@@ -2,6 +2,7 @@ var parserMod = require('./parser');
 var TChannelParser = parserMod.TChannelParser;
 var TChannelFrame = parserMod.TChannelFrame;
 var types = parserMod.types;
+var nullLogger = require('./null-logger.js');
 
 var farmhash = require('farmhash');
 var net = require('net');
@@ -11,6 +12,7 @@ function TChannel(options) {
 	var self = this;
 
 	this.options = options || {};
+	this.logger = this.options.logger || nullLogger;
 	this.host = this.options.host || '127.0.0.1';
 	this.port = this.options.port || 4040;
 	this.name = this.host + ':' + this.port;
@@ -22,14 +24,14 @@ function TChannel(options) {
 	this.serverSocket = new net.createServer();
 	this.serverSocket.listen(this.port, this.host);
 	this.serverSocket.on('listening', function () {
-		console.log(self.name + ' listening');
+		self.logger.info(self.name + ' listening');
 		self.emit('listening');
 	});
 	this.serverSocket.on('error', function (err) {
-		console.log(self.name + ' sdkjfdskj server socket error: ' + inspect(err));
+		self.logger.error(self.name + ' sdkjfdskj server socket error: ' + inspect(err));
 	});
 	this.serverSocket.on('close', function () {
-		console.log('server socket close');
+		self.logger.warn('server socket close');
 	});
 	this.serverSocket.on('connection', function (sock) {
 		return new TChannelConnection(self, sock, 'in', sock.remoteAddress + ':' + sock.remotePort);
@@ -87,13 +89,14 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 	var self = this;
 
 	this.channel = channel;
+	this.logger = this.channel.logger;
 	this.socket = socket;
 	this.direction = direction;
 	this.remoteAddr = remoteAddr;
 
 	this.remoteName = null; // filled in by identify message
 
-//	console.log(this.channel.name + ' new connection ' + direction + ' ' + this.remoteAddr);
+	this.logger.info(this.channel.name + ' new connection ' + direction + ' ' + this.remoteAddr);
 
 	this.inOps = {};
 	this.inPending = 0;
@@ -103,7 +106,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 	this.lastSentMessage = 0;
 	this.closing = false;
 
-	this.parser = new TChannelParser();
+	this.parser = new TChannelParser(this);
 
 	this.socket.setNoDelay(true);
 
@@ -114,7 +117,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 		self.onSocketErr(err);
 	});
 	this.socket.on('close', function () {
-		console.log(self.channel.name + ' ' + direction + ' ' + self.remoteAddr + ' socket close');
+		self.logger.warn(self.channel.name + ' ' + direction + ' ' + self.remoteAddr + ' socket close');
 	});
 
 	this.parser.on('frame', function (frame) {
@@ -169,7 +172,7 @@ TChannelConnection.prototype.resetAll = function (err) {
 };
 
 TChannelConnection.prototype.onSocketErr = function (err) {
-	console.log(this.channel.name + ' client socket error dir=' + this.direction + ' addr=' + this.remoteAddr + ' message=' + err.message);
+	this.logger.error(this.channel.name + ' client socket error dir=' + this.direction + ' addr=' + this.remoteAddr + ' message=' + err.message);
 	this.resetAll(err);
 };
 
@@ -183,8 +186,8 @@ TChannelConnection.prototype.validateChecksum = function (frame) {
 	}
 	var expected = frame.header.csum;
 	if (expected !== actual) {
-		console.log('server checksum validation failed ' + expected + ' vs ' + actual);
-		console.log(inspect(frame));
+		this.logger.warn('server checksum validation failed ' + expected + ' vs ' + actual);
+		this.logger.warn(inspect(frame));
 		return false;
 	} else {
 		return true;
@@ -201,15 +204,15 @@ TChannelConnection.prototype.onIdentify = function (frame) {
 		return true;
 	}
 
-	console.log('error: first req on socket must be identify');
+	this.logger.error('error: first req on socket must be identify');
 	return false;
 };
 
 TChannelConnection.prototype.onFrame = function (frame) {
-//	console.log(this.channel.name + ' got frame ' + frame.arg1 + ' ' + frame.arg2);
+//	this.logger.info(this.channel.name + ' got frame ' + frame.arg1 + ' ' + frame.arg2);
 
 	if (this.validateChecksum(frame) === false) {
-		console.log("error: bad checksum");
+		this.logger.error("error: bad checksum");
 	}
 
 	if (frame.header.type === types.req_complete_message) {
@@ -225,7 +228,7 @@ TChannelConnection.prototype.onFrame = function (frame) {
 		if (typeof handler === 'function') {
 			return new TChannelServerOp(this, handler, frame);
 		} else {
-			console.log('error: not found');
+			this.logger.error('error: not found');
 		}
 	} else if (frame.header.type === types.res_complete_message) {
 		var op = this.outOps[frame.header.id];
@@ -238,7 +241,7 @@ TChannelConnection.prototype.onFrame = function (frame) {
 		this.outPending--;
 		return op.callback(new Error(frame.arg1), null, null);
 	} else {
-		console.log('error: unknown type');
+		this.logger.error('error: unknown type');
 	}
 };
 

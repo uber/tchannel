@@ -129,9 +129,10 @@ TChannelFrame.prototype.toBuffer = function () {
 };
 
 
-function TChannelParser() {
+function TChannelParser(connection) {
 	this.newFrame = new TChannelFrame();
 
+	this.logger = connection.logger;
 	this.state = states.read_type;
 
 	this.tmpInt = null;
@@ -148,7 +149,7 @@ require('util').inherits(TChannelParser, require('events').EventEmitter);
 
 TChannelParser.prototype.parseError = function(msg) {
 	this.emit('error', new Error(msg));
-	console.log('parse error: ' + msg);
+	this.logger.error('parse error: ' + msg);
 	this.pos = this.chunk.length;
 	this.state = states.error;
 };

@@ -11,5 +11,8 @@
     "url": "gh:uber/tchannel"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "farmhash": "git://github.com/lovell/farmhash"
+  }
 }
