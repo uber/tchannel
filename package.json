@@ -1,24 +1,21 @@
 {
   "name": "tchannel",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "network multiplexing and framing protocol for RPC or parser drag racing",
+  "author": "mranney@uber.com",
+  "version": "1.0.1",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node test/index.js"
   },
   "repository": {
     "type": "git",
     "url": "gh:uber/tchannel"
   },
-  "scripts": {
-    "test": "node test/index.js"
-  },
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "farmhash": "git://github.com/lovell/farmhash"
+    "farmhash": "^0.2.0",
+    "metrics": "^0.1.8"
   },
   "devDependencies": {
-    "tape": "^3.0.3"
+    "tape": "^3.0.3",
+    "jshint": "^2.5.6"
   }
 }
