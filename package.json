@@ -10,9 +10,15 @@
     "type": "git",
     "url": "gh:uber/tchannel"
   },
+  "scripts": {
+    "test": "node test/index.js"
+  },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "farmhash": "git://github.com/lovell/farmhash"
+  },
+  "devDependencies": {
+    "tape": "^3.0.3"
   }
 }
