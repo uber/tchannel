@@ -9,6 +9,10 @@ var net = require('net');
 var inspect = require('util').inspect;
 
 function TChannel(options) {
+	if (!(this instanceof TChannel)) {
+		return new TChannel(options);
+	}
+
 	var self = this;
 
 	this.options = options || {};
@@ -82,7 +86,14 @@ TChannel.prototype.quit = function (callback) {
 		}
 		sock.end();
 	});
-	this.serverSocket.close();
+
+	if (this.serverSocket.address()) {
+		this.serverSocket.close();
+	} else {
+		this.serverSocket.once('listening', function onListen() {
+			self.serverSocket.close();
+		});
+	}
 };
 
 function TChannelConnection(channel, socket, direction, remoteAddr) {
