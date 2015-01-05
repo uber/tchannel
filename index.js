@@ -57,8 +57,8 @@ TChannel.prototype.addPeer = function (name, connection) {
 	connection.on('reset', function (err) {
 		delete self.peers[name];
 	});
-	connection.on('socket close', function (conn, err) {
-		self.emit('socket close', conn, err);
+	connection.on('socketClose', function (conn, err) {
+		self.emit('socketClose', conn, err);
 	});
 	connection.remoteName = name;
 };
@@ -234,7 +234,7 @@ TChannelConnection.prototype.resetAll = function (err) {
 	this.inPending = 0;
 	this.outPending = 0;
 
-	this.emit('socket close', this, err);
+	this.emit('socketClose', this, err);
 };
 
 TChannelConnection.prototype.onSocketErr = function (type, err) {

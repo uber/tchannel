@@ -65,7 +65,7 @@ Test.prototype.new_client = function (id) {
     // sending a ping to pre-connect the socket
     new_client.send({host: '127.0.0.1:4040'}, 'ping', null, null, function () {});
 
-    new_client.on("socket close", function (conn, err) {
+    new_client.on("socketClose", function (conn, err) {
         if (err.message !== 'shutdown from quit') {
             console.log('socket close: ' + conn.remoteName + ' ' + err.message);
         }
