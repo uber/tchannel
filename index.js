@@ -86,16 +86,31 @@ TChannel.prototype.makeOutConnection = function (dest) {
 
 TChannel.prototype.quit = function (callback) {
 	var self = this;
-	Object.keys(this.peers).forEach(function (peer) {
+	var peerKeys = Object.keys(this.peers);
+	var counter = peerKeys.length + 1;
+
+	peerKeys.forEach(function (peer) {
 		var conn = self.peers[peer];
 		var sock = conn.socket;
-		if (typeof callback === 'function') {
-			sock.once('end', callback);
+		sock.once('end', onEnd);
+
+		if (conn.timer) {
+			clearTimeout(conn.timer);
 		}
+
 		conn.closing = true;
 		conn.resetAll(new Error('shutdown from quit'));
 		sock.end();
 	});
+
+	onEnd();
+
+	function onEnd() {
+		if (--counter === 0 && typeof callback === 'function') {
+			callback();
+		}
+	}
+
 
 	if (this.serverSocket.address()) {
 		this.serverSocket.close();
