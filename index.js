@@ -4,6 +4,8 @@ var TChannelFrame = parserMod.TChannelFrame;
 var types = parserMod.types;
 var nullLogger = require('./null-logger.js');
 
+var clearTimeout = require('timers').clearTimeout;
+var setTimeout = require('timers').setTimeout;
 var farmhash = require('farmhash');
 var net = require('net');
 var inspect = require('util').inspect;
