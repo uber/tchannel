@@ -177,9 +177,17 @@ TChannelConnection.prototype.getTimeoutDelay = function () {
 
 TChannelConnection.prototype.startTimeoutTimer = function () {
 	var self = this;
+	var socket = this.socket;
+
+	socket.once('close', clearTimer);
+
 	this.timer = setTimeout(function () {
 		self.onTimeoutCheck();
 	}, this.getTimeoutDelay());
+
+	function clearTimer() {
+		clearTimeout(self.timer);
+	}
 };
 
 // If the connection has some success and some timeouts, we should probably leave it up,
