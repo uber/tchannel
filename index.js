@@ -342,7 +342,7 @@ TChannelConnection.prototype.onFrame = function (frame) {
 	} else if (frame.header.type === types.res_complete_message) {
 		this.handleResCompleteMessage(frame);
 	} else if (frame.header.type === types.res_error) {
-		this.handleRedError(frame);
+		this.handleResError(frame);
 	} else {
 		this.logger.error('error: unknown type');
 	}
