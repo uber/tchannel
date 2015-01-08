@@ -4,8 +4,9 @@ var TChannelFrame = parserMod.TChannelFrame;
 var types = parserMod.types;
 var nullLogger = require('./null-logger.js');
 
-var clearTimeout = require('timers').clearTimeout;
-var setTimeout = require('timers').setTimeout;
+var globalClearTimeout = require('timers').clearTimeout;
+var globalSetTimeout = require('timers').setTimeout;
+var globalNow = Date.now;
 var farmhash = require('farmhash');
 var net = require('net');
 var inspect = require('util').inspect;
@@ -22,6 +23,12 @@ function TChannel(options) {
 	this.host = this.options.host || '127.0.0.1';
 	this.port = this.options.port || 4040;
 	this.name = this.host + ':' + this.port;
+	this.setTimeout = this.options.timers ?
+		this.options.timers.setTimeout : globalSetTimeout;
+	this.clearTimeout = this.options.timers ?
+		this.options.timers.clearTimeout : globalClearTimeout;
+	this.now = this.options.timers ?
+		this.options.timers.now : globalNow;
 
 	this.reqTimeoutDefault = this.options.reqTimeoutDefault || 5000;
 	this.timeoutCheckInterval = this.options.timeoutCheckInterval || 1000;
@@ -95,7 +102,7 @@ TChannel.prototype.quit = function (callback) {
 		sock.once('end', onEnd);
 
 		if (conn.timer) {
-			clearTimeout(conn.timer);
+			self.clearTimeout(conn.timer);
 		}
 
 		conn.closing = true;
@@ -179,6 +186,13 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 	}
 
 	this.startTimeoutTimer();
+	var socket = this.socket;
+
+	socket.once('close', clearTimer);
+
+	function clearTimer() {
+		self.channel.clearTimeout(self.timer);
+	}
 }
 require('util').inherits(TChannelConnection, require('events').EventEmitter);
 
@@ -192,17 +206,10 @@ TChannelConnection.prototype.getTimeoutDelay = function () {
 
 TChannelConnection.prototype.startTimeoutTimer = function () {
 	var self = this;
-	var socket = this.socket;
 
-	socket.once('close', clearTimer);
-
-	this.timer = setTimeout(function () {
+	this.timer = this.channel.setTimeout(function () {
 		self.onTimeoutCheck();
 	}, this.getTimeoutDelay());
-
-	function clearTimer() {
-		clearTimeout(self.timer);
-	}
 };
 
 // If the connection has some success and some timeouts, we should probably leave it up,
@@ -215,7 +222,7 @@ TChannelConnection.prototype.onTimeoutCheck = function () {
 	}
 
 	var opKeys = Object.keys(this.outOps);
-	var now = Date.now();
+	var now = this.channel.now();
 	for (var i = 0; i < opKeys.length ; i++) {
 		var op = this.outOps[opKeys[i]];
 		var timeout = op.options.timeout || this.channel.reqTimeoutDefault;
@@ -231,7 +238,7 @@ TChannelConnection.prototype.onTimeoutCheck = function () {
 TChannelConnection.prototype.onReqTimeout = function (op) {
 	op.timedOut = true;
 	op.callback(new Error('timed out'), null, null);
-	this.lastTimeoutTime = Date.now();
+	this.lastTimeoutTime = this.channel.now();
 };
 
 // this socket is completely broken, and is going away
@@ -404,16 +411,17 @@ TChannelConnection.prototype.send = function(options, arg1, arg2, arg3, callback
 	frame.header.id = ++this.lastSentMessage;
 	frame.header.seq = 0;
 
-	this.outOps[frame.header.id] = new TChannelClientOp(options, frame, callback);
+	this.outOps[frame.header.id] = new TChannelClientOp(
+		options, frame, this.channel.now(), callback);
 	this.pendingCount++;
 	return this.socket.write(frame.toBuffer());
 };
 
-function TChannelClientOp(options, frame, callback) {
+function TChannelClientOp(options, frame, start, callback) {
 	this.options = options;
 	this.frame = frame;
 	this.callback = callback;
-	this.start = Date.now();
+	this.start = start;
 	this.timedOut = false;
 }
 
