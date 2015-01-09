@@ -228,8 +228,9 @@ TChannelConnection.prototype.onTimeoutCheck = function () {
 		var timeout = op.options.timeout || this.channel.reqTimeoutDefault;
 		var duration = now - op.start;
 		if (duration > timeout) {
-			this.onReqTimeout(op);
 			delete this.outOps[opKeys[i]];
+			this.outPending--;
+			this.onReqTimeout(op);
 		}
 	}
 	this.startTimeoutTimer();
