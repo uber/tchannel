@@ -4,6 +4,9 @@ var TChannelFrame = parserMod.TChannelFrame;
 var types = parserMod.types;
 var nullLogger = require('./null-logger.js');
 
+var globalClearTimeout = require('timers').clearTimeout;
+var globalSetTimeout = require('timers').setTimeout;
+var globalNow = Date.now;
 var farmhash = require('farmhash');
 var net = require('net');
 var inspect = require('util').inspect;
@@ -20,6 +23,16 @@ function TChannel(options) {
 	this.host = this.options.host || '127.0.0.1';
 	this.port = this.options.port || 4040;
 	this.name = this.host + ':' + this.port;
+	this.setTimeout = this.options.timers ?
+		this.options.timers.setTimeout : globalSetTimeout;
+	this.clearTimeout = this.options.timers ?
+		this.options.timers.clearTimeout : globalClearTimeout;
+	this.now = this.options.timers ?
+		this.options.timers.now : globalNow;
+
+	this.reqTimeoutDefault = this.options.reqTimeoutDefault || 5000;
+	this.timeoutCheckInterval = this.options.timeoutCheckInterval || 1000;
+	this.timeoutFuzz = this.options.timeoutFuzz || 100;
 
 	this.peers = {};
 
@@ -32,7 +45,7 @@ function TChannel(options) {
 		self.emit('listening');
 	});
 	this.serverSocket.on('error', function (err) {
-		self.logger.error(self.name + ' sdkjfdskj server socket error: ' + inspect(err));
+		self.logger.error(self.name + ' server socket error: ' + inspect(err));
 	});
 	this.serverSocket.on('close', function () {
 		self.logger.warn('server socket close');
@@ -49,12 +62,13 @@ TChannel.prototype.register = function (op, callback) {
 
 TChannel.prototype.addPeer = function (name, connection) {
 	this.peers[name] = connection;
-	if (connection.direction === 'out') {
-		var self = this;
-		connection.on('reset', function (err) {
-			delete self.peers[name];
-		});
-	}
+	var self = this;
+	connection.on('reset', function (err) {
+		delete self.peers[name];
+	});
+	connection.on('socketClose', function (conn, err) {
+		self.emit('socketClose', conn, err);
+	});
 	connection.remoteName = name;
 };
 
@@ -79,13 +93,31 @@ TChannel.prototype.makeOutConnection = function (dest) {
 
 TChannel.prototype.quit = function (callback) {
 	var self = this;
-	Object.keys(this.peers).forEach(function (peer) {
-		var sock = self.peers[peer].socket;
-		if (typeof callback === 'function') {
-			sock.once('end', callback);
+	var peerKeys = Object.keys(this.peers);
+	var counter = peerKeys.length + 1;
+
+	peerKeys.forEach(function (peer) {
+		var conn = self.peers[peer];
+		var sock = conn.socket;
+		sock.once('end', onEnd);
+
+		if (conn.timer) {
+			self.clearTimeout(conn.timer);
 		}
+
+		conn.closing = true;
+		conn.resetAll(new Error('shutdown from quit'));
 		sock.end();
 	});
+
+	onEnd();
+
+	function onEnd() {
+		if (--counter === 0 && typeof callback === 'function') {
+			callback();
+		}
+	}
+
 
 	if (this.serverSocket.address()) {
 		this.serverSocket.close();
@@ -107,14 +139,13 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 
 	this.remoteName = null; // filled in by identify message
 
-	this.logger.info(this.channel.name + ' new connection ' + direction + ' ' + this.remoteAddr);
-
 	this.inOps = {};
 	this.inPending = 0;
 	this.outOps = {};
 	this.outPending = 0;
 
 	this.lastSentMessage = 0;
+	this.lastTimeoutTime = 0;
 	this.closing = false;
 
 	this.parser = new TChannelParser(this);
@@ -125,10 +156,10 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 		self.parser.execute(chunk);
 	});
 	this.socket.on('error', function (err) {
-		self.onSocketErr(err);
+		self.onSocketErr('error', err);
 	});
 	this.socket.on('close', function () {
-		self.logger.warn(self.channel.name + ' ' + direction + ' ' + self.remoteAddr + ' socket close');
+		self.onSocketErr('close');
 	});
 
 	this.parser.on('frame', function (frame) {
@@ -153,8 +184,63 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 			self.channel.emit('identified', remote);
 		});
 	}
+
+	this.startTimeoutTimer();
+	var socket = this.socket;
+
+	socket.once('close', clearTimer);
+
+	function clearTimer() {
+		self.channel.clearTimeout(self.timer);
+	}
 }
 require('util').inherits(TChannelConnection, require('events').EventEmitter);
+
+// timeout check runs every timeoutCheckInterval +/- some random fuzz. Range is from
+//   base - fuzz/2 to base + fuzz/2
+TChannelConnection.prototype.getTimeoutDelay = function () {
+	var base = this.channel.timeoutCheckInterval;
+	var fuzz = this.channel.timeoutFuzz;
+	return base + Math.round(Math.floor(Math.random() * fuzz) - (fuzz / 2));
+};
+
+TChannelConnection.prototype.startTimeoutTimer = function () {
+	var self = this;
+
+	this.timer = this.channel.setTimeout(function () {
+		self.onTimeoutCheck();
+	}, this.getTimeoutDelay());
+};
+
+// If the connection has some success and some timeouts, we should probably leave it up,
+// but if everything is timing out, then we should kill the connection.
+TChannelConnection.prototype.onTimeoutCheck = function () {
+	if (this.lastTimeoutTime) {
+		self.logger.warn(this.channel.name + ' destroying socket from timeouts');
+		this.socket.destroy();
+		return;
+	}
+
+	var opKeys = Object.keys(this.outOps);
+	var now = this.channel.now();
+	for (var i = 0; i < opKeys.length ; i++) {
+		var op = this.outOps[opKeys[i]];
+		var timeout = op.options.timeout || this.channel.reqTimeoutDefault;
+		var duration = now - op.start;
+		if (duration > timeout) {
+			delete this.outOps[opKeys[i]];
+			this.outPending--;
+			this.onReqTimeout(op);
+		}
+	}
+	this.startTimeoutTimer();
+};
+
+TChannelConnection.prototype.onReqTimeout = function (op) {
+	op.timedOut = true;
+	op.callback(new Error('timed out'), null, null);
+	this.lastTimeoutTime = this.channel.now();
+};
 
 // this socket is completely broken, and is going away
 // In addition to erroring out all of the pending work, we reset the state in case anybody
@@ -180,11 +266,22 @@ TChannelConnection.prototype.resetAll = function (err) {
 
 	this.inPending = 0;
 	this.outPending = 0;
+
+	this.emit('socketClose', this, err);
 };
 
-TChannelConnection.prototype.onSocketErr = function (err) {
-	this.logger.error(this.channel.name + ' client socket error dir=' + this.direction + ' addr=' + this.remoteAddr + ' message=' + err.message);
-	this.resetAll(err);
+TChannelConnection.prototype.onSocketErr = function (type, err) {
+	if (this.closing) {
+		return;
+	}
+	this.closing = true;
+	var message;
+	if (type === 'error') {
+		message = err.message;
+	} else {
+		message = 'socket closed';
+	}
+	this.resetAll(new Error(message));
 };
 
 TChannelConnection.prototype.validateChecksum = function (frame) {
@@ -226,6 +323,8 @@ TChannelConnection.prototype.onFrame = function (frame) {
 		this.logger.error("error: bad checksum");
 	}
 
+	this.lastTimeoutTime = 0;
+
 	if (frame.header.type === types.req_complete_message) {
 		if (this.remoteName === null && this.onIdentify(frame) === false) {
 			return;
@@ -242,26 +341,40 @@ TChannelConnection.prototype.onFrame = function (frame) {
 			this.logger.error('error: not found');
 		}
 	} else if (frame.header.type === types.res_complete_message) {
-		var op = this.outOps[frame.header.id];
-		delete this.outOps[frame.header.id];
-		this.outPending--;
-		op.callback(null, frame.arg2, frame.arg3);
+		this.handleResCompleteMessage(frame);
 	} else if (frame.header.type === types.res_error) {
-		var op = this.outOps[frame.header.id];
-		delete this.outOps[frame.header.id];
-		this.outPending--;
-		return op.callback(new Error(frame.arg1), null, null);
+		this.handleResError(frame);
 	} else {
 		this.logger.error('error: unknown type');
 	}
 };
 
+TChannelConnection.prototype.handleResCompleteMessage = function (frame) {
+	var op = this.outOps[frame.header.id];
+	if (op) {
+		delete this.outOps[frame.header.id];
+		this.outPending--;
+		op.callback(null, frame.arg2, frame.arg3);
+	}
+};
+
+TChannelConnection.prototype.handleResError = function (frame) {
+	var op = this.outOps[frame.header.id];
+	if (op) {
+		delete this.outOps[frame.header.id];
+		this.outPending--;
+		return op.callback(new Error(frame.arg1), null, null);
+	}
+};
+
 TChannelConnection.prototype.sendResFrame = function(frame) {
 	var op = this.inOps[frame.header.id];
-	delete this.inOps[frame.header.id];
-	this.inPending--;
+	if (op) {
+		delete this.inOps[frame.header.id];
+		this.inPending--;
 
-	return this.socket.write(frame.toBuffer());
+		return this.socket.write(frame.toBuffer());
+	}
 };
 
 function TChannelServerOp(connection, fn, reqFrame) {
@@ -303,15 +416,18 @@ TChannelConnection.prototype.send = function(options, arg1, arg2, arg3, callback
 	frame.header.id = ++this.lastSentMessage;
 	frame.header.seq = 0;
 
-	this.outOps[frame.header.id] = new TChannelClientOp(options, frame, callback);
+	this.outOps[frame.header.id] = new TChannelClientOp(
+		options, frame, this.channel.now(), callback);
 	this.pendingCount++;
 	return this.socket.write(frame.toBuffer());
 };
 
-function TChannelClientOp(options, frame, callback) {
+function TChannelClientOp(options, frame, start, callback) {
 	this.options = options;
 	this.frame = frame;
 	this.callback = callback;
+	this.start = start;
+	this.timedOut = false;
 }
 
 module.exports = TChannel;
