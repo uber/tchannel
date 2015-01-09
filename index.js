@@ -45,7 +45,7 @@ function TChannel(options) {
 		self.emit('listening');
 	});
 	this.serverSocket.on('error', function (err) {
-		console.log(self.name + ' server socket error: ' + inspect(err));
+		self.logger.error(self.name + ' server socket error: ' + inspect(err));
 	});
 	this.serverSocket.on('close', function () {
 		self.logger.warn('server socket close');
@@ -216,7 +216,7 @@ TChannelConnection.prototype.startTimeoutTimer = function () {
 // but if everything is timing out, then we should kill the connection.
 TChannelConnection.prototype.onTimeoutCheck = function () {
 	if (this.lastTimeoutTime) {
-		console.log(this.channel.name + ' destroying socket from timeouts');
+		self.logger.warn(this.channel.name + ' destroying socket from timeouts');
 		this.socket.destroy();
 		return;
 	}
