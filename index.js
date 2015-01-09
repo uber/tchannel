@@ -360,17 +360,21 @@ TChannelConnection.prototype.handleResCompleteMessage = function (frame) {
 
 TChannelConnection.prototype.handleResError = function (frame) {
 	var op = this.outOps[frame.header.id];
-	delete this.outOps[frame.header.id];
-	this.outPending--;
-	return op.callback(new Error(frame.arg1), null, null);
+	if (op) {
+		delete this.outOps[frame.header.id];
+		this.outPending--;
+		return op.callback(new Error(frame.arg1), null, null);
+	}
 };
 
 TChannelConnection.prototype.sendResFrame = function(frame) {
 	var op = this.inOps[frame.header.id];
-	delete this.inOps[frame.header.id];
-	this.inPending--;
+	if (op) {
+		delete this.inOps[frame.header.id];
+		this.inPending--;
 
-	return this.socket.write(frame.toBuffer());
+		return this.socket.write(frame.toBuffer());
+	}
 };
 
 function TChannelServerOp(connection, fn, reqFrame) {
