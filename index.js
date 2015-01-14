@@ -84,6 +84,18 @@ TChannel.prototype.register = function (op, callback) {
 };
 
 TChannel.prototype.addPeer = function (name, connection) {
+	if (this.peers[name] !== connection) {
+		this.logger.warn('allocated a connection twice', {
+			name: name
+		});
+		// this.peers[name].socket.destroy();
+		// return;
+	}
+
+	this.logger.debug('alloc peer', {
+		source: this.name,
+		destination: name
+	});
 	this.peers[name] = connection;
 	var self = this;
 	connection.on('reset', function (err) {
