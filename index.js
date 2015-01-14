@@ -59,6 +59,7 @@ function TChannel(options) {
 	this.peers = {};
 
 	this.endpoints = {};
+	this.destroyed = false;
 
 	this.serverSocket = new net.createServer();
 	this.serverSocket.listen(this.port, this.host);
@@ -95,6 +96,10 @@ TChannel.prototype.addPeer = function (name, connection) {
 };
 
 TChannel.prototype.send = function (options, arg1, arg2, arg3, callback) {
+	if (this.destroyed) {
+		throw new Error('cannot send() to destroyed tchannel');
+	}
+
 	var dest = options.host;
 
 	if (this.peers[dest]) {
@@ -115,6 +120,7 @@ TChannel.prototype.makeOutConnection = function (dest) {
 
 TChannel.prototype.quit = function (callback) {
 	var self = this;
+	this.destroyed = true;
 	var peerKeys = Object.keys(this.peers);
 	var counter = peerKeys.length + 1;
 
