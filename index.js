@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+'use strict';
+
 var parserMod = require('./parser');
 var TChannelParser = parserMod.TChannelParser;
 var TChannelFrame = parserMod.TChannelFrame;
