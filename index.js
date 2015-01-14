@@ -136,6 +136,11 @@ TChannel.prototype.quit = function (callback) {
 	var peerKeys = Object.keys(this.peers);
 	var counter = peerKeys.length + 1;
 
+	this.logger.debug('quitting tchannel', {
+		name: this.name,
+		peerKeys: peerKeys
+	});
+
 	peerKeys.forEach(function (peer) {
 		var conn = self.peers[peer];
 		var sock = conn.socket;
@@ -145,6 +150,10 @@ TChannel.prototype.quit = function (callback) {
 			self.clearTimeout(conn.timer);
 		}
 
+		this.logger.debug('destroy channel for', {
+			peer: peer,
+			fromAddress: sock.address()
+		});
 		conn.closing = true;
 		conn.resetAll(new Error('shutdown from quit'));
 		sock.end();
