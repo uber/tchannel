@@ -127,7 +127,7 @@ TChannel.prototype.quit = function (callback) {
 	peerKeys.forEach(function (peer) {
 		var conn = self.peers[peer];
 		var sock = conn.socket;
-		sock.once('end', onEnd);
+		sock.once('close', onClose);
 
 		if (conn.timer) {
 			self.clearTimeout(conn.timer);
@@ -138,9 +138,9 @@ TChannel.prototype.quit = function (callback) {
 		sock.end();
 	});
 
-	onEnd();
+	onClose();
 
-	function onEnd() {
+	function onClose() {
 		if (--counter === 0 && typeof callback === 'function') {
 			callback();
 		}
