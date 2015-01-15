@@ -51,7 +51,7 @@ This protocol is intended to run on datacenter networks for inter-process commun
 
 TChannel frames have a fixed length header and 3 variable length fields. The underlying protocol
 does not assign meaning to these fields, but the included client/server implementation uses
-the first field to represent a unique endpoint or funciton name in an RPC model.
+the first field to represent a unique endpoint or function name in an RPC model.
 The next two fields can be used for arbitrary data. Some suggested way to use the 3 fields are:
 
 * URI path, HTTP method and headers as JSON, body
