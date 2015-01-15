@@ -18,44 +18,23 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-var TChannel = require('./index');
-var server = new TChannel({listen: '127.0.0.1', port: 4040});
+var TChannel = require('tchannel');
 
-var keys = {};
+var server = new TChannel({host: '127.0.0.1', port: 4040});
+var client = new TChannel({host: '127.0.0.1', port: 4041});
 
-server.on('socketClose', function (conn, err) {
-	console.log('socket close: ' + conn.remoteName + ' ' + err);
+// normal response
+server.register('func 1', function (arg1, arg2, peerInfo, cb) {
+	console.log('func 1 responding immediately 1:' + arg1.toString() + ' 2:' + arg2.toString());
+	cb(null, 'result', 'indeed it did');
 });
-
-server.register('ping', function onPing(arg1, arg2, hostInfo, pingCb) {
-	pingCb(null, 'pong', null);
+// err response
+server.register('func 2', function (arg1, arg2, peerInfo, cb) {
+	cb(new Error('it failed'));
 });
-
-function safeParse(str) {
-	try {
-		return JSON.parse(str);
-	} catch (e) {
-		return null;
-	}
-}
-
-server.register('set', function onSet(arg1, arg2, hostInfo, setCb) {
-	var parts = safeParse(arg1.toString('utf8'));
-	keys[parts[0]] = parts[1];
-	setCb(null, 'ok', 'really ok');
+client.send({host: '127.0.0.1:4040'}, 'func 1', "arg 1", "arg 2", function (err, res1, res2) {
+	console.log('normal res: ' + res1.toString() + ' ' + res2.toString());
 });
-
-server.register('get', function onGet(arg1, arg2, hostInfo, getCb) {
-	var str = arg1.toString('utf8');
-	if (keys[str] !== undefined) {
-		getCb(null, keys[str].length, keys[str]);
-	} else {
-		getCb(new Error('key not found: ' + str));
-	}
+client.send({host: '127.0.0.1:4040'}, 'func 2', "arg 1", "arg 2", function (err, res1, res2) {
+	console.log('err res: ' + err.message);
 });
-
-setInterval(function () {
-	Object.keys(keys).forEach(function (key) {
-		console.log(key + '=' + keys[key].length + ' bytes');
-	});
-}, 1000);
