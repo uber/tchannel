@@ -150,7 +150,7 @@ TChannel.prototype.quit = function (callback) {
 			self.clearTimeout(conn.timer);
 		}
 
-		this.logger.debug('destroy channel for', {
+		self.logger.debug('destroy channel for', {
 			peer: peer,
 			fromAddress: sock.address()
 		});
