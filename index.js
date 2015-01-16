@@ -307,6 +307,10 @@ TChannelConnection.prototype.resetAll = function (err) {
 	this.emit('reset');
 	var self = this;
 
+	if (this.timer) {
+		clearTimeout(this.timer);
+	}
+
 	// requests that we've received we can delete, but these reqs may have started their
 	//   own outgoing work, which is hard to cancel. By setting this.closing, we make sure
 	//   that once they do finish that their callback will swallow the response.
