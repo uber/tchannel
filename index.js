@@ -83,10 +83,79 @@ TChannel.prototype.register = function (op, callback) {
 	this.endpoints[op] = callback;
 };
 
-TChannel.prototype.addPeer = function (name, connection) {
-	if (this.peers[name] !== connection) {
+TChannel.prototype.setPeer = function (name, conn, opts) {
+	if (!this.peers[name]) {
+		this.peers[name] = {
+			incoming: [],
+			outgoing: []
+		}
+	}
+
+	var isIncoming = opts && opts.incoming;
+	if (isIncoming) {
+		this.peers[name].incoming.push(conn);
+	} else {
+		this.peers[name].outgoing.push(conn);
+	}
+};
+TChannel.prototype.getPeer = function (name) {
+	var info = this.peers[name];
+	if (!info) {
+		return null;
+	}
+
+	return info.outgoing[0] || info.incoming[0];
+};
+
+TChannel.prototype.removePeer = function (name, conn) {
+	var info = this.peers[name];
+	if (!info) {
+		return null;
+	}
+
+	var outgoing = info.outgoing;
+	var incoming = info.incoming;
+
+	for (var i = 0; i < outgoing.length; i++) {
+		if (outgoing[i] === conn) {
+			outgoing.splice(i, 1);
+			return;
+		}
+	}
+
+	for (var j = 0; j < incoming.length; j++) {
+		if (incoming[j] === conn) {
+			incoming.splice(j, 1);
+			return;
+		}
+	}
+};
+
+TChannel.prototype.getPeers = function () {
+	var keys = Object.keys(this.peers);
+	var peers = [];
+	for (var i = 0; i < keys.length; i++) {
+		var info = this.peers[keys[i]];
+
+		var incoming = info.incoming;
+		var outgoing = info.outgoing;
+
+		for (var j = 0; j < incoming.length; j++) {
+			peers.push(incoming[j]);
+		}
+
+		for (var k = 0; k < outgoing.length; k++) {
+			peers.push(outgoing[k]);
+		}
+	}
+	return peers;
+};
+
+TChannel.prototype.addPeer = function (name, connection, opts) {
+	if (this.getPeer(name) !== connection) {
 		this.logger.warn('allocated a connection twice', {
-			name: name
+			name: name,
+			incoming: opts && opts.incoming
 		});
 		// this.peers[name].socket.destroy();
 		// return;
@@ -94,12 +163,13 @@ TChannel.prototype.addPeer = function (name, connection) {
 
 	this.logger.debug('alloc peer', {
 		source: this.name,
-		destination: name
+		destination: name,
+		incoming: opts && opts.incoming
 	});
-	this.peers[name] = connection;
+	this.setPeer(name, connection, opts);
 	var self = this;
 	connection.on('reset', function (err) {
-		delete self.peers[name];
+		self.removePeer(name, connection);
 	});
 	connection.on('socketClose', function (conn, err) {
 		self.emit('socketClose', conn, err);
@@ -114,12 +184,13 @@ TChannel.prototype.send = function (options, arg1, arg2, arg3, callback) {
 
 	var dest = options.host;
 
-	if (this.peers[dest]) {
-		this.peers[dest].send(options, arg1, arg2, arg3, callback);
-	} else {
+	var peer = this.getPeer(dest);
+	if (!peer) {
 		this.addPeer(dest, this.makeOutConnection(dest));
-		this.peers[dest].send(options, arg1, arg2, arg3, callback);
+		peer = this.getPeer(dest);
 	}
+
+	peer.send(options, arg1, arg2, arg3, callback);
 };
 
 TChannel.prototype.makeOutConnection = function (dest) {
@@ -133,16 +204,14 @@ TChannel.prototype.makeOutConnection = function (dest) {
 TChannel.prototype.quit = function (callback) {
 	var self = this;
 	this.destroyed = true;
-	var peerKeys = Object.keys(this.peers);
-	var counter = peerKeys.length + 1;
+	var peers = this.getPeers();
+	var counter = peers.length + 1;
 
 	this.logger.debug('quitting tchannel', {
-		name: this.name,
-		peerKeys: peerKeys
+		name: this.name
 	});
 
-	peerKeys.forEach(function (peer) {
-		var conn = self.peers[peer];
+	peers.forEach(function (conn) {
 		var sock = conn.socket;
 		sock.once('close', onClose);
 
@@ -151,7 +220,7 @@ TChannel.prototype.quit = function (callback) {
 		}
 
 		self.logger.debug('destroy channel for', {
-			peer: peer,
+			peer: conn.remoteName,
 			fromAddress: sock.address()
 		});
 		conn.closing = true;
@@ -368,7 +437,9 @@ TChannelConnection.prototype.onIdentify = function (frame) {
 	var str1 = frame.arg1.toString();
 	var str2 = frame.arg2.toString();
 	if (str1 === 'TChannel identify') {
-		this.channel.addPeer(str2, this);
+		this.channel.addPeer(str2, this, {
+			incoming: true
+		});
 		this.channel.emit('identified', str2);
 		return true;
 	}
