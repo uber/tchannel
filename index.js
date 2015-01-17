@@ -84,14 +84,15 @@ TChannel.prototype.register = function (op, callback) {
 };
 
 TChannel.prototype.setPeer = function (name, conn) {
-	if (!this.peers[name]) {
-		this.peers[name] = []
+	var list = this.peers[name];
+	if (list) {
+		list = this.peers[name] = [];
 	}
 
 	if (conn.direction === 'out') {
-		this.peers[name].unshift(conn);
+		list.unshift(conn);
 	} else {
-		this.peers[name].push(conn);
+		list.push(conn);
 	}
 };
 TChannel.prototype.getPeer = function (name) {
@@ -100,14 +101,14 @@ TChannel.prototype.getPeer = function (name) {
 };
 
 TChannel.prototype.removePeer = function (name, conn) {
-	var info = this.peers[name];
-	var index = info ? info.indexOf(conn) : -1;
+	var list = this.peers[name];
+	var index = list ? list.indexOf(conn) : -1;
 
 	if (index === -1) {
 		return;
 	}
 
-	info.splice(index, 1);
+	list.splice(index, 1);
 };
 
 TChannel.prototype.getPeers = function () {
