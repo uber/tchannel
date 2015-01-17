@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+'use strict';
+
 var parserMod = require('./parser');
 var TChannelParser = parserMod.TChannelParser;
 var TChannelFrame = parserMod.TChannelFrame;
@@ -57,6 +59,7 @@ function TChannel(options) {
 	this.peers = {};
 
 	this.endpoints = {};
+	this.destroyed = false;
 
 	this.serverSocket = new net.createServer();
 	this.serverSocket.listen(this.port, this.host);
@@ -80,11 +83,66 @@ TChannel.prototype.register = function (op, callback) {
 	this.endpoints[op] = callback;
 };
 
+TChannel.prototype.setPeer = function (name, conn) {
+	var list = this.peers[name];
+	if (list) {
+		list = this.peers[name] = [];
+	}
+
+	if (conn.direction === 'out') {
+		list.unshift(conn);
+	} else {
+		list.push(conn);
+	}
+};
+TChannel.prototype.getPeer = function (name) {
+	var list = this.peers[name];
+	return list ? list[0] : null;
+};
+
+TChannel.prototype.removePeer = function (name, conn) {
+	var list = this.peers[name];
+	var index = list ? list.indexOf(conn) : -1;
+
+	if (index === -1) {
+		return;
+	}
+
+	list.splice(index, 1);
+};
+
+TChannel.prototype.getPeers = function () {
+	var keys = Object.keys(this.peers);
+
+	var peers = [];
+	for (var i = 0; i < keys.length; i++) {
+		var list = this.peers[keys[i]];
+
+		for (var j = 0; j < list.length; j++) {
+			peers.push(list[j]);
+		}
+	}
+
+	return peers;
+};
+
 TChannel.prototype.addPeer = function (name, connection) {
-	this.peers[name] = connection;
+	if (this.getPeer(name) !== connection) {
+		this.logger.warn('allocated a connection twice', {
+			name: name,
+			direction: connection.direction
+		});
+	}
+
+	this.logger.debug('alloc peer', {
+		source: this.name,
+		destination: name,
+		direction: connection.direction
+	});
+	this.setPeer(name, connection);
 	var self = this;
 	connection.on('reset', function (err) {
-		delete self.peers[name];
+		self.removePeer(name, connection);
 	});
 	connection.on('socketClose', function (conn, err) {
 		self.emit('socketClose', conn, err);
@@ -93,14 +151,22 @@ TChannel.prototype.addPeer = function (name, connection) {
 };
 
 TChannel.prototype.send = function (options, arg1, arg2, arg3, callback) {
-	var dest = options.host;
-
-	if (this.peers[dest]) {
-		this.peers[dest].send(options, arg1, arg2, arg3, callback);
-	} else {
-		this.addPeer(dest, this.makeOutConnection(dest));
-		this.peers[dest].send(options, arg1, arg2, arg3, callback);
+	if (this.destroyed) {
+		throw new Error('cannot send() to destroyed tchannel');
 	}
+
+	var dest = options.host;
+	if (!dest || dest.indexOf(':') === -1) {
+		throw new Error('cannot send() without options.host');
+	}
+
+	var peer = this.getPeer(dest);
+	if (!peer) {
+		this.addPeer(dest, this.makeOutConnection(dest));
+		peer = this.getPeer(dest);
+	}
+
+	peer.send(options, arg1, arg2, arg3, callback);
 };
 
 TChannel.prototype.makeOutConnection = function (dest) {
@@ -113,26 +179,34 @@ TChannel.prototype.makeOutConnection = function (dest) {
 
 TChannel.prototype.quit = function (callback) {
 	var self = this;
-	var peerKeys = Object.keys(this.peers);
-	var counter = peerKeys.length + 1;
+	this.destroyed = true;
+	var peers = this.getPeers();
+	var counter = peers.length + 1;
 
-	peerKeys.forEach(function (peer) {
-		var conn = self.peers[peer];
+	this.logger.debug('quitting tchannel', {
+		name: this.name
+	});
+
+	peers.forEach(function (conn) {
 		var sock = conn.socket;
-		sock.once('end', onEnd);
+		sock.once('close', onClose);
 
 		if (conn.timer) {
 			self.clearTimeout(conn.timer);
 		}
 
+		self.logger.debug('destroy channel for', {
+			peer: conn.remoteName,
+			fromAddress: sock.address()
+		});
 		conn.closing = true;
 		conn.resetAll(new Error('shutdown from quit'));
 		sock.end();
 	});
 
-	onEnd();
+	onClose();
 
-	function onEnd() {
+	function onClose() {
 		if (--counter === 0 && typeof callback === 'function') {
 			callback();
 		}
@@ -245,6 +319,14 @@ TChannelConnection.prototype.onTimeoutCheck = function () {
 	var now = this.channel.now();
 	for (var i = 0; i < opKeys.length ; i++) {
 		var op = this.outOps[opKeys[i]];
+		if (op === undefined) {
+			this.channel.logger
+				.warn('unexpected undefined operation', {
+					key: opKeys[i],
+					op: op
+				});
+			continue;
+		}
 		var timeout = op.options.timeout || this.channel.reqTimeoutDefault;
 		var duration = now - op.start;
 		if (duration > timeout) {
@@ -269,6 +351,10 @@ TChannelConnection.prototype.resetAll = function (err) {
 	this.closing = true;
 	this.emit('reset');
 	var self = this;
+
+	if (this.timer) {
+		clearTimeout(this.timer);
+	}
 
 	// requests that we've received we can delete, but these reqs may have started their
 	//   own outgoing work, which is hard to cancel. By setting this.closing, we make sure
