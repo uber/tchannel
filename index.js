@@ -85,7 +85,7 @@ TChannel.prototype.register = function (op, callback) {
 
 TChannel.prototype.setPeer = function (name, conn) {
 	var list = this.peers[name];
-	if (list) {
+	if (!list) {
 		list = this.peers[name] = [];
 	}
 
