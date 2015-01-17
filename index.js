@@ -127,7 +127,8 @@ TChannel.prototype.getPeers = function () {
 };
 
 TChannel.prototype.addPeer = function (name, connection) {
-	if (this.getPeer(name) !== connection) {
+	var existingPeer = this.getPeer(name)
+	if (existingPeer !== null && existingPeer !== connection) {
 		this.logger.warn('allocated a connection twice', {
 			name: name,
 			direction: connection.direction
