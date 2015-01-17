@@ -156,6 +156,9 @@ TChannel.prototype.send = function (options, arg1, arg2, arg3, callback) {
 	}
 
 	var dest = options.host;
+	if (!dest || dest.indexOf(':') === -1) {
+		throw new Error('cannot send() without options.host');
+	}
 
 	var peer = this.getPeer(dest);
 	if (!peer) {
