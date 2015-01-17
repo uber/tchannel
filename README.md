@@ -71,8 +71,8 @@ process.
 
 ## Further examples
 
- - [example1.js](example1.js)
- - [example2.js](example2.js)
+ - [example1.js](examples/example1.js)
+ - [example2.js](examples/example2.js)
 
 ## Installation
 
