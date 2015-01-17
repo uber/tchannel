@@ -83,90 +83,62 @@ TChannel.prototype.register = function (op, callback) {
 	this.endpoints[op] = callback;
 };
 
-TChannel.prototype.setPeer = function (name, conn, opts) {
+TChannel.prototype.setPeer = function (name, conn) {
 	if (!this.peers[name]) {
-		this.peers[name] = {
-			incoming: [],
-			outgoing: []
-		}
+		this.peers[name] = []
 	}
 
-	var isIncoming = opts && opts.incoming;
-	if (isIncoming) {
-		this.peers[name].incoming.push(conn);
+	if (conn.direction === 'out') {
+		this.peers[name].unshift(conn);
 	} else {
-		this.peers[name].outgoing.push(conn);
+		this.peers[name].push(conn);
 	}
 };
 TChannel.prototype.getPeer = function (name) {
-	var info = this.peers[name];
-	if (!info) {
-		return null;
-	}
-
-	return info.outgoing[0] || info.incoming[0];
+	var list = this.peers[name];
+	return list ? list[0] : null;
 };
 
 TChannel.prototype.removePeer = function (name, conn) {
 	var info = this.peers[name];
-	if (!info) {
-		return null;
+	var index = info ? info.indexOf(conn) : -1;
+
+	if (index === -1) {
+		return;
 	}
 
-	var outgoing = info.outgoing;
-	var incoming = info.incoming;
-
-	for (var i = 0; i < outgoing.length; i++) {
-		if (outgoing[i] === conn) {
-			outgoing.splice(i, 1);
-			return;
-		}
-	}
-
-	for (var j = 0; j < incoming.length; j++) {
-		if (incoming[j] === conn) {
-			incoming.splice(j, 1);
-			return;
-		}
-	}
+	info.splice(index, 1);
 };
 
 TChannel.prototype.getPeers = function () {
 	var keys = Object.keys(this.peers);
+
 	var peers = [];
 	for (var i = 0; i < keys.length; i++) {
-		var info = this.peers[keys[i]];
+		var list = this.peers[keys[i]];
 
-		var incoming = info.incoming;
-		var outgoing = info.outgoing;
-
-		for (var j = 0; j < incoming.length; j++) {
-			peers.push(incoming[j]);
-		}
-
-		for (var k = 0; k < outgoing.length; k++) {
-			peers.push(outgoing[k]);
+		for (var j = 0; j < list.length; j++) {
+			peers.push(list[j]);
 		}
 	}
+
 	return peers;
 };
 
-TChannel.prototype.addPeer = function (name, connection, opts) {
+TChannel.prototype.addPeer = function (name, connection) {
 	if (this.getPeer(name) !== connection) {
 		this.logger.warn('allocated a connection twice', {
 			name: name,
-			incoming: opts && opts.incoming
+			direction: connection.direction
 		});
-		// this.peers[name].socket.destroy();
-		// return;
 	}
 
 	this.logger.debug('alloc peer', {
 		source: this.name,
 		destination: name,
-		incoming: opts && opts.incoming
+		direction: connection.direction
 	});
-	this.setPeer(name, connection, opts);
+	this.setPeer(name, connection);
 	var self = this;
 	connection.on('reset', function (err) {
 		self.removePeer(name, connection);
@@ -437,9 +409,7 @@ TChannelConnection.prototype.onIdentify = function (frame) {
 	var str1 = frame.arg1.toString();
 	var str2 = frame.arg2.toString();
 	if (str1 === 'TChannel identify') {
-		this.channel.addPeer(str2, this, {
-			incoming: true
-		});
+		this.channel.addPeer(str2, this);
 		this.channel.emit('identified', str2);
 		return true;
 	}
