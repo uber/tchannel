@@ -65,6 +65,9 @@ function TChannelFrame() {
 }
 
 TChannelFrame.prototype.set = function (arg1, arg2, arg3) {
+	if (arg1 === undefined || arg1 === null) {
+		arg1 = '';
+	}
 	if (arg2 === undefined || arg2 === null) {
 		arg2 = '';
 	}
