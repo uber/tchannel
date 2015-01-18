@@ -13,7 +13,8 @@ type Timers : {
 
 type IP : String
 type HostInfo : String
-type TChannelValue : Buffer | String | Object | Any
+type TChannelValue :
+    Buffer | String | Object | null | undefined | Any
 type TChannelCallback : (
     err?: Error,
     res1: TChannelValue,
