@@ -10,6 +10,8 @@ test('send() to a server', function t(assert) {
     var cluster = allocCluster();
 
     cluster.one.register('foo', function foo(h, b, hi, cb) {
+        assert.ok(Buffer.isBuffer(h));
+        assert.ok(Buffer.isBuffer(b));
         cb(null, h, b);
     });
 
