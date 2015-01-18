@@ -42,8 +42,8 @@ type TChannel : {
         arg3: TChannelValue,
         cb: (
             err?: Error,
-            res1: Buffer,
-            res2: Buffer
+            res1: Buffer | null,
+            res2: Buffer | null
         ) => void
     ) => void,
     quit: (Callback<Error>) => void,
