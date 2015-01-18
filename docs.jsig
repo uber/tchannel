@@ -16,24 +16,22 @@ type HostInfo : String
 type TChannelValue :
     Buffer | String | Object | null | undefined | Any
 
-type TChannelFunc : (
-    arg1: Buffer,
-    arg2: Buffer,
-    hostInfo: HostInfo,
-    cb: (
-        err?: Error,
-        res1: TChannelValue,
-        res2: TChannelValue
-    ) => void
-) => void
-
 type TChannelConnection : {
     direction: "in" | "out",
     remoteAddr: HostInfo
 }
 
 type TChannel : {
-    register: (op: String, fn: TChannelFunc),
+    register: (op: String, fn: (
+        arg1: Buffer,
+        arg2: Buffer,
+        hostInfo: HostInfo,
+        cb: (
+            err?: Error,
+            res1: TChannelValue,
+            res2: TChannelValue
+        ) => void
+    ) => void) => void,
     send: (
         options: {
             host: HostInfo,
