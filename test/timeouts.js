@@ -3,7 +3,7 @@
 var test = require('tape');
 var TimeMock = require('time-mock');
 
-var TChannel = require('../index.js');
+var allocCluster = require('./lib/alloc-cluster.js');
 
 test('requests will timeout', function t(assert) {
     var timers = TimeMock(Date.now());
@@ -43,39 +43,3 @@ test('requests will timeout', function t(assert) {
         // do not call cb();
     }
 });
-
-function allocCluster(opts) {
-    opts = opts || {};
-    var portOne = randomPort();
-    var portTwo = randomPort();
-
-    var one = TChannel({
-        host: 'localhost',
-        port: portOne,
-        timers: opts.timers
-    });
-    var two = TChannel({
-        host: 'localhost',
-        port: portTwo,
-        timers: opts.timers
-    });
-
-    return {
-        one: one,
-        two: two,
-        hosts: {
-            one: 'localhost:' + portOne,
-            two: 'localhost:' + portTwo
-        },
-        destroy: destroy
-    };
-
-    function destroy() {
-        one.quit();
-        two.quit();
-    }
-}
-
-function randomPort() {
-    return 20000 + Math.floor(Math.random() * 20000);
-}
