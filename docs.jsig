@@ -15,17 +15,16 @@ type IP : String
 type HostInfo : String
 type TChannelValue :
     Buffer | String | Object | null | undefined | Any
-type TChannelCallback : (
-    err?: Error,
-    res1: TChannelValue,
-    res2: TChannelValue
-) => void
 
 type TChannelFunc : (
     arg1: Buffer,
     arg2: Buffer,
     hostInfo: HostInfo,
-    cb: TChannelCallback
+    cb: (
+        err?: Error,
+        res1: TChannelValue,
+        res2: TChannelValue
+    ) => void
 ) => void
 
 type TChannelConnection : {
@@ -43,7 +42,11 @@ type TChannel : {
         arg1: Buffer | String,
         arg2: TChannelValue,
         arg3: TChannelValue,
-        cb: TChannelCallback
+        cb: (
+            err?: Error,
+            res1: Buffer,
+            res2: Buffer
+        ) => void
     ) => void,
     quit: (Callback<Error>) => void,
 
