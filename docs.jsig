@@ -1,0 +1,64 @@
+type Logger : {
+    debug: (String, Object) => void,
+    info: (String, Object) => void,
+    warn: (String, Object) => void,
+    error: (String, Object) => void,
+    fatal: (String, Object) => void
+}
+type Timers : {
+    setTimeout: (Function, timeout: Number) => id: Number,
+    clearTimeout: (id: Number) => void,
+    now: () => timestamp: Number
+}
+
+type IP : String
+type HostInfo : String
+type TChannelValue : Buffer | String | Object | Any
+type TChannelCallback : (
+    err?: Error,
+    res1: TChannelValue,
+    res2: TChannelValue
+) => void
+
+type TChannelFunc : (
+    arg1: Buffer,
+    arg2: Buffer,
+    hostInfo: HostInfo,
+    cb: TChannelCallback
+) => void
+
+type TChannelConnection : {
+    direction: "in" | "out",
+    remoteAddr: HostInfo
+}
+
+type TChannel : {
+    register: (op: String, fn: TChannelFunc),
+    send: (
+        options: {
+            host: HostInfo,
+            timeout?: Number
+        },
+        arg1: Buffer | String,
+        arg2: TChannelValue,
+        arg3: TChannelValue,
+        cb: TChannelCallback
+    ) => void,
+    quit: (Callback<Error>) => void,
+
+    getPeer: (name: HostInfo) => TChannelConnection,
+    getPeers: () => Array<TChannelConnection>,
+
+    name: HostInfo
+}
+
+tchannel : (options: {
+    host: IP,
+    port: Number,
+    logger?: Logger,
+    timers?: Timers,
+
+    reqTimeoutDefault?: Number,
+    timeoutCheckInterval?: Number,
+    timeoutFuzz?: Number
+}) => TChannel
