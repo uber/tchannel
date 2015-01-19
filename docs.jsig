@@ -13,19 +13,8 @@ type Timers : {
 
 type IP : String
 type HostInfo : String
-type TChannelValue : Buffer | String | Object | Any
-type TChannelCallback : (
-    err?: Error,
-    res1: TChannelValue,
-    res2: TChannelValue
-) => void
-
-type TChannelFunc : (
-    arg1: Buffer,
-    arg2: Buffer,
-    hostInfo: HostInfo,
-    cb: TChannelCallback
-) => void
+type TChannelValue :
+    Buffer | String | Object | null | undefined | Any
 
 type TChannelConnection : {
     direction: "in" | "out",
@@ -33,7 +22,16 @@ type TChannelConnection : {
 }
 
 type TChannel : {
-    register: (op: String, fn: TChannelFunc),
+    register: (op: String, fn: (
+        arg1: Buffer,
+        arg2: Buffer,
+        hostInfo: HostInfo,
+        cb: (
+            err?: Error,
+            res1: TChannelValue,
+            res2: TChannelValue
+        ) => void
+    ) => void) => void,
     send: (
         options: {
             host: HostInfo,
@@ -42,7 +40,11 @@ type TChannel : {
         arg1: Buffer | String,
         arg2: TChannelValue,
         arg3: TChannelValue,
-        cb: TChannelCallback
+        cb: (
+            err?: Error,
+            res1: Buffer | null,
+            res2: Buffer | null
+        ) => void
     ) => void,
     quit: (Callback<Error>) => void,
 
