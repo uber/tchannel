@@ -502,7 +502,9 @@ TChannelServerOp.prototype.onResponse = function (err, res1, res2) {
 
 	var newFrame = new TChannelFrame();
 	if (err) {
-		newFrame.set(err.message, null, null);
+		var isError = typeof err === 'object' &&
+			(Object.prototype.toString.call(err) === '[object Error]' || err instanceof Error);
+		newFrame.set(isError ? err.message : err, null, null);
 		newFrame.header.type = types.res_error;
 	} else {
 		newFrame.set(this.reqFrame.arg1, res1, res2);
