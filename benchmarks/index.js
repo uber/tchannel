@@ -18,44 +18,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-var TChannel = require('../index');
-var server = new TChannel({listen: '127.0.0.1', port: 4040});
+'use strict';
 
-var keys = {};
+var childProcess = require('child_process');
+var path = require('path');
 
-server.on('socketClose', function (conn, err) {
-	console.log('socket close: ' + conn.remoteName + ' ' + err);
-});
+var server = path.join(__dirname, 'bench_server.js');
+var bench = path.join(__dirname, 'multi_bench.js');
 
-server.register('ping', function onPing(arg1, arg2, hostInfo, pingCb) {
-	pingCb(null, 'pong', null);
-});
+var serverProc = childProcess.spawn('node', [server]);
 
-function safeParse(str) {
-	try {
-		return JSON.parse(str);
-	} catch (e) {
-		return null;
-	}
-}
+serverProc.stdout.pipe(process.stderr);
+serverProc.stderr.pipe(process.stderr);
 
-server.register('set', function onSet(arg1, arg2, hostInfo, setCb) {
-	var parts = safeParse(arg1.toString('utf8'));
-	keys[parts[0]] = parts[1];
-	setCb(null, 'ok', 'really ok');
-});
+setTimeout(function nextProc() {
+    var benchProc = childProcess.spawn('node', [bench]);
 
-server.register('get', function onGet(arg1, arg2, hostInfo, getCb) {
-	var str = arg1.toString('utf8');
-	if (keys[str] !== undefined) {
-		getCb(null, keys[str].length, keys[str]);
-	} else {
-		getCb(new Error('key not found: ' + str));
-	}
-});
+    benchProc.stdout.pipe(process.stdout);
+    benchProc.stderr.pipe(process.stderr);
 
-// setInterval(function () {
-// 	Object.keys(keys).forEach(function (key) {
-// 		console.log(key + '=' + keys[key].length + ' bytes');
-// 	});
-// }, 1000);
+    benchProc.once('close', function onClose() {
+        serverProc.kill();
+    });
+}, 500);

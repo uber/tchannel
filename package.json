@@ -4,7 +4,8 @@
   "author": "mranney@uber.com",
   "version": "1.2.3",
   "scripts": {
-    "test": "node test/index.js"
+    "test": "node test/index.js",
+    "benchmark": "node benchmarks/index.js"
   },
   "repository": {
     "type": "git",
