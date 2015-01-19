@@ -502,9 +502,8 @@ TChannelServerOp.prototype.onResponse = function (err, res1, res2) {
 
 	var newFrame = new TChannelFrame();
 	if (err) {
-		// Checks for isObject and isError copied from core-util-is package.
-		var isObject = typeof err === 'object' && err !== null;
-		var isError = isObject && (Object.prototype.toString.call(err) === '[object Error]' || err instanceof Error);
+		var isError = typeof err === 'object' &&
+			(Object.prototype.toString.call(err) === '[object Error]' || err instanceof Error);
 		newFrame.set(isError ? err.message : err, null, null);
 		newFrame.header.type = types.res_error;
 	} else {
