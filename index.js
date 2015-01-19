@@ -32,7 +32,6 @@ var globalNow = Date.now;
 var farmhash = require('farmhash');
 var net = require('net');
 var inspect = require('util').inspect;
-var isError = require('util').isError;
 
 function TChannel(options) {
 	if (!(this instanceof TChannel)) {
@@ -503,7 +502,10 @@ TChannelServerOp.prototype.onResponse = function (err, res1, res2) {
 
 	var newFrame = new TChannelFrame();
 	if (err) {
-		newFrame.set(isError(err) ? err.message : err, null, null);
+        // Checks for isObject and isError copied from core-util-is package.
+        var isObject = typeof err === 'object' && err !== null;
+        var isError = isObject && (Object.prototype.toString.call(err) === '[object Error]' || err instanceof Error);
+		newFrame.set(isError ? err.message : err, null, null);
 		newFrame.header.type = types.res_error;
 	} else {
 		newFrame.set(this.reqFrame.arg1, res1, res2);
