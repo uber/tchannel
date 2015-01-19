@@ -12,11 +12,11 @@
     "url": "gh:uber/tchannel"
   },
   "dependencies": {
-    "farmhash": "^0.2.0",
-    "metrics": "^0.1.8"
+    "farmhash": "^0.2.0"
   },
   "devDependencies": {
     "jshint": "^2.5.6",
+    "metrics": "^0.1.8",
     "tape": "^3.0.3",
     "time-mock": "^0.1.2"
   }

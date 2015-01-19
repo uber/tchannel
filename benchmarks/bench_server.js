@@ -24,7 +24,7 @@ var server = new TChannel({listen: '127.0.0.1', port: 4040});
 var keys = {};
 
 server.on('socketClose', function (conn, err) {
-	console.log('socket close: ' + conn.remoteName + ' ' + err);
+	// console.log('socket close: ' + conn.remoteName + ' ' + err);
 });
 
 server.register('ping', function onPing(arg1, arg2, hostInfo, pingCb) {
