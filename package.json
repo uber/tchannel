@@ -5,7 +5,11 @@
   "version": "1.2.4",
   "scripts": {
     "test": "node test/index.js",
-    "benchmark": "node benchmarks/index.js"
+    "benchmark": "node benchmarks/index.js",
+    "cover": "istanbul cover --print detail --report html -- test/index.js",
+    "view-cover": "opn coverage/index.html",
+    "check-licence": "uber-licence --dry",
+    "add-licence": "uber-licence"
   },
   "repository": {
     "type": "git",
@@ -15,9 +19,18 @@
     "farmhash": "^0.2.0"
   },
   "devDependencies": {
+    "istanbul": "^0.3.5",
     "jshint": "^2.5.6",
     "metrics": "^0.1.8",
+    "opn": "^1.0.1",
+    "pre-commit": "0.0.9",
     "tape": "^3.0.3",
-    "time-mock": "^0.1.2"
-  }
+    "time-mock": "^0.1.2",
+    "uber-licence": "git+ssh://git@github.com:uber/uber-licence"
+  },
+  "pre-commit": [
+    "test",
+    "check-licence"
+  ],
+  "pre-commit.silent": true
 }
