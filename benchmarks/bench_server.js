@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-var TChannel = require('./index');
+var TChannel = require('../index');
 var server = new TChannel({listen: '127.0.0.1', port: 4040});
 
 var keys = {};

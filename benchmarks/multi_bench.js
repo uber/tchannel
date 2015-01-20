@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-var TChannel = require("./index"),
+var TChannel = require("../index"),
     metrics = require("metrics"),
     num_clients = parseInt(process.argv[2], 10) || 5,
     num_requests = 20000,
