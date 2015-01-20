@@ -4,18 +4,19 @@
   "author": "mranney@uber.com",
   "version": "1.2.4",
   "scripts": {
-    "test": "node test/index.js"
+    "test": "node test/index.js",
+    "benchmark": "node benchmarks/index.js"
   },
   "repository": {
     "type": "git",
     "url": "gh:uber/tchannel"
   },
   "dependencies": {
-    "farmhash": "^0.2.0",
-    "metrics": "^0.1.8"
+    "farmhash": "^0.2.0"
   },
   "devDependencies": {
     "jshint": "^2.5.6",
+    "metrics": "^0.1.8",
     "tape": "^3.0.3",
     "time-mock": "^0.1.2"
   }
