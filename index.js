@@ -64,8 +64,7 @@ function TChannel(options) {
 	this.destroyed = false;
 
 	// TODO do not create a tcp server in the constructor
-	// We should make TChannel agnostic of a TCP server.
-	// We should move this into a method
+	// Doing IO in a constructor is bad. Move into a method.
 	this.serverSocket = new net.createServer();
 	// TODO do not call listen by default. We might want to
 	// seperate allocating a server from calling listen on it.
