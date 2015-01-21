@@ -40,7 +40,7 @@ All 4-byte integers are unsigned and in big-endian.
  - The next 4 bytes is the length of argument 2
  - The next 4 bytes is the length of argument 3
  - The next 4 bytes is the checksum of the first 3 args
- - The next N bytes is arg 2, N is based on the length of arg 1
+ - The next N bytes is arg 1, N is based on the length of arg 1
  - The next M bytes is arg 2, M is based on the length of arg 2
  - The next P bytes is arg 3, P is based on the length of arg 3
 
@@ -140,7 +140,7 @@ The frame id does not have to be unique. The current
 
 ## Protocol frame seq
 
-Each frame has a sequence number, this allows you to implement 
+Each frame has a sequence number, this allows you to implement
     streaming.
 
 The current implementation of `TChannel` doesn't implement
