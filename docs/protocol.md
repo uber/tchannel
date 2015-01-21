@@ -31,6 +31,7 @@ A frame consists of a header and three arguments. At the byte
 /                              ARG3                             /
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 ```
+All 4-byte integers are unsigned and in big-endian.
 
  - The first byte is the frame type
  - The next 4 bytes are the frame id
@@ -38,10 +39,16 @@ A frame consists of a header and three arguments. At the byte
  - The next 4 bytes is the length of argument 1
  - The next 4 bytes is the length of argument 2
  - The next 4 bytes is the length of argument 3
- - The next 4 bytes is the checksum for the entire frame
+ - The next 4 bytes is the checksum of the first 3 args
  - The next N bytes is arg 2, N is based on the length of arg 1
  - The next M bytes is arg 2, M is based on the length of arg 2
  - The next P bytes is arg 3, P is based on the length of arg 3
+
+The checksum is computed as follows using [FarmHash](https://code.google.com/p/farmhash/source/browse/trunk/src/farmhash.h#86)
+
+ - checksum = Hash32(arg1)
+ - if (len(arg2) > 0) { checksum = Hash32WithSeed(arg2, checksum)
+ - if (len(arg3) > 0) { checksum = Hash32WithSeed(arg3, checksum)
 
 ## Protocol frame type
 
