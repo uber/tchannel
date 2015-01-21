@@ -42,7 +42,6 @@ function TChannel(options) {
 
 	this.options = options || {};
 	this.logger = this.options.logger || nullLogger;
-	// TODO rename the options.host field to options.ip
 	// TODO do not default the host.
 	this.host = this.options.host || '127.0.0.1';
 	// TODO do not default the port.
