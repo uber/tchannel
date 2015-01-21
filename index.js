@@ -548,9 +548,6 @@ TChannelServerOp.prototype.onResponse = function (err, res1, res2) {
 		newFrame.set(isError(err) ? err.message : err, null, null);
 		newFrame.header.type = types.resError;
 	} else {
-		// TODO set a null buffer for arg1. I don't think we
-		// need to set the operation name we are responding to.
-		// The only reason I can think of is easy wire inspection
 		newFrame.set(this.reqFrame.arg1, res1, res2);
 		newFrame.header.type = types.resCompleteMessage;
 	}
