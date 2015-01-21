@@ -44,7 +44,7 @@ All 4-byte integers are unsigned and in big-endian.
  - The next M bytes is arg 2, M is based on the length of arg 2
  - The next P bytes is arg 3, P is based on the length of arg 3
 
-The checksum is computed as follows using [FarmHash][https://code.google.com/p/farmhash/source/browse/trunk/src/farmhash.h#86]
+The checksum is computed as follows using [FarmHash](https://code.google.com/p/farmhash/source/browse/trunk/src/farmhash.h#86)
 
  - checksum = Hash32(arg1)
  - if (len(arg2) > 0) { checksum = Hash32WithSeed(arg2, checksum)
