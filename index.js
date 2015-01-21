@@ -271,6 +271,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 	});
 	this.parser.on('error', function (err) {
 		// TODO this method is not implemented.
+		// We should close the connection.
 		self.onParserErr(err);
 	});
 
