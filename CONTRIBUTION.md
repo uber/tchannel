@@ -14,7 +14,8 @@ There are a few basic ground-rules for contributors:
  - Internal pull-requests to solicit feedback are encouraged for any other non-trivial contribution but left to the discretion of the contributor.
  - For significant changes wait a full 24 hours before merging so that active contributors who are distributed throughout the world have a chance to weigh in.
  - Contributors should attempt to adhere to the prevailing code-style.
-Releases
+
+## Releases
 
 Declaring formal releases requires peer review.
 
