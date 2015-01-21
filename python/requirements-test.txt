@@ -1,0 +1,9 @@
+# Testing and coverage
+pytest
+pytest-cov
+
+# Release tool
+zest.releaser
+
+# Syntax checker
+flake8==2.2.5
