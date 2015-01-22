@@ -2,7 +2,7 @@
   "name": "tchannel",
   "description": "network multiplexing and framing protocol for RPC or parser drag racing",
   "author": "mranney@uber.com",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "scripts": {
     "test": "node test/index.js",
     "benchmark": "node benchmarks/index.js",
