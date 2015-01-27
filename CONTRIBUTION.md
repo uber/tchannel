@@ -44,6 +44,12 @@ Even though collaborators may contribute as they see fit, if you are not sure wh
  - A new release version get's cut.
  - (Disclaimer: Your feature might get rejected.)
 
+## Licencing
+
+ - Every file must have a licence block at the top. This is enforced using `uber-licence`
+ - If you contribute to a file in this project and are not an uber employee then you should
+add your name to the licence file.
+
 ### Changes to this arrangement
 
 This is an experiment and feedback is welcome! This document may also be subject to pull-requests or changes by contributors where you believe you have something valuable to add or change.
