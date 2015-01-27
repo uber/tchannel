@@ -13,7 +13,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "gh:uber/tchannel"
+    "url": "git@github.com:uber/tchannel"
   },
   "dependencies": {
     "farmhash": "^0.2.0"
