@@ -17,3 +17,19 @@ Before you get started, here are some suggestions:
  - If you contribute to a file in this project and are not an Uber employee, then you should
 add your name to the copyright section of the licence file.
  - Work that you contribute must be your own.
+
+## Releases
+
+Declaring formal releases requires peer review.
+
+ - A reviewer of a pull request should recommend a new version number (patch, minor or major).
+ - Once your change is merged feel free to bump the version as recommended by the reviewer.
+ - A new version number should not be cut without peer review unless done by the project maintainer.
+
+### Cutting a new version
+
+ - Get your branch merged on master
+ - Run `npm version major` or `npm version minor` or `npm version patch`
+ - `git push origin master --tags`
+ - If you are a project owner, then `npm publish`
+
