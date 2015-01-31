@@ -540,25 +540,25 @@ TChannelConnection.prototype.onFrame = function (frame) {
 };
 
 TChannelConnection.prototype.handleResCompleteMessage = function (frame) {
-	var op = this.outOps[frame.header.id];
+	this.completeOutOp(frame.header.id, null, frame.arg2, frame.arg3);
+};
+
+TChannelConnection.prototype.handleResError = function (frame) {
+	var err = new Error(frame.arg1);
+	this.completeOutOp(frame.header.id, err, null, null);
+};
+
+TChannelConnection.prototype.completeOutOp = function (id, err, arg1, arg2) {
+	var op = this.outOps[id];
 	if (op) {
-		delete this.outOps[frame.header.id];
+		delete this.outOps[id];
 		this.outPending--;
-		op.callback(null, frame.arg2, frame.arg3);
+		op.callback(err, arg1, arg2);
 	}
 	// TODO else case. We should warn about an incoming response
 	// for an operation we did not send out.
 	// This could be because of a timeout or could be because
 	// of a confused / corrupted server.
-};
-
-TChannelConnection.prototype.handleResError = function (frame) {
-	var op = this.outOps[frame.header.id];
-	if (op) {
-		delete this.outOps[frame.header.id];
-		this.outPending--;
-		return op.callback(new Error(frame.arg1), null, null);
-	}
 };
 
 TChannelConnection.prototype.sendResFrame = function(frame) {
