@@ -84,6 +84,10 @@ TChannel.prototype.register = function (op, callback) {
 };
 
 TChannel.prototype.setPeer = function (name, conn) {
+	if (name === this.name) {
+		throw new Error('refusing to set self peer');
+	}
+
 	var list = this.peers[name];
 	if (!list) {
 		list = this.peers[name] = [];
@@ -128,6 +132,10 @@ TChannel.prototype.getPeers = function () {
 };
 
 TChannel.prototype.addPeer = function (name, connection) {
+	if (name === this.name) {
+		throw new Error('refusing to add self peer');
+	}
+
 	var existingPeer = this.getPeer(name);
 	if (existingPeer !== null && existingPeer !== connection) {
 		this.logger.warn('allocated a connection twice', {
@@ -228,6 +236,9 @@ TChannel.prototype.quit = function (callback) {
 
 function TChannelConnection(channel, socket, direction, remoteAddr) {
 	var self = this;
+	if (remoteAddr === channel.name) {
+		throw new Error('refusing to create self connection');
+	}
 
 	this.channel = channel;
 	this.logger = this.channel.logger;
