@@ -84,8 +84,10 @@ function TChannel(options) {
 		self.logger.warn('server socket close');
 	});
 	this.serverSocket.on('connection', function (sock) {
-		var remoteAddr = sock.remoteAddress + ':' + sock.remotePort;
-		return new TChannelConnection(self, sock, 'in', remoteAddr);
+		if (!self.destroyed) {
+			var remoteAddr = sock.remoteAddress + ':' + sock.remotePort;
+			return new TChannelConnection(self, sock, 'in', remoteAddr);
+		}
 	});
 }
 require('util').inherits(TChannel, require('events').EventEmitter);
