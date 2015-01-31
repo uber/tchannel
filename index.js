@@ -313,10 +313,10 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 		}
 	});
 	this.socket.on('error', function (err) {
-		self.onSocketErr('error', err);
+		self.onSocketErr(err);
 	});
 	this.socket.on('close', function () {
-		self.onSocketErr('close');
+		self.onSocketErr(new Error('socket closed'));
 	});
 
 	this.parser.on('frame', function (frame) {
@@ -456,17 +456,12 @@ TChannelConnection.prototype.resetAll = function (err) {
 	this.emit('socketClose', this, err);
 };
 
-TChannelConnection.prototype.onSocketErr = function (type, err) {
+TChannelConnection.prototype.onSocketErr = function (err) {
 	if (this.closing) {
 		return;
 	}
 	this.closing = true;
-	var message;
-	if (type === 'error') {
-		message = err.message;
-	} else {
-		message = 'socket closed';
-	}
+	var message = err.message;
 	this.resetAll(new Error(message));
 };
 
