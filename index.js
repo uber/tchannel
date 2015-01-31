@@ -291,9 +291,9 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 
 	this.remoteName = null; // filled in by identify message
 
-	this.inOps = {};
+	this.inOps = Object.create(null);
 	this.inPending = 0;
-	this.outOps = {};
+	this.outOps = Object.create(null);
 	this.outPending = 0;
 
 	this.lastSentMessage = 0;
