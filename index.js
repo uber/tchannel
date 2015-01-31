@@ -161,7 +161,6 @@ TChannel.prototype.addPeer = function (name, connection) {
 	connection.on('socketClose', function (conn, err) {
 		self.emit('socketClose', conn, err);
 	});
-	connection.remoteName = name;
 	return this.setPeer(name, connection);
 };
 
@@ -189,7 +188,6 @@ TChannel.prototype.makeOutConnection = function (dest) {
 	var parts = dest.split(':');
 	var socket = net.createConnection({host: parts[0], port: parts[1]});
 	var connection = new TChannelConnection(this, socket, 'out', dest);
-	connection.remoteName = dest;
 	return connection;
 };
 
@@ -300,6 +298,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 				return;
 			}
 			var remote = res1.toString();
+			self.remoteName = remote;
 			self.channel.emit('identified', remote);
 		});
 	}
@@ -437,6 +436,7 @@ TChannelConnection.prototype.onIdentify = function (frame) {
 	var str1 = frame.arg1.toString();
 	var str2 = frame.arg2.toString();
 	if (str1 === 'TChannel identify') {
+		this.remoteName = str2;
 		this.channel.addPeer(str2, this);
 		this.channel.emit('identified', str2);
 		return true;
