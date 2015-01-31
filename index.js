@@ -30,7 +30,6 @@ var globalClearTimeout = require('timers').clearTimeout;
 var globalSetTimeout = require('timers').setTimeout;
 var globalNow = Date.now;
 var globalRandom = Math.random;
-var farmhash = require('farmhash');
 var net = require('net');
 var inspect = require('util').inspect;
 
@@ -472,13 +471,7 @@ TChannelConnection.prototype.onSocketErr = function (type, err) {
 };
 
 TChannelConnection.prototype.validateChecksum = function (frame) {
-	var actual = farmhash.hash32(frame.arg1);
-	if (frame.arg2.length > 0) {
-		actual = farmhash.hash32WithSeed(frame.arg2, actual);
-	}
-	if (frame.arg3.length > 0) {
-		actual = farmhash.hash32WithSeed(frame.arg3, actual);
-	}
+	var actual = frame.checksum();
 	var expected = frame.header.csum;
 	if (expected !== actual) {
 		this.logger.warn('server checksum validation failed ' + expected + ' vs ' + actual);
