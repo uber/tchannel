@@ -192,14 +192,18 @@ TChannel.prototype.send = function (options, arg1, arg2, arg3, callback) {
 		throw new Error('cannot send() without options.host');
 	}
 
+	var peer = this.getOutConnection(dest);
+	peer.send(options, arg1, arg2, arg3, callback);
+};
+/* jshint maxparams:4 */
+
+TChannel.prototype.getOutConnection = function (dest) {
 	var peer = this.getPeer(dest);
 	if (!peer) {
 		peer = this.addPeer(dest);
 	}
-
-	peer.send(options, arg1, arg2, arg3, callback);
+	return peer;
 };
-/* jshint maxparams:4 */
 
 TChannel.prototype.makeSocket = function (dest) {
 	var parts = dest.split(':');
