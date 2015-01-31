@@ -538,7 +538,9 @@ TChannelConnection.prototype.onFrame = function (frame) {
 	} else if (frame.header.type === types.resError) {
 		this.handleResError(frame);
 	} else {
-		this.logger.error('unknown type');
+		this.logger.error('unknown frame type', {
+			type: frame.header.type
+		});
 	}
 };
 
