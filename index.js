@@ -212,7 +212,9 @@ TChannel.prototype.quit = function (callback) {
 		}
 
 		self.logger.debug('destroy channel for', {
-			peer: conn.remoteName,
+			direction: conn.direction,
+			peerRemoteAddr: conn.remoteAddr,
+			peerRemoteName: conn.remoteName,
 			fromAddress: sock.address()
 		});
 		conn.closing = true;
