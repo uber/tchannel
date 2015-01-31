@@ -379,7 +379,7 @@ TChannelConnection.prototype.startTimeoutTimer = function () {
 
 TChannelConnection.prototype.clearTimeoutTimer = function () {
 	if (this.timer) {
-		clearTimeout(this.timer);
+		this.channel.clearTimeout(this.timer);
 		this.timer = null;
 	}
 };
