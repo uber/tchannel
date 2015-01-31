@@ -563,6 +563,10 @@ TChannelConnection.prototype.completeOutOp = function (id, err, arg1, arg2) {
 };
 
 TChannelConnection.prototype.sendResFrame = function(frame) {
+	if (this.closing) {
+		return;
+	}
+
 	var op = this.inOps[frame.header.id];
 	if (op) {
 		delete this.inOps[frame.header.id];
@@ -607,10 +611,6 @@ function TChannelServerOp(connection, handler, reqFrame) {
 }
 
 TChannelServerOp.prototype.onResponse = function (err, res1, res2) {
-	if (this.connection.closing) {
-		return;
-	}
-
 	var newFrame = new TChannelFrame();
 	if (err) {
 		// TODO should the error response contain a head ?
