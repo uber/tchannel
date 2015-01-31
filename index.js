@@ -288,6 +288,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 	this.socket = socket;
 	this.direction = direction;
 	this.remoteAddr = remoteAddr;
+	this.timer = null;
 
 	this.remoteName = null; // filled in by identify message
 
