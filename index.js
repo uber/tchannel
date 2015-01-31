@@ -296,6 +296,8 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 	this.outOps = Object.create(null);
 	this.outPending = 0;
 
+	this.localEndpoints = {};
+
 	this.lastSentMessage = 0;
 	this.lastTimeoutTime = 0;
 	this.closing = false;
@@ -323,10 +325,8 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 		self.onParserErr(err);
 	});
 
-	this.localEndpoints = {
-		'TChannel identify': function (arg1, arg2, hostInfo, cb) {
-			cb(null, self.channel.name, null);
-		}
+	this.localEndpoints['TChannel identify'] = function (arg1, arg2, hostInfo, cb) {
+		cb(null, self.channel.name, null);
 	};
 
 	if (direction === 'out') {
