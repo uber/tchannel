@@ -461,8 +461,7 @@ TChannelConnection.prototype.onSocketErr = function (err) {
 		return;
 	}
 	this.closing = true;
-	var message = err.message;
-	this.resetAll(new Error(message));
+	this.resetAll(err);
 };
 
 TChannelConnection.prototype.validateChecksum = function (frame) {
