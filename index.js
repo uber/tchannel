@@ -486,6 +486,23 @@ TChannelConnection.prototype.sendResFrame = function(frame) {
 	}
 };
 
+// send a req frame
+/* jshint maxparams:5 */
+TChannelConnection.prototype.send = function(options, arg1, arg2, arg3, callback) {
+	var frame = new TChannelFrame();
+
+	frame.set(arg1, arg2, arg3);
+	frame.header.type = types.reqCompleteMessage;
+	frame.header.id = ++this.lastSentMessage;
+	frame.header.seq = 0;
+
+	this.outOps[frame.header.id] = new TChannelClientOp(
+		options, frame, this.channel.now(), callback);
+	this.pendingCount++;
+	return this.socket.write(frame.toBuffer());
+};
+/* jshint maxparams:4 */
+
 function TChannelServerOp(connection, fn, reqFrame) {
 	this.connection = connection;
 	this.fn = fn;
@@ -517,23 +534,6 @@ TChannelServerOp.prototype.onResponse = function (err, res1, res2) {
 
 	return this.connection.sendResFrame(newFrame);
 };
-
-// send a req frame
-/* jshint maxparams:5 */
-TChannelConnection.prototype.send = function(options, arg1, arg2, arg3, callback) {
-	var frame = new TChannelFrame();
-
-	frame.set(arg1, arg2, arg3);
-	frame.header.type = types.reqCompleteMessage;
-	frame.header.id = ++this.lastSentMessage;
-	frame.header.seq = 0;
-
-	this.outOps[frame.header.id] = new TChannelClientOp(
-		options, frame, this.channel.now(), callback);
-	this.pendingCount++;
-	return this.socket.write(frame.toBuffer());
-};
-/* jshint maxparams:4 */
 
 function TChannelClientOp(options, frame, start, callback) {
 	this.options = options;
