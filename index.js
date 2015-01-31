@@ -521,9 +521,7 @@ TChannelServerOp.prototype.onResponse = function (err, res1, res2) {
 
 	var newFrame = new TChannelFrame();
 	if (err) {
-		var isError = typeof err === 'object' &&
-			(Object.prototype.toString.call(err) === '[object Error]' || err instanceof Error);
-		newFrame.set(isError ? err.message : err, null, null);
+		newFrame.set(isError(err) ? err.message : err, null, null);
 		newFrame.header.type = types.resError;
 	} else {
 		newFrame.set(this.reqFrame.arg1, res1, res2);
@@ -534,6 +532,12 @@ TChannelServerOp.prototype.onResponse = function (err, res1, res2) {
 
 	return this.connection.sendResFrame(newFrame);
 };
+
+function isError(obj) {
+	return typeof obj === 'object' && (
+		Object.prototype.toString.call(obj) === '[object Error]' ||
+		obj instanceof Error);
+}
 
 function TChannelClientOp(options, frame, start, callback) {
 	this.options = options;
