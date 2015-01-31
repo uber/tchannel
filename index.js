@@ -605,27 +605,38 @@ function TChannelServerOp(connection, handler, reqFrame) {
 	this.reqFrame = reqFrame;
 	
 	var self = this;
-	handler(reqFrame.arg2, reqFrame.arg3, connection.remoteName, function responseBind(err, res1, res2) {
-		self.onResponse(err, res1, res2);
-	});
+	handler(reqFrame.arg2, reqFrame.arg3, connection.remoteName, responseFrameBuilder(reqFrame, function responseBind(err, handlerErr, resFrame) {
+		self.onResponse(err, handlerErr, resFrame);
+	}));
 }
 
-TChannelServerOp.prototype.onResponse = function (err, res1, res2) {
-	var newFrame = new TChannelFrame();
-	if (err) {
-		// TODO should the error response contain a head ?
-		// Is there any value in sending meta data along with
-		// the error.
-		newFrame.set(isError(err) ? err.message : err, null, null);
-		newFrame.header.type = types.resError;
-	} else {
-		newFrame.set(this.reqFrame.arg1, res1, res2);
-		newFrame.header.type = types.resCompleteMessage;
-	}
-	newFrame.header.id = this.reqFrame.header.id;
-	newFrame.header.seq = 0;
+function responseFrameBuilder(reqFrame, callback) {
+	var id = reqFrame.header.id;
+	var arg1 = reqFrame.arg1;
+	return function (handlerErr, res1, res2) {
+		var resFrame = new TChannelFrame();
+		if (handlerErr) {
+			// TODO should the error response contain a head ?
+			// Is there any value in sending meta data along with
+			// the error.
+			resFrame.set(isError(handlerErr) ? handlerErr.message : handlerErr, null, null);
+			resFrame.header.type = types.resError;
+		} else {
+			resFrame.set(arg1, res1, res2);
+			resFrame.header.type = types.resCompleteMessage;
+		}
+		resFrame.header.id = id;
+		resFrame.header.seq = 0;
+		callback(null, handlerErr, resFrame);
+	};
+}
 
-	return this.connection.sendResFrame(newFrame);
+TChannelServerOp.prototype.onResponse = function (err, handlerErr, resFrame) {
+	if (err) {
+		this.connection.logger.error(err);
+	} else {
+		this.connection.sendResFrame(resFrame);
+	}
 };
 
 function isError(obj) {
