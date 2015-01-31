@@ -94,6 +94,7 @@ TChannel.prototype.setPeer = function (name, conn) {
 	} else {
 		list.push(conn);
 	}
+	return conn;
 };
 TChannel.prototype.getPeer = function (name) {
 	var list = this.peers[name];
