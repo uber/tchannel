@@ -616,6 +616,9 @@ function responseFrameBuilder(reqFrame, callback) {
 	var id = reqFrame.header.id;
 	var arg1 = reqFrame.arg1;
 	var sent = false;
+	var resFrame = new TChannelFrame();
+	resFrame.header.id = id;
+	resFrame.header.seq = 0;
 	return function (handlerErr, res1, res2) {
 		if (sent) {
 			return callback(new Error('response already sent', {
@@ -625,7 +628,6 @@ function responseFrameBuilder(reqFrame, callback) {
 			}));
 		}
 		sent = true;
-		var resFrame = new TChannelFrame();
 		if (handlerErr) {
 			// TODO should the error response contain a head ?
 			// Is there any value in sending meta data along with
@@ -636,8 +638,6 @@ function responseFrameBuilder(reqFrame, callback) {
 			resFrame.set(arg1, res1, res2);
 			resFrame.header.type = types.resCompleteMessage;
 		}
-		resFrame.header.id = id;
-		resFrame.header.seq = 0;
 		callback(null, handlerErr, resFrame);
 	};
 }
