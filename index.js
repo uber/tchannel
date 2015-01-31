@@ -127,7 +127,7 @@ TChannel.prototype.getPeers = function () {
 };
 
 TChannel.prototype.addPeer = function (name, connection) {
-	var existingPeer = this.getPeer(name)
+	var existingPeer = this.getPeer(name);
 	if (existingPeer !== null && existingPeer !== connection) {
 		this.logger.warn('allocated a connection twice', {
 			name: name,
@@ -142,7 +142,8 @@ TChannel.prototype.addPeer = function (name, connection) {
 	});
 	this.setPeer(name, connection);
 	var self = this;
-	connection.on('reset', function (err) {
+	connection.on('reset', function (/* err */) {
+		// TODO: log?
 		self.removePeer(name, connection);
 	});
 	connection.on('socketClose', function (conn, err) {
@@ -151,6 +152,7 @@ TChannel.prototype.addPeer = function (name, connection) {
 	connection.remoteName = name;
 };
 
+/* jshint maxparams:5 */
 TChannel.prototype.send = function (options, arg1, arg2, arg3, callback) {
 	if (this.destroyed) {
 		throw new Error('cannot send() to destroyed tchannel');
@@ -169,6 +171,7 @@ TChannel.prototype.send = function (options, arg1, arg2, arg3, callback) {
 
 	peer.send(options, arg1, arg2, arg3, callback);
 };
+/* jshint maxparams:4 */
 
 TChannel.prototype.makeOutConnection = function (dest) {
 	var parts = dest.split(':');
@@ -271,7 +274,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 	};
 
 	if (direction === 'out') {
-		this.send({}, 'TChannel identify', this.channel.name, null, function onOutIdentify(err, res1, res2) {
+		this.send({}, 'TChannel identify', this.channel.name, null, function onOutIdentify(err, res1/*, res2 */) {
 			if (err) {
 				return;
 			}
@@ -281,7 +284,6 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 	}
 
 	this.startTimeoutTimer();
-	var socket = this.socket;
 
 	socket.once('close', clearTimer);
 
@@ -432,7 +434,7 @@ TChannelConnection.prototype.onFrame = function (frame) {
 
 	this.lastTimeoutTime = 0;
 
-	if (frame.header.type === types.req_complete_message) {
+	if (frame.header.type === types.reqCompleteMessage) {
 		if (this.remoteName === null && this.onIdentify(frame) === false) {
 			return;
 		}
@@ -447,9 +449,9 @@ TChannelConnection.prototype.onFrame = function (frame) {
 		} else {
 			this.logger.error('error: not found');
 		}
-	} else if (frame.header.type === types.res_complete_message) {
+	} else if (frame.header.type === types.resCompleteMessage) {
 		this.handleResCompleteMessage(frame);
-	} else if (frame.header.type === types.res_error) {
+	} else if (frame.header.type === types.resError) {
 		this.handleResError(frame);
 	} else {
 		this.logger.error('error: unknown type');
@@ -505,10 +507,10 @@ TChannelServerOp.prototype.onResponse = function (err, res1, res2) {
 		var isError = typeof err === 'object' &&
 			(Object.prototype.toString.call(err) === '[object Error]' || err instanceof Error);
 		newFrame.set(isError ? err.message : err, null, null);
-		newFrame.header.type = types.res_error;
+		newFrame.header.type = types.resError;
 	} else {
 		newFrame.set(this.reqFrame.arg1, res1, res2);
-		newFrame.header.type = types.res_complete_message;
+		newFrame.header.type = types.resCompleteMessage;
 	}
 	newFrame.header.id = this.reqFrame.header.id;
 	newFrame.header.seq = 0;
@@ -517,11 +519,12 @@ TChannelServerOp.prototype.onResponse = function (err, res1, res2) {
 };
 
 // send a req frame
+/* jshint maxparams:5 */
 TChannelConnection.prototype.send = function(options, arg1, arg2, arg3, callback) {
 	var frame = new TChannelFrame();
 
 	frame.set(arg1, arg2, arg3);
-	frame.header.type = types.req_complete_message;
+	frame.header.type = types.reqCompleteMessage;
 	frame.header.id = ++this.lastSentMessage;
 	frame.header.seq = 0;
 
@@ -530,6 +533,7 @@ TChannelConnection.prototype.send = function(options, arg1, arg2, arg3, callback
 	this.pendingCount++;
 	return this.socket.write(frame.toBuffer());
 };
+/* jshint maxparams:4 */
 
 function TChannelClientOp(options, frame, start, callback) {
 	this.options = options;
