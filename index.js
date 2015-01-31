@@ -380,6 +380,10 @@ TChannelConnection.prototype.startTimeoutTimer = function () {
 // If the connection has some success and some timeouts, we should probably leave it up,
 // but if everything is timing out, then we should kill the connection.
 TChannelConnection.prototype.onTimeoutCheck = function () {
+	if (this.closing) {
+		return;
+	}
+
 	if (this.lastTimeoutTime) {
 		this.logger.warn(this.channel.name + ' destroying socket from timeouts');
 		this.socket.destroy();
