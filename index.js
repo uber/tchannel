@@ -201,9 +201,16 @@ TChannel.prototype.send = function (options, arg1, arg2, arg3, callback) {
 };
 /* jshint maxparams:4 */
 
-TChannel.prototype.makeOutConnection = function (dest) {
+TChannel.prototype.makeSocket = function (dest) {
 	var parts = dest.split(':');
-	var socket = net.createConnection({host: parts[0], port: parts[1]});
+	var host = parts[0];
+	var port = parts[1];
+	var socket = net.createConnection({host: host, port: port});
+	return socket;
+};
+
+TChannel.prototype.makeOutConnection = function (dest) {
+	var socket = this.makeSocket(dest);
 	var connection = new TChannelConnection(this, socket, 'out', dest);
 	return connection;
 };
