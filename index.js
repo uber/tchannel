@@ -141,7 +141,6 @@ TChannel.prototype.addPeer = function (name, connection) {
 		destination: name,
 		direction: connection.direction
 	});
-	this.setPeer(name, connection);
 	var self = this;
 	connection.on('reset', function (/* err */) {
 		// TODO: log?
@@ -151,6 +150,7 @@ TChannel.prototype.addPeer = function (name, connection) {
 		self.emit('socketClose', conn, err);
 	});
 	connection.remoteName = name;
+	return this.setPeer(name, connection);
 };
 
 /* jshint maxparams:5 */
