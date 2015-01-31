@@ -526,7 +526,9 @@ TChannelConnection.prototype.onFrame = function (frame) {
 			// TODO send back some kind of 404 message to the
 			// client. It's better if the client gets a not
 			// implemented error then a timeout error
-			this.logger.error('not found');
+			this.logger.error('no such operation', {
+				op: op
+			});
 		}
 	} else if (frame.header.type === types.resCompleteMessage) {
 		this.handleResCompleteMessage(frame);
