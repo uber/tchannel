@@ -400,11 +400,12 @@ TChannelConnection.prototype.onTimeoutCheck = function () {
 	var opKeys = Object.keys(this.outOps);
 	var now = this.channel.now();
 	for (var i = 0; i < opKeys.length ; i++) {
-		var op = this.outOps[opKeys[i]];
+		var opKey = opKeys[i];
+		var op = this.outOps[opKey];
 		if (op === undefined) {
 			this.channel.logger
 				.warn('unexpected undefined operation', {
-					key: opKeys[i],
+					key: opKey,
 					op: op
 				});
 			continue;
@@ -412,7 +413,7 @@ TChannelConnection.prototype.onTimeoutCheck = function () {
 		var timeout = op.options.timeout || this.channel.reqTimeoutDefault;
 		var duration = now - op.start;
 		if (duration > timeout) {
-			delete this.outOps[opKeys[i]];
+			delete this.outOps[opKey];
 			this.outPending--;
 			this.onReqTimeout(op);
 		}
