@@ -402,6 +402,12 @@ TChannelConnection.prototype.onTimeoutCheck = function () {
 	for (var i = 0; i < opKeys.length ; i++) {
 		var opKey = opKeys[i];
 		var op = this.outOps[opKey];
+		if (op.timedOut) {
+			delete this.outOps[opKey];
+			this.outPending--;
+			this.logger.warn('lingering timed-out outgoing operation');
+			continue;
+		}
 		if (op === undefined) {
 			this.channel.logger
 				.warn('unexpected undefined operation', {
