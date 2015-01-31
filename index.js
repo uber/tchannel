@@ -136,6 +136,10 @@ TChannel.prototype.addPeer = function (name, connection) {
 		throw new Error('refusing to add self peer');
 	}
 
+	if (!connection) {
+		connection = this.makeOutConnection(name);
+	}
+
 	var existingPeer = this.getPeer(name);
 	if (existingPeer !== null && existingPeer !== connection) {
 		this.logger.warn('allocated a connection twice', {
@@ -174,7 +178,7 @@ TChannel.prototype.send = function (options, arg1, arg2, arg3, callback) {
 
 	var peer = this.getPeer(dest);
 	if (!peer) {
-		peer = this.addPeer(dest, this.makeOutConnection(dest));
+		peer = this.addPeer(dest);
 	}
 
 	peer.send(options, arg1, arg2, arg3, callback);
