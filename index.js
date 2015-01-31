@@ -529,12 +529,11 @@ TChannelConnection.prototype.handleReqFrame = function (reqFrame) {
 	var handler = this.localEndpoints[name] || this.channel.endpoints[name];
 
 	if (typeof handler !== 'function') {
-		// TODO send back some kind of 404 message to the
-		// client. It's better if the client gets a not
-		// implemented error then a timeout error
-		this.logger.error('no such operation', {
-			op: name
-		});
+		handler = function(arg2, arg3, remoteAddr, cb) {
+			var err = new Error('no such operation');
+			err.op = name;
+			cb(err, null, null);
+		};
 		return;
 	}
 
