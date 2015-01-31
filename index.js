@@ -254,8 +254,15 @@ TChannel.prototype.quit = function (callback) {
 	onClose();
 
 	function onClose() {
-		if (--counter === 0 && typeof callback === 'function') {
-			callback();
+		if (--counter <= 0) {
+			if (counter < 0) {
+				self.logger.error('closed more sockets than expected', {
+					counter: counter
+				});
+			}
+			if (typeof callback === 'function') {
+				callback();
+			}
 		}
 	}
 
