@@ -73,7 +73,9 @@ function TChannel(options) {
 	this.serverSocket.listen(this.port, this.host);
 	this.serverSocket.on('listening', function () {
 		self.logger.info(self.name + ' listening');
-		self.emit('listening');
+		if (!self.destroyed) {
+			self.emit('listening');
+		}
 	});
 	this.serverSocket.on('error', function (err) {
 		self.logger.error(self.name + ' server socket error: ' + inspect(err));
