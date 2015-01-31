@@ -293,6 +293,10 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 	if (direction === 'out') {
 		this.send({}, 'TChannel identify', this.channel.name, null, function onOutIdentify(err, res1/*, res2 */) {
 			if (err) {
+				self.channel.logger.error('identification error', {
+					remoteAddr: remoteAddr,
+					error: err
+				});
 				return;
 			}
 			var remote = res1.toString();
