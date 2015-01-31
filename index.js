@@ -307,7 +307,9 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 	this.socket.setNoDelay(true);
 
 	this.socket.on('data', function (chunk) {
-		self.parser.execute(chunk);
+		if (!self.closing) {
+			self.parser.execute(chunk);
+		}
 	});
 	this.socket.on('error', function (err) {
 		self.onSocketErr('error', err);
