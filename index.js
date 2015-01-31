@@ -553,13 +553,13 @@ TChannelConnection.prototype.send = function(options, arg1, arg2, arg3, callback
 };
 /* jshint maxparams:4 */
 
-function TChannelServerOp(connection, fn, reqFrame) {
+function TChannelServerOp(connection, handler, reqFrame) {
 	this.connection = connection;
-	this.fn = fn;
+	this.handler = handler;
 	this.reqFrame = reqFrame;
 	
 	var self = this;
-	fn(reqFrame.arg2, reqFrame.arg3, connection.remoteName, function responseBind(err, res1, res2) {
+	handler(reqFrame.arg2, reqFrame.arg3, connection.remoteName, function responseBind(err, res1, res2) {
 		self.onResponse(err, res1, res2);
 	});
 }
