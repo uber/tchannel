@@ -317,12 +317,16 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 	});
 
 	this.parser.on('frame', function (frame) {
-		self.onFrame(frame);
+		if (!self.closing) {
+			self.onFrame(frame);
+		}
 	});
 	this.parser.on('error', function (err) {
-		// TODO this method is not implemented.
-		// We should close the connection.
-		self.onParserErr(err);
+		if (!self.closing) {
+			// TODO this method is not implemented.
+			// We should close the connection.
+			self.onParserErr(err);
+		}
 	});
 
 	this.localEndpoints['TChannel identify'] = function (arg1, arg2, hostInfo, cb) {
