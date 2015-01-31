@@ -421,7 +421,7 @@ TChannelConnection.prototype.onIdentify = function (frame) {
 		return true;
 	}
 
-	this.logger.error('error: first req on socket must be identify');
+	this.logger.error('first req on socket must be identify');
 	return false;
 };
 
@@ -429,7 +429,7 @@ TChannelConnection.prototype.onFrame = function (frame) {
 //	this.logger.info(this.channel.name + ' got frame ' + frame.arg1 + ' ' + frame.arg2);
 
 	if (this.validateChecksum(frame) === false) {
-		this.logger.error("error: bad checksum");
+		this.logger.error("bad checksum");
 	}
 
 	this.lastTimeoutTime = 0;
@@ -447,14 +447,14 @@ TChannelConnection.prototype.onFrame = function (frame) {
 		if (typeof handler === 'function') {
 			return new TChannelServerOp(this, handler, frame);
 		} else {
-			this.logger.error('error: not found');
+			this.logger.error('not found');
 		}
 	} else if (frame.header.type === types.resCompleteMessage) {
 		this.handleResCompleteMessage(frame);
 	} else if (frame.header.type === types.resError) {
 		this.handleResError(frame);
 	} else {
-		this.logger.error('error: unknown type');
+		this.logger.error('unknown type');
 	}
 };
 
