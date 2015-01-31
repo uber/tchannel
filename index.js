@@ -166,8 +166,7 @@ TChannel.prototype.send = function (options, arg1, arg2, arg3, callback) {
 
 	var peer = this.getPeer(dest);
 	if (!peer) {
-		this.addPeer(dest, this.makeOutConnection(dest));
-		peer = this.getPeer(dest);
+		peer = this.addPeer(dest, this.makeOutConnection(dest));
 	}
 
 	peer.send(options, arg1, arg2, arg3, callback);
