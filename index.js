@@ -607,7 +607,7 @@ function TChannelServerOp(connection, handler, reqFrame) {
 }
 
 TChannelServerOp.prototype.onResponse = function (err, res1, res2) {
-	if (this.closing) {
+	if (this.connection.closing) {
 		return;
 	}
 
