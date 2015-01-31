@@ -148,6 +148,10 @@ TChannel.prototype.addPeer = function (name, connection) {
 		connection = this.makeOutConnection(name);
 	}
 
+	if (!connection) {
+		connection = this.makeOutConnection(name);
+	}
+
 	var existingPeer = this.getPeer(name);
 	if (existingPeer !== null && existingPeer !== connection) {
 		this.logger.warn('allocated a connection twice', {
