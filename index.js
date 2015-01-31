@@ -377,6 +377,13 @@ TChannelConnection.prototype.startTimeoutTimer = function () {
 	}, this.getTimeoutDelay());
 };
 
+TChannelConnection.prototype.clearTimeoutTimer = function () {
+	if (this.timer) {
+		clearTimeout(this.timer);
+		this.timer = null;
+	}
+};
+
 // If the connection has some success and some timeouts, we should probably leave it up,
 // but if everything is timing out, then we should kill the connection.
 TChannelConnection.prototype.onTimeoutCheck = function () {
@@ -427,9 +434,7 @@ TChannelConnection.prototype.resetAll = function (err) {
 	this.emit('reset');
 	var self = this;
 
-	if (this.timer) {
-		clearTimeout(this.timer);
-	}
+	this.clearTimeoutTimer();
 
 	// requests that we've received we can delete, but these reqs may have started their
 	//   own outgoing work, which is hard to cancel. By setting this.closing, we make sure
