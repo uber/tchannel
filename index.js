@@ -526,21 +526,20 @@ TChannelConnection.prototype.handleReqFrame = function (reqFrame) {
 	var id = reqFrame.header.id;
 	var name = reqFrame.arg1.toString();
 
-	this.inOps[id] = reqFrame;
-	this.inPending++;
-
 	var handler = this.localEndpoints[name] || this.channel.endpoints[name];
 
-	if (typeof handler === 'function') {
-		return new TChannelServerOp(this, handler, reqFrame, sendResponse);
-	} else {
+	if (typeof handler !== 'function') {
 		// TODO send back some kind of 404 message to the
 		// client. It's better if the client gets a not
 		// implemented error then a timeout error
 		this.logger.error('no such operation', {
 			op: name
 		});
+		return;
 	}
+
+	this.inPending++;
+	this.inOps[id] = new TChannelServerOp(this, handler, reqFrame, sendResponse);
 
 	function sendResponse(err, handlerErr, resFrame) {
 		if (err) {
@@ -550,8 +549,7 @@ TChannelConnection.prototype.handleReqFrame = function (reqFrame) {
 		if (self.closing) {
 			return;
 		}
-		var op = self.inOps[id];
-		if (!op) {
+		if (!self.inOps[id]) {
 			return;
 		}
 		delete self.inOps[id];
