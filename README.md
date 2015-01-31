@@ -354,5 +354,6 @@ Your `cb` will get called when it's finished.
  - mranney
  - jwolski
  - Raynos
+ - jcorbin
 
 ## MIT Licenced
