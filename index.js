@@ -58,9 +58,9 @@ function TChannel(options) {
 	this.timeoutCheckInterval = this.options.timeoutCheckInterval || 1000;
 	this.timeoutFuzz = this.options.timeoutFuzz || 100;
 
-	this.peers = {};
+	this.peers = Object.create(null);
 
-	this.endpoints = {};
+	this.endpoints = Object.create(null);
 	this.destroyed = false;
 
 	// TODO do not create a tcp server in the constructor
