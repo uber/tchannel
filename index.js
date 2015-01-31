@@ -615,7 +615,16 @@ function TChannelServerOp(connection, handler, reqFrame, callback) {
 function responseFrameBuilder(reqFrame, callback) {
 	var id = reqFrame.header.id;
 	var arg1 = reqFrame.arg1;
+	var sent = false;
 	return function (handlerErr, res1, res2) {
+		if (sent) {
+			return callback(new Error('response already sent', {
+				handlerErr: handlerErr,
+				res1: res1,
+				res2: res2
+			}));
+		}
+		sent = true;
 		var resFrame = new TChannelFrame();
 		if (handlerErr) {
 			// TODO should the error response contain a head ?
