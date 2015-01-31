@@ -236,9 +236,7 @@ TChannel.prototype.quit = function (callback) {
 		var sock = conn.socket;
 		sock.once('close', onClose);
 
-		if (conn.timer) {
-			self.clearTimeout(conn.timer);
-		}
+		conn.clearTimeoutTimer();
 
 		self.logger.debug('destroy channel for', {
 			direction: conn.direction,
