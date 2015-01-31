@@ -539,7 +539,7 @@ TChannelConnection.prototype.handleReqFrame = function (reqFrame) {
 	}
 
 	this.inPending++;
-	this.inOps[id] = new TChannelServerOp(this, handler, reqFrame, sendResponse);
+	var op = this.inOps[id] = new TChannelServerOp(this, handler, reqFrame, sendResponse);
 
 	function sendResponse(err, handlerErr, resFrame) {
 		if (err) {
@@ -549,7 +549,7 @@ TChannelConnection.prototype.handleReqFrame = function (reqFrame) {
 		if (self.closing) {
 			return;
 		}
-		if (!self.inOps[id]) {
+		if (self.inOps[id] !== op) {
 			return;
 		}
 		delete self.inOps[id];
