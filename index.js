@@ -296,7 +296,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 	this.outOps = Object.create(null);
 	this.outPending = 0;
 
-	this.localEndpoints = {};
+	this.localEndpoints = Object.create(null);
 
 	this.lastSentMessage = 0;
 	this.lastTimeoutTime = 0;
