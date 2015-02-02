@@ -27,17 +27,13 @@ var server = path.join(__dirname, 'bench_server.js');
 var bench = path.join(__dirname, 'multi_bench.js');
 
 var serverProc = childProcess.spawn('node', [server]);
-
 serverProc.stdout.pipe(process.stderr);
 serverProc.stderr.pipe(process.stderr);
 
-setTimeout(function nextProc() {
-    var benchProc = childProcess.spawn('node', [bench]);
+var benchProc = childProcess.spawn('node', [bench]);
+benchProc.stdout.pipe(process.stdout);
+benchProc.stderr.pipe(process.stderr);
 
-    benchProc.stdout.pipe(process.stdout);
-    benchProc.stderr.pipe(process.stderr);
-
-    benchProc.once('close', function onClose() {
-        serverProc.kill();
-    });
-}, 500);
+benchProc.once('close', function onClose() {
+    serverProc.kill();
+});
