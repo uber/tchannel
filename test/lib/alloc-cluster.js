@@ -20,39 +20,40 @@
 
 'use strict';
 
+var extend = require('xtend');
+var util = require('util');
 var TChannel = require('../../index.js');
+var parallel = require('run-parallel');
 
 module.exports = allocCluster;
 
-function allocCluster(opts) {
+function allocCluster(n, opts) {
     opts = opts || {};
-    var portOne = randomPort();
-    var portTwo = randomPort();
 
-    var one = TChannel({
-        host: 'localhost',
-        port: portOne,
-        timers: opts.timers
-    });
-    var two = TChannel({
-        host: 'localhost',
-        port: portTwo,
-        timers: opts.timers
-    });
-
-    return {
-        one: one,
-        two: two,
-        hosts: {
-            one: 'localhost:' + portOne,
-            two: 'localhost:' + portTwo
-        },
+    var host = 'localhost';
+    var ret = {
+        hosts: new Array(n),
+        channels: new Array(n),
         destroy: destroy
     };
 
-    function destroy() {
-        one.quit();
-        two.quit();
+    for (var i=0; i<n; i++) {
+        var port = randomPort();
+        ret.channels[i] = TChannel(extend({
+            host: host,
+            port: port
+        }, opts));
+        ret.hosts[i] = util.format('%s:%s', host, port);
+    }
+
+    return ret;
+
+    function destroy(cb) {
+        parallel(ret.channels.map(function(chan) {
+            return function(done) {
+                chan.quit(done);
+            };
+        }), cb);
     }
 }
 

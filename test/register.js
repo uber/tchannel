@@ -27,8 +27,10 @@ var Buffer = require('buffer').Buffer;
 var allocCluster = require('./lib/alloc-cluster.js');
 
 test('register() with different results', function t(assert) {
-    var cluster = allocCluster();
-    var one = cluster.one;
+    var cluster = allocCluster(2);
+    var one = cluster.channels[0];
+    var two = cluster.channels[1];
+    var hostOne = cluster.hosts[0];
 
     one.register('/error', function error(h, b, hi, cb) {
         cb(new Error('abc'));
@@ -67,40 +69,40 @@ test('register() with different results', function t(assert) {
     });
 
     parallel({
-        'errorCall': sendCall.bind(null, cluster.two, {
-            host: cluster.hosts.one
+        'errorCall': sendCall.bind(null, two, {
+            host: hostOne
         }, '/error'),
 
-        'bufferHead': sendCall.bind(null, cluster.two, {
-            host: cluster.hosts.one
+        'bufferHead': sendCall.bind(null, two, {
+            host: hostOne
         }, '/buffer-head'),
-        'stringHead': sendCall.bind(null, cluster.two, {
-            host: cluster.hosts.one
+        'stringHead': sendCall.bind(null, two, {
+            host: hostOne
         }, '/string-head'),
-        'objectHead': sendCall.bind(null, cluster.two, {
-            host: cluster.hosts.one
+        'objectHead': sendCall.bind(null, two, {
+            host: hostOne
         }, '/object-head'),
-        'nullHead': sendCall.bind(null, cluster.two, {
-            host: cluster.hosts.one
+        'nullHead': sendCall.bind(null, two, {
+            host: hostOne
         }, '/null-head'),
-        'undefHead': sendCall.bind(null, cluster.two, {
-            host: cluster.hosts.one
+        'undefHead': sendCall.bind(null, two, {
+            host: hostOne
         }, '/undef-head'),
 
-        'bufferBody': sendCall.bind(null, cluster.two, {
-            host: cluster.hosts.one
+        'bufferBody': sendCall.bind(null, two, {
+            host: hostOne
         }, '/buffer-body'),
-        'stringBody': sendCall.bind(null, cluster.two, {
-            host: cluster.hosts.one
+        'stringBody': sendCall.bind(null, two, {
+            host: hostOne
         }, '/string-body'),
-        'objectBody': sendCall.bind(null, cluster.two, {
-            host: cluster.hosts.one
+        'objectBody': sendCall.bind(null, two, {
+            host: hostOne
         }, '/object-body'),
-        'nullBody': sendCall.bind(null, cluster.two, {
-            host: cluster.hosts.one
+        'nullBody': sendCall.bind(null, two, {
+            host: hostOne
         }, '/null-body'),
-        'undefBody': sendCall.bind(null, cluster.two, {
-            host: cluster.hosts.one
+        'undefBody': sendCall.bind(null, two, {
+            host: hostOne
         }, '/undef-body')
     }, onResults);
 
@@ -183,8 +185,7 @@ test('register() with different results', function t(assert) {
         assert.ok(Buffer.isBuffer(undefBody.body));
         assert.equal(String(undefBody.body), '');
 
-        cluster.destroy();
-        assert.end();
+        cluster.destroy(assert.end);
     }
 });
 

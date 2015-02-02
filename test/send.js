@@ -27,50 +27,53 @@ var Buffer = require('buffer').Buffer;
 var allocCluster = require('./lib/alloc-cluster.js');
 
 test('send() to a server', function t(assert) {
-    var cluster = allocCluster();
+    var cluster = allocCluster(2);
+    var one = cluster.channels[0];
+    var two = cluster.channels[1];
+    var hostOne = cluster.hosts[0];
 
-    cluster.one.register('foo', function foo(h, b, hi, cb) {
+    one.register('foo', function foo(h, b, hi, cb) {
         assert.ok(Buffer.isBuffer(h));
         assert.ok(Buffer.isBuffer(b));
         cb(null, h, b);
     });
 
     parallel({
-        'bufferOp': sendRes.bind(null, cluster.two, {
-            host: cluster.hosts.one
+        'bufferOp': sendRes.bind(null, two, {
+            host: hostOne
         }, new Buffer('foo'), null, null),
-        'stringOp': sendRes.bind(null, cluster.two, {
-            host: cluster.hosts.one
+        'stringOp': sendRes.bind(null, two, {
+            host: hostOne
         }, 'foo', null, null),
-        'bufferHead': sendRes.bind(null, cluster.two, {
-            host: cluster.hosts.one
+        'bufferHead': sendRes.bind(null, two, {
+            host: hostOne
         }, 'foo', new Buffer('abc'), null),
-        'stringHead': sendRes.bind(null, cluster.two, {
-            host: cluster.hosts.one
+        'stringHead': sendRes.bind(null, two, {
+            host: hostOne
         }, 'foo', 'abc', null),
-        'objectHead': sendRes.bind(null, cluster.two, {
-            host: cluster.hosts.one
+        'objectHead': sendRes.bind(null, two, {
+            host: hostOne
         }, 'foo', { value: 'abc' }, null),
-        'nullHead': sendRes.bind(null, cluster.two, {
-            host: cluster.hosts.one
+        'nullHead': sendRes.bind(null, two, {
+            host: hostOne
         }, 'foo', null, null),
-        'undefinedHead': sendRes.bind(null, cluster.two, {
-            host: cluster.hosts.one
+        'undefinedHead': sendRes.bind(null, two, {
+            host: hostOne
         }, 'foo', undefined, null),
-        'bufferBody': sendRes.bind(null, cluster.two, {
-            host: cluster.hosts.one
+        'bufferBody': sendRes.bind(null, two, {
+            host: hostOne
         }, 'foo', null, new Buffer('abc')),
-        'stringBody': sendRes.bind(null, cluster.two, {
-            host: cluster.hosts.one
+        'stringBody': sendRes.bind(null, two, {
+            host: hostOne
         }, 'foo', null, 'abc'),
-        'objectBody': sendRes.bind(null, cluster.two, {
-            host: cluster.hosts.one
+        'objectBody': sendRes.bind(null, two, {
+            host: hostOne
         }, 'foo', null, { value: 'abc' }),
-        'nullBody': sendRes.bind(null, cluster.two, {
-            host: cluster.hosts.one
+        'nullBody': sendRes.bind(null, two, {
+            host: hostOne
         }, 'foo', null, null),
-        'undefinedBody': sendRes.bind(null, cluster.two, {
-            host: cluster.hosts.one
+        'undefinedBody': sendRes.bind(null, two, {
+            host: hostOne
         }, 'foo', null, undefined)
     }, function onResults(err, results) {
         assert.ifError(err);
@@ -147,8 +150,7 @@ test('send() to a server', function t(assert) {
         assert.ok(Buffer.isBuffer(undefinedBody.body));
         assert.equal(String(undefinedBody.body), '');
 
-        cluster.destroy();
-        assert.end();
+        cluster.destroy(assert.end);
     });
 });
 
