@@ -20,29 +20,32 @@
 
 var farmhash = require('farmhash');
 
-var types = {
-	req_complete_message: 0x01,
-	req_message_fragment: 0x02,
-	req_last_fragment: 0x03,
-	res_complete_message: 0x80,
-	res_message_fragment: 0x81,
-	res_last_fragment: 0x82,
-	res_error: 0xC0
-};
+/* jshint camelcase:false */
 
-var states = {
-	read_type: 1,
-	read_id: 2,
-	read_seq: 3,
-	read_arg1len: 4,
-	read_arg2len: 5,
-	read_arg3len: 6,
-	read_csum: 7,
-	read_arg1: 8,
-	read_arg2: 9,
-	read_arg3: 10,
-	error: 255
-};
+var types = {};
+types.reqCompleteMessage = types.req_complete_message = 0x01;
+types.reqMessageFragment = types.req_message_fragment = 0x02;
+types.reqLastFragment = types.req_last_fragment = 0x03;
+types.resCompleteMessage = types.res_complete_message = 0x80;
+types.resMessageFragment = types.res_message_fragment = 0x81;
+types.resLastFragment = types.res_last_fragment = 0x82;
+types.resError = types.res_error = 0xC0;
+
+var states = {};
+
+states.readType = states.read_type = 1;
+states.readId = states.read_id = 2;
+states.readSeq = states.read_seq = 3;
+states.readArg1len = states.read_arg1len = 4;
+states.readArg2len = states.read_arg2len = 5;
+states.readArg3len = states.read_arg3len = 6;
+states.readCsum = states.read_csum = 7;
+states.readArg1 = states.read_arg1 = 8;
+states.readArg2 = states.read_arg2 = 9;
+states.readArg3 = states.read_arg3 = 10;
+states.error = states.error = 255;
+
+/* jshint camelcase:true */
 
 var emptyBuffer = new Buffer(0);
 

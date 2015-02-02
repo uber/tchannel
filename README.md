@@ -86,7 +86,7 @@ tchannel : (options: {
     timeoutCheckInterval?: Number,
     timeoutFuzz?: Number
 }) => {
-    register: (op: String, fn: Function),
+    register: (op: String, fn: Function) => void,
     send: (
         options: Object,
         arg1: String,
@@ -354,5 +354,6 @@ Your `cb` will get called when it's finished.
  - mranney
  - jwolski
  - Raynos
+ - jcorbin
 
 ## MIT Licenced
