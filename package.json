@@ -6,6 +6,7 @@
   "scripts": {
     "test": "node test/index.js",
     "benchmark": "node benchmarks/index.js",
+    "compare_to_master": "benchmarks/compare_to.sh master",
     "cover": "istanbul cover --print detail --report html -- test/index.js",
     "view-cover": "opn coverage/index.html",
     "check-licence": "uber-licence --dry",
