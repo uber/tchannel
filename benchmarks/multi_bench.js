@@ -23,27 +23,10 @@ var TChannel = require("../index"),
     num_clients = parseInt(process.argv[2], 10) || 5,
     num_requests = 20000,
     tests = [],
-    versions_logged = false,
     client_options = {
         return_buffers: false
     },
     small_str, large_str, small_buf, large_buf;
-
-function lpad(input, len, chr) {
-    var str = input.toString();
-    chr = chr || " ";
-
-    while (str.length < len) {
-        str = chr + str;
-    }
-    return str;
-}
-
-metrics.Histogram.prototype.print_line = function () {
-    var obj = this.printObj();
-    
-    return lpad(obj.min, 4) + "/" + lpad(obj.max, 4) + "/" + lpad(obj.mean.toFixed(2), 7) + "/" + lpad(obj.p95.toFixed(2), 7);
-};
 
 function Test(args) {
     this.args = args;
@@ -85,19 +68,8 @@ Test.prototype.new_client = function (id) {
     // sending a ping to pre-connect the socket
     new_client.send({host: '127.0.0.1:4040'}, 'ping', null, null, function () {});
 
-    new_client.on("socketClose", function (conn, err) {
-        if (err.message !== 'shutdown from quit') {
-            console.log('socket close: ' + conn.remoteName + ' ' + err.message);
-        }
-    });
-
     new_client.on("identified", function (peer) {
         self.connect_latency.update(Date.now() - new_client.create_time);
-
-        if (! versions_logged) {
-            console.log("Client count: " + num_clients + ", node version: " + process.versions.node);
-            versions_logged = true;
-        }
         self.ready_latency.update(Date.now() - new_client.create_time);
         self.clients_ready++;
         if (self.clients_ready === self.clients.length) {
@@ -109,9 +81,7 @@ Test.prototype.new_client = function (id) {
 };
 
 Test.prototype.on_clients_ready = function () {
-    process.stdout.write(lpad(this.args.descr, 13) + ", " + lpad(this.args.pipeline, 5) + "/" + this.clients_ready + " ");
     this.test_start = Date.now();
-
     this.fill_pipeline();
 };
 
@@ -159,11 +129,19 @@ Test.prototype.send_next = function () {
     });
 };
 
+Test.prototype.get_stats = function () {
+    var obj = this.command_latency.printObj();
+    obj.descr = this.args.descr;
+    obj.pipeline = this.args.pipeline;
+    obj.numClients = this.clients_ready;
+    obj.elapsed = Date.now() - this.test_start;
+    obj.rate = num_requests / (obj.elapsed / 1000);
+    return obj;
+};
+
 Test.prototype.print_stats = function () {
-    var duration = Date.now() - this.test_start;
-    
-    console.log("min/max/avg/p95: " + this.command_latency.print_line() + " " + lpad(duration, 6) + "ms total, " +
-        lpad((num_requests / (duration / 1000)).toFixed(2), 8) + " ops/sec");
+    var obj = this.get_stats();
+    process.stdout.write(JSON.stringify(obj) + "\n");
 };
 
 small_str = "1234";
@@ -246,7 +224,6 @@ function next() {
             next();
         });
     } else {
-        console.log("End of tests.");
         process.exit(0);
     }
 }
