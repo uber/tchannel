@@ -21,12 +21,20 @@
 'use strict';
 
 var childProcess = require('child_process');
+var parseArgs = require('minimist');
 var path = require('path');
 var ldj = require('ldjson-stream');
+var fs = require('fs');
 var util = require('util');
 
 var server = path.join(__dirname, 'bench_server.js');
 var bench = path.join(__dirname, 'multi_bench.js');
+
+var argv = parseArgs(process.argv.slice(2), {
+	alias: {
+		o: 'output'
+	}
+});
 
 var serverProc = childProcess.spawn('node', [server]);
 serverProc.stdout.pipe(process.stderr);
@@ -51,6 +59,12 @@ benchProc.stdout
 		    lpad(result.rate.toFixed(2), 8)
 		));
 	});
+
+if (argv.output) {
+	benchProc.stdout
+		.pipe(fs.createWriteStream(argv.output, {encoding: 'utf8'}));
+}
+
 
 benchProc.once('close', function onClose() {
     serverProc.kill();
