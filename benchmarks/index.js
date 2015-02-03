@@ -32,15 +32,17 @@ var bench = path.join(__dirname, 'multi_bench.js');
 
 var argv = parseArgs(process.argv.slice(2), {
 	alias: {
+		m: 'multiplicity',
 		o: 'output'
 	}
 });
+var multiplicity = parseInt(argv.multiplicity) || 2;
 
 var serverProc = childProcess.spawn('node', [server]);
 serverProc.stdout.pipe(process.stderr);
 serverProc.stderr.pipe(process.stderr);
 
-var benchProc = childProcess.spawn('node', [bench]);
+var benchProc = childProcess.spawn('node', [bench, '--multiplicity', String(multiplicity)]);
 benchProc.stderr.pipe(process.stderr);
 
 benchProc.stdout

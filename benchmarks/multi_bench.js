@@ -18,6 +18,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+var parseArgs = require('minimist');
+var argv = parseArgs(process.argv.slice(2), {});
+var multiplicity = parseInt(argv.multiplicity) || 2;
+
 var TChannel = require("../index"),
     metrics = require("metrics"),
     num_clients = parseInt(process.argv[2], 10) || 5,
@@ -47,6 +51,10 @@ function Test(args) {
     this.ready_latency = new metrics.Histogram();
     this.command_latency = new metrics.Histogram();
 }
+
+Test.prototype.copy = function () {
+    return new Test(this.args);
+};
 
 Test.prototype.run = function (callback) {
     var i;
@@ -157,15 +165,7 @@ tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: 1}));
 tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: 50}));
 tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: 200}));
 tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: 20000}));
-tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: 1}));
-tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: 50}));
-tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: 200}));
-tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: 20000}));
 
-tests.push(new Test({descr: "SET small str", command: "set", args: small_str_set, pipeline: 1}));
-tests.push(new Test({descr: "SET small str", command: "set", args: small_str_set, pipeline: 50}));
-tests.push(new Test({descr: "SET small str", command: "set", args: small_str_set, pipeline: 200}));
-tests.push(new Test({descr: "SET small str", command: "set", args: small_str_set, pipeline: 20000}));
 tests.push(new Test({descr: "SET small str", command: "set", args: small_str_set, pipeline: 1}));
 tests.push(new Test({descr: "SET small str", command: "set", args: small_str_set, pipeline: 50}));
 tests.push(new Test({descr: "SET small str", command: "set", args: small_str_set, pipeline: 200}));
@@ -175,15 +175,7 @@ tests.push(new Test({descr: "SET small buf", command: "set", args: small_buf_set
 tests.push(new Test({descr: "SET small buf", command: "set", args: small_buf_set, pipeline: 50}));
 tests.push(new Test({descr: "SET small buf", command: "set", args: small_buf_set, pipeline: 200}));
 tests.push(new Test({descr: "SET small buf", command: "set", args: small_buf_set, pipeline: 20000}));
-tests.push(new Test({descr: "SET small buf", command: "set", args: small_buf_set, pipeline: 1}));
-tests.push(new Test({descr: "SET small buf", command: "set", args: small_buf_set, pipeline: 50}));
-tests.push(new Test({descr: "SET small buf", command: "set", args: small_buf_set, pipeline: 200}));
-tests.push(new Test({descr: "SET small buf", command: "set", args: small_buf_set, pipeline: 20000}));
 
-tests.push(new Test({descr: "GET small str", command: "get", args: "foo_rand000000000000", pipeline: 1}));
-tests.push(new Test({descr: "GET small str", command: "get", args: "foo_rand000000000000", pipeline: 50}));
-tests.push(new Test({descr: "GET small str", command: "get", args: "foo_rand000000000000", pipeline: 200}));
-tests.push(new Test({descr: "GET small str", command: "get", args: "foo_rand000000000000", pipeline: 20000}));
 tests.push(new Test({descr: "GET small str", command: "get", args: "foo_rand000000000000", pipeline: 1}));
 tests.push(new Test({descr: "GET small str", command: "get", args: "foo_rand000000000000", pipeline: 50}));
 tests.push(new Test({descr: "GET small str", command: "get", args: "foo_rand000000000000", pipeline: 200}));
@@ -193,15 +185,7 @@ tests.push(new Test({descr: "SET large str", command: "set", args: large_str_set
 tests.push(new Test({descr: "SET large str", command: "set", args: large_str_set, pipeline: 50}));
 tests.push(new Test({descr: "SET large str", command: "set", args: large_str_set, pipeline: 200}));
 tests.push(new Test({descr: "SET large str", command: "set", args: large_str_set, pipeline: 20000}));
-tests.push(new Test({descr: "SET large str", command: "set", args: large_str_set, pipeline: 1}));
-tests.push(new Test({descr: "SET large str", command: "set", args: large_str_set, pipeline: 50}));
-tests.push(new Test({descr: "SET large str", command: "set", args: large_str_set, pipeline: 200}));
-tests.push(new Test({descr: "SET large str", command: "set", args: large_str_set, pipeline: 20000}));
 
-tests.push(new Test({descr: "SET large buf", command: "set", args: large_buf_set, pipeline: 1}));
-tests.push(new Test({descr: "SET large buf", command: "set", args: large_buf_set, pipeline: 50}));
-tests.push(new Test({descr: "SET large buf", command: "set", args: large_buf_set, pipeline: 200}));
-tests.push(new Test({descr: "SET large buf", command: "set", args: large_buf_set, pipeline: 20000}));
 tests.push(new Test({descr: "SET large buf", command: "set", args: large_buf_set, pipeline: 1}));
 tests.push(new Test({descr: "SET large buf", command: "set", args: large_buf_set, pipeline: 50}));
 tests.push(new Test({descr: "SET large buf", command: "set", args: large_buf_set, pipeline: 200}));
@@ -211,21 +195,16 @@ tests.push(new Test({descr: "GET large str", command: "get", args: 'foo_rand0000
 tests.push(new Test({descr: "GET large str", command: "get", args: 'foo_rand000000000001', pipeline: 50}));
 tests.push(new Test({descr: "GET large str", command: "get", args: 'foo_rand000000000001', pipeline: 200}));
 tests.push(new Test({descr: "GET large str", command: "get", args: 'foo_rand000000000001', pipeline: 20000}));
-tests.push(new Test({descr: "GET large str", command: "get", args: 'foo_rand000000000001', pipeline: 1}));
-tests.push(new Test({descr: "GET large str", command: "get", args: 'foo_rand000000000001', pipeline: 50}));
-tests.push(new Test({descr: "GET large str", command: "get", args: 'foo_rand000000000001', pipeline: 200}));
-tests.push(new Test({descr: "GET large str", command: "get", args: 'foo_rand000000000001', pipeline: 20000}));
 
-
-function next() {
-    var test = tests.shift();
-    if (test) {
-        test.run(function () {
-            next();
-        });
-    } else {
-        process.exit(0);
-    }
+function next(i, j, done) {
+    if (i >= tests.length) return done();
+    if (j >= multiplicity) return next(i+1, 0, done);
+    var test = tests[i].copy();
+    test.run(function () {
+        next(i, j+1, done);
+    });
 }
 
-next();
+next(0, 0, function() {
+    process.exit(0);
+});
