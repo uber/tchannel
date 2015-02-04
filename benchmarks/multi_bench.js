@@ -19,13 +19,19 @@
 // THE SOFTWARE.
 
 var parseArgs = require('minimist');
-var argv = parseArgs(process.argv.slice(2), {});
-var multiplicity = parseInt(argv.multiplicity) || 2;
+var argv = parseArgs(process.argv.slice(2), {
+    alias: {
+        m: multiplicity,
+        c: numClients,
+        r: numRequests
+    }
+});
+var multiplicity = parseInt(argv.multiplicity, 10) || 2;
+var numClients = parseInt(argv.numClients, 10) || 5;
+var numRequests = parseInt(argv.numRequests, 10) || 20000;
 
 var TChannel = require("../index"),
     metrics = require("metrics"),
-    num_clients = parseInt(process.argv[2], 10) || 5,
-    num_requests = 20000,
     tests = [],
     client_options = {
         return_buffers: false
@@ -44,7 +50,7 @@ function Test(args) {
     this.clients_ready = 0;
     this.commands_sent = 0;
     this.commands_completed = 0;
-    this.max_pipeline = this.args.pipeline || num_requests;
+    this.max_pipeline = this.args.pipeline || numRequests;
     this.client_options = args.client_options || client_options;
     
     this.connect_latency = new metrics.Histogram();
@@ -61,7 +67,7 @@ Test.prototype.run = function (callback) {
 
     this.callback = callback;
 
-    for (i = 0; i < num_clients ; i++) {
+    for (i = 0; i < numClients ; i++) {
         this.new_client(i);
     }
 };
@@ -96,13 +102,13 @@ Test.prototype.on_clients_ready = function () {
 Test.prototype.fill_pipeline = function () {
     var pipeline = this.commands_sent - this.commands_completed;
 
-    while (this.commands_sent < num_requests && pipeline < this.max_pipeline) {
+    while (this.commands_sent < numRequests && pipeline < this.max_pipeline) {
         this.commands_sent++;
         pipeline++;
         this.send_next();
     }
     
-    if (this.commands_completed === num_requests) {
+    if (this.commands_completed === numRequests) {
         this.print_stats();
         this.stop_clients();
     }
@@ -143,7 +149,7 @@ Test.prototype.get_stats = function () {
     obj.pipeline = this.args.pipeline;
     obj.numClients = this.clients_ready;
     obj.elapsed = Date.now() - this.test_start;
-    obj.rate = num_requests / (obj.elapsed / 1000);
+    obj.rate = numRequests / (obj.elapsed / 1000);
     return obj;
 };
 
