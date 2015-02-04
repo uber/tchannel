@@ -2,7 +2,7 @@
 set -e
 set -x
 
-multiplicity=2
+multiplicity=5
 
 while getopts m: OPT; do
     case $OPT in
