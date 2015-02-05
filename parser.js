@@ -61,6 +61,7 @@ function TChannelHeader() {
 
 function TChannelFrame() {
 	this.header = new TChannelHeader();
+	// TODO this field is unused. It should be removed.
 	this.options = null;
 	this.arg1 = null;
 	this.arg2 = null;
@@ -90,6 +91,13 @@ TChannelFrame.prototype.set = function (arg1, arg2, arg3) {
 	if (Buffer.isBuffer(arg2)) {
 		this.arg2 = arg2;
 	} else {
+		// 	TODO remove special case for JSON.stringify
+		// 	This creates a situation where objects are
+		// 	JSON serialized but `null`, `true` and strings are
+		//	not.
+		// 	
+		//	The convenience of object serialization is not worth
+		// 	The confusion it introduces.
 		if (typeof arg2 === 'object') {
 			this.arg2 = new Buffer(JSON.stringify(arg2));
 		} else if (typeof arg2 === 'string') {
