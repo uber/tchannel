@@ -21,48 +21,40 @@
 'use strict';
 
 var test = require('tape');
-var TimeMock = require('time-mock');
 
 var allocCluster = require('./lib/alloc-cluster.js');
+var barrier = require('./lib/barrier');
 
-test('requests will timeout', function t(assert) {
-    var timers = TimeMock(Date.now());
+test('identify', function t(assert) {
     var cluster = allocCluster(2, {
-        timers: timers
+        // logger: require('./logger')(process.stdout)
     });
     var one = cluster.channels[0];
     var two = cluster.channels[1];
     var hostOne = cluster.hosts[0];
+    var hostTwo = cluster.hosts[1];
 
-    one.register('/normal-proxy', normalProxy);
-    one.register('/timeout', timeout);
+    assert.equal(one.getPeer(hostTwo), null);
+    assert.equal(two.getPeer(hostOne), null);
 
-    two.send({
-        host: hostOne,
-        timeout: 1000
-    }, '/normal-proxy', 'h', 'b', function onResp(err, h, b) {
-        assert.ifError(err);
+    var idBar = barrier.keyed(2, function(idents, done) {
+        var outPeer = one.getPeer(hostTwo);
+        var inPeer = two.getPeer(hostOne);
+        assert.equal(idents.one, hostTwo, 'one identified two');
+        assert.equal(idents.two, hostOne, 'two identified one');
+        assert.equal(outPeer.direction, 'out', 'outPeer is out');
+        assert.equal(inPeer.direction, 'in', 'inPeer is in');
+        assert.equal(outPeer && outPeer.remoteName, hostTwo, 'outgoing connection name filled in');
+        assert.equal(inPeer && inPeer.remoteName, hostOne, 'incoming connection name filled in');
+        done();
+    }, finish);
 
-        assert.equal(String(h), 'h');
-        assert.equal(String(b), 'b');
+    one.once('identified', idBar('one'));
+    two.once('identified', idBar('two'));
+    one.addPeer(hostTwo);
 
-        two.send({
-            host: hostOne,
-            timeout: 1000
-        }, '/timeout', 'h', 'b', onTimeout);
-        timers.advance(2500);
-    });
-
-    function onTimeout(err) {
-        assert.ok(err);
-        assert.equal(err.message, 'timed out');
+    function finish(err) {
+        if (err) assert.fail(err);
         cluster.destroy(assert.end);
-    }
-
-    function normalProxy(head, body, hostInfo, cb) {
-        cb(null, head, body);
-    }
-    function timeout(/* head, body, hostInfo, cb */) {
-        // do not call cb();
     }
 });

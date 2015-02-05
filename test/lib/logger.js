@@ -1,5 +1,5 @@
 // Copyright (c) 2015 Uber Technologies, Inc.
-//
+
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -20,8 +20,26 @@
 
 'use strict';
 
-require('./safe-quit.js');
-require('./timeouts.js');
-require('./send.js');
-require('./register.js');
-require('./identify.js');
+var util = require('util');
+
+function echo(stream, level) {
+	level = level.toUpperCase();
+	return function(mess, extra) {
+		if (extra) {
+			mess = util.format("%s: %s %j\n", level, mess, extra);
+		} else {
+			mess = util.format("%s: %s\n", level, mess);
+		}
+		stream.write(mess);
+	};
+}
+
+module.exports = function(stream) {
+	return {
+		debug: echo(stream, 'debug'),
+		error: echo(stream, 'error'),
+		fatal: echo(stream, 'fatal'),
+		info: echo(stream, 'info'),
+		warn: echo(stream, 'warn')
+	};
+};

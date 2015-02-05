@@ -92,6 +92,10 @@ TChannel.prototype.register = function (op, callback) {
 };
 
 TChannel.prototype.setPeer = function (name, conn) {
+	if (name === this.name) {
+		throw new Error('refusing to set self peer');
+	}
+
 	var list = this.peers[name];
 	if (!list) {
 		list = this.peers[name] = [];
@@ -102,6 +106,7 @@ TChannel.prototype.setPeer = function (name, conn) {
 	} else {
 		list.push(conn);
 	}
+	return conn;
 };
 TChannel.prototype.getPeer = function (name) {
 	var list = this.peers[name];
@@ -135,6 +140,14 @@ TChannel.prototype.getPeers = function () {
 };
 
 TChannel.prototype.addPeer = function (name, connection) {
+	if (name === this.name) {
+		throw new Error('refusing to add self peer');
+	}
+
+	if (!connection) {
+		connection = this.makeOutConnection(name);
+	}
+
 	var existingPeer = this.getPeer(name);
 	if (existingPeer !== null && existingPeer !== connection) {
 		this.logger.warn('allocated a connection twice', {
@@ -148,7 +161,6 @@ TChannel.prototype.addPeer = function (name, connection) {
 		destination: name,
 		direction: connection.direction
 	});
-	this.setPeer(name, connection);
 	var self = this;
 	connection.on('reset', function (/* err */) {
 		// TODO: log?
@@ -157,7 +169,7 @@ TChannel.prototype.addPeer = function (name, connection) {
 	connection.on('socketClose', function (conn, err) {
 		self.emit('socketClose', conn, err);
 	});
-	connection.remoteName = name;
+	return this.setPeer(name, connection);
 };
 
 /* jshint maxparams:5 */
@@ -173,8 +185,7 @@ TChannel.prototype.send = function (options, arg1, arg2, arg3, callback) {
 
 	var peer = this.getPeer(dest);
 	if (!peer) {
-		this.addPeer(dest, this.makeOutConnection(dest));
-		peer = this.getPeer(dest);
+		peer = this.addPeer(dest);
 	}
 
 	peer.send(options, arg1, arg2, arg3, callback);
@@ -185,7 +196,6 @@ TChannel.prototype.makeOutConnection = function (dest) {
 	var parts = dest.split(':');
 	var socket = net.createConnection({host: parts[0], port: parts[1]});
 	var connection = new TChannelConnection(this, socket, 'out', dest);
-	connection.remoteName = dest;
 	return connection;
 };
 
@@ -208,7 +218,9 @@ TChannel.prototype.quit = function (callback) {
 		}
 
 		self.logger.debug('destroy channel for', {
-			peer: conn.remoteName,
+			direction: conn.direction,
+			peerRemoteAddr: conn.remoteAddr,
+			peerRemoteName: conn.remoteName,
 			fromAddress: sock.address()
 		});
 		conn.closing = true;
@@ -236,6 +248,9 @@ TChannel.prototype.quit = function (callback) {
 
 function TChannelConnection(channel, socket, direction, remoteAddr) {
 	var self = this;
+	if (remoteAddr === channel.name) {
+		throw new Error('refusing to create self connection');
+	}
 
 	this.channel = channel;
 	this.logger = this.channel.logger;
@@ -286,9 +301,14 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 	if (direction === 'out') {
 		this.send({}, 'TChannel identify', this.channel.name, null, function onOutIdentify(err, res1/*, res2 */) {
 			if (err) {
+				self.channel.logger.error('identification error', {
+					remoteAddr: remoteAddr,
+					error: err
+				});
 				return;
 			}
 			var remote = res1.toString();
+			self.remoteName = remote;
 			self.channel.emit('identified', remote);
 		});
 	}
@@ -426,6 +446,7 @@ TChannelConnection.prototype.onIdentify = function (frame) {
 	var str1 = frame.arg1.toString();
 	var str2 = frame.arg2.toString();
 	if (str1 === 'TChannel identify') {
+		this.remoteName = str2;
 		this.channel.addPeer(str2, this);
 		this.channel.emit('identified', str2);
 		return true;

@@ -51,6 +51,28 @@ test('can call quit() safely sync', function t(assert) {
     assert.end();
 });
 
+test('can call quit() safely async w/ callback', function t(assert) {
+    var channel = TChannel({
+        host: 'localhost',
+        port: randomPort()
+    });
+    channel.once('listening', function onListen() {
+        assert.doesNotThrow(function noThrow() {
+            channel.quit(assert.end);
+        });
+    });
+});
+
+test('can call quit() safely sync w/ callback', function t(assert) {
+    var channel = TChannel({
+        host: 'localhost',
+        port: randomPort()
+    });
+    assert.doesNotThrow(function noThrow() {
+        channel.quit(assert.end);
+    });
+});
+
 function randomPort() {
     return 20000 + Math.floor(Math.random() * 20000);
 }
