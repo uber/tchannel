@@ -128,6 +128,9 @@ TChannel.prototype.removePeer = function (name, conn) {
 		return;
 	}
 
+	// TODO: run (don't walk) away from "arrays" as peers, get to actual peer
+	// objects... note how these current semantics can implicitly convert
+	// an in socket to an out socket
 	list.splice(index, 1);
 };
 
@@ -160,10 +163,11 @@ TChannel.prototype.addPeer = function (name, connection) {
 	}
 
 	var existingPeer = this.getPeer(name);
-	if (existingPeer !== null && existingPeer !== connection) {
+	if (existingPeer !== null && existingPeer !== connection) { // TODO: how about === undefined?
 		this.logger.warn('allocated a connection twice', {
 			name: name,
 			direction: connection.direction
+			// TODO: more log context
 		});
 	}
 
@@ -171,6 +175,7 @@ TChannel.prototype.addPeer = function (name, connection) {
 		source: this.name,
 		destination: name,
 		direction: connection.direction
+		// TODO: more log context
 	});
 	var self = this;
 	connection.on('reset', function (/* err */) {
@@ -292,6 +297,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 
 	this.remoteName = null; // filled in by identify message
 
+	// TODO: factor out an operation collection abstraction
 	this.inOps = Object.create(null);
 	this.inPending = 0;
 	this.outOps = Object.create(null);
@@ -373,6 +379,7 @@ TChannelConnection.prototype.startTimeoutTimer = function () {
 	var self = this;
 
 	this.timer = this.channel.setTimeout(function () {
+		// TODO: worth it to clear the fired self.timer objcet?
 		self.onTimeoutCheck();
 	}, this.getTimeoutDelay());
 };
@@ -409,6 +416,8 @@ TChannelConnection.prototype.onTimeoutCheck = function () {
 			continue;
 		}
 		if (op === undefined) {
+			// TODO: why not null and empty string too? I mean I guess false
+			// and 0 might be a thing, but really why not just !op?
 			this.channel.logger
 				.warn('unexpected undefined operation', {
 					key: opKey,
@@ -447,6 +456,7 @@ TChannelConnection.prototype.resetAll = function (err) {
 	//   own outgoing work, which is hard to cancel. By setting this.closing, we make sure
 	//   that once they do finish that their callback will swallow the response.
 	Object.keys(this.inOps).forEach(function (id) {
+		// TODO: we could support an op.cancel opt-in callback
 		delete self.inOps[id];
 	});
 
@@ -454,6 +464,7 @@ TChannelConnection.prototype.resetAll = function (err) {
 	Object.keys(this.outOps).forEach(function (id) {
 		var op = self.outOps[id];
 		delete self.outOps[id];
+		// TODO: shared mutable object... use Object.create(err)?
 		op.callback(err, null, null);
 	});
 
@@ -500,6 +511,9 @@ TChannelConnection.prototype.onFrame = function (frame) {
 //	this.logger.info(this.channel.name + ' got frame ' + frame.arg1 + ' ' + frame.arg2);
 
 	if (this.validateChecksum(frame) === false) {
+		// TODO: reduce the log spam: validateChecksum emits 2x warn logs, then
+		// we have a less than informative error log here... use a structured
+		// error out of validation and log it here instead
 		this.logger.error("bad checksum");
 	}
 
@@ -529,6 +543,11 @@ TChannelConnection.prototype.handleReqFrame = function (reqFrame) {
 	var handler = this.localEndpoints[name] || this.channel.endpoints[name];
 
 	if (typeof handler !== 'function') {
+		// TODO: test this behavior, in fact the prior early return subtlety
+		// broke tests in an unknown way after deferring the inOps mutation
+		// until after old handler verification without this... arguably it's
+		// what we want anyhow, but that weird test failure should be
+		// understood
 		handler = function(arg2, arg3, remoteAddr, cb) {
 			var err = new Error('no such operation');
 			err.op = name;
@@ -543,6 +562,7 @@ TChannelConnection.prototype.handleReqFrame = function (reqFrame) {
 
 	function sendResponse(err, handlerErr, resFrame) {
 		if (err) {
+			// TODO: add more log context
 			self.logger.error(err);
 			return;
 		}
@@ -550,8 +570,10 @@ TChannelConnection.prototype.handleReqFrame = function (reqFrame) {
 			return;
 		}
 		if (self.inOps[id] !== op) {
+			// TODO log...
 			return;
 		}
+		// TODO: observability hook for handler errors
 		var buf = resFrame.toBuffer();
 		delete self.inOps[id];
 		self.inPending--;
@@ -574,6 +596,7 @@ TChannelConnection.prototype.completeOutOp = function (id, err, arg1, arg2) {
 		delete this.outOps[id];
 		this.outPending--;
 		op.callback(err, arg1, arg2);
+	// } else { // TODO log...
 	}
 	// TODO else case. We should warn about an incoming response
 	// for an operation we did not send out.
