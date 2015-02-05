@@ -120,7 +120,10 @@ TChannelFrame.prototype.set = function (arg1, arg2, arg3) {
 		}
 	}
 	this.header.arg3len = this.arg3.length;
+	this.header.csum = this.checksum();
+};
 
+TChannelFrame.prototype.checksum = function () {
 	var csum = farmhash.hash32(this.arg1);
 	if (this.arg2.length > 0) {
 		csum = farmhash.hash32WithSeed(this.arg2, csum);
@@ -128,7 +131,7 @@ TChannelFrame.prototype.set = function (arg1, arg2, arg3) {
 	if (this.arg3.length > 0) {
 		csum = farmhash.hash32WithSeed(this.arg3, csum);
 	}
-	this.header.csum = csum;
+	return csum;
 };
 
 TChannelFrame.prototype.toBuffer = function () {

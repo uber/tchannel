@@ -29,7 +29,7 @@ var nullLogger = require('./null-logger.js');
 var globalClearTimeout = require('timers').clearTimeout;
 var globalSetTimeout = require('timers').setTimeout;
 var globalNow = Date.now;
-var farmhash = require('farmhash');
+var globalRandom = Math.random;
 var net = require('net');
 var inspect = require('util').inspect;
 
@@ -47,6 +47,8 @@ function TChannel(options) {
 	// TODO do not default the port.
 	this.port = this.options.port || 4040;
 	this.name = this.host + ':' + this.port;
+	this.random = this.options.random ?
+		this.options.random : globalRandom;
 	this.setTimeout = this.options.timers ?
 		this.options.timers.setTimeout : globalSetTimeout;
 	this.clearTimeout = this.options.timers ?
@@ -58,9 +60,9 @@ function TChannel(options) {
 	this.timeoutCheckInterval = this.options.timeoutCheckInterval || 1000;
 	this.timeoutFuzz = this.options.timeoutFuzz || 100;
 
-	this.peers = {};
+	this.peers = Object.create(null);
 
-	this.endpoints = {};
+	this.endpoints = Object.create(null);
 	this.destroyed = false;
 
 	// TODO do not create a tcp server in the constructor
@@ -73,7 +75,9 @@ function TChannel(options) {
 	this.serverSocket.listen(this.port, this.host);
 	this.serverSocket.on('listening', function () {
 		self.logger.info(self.name + ' listening');
-		self.emit('listening');
+		if (!self.destroyed) {
+			self.emit('listening');
+		}
 	});
 	this.serverSocket.on('error', function (err) {
 		self.logger.error(self.name + ' server socket error: ' + inspect(err));
@@ -82,7 +86,10 @@ function TChannel(options) {
 		self.logger.warn('server socket close');
 	});
 	this.serverSocket.on('connection', function (sock) {
-		return new TChannelConnection(self, sock, 'in', sock.remoteAddress + ':' + sock.remotePort);
+		if (!self.destroyed) {
+			var remoteAddr = sock.remoteAddress + ':' + sock.remotePort;
+			return new TChannelConnection(self, sock, 'in', remoteAddr);
+		}
 	});
 }
 require('util').inherits(TChannel, require('events').EventEmitter);
@@ -121,6 +128,9 @@ TChannel.prototype.removePeer = function (name, conn) {
 		return;
 	}
 
+	// TODO: run (don't walk) away from "arrays" as peers, get to actual peer
+	// objects... note how these current semantics can implicitly convert
+	// an in socket to an out socket
 	list.splice(index, 1);
 };
 
@@ -148,11 +158,16 @@ TChannel.prototype.addPeer = function (name, connection) {
 		connection = this.makeOutConnection(name);
 	}
 
+	if (!connection) {
+		connection = this.makeOutConnection(name);
+	}
+
 	var existingPeer = this.getPeer(name);
-	if (existingPeer !== null && existingPeer !== connection) {
+	if (existingPeer !== null && existingPeer !== connection) { // TODO: how about === undefined?
 		this.logger.warn('allocated a connection twice', {
 			name: name,
 			direction: connection.direction
+			// TODO: more log context
 		});
 	}
 
@@ -160,6 +175,7 @@ TChannel.prototype.addPeer = function (name, connection) {
 		source: this.name,
 		destination: name,
 		direction: connection.direction
+		// TODO: more log context
 	});
 	var self = this;
 	connection.on('reset', function (/* err */) {
@@ -179,22 +195,36 @@ TChannel.prototype.send = function (options, arg1, arg2, arg3, callback) {
 	}
 
 	var dest = options.host;
-	if (!dest || dest.indexOf(':') === -1) {
+	if (!dest) {
 		throw new Error('cannot send() without options.host');
 	}
 
-	var peer = this.getPeer(dest);
-	if (!peer) {
-		peer = this.addPeer(dest);
-	}
-
+	var peer = this.getOutConnection(dest);
 	peer.send(options, arg1, arg2, arg3, callback);
 };
 /* jshint maxparams:4 */
 
-TChannel.prototype.makeOutConnection = function (dest) {
+TChannel.prototype.getOutConnection = function (dest) {
+	var peer = this.getPeer(dest);
+	if (!peer) {
+		peer = this.addPeer(dest);
+	}
+	return peer;
+};
+
+TChannel.prototype.makeSocket = function (dest) {
 	var parts = dest.split(':');
-	var socket = net.createConnection({host: parts[0], port: parts[1]});
+	if (parts.length !== 2) {
+		throw new Error('invalid destination');
+	}
+	var host = parts[0];
+	var port = parts[1];
+	var socket = net.createConnection({host: host, port: port});
+	return socket;
+};
+
+TChannel.prototype.makeOutConnection = function (dest) {
+	var socket = this.makeSocket(dest);
 	var connection = new TChannelConnection(this, socket, 'out', dest);
 	return connection;
 };
@@ -213,9 +243,7 @@ TChannel.prototype.quit = function (callback) {
 		var sock = conn.socket;
 		sock.once('close', onClose);
 
-		if (conn.timer) {
-			self.clearTimeout(conn.timer);
-		}
+		conn.clearTimeoutTimer();
 
 		self.logger.debug('destroy channel for', {
 			direction: conn.direction,
@@ -228,21 +256,29 @@ TChannel.prototype.quit = function (callback) {
 		sock.end();
 	});
 
-	onClose();
-
-	function onClose() {
-		if (--counter === 0 && typeof callback === 'function') {
-			callback();
-		}
+	var serverSocket = this.serverSocket;
+	if (serverSocket.address()) {
+		closeServerSocket();
+	} else {
+		serverSocket.once('listening', closeServerSocket);
 	}
 
+	function closeServerSocket() {
+		serverSocket.once('close', onClose);
+		serverSocket.close();
+	}
 
-	if (this.serverSocket.address()) {
-		this.serverSocket.close();
-	} else {
-		this.serverSocket.once('listening', function onListen() {
-			self.serverSocket.close();
-		});
+	function onClose() {
+		if (--counter <= 0) {
+			if (counter < 0) {
+				self.logger.error('closed more sockets than expected', {
+					counter: counter
+				});
+			}
+			if (typeof callback === 'function') {
+				callback();
+			}
+		}
 	}
 };
 
@@ -257,13 +293,17 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 	this.socket = socket;
 	this.direction = direction;
 	this.remoteAddr = remoteAddr;
+	this.timer = null;
 
 	this.remoteName = null; // filled in by identify message
 
-	this.inOps = {};
+	// TODO: factor out an operation collection abstraction
+	this.inOps = Object.create(null);
 	this.inPending = 0;
-	this.outOps = {};
+	this.outOps = Object.create(null);
 	this.outPending = 0;
+
+	this.localEndpoints = Object.create(null);
 
 	this.lastSentMessage = 0;
 	this.lastTimeoutTime = 0;
@@ -274,28 +314,32 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 	this.socket.setNoDelay(true);
 
 	this.socket.on('data', function (chunk) {
-		self.parser.execute(chunk);
+		if (!self.closing) {
+			self.parser.execute(chunk);
+		}
 	});
 	this.socket.on('error', function (err) {
-		self.onSocketErr('error', err);
+		self.onSocketErr(err);
 	});
 	this.socket.on('close', function () {
-		self.onSocketErr('close');
+		self.onSocketErr(new Error('socket closed'));
 	});
 
 	this.parser.on('frame', function (frame) {
-		self.onFrame(frame);
+		if (!self.closing) {
+			self.onFrame(frame);
+		}
 	});
 	this.parser.on('error', function (err) {
-		// TODO this method is not implemented.
-		// We should close the connection.
-		self.onParserErr(err);
+		if (!self.closing) {
+			// TODO this method is not implemented.
+			// We should close the connection.
+			self.onParserErr(err);
+		}
 	});
 
-	this.localEndpoints = {
-		'TChannel identify': function (arg1, arg2, hostInfo, cb) {
-			cb(null, self.channel.name, null);
-		}
+	this.localEndpoints['TChannel identify'] = function (arg1, arg2, hostInfo, cb) {
+		cb(null, self.channel.name, null);
 	};
 
 	if (direction === 'out') {
@@ -328,20 +372,32 @@ require('util').inherits(TChannelConnection, require('events').EventEmitter);
 TChannelConnection.prototype.getTimeoutDelay = function () {
 	var base = this.channel.timeoutCheckInterval;
 	var fuzz = this.channel.timeoutFuzz;
-	return base + Math.round(Math.floor(Math.random() * fuzz) - (fuzz / 2));
+	return base + Math.round(Math.floor(this.channel.random() * fuzz) - (fuzz / 2));
 };
 
 TChannelConnection.prototype.startTimeoutTimer = function () {
 	var self = this;
 
 	this.timer = this.channel.setTimeout(function () {
+		// TODO: worth it to clear the fired self.timer objcet?
 		self.onTimeoutCheck();
 	}, this.getTimeoutDelay());
+};
+
+TChannelConnection.prototype.clearTimeoutTimer = function () {
+	if (this.timer) {
+		this.channel.clearTimeout(this.timer);
+		this.timer = null;
+	}
 };
 
 // If the connection has some success and some timeouts, we should probably leave it up,
 // but if everything is timing out, then we should kill the connection.
 TChannelConnection.prototype.onTimeoutCheck = function () {
+	if (this.closing) {
+		return;
+	}
+
 	if (this.lastTimeoutTime) {
 		this.logger.warn(this.channel.name + ' destroying socket from timeouts');
 		this.socket.destroy();
@@ -351,11 +407,20 @@ TChannelConnection.prototype.onTimeoutCheck = function () {
 	var opKeys = Object.keys(this.outOps);
 	var now = this.channel.now();
 	for (var i = 0; i < opKeys.length ; i++) {
-		var op = this.outOps[opKeys[i]];
+		var opKey = opKeys[i];
+		var op = this.outOps[opKey];
+		if (op.timedOut) {
+			delete this.outOps[opKey];
+			this.outPending--;
+			this.logger.warn('lingering timed-out outgoing operation');
+			continue;
+		}
 		if (op === undefined) {
+			// TODO: why not null and empty string too? I mean I guess false
+			// and 0 might be a thing, but really why not just !op?
 			this.channel.logger
 				.warn('unexpected undefined operation', {
-					key: opKeys[i],
+					key: opKey,
 					op: op
 				});
 			continue;
@@ -363,7 +428,7 @@ TChannelConnection.prototype.onTimeoutCheck = function () {
 		var timeout = op.options.timeout || this.channel.reqTimeoutDefault;
 		var duration = now - op.start;
 		if (duration > timeout) {
-			delete this.outOps[opKeys[i]];
+			delete this.outOps[opKey];
 			this.outPending--;
 			this.onReqTimeout(op);
 		}
@@ -382,17 +447,16 @@ TChannelConnection.prototype.onReqTimeout = function (op) {
 // stumbles across this object in a core dump.
 TChannelConnection.prototype.resetAll = function (err) {
 	this.closing = true;
+	this.clearTimeoutTimer();
+
 	this.emit('reset');
 	var self = this;
-
-	if (this.timer) {
-		clearTimeout(this.timer);
-	}
 
 	// requests that we've received we can delete, but these reqs may have started their
 	//   own outgoing work, which is hard to cancel. By setting this.closing, we make sure
 	//   that once they do finish that their callback will swallow the response.
 	Object.keys(this.inOps).forEach(function (id) {
+		// TODO: we could support an op.cancel opt-in callback
 		delete self.inOps[id];
 	});
 
@@ -400,6 +464,7 @@ TChannelConnection.prototype.resetAll = function (err) {
 	Object.keys(this.outOps).forEach(function (id) {
 		var op = self.outOps[id];
 		delete self.outOps[id];
+		// TODO: shared mutable object... use Object.create(err)?
 		op.callback(err, null, null);
 	});
 
@@ -409,28 +474,14 @@ TChannelConnection.prototype.resetAll = function (err) {
 	this.emit('socketClose', this, err);
 };
 
-TChannelConnection.prototype.onSocketErr = function (type, err) {
-	if (this.closing) {
-		return;
+TChannelConnection.prototype.onSocketErr = function (err) {
+	if (!this.closing) {
+		this.resetAll(err);
 	}
-	this.closing = true;
-	var message;
-	if (type === 'error') {
-		message = err.message;
-	} else {
-		message = 'socket closed';
-	}
-	this.resetAll(new Error(message));
 };
 
 TChannelConnection.prototype.validateChecksum = function (frame) {
-	var actual = farmhash.hash32(frame.arg1);
-	if (frame.arg2.length > 0) {
-		actual = farmhash.hash32WithSeed(frame.arg2, actual);
-	}
-	if (frame.arg3.length > 0) {
-		actual = farmhash.hash32WithSeed(frame.arg3, actual);
-	}
+	var actual = frame.checksum();
 	var expected = frame.header.csum;
 	if (expected !== actual) {
 		this.logger.warn('server checksum validation failed ' + expected + ' vs ' + actual);
@@ -460,6 +511,9 @@ TChannelConnection.prototype.onFrame = function (frame) {
 //	this.logger.info(this.channel.name + ' got frame ' + frame.arg1 + ' ' + frame.arg2);
 
 	if (this.validateChecksum(frame) === false) {
+		// TODO: reduce the log spam: validateChecksum emits 2x warn logs, then
+		// we have a less than informative error log here... use a structured
+		// error out of validation and log it here instead
 		this.logger.error("bad checksum");
 	}
 
@@ -469,59 +523,85 @@ TChannelConnection.prototype.onFrame = function (frame) {
 		if (this.remoteName === null && this.onIdentify(frame) === false) {
 			return;
 		}
-		this.inOps[frame.header.id] = frame;
-		this.inPending++;
-
-		var op = frame.arg1.toString();
-		var handler = this.localEndpoints[op] || this.channel.endpoints[op];
-
-		if (typeof handler === 'function') {
-			return new TChannelServerOp(this, handler, frame);
-		} else {
-			// TODO send back some kind of 404 message to the
-			// client. It's better if the client gets a not
-			// implemented error then a timeout error
-			this.logger.error('not found');
-		}
+		this.handleReqFrame(frame);
 	} else if (frame.header.type === types.resCompleteMessage) {
 		this.handleResCompleteMessage(frame);
 	} else if (frame.header.type === types.resError) {
 		this.handleResError(frame);
 	} else {
-		this.logger.error('unknown type');
+		this.logger.error('unknown frame type', {
+			type: frame.header.type
+		});
+	}
+};
+
+TChannelConnection.prototype.handleReqFrame = function (reqFrame) {
+	var self = this;
+	var id = reqFrame.header.id;
+	var name = reqFrame.arg1.toString();
+
+	var handler = this.localEndpoints[name] || this.channel.endpoints[name];
+
+	if (typeof handler !== 'function') {
+		// TODO: test this behavior, in fact the prior early return subtlety
+		// broke tests in an unknown way after deferring the inOps mutation
+		// until after old handler verification without this... arguably it's
+		// what we want anyhow, but that weird test failure should be
+		// understood
+		handler = function(arg2, arg3, remoteAddr, cb) {
+			var err = new Error('no such operation');
+			err.op = name;
+			cb(err, null, null);
+		};
+		return;
+	}
+
+	this.inPending++;
+	var opCallback = responseFrameBuilder(reqFrame, sendResponse);
+	var op = this.inOps[id] = new TChannelServerOp(this, handler, reqFrame, opCallback);
+
+	function sendResponse(err, handlerErr, resFrame) {
+		if (err) {
+			// TODO: add more log context
+			self.logger.error(err);
+			return;
+		}
+		if (self.closing) {
+			return;
+		}
+		if (self.inOps[id] !== op) {
+			// TODO log...
+			return;
+		}
+		// TODO: observability hook for handler errors
+		var buf = resFrame.toBuffer();
+		delete self.inOps[id];
+		self.inPending--;
+		self.socket.write(buf);
 	}
 };
 
 TChannelConnection.prototype.handleResCompleteMessage = function (frame) {
-	var op = this.outOps[frame.header.id];
+	this.completeOutOp(frame.header.id, null, frame.arg2, frame.arg3);
+};
+
+TChannelConnection.prototype.handleResError = function (frame) {
+	var err = new Error(frame.arg1);
+	this.completeOutOp(frame.header.id, err, null, null);
+};
+
+TChannelConnection.prototype.completeOutOp = function (id, err, arg1, arg2) {
+	var op = this.outOps[id];
 	if (op) {
-		delete this.outOps[frame.header.id];
+		delete this.outOps[id];
 		this.outPending--;
-		op.callback(null, frame.arg2, frame.arg3);
+		op.callback(err, arg1, arg2);
+	// } else { // TODO log...
 	}
 	// TODO else case. We should warn about an incoming response
 	// for an operation we did not send out.
 	// This could be because of a timeout or could be because
 	// of a confused / corrupted server.
-};
-
-TChannelConnection.prototype.handleResError = function (frame) {
-	var op = this.outOps[frame.header.id];
-	if (op) {
-		delete this.outOps[frame.header.id];
-		this.outPending--;
-		return op.callback(new Error(frame.arg1), null, null);
-	}
-};
-
-TChannelConnection.prototype.sendResFrame = function(frame) {
-	var op = this.inOps[frame.header.id];
-	if (op) {
-		delete this.inOps[frame.header.id];
-		this.inPending--;
-
-		return this.socket.write(frame.toBuffer());
-	}
 };
 
 // send a req frame
@@ -547,38 +627,42 @@ TChannelConnection.prototype.send = function(options, arg1, arg2, arg3, callback
 };
 /* jshint maxparams:4 */
 
-function TChannelServerOp(connection, fn, reqFrame) {
+function TChannelServerOp(connection, handler, reqFrame, callback) {
 	this.connection = connection;
-	this.fn = fn;
+	this.handler = handler;
 	this.reqFrame = reqFrame;
-	
-	var self = this;
-	fn(reqFrame.arg2, reqFrame.arg3, connection.remoteName, function responseBind(err, res1, res2) {
-		self.onResponse(err, res1, res2);
-	});
+	handler(reqFrame.arg2, reqFrame.arg3, connection.remoteName, callback);
 }
 
-TChannelServerOp.prototype.onResponse = function (err, res1, res2) {
-	if (this.closing) {
-		return;
-	}
-
-	var newFrame = new TChannelFrame();
-	if (err) {
-		// TODO should the error response contain a head ?
-		// Is there any value in sending meta data along with
-		// the error.
-		newFrame.set(isError(err) ? err.message : err, null, null);
-		newFrame.header.type = types.resError;
-	} else {
-		newFrame.set(this.reqFrame.arg1, res1, res2);
-		newFrame.header.type = types.resCompleteMessage;
-	}
-	newFrame.header.id = this.reqFrame.header.id;
-	newFrame.header.seq = 0;
-
-	return this.connection.sendResFrame(newFrame);
-};
+function responseFrameBuilder(reqFrame, callback) {
+	var id = reqFrame.header.id;
+	var arg1 = reqFrame.arg1;
+	var sent = false;
+	var resFrame = new TChannelFrame();
+	resFrame.header.id = id;
+	resFrame.header.seq = 0;
+	return function (handlerErr, res1, res2) {
+		if (sent) {
+			return callback(new Error('response already sent', {
+				handlerErr: handlerErr,
+				res1: res1,
+				res2: res2
+			}));
+		}
+		sent = true;
+		if (handlerErr) {
+			// TODO should the error response contain a head ?
+			// Is there any value in sending meta data along with
+			// the error.
+			resFrame.set(isError(handlerErr) ? handlerErr.message : handlerErr, null, null);
+			resFrame.header.type = types.resError;
+		} else {
+			resFrame.set(arg1, res1, res2);
+			resFrame.header.type = types.resCompleteMessage;
+		}
+		callback(null, handlerErr, resFrame);
+	};
+}
 
 function isError(obj) {
 	return typeof obj === 'object' && (
