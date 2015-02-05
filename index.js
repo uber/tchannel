@@ -68,6 +68,8 @@ function TChannel(options) {
 	this.serverSocket = new net.createServer();
 	// TODO do not call listen by default. We might want to
 	// seperate allocating a server from calling listen on it.
+	// We can module.exports a `createTchannel()` helper that
+	// calls listen() by default.
 	this.serverSocket.listen(this.port, this.host);
 	this.serverSocket.on('listening', function () {
 		self.logger.info(self.name + ' listening');
