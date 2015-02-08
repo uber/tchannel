@@ -64,15 +64,15 @@ function TChannel(options) {
 
 	this.endpoints = Object.create(null);
 	this.destroyed = false;
-
-	// TODO do not create a tcp server in the constructor
-	// Doing IO in a constructor is bad. Move into a method.
+	// to provide backward compatibility. 
+	this.listening = this.options.listening === false ?
+	  false : true;
 	this.serverSocket = new net.createServer();
-	// TODO do not call listen by default. We might want to
-	// seperate allocating a server from calling listen on it.
-	// We can module.exports a `createTchannel()` helper that
-	// calls listen() by default.
-	this.serverSocket.listen(this.port, this.host);
+
+	if (this.listening) {
+		this.createTchannel();
+	}
+
 	this.serverSocket.on('listening', function () {
 		self.logger.info(self.name + ' listening');
 		if (!self.destroyed) {
@@ -93,6 +93,24 @@ function TChannel(options) {
 	});
 }
 require('util').inherits(TChannel, require('events').EventEmitter);
+
+// Decoulping config and creation from the constructor.
+// This also allows us to better unit test the code as the test process
+// is not blocked by the listening connections
+TChannel.prototype.createTchannel = function () {
+	if (!this.serverSocket) {
+		throw new Error('Missing server Socket.');
+	}
+	if (!this.host) {
+		throw new Error('Missing server host.');
+	}
+	if (!this.port) {
+		throw new Error('Missing server port.');
+	}
+
+	this.serverSocket.listen(this.port, this.host);
+};
+
 
 TChannel.prototype.register = function (op, callback) {
 	this.endpoints[op] = callback;
@@ -152,10 +170,6 @@ TChannel.prototype.getPeers = function () {
 TChannel.prototype.addPeer = function (name, connection) {
 	if (name === this.name) {
 		throw new Error('refusing to add self peer');
-	}
-
-	if (!connection) {
-		connection = this.makeOutConnection(name);
 	}
 
 	if (!connection) {
