@@ -70,7 +70,7 @@ function TChannel(options) {
 	this.serverSocket = new net.createServer();
 
 	if (this.listening) {
-		this.createTchannel();
+		this.listen();
 	}
 
 	this.serverSocket.on('listening', function () {
@@ -97,7 +97,7 @@ require('util').inherits(TChannel, require('events').EventEmitter);
 // Decoulping config and creation from the constructor.
 // This also allows us to better unit test the code as the test process
 // is not blocked by the listening connections
-TChannel.prototype.createTchannel = function () {
+TChannel.prototype.listen = function () {
 	if (!this.serverSocket) {
 		throw new Error('Missing server Socket.');
 	}

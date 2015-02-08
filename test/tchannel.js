@@ -1,12 +1,12 @@
 var test = require('tape');
 var TChannel = require('../index.js');
 
-var serverOptions = {host: '127.0.0.1', port: 4040, listening: false},
-  clientOptions = {host: '127.0.0.1', port: 4041, listening: false},
-  client1Options = {host: '127.0.0.1', port: 4042, listening: false},
-  serverName = serverOptions.host + ':' + serverOptions.port,
-  clientName = clientOptions.host + ':' + clientOptions.port,
-  client1Name = client1Options.host + ':' + client1Options.port;
+var serverOptions = {host: '127.0.0.1', port: 4040, listening: false};
+var clientOptions = {host: '127.0.0.1', port: 4041, listening: false};
+var client1Options = {host: '127.0.0.1', port: 4042, listening: false};
+var serverName = serverOptions.host + ':' + serverOptions.port;
+var clientName = clientOptions.host + ':' + clientOptions.port;
+var client1Name = client1Options.host + ':' + client1Options.port;
 
 
 test('add peer: refuse to add self', function t(assert) {
@@ -32,8 +32,8 @@ test('add peer: should successfully add peer', function t(assert) {
 
 
 test('add peer: get connection', function t(assert) {
-  var server = new TChannel(serverOptions),
-    connection = server.addPeer(clientName);
+  var server = new TChannel(serverOptions);
+  var connection = server.addPeer(clientName);
 
   assert.ok(connection, 'A connection object should be returned');
   assert.equals(connection.remoteAddr, '127.0.0.1:4041', 'Remote address should match the client');
@@ -53,8 +53,8 @@ test('set peer: refuse to set self', function t(assert) {
 
 
 test('set peer: should successfully set peer', function t(assert) {
-  var server = new TChannel(serverOptions),
-    conn = server.makeOutConnection(clientName);
+  var server = new TChannel(serverOptions);
+  var conn = server.makeOutConnection(clientName);
 
   assert.doesNotThrow(function () {
     server.setPeer(clientName, conn);
@@ -65,9 +65,9 @@ test('set peer: should successfully set peer', function t(assert) {
 
 
 test('set peer: get connection', function t(assert) {
-  var server = new TChannel(serverOptions),
-    conn = server.makeOutConnection(clientName),
-    connection = server.setPeer(clientName, conn);
+  var server = new TChannel(serverOptions);
+  var conn = server.makeOutConnection(clientName);
+  var connection = server.setPeer(clientName, conn);
 
   assert.ok(connection, 'A connection object should be returned');
   assert.equals(connection.remoteAddr, '127.0.0.1:4041', 'Remote address should match the client');
@@ -165,5 +165,3 @@ test('make socket: should throw for invalid destination', function t(assert) {
 //    'Should reject invalid destination');
 //  assert.end();
 //});
-
-
