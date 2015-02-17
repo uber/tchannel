@@ -2,6 +2,9 @@
 pytest
 pytest-cov
 
+# Test all the pythons
+tox
+
 # Release tool
 zest.releaser
 
