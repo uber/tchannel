@@ -1,0 +1,23 @@
+---
+language: python
+
+python:
+  - "2.7"
+  - "3.4"
+
+env:
+  TOX_ENV=py27
+  TOX_ENV=py34
+  TOX_ENV=flake8
+  TOX_ENV=cover
+
+install:
+  - "pip install -r requirements.txt --use-mirrors"
+  - "pip install -r requirements-test.txt --use-mirrors"
+  - if [ "$TOX_ENV" = "cover" ] ; then pip install coveralls ; fi
+  - "python setup.py develop"
+
+script: tox -e $TOX_ENV
+
+after_success:
+  - if [ "$TOX_ENV" = "cover" ] ; then coveralls ; fi
