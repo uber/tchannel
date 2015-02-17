@@ -1,2 +1,5 @@
 [run]
 branch = true
+
+[xml]
+output = coverage.xml
