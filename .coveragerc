@@ -1,5 +1,11 @@
 [run]
 branch = true
 
+[report]
+exclude_lines =
+  pragma: no cover
+  raise NotImplementedError
+  def __repr__
+
 [xml]
 output = coverage.xml
