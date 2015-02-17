@@ -8,7 +8,6 @@ class Types(object):
     CALL_REQ = 0x03
     CALL_RES = 0x04
 
-    PUBLISH = 0x06
     CANCEL = 0xc0
     CLAIM = 0xc1
 
