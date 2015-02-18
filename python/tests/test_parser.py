@@ -1,5 +1,9 @@
 from __future__ import absolute_import
-from cStringIO import StringIO
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from io import BytesIO as StringIO
+
 import struct
 
 import pytest
@@ -10,7 +14,7 @@ from tchannel.parser import read_key_value
 
 def test_read_char():
     """Ensure reading a single character works."""
-    assert read_big_endian(StringIO(chr(0x10)), 1) == 16
+    assert read_big_endian(StringIO(b'\x10'), 1) == 16
 
 
 def test_read_long():
