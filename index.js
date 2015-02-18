@@ -578,9 +578,8 @@ TChannelConnection.prototype.handleReqFrame = function (reqFrame) {
 
 	this.inPending++;
 	var opCallback = responseFrameBuilder(reqFrame, sendResponse);
-	var op = this.inOps[id] = new TChannelServerOp(this, handler, reqFrame, {
-		
-	}, this.channel.now(), opCallback);
+	var op = this.inOps[id] = new TChannelServerOp(this,
+		handler, reqFrame, this.channel.now(), {}, opCallback);
 
 	function sendResponse(err, handlerErr, resFrame) {
 		if (err) {
