@@ -5,8 +5,5 @@ pytest-cov
 # Test all the pythons
 tox
 
-# Release tool
-zest.releaser
-
 # Syntax checker
 flake8==2.2.5
