@@ -36,9 +36,13 @@ def read_key_value(buffer, key_size, value_size=None):
 
     Returns tuple of (key, value, bytes read).
     """
-    value_size = value_size or key_size
+    if value_size is None:
+        value_size = key_size
 
     key, key_bytes = read_variable_length_key(buffer, key_size)
-    value, value_bytes = read_variable_length_key(buffer, value_size)
+    if value_size > 0:
+        value, value_bytes = read_variable_length_key(buffer, value_size)
+    else:
+        value, value_bytes = None, 0
 
     return key, value, (key_bytes + value_bytes)

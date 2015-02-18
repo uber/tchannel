@@ -5,6 +5,7 @@ import struct
 import pytest
 
 from tchannel.parser import read_big_endian
+from tchannel.parser import read_key_value
 
 
 def test_read_char():
@@ -24,3 +25,15 @@ def test_read_invalid():
     """Ensure size validation is enforced."""
     with pytest.raises(ValueError):
         read_big_endian(None, 42)
+
+
+def test_read_zero_length_value():
+    """Test edge case around 0-length value."""
+    buff = StringIO(
+        b'\x00\x03key'
+    )
+    assert read_key_value(buff, 2, 0) == (
+        'key',
+        None,
+        len('key') + 2
+    )
