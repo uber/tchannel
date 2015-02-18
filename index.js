@@ -458,7 +458,9 @@ function checkOpsForTimeout(tconn, ops, pendingKey) {
 
 TChannelConnection.prototype.onReqTimeout = function (op) {
 	op.timedOut = true;
-	op.callback(new Error('timed out'), null, null);
+	if (op.callback) {
+		op.callback(new Error('timed out'), null, null);
+	}
 	this.lastTimeoutTime = this.channel.now();
 };
 
