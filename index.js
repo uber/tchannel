@@ -418,37 +418,43 @@ TChannelConnection.prototype.onTimeoutCheck = function () {
 		return;
 	}
 
-	var opKeys = Object.keys(this.outOps);
-	var now = this.channel.now();
+	checkOpsForTimeout(this, this.outOps, 'outPending');
+	checkOpsForTimeout(this, this.inOps, 'inPending');
+
+	this.startTimeoutTimer();
+};
+
+function checkOpsForTimeout(tconn, ops, pendingKey) {
+	var opKeys = Object.keys(ops);
+	var now = tconn.channel.now();
 	for (var i = 0; i < opKeys.length ; i++) {
 		var opKey = opKeys[i];
-		var op = this.outOps[opKey];
+		var op = ops[opKey];
 		if (op.timedOut) {
-			delete this.outOps[opKey];
-			this.outPending--;
-			this.logger.warn('lingering timed-out outgoing operation');
+			delete ops[opKey];
+			tconn[pendingKey]--;
+			tconn.logger.warn('lingering timed-out outgoing operation');
 			continue;
 		}
 		if (op === undefined) {
 			// TODO: why not null and empty string too? I mean I guess false
 			// and 0 might be a thing, but really why not just !op?
-			this.channel.logger
+			tconn.channel.logger
 				.warn('unexpected undefined operation', {
 					key: opKey,
 					op: op
 				});
 			continue;
 		}
-		var timeout = op.options.timeout || this.channel.reqTimeoutDefault;
+		var timeout = op.options.timeout || tconn.channel.reqTimeoutDefault;
 		var duration = now - op.start;
 		if (duration > timeout) {
-			delete this.outOps[opKey];
-			this.outPending--;
-			this.onReqTimeout(op);
+			delete ops[opKey];
+			tconn[pendingKey]--;
+			tconn.onReqTimeout(op);
 		}
 	}
-	this.startTimeoutTimer();
-};
+}
 
 TChannelConnection.prototype.onReqTimeout = function (op) {
 	op.timedOut = true;
@@ -572,7 +578,9 @@ TChannelConnection.prototype.handleReqFrame = function (reqFrame) {
 
 	this.inPending++;
 	var opCallback = responseFrameBuilder(reqFrame, sendResponse);
-	var op = this.inOps[id] = new TChannelServerOp(this, handler, reqFrame, opCallback);
+	var op = this.inOps[id] = new TChannelServerOp(this, handler, reqFrame, {
+		
+	}, this.channel.now(), opCallback);
 
 	function sendResponse(err, handlerErr, resFrame) {
 		if (err) {
@@ -641,12 +649,17 @@ TChannelConnection.prototype.send = function(options, arg1, arg2, arg3, callback
 };
 /* jshint maxparams:4 */
 
-function TChannelServerOp(connection, handler, reqFrame, callback) {
+/* jshint maxparams:6 */
+function TChannelServerOp(connection, handler, reqFrame, start, options, callback) {
 	this.connection = connection;
 	this.handler = handler;
 	this.reqFrame = reqFrame;
+	this.timedOut = false;
+	this.start = start;
+	this.options = options;
 	handler(reqFrame.arg2, reqFrame.arg3, connection.remoteName, callback);
 }
+/* jshint maxparams:4 */
 
 function responseFrameBuilder(reqFrame, callback) {
 	var id = reqFrame.header.id;
