@@ -1,12 +1,12 @@
 from __future__ import absolute_import
 
+from .exceptions import InvalidMessageException
 from .types import Types
 from .parser import read_short
 from .parser import read_key_value
 
 
-_BASE_FIELDS = (
-)
+_BASE_FIELDS = ()
 
 
 class BaseMessage(object):
@@ -73,3 +73,17 @@ class CallRequestMessage(BaseMessage):
 class CallResponseMessage(CallRequestMessage):
     """Respond to an RPC call."""
     message_type = Types.CALL_RES
+
+
+class PingRequestMessage(BaseMessage):
+    """Initiate a ping request."""
+    message_type = Types.PING_REQ
+
+    def parse(self, payload, size):
+        if size > 0:
+            raise InvalidMessageException('Ping messages cannot have a body')
+
+
+class PingResponseMessage(PingRequestMessage):
+    """Respond to a ping request."""
+    message_type = Types.PING_RES
