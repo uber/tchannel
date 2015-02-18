@@ -59,7 +59,7 @@ def test_init_request_with_headers(init_request_with_headers):
     message = messages.InitRequestMessage()
     message.parse(*init_request_with_headers)
 
-    assert message.headers[b'test_header']
+    assert message.headers['test_header']
 
 
 def test_invalid_ping_request():
