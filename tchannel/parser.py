@@ -45,4 +45,4 @@ def read_key_value(buffer, key_size, value_size=None):
     else:
         value, value_bytes = None, 0
 
-    return key, value, (key_bytes + value_bytes)
+    return key.decode('utf-8'), value, (key_bytes + value_bytes)
