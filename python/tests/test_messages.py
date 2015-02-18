@@ -5,6 +5,7 @@ import struct
 import pytest
 
 from tchannel import messages
+from tchannel import exceptions
 
 
 def make_byte_stream(bytes_):
@@ -55,3 +56,16 @@ def test_init_request_with_headers(init_request_with_headers):
     message.parse(*init_request_with_headers)
 
     assert message.headers['test_header']
+
+
+def test_invalid_ping_request():
+    """Ensure we validate ping requests."""
+    message = messages.PingRequestMessage()
+    with pytest.raises(exceptions.InvalidMessageException):
+        message.parse(StringIO(), 1)
+
+
+def test_valid_ping_request():
+    """Verify we don't barf on 0-length bodies."""
+    message = messages.PingRequestMessage()
+    message.parse(StringIO(), 0)
