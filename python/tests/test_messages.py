@@ -1,6 +1,10 @@
 from __future__ import absolute_import
-from cStringIO import StringIO
 import struct
+
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from io import BytesIO as StringIO
 
 import pytest
 
@@ -24,8 +28,8 @@ def init_request_message():
 
 @pytest.fixture
 def init_request_with_headers():
-    header_name = 'test_header'
-    header_value = 'something'
+    header_name = b'test_header'
+    header_value = b'something'
     header_buffer = (
         make_short_bytes(len(header_name)) +
         header_name +
@@ -55,7 +59,7 @@ def test_init_request_with_headers(init_request_with_headers):
     message = messages.InitRequestMessage()
     message.parse(*init_request_with_headers)
 
-    assert message.headers['test_header']
+    assert message.headers[b'test_header']
 
 
 def test_invalid_ping_request():
