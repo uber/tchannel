@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 from .types import Types
 from .parser import read_short
-from .parser import read_variable_length_key
+from .parser import read_key_value
 
 
 _BASE_FIELDS = (
@@ -32,6 +32,7 @@ class InitRequestMessage(BaseMessage):
     """Initialize a connection to a TChannel server."""
     message_type = Types.INIT_REQ
     VERSION_SIZE = 2
+    HEADER_SIZE = 2
 
     __slots__ = _BASE_FIELDS + (
         'version',
@@ -44,12 +45,11 @@ class InitRequestMessage(BaseMessage):
 
         offset = self.VERSION_SIZE
         while offset < size:
-            header_name, bytes_read = read_variable_length_key(payload, 2)
+            header_name, header_value, bytes_read = read_key_value(
+                payload,
+                self.HEADER_SIZE,
+            )
             offset += bytes_read
-
-            header_value, bytes_read = read_variable_length_key(payload, 2)
-            offset += bytes_read
-
             self.headers[header_name] = header_value
 
 

@@ -24,8 +24,21 @@ def read_short(buffer):
 def read_variable_length_key(buffer, key_size):
     """Read a variable-length key from a stream.
 
-    Returns total number of bytes read, plus the value.
+    Returns tuple of (value, bytes read).
     """
     key_bytes = read_big_endian(buffer, key_size)
     value = buffer.read(key_bytes)
     return value, (key_bytes + key_size)
+
+
+def read_key_value(buffer, key_size, value_size=None):
+    """Read a variable-length key-value pair from a stream.
+
+    Returns tuple of (key, value, bytes read).
+    """
+    value_size = value_size or key_size
+
+    key, key_bytes = read_variable_length_key(buffer, key_size)
+    value, value_bytes = read_variable_length_key(buffer, value_size)
+
+    return key, value, (key_bytes + value_bytes)
