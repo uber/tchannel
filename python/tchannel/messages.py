@@ -4,6 +4,8 @@ from .exceptions import InvalidMessageException
 from .types import Types
 from .parser import read_short
 from .parser import read_key_value
+from .parser import write_number
+from .parser import write_key_value
 
 
 _BASE_FIELDS = ()
@@ -25,6 +27,16 @@ class BaseMessage(object):
         the size and flags have been parsed.
 
         Payload may be ``None`` if size is 0.
+        """
+        raise NotImplementedError()
+
+    def serialize(self, out):
+        """Serialize a message to its wire format.
+
+        ``out`` is generally a ``bytearray`` which is a mutable sequence of
+        bytes.
+
+        This generates the ``payload`` section of the message.
         """
         raise NotImplementedError()
 
@@ -52,6 +64,11 @@ class InitRequestMessage(BaseMessage):
             )
             offset += bytes_read
             self.headers[header_name] = header_value
+
+    def serialize(self, out):
+        out.extend(write_number(PROTOCOL_VERSION, self.VERSION_SIZE))
+        for key, value in self.headers.iteritems():
+            out.extend(write_key_value(key, value, key_size=2))
 
 
 class InitResponseMessage(InitRequestMessage):
