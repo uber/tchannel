@@ -4,6 +4,8 @@
 (https://travis-ci.org/uber/tchannel.py)
 [![Coverage Status](https://coveralls.io/repos/uber/tchannel.py/badge.svg?branch=master)]
 (https://coveralls.io/r/uber/tchannel.py?branch=master)
+[![Documentation Status](https://readthedocs.org/projects/tchannel/badge/?version=latest)]
+(http://tchannel.readthedocs.org/en/latest/)
 
 TChannel.py is a Python implementation of [TChannel].
 
