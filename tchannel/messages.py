@@ -101,6 +101,10 @@ class PingRequestMessage(BaseMessage):
         if size > 0:
             raise InvalidMessageException('Ping messages cannot have a body')
 
+    def serialize(self, out):
+        """Serialize nothing to the wire."""
+        return
+
 
 class PingResponseMessage(PingRequestMessage):
     """Respond to a ping request."""
