@@ -8,3 +8,6 @@
 TChannel.py is a Python implementation of [TChannel].
 
 [TChannel]: https://github.com/uber/tchannel
+
+[Documentation](http://tchannel.readthedocs.org/en/latest/) is available on Read
+the Docs.
