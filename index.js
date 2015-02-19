@@ -57,6 +57,7 @@ function TChannel(options) {
 		this.options.timers.now : globalNow;
 
 	this.reqTimeoutDefault = this.options.reqTimeoutDefault || 5000;
+	this.serverTimeoutDefault = this.options.serverTimeoutDefault || 5000;
 	this.timeoutCheckInterval = this.options.timeoutCheckInterval || 1000;
 	this.timeoutFuzz = this.options.timeoutFuzz || 100;
 
@@ -419,12 +420,33 @@ TChannelConnection.prototype.onTimeoutCheck = function () {
 	}
 
 	checkOpsForTimeout(this, this.outOps, 'outPending');
-	checkOpsForTimeout(this, this.inOps, 'inPending');
+	checksInOpsForTimeout(this, this.inOps);
 
 	this.startTimeoutTimer();
 };
 
-function checkOpsForTimeout(tconn, ops, pendingKey) {
+function checksInOpsForTimeout(tconn, ops) {
+	var opKeys = Object.keys(ops);
+	var now = tconn.channel.now();
+
+	for (var i = 0; i < opKeys.length; i++) {
+		var opKey = opKeys[i];
+		var op = ops[opKey];
+
+		if (op === undefined) {
+			continue;
+		}
+
+		var timeout = tconn.channel.serverTimeoutDefault;
+		var duration = now - op.start;
+		if (duration > timeout) {
+			delete ops[opKey];
+			tconn.inPending--;
+		}
+	}
+}
+
+function checkOpsForTimeout(tconn, ops) {
 	var opKeys = Object.keys(ops);
 	var now = tconn.channel.now();
 	for (var i = 0; i < opKeys.length ; i++) {
@@ -432,7 +454,7 @@ function checkOpsForTimeout(tconn, ops, pendingKey) {
 		var op = ops[opKey];
 		if (op.timedOut) {
 			delete ops[opKey];
-			tconn[pendingKey]--;
+			tconn.outPending--;
 			tconn.logger.warn('lingering timed-out outgoing operation');
 			continue;
 		}
@@ -450,7 +472,7 @@ function checkOpsForTimeout(tconn, ops, pendingKey) {
 		var duration = now - op.start;
 		if (duration > timeout) {
 			delete ops[opKey];
-			tconn[pendingKey]--;
+			tconn.outPending--;
 			tconn.onReqTimeout(op);
 		}
 	}
@@ -458,9 +480,7 @@ function checkOpsForTimeout(tconn, ops, pendingKey) {
 
 TChannelConnection.prototype.onReqTimeout = function (op) {
 	op.timedOut = true;
-	if (op.callback) {
-		op.callback(new Error('timed out'), null, null);
-	}
+	op.callback(new Error('timed out'), null, null);
 	this.lastTimeoutTime = this.channel.now();
 };
 

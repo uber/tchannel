@@ -26,7 +26,8 @@ var allocCluster = require('./lib/alloc-cluster.js');
 
 test('does not leak inOps', function t(assert) {
     var cluster = allocCluster(2, {
-        timeoutCheckInterval: 100
+        timeoutCheckInterval: 100,
+        serverTimeoutDefault: 100
     });
 
     var one = cluster.channels[0];
@@ -40,6 +41,7 @@ test('does not leak inOps', function t(assert) {
     }, '/timeout', 'h', 'b', onTimeout);
 
     function onTimeout(err) {
+        two.timeoutCheckInterval = 99999;
         assert.ok(err);
 
         assert.equal(err.message, 'timed out');
@@ -56,16 +58,16 @@ test('does not leak inOps', function t(assert) {
         assert.equal(inPeer.direction, 'in');
         assert.equal(outPeer.direction, 'out');
 
-        setTimeout(function onTimeout() {
-            assert.equal(Object.keys(inPeer.outOps).length, 0);
-            assert.equal(Object.keys(outPeer.inOps).length, 0);
+        inPeer.onTimeoutCheck();
 
-            assert.equal(Object.keys(inPeer.inOps).length, 0);
-            assert.equal(Object.keys(outPeer.outOps).length, 0);
+        assert.equal(Object.keys(inPeer.outOps).length, 0);
+        assert.equal(Object.keys(outPeer.inOps).length, 0);
 
-            cluster.destroy();
-            assert.end();
-        }, 200);
+        assert.equal(Object.keys(inPeer.inOps).length, 0);
+        assert.equal(Object.keys(outPeer.outOps).length, 0);
+
+        cluster.destroy();
+        assert.end();
     }
 
     function timeout() {
