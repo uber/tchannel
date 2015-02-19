@@ -77,6 +77,8 @@ def test_valid_ping_request():
 
 @pytest.mark.parametrize('message_class,attrs', [
     (messages.InitRequestMessage, {'headers': {'one': '2'}}),
+    (messages.PingRequestMessage, {}),
+    (messages.PingResponseMessage, {}),
 ])
 def test_serialize_message(message_class, attrs):
     """Verify all message types serialize properly."""
