@@ -51,19 +51,6 @@ def test_write_number():
     assert write_number(0x01, 1) == b'\x01'
 
 
-def verify_key_value(stream, key, value, key_size, value_size):
-    utf8_key = key.encode('utf-8')
-    key_length = len(utf8_key)
-    assert read_number(stream, key_size) == key_length
-    assert stream.read(key_length).decode('utf-8') == key
-
-    value = value or ''
-    utf8_value = value.encode('utf-8')
-    value_length = len(utf8_value)
-    assert read_number(stream, value_size) == value_length
-    assert stream.read(value_length).decode('utf-8') == value
-
-
 @pytest.mark.parametrize('key_size,value_size,value', [
     (2, None, 'value'),
     (2, 4, u"i'm a little snowman ☃"),
@@ -73,13 +60,17 @@ def test_write_key_value(key_size, value_size, value, stringio):
     """Verify we write variable-width values properly."""
     key = u'key ☢'
 
-    stream = write_key_value(
+    stream = stringio(write_key_value(
         key, value, key_size=key_size, value_size=value_size
-    )
-    verify_key_value(
-        stringio(stream),
-        key,
-        value,
-        key_size=key_size,
-        value_size=value_size or key_size,
-    )
+    ))
+
+    utf8_key = key.encode('utf-8')
+    key_length = len(utf8_key)
+    assert read_number(stream, key_size) == key_length
+    assert stream.read(key_length).decode('utf-8') == key
+
+    value = value or ''
+    utf8_value = value.encode('utf-8')
+    value_length = len(utf8_value)
+    assert read_number(stream, value_size or key_size) == value_length
+    assert stream.read(value_length).decode('utf-8') == value
