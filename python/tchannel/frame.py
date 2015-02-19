@@ -40,7 +40,7 @@ class Frame(object):
         ))
 
         # No flags
-        header_bytes.append(b'\x00')
+        header_bytes.append(0)
 
         # 6 bytes of reserved data
         header_bytes.extend(self.RESERVED_PADDING)

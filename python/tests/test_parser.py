@@ -52,11 +52,11 @@ def test_write_number():
 
 def verify_key_value(stream, key, value, key_size, value_size):
     assert read_number(stream, key_size) == len(key)
-    assert stream.read(len(key)) == key
+    assert stream.read(len(key)).decode('utf-8') == key
 
     if value:
         assert read_number(stream, value_size) == len(value)
-        assert stream.read(len(value)) == value
+        assert stream.read(len(value)).decode('utf-8') == value
     else:
         assert read_number(stream, value_size) == 0
 

@@ -67,7 +67,7 @@ class InitRequestMessage(BaseMessage):
 
     def serialize(self, out):
         out.extend(write_number(PROTOCOL_VERSION, self.VERSION_SIZE))
-        for key, value in self.headers.iteritems():
+        for key, value in self.headers.items():
             out.extend(write_key_value(key, value, key_size=2))
 
 
