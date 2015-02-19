@@ -419,15 +419,16 @@ TChannelConnection.prototype.onTimeoutCheck = function () {
 		return;
 	}
 
-	checkOpsForTimeout(this, this.outOps, 'outPending');
-	checksInOpsForTimeout(this, this.inOps);
+	this.checkOutOpsForTimeout(this.outOps);
+	this.checkInOpsForTimeout(this.inOps);
 
 	this.startTimeoutTimer();
 };
 
-function checksInOpsForTimeout(tconn, ops) {
+TChannelConnection.prototype.checkInOpsForTimeout = function checkInOpsForTimeout(ops) {
+	var self = this;
 	var opKeys = Object.keys(ops);
-	var now = tconn.channel.now();
+	var now = self.channel.now();
 
 	for (var i = 0; i < opKeys.length; i++) {
 		var opKey = opKeys[i];
@@ -437,46 +438,47 @@ function checksInOpsForTimeout(tconn, ops) {
 			continue;
 		}
 
-		var timeout = tconn.channel.serverTimeoutDefault;
+		var timeout = self.channel.serverTimeoutDefault;
 		var duration = now - op.start;
 		if (duration > timeout) {
 			delete ops[opKey];
-			tconn.inPending--;
+			self.inPending--;
 		}
 	}
-}
+};
 
-function checkOpsForTimeout(tconn, ops) {
+TChannelConnection.prototype.checkOutOpsForTimeout = function checkOutOpsForTimeout(ops) {
+	var self = this;
 	var opKeys = Object.keys(ops);
-	var now = tconn.channel.now();
+	var now = self.channel.now();
 	for (var i = 0; i < opKeys.length ; i++) {
 		var opKey = opKeys[i];
 		var op = ops[opKey];
 		if (op.timedOut) {
 			delete ops[opKey];
-			tconn.outPending--;
-			tconn.logger.warn('lingering timed-out outgoing operation');
+			self.outPending--;
+			self.logger.warn('lingering timed-out outgoing operation');
 			continue;
 		}
 		if (op === undefined) {
 			// TODO: why not null and empty string too? I mean I guess false
 			// and 0 might be a thing, but really why not just !op?
-			tconn.channel.logger
+			self.channel.logger
 				.warn('unexpected undefined operation', {
 					key: opKey,
 					op: op
 				});
 			continue;
 		}
-		var timeout = op.options.timeout || tconn.channel.reqTimeoutDefault;
+		var timeout = op.options.timeout || self.channel.reqTimeoutDefault;
 		var duration = now - op.start;
 		if (duration > timeout) {
 			delete ops[opKey];
-			tconn.outPending--;
-			tconn.onReqTimeout(op);
+			self.outPending--;
+			self.onReqTimeout(op);
 		}
 	}
-}
+};
 
 TChannelConnection.prototype.onReqTimeout = function (op) {
 	op.timedOut = true;
