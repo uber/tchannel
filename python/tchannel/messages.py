@@ -7,6 +7,7 @@ from .parser import read_key_value
 
 
 _BASE_FIELDS = ()
+PROTOCOL_VERSION = 0x02
 
 
 class BaseMessage(object):
