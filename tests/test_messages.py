@@ -82,7 +82,7 @@ def test_serialize_message(message_class, attrs):
     """Verify all message types serialize properly."""
     message = message_class()
     out = bytearray()
-    for key, value in attrs.iteritems():
+    for key, value in attrs.items():
         setattr(message, key, value)
 
     message.serialize(out)
