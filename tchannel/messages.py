@@ -16,7 +16,6 @@ class BaseMessage(object):
     """Represent common functionality across all TChannel messages."""
     # Micro-optimizations are the best kinds of optimizations
     message_type = None
-    message_id = None
 
     __slots__ = _BASE_FIELDS
 
