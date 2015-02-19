@@ -3,35 +3,43 @@ from __future__ import absolute_import
 import struct
 
 
-def read_big_endian(buffer, size):
-    """Read a big-endian number off the byte stream."""
+def get_number_format(size):
     if size == 1:
-        format = '>B'
+        return '>B'
     elif size == 2:
-        format = '>H'
+        return '>H'
     elif size == 4:
-        format = '>I'
+        return '>I'
     else:
         raise ValueError('size must be 1, 2, or 4')
-    return struct.unpack(format, buffer.read(size))[0]
 
 
-def read_short(buffer):
+def write_number(value, size):
+    """Write a big-endian short."""
+    return struct.pack(get_number_format(size), value)
+
+
+def read_number(buff, size):
+    """Read a big-endian number off the byte stream."""
+    return struct.unpack(get_number_format(size), buff.read(size))[0]
+
+
+def read_short(buff):
     """Read two bytes in big-endian and return an unsigned integer."""
-    return read_big_endian(buffer, 2)
+    return read_number(buff, 2)
 
 
-def read_variable_length_key(buffer, key_size):
+def read_variable_length_key(buff, key_size):
     """Read a variable-length key from a stream.
 
     Returns tuple of (value, bytes read).
     """
-    key_bytes = read_big_endian(buffer, key_size)
-    value = buffer.read(key_bytes)
+    key_bytes = read_number(buff, key_size)
+    value = buff.read(key_bytes)
     return value, (key_bytes + key_size)
 
 
-def read_key_value(buffer, key_size, value_size=None):
+def read_key_value(buff, key_size, value_size=None):
     """Read a variable-length key-value pair from a stream.
 
     Returns tuple of (key, value, bytes read).
@@ -39,10 +47,43 @@ def read_key_value(buffer, key_size, value_size=None):
     if value_size is None:
         value_size = key_size
 
-    key, key_bytes = read_variable_length_key(buffer, key_size)
+    key, key_bytes = read_variable_length_key(buff, key_size)
     if value_size > 0:
-        value, value_bytes = read_variable_length_key(buffer, value_size)
+        value, value_bytes = read_variable_length_key(buff, value_size)
     else:
         value, value_bytes = None, 0
 
     return key.decode('utf-8'), value, (key_bytes + value_bytes)
+
+
+def write_variable_length_key(value, value_size):
+    """Write a length followed by that many bytes."""
+    return write_number(len(value), value_size), value
+
+
+def write_key_value(key, value, key_size, value_size=None):
+    """Write a variable-length key-value pair.
+
+    Returns an array of bytes.
+    """
+    if value_size is None:
+        value_size = key_size
+
+    stream = bytearray()
+    size, key_bytes = write_variable_length_key(
+        key.encode('utf-8'),
+        key_size
+    )
+    stream.extend(size)
+    stream.extend(key_bytes)
+
+    if value:
+        size, value = write_variable_length_key(
+            value.encode('utf-8'),
+            value_size
+        )
+        stream.extend(size)
+        stream.extend(value)
+    else:
+        stream.extend(write_number(0, value_size))
+    return stream
