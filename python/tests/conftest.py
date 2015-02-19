@@ -1,8 +1,4 @@
 from __future__ import absolute_import
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from io import BytesIO as StringIO
 
 import pytest
 
@@ -22,8 +18,3 @@ class _MockConnection(object):
 def connection():
     """Make a mock connection."""
     return _MockConnection()
-
-
-@pytest.fixture
-def stringio():
-    return StringIO
