@@ -26,3 +26,4 @@ require('./send.js');
 require('./register.js');
 require('./identify.js');
 require('./tchannel.js');
+require('./regression-inOps-leak.js');
