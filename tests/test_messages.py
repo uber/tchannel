@@ -37,7 +37,7 @@ def init_request_with_headers():
         header_value
     )
     return make_byte_stream(
-        make_short_bytes(0x02) +
+        make_short_bytes(messages.PROTOCOL_VERSION) +
         header_buffer
     )
 
