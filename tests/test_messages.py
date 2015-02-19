@@ -73,3 +73,16 @@ def test_valid_ping_request():
     """Verify we don't barf on 0-length bodies."""
     message = messages.PingRequestMessage()
     message.parse(StringIO(), 0)
+
+
+@pytest.mark.parametrize('message_class,attrs', [
+    (messages.InitRequestMessage, {'headers': {'one': '2'}}),
+])
+def test_serialize_message(message_class, attrs):
+    """Verify all message types serialize properly."""
+    message = message_class()
+    out = bytearray()
+    for key, value in attrs.items():
+        setattr(message, key, value)
+
+    message.serialize(out)
