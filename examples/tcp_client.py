@@ -4,7 +4,7 @@ from __future__ import absolute_import
 import socket
 import sys
 
-from tchannel.socket.connection import Connection
+from tchannel.socket import Connection
 
 
 class MyClient(object):
