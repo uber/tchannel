@@ -19,7 +19,7 @@ class _FakeMessage(object):
 @pytest.fixture
 def dummy_frame():
     return bytearray([
-        0, 0, 0, 0,  # Size
+        0, 0, 0, 16,  # Size
         0, 0, 0, 1,  # ID
         0,  # type
         0,  # flags
