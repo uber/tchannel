@@ -1,14 +1,10 @@
 # coding: utf-8
 from __future__ import absolute_import
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from io import BytesIO as StringIO
-
 import struct
 
 import pytest
 
+from tchannel.io import BytesIO
 from tchannel.parser import read_number
 from tchannel.parser import read_key_value
 from tchannel.parser import write_number
@@ -17,13 +13,13 @@ from tchannel.parser import write_key_value
 
 def test_read_char():
     """Ensure reading a single character works."""
-    assert read_number(StringIO(b'\x10'), 1) == 16
+    assert read_number(BytesIO(b'\x10'), 1) == 16
 
 
 def test_read_long():
     """Ensure we can read 4-byte longs."""
     value = 12345
-    assert read_number(StringIO(
+    assert read_number(BytesIO(
         struct.pack('>I', value)
     ), 4) == value
 
@@ -36,7 +32,7 @@ def test_read_invalid():
 
 def test_read_zero_length_value():
     """Test edge case around 0-length value."""
-    buff = StringIO(
+    buff = BytesIO(
         b'\x00\x03key'
     )
     assert read_key_value(buff, 2, 0) == (
@@ -56,11 +52,11 @@ def test_write_number():
     (2, 4, u"i'm a little snowman ☃"),
     (2, 2, None),
 ])
-def test_write_key_value(key_size, value_size, value, stringio):
+def test_write_key_value(key_size, value_size, value):
     """Verify we write variable-width values properly."""
     key = u'key ☢'
 
-    stream = stringio(write_key_value(
+    stream = BytesIO(write_key_value(
         key, value, key_size=key_size, value_size=value_size
     ))
 
