@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 from .exceptions import ProtocolException
 from .io import BytesIO
-from .mapping import get_message
+from .mapping import get_message_class
 from .parser import read_number
 from .parser import write_number
 
@@ -31,7 +31,7 @@ class Frame(object):
         message_length = read_number(stream, cls.SIZE_WIDTH)
         message_id = read_number(stream, cls.ID_WIDTH)
         message_type = read_number(stream, cls.TYPE_WIDTH)
-        message_class = get_message(message_type)
+        message_class = get_message_class(message_type)
         if not message_class:
             raise ProtocolException('Unknown message type: %d' % message_type)
 
