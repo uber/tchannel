@@ -23,7 +23,7 @@ def dummy_frame():
         0, 0, 0, 1,  # ID
         0,  # type
         0,  # flags
-        0, 0, 0, 0, 0, 0, # reserved padding
+        0, 0, 0, 0, 0, 0,  # reserved padding
     ])
 
 
@@ -47,7 +47,7 @@ def test_empty_message(connection):
 def test_decode_empty_buffer():
     """Verify we raise on invalid buffers."""
     with pytest.raises(exceptions.ProtocolException):
-        Frame.decode('')
+        Frame.decode(b'')
 
 
 def test_decode_invalid_message_id(dummy_frame):
