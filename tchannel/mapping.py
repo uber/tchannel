@@ -23,6 +23,6 @@ MESSAGE_TYPES_TO_CLASSES = {
 }
 
 
-def get_message(message_type):
+def get_message_class(message_type):
     """Map a message type identifier to a message class."""
     return MESSAGE_TYPES_TO_CLASSES.get(message_type)
