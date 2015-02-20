@@ -1,5 +1,4 @@
 from __future__ import absolute_import
-import contextlib
 import socket
 
 import pytest
@@ -7,8 +6,7 @@ import pytest
 from tchannel.socket import Connection
 
 
-@pytest.fixture
-@contextlib.contextmanager
+@pytest.yield_fixture
 def tchannel_pair():
     """Generate a pair of connected TChannels.
 
@@ -28,13 +26,15 @@ def tchannel_pair():
 
 def test_handshake(tchannel_pair):
     """Validate the handshake exchange."""
-    with tchannel_pair as (server, client):
-        client.initiate_handshake()
-        server.await_handshake()
+    server, client = tchannel_pair
+
+    client.initiate_handshake()
+    server.await_handshake()
 
 
 def test_ping(tchannel_pair):
     """Validate the ping/pong exchange."""
-    with tchannel_pair as (server, client):
-        client.ping()
-        server.pong()
+    server, client = tchannel_pair
+
+    client.ping()
+    server.pong()
