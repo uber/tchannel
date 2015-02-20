@@ -1,19 +1,15 @@
 from __future__ import absolute_import
 import struct
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from io import BytesIO as StringIO
-
 import pytest
 
-from tchannel import messages
 from tchannel import exceptions
+from tchannel import messages
+from tchannel.io import BytesIO
 
 
 def make_byte_stream(bytes_):
-    return StringIO(bytes_), len(bytes_)
+    return BytesIO(bytes_), len(bytes_)
 
 
 def make_short_bytes(value):
@@ -66,13 +62,13 @@ def test_invalid_ping_request():
     """Ensure we validate ping requests."""
     message = messages.PingRequestMessage()
     with pytest.raises(exceptions.InvalidMessageException):
-        message.parse(StringIO(), 1)
+        message.parse(BytesIO(), 1)
 
 
 def test_valid_ping_request():
     """Verify we don't barf on 0-length bodies."""
     message = messages.PingRequestMessage()
-    message.parse(StringIO(), 0)
+    message.parse(BytesIO(), 0)
 
 
 @pytest.mark.parametrize('message_class,attrs', [
