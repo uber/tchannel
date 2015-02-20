@@ -64,9 +64,9 @@ def test_decode_ping(dummy_frame):
 
 
 def test_decode_with_flags(dummy_frame):
-    """Verify we handle flags."""
+    """Verify we handle flags (not implemented yet)."""
     dummy_frame[8] = Types.PING_REQ
     dummy_frame[9] = 0x01
 
-    Frame.decode(dummy_frame)
-    # if we didn't raise, we're good
+    with pytest.raises(NotImplementedError):
+        Frame.decode(dummy_frame)
