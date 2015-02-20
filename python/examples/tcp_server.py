@@ -8,7 +8,7 @@ except ImportError:
 
 import sys
 
-from tchannel.socket.connection import Connection
+from tchannel.socket import Connection
 
 
 class MyHandler(SocketServer.BaseRequestHandler):
@@ -25,7 +25,8 @@ class MyHandler(SocketServer.BaseRequestHandler):
         tchannel_connection.await_handshake()
         print("Successfully completed handshake")
 
-        # This call synchronously dispatches RPC requests to ``self.handle_call``
+        # This call synchronously dispatches RPC requests to
+        # ``self.handle_call``
         tchannel_connection.handle_calls(self.handle_call)
 
         # Connection is automatically closed when this function returns
