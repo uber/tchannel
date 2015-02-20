@@ -38,7 +38,7 @@ class Frame(object):
         flags = read_number(stream, cls.FLAGS_WIDTH)
         if flags:
             # TODO handle partial messages (e.g. multiple frames)
-            pass
+            raise NotImplementedError("I don't understand flags yet!")
 
         stream.read(cls.RESERVED_WIDTH)
         message = message_class()
