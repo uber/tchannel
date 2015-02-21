@@ -325,7 +325,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 
     self.localEndpoints = Object.create(null);
 
-    self.lastSentMessage = 0;
+    self.lastSentFrameId = 0;
     self.lastTimeoutTime = 0;
     self.closing = false;
 
@@ -384,6 +384,13 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     }
 }
 require('util').inherits(TChannelConnection, require('events').EventEmitter);
+
+TChannelConnection.prototype.nextFrameId = function nextFrameId() {
+    var self = this;
+    // TODO this needs to wrap around with 32-bit uint space
+    ++self.lastSentFrameId;
+    return self.lastSentFrameId;
+};
 
 // timeout check runs every timeoutCheckInterval +/- some random fuzz. Range is from
 //   base - fuzz/2 to base + fuzz/2
@@ -678,21 +685,25 @@ TChannelConnection.prototype.send = function send(options, arg1, arg2, arg3, cal
     var self = this;
     var frame = new v1.Frame();
 
+    var id = self.nextFrameId();
+
+    // TODO: use this to protect against >4Mi outstanding messages edge case
+    // (e.g. zombie operation bug, incredible throughput, or simply very long
+    // timeout
+    // if (self.outOps[id]) {
+    //  throw new Error('duplicate frame id in flight');
+    // }
+
     frame.set(arg1, arg2, arg3);
     frame.header.type = v1.Types.reqCompleteMessage;
-    // TODO This id will overflow at the 4 million messages mark
-    // This can create a very strange race condition where we
-    // call an very old operation with a long timeout if we
-    // send more then 4 million messages in a certain timeframe
-    frame.header.id = ++self.lastSentMessage;
+    frame.header.id = id;
     frame.header.seq = 0;
 
-    // TODO check whether this outOps already exists in case
-    // we send more then 4 million messages in a time frame.
-    self.outOps[frame.header.id] = new TChannelClientOp(
+    self.outOps[id] = new TChannelClientOp(
         options, frame, self.channel.now(), callback);
     self.pendingCount++;
-    return self.socket.write(frame.toBuffer());
+    var buffer = frame.toBuffer();
+    return self.socket.write(buffer);
 };
 /* jshint maxparams:4 */
 
