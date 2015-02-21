@@ -2,6 +2,7 @@ package binio
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/binary"
 	"io"
 )
@@ -66,6 +67,10 @@ type Reader interface {
 	ReadUint16() (uint16, error)
 	ReadUint32() (uint32, error)
 	ReadUint64() (uint64, error)
+
+	// Attempts to read n bytes from the underlying stream, avoiding a copy if possible (i.e. if the underlying
+	// reader is already maintaining a full buffer and can just wrap a slice of that buffer in a Reader)
+	ReadBytesNoCopy(n int) (io.Reader, error)
 }
 
 func NewReader(r io.Reader) Reader {
@@ -91,7 +96,7 @@ func (r *reader) ReadByte() (byte, error) {
 
 func (r *reader) ReadBytes(n int) ([]byte, error) {
 	b := make([]byte, n)
-	if _, err := r.r.Read(b); err != nil {
+	if _, err := io.ReadFull(r.r, b); err != nil {
 		return nil, err
 	}
 
@@ -99,7 +104,7 @@ func (r *reader) ReadBytes(n int) ([]byte, error) {
 }
 
 func (r *reader) Read(b []byte) error {
-	if _, err := r.r.Read(b); err != nil {
+	if _, err := io.ReadFull(r.r, b); err != nil {
 		return err
 	}
 
@@ -142,4 +147,15 @@ func (r *reader) ReadUint64() (uint64, error) {
 	}
 
 	return binary.BigEndian.Uint64(b[:]), nil
+}
+
+func (r *reader) ReadBytesNoCopy(n int) (io.Reader, error) {
+	// TODO(mmihic): Support an optimized BufferedReader interface that can be used to avoid copies
+	// from the underlying buffer if needed
+	b, err := r.ReadBytes(n)
+	if err != nil {
+		return nil, err
+	}
+
+	return bytes.NewReader(b), nil
 }
