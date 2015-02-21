@@ -111,6 +111,10 @@ func (r *reader) EOF() bool {
 }
 
 func (r *reader) ReadError() error {
+	if r.EOF() {
+		return nil
+	}
+
 	return r.err
 }
 
