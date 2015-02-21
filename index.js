@@ -371,9 +371,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
                 });
                 return;
             }
-            var remote = res1.toString();
-            self.remoteName = remote;
-            self.channel.emit('identified', remote);
+            self.handleInitResponse(res1.toString());
         });
     }
 
@@ -666,6 +664,13 @@ TChannelConnection.prototype.completeOutOp = function completeOutOp(id, err, arg
 TChannelConnection.prototype.sendInitRequest = function sendInitRequest(callback) {
     var self = this;
     self.send({}, 'TChannel identify', self.channel.name, null, callback);
+};
+
+TChannelConnection.prototype.handleInitResponse = function handleInitResponse(res) {
+    var self = this;
+    var remote = res;
+    self.remoteName = remote;
+    self.channel.emit('identified', remote);
 };
 
 // send a req frame
