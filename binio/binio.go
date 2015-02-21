@@ -9,14 +9,12 @@ import (
 // Writer for binary content (in BigEndian format).  Buffers writes as needed
 type Writer interface {
 	Flush() error
-	WriteError() error
-
-	WriteByte(n byte)
-	WriteBytes(b []byte)
-	WriteUint16(n uint16)
-	WriteUint32(n uint32)
-	WriteUint64(n uint64)
-	WriteString(s string)
+	WriteByte(n byte) error
+	WriteBytes(b []byte) error
+	WriteUint16(n uint16) error
+	WriteUint32(n uint32) error
+	WriteUint64(n uint64) error
+	WriteString(s string) error
 }
 
 func NewWriter(w io.Writer) Writer {
@@ -24,74 +22,50 @@ func NewWriter(w io.Writer) Writer {
 }
 
 type writer struct {
-	w   *bufio.Writer
-	err error
-}
-
-func (w *writer) WriteError() error {
-	return w.err
+	w *bufio.Writer
 }
 
 func (w *writer) Flush() error {
-	if w.err != nil {
-		return w.err
-	}
-
 	return w.w.Flush()
 }
 
-func (w *writer) WriteByte(n byte) {
-	if w.err != nil {
-		return
-	}
-
-	w.err = w.w.WriteByte(n)
+func (w *writer) WriteByte(n byte) error {
+	return w.w.WriteByte(n)
 }
 
-func (w *writer) WriteBytes(b []byte) {
-	if w.err != nil {
-		return
-	}
-
-	_, w.err = w.w.Write(b)
+func (w *writer) WriteBytes(b []byte) error {
+	var err error
+	_, err = w.w.Write(b)
+	return err
 }
 
-func (w *writer) WriteString(s string) {
-	if w.err != nil {
-		return
-	}
-
-	_, w.err = w.w.WriteString(s)
+func (w *writer) WriteString(s string) error {
+	var err error
+	_, err = w.w.WriteString(s)
+	return err
 }
 
-func (w *writer) WriteUint16(n uint16) {
-	w.WriteBytes([]byte{byte(n >> 8), byte(n)})
+func (w *writer) WriteUint16(n uint16) error {
+	return w.WriteBytes([]byte{byte(n >> 8), byte(n)})
 }
 
-func (w *writer) WriteUint32(n uint32) {
-	w.WriteBytes([]byte{byte(n >> 24), byte(n >> 16), byte(n >> 8), byte(n)})
+func (w *writer) WriteUint32(n uint32) error {
+	return w.WriteBytes([]byte{byte(n >> 24), byte(n >> 16), byte(n >> 8), byte(n)})
 }
 
-func (w *writer) WriteUint64(n uint64) {
-	w.WriteBytes([]byte{byte(n >> 56), byte(n >> 48), byte(n >> 40), byte(n >> 32),
+func (w *writer) WriteUint64(n uint64) error {
+	return w.WriteBytes([]byte{byte(n >> 56), byte(n >> 48), byte(n >> 40), byte(n >> 32),
 		byte(n >> 24), byte(n >> 16), byte(n >> 8), byte(n)})
 }
 
-// Reader for binary content (in BigEndian format).  Tracks any read errors that occur; each of the
-// ReadXXX methods return a zero-value on error, with ReadError() returning the last read error.
+// Writes binary content in BigEndian format
 type Reader interface {
-	// return true if the reader has reached the end of the stream
-	EOF() bool
-
-	// return the last read error
-	ReadError() error
-
-	ReadByte() byte
-	ReadBytes(n int) []byte
-	ReadString(n int) string
-	ReadUint16() uint16
-	ReadUint32() uint32
-	ReadUint64() uint64
+	ReadByte() (byte, error)
+	ReadBytes(n int) ([]byte, error)
+	ReadString(n int) (string, error)
+	ReadUint16() (uint16, error)
+	ReadUint32() (uint32, error)
+	ReadUint64() (uint64, error)
 }
 
 func NewReader(r io.Reader) Reader {
@@ -102,88 +76,70 @@ func NewReader(r io.Reader) Reader {
 // for the common scenario where the underlying reader is managing one or more fragmentation buffers,
 // allowing us to avoid unnecessary copies.
 type reader struct {
-	r   io.Reader
-	err error
+	r io.Reader
 }
 
-func (r *reader) EOF() bool {
-	return r.err == io.EOF
-}
-
-func (r *reader) ReadError() error {
-	if r.EOF() {
-		return nil
-	}
-
-	return r.err
-}
-
-func (r *reader) ReadByte() byte {
+func (r *reader) ReadByte() (byte, error) {
 	// This is the worst thing ever
 	var b [1]byte
-	if !r.Read(b[:]) {
-		return 0
+	if err := r.Read(b[:]); err != nil {
+		return 0, err
 	}
 
-	return b[0]
+	return b[0], nil
 }
 
-func (r *reader) ReadBytes(n int) []byte {
-	if r.err != nil {
-		return nil
-	}
-
+func (r *reader) ReadBytes(n int) ([]byte, error) {
 	b := make([]byte, n)
-	_, r.err = r.r.Read(b)
-	if r.err != nil {
-		return nil
+	if _, err := r.r.Read(b); err != nil {
+		return nil, err
 	}
 
-	return b
+	return b, nil
 }
 
-func (r *reader) Read(b []byte) bool {
-	if r.err != nil {
-		return false
+func (r *reader) Read(b []byte) error {
+	if _, err := r.r.Read(b); err != nil {
+		return err
 	}
 
-	_, r.err = r.r.Read(b)
-	return r.err == nil
+	return nil
 }
 
-func (r *reader) ReadString(n int) string {
+func (r *reader) ReadString(n int) (string, error) {
+	b, err := r.ReadBytes(n)
+	if err != nil {
+		return "", err
+
+	}
+
 	// TODO(mmihic): Unfortunately this results in a copy.  Would be nice to have a way to tell
 	// golang that the underlying byte array is immutable, and thus we shouldn't bother
-	if b := r.ReadBytes(n); b != nil {
-		return string(b)
-	}
-
-	return ""
+	return string(b), nil
 }
 
-func (r *reader) ReadUint16() uint16 {
+func (r *reader) ReadUint16() (uint16, error) {
 	var b [2]byte
-	if r.Read(b[:]) {
-		return binary.BigEndian.Uint16(b[:])
+	if err := r.Read(b[:]); err != nil {
+		return 0, err
 	}
 
-	return 0
+	return binary.BigEndian.Uint16(b[:]), nil
 }
 
-func (r *reader) ReadUint32() uint32 {
+func (r *reader) ReadUint32() (uint32, error) {
 	var b [4]byte
-	if r.Read(b[:]) {
-		return binary.BigEndian.Uint32(b[:])
+	if err := r.Read(b[:]); err != nil {
+		return 0, err
 	}
-
-	return 0
+	return binary.BigEndian.Uint32(b[:]), nil
 }
 
-func (r *reader) ReadUint64() uint64 {
+func (r *reader) ReadUint64() (uint64, error) {
 	var b [8]byte
-	if r.Read(b[:]) {
-		return binary.BigEndian.Uint64(b[:])
+	if err := r.Read(b[:]); err != nil {
+		return 0, err
 	}
 
-	return 0
+	return binary.BigEndian.Uint64(b[:]), nil
 }
