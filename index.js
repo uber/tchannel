@@ -352,9 +352,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     });
     self.parser.on('error', function onParserError(err) {
         if (!self.closing) {
-            // TODO this method is not implemented.
-            // We should close the connection.
-            self.onParserErr(err);
+            self.onParserError(err);
         }
     });
 
@@ -384,6 +382,16 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     }
 }
 require('util').inherits(TChannelConnection, require('events').EventEmitter);
+
+TChannelConnection.prototype.onParserError = function onParserError(err) {
+    var self = this;
+    self.channel.logger.error('tchannel parse error', {
+        remoteName: self.remoteName,
+        localName: self.channel.name,
+        error: err
+    });
+    // TODO should we close the connection?
+};
 
 TChannelConnection.prototype.nextFrameId = function nextFrameId() {
     var self = this;
