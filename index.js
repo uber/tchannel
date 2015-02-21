@@ -363,7 +363,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     };
 
     if (direction === 'out') {
-        self.send({}, 'TChannel identify', self.channel.name, null, function onOutIdentify(err, res1/*, res2 */) {
+        self.sendInitRequest(function onOutIdentify(err, res1/*, res2 */) {
             if (err) {
                 self.channel.logger.error('identification error', {
                     remoteAddr: remoteAddr,
@@ -661,6 +661,11 @@ TChannelConnection.prototype.completeOutOp = function completeOutOp(id, err, arg
     // for an operation we did not send out.
     // This could be because of a timeout or could be because
     // of a confused / corrupted server.
+};
+
+TChannelConnection.prototype.sendInitRequest = function sendInitRequest(callback) {
+    var self = this;
+    self.send({}, 'TChannel identify', self.channel.name, null, callback);
 };
 
 // send a req frame
