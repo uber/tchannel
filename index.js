@@ -649,16 +649,15 @@ TChannelConnection.prototype.handleResError = function handleResError(frame) {
 TChannelConnection.prototype.completeOutOp = function completeOutOp(id, err, arg1, arg2) {
     var self = this;
     var op = self.outOps[id];
-    if (op) {
-        delete self.outOps[id];
-        self.outPending--;
-        op.callback(err, arg1, arg2);
-    // } else { // TODO log...
+    if (!op) {
+        // TODO else case. We should warn about an incoming response for an
+        // operation we did not send out.  This could be because of a timeout
+        // or could be because of a confused / corrupted server.
+        return;
     }
-    // TODO else case. We should warn about an incoming response
-    // for an operation we did not send out.
-    // This could be because of a timeout or could be because
-    // of a confused / corrupted server.
+    delete self.outOps[id];
+    self.outPending--;
+    op.callback(err, arg1, arg2);
 };
 
 TChannelConnection.prototype.sendInitRequest = function sendInitRequest(callback) {
