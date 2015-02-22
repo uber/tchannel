@@ -76,8 +76,8 @@ function TChannel(options) {
     });
 
     self.serverSocket.on('listening', function onServerSocketListening() {
-        self.logger.info(self.name + ' listening');
         if (!self.destroyed) {
+            self.logger.info(self.name + ' listening');
             self.emit('listening');
         }
     });
