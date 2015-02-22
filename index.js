@@ -546,19 +546,6 @@ TChannelConnection.prototype.onSocketErr = function onSocketErr(err) {
     }
 };
 
-TChannelConnection.prototype.validateChecksum = function validateChecksum(frame) {
-    var self = this;
-    var actual = frame.checksum();
-    var expected = frame.header.csum;
-    if (expected !== actual) {
-        self.logger.warn('server checksum validation failed ' + expected + ' vs ' + actual);
-        self.logger.warn(inspect(frame));
-        return false;
-    } else {
-        return true;
-    }
-};
-
 // when we receive a new connection, we expect the first message to be identify
 TChannelConnection.prototype.onIdentify = function onIdentify(frame) {
     var self = this;
@@ -577,13 +564,6 @@ TChannelConnection.prototype.onIdentify = function onIdentify(frame) {
 
 TChannelConnection.prototype.onFrame = function onFrame(frame) {
     var self = this;
-
-    if (self.validateChecksum(frame) === false) {
-        // TODO: reduce the log spam: validateChecksum emits 2x warn logs, then
-        // we have a less than informative error log here... use a structured
-        // error out of validation and log it here instead
-        self.logger.error("bad checksum");
-    }
 
     self.lastTimeoutTime = 0;
     switch (frame.header.type) {
