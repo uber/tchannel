@@ -605,16 +605,10 @@ TChannelConnection.prototype.handleReqFrame = function handleReqFrame(reqFrame) 
     }
 
     self.inPending++;
-    var opCallback = responseFrameBuilder(reqFrame, sendResponse);
     var op = self.inOps[id] = new TChannelServerOp(self,
-        handler, reqFrame, self.channel.now(), {}, opCallback);
+        handler, reqFrame, self.channel.now(), {}, sendFrame);
 
-    function sendResponse(err, handlerErr, resFrame) {
-        if (err) {
-            // TODO: add more log context
-            self.logger.error(err);
-            return;
-        }
+    function sendFrame(resFrame) {
         if (self.closing) {
             return;
         }
@@ -622,7 +616,6 @@ TChannelConnection.prototype.handleReqFrame = function handleReqFrame(reqFrame) 
             // TODO log...
             return;
         }
-        // TODO: observability hook for handler errors
         var buf = resFrame.toBuffer();
         delete self.inOps[id];
         self.inPending--;
@@ -696,7 +689,7 @@ TChannelConnection.prototype.send = function send(options, arg1, arg2, arg3, cal
 /* jshint maxparams:4 */
 
 /* jshint maxparams:6 */
-function TChannelServerOp(connection, handler, reqFrame, start, options, callback) {
+function TChannelServerOp(connection, handler, reqFrame, start, options, sendFrame) {
     var self = this;
     self.connection = connection;
     self.logger = connection.logger;
@@ -705,7 +698,7 @@ function TChannelServerOp(connection, handler, reqFrame, start, options, callbac
     self.timedOut = false;
     self.start = start;
     self.options = options;
-    self.callback = callback;
+    self.sendFrame = sendFrame;
     self.responseSent = false;
     self.handler(reqFrame.arg2, reqFrame.arg3, connection.remoteName, sendResponse);
     function sendResponse(err, res1, res2) {
@@ -725,29 +718,30 @@ TChannelServerOp.prototype.sendResponse = function sendResponse(err, res1, res2)
         return;
     }
     self.responseSent = true;
-    self.callback(err, res1, res2);
+    // TODO: observability hook for handler errors
+    var resFrame = self.buildResponseFrame(err, res1, res2);
+    self.sendFrame(resFrame);
 };
 
-function responseFrameBuilder(reqFrame, callback) {
-    var id = reqFrame.header.id;
-    var arg1 = reqFrame.arg1;
+TChannelServerOp.prototype.buildResponseFrame = function buildResponseFrame(err, res1, res2) {
+    var self = this;
+    var id = self.reqFrame.header.id;
+    var arg1 = self.reqFrame.arg1;
     var resFrame = new v1.Frame();
     resFrame.header.id = id;
     resFrame.header.seq = 0;
-    return function buildResponseFrame(handlerErr, res1, res2) {
-        if (handlerErr) {
-            // TODO should the error response contain a head ?
-            // Is there any value in sending meta data along with
-            // the error.
-            resFrame.set(isError(handlerErr) ? handlerErr.message : handlerErr, null, null);
-            resFrame.header.type = v1.Types.resError;
-        } else {
-            resFrame.set(arg1, res1, res2);
-            resFrame.header.type = v1.Types.resCompleteMessage;
-        }
-        callback(null, handlerErr, resFrame);
-    };
-}
+    if (err) {
+        // TODO should the error response contain a head ?
+        // Is there any value in sending meta data along with
+        // the error.
+        resFrame.set(isError(err) ? err.message : err, null, null);
+        resFrame.header.type = v1.Types.resError;
+    } else {
+        resFrame.set(arg1, res1, res2);
+        resFrame.header.type = v1.Types.resCompleteMessage;
+    }
+    return resFrame;
+};
 
 function isError(obj) {
     return typeof obj === 'object' && (
