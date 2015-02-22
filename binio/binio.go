@@ -18,6 +18,10 @@ type Writer interface {
 	WriteString(s string) error
 }
 
+func NewWriterSize(w io.Writer, size int) Writer {
+	return &writer{w: bufio.NewWriterSize(w, size)}
+}
+
 func NewWriter(w io.Writer) Writer {
 	return &writer{w: bufio.NewWriter(w)}
 }
@@ -62,6 +66,7 @@ func (w *writer) WriteUint64(n uint64) error {
 // Writes binary content in BigEndian format
 type Reader interface {
 	ReadByte() (byte, error)
+	ReadFull(b []byte) error
 	ReadBytes(n int) ([]byte, error)
 	ReadString(n int) (string, error)
 	ReadUint16() (uint16, error)
@@ -101,6 +106,11 @@ func (r *reader) ReadBytes(n int) ([]byte, error) {
 	}
 
 	return b, nil
+}
+
+// TODO(mmihic): Get rid of method below
+func (r *reader) ReadFull(b []byte) error {
+	return r.Read(b)
 }
 
 func (r *reader) Read(b []byte) error {
