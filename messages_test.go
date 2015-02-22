@@ -108,11 +108,28 @@ func TestMessageWriterReader(t *testing.T) {
 	err := w.Write(req)
 	require.Nil(t, err, "error writing message")
 
+	res := &CallRes{
+		id:           0xDEADBEEF,
+		ResponseCode: ServiceBusy,
+		Headers: CallHeaders{
+			"r": "c",
+			"f": "d",
+		},
+		Arg1: []byte("login"),
+		Arg2: []byte("thrift-headers"),
+		Arg3: []byte("thrify-body"),
+	}
+	err = w.Write(res)
+	require.Nil(t, err, "error writing second message")
+
 	r := NewMessageReader(bytes.NewReader(b.Bytes()))
 	msg, err := r.Read()
-	require.Nil(t, err, "error reading message")
+	require.Nil(t, err, "error reading request")
+	assert.Equal(t, req, msg, "pre- and post-marshalled requests do not match")
 
-	assert.Equal(t, req, msg, "pre- and post-marshal do not match")
+	msg, err = r.Read()
+	require.Nil(t, err, "error reading response")
+	assert.Equal(t, res, msg, "pre- and post-marshalled responses do not match")
 }
 
 func assertRoundTrip(t *testing.T, expected Message, actual Message) {
