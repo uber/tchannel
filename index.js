@@ -20,12 +20,8 @@
 
 'use strict';
 
-var parserMod = require('./parser');
-var TChannelParser = parserMod.TChannelParser;
-var TChannelFrame = parserMod.TChannelFrame;
-var types = parserMod.types;
+var v1 = require('./v1');
 var nullLogger = require('./null-logger.js');
-
 var globalClearTimeout = require('timers').clearTimeout;
 var globalSetTimeout = require('timers').setTimeout;
 var globalNow = Date.now;
@@ -333,7 +329,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     self.lastTimeoutTime = 0;
     self.closing = false;
 
-    self.parser = new TChannelParser(self);
+    self.parser = new v1.Parser(self);
 
     self.socket.setNoDelay(true);
 
@@ -578,14 +574,14 @@ TChannelConnection.prototype.onFrame = function onFrame(frame) {
 
     self.lastTimeoutTime = 0;
 
-    if (frame.header.type === types.reqCompleteMessage) {
+    if (frame.header.type === v1.Types.reqCompleteMessage) {
         if (self.remoteName === null && self.onIdentify(frame) === false) {
             return;
         }
         self.handleReqFrame(frame);
-    } else if (frame.header.type === types.resCompleteMessage) {
+    } else if (frame.header.type === v1.Types.resCompleteMessage) {
         self.handleResCompleteMessage(frame);
-    } else if (frame.header.type === types.resError) {
+    } else if (frame.header.type === v1.Types.resError) {
         self.handleResError(frame);
     } else {
         self.logger.error('unknown frame type', {
@@ -671,10 +667,10 @@ TChannelConnection.prototype.completeOutOp = function completeOutOp(id, err, arg
 /* jshint maxparams:5 */
 TChannelConnection.prototype.send = function send(options, arg1, arg2, arg3, callback) {
     var self = this;
-    var frame = new TChannelFrame();
+    var frame = new v1.Frame();
 
     frame.set(arg1, arg2, arg3);
-    frame.header.type = types.reqCompleteMessage;
+    frame.header.type = v1.Types.reqCompleteMessage;
     // TODO This id will overflow at the 4 million messages mark
     // This can create a very strange race condition where we
     // call an very old operation with a long timeout if we
@@ -708,7 +704,7 @@ function responseFrameBuilder(reqFrame, callback) {
     var id = reqFrame.header.id;
     var arg1 = reqFrame.arg1;
     var sent = false;
-    var resFrame = new TChannelFrame();
+    var resFrame = new v1.Frame();
     resFrame.header.id = id;
     resFrame.header.seq = 0;
     return function buildResponseFrame(handlerErr, res1, res2) {
@@ -725,10 +721,10 @@ function responseFrameBuilder(reqFrame, callback) {
             // Is there any value in sending meta data along with
             // the error.
             resFrame.set(isError(handlerErr) ? handlerErr.message : handlerErr, null, null);
-            resFrame.header.type = types.resError;
+            resFrame.header.type = v1.Types.resError;
         } else {
             resFrame.set(arg1, res1, res2);
-            resFrame.header.type = types.resCompleteMessage;
+            resFrame.header.type = v1.Types.resCompleteMessage;
         }
         callback(null, handlerErr, resFrame);
     };

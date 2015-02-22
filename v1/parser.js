@@ -20,158 +20,30 @@
 
 'use strict';
 
-var farmhash = require('farmhash');
-
-/* jshint camelcase:false */
-
-var types = {};
-types.reqCompleteMessage = types.req_complete_message = 0x01;
-types.reqMessageFragment = types.req_message_fragment = 0x02;
-types.reqLastFragment = types.req_last_fragment = 0x03;
-types.resCompleteMessage = types.res_complete_message = 0x80;
-types.resMessageFragment = types.res_message_fragment = 0x81;
-types.resLastFragment = types.res_last_fragment = 0x82;
-types.resError = types.res_error = 0xC0;
-
-var states = {};
-
-states.readType = states.read_type = 1;
-states.readId = states.read_id = 2;
-states.readSeq = states.read_seq = 3;
-states.readArg1len = states.read_arg1len = 4;
-states.readArg2len = states.read_arg2len = 5;
-states.readArg3len = states.read_arg3len = 6;
-states.readCsum = states.read_csum = 7;
-states.readArg1 = states.read_arg1 = 8;
-states.readArg2 = states.read_arg2 = 9;
-states.readArg3 = states.read_arg3 = 10;
-states.error = states.error = 255;
-
-/* jshint camelcase:true */
+module.exports = TChannelParser;
 
 var emptyBuffer = new Buffer(0);
 
-function TChannelHeader() {
-    this.type = null;
-    this.id = null;
-    this.seq = null;
-    this.arg1len = null;
-    this.arg2len = null;
-    this.arg3len = null;
-    this.csum = null;
-}
+var TChannelFrame = require('./frame');
 
-function TChannelFrame() {
-    this.header = new TChannelHeader();
-    // TODO this field is unused. It should be removed.
-    this.options = null;
-    this.arg1 = null;
-    this.arg2 = null;
-    this.arg3 = null;
-}
-
-TChannelFrame.prototype.set = function (arg1, arg2, arg3) {
-    if (arg1 === undefined || arg1 === null) {
-        arg1 = '';
-    }
-    if (arg2 === undefined || arg2 === null) {
-        arg2 = '';
-    }
-    if (arg3 === undefined || arg3 === null) {
-        arg3 = '';
-    }
-
-    var type;
-
-    if (Buffer.isBuffer(arg1)) {
-        this.arg1 = arg1;
-    } else {
-        this.arg1 = new Buffer(arg1.toString());
-    }
-    this.header.arg1len = this.arg1.length;
-
-    if (Buffer.isBuffer(arg2)) {
-        this.arg2 = arg2;
-    } else {
-        //  TODO remove special case for JSON.stringify
-        //  This creates a situation where objects are
-        //  JSON serialized but `null`, `true` and strings are
-        //  not.
-        //  
-        //  The convenience of object serialization is not worth
-        //  The confusion it introduces.
-        if (typeof arg2 === 'object') {
-            this.arg2 = new Buffer(JSON.stringify(arg2));
-        } else if (typeof arg2 === 'string') {
-            this.arg2 = new Buffer(arg2);
-        } else {
-            this.arg2 = new Buffer(arg2.toString());
-        }
-    }
-    this.header.arg2len = this.arg2.length;
-
-    if (Buffer.isBuffer(arg3)) {
-        this.arg3 = arg3;
-    } else {
-        if (typeof arg3 === 'object') {
-            this.arg3 = new Buffer(JSON.stringify(arg3));
-        } else if (typeof arg3 === 'string') {
-            this.arg3 = new Buffer(arg3);
-        } else {
-            this.arg3 = new Buffer(arg3.toString());
-        }
-    }
-    this.header.arg3len = this.arg3.length;
-    this.header.csum = this.checksum();
-};
-
-TChannelFrame.prototype.checksum = function () {
-    var csum = farmhash.hash32(this.arg1);
-    if (this.arg2.length > 0) {
-        csum = farmhash.hash32WithSeed(this.arg2, csum);
-    }
-    if (this.arg3.length > 0) {
-        csum = farmhash.hash32WithSeed(this.arg3, csum);
-    }
-    return csum;
-};
-
-TChannelFrame.prototype.toBuffer = function () {
-    var header = this.header;
-    var buf = new Buffer(25 + header.arg1len + header.arg2len + header.arg3len);
-    var offset = 0;
-
-    buf.writeUInt8(header.type, offset, true);
-    offset += 1;
-    buf.writeUInt32BE(header.id, offset, true);
-    offset += 4;
-    buf.writeUInt32BE(header.seq, offset, true);
-    offset += 4;
-    buf.writeUInt32BE(header.arg1len, offset, true);
-    offset += 4;
-    buf.writeUInt32BE(header.arg2len, offset, true);
-    offset += 4;
-    buf.writeUInt32BE(header.arg3len, offset, true);
-    offset += 4;
-    buf.writeUInt32BE(header.csum, offset, true);
-    offset += 4;
-
-    this.arg1.copy(buf, offset);
-    offset += this.arg1.length;
-    this.arg2.copy(buf, offset);
-    offset += this.arg2.length;
-    this.arg3.copy(buf, offset);
-    offset += this.arg3.length;
-
-    return buf;
-};
-
+var states = TChannelParser.States = {};
+states.readType = 1;
+states.readId = 2;
+states.readSeq = 3;
+states.readArg1len = 4;
+states.readArg2len = 5;
+states.readArg3len = 6;
+states.readCsum = 7;
+states.readArg1 = 8;
+states.readArg2 = 9;
+states.readArg3 = 10;
+states.error = 255;
 
 function TChannelParser(connection) {
     this.newFrame = new TChannelFrame();
 
     this.logger = connection.logger;
-    this.state = states.read_type;
+    this.state = states.readType;
 
     this.tmpInt = null;
     this.tmpIntBuf = new Buffer(4);
@@ -194,7 +66,7 @@ TChannelParser.prototype.parseError = function(msg) {
 
 TChannelParser.prototype.readType = function () {
     var newType = this.chunk[this.pos++];
-    this.state = states.read_id;
+    this.state = states.readId;
     this.newFrame.header.type = newType;
 };
 
@@ -239,51 +111,51 @@ TChannelParser.prototype.execute = function (chunk) {
     var header = this.newFrame.header;
 
     while (this.pos < chunk.length) {
-        if (this.state === states.read_type) {
+        if (this.state === states.readType) {
             this.readType();
-        } else if (this.state === states.read_id) {
+        } else if (this.state === states.readId) {
             this.readInt();
             if (typeof this.tmpInt === 'number') {
                 header.id = this.tmpInt;
                 this.tmpInt = null;
-                this.state = states.read_seq;
+                this.state = states.readSeq;
             }
-        } else if (this.state === states.read_seq) {
+        } else if (this.state === states.readSeq) {
             this.readInt();
             if (typeof this.tmpInt === 'number') {
                 header.seq = this.tmpInt;
                 this.tmpInt = null;
-                this.state = states.read_arg1len;
+                this.state = states.readArg1len;
             }
-        } else if (this.state === states.read_arg1len) {
+        } else if (this.state === states.readArg1len) {
             this.readInt();
             if (typeof this.tmpInt === 'number') {
                 header.arg1len = this.tmpInt;
                 this.tmpInt = null;
-                this.state = states.read_arg2len;
+                this.state = states.readArg2len;
             }
-        } else if (this.state === states.read_arg2len) {
+        } else if (this.state === states.readArg2len) {
             this.readInt();
             if (typeof this.tmpInt === 'number') {
                 header.arg2len = this.tmpInt;
                 this.tmpInt = null;
-                this.state = states.read_arg3len;
+                this.state = states.readArg3len;
             }
-        } else if (this.state === states.read_arg3len) {
+        } else if (this.state === states.readArg3len) {
             this.readInt();
             if (typeof this.tmpInt === 'number') {
                 header.arg3len = this.tmpInt;
                 this.tmpInt = null;
-                this.state = states.read_csum;
+                this.state = states.readCsum;
             }
-        } else if (this.state === states.read_csum) {
+        } else if (this.state === states.readCsum) {
             this.readInt();
             if (typeof this.tmpInt === 'number') {
                 header.csum = this.tmpInt;
                 this.tmpInt = null;
-                this.state = states.read_arg1;
+                this.state = states.readArg1;
             }
-        } else if (this.state === states.read_arg1) {
+        } else if (this.state === states.readArg1) {
             this.readStr(header.arg1len);
             if (this.tmpStrPos === header.arg1len) {
                 this.newFrame.arg1 = this.tmpStr;
@@ -293,10 +165,10 @@ TChannelParser.prototype.execute = function (chunk) {
                     this.emitAndReset();
                     header = this.newFrame.header;
                 } else {
-                    this.state = states.read_arg2;
+                    this.state = states.readArg2;
                 }
             }
-        } else if (this.state === states.read_arg2) {
+        } else if (this.state === states.readArg2) {
             this.readStr(header.arg2len);
             if (this.tmpStrPos === header.arg2len) {
                 this.newFrame.arg2 = this.tmpStr;
@@ -306,10 +178,10 @@ TChannelParser.prototype.execute = function (chunk) {
                     this.emitAndReset();
                     header = this.newFrame.header;
                 } else {
-                    this.state = states.read_arg3;
+                    this.state = states.readArg3;
                 }
             }
-        } else if (this.state === states.read_arg3) {
+        } else if (this.state === states.readArg3) {
             this.readStr(header.arg3len);
             if (this.tmpStrPos === header.arg3len) {
                 this.newFrame.arg3 = this.tmpStr;
@@ -333,12 +205,5 @@ TChannelParser.prototype.emitAndReset = function () {
     }
     this.emit('frame', this.newFrame);
     this.newFrame = new TChannelFrame();
-    this.state = states.read_type;
+    this.state = states.readType;
 };
-
-exports.TChannelParser = TChannelParser;
-exports.TChannelFrame = TChannelFrame;
-exports.TChannelHeader = TChannelHeader;
-exports.types = types;
-
-
