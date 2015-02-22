@@ -1,10 +1,16 @@
 package tchannel
 
 import (
+	"bytes"
 	"code.uber.internal/infra/mmihic/tchannel-go/binio"
+	"errors"
+	"fmt"
+	"github.com/op/go-logging"
 	"io"
 	"time"
 )
+
+var log = logging.MustGetLogger("tchannel-protocol")
 
 // Type of message
 type MessageType byte
@@ -404,4 +410,91 @@ func readArg(r binio.Reader) ([]byte, error) {
 	}
 
 	return r.ReadBytes(int(l))
+}
+
+type MessageReader interface {
+	Read() (Message, error)
+}
+
+type MessageWriter interface {
+	Write(msg Message) error
+}
+
+func NewMessageReader(r io.Reader) MessageReader {
+	return &messageReader{r: NewFrameReader(r)}
+}
+
+type messageReader struct {
+	r *FrameReader
+}
+
+var ErrFragmentationUnsupported = errors.New("fragmentation not yet supported")
+
+func (r *messageReader) Read() (Message, error) {
+	// TODO(mmihic): Implement fragmentation once we have that better resolved
+	frame, err := r.r.ReadFrame()
+	if err != nil {
+		return nil, err
+	}
+
+	if !frame.Header.FinalFragment() {
+		return nil, ErrFragmentationUnsupported
+	}
+
+	var msg Message
+	switch frame.Header.Type {
+	case MessageTypeInitReq:
+		msg = &InitReq{initMessage{id: frame.Header.Id}}
+	case MessageTypeInitRes:
+		msg = &InitRes{initMessage{id: frame.Header.Id}}
+	case MessageTypeCallReq:
+		msg = &CallReq{id: frame.Header.Id}
+	case MessageTypeCallRes:
+		msg = &CallRes{id: frame.Header.Id}
+	default:
+		return nil, fmt.Errorf("unsupported message type %x", frame.Header.Type)
+	}
+
+	br := binio.NewReader(bytes.NewReader(frame.Payload))
+	if err := msg.read(br); err != nil {
+		return nil, err
+	}
+
+	return msg, nil
+}
+
+// Creates a new MessageWriter over the given io.Writer
+func NewMessageWriter(w io.Writer) MessageWriter {
+	return &messageWriter{w: NewFrameWriter(w)}
+}
+
+type messageWriter struct {
+	w *FrameWriter
+}
+
+func (w *messageWriter) Write(msg Message) error {
+	// TODO(mmihic): This is not good
+	var payloadBuffer bytes.Buffer
+	bw := binio.NewWriter(&payloadBuffer)
+	if err := msg.write(bw); err != nil {
+		return err
+	}
+
+	if err := bw.Flush(); err != nil {
+		return err
+	}
+
+	payload := payloadBuffer.Bytes()
+
+	frame := Frame{
+		Header: FrameHeader{
+			Id:    msg.Id(),
+			Type:  msg.Type(),
+			Size:  uint32(len(payload)),
+			Flags: 0x00,
+		},
+		Payload: payload,
+	}
+
+	return w.w.WriteFrame(&frame)
 }

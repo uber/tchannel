@@ -83,6 +83,38 @@ func TestCallRes(t *testing.T) {
 	assertRoundTrip(t, &r, &CallRes{id: 0xDEADBEEF})
 }
 
+func TestMessageWriterReader(t *testing.T) {
+	req := &CallReq{
+		id:         0xDEADBEEF,
+		TimeToLive: time.Second * 45,
+		Tracing: Tracing{
+			TraceId:  294390430934,
+			ParentId: 398348934,
+			SpanId:   12762782,
+		},
+		TraceFlags: 0x01,
+		Headers: CallHeaders{
+			"r": "c",
+			"f": "d",
+		},
+		Service: []byte("udr"),
+		Arg1:    []byte("login"),
+		Arg2:    []byte("thrift-headers"),
+		Arg3:    []byte("thrify-body"),
+	}
+
+	var b bytes.Buffer
+	w := NewMessageWriter(&b)
+	err := w.Write(req)
+	require.Nil(t, err, "error writing message")
+
+	r := NewMessageReader(bytes.NewReader(b.Bytes()))
+	msg, err := r.Read()
+	require.Nil(t, err, "error reading message")
+
+	assert.Equal(t, req, msg, "pre- and post-marshal do not match")
+}
+
 func assertRoundTrip(t *testing.T, expected Message, actual Message) {
 	var b bytes.Buffer
 	w := binio.NewWriter(&b)
