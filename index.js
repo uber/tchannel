@@ -520,6 +520,7 @@ TChannelConnection.prototype.onReqTimeout = function onReqTimeout(op) {
 // stumbles across this object in a core dump.
 TChannelConnection.prototype.resetAll = function resetAll(err) {
     var self = this;
+    if (self.closing) return;
     self.closing = true;
     self.clearTimeoutTimer();
 
