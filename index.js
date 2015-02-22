@@ -699,31 +699,42 @@ TChannelConnection.prototype.send = function send(options, arg1, arg2, arg3, cal
 function TChannelServerOp(connection, handler, reqFrame, start, options, callback) {
     var self = this;
     self.connection = connection;
+    self.logger = connection.logger;
     self.handler = handler;
     self.reqFrame = reqFrame;
     self.timedOut = false;
     self.start = start;
     self.options = options;
-    handler(reqFrame.arg2, reqFrame.arg3, connection.remoteName, callback);
+    self.callback = callback;
+    self.responseSent = false;
+    self.handler(reqFrame.arg2, reqFrame.arg3, connection.remoteName, sendResponse);
+    function sendResponse(err, res1, res2) {
+        self.sendResponse(err, res1, res2);
+    }
 }
 /* jshint maxparams:4 */
+
+TChannelServerOp.prototype.sendResponse = function sendResponse(err, res1, res2) {
+    var self = this;
+    if (self.responseSent) {
+        self.logger.error('response already sent', {
+            err: err,
+            res1: res1,
+            res2: res2
+        });
+        return;
+    }
+    self.responseSent = true;
+    self.callback(err, res1, res2);
+};
 
 function responseFrameBuilder(reqFrame, callback) {
     var id = reqFrame.header.id;
     var arg1 = reqFrame.arg1;
-    var sent = false;
     var resFrame = new v1.Frame();
     resFrame.header.id = id;
     resFrame.header.seq = 0;
     return function buildResponseFrame(handlerErr, res1, res2) {
-        if (sent) {
-            return callback(new Error('response already sent', {
-                handlerErr: handlerErr,
-                res1: res1,
-                res2: res2
-            }));
-        }
-        sent = true;
         if (handlerErr) {
             // TODO should the error response contain a head ?
             // Is there any value in sending meta data along with
