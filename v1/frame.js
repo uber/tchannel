@@ -54,34 +54,23 @@ TChannelFrame.prototype.set = function (arg1, arg2, arg3) {
 
     if (Buffer.isBuffer(arg2)) {
         this.arg2 = arg2;
+    } else if (typeof arg2 === 'string') {
+        this.arg2 = new Buffer(arg2);
+    } else if (arg2 === null || arg2 === undefined) {
+        this.arg2 = emptyBuffer;
     } else {
-        //  TODO remove special case for JSON.stringify
-        //  This creates a situation where objects are
-        //  JSON serialized but `null`, `true` and strings are
-        //  not.
-        //  
-        //  The convenience of object serialization is not worth
-        //  The confusion it introduces.
-        if (typeof arg2 === 'object') {
-            this.arg2 = new Buffer(JSON.stringify(arg2));
-        } else if (typeof arg2 === 'string') {
-            this.arg2 = new Buffer(arg2);
-        } else {
-            this.arg2 = new Buffer(arg2.toString());
-        }
+        throw new Error('arg2 must be a buffer or string');
     }
     this.header.arg2len = this.arg2.length;
 
     if (Buffer.isBuffer(arg3)) {
         this.arg3 = arg3;
+    } else if (typeof arg3 === 'string') {
+        this.arg3 = new Buffer(arg3);
+    } else if (arg3 === null || arg3 === undefined) {
+        this.arg3 = emptyBuffer;
     } else {
-        if (typeof arg3 === 'object') {
-            this.arg3 = new Buffer(JSON.stringify(arg3));
-        } else if (typeof arg3 === 'string') {
-            this.arg3 = new Buffer(arg3);
-        } else {
-            this.arg3 = new Buffer(arg3.toString());
-        }
+        throw new Error('arg3 must be a buffer or string');
     }
     this.header.arg3len = this.arg3.length;
     this.header.csum = this.checksum();
