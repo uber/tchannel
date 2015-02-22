@@ -34,8 +34,8 @@ test('identify', function t(assert) {
     var hostOne = cluster.hosts[0];
     var hostTwo = cluster.hosts[1];
 
-    assert.equal(one.getPeer(hostTwo), null);
-    assert.equal(two.getPeer(hostOne), null);
+    assert.equal(one.getPeer(hostTwo), null, 'one has no peer two');
+    assert.equal(two.getPeer(hostOne), null, 'two has no peer one');
 
     var idBar = barrier.keyed(2, function(idents, done) {
         var outPeer = one.getPeer(hostTwo);
