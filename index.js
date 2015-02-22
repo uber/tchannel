@@ -64,11 +64,12 @@ function TChannel(options) {
     // to provide backward compatibility.
     self.listening = self.options.listening === false ?
       false : true;
-    self.serverSocket = new net.createServer();
-
-    if (self.listening) {
-        self.listen();
-    }
+    self.serverSocket = new net.createServer(function onServerSocketConnection(sock) {
+        if (!self.destroyed) {
+            var remoteAddr = sock.remoteAddress + ':' + sock.remotePort;
+            return new TChannelConnection(self, sock, 'in', remoteAddr);
+        }
+    });
 
     self.serverSocket.on('listening', function onServerSocketListening() {
         self.logger.info(self.name + ' listening');
@@ -82,12 +83,10 @@ function TChannel(options) {
     self.serverSocket.on('close', function onServerSocketClose() {
         self.logger.warn('server socket close');
     });
-    self.serverSocket.on('connection', function onServerSocketConnection(sock) {
-        if (!self.destroyed) {
-            var remoteAddr = sock.remoteAddress + ':' + sock.remotePort;
-            return new TChannelConnection(self, sock, 'in', remoteAddr);
-        }
-    });
+
+    if (self.listening) {
+        self.listen();
+    }
 }
 require('util').inherits(TChannel, require('events').EventEmitter);
 
