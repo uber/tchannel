@@ -217,10 +217,18 @@ TChannel.prototype.send = function send(options, arg1, arg2, arg3, callback) {
         throw new Error('cannot send() without options.host');
     }
 
+    var reqFrame = self.buildRequest(options, arg1, arg2, arg3);
     var peer = self.getOutConnection(dest);
-    peer.send(options, arg1, arg2, arg3, callback);
+    peer.send(options, reqFrame, callback);
 };
 /* jshint maxparams:4 */
+
+TChannel.prototype.buildRequest = function buildRequest(options, arg1, arg2, arg3) {
+    var reqFrame = new v1.Frame();
+    reqFrame.set(arg1, arg2, arg3);
+    reqFrame.header.type = v1.Types.reqCompleteMessage;
+    return reqFrame;
+};
 
 TChannel.prototype.getOutConnection = function getOutConnection(dest) {
     var self = this;
@@ -650,7 +658,10 @@ TChannelConnection.prototype.completeOutOp = function completeOutOp(id, err, arg
 
 TChannelConnection.prototype.sendInitRequest = function sendInitRequest(callback) {
     var self = this;
-    self.send({}, 'TChannel identify', self.channel.name, null, callback);
+    var reqFrame = new v1.Frame();
+    reqFrame.set('TChannel identify', self.channel.name, null);
+    reqFrame.header.type = v1.Types.reqCompleteMessage;
+    self.send({}, reqFrame, callback);
 };
 
 TChannelConnection.prototype.handleInitResponse = function handleInitResponse(res) {
@@ -662,12 +673,9 @@ TChannelConnection.prototype.handleInitResponse = function handleInitResponse(re
 
 // send a req frame
 /* jshint maxparams:5 */
-TChannelConnection.prototype.send = function send(options, arg1, arg2, arg3, callback) {
+TChannelConnection.prototype.send = function send(options, frame, callback) {
     var self = this;
-    var frame = new v1.Frame();
-
     var id = self.nextFrameId();
-
     // TODO: use this to protect against >4Mi outstanding messages edge case
     // (e.g. zombie operation bug, incredible throughput, or simply very long
     // timeout
@@ -675,11 +683,8 @@ TChannelConnection.prototype.send = function send(options, arg1, arg2, arg3, cal
     //  throw new Error('duplicate frame id in flight');
     // }
 
-    frame.set(arg1, arg2, arg3);
-    frame.header.type = v1.Types.reqCompleteMessage;
     frame.header.id = id;
     frame.header.seq = 0;
-
     self.outOps[id] = new TChannelClientOp(
         options, frame, self.channel.now(), callback);
     self.pendingCount++;
