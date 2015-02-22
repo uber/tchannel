@@ -27,6 +27,7 @@ var globalSetTimeout = require('timers').setTimeout;
 var globalNow = Date.now;
 var globalRandom = Math.random;
 var net = require('net');
+var format = require('util').format;
 var inspect = require('util').inspect;
 
 function TChannel(options) {
@@ -43,6 +44,9 @@ function TChannel(options) {
     // TODO do not default the port.
     self.port = self.options.port || 4040;
     self.hostPort = self.host + ':' + self.port;
+    // TODO: maybe we should always add pid to user-supplied?
+    self.processName = self.options.processName ||
+        format('%s[%s]', process.title, process.pid);
     self.random = self.options.random ?
         self.options.random : globalRandom;
     self.setTimeout = self.options.timers ?
