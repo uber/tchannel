@@ -67,7 +67,11 @@ function TChannel(options) {
     self.serverSocket = new net.createServer(function onServerSocketConnection(sock) {
         if (!self.destroyed) {
             var remoteAddr = sock.remoteAddress + ':' + sock.remotePort;
-            return new TChannelConnection(self, sock, 'in', remoteAddr);
+            var conn = new TChannelConnection(self, sock, 'in', remoteAddr);
+            self.logger.debug('incoming server connection', {
+                hostPort: self.hostPort,
+                remoteAddr: conn.remoteAddr
+            });
         }
     });
 
