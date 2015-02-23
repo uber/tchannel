@@ -48,10 +48,10 @@ type TChannel : {
     ) => void,
     quit: (Callback<Error>) => void,
 
-    getPeer: (name: HostInfo) => TChannelConnection,
+    getPeer: (hostPort: HostInfo) => TChannelConnection,
     getPeers: () => Array<TChannelConnection>,
 
-    name: HostInfo
+    hostPort: HostInfo
 }
 
 tchannel : (options: {
