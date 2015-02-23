@@ -602,7 +602,7 @@ TChannelConnection.prototype.onFrame = function onFrame(frame) {
             if (self.remoteName === null && self.onIdentify(frame) === false) {
                 return;
             }
-            return self.handleReqFrame(frame);
+            return self.handleCallRequest(frame);
         case v1.Types.resCompleteMessage:
             return self.handleResCompleteMessage(frame);
         case v1.Types.resError:
@@ -614,7 +614,7 @@ TChannelConnection.prototype.onFrame = function onFrame(frame) {
     }
 };
 
-TChannelConnection.prototype.handleReqFrame = function handleReqFrame(reqFrame) {
+TChannelConnection.prototype.handleCallRequest = function handleCallRequest(reqFrame) {
     var self = this;
     var id = reqFrame.header.id;
     var name = reqFrame.arg1.toString();
