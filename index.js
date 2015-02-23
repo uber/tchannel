@@ -406,8 +406,7 @@ TChannelConnection.prototype.onParserError = function onParserError(err) {
 
 TChannelConnection.prototype.nextFrameId = function nextFrameId() {
     var self = this;
-    // TODO this needs to wrap around with 32-bit uint space
-    ++self.lastSentFrameId;
+    self.lastSentFrameId = (self.lastSentFrameId + 1) % 0xffffffff;
     return self.lastSentFrameId;
 };
 
