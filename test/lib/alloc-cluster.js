@@ -24,6 +24,7 @@ var extend = require('xtend');
 var util = require('util');
 var TChannel = require('../../index.js');
 var parallel = require('run-parallel');
+var echoLogger = require('./logger');
 
 module.exports = allocCluster;
 
@@ -40,6 +41,7 @@ function allocCluster(n, opts) {
     for (var i=0; i<n; i++) {
         var port = randomPort();
         ret.channels[i] = TChannel(extend({
+            logger: opts.debugLog ? echoLogger(process.stdout) : null,
             host: host,
             port: port
         }, opts));
