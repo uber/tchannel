@@ -576,23 +576,6 @@ TChannelConnection.prototype.onSocketErr = function onSocketErr(err) {
     }
 };
 
-// when we receive a new connection, we expect the first message to be identify
-TChannelConnection.prototype.onIdentify = function onIdentify(frame) {
-    var self = this;
-    var str1 = frame.arg1.toString();
-    var str2 = frame.arg2.toString();
-    if (str1 === 'TChannel identify') {
-        self.remoteName = str2;
-        self.channel.addPeer(str2, self);
-        self.channel.emit('identified', str2);
-        return true;
-    }
-
-    self.logger.error('first req on socket must be identify');
-    return false;
-};
-
-
 TChannelConnection.prototype.onFrame = function onFrame(frame) {
     var self = this;
 
@@ -613,9 +596,10 @@ TChannelConnection.prototype.onFrame = function onFrame(frame) {
 
 TChannelConnection.prototype.handleCallRequest = function handleCallRequest(reqFrame) {
     var self = this;
-    if (self.remoteName === null && self.onIdentify(reqFrame) === false) {
+    if (self.remoteName === null && self.handleInitRequest(reqFrame) === false) {
         return;
     }
+
     var id = reqFrame.header.id;
     var name = reqFrame.arg1.toString();
 
@@ -704,13 +688,25 @@ TChannelConnection.prototype.sendInitRequest = function sendInitRequest(callback
     self.send({}, reqFrame, callback);
 };
 
+TChannelConnection.prototype.handleInitRequest = function handleInitRequest(reqFrame) {
+    var self = this;
+    if (reqFrame.arg1.toString() !== 'TChannel identify') {
+        self.logger.error('first req on socket must be identify');
+        return false;
+    }
+    var hostPort = reqFrame.arg2.toString();
+    self.remoteName = hostPort;
+    self.channel.addPeer(hostPort, self);
+    self.channel.emit('identified', hostPort);
+    return true;
+};
+
 TChannelConnection.prototype.handleInitResponse = function handleInitResponse(res) {
     var self = this;
     var remote = res;
     self.remoteName = remote;
     self.channel.emit('identified', remote);
 };
-
 
 // send a req frame
 /* jshint maxparams:5 */
