@@ -36,6 +36,12 @@ allocCluster.test('identify', 2, function t(cluster, assert) {
         assert.equal(idents.one, hostTwo, 'one identified two');
         assert.equal(idents.two, hostOne, 'two identified one');
 
+        var peersOne = one.getPeers();
+        var peersTwo = two.getPeers();
+
+        assert.equal(peersOne.length, 1, 'one should have 1 peer');
+        assert.equal(peersTwo.length, 1, 'two should have 1 peer');
+
         var outPeer = one.getPeer(hostTwo);
         if (outPeer) {
             assert.equal(outPeer.direction, 'out', 'outPeer is out');
