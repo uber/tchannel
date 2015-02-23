@@ -633,7 +633,10 @@ TChannelConnection.prototype.handleReqFrame = function handleReqFrame(reqFrame) 
 
     function sendFrame(resFrame) {
         if (self.inOps[id] !== op) {
-            // TODO log...
+            self.logger.warn('attempt to send frame for mismatched operation', {
+                hostPort: self.channel.name,
+                opId: id
+            });
             return;
         }
         delete self.inOps[id];
