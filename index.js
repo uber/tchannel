@@ -528,8 +528,10 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
     var inOpKeys = Object.keys(self.inOps);
     var outOpKeys = Object.keys(self.outOps);
 
-    self.logger[err ? 'warn' : 'info']('resetting all connections', {
+    self.logger[err ? 'warn' : 'info']('resetting connection', {
         error: err,
+        remoteName: self.remoteName,
+        localName: self.channel.hostPort,
         numInOps: inOpKeys.length,
         numOutOps: outOpKeys.length,
         inPending: self.inPending,
