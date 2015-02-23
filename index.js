@@ -220,10 +220,18 @@ TChannel.prototype.send = function send(options, arg1, arg2, arg3, callback) {
         throw new Error('cannot send() without options.host');
     }
 
+    var reqFrame = self.buildRequest(options, arg1, arg2, arg3);
     var peer = self.getOutConnection(dest);
-    peer.send(options, arg1, arg2, arg3, callback);
+    peer.send(options, reqFrame, callback);
 };
 /* jshint maxparams:4 */
+
+TChannel.prototype.buildRequest = function buildRequest(options, arg1, arg2, arg3) {
+    var reqFrame = new v1.Frame();
+    reqFrame.set(arg1, arg2, arg3);
+    reqFrame.header.type = v1.Types.reqCompleteMessage;
+    return reqFrame;
+};
 
 TChannel.prototype.getOutConnection = function getOutConnection(dest) {
     var self = this;
@@ -328,7 +336,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 
     self.localEndpoints = Object.create(null);
 
-    self.lastSentMessage = 0;
+    self.lastSentFrameId = 0;
     self.lastTimeoutTime = 0;
     self.closing = false;
 
@@ -355,9 +363,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     });
     self.parser.on('error', function onParserError(err) {
         if (!self.closing) {
-            // TODO this method is not implemented.
-            // We should close the connection.
-            self.onParserErr(err);
+            self.onParserError(err);
         }
     });
 
@@ -387,6 +393,23 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     }
 }
 require('util').inherits(TChannelConnection, require('events').EventEmitter);
+
+TChannelConnection.prototype.onParserError = function onParserError(err) {
+    var self = this;
+    self.channel.logger.error('tchannel parse error', {
+        remoteName: self.remoteName,
+        localName: self.channel.name,
+        error: err
+    });
+    // TODO should we close the connection?
+};
+
+TChannelConnection.prototype.nextFrameId = function nextFrameId() {
+    var self = this;
+    // TODO this needs to wrap around with 32-bit uint space
+    ++self.lastSentFrameId;
+    return self.lastSentFrameId;
+};
 
 // timeout check runs every timeoutCheckInterval +/- some random fuzz. Range is from
 //   base - fuzz/2 to base + fuzz/2
@@ -500,6 +523,7 @@ TChannelConnection.prototype.onReqTimeout = function onReqTimeout(op) {
 // stumbles across this object in a core dump.
 TChannelConnection.prototype.resetAll = function resetAll(err) {
     var self = this;
+    if (self.closing) return;
     self.closing = true;
     self.clearTimeoutTimer();
 
@@ -534,19 +558,6 @@ TChannelConnection.prototype.onSocketErr = function onSocketErr(err) {
     }
 };
 
-TChannelConnection.prototype.validateChecksum = function validateChecksum(frame) {
-    var self = this;
-    var actual = frame.checksum();
-    var expected = frame.header.csum;
-    if (expected !== actual) {
-        self.logger.warn('server checksum validation failed ' + expected + ' vs ' + actual);
-        self.logger.warn(inspect(frame));
-        return false;
-    } else {
-        return true;
-    }
-};
-
 // when we receive a new connection, we expect the first message to be identify
 TChannelConnection.prototype.onIdentify = function onIdentify(frame) {
     var self = this;
@@ -565,13 +576,6 @@ TChannelConnection.prototype.onIdentify = function onIdentify(frame) {
 
 TChannelConnection.prototype.onFrame = function onFrame(frame) {
     var self = this;
-
-    if (self.validateChecksum(frame) === false) {
-        // TODO: reduce the log spam: validateChecksum emits 2x warn logs, then
-        // we have a less than informative error log here... use a structured
-        // error out of validation and log it here instead
-        self.logger.error("bad checksum");
-    }
 
     self.lastTimeoutTime = 0;
     switch (frame.header.type) {
@@ -613,16 +617,10 @@ TChannelConnection.prototype.handleReqFrame = function handleReqFrame(reqFrame) 
     }
 
     self.inPending++;
-    var opCallback = responseFrameBuilder(reqFrame, sendResponse);
     var op = self.inOps[id] = new TChannelServerOp(self,
-        handler, reqFrame, self.channel.now(), {}, opCallback);
+        handler, reqFrame, self.channel.now(), {}, sendFrame);
 
-    function sendResponse(err, handlerErr, resFrame) {
-        if (err) {
-            // TODO: add more log context
-            self.logger.error(err);
-            return;
-        }
+    function sendFrame(resFrame) {
         if (self.closing) {
             return;
         }
@@ -630,7 +628,6 @@ TChannelConnection.prototype.handleReqFrame = function handleReqFrame(reqFrame) 
             // TODO log...
             return;
         }
-        // TODO: observability hook for handler errors
         var buf = resFrame.toBuffer();
         delete self.inOps[id];
         self.inPending--;
@@ -652,21 +649,23 @@ TChannelConnection.prototype.handleResError = function handleResError(frame) {
 TChannelConnection.prototype.completeOutOp = function completeOutOp(id, err, arg1, arg2) {
     var self = this;
     var op = self.outOps[id];
-    if (op) {
-        delete self.outOps[id];
-        self.outPending--;
-        op.callback(err, arg1, arg2);
-    // } else { // TODO log...
+    if (!op) {
+        // TODO else case. We should warn about an incoming response for an
+        // operation we did not send out.  This could be because of a timeout
+        // or could be because of a confused / corrupted server.
+        return;
     }
-    // TODO else case. We should warn about an incoming response
-    // for an operation we did not send out.
-    // This could be because of a timeout or could be because
-    // of a confused / corrupted server.
+    delete self.outOps[id];
+    self.outPending--;
+    op.callback(err, arg1, arg2);
 };
 
 TChannelConnection.prototype.sendInitRequest = function sendInitRequest(callback) {
     var self = this;
-    self.send({}, 'TChannel identify', self.channel.name, null, callback);
+    var reqFrame = new v1.Frame();
+    reqFrame.set('TChannel identify', self.channel.name, null);
+    reqFrame.header.type = v1.Types.reqCompleteMessage;
+    self.send({}, reqFrame, callback);
 };
 
 TChannelConnection.prototype.handleInitResponse = function handleInitResponse(res) {
@@ -678,70 +677,80 @@ TChannelConnection.prototype.handleInitResponse = function handleInitResponse(re
 
 // send a req frame
 /* jshint maxparams:5 */
-TChannelConnection.prototype.send = function send(options, arg1, arg2, arg3, callback) {
+TChannelConnection.prototype.send = function send(options, frame, callback) {
     var self = this;
-    var frame = new v1.Frame();
+    var id = self.nextFrameId();
+    // TODO: use this to protect against >4Mi outstanding messages edge case
+    // (e.g. zombie operation bug, incredible throughput, or simply very long
+    // timeout
+    // if (self.outOps[id]) {
+    //  throw new Error('duplicate frame id in flight');
+    // }
 
-    frame.set(arg1, arg2, arg3);
-    frame.header.type = v1.Types.reqCompleteMessage;
-    // TODO This id will overflow at the 4 million messages mark
-    // This can create a very strange race condition where we
-    // call an very old operation with a long timeout if we
-    // send more then 4 million messages in a certain timeframe
-    frame.header.id = ++self.lastSentMessage;
+    frame.header.id = id;
     frame.header.seq = 0;
-
-    // TODO check whether this outOps already exists in case
-    // we send more then 4 million messages in a time frame.
-    self.outOps[frame.header.id] = new TChannelClientOp(
+    self.outOps[id] = new TChannelClientOp(
         options, frame, self.channel.now(), callback);
     self.pendingCount++;
-    return self.socket.write(frame.toBuffer());
+    var buffer = frame.toBuffer();
+    return self.socket.write(buffer);
 };
 /* jshint maxparams:4 */
 
 /* jshint maxparams:6 */
-function TChannelServerOp(connection, handler, reqFrame, start, options, callback) {
+function TChannelServerOp(connection, handler, reqFrame, start, options, sendFrame) {
     var self = this;
     self.connection = connection;
+    self.logger = connection.logger;
     self.handler = handler;
     self.reqFrame = reqFrame;
     self.timedOut = false;
     self.start = start;
     self.options = options;
-    handler(reqFrame.arg2, reqFrame.arg3, connection.remoteName, callback);
+    self.sendFrame = sendFrame;
+    self.responseSent = false;
+    self.handler(reqFrame.arg2, reqFrame.arg3, connection.remoteName, sendResponse);
+    function sendResponse(err, res1, res2) {
+        self.sendResponse(err, res1, res2);
+    }
 }
 /* jshint maxparams:4 */
 
-function responseFrameBuilder(reqFrame, callback) {
-    var id = reqFrame.header.id;
-    var arg1 = reqFrame.arg1;
-    var sent = false;
+TChannelServerOp.prototype.sendResponse = function sendResponse(err, res1, res2) {
+    var self = this;
+    if (self.responseSent) {
+        self.logger.error('response already sent', {
+            err: err,
+            res1: res1,
+            res2: res2
+        });
+        return;
+    }
+    self.responseSent = true;
+    // TODO: observability hook for handler errors
+    var resFrame = self.buildResponseFrame(err, res1, res2);
+    self.sendFrame(resFrame);
+};
+
+TChannelServerOp.prototype.buildResponseFrame = function buildResponseFrame(err, res1, res2) {
+    var self = this;
+    var id = self.reqFrame.header.id;
+    var arg1 = self.reqFrame.arg1;
     var resFrame = new v1.Frame();
     resFrame.header.id = id;
     resFrame.header.seq = 0;
-    return function buildResponseFrame(handlerErr, res1, res2) {
-        if (sent) {
-            return callback(new Error('response already sent', {
-                handlerErr: handlerErr,
-                res1: res1,
-                res2: res2
-            }));
-        }
-        sent = true;
-        if (handlerErr) {
-            // TODO should the error response contain a head ?
-            // Is there any value in sending meta data along with
-            // the error.
-            resFrame.set(isError(handlerErr) ? handlerErr.message : handlerErr, null, null);
-            resFrame.header.type = v1.Types.resError;
-        } else {
-            resFrame.set(arg1, res1, res2);
-            resFrame.header.type = v1.Types.resCompleteMessage;
-        }
-        callback(null, handlerErr, resFrame);
-    };
-}
+    if (err) {
+        // TODO should the error response contain a head ?
+        // Is there any value in sending meta data along with
+        // the error.
+        resFrame.set(isError(err) ? err.message : err, null, null);
+        resFrame.header.type = v1.Types.resError;
+    } else {
+        resFrame.set(arg1, res1, res2);
+        resFrame.header.type = v1.Types.resCompleteMessage;
+    }
+    return resFrame;
+};
 
 function isError(obj) {
     return typeof obj === 'object' && (

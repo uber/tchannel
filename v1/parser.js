@@ -203,6 +203,11 @@ TChannelParser.prototype.emitAndReset = function () {
     if (this.newFrame.header.arg3len === 0) {
         this.newFrame.arg3 = emptyBuffer;
     }
+    var err = this.newFrame.verifyChecksum();
+    if (err) {
+        this.emit('error', err);
+        return;
+    }
     this.emit('frame', this.newFrame);
     this.newFrame = new TChannelFrame();
     this.state = states.readType;

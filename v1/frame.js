@@ -98,6 +98,19 @@ TChannelFrame.prototype.checksum = function () {
     return csum;
 };
 
+TChannelFrame.prototype.verifyChecksum = function () {
+    var self = this;
+    var err = null;
+    var actual = self.checksum();
+    var expected = self.header.csum;
+    if (expected !== actual) {
+        err = new Error('tchannel checksum validation failed');
+        err.actual = actual;
+        err.expected = expected;
+    }
+    return err;
+};
+
 TChannelFrame.prototype.toBuffer = function () {
     var header = this.header;
     var buf = new Buffer(25 + header.arg1len + header.arg2len + header.arg3len);
