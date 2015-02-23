@@ -599,9 +599,6 @@ TChannelConnection.prototype.onFrame = function onFrame(frame) {
     self.lastTimeoutTime = 0;
     switch (frame.header.type) {
         case v1.Types.reqCompleteMessage:
-            if (self.remoteName === null && self.onIdentify(frame) === false) {
-                return;
-            }
             return self.handleCallRequest(frame);
         case v1.Types.resCompleteMessage:
             return self.handleCallResponse(frame);
@@ -616,6 +613,9 @@ TChannelConnection.prototype.onFrame = function onFrame(frame) {
 
 TChannelConnection.prototype.handleCallRequest = function handleCallRequest(reqFrame) {
     var self = this;
+    if (self.remoteName === null && self.onIdentify(reqFrame) === false) {
+        return;
+    }
     var id = reqFrame.header.id;
     var name = reqFrame.arg1.toString();
 
