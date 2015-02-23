@@ -118,13 +118,16 @@ class ErrorMessage(BaseMessage):
     message_type = Types.ERROR
     __slots__ = _BASE_FIELDS + (
         'code',
+        'original_message_id',
         'message',
     )
 
     def parse(self, payload, size):
         self.code = read_number(payload, 1)
+        self.original_message_id = read_number(payload, 4)
         self.message = read_variable_length_key(payload, 2)
 
     def serialize(self, out):
         out.extend(write_number(self.code, 1))
+        out.extend(write_number(self.original_message_id, 4))
         write_variable_length_key(out, self.message, 2)
