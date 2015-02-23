@@ -20,11 +20,50 @@
 
 'use strict';
 
-require('./safe-quit.js');
-require('./timeouts.js');
-require('./send.js');
-require('./register.js');
-require('./identify.js');
-require('./tchannel.js');
-require('./regression-inOps-leak.js');
-require('./emits-endpoint.js');
+var allocCluster = require('./lib/alloc-cluster.js');
+
+allocCluster.test('emits endpoint event', 2, {
+
+}, function t(cluster, assert) {
+    var one = cluster.channels[0];
+    var two = cluster.channels[1];
+    var endpoints = [];
+
+    one.register('/hello', function hello(arg1, arg2, hi, cb) {
+        assert.deepEqual(endpoints, [
+            {
+                name: 'TChannel identify'
+            },
+            {
+                name: '/hello'
+            }
+        ]);
+        cb(null, '', 'hello');
+    });
+
+    one.on('endpoint', function onEndpoint(name) {
+        endpoints.push(name);
+    });
+
+    two.send({
+        host: cluster.hosts[0]
+    }, '/hello', '', '', onHello);
+
+    function onHello(err, res1, res2) {
+        assert.ifError(err);
+
+        assert.equal(String(res1), '');
+        assert.equal(String(res2), 'hello');
+
+        assert.deepEqual(endpoints, [
+            {
+                name: 'TChannel identify'
+            },
+            {
+                name: '/hello'
+            }
+        ]);
+
+        assert.end();
+    }
+});

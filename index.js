@@ -613,6 +613,10 @@ TChannelConnection.prototype.handleReqFrame = function handleReqFrame(reqFrame) 
 
     var handler = self.localEndpoints[name] || self.channel.endpoints[name];
 
+    self.channel.emit('endpoint', {
+        name: name
+    });
+
     if (typeof handler !== 'function') {
         // TODO: test this behavior, in fact the prior early return subtlety
         // broke tests in an unknown way after deferring the inOps mutation
