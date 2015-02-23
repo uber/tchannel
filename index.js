@@ -571,20 +571,20 @@ TChannelConnection.prototype.onFrame = function onFrame(frame) {
     }
 
     self.lastTimeoutTime = 0;
-
-    if (frame.header.type === v1.Types.reqCompleteMessage) {
-        if (self.remoteName === null && self.onIdentify(frame) === false) {
-            return;
-        }
-        self.handleReqFrame(frame);
-    } else if (frame.header.type === v1.Types.resCompleteMessage) {
-        self.handleResCompleteMessage(frame);
-    } else if (frame.header.type === v1.Types.resError) {
-        self.handleResError(frame);
-    } else {
-        self.logger.error('unknown frame type', {
-            type: frame.header.type
-        });
+    switch (frame.header.type) {
+        case v1.Types.reqCompleteMessage:
+            if (self.remoteName === null && self.onIdentify(frame) === false) {
+                return;
+            }
+            return self.handleReqFrame(frame);
+        case v1.Types.resCompleteMessage:
+            return self.handleResCompleteMessage(frame);
+        case v1.Types.resError:
+            return self.handleResError(frame);
+        default:
+            self.logger.error('unhandled frame type', {
+                type: frame.header.type
+            });
     }
 };
 
