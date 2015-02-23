@@ -198,11 +198,11 @@ TChannel.prototype.addPeer = function addPeer(name, connection) {
         direction: connection.direction
         // TODO: more log context
     });
-    connection.on('reset', function onConnectionReset(/* err */) {
+    connection.once('reset', function onConnectionReset(/* err */) {
         // TODO: log?
         self.removePeer(name, connection);
     });
-    connection.on('socketClose', function onConnectionSocketClose(conn, err) {
+    connection.once('socketClose', function onConnectionSocketClose(conn, err) {
         self.emit('socketClose', conn, err);
     });
     return self.setPeer(name, connection);
