@@ -25,6 +25,7 @@ var util = require('util');
 var TChannel = require('../../index.js');
 var parallel = require('run-parallel');
 var echoLogger = require('./logger');
+var nullLogger = require('../../null-logger');
 
 module.exports = allocCluster;
 
@@ -32,7 +33,9 @@ function allocCluster(n, opts) {
     opts = opts || {};
 
     var host = 'localhost';
+    var logger = opts.debugLog ? echoLogger(process.stdout) : nullLogger;
     var ret = {
+        logger: logger,
         hosts: new Array(n),
         channels: new Array(n),
         destroy: destroy
@@ -41,7 +44,7 @@ function allocCluster(n, opts) {
     for (var i=0; i<n; i++) {
         var port = randomPort();
         ret.channels[i] = TChannel(extend({
-            logger: opts.debugLog ? echoLogger(process.stdout) : null,
+            logger: logger,
             host: host,
             port: port
         }, opts));

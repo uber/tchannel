@@ -524,6 +524,18 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
     var self = this;
     if (self.closing) return;
     self.closing = true;
+
+    var inOpKeys = Object.keys(self.inOps);
+    var outOpKeys = Object.keys(self.outOps);
+
+    self.logger[err ? 'warn' : 'info']('resetting all connections', {
+        error: err,
+        numInOps: inOpKeys.length,
+        numOutOps: outOpKeys.length,
+        inPending: self.inPending,
+        outPending: self.outPending
+    });
+
     self.clearTimeoutTimer();
 
     self.emit('reset');
@@ -531,13 +543,13 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
     // requests that we've received we can delete, but these reqs may have started their
     //   own outgoing work, which is hard to cancel. By setting this.closing, we make sure
     //   that once they do finish that their callback will swallow the response.
-    Object.keys(self.inOps).forEach(function eachInOp(id) {
+    inOpKeys.forEach(function eachInOp(id) {
         // TODO: we could support an op.cancel opt-in callback
         delete self.inOps[id];
     });
 
     // for all outgoing requests, forward the triggering error to the user callback
-    Object.keys(self.outOps).forEach(function eachOutOp(id) {
+    outOpKeys.forEach(function eachOutOp(id) {
         var op = self.outOps[id];
         delete self.outOps[id];
         // TODO: shared mutable object... use Object.create(err)?
