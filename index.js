@@ -27,6 +27,7 @@ var globalSetTimeout = require('timers').setTimeout;
 var globalNow = Date.now;
 var globalRandom = Math.random;
 var net = require('net');
+var format = require('util').format;
 var inspect = require('util').inspect;
 
 function TChannel(options) {
@@ -42,7 +43,10 @@ function TChannel(options) {
     self.host = self.options.host || '127.0.0.1';
     // TODO do not default the port.
     self.port = self.options.port || 4040;
-    self.name = self.host + ':' + self.port;
+    self.hostPort = self.host + ':' + self.port;
+    // TODO: maybe we should always add pid to user-supplied?
+    self.processName = self.options.processName ||
+        format('%s[%s]', process.title, process.pid);
     self.random = self.options.random ?
         self.options.random : globalRandom;
     self.setTimeout = self.options.timers ?
@@ -77,12 +81,12 @@ function TChannel(options) {
 
     self.serverSocket.on('listening', function onServerSocketListening() {
         if (!self.destroyed) {
-            self.logger.info(self.name + ' listening');
+            self.logger.info(self.hostPort + ' listening');
             self.emit('listening');
         }
     });
     self.serverSocket.on('error', function onServerSocketError(err) {
-        self.logger.error(self.name + ' server socket error: ' + inspect(err));
+        self.logger.error(self.hostPort + ' server socket error: ' + inspect(err));
     });
     self.serverSocket.on('close', function onServerSocketClose() {
         self.logger.warn('server socket close');
@@ -118,15 +122,15 @@ TChannel.prototype.register = function register(op, callback) {
     self.endpoints[op] = callback;
 };
 
-TChannel.prototype.setPeer = function setPeer(name, conn) {
+TChannel.prototype.setPeer = function setPeer(hostPort, conn) {
     var self = this;
-    if (name === self.name) {
+    if (hostPort === self.hostPort) {
         throw new Error('refusing to set self peer');
     }
 
-    var list = self.peers[name];
+    var list = self.peers[hostPort];
     if (!list) {
-        list = self.peers[name] = [];
+        list = self.peers[hostPort] = [];
     }
 
     if (conn.direction === 'out') {
@@ -136,15 +140,16 @@ TChannel.prototype.setPeer = function setPeer(name, conn) {
     }
     return conn;
 };
-TChannel.prototype.getPeer = function getPeer(name) {
+
+TChannel.prototype.getPeer = function getPeer(hostPort) {
     var self = this;
-    var list = self.peers[name];
+    var list = self.peers[hostPort];
     return list && list[0] ? list[0] : null;
 };
 
-TChannel.prototype.removePeer = function removePeer(name, conn) {
+TChannel.prototype.removePeer = function removePeer(hostPort, conn) {
     var self = this;
-    var list = self.peers[name];
+    var list = self.peers[hostPort];
     var index = list ? list.indexOf(conn) : -1;
 
     if (index === -1) {
@@ -173,39 +178,39 @@ TChannel.prototype.getPeers = function getPeers() {
     return peers;
 };
 
-TChannel.prototype.addPeer = function addPeer(name, connection) {
+TChannel.prototype.addPeer = function addPeer(hostPort, connection) {
     var self = this;
-    if (name === self.name) {
+    if (hostPort === self.hostPort) {
         throw new Error('refusing to add self peer');
     }
 
     if (!connection) {
-        connection = self.makeOutConnection(name);
+        connection = self.makeOutConnection(hostPort);
     }
 
-    var existingPeer = self.getPeer(name);
+    var existingPeer = self.getPeer(hostPort);
     if (existingPeer !== null && existingPeer !== connection) { // TODO: how about === undefined?
         self.logger.warn('allocated a connection twice', {
-            name: name,
+            hostPort: hostPort,
             direction: connection.direction
             // TODO: more log context
         });
     }
 
     self.logger.debug('alloc peer', {
-        source: self.name,
-        destination: name,
+        source: self.hostPort,
+        destination: hostPort,
         direction: connection.direction
         // TODO: more log context
     });
     connection.on('reset', function onConnectionReset(/* err */) {
         // TODO: log?
-        self.removePeer(name, connection);
+        self.removePeer(hostPort, connection);
     });
     connection.on('socketClose', function onConnectionSocketClose(conn, err) {
         self.emit('socketClose', conn, err);
     });
-    return self.setPeer(name, connection);
+    return self.setPeer(hostPort, connection);
 };
 
 /* jshint maxparams:5 */
@@ -267,7 +272,7 @@ TChannel.prototype.quit = function quit(callback) {
     var counter = peers.length + 1;
 
     self.logger.debug('quitting tchannel', {
-        name: self.name
+        hostPort: self.hostPort
     });
 
     peers.forEach(function eachPeer(conn) {
@@ -315,7 +320,7 @@ TChannel.prototype.quit = function quit(callback) {
 
 function TChannelConnection(channel, socket, direction, remoteAddr) {
     var self = this;
-    if (remoteAddr === channel.name) {
+    if (remoteAddr === channel.hostPort) {
         throw new Error('refusing to create self connection');
     }
 
@@ -368,7 +373,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     });
 
     self.localEndpoints['TChannel identify'] = function identifyEndpoint(arg1, arg2, hostInfo, cb) {
-        cb(null, self.channel.name, null);
+        cb(null, self.channel.hostPort, null);
     };
 
     if (direction === 'out') {
@@ -398,7 +403,7 @@ TChannelConnection.prototype.onParserError = function onParserError(err) {
     var self = this;
     self.channel.logger.error('tchannel parse error', {
         remoteName: self.remoteName,
-        localName: self.channel.name,
+        localName: self.channel.hostPort,
         error: err
     });
     // TODO should we close the connection?
@@ -444,7 +449,7 @@ TChannelConnection.prototype.onTimeoutCheck = function onTimeoutCheck() {
     }
 
     if (self.lastTimeoutTime) {
-        self.logger.warn(self.channel.name + ' destroying socket from timeouts');
+        self.logger.warn(self.channel.hostPort + ' destroying socket from timeouts');
         self.socket.destroy();
         return;
     }
@@ -676,7 +681,7 @@ TChannelConnection.prototype.completeOutOp = function completeOutOp(id, err, arg
 TChannelConnection.prototype.sendInitRequest = function sendInitRequest(callback) {
     var self = this;
     var reqFrame = new v1.Frame();
-    reqFrame.set('TChannel identify', self.channel.name, null);
+    reqFrame.set('TChannel identify', self.channel.hostPort, null);
     reqFrame.header.type = v1.Types.reqCompleteMessage;
     self.send({}, reqFrame, callback);
 };
