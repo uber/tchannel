@@ -36,7 +36,7 @@ def read_variable_length_key(buff, key_size):
     """
     key_bytes = read_number(buff, key_size)
     value = buff.read(key_bytes)
-    return value, (key_bytes + key_size)
+    return value.decode('utf-8'), (key_bytes + key_size)
 
 
 def read_key_value(buff, key_size, value_size=None):
@@ -53,12 +53,14 @@ def read_key_value(buff, key_size, value_size=None):
     else:
         value, value_bytes = None, 0
 
-    return key.decode('utf-8'), value, (key_bytes + value_bytes)
+    return key, value, (key_bytes + value_bytes)
 
 
-def write_variable_length_key(value, value_size):
+def write_variable_length_key(stream, value, value_size):
     """Write a length followed by that many bytes."""
-    return write_number(len(value), value_size), value
+    encoded_value = value.encode('utf-8')
+    stream.extend(write_number(len(encoded_value), value_size))
+    stream.extend(encoded_value)
 
 
 def write_key_value(key, value, key_size, value_size=None):
@@ -70,20 +72,14 @@ def write_key_value(key, value, key_size, value_size=None):
         value_size = key_size
 
     stream = bytearray()
-    size, key_bytes = write_variable_length_key(
-        key.encode('utf-8'),
+    write_variable_length_key(
+        stream,
+        key,
         key_size
     )
-    stream.extend(size)
-    stream.extend(key_bytes)
 
     if value:
-        size, value = write_variable_length_key(
-            value.encode('utf-8'),
-            value_size
-        )
-        stream.extend(size)
-        stream.extend(value)
+        write_variable_length_key(stream, value, value_size)
     else:
         stream.extend(write_number(0, value_size))
     return stream

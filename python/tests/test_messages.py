@@ -75,6 +75,7 @@ def test_valid_ping_request():
     (messages.InitRequestMessage, {'headers': {'one': '2'}}),
     (messages.PingRequestMessage, {}),
     (messages.PingResponseMessage, {}),
+    (messages.ErrorMessage, {'code': 1, 'message': 'hi'}),
 ])
 def test_serialize_message(message_class, attrs):
     """Verify all message types serialize properly."""
@@ -84,3 +85,12 @@ def test_serialize_message(message_class, attrs):
         setattr(message, key, value)
 
     message.serialize(out)
+
+
+@pytest.mark.parametrize('message_class,byte_stream', [
+    (messages.ErrorMessage, b'\x00\x00\x02hi')
+])
+def test_parse_message(message_class, byte_stream):
+    """Verify all messages parse properly."""
+    message = message_class()
+    message.parse(BytesIO(byte_stream), len(byte_stream))

@@ -1,11 +1,14 @@
 from __future__ import absolute_import
 
 from .exceptions import InvalidMessageException
-from .types import Types
-from .parser import read_short
 from .parser import read_key_value
-from .parser import write_number
+from .parser import read_number
+from .parser import read_short
+from .parser import read_variable_length_key
 from .parser import write_key_value
+from .parser import write_number
+from .parser import write_variable_length_key
+from .types import Types
 
 
 _BASE_FIELDS = ()
@@ -108,3 +111,20 @@ class PingRequestMessage(BaseMessage):
 class PingResponseMessage(PingRequestMessage):
     """Respond to a ping request."""
     message_type = Types.PING_RES
+
+
+class ErrorMessage(BaseMessage):
+    """Respond to a CALL_REQ with a failure at the protocol level."""
+    message_type = Types.ERROR
+    __slots__ = _BASE_FIELDS + (
+        'code',
+        'message',
+    )
+
+    def parse(self, payload, size):
+        self.code = read_number(payload, 1)
+        self.message = read_variable_length_key(payload, 2)
+
+    def serialize(self, out):
+        out.extend(write_number(self.code, 1))
+        write_variable_length_key(out, self.message, 2)
