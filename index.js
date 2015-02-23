@@ -720,7 +720,9 @@ function TChannelServerOp(connection, handler, reqFrame, start, options, sendFra
     self.options = options;
     self.sendFrame = sendFrame;
     self.responseSent = false;
-    self.handler(reqFrame.arg2, reqFrame.arg3, connection.remoteName, sendResponse);
+    process.nextTick(function runHandler() {
+        self.handler(reqFrame.arg2, reqFrame.arg3, connection.remoteName, sendResponse);
+    });
     function sendResponse(err, res1, res2) {
         self.sendResponse(err, res1, res2);
     }
