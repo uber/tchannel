@@ -20,14 +20,11 @@
 
 'use strict';
 
-var test = require('tape');
 var parallel = require('run-parallel');
 var Buffer = require('buffer').Buffer;
-
 var allocCluster = require('./lib/alloc-cluster.js');
 
-test('send() to a server', function t(assert) {
-    var cluster = allocCluster(2);
+allocCluster.test('send() to a server', 2, function t(cluster, assert) {
     var one = cluster.channels[0];
     var two = cluster.channels[1];
     var hostOne = cluster.hosts[0];
@@ -150,7 +147,7 @@ test('send() to a server', function t(assert) {
         assert.ok(Buffer.isBuffer(undefinedBody.body));
         assert.equal(String(undefinedBody.body), '');
 
-        cluster.destroy(assert.end);
+        assert.end();
     });
 });
 

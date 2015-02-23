@@ -20,14 +20,11 @@
 
 'use strict';
 
-var test = require('tape');
 var parallel = require('run-parallel');
 var Buffer = require('buffer').Buffer;
-
 var allocCluster = require('./lib/alloc-cluster.js');
 
-test('register() with different results', function t(assert) {
-    var cluster = allocCluster(2);
+allocCluster.test('register() with different results', 2, function t(cluster, assert) {
     var one = cluster.channels[0];
     var two = cluster.channels[1];
     var hostOne = cluster.hosts[0];
@@ -185,7 +182,7 @@ test('register() with different results', function t(assert) {
         assert.ok(Buffer.isBuffer(undefBody.body));
         assert.equal(String(undefBody.body), '');
 
-        cluster.destroy(assert.end);
+        assert.end();
     }
 });
 

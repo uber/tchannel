@@ -21,6 +21,8 @@
 'use strict';
 
 var extend = require('xtend');
+var ReadySignal = require('ready-signal');
+var test = require('tape');
 var util = require('util');
 var TChannel = require('../../index.js');
 var parallel = require('run-parallel');
@@ -31,26 +33,42 @@ module.exports = allocCluster;
 function allocCluster(n, opts) {
     opts = opts || {};
 
+    var ready = ReadySignal();
+    var readyCount = 0;
+
     var host = 'localhost';
     var logger = debugLogtron('tchannel');
     var ret = {
         logger: logger,
         hosts: new Array(n),
         channels: new Array(n),
-        destroy: destroy
+        destroy: destroy,
+        ready: ready
     };
 
     for (var i=0; i<n; i++) {
         var port = randomPort();
-        ret.channels[i] = TChannel(extend({
+        var chan = TChannel(extend({
             logger: logger,
             host: host,
             port: port
         }, opts));
+        ret.channels[i] = chan;
         ret.hosts[i] = util.format('%s:%s', host, port);
+        if (chan.listening) {
+            chan.once('listening', chanReady);
+        } else {
+            chanReady();
+        }
     }
 
     return ret;
+
+    function chanReady() {
+        if (++readyCount >= n) {
+            ready.signal();
+        }
+    }
 
     function destroy(cb) {
         parallel(ret.channels.map(function(chan) {
@@ -60,6 +78,22 @@ function allocCluster(n, opts) {
         }), cb);
     }
 }
+
+allocCluster.test = function testCluster(desc, n, opts, t) {
+    if (typeof opts === 'function') {
+        t = opts;
+        opts = {};
+    }
+    var cluster = allocCluster(n, opts);
+    cluster.ready(function clusterReady() {
+        test(desc, function t2(assert) {
+            assert.once('end', function testEnded() {
+                cluster.destroy();
+            });
+            t(cluster, assert);
+        });
+    });
+};
 
 function randomPort() {
     return 20000 + Math.floor(Math.random() * 20000);

@@ -28,6 +28,7 @@
     "minimist": "^1.1.0",
     "opn": "^1.0.1",
     "pre-commit": "0.0.9",
+    "ready-signal": "^1.0.0",
     "run-parallel": "^1.0.0",
     "tape": "^3.0.3",
     "time-mock": "^0.1.2",
