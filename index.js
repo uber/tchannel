@@ -632,17 +632,16 @@ TChannelConnection.prototype.handleReqFrame = function handleReqFrame(reqFrame) 
         handler, reqFrame, self.channel.now(), {}, sendFrame);
 
     function sendFrame(resFrame) {
-        if (self.closing) {
-            return;
-        }
         if (self.inOps[id] !== op) {
             // TODO log...
             return;
         }
-        var buf = resFrame.toBuffer();
         delete self.inOps[id];
         self.inPending--;
-        self.socket.write(buf);
+        if (!self.closing) {
+            var buf = resFrame.toBuffer();
+            self.socket.write(buf);
+        }
     }
 };
 
