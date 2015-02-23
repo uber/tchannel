@@ -632,17 +632,19 @@ TChannelConnection.prototype.handleReqFrame = function handleReqFrame(reqFrame) 
         handler, reqFrame, self.channel.now(), {}, sendFrame);
 
     function sendFrame(resFrame) {
-        if (self.closing) {
-            return;
-        }
         if (self.inOps[id] !== op) {
-            // TODO log...
+            self.logger.warn('attempt to send frame for mismatched operation', {
+                hostPort: self.channel.name,
+                opId: id
+            });
             return;
         }
-        var buf = resFrame.toBuffer();
         delete self.inOps[id];
         self.inPending--;
-        self.socket.write(buf);
+        if (!self.closing) {
+            var buf = resFrame.toBuffer();
+            self.socket.write(buf);
+        }
     }
 };
 
@@ -720,7 +722,9 @@ function TChannelServerOp(connection, handler, reqFrame, start, options, sendFra
     self.options = options;
     self.sendFrame = sendFrame;
     self.responseSent = false;
-    self.handler(reqFrame.arg2, reqFrame.arg3, connection.remoteName, sendResponse);
+    process.nextTick(function runHandler() {
+        self.handler(reqFrame.arg2, reqFrame.arg3, connection.remoteName, sendResponse);
+    });
     function sendResponse(err, res1, res2) {
         self.sendResponse(err, res1, res2);
     }

@@ -38,29 +38,28 @@ allocCluster.test('does not leak inOps', 2, {
 
     function onTimeout(err) {
         two.timeoutCheckInterval = 99999;
-        assert.ok(err);
-
-        assert.equal(err.message, 'timed out');
+        assert.equal(err && err.message, 'timed out', 'should have a timeout error');
 
         var peersOne = one.getPeers();
         var peersTwo = two.getPeers();
 
-        assert.equal(peersOne.length, 1);
-        assert.equal(peersTwo.length, 1);
+        assert.equal(peersOne.length, 1, 'one should have 1 peer');
+        assert.equal(peersTwo.length, 1, 'two should have 1 peer');
 
         var inPeer = peersOne[0];
+        if (inPeer) {
+            assert.equal(inPeer.direction, 'in', 'inPeer should be in');
+            inPeer.onTimeoutCheck();
+            assert.equal(Object.keys(inPeer.inOps).length, 0, 'inPeer should have no inOps');
+            assert.equal(Object.keys(inPeer.outOps).length, 0, 'inPeer should have no outOps');
+        }
+
         var outPeer = peersTwo[0];
-
-        assert.equal(inPeer.direction, 'in');
-        assert.equal(outPeer.direction, 'out');
-
-        inPeer.onTimeoutCheck();
-
-        assert.equal(Object.keys(inPeer.outOps).length, 0);
-        assert.equal(Object.keys(outPeer.inOps).length, 0);
-
-        assert.equal(Object.keys(inPeer.inOps).length, 0);
-        assert.equal(Object.keys(outPeer.outOps).length, 0);
+        if (outPeer) {
+            assert.equal(outPeer.direction, 'out', 'outPeer should be out');
+            assert.equal(Object.keys(outPeer.inOps).length, 0, 'outPeer should have no inOps');
+            assert.equal(Object.keys(outPeer.outOps).length, 0, 'outPeer should have no outOps');
+        }
 
         assert.end();
     }
