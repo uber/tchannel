@@ -530,6 +530,8 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
 
     self.logger[err ? 'warn' : 'info']('resetting all connections', {
         error: err,
+        remoteName: self.remoteName,
+        localName: self.channel.hostPort,
         numInOps: inOpKeys.length,
         numOutOps: outOpKeys.length,
         inPending: self.inPending,
