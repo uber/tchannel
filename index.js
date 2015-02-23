@@ -604,7 +604,7 @@ TChannelConnection.prototype.onFrame = function onFrame(frame) {
             }
             return self.handleCallRequest(frame);
         case v1.Types.resCompleteMessage:
-            return self.handleResCompleteMessage(frame);
+            return self.handleCallResponse(frame);
         case v1.Types.resError:
             return self.handleResError(frame);
         default:
@@ -665,9 +665,13 @@ TChannelConnection.prototype.handleCallRequest = function handleCallRequest(reqF
     }
 };
 
-TChannelConnection.prototype.handleResCompleteMessage = function handleResCompleteMessage(frame) {
+TChannelConnection.prototype.handleCallResponse = function handleCallResponse(resFrame) {
     var self = this;
-    self.completeOutOp(frame.header.id, null, frame.arg2, frame.arg3);
+    var id = resFrame.header.id;
+    var arg2 = resFrame.arg2;
+    var arg3 = resFrame.arg3;
+    var err = null;
+    self.completeOutOp(id, err, arg2, arg3);
 };
 
 TChannelConnection.prototype.handleResError = function handleResError(frame) {
