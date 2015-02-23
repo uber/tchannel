@@ -606,7 +606,7 @@ TChannelConnection.prototype.onFrame = function onFrame(frame) {
         case v1.Types.resCompleteMessage:
             return self.handleCallResponse(frame);
         case v1.Types.resError:
-            return self.handleResError(frame);
+            return self.handleError(frame);
         default:
             self.logger.error('unhandled frame type', {
                 type: frame.header.type
@@ -674,10 +674,12 @@ TChannelConnection.prototype.handleCallResponse = function handleCallResponse(re
     self.completeOutOp(id, err, arg2, arg3);
 };
 
-TChannelConnection.prototype.handleResError = function handleResError(frame) {
+TChannelConnection.prototype.handleError = function handleError(errFrame) {
     var self = this;
-    var err = new Error(frame.arg1);
-    self.completeOutOp(frame.header.id, err, null, null);
+    var id = errFrame.header.id;
+    var message = errFrame.arg1;
+    var err = new Error(message);
+    self.completeOutOp(id, err, null, null);
 };
 
 TChannelConnection.prototype.completeOutOp = function completeOutOp(id, err, arg1, arg2) {
