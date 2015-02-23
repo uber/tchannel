@@ -24,8 +24,7 @@ var extend = require('xtend');
 var util = require('util');
 var TChannel = require('../../index.js');
 var parallel = require('run-parallel');
-var echoLogger = require('./logger');
-var nullLogger = require('../../null-logger');
+var debugLogtron = require('debug-logtron');
 
 module.exports = allocCluster;
 
@@ -33,7 +32,7 @@ function allocCluster(n, opts) {
     opts = opts || {};
 
     var host = 'localhost';
-    var logger = opts.debugLog ? echoLogger(process.stdout) : nullLogger;
+    var logger = debugLogtron('tchannel');
     var ret = {
         logger: logger,
         hosts: new Array(n),
