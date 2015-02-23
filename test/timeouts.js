@@ -51,8 +51,8 @@ allocCluster.test('requests will timeout', 2, {
     });
 
     function onTimeout(err) {
-        assert.ok(err);
-        assert.equal(err.message, 'timed out');
+        assert.equal(err && err.message, 'timed out', 'expected timeout error');
+
         assert.end();
     }
 
