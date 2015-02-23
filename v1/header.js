@@ -20,12 +20,14 @@
 
 'use strict';
 
-function noop() {}
+module.exports = TChannelHeader;
 
-module.exports = {
-    debug: noop,
-    error: noop,
-    fatal: noop,
-    info: noop,
-    warn: noop
-};
+function TChannelHeader() {
+    this.type = null;
+    this.id = null;
+    this.seq = null;
+    this.arg1len = null;
+    this.arg2len = null;
+    this.arg3len = null;
+    this.csum = null;
+}

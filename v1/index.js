@@ -20,12 +20,21 @@
 
 'use strict';
 
-function noop() {}
+module.exports.VERSION = 1;
 
-module.exports = {
-    debug: noop,
-    error: noop,
-    fatal: noop,
-    info: noop,
-    warn: noop
-};
+module.exports.Frame = require('./frame');
+module.exports.Header = require('./header');
+module.exports.Parser = require('./parser');
+
+/* jshint camelcase:false */
+
+var types = module.exports.Types = {};
+types.reqCompleteMessage = types.req_complete_message = 0x01;
+types.reqMessageFragment = types.req_message_fragment = 0x02;
+types.reqLastFragment = types.req_last_fragment = 0x03;
+types.resCompleteMessage = types.res_complete_message = 0x80;
+types.resMessageFragment = types.res_message_fragment = 0x81;
+types.resLastFragment = types.res_last_fragment = 0x82;
+types.resError = types.res_error = 0xC0;
+
+/* jshint camelcase:true */
