@@ -32,9 +32,6 @@ allocCluster.test('emits endpoint event', 2, {
     one.register('/hello', function hello(arg1, arg2, hi, cb) {
         assert.deepEqual(endpoints, [
             {
-                name: 'TChannel identify'
-            },
-            {
                 name: '/hello'
             }
         ]);
@@ -56,9 +53,6 @@ allocCluster.test('emits endpoint event', 2, {
         assert.equal(String(res2), 'hello');
 
         assert.deepEqual(endpoints, [
-            {
-                name: 'TChannel identify'
-            },
             {
                 name: '/hello'
             }
