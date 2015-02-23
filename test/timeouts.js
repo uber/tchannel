@@ -20,16 +20,13 @@
 
 'use strict';
 
-var test = require('tape');
 var TimeMock = require('time-mock');
-
 var allocCluster = require('./lib/alloc-cluster.js');
+var timers = TimeMock(Date.now());
 
-test('requests will timeout', function t(assert) {
-    var timers = TimeMock(Date.now());
-    var cluster = allocCluster(2, {
-        timers: timers
-    });
+allocCluster.test('requests will timeout', 2, {
+    timers: timers
+}, function t(cluster, assert) {
     var one = cluster.channels[0];
     var two = cluster.channels[1];
     var hostOne = cluster.hosts[0];
@@ -56,7 +53,7 @@ test('requests will timeout', function t(assert) {
     function onTimeout(err) {
         assert.ok(err);
         assert.equal(err.message, 'timed out');
-        cluster.destroy(assert.end);
+        assert.end();
     }
 
     function normalProxy(head, body, hostInfo, cb) {

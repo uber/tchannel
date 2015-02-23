@@ -20,16 +20,12 @@
 
 'use strict';
 
-var test = require('tape');
-
 var allocCluster = require('./lib/alloc-cluster.js');
 
-test('does not leak inOps', function t(assert) {
-    var cluster = allocCluster(2, {
-        timeoutCheckInterval: 100,
-        serverTimeoutDefault: 100
-    });
-
+allocCluster.test('does not leak inOps', 2, {
+    timeoutCheckInterval: 100,
+    serverTimeoutDefault: 100
+}, function t(cluster, assert) {
     var one = cluster.channels[0];
     var two = cluster.channels[1];
 
@@ -66,7 +62,6 @@ test('does not leak inOps', function t(assert) {
         assert.equal(Object.keys(inPeer.inOps).length, 0);
         assert.equal(Object.keys(outPeer.outOps).length, 0);
 
-        cluster.destroy();
         assert.end();
     }
 

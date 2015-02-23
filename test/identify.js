@@ -20,15 +20,10 @@
 
 'use strict';
 
-var test = require('tape');
-
 var allocCluster = require('./lib/alloc-cluster.js');
 var barrier = require('./lib/barrier');
 
-test('identify', function t(assert) {
-    var cluster = allocCluster(2, {
-        // logger: require('./logger')(process.stdout)
-    });
+allocCluster.test('identify', 2, function t(cluster, assert) {
     var one = cluster.channels[0];
     var two = cluster.channels[1];
     var hostOne = cluster.hosts[0];
@@ -47,14 +42,9 @@ test('identify', function t(assert) {
         assert.equal(outPeer && outPeer.remoteName, hostTwo, 'outgoing connection name filled in');
         assert.equal(inPeer && inPeer.remoteName, hostOne, 'incoming connection name filled in');
         done();
-    }, finish);
+    }, assert.end);
 
     one.once('identified', idBar('one'));
     two.once('identified', idBar('two'));
     one.addPeer(hostTwo);
-
-    function finish(err) {
-        if (err) assert.fail(err);
-        cluster.destroy(assert.end);
-    }
 });
