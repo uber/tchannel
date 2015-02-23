@@ -75,6 +75,26 @@ allocCluster.test('send() to a server', 2, function t(cluster, assert) {
     }, function onResults(err, results) {
         assert.ifError(err);
 
+        var peersOne = one.getPeers();
+        var peersTwo = two.getPeers();
+
+        assert.equal(peersOne.length, 1, 'one should have 1 peer');
+        assert.equal(peersTwo.length, 1, 'two should have 1 peer');
+
+        var inPeer = peersOne[0];
+        if (inPeer) {
+            assert.equal(inPeer.direction, 'in', 'inPeer should be in');
+            assert.equal(Object.keys(inPeer.inOps).length, 0, 'inPeer should have no inOps');
+            assert.equal(Object.keys(inPeer.outOps).length, 0, 'inPeer should have no outOps');
+        }
+
+        var outPeer = peersTwo[0];
+        if (outPeer) {
+            assert.equal(outPeer.direction, 'out', 'outPeer should be out');
+            assert.equal(Object.keys(outPeer.inOps).length, 0, 'outPeer should have no inOps');
+            assert.equal(Object.keys(outPeer.outOps).length, 0, 'outPeer should have no outOps');
+        }
+
         var stringOp = results.stringOp;
         assert.ok(Buffer.isBuffer(stringOp.head));
         assert.equal(stringOp.head.length, 0);
