@@ -625,7 +625,7 @@ TChannelConnection.prototype.handleReqFrame = function handleReqFrame(reqFrame) 
             cb(err, null, null);
         };
 
-        self.channel.emit('missingEndpoint', {
+        self.channel.emit('endpoint.missing', {
             name: name
         });
 
