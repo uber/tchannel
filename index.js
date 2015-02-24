@@ -116,6 +116,25 @@ TChannel.prototype.listen = function listen() {
     self.serverSocket.listen(self.port, self.host);
 };
 
+TChannel.prototype.getEndpointHandler = function getEndpointHandler(name) {
+    var self = this;
+    var handler = self.endpoints[name];
+    if (typeof handler !== 'function') {
+        handler = function noSuchHandler(arg2, arg3, remoteAddr, cb) {
+            var err = new Error('no such operation');
+            err.op = name;
+            cb(err, null, null);
+        };
+        self.emit('endpoint.missing', {
+            name: name
+        });
+    } else if (self.endpoints[name]) {
+        self.emit('endpoint', {
+            name: name
+        });
+    }
+    return handler;
+};
 
 TChannel.prototype.register = function register(op, callback) {
     var self = this;
@@ -594,30 +613,7 @@ TChannelConnection.prototype.handleCallRequest = function handleCallRequest(reqF
         return;
     }
 
-    var handler = self.channel.endpoints[name];
-
-    if (typeof handler !== 'function') {
-        // TODO: test this behavior, in fact the prior early return subtlety
-        // broke tests in an unknown way after deferring the inOps mutation
-        // until after old handler verification without this... arguably it's
-        // what we want anyhow, but that weird test failure should be
-        // understood
-        handler = function noSuchHandler(arg2, arg3, remoteAddr, cb) {
-            var err = new Error('no such operation');
-            err.op = name;
-            cb(err, null, null);
-        };
-
-        self.channel.emit('endpoint.missing', {
-            name: name
-        });
-
-        return;
-    } else if (self.channel.endpoints[name]) {
-        self.channel.emit('endpoint', {
-            name: name
-        });
-    }
+    var handler = self.channel.getEndpointHandler(name);
 
     self.inPending++;
     var op = self.inOps[id] = new TChannelServerOp(self,
