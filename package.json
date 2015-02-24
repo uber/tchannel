@@ -17,7 +17,8 @@
     "url": "git@github.com:uber/tchannel"
   },
   "dependencies": {
-    "farmhash": "^0.2.0"
+    "farmhash": "^0.2.0",
+    "hexer": "^1.0.1"
   },
   "devDependencies": {
     "debug-logtron": "^2.0.0",
