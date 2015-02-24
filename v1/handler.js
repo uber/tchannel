@@ -30,6 +30,11 @@ function TChannelHandler(conn, options) {
     var self = this;
     self.conn = conn;
     self.writeFrame = options.writeFrame;
+    // TODO: may be better suited to pull out an operation collection
+    // abstraction and then encapsulate through that rather than this
+    // run/complete approach
+    self.runInOp = options.runInOp;
+    self.completeOutOp = options.completeOutOp;
     self.remoteName = null; // filled in by identify message
     self.lastSentFrameId = 0;
 }
@@ -97,7 +102,7 @@ TChannelHandler.prototype.handleCallRequest = function handleCallRequest(reqFram
     }
 
     var handler = self.conn.channel.getEndpointHandler(name);
-    self.conn.runInOp(handler, {
+    self.runInOp(handler, {
         id: id,
         arg1: reqFrame.arg1,
         arg2: reqFrame.arg2,
@@ -123,7 +128,7 @@ TChannelHandler.prototype.handleCallResponse = function handleCallResponse(resFr
     var id = resFrame.header.id;
     var arg2 = resFrame.arg2;
     var arg3 = resFrame.arg3;
-    self.conn.completeOutOp(id, null, arg2, arg3);
+    self.completeOutOp(null, id, arg2, arg3);
 };
 
 TChannelHandler.prototype.handleError = function handleError(errFrame) {
@@ -131,7 +136,7 @@ TChannelHandler.prototype.handleError = function handleError(errFrame) {
     var id = errFrame.header.id;
     var message = errFrame.arg1;
     var err = new Error(message);
-    self.conn.completeOutOp(id, err, null, null);
+    self.completeOutOp(err, id, null, null);
 };
 
 TChannelHandler.prototype.sendInitRequest = function sendInitRequest() {

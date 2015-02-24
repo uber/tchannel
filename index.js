@@ -357,6 +357,15 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     self.handler = new v1.Handler(self, {
         writeFrame: function writeFrame(frame) {
             self._writeFrame(frame);
+        },
+        // TODO: the op boundary is probably better handled by an operation
+        // collection abstraction that the handler can submit to and then later
+        // fulfill to
+        runInOp: function runInOp(handler, options, sendResponseFrame) {
+            self.runInOp(handler, options, sendResponseFrame);
+        },
+        completeOutOp: function completeOutOp(err, id, res1, res2) {
+            self.completeOutOp(id, err, res1, res2);
         }
     });
 
