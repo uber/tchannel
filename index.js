@@ -612,6 +612,15 @@ TChannelConnection.prototype.send = function send(options, arg1, arg2, arg3, cal
         arg1: arg1,
         arg2: arg2,
         arg3: arg3
+    }, function requestSent(err) {
+        if (err) {
+            self.logger.warn('failed to send request', {
+                id: id,
+                error: err
+            });
+            // TODO: retry?
+            // TODO: early self.completeOutOp(id, err, null, null)?
+        }
     });
 
     self.outOps[id] = new TChannelClientOp(
