@@ -22,7 +22,10 @@ class MyHandler(SocketServer.BaseRequestHandler):
         print("Received request from %s:%d" % self.client_address)
 
         print("Waiting for TChannel handshake...")
-        tchannel_connection.await_handshake()
+        tchannel_connection.await_handshake(headers={
+            'host_port': '%s:%s' % self.request.getsockname(),
+            'process_name': sys.argv[0],
+        })
         print("Successfully completed handshake")
 
         # This call synchronously dispatches RPC requests to
@@ -34,7 +37,7 @@ class MyHandler(SocketServer.BaseRequestHandler):
 
     def handle_call(self, connection, context, message):
         """Handle a TChannel CALL_REQ message."""
-        print(context, message)
+        print("Received message: %s" % message)
 
 
 if __name__ == '__main__':

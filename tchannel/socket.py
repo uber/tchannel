@@ -12,6 +12,8 @@ class Connection(object):
     Use this class to perform synchronous socket operations, e.g. over TCP or a
     Unix Domain Socket.
     """
+    INITIAL_CHUNK_SIZE = 4096
+
     def __init__(self, connection):
         self._connection = _SocketIOAdapter(connection)
         self._id_sequence = 0
@@ -29,19 +31,36 @@ class Connection(object):
         self._id_sequence += 1
         return self._id_sequence
 
+    def _await(self):
+        """Decode a full message and return"""
+        return Frame.read_full_message(
+            self._connection,
+            self.INITIAL_CHUNK_SIZE,
+        )
+
     def await_handshake(self, headers):
         """Negotiate a common protocol version with a client."""
-        hunk = self._connection.read(4096)
-        frame, message = Frame.decode(hunk)
+        frame, message = self._await()
         if message.message_type != Types.INIT_REQ:
             raise InvalidMessageException(
                 'You need to shake my hand first. Got: %d' %
                 message.message_type,
             )
+
+        try:
+            self._remote_host = message.headers[message.HOST_PORT]
+            self._remote_process_name = message.headers[message.PROCESS_NAME]
+        except KeyError as e:
+            raise InvalidMessageException(
+                'Missing required header: %s' % e
+            )
+
         self._requested_version = message.version
+
         response = messages.InitResponseMessage()
         response.version = messages.PROTOCOL_VERSION
         response.headers = headers
+
         return self.frame_and_write(response)
 
     def initiate_handshake(self, headers):
@@ -53,8 +72,11 @@ class Connection(object):
         return self.frame_and_write(message)
 
     def handle_calls(self, handler):
-        # TODO
-        raise NotImplementedError()
+        while True:
+            frame, message = self._await()
+            if frame is None:
+                break
+            handler(self._connection, frame, message)
 
     def ping(self):
         """Send a PING_REQ message to the remote end of the connection."""

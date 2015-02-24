@@ -19,6 +19,10 @@ def write_number(value, size):
     return struct.pack(get_number_format(size), value)
 
 
+def read_number_string(string, size):
+    return struct.unpack(get_number_format(size), string)
+
+
 def read_number(buff, size):
     """Read a big-endian number off the byte stream."""
     return struct.unpack(get_number_format(size), buff.read(size))[0]

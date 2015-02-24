@@ -49,6 +49,9 @@ class InitRequestMessage(BaseMessage):
     VERSION_SIZE = 2
     HEADER_SIZE = 2
 
+    HOST_PORT = 'host_port'
+    PROCESS_NAME = 'process_name'
+
     __slots__ = _BASE_FIELDS + (
         'version',
         'headers',
