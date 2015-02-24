@@ -1,2 +1,2 @@
 recursive-include tchannel *
-include README.md
+include README.rst
