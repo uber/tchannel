@@ -629,10 +629,7 @@ TChannelConnection.prototype.handleCallRequest = function handleCallRequest(reqF
         }
         delete self.inOps[id];
         self.inPending--;
-        if (!self.closing) {
-            var buf = resFrame.toBuffer();
-            self.socket.write(buf);
-        }
+        self._writeFrame(resFrame);
     }
 };
 
@@ -687,8 +684,7 @@ TChannelConnection.prototype.sendInitRequest = function sendInitRequest() {
     reqFrame.header.seq = 0;
     reqFrame.set('TChannel identify', self.channel.hostPort, null);
     reqFrame.header.type = v1.Types.reqCompleteMessage;
-    var buf = reqFrame.toBuffer();
-    self.socket.write(buf);
+    self._writeFrame(reqFrame);
 };
 
 TChannelConnection.prototype.sendInitResponse = function sendInitResponse(reqFrame) {
@@ -700,8 +696,7 @@ TChannelConnection.prototype.sendInitResponse = function sendInitResponse(reqFra
     resFrame.header.seq = 0;
     resFrame.set(arg1, self.channel.hostPort, null);
     resFrame.header.type = v1.Types.resCompleteMessage;
-    var buf = resFrame.toBuffer();
-    self.socket.write(buf);
+    self._writeFrame(resFrame);
 };
 
 TChannelConnection.prototype.handleInitRequest = function handleInitRequest(reqFrame) {
@@ -745,10 +740,21 @@ TChannelConnection.prototype.send = function send(options, frame, callback) {
     self.outOps[id] = new TChannelClientOp(
         options, frame, self.channel.now(), callback);
     self.pendingCount++;
-    var buffer = frame.toBuffer();
-    return self.socket.write(buffer);
+    self._writeFrame(frame);
 };
 /* jshint maxparams:4 */
+
+TChannelConnection.prototype._writeFrame = function _writeFrame(frame, callback) {
+    var self = this;
+    if (self.closing) {
+        if (callback) {
+            callback(new Error('socket closing'));
+        }
+    } else {
+        var buffer = frame.toBuffer();
+        self.socket.write(buffer, null, callback);
+    }
+};
 
 /* jshint maxparams:6 */
 function TChannelServerOp(connection, handler, reqFrame, start, options, sendFrame) {
