@@ -644,6 +644,10 @@ TChannelConnection.prototype.runInOp = function runInOp(handler, options, sendRe
 TChannelConnection.prototype._writeFrame = function _writeFrame(frame, callback) {
     var self = this;
     if (self.closing) {
+        self.logger.warn('write frame after close', {
+            hostPort: self.channel.hostPort,
+            remoteAddr: self.remoteAddr
+        });
         if (callback) {
             callback(new Error('socket closing'));
         }
