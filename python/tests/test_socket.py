@@ -68,6 +68,7 @@ def test_ping(tchannel_pair):
 
 
 def test_handle_calls(tchannel_pair):
+    """Verify handle_calls sends the message to our handler."""
     class _MyException(Exception):
         pass
 
@@ -81,6 +82,7 @@ def test_handle_calls(tchannel_pair):
 
 
 def test_finish_connection(tchannel_pair):
+    """Ensure we break out of the endless loop when client closes."""
     server, client = tchannel_pair
     client.ping()
     client._connection._connection.close()
