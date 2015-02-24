@@ -4,6 +4,7 @@ import socket
 import pytest
 
 from tchannel.socket import Connection
+from tchannel.exceptions import InvalidMessageException
 
 
 @pytest.yield_fixture
@@ -28,8 +29,18 @@ def test_handshake(tchannel_pair):
     """Validate the handshake exchange."""
     server, client = tchannel_pair
 
-    client.initiate_handshake()
-    server.await_handshake()
+    client.initiate_handshake(headers={})
+    server.await_handshake(headers={})
+
+
+def test_handshake_pong(tchannel_pair):
+    """Validate we handle invalid states."""
+
+    server, client = tchannel_pair
+
+    client.ping()
+    with pytest.raises(InvalidMessageException):
+        server.await_handshake(headers={})
 
 
 def test_ping(tchannel_pair):
