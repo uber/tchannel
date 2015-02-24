@@ -30,6 +30,7 @@ function TChannelHandler(conn, options) {
     var self = this;
     self.conn = conn;
     self.writeFrame = options.writeFrame;
+    self.remoteName = null; // filled in by identify message
     self.lastSentFrameId = 0;
 }
 
@@ -59,26 +60,25 @@ TChannelHandler.prototype.handleFrame = function handleFrame(frame) {
 
 TChannelHandler.prototype.handleInitRequest = function handleInitRequest(reqFrame) {
     var self = this;
-    if (self.conn.remoteName !== null) {
+    if (self.remoteName !== null) {
         self.emit('error', new Error('duplicate init request')); // TODO typed error
         return;
     }
     var hostPort = reqFrame.arg2.toString();
-    self.conn.remoteName = hostPort;
-    self.conn.channel.addPeer(hostPort, self.conn);
-    self.conn.channel.emit('identified', hostPort);
+    self.remoteName = hostPort;
+    self.emit('ident.in', hostPort);
     self.sendInitResponse(reqFrame);
 };
 
 TChannelHandler.prototype.handleInitResponse = function handleInitResponse(resFrame) {
     var self = this;
-    if (self.conn.remoteName !== null) {
+    if (self.remoteName !== null) {
         self.emit('error', new Error('duplicate init response')); // TODO typed error
         return;
     }
     var remote = String(resFrame.arg2);
-    self.conn.remoteName = remote;
-    self.conn.channel.emit('identified', remote);
+    self.remoteName = remote;
+    self.emit('ident.out', remote);
 };
 
 TChannelHandler.prototype.handleCallRequest = function handleCallRequest(reqFrame) {
@@ -91,7 +91,7 @@ TChannelHandler.prototype.handleCallRequest = function handleCallRequest(reqFram
         return;
     }
 
-    if (self.conn.remoteName === null) {
+    if (self.remoteName === null) {
         self.emit('error', new Error('call request before init request')); // TODO typed error
         return;
     }
@@ -115,7 +115,7 @@ TChannelHandler.prototype.handleCallResponse = function handleCallResponse(resFr
         return;
     }
 
-    if (self.conn.remoteName === null) {
+    if (self.remoteName === null) {
         self.emit('error', new Error('call response before init response')); // TODO typed error
         return;
     }
