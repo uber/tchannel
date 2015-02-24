@@ -23,6 +23,8 @@
 var farmhash = require('farmhash');
 var Header = require('./header');
 
+var emptyBuffer = Buffer(0);
+
 module.exports = TChannelFrame;
 
 function TChannelFrame() {
