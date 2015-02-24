@@ -1,8 +1,5 @@
 from setuptools import find_packages, setup
 
-with open('README.md') as f:
-    long_description = f.read()
-
 
 setup(
     name='tchannel',
@@ -10,7 +7,6 @@ setup(
     author='Aiden Scandella',
     author_email='dev@uber.com',
     description='Network multiplexing and framing protocol for RPC',
-    long_description=long_description,
     license='MIT',
     url='https://github.com/uber/tchannel.py',
     packages=find_packages(),
