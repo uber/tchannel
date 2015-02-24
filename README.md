@@ -2,6 +2,14 @@
 
 network multiplexing and framing protocol for RPC
 
+## Stability: experimental
+
+We are working on a large v2 refactor in the `v2` branch and will completely remove
+back compat for v1 of the protocol.
+
+We are currently moving portions of the v2 branch into master and master should
+be considered unstable.
+
 ## Example
 
 ```js
