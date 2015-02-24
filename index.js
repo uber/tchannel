@@ -617,7 +617,12 @@ TChannelConnection.prototype.handleCallRequest = function handleCallRequest(reqF
 
     self.inPending++;
     var op = self.inOps[id] = new TChannelServerOp(self,
-        handler, reqFrame, self.channel.now(), {}, sendFrame);
+        handler, self.channel.now(), {
+            id: id,
+            arg1: reqFrame.arg1,
+            arg2: reqFrame.arg2,
+            arg3: reqFrame.arg3
+        }, sendFrame);
 
     function sendFrame(resFrame) {
         if (self.inOps[id] !== op) {
@@ -757,19 +762,18 @@ TChannelConnection.prototype._writeFrame = function _writeFrame(frame, callback)
 };
 
 /* jshint maxparams:6 */
-function TChannelServerOp(connection, handler, reqFrame, start, options, sendFrame) {
+function TChannelServerOp(connection, handler, start, options, sendFrame) {
     var self = this;
+    self.options = options;
     self.connection = connection;
     self.logger = connection.logger;
     self.handler = handler;
-    self.reqFrame = reqFrame;
     self.timedOut = false;
     self.start = start;
-    self.options = options;
     self.sendFrame = sendFrame;
     self.responseSent = false;
     process.nextTick(function runHandler() {
-        self.handler(reqFrame.arg2, reqFrame.arg3, connection.remoteName, sendResponse);
+        self.handler(self.options.arg2, self.options.arg3, connection.remoteName, sendResponse);
     });
     function sendResponse(err, res1, res2) {
         self.sendResponse(err, res1, res2);
@@ -795,8 +799,8 @@ TChannelServerOp.prototype.sendResponse = function sendResponse(err, res1, res2)
 
 TChannelServerOp.prototype.buildResponseFrame = function buildResponseFrame(err, res1, res2) {
     var self = this;
-    var id = self.reqFrame.header.id;
-    var arg1 = self.reqFrame.arg1;
+    var id = self.options.id;
+    var arg1 = self.options.arg1;
     var resFrame = new v1.Frame();
     resFrame.header.id = id;
     resFrame.header.seq = 0;
