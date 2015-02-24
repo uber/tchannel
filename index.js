@@ -350,7 +350,6 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     self.outOps = Object.create(null);
     self.outPending = 0;
 
-    self.lastSentFrameId = 0;
     self.lastTimeoutTime = 0;
     self.closing = false;
 
@@ -410,12 +409,6 @@ TChannelConnection.prototype.onParserError = function onParserError(err) {
         error: err
     });
     // TODO should we close the connection?
-};
-
-TChannelConnection.prototype.nextFrameId = function nextFrameId() {
-    var self = this;
-    self.lastSentFrameId = (self.lastSentFrameId + 1) % 0xffffffff;
-    return self.lastSentFrameId;
 };
 
 // timeout check runs every timeoutCheckInterval +/- some random fuzz. Range is from
@@ -603,7 +596,6 @@ TChannelConnection.prototype.completeOutOp = function completeOutOp(id, err, arg
 /* jshint maxparams:5 */
 TChannelConnection.prototype.send = function send(options, arg1, arg2, arg3, callback) {
     var self = this;
-    var id = self.nextFrameId();
     // TODO: use this to protect against >4Mi outstanding messages edge case
     // (e.g. zombie operation bug, incredible throughput, or simply very long
     // timeout
@@ -611,8 +603,7 @@ TChannelConnection.prototype.send = function send(options, arg1, arg2, arg3, cal
     //  throw new Error('duplicate frame id in flight');
     // }
 
-    self.handler.sendRequestFrame({
-        id: id,
+    var id = self.handler.sendRequestFrame({
         arg1: arg1,
         arg2: arg2,
         arg3: arg3

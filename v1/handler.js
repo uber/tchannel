@@ -30,9 +30,16 @@ function TChannelHandler(conn, writeFrame) {
     var self = this;
     self.conn = conn;
     self.writeFrame = writeFrame;
+    self.lastSentFrameId = 0;
 }
 
 util.inherits(TChannelHandler, EventEmitter);
+
+TChannelHandler.prototype.nextFrameId = function nextFrameId() {
+    var self = this;
+    self.lastSentFrameId = (self.lastSentFrameId + 1) % 0xffffffff;
+    return self.lastSentFrameId;
+};
 
 TChannelHandler.prototype.handleFrame = function handleFrame(frame) {
     var self = this;
@@ -130,7 +137,7 @@ TChannelHandler.prototype.handleError = function handleError(errFrame) {
 TChannelHandler.prototype.sendInitRequest = function sendInitRequest() {
     var self = this;
     var reqFrame = new v1.Frame();
-    var id = self.conn.nextFrameId();
+    var id = self.nextFrameId();
     reqFrame.header.id = id;
     reqFrame.header.seq = 0;
     reqFrame.set('TChannel identify', self.conn.channel.hostPort, null);
@@ -152,12 +159,14 @@ TChannelHandler.prototype.sendInitResponse = function sendInitResponse(reqFrame)
 
 TChannelHandler.prototype.sendRequestFrame = function sendRequestFrame(options, callback) {
     var self = this;
+    var id = self.nextFrameId();
     var reqFrame = new v1.Frame();
-    reqFrame.header.id = options.id;
+    reqFrame.header.id = id;
     reqFrame.header.seq = 0;
     reqFrame.set(options.arg1, options.arg2, options.arg3);
     reqFrame.header.type = v1.Types.reqCompleteMessage;
     self.writeFrame(reqFrame, callback);
+    return id;
 };
 
 /* jshint maxparams:5 */
