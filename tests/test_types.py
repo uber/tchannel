@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-from tchannel.types import Types
+from tchannel.messages.types import Types
 
 
 def test_type_sanity():
