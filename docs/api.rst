@@ -7,10 +7,18 @@ Messages
 
 .. automodule:: tchannel.messages
     :members:
-    :show-inheritance:
+    :imported-members:
+
 
 Framing
 -------
 
 .. automodule:: tchannel.frame
+    :members:
+
+
+Exceptions
+----------
+
+.. automodule:: tchannel.exceptions
     :members:
