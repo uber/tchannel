@@ -384,6 +384,10 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
         }
     });
 
+    self.handler.on('error', function onHandlerError(err) {
+        self.resetAll(err);
+    });
+
     if (direction === 'out') {
         self.handler.sendInitRequest();
     }

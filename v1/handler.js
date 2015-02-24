@@ -20,6 +20,8 @@
 
 'use strict';
 
+var EventEmitter = require('events').EventEmitter;
+var util = require('util');
 
 var v1 = require('./index');
 module.exports = TChannelHandler;
@@ -29,6 +31,8 @@ function TChannelHandler(conn, writeFrame) {
     self.conn = conn;
     self.writeFrame = writeFrame;
 }
+
+util.inherits(TChannelHandler, EventEmitter);
 
 TChannelHandler.prototype.handleFrame = function handleFrame(frame) {
     var self = this;
@@ -49,7 +53,7 @@ TChannelHandler.prototype.handleFrame = function handleFrame(frame) {
 TChannelHandler.prototype.handleInitRequest = function handleInitRequest(reqFrame) {
     var self = this;
     if (self.conn.remoteName !== null) {
-        self.conn.resetAll(new Error('duplicate init request')); // TODO typed error
+        self.emit('error', new Error('duplicate init request')); // TODO typed error
         return;
     }
     var hostPort = reqFrame.arg2.toString();
@@ -62,7 +66,7 @@ TChannelHandler.prototype.handleInitRequest = function handleInitRequest(reqFram
 TChannelHandler.prototype.handleInitResponse = function handleInitResponse(resFrame) {
     var self = this;
     if (self.conn.remoteName !== null) {
-        self.conn.resetAll(new Error('duplicate init response')); // TODO typed error
+        self.emit('error', new Error('duplicate init response')); // TODO typed error
         return;
     }
     var remote = String(resFrame.arg2);
@@ -81,7 +85,7 @@ TChannelHandler.prototype.handleCallRequest = function handleCallRequest(reqFram
     }
 
     if (self.conn.remoteName === null) {
-        self.conn.resetAll(new Error('call request before init request')); // TODO typed error
+        self.emit('error', new Error('call request before init request')); // TODO typed error
         return;
     }
 
@@ -105,7 +109,7 @@ TChannelHandler.prototype.handleCallResponse = function handleCallResponse(resFr
     }
 
     if (self.conn.remoteName === null) {
-        self.conn.resetAll(new Error('call response before init response')); // TODO typed error
+        self.emit('error', new Error('call response before init response')); // TODO typed error
         return;
     }
 
