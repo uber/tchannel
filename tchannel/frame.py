@@ -44,11 +44,8 @@ class Frame(object):
         if not message_class:
             raise ProtocolException('Unknown message type: %d' % message_type)
 
-        partial = False
         flags = read_number(stream, cls.FLAGS_WIDTH)
-
-        if flags & cls.MORE_FRAMES_FLAG:
-            partial = True
+        partial = flags & cls.MORE_FRAMES_FLAG
 
         stream.read(cls.RESERVED_WIDTH)
         if not message:
