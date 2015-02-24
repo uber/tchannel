@@ -620,7 +620,7 @@ TChannelConnection.prototype.send = function send(options, arg1, arg2, arg3, cal
 };
 /* jshint maxparams:4 */
 
-TChannelConnection.prototype.runInOp = function runInOp(handler, options, buildResponseFrame) {
+TChannelConnection.prototype.runInOp = function runInOp(handler, options, sendResponseFrame) {
     var self = this;
     var id = options.id;
     self.inPending++;
@@ -628,7 +628,6 @@ TChannelConnection.prototype.runInOp = function runInOp(handler, options, buildR
         handler, self.channel.now(), options, opDone);
 
     function opDone(err, res1, res2) {
-        var resFrame = buildResponseFrame(err, res1, res2);
         if (self.inOps[id] !== op) {
             self.logger.warn('attempt to send frame for mismatched operation', {
                 hostPort: self.channel.hostPort,
@@ -636,9 +635,9 @@ TChannelConnection.prototype.runInOp = function runInOp(handler, options, buildR
             });
             return;
         }
+        sendResponseFrame(err, res1, res2);
         delete self.inOps[id];
         self.inPending--;
-        self._writeFrame(resFrame);
     }
 };
 

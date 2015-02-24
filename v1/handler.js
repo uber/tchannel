@@ -91,21 +91,8 @@ TChannelHandler.prototype.handleCallRequest = function handleCallRequest(reqFram
         arg1: reqFrame.arg1,
         arg2: reqFrame.arg2,
         arg3: reqFrame.arg3,
-    }, function buildResponseFrame(err, res1, res2) {
-        var resFrame = new v1.Frame();
-        resFrame.header.id = id;
-        resFrame.header.seq = 0;
-        if (err) {
-            // TODO should the error response contain a head ?
-            // Is there any value in sending meta data along with
-            // the error.
-            resFrame.set(isError(err) ? err.message : err, null, null);
-            resFrame.header.type = v1.Types.resError;
-        } else {
-            resFrame.set(name, res1, res2);
-            resFrame.header.type = v1.Types.resCompleteMessage;
-        }
-        return resFrame;
+    }, function sendResponseFrame(err, res1, res2, callback) {
+        self.sendResponseFrame(reqFrame, err, res1, res2, callback);
     });
 };
 
@@ -168,6 +155,28 @@ TChannelHandler.prototype.sendRequestFrame = function sendRequestFrame(options, 
     reqFrame.header.type = v1.Types.reqCompleteMessage;
     self.writeFrame(reqFrame, callback);
 };
+
+/* jshint maxparams:5 */
+TChannelHandler.prototype.sendResponseFrame = function sendResponseFrame(reqFrame, err, res1, res2, callback) {
+    var self = this;
+    var resFrame = new v1.Frame();
+    var id = reqFrame.header.id;
+    var name = reqFrame.arg1.toString();
+    resFrame.header.id = id;
+    resFrame.header.seq = 0;
+    if (err) {
+        // TODO should the error response contain a head ?
+        // Is there any value in sending meta data along with
+        // the error.
+        resFrame.set(isError(err) ? err.message : err, null, null);
+        resFrame.header.type = v1.Types.resError;
+    } else {
+        resFrame.set(name, res1, res2);
+        resFrame.header.type = v1.Types.resCompleteMessage;
+    }
+    self.writeFrame(resFrame, callback);
+};
+/* jshint maxparams:4 */
 
 function isError(obj) {
     return typeof obj === 'object' && (
