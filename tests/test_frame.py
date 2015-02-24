@@ -6,7 +6,7 @@ from tchannel import messages
 from tchannel.frame import Frame
 from tchannel.io import BytesIO
 from tchannel.parser import read_number
-from tchannel.types import Types
+from tchannel.messages.types import Types
 
 
 class _FakeMessage(object):

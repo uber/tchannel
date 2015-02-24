@@ -5,6 +5,7 @@ import pytest
 
 from tchannel import exceptions
 from tchannel import messages
+from tchannel.messages.common import PROTOCOL_VERSION
 from tchannel.io import BytesIO
 
 
@@ -33,7 +34,7 @@ def init_request_with_headers():
         header_value
     )
     return make_byte_stream(
-        make_short_bytes(messages.PROTOCOL_VERSION) +
+        make_short_bytes(PROTOCOL_VERSION) +
         header_buffer
     )
 

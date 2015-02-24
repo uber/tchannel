@@ -3,7 +3,8 @@ from __future__ import absolute_import
 from . import messages
 from .exceptions import InvalidMessageException
 from .frame import Frame
-from .types import Types
+from .messages.common import PROTOCOL_VERSION
+from .messages.types import Types
 
 
 class Connection(object):
@@ -58,7 +59,7 @@ class Connection(object):
         self._requested_version = message.version
 
         response = messages.InitResponseMessage()
-        response.version = messages.PROTOCOL_VERSION
+        response.version = PROTOCOL_VERSION
         response.headers = headers
 
         return self.frame_and_write(response)
@@ -66,7 +67,7 @@ class Connection(object):
     def initiate_handshake(self, headers):
         """Send a handshake offer to a server."""
         message = messages.InitRequestMessage()
-        message.version = messages.PROTOCOL_VERSION
+        message.version = PROTOCOL_VERSION
         message.headers = headers
 
         return self.frame_and_write(message)
