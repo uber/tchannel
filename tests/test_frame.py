@@ -80,7 +80,7 @@ def test_decode_with_flags(dummy_frame):
 
 
 def test_read_full_small_chunk(connection, dummy_frame):
-    """Verify we can co-constitute from multiple reads."""
+    """Verify we can re-constitute from multiple reads."""
     frame = Frame(
         message=messages.PingRequestMessage(),
         message_id=42,
@@ -97,6 +97,7 @@ def test_read_empty_buffer():
 
 
 def test_multi_frame(dummy_frame):
+    """Ensure we read multiple frames into a message."""
     dummy_frame[8] = Types.PING_REQ
     first_frame = bytearray(dummy_frame)
     second_frame = bytearray(dummy_frame)
