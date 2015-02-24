@@ -743,7 +743,7 @@ TChannelConnection.prototype.send = function send(options, frame, callback) {
     frame.header.id = id;
     frame.header.seq = 0;
     self.outOps[id] = new TChannelClientOp(
-        options, frame, self.channel.now(), callback);
+        options, self.channel.now(), callback);
     self.pendingCount++;
     self._writeFrame(frame);
 };
@@ -823,10 +823,9 @@ function isError(obj) {
         obj instanceof Error);
 }
 
-function TChannelClientOp(options, frame, start, callback) {
+function TChannelClientOp(options, start, callback) {
     var self = this;
     self.options = options;
-    self.frame = frame;
     self.callback = callback;
     self.start = start;
     self.timedOut = false;
