@@ -30,15 +30,6 @@ function TChannelHandler(conn, writeFrame) {
     self.writeFrame = writeFrame;
 }
 
-TChannelHandler.prototype.buildRequestFrame = function buildRequestFrame(options) {
-    var reqFrame = new v1.Frame();
-    reqFrame.header.id = options.id;
-    reqFrame.header.seq = 0;
-    reqFrame.set(options.arg1, options.arg2, options.arg3);
-    reqFrame.header.type = v1.Types.reqCompleteMessage;
-    return reqFrame;
-};
-
 TChannelHandler.prototype.handleFrame = function handleFrame(frame) {
     var self = this;
     switch (frame.header.type) {
@@ -166,6 +157,16 @@ TChannelHandler.prototype.sendInitResponse = function sendInitResponse(reqFrame)
     resFrame.set(arg1, self.conn.channel.hostPort, null);
     resFrame.header.type = v1.Types.resCompleteMessage;
     self.writeFrame(resFrame);
+};
+
+TChannelHandler.prototype.sendRequestFrame = function sendRequestFrame(options, callback) {
+    var self = this;
+    var reqFrame = new v1.Frame();
+    reqFrame.header.id = options.id;
+    reqFrame.header.seq = 0;
+    reqFrame.set(options.arg1, options.arg2, options.arg3);
+    reqFrame.header.type = v1.Types.reqCompleteMessage;
+    self.writeFrame(reqFrame, callback);
 };
 
 function isError(obj) {

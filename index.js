@@ -607,7 +607,7 @@ TChannelConnection.prototype.send = function send(options, arg1, arg2, arg3, cal
     //  throw new Error('duplicate frame id in flight');
     // }
 
-    var frame = self.handler.buildRequestFrame({
+    self.handler.sendRequestFrame({
         id: id,
         arg1: arg1,
         arg2: arg2,
@@ -617,7 +617,6 @@ TChannelConnection.prototype.send = function send(options, arg1, arg2, arg3, cal
     self.outOps[id] = new TChannelClientOp(
         options, self.channel.now(), callback);
     self.pendingCount++;
-    self._writeFrame(frame);
 };
 /* jshint maxparams:4 */
 
