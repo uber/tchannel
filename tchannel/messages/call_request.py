@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
-from .types import Types
 from .base import BaseMessage
+from .types import Types
 
 
 class CallRequestMessage(BaseMessage):

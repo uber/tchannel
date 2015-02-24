@@ -8,6 +8,9 @@ class Types(object):
     CALL_REQ = 0x03
     CALL_RES = 0x04
 
+    CALL_REQ_CONTINUE = 0x13
+    CALL_RES_CONTINUE = 0x14
+
     CANCEL = 0xc0
     CLAIM = 0xc1
 
