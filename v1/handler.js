@@ -27,6 +27,10 @@ var v1 = require('./index');
 module.exports = TChannelHandler;
 
 function TChannelHandler(channel, options) {
+    if (!(this instanceof TChannelHandler)) {
+        return new TChannelHandler(channel, options);
+    }
+    EventEmitter.call(this);
     var self = this;
     self.channel = channel;
     self.writeFrame = options.writeFrame;
