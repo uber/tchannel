@@ -355,8 +355,8 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 
     self.parser = new v1.Parser(self);
     self.handler = new v1.Handler(self.channel, {
-        writeFrame: function writeFrame(frame) {
-            self._writeFrame(frame);
+        writeFrame: function writeFrame(frame, callback) {
+            self._writeFrame(frame, callback);
         },
         // TODO: the op boundary is probably better handled by an operation
         // collection abstraction that the handler can submit to and then later
