@@ -371,16 +371,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     });
 
     if (direction === 'out') {
-        self.sendInitRequest(function onOutIdentify(err, res1/*, res2 */) {
-            if (err) {
-                self.channel.logger.error('identification error', {
-                    remoteAddr: remoteAddr,
-                    error: err
-                });
-                return;
-            }
-            self.handleInitResponse(res1.toString());
-        });
+        self.sendInitRequest();
     }
 
     self.startTimeoutTimer();
@@ -593,14 +584,17 @@ TChannelConnection.prototype.handleCallRequest = function handleCallRequest(reqF
     var id = reqFrame.header.id;
     var name = reqFrame.arg1.toString();
 
-    var handler;
     if (name === 'TChannel identify') {
-        handler = function identifyEndpoint(arg1, arg2, hostInfo, cb) {
-            cb(null, self.channel.hostPort, null);
-        };
-    } else {
-        handler = self.channel.endpoints[name];
+        self.handleInitRequest(reqFrame);
+        return;
     }
+
+    if (self.remoteName === null) {
+        // TODO reset
+        return;
+    }
+
+    var handler = self.channel.endpoints[name];
 
     if (typeof handler !== 'function') {
         // TODO: test this behavior, in fact the prior early return subtlety
@@ -648,10 +642,17 @@ TChannelConnection.prototype.handleCallRequest = function handleCallRequest(reqF
 
 TChannelConnection.prototype.handleCallResponse = function handleCallResponse(resFrame) {
     var self = this;
+
+    if (String(resFrame.arg1) === 'TChannel identify') {
+        self.handleInitResponse(resFrame);
+        return;
+    }
+
     var id = resFrame.header.id;
     var arg2 = resFrame.arg2;
     var arg3 = resFrame.arg3;
     var err = null;
+
     self.completeOutOp(id, err, arg2, arg3);
 };
 
@@ -677,12 +678,29 @@ TChannelConnection.prototype.completeOutOp = function completeOutOp(id, err, arg
     op.callback(err, arg1, arg2);
 };
 
-TChannelConnection.prototype.sendInitRequest = function sendInitRequest(callback) {
+TChannelConnection.prototype.sendInitRequest = function sendInitRequest() {
     var self = this;
     var reqFrame = new v1.Frame();
+    var id = self.nextFrameId();
+    reqFrame.header.id = id;
+    reqFrame.header.seq = 0;
     reqFrame.set('TChannel identify', self.channel.hostPort, null);
     reqFrame.header.type = v1.Types.reqCompleteMessage;
-    self.send({}, reqFrame, callback);
+    var buf = reqFrame.toBuffer();
+    self.socket.write(buf);
+};
+
+TChannelConnection.prototype.sendInitResponse = function sendInitResponse(reqFrame) {
+    var self = this;
+    var id = reqFrame.header.id;
+    var arg1 = reqFrame.arg1;
+    var resFrame = new v1.Frame();
+    resFrame.header.id = id;
+    resFrame.header.seq = 0;
+    resFrame.set(arg1, self.channel.hostPort, null);
+    resFrame.header.type = v1.Types.resCompleteMessage;
+    var buf = resFrame.toBuffer();
+    self.socket.write(buf);
 };
 
 TChannelConnection.prototype.handleInitRequest = function handleInitRequest(reqFrame) {
@@ -691,12 +709,12 @@ TChannelConnection.prototype.handleInitRequest = function handleInitRequest(reqF
     self.remoteName = hostPort;
     self.channel.addPeer(hostPort, self);
     self.channel.emit('identified', hostPort);
-    return true;
+    self.sendInitResponse(reqFrame);
 };
 
-TChannelConnection.prototype.handleInitResponse = function handleInitResponse(res) {
+TChannelConnection.prototype.handleInitResponse = function handleInitResponse(resFrame) {
     var self = this;
-    var remote = res;
+    var remote = String(resFrame.arg2);
     self.remoteName = remote;
     self.channel.emit('identified', remote);
 };
