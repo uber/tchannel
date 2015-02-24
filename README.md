@@ -57,6 +57,9 @@ The next two fields can be used for arbitrary data. Some suggested way to use th
 * URI path, HTTP method and headers as JSON, body
 * function name, headers, thrift / protobuf
 
+Note however that the only encoding supported by TChannel is UTF-8.  If you want JSON, you'll need
+to stringify and parse outside of TChannel.
+
 This design supports efficient routing and forwarding of data where the routing information needs
 to parse only the first or second field, but the 3rd field is forwarded without parsing.
 
@@ -248,11 +251,9 @@ The `res2` is the body to return to the client.
 `TChannel` will format the head (res1) and body (res2) for you
 
  - If you pass a `Buffer` it uses the buffer.
- - If you pass `undefined` it will cast it to `''`
- - If you pass `null` it will cast it to `''`
  - If you pass a `String` it will cast it to a buffer.
- - If you pass an `Object` it will JSON serialize it to a string
- - If you pass anything else it will call `toString()` on it.
+ - If you pass `undefined` it will cast it to `Buffer(0)`
+ - If you pass `null` it will cast it to `Buffer(0)`
 
 ### `channel.send(options, arg1, arg2, arg3, cb)`
 
@@ -279,11 +280,9 @@ send: (
 `TChannel` will format the head (arg2) and body (arg3) for you
 
  - If you pass a `Buffer` it uses the buffer.
- - If you pass `undefined` it will cast it to `''`
- - If you pass `null` it will cast it to `''`
  - If you pass a `String` it will cast it to a buffer.
- - If you pass an `Object` it will JSON serialize it to a string
- - If you pass anything else it will call `toString()` on it.
+ - If you pass `undefined` it will cast it to `Buffer(0)`
+ - If you pass `null` it will cast it to `Buffer(0)`
 
 
 #### `options.host`
