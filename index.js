@@ -590,7 +590,7 @@ TChannelConnection.prototype.handleCallRequest = function handleCallRequest(reqF
     }
 
     if (self.remoteName === null) {
-        // TODO reset
+        self.resetAll(new Error('call request before init request')); // TODO typed error
         return;
     }
 
@@ -645,6 +645,11 @@ TChannelConnection.prototype.handleCallResponse = function handleCallResponse(re
 
     if (String(resFrame.arg1) === 'TChannel identify') {
         self.handleInitResponse(resFrame);
+        return;
+    }
+
+    if (self.remoteName === null) {
+        self.resetAll(new Error('call response before init response')); // TODO typed error
         return;
     }
 
@@ -705,6 +710,10 @@ TChannelConnection.prototype.sendInitResponse = function sendInitResponse(reqFra
 
 TChannelConnection.prototype.handleInitRequest = function handleInitRequest(reqFrame) {
     var self = this;
+    if (self.remoteName !== null) {
+        self.resetAll(new Error('duplicate init request')); // TODO typed error
+        return;
+    }
     var hostPort = reqFrame.arg2.toString();
     self.remoteName = hostPort;
     self.channel.addPeer(hostPort, self);
@@ -714,6 +723,10 @@ TChannelConnection.prototype.handleInitRequest = function handleInitRequest(reqF
 
 TChannelConnection.prototype.handleInitResponse = function handleInitResponse(resFrame) {
     var self = this;
+    if (self.remoteName !== null) {
+        self.resetAll(new Error('duplicate init response')); // TODO typed error
+        return;
+    }
     var remote = String(resFrame.arg2);
     self.remoteName = remote;
     self.channel.emit('identified', remote);
