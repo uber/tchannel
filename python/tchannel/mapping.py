@@ -1,9 +1,10 @@
 from __future__ import absolute_import
 
-from .messages import InitRequestMessage
-from .messages import InitResponseMessage
 from .messages import CallRequestMessage
 from .messages import CallResponseMessage
+from .messages import ErrorMessage
+from .messages import InitRequestMessage
+from .messages import InitResponseMessage
 from .messages import PingRequestMessage
 from .messages import PingResponseMessage
 
@@ -15,6 +16,7 @@ ALL_MESSAGES = [
     CallResponseMessage,
     PingRequestMessage,
     PingResponseMessage,
+    ErrorMessage,
 ]
 
 MESSAGE_TYPES_TO_CLASSES = {
