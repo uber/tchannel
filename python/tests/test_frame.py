@@ -20,11 +20,11 @@ class _FakeMessage(object):
 @pytest.fixture
 def dummy_frame():
     return bytearray([
-        0, 0, 0, 16,  # Size
-        0, 0, 0, 1,  # ID
+        0, 16,  # Size
         0,  # type
-        0,  # flags
-        0, 0, 0, 0, 0, 0,  # reserved padding
+        0,  # reserved
+        0, 0, 0, 1,  # ID
+        0, 0, 0, 0, 0, 0, 0, 0  # reserved padding
     ])
 
 
@@ -40,9 +40,10 @@ def test_empty_message(connection):
 
     value = BytesIO(connection.getvalue())
 
-    assert read_number(value, 4) == frame.PRELUDE_SIZE
+    assert read_number(value, 2) == frame.PRELUDE_SIZE
+    assert read_number(value, 1) == _FakeMessage.message_type
+    value.read(1)  # throw away reserved bit
     assert read_number(value, 4) == message_id
-    assert read_number(value, 1) == 0x30
 
 
 def test_decode_empty_buffer():
@@ -53,7 +54,7 @@ def test_decode_empty_buffer():
 
 def test_decode_with_message_length(dummy_frame):
     """Verify we can pre-flight a message size."""
-    dummy_frame[8] = Types.PING_REQ
+    dummy_frame[2] = Types.PING_REQ
     Frame.decode(BytesIO(dummy_frame), len(dummy_frame))
 
 
@@ -66,17 +67,8 @@ def test_decode_invalid_message_id(dummy_frame):
 
 def test_decode_ping(dummy_frame):
     """Verify we can decode a ping message."""
-    dummy_frame[8] = Types.PING_REQ
+    dummy_frame[2] = Types.PING_REQ
     frame, message = Frame.decode(BytesIO(dummy_frame))
-
-
-def test_decode_with_flags(dummy_frame):
-    """Verify we handle the `partial` flag."""
-    dummy_frame[8] = Types.PING_REQ
-    dummy_frame[9] = 0x01
-
-    frame, _ = Frame.decode(BytesIO(dummy_frame))
-    assert frame.partial
 
 
 def test_read_full_small_chunk(connection, dummy_frame):
@@ -87,29 +79,17 @@ def test_read_full_small_chunk(connection, dummy_frame):
     )
     frame.write(connection)
 
-    frame, message = Frame.read_full_message(BytesIO(connection.getvalue()), 4)
+    frame, message = Frame.read_full_frame(BytesIO(connection.getvalue()), 4)
     assert message.message_type == Types.PING_REQ
 
 
 def test_read_empty_buffer():
     """Verify we handle an empty buffer."""
-    assert Frame.read_full_message(BytesIO(), 4) == (None, None)
+    assert Frame.read_full_frame(BytesIO(), 4) == (None, None)
 
 
 def test_read_invalid_size(dummy_frame):
     """Verify we raise when we try to read but get nothing."""
-    dummy_frame[3] = 0x20  # more bytes than are actually in dummy_frame
+    dummy_frame[1] = 0x20  # more bytes than are actually in dummy_frame
     with pytest.raises(exceptions.ProtocolException):
-        assert Frame.read_full_message(BytesIO(dummy_frame), len(dummy_frame))
-
-
-def test_multi_frame(dummy_frame):
-    """Ensure we read multiple frames into a message."""
-    dummy_frame[8] = Types.PING_REQ
-    first_frame = bytearray(dummy_frame)
-    second_frame = bytearray(dummy_frame)
-
-    first_frame[9] = 0x01
-
-    connection = BytesIO(first_frame + second_frame)
-    frame, message = Frame.read_full_message(connection, 16)
+        assert Frame.read_full_frame(BytesIO(dummy_frame), len(dummy_frame))
