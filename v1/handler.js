@@ -75,7 +75,7 @@ TChannelHandler.prototype.handleInitRequest = function handleInitRequest(reqFram
     }
     var hostPort = reqFrame.arg2.toString();
     self.remoteName = hostPort;
-    self.emit('ident.in', hostPort);
+    self.emit('identify.in', hostPort);
     self.sendInitResponse(reqFrame);
 };
 
@@ -87,7 +87,7 @@ TChannelHandler.prototype.handleInitResponse = function handleInitResponse(resFr
     }
     var remote = String(resFrame.arg2);
     self.remoteName = remote;
-    self.emit('ident.out', remote);
+    self.emit('identify.out', remote);
 };
 
 TChannelHandler.prototype.handleCallRequest = function handleCallRequest(reqFrame) {
