@@ -25,17 +25,33 @@ def tchannel_pair():
         server.close()
 
 
-def test_handshake(tchannel_pair):
+@pytest.fixture
+def dummy_headers():
+    return {
+        'host_port': 'fake:1234',
+        'process_name': 'honeybooboo',
+    }
+
+
+def test_handshake(tchannel_pair, dummy_headers):
     """Validate the handshake exchange."""
     server, client = tchannel_pair
 
+    client.initiate_handshake(headers=dummy_headers)
+    server.await_handshake(headers=dummy_headers)
+
+
+def test_handshake_missing_headers(tchannel_pair):
+    """Verify we enforce required headers."""
+    server, client = tchannel_pair
+
     client.initiate_handshake(headers={})
-    server.await_handshake(headers={})
+    with pytest.raises(InvalidMessageException):
+        server.await_handshake(headers={})
 
 
 def test_handshake_pong(tchannel_pair):
     """Validate we handle invalid states."""
-
     server, client = tchannel_pair
 
     client.ping()
@@ -49,3 +65,23 @@ def test_ping(tchannel_pair):
 
     client.ping()
     server.pong()
+
+
+def test_handle_calls(tchannel_pair):
+    class _MyException(Exception):
+        pass
+
+    def my_handler(connection, context, message):
+        raise _MyException()
+
+    server, client = tchannel_pair
+    client.ping()
+    with pytest.raises(_MyException):
+        server.handle_calls(my_handler)
+
+
+def test_finish_connection(tchannel_pair):
+    server, client = tchannel_pair
+    client.ping()
+    client._connection._connection.close()
+    server.handle_calls(lambda x, y, z: None)
