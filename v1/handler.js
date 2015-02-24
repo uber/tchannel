@@ -26,10 +26,10 @@ var util = require('util');
 var v1 = require('./index');
 module.exports = TChannelHandler;
 
-function TChannelHandler(conn, writeFrame) {
+function TChannelHandler(conn, options) {
     var self = this;
     self.conn = conn;
-    self.writeFrame = writeFrame;
+    self.writeFrame = options.writeFrame;
     self.lastSentFrameId = 0;
 }
 
