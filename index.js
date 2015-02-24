@@ -121,7 +121,7 @@ TChannel.prototype.getEndpointHandler = function getEndpointHandler(name) {
     var handler = self.endpoints[name];
     if (typeof handler !== 'function') {
         handler = function noSuchHandler(arg2, arg3, remoteAddr, cb) {
-            var err = new Error('no such operation');
+            var err = new Error('no such operation'); // TODO: typed error
             err.op = name;
             cb(err, null, null);
         };
