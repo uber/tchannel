@@ -652,9 +652,9 @@ TChannelConnection.prototype.runInOp = function runInOp(handler, options, sendRe
                 });
                 // TODO: retry
             }
+            delete self.inOps[id];
+            self.inPending--;
         });
-        delete self.inOps[id];
-        self.inPending--;
     }
 };
 
