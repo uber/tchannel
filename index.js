@@ -244,18 +244,10 @@ TChannel.prototype.send = function send(options, arg1, arg2, arg3, callback) {
         throw new Error('cannot send() without options.host');
     }
 
-    var reqFrame = self.buildRequest(options, arg1, arg2, arg3);
     var peer = self.getOutConnection(dest);
-    peer.send(options, reqFrame, callback);
+    peer.send(options, arg1, arg2, arg3, callback);
 };
 /* jshint maxparams:4 */
-
-TChannel.prototype.buildRequest = function buildRequest(options, arg1, arg2, arg3) {
-    var reqFrame = new v1.Frame();
-    reqFrame.set(arg1, arg2, arg3);
-    reqFrame.header.type = v1.Types.reqCompleteMessage;
-    return reqFrame;
-};
 
 TChannel.prototype.getOutConnection = function getOutConnection(dest) {
     var self = this;
@@ -730,7 +722,7 @@ TChannelConnection.prototype.handleInitResponse = function handleInitResponse(re
 
 // send a req frame
 /* jshint maxparams:5 */
-TChannelConnection.prototype.send = function send(options, frame, callback) {
+TChannelConnection.prototype.send = function send(options, arg1, arg2, arg3, callback) {
     var self = this;
     var id = self.nextFrameId();
     // TODO: use this to protect against >4Mi outstanding messages edge case
@@ -740,8 +732,12 @@ TChannelConnection.prototype.send = function send(options, frame, callback) {
     //  throw new Error('duplicate frame id in flight');
     // }
 
+    var frame = new v1.Frame();
     frame.header.id = id;
     frame.header.seq = 0;
+    frame.set(arg1, arg2, arg3);
+    frame.header.type = v1.Types.reqCompleteMessage;
+
     self.outOps[id] = new TChannelClientOp(
         options, self.channel.now(), callback);
     self.pendingCount++;
