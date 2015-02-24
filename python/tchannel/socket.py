@@ -1,7 +1,9 @@
 from __future__ import absolute_import
 
 from . import messages
+from .exceptions import InvalidMessageException
 from .frame import Frame
+from .types import Types
 
 
 class Connection(object):
@@ -27,18 +29,26 @@ class Connection(object):
         self._id_sequence += 1
         return self._id_sequence
 
-    def await_handshake(self):
+    def await_handshake(self, headers):
         """Negotiate a common protocol version with a client."""
         hunk = self._connection.read(4096)
-        # TODO
-        hunk
+        frame, message = Frame.decode(hunk)
+        if message.message_type != Types.INIT_REQ:
+            raise InvalidMessageException(
+                'You need to shake my hand first. Got: %d' %
+                message.message_type,
+            )
+        self._requested_version = message.version
+        response = messages.InitResponseMessage()
+        response.version = messages.PROTOCOL_VERSION
+        response.headers = headers
+        return self.frame_and_write(response)
 
-    def initiate_handshake(self):
+    def initiate_handshake(self, headers):
         """Send a handshake offer to a server."""
         message = messages.InitRequestMessage()
         message.version = messages.PROTOCOL_VERSION
-        # TODO specify service name and host/port
-        message.headers = {}
+        message.headers = headers
 
         return self.frame_and_write(message)
 
