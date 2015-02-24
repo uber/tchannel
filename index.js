@@ -354,7 +354,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     self.closing = false;
 
     self.parser = new v1.Parser(self);
-    self.handler = new v1.Handler(self, {
+    self.handler = new v1.Handler(self.channel, {
         writeFrame: function writeFrame(frame) {
             self._writeFrame(frame);
         },

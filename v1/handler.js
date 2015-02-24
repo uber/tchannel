@@ -26,9 +26,9 @@ var util = require('util');
 var v1 = require('./index');
 module.exports = TChannelHandler;
 
-function TChannelHandler(conn, options) {
+function TChannelHandler(channel, options) {
     var self = this;
-    self.conn = conn;
+    self.channel = channel;
     self.writeFrame = options.writeFrame;
     // TODO: may be better suited to pull out an operation collection
     // abstraction and then encapsulate through that rather than this
@@ -101,7 +101,7 @@ TChannelHandler.prototype.handleCallRequest = function handleCallRequest(reqFram
         return;
     }
 
-    var handler = self.conn.channel.getEndpointHandler(name);
+    var handler = self.channel.getEndpointHandler(name);
     self.runInOp(handler, {
         id: id,
         arg1: reqFrame.arg1,
@@ -145,7 +145,7 @@ TChannelHandler.prototype.sendInitRequest = function sendInitRequest() {
     var id = self.nextFrameId();
     reqFrame.header.id = id;
     reqFrame.header.seq = 0;
-    reqFrame.set('TChannel identify', self.conn.channel.hostPort, null);
+    reqFrame.set('TChannel identify', self.channel.hostPort, null);
     reqFrame.header.type = v1.Types.reqCompleteMessage;
     self.writeFrame(reqFrame);
 };
@@ -157,7 +157,7 @@ TChannelHandler.prototype.sendInitResponse = function sendInitResponse(reqFrame)
     var resFrame = new v1.Frame();
     resFrame.header.id = id;
     resFrame.header.seq = 0;
-    resFrame.set(arg1, self.conn.channel.hostPort, null);
+    resFrame.set(arg1, self.channel.hostPort, null);
     resFrame.header.type = v1.Types.resCompleteMessage;
     self.writeFrame(resFrame);
 };
