@@ -4,7 +4,8 @@
   "author": "mranney@uber.com",
   "version": "1.3.1",
   "scripts": {
-    "test": "node test/index.js",
+    "lint": "jshint .",
+    "test": "npm run lint -s && node test/index.js",
     "benchmark": "node benchmarks/index.js",
     "compare_to_master": "benchmarks/compare_to.sh -m 5 master",
     "cover": "istanbul cover --print detail --report html -- test/index.js",
