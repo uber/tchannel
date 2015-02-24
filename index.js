@@ -20,7 +20,7 @@
 
 'use strict';
 
-var v1 = require('./v1');
+var v2 = require('./v2');
 var nullLogger = require('./null-logger.js');
 var globalClearTimeout = require('timers').clearTimeout;
 var globalSetTimeout = require('timers').setTimeout;
@@ -385,8 +385,8 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     self.lastTimeoutTime = 0;
     self.closing = false;
 
-    self.parser = new v1.Parser(self);
-    self.handler = new v1.Handler(self.channel, {
+    self.parser = new v2.Parser(v2.Frame);
+    self.handler = new v2.Handler(self.channel, {
         writeFrame: function writeFrame(frame, callback) {
             self._writeFrame(frame, callback);
         },
