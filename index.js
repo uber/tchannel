@@ -339,8 +339,6 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     self.outOps = Object.create(null);
     self.outPending = 0;
 
-    self.localEndpoints = Object.create(null);
-
     self.lastSentFrameId = 0;
     self.lastTimeoutTime = 0;
     self.closing = false;
@@ -371,10 +369,6 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
             self.onParserError(err);
         }
     });
-
-    self.localEndpoints['TChannel identify'] = function identifyEndpoint(arg1, arg2, hostInfo, cb) {
-        cb(null, self.channel.hostPort, null);
-    };
 
     if (direction === 'out') {
         self.sendInitRequest(function onOutIdentify(err, res1/*, res2 */) {
@@ -596,14 +590,17 @@ TChannelConnection.prototype.onFrame = function onFrame(frame) {
 
 TChannelConnection.prototype.handleCallRequest = function handleCallRequest(reqFrame) {
     var self = this;
-    if (self.remoteName === null && self.handleInitRequest(reqFrame) === false) {
-        return;
-    }
-
     var id = reqFrame.header.id;
     var name = reqFrame.arg1.toString();
 
-    var handler = self.localEndpoints[name] || self.channel.endpoints[name];
+    var handler;
+    if (name === 'TChannel identify') {
+        handler = function identifyEndpoint(arg1, arg2, hostInfo, cb) {
+            cb(null, self.channel.hostPort, null);
+        };
+    } else {
+        handler = self.channel.endpoints[name];
+    }
 
     if (typeof handler !== 'function') {
         // TODO: test this behavior, in fact the prior early return subtlety
@@ -690,10 +687,6 @@ TChannelConnection.prototype.sendInitRequest = function sendInitRequest(callback
 
 TChannelConnection.prototype.handleInitRequest = function handleInitRequest(reqFrame) {
     var self = this;
-    if (reqFrame.arg1.toString() !== 'TChannel identify') {
-        self.logger.error('first req on socket must be identify');
-        return false;
-    }
     var hostPort = reqFrame.arg2.toString();
     self.remoteName = hostPort;
     self.channel.addPeer(hostPort, self);
