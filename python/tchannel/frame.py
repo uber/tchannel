@@ -17,11 +17,11 @@ class Frame(object):
     PRELUDE_SIZE = 0x10  # this many bytes of framing before payload
 
     # 8 bytes are reserved
-    RESERVED_PADDING = b'\x00\x00\x00\x00\x00\x00\x00\x00'
-    RESERVED_WIDTH = len(RESERVED_PADDING)
+    RESERVED_WIDTH = 8
+    RESERVED_PADDING = b'\x00' * RESERVED_WIDTH
 
-    BEFORE_ID_PADDING = b'\x00'
-    BEFORE_ID_WIDTH = len(BEFORE_ID_PADDING)
+    BEFORE_ID_WIDTH = 1
+    BEFORE_ID_PADDING = b'\x00' * BEFORE_ID_WIDTH
 
     def __init__(self, message, message_id):
         self._message = message
