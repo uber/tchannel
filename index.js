@@ -644,7 +644,15 @@ TChannelConnection.prototype.runInOp = function runInOp(handler, options, sendRe
             });
             return;
         }
-        sendResponseFrame(err, res1, res2);
+        sendResponseFrame(err, res1, res2, function responseSent(err) {
+            if (err) {
+                self.logger.warn('failed to send response', {
+                    id: id,
+                    error: err
+                });
+                // TODO: retry
+            }
+        });
         delete self.inOps[id];
         self.inPending--;
     }
