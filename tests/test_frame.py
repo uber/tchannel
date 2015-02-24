@@ -96,6 +96,13 @@ def test_read_empty_buffer():
     assert Frame.read_full_message(BytesIO(), 4) == (None, None)
 
 
+def test_read_invalid_size(dummy_frame):
+    """Verify we raise when we try to read but get nothing."""
+    dummy_frame[3] = 0x20  # more bytes than are actually in dummy_frame
+    with pytest.raises(exceptions.ProtocolException):
+        assert Frame.read_full_message(BytesIO(dummy_frame), len(dummy_frame))
+
+
 def test_multi_frame(dummy_frame):
     """Ensure we read multiple frames into a message."""
     dummy_frame[8] = Types.PING_REQ
