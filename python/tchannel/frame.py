@@ -27,7 +27,13 @@ class Frame(object):
 
     @classmethod
     def decode(cls, stream, message_length=None, message=None):
-        """Decode a sequence of bytes into a frame and message."""
+        """Decode a sequence of bytes into a frame and message.
+
+        :param stream: a byte stream
+        :param message_length: length of the message in bytes including framing
+        :param message: an existing message to read into, if the message spans
+            multiple frames
+        """
         if message_length is None:
             message_length = read_number(stream, cls.SIZE_WIDTH)
         else:
@@ -57,7 +63,13 @@ class Frame(object):
 
     @classmethod
     def read_full_frame(cls, stream, chunk_size, message=None):
-        """Read a full frame off the wire."""
+        """Read a full frame off the wire.
+
+        :param stream: a byte stream
+        :param chunk_size: number of bytes to read initially from ``stream``
+        :param message: an existing message to read into, if the message spans
+            multiple frames
+        """
         chunk = stream.read(chunk_size)
         if not chunk:
             return None, None
@@ -68,6 +80,8 @@ class Frame(object):
         )[0]
         if message_length > chunk_size:
             rest_of_message = stream.read(message_length - chunk_size)
+            if not rest_of_message:
+                raise ProtocolException('Unexpectedly empty stream')
             full_message = BytesIO(chunk + rest_of_message)
         else:
             full_message = BytesIO(chunk)
@@ -79,19 +93,21 @@ class Frame(object):
         """Read a full message off the wire.
 
         Possibly re-hydrating from multiple frames.
+
+        :param stream: a byte stream
+        :param chunk_size: number of bytes to read initially from ``stream``
         """
         frame, message = cls.read_full_frame(stream, chunk_size)
         if not frame:
             return None, None
 
-        if frame.partial:
-            next_frame = frame
-            while next_frame.partial:
-                next_frame, message = cls.read_full_frame(
-                    stream,
-                    chunk_size,
-                    message=message,
-                )
+        next_frame = frame
+        while next_frame.partial:
+            next_frame, message = cls.read_full_frame(
+                stream,
+                chunk_size,
+                message=message,
+            )
 
         return frame, message
 
