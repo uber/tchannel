@@ -80,7 +80,7 @@ def test_valid_ping_request():
     (messages.ErrorMessage, {
         'code': 1,
         'message': 'hi',
-        'original_message_id': 1
+        'original_message_id': 1,
     }),
 ])
 def test_serialize_message(message_class, attrs):
