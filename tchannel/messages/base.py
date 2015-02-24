@@ -3,7 +3,6 @@ from __future__ import absolute_import
 
 class BaseMessage(object):
     """Represent common functionality across all TChannel messages."""
-    # Micro-optimizations are the best kinds of optimizations
     message_type = None
 
     def parse(self, payload, size):

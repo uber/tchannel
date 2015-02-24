@@ -18,6 +18,7 @@ class InitRequestMessage(BaseMessage):
     HOST_PORT = 'host_port'
     PROCESS_NAME = 'process_name'
 
+    # Micro-optimizations are the best kinds of optimizations
     __slots__ = (
         'version',
         'headers',
