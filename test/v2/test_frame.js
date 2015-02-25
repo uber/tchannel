@@ -20,8 +20,16 @@
 
 'use strict';
 
+var TypedError = require("error/typed");
 var read = require('../../lib/read.js');
 var write = require('../../lib/write.js');
+
+var SizeMismatchError = TypedError({
+    type: 'test-frame.size-mismatch-error',
+    message: 'size ({size}) mismatches buffer length ({bufferLength})',
+    size: null,
+    bufferLength: null
+});
 
 module.exports = TestFrame;
 
@@ -41,6 +49,13 @@ TestFrame.read = read.chained(read.series([
 ]), function(results, buffer, offset) {
     var size = results[0];
     var payload = results[1];
+    if (size !== buffer.length) {
+        // parser shouldn't let this happen
+        return [SizeMismatchError({
+            size: null,
+            bufferLength: null
+        }), offset, null];
+    }
     var body = new TestFrame(payload);
     return [null, offset, body];
 });
