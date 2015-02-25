@@ -19,3 +19,5 @@
 // THE SOFTWARE.
 
 'use strict';
+
+require('./parser.js');
