@@ -33,6 +33,15 @@ def test_read_multi_chunk(ping_request):
     next(reader.read())
 
 
+def test_read_not_enough_data():
+    """Verify we bail when not enough data is available."""
+    bad_bytes = b'\x00\x03'
+    reader = FrameReader(BytesIO(bad_bytes), len(bad_bytes))
+
+    with pytest.raises(exceptions.ProtocolException):
+        next(reader.read())
+
+
 @pytest.mark.parametrize('n', [
     3,
     10,
