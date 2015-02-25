@@ -7,7 +7,7 @@ class _MockConnection(object):
     def __init__(self):
         self.buff = bytearray()
 
-    def write(self, payload):
+    def write(self, payload, callback=None):
         self.buff.extend(payload)
 
     def getvalue(self):

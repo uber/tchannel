@@ -7,3 +7,6 @@ tox
 
 # Syntax checker
 flake8==2.2.5
+
+# Optional dependency, but must be tested er'ry time
+tornado>=4.0,<5.0
