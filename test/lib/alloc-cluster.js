@@ -22,6 +22,7 @@
 
 var extend = require('xtend');
 var ReadySignal = require('ready-signal');
+var after = require('after');
 var test = require('tape');
 var util = require('util');
 var TChannel = require('../../index.js');
@@ -34,7 +35,7 @@ function allocCluster(n, opts) {
     opts = opts || {};
 
     var ready = ReadySignal();
-    var readyCount = 0;
+    var listening = after(n, ready.signal);
 
     var host = 'localhost';
     var logger = debugLogtron('tchannel');
@@ -47,26 +48,23 @@ function allocCluster(n, opts) {
     };
 
     for (var i=0; i<n; i++) {
-        var port = randomPort();
-        var chan = TChannel(extend({
-            logger: logger,
-            host: host,
-            port: port
-        }, opts));
-        ret.channels[i] = chan;
-        ret.hosts[i] = util.format('%s:%s', host, port);
-        if (chan.listening) {
-            chan.once('listening', chanReady);
-        } else {
-            chanReady();
-        }
+        createChannel(i);
     }
 
     return ret;
 
-    function chanReady() {
-        if (++readyCount >= n) {
-            ready.signal();
+    function createChannel(i) {
+        var chan = TChannel(extend({
+            logger: logger
+        }, opts));
+        chan.listen(0, host);
+        ret.channels[i] = chan;
+        chan.once('listening', chanReady);
+
+        function chanReady() {
+            var port = chan.address().port;
+            ret.hosts[i] = util.format('%s:%s', host, port);
+            listening();
         }
     }
 
@@ -95,6 +93,3 @@ allocCluster.test = function testCluster(desc, n, opts, t) {
     });
 };
 
-function randomPort() {
-    return 20000 + Math.floor(Math.random() * 20000);
-}

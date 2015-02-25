@@ -25,10 +25,8 @@ var test = require('tape');
 var TChannel = require('../index.js');
 
 test('can call quit() safely async', function t(assert) {
-    var channel = TChannel({
-        host: 'localhost',
-        port: randomPort()
-    });
+    var channel = TChannel();
+    channel.listen(0, 'localhost');
 
     channel.once('listening', function onListen() {
         assert.doesNotThrow(function noThrow() {
@@ -40,10 +38,8 @@ test('can call quit() safely async', function t(assert) {
 });
 
 test('can call quit() safely sync', function t(assert) {
-    var channel = TChannel({
-        host: 'localhost',
-        port: randomPort()
-    });
+    var channel = TChannel();
+    channel.listen(0, 'localhost');
 
     assert.doesNotThrow(function noThrow() {
         channel.quit();
@@ -52,10 +48,9 @@ test('can call quit() safely sync', function t(assert) {
 });
 
 test('can call quit() safely async w/ callback', function t(assert) {
-    var channel = TChannel({
-        host: 'localhost',
-        port: randomPort()
-    });
+    var channel = TChannel();
+    channel.listen(0, 'localhost');
+
     channel.once('listening', function onListen() {
         assert.doesNotThrow(function noThrow() {
             channel.quit(assert.end);
@@ -64,15 +59,10 @@ test('can call quit() safely async w/ callback', function t(assert) {
 });
 
 test('can call quit() safely sync w/ callback', function t(assert) {
-    var channel = TChannel({
-        host: 'localhost',
-        port: randomPort()
-    });
+    var channel = TChannel();
+    channel.listen(0, 'localhost');
     assert.doesNotThrow(function noThrow() {
         channel.quit(assert.end);
     });
 });
 
-function randomPort() {
-    return 20000 + Math.floor(Math.random() * 20000);
-}

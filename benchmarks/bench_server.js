@@ -19,7 +19,8 @@
 // THE SOFTWARE.
 
 var TChannel = require('../index');
-var server = new TChannel({listen: '127.0.0.1', port: 4040});
+var server = new TChannel();
+server.listen(4040, '127.0.0.1');
 
 var keys = {};
 

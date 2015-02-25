@@ -6,25 +6,34 @@ network multiplexing and framing protocol for RPC
 
 ```js
 var TChannel = require('tchannel');
+var after = require('after');
 
-var server = new TChannel({host: '127.0.0.1', port: 4040});
-var client = new TChannel({host: '127.0.0.1', port: 4041});
+var server = new TChannel();
+var client = new TChannel();
 
-// normal response
-server.register('func 1', function (arg1, arg2, peerInfo, cb) {
-    console.log('func 1 responding immediately 1:' + arg1.toString() + ' 2:' + arg2.toString());
-    cb(null, 'result', 'indeed it did');
+var listening = after(2, function (err) {
+    // ...forward or handle err
+
+    // normal response
+    server.register('func 1', function (arg1, arg2, peerInfo, cb) {
+        console.log('func 1 responding immediately 1:' + arg1.toString() + ' 2:' + arg2.toString());
+        cb(null, 'result', 'indeed it did');
+    });
+    // err response
+    server.register('func 2', function (arg1, arg2, peerInfo, cb) {
+        cb(new Error('it failed'));
+    });
+    client.send({host: '127.0.0.1:4040'}, 'func 1', "arg 1", "arg 2", function (err, res1, res2) {
+        console.log('normal res: ' + res1.toString() + ' ' + res2.toString());
+    });
+    client.send({host: '127.0.0.1:4040'}, 'func 2', "arg 1", "arg 2", function (err, res1, res2) {
+        console.log('err res: ' + err.message);
+    });
+
 });
-// err response
-server.register('func 2', function (arg1, arg2, peerInfo, cb) {
-    cb(new Error('it failed'));
-});
-client.send({host: '127.0.0.1:4040'}, 'func 1', "arg 1", "arg 2", function (err, res1, res2) {
-    console.log('normal res: ' + res1.toString() + ' ' + res2.toString());
-});
-client.send({host: '127.0.0.1:4040'}, 'func 2', "arg 1", "arg 2", function (err, res1, res2) {
-    console.log('err res: ' + err.message);
-});
+
+server.listen(4040, '127.0.0.1', listening);
+client.listen(4041, '127.0.0.1', listening);
 ```
 
 This example registers two functions on the "server". "func 1" always works and "func 2" always 
@@ -112,19 +121,6 @@ var channel = TChannel({
 });
 ```
 
-#### `options.host`
-
-You must specify a local host name. This local host name will
-    be used the remote server to identify you.
-
-The host name and port must be a unique identifier for your
-    TChannel server and its strongly recommended that this host
-    is the publicly addressable IP address.
-
-#### `options.port`
-
-The port for which `TChannel` will open a TCP server on.
-
 #### `options.logger`
 
 ```ocaml
@@ -194,6 +190,19 @@ The client interval does not run every N milliseconds, it has
 > every `timeoutCheckInterval` +/ `fuzz/2`
 
 This is used to avoid race conditions in the network.
+
+#### `channel.listen(port, host, callback?)
+
+Starts listening on the given port and host.
+
+Both port and host are mandatory.
+
+The port may be 0, indicating that the operating system must grant an available
+    ephemeral port.
+
+The eventual host and port combination must uniquely identify the TChannel
+    server and it is strongly recommended that the host be the public IP
+    address.
 
 ### `channel.register(op, fn)`
 
