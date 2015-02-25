@@ -20,7 +20,7 @@ def write_number(value, size):
 
 
 def read_number_string(string, size):
-    return struct.unpack(get_number_format(size), string)
+    return struct.unpack(get_number_format(size), string)[0]
 
 
 def read_number(buff, size):
