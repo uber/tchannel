@@ -21,4 +21,5 @@
 'use strict';
 
 require('./frame.js');
+require('./init.js');
 require('./call.js');
