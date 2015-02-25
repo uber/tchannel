@@ -3,7 +3,6 @@ from __future__ import absolute_import
 from .exceptions import ProtocolException
 from .frame import Frame
 from .io import BytesIO
-from .parser import read_number
 from .parser import read_number_string
 
 
@@ -38,33 +37,24 @@ class FrameReader(object):
         This usually occurs when the other end of the connection closes.
         """
         while True:
-            chunk = self._connection.read(self.chunk_size)
-            if not chunk:
+            size_bytes = self._connection.read(Frame.SIZE_WIDTH)
+            # Read will return zero bytes when the other side of the connection
+            # closes.
+            if not size_bytes:
                 break
 
-            message_length = _get_size(chunk)
+            message_length = read_number_string(size_bytes, Frame.SIZE_WIDTH)
 
-            if message_length > self.chunk_size:
-                rest_of_message = self._connection.read(
-                    message_length - self.chunk_size
+            chunk = self._connection.read(message_length - Frame.SIZE_WIDTH)
+            if not chunk:
+                raise ProtocolException(
+                    'Expected %d bytes available, got none' % message_length
                 )
-                if not rest_of_message:
-                    raise ProtocolException('Unexpectedly empty stream')
 
-                yield Frame.decode(BytesIO(chunk + rest_of_message))
+            if len(chunk) != message_length - Frame.SIZE_WIDTH:
+                raise ProtocolException(
+                    'Expected %d bytes, got %d' %
+                    (len(chunk), message_length - Frame.SIZE_WIDTH)
+                )
 
-            elif len(chunk) > message_length:
-                # We got a payload with multiple messages.
-                stream = BytesIO(chunk)
-                remaining_bytes = len(chunk)
-
-                while remaining_bytes:
-                    message_length = read_number(stream, Frame.SIZE_WIDTH)
-                    yield Frame.decode(stream, message_length)
-                    remaining_bytes -= message_length
-            else:
-                yield Frame.decode(BytesIO(chunk))
-
-
-def _get_size(chunk):
-    return read_number_string(chunk[0:Frame.SIZE_WIDTH], Frame.SIZE_WIDTH)
+            yield Frame.decode(BytesIO(chunk), message_length)
