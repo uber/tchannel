@@ -1,5 +1,5 @@
 // Copyright (c) 2015 Uber Technologies, Inc.
-//
+
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -20,12 +20,20 @@
 
 'use strict';
 
-require('./safe-quit.js');
-require('./timeouts.js');
-require('./send.js');
-require('./register.js');
-require('./identify.js');
-require('./tchannel.js');
-require('./regression-inOps-leak.js');
-require('./emits-endpoint.js');
-require('./v2/index.js');
+var Frame = require('../../v2/frame.js');
+var TestBody = require('./test_body.js');
+var testRead = require('../lib/readTest.js');
+
+TestBody.testWith('read a cat frame', function t(assert) {
+    testRead(assert, Frame.read, TestBody.catBuffer, function s(frame) {
+        assert.equal(frame.id, 0x02030405, 'expected frame id');
+        assert.equal(String(frame.body.payload), 'cat', 'expected body payload');
+    });
+});
+
+TestBody.testWith('write a cat frame', function t(assert) {
+    var frame = Frame(0x01020304, TestBody(Buffer('doge')));
+    var buf = frame.toBuffer();
+    assert.deepEqual(buf, TestBody.dogeBuffer, 'expected buffer output');
+    assert.end();
+});

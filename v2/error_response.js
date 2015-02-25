@@ -1,5 +1,5 @@
 // Copyright (c) 2015 Uber Technologies, Inc.
-//
+
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -20,12 +20,40 @@
 
 'use strict';
 
-require('./safe-quit.js');
-require('./timeouts.js');
-require('./send.js');
-require('./register.js');
-require('./identify.js');
-require('./tchannel.js');
-require('./regression-inOps-leak.js');
-require('./emits-endpoint.js');
-require('./v2/index.js');
+var read = require('../lib/read');
+var write = require('../lib/write');
+
+module.exports = ErrorResponse;
+
+var emptyBuffer = new Buffer(0);
+
+function ErrorResponse(code, message) {
+    if (!(this instanceof ErrorResponse)) {
+        return new ErrorResponse(code, message);
+    }
+    var self = this;
+    self.code = code;
+    self.message = message || emptyBuffer;
+}
+
+ErrorResponse.TypeCode = 0xff;
+
+// code:1 message~2
+ErrorResponse.prototype.read = read.chained(read.series([
+    read.UInt8, // code:1
+    read.buf2   // message~2
+]), function buildErrorRes(results, buffer, offset) {
+    var code = results[0];
+    var message = results[1];
+    var res = new ErrorResponse(code, message);
+    return [null, offset, res];
+});
+
+// code:1 message~2
+ErrorResponse.prototype.write = function writeErrorRes() {
+    var self = this;
+    return write.series([
+        write.UInt8(self.code, 'ErrorResponse code'),  // code:1
+        write.buf2(self.message, 'ErrorResponse arg1') // message~2
+    ]);
+};

@@ -1,5 +1,5 @@
 // Copyright (c) 2015 Uber Technologies, Inc.
-//
+
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -20,12 +20,47 @@
 
 'use strict';
 
-require('./safe-quit.js');
-require('./timeouts.js');
-require('./send.js');
-require('./register.js');
-require('./identify.js');
-require('./tchannel.js');
-require('./regression-inOps-leak.js');
-require('./emits-endpoint.js');
-require('./v2/index.js');
+module.exports.VERSION = 2;
+
+var Types = module.exports.Types = {};
+
+var Frame = require('./frame');
+
+var init = require('./init');
+Types.InitRequest = init.Request.TypeCode;
+Types.InitResponse = init.Response.TypeCode;
+Frame.Types[Types.InitRequest] = init.Request;
+Frame.Types[Types.InitResponse] = init.Response;
+module.exports.InitRequest = init.Request;
+module.exports.InitResponse = init.Response;
+
+var call = require('./call');
+Types.CallRequest = call.Request.TypeCode;
+Types.CallResponse = call.Response.TypeCode;
+Frame.Types[Types.CallRequest] = call.Request;
+Frame.Types[Types.CallResponse] = call.Response;
+module.exports.CallRequest = call.Request;
+module.exports.CallResponse = call.Response;
+
+// 0xc0 cancel
+// why~2
+
+// 0xc1 claim
+// tracing:24
+
+// 0xd0 pingReq
+// null
+
+// 0xd1 pingRes
+// null
+
+var ErrorResponse = require('./error_response');
+Types.ErrorResponse = ErrorResponse.TypeCode;
+Frame.Types[Types.ErrorResponse] = ErrorResponse;
+module.exports.ErrorResponse = ErrorResponse;
+
+module.exports.Checksum = require('./checksum');
+
+module.exports.Frame = Frame;
+
+module.exports.Parser = require('./parser');
