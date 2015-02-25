@@ -25,23 +25,37 @@ var write = require('../../lib/write.js');
 
 module.exports = TestFrame;
 
-function TestFrame(size, payload) {
+// size:1 payload~1
+
+function TestFrame(payload) {
+    if (!(this instanceof TestFrame)) {
+        return new TestFrame(payload);
+    }
     var self = this;
-    self.size = size || 1 + 1 + self.payload.length;
     self.payload = payload;
 }
 
 TestFrame.read = read.chained(read.series([
-    read.UInt8,
-    read.buf1
+    read.UInt8, // size:1
+    read.buf1   // payload~1
 ]), function(results, buffer, offset) {
     var size = results[0];
     var payload = results[1];
-    var body = new TestFrame(size, payload);
+    var body = new TestFrame(payload);
     return [null, offset, body];
 });
 
 TestFrame.prototype.write = function writeTestBody() {
     var self = this;
-    return write.buf1(self.payload);
+    var payload = write.buf1(self.payload);
+    var size = write.UInt8(1 + payload.length);
+    return write.series([
+        size,   // size:1
+        payload // payload~1
+    ]);
+};
+
+TestFrame.prototype.toBuffer = function toBuffer() {
+    var self = this;
+    return self.write().create();
 };
