@@ -7,8 +7,21 @@ from .parser import read_number
 from .parser import read_number_string
 
 
-class StreamReader(object):
-    """Read bytes from a stream and yield messages as they come."""
+class FrameReader(object):
+    """Read bytes from a stream and yield messages as they come.
+
+    This takes a ``connection`` object which is anything that supports
+    ``read(num_bytes)`` and ``write(bytes_)``.
+
+    As you iterate over the ``read()`` call, you will get back subclasses of
+    :class:`tchannel.messages.base.BaseMessage` along with their frames.
+
+    In order to support the reading the underlying stream in its recommended
+    fashion, we take a ``chunk_size`` parameter to specify how much data to
+    read at a time. If a message comes in whose size is greater than the
+    ``chunk_size``, the rest of the message will be read off the stream in the
+    next call.
+    """
 
     __slots__ = (
         '_connection',

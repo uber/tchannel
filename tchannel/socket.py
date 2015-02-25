@@ -3,9 +3,9 @@ from __future__ import absolute_import
 from . import messages
 from .exceptions import InvalidMessageException
 from .frame import Frame
+from .frame_reader import FrameReader
 from .messages.common import PROTOCOL_VERSION
 from .messages.types import Types
-from .stream_reader import StreamReader
 
 
 class Connection(object):
@@ -19,7 +19,7 @@ class Connection(object):
     def __init__(self, connection):
         self._connection = _SocketIOAdapter(connection)
         self._id_sequence = 0
-        self._reader = StreamReader(
+        self._reader = FrameReader(
             self._connection,
             self.INITIAL_CHUNK_SIZE
         ).read()
