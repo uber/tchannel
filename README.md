@@ -121,20 +121,6 @@ var channel = TChannel({
 });
 ```
 
-#### `options.host`
-
-You must specify a local host name. This local host name will
-    be used the remote server to identify you.
-
-The host name and port must be a unique identifier for your
-    TChannel server and its strongly recommended that this host
-    is the publicly addressable IP address.
-
-#### `options.port`
-
-The port for which `TChannel` will open a TCP server on.
-If the port is 0, the operating system will select an available port for you.
-
 #### `options.logger`
 
 ```ocaml
@@ -204,6 +190,19 @@ The client interval does not run every N milliseconds, it has
 > every `timeoutCheckInterval` +/ `fuzz/2`
 
 This is used to avoid race conditions in the network.
+
+#### `channel.listen(port, host, callback?)
+
+Starts listening on the given port and host.
+
+Both port and host are mandatory.
+
+The port may be 0, indicating that the operating system must grant an available
+    ephemeral port.
+
+The eventual host and port combination must uniquely identify the TChannel
+    server and it is strongly recommended that the host be the public IP
+    address.
 
 ### `channel.register(op, fn)`
 
