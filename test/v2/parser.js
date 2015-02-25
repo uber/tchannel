@@ -20,37 +20,30 @@
 
 'use strict';
 
+var util = require('util');
 var Parser = require('../../v2/parser.js');
 var TestFrame = require('./test_frame');
 var parserTest = require('../lib/parser_test');
 
-var buffers = [
-    Buffer([0x06, 0x04, 0x62, 0x6f, 0x6f, 0x74]),       // boot
-    Buffer([0x05, 0x03, 0x63, 0x61, 0x74]),             // cat
-    Buffer([0x07, 0x05, 0x62, 0x6f, 0x6f, 0x74, 0x73]), // boots
-    Buffer([0x06, 0x04, 0x63, 0x61, 0x74, 0x73]),       // cats
-    Buffer([0x07, 0x05, 0x62, 0x6f, 0x6f, 0x74, 0x73]), // boots
-    Buffer([0x03, 0x01, 0x4e]),                         // N
-    Buffer([0x06, 0x04, 0x63, 0x61, 0x74, 0x73]),       // cats
-    Buffer([0x03, 0x01, 0x4e]),                         // N
-    Buffer([0x07, 0x05, 0x62, 0x6f, 0x6f, 0x74, 0x73]), // boots
-    Buffer([0x03, 0x01, 0x4e]),                         // N
-    Buffer([0x06, 0x04, 0x63, 0x61, 0x74, 0x73])        // cats
-];
+var buffers = [];
+var expectedFrames = [];
+[
+    'boot', 'cat',
+    'boots', 'cats',
+    'boots', 'N',
+    'cats', 'N',
+    'boots', 'N',
+    'cats'
+].forEach(function eachToken(token, i) {
+    var assertMess = util.format('got expected[%s] payload token %j', i, token);
+    buffers.push(TestFrame(token).toBuffer());
+    expectedFrames.push({
+        frame: function expectToken(frame, assert) {
+            assert.equal(String(frame.payload), token, assertMess);
+        }
+    });
 
-var expectedFrames = [
-    {frame: expectPayload('boot')},
-    {frame: expectPayload('cat')},
-    {frame: expectPayload('boots')},
-    {frame: expectPayload('cats')},
-    {frame: expectPayload('boots')},
-    {frame: expectPayload('N')},
-    {frame: expectPayload('cats')},
-    {frame: expectPayload('N')},
-    {frame: expectPayload('boots')},
-    {frame: expectPayload('N')},
-    {frame: expectPayload('cats')}
-];
+});
 
 var BigChunk = Buffer.concat(buffers);
 
@@ -67,10 +60,4 @@ function makeV2Parser() {
     return Parser(TestFrame, {
         frameLengthSize: 1
     });
-}
-
-function expectPayload(str) {
-    return function payloadExpected(frame, assert) {
-        assert.equal(String(frame.payload), str, 'got expected payload');
-    };
 }
