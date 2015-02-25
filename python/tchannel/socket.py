@@ -34,7 +34,7 @@ class Connection(object):
 
     def _await(self):
         """Decode a full message and return"""
-        return Frame.read_full_message(
+        return Frame.read_full_frame(
             self._connection,
             self.INITIAL_CHUNK_SIZE,
         )
