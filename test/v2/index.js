@@ -21,3 +21,4 @@
 'use strict';
 
 require('./parser.js');
+require('./frame.js');

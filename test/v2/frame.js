@@ -20,13 +20,20 @@
 
 'use strict';
 
-module.exports.VERSION = 2;
+var Frame = require('../../v2/frame.js');
+var TestBody = require('./test_body.js');
+var testRead = require('../lib/read_test.js');
 
-var Types = {};
-module.exports.Types = Types;
+TestBody.testWith('read a cat frame', function t(assert) {
+    testRead(assert, Frame.read, TestBody.catBuffer, function s(frame) {
+        assert.equal(frame.id, 0x02030405, 'expected frame id');
+        assert.equal(String(frame.body.payload), 'cat', 'expected body payload');
+    });
+});
 
-var Frame = require('./frame');
-
-module.exports.Frame = Frame;
-
-module.exports.Parser = require('./parser');
+TestBody.testWith('write a cat frame', function t(assert) {
+    var frame = Frame(0x01020304, TestBody(Buffer('doge')));
+    var buf = frame.toBuffer();
+    assert.deepEqual(buf, TestBody.dogeBuffer, 'expected buffer output');
+    assert.end();
+});
