@@ -54,7 +54,7 @@ def test_decode_empty_buffer():
 def test_decode_with_message_length(dummy_frame):
     """Verify we can pre-flight a message size."""
     dummy_frame[2] = Types.PING_REQ
-    Frame.decode(BytesIO(dummy_frame), len(dummy_frame))
+    Frame.decode(BytesIO(dummy_frame[2:]), len(dummy_frame))
 
 
 def test_decode_invalid_message_id(dummy_frame):
