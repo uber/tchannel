@@ -34,8 +34,6 @@ class Frame(object):
         """
         if message_length is None:
             message_length = read_number(stream, cls.SIZE_WIDTH)
-        else:
-            stream.read(cls.SIZE_WIDTH)
 
         if message_length < cls.PRELUDE_SIZE:
             raise ProtocolException(
@@ -59,7 +57,6 @@ class Frame(object):
         if remaining_bytes:
             message.parse(stream, remaining_bytes)
         frame = cls(message=message, message_id=message_id)
-
         return frame, message
 
     def write(self, connection):
