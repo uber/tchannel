@@ -1,10 +1,8 @@
 from __future__ import absolute_import
 
 from .exceptions import ProtocolException
-from .io import BytesIO
 from .mapping import get_message_class
 from .parser import read_number
-from .parser import read_number_string
 from .parser import write_number
 
 
@@ -36,8 +34,6 @@ class Frame(object):
         """
         if message_length is None:
             message_length = read_number(stream, cls.SIZE_WIDTH)
-        else:
-            stream.read(cls.SIZE_WIDTH)
 
         if message_length < cls.PRELUDE_SIZE:
             raise ProtocolException(
@@ -57,35 +53,11 @@ class Frame(object):
         stream.read(cls.RESERVED_WIDTH)
 
         message = message_class()
-        message.parse(stream, message_length - cls.PRELUDE_SIZE)
+        remaining_bytes = message_length - cls.PRELUDE_SIZE
+        if remaining_bytes:
+            message.parse(stream, remaining_bytes)
         frame = cls(message=message, message_id=message_id)
-
         return frame, message
-
-    @classmethod
-    def read_full_frame(cls, stream, chunk_size):
-        """Read a full frame off the wire.
-
-        :param stream: a byte stream
-        :param chunk_size: number of bytes to read initially from ``stream``
-        """
-        chunk = stream.read(chunk_size)
-        if not chunk:
-            return None, None
-
-        message_length = read_number_string(
-            chunk[0:cls.SIZE_WIDTH],
-            cls.SIZE_WIDTH,
-        )[0]
-        if message_length > chunk_size:
-            rest_of_message = stream.read(message_length - chunk_size)
-            if not rest_of_message:
-                raise ProtocolException('Unexpectedly empty stream')
-            full_message = BytesIO(chunk + rest_of_message)
-        else:
-            full_message = BytesIO(chunk)
-
-        return cls.decode(full_message)
 
     def write(self, connection):
         """Write a frame out to a connection."""
