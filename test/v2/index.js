@@ -22,3 +22,4 @@
 
 require('./parser.js');
 require('./frame.js');
+require('./init.js');
