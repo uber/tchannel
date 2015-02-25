@@ -9,8 +9,19 @@ class CallRequestMessage(BaseMessage):
     message_type = Types.CALL_REQ
 
     __slots__ = (
+        'flags',
+        'ttl',
+
         # Zipkin-style tracing data
         'span_id',
         'parent_id',
         'trace_id',
+
+        'traceflags',
+        'service',
+        'headers',
+
+        'arg1',
+        'arg2',
+        'arg3',
     )

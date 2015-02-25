@@ -2,7 +2,6 @@ from __future__ import absolute_import
 import pytest
 
 from tchannel import exceptions
-from tchannel import messages
 from tchannel.frame import Frame
 from tchannel.io import BytesIO
 from tchannel.parser import read_number
@@ -69,27 +68,3 @@ def test_decode_ping(dummy_frame):
     """Verify we can decode a ping message."""
     dummy_frame[2] = Types.PING_REQ
     frame, message = Frame.decode(BytesIO(dummy_frame))
-
-
-def test_read_full_small_chunk(connection, dummy_frame):
-    """Verify we can re-constitute from multiple reads."""
-    frame = Frame(
-        message=messages.PingRequestMessage(),
-        message_id=42,
-    )
-    frame.write(connection)
-
-    frame, message = Frame.read_full_frame(BytesIO(connection.getvalue()), 4)
-    assert message.message_type == Types.PING_REQ
-
-
-def test_read_empty_buffer():
-    """Verify we handle an empty buffer."""
-    assert Frame.read_full_frame(BytesIO(), 4) == (None, None)
-
-
-def test_read_invalid_size(dummy_frame):
-    """Verify we raise when we try to read but get nothing."""
-    dummy_frame[1] = 0x20  # more bytes than are actually in dummy_frame
-    with pytest.raises(exceptions.ProtocolException):
-        assert Frame.read_full_frame(BytesIO(dummy_frame), len(dummy_frame))

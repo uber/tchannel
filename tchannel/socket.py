@@ -5,6 +5,7 @@ from .exceptions import InvalidMessageException
 from .frame import Frame
 from .messages.common import PROTOCOL_VERSION
 from .messages.types import Types
+from .stream_reader import StreamReader
 
 
 class Connection(object):
@@ -18,6 +19,10 @@ class Connection(object):
     def __init__(self, connection):
         self._connection = _SocketIOAdapter(connection)
         self._id_sequence = 0
+        self._reader = StreamReader(
+            self._connection,
+            self.INITIAL_CHUNK_SIZE
+        ).read()
 
     def frame_and_write(self, message):
         """Frame and write a message over a connection."""
@@ -34,10 +39,7 @@ class Connection(object):
 
     def _await(self):
         """Decode a full message and return"""
-        return Frame.read_full_frame(
-            self._connection,
-            self.INITIAL_CHUNK_SIZE,
-        )
+        return next(self._reader)
 
     def await_handshake(self, headers):
         """Negotiate a common protocol version with a client."""
@@ -73,10 +75,7 @@ class Connection(object):
         return self.frame_and_write(message)
 
     def handle_calls(self, handler):
-        while True:
-            frame, message = self._await()
-            if frame is None:
-                break
+        for frame, message in self._reader:
             handler(self._connection, frame, message)
 
     def ping(self):
