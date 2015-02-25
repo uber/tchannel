@@ -3,7 +3,7 @@ import socket
 
 import pytest
 
-from tchannel.socket import Connection
+from tchannel.socket import SocketConnection
 from tchannel.exceptions import InvalidMessageException
 
 
@@ -16,8 +16,8 @@ def tchannel_pair():
     """
     server, client = socket.socketpair()
 
-    server_channel = Connection(server)
-    client_channel = Connection(client)
+    server_channel = SocketConnection(server)
+    client_channel = SocketConnection(client)
     try:
         yield server_channel, client_channel
     finally:
@@ -39,6 +39,8 @@ def test_handshake(tchannel_pair, dummy_headers):
 
     client.initiate_handshake(headers=dummy_headers)
     server.await_handshake(headers=dummy_headers)
+    client.await_handshake_reply()
+    assert client.requested_version == server.requested_version
 
 
 def test_handshake_missing_headers(tchannel_pair):
@@ -48,6 +50,24 @@ def test_handshake_missing_headers(tchannel_pair):
     client.initiate_handshake(headers={})
     with pytest.raises(InvalidMessageException):
         server.await_handshake(headers={})
+
+
+def test_handshake_wrong_reply(tchannel_pair, dummy_headers):
+    """Verify the third leg of the handshake must be an INIT_RES."""
+    server, client = tchannel_pair
+
+    client.initiate_handshake(headers=dummy_headers)
+    server.initiate_handshake(headers=dummy_headers)
+    with pytest.raises(InvalidMessageException):
+        client.await_handshake_reply()
+
+
+def test_handshake_with_callback(tchannel_pair, dummy_headers):
+    server, client = tchannel_pair
+
+    client.initiate_handshake(headers=dummy_headers)
+    server.await_handshake(headers=dummy_headers)
+    client.await_handshake_reply(callback=lambda x: None)
 
 
 def test_handshake_pong(tchannel_pair):

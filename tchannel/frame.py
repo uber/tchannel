@@ -59,7 +59,7 @@ class Frame(object):
         frame = cls(message=message, message_id=message_id)
         return frame, message
 
-    def write(self, connection):
+    def write(self, connection, callback=None):
         """Write a frame out to a connection."""
         payload = bytearray()
         self._message.serialize(payload)
@@ -89,4 +89,4 @@ class Frame(object):
 
         # Then the payload
         header_bytes.extend(payload)
-        connection.write(header_bytes)
+        return connection.write(header_bytes, callback=callback)
