@@ -23,3 +23,4 @@
 require('./parser.js');
 require('./frame.js');
 require('./init.js');
+require('./checksum.js');
