@@ -25,6 +25,7 @@ module.exports.VERSION = 1;
 module.exports.Frame = require('./frame');
 module.exports.Header = require('./header');
 module.exports.Parser = require('./parser');
+module.exports.Handler = require('./handler');
 
 /* jshint camelcase:false */
 

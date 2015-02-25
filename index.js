@@ -116,6 +116,25 @@ TChannel.prototype.listen = function listen() {
     self.serverSocket.listen(self.port, self.host);
 };
 
+TChannel.prototype.getEndpointHandler = function getEndpointHandler(name) {
+    var self = this;
+    var handler = self.endpoints[name];
+    if (typeof handler !== 'function') {
+        handler = function noSuchHandler(arg2, arg3, remoteAddr, cb) {
+            var err = new Error('no such operation'); // TODO: typed error
+            err.op = name;
+            cb(err, null, null);
+        };
+        self.emit('endpoint.missing', {
+            name: name
+        });
+    } else if (self.endpoints[name]) {
+        self.emit('endpoint', {
+            name: name
+        });
+    }
+    return handler;
+};
 
 TChannel.prototype.register = function register(op, callback) {
     var self = this;
@@ -225,18 +244,10 @@ TChannel.prototype.send = function send(options, arg1, arg2, arg3, callback) {
         throw new Error('cannot send() without options.host');
     }
 
-    var reqFrame = self.buildRequest(options, arg1, arg2, arg3);
     var peer = self.getOutConnection(dest);
-    peer.send(options, reqFrame, callback);
+    peer.send(options, arg1, arg2, arg3, callback);
 };
 /* jshint maxparams:4 */
-
-TChannel.prototype.buildRequest = function buildRequest(options, arg1, arg2, arg3) {
-    var reqFrame = new v1.Frame();
-    reqFrame.set(arg1, arg2, arg3);
-    reqFrame.header.type = v1.Types.reqCompleteMessage;
-    return reqFrame;
-};
 
 TChannel.prototype.getOutConnection = function getOutConnection(dest) {
     var self = this;
@@ -339,13 +350,24 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     self.outOps = Object.create(null);
     self.outPending = 0;
 
-    self.localEndpoints = Object.create(null);
-
-    self.lastSentFrameId = 0;
     self.lastTimeoutTime = 0;
     self.closing = false;
 
     self.parser = new v1.Parser(self);
+    self.handler = new v1.Handler(self.channel, {
+        writeFrame: function writeFrame(frame, callback) {
+            self._writeFrame(frame, callback);
+        },
+        // TODO: the op boundary is probably better handled by an operation
+        // collection abstraction that the handler can submit to and then later
+        // fulfill to
+        runInOp: function runInOp(handler, options, sendResponseFrame) {
+            self.runInOp(handler, options, sendResponseFrame);
+        },
+        completeOutOp: function completeOutOp(err, id, res1, res2) {
+            self.completeOutOp(id, err, res1, res2);
+        }
+    });
 
     self.socket.setNoDelay(true);
 
@@ -372,20 +394,21 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
         }
     });
 
-    self.localEndpoints['TChannel identify'] = function identifyEndpoint(arg1, arg2, hostInfo, cb) {
-        cb(null, self.channel.hostPort, null);
-    };
+    self.handler.on('error', function onHandlerError(err) {
+        self.resetAll(err);
+    });
 
     if (direction === 'out') {
-        self.sendInitRequest(function onOutIdentify(err, res1/*, res2 */) {
-            if (err) {
-                self.channel.logger.error('identification error', {
-                    remoteAddr: remoteAddr,
-                    error: err
-                });
-                return;
-            }
-            self.handleInitResponse(res1.toString());
+        self.handler.sendInitRequest();
+        self.handler.once('identify.out', function onOutIdentified(hostPort) {
+            self.remoteName = hostPort;
+            self.channel.emit('identified', hostPort);
+        });
+    } else {
+        self.handler.once('identify.in', function onInIdentified(hostPort) {
+            self.remoteName = hostPort;
+            self.channel.addPeer(hostPort, self);
+            self.channel.emit('identified', hostPort);
         });
     }
 
@@ -407,12 +430,6 @@ TChannelConnection.prototype.onParserError = function onParserError(err) {
         error: err
     });
     // TODO should we close the connection?
-};
-
-TChannelConnection.prototype.nextFrameId = function nextFrameId() {
-    var self = this;
-    self.lastSentFrameId = (self.lastSentFrameId + 1) % 0xffffffff;
-    return self.lastSentFrameId;
 };
 
 // timeout check runs every timeoutCheckInterval +/- some random fuzz. Range is from
@@ -578,92 +595,8 @@ TChannelConnection.prototype.onSocketErr = function onSocketErr(err) {
 
 TChannelConnection.prototype.onFrame = function onFrame(frame) {
     var self = this;
-
     self.lastTimeoutTime = 0;
-    switch (frame.header.type) {
-        case v1.Types.reqCompleteMessage:
-            return self.handleCallRequest(frame);
-        case v1.Types.resCompleteMessage:
-            return self.handleCallResponse(frame);
-        case v1.Types.resError:
-            return self.handleError(frame);
-        default:
-            self.logger.error('unhandled frame type', {
-                type: frame.header.type
-            });
-    }
-};
-
-TChannelConnection.prototype.handleCallRequest = function handleCallRequest(reqFrame) {
-    var self = this;
-    if (self.remoteName === null && self.handleInitRequest(reqFrame) === false) {
-        return;
-    }
-
-    var id = reqFrame.header.id;
-    var name = reqFrame.arg1.toString();
-
-    var handler = self.localEndpoints[name] || self.channel.endpoints[name];
-
-    if (typeof handler !== 'function') {
-        // TODO: test this behavior, in fact the prior early return subtlety
-        // broke tests in an unknown way after deferring the inOps mutation
-        // until after old handler verification without this... arguably it's
-        // what we want anyhow, but that weird test failure should be
-        // understood
-        handler = function noSuchHandler(arg2, arg3, remoteAddr, cb) {
-            var err = new Error('no such operation');
-            err.op = name;
-            cb(err, null, null);
-        };
-
-        self.channel.emit('endpoint.missing', {
-            name: name
-        });
-
-        return;
-    } else if (self.channel.endpoints[name]) {
-        self.channel.emit('endpoint', {
-            name: name
-        });
-    }
-
-    self.inPending++;
-    var op = self.inOps[id] = new TChannelServerOp(self,
-        handler, reqFrame, self.channel.now(), {}, sendFrame);
-
-    function sendFrame(resFrame) {
-        if (self.inOps[id] !== op) {
-            self.logger.warn('attempt to send frame for mismatched operation', {
-                hostPort: self.channel.hostPort,
-                opId: id
-            });
-            return;
-        }
-        delete self.inOps[id];
-        self.inPending--;
-        if (!self.closing) {
-            var buf = resFrame.toBuffer();
-            self.socket.write(buf);
-        }
-    }
-};
-
-TChannelConnection.prototype.handleCallResponse = function handleCallResponse(resFrame) {
-    var self = this;
-    var id = resFrame.header.id;
-    var arg2 = resFrame.arg2;
-    var arg3 = resFrame.arg3;
-    var err = null;
-    self.completeOutOp(id, err, arg2, arg3);
-};
-
-TChannelConnection.prototype.handleError = function handleError(errFrame) {
-    var self = this;
-    var id = errFrame.header.id;
-    var message = errFrame.arg1;
-    var err = new Error(message);
-    self.completeOutOp(id, err, null, null);
+    self.handler.handleFrame(frame);
 };
 
 TChannelConnection.prototype.completeOutOp = function completeOutOp(id, err, arg1, arg2) {
@@ -680,39 +613,10 @@ TChannelConnection.prototype.completeOutOp = function completeOutOp(id, err, arg
     op.callback(err, arg1, arg2);
 };
 
-TChannelConnection.prototype.sendInitRequest = function sendInitRequest(callback) {
-    var self = this;
-    var reqFrame = new v1.Frame();
-    reqFrame.set('TChannel identify', self.channel.hostPort, null);
-    reqFrame.header.type = v1.Types.reqCompleteMessage;
-    self.send({}, reqFrame, callback);
-};
-
-TChannelConnection.prototype.handleInitRequest = function handleInitRequest(reqFrame) {
-    var self = this;
-    if (reqFrame.arg1.toString() !== 'TChannel identify') {
-        self.logger.error('first req on socket must be identify');
-        return false;
-    }
-    var hostPort = reqFrame.arg2.toString();
-    self.remoteName = hostPort;
-    self.channel.addPeer(hostPort, self);
-    self.channel.emit('identified', hostPort);
-    return true;
-};
-
-TChannelConnection.prototype.handleInitResponse = function handleInitResponse(res) {
-    var self = this;
-    var remote = res;
-    self.remoteName = remote;
-    self.channel.emit('identified', remote);
-};
-
 // send a req frame
 /* jshint maxparams:5 */
-TChannelConnection.prototype.send = function send(options, frame, callback) {
+TChannelConnection.prototype.send = function send(options, arg1, arg2, arg3, callback) {
     var self = this;
-    var id = self.nextFrameId();
     // TODO: use this to protect against >4Mi outstanding messages edge case
     // (e.g. zombie operation bug, incredible throughput, or simply very long
     // timeout
@@ -720,30 +624,85 @@ TChannelConnection.prototype.send = function send(options, frame, callback) {
     //  throw new Error('duplicate frame id in flight');
     // }
 
-    frame.header.id = id;
-    frame.header.seq = 0;
+    var id = self.handler.sendRequestFrame({
+        arg1: arg1,
+        arg2: arg2,
+        arg3: arg3
+    }, function requestSent(err) {
+        if (err) {
+            self.logger.warn('failed to send request', {
+                id: id,
+                error: err
+            });
+            // TODO: retry?
+            // TODO: early self.completeOutOp(id, err, null, null)?
+        }
+    });
+
     self.outOps[id] = new TChannelClientOp(
-        options, frame, self.channel.now(), callback);
+        options, self.channel.now(), callback);
     self.pendingCount++;
-    var buffer = frame.toBuffer();
-    return self.socket.write(buffer);
 };
 /* jshint maxparams:4 */
 
-/* jshint maxparams:6 */
-function TChannelServerOp(connection, handler, reqFrame, start, options, sendFrame) {
+TChannelConnection.prototype.runInOp = function runInOp(handler, options, sendResponseFrame) {
     var self = this;
+    var id = options.id;
+    self.inPending++;
+    var op = self.inOps[id] = new TChannelServerOp(self,
+        handler, self.channel.now(), options, opDone);
+
+    function opDone(err, res1, res2) {
+        if (self.inOps[id] !== op) {
+            self.logger.warn('attempt to send frame for mismatched operation', {
+                hostPort: self.channel.hostPort,
+                opId: id
+            });
+            return;
+        }
+        sendResponseFrame(err, res1, res2, function responseSent(err) {
+            if (err) {
+                self.logger.warn('failed to send response', {
+                    id: id,
+                    error: err
+                });
+                // TODO: retry
+            }
+            delete self.inOps[id];
+            self.inPending--;
+        });
+    }
+};
+
+TChannelConnection.prototype._writeFrame = function _writeFrame(frame, callback) {
+    var self = this;
+    if (self.closing) {
+        self.logger.warn('write frame after close', {
+            hostPort: self.channel.hostPort,
+            remoteAddr: self.remoteAddr
+        });
+        if (callback) {
+            callback(new Error('socket closing'));
+        }
+    } else {
+        var buffer = frame.toBuffer();
+        self.socket.write(buffer, null, callback);
+    }
+};
+
+/* jshint maxparams:6 */
+function TChannelServerOp(connection, handler, start, options, callback) {
+    var self = this;
+    self.options = options;
     self.connection = connection;
     self.logger = connection.logger;
     self.handler = handler;
-    self.reqFrame = reqFrame;
     self.timedOut = false;
     self.start = start;
-    self.options = options;
-    self.sendFrame = sendFrame;
+    self.callback = callback;
     self.responseSent = false;
     process.nextTick(function runHandler() {
-        self.handler(reqFrame.arg2, reqFrame.arg3, connection.remoteName, sendResponse);
+        self.handler(self.options.arg2, self.options.arg3, connection.remoteName, sendResponse);
     });
     function sendResponse(err, res1, res2) {
         self.sendResponse(err, res1, res2);
@@ -763,40 +722,12 @@ TChannelServerOp.prototype.sendResponse = function sendResponse(err, res1, res2)
     }
     self.responseSent = true;
     // TODO: observability hook for handler errors
-    var resFrame = self.buildResponseFrame(err, res1, res2);
-    self.sendFrame(resFrame);
+    self.callback(err, res1, res2);
 };
 
-TChannelServerOp.prototype.buildResponseFrame = function buildResponseFrame(err, res1, res2) {
-    var self = this;
-    var id = self.reqFrame.header.id;
-    var arg1 = self.reqFrame.arg1;
-    var resFrame = new v1.Frame();
-    resFrame.header.id = id;
-    resFrame.header.seq = 0;
-    if (err) {
-        // TODO should the error response contain a head ?
-        // Is there any value in sending meta data along with
-        // the error.
-        resFrame.set(isError(err) ? err.message : err, null, null);
-        resFrame.header.type = v1.Types.resError;
-    } else {
-        resFrame.set(arg1, res1, res2);
-        resFrame.header.type = v1.Types.resCompleteMessage;
-    }
-    return resFrame;
-};
-
-function isError(obj) {
-    return typeof obj === 'object' && (
-        Object.prototype.toString.call(obj) === '[object Error]' ||
-        obj instanceof Error);
-}
-
-function TChannelClientOp(options, frame, start, callback) {
+function TChannelClientOp(options, start, callback) {
     var self = this;
     self.options = options;
-    self.frame = frame;
     self.callback = callback;
     self.start = start;
     self.timedOut = false;
