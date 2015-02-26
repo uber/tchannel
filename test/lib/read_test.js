@@ -37,12 +37,8 @@ function testRead(assert, reader, buffer, t, done) {
 
     if (err) {
         hexdump('read error at');
-        if (err.type) {
-            console.log(util.format('- with %s: %s',
-                err.name, err.message));
-        } else {
-            console.log('- with error: ' + util.inspect(err));
-        }
+        var errname = err.type ? err.name : err.constructor.name;
+        console.log(util.format('- %s: %s', errname, err.message));
         done(err);
     } else if (offset < buffer.length) {
         hexdump('read stopped short at');
