@@ -46,26 +46,6 @@ TestBody.prototype.write = function writeTestBody() {
 
 TestBody.TypeCode = 0x00;
 
-TestBody.catBuffer = Buffer([
-    0x00, 0x14,             // size:2:
-    TestBody.TypeCode,      // type:1
-    0x01,                   // reserved:1
-    0x02, 0x03, 0x04, 0x05, // id:4
-    0x06, 0x07, 0x08, 0x09, // reserved:4
-    0x0a, 0x0b, 0x0c, 0x0d, // reserved:4
-    0x03, 0x63, 0x61, 0x74  // payload~1
-]);
-
-TestBody.dogeBuffer = Buffer([
-    0x00, 0x15,                  // size:2:
-    TestBody.TypeCode,           // type:1
-    0x00,                        // reserved:1
-    0x01, 0x02, 0x03, 0x04,      // id:4
-    0x00, 0x00, 0x00, 0x00,      // reserved:4
-    0x00, 0x00, 0x00, 0x00,      // reserved:4
-    0x04, 0x64, 0x6f, 0x67, 0x65 // payload~1
-]);
-
 TestBody.testWith = function testWidTestBody(desc, t) {
     var test = require('tape');
     var Frame = require('../../v2/frame.js');
