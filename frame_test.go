@@ -12,9 +12,8 @@ func TestFraming(t *testing.T) {
 
 	f := &Frame{
 		Header: FrameHeader{
-			Size:  uint32(len(payload)),
-			Type:  MessageTypeCallReq,
-			Flags: 0x34,
+			Size: uint16(len(payload)),
+			Type: MessageTypeCallReq,
 		},
 		Payload: payload,
 	}

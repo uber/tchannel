@@ -3,14 +3,10 @@ package tchannel
 import (
 	"bytes"
 	"code.uber.internal/infra/mmihic/tchannel-go/binio"
-	"errors"
 	"fmt"
-	"github.com/op/go-logging"
 	"io"
 	"time"
 )
-
-var log = logging.MustGetLogger("tchannel-protocol")
 
 // Type of message
 type MessageType byte
@@ -428,17 +424,11 @@ type messageReader struct {
 	r *FrameReader
 }
 
-var ErrFragmentationUnsupported = errors.New("fragmentation not yet supported")
-
 func (r *messageReader) Read() (Message, error) {
 	// TODO(mmihic): Implement fragmentation once we have that better resolved
 	frame, err := r.r.ReadFrame()
 	if err != nil {
 		return nil, err
-	}
-
-	if !frame.Header.FinalFragment() {
-		return nil, ErrFragmentationUnsupported
 	}
 
 	var msg Message
@@ -488,10 +478,9 @@ func (w *messageWriter) Write(msg Message) error {
 
 	frame := Frame{
 		Header: FrameHeader{
-			Id:    msg.Id(),
-			Type:  msg.Type(),
-			Size:  uint32(len(payload)),
-			Flags: 0x00,
+			Id:   msg.Id(),
+			Type: msg.Type(),
+			Size: uint16(len(payload)),
 		},
 		Payload: payload,
 	}
