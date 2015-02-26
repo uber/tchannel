@@ -27,6 +27,14 @@ module.exports.Types = Types;
 
 var Frame = require('./frame');
 
+var init = require('./init');
+Types.InitRequest = init.Request.TypeCode;
+Types.InitResponse = init.Response.TypeCode;
+Frame.Types[Types.InitRequest] = init.Request;
+Frame.Types[Types.InitResponse] = init.Response;
+module.exports.InitRequest = init.Request;
+module.exports.InitResponse = init.Response;
+
 module.exports.Frame = Frame;
 
 module.exports.Parser = require('./parser');
