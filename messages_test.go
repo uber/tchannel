@@ -59,9 +59,6 @@ func TestCallReq(t *testing.T) {
 			"f": "d",
 		},
 		Service: []byte("udr"),
-		Arg1:    []byte("login"),
-		Arg2:    []byte("thrift-headers"),
-		Arg3:    []byte("thrify-body"),
 	}
 
 	assertRoundTrip(t, &r, &CallReq{id: 0xDEADBEEF})
@@ -75,9 +72,6 @@ func TestCallRes(t *testing.T) {
 			"r": "c",
 			"f": "d",
 		},
-		Arg1: []byte("login"),
-		Arg2: []byte("thrift-headers"),
-		Arg3: []byte("thrify-body"),
 	}
 
 	assertRoundTrip(t, &r, &CallRes{id: 0xDEADBEEF})
@@ -98,9 +92,6 @@ func TestMessageWriterReader(t *testing.T) {
 			"f": "d",
 		},
 		Service: []byte("udr"),
-		Arg1:    []byte("login"),
-		Arg2:    []byte("thrift-headers"),
-		Arg3:    []byte("thrify-body"),
 	}
 
 	var b bytes.Buffer
@@ -115,9 +106,6 @@ func TestMessageWriterReader(t *testing.T) {
 			"r": "c",
 			"f": "d",
 		},
-		Arg1: []byte("login"),
-		Arg2: []byte("thrift-headers"),
-		Arg3: []byte("thrify-body"),
 	}
 	err = w.Write(res)
 	require.Nil(t, err, "error writing second message")

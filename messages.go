@@ -12,19 +12,23 @@ import (
 type MessageType byte
 
 const (
-	MessageTypeInitReq MessageType = 0x01
-	MessageTypeInitRes MessageType = 0x02
-	MessageTypeCallReq MessageType = 0x03
-	MessageTypeCallRes MessageType = 0x04
-	MessageTypeError   MessageType = 0xFF
+	MessageTypeInitReq         MessageType = 0x01
+	MessageTypeInitRes         MessageType = 0x02
+	MessageTypeCallReq         MessageType = 0x03
+	MessageTypeCallRes         MessageType = 0x04
+	MessageTypeCallReqContinue MessageType = 0x13
+	MessageTypeCallResContinue MessageType = 0x14
+	MessageTypeError           MessageType = 0xFF
 )
 
 var messageTypeNames = map[MessageType]string{
-	MessageTypeInitReq: "InitReq",
-	MessageTypeInitRes: "InitRes",
-	MessageTypeCallReq: "CallReq",
-	MessageTypeCallRes: "CallRes",
-	MessageTypeError:   "Error",
+	MessageTypeInitReq:         "InitReq",
+	MessageTypeInitRes:         "InitRes",
+	MessageTypeCallReq:         "CallReq",
+	MessageTypeCallReqContinue: "CallReqContinue",
+	MessageTypeCallRes:         "CallRes",
+	MessageTypeCallResContinue: "CallResContinue",
+	MessageTypeError:           "Error",
 }
 
 func (t MessageType) String() string {
@@ -202,9 +206,7 @@ type CallReq struct {
 	TraceFlags byte
 	Headers    CallHeaders
 	Service    []byte
-	Arg1       []byte
-	Arg2       []byte
-	Arg3       []byte
+	Args       []byte
 }
 
 func (m *CallReq) Id() uint32        { return m.id }
@@ -246,20 +248,8 @@ func (m *CallReq) read(r binio.Reader) error {
 		return err
 	}
 
-	m.Arg1, err = readArg(r)
-	if err != nil {
-		return err
-	}
+	// TODO(mmihic): Do non-copy read of remainder of fragment, if possible
 
-	m.Arg2, err = readArg(r)
-	if err != nil {
-		return err
-	}
-
-	m.Arg3, err = readArg(r)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -292,17 +282,7 @@ func (m *CallReq) write(w binio.Writer) error {
 		return err
 	}
 
-	if err := writeArg(m.Arg1, w); err != nil {
-		return err
-	}
-
-	if err := writeArg(m.Arg2, w); err != nil {
-		return err
-	}
-
-	if err := writeArg(m.Arg3, w); err != nil {
-		return err
-	}
+	// TODO(mmihic): Write args
 	return nil
 }
 
@@ -330,9 +310,7 @@ type CallRes struct {
 	id           uint32
 	ResponseCode ResponseCode
 	Headers      CallHeaders
-	Arg1         []byte
-	Arg2         []byte
-	Arg3         []byte
+	Args         []byte
 }
 
 func (m *CallRes) Id() uint32        { return m.id }
@@ -349,21 +327,7 @@ func (m *CallRes) read(r binio.Reader) error {
 		return err
 	}
 
-	m.Arg1, err = readArg(r)
-	if err != nil {
-		return err
-	}
-
-	m.Arg2, err = readArg(r)
-	if err != nil {
-		return err
-	}
-
-	m.Arg3, err = readArg(r)
-	if err != nil {
-		return err
-	}
-
+	// TODO(mmihic): Do non-copy read of remainder of fragment, if possible
 	return nil
 }
 
@@ -376,15 +340,7 @@ func (m *CallRes) write(w binio.Writer) error {
 		return err
 	}
 
-	if err := writeArg(m.Arg1, w); err != nil {
-		return err
-	}
-
-	if err := writeArg(m.Arg2, w); err != nil {
-		return err
-	}
-
-	if err := writeArg(m.Arg3, w); err != nil {
+	if err := w.WriteBytes(m.Args); err != nil {
 		return err
 	}
 
