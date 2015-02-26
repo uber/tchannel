@@ -34,6 +34,7 @@
     "pre-commit": "0.0.9",
     "ready-signal": "^1.1.0",
     "run-parallel": "^1.0.0",
+    "split2": "^0.2.1",
     "tape": "^3.0.3",
     "time-mock": "^0.1.2",
     "uber-licence": "^1.1.0",
