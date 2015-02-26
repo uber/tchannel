@@ -46,10 +46,11 @@ var testInitReq = Buffer([
 ]);
 
 test('read a Init.Request', function t(assert) {
-    testRead(assert, Init.Request.read, testInitReq, function s(req) {
+    testRead(assert, Init.Request.read, testInitReq, function s(req, done) {
         assert.equal(req.version, 2, 'expected version');
         assert.equal(req.hostPort, '1.2.3.4:5', 'expected hostPort');
         assert.equal(req.processName, 'node', 'expected processName');
+        done();
     });
 });
 
@@ -62,10 +63,11 @@ test('write a Init.Request', function t(assert) {
 });
 
 test('read a Init.Response', function t(assert) {
-    testRead(assert, Init.Response.read, testInitReq, function s(req) {
+    testRead(assert, Init.Response.read, testInitReq, function s(req, done) {
         assert.equal(req.version, 2, 'expected version');
         assert.equal(req.hostPort, '1.2.3.4:5', 'expected hostPort');
         assert.equal(req.processName, 'node', 'expected processName');
+        done();
     });
 });
 

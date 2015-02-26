@@ -54,8 +54,7 @@ function testRead(assert, reader, buffer, t, done) {
         }
     }
     if (val) {
-        t(val, assert);
-        done();
+        t(val, done);
     } else {
         done(new Error('Expected to have read a value'));
     }

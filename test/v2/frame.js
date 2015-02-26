@@ -45,9 +45,10 @@ var dogeBuffer = Buffer([
 ]);
 
 TestBody.testWith('read a cat frame', function t(assert) {
-    testRead(assert, Frame.read, catBuffer, function s(frame) {
+    testRead(assert, Frame.read, catBuffer, function s(frame, done) {
         assert.equal(frame.id, 0x02030405, 'expected frame id');
         assert.equal(String(frame.body.payload), 'cat', 'expected body payload');
+        done();
     });
 });
 
