@@ -305,6 +305,11 @@ TChannel.prototype.quit = function close(callback) {
 
 TChannel.prototype.close = function close(callback) {
     var self = this;
+
+    if (self.destroyed) {
+        throw new Error('double close'); // TODO typed error
+    }
+
     self.destroyed = true;
     var peers = self.getPeers();
     var counter = peers.length + 1;
