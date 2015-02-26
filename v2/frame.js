@@ -92,9 +92,7 @@ Frame.read = read.chained(read.series([
 
     var end = offset + bodyLength;
 
-    return read.chain(function(buffer, offset) {
-        return BodyType.read(buffer, offset);
-    }, buffer, offset, buildFrame);
+    return read.chain(BodyType.read, buffer, offset, buildFrame);
 
     function buildFrame(body, buffer, offset) {
         if (offset < end) {
