@@ -20,13 +20,40 @@
 
 'use strict';
 
-module.exports.VERSION = 2;
+var read = require('../../lib/read.js');
+var write = require('../../lib/write.js');
 
-var Types = {};
-module.exports.Types = Types;
+module.exports = TestBody;
 
-var Frame = require('./frame');
+function TestBody(payload) {
+    if (!(this instanceof TestBody)) {
+        return new TestBody(payload);
+    }
+    var self = this;
+    self.type = TestBody.TypeCode;
+    self.payload = payload;
+}
 
-module.exports.Frame = Frame;
+TestBody.read = read.chained(read.buf1, function(payload, buffer, offset) {
+    var body = new TestBody(payload);
+    return [null, offset, body];
+});
 
-module.exports.Parser = require('./parser');
+TestBody.prototype.write = function writeTestBody() {
+    var self = this;
+    return write.buf1(self.payload);
+};
+
+TestBody.TypeCode = 0x00;
+
+TestBody.testWith = function testWidTestBody(desc, t) {
+    var test = require('tape');
+    var Frame = require('../../v2/frame.js');
+    test(desc, function s(assert) {
+        Frame.Types[TestBody.TypeCode] = TestBody;
+        assert.once('end', function removeTestBody() {
+            delete Frame.Types[TestBody.TypeCode];
+        });
+        return t(assert);
+    });
+};
