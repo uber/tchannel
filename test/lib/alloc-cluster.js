@@ -21,8 +21,7 @@
 'use strict';
 
 var extend = require('xtend');
-var ReadySignal = require('ready-signal');
-var after = require('after');
+var CountedReadySignal = require('ready-signal/counted');
 var test = require('tape');
 var util = require('util');
 var TChannel = require('../../index.js');
@@ -34,8 +33,7 @@ module.exports = allocCluster;
 function allocCluster(n, opts) {
     opts = opts || {};
 
-    var ready = ReadySignal();
-    var listening = after(n, ready.signal);
+    var ready = CountedReadySignal(n);
 
     var host = 'localhost';
     var logger = debugLogtron('tchannel');
@@ -64,7 +62,7 @@ function allocCluster(n, opts) {
         function chanReady() {
             var port = chan.address().port;
             ret.hosts[i] = util.format('%s:%s', host, port);
-            listening();
+            ready.signal();
         }
     }
 
