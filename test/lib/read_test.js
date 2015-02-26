@@ -26,7 +26,7 @@ var util = require('util');
 
 module.exports = testRead;
 
-/* jshint maxparams:5 */
+/* jshint maxparams:6 */
 
 function testRead(assert, reader, buffer, t, done) {
     if (!done) done = assert.end;
@@ -34,31 +34,44 @@ function testRead(assert, reader, buffer, t, done) {
     var err = res[0];
     var offset = res[1];
     var val = res[2];
-    assert.error(err, 'should not fail to read');
-    assert.ok(offset === buffer.length, 'read entire buffer');
-    if (err || offset < buffer.length) {
+
+    if (err) {
+        hexdump('read error at');
+        var errname = err.type ? err.name : err.constructor.name;
+        console.log(util.format('- %s: %s', errname, err.message));
+        done(err);
+    } else if (offset < buffer.length) {
+        hexdump('read stopped short at');
+        done(new Error('read did not consume entire buffer'));
+    } else if (val === null || val === undefined) {
+        done(new Error('Expected to have read a value'));
+    } else {
+        t(val, done);
+    }
+
+    function hexdump(desc) {
         console.log(hexHighlight(buffer, {
             end: {
-                desc: 'read stopped at',
+                desc: desc,
                 offset: offset,
                 color: 'red+bold'
             }
         }));
-        if (err) {
-            if (err.type) {
-                console.log(util.format('- with %s: %s',
-                    err.name, err.message));
-            } else {
-                console.log('- with error: ' + util.inspect(err));
-            }
-        }
-    }
-    if (val) {
-        t(val, done);
-    } else {
-        done(new Error('Expected to have read a value'));
     }
 }
+
+testRead.shouldError = function shouldError(assert, reader, buffer, t, done) {
+    if (!done) done = assert.end;
+    var res = reader(buffer, 0);
+    var err = res[0];
+    var offset = res[1];
+    if (err) {
+        err.offset = offset;
+        t(err, done);
+    } else {
+        done(new Error('expected a read error'));
+    }
+};
 
 function hexHighlight(buffer, highlights) {
     var highlight = {};
