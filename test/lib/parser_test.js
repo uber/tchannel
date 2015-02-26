@@ -77,7 +77,6 @@ function parserTest(desc, parser, chunks, expected) {
                 return;
             }
             done = true;
-            console.log('fin');
 
             if (err) {
                 assert.end(err);
