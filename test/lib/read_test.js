@@ -78,6 +78,13 @@ testRead.shouldError = function shouldError(assert, reader, buffer, t, done) {
     var offset = res[1];
     if (err) {
         err.offset = offset;
+    } else if (offset < buffer.length) {
+        err = ShortReadError({
+            offset: offset,
+            length: buffer.length
+        });
+    }
+    if (err) {
         t(err, done);
     } else {
         done(new Error('expected a read error'));
