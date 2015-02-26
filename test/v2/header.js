@@ -124,10 +124,11 @@ test('read duplicate key -> error', function t(assert) {
 });
 
 test('read null key', function t(assert) {
-    testRead(assert, Header.read, testNullKey, function s(headers, done) {
-        var keys = Object.keys(headers);
-        assert.deepEqual(keys, [''], 'expected one header');
-        assert.equal(headers[''], 'ek', 'expected "" => "ek"');
+    testRead.shouldError(assert, Header.read, testNullKey, function s(err, done) {
+        assert.equal(err.type, 'tchannel.null-key', 'expected duplicate key error');
+        // TODO: should be 0x01, but pair already read by time error guard gets
+        // a chance
+        assert.equal(err.offset, 0x05, 'expected duplicate key error');
         done();
     });
 });

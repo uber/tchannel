@@ -32,6 +32,11 @@ var DuplicateHeaderKeyError = TypedError({
     priorValue: null
 });
 
+var NullKeyError = TypedError({
+    type: 'tchannel.null-key',
+    message: 'null key'
+});
+
 // nh:1 (hk~1 hv~1){nh}
 module.exports.read = read.chained(read.UInt8, function readHeaders(numHeaders, buffer, offset) {
     var headers = {};
@@ -40,6 +45,9 @@ module.exports.read = read.chained(read.UInt8, function readHeaders(numHeaders, 
         if (res[0]) return res;
         offset = res[1];
         var pair = res[2];
+        if (!pair[0].length) {
+            return [NullKeyError(), offset, null];
+        }
         var key = String(pair[0]);
         var val = String(pair[1]);
         if (headers[key] !== undefined) {
