@@ -33,26 +33,33 @@ var DuplicateHeaderKeyError = TypedError({
 });
 
 // nh:1 (hk~1 hv~1){nh}
-module.exports.read = read.chained(read.UInt8, function readHeaders(numHeaders, buffer, offset) {
-    var headers = {};
-    for (var i=0; i<numHeaders; i++) {
-        var res = read.pair1(buffer, offset);
-        if (res[0]) return res;
-        offset = res[1];
-        var pair = res[2];
+module.exports.read = read.reduced(
+    read.pair1,
+
+    read.chained(read.UInt8, function initHeaders(count, buffer, offset) {
+        return [null, offset, {
+            done: count <= 0,
+            remain: count,
+            value: {}
+        }];
+    }),
+
+    function reducePair(state, pair) {
         var key = String(pair[0]);
         var val = String(pair[1]);
-        if (headers[key] !== undefined) {
-            return [DuplicateHeaderKeyError({
+        if (state.value[key] !== undefined) {
+            var err = DuplicateHeaderKeyError({
                 key: key,
                 value: val,
-                priorValue: headers[key]
-            }), offset, null];
+                priorValue: state.value[key]
+            });
+            return err;
         }
-        headers[key] = val;
+        state.value[key] = val;
+        state.done = --state.remain <= 0;
+        return null;
     }
-    return [null, offset, headers];
-});
+);
 
 // nh:1 (hk~1 hv~1){nh}
 module.exports.write = function writeHeaders(headers) {
