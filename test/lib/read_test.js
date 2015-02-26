@@ -20,9 +20,17 @@
 
 'use strict';
 
+var TypedError = require('error/typed');
 var color = require('ansi-color').set;
 var hex = require('hexer');
 var util = require('util');
+
+var ShortReadError = TypedError({
+    type: 'short-read',
+    message: 'read did not consume entire buffer',
+    offset: null,
+    length: null
+});
 
 module.exports = testRead;
 
@@ -42,7 +50,10 @@ function testRead(assert, reader, buffer, t, done) {
         done(err);
     } else if (offset < buffer.length) {
         hexdump('read stopped short at');
-        done(new Error('read did not consume entire buffer'));
+        done(ShortReadError({
+            offset: offset,
+            length: buffer.length
+        }));
     } else if (val === null || val === undefined) {
         done(new Error('Expected to have read a value'));
     } else {
@@ -67,6 +78,13 @@ testRead.shouldError = function shouldError(assert, reader, buffer, t, done) {
     var offset = res[1];
     if (err) {
         err.offset = offset;
+    } else if (offset < buffer.length) {
+        err = ShortReadError({
+            offset: offset,
+            length: buffer.length
+        });
+    }
+    if (err) {
         t(err, done);
     } else {
         done(new Error('expected a read error'));
