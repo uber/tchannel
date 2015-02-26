@@ -26,7 +26,7 @@ var util = require('util');
 
 module.exports = testRead;
 
-/* jshint maxparams:5 */
+/* jshint maxparams:6 */
 
 function testRead(assert, reader, buffer, t, done) {
     if (!done) done = assert.end;
@@ -59,6 +59,19 @@ function testRead(assert, reader, buffer, t, done) {
         }));
     }
 }
+
+testRead.shouldError = function shouldError(assert, reader, buffer, t, done) {
+    if (!done) done = assert.end;
+    var res = reader(buffer, 0);
+    var err = res[0];
+    var offset = res[1];
+    if (err) {
+        err.offset = offset;
+        t(err, done);
+    } else {
+        done(new Error('expected a read error'));
+    }
+};
 
 function hexHighlight(buffer, highlights) {
     var highlight = {};
