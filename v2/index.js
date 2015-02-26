@@ -35,6 +35,8 @@ Frame.Types[Types.InitResponse] = init.Response;
 module.exports.InitRequest = init.Request;
 module.exports.InitResponse = init.Response;
 
+module.exports.Checksum = require('./checksum');
+
 module.exports.Frame = Frame;
 
 module.exports.Parser = require('./parser');
