@@ -29,13 +29,12 @@ class _IOStreamAdapter(object):
 
 class TornadoConnection(Connection):
     """Handle speaking TChannel over a Tornado connection."""
-    ADAPTER = _IOStreamAdapter
 
     def __init__(self, connection):
-        super(TornadoConnection, self).__init__(connection)
-        self.reader = IOStreamFrameReader(
-            self._connection,
-        )
+        adapted = _IOStreamAdapter(connection)
+        super(TornadoConnection, self).__init__(adapted)
+
+        self.reader = IOStreamFrameReader(adapted)
         connection.set_close_callback(self.on_close)
         self.closed = False
 

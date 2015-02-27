@@ -24,14 +24,11 @@ class SocketConnection(Connection):
     Use this class to perform synchronous socket operations, e.g. over TCP or a
     Unix Domain Socket.
     """
-    ADAPTER = _SocketIOAdapter
-
     def __init__(self, connection):
-        super(SocketConnection, self).__init__(connection)
+        adapted = _SocketIOAdapter(connection)
+        super(SocketConnection, self).__init__(adapted)
 
-        self.reader = FrameReader(
-            self._connection,
-        ).read()
+        self.reader = FrameReader(adapted).read()
 
     def handle_calls(self, handler):
         for frame, message in self.reader:

@@ -11,10 +11,8 @@ from .messages.types import Types
 class Connection(object):
     """Encapsulate transporting TChannel over an underlying stream."""
     # Must be provided by subclasses
-    ADAPTER = None
-
     def __init__(self, connection):
-        self._connection = self.ADAPTER(connection)
+        self._connection = connection
         self._id_sequence = 0
 
     def handle_calls(self, handler):
