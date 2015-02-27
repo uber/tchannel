@@ -17,7 +17,7 @@ class MyHandler(SocketServer.BaseRequestHandler):
 
         ``self.request`` is the TCP socket connected to the client.
         """
-        # self.request.settimeout(1.0)
+        self.request.settimeout(1.0)
         tchannel_connection = SocketConnection(connection=self.request)
         print("Received request from %s:%d" % self.client_address)
 
