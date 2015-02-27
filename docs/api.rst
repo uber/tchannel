@@ -22,3 +22,9 @@ Exceptions
 
 .. automodule:: tchannel.exceptions
     :members:
+
+Connection
+----------
+
+.. automodule:: tchannel.connection
+    :members:

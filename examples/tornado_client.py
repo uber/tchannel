@@ -23,6 +23,7 @@ class MyClient(object):
             'host_port': '%s:%s' % self.sock.getsockname(),
             'process_name': sys.argv[0],
         })
+
         yield self.connection.await_handshake_reply()
         print(
             "Successfully completed handshake with %s" %
@@ -55,7 +56,6 @@ def main():
     print("Finish %d iterations in %d ms" % (N, elapsed))
     print("%.4f ops/s" % ((N / elapsed) * 1000))
 
-    print("All done")
 
 if __name__ == '__main__':
     tornado.ioloop.IOLoop.instance().run_sync(main)
