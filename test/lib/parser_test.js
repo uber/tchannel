@@ -20,16 +20,14 @@
 
 'use strict';
 
+var TypedError = require('error/typed');
+var once = require('once');
 var test = require('tape');
-var util = require('util');
 
 module.exports = parserTest;
 
 function parserTest(desc, parser, chunks, expected) {
-    test(desc, function t(assert) {
-        var expectedI = 0;
-        var done = false;
-
+    testExpectations(desc, expected, function run(expect, done) {
         if (typeof parser === 'function') parser = parser();
 
         parser.on('frame', function onFrame(frame) {
@@ -43,55 +41,79 @@ function parserTest(desc, parser, chunks, expected) {
             parser.execute(chunk);
         });
 
+        parser.flush();
+        done();
+    });
+}
+
+var TooManyResults = TypedError({
+    type: 'test-expectations.too-many-results',
+    message: 'got more results than expected; got: {got} expected {expected}',
+    got: null,
+    expected: null
+});
+
+var TooFewResults = TypedError({
+    type: 'test-expectations.too-few-results',
+    message: 'got less results than expected; got: {got} expected {expected}',
+    got: null,
+    expected: null
+});
+
+var MismatchedExpectationKind = TypedError({
+    type: 'test-expectations.mismatched-kind',
+    message: 'expectad a {expected} got a {got} instead',
+    got: null,
+    expected: null
+});
+
+function testExpectations(desc, expected, func) {
+    test(desc, function t(assert) {
+        var expectedI = 0;
+        var finish = once(done);
+
+        func(expect, finish);
+
         function expect(kind, result) {
-            if (expectedI >= expected.length) {
-                finish(new Error(util.format(
-                    'got more than the expected %s results',
-                    expected.length)));
+            if (finish.called) {
                 return;
             }
 
+            if (expectedI >= expected.length) {
+                finish(TooManyResults({
+                    got: expectedI,
+                    expected: expected.length
+                }));
+                return;
+            }
             var e = expected[expectedI++];
             if (e[kind] === undefined) {
                 var eKind = Object.keys(e)[0];
                 if (kind === 'error') {
-                    assert.error(result);
+                    finish(result);
                 } else {
-                    assert.fail(util.format(
-                        'expected a %s, got a %s instead',
-                        eKind, kind));
+                    finish(MismatchedExpectationKind({
+                        got: null,
+                        expected: eKind
+                    }));
                 }
-            } else if (typeof e[kind] === 'function') {
-                e[kind](result, assert);
             } else {
-                assert.deepEqual(result, e[kind],
-                    util.format('got expected[%s] %s', expectedI, kind));
+                e[kind](result, assert);
             }
-
-            if (expectedI === expected.length) finish(null);
         }
 
-        function finish(err) {
-            if (done) {
-                if (err) throw err;
-                return;
+        function done(err) {
+            if (!err && expectedI < expected.length) {
+                err = TooFewResults({
+                    got: expectedI,
+                    expected: expected.length
+                });
             }
-            done = true;
-
             if (err) {
                 assert.end(err);
-                return;
-            }
-
-            parser.flush();
-            process.nextTick(function testDone() {
-                if (expectedI < expected.length) {
-                    assert.fail(util.format(
-                        'got less than the expected %s results',
-                        expected.length));
-                }
+            } else {
                 assert.end();
-            });
+            }
         }
     });
 }
