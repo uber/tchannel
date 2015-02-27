@@ -25,6 +25,7 @@ var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 
 var v2 = require('./index');
+
 module.exports = TChannelV2Handler;
 
 var TChannelApplicationError = TypedError({
