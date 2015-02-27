@@ -112,7 +112,7 @@ def test_valid_ping_request():
         'headers': {},
         'checksum_type': 1,
         'checksum': 3,
-        'arg_1': 'hi',
+        'arg_1': b'hi',
         'arg_2': b'\x00',
         'arg_3': None,
     })
