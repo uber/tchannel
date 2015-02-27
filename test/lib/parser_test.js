@@ -20,6 +20,7 @@
 
 'use strict';
 
+var PassThrough = require('stream').PassThrough;
 var TypedError = require('error/typed');
 var once = require('once');
 var test = require('tape');
@@ -28,21 +29,16 @@ module.exports = parserTest;
 
 function parserTest(desc, parser, chunks, expected) {
     testExpectations(desc, expected, function run(expect, done) {
+        var stream = passChunks(chunks);
         if (typeof parser === 'function') parser = parser();
 
-        parser.on('frame', function onFrame(frame) {
-            expect('frame', frame);
-        });
-        parser.on('error', function onError(error) {
-            expect('error', error);
-        });
+        observeStream(parser, function obs(err, frame) {
+            if (err) expect('error', err);
+            else expect('frame', frame);
+        }, done);
 
-        chunks.forEach(function eachPart(chunk) {
-            parser.execute(chunk);
-        });
-
-        parser.flush();
-        done();
+        stream
+            .pipe(parser);
     });
 }
 
@@ -116,4 +112,25 @@ function testExpectations(desc, expected, func) {
             }
         }
     });
+}
+
+function passChunks(chunks) {
+    var stream = PassThrough({
+        highWaterMark: 1
+    });
+    chunks.forEach(function(chunk) {
+        stream.push(chunk);
+    });
+    stream.push(null);
+    return stream;
+}
+
+function observeStream(stream, obs, done) {
+    stream.on('data', function onData(data) {
+        obs(null, data);
+    });
+    stream.on('error', function onError(error) {
+        obs(error, null);
+    });
+    stream.on('end', done);
 }

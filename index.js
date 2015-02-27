@@ -408,11 +408,6 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 
     self.socket.setNoDelay(true);
 
-    self.socket.on('data', function onSocketData(chunk) {
-        if (!self.closing) {
-            self.parser.execute(chunk);
-        }
-    });
     self.socket.on('error', function onSocketError(err) {
         self.onSocketErr(err);
     });
@@ -420,7 +415,8 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
         self.onSocketErr(new Error('socket closed')); // TODO typed error
     });
 
-    self.parser.on('frame', function onParserFrame(frame) {
+    // TODO: refactor handler to be objectMode Writable
+    self.parser.on('data', function onParserFrame(frame) {
         if (!self.closing) {
             self.onFrame(frame);
         }
@@ -454,6 +450,10 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     self.startTimeoutTimer();
 
     socket.once('close', clearTimer);
+
+    self.socket
+        .pipe(self.parser)
+        ;
 
     function clearTimer() {
         self.channel.clearTimeout(self.timer);
