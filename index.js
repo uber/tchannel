@@ -428,6 +428,8 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 
     self.handler.on('error', function onHandlerError(err) {
         self.resetAll(err);
+        // resetAll() does not close the socket
+        self.socket.destroy();
     });
 
     if (direction === 'out') {
