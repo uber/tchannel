@@ -8,7 +8,7 @@ except ImportError:
 
 import sys
 
-from tchannel.socket import Connection
+from tchannel.socket import SocketConnection
 
 
 class MyHandler(SocketServer.BaseRequestHandler):
@@ -18,7 +18,7 @@ class MyHandler(SocketServer.BaseRequestHandler):
         ``self.request`` is the TCP socket connected to the client.
         """
         self.request.settimeout(1.0)
-        tchannel_connection = Connection(connection=self.request)
+        tchannel_connection = SocketConnection(connection=self.request)
         print("Received request from %s:%d" % self.client_address)
 
         print("Waiting for TChannel handshake...")
@@ -35,7 +35,7 @@ class MyHandler(SocketServer.BaseRequestHandler):
         # Connection is automatically closed when this function returns
         print("Closing connection to %s:%d" % self.client_address)
 
-    def handle_call(self, connection, context, message):
+    def handle_call(self, context, message, connection):
         """Handle a TChannel CALL_REQ message."""
         print("Received message: %s" % message)
 
