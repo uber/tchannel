@@ -33,7 +33,8 @@ class BaseMessage(object):
     def _read_headers(self, stream, nh_size, header_size):
         """Read a variable number of headers.
 
-        Returns a tuple of (headers dict, bytes read)"""
+        Returns a tuple of (headers dict, bytes read).
+        """
         num_headers = read_number(stream, nh_size)
         bytes_read = nh_size
 
