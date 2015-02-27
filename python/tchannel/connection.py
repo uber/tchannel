@@ -18,6 +18,11 @@ class Connection(object):
         self._id_sequence = 0
 
     def handle_calls(self, handler):
+        """Dispatch calls to handler from the wire."""
+        raise NotImplementedError()
+
+    def await(self, callback):
+        """Decode a full message off the wire."""
         raise NotImplementedError()
 
     def next_message_id(self):
@@ -46,10 +51,6 @@ class Connection(object):
     def wrap(self, callback):
         if callback:
             return functools.partial(callback, connection=self)
-
-    def await(self, callback):
-        """Decode a full message and return"""
-        callback(next(self.reader))
 
     def await_handshake(self, headers, callback=None):
         """Negotiate a common protocol version with a client."""
