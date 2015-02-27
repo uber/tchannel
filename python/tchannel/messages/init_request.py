@@ -13,6 +13,7 @@ class InitRequestMessage(BaseMessage):
     """Initialize a connection to a TChannel server."""
     message_type = Types.INIT_REQ
     VERSION_SIZE = 2
+    NH_SIZE = 2
     HEADER_SIZE = 2
 
     HOST_PORT = 'host_port'
@@ -28,7 +29,9 @@ class InitRequestMessage(BaseMessage):
         self.version = read_short(payload)
         self.headers = {}
 
-        offset = self.VERSION_SIZE
+        payload.read(self.NH_SIZE)  # we don't use nh currently
+        offset = 4  # 2 bytes for version, 2 bytes for nh
+
         while offset < size:
             header_name, header_value, bytes_read = read_key_value(
                 payload,
@@ -39,5 +42,6 @@ class InitRequestMessage(BaseMessage):
 
     def serialize(self, out):
         out.extend(write_number(PROTOCOL_VERSION, self.VERSION_SIZE))
+        out.extend(write_number(len(self.headers), self.NH_SIZE))
         for key, value in self.headers.items():
-            out.extend(write_key_value(key, value, key_size=2))
+            out.extend(write_key_value(key, value, key_size=self.HEADER_SIZE))
