@@ -10,7 +10,6 @@ from .messages.types import Types
 
 class Connection(object):
     """Encapsulate transporting TChannel over an underlying stream."""
-    # Must be provided by subclasses
     def __init__(self, connection):
         self._connection = connection
         self._id_sequence = 0
