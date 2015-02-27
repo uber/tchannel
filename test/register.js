@@ -108,8 +108,8 @@ allocCluster.test('register() with different results', 2, function t(cluster, as
 
         var errorCall = results.errorCall;
         assert.ok(errorCall.err);
-        assert.equal(errorCall.err.message, 'abc');
-        assert.equal(errorCall.head, null);
+        assert.equal(String(errorCall.err.arg3), 'abc');
+        assert.deepEqual(errorCall.head, Buffer(0));
         assert.equal(errorCall.body, null);
 
         var bufferHead = results.bufferHead;
