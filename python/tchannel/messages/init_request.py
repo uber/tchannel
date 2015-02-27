@@ -1,8 +1,6 @@
 from __future__ import absolute_import
 
-from ..parser import read_key_value
 from ..parser import read_short
-from ..parser import write_key_value
 from ..parser import write_number
 from .base import BaseMessage
 from .common import PROTOCOL_VERSION
@@ -27,21 +25,12 @@ class InitRequestMessage(BaseMessage):
 
     def parse(self, payload, size):
         self.version = read_short(payload)
-        self.headers = {}
-
-        payload.read(self.NH_SIZE)  # we don't use nh currently
-        offset = 4  # 2 bytes for version, 2 bytes for nh
-
-        while offset < size:
-            header_name, header_value, bytes_read = read_key_value(
-                payload,
-                self.HEADER_SIZE,
-            )
-            offset += bytes_read
-            self.headers[header_name] = header_value
+        self.headers, _ = self._read_headers(
+            payload,
+            self.NH_SIZE,
+            self.HEADER_SIZE,
+        )
 
     def serialize(self, out):
         out.extend(write_number(PROTOCOL_VERSION, self.VERSION_SIZE))
-        out.extend(write_number(len(self.headers), self.NH_SIZE))
-        for key, value in self.headers.items():
-            out.extend(write_key_value(key, value, key_size=self.HEADER_SIZE))
+        self._write_headers(out, self.headers, self.NH_SIZE, self.HEADER_SIZE)

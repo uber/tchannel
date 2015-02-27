@@ -20,7 +20,7 @@ class ErrorMessage(BaseMessage):
     def parse(self, payload, size):
         self.code = read_number(payload, 1)
         self.original_message_id = read_number(payload, 4)
-        self.message = read_variable_length_key(payload, 2)
+        self.message, _ = read_variable_length_key(payload, 2)
 
     def serialize(self, out):
         out.extend(write_number(self.code, 1))
