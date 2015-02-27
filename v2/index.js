@@ -43,6 +43,11 @@ Frame.Types[Types.CallResponse] = call.Response;
 module.exports.CallRequest = call.Request;
 module.exports.CallResponse = call.Response;
 
+var ErrorResponse = require('./error_response');
+Types.ErrorResponse = ErrorResponse.TypeCode;
+Frame.Types[Types.ErrorResponse] = ErrorResponse;
+module.exports.ErrorResponse = ErrorResponse;
+
 module.exports.Checksum = require('./checksum');
 
 module.exports.Frame = Frame;
