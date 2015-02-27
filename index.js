@@ -153,6 +153,11 @@ TChannel.prototype.getEndpointHandler = function getEndpointHandler(name) {
 
 TChannel.prototype.register = function register(op, callback) {
     var self = this;
+
+    if (self.endpoints[op]) {
+        throw new Error('endpoint ' + op + ' is already defined'); // TODO typed error
+    }
+
     self.endpoints[op] = callback;
 };
 
