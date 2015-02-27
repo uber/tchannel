@@ -28,7 +28,7 @@ var read = require('../lib/read');
 var write = require('../lib/write');
 
 var ChecksumError = TypedError({
-    type: 'tchannel.checksum-error',
+    type: 'tchannel.checksum',
     message: 'invalid checksum',
     checksumType: null,
     expectedValue: null,

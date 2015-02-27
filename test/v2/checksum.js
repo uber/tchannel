@@ -59,7 +59,7 @@ test('read and verify crc32 checksum', function t(assert) {
         var good = csum.verify(parts[0], parts[1], parts[2]);
         assert.equal(good, null, 'crc32 expected to verify parts');
         var bad = csum.verify(uparts[0], uparts[1], uparts[2]);
-        assert.equal(bad && bad.type, 'tchannel.checksum-error', 'crc32 expected to fail');
+        assert.equal(bad && bad.type, 'tchannel.checksum', 'crc32 expected to fail');
         done();
     });
 });
@@ -70,7 +70,7 @@ test('read and verify farmhash32 checksum', function t(assert) {
         var good = csum.verify(parts[0], parts[1], parts[2]);
         assert.equal(good, null, 'farmhash32 expected to verify parts');
         var bad = csum.verify(uparts[0], uparts[1], uparts[2]);
-        assert.equal(bad && bad.type, 'tchannel.checksum-error', 'farmhash32 expected to fail');
+        assert.equal(bad && bad.type, 'tchannel.checksum', 'farmhash32 expected to fail');
         done();
     });
 });
