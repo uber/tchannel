@@ -166,19 +166,19 @@ TChannelHandler.prototype.sendInitResponse = function sendInitResponse(reqFrame)
     self.writeFrame(resFrame);
 };
 
-TChannelHandler.prototype.sendRequestFrame = function sendRequestFrame(options, callback) {
+/* jshint maxparams:5 */
+TChannelHandler.prototype.sendRequestFrame = function sendRequestFrame(options, arg1, arg2, arg3, callback) {
     var self = this;
     var id = self.nextFrameId();
     var reqFrame = new v1.Frame();
     reqFrame.header.id = id;
     reqFrame.header.seq = 0;
-    reqFrame.set(options.arg1, options.arg2, options.arg3);
+    reqFrame.set(arg1, arg2, arg3);
     reqFrame.header.type = v1.Types.reqCompleteMessage;
     self.writeFrame(reqFrame, callback);
     return id;
 };
 
-/* jshint maxparams:5 */
 TChannelHandler.prototype.sendResponseFrame = function sendResponseFrame(reqFrame, err, res1, res2, callback) {
     var self = this;
     var resFrame = new v1.Frame();

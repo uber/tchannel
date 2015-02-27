@@ -656,11 +656,7 @@ TChannelConnection.prototype.send = function send(options, arg1, arg2, arg3, cal
     //  throw new Error('duplicate frame id in flight'); // TODO typed error
     // }
 
-    var id = self.handler.sendRequestFrame({
-        arg1: arg1,
-        arg2: arg2,
-        arg3: arg3
-    }, function requestSent(err) {
+    var id = self.handler.sendRequestFrame(options, arg1, arg2, arg3, function requestSent(err) {
         if (err) {
             self.logger.warn('failed to send request', {
                 id: id,
