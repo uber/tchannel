@@ -25,7 +25,7 @@ var read = require('../../lib/read.js');
 var write = require('../../lib/write.js');
 
 var SizeMismatchError = TypedError({
-    type: 'test-frame.size-mismatch-error',
+    type: 'test-frame.size-mismatch',
     message: 'size ({size}) mismatches buffer length ({bufferLength})',
     size: null,
     bufferLength: null
