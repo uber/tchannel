@@ -12,6 +12,9 @@ class _IOStreamAdapter(object):
     def read(self, size, callback=None):
         """Read ``size`` bytes and run ``callback`` when ready.
 
+        Unlike a normal ``socket.recv(size)`` call, this will wait to call
+        ``callback`` until ``size`` bytes are available.
+
         Returns a future if no callback is given.
         """
         return self._stream.read_bytes(size, callback)
