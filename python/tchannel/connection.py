@@ -11,11 +11,20 @@ from .messages.types import Types
 class Connection(object):
     """Encapsulate transporting TChannel over an underlying stream."""
     def __init__(self, connection):
+        """Initialize a TChannel connection with an underlying transport.
+
+        ``connection`` must support ``read(num_bytes)`` and ``write(bytes_)``.
+        """
         self._connection = connection
         self._id_sequence = 0
 
     def handle_calls(self, handler):
-        """Dispatch calls to handler from the wire."""
+        """Dispatch calls to handler from the wire.
+
+        When a new message is received, we will call ``handler(data,
+        connection)`` where ``connection`` is a reference to the current
+        ``Connection`` object (e.g. ``self``).
+        """
         raise NotImplementedError()
 
     def await(self, callback):

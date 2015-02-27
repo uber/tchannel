@@ -32,7 +32,7 @@ class SocketConnection(Connection):
 
     def handle_calls(self, handler):
         for frame, message in self.reader:
-            handler(self, frame, message)
+            handler(frame, message, connection=self)
 
     def await(self, callback):
         """Decode a full message and return"""
