@@ -35,6 +35,14 @@ Frame.Types[Types.InitResponse] = init.Response;
 module.exports.InitRequest = init.Request;
 module.exports.InitResponse = init.Response;
 
+var call = require('./call');
+Types.CallRequest = call.Request.TypeCode;
+Types.CallResponse = call.Response.TypeCode;
+Frame.Types[Types.CallRequest] = call.Request;
+Frame.Types[Types.CallResponse] = call.Response;
+module.exports.CallRequest = call.Request;
+module.exports.CallResponse = call.Response;
+
 module.exports.Checksum = require('./checksum');
 
 module.exports.Frame = Frame;
