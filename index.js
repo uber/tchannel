@@ -20,7 +20,7 @@
 
 'use strict';
 
-var v1 = require('./v1');
+var v2 = require('./v2');
 var nullLogger = require('./null-logger.js');
 var globalClearTimeout = require('timers').clearTimeout;
 var globalSetTimeout = require('timers').setTimeout;
@@ -390,8 +390,8 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     self.lastTimeoutTime = 0;
     self.closing = false;
 
-    self.parser = new v1.Parser(self);
-    self.handler = new v1.Handler(self.channel, {
+    self.parser = new v2.Parser(v2.Frame);
+    self.handler = new v2.Handler(self.channel, {
         writeFrame: function writeFrame(frame, callback) {
             self._writeFrame(frame, callback);
         },
@@ -663,11 +663,7 @@ TChannelConnection.prototype.send = function send(options, arg1, arg2, arg3, cal
     //  throw new Error('duplicate frame id in flight'); // TODO typed error
     // }
 
-    var id = self.handler.sendRequestFrame({
-        arg1: arg1,
-        arg2: arg2,
-        arg3: arg3
-    }, function requestSent(err) {
+    var id = self.handler.sendRequestFrame(options, arg1, arg2, arg3, function requestSent(err) {
         if (err) {
             self.logger.warn('failed to send request', {
                 id: id,

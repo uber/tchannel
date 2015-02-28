@@ -134,7 +134,16 @@ Test.prototype.send_next = function () {
         cur_client = this.commands_sent % this.clients.length,
         start = Date.now();
 
-    this.clients[cur_client].send({host: '127.0.0.1:4040'}, this.arg1, this.arg2, this.arg3, function (err, res1, res2) {
+    this.clients[cur_client].send({
+        host: '127.0.0.1:4040',
+        timeout: 10000,
+        service: 'benchmark',
+        headers: {
+            benchHeader1: 'bench value one',
+            benchHeader2: 'bench value two',
+            benchHeader3: 'bench value three'
+        }
+    }, this.arg1, this.arg2, this.arg3, function (err, res1, res2) {
         if (err) {
             throw err;
         }

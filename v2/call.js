@@ -50,7 +50,11 @@ function CallRequest(flags, ttl, tracing, service, headers, csum, arg1, arg2, ar
     self.tracing = tracing || emptyTracing;
     self.service = service || emptyBuffer;
     self.headers = headers || {};
-    self.csum = Checksum.objOrType(csum);
+    if (csum === undefined || csum === null) {
+        self.csum = Checksum(Checksum.Types.None);
+    } else {
+        self.csum = Checksum.objOrType(csum);
+    }
     self.arg1 = arg1 || emptyBuffer;
     self.arg2 = arg2 || emptyBuffer;
     self.arg3 = arg3 || emptyBuffer;
@@ -117,7 +121,11 @@ function CallResponse(flags, code, headers, csum, arg1, arg2, arg3) {
     self.flags = flags || 0;
     self.code = code || CallResponse.Codes.OK;
     self.headers = headers || {};
-    self.csum = Checksum.objOrType(csum);
+    if (csum === undefined || csum === null) {
+        self.csum = Checksum(Checksum.Types.None);
+    } else {
+        self.csum = Checksum.objOrType(csum);
+    }
     self.arg1 = arg1 || emptyBuffer;
     self.arg2 = arg2 || emptyBuffer;
     self.arg3 = arg3 || emptyBuffer;
