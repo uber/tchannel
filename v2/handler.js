@@ -126,7 +126,7 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
     }
 
     var handler = self.channel.getEndpointHandler(name);
-    var headers = {};
+    var responseHeaders = {};
 
     // TODO: couple reqFrame.body.tracing for all downstream requests
     // TODO: implement service name?
@@ -136,9 +136,9 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
         arg1: reqFrame.body.arg1,
         arg2: reqFrame.body.arg2,
         arg3: reqFrame.body.arg3,
-        headers: headers
+        responseHeaders: responseHeaders
     }, function sendResponseFrame(err, res1, res2, callback) {
-        self.sendResponseFrame(reqFrame, headers, err, res1, res2, callback);
+        self.sendResponseFrame(reqFrame, responseHeaders, err, res1, res2, callback);
     });
 };
 
