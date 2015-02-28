@@ -174,7 +174,10 @@ TChannelV2Handler.prototype.handleError = function handleError(errFrame) {
     var id = errFrame.id;
     var code = errFrame.body.code;
     var message = errFrame.body.message;
-    var err = v2.ErrorResponse.CodeErrors[code]({message: message});
+    var err = v2.ErrorResponse.CodeErrors[code]({
+        originalId: id,
+        message: message
+    });
     self.completeOutOp(err, id, null, null);
 };
 
