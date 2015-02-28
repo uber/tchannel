@@ -128,11 +128,11 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
     var handler = self.channel.getEndpointHandler(name);
     var responseHeaders = {};
 
-    // TODO: couple reqFrame.body.tracing for all downstream requests
-    // TODO: implement service name?
-
     self.runInOp(handler, {
         id: id,
+        tracing: reqFrame.tracing,
+        service: reqFrame.service,
+        requestHeaders: reqFrame.headers,
         arg1: reqFrame.body.arg1,
         arg2: reqFrame.body.arg2,
         arg3: reqFrame.body.arg3,
