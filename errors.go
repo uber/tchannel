@@ -1,6 +1,7 @@
 package tchannel
 
 import (
+	"fmt"
 	"io"
 )
 
