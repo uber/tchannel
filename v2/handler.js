@@ -221,13 +221,14 @@ TChannelV2Handler.prototype.sendResponseFrame = function sendResponseFrame(reqFr
     var id = reqFrame.id;
     var flags = 0; // TODO: streaming
     var arg1 = reqFrame.body.arg1;
+    var tracing = reqFrame.body.tracing;
     var checksumType = reqFrame.body.csum.type;
     var resBody;
     if (err) {
         var errArg = isError(err) ? err.message : JSON.stringify(err); // TODO: better
-        resBody = v2.CallResponse(flags, v2.CallResponse.Codes.Error, headers, checksumType, arg1, res1, errArg);
+        resBody = v2.CallResponse(flags, v2.CallResponse.Codes.Error, tracing, headers, checksumType, arg1, res1, errArg);
     } else {
-        resBody = v2.CallResponse(flags, v2.CallResponse.Codes.OK, headers, checksumType, arg1, res1, res2);
+        resBody = v2.CallResponse(flags, v2.CallResponse.Codes.OK, tracing, headers, checksumType, arg1, res1, res2);
     }
     var resFrame = v2.Frame(id, resBody);
     self.writeFrame(resFrame, callback);
