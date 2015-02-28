@@ -23,100 +23,78 @@
 var TypedError = require('error/typed');
 var read = require('../lib/read');
 var write = require('../lib/write');
-
-var DuplicateInitHeaderError = TypedError({
-    type: 'tchannel.duplicate-init-header',
-    message: 'duplicate init frame header {name}',
-    name: null
-});
-
-var InvalidInitHeaderError = TypedError({
-    type: 'tchannel.invalid-init-header',
-    message: 'invalid init frame header {name}',
-    name: null
-});
+var header = require('./header');
 
 module.exports.Request = InitRequest;
 module.exports.Response = InitResponse;
 
-function InitRequest(version, hostPort, processName) {
+var MissingInitHeaderError = TypedError({
+    type: 'tchannel.missing-init-header',
+    message: 'missing init frame header {field}',
+    field: null
+});
+
+var RequiredHeaderFields = ['host_port', 'process_name'];
+
+function InitRequest(version, headers) {
     if (!(this instanceof InitRequest)) {
-        return new InitRequest(version, hostPort, processName);
+        return new InitRequest(version, headers);
     }
     var self = this;
     self.type = InitRequest.TypeCode;
     self.version = version || 0;
-    self.hostPort = hostPort || '';
-    self.processName = processName || '';
+    self.headers = headers || {};
 }
 
 InitRequest.TypeCode = 0x01;
 
 function buildInitReqRes(Type, results, buffer, offset) {
     var version = results[0];
-    var hostPort;
-    var processName;
-
-    for (var i=1; i<results.length; i++) {
-        var pair = results[i];
-        var k = String(pair[0]);
-        var v = String(pair[1]);
-        switch (k) {
-            case 'host_port':
-                if (hostPort) {
-                    return [DuplicateInitHeaderError({name: 'host_port'}), offset, null];
-                }
-                hostPort = v;
-                break;
-            case 'process_name':
-                if (processName) {
-                    return [DuplicateInitHeaderError({name: 'process_name'}), offset, null];
-                }
-                processName = v;
-                break;
-            default:
-                return [InvalidInitHeaderError({name: k}), offset, null];
+    var headers = results[1];
+    for (var i = 0; i < RequiredHeaderFields.length; ++i) {
+        var field = RequiredHeaderFields[i];
+        if (headers[field] === undefined) {
+            return [MissingInitHeaderError({field: field}), offset, null];
         }
     }
-
-    var req = new Type(version, hostPort, processName);
+    var req = new Type(version, headers);
     return [null, offset, req];
 }
 
 InitRequest.read = read.chained(read.series([
     read.UInt16BE, // version:2
-    read.pair2,    // key~2 value~2
-    read.pair2     // key~2 value~2
+    header.read2   // nh:2 (hk~2 hv~2){nh}
 ]), function buildInitReq(results, buffer, offset) {
     return buildInitReqRes(InitRequest, results, buffer, offset);
 });
 
 InitRequest.prototype.write = function encode() {
     var self = this;
+    for (var i = 0; i < RequiredHeaderFields.length; ++i) {
+        var field = RequiredHeaderFields[i];
+        if (self.headers[field] === undefined) {
+            throw MissingInitHeaderError({field: field});
+        }
+    }
     return write.series([
-        write.UInt16BE(self.version),                    // version:2
-        write.buf2('host_port'),                         // key~2
-        write.buf2(self.hostPort, 'init hostPort'),      // value~2
-        write.buf2('process_name'),                      // key~2
-        write.buf2(self.processName, 'init processName') // value~2
+        write.UInt16BE(self.version), // version:2
+        header.write2(self.headers)   // nh:2 (hk~2 hv~2){nh}
     ]);
 };
 
-function InitResponse(version, hostPort, processName) {
+function InitResponse(version, headers) {
     if (!(this instanceof InitResponse)) {
-        return new InitResponse(version, hostPort, processName);
+        return new InitResponse(version, headers);
     }
     var self = this;
     self.type = InitResponse.TypeCode;
-    self.version = version;
-    self.hostPort = hostPort;
-    self.processName = processName;
+    self.version = version || 0;
+    self.headers = headers || {};
 }
 InitResponse.TypeCode = 0x02;
 InitResponse.read = read.chained(read.series([
     read.UInt16BE, // version:2
-    read.pair2,    // key~2 value~2
-    read.pair2     // key~2 value~2
+    header.read2   // nh:2 (hk~2 hv~2){nh}
 ]), function buildInitReq(results, buffer, offset) {
     return buildInitReqRes(InitResponse, results, buffer, offset);
 });
