@@ -94,8 +94,10 @@ TChannelV2Handler.prototype.handleInitRequest = function handleInitRequest(reqFr
         self.emit('error', new Error('duplicate init request')); // TODO typed error
         return;
     }
-    var hostPort = reqFrame.body.hostPort;
-    var processName = reqFrame.body.processName;
+    /* jshint camelcase:false */
+    var hostPort = reqFrame.body.headers.host_port;
+    var processName = reqFrame.body.headers.process_name;
+    /* jshint camelcase:true */
     self.remoteHostPort = hostPort;
     // TODO: use processName
     self.emit('identify.in', hostPort, processName);
@@ -108,8 +110,10 @@ TChannelV2Handler.prototype.handleInitResponse = function handleInitResponse(res
         self.emit('error', new Error('duplicate init response')); // TODO typed error
         return;
     }
-    var hostPort = resFrame.body.hostPort;
-    var processName = resFrame.body.processName;
+    /* jshint camelcase:false */
+    var hostPort = resFrame.body.headers.host_port;
+    var processName = resFrame.body.headers.process_name;
+    /* jshint camelcase:true */
     // TODO: use processName
     self.remoteHostPort = hostPort;
     self.emit('identify.out', hostPort, processName);
@@ -179,7 +183,12 @@ TChannelV2Handler.prototype.sendInitRequest = function sendInitRequest() {
     var id = self.nextFrameId(); // TODO: assert(id === 1)?
     var hostPort = self.channel.hostPort;
     var processName = self.channel.processName;
-    var body = v2.InitRequest(v2.VERSION, hostPort, processName);
+    var body = v2.InitRequest(v2.VERSION, {
+        /* jshint camelcase:false */
+        host_port: hostPort,
+        process_name: processName
+        /* jshint camelcase:true */
+    });
     var reqFrame = v2.Frame(id, body);
     self.writeFrame(reqFrame);
 };
@@ -189,7 +198,12 @@ TChannelV2Handler.prototype.sendInitResponse = function sendInitResponse(reqFram
     var id = reqFrame.id;
     var hostPort = self.channel.hostPort;
     var processName = self.channel.processName;
-    var body = v2.InitResponse(v2.VERSION, hostPort, processName);
+    var body = v2.InitResponse(v2.VERSION, {
+        /* jshint camelcase:false */
+        host_port: hostPort,
+        process_name: processName
+        /* jshint camelcase:true */
+    });
     var resFrame = v2.Frame(id, body);
     self.writeFrame(resFrame);
 };

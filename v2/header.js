@@ -75,3 +75,42 @@ module.exports.write = function writeHeaders(headers) {
     }
     return write.series(parts);
 };
+
+// nh:2 (hk~2 hv~2){nh}
+module.exports.read2 = read.chained(read.UInt16BE, function readHeaders(numHeaders, buffer, offset) {
+    var headers = {};
+    for (var i=0; i<numHeaders; i++) {
+        var res = read.pair2(buffer, offset);
+        if (res[0]) return res;
+        offset = res[1];
+        var pair = res[2];
+        if (!pair[0].length) {
+            return [NullKeyError(), offset, null];
+        }
+        var key = String(pair[0]);
+        var val = String(pair[1]);
+        if (headers[key] !== undefined) {
+            return [DuplicateHeaderKeyError({
+                key: key,
+                value: val,
+                priorValue: headers[key]
+            }), offset, null];
+        }
+        headers[key] = val;
+    }
+    return [null, offset, headers];
+});
+
+// nh:2 (hk~2 hv~2){nh}
+module.exports.write2 = function write2Headers(headers) {
+    var keys = Object.keys(headers);
+    var parts = new Array(1 + 2 * keys.length);
+    parts[0] = write.UInt16BE(keys.length);
+    for (var i=0, j=0; i<keys.length; i++) {
+        var key = write.buf2(keys[i], 'header key');
+        var val = write.buf2(headers[keys[i]], 'header val');
+        parts[++j] = key;
+        parts[++j] = val;
+    }
+    return write.series(parts);
+};
