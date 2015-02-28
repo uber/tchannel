@@ -22,6 +22,7 @@
 
 var v2 = require('./v2');
 var nullLogger = require('./null-logger.js');
+var debuglog = require('./lib/debug-log.js');
 var globalClearTimeout = require('timers').clearTimeout;
 var globalSetTimeout = require('timers').setTimeout;
 var globalNow = Date.now;
@@ -29,6 +30,9 @@ var globalRandom = Math.random;
 var net = require('net');
 var format = require('util').format;
 var inspect = require('util').inspect;
+var hexer = require('hexer');
+
+var debugHex = debuglog('tchannelhexer');
 
 function TChannel(options) {
     if (!(this instanceof TChannel)) {
@@ -721,6 +725,9 @@ TChannelConnection.prototype._writeFrame = function _writeFrame(frame, callback)
         }
     } else {
         var buffer = frame.toBuffer();
+        if (debugHex.enabled) {
+            debugHex('outgoing frame: \n%s', hexer(buffer));
+        }
         self.socket.write(buffer, null, callback);
     }
 };
