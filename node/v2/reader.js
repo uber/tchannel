@@ -25,9 +25,9 @@ var inherits = require('util').inherits;
 var Transform = require('stream').Transform;
 var ParseBuffer = require('./parse_buffer');
 
-var BrokenParserStateError = TypedError({
-    type: 'tchannel.broken-parser-state',
-    message: 'parser in invalid state {state}',
+var BrokenReaderStateError = TypedError({
+    type: 'tchannel.broken-reader-state',
+    message: 'reader in invalid state {state}',
     state: null
 });
 
@@ -37,25 +37,25 @@ var ShortChunkRead = TypedError({
     remaining: null
 });
 
-var TruncatedParseError = TypedError({
-    type: 'tchannel.truncated-parse',
-    message: 'parse truncated by end of stream with {length} bytes in buffer',
+var TruncatedReadError = TypedError({
+    type: 'tchannel.truncated-read',
+    message: 'read truncated by end of stream with {length} bytes in buffer',
     length: null,
     buffer: null,
     state: null,
     expecting: null
 });
 
-module.exports = ChunkParser;
+module.exports = ChunkReader;
 
 var States = {
     PendingLength: 0,
     Seeking: 1
 };
 
-function ChunkParser(FrameType, options) {
-    if (!(this instanceof ChunkParser)) {
-        return new ChunkParser(FrameType, options);
+function ChunkReader(FrameType, options) {
+    if (!(this instanceof ChunkReader)) {
+        return new ChunkReader(FrameType, options);
     }
     options = options || {};
     Transform.call(this, options);
@@ -81,9 +81,9 @@ function ChunkParser(FrameType, options) {
     }
 }
 
-inherits(ChunkParser, Transform);
+inherits(ChunkReader, Transform);
 
-ChunkParser.prototype._transform = function _transform(chunk, encoding, callback) {
+ChunkReader.prototype._transform = function _transform(chunk, encoding, callback) {
     var self = this;
     if (!callback) {
         callback = emitIt;
@@ -102,7 +102,7 @@ ChunkParser.prototype._transform = function _transform(chunk, encoding, callback
                 self.state = States.PendingLength;
                 break;
             default:
-                callback(BrokenParserStateError({state: self.state}));
+                callback(BrokenReaderStateError({state: self.state}));
                 return;
         }
     }
@@ -113,11 +113,11 @@ ChunkParser.prototype._transform = function _transform(chunk, encoding, callback
     }
 };
 
-ChunkParser.prototype._flush = function _flush(callback) {
+ChunkReader.prototype._flush = function _flush(callback) {
     var self = this;
     var avail = self.buffer.avail();
     if (avail) {
-        callback(TruncatedParseError({
+        callback(TruncatedReadError({
             length: avail,
             state: self.state,
             expecting: self.expecting
@@ -130,7 +130,7 @@ ChunkParser.prototype._flush = function _flush(callback) {
     }
 };
 
-ChunkParser.prototype.handleFrame = function handleFrame(chunk, callback) {
+ChunkReader.prototype.handleFrame = function handleFrame(chunk, callback) {
     var self = this;
     if (!callback) {
         callback = emitFrame;
@@ -160,17 +160,17 @@ ChunkParser.prototype.handleFrame = function handleFrame(chunk, callback) {
     }
 };
 
-ChunkParser.prototype._readUInt8Length = function _readUInt8Length() {
+ChunkReader.prototype._readUInt8Length = function _readUInt8Length() {
     var self = this;
     return self.buffer.readUInt8(0);
 };
 
-ChunkParser.prototype._readUInt16BELength = function _readUInt16BELength() {
+ChunkReader.prototype._readUInt16BELength = function _readUInt16BELength() {
     var self = this;
     return self.buffer.readUInt16BE(0);
 };
 
-ChunkParser.prototype._readUInt32BELength = function _readUInt32BELength() {
+ChunkReader.prototype._readUInt32BELength = function _readUInt32BELength() {
     var self = this;
     return self.buffer.readUInt32BE(0);
 };
