@@ -82,6 +82,13 @@ test('write a Call.Request', function t(assert) {
 var testCallRes = Buffer([
     0x00,                   // flags:1
     Call.Response.Codes.OK, // code:1
+    0x00, 0x01, 0x02, 0x03, // tracing:24
+    0x04, 0x05, 0x06, 0x07, // ...
+    0x08, 0x09, 0x0a, 0x0b, // ...
+    0x0c, 0x0d, 0x0e, 0x0f, // ...
+    0x10, 0x11, 0x12, 0x13, // ...
+    0x14, 0x15, 0x16, 0x17, // ...
+    0x18,                   // traceflags:1
     0x01,                   // nh:1
     0x03, 0x6b, 0x65, 0x79, // (hk~1 hv~1){nh}
     0x03, 0x76, 0x61, 0x6c, // ...
@@ -95,6 +102,7 @@ test('read a Call.Response', function t(assert) {
     testRead(assert, Call.Response.read, testCallRes, function s(res, done) {
         assert.equal(res.flags, 0, 'expected flags');
         assert.equal(res.code, Call.Response.Codes.OK, 'expected code');
+        assert.deepEqual(res.tracing, testTracing, 'expected tracing data');
         assert.equal(Object.keys(res.headers).length, 1, 'expected one header');
         assert.equal(res.headers.key, 'val', 'expected header key => val');
         assert.equal(res.csum.type, 0, 'expected no checksum');
@@ -107,7 +115,7 @@ test('read a Call.Response', function t(assert) {
 
 test('write a Call.Response', function t(assert) {
     var req = Call.Response(
-        0, Call.Response.Codes.OK, {key: 'val'},
+        0, Call.Response.Codes.OK, testTracing, {key: 'val'},
         0, 'on', 'to', 'te');
     assert.deepEqual(
         req.write().create(), testCallRes,
