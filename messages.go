@@ -1,9 +1,7 @@
 package tchannel
 
 import (
-	"bytes"
-	"code.uber.internal/infra/mmihic/tchannel-go/binio"
-	"fmt"
+	"code.uber.internal/infra/mmihic/tchannel-go/typed"
 	"io"
 	"time"
 )
@@ -43,8 +41,8 @@ type Message interface {
 	// The type of the message
 	Type() MessageType
 
-	read(r binio.Reader) error
-	write(r binio.Writer) error
+	read(r typed.Reader) error
+	write(r typed.Writer) error
 }
 
 // Parameters to an InitReq/InitRes
@@ -56,7 +54,7 @@ type initMessage struct {
 	InitParams InitParams
 }
 
-func (m *initMessage) read(r binio.Reader) error {
+func (m *initMessage) read(r typed.Reader) error {
 	var err error
 	m.Version, err = r.ReadUint16()
 	if err != nil {
@@ -89,7 +87,7 @@ func (m *initMessage) read(r binio.Reader) error {
 	}
 }
 
-func (m *initMessage) write(w binio.Writer) error {
+func (m *initMessage) write(w typed.Writer) error {
 	if err := w.WriteUint16(m.Version); err != nil {
 		return err
 	}
@@ -134,7 +132,7 @@ func (m *InitRes) Type() MessageType { return MessageTypeInitRes }
 // Headers passed as part of a CallReq/CallRes
 type CallHeaders map[string]string
 
-func (ch CallHeaders) read(r binio.Reader) error {
+func (ch CallHeaders) read(r typed.Reader) error {
 	nh, err := r.ReadByte()
 	if err != nil {
 		return err
@@ -167,7 +165,7 @@ func (ch CallHeaders) read(r binio.Reader) error {
 	return nil
 }
 
-func (ch CallHeaders) write(w binio.Writer) error {
+func (ch CallHeaders) write(w typed.Writer) error {
 	if err := w.WriteByte(byte(len(ch))); err != nil {
 		return err
 	}
@@ -206,12 +204,12 @@ type CallReq struct {
 	TraceFlags byte
 	Headers    CallHeaders
 	Service    []byte
-	Args       []byte
+	ArgStream  []byte
 }
 
 func (m *CallReq) Id() uint32        { return m.id }
 func (m *CallReq) Type() MessageType { return MessageTypeCallReq }
-func (m *CallReq) read(r binio.Reader) error {
+func (m *CallReq) read(r typed.Reader) error {
 	ttl, err := r.ReadUint32()
 	if err != nil {
 		return err
@@ -249,11 +247,10 @@ func (m *CallReq) read(r binio.Reader) error {
 	}
 
 	// TODO(mmihic): Do non-copy read of remainder of fragment, if possible
-
 	return nil
 }
 
-func (m *CallReq) write(w binio.Writer) error {
+func (m *CallReq) write(w typed.Writer) error {
 	if err := w.WriteUint32(uint32(m.TimeToLive.Seconds() * 1000)); err != nil {
 		return err
 	}
@@ -316,7 +313,7 @@ type CallRes struct {
 func (m *CallRes) Id() uint32        { return m.id }
 func (m *CallRes) Type() MessageType { return MessageTypeCallRes }
 
-func (m *CallRes) read(r binio.Reader) error {
+func (m *CallRes) read(r typed.Reader) error {
 	c, err := r.ReadByte()
 	if err != nil {
 		return err
@@ -331,7 +328,7 @@ func (m *CallRes) read(r binio.Reader) error {
 	return nil
 }
 
-func (m *CallRes) write(w binio.Writer) error {
+func (m *CallRes) write(w typed.Writer) error {
 	if err := w.WriteByte(byte(m.ResponseCode)); err != nil {
 		return err
 	}
@@ -347,7 +344,7 @@ func (m *CallRes) write(w binio.Writer) error {
 	return nil
 }
 
-func writeArg(arg []byte, w binio.Writer) error {
+func writeArg(arg []byte, w typed.Writer) error {
 	if err := w.WriteUint32(uint32(len(arg))); err != nil {
 		return err
 	}
@@ -355,91 +352,11 @@ func writeArg(arg []byte, w binio.Writer) error {
 	return w.WriteBytes(arg)
 }
 
-func readArg(r binio.Reader) ([]byte, error) {
+func readArg(r typed.Reader) ([]byte, error) {
 	l, err := r.ReadUint32()
 	if err != nil {
 		return nil, err
 	}
 
 	return r.ReadBytes(int(l))
-}
-
-type MessageReader interface {
-	Read() (Message, error)
-}
-
-type MessageWriter interface {
-	Write(msg Message) error
-}
-
-func NewMessageReader(r io.Reader) MessageReader {
-	return &messageReader{r: NewFrameReader(r)}
-}
-
-type messageReader struct {
-	r *FrameReader
-}
-
-func (r *messageReader) Read() (Message, error) {
-	// TODO(mmihic): Implement fragmentation once we have that better resolved
-	frame, err := r.r.ReadFrame()
-	if err != nil {
-		return nil, err
-	}
-
-	var msg Message
-	switch frame.Header.Type {
-	case MessageTypeInitReq:
-		msg = &InitReq{initMessage{id: frame.Header.Id}}
-	case MessageTypeInitRes:
-		msg = &InitRes{initMessage{id: frame.Header.Id}}
-	case MessageTypeCallReq:
-		msg = &CallReq{id: frame.Header.Id}
-	case MessageTypeCallRes:
-		msg = &CallRes{id: frame.Header.Id}
-	default:
-		return nil, fmt.Errorf("unsupported message type %x", frame.Header.Type)
-	}
-
-	br := binio.NewReader(bytes.NewReader(frame.Payload))
-	if err := msg.read(br); err != nil {
-		return nil, err
-	}
-
-	return msg, nil
-}
-
-// Creates a new MessageWriter over the given io.Writer
-func NewMessageWriter(w io.Writer) MessageWriter {
-	return &messageWriter{w: NewFrameWriter(w)}
-}
-
-type messageWriter struct {
-	w *FrameWriter
-}
-
-func (w *messageWriter) Write(msg Message) error {
-	// TODO(mmihic): This is not good
-	var payloadBuffer bytes.Buffer
-	bw := binio.NewWriter(&payloadBuffer)
-	if err := msg.write(bw); err != nil {
-		return err
-	}
-
-	if err := bw.Flush(); err != nil {
-		return err
-	}
-
-	payload := payloadBuffer.Bytes()
-
-	frame := Frame{
-		Header: FrameHeader{
-			Id:   msg.Id(),
-			Type: msg.Type(),
-			Size: uint16(len(payload)),
-		},
-		Payload: payload,
-	}
-
-	return w.w.WriteFrame(&frame)
 }

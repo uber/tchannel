@@ -1,7 +1,7 @@
 GODEPS = $(realpath ./Godeps/_workspace)
 GOPATH := $(GODEPS):$(GOPATH)
 PATH := $(GODEPS)/bin:$(PATH)
-PKGS := ./ ./binio
+PKGS := ./ ./binio ./typed
 
 # target: all - Run tests
 all: test

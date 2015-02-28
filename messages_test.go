@@ -1,8 +1,7 @@
 package tchannel
 
 import (
-	"bytes"
-	"code.uber.internal/infra/mmihic/tchannel-go/binio"
+	"code.uber.internal/infra/mmihic/tchannel-go/typed"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -77,56 +76,12 @@ func TestCallRes(t *testing.T) {
 	assertRoundTrip(t, &r, &CallRes{id: 0xDEADBEEF})
 }
 
-func TestMessageWriterReader(t *testing.T) {
-	req := &CallReq{
-		id:         0xDEADBEEF,
-		TimeToLive: time.Second * 45,
-		Tracing: Tracing{
-			TraceId:  294390430934,
-			ParentId: 398348934,
-			SpanId:   12762782,
-		},
-		TraceFlags: 0x01,
-		Headers: CallHeaders{
-			"r": "c",
-			"f": "d",
-		},
-		Service: []byte("udr"),
-	}
-
-	var b bytes.Buffer
-	w := NewMessageWriter(&b)
-	err := w.Write(req)
-	require.Nil(t, err, "error writing message")
-
-	res := &CallRes{
-		id:           0xDEADBEEF,
-		ResponseCode: ServiceBusy,
-		Headers: CallHeaders{
-			"r": "c",
-			"f": "d",
-		},
-	}
-	err = w.Write(res)
-	require.Nil(t, err, "error writing second message")
-
-	r := NewMessageReader(bytes.NewReader(b.Bytes()))
-	msg, err := r.Read()
-	require.Nil(t, err, "error reading request")
-	assert.Equal(t, req, msg, "pre- and post-marshalled requests do not match")
-
-	msg, err = r.Read()
-	require.Nil(t, err, "error reading response")
-	assert.Equal(t, res, msg, "pre- and post-marshalled responses do not match")
-}
-
 func assertRoundTrip(t *testing.T, expected Message, actual Message) {
-	var b bytes.Buffer
-	w := binio.NewWriter(&b)
+	var bytes [1024]byte
+	w := typed.NewWriter(bytes[:])
 	require.Nil(t, expected.write(w), fmt.Sprintf("error writing message %s", expected.Type()))
-	require.Nil(t, w.Flush(), "error flushing message")
 
-	r := binio.NewReader(bytes.NewReader(b.Bytes()))
+	r := typed.NewReader(bytes[0:w.BytesWritten()])
 	require.Nil(t, actual.read(r), fmt.Sprintf("error reading message %s", expected.Type()))
 
 	assert.Equal(t, expected, actual, fmt.Sprintf("pre- and post-marshal %s do not match", expected.Type()))

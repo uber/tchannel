@@ -1,9 +1,7 @@
 package tchannel
 
 import (
-	"bytes"
-	"code.uber.internal/infra/mmihic/tchannel-go/binio"
-	"fmt"
+	"code.uber.internal/infra/mmihic/tchannel-go/typed"
 	"io"
 	"math"
 )
@@ -13,39 +11,6 @@ const (
 	FrameHeaderSize     = 16
 	MaxFrameSize        = MaxFramePayloadSize + FrameHeaderSize
 )
-
-type IOError struct {
-	msg string
-	err error
-}
-
-func NewReadIOError(part string, err error) error {
-	return IOError{msg: fmt.Sprintf("error reading %s: %v", part, err), err: err}
-}
-
-func NewWriteIOError(part string, err error) error {
-	return IOError{msg: fmt.Sprintf("error writing %s: %v", part, err), err: err}
-}
-
-func (err IOError) Error() string {
-	return err.msg
-}
-
-func (err IOError) Underlying() error {
-	return err.err
-}
-
-func EOF(err error) bool {
-	if err == io.EOF {
-		return true
-	}
-
-	if ioerr, ok := err.(IOError); ok {
-		return EOF(ioerr.Underlying())
-	}
-
-	return false
-}
 
 // Header for frames
 type FrameHeader struct {
@@ -65,7 +30,7 @@ type FrameHeader struct {
 	reserved [8]byte
 }
 
-func (fh *FrameHeader) read(r binio.Reader) error {
+func (fh *FrameHeader) read(r typed.Reader) error {
 	var err error
 	fh.Size, err = r.ReadUint16()
 	if err != nil {
@@ -88,14 +53,14 @@ func (fh *FrameHeader) read(r binio.Reader) error {
 		return NewReadIOError("frame msg id", err)
 	}
 
-	if err := r.ReadFull(fh.reserved[:]); err != nil {
+	if _, err := r.ReadBytes(len(fh.reserved)); err != nil {
 		return NewReadIOError("frame reserved1", err)
 	}
 
 	return nil
 }
 
-func (fh *FrameHeader) write(w binio.Writer) error {
+func (fh *FrameHeader) write(w typed.Writer) error {
 	if err := w.WriteUint16(fh.Size); err != nil {
 		return NewWriteIOError("frame size", err)
 	}
@@ -121,8 +86,15 @@ func (fh *FrameHeader) write(w binio.Writer) error {
 
 // A Frame, consisting of a header and a payload
 type Frame struct {
+	pool    FrameBufferPool
 	Header  FrameHeader
 	Payload []byte
+}
+
+// Implements the io.Closer interface
+func (f Frame) Close() error {
+	f.pool.Release(f.Payload)
+	return nil
 }
 
 // Pool managing frame buffers.  We know the max size of a frame, so we can more efficiently pool these
@@ -164,12 +136,11 @@ func (r *FrameReader) ReadFrame() (Frame, error) {
 		return frame, err
 	}
 
-	br := binio.NewReader(bytes.NewReader(r.frameHeaderBuf[:]))
+	br := typed.NewReader(r.frameHeaderBuf[:])
 	if err := frame.Header.read(br); err != nil {
 		return frame, err
 	}
 
-	// TODO(mmihic): Provide a way of managing memory for the payload buffers
 	frame.Payload = r.pool.Get(int(frame.Header.Size))
 	if _, err := io.ReadFull(r.r, frame.Payload); err != nil {
 		return frame, err
@@ -190,12 +161,13 @@ func NewFrameWriter(w io.Writer) *FrameWriter {
 
 // Writes a frame to the underlying stream
 func (w *FrameWriter) WriteFrame(f *Frame) error {
-	bw := binio.NewWriterSize(w.w, FrameHeaderSize)
-	if err := f.Header.write(bw); err != nil {
+	var fh [FrameHeaderSize]byte
+	tw := typed.NewWriter(fh[:])
+	if err := f.Header.write(tw); err != nil {
 		return err
 	}
 
-	if err := bw.Flush(); err != nil {
+	if _, err := w.w.Write(fh[:]); err != nil {
 		return err
 	}
 
