@@ -418,9 +418,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 
     // TODO: refactor handler to be objectMode Writable
     self.reader.on('data', function onReaderFrame(frame) {
-        if (!self.closing) {
-            self.onFrame(frame);
-        }
+        self.onFrame(frame);
     });
     self.reader.on('error', function onReaderError(err) {
         self.onReaderError(err);
@@ -637,7 +635,9 @@ TChannelConnection.prototype.onSocketErr = function onSocketErr(err) {
 
 TChannelConnection.prototype.onFrame = function onFrame(/* frame */) {
     var self = this;
-    self.lastTimeoutTime = 0;
+    if (!self.closing) {
+        self.lastTimeoutTime = 0;
+    }
 };
 
 TChannelConnection.prototype.completeOutOp = function completeOutOp(id, err, arg1, arg2) {
