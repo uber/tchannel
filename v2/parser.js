@@ -22,7 +22,8 @@
 
 var TypedError = require('error/typed');
 var inherits = require('util').inherits;
-var EventEmitter = require('events').EventEmitter;
+var Transform = require('stream').Transform;
+var ParseBuffer = require('./parse_buffer');
 
 var BrokenParserStateError = TypedError({
     type: 'tchannel.broken-parser-state',
@@ -37,7 +38,7 @@ var ShortChunkRead = TypedError({
 });
 
 var TruncatedParseError = TypedError({
-    type: 'tchannel.broken-parser-state',
+    type: 'tchannel.truncated-parse',
     message: 'parse truncated by end of stream with {length} bytes in buffer',
     length: null,
     buffer: null,
@@ -57,10 +58,11 @@ function ChunkParser(FrameType, options) {
         return new ChunkParser(FrameType, options);
     }
     options = options || {};
-    EventEmitter.call(this, options);
+    Transform.call(this, options);
     var self = this;
+    self._readableState.objectMode = true;
     self.FrameType = FrameType;
-    self.buffer = Buffer(0);
+    self.buffer = new ParseBuffer();
     self.frameLengthSize = options.frameLengthSize || 2;
     self.expecting = self.frameLengthSize;
     self.state = States.PendingLength;
@@ -79,32 +81,60 @@ function ChunkParser(FrameType, options) {
     }
 }
 
-inherits(ChunkParser, EventEmitter);
+inherits(ChunkParser, Transform);
 
-ChunkParser.prototype.execute = function execute(chunk) {
+ChunkParser.prototype._transform = function _transform(chunk, encoding, callback) {
     var self = this;
-    self.push(chunk);
-    while (self.buffer.length >= self.expecting) {
+    if (!callback) {
+        callback = emitIt;
+    }
+    self.buffer.push(chunk);
+    while (self.buffer.avail() >= self.expecting) {
         switch (self.state) {
             case States.PendingLength:
                 self.expecting = self._readLength();
                 self.state = States.Seeking;
                 break;
             case States.Seeking:
-                var frameChunk = self.shift();
+                var frameChunk = self.buffer.shift(self.expecting);
                 self.handleFrame(frameChunk);
                 self.expecting = self.frameLengthSize;
                 self.state = States.PendingLength;
                 break;
             default:
-                self.emit('error', BrokenParserStateError({state: self.state}));
+                callback(BrokenParserStateError({state: self.state}));
                 return;
         }
     }
+    callback();
+
+    function emitIt(err) {
+        self.emit('error', err);
+    }
 };
 
-ChunkParser.prototype.handleFrame = function handleFrame(chunk) {
+ChunkParser.prototype._flush = function _flush(callback) {
     var self = this;
+    var avail = self.buffer.avail();
+    if (avail) {
+        callback(TruncatedParseError({
+            length: avail,
+            state: self.state,
+            expecting: self.expecting
+        }));
+        self.buffer.clear();
+        self.expecting = 4;
+        self.state = States.PendingLength;
+    } else {
+        callback();
+    }
+};
+
+ChunkParser.prototype.handleFrame = function handleFrame(chunk, callback) {
+    var self = this;
+    if (!callback) {
+        callback = emitFrame;
+    }
     var res = self.FrameType.read(chunk, 0);
     var err = res[0];
     var end = res[1];
@@ -116,48 +146,17 @@ ChunkParser.prototype.handleFrame = function handleFrame(chunk) {
     if (err) {
         err.offset = end;
         err.buffer = chunk;
-        self.emit('error', err);
+        callback(err);
     } else {
-        self.emit('frame', frame);
+        callback(null, frame);
     }
-};
 
-ChunkParser.prototype.push = function push(chunk) {
-    var self = this;
-    if (self.buffer.length) {
-        self.buffer = Buffer.concat([self.buffer, chunk], self.buffer.length + chunk.length);
-    } else {
-        self.buffer = chunk;
-    }
-};
-
-ChunkParser.prototype.shift = function shift() {
-    var self = this;
-    var chunk;
-    if (self.buffer.length < self.expecting) {
-        chunk = Buffer(0);
-    } else if (self.buffer.length > self.expecting) {
-        chunk = self.buffer.slice(0, self.expecting);
-        self.buffer = self.buffer.slice(self.expecting);
-    } else {
-        chunk = self.buffer;
-        self.buffer = Buffer(0);
-    }
-    return chunk;
-};
-
-ChunkParser.prototype.flush = function flush() {
-    var self = this;
-    if (self.buffer.length) {
-        self.emit('error', TruncatedParseError({
-            length: self.buffer.length,
-            buffer: self.buffer,
-            state: self.state,
-            expecting: self.expecting
-        }));
-        self.buffer = Buffer(0);
-        self.expecting = 4;
-        self.state = States.PendingLength;
+    function emitFrame(err, frame) {
+        if (err) {
+            self.emit('error', err);
+        } else {
+            self.push(frame);
+        }
     }
 };
 

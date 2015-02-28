@@ -52,8 +52,8 @@ TestFrame.read = read.chained(read.series([
     if (size !== buffer.length) {
         // parser shouldn't let this happen
         return [SizeMismatchError({
-            size: null,
-            bufferLength: null
+            size: size,
+            bufferLength: buffer.length
         }), offset, null];
     }
     var body = new TestFrame(payload);
