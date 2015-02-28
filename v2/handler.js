@@ -201,7 +201,7 @@ TChannelV2Handler.prototype.sendRequestFrame = function sendRequestFrame(options
     var flags = 0; // TODO: streaming
     var ttl = options.timeout || 1; // TODO: better default, support for dynamic
     var tracing = options.tracing || null; // TODO: generate
-    var service = options.service || null; // TODO: what even is this? default it to some sort of "my" name?
+    var service = options.service || null; // TODO: provide some sort of channel default
     var headers = options.headers || {};
     var csum;
     if (options.checksum === undefined || options.checksum === null) {
