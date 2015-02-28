@@ -21,7 +21,7 @@
 'use strict';
 
 var TypedError = require('error/typed');
-var EventEmitter = require('events').EventEmitter;
+var Writable = require('stream').Writable;
 var util = require('util');
 
 var v2 = require('./index');
@@ -47,8 +47,10 @@ function TChannelV2Handler(channel, options) {
     if (!(this instanceof TChannelV2Handler)) {
         return new TChannelV2Handler(channel, options);
     }
-    EventEmitter.call(this);
     var self = this;
+    Writable.call(self, {
+        objectMode: true
+    });
     self.channel = channel;
     self.writeFrame = options.writeFrame;
     // TODO: may be better suited to pull out an operation collection
@@ -60,7 +62,7 @@ function TChannelV2Handler(channel, options) {
     self.lastSentFrameId = 0;
 }
 
-util.inherits(TChannelV2Handler, EventEmitter);
+util.inherits(TChannelV2Handler, Writable);
 
 TChannelV2Handler.prototype.nextFrameId = function nextFrameId() {
     var self = this;
@@ -68,31 +70,30 @@ TChannelV2Handler.prototype.nextFrameId = function nextFrameId() {
     return self.lastSentFrameId;
 };
 
-TChannelV2Handler.prototype.handleFrame = function handleFrame(frame) {
+TChannelV2Handler.prototype._write = function _write(frame, encoding, callback) {
     var self = this;
     switch (frame.body.type) {
         case v2.Types.InitRequest:
-            return self.handleInitRequest(frame);
+            return self.handleInitRequest(frame, callback);
         case v2.Types.InitResponse:
-            return self.handleInitResponse(frame);
+            return self.handleInitResponse(frame, callback);
         case v2.Types.CallRequest:
-            return self.handleCallRequest(frame);
+            return self.handleCallRequest(frame, callback);
         case v2.Types.CallResponse:
-            return self.handleCallResponse(frame);
+            return self.handleCallResponse(frame, callback);
         case v2.Types.Error:
-            return self.handleError(frame);
+            return self.handleError(frame, callback);
         default:
-            self.emit('error', TChannelUnhandledFrameTypeError({
+            return callback(TChannelUnhandledFrameTypeError({
                 typeCode: frame.body.type
             }));
     }
 };
 
-TChannelV2Handler.prototype.handleInitRequest = function handleInitRequest(reqFrame) {
+TChannelV2Handler.prototype.handleInitRequest = function handleInitRequest(reqFrame, callback) {
     var self = this;
     if (self.remoteHostPort !== null) {
-        self.emit('error', new Error('duplicate init request')); // TODO typed error
-        return;
+        return callback(new Error('duplicate init request')); // TODO typed error
     }
     /* jshint camelcase:false */
     var hostPort = reqFrame.body.headers.host_port;
@@ -102,13 +103,13 @@ TChannelV2Handler.prototype.handleInitRequest = function handleInitRequest(reqFr
     // TODO: use processName
     self.emit('identify.in', hostPort, processName);
     self.sendInitResponse(reqFrame);
+    callback();
 };
 
-TChannelV2Handler.prototype.handleInitResponse = function handleInitResponse(resFrame) {
+TChannelV2Handler.prototype.handleInitResponse = function handleInitResponse(resFrame, callback) {
     var self = this;
     if (self.remoteHostPort !== null) {
-        self.emit('error', new Error('duplicate init response')); // TODO typed error
-        return;
+        return callback(new Error('duplicate init response')); // TODO typed error
     }
     /* jshint camelcase:false */
     var hostPort = resFrame.body.headers.host_port;
@@ -117,16 +118,16 @@ TChannelV2Handler.prototype.handleInitResponse = function handleInitResponse(res
     // TODO: use processName
     self.remoteHostPort = hostPort;
     self.emit('identify.out', hostPort, processName);
+    callback();
 };
 
-TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFrame) {
+TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFrame, callback) {
     var self = this;
     var id = reqFrame.id;
     var name = String(reqFrame.body.arg1);
 
     if (self.remoteHostPort === null) {
-        self.emit('error', new Error('call request before init request')); // TODO typed error
-        return;
+        return callback(new Error('call request before init request')); // TODO typed error
     }
 
     var handler = self.channel.getEndpointHandler(name);
@@ -144,13 +145,13 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
     }, function sendResponseFrame(err, res1, res2) {
         self.sendResponseFrame(reqFrame, responseHeaders, err, res1, res2);
     });
+    callback();
 };
 
-TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(resFrame) {
+TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(resFrame, callback) {
     var self = this;
     if (self.remoteHostPort === null) {
-        self.emit('error', new Error('call response before init response')); // TODO typed error
-        return;
+        return callback(new Error('call response before init response')); // TODO typed error
     }
     var id = resFrame.id;
     var code = resFrame.body.code;
@@ -167,9 +168,10 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
             arg3: arg3
         }), id, arg2, null);
     }
+    callback();
 };
 
-TChannelV2Handler.prototype.handleError = function handleError(errFrame) {
+TChannelV2Handler.prototype.handleError = function handleError(errFrame, callback) {
     var self = this;
     var id = errFrame.id;
     var code = errFrame.body.code;
@@ -180,9 +182,10 @@ TChannelV2Handler.prototype.handleError = function handleError(errFrame) {
     });
     if (id === v2.Frame.NullId) {
         // fatal error not associated with a prior frame
-        self.emit('error', err);
+        callback(err);
     } else {
         self.completeOutOp(err, id, null, null);
+        callback();
     }
 };
 
