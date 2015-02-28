@@ -141,8 +141,8 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
         arg2: reqFrame.body.arg2,
         arg3: reqFrame.body.arg3,
         responseHeaders: responseHeaders
-    }, function sendResponseFrame(err, res1, res2, callback) {
-        self.sendResponseFrame(reqFrame, responseHeaders, err, res1, res2, callback);
+    }, function sendResponseFrame(err, res1, res2) {
+        self.sendResponseFrame(reqFrame, responseHeaders, err, res1, res2);
     });
 };
 
@@ -209,7 +209,7 @@ TChannelV2Handler.prototype.sendInitResponse = function sendInitResponse(reqFram
 };
 
 /* jshint maxparams:6 */
-TChannelV2Handler.prototype.sendRequestFrame = function sendRequestFrame(options, arg1, arg2, arg3, callback) {
+TChannelV2Handler.prototype.sendRequestFrame = function sendRequestFrame(options, arg1, arg2, arg3) {
     var self = this;
     var id = self.nextFrameId();
     var flags = 0; // TODO: streaming
@@ -225,11 +225,11 @@ TChannelV2Handler.prototype.sendRequestFrame = function sendRequestFrame(options
     }
     var reqBody = v2.CallRequest(flags, ttl, tracing, service, headers, csum, arg1, arg2, arg3);
     var reqFrame = v2.Frame(id, reqBody);
-    self.writeFrame(reqFrame, callback);
+    self.writeFrame(reqFrame);
     return id;
 };
 
-TChannelV2Handler.prototype.sendResponseFrame = function sendResponseFrame(reqFrame, headers, err, res1, res2, callback) {
+TChannelV2Handler.prototype.sendResponseFrame = function sendResponseFrame(reqFrame, headers, err, res1, res2) {
     // TODO: refactor this all the way back out through the op handler calling convention
     var self = this;
     var id = reqFrame.id;
@@ -245,7 +245,7 @@ TChannelV2Handler.prototype.sendResponseFrame = function sendResponseFrame(reqFr
         resBody = v2.CallResponse(flags, v2.CallResponse.Codes.OK, tracing, headers, checksumType, arg1, res1, res2);
     }
     var resFrame = v2.Frame(id, resBody);
-    self.writeFrame(resFrame, callback);
+    self.writeFrame(resFrame);
 };
 /* jshint maxparams:4 */
 
