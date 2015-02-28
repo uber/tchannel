@@ -1,5 +1,5 @@
 // Copyright (c) 2015 Uber Technologies, Inc.
-//
+
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -20,49 +20,44 @@
 
 'use strict';
 
-var test = require('tape');
+var util = require('util');
+var Parser = require('../../v2/parser.js');
+var TestFrame = require('./test_frame');
+var parserTest = require('../lib/parser_test');
 
-var TChannel = require('../index.js');
-
-test('can call quit() safely async', function t(assert) {
-    var channel = TChannel();
-    channel.listen(0, 'localhost');
-
-    channel.once('listening', function onListen() {
-        assert.doesNotThrow(function noThrow() {
-            channel.quit();
-        });
-
-        assert.end();
+var buffers = [];
+var expectedFrames = [];
+[
+    'boot', 'cat',
+    'boots', 'cats',
+    'boots', 'N',
+    'cats', 'N',
+    'boots', 'N',
+    'cats'
+].forEach(function eachToken(token, i) {
+    var assertMess = util.format('got expected[%s] payload token %j', i, token);
+    buffers.push(TestFrame(token).toBuffer());
+    expectedFrames.push({
+        frame: function expectToken(frame, assert) {
+            assert.equal(String(frame.payload), token, assertMess);
+        }
     });
+
 });
 
-test('can call quit() safely sync', function t(assert) {
-    var channel = TChannel();
-    channel.listen(0, 'localhost');
+var BigChunk = Buffer.concat(buffers);
 
-    assert.doesNotThrow(function noThrow() {
-        channel.quit();
+var oneBytePer = new Array(BigChunk.length);
+for (var i = 0; i < BigChunk.length; i++) {
+    oneBytePer.push(Buffer([BigChunk[i]]));
+}
+
+parserTest('works frame-at-a-time', makeV2Parser, buffers, expectedFrames);
+parserTest('works from one big chunk', makeV2Parser, [BigChunk], expectedFrames);
+parserTest('works byte-at-a-time', makeV2Parser, oneBytePer, expectedFrames);
+
+function makeV2Parser() {
+    return Parser(TestFrame, {
+        frameLengthSize: 1
     });
-    assert.end();
-});
-
-test('can call quit() safely async w/ callback', function t(assert) {
-    var channel = TChannel();
-    channel.listen(0, 'localhost');
-
-    channel.once('listening', function onListen() {
-        assert.doesNotThrow(function noThrow() {
-            channel.quit(assert.end);
-        });
-    });
-});
-
-test('can call quit() safely sync w/ callback', function t(assert) {
-    var channel = TChannel();
-    channel.listen(0, 'localhost');
-    assert.doesNotThrow(function noThrow() {
-        channel.quit(assert.end);
-    });
-});
-
+}

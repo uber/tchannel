@@ -19,9 +19,11 @@
 // THE SOFTWARE.
 
 var TChannel = require('../index.js');
+var after = require('after');
 
-var server = new TChannel({host: '127.0.0.1', port: 4040});
-var client = new TChannel({host: '127.0.0.1', port: 4041});
+var server = new TChannel();
+var client = new TChannel();
+var client2 = new TChannel({timeoutCheckInterval: 100, timeoutFuzz: 5});
 
 // normal response
 server.register('func 1', function (arg1, arg2, peerInfo, cb) {
@@ -50,12 +52,37 @@ client.register('ping', function onPing(arg1, arg2, peerInfo, pingCb) {
 	console.log('client got ping req from ' + peerInfo);
 	pingCb(null, 'pong', null);
 });
-client.send({host: '127.0.0.1:4040'}, 'ping', null, null, function (err, res1, res2) {
-	console.log('ping res from client: ' + res1 + ' ' + res2);
-	server.send({host: '127.0.0.1:4041'}, 'ping', null, null, function (err, res1, res2) {
-		console.log('ping res server: ' + res1 + ' ' + res2);
-	});
+
+var listening = after(3, function (err) {
+
+    client.send({host: '127.0.0.1:4040'}, 'ping', null, null, function (err, res1, res2) {
+        console.log('ping res from client: ' + res1 + ' ' + res2);
+        server.send({host: '127.0.0.1:4041'}, 'ping', null, null, function (err, res1, res2) {
+            console.log('ping res server: ' + res1 + ' ' + res2);
+        });
+    });
+
+    // very aggressive settings. Not recommended for real life.
+    client2.send({host: '127.0.0.1:4040', timeout: 500}, 'func 3', 'arg2', 'arg3', function (err, res1, res2) {
+        console.log('2 slow res: ' + formatRes(err, res1, res2));
+        client2.send({host: '127.0.0.1:4040', timeout: 500}, 'func 3', 'arg2', 'arg3', function (err, res1, res2) {
+            console.log('3 slow res: ' + formatRes(err, res1, res2));
+        });
+
+        client2.send({host: '127.0.0.1:4040', timeout: 500}, 'func 3', 'arg2', 'arg3', function (err, res1, res2) {
+            console.log('4 slow res: ' + formatRes(err, res1, res2));
+        });
+    });
+
+    client2.send({host: '127.0.0.1:4040', timeout: 500}, 'func 1', 'arg2', 'arg3', function (err, res1, res2) {
+        console.log('1 fast res: ' + formatRes(err, res1, res2));
+    });
+
 });
+
+server.listen(4040, '127.0.0.1', listening);
+client.listen(4041, '127.0.0.1', listening);
+client2.listen(4042, '127.0.0.1', listening);
 
 function formatRes(err, res1, res2) {
 	var ret = [];
@@ -71,20 +98,3 @@ function formatRes(err, res1, res2) {
 	}
 	return ret.join(' ');
 }
-
-// very aggressive settings. Not recommended for real life.
-var client2 = new TChannel({host: '127.0.0.1', port: 4042, timeoutCheckInterval: 100, timeoutFuzz: 5});
-client2.send({host: '127.0.0.1:4040', timeout: 500}, 'func 3', 'arg2', 'arg3', function (err, res1, res2) {
-	console.log('2 slow res: ' + formatRes(err, res1, res2));
-	client2.send({host: '127.0.0.1:4040', timeout: 500}, 'func 3', 'arg2', 'arg3', function (err, res1, res2) {
-		console.log('3 slow res: ' + formatRes(err, res1, res2));
-	});
-
-	client2.send({host: '127.0.0.1:4040', timeout: 500}, 'func 3', 'arg2', 'arg3', function (err, res1, res2) {
-		console.log('4 slow res: ' + formatRes(err, res1, res2));
-	});
-});
-
-client2.send({host: '127.0.0.1:4040', timeout: 500}, 'func 1', 'arg2', 'arg3', function (err, res1, res2) {
-	console.log('1 fast res: ' + formatRes(err, res1, res2));
-});

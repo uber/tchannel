@@ -1,5 +1,5 @@
 // Copyright (c) 2015 Uber Technologies, Inc.
-//
+
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -20,12 +20,40 @@
 
 'use strict';
 
-require('./safe-quit.js');
-require('./timeouts.js');
-require('./send.js');
-require('./register.js');
-require('./identify.js');
-require('./tchannel.js');
-require('./regression-inOps-leak.js');
-require('./emits-endpoint.js');
-require('./v2/index.js');
+var read = require('../../lib/read.js');
+var write = require('../../lib/write.js');
+
+module.exports = TestBody;
+
+function TestBody(payload) {
+    if (!(this instanceof TestBody)) {
+        return new TestBody(payload);
+    }
+    var self = this;
+    self.type = TestBody.TypeCode;
+    self.payload = payload;
+}
+
+TestBody.read = read.chained(read.buf1, function(payload, buffer, offset) {
+    var body = new TestBody(payload);
+    return [null, offset, body];
+});
+
+TestBody.prototype.write = function writeTestBody() {
+    var self = this;
+    return write.buf1(self.payload);
+};
+
+TestBody.TypeCode = 0x00;
+
+TestBody.testWith = function testWidTestBody(desc, t) {
+    var test = require('tape');
+    var Frame = require('../../v2/frame.js');
+    test(desc, function s(assert) {
+        Frame.Types[TestBody.TypeCode] = TestBody;
+        assert.once('end', function removeTestBody() {
+            delete Frame.Types[TestBody.TypeCode];
+        });
+        return t(assert);
+    });
+};

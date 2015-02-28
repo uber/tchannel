@@ -19,7 +19,8 @@
 // THE SOFTWARE.
 
 var TChannel = require('../index');
-var server = new TChannel({listen: '127.0.0.1', port: 4040});
+var server = new TChannel();
+server.listen(4040, '127.0.0.1');
 
 var keys = {};
 
@@ -48,7 +49,7 @@ server.register('set', function onSet(arg1, arg2, hostInfo, setCb) {
 server.register('get', function onGet(arg1, arg2, hostInfo, getCb) {
 	var str = arg1.toString('utf8');
 	if (keys[str] !== undefined) {
-		getCb(null, keys[str].length, keys[str]);
+		getCb(null, JSON.stringify(keys[str].length), JSON.stringify(keys[str]));
 	} else {
 		getCb(new Error('key not found: ' + str));
 	}

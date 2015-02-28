@@ -50,7 +50,7 @@ allocCluster.test('send() to a server', 2, function t(cluster, assert) {
         }, 'foo', 'abc', null),
         'objectHead': sendRes.bind(null, two, {
             host: hostOne
-        }, 'foo', { value: 'abc' }, null),
+        }, 'foo', JSON.stringify({ value: 'abc' }), null),
         'nullHead': sendRes.bind(null, two, {
             host: hostOne
         }, 'foo', null, null),
@@ -65,7 +65,7 @@ allocCluster.test('send() to a server', 2, function t(cluster, assert) {
         }, 'foo', null, 'abc'),
         'objectBody': sendRes.bind(null, two, {
             host: hostOne
-        }, 'foo', null, { value: 'abc' }),
+        }, 'foo', null, JSON.stringify({ value: 'abc' })),
         'nullBody': sendRes.bind(null, two, {
             host: hostOne
         }, 'foo', null, null),

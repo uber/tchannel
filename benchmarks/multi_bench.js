@@ -76,22 +76,23 @@ Test.prototype.new_client = function (id) {
     var self = this, new_client;
     
     var port = 4041 + id;
-    new_client = new TChannel({host: "127.0.0.1", port: port});
+    new_client = new TChannel();
     new_client.create_time = Date.now();
+    new_client.listen(port, "127.0.0.1", function (err) {
+        // sending a ping to pre-connect the socket
+        new_client.send({host: '127.0.0.1:4040'}, 'ping', null, null, function () {});
 
-    // sending a ping to pre-connect the socket
-    new_client.send({host: '127.0.0.1:4040'}, 'ping', null, null, function () {});
+        new_client.on("identified", function (peer) {
+            self.connect_latency.update(Date.now() - new_client.create_time);
+            self.ready_latency.update(Date.now() - new_client.create_time);
+            self.clients_ready++;
+            if (self.clients_ready === self.clients.length) {
+                self.on_clients_ready();
+            }
+        });
 
-    new_client.on("identified", function (peer) {
-        self.connect_latency.update(Date.now() - new_client.create_time);
-        self.ready_latency.update(Date.now() - new_client.create_time);
-        self.clients_ready++;
-        if (self.clients_ready === self.clients.length) {
-            self.on_clients_ready();
-        }
+        self.clients[id] = new_client;
     });
-
-    self.clients[id] = new_client;
 };
 
 Test.prototype.on_clients_ready = function () {
@@ -133,7 +134,16 @@ Test.prototype.send_next = function () {
         cur_client = this.commands_sent % this.clients.length,
         start = Date.now();
 
-    this.clients[cur_client].send({host: '127.0.0.1:4040'}, this.arg1, this.arg2, this.arg3, function (err, res1, res2) {
+    this.clients[cur_client].send({
+        host: '127.0.0.1:4040',
+        timeout: 10000,
+        service: 'benchmark',
+        headers: {
+            benchHeader1: 'bench value one',
+            benchHeader2: 'bench value two',
+            benchHeader3: 'bench value three'
+        }
+    }, this.arg1, this.arg2, this.arg3, function (err, res1, res2) {
         if (err) {
             throw err;
         }

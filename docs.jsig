@@ -46,12 +46,13 @@ type TChannel : {
             res2: Buffer | null
         ) => void
     ) => void,
-    quit: (Callback<Error>) => void,
+    listen: (port:Number, hostname:String, Callback<Error>?) => void,
+    close: (Callback<Error>) => void,
 
-    getPeer: (name: HostInfo) => TChannelConnection,
+    getPeer: (hostPort: HostInfo) => TChannelConnection,
     getPeers: () => Array<TChannelConnection>,
 
-    name: HostInfo
+    hostPort: HostInfo
 }
 
 tchannel : (options: {

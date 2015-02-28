@@ -40,7 +40,7 @@ allocCluster.test('register() with different results', 2, function t(cluster, as
         cb(null, 'abc', null);
     });
     one.register('/object-head', function object(h, b, hi, cb) {
-        cb(null, { value: 'abc' }, null);
+        cb(null, JSON.stringify({ value: 'abc' }), null);
     });
     one.register('/null-head', function nullH(h, b, hi, cb) {
         cb(null, null, null);
@@ -56,7 +56,7 @@ allocCluster.test('register() with different results', 2, function t(cluster, as
         cb(null, null, 'abc');
     });
     one.register('/object-body', function object(h, b, hi, cb) {
-        cb(null, null, { value: 'abc' });
+        cb(null, null, JSON.stringify({ value: 'abc' }));
     });
     one.register('/null-body', function nullB(h, b, hi, cb) {
         cb(null, null, null);
@@ -108,8 +108,8 @@ allocCluster.test('register() with different results', 2, function t(cluster, as
 
         var errorCall = results.errorCall;
         assert.ok(errorCall.err);
-        assert.equal(errorCall.err.message, 'abc');
-        assert.equal(errorCall.head, null);
+        assert.equal(String(errorCall.err.arg3), 'abc');
+        assert.deepEqual(errorCall.head, Buffer(0));
         assert.equal(errorCall.body, null);
 
         var bufferHead = results.bufferHead;

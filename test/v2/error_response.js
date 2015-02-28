@@ -1,5 +1,5 @@
 // Copyright (c) 2015 Uber Technologies, Inc.
-//
+
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -20,12 +20,33 @@
 
 'use strict';
 
-require('./safe-quit.js');
-require('./timeouts.js');
-require('./send.js');
-require('./register.js');
-require('./identify.js');
-require('./tchannel.js');
-require('./regression-inOps-leak.js');
-require('./emits-endpoint.js');
-require('./v2/index.js');
+var test = require('tape');
+var testRead = require('../lib/read_test.js');
+var ErrorResponse = require('../../v2/error_response.js');
+
+var testErrorResponse = Buffer([
+    ErrorResponse.Codes.ProtocolError, // code:1
+    0x01, 0x02, 0x03, 0x04,            // id:4
+    0x00, 0x08, 0x74, 0x6f,            // message~2
+    0x6f, 0x20, 0x62, 0x61,            // ...
+    0x64, 0x2e                         // ...
+]);
+
+test('read a ErrorResponse', function t(assert) {
+    testRead(assert, ErrorResponse.read, testErrorResponse, function s(res, done) {
+        assert.equal(res.code, ErrorResponse.Codes.ProtocolError, 'expected code');
+        assert.equal(res.id, 0x01020304, 'expected id');
+        assert.equal(String(res.message), 'too bad.', 'expected message');
+        done();
+    });
+});
+
+test('write a ErrorResponse', function t(assert) {
+    var res = ErrorResponse(
+        ErrorResponse.Codes.ProtocolError,
+        0x01020304, 'too bad.');
+    assert.deepEqual(
+        res.write().create(), testErrorResponse,
+        'expected write output');
+    assert.end();
+});

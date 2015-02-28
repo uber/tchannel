@@ -4,7 +4,8 @@
   "author": "mranney@uber.com",
   "version": "1.3.1",
   "scripts": {
-    "test": "node test/index.js",
+    "lint": "jshint .",
+    "test": "npm run lint -s && node test/index.js",
     "benchmark": "node benchmarks/index.js",
     "compare_to_master": "benchmarks/compare_to.sh -m 5 master",
     "cover": "istanbul cover --print detail --report html -- test/index.js",
@@ -17,18 +18,25 @@
     "url": "git@github.com:uber/tchannel"
   },
   "dependencies": {
-    "farmhash": "^0.2.0"
+    "crc": "^3.2.1",
+    "debuglog": "^1.0.1",
+    "error": "^5.1.1",
+    "farmhash": "^0.2.0",
+    "hexer": "^1.1.0"
   },
   "devDependencies": {
+    "ansi-color": "^0.2.1",
     "debug-logtron": "^2.0.0",
+    "hexer": "^1.0.4",
     "istanbul": "^0.3.5",
     "jshint": "^2.5.6",
     "ldjson-stream": "^1.2.1",
     "metrics": "^0.1.8",
     "minimist": "^1.1.0",
+    "once": "^1.3.1",
     "opn": "^1.0.1",
     "pre-commit": "0.0.9",
-    "ready-signal": "^1.0.0",
+    "ready-signal": "^1.1.0",
     "run-parallel": "^1.0.0",
     "tape": "^3.0.3",
     "time-mock": "^0.1.2",
