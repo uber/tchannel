@@ -71,25 +71,32 @@ CodeNames[Codes.ProtocolError] = 'protocol error';
 
 var CodeErrors = {};
 CodeErrors[Codes.Timeout] = TypedError({
-    type: 'tchannel.timeout'
+    type: 'tchannel.timeout',
+    errorCode: Codes.Timeout
 });
 CodeErrors[Codes.Cancelled] = TypedError({
-    type: 'tchannel.canceled'
+    type: 'tchannel.canceled',
+    errorCode: Codes.Cancelled
 });
 CodeErrors[Codes.Busy] = TypedError({
-    type: 'tchannel.busy'
+    type: 'tchannel.busy',
+    errorCode: Codes.Busy
 });
 CodeErrors[Codes.Declined] = TypedError({
-    type: 'tchannel.declined'
+    type: 'tchannel.declined',
+    errorCode: Codes.Declined
 });
 CodeErrors[Codes.UnexpectedError] = TypedError({
-    type: 'tchannel.unexpected'
+    type: 'tchannel.unexpected',
+    errorCode: Codes.UnexpectedError
 });
 CodeErrors[Codes.BadRequest] = TypedError({
-    type: 'tchannel.bad-request'
+    type: 'tchannel.bad-request',
+    errorCode: Codes.BadRequest
 });
 CodeErrors[Codes.ProtocolError] = TypedError({
-    type: 'tchannel.protocol'
+    type: 'tchannel.protocol',
+    errorCode: Codes.ProtocolError
 });
 
 ErrorResponse.Codes = Codes;
