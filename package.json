@@ -19,8 +19,10 @@
   },
   "dependencies": {
     "crc": "^3.2.1",
+    "debuglog": "^1.0.1",
     "error": "^5.1.1",
-    "farmhash": "^0.2.0"
+    "farmhash": "^0.2.0",
+    "hexer": "^1.1.0"
   },
   "devDependencies": {
     "ansi-color": "^0.2.1",

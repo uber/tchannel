@@ -23,7 +23,12 @@
 var TypedError = require('error/typed');
 var inherits = require('util').inherits;
 var Transform = require('stream').Transform;
+var hexer = require('hexer');
+
 var ParseBuffer = require('./parse_buffer');
+var debuglog = require('../lib/debug-log.js');
+
+var debugHex = debuglog('tchannelhexer');
 
 var BrokenParserStateError = TypedError({
     type: 'tchannel.broken-parser-state',
@@ -135,6 +140,11 @@ ChunkParser.prototype.handleFrame = function handleFrame(chunk, callback) {
     if (!callback) {
         callback = emitFrame;
     }
+
+    if (debugHex.enabled) {
+        debugHex('incoming frame: \n%s', hexer(chunk));
+    }
+
     var res = self.FrameType.read(chunk, 0);
     var err = res[0];
     var end = res[1];
