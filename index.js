@@ -422,9 +422,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
         }
     });
     self.reader.on('error', function onReaderError(err) {
-        if (!self.closing) {
-            self.onReaderError(err);
-        }
+        self.onReaderError(err);
     });
 
     self.handler.on('error', function onHandlerError(err) {
@@ -468,7 +466,6 @@ TChannelConnection.prototype.onReaderError = function onReaderError(err) {
         localName: self.channel.hostPort,
         error: err
     });
-    // TODO should we close the connection?
 };
 
 // timeout check runs every timeoutCheckInterval +/- some random fuzz. Range is from
