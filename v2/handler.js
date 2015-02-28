@@ -28,6 +28,12 @@ var v2 = require('./index');
 
 module.exports = TChannelV2Handler;
 
+var TChannelUnhandledFrameTypeError = TypedError({
+    type: 'tchannel.unhandled-frame-type',
+    message: 'unhandled frame type {typeCode}',
+    typeCode: null
+});
+
 var TChannelApplicationError = TypedError({
     type: 'tchannel.application',
     message: 'tchannel application error code {code}',
@@ -76,9 +82,9 @@ TChannelV2Handler.prototype.handleFrame = function handleFrame(frame) {
         case v2.Types.Error:
             return self.handleError(frame);
         default:
-            self.logger.error('unhandled frame type', {
-                type: frame.body.type
-            });
+            self.emit('error', TChannelUnhandledFrameTypeError({
+                typeCode: frame.body.type
+            }));
     }
 };
 
