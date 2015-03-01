@@ -20,27 +20,13 @@
 
 'use strict';
 
-var PassThrough = require('stream').PassThrough;
-var TypedError = require('error/typed');
-var once = require('once');
+// ---
+
+module.exports = testExpectations;
+
 var test = require('tape');
-
-module.exports = parserTest;
-
-function parserTest(desc, parser, chunks, expected) {
-    testExpectations(desc, expected, function run(expect, done) {
-        var stream = passChunks(chunks);
-        if (typeof parser === 'function') parser = parser();
-
-        observeStream(parser, function obs(err, frame) {
-            if (err) expect('error', err);
-            else expect('frame', frame);
-        }, done);
-
-        stream
-            .pipe(parser);
-    });
-}
+var once = require('once');
+var TypedError = require('error/typed');
 
 var TooManyResults = TypedError({
     type: 'test-expectations.too-many-results',
@@ -112,25 +98,4 @@ function testExpectations(desc, expected, func) {
             }
         }
     });
-}
-
-function passChunks(chunks) {
-    var stream = PassThrough({
-        highWaterMark: 1
-    });
-    chunks.forEach(function(chunk) {
-        stream.push(chunk);
-    });
-    stream.push(null);
-    return stream;
-}
-
-function observeStream(stream, obs, done) {
-    stream.on('data', function onData(data) {
-        obs(null, data);
-    });
-    stream.on('error', function onError(error) {
-        obs(error, null);
-    });
-    stream.on('end', done);
 }

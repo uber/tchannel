@@ -390,7 +390,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     self.lastTimeoutTime = 0;
     self.closing = false;
 
-    self.parser = new v2.Parser(v2.Frame);
+    self.reader = new v2.Reader(v2.Frame);
     self.handler = new v2.Handler(self.channel, {
         writeFrame: function writeFrame(frame, callback) {
             self._writeFrame(frame, callback);
@@ -416,15 +416,13 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     });
 
     // TODO: refactor handler to be objectMode Writable
-    self.parser.on('data', function onParserFrame(frame) {
+    self.reader.on('data', function onReaderFrame(frame) {
         if (!self.closing) {
             self.onFrame(frame);
         }
     });
-    self.parser.on('error', function onParserError(err) {
-        if (!self.closing) {
-            self.onParserError(err);
-        }
+    self.reader.on('error', function onReaderError(err) {
+        self.onReaderError(err);
     });
 
     self.handler.on('error', function onHandlerError(err) {
@@ -452,7 +450,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     socket.once('close', clearTimer);
 
     self.socket
-        .pipe(self.parser)
+        .pipe(self.reader)
         ;
 
     function clearTimer() {
@@ -461,14 +459,13 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 }
 require('util').inherits(TChannelConnection, require('events').EventEmitter);
 
-TChannelConnection.prototype.onParserError = function onParserError(err) {
+TChannelConnection.prototype.onReaderError = function onReaderError(err) {
     var self = this;
-    self.channel.logger.error('tchannel parse error', {
+    self.channel.logger.error('tchannel read error', {
         remoteName: self.remoteName,
         localName: self.channel.hostPort,
         error: err
     });
-    // TODO should we close the connection?
 };
 
 // timeout check runs every timeoutCheckInterval +/- some random fuzz. Range is from
