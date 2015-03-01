@@ -434,13 +434,17 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
         self.handler.sendInitRequest();
         self.handler.once('init.response', function onOutIdentified(hostPort) {
             self.remoteName = hostPort;
-            self.channel.emit('identified', hostPort);
+            self.channel.emit('identified', {
+                hostPort: hostPort
+            });
         });
     } else {
         self.handler.once('init.request', function onInIdentified(hostPort) {
             self.remoteName = hostPort;
             self.channel.addPeer(hostPort, self);
-            self.channel.emit('identified', hostPort);
+            self.channel.emit('identified', {
+                hostPort: hostPort
+            });
         });
     }
 
