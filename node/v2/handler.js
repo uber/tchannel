@@ -104,7 +104,7 @@ TChannelV2Handler.prototype.handleInitRequest = function handleInitRequest(reqFr
     /* jshint camelcase:true */
     self.remoteHostPort = hostPort;
     // TODO: use processName
-    self.emit('identify.in', hostPort, processName);
+    self.emit('init.request', hostPort, processName);
     self.sendInitResponse(reqFrame);
     callback();
 };
@@ -120,7 +120,7 @@ TChannelV2Handler.prototype.handleInitResponse = function handleInitResponse(res
     /* jshint camelcase:true */
     // TODO: use processName
     self.remoteHostPort = hostPort;
-    self.emit('identify.out', hostPort, processName);
+    self.emit('init.response', hostPort, processName);
     callback();
 };
 
