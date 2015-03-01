@@ -7,7 +7,8 @@ import (
 )
 
 var (
-	ErrBufferFull = errors.New("no more room in buffer")
+	ErrInsufficientBuffer = errors.New("buffer is too small")
+	ErrBufferFull         = errors.New("no more room in buffer")
 )
 
 // A typed.ReadBuffer is a wrapper around an underlying []byte with methods to read from
@@ -34,8 +35,8 @@ type ReadBuffer interface {
 	// Returns the number of bytes remaining in the buffer
 	BytesRemaining() int
 
-	// Truncates the remainder of the buffer to n bytes.
-	TruncateRemaining(n int) error
+	// Fills the buffer from a given reader, up the amount specified
+	FillFrom(ior io.Reader, n int) (int, error)
 }
 
 // A typed.WriteBuffer is a wrapper around an underlying []byte with methods to write to
@@ -65,20 +66,23 @@ type WriteBuffer interface {
 	// Returns the number of bytes written to the buffer
 	BytesWritten() int
 
-	// Writes the buffer content to the given Writer
-	WriteTo(w io.Writer) (int, error)
+	// Flushes the buffer's content to the given Writer
+	FlushTo(w io.Writer) (int, error)
+
+	// Resets the buffer to a clean state for writing
+	Reset()
 }
 
-func NewReadBuffer(buffer []byte) ReadBuffer {
-	return &reader{buffer: buffer, remaining: buffer}
+func NewReadBufferWithSize(size int) ReadBuffer {
+	return &readBuffer{buffer: make([]byte, size), remaining: nil}
 }
 
-type reader struct {
+type readBuffer struct {
 	buffer    []byte
 	remaining []byte
 }
 
-func (r *reader) ReadByte() (byte, error) {
+func (r *readBuffer) ReadByte() (byte, error) {
 	if len(r.remaining) == 0 {
 		return 0, io.EOF
 	}
@@ -88,7 +92,7 @@ func (r *reader) ReadByte() (byte, error) {
 	return b, nil
 }
 
-func (r *reader) ReadBytes(n int) ([]byte, error) {
+func (r *readBuffer) ReadBytes(n int) ([]byte, error) {
 	if len(r.remaining) < n {
 		b := r.remaining
 		r.remaining = nil
@@ -100,7 +104,7 @@ func (r *reader) ReadBytes(n int) ([]byte, error) {
 	return b, nil
 }
 
-func (r *reader) ReadString(n int) (string, error) {
+func (r *readBuffer) ReadString(n int) (string, error) {
 	b, err := r.ReadBytes(n)
 	if err != nil {
 		return "", err
@@ -110,7 +114,7 @@ func (r *reader) ReadString(n int) (string, error) {
 	return string(b), nil
 }
 
-func (r *reader) ReadUint16() (uint16, error) {
+func (r *readBuffer) ReadUint16() (uint16, error) {
 	b, err := r.ReadBytes(2)
 	if err != nil {
 		return 0, err
@@ -119,7 +123,7 @@ func (r *reader) ReadUint16() (uint16, error) {
 	return binary.BigEndian.Uint16(b), nil
 }
 
-func (r *reader) ReadUint32() (uint32, error) {
+func (r *readBuffer) ReadUint32() (uint32, error) {
 	b, err := r.ReadBytes(4)
 	if err != nil {
 		return 0, err
@@ -128,7 +132,7 @@ func (r *reader) ReadUint32() (uint32, error) {
 	return binary.BigEndian.Uint32(b), nil
 }
 
-func (r *reader) ReadUint64() (uint64, error) {
+func (r *readBuffer) ReadUint64() (uint64, error) {
 	b, err := r.ReadBytes(8)
 	if err != nil {
 		return 0, err
@@ -137,33 +141,33 @@ func (r *reader) ReadUint64() (uint64, error) {
 	return binary.BigEndian.Uint64(b), nil
 }
 
-func (r *reader) BytesRemaining() int {
+func (r *readBuffer) BytesRemaining() int {
 	return len(r.remaining)
 }
 
-func (r *reader) TruncateRemaining(n int) error {
-	if len(r.remaining) < n {
-		return io.EOF
+func (r *readBuffer) FillFrom(ior io.Reader, n int) (int, error) {
+	if len(r.buffer) < n {
+		return 0, ErrInsufficientBuffer
 	}
 
-	r.remaining = r.remaining[0:n]
-	return nil
+	r.remaining = r.buffer[:n]
+	return ior.Read(r.remaining)
 }
 
 func NewWriteBuffer(buffer []byte) WriteBuffer {
-	return &writer{buffer: buffer, remaining: buffer}
+	return &writeBuffer{buffer: buffer, remaining: buffer}
 }
 
 func NewWriteBufferWithSize(size int) WriteBuffer {
 	return NewWriteBuffer(make([]byte, size))
 }
 
-type writer struct {
+type writeBuffer struct {
 	buffer    []byte
 	remaining []byte
 }
 
-func (w *writer) WriteByte(n byte) error {
+func (w *writeBuffer) WriteByte(n byte) error {
 	if len(w.remaining) == 0 {
 		return ErrBufferFull
 	}
@@ -173,7 +177,7 @@ func (w *writer) WriteByte(n byte) error {
 	return nil
 }
 
-func (w *writer) WriteBytes(b []byte) error {
+func (w *writeBuffer) WriteBytes(b []byte) error {
 	inbuf, err := w.reserve(len(b))
 	if err != nil {
 		return err
@@ -183,7 +187,7 @@ func (w *writer) WriteBytes(b []byte) error {
 	return nil
 }
 
-func (w *writer) WriteUint16(n uint16) error {
+func (w *writeBuffer) WriteUint16(n uint16) error {
 	b, err := w.reserve(2)
 	if err != nil {
 		return err
@@ -193,7 +197,7 @@ func (w *writer) WriteUint16(n uint16) error {
 	return nil
 }
 
-func (w *writer) WriteUint32(n uint32) error {
+func (w *writeBuffer) WriteUint32(n uint32) error {
 	b, err := w.reserve(4)
 	if err != nil {
 		return err
@@ -203,7 +207,7 @@ func (w *writer) WriteUint32(n uint32) error {
 	return nil
 }
 
-func (w *writer) WriteUint64(n uint64) error {
+func (w *writeBuffer) WriteUint64(n uint64) error {
 	b, err := w.reserve(8)
 	if err != nil {
 		return err
@@ -213,7 +217,7 @@ func (w *writer) WriteUint64(n uint64) error {
 	return nil
 }
 
-func (w *writer) WriteString(s string) error {
+func (w *writeBuffer) WriteString(s string) error {
 	// NB(mmihic): Don't just call WriteBytes; that will make a double copy of the string due to the cast
 	b, err := w.reserve(len(s))
 	if err != nil {
@@ -224,7 +228,7 @@ func (w *writer) WriteString(s string) error {
 	return nil
 }
 
-func (w *writer) reserve(n int) ([]byte, error) {
+func (w *writeBuffer) reserve(n int) ([]byte, error) {
 	if len(w.remaining) < n {
 		return nil, ErrBufferFull
 	}
@@ -234,15 +238,19 @@ func (w *writer) reserve(n int) ([]byte, error) {
 	return b, nil
 }
 
-func (w *writer) BytesRemaining() int {
+func (w *writeBuffer) BytesRemaining() int {
 	return len(w.remaining)
 }
 
-func (w *writer) BytesWritten() int {
+func (w *writeBuffer) FlushTo(iow io.Writer) (int, error) {
+	dirty := w.buffer[0:w.BytesWritten()]
+	return iow.Write(dirty)
+}
+
+func (w *writeBuffer) BytesWritten() int {
 	return len(w.buffer) - len(w.remaining)
 }
 
-func (w *writer) WriteTo(iow io.Writer) (int, error) {
-	dirty := w.buffer[0:w.BytesWritten()]
-	return iow.Write(dirty)
+func (w *writeBuffer) Reset() {
+	w.remaining = w.buffer
 }

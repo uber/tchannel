@@ -19,9 +19,11 @@ func TestReadWrite(t *testing.T) {
 	w.WriteBytes(bslice)
 
 	var b bytes.Buffer
-	w.WriteTo(&b)
+	w.FlushTo(&b)
 
-	r := NewReadBuffer(b.Bytes())
+	r := NewReadBufferWithSize(1024)
+	r.FillFrom(bytes.NewReader(b.Bytes()), len(b.Bytes()))
+
 	{
 		n, err := r.ReadUint64()
 		assert.Nil(t, err, "could not read uint64")

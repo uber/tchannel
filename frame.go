@@ -84,94 +84,57 @@ func (fh *FrameHeader) write(w typed.WriteBuffer) error {
 	return nil
 }
 
-// A Frame, consisting of a header and a payload
-type Frame struct {
-	pool    FrameBufferPool
-	Header  FrameHeader
-	Payload []byte
-}
-
-// Implements the io.Closer interface
-func (f Frame) Close() error {
-	f.pool.Release(f.Payload)
-	return nil
-}
-
-// Pool managing frame buffers.  We know the max size of a frame, so we can more efficiently pool these
-type FrameBufferPool interface {
-	Get(size int) []byte
-	Release(b []byte)
-}
-
-type defaultFrameBufferPool struct{}
-
-func (fp *defaultFrameBufferPool) Get(size int) []byte { return make([]byte, size) }
-func (fp *defaultFrameBufferPool) Release(b []byte)    {}
-
-var (
-	DefaultFrameBufferPool = &defaultFrameBufferPool{}
-)
-
 // Allows reading Frames off an underlying io.Reader
 type FrameReader struct {
-	pool           FrameBufferPool
-	frameHeaderBuf [FrameHeaderSize]byte
-	r              io.Reader
+	r io.Reader
 }
 
 // Creates a new FrameReader on top of the provided io.Reader
 func NewFrameReader(r io.Reader) *FrameReader {
-	return NewFrameReaderWithPool(r, DefaultFrameBufferPool)
-}
-
-func NewFrameReaderWithPool(r io.Reader, pool FrameBufferPool) *FrameReader {
-	return &FrameReader{r: r, pool: pool}
+	return &FrameReader{r}
 }
 
 // Reads the next Frame from the stream.
-func (r *FrameReader) ReadFrame() (Frame, error) {
-	frame := Frame{}
-
-	if _, err := io.ReadFull(r.r, r.frameHeaderBuf[:]); err != nil {
-		return frame, err
+func (r *FrameReader) ReadFrame(fh *FrameHeader, payload typed.ReadBuffer) error {
+	if _, err := payload.FillFrom(r.r, FrameHeaderSize); err != nil {
+		return err
 	}
 
-	br := typed.NewReadBuffer(r.frameHeaderBuf[:])
-	if err := frame.Header.read(br); err != nil {
-		return frame, err
+	if err := fh.read(payload); err != nil {
+		return err
 	}
 
-	frame.Payload = r.pool.Get(int(frame.Header.Size))
-	if _, err := io.ReadFull(r.r, frame.Payload); err != nil {
-		return frame, err
+	if _, err := payload.FillFrom(r.r, int(fh.Size)); err != nil {
+		return err
 	}
 
-	return frame, nil
+	return nil
 }
 
 // Writer for Frames
 type FrameWriter struct {
-	w io.Writer
+	w         io.Writer
+	headerBuf typed.WriteBuffer
 }
 
 // Creates a new FrameWriter around a frame
 func NewFrameWriter(w io.Writer) *FrameWriter {
-	return &FrameWriter{w: w}
+	return &FrameWriter{w: w, headerBuf: typed.NewWriteBufferWithSize(FrameHeaderSize)}
 }
 
 // Writes a frame to the underlying stream
-func (w *FrameWriter) WriteFrame(f *Frame) error {
-	var fh [FrameHeaderSize]byte
-	tw := typed.NewWriteBuffer(fh[:])
-	if err := f.Header.write(tw); err != nil {
+func (w *FrameWriter) WriteFrame(fh FrameHeader, payload typed.WriteBuffer) error {
+	w.headerBuf.Reset()
+
+	if err := fh.write(w.headerBuf); err != nil {
 		return err
 	}
 
-	if _, err := w.w.Write(fh[:]); err != nil {
+	if _, err := w.headerBuf.FlushTo(w.w); err != nil {
 		return err
 	}
 
-	if _, err := w.w.Write(f.Payload); err != nil {
+	if _, err := payload.FlushTo(w.w); err != nil {
 		return err
 	}
 

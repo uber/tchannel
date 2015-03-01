@@ -82,9 +82,11 @@ func assertRoundTrip(t *testing.T, expected Message, actual Message) {
 	require.Nil(t, expected.write(w), fmt.Sprintf("error writing message %s", expected.Type()))
 
 	var b bytes.Buffer
-	w.WriteTo(&b)
+	w.FlushTo(&b)
 
-	r := typed.NewReadBuffer(b.Bytes())
+	r := typed.NewReadBufferWithSize(1024)
+	_, err := r.FillFrom(bytes.NewReader(b.Bytes()), len(b.Bytes()))
+	require.Nil(t, err)
 	require.Nil(t, actual.read(r), fmt.Sprintf("error reading message %s", expected.Type()))
 
 	assert.Equal(t, expected, actual, fmt.Sprintf("pre- and post-marshal %s do not match", expected.Type()))
