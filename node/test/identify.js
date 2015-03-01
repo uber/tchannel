@@ -33,8 +33,8 @@ allocCluster.test('identify', 2, function t(cluster, assert) {
     assert.equal(two.getPeer(hostOne), null, 'two has no peer one');
 
     var idBar = barrier.keyed(2, function(idents, done) {
-        assert.equal(idents.one, hostTwo, 'one identified two');
-        assert.equal(idents.two, hostOne, 'two identified one');
+        assert.equal(idents.one.hostPort, hostTwo, 'one identified two');
+        assert.equal(idents.two.hostPort, hostOne, 'two identified one');
 
         var peersOne = one.getPeers();
         var peersTwo = two.getPeers();

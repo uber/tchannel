@@ -99,12 +99,14 @@ TChannelV2Handler.prototype.handleInitRequest = function handleInitRequest(reqFr
         return callback(new Error('duplicate init request')); // TODO typed error
     }
     /* jshint camelcase:false */
-    var hostPort = reqFrame.body.headers.host_port;
-    var processName = reqFrame.body.headers.process_name;
+    var headers = reqFrame.body.headers;
+    var init = {
+        hostPort: headers.host_port,
+        processName: headers.process_name
+    };
     /* jshint camelcase:true */
-    self.remoteHostPort = hostPort;
-    // TODO: use processName
-    self.emit('identify.in', hostPort, processName);
+    self.remoteHostPort = init.hostPort;
+    self.emit('init.request', init);
     self.sendInitResponse(reqFrame);
     callback();
 };
@@ -115,12 +117,14 @@ TChannelV2Handler.prototype.handleInitResponse = function handleInitResponse(res
         return callback(new Error('duplicate init response')); // TODO typed error
     }
     /* jshint camelcase:false */
-    var hostPort = resFrame.body.headers.host_port;
-    var processName = resFrame.body.headers.process_name;
+    var headers = resFrame.body.headers;
+    var init = {
+        hostPort: headers.host_port,
+        processName: headers.process_name
+    };
     /* jshint camelcase:true */
-    // TODO: use processName
-    self.remoteHostPort = hostPort;
-    self.emit('identify.out', hostPort, processName);
+    self.remoteHostPort = init.hostPort;
+    self.emit('init.response', init);
     callback();
 };
 
