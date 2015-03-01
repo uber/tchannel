@@ -10,58 +10,93 @@ var (
 	ErrBufferFull = errors.New("no more room in buffer")
 )
 
-// A typed.Reader is a wrapper around an underlying []byte with methods to read from
+// A typed.ReadBuffer is a wrapper around an underlying []byte with methods to read from
 // that buffer in big-endian format.
-type Reader interface {
+type ReadBuffer interface {
+	// Reads the next byte from the buffer
 	ReadByte() (byte, error)
+
+	// Read n bytes from the buffer
 	ReadBytes(n int) ([]byte, error)
+
+	// Read a string of length n from the buffer
 	ReadString(n int) (string, error)
+
+	// Read a 16-bit big endian value from the buffer
 	ReadUint16() (uint16, error)
+
+	// Reads a 32-bit big endian value from the buffer
 	ReadUint32() (uint32, error)
+
+	// Reads a 64-bit big endian value from the buffer
 	ReadUint64() (uint64, error)
+
+	// Returns the number of bytes remaining in the buffer
 	BytesRemaining() int
+
+	// Truncates the remainder of the buffer to n bytes.
+	TruncateRemaining(n int) error
 }
 
-// A typed.Writer is a wrapper around an underlying []byte with methods to write to
+// A typed.WriteBuffer is a wrapper around an underlying []byte with methods to write to
 // that buffer in big-endian format.  The buffer is of fixed size, and does not grow.
-type Writer interface {
+type WriteBuffer interface {
+	// Writes a byte to the buffer
 	WriteByte(n byte) error
+
+	// Writes a slice of bytes to the buffer
 	WriteBytes(b []byte) error
+
+	// Writes a 16-bit big endian value to the buffer
 	WriteUint16(n uint16) error
+
+	// Writes a 32-bit big endian value to the buffer
 	WriteUint32(n uint32) error
+
+	// Writes a 64-bit big endian value to the buffer
 	WriteUint64(n uint64) error
+
+	// Writes a string to the buffer
 	WriteString(s string) error
+
+	// Returns the amount of free buffer space remaining
 	BytesRemaining() int
+
+	// Returns the number of bytes written to the buffer
 	BytesWritten() int
+
+	// Writes the buffer content to the given Writer
+	WriteTo(w io.Writer) (int, error)
 }
 
-func NewReader(buffer []byte) Reader {
-	return &reader{buffer}
+func NewReadBuffer(buffer []byte) ReadBuffer {
+	return &reader{buffer: buffer, remaining: buffer}
 }
 
 type reader struct {
-	buffer []byte
+	buffer    []byte
+	remaining []byte
 }
 
 func (r *reader) ReadByte() (byte, error) {
-	if len(r.buffer) == 0 {
+	if len(r.remaining) == 0 {
 		return 0, io.EOF
 	}
 
-	b := r.buffer[0]
-	r.buffer = r.buffer[1:]
+	b := r.remaining[0]
+	r.remaining = r.remaining[1:]
 	return b, nil
 }
 
 func (r *reader) ReadBytes(n int) ([]byte, error) {
-	if len(r.buffer) < n {
-		b := r.buffer
-		r.buffer = nil
+	if len(r.remaining) < n {
+		b := r.remaining
+		r.remaining = nil
 		return b, io.EOF
 	}
 
-	b := r.buffer[0:n]
-	r.buffer = r.buffer[n:]
+	b := r.remaining[0:n]
+	r.remaining = r.remaining[n:]
 	return b, nil
 }
 
@@ -103,11 +138,24 @@ func (r *reader) ReadUint64() (uint64, error) {
 }
 
 func (r *reader) BytesRemaining() int {
-	return len(r.buffer)
+	return len(r.remaining)
 }
 
-func NewWriter(buffer []byte) Writer {
+func (r *reader) TruncateRemaining(n int) error {
+	if len(r.remaining) < n {
+		return io.EOF
+	}
+
+	r.remaining = r.remaining[0:n]
+	return nil
+}
+
+func NewWriteBuffer(buffer []byte) WriteBuffer {
 	return &writer{buffer: buffer, remaining: buffer}
+}
+
+func NewWriteBufferWithSize(size int) WriteBuffer {
+	return NewWriteBuffer(make([]byte, size))
 }
 
 type writer struct {
@@ -192,4 +240,9 @@ func (w *writer) BytesRemaining() int {
 
 func (w *writer) BytesWritten() int {
 	return len(w.buffer) - len(w.remaining)
+}
+
+func (w *writer) WriteTo(iow io.Writer) (int, error) {
+	dirty := w.buffer[0:w.BytesWritten()]
+	return iow.Write(dirty)
 }

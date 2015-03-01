@@ -1,17 +1,16 @@
 package typed
 
 import (
+	"bytes"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 func TestReadWrite(t *testing.T) {
-	contents := make([]byte, 1024)
-
 	s := "the small brown fix"
 	bslice := []byte("jumped over the lazy dog")
 
-	w := NewWriter(contents)
+	w := NewWriteBufferWithSize(1024)
 	w.WriteUint64(0x0123456789ABCDEF)
 	w.WriteUint32(0xABCDEF01)
 	w.WriteUint16(0x2345)
@@ -19,7 +18,10 @@ func TestReadWrite(t *testing.T) {
 	w.WriteString(s)
 	w.WriteBytes(bslice)
 
-	r := NewReader(contents)
+	var b bytes.Buffer
+	w.WriteTo(&b)
+
+	r := NewReadBuffer(b.Bytes())
 	{
 		n, err := r.ReadUint64()
 		assert.Nil(t, err, "could not read uint64")

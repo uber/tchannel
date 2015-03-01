@@ -1,6 +1,7 @@
 package tchannel
 
 import (
+	"bytes"
 	"code.uber.internal/infra/mmihic/tchannel-go/typed"
 	"fmt"
 	"github.com/stretchr/testify/assert"
@@ -77,11 +78,13 @@ func TestCallRes(t *testing.T) {
 }
 
 func assertRoundTrip(t *testing.T, expected Message, actual Message) {
-	var bytes [1024]byte
-	w := typed.NewWriter(bytes[:])
+	w := typed.NewWriteBufferWithSize(1024)
 	require.Nil(t, expected.write(w), fmt.Sprintf("error writing message %s", expected.Type()))
 
-	r := typed.NewReader(bytes[0:w.BytesWritten()])
+	var b bytes.Buffer
+	w.WriteTo(&b)
+
+	r := typed.NewReadBuffer(b.Bytes())
 	require.Nil(t, actual.read(r), fmt.Sprintf("error reading message %s", expected.Type()))
 
 	assert.Equal(t, expected, actual, fmt.Sprintf("pre- and post-marshal %s do not match", expected.Type()))

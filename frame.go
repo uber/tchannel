@@ -30,7 +30,7 @@ type FrameHeader struct {
 	reserved [8]byte
 }
 
-func (fh *FrameHeader) read(r typed.Reader) error {
+func (fh *FrameHeader) read(r typed.ReadBuffer) error {
 	var err error
 	fh.Size, err = r.ReadUint16()
 	if err != nil {
@@ -60,7 +60,7 @@ func (fh *FrameHeader) read(r typed.Reader) error {
 	return nil
 }
 
-func (fh *FrameHeader) write(w typed.Writer) error {
+func (fh *FrameHeader) write(w typed.WriteBuffer) error {
 	if err := w.WriteUint16(fh.Size); err != nil {
 		return NewWriteIOError("frame size", err)
 	}
@@ -136,7 +136,7 @@ func (r *FrameReader) ReadFrame() (Frame, error) {
 		return frame, err
 	}
 
-	br := typed.NewReader(r.frameHeaderBuf[:])
+	br := typed.NewReadBuffer(r.frameHeaderBuf[:])
 	if err := frame.Header.read(br); err != nil {
 		return frame, err
 	}
@@ -162,7 +162,7 @@ func NewFrameWriter(w io.Writer) *FrameWriter {
 // Writes a frame to the underlying stream
 func (w *FrameWriter) WriteFrame(f *Frame) error {
 	var fh [FrameHeaderSize]byte
-	tw := typed.NewWriter(fh[:])
+	tw := typed.NewWriteBuffer(fh[:])
 	if err := f.Header.write(tw); err != nil {
 		return err
 	}

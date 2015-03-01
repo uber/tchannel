@@ -41,8 +41,8 @@ type Message interface {
 	// The type of the message
 	Type() MessageType
 
-	read(r typed.Reader) error
-	write(r typed.Writer) error
+	read(r typed.ReadBuffer) error
+	write(r typed.WriteBuffer) error
 }
 
 // Parameters to an InitReq/InitRes
@@ -54,7 +54,7 @@ type initMessage struct {
 	InitParams InitParams
 }
 
-func (m *initMessage) read(r typed.Reader) error {
+func (m *initMessage) read(r typed.ReadBuffer) error {
 	var err error
 	m.Version, err = r.ReadUint16()
 	if err != nil {
@@ -87,7 +87,7 @@ func (m *initMessage) read(r typed.Reader) error {
 	}
 }
 
-func (m *initMessage) write(w typed.Writer) error {
+func (m *initMessage) write(w typed.WriteBuffer) error {
 	if err := w.WriteUint16(m.Version); err != nil {
 		return err
 	}
@@ -132,7 +132,7 @@ func (m *InitRes) Type() MessageType { return MessageTypeInitRes }
 // Headers passed as part of a CallReq/CallRes
 type CallHeaders map[string]string
 
-func (ch CallHeaders) read(r typed.Reader) error {
+func (ch CallHeaders) read(r typed.ReadBuffer) error {
 	nh, err := r.ReadByte()
 	if err != nil {
 		return err
@@ -165,7 +165,7 @@ func (ch CallHeaders) read(r typed.Reader) error {
 	return nil
 }
 
-func (ch CallHeaders) write(w typed.Writer) error {
+func (ch CallHeaders) write(w typed.WriteBuffer) error {
 	if err := w.WriteByte(byte(len(ch))); err != nil {
 		return err
 	}
@@ -209,7 +209,7 @@ type CallReq struct {
 
 func (m *CallReq) Id() uint32        { return m.id }
 func (m *CallReq) Type() MessageType { return MessageTypeCallReq }
-func (m *CallReq) read(r typed.Reader) error {
+func (m *CallReq) read(r typed.ReadBuffer) error {
 	ttl, err := r.ReadUint32()
 	if err != nil {
 		return err
@@ -250,7 +250,7 @@ func (m *CallReq) read(r typed.Reader) error {
 	return nil
 }
 
-func (m *CallReq) write(w typed.Writer) error {
+func (m *CallReq) write(w typed.WriteBuffer) error {
 	if err := w.WriteUint32(uint32(m.TimeToLive.Seconds() * 1000)); err != nil {
 		return err
 	}
@@ -313,7 +313,7 @@ type CallRes struct {
 func (m *CallRes) Id() uint32        { return m.id }
 func (m *CallRes) Type() MessageType { return MessageTypeCallRes }
 
-func (m *CallRes) read(r typed.Reader) error {
+func (m *CallRes) read(r typed.ReadBuffer) error {
 	c, err := r.ReadByte()
 	if err != nil {
 		return err
@@ -328,7 +328,7 @@ func (m *CallRes) read(r typed.Reader) error {
 	return nil
 }
 
-func (m *CallRes) write(w typed.Writer) error {
+func (m *CallRes) write(w typed.WriteBuffer) error {
 	if err := w.WriteByte(byte(m.ResponseCode)); err != nil {
 		return err
 	}
@@ -344,7 +344,7 @@ func (m *CallRes) write(w typed.Writer) error {
 	return nil
 }
 
-func writeArg(arg []byte, w typed.Writer) error {
+func writeArg(arg []byte, w typed.WriteBuffer) error {
 	if err := w.WriteUint32(uint32(len(arg))); err != nil {
 		return err
 	}
@@ -352,7 +352,7 @@ func writeArg(arg []byte, w typed.Writer) error {
 	return w.WriteBytes(arg)
 }
 
-func readArg(r typed.Reader) ([]byte, error) {
+func readArg(r typed.ReadBuffer) ([]byte, error) {
 	l, err := r.ReadUint32()
 	if err != nil {
 		return nil, err
