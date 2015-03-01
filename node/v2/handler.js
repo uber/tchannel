@@ -24,6 +24,8 @@ var TypedError = require('error/typed');
 var Duplex = require('stream').Duplex;
 var util = require('util');
 
+var TChannelOutgoingResponse = require('../reqres').OutgoingResponse;
+var TChannelIncomingRequest = require('../reqres').IncomingRequest;
 var v2 = require('./index');
 
 module.exports = TChannelV2Handler;
@@ -130,28 +132,13 @@ TChannelV2Handler.prototype.handleInitResponse = function handleInitResponse(res
 
 TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFrame, callback) {
     var self = this;
-    var id = reqFrame.id;
-    var name = String(reqFrame.body.arg1);
-
     if (self.remoteHostPort === null) {
         return callback(new Error('call request before init request')); // TODO typed error
     }
-
-    var handler = self.channel.getEndpointHandler(name);
-    var responseHeaders = {};
-
-    self.runInOp(handler, {
-        id: id,
-        tracing: reqFrame.tracing,
-        service: reqFrame.service,
-        requestHeaders: reqFrame.headers,
-        arg1: reqFrame.body.arg1,
-        arg2: reqFrame.body.arg2,
-        arg3: reqFrame.body.arg3,
-        responseHeaders: responseHeaders
-    }, function sendResponseFrame(err, res1, res2) {
-        self.sendResponseFrame(reqFrame, responseHeaders, err, res1, res2);
-    });
+    var req = self.buildIncomingRequest(reqFrame);
+    var res = self.buildOutgoingResponse(req);
+    var handler = self.channel.getEndpointHandler(req.name);
+    self.runInOp(handler, req, res.send.bind(res));
     callback();
 };
 
@@ -247,25 +234,55 @@ TChannelV2Handler.prototype.sendRequestFrame = function sendRequestFrame(options
     return id;
 };
 
-TChannelV2Handler.prototype.sendResponseFrame = function sendResponseFrame(reqFrame, headers, err, res1, res2) {
+TChannelV2Handler.prototype.sendResponseFrame = function sendResponseFrame(res, err, res1, res2) {
     // TODO: refactor this all the way back out through the op handler calling convention
     var self = this;
-    var id = reqFrame.id;
-    var flags = 0; // TODO: streaming
-    var arg1 = reqFrame.body.arg1;
-    var tracing = reqFrame.body.tracing;
-    var checksumType = reqFrame.body.csum.type;
     var resBody;
+    var flags = 0; // TODO: streaming
     if (err) {
         var errArg = isError(err) ? err.message : JSON.stringify(err); // TODO: better
-        resBody = v2.CallResponse(flags, v2.CallResponse.Codes.Error, tracing, headers, checksumType, arg1, res1, errArg);
+        resBody = v2.CallResponse(
+            flags, v2.CallResponse.Codes.Error, res.tracing,
+            res.headers, res.checksumType, res.name, res1, errArg);
     } else {
-        resBody = v2.CallResponse(flags, v2.CallResponse.Codes.OK, tracing, headers, checksumType, arg1, res1, res2);
+        resBody = v2.CallResponse(
+            flags, v2.CallResponse.Codes.OK, res.tracing,
+            res.headers, res.checksumType, res.name, res1, res2);
     }
-    var resFrame = v2.Frame(id, resBody);
+    var resFrame = v2.Frame(res.id, resBody);
     self.push(resFrame);
 };
 /* jshint maxparams:4 */
+
+TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingResponse(req) {
+    var self = this;
+    var res = TChannelOutgoingResponse(req.id, {
+        tracing: req.tracing,
+        headers: {},
+        checksumType: req.checksumType,
+        name: req.name,
+    }, sendResponseFrame);
+    return res;
+    function sendResponseFrame(err, res1, res2) {
+        self.sendResponseFrame(res, err, res1, res2);
+    }
+};
+
+TChannelV2Handler.prototype.buildIncomingRequest = function buildIncomingRequest(reqFrame) {
+    var name = String(reqFrame.body.arg1);
+    var req = TChannelIncomingRequest(reqFrame.id, {
+        id: reqFrame.id,
+        ttl: reqFrame.ttl,
+        tracing: reqFrame.tracing,
+        service: reqFrame.service,
+        name: name,
+        headers: reqFrame.headers,
+        checksumType: reqFrame.body.csum.type,
+        arg2: reqFrame.body.arg2,
+        arg3: reqFrame.body.arg3
+    });
+    return req;
+};
 
 function isError(obj) {
     return typeof obj === 'object' && (
