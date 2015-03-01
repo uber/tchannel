@@ -29,6 +29,9 @@ var globalRandom = Math.random;
 var net = require('net');
 var format = require('util').format;
 var inspect = require('util').inspect;
+var Spy = require('./v2/spy');
+
+var dumpEnabled = /\btchannel_dump\b/.test(process.env.NODE_DEBUG || '');
 
 function TChannel(options) {
     if (!(this instanceof TChannel)) {
@@ -445,10 +448,27 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 
     socket.once('close', clearTimer);
 
-    self.socket
+    var stream = self.socket;
+
+    if (dumpEnabled) {
+        stream = stream.pipe(Spy(process.stdout, {
+            prefix: '>>> ' + self.remoteAddr + ' '
+        }));
+    }
+
+    stream = stream
         .pipe(self.reader)
         .pipe(self.handler)
         .pipe(self.writer)
+        ;
+
+    if (dumpEnabled) {
+        stream = stream.pipe(Spy(process.stdout, {
+            prefix: '<<< ' + self.remoteAddr + ' '
+        }));
+    }
+
+    stream = stream
         .pipe(self.socket)
         ;
 
