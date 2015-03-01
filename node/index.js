@@ -393,9 +393,6 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     self.reader = new v2.Reader(v2.Frame);
     self.writer = new v2.Writer();
     self.handler = new v2.Handler(self.channel, {
-        writeFrame: function writeFrame(frame, callback) {
-            self.writer.write(frame, null, callback);
-        },
         // TODO: the op boundary is probably better handled by an operation
         // collection abstraction that the handler can submit to and then later
         // fulfill to
@@ -451,9 +448,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     self.socket
         .pipe(self.reader)
         .pipe(self.handler)
-        ;
-
-    self.writer
+        .pipe(self.writer)
         .pipe(self.socket)
         ;
 

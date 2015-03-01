@@ -21,7 +21,7 @@
 'use strict';
 
 var TypedError = require('error/typed');
-var Writable = require('stream').Writable;
+var Duplex = require('stream').Duplex;
 var util = require('util');
 
 var v2 = require('./index');
@@ -48,11 +48,10 @@ function TChannelV2Handler(channel, options) {
         return new TChannelV2Handler(channel, options);
     }
     var self = this;
-    Writable.call(self, {
+    Duplex.call(self, {
         objectMode: true
     });
     self.channel = channel;
-    self.writeFrame = options.writeFrame;
     // TODO: may be better suited to pull out an operation collection
     // abstraction and then encapsulate through that rather than this
     // run/complete approach
@@ -62,7 +61,7 @@ function TChannelV2Handler(channel, options) {
     self.lastSentFrameId = 0;
 }
 
-util.inherits(TChannelV2Handler, Writable);
+util.inherits(TChannelV2Handler, Duplex);
 
 TChannelV2Handler.prototype.nextFrameId = function nextFrameId() {
     var self = this;
@@ -88,6 +87,10 @@ TChannelV2Handler.prototype._write = function _write(frame, encoding, callback) 
                 typeCode: frame.body.type
             }));
     }
+};
+
+TChannelV2Handler.prototype._read = function _read(/* n */) {
+    /* noop */
 };
 
 TChannelV2Handler.prototype.handleInitRequest = function handleInitRequest(reqFrame, callback) {
@@ -201,7 +204,7 @@ TChannelV2Handler.prototype.sendInitRequest = function sendInitRequest() {
         /* jshint camelcase:true */
     });
     var reqFrame = v2.Frame(id, body);
-    self.writeFrame(reqFrame);
+    self.push(reqFrame);
 };
 
 TChannelV2Handler.prototype.sendInitResponse = function sendInitResponse(reqFrame) {
@@ -216,7 +219,7 @@ TChannelV2Handler.prototype.sendInitResponse = function sendInitResponse(reqFram
         /* jshint camelcase:true */
     });
     var resFrame = v2.Frame(id, body);
-    self.writeFrame(resFrame);
+    self.push(resFrame);
 };
 
 /* jshint maxparams:6 */
@@ -236,7 +239,7 @@ TChannelV2Handler.prototype.sendRequestFrame = function sendRequestFrame(options
     }
     var reqBody = v2.CallRequest(flags, ttl, tracing, service, headers, csum, arg1, arg2, arg3);
     var reqFrame = v2.Frame(id, reqBody);
-    self.writeFrame(reqFrame);
+    self.push(reqFrame);
     return id;
 };
 
@@ -256,7 +259,7 @@ TChannelV2Handler.prototype.sendResponseFrame = function sendResponseFrame(reqFr
         resBody = v2.CallResponse(flags, v2.CallResponse.Codes.OK, tracing, headers, checksumType, arg1, res1, res2);
     }
     var resFrame = v2.Frame(id, resBody);
-    self.writeFrame(resFrame);
+    self.push(resFrame);
 };
 /* jshint maxparams:4 */
 
