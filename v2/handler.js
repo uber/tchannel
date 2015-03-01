@@ -178,7 +178,12 @@ TChannelV2Handler.prototype.handleError = function handleError(errFrame) {
         originalId: id,
         message: message
     });
-    self.completeOutOp(err, id, null, null);
+    if (id === v2.Frame.NullId) {
+        // fatal error not associated with a prior frame
+        self.emit('error', err);
+    } else {
+        self.completeOutOp(err, id, null, null);
+    }
 };
 
 TChannelV2Handler.prototype.sendInitRequest = function sendInitRequest() {
