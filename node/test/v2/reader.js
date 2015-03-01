@@ -21,9 +21,10 @@
 'use strict';
 
 var util = require('util');
-var Parser = require('../../v2/parser.js');
+var Reader = require('../../v2/reader.js');
 var TestFrame = require('./test_frame');
-var parserTest = require('../lib/parser_test');
+var testExpectations = require('../lib/test_expectations');
+var PassThrough = require('stream').PassThrough;
 
 var buffers = [];
 var expectedFrames = [];
@@ -52,12 +53,29 @@ for (var i = 0; i < BigChunk.length; i++) {
     oneBytePer.push(Buffer([BigChunk[i]]));
 }
 
-parserTest('works frame-at-a-time', makeV2Parser, buffers, expectedFrames);
-parserTest('works from one big chunk', makeV2Parser, [BigChunk], expectedFrames);
-parserTest('works byte-at-a-time', makeV2Parser, oneBytePer, expectedFrames);
+readerTest('works frame-at-a-time', buffers, expectedFrames);
+readerTest('works from one big chunk', [BigChunk], expectedFrames);
+readerTest('works byte-at-a-time', oneBytePer, expectedFrames);
 
-function makeV2Parser() {
-    return Parser(TestFrame, {
-        frameLengthSize: 1
+function readerTest(desc, chunks, expected) {
+    testExpectations(desc, expected, function run(expect, done) {
+        var reader = Reader(TestFrame, {
+            frameLengthSize: 1
+        });
+        var stream = PassThrough({
+            highWaterMark: 1
+        });
+        chunks.forEach(function(chunk) {
+            stream.push(chunk);
+        });
+        stream.push(null);
+        reader.on('data', function onData(frame) {
+            expect('frame', frame);
+        });
+        reader.on('error', function onError(err) {
+            expect('error', err);
+        });
+        reader.on('end', done);
+        stream.pipe(reader);
     });
 }
