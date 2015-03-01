@@ -20,7 +20,7 @@
 
 'use strict';
 
-require('./parser.js');
+require('./reader.js');
 require('./frame.js');
 require('./init.js');
 require('./checksum.js');
