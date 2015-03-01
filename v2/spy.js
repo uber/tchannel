@@ -118,10 +118,12 @@ ChunkSpy.prototype._flush = function _flush(callback) {
     var self = this;
     if (self.buffer.length) {
         self.push(self.buffer);
-        self.hex.write(self.buffer);
+        self.hex.end(self.buffer);
         self.buffer = Buffer(0);
         self.expecting = 4;
         self.state = States.PendingLength;
+    } else {
+        self.hex.end();
     }
     callback();
 };
