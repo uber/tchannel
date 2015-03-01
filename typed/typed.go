@@ -37,6 +37,12 @@ type ReadBuffer interface {
 
 	// Fills the buffer from a given reader, up the amount specified
 	FillFrom(ior io.Reader, n int) (int, error)
+
+	// Returns the current position in the buffer
+	CurrentPos() int
+
+	// Seeks to the given position from the start of the buffer
+	Seek(position int) error
 }
 
 // A typed.WriteBuffer is a wrapper around an underlying []byte with methods to write to
@@ -71,6 +77,12 @@ type WriteBuffer interface {
 
 	// Resets the buffer to a clean state for writing
 	Reset()
+
+	// Returns the current position in the buffer
+	CurrentPos() int
+
+	// Seeks to the given offset from the start of the buffer
+	Seek(offset int) error
 }
 
 func NewReadBufferWithSize(size int) ReadBuffer {
@@ -152,6 +164,19 @@ func (r *readBuffer) FillFrom(ior io.Reader, n int) (int, error) {
 
 	r.remaining = r.buffer[:n]
 	return ior.Read(r.remaining)
+}
+
+func (r *readBuffer) CurrentPos() int {
+	return len(r.buffer) - len(r.remaining)
+}
+
+func (r *readBuffer) Seek(offset int) error {
+	if offset > len(r.buffer) {
+		return ErrInsufficientBuffer
+	}
+
+	r.remaining = r.buffer[offset:]
+	return nil
 }
 
 func NewWriteBuffer(buffer []byte) WriteBuffer {
@@ -247,10 +272,15 @@ func (w *writeBuffer) FlushTo(iow io.Writer) (int, error) {
 	return iow.Write(dirty)
 }
 
-func (w *writeBuffer) BytesWritten() int {
-	return len(w.buffer) - len(w.remaining)
-}
+func (w *writeBuffer) BytesWritten() int { return len(w.buffer) - len(w.remaining) }
+func (w *writeBuffer) Reset()            { w.remaining = w.buffer }
+func (w *writeBuffer) CurrentPos() int   { return len(w.buffer) - len(w.remaining) }
 
-func (w *writeBuffer) Reset() {
-	w.remaining = w.buffer
+func (w *writeBuffer) Seek(offset int) error {
+	if offset > len(w.buffer) {
+		return ErrInsufficientBuffer
+	}
+
+	w.remaining = w.buffer[offset:]
+	return nil
 }

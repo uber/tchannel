@@ -3,6 +3,7 @@ package typed
 import (
 	"bytes"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -55,4 +56,47 @@ func TestReadWrite(t *testing.T) {
 		assert.Nil(t, err, "could not read byte slice")
 		assert.Equal(t, rbslice, bslice, "mismatched byte slices")
 	}
+}
+
+func TestSeek(t *testing.T) {
+	w := NewWriteBufferWithSize(1024)
+	pos := w.CurrentPos()
+	require.Nil(t, w.WriteUint16(0))
+	require.Nil(t, w.WriteString("Hello NYC"))
+	endPos := w.CurrentPos()
+
+	require.Nil(t, w.Seek(pos))
+	require.Nil(t, w.WriteUint16(uint16(len("Hello NYC"))))
+	require.Nil(t, w.Seek(endPos))
+
+	pos = w.CurrentPos()
+	require.Nil(t, w.WriteUint16(0)) // We'll come back to this
+	require.Nil(t, w.WriteString("The quick brown fox"))
+	endPos = w.CurrentPos()
+
+	require.Nil(t, w.Seek(pos))
+	require.Nil(t, w.WriteUint16(uint16(len("The quick brown fox"))))
+	require.Nil(t, w.Seek(endPos))
+
+	var b bytes.Buffer
+	_, err := w.FlushTo(&b)
+	require.Nil(t, err)
+
+	r := NewReadBufferWithSize(1024)
+	_, err = r.FillFrom(bytes.NewReader(b.Bytes()), w.BytesWritten())
+	require.Nil(t, err)
+
+	n, err := r.ReadUint16()
+	require.Nil(t, err)
+
+	s, err := r.ReadString(int(n))
+	require.Nil(t, err)
+	assert.Equal(t, "Hello NYC", s)
+
+	n, err = r.ReadUint16()
+	require.Nil(t, err)
+
+	s, err = r.ReadString(int(n))
+	require.Nil(t, err)
+	assert.Equal(t, "The quick brown fox", s)
 }
