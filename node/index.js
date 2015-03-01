@@ -432,18 +432,20 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 
     if (direction === 'out') {
         self.handler.sendInitRequest();
-        self.handler.once('init.response', function onOutIdentified(hostPort) {
-            self.remoteName = hostPort;
+        self.handler.once('init.response', function onOutIdentified(init) {
+            self.remoteName = init.hostPort;
             self.channel.emit('identified', {
-                hostPort: hostPort
+                hostPort: init.hostPort,
+                processName: init.processName
             });
         });
     } else {
-        self.handler.once('init.request', function onInIdentified(hostPort) {
-            self.remoteName = hostPort;
-            self.channel.addPeer(hostPort, self);
+        self.handler.once('init.request', function onInIdentified(init) {
+            self.remoteName = init.hostPort;
+            self.channel.addPeer(init.hostPort, self);
             self.channel.emit('identified', {
-                hostPort: hostPort
+                hostPort: init.hostPort,
+                processName: init.processName
             });
         });
     }
