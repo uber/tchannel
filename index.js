@@ -660,17 +660,7 @@ TChannelConnection.prototype.send = function send(options, arg1, arg2, arg3, cal
     //  throw new Error('duplicate frame id in flight'); // TODO typed error
     // }
 
-    var id = self.handler.sendRequestFrame(options, arg1, arg2, arg3, function requestSent(err) {
-        if (err) {
-            self.logger.warn('failed to send request', {
-                id: id,
-                error: err
-            });
-            // TODO: retry?
-            // TODO: early self.completeOutOp(id, err, null, null)?
-        }
-    });
-
+    var id = self.handler.sendRequestFrame(options, arg1, arg2, arg3);
     self.outOps[id] = new TChannelClientOp(
         options, self.channel.now(), callback);
     self.pendingCount++;
@@ -692,17 +682,9 @@ TChannelConnection.prototype.runInOp = function runInOp(handler, options, sendRe
             });
             return;
         }
-        sendResponseFrame(err, res1, res2, function responseSent(err) {
-            if (err) {
-                self.logger.warn('failed to send response', {
-                    id: id,
-                    error: err
-                });
-                // TODO: retry
-            }
-            delete self.inOps[id];
-            self.inPending--;
-        });
+        sendResponseFrame(err, res1, res2);
+        delete self.inOps[id];
+        self.inPending--;
     }
 };
 
