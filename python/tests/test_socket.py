@@ -92,7 +92,7 @@ def test_handle_calls(tchannel_pair):
     class _MyException(Exception):
         pass
 
-    def my_handler(context, message, connection):
+    def my_handler(context, connection):
         raise _MyException()
 
     server, client = tchannel_pair
@@ -107,6 +107,6 @@ def test_finish_connection(tchannel_pair):
     client.ping()
     client._connection._connection.close()
 
-    def _handle(context, message, connection):
+    def _handle(data, connection):
         pass
     server.handle_calls(_handle)

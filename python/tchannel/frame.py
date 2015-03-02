@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+from .context import Context
 from .exceptions import ProtocolException
 from .mapping import get_message_class
 from .parser import read_number
@@ -56,8 +57,8 @@ class Frame(object):
         remaining_bytes = message_length - cls.PRELUDE_SIZE
         if remaining_bytes:
             message.parse(stream, remaining_bytes)
-        frame = cls(message=message, message_id=message_id)
-        return frame, message
+        context = Context(message_id=message_id, message=message)
+        return context
 
     def write(self, connection, callback=None):
         """Write a frame out to a connection."""

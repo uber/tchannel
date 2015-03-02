@@ -76,8 +76,8 @@ class Connection(object):
 
         self.requested_version = message.version
 
-    def on_handshake(self, data):
-        frame, message = data
+    def on_handshake(self, context):
+        message = context.message
         if message.message_type != Types.INIT_REQ:
             raise InvalidMessageException(
                 'You need to shake my hand first. Got: %d' %
@@ -105,7 +105,7 @@ class Connection(object):
         return self.await(callback=self.on_handshake_reply)
 
     def on_handshake_reply(self, data):
-        frame, message = data
+        message = data.message
         if message.message_type != Types.INIT_RES:
             raise InvalidMessageException(
                 'Expected handshake response, got %d' %

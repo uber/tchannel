@@ -67,4 +67,4 @@ def test_decode_invalid_message_id(dummy_frame):
 def test_decode_ping(dummy_frame):
     """Verify we can decode a ping message."""
     dummy_frame[2] = Types.PING_REQ
-    frame, message = Frame.decode(BytesIO(dummy_frame))
+    Frame.decode(BytesIO(dummy_frame))
