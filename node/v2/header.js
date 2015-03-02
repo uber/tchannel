@@ -21,8 +21,8 @@
 'use strict';
 
 var TypedError = require('error/typed');
-var read = require('../lib/read');
-var write = require('../lib/write');
+var bufrw = require('bufrw');
+var inherits = require('util').inherits;
 
 var DuplicateHeaderKeyError = TypedError({
     type: 'tchannel.duplicate-header-key',
@@ -37,80 +37,75 @@ var NullKeyError = TypedError({
     message: 'null key'
 });
 
-// nh:1 (hk~1 hv~1){nh}
-module.exports.read = read.chained(read.UInt8, function readHeaders(numHeaders, buffer, offset) {
+// TODO: different struct pattern that doesn't realize a temporary list of
+// [key, val] tuples may be better. At the very least, such structure would
+// allow for more precise error reporting.
+
+function HeaderRW(countrw, keyrw, valrw) {
+    if (!(this instanceof HeaderRW)) {
+        return new HeaderRW(countrw, keyrw, valrw);
+    }
+    var self = this;
+    self.keyrw = keyrw;
+    self.valrw = valrw;
+    var keyvalrw = bufrw.Series([self.keyrw, self.valrw]);
+    bufrw.Repeat.call(self, countrw, keyvalrw);
+}
+inherits(HeaderRW, bufrw.Repeat);
+
+HeaderRW.prototype.byteLength = function byteLength(headers) {
+    // TODO: bit wasteful
+    var self = this;
+    var keys = Object.keys(headers);
+    var keyvals = new Array(keys.length);
+    for (var i = 0; i < keys.length; i++) {
+        keyvals[i] = [keys[i], headers[keys[i]]];
+    }
+    return bufrw.Repeat.prototype.byteLength.call(self, keyvals);
+};
+
+HeaderRW.prototype.writeInto = function writeInto(headers, buffer, offset) {
+    var self = this;
+    var keys = Object.keys(headers);
+    var keyvals = new Array(keys.length);
+    for (var i = 0; i < keys.length; i++) {
+        keyvals[i] = [keys[i], headers[keys[i]]];
+    }
+    return bufrw.Repeat.prototype.writeInto.call(self, keyvals, buffer, offset);
+};
+
+HeaderRW.prototype.readFrom = function readFrom(buffer, offset) {
+    var self = this;
+    var res = bufrw.Repeat.prototype.readFrom.call(self, buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+    var keyvals = res.value;
+
     var headers = {};
-    for (var i=0; i<numHeaders; i++) {
-        var res = read.pair1(buffer, offset);
-        if (res[0]) return res;
-        offset = res[1];
-        var pair = res[2];
-        if (!pair[0].length) {
-            return [NullKeyError(), offset, null];
+    for (var i = 0; i < keyvals.length; i++) {
+        var keyval = keyvals[i];
+        var key = keyval[0];
+        var val = keyval[1];
+        if (!key.length) {
+            return bufrw.ReadResult.error(NullKeyError(), offset, headers);
         }
-        var key = String(pair[0]);
-        var val = String(pair[1]);
         if (headers[key] !== undefined) {
-            return [DuplicateHeaderKeyError({
+            return bufrw.ReadResult.error(DuplicateHeaderKeyError({
                 key: key,
                 value: val,
                 priorValue: headers[key]
-            }), offset, null];
+            }), offset, headers);
         }
         headers[key] = val;
     }
-    return [null, offset, headers];
-});
+
+    return bufrw.ReadResult.just(offset, headers);
+};
+
+module.exports = HeaderRW;
 
 // nh:1 (hk~1 hv~1){nh}
-module.exports.write = function writeHeaders(headers) {
-    var keys = Object.keys(headers);
-    var parts = new Array(1 + 2 * keys.length);
-    parts[0] = write.UInt8(keys.length);
-    for (var i=0, j=0; i<keys.length; i++) {
-        var key = write.buf1(keys[i], 'header key');
-        var val = write.buf1(headers[keys[i]], 'header val');
-        parts[++j] = key;
-        parts[++j] = val;
-    }
-    return write.series(parts);
-};
+module.exports.header1 = HeaderRW(bufrw.UInt8, bufrw.str1, bufrw.str1);
 
 // nh:2 (hk~2 hv~2){nh}
-module.exports.read2 = read.chained(read.UInt16BE, function readHeaders(numHeaders, buffer, offset) {
-    var headers = {};
-    for (var i=0; i<numHeaders; i++) {
-        var res = read.pair2(buffer, offset);
-        if (res[0]) return res;
-        offset = res[1];
-        var pair = res[2];
-        if (!pair[0].length) {
-            return [NullKeyError(), offset, null];
-        }
-        var key = String(pair[0]);
-        var val = String(pair[1]);
-        if (headers[key] !== undefined) {
-            return [DuplicateHeaderKeyError({
-                key: key,
-                value: val,
-                priorValue: headers[key]
-            }), offset, null];
-        }
-        headers[key] = val;
-    }
-    return [null, offset, headers];
-});
-
-// nh:2 (hk~2 hv~2){nh}
-module.exports.write2 = function write2Headers(headers) {
-    var keys = Object.keys(headers);
-    var parts = new Array(1 + 2 * keys.length);
-    parts[0] = write.UInt16BE(keys.length);
-    for (var i=0, j=0; i<keys.length; i++) {
-        var key = write.buf2(keys[i], 'header key');
-        var val = write.buf2(headers[keys[i]], 'header val');
-        parts[++j] = key;
-        parts[++j] = val;
-    }
-    return write.series(parts);
-};
+module.exports.header2 = HeaderRW(bufrw.UInt16BE, bufrw.str2, bufrw.str2);
