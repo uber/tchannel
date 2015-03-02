@@ -6,10 +6,10 @@ env:
   - SUBDIR=python
 
 install:
-  - pushd $SUBDIR && make install && popd
+  - make -C $SUBDIR install
 
 script:
-  - cd $SUBDIR && make test_ci
+  - make -C $SUBDIR test_ci
 
 after_success:
   - coveralls
