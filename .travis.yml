@@ -1,11 +1,17 @@
 ---
 language: python
 
+env:
+  - LANGUAGE=node
+  - LANGUAGE=python
+
 install:
-  - pushd python && pip install tox coveralls && python setup.py develop && popd
+  - if [ "$LANGUAGE" == "python" ] ; then pushd python && pip install tox coveralls && python setup.py develop && popd ; fi
+  - if [ "$LANGUAGE" == "node" ] ; then pushd node && npm install && popd ; fi
 
 script:
-  - cd python && tox
+  - if [ "$LANGUAGE" == "python" ] ; then cd python && tox ; fi
+  - if [ "$LANGUAGE" == "node" ] ; then cd node && npm test ; fi
 
 after_success:
   - coveralls
