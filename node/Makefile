@@ -5,7 +5,7 @@
 install:
 	npm install
 
-test_ci:
-	npm test
+test_ci: test
 
-test: test_ci
+test:
+	npm test
