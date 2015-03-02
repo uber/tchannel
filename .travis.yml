@@ -1,11 +1,15 @@
 ---
 language: python
 
+env:
+  - SUBDIR=node
+  - SUBDIR=python
+
 install:
-  - pushd python && pip install tox coveralls && python setup.py develop && popd
+  - pushd $SUBDIR && make install && popd
 
 script:
-  - cd python && tox
+  - cd $SUBDIR && make test_ci
 
 after_success:
   - coveralls
