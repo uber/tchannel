@@ -10,8 +10,10 @@ def get_number_format(size):
         return '>H'
     elif size == 4:
         return '>I'
+    elif size == 8:
+        return '>Q'
     else:
-        raise ValueError('size must be 1, 2, or 4')
+        raise ValueError('size must be 1, 2, 4, or 8, not %d' % size)
 
 
 def write_number(value, size):
@@ -33,14 +35,18 @@ def read_short(buff):
     return read_number(buff, 2)
 
 
-def read_variable_length_key(buff, key_size):
+def read_variable_length_key(buff, key_size, decode=True):
     """Read a variable-length key from a stream.
 
     Returns tuple of (value, bytes read).
     """
     key_bytes = read_number(buff, key_size)
-    value = buff.read(key_bytes)
-    return value.decode('utf-8'), (key_bytes + key_size)
+    if key_bytes:
+        value = buff.read(key_bytes)
+        return_value = value.decode('utf-8') if decode else value
+    else:
+        return_value = None
+    return return_value, (key_bytes + key_size)
 
 
 def read_key_value(buff, key_size, value_size=None):
@@ -60,11 +66,18 @@ def read_key_value(buff, key_size, value_size=None):
     return key, value, (key_bytes + value_bytes)
 
 
-def write_variable_length_key(stream, value, value_size):
+def write_variable_length_key(stream, value, value_size, encode=True):
     """Write a length followed by that many bytes."""
-    encoded_value = value.encode('utf-8')
-    stream.extend(write_number(len(encoded_value), value_size))
-    stream.extend(encoded_value)
+    if value:
+        encoded_value = value.encode('utf-8') if encode else value
+        value_length = len(encoded_value)
+    else:
+        encoded_value = None
+        value_length = 0
+
+    stream.extend(write_number(value_length, value_size))
+    if encoded_value:
+        stream.extend(encoded_value)
 
 
 def write_key_value(key, value, key_size, value_size=None):

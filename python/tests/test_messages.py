@@ -20,7 +20,10 @@ def make_short_bytes(value):
 
 @pytest.fixture
 def init_request_message():
-    return make_byte_stream(make_short_bytes(0x02))
+    return make_byte_stream(
+        make_short_bytes(0x02) +  # version 2
+        make_short_bytes(0)  # 0 headers
+    )
 
 
 @pytest.fixture
@@ -84,15 +87,50 @@ def test_valid_ping_request():
         'message': 'hi',
         'original_message_id': 1,
     }),
+    (messages.CallRequestMessage, {
+        'flags': 0,
+        'ttl': 1,
+        'span_id': 0,
+        'parent_id': 0,
+        'trace_id': 0,
+        'traceflags': 0,
+        'service': 'kodenom',
+        'headers': {},
+        'checksum_type': 0,
+        'arg_1': None,
+        'arg_2': None,
+        'arg_3': None,
+    }),
+    (messages.CallRequestMessage, {
+        'flags': 0x01,
+        'ttl': 1,
+        'span_id': 0,
+        'parent_id': 0,
+        'trace_id': 0,
+        'traceflags': 0x01,
+        'service': 'with_checksum',
+        'headers': {},
+        'checksum_type': 1,
+        'checksum': 3,
+        'arg_1': b'hi',
+        'arg_2': b'\x00',
+        'arg_3': None,
+    })
 ])
-def test_serialize_message(message_class, attrs):
-    """Verify all message types serialize properly."""
+def test_roundtrip_message(message_class, attrs):
+    """Verify all message types serialize and deserialize properly."""
     message = message_class()
-    out = bytearray()
     for key, value in attrs.items():
         setattr(message, key, value)
 
+    out = bytearray()
     message.serialize(out)
+
+    in_message = message_class()
+    in_message.parse(BytesIO(out), len(out))
+
+    for key, value in attrs.items():
+        assert getattr(in_message, key) == value
 
 
 @pytest.mark.parametrize('message_class,byte_stream', [
