@@ -20,41 +20,35 @@
 
 'use strict';
 
+var testRW = require('bufrw/test_rw');
 var Frame = require('../../v2/frame.js');
 var TestBody = require('./test_body.js');
-var testRead = require('../lib/read_test.js');
 
-var catBuffer = Buffer([
-    0x00, 0x14,             // size:2:
-    TestBody.TypeCode,      // type:1
-    0x00,                   // reserved:1
-    0x02, 0x03, 0x04, 0x05, // id:4
-    0x06, 0x07, 0x08, 0x09, // reserved:4
-    0x0a, 0x0b, 0x0c, 0x0d, // reserved:4
-    0x03, 0x63, 0x61, 0x74  // payload~1
-]);
+TestBody.testWith('Frame.RW: read/write payload', testRW.cases(Frame.RW, [
 
-var dogeBuffer = Buffer([
-    0x00, 0x15,                  // size:2:
-    TestBody.TypeCode,           // type:1
-    0x00,                        // reserved:1
-    0x01, 0x02, 0x03, 0x04,      // id:4
-    0x00, 0x00, 0x00, 0x00,      // reserved:4
-    0x00, 0x00, 0x00, 0x00,      // reserved:4
-    0x04, 0x64, 0x6f, 0x67, 0x65 // payload~1
-]);
+    [
+        Frame(0x01020304, TestBody(Buffer('doge'))), [
+            0x00, 0x15,             // size:2:
+            TestBody.TypeCode,      // type:1
+            0x00,                   // reserved:1
+            0x01, 0x02, 0x03, 0x04, // id:4
+            0x00, 0x00, 0x00, 0x00, // reserved:4
+            0x00, 0x00, 0x00, 0x00, // reserved:4
 
-TestBody.testWith('read a cat frame', function t(assert) {
-    testRead(assert, Frame.read, catBuffer, function s(frame, done) {
-        assert.equal(frame.id, 0x02030405, 'expected frame id');
-        assert.equal(String(frame.body.payload), 'cat', 'expected body payload');
-        done();
-    });
-});
+            0x04, 0x64, 0x6f, 0x67, 0x65 // payload~1
+        ]
+    ],
 
-TestBody.testWith('write a doge frame', function t(assert) {
-    var frame = Frame(0x01020304, TestBody(Buffer('doge')));
-    var buf = frame.toBuffer();
-    assert.deepEqual(buf, dogeBuffer, 'expected buffer output');
-    assert.end();
-});
+    [
+        Frame(0x01020304, TestBody(Buffer('cat'))),[
+            0x00, 0x14,             // size:2:
+            TestBody.TypeCode,      // type:1
+            0x00,                   // reserved:1
+            0x01, 0x02, 0x03, 0x04, // id:4
+            0x00, 0x00, 0x00, 0x00, // reserved:4
+            0x00, 0x00, 0x00, 0x00, // reserved:4
+            0x03, 0x63, 0x61, 0x74  // payload~1
+        ]
+    ]
+
+]));

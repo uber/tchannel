@@ -20,8 +20,7 @@
 
 'use strict';
 
-var read = require('../../lib/read.js');
-var write = require('../../lib/write.js');
+var bufrw = require('bufrw');
 
 module.exports = TestBody;
 
@@ -34,17 +33,11 @@ function TestBody(payload) {
     self.payload = payload;
 }
 
-TestBody.read = read.chained(read.buf1, function(payload, buffer, offset) {
-    var body = new TestBody(payload);
-    return [null, offset, body];
-});
-
-TestBody.prototype.write = function writeTestBody() {
-    var self = this;
-    return write.buf1(self.payload);
-};
-
 TestBody.TypeCode = 0x00;
+
+TestBody.RW = bufrw.Struct(TestBody, {
+    payload: bufrw.buf1
+});
 
 TestBody.testWith = function testWidTestBody(desc, t) {
     var test = require('tape');
