@@ -34,8 +34,8 @@ class ConnectionTestCase(tornado.testing.AsyncTestCase):
     @tornado.testing.gen_test
     def test_handle_calls(self):
         """Verify calls are sent to handler properly."""
-        def _handle(data, connection):
-            _, message = data
+        def _handle(call, connection):
+            message = call.message
             # Not a rigorous assertion, but makes sure the data is well-formed.
             assert message.message_type
 

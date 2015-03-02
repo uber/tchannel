@@ -31,8 +31,8 @@ class SocketConnection(Connection):
         self.reader = FrameReader(adapted).read()
 
     def handle_calls(self, handler):
-        for frame, message in self.reader:
-            handler(frame, message, connection=self)
+        for call in self.reader:
+            handler(call, connection=self)
 
     def await(self, callback):
         """Decode a full message and return"""

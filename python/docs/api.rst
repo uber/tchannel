@@ -28,3 +28,10 @@ Connection
 
 .. automodule:: tchannel.connection
     :members:
+
+
+Context
+-------
+
+.. automodule:: tchannel.context
+    :members:
