@@ -20,8 +20,6 @@
 
 'use strict';
 
-require('./reader.js');
-require('./writer.js');
 require('./frame.js');
 require('./init.js');
 require('./checksum.js');
