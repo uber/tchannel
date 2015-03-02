@@ -1,4 +1,4 @@
-# TChannel
+# TChannel [![Build Status](https://travis-ci.org/uber/tchannel.svg?branch=master)] (https://travis-ci.org/uber/tchannel)
 
 Network multiplexing and framing protocol for RPC
 
