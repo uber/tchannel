@@ -1,0 +1,2 @@
+recursive-include tchannel *
+include README.rst
