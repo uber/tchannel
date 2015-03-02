@@ -1,0 +1,11 @@
+---
+language: python
+
+install:
+  - pushd python && pip install tox coveralls && python setup.py develop && popd
+
+script:
+  - cd python && tox
+
+after_success:
+  - coveralls
