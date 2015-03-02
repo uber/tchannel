@@ -22,10 +22,8 @@
 
 var farm32 = require('farmhash').fingerprint32;
 var crc32 = require('crc').crc32;
-
+var bufrw = require('bufrw');
 var TypedError = require('error/typed');
-var read = require('../lib/read');
-var write = require('../lib/write');
 
 var ChecksumError = TypedError({
     type: 'tchannel.checksum',
@@ -69,38 +67,20 @@ Checksum.Types.None = 0x00;
 Checksum.Types.CRC32 = 0x01;
 Checksum.Types.Farm32 = 0x02;
 
-Checksum.read = read.chained(read.UInt8, function(type, buffer, offset) {
-    switch (type) {
-        case 0x00:
-            return build(0, buffer, offset);
-        case 0x01:
-        case 0x02:
-            return read.chain(read.UInt32BE, buffer, offset, build);
-        default:
-            var err = new Error('invalid checksum type ' + type);
-            return [err, offset - 1, null];
-    }
-    function build(val, buffer, offset) {
-        var csum = new Checksum(type, val);
-        return [null, offset, csum];
-    }
+// csumtype:1 (csum:4){0,1}
+
+var rwCases = Object.create(null);
+rwCases[Checksum.Types.None] = bufrw.Null;
+rwCases[Checksum.Types.CRC32] = bufrw.UInt32BE;
+rwCases[Checksum.Types.Farm32] = bufrw.UInt32BE;
+
+Checksum.RW = bufrw.Switch(bufrw.UInt8, rwCases, {
+    cons: Checksum,
+    valKey: 'type',
+    dataKey: 'val'
 });
 
-// csumtype:1 (csum:4){0,1}
-Checksum.prototype.write = function writeChecksum() {
-    var self = this;
-    var type = write.UInt8(self.type);
-    switch (self.type) {
-        case 0x00:
-            return type;
-        case 0x01:
-        case 0x02:
-            return write.series([type, write.UInt32BE(self.val)]);
-        default:
-            throw new Error('invalid checksum type ' + self.type);
-    }
-};
-
+// TODO: needs a prior
 Checksum.prototype.compute = function compute(arg1, arg2, arg3) {
     var self = this;
     var csum = 0;
