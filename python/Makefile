@@ -9,14 +9,17 @@ test_args := --cov-report term-missing
 
 .DEFAULT_GOAL := test-lint
 
-.PHONY: bootstrap test test-lint testhtml clean lint
+.PHONY: install test test_ci test-lint testhtml clean lint
 
-bootstrap:
+install:
 	pip install -r requirements-test.txt
 	python setup.py develop
 
 test: clean
 	$(pytest) $(test_args)
+
+test_ci: clean
+	tox
 
 testhtml: clean
 	$(pytest) $(html_report) && open htmlcov/index.html

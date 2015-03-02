@@ -2,16 +2,14 @@
 language: python
 
 env:
-  - LANGUAGE=node
-  - LANGUAGE=python
+  - SUBDIR=node
+  - SUBDIR=python
 
 install:
-  - if [ "$LANGUAGE" == "python" ] ; then pushd python && pip install tox coveralls && python setup.py develop && popd ; fi
-  - if [ "$LANGUAGE" == "node" ] ; then pushd node && npm install && popd ; fi
+  - pushd $SUBDIR && make install && popd
 
 script:
-  - if [ "$LANGUAGE" == "python" ] ; then cd python && tox ; fi
-  - if [ "$LANGUAGE" == "node" ] ; then cd node && npm test ; fi
+  - cd $SUBDIR && make test_ci
 
 after_success:
   - coveralls
