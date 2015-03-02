@@ -1,4 +1,4 @@
-.PHONY: install test_ci test
+.PHONY: install test_ci test lint
 
 .DEFAULT_GOAL := test
 
@@ -9,3 +9,6 @@ test_ci: test
 
 test:
 	npm test
+
+lint:
+	npm run lint
