@@ -17,6 +17,16 @@ class ErrorMessage(BaseMessage):
         'message',
     )
 
+    ERROR_CODES = {
+        0x01: 'timeout',
+        0x02: 'cancelled',
+        0x03: 'busy',
+        0x04: 'declined',
+        0x05: 'unexpected',
+        0x06: 'bad request',
+        0xff: 'fatal protocol error'
+    }
+
     def parse(self, payload, size):
         self.code = read_number(payload, 1)
         self.original_message_id = read_number(payload, 4)
@@ -26,3 +36,7 @@ class ErrorMessage(BaseMessage):
         out.extend(write_number(self.code, 1))
         out.extend(write_number(self.original_message_id, 4))
         write_variable_length_key(out, self.message, 2)
+
+    def error_name(self):
+        """Get a friendly error message."""
+        return self.ERROR_CODES.get(self.code)

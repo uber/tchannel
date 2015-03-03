@@ -140,3 +140,10 @@ def test_parse_message(message_class, byte_stream):
     """Verify all messages parse properly."""
     message = message_class()
     message.parse(BytesIO(byte_stream), len(byte_stream))
+
+
+def test_error_message_name():
+    """Smoke test the error dictionary."""
+    error = messages.ErrorMessage()
+    error.code = 0x03
+    assert error.error_name() == 'busy'
