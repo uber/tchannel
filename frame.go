@@ -2,7 +2,6 @@ package tchannel
 
 import (
 	"code.uber.internal/infra/mmihic/tchannel-go/typed"
-	"io"
 	"math"
 )
 
@@ -28,6 +27,12 @@ type FrameHeader struct {
 
 	// Left empty
 	reserved [8]byte
+}
+
+// A frame, consisting of a header and a payload
+type Frame struct {
+	Header  FrameHeader
+	Payload [MaxFramePayloadSize]byte
 }
 
 func (fh *FrameHeader) read(r typed.ReadBuffer) error {
@@ -79,63 +84,6 @@ func (fh *FrameHeader) write(w typed.WriteBuffer) error {
 
 	if err := w.WriteBytes(fh.reserved[:]); err != nil {
 		return NewWriteIOError("frame reserved2", err)
-	}
-
-	return nil
-}
-
-// Allows reading Frames off an underlying io.Reader
-type FrameReader struct {
-	r io.Reader
-}
-
-// Creates a new FrameReader on top of the provided io.Reader
-func NewFrameReader(r io.Reader) *FrameReader {
-	return &FrameReader{r}
-}
-
-// Reads the next Frame from the stream.
-func (r *FrameReader) ReadFrame(fh *FrameHeader, payload typed.ReadBuffer) error {
-	if _, err := payload.FillFrom(r.r, FrameHeaderSize); err != nil {
-		return err
-	}
-
-	if err := fh.read(payload); err != nil {
-		return err
-	}
-
-	if _, err := payload.FillFrom(r.r, int(fh.Size)); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// Writer for Frames
-type FrameWriter struct {
-	w         io.Writer
-	headerBuf typed.WriteBuffer
-}
-
-// Creates a new FrameWriter around a frame
-func NewFrameWriter(w io.Writer) *FrameWriter {
-	return &FrameWriter{w: w, headerBuf: typed.NewWriteBufferWithSize(FrameHeaderSize)}
-}
-
-// Writes a frame to the underlying stream
-func (w *FrameWriter) WriteFrame(fh FrameHeader, payload typed.WriteBuffer) error {
-	w.headerBuf.Reset()
-
-	if err := fh.write(w.headerBuf); err != nil {
-		return err
-	}
-
-	if _, err := w.headerBuf.FlushTo(w.w); err != nil {
-		return err
-	}
-
-	if _, err := payload.FlushTo(w.w); err != nil {
-		return err
 	}
 
 	return nil

@@ -85,6 +85,10 @@ type WriteBuffer interface {
 	Seek(offset int) error
 }
 
+func NewReadBuffer(buffer []byte) ReadBuffer {
+	return &readBuffer{buffer: buffer, remaining: buffer}
+}
+
 func NewReadBufferWithSize(size int) ReadBuffer {
 	return &readBuffer{buffer: make([]byte, size), remaining: nil}
 }

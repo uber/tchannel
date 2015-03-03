@@ -9,31 +9,24 @@ import (
 )
 
 func TestFraming(t *testing.T) {
-	s := []byte("Hello there smalldog")
-
 	fh := FrameHeader{
-		Size: uint16(len(s)),
+		Size: uint16(0xFF34),
 		Type: MessageTypeCallReq,
+		Id:   0xDEADBEEF,
 	}
 
-	w := typed.NewWriteBufferWithSize(1024)
-	w.WriteBytes(s)
+	wbuf := typed.NewWriteBufferWithSize(1024)
+	require.Nil(t, fh.write(wbuf))
 
 	var b bytes.Buffer
-	fw := NewFrameWriter(&b)
-	err := fw.WriteFrame(fh, w)
-	require.Nil(t, err, "could not write frame")
+	if _, err := wbuf.FlushTo(&b); err != nil {
+		require.Nil(t, err)
+	}
 
-	fr := NewFrameReader(bytes.NewReader(b.Bytes()))
+	rbuf := typed.NewReadBuffer(b.Bytes())
 
 	var fh2 FrameHeader
-	r := typed.NewReadBufferWithSize(1024)
-	err = fr.ReadFrame(&fh2, r)
-	require.Nil(t, err, "could not read frame")
+	require.Nil(t, fh2.read(rbuf))
 
-	assert.Equal(t, fh, fh2, "frames do not match")
-
-	s2, err := r.ReadBytes(len(s))
-	require.Nil(t, err)
-	assert.Equal(t, s, s2)
+	assert.Equal(t, fh, fh2)
 }
