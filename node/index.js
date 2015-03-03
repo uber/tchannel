@@ -417,9 +417,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 
     // TODO: refactor op boundary to pass full req/res around
     self.handler.on('call.incoming.request', function onCallRequest(req) {
-        var handler = self.channel.getEndpointHandler(req.name);
-        var res = self.handler.buildOutgoingResponse(req);
-        self.runInOp(handler, req, res);
+        self.handleCallRequest(req);
     });
 
     self.handler.on('call.incoming.response', function onCallResponse(res) {
@@ -731,8 +729,10 @@ TChannelConnection.prototype.request = function request(options) {
     return req;
 };
 
-TChannelConnection.prototype.runInOp = function runInOp(handler, req, res) {
+TChannelConnection.prototype.handleCallRequest = function handleCallRequest(req) {
     var self = this;
+    var handler = self.channel.getEndpointHandler(req.name);
+    var res = self.handler.buildOutgoingResponse(req);
     var id = req.id;
     self.inPending++;
     var op = self.inOps[id] = new TChannelServerOp(self,
