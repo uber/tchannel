@@ -207,25 +207,18 @@ type Tracing struct {
 
 // A CallReq for service
 type CallReq struct {
-	id           uint32
-	Flags        byte
-	TimeToLive   time.Duration
-	Tracing      Tracing
-	TraceFlags   byte
-	Headers      CallHeaders
-	Service      []byte
-	ChecksumType ChecksumType
-	Checksum     []byte
+	id         uint32
+	TimeToLive time.Duration
+	Tracing    Tracing
+	TraceFlags byte
+	Headers    CallHeaders
+	Service    []byte
 }
 
 func (m *CallReq) Id() uint32        { return m.id }
 func (m *CallReq) Type() MessageType { return MessageTypeCallReq }
 func (m *CallReq) read(r typed.ReadBuffer) error {
 	var err error
-	if m.Flags, err = r.ReadByte(); err != nil {
-		return err
-	}
-
 	ttl, err := r.ReadUint32()
 	if err != nil {
 		return err
@@ -266,24 +259,10 @@ func (m *CallReq) read(r typed.ReadBuffer) error {
 		return err
 	}
 
-	csumType, err := r.ReadByte()
-	if err != nil {
-		return err
-	}
-
-	m.ChecksumType = ChecksumType(csumType)
-	if m.Checksum, err = r.ReadBytes(m.ChecksumType.ChecksumSize()); err != nil {
-		return err
-	}
-
 	return nil
 }
 
 func (m *CallReq) write(w typed.WriteBuffer) error {
-	if err := w.WriteByte(m.Flags); err != nil {
-		return err
-	}
-
 	if err := w.WriteUint32(uint32(m.TimeToLive.Seconds() * 1000)); err != nil {
 		return err
 	}
@@ -316,67 +295,18 @@ func (m *CallReq) write(w typed.WriteBuffer) error {
 		return err
 	}
 
-	if err := w.WriteByte(byte(m.ChecksumType)); err != nil {
-		return err
-	}
-
-	if err := w.WriteBytes(m.Checksum); err != nil {
-		return err
-	}
-
 	return nil
 }
 
 // A continuatin of a previous CallReq
 type CallReqContinue struct {
-	id           uint32
-	Flags        byte
-	ChecksumType ChecksumType
-	Checksum     []byte
+	id uint32
 }
 
-func (c *CallReqContinue) Id() uint32        { return c.id }
-func (c *CallReqContinue) Type() MessageType { return MessageTypeCallReqContinue }
-
-func (c *CallReqContinue) read(r typed.ReadBuffer) error {
-	var err error
-	if c.Flags, err = r.ReadByte(); err != nil {
-		return NewReadIOError("call-req-continue-flags", err)
-	}
-
-	csumType, err := r.ReadByte()
-	if err != nil {
-		return NewReadIOError("call-req-continue-csum-type", err)
-	}
-
-	c.ChecksumType = ChecksumType(csumType)
-	if c.ChecksumType.ChecksumSize() == 0 {
-		c.Checksum = nil
-		return nil
-	}
-
-	if c.Checksum, err = r.ReadBytes(c.ChecksumType.ChecksumSize()); err != nil {
-		return NewReadIOError("call-req-continue-checksum", err)
-	}
-
-	return nil
-}
-
-func (c *CallReqContinue) write(w typed.WriteBuffer) error {
-	if err := w.WriteByte(c.Flags); err != nil {
-		return NewWriteIOError("call-req-continue-flags", err)
-	}
-
-	if err := w.WriteByte(byte(c.ChecksumType)); err != nil {
-		return NewWriteIOError("call-req-continue-csum-type", err)
-	}
-
-	if err := w.WriteBytes(c.Checksum); err != nil {
-		return NewWriteIOError("call-req-continue-checksum", err)
-	}
-
-	return nil
-}
+func (c *CallReqContinue) Id() uint32                      { return c.id }
+func (c *CallReqContinue) Type() MessageType               { return MessageTypeCallReqContinue }
+func (c *CallReqContinue) read(r typed.ReadBuffer) error   { return nil }
+func (c *CallReqContinue) write(w typed.WriteBuffer) error { return nil }
 
 // ResponseCode to a CallReq
 type ResponseCode byte
@@ -389,13 +319,10 @@ const (
 // A response to a CallReq
 type CallRes struct {
 	id           uint32
-	Flags        byte
 	ResponseCode ResponseCode
 	Tracing      Tracing
 	TraceFlags   byte
 	Headers      CallHeaders
-	ChecksumType ChecksumType
-	Checksum     []byte
 }
 
 func (m *CallRes) Id() uint32        { return m.id }
@@ -403,10 +330,6 @@ func (m *CallRes) Type() MessageType { return MessageTypeCallRes }
 
 func (m *CallRes) read(r typed.ReadBuffer) error {
 	var err error
-	if m.Flags, err = r.ReadByte(); err != nil {
-		return err
-	}
-
 	c, err := r.ReadByte()
 	if err != nil {
 		return err
@@ -437,24 +360,10 @@ func (m *CallRes) read(r typed.ReadBuffer) error {
 		return err
 	}
 
-	csumType, err := r.ReadByte()
-	if err != nil {
-		return err
-	}
-
-	m.ChecksumType = ChecksumType(csumType)
-	if m.Checksum, err = r.ReadBytes(m.ChecksumType.ChecksumSize()); err != nil {
-		return err
-	}
-
 	return nil
 }
 
 func (m *CallRes) write(w typed.WriteBuffer) error {
-	if err := w.WriteByte(m.Flags); err != nil {
-		return err
-	}
-
 	if err := w.WriteByte(byte(m.ResponseCode)); err != nil {
 		return err
 	}
@@ -479,64 +388,15 @@ func (m *CallRes) write(w typed.WriteBuffer) error {
 		return err
 	}
 
-	if err := w.WriteByte(byte(m.ChecksumType)); err != nil {
-		return err
-	}
-
-	if err := w.WriteBytes(m.Checksum); err != nil {
-		return err
-	}
-
 	return nil
 }
 
 // A continuation of a previous CallRes
 type CallResContinue struct {
-	id           uint32
-	Flags        byte
-	ChecksumType ChecksumType
-	Checksum     []byte
+	id uint32
 }
 
-func (c *CallResContinue) Id() uint32        { return c.id }
-func (c *CallResContinue) Type() MessageType { return MessageTypeCallResContinue }
-
-func (c *CallResContinue) read(r typed.ReadBuffer) error {
-	var err error
-	if c.Flags, err = r.ReadByte(); err != nil {
-		return NewReadIOError("call-req-continue-flags", err)
-	}
-
-	csumType, err := r.ReadByte()
-	if err != nil {
-		return NewReadIOError("call-req-continue-csum-type", err)
-	}
-
-	c.ChecksumType = ChecksumType(csumType)
-	if c.ChecksumType.ChecksumSize() == 0 {
-		c.Checksum = nil
-		return nil
-	}
-
-	if c.Checksum, err = r.ReadBytes(c.ChecksumType.ChecksumSize()); err != nil {
-		return NewReadIOError("call-req-continue-checksum", err)
-	}
-
-	return nil
-}
-
-func (c *CallResContinue) write(w typed.WriteBuffer) error {
-	if err := w.WriteByte(c.Flags); err != nil {
-		return NewWriteIOError("call-req-continue-flags", err)
-	}
-
-	if err := w.WriteByte(byte(c.ChecksumType)); err != nil {
-		return NewWriteIOError("call-req-continue-csum-type", err)
-	}
-
-	if err := w.WriteBytes(c.Checksum); err != nil {
-		return NewWriteIOError("call-req-continue-checksum", err)
-	}
-
-	return nil
-}
+func (c *CallResContinue) Id() uint32                      { return c.id }
+func (c *CallResContinue) Type() MessageType               { return MessageTypeCallResContinue }
+func (c *CallResContinue) read(r typed.ReadBuffer) error   { return nil }
+func (c *CallResContinue) write(w typed.WriteBuffer) error { return nil }
