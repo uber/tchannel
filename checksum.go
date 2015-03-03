@@ -31,13 +31,15 @@ func (t ChecksumType) ChecksumSize() int {
 // Creates a new Checksum of the given type
 func (t ChecksumType) New() Checksum {
 	switch t {
-	case ChecksumTypeNull:
+	case ChecksumTypeNone:
 		return NullChecksum{}
 	case ChecksumTypeCrc32:
 		return NewCrc32Checksum()
-	case ChecksumTypeFarmHash:
+	case ChecksumTypeFarmhash:
 		return nil
 	}
+
+	return nil
 }
 
 // Interface for a Checksum calculated
