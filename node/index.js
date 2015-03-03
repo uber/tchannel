@@ -411,7 +411,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     self.handler.on('call.incoming.request', function onCallRequest(req) {
         var handler = self.channel.getEndpointHandler(req.name);
         var res = self.handler.buildOutgoingResponse(req);
-        self.runInOp(handler, req, res.send.bind(res));
+        self.runInOp(handler, req, res);
     });
 
     self.handler.on('call.incoming.response', function onCallResponse(res) {
@@ -717,7 +717,7 @@ TChannelConnection.prototype.send = function send(options, arg1, arg2, arg3, cal
 };
 /* jshint maxparams:4 */
 
-TChannelConnection.prototype.runInOp = function runInOp(handler, options, sendResponseFrame) {
+TChannelConnection.prototype.runInOp = function runInOp(handler, options, res) {
     var self = this;
     var id = options.id;
     self.inPending++;
@@ -732,7 +732,7 @@ TChannelConnection.prototype.runInOp = function runInOp(handler, options, sendRe
             });
             return;
         }
-        sendResponseFrame(err, res1, res2);
+        res.send(err, res1, res2);
         delete self.inOps[id];
         self.inPending--;
     }
