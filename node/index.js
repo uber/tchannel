@@ -272,7 +272,15 @@ TChannel.prototype.addPeer = function addPeer(hostPort, connection) {
 };
 
 /* jshint maxparams:5 */
+// TODO: deprecated, callers should use .request directly
 TChannel.prototype.send = function send(options, arg1, arg2, arg3, callback) {
+    var self = this;
+    var req = self.request(options, callback);
+    req.send(arg1, arg2, arg3);
+};
+/* jshint maxparams:4 */
+
+TChannel.prototype.request = function send(options, callback) {
     var self = this;
     if (self.destroyed) {
         throw new Error('cannot send() to destroyed tchannel'); // TODO typed error
@@ -284,9 +292,8 @@ TChannel.prototype.send = function send(options, arg1, arg2, arg3, callback) {
     }
 
     var peer = self.getOutConnection(dest);
-    peer.send(options, arg1, arg2, arg3, callback);
+    return peer.request(options, callback);
 };
-/* jshint maxparams:4 */
 
 TChannel.prototype.getOutConnection = function getOutConnection(dest) {
     var self = this;
@@ -698,15 +705,6 @@ TChannelConnection.prototype.completeOutOp = function completeOutOp(id, err, arg
     self.outPending--;
     op.callback(err, arg1, arg2);
 };
-
-/* jshint maxparams:5 */
-// TODO: deprecated, callers should use .request directly
-TChannelConnection.prototype.send = function send(options, arg1, arg2, arg3, callback) {
-    var self = this;
-    var req = self.request(options, callback);
-    req.send(arg1, arg2, arg3);
-};
-/* jshint maxparams:4 */
 
 // create a request
 TChannelConnection.prototype.request = function request(options, callback) {
