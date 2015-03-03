@@ -39,6 +39,7 @@ function TChannelIncomingRequest(id, options) {
     self.ttl = options.ttl || 0;
     self.tracing = options.tracing || emptyTracing;
     self.service = options.service || '';
+    self.remoteAddr = null;
     self.headers = options.headers || {};
     self.checksumType = options.checksumType || 0;
     self.name = options.name || '';

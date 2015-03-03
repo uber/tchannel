@@ -731,6 +731,7 @@ TChannelConnection.prototype.request = function request(options) {
 
 TChannelConnection.prototype.handleCallRequest = function handleCallRequest(req) {
     var self = this;
+    req.remoteAddr = self.remoteName;
     var handler = self.channel.getEndpointHandler(req.name);
     var res = self.handler.buildOutgoingResponse(req);
     var id = req.id;
