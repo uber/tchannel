@@ -19,7 +19,7 @@
 // THE SOFTWARE.
 
 var TChannel = require('../index.js');
-var after = require('after');
+var CountedReadySignal = require('ready-signal/counted');
 
 var server = new TChannel();
 var client = new TChannel();
@@ -34,7 +34,8 @@ server.register('func 2', function (arg1, arg2, peerInfo, cb) {
     cb(new Error('it failed'));
 });
 
-var listening = after(2, function (err) {
+var ready = CountedReadySignal(2);
+var listening = ready(function (err) {
     if (err) {
         throw err;
     }
@@ -48,5 +49,5 @@ var listening = after(2, function (err) {
 
 });
 
-server.listen(4040, '127.0.0.1', listening);
-client.listen(4041, '127.0.0.1', listening);
+server.listen(4040, '127.0.0.1', ready.signal);
+client.listen(4041, '127.0.0.1', ready.signal);

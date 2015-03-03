@@ -19,7 +19,7 @@
 // THE SOFTWARE.
 
 var TChannel = require('../index.js');
-var after = require('after');
+var CountedReadySignal = require('ready-signal/counted');
 
 var server = new TChannel();
 var client = new TChannel();
@@ -53,7 +53,9 @@ client.register('ping', function onPing(arg1, arg2, peerInfo, pingCb) {
 	pingCb(null, 'pong', null);
 });
 
-var listening = after(3, function (err) {
+var ready = CountedReadySignal(3);
+
+var listening = ready(function (err) {
 
     client.send({host: '127.0.0.1:4040'}, 'ping', null, null, function (err, res1, res2) {
         console.log('ping res from client: ' + res1 + ' ' + res2);
@@ -80,9 +82,9 @@ var listening = after(3, function (err) {
 
 });
 
-server.listen(4040, '127.0.0.1', listening);
-client.listen(4041, '127.0.0.1', listening);
-client2.listen(4042, '127.0.0.1', listening);
+server.listen(4040, '127.0.0.1', ready.signal);
+client.listen(4041, '127.0.0.1', ready.signal);
+client2.listen(4042, '127.0.0.1', ready.signal);
 
 function formatRes(err, res1, res2) {
 	var ret = [];
