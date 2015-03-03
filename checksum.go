@@ -28,6 +28,18 @@ func (t ChecksumType) ChecksumSize() int {
 	}
 }
 
+// Creates a new Checksum of the given type
+func (t ChecksumType) New() Checksum {
+	switch t {
+	case ChecksumTypeNull:
+		return NullChecksum{}
+	case ChecksumTypeCrc32:
+		return NewCrc32Checksum()
+	case ChecksumTypeFarmHash:
+		return nil
+	}
+}
+
 // Interface for a Checksum calculated
 type Checksum interface {
 	// The typecode for this checksum
