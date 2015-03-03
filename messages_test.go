@@ -47,6 +47,7 @@ func TestInitRes(t *testing.T) {
 func TestCallReq(t *testing.T) {
 	r := CallReq{
 		id:         0xDEADBEEF,
+		Flags:      0x02,
 		TimeToLive: time.Second * 45,
 		Tracing: Tracing{
 			TraceId:  294390430934,
@@ -58,23 +59,64 @@ func TestCallReq(t *testing.T) {
 			"r": "c",
 			"f": "d",
 		},
-		Service: []byte("udr"),
+		Service:      []byte("udr"),
+		ChecksumType: ChecksumTypeCrc32,
+		Checksum:     []byte{0xAB, 0xBC, 0xDE, 0xF1},
 	}
 
+	assert.Equal(t, uint32(0xDEADBEEF), r.Id())
+	assert.Equal(t, MessageTypeCallReq, r.Type())
 	assertRoundTrip(t, &r, &CallReq{id: 0xDEADBEEF})
+}
+
+func TestCallReqContinue(t *testing.T) {
+	r := CallReqContinue{
+		id:           0xDEADBEEF,
+		Flags:        0x04,
+		ChecksumType: ChecksumTypeCrc32,
+		Checksum:     []byte{0xAB, 0xBC, 0xDE, 0xF1},
+	}
+
+	assert.Equal(t, uint32(0xDEADBEEF), r.Id())
+	assert.Equal(t, MessageTypeCallReqContinue, r.Type())
+	assertRoundTrip(t, &r, &CallReqContinue{id: 0xDEADBEEF})
 }
 
 func TestCallRes(t *testing.T) {
 	r := CallRes{
 		id:           0xDEADBEEF,
-		ResponseCode: ServiceBusy,
+		Flags:        0x02,
+		ResponseCode: ResponseError,
 		Headers: CallHeaders{
 			"r": "c",
 			"f": "d",
 		},
+		Tracing: Tracing{
+			TraceId:  294390430934,
+			ParentId: 398348934,
+			SpanId:   12762782,
+		},
+		TraceFlags:   0x04,
+		ChecksumType: ChecksumTypeCrc32,
+		Checksum:     []byte{0xAB, 0xBC, 0xDE, 0xF1},
 	}
 
+	assert.Equal(t, uint32(0xDEADBEEF), r.Id())
+	assert.Equal(t, MessageTypeCallRes, r.Type())
 	assertRoundTrip(t, &r, &CallRes{id: 0xDEADBEEF})
+}
+
+func TestCallResContinue(t *testing.T) {
+	r := CallResContinue{
+		id:           0xDEADBEEF,
+		Flags:        0x04,
+		ChecksumType: ChecksumTypeCrc32,
+		Checksum:     []byte{0xAB, 0xBC, 0xDE, 0xF1},
+	}
+
+	assert.Equal(t, uint32(0xDEADBEEF), r.Id())
+	assert.Equal(t, MessageTypeCallResContinue, r.Type())
+	assertRoundTrip(t, &r, &CallResContinue{id: 0xDEADBEEF})
 }
 
 func assertRoundTrip(t *testing.T, expected Message, actual Message) {
