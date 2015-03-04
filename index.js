@@ -144,8 +144,9 @@ TChannel.prototype.address = function address() {
     return self.serverSocket.address();
 };
 
-TChannel.prototype.handleRequest = function handleRequest(req, callback) {
+TChannel.prototype.handleRequest = function handleRequest(req, res) {
     var self = this;
+
     var name = req.name;
     var handler = self.endpoints[name];
     if (typeof handler !== 'function') {
@@ -154,12 +155,14 @@ TChannel.prototype.handleRequest = function handleRequest(req, callback) {
         });
         var err = new Error('no such operation'); // TODO: typed error
         err.op = name;
-        callback(err, null, null);
+        res.send(err, null, null);
     } else if (self.endpoints[name]) {
         self.emit('endpoint', {
             name: name
         });
-        handler(req.arg2, req.arg3, req.remoteAddr, callback);
+        handler(req.arg2, req.arg3, req.remoteAddr, function handlerCallback(err, res1, res2) {
+            res.send(err, res1, res2);
+        });
     }
 };
 
@@ -739,9 +742,7 @@ TChannelConnection.prototype.handleCallRequest = function handleCallRequest(req)
     process.nextTick(runHandler);
 
     function runHandler() {
-        self.channel.handleRequest(req, function handlerCallback(err, res1, res2) {
-            res.send(err, res1, res2);
-        });
+        self.channel.handleRequest(req, res);
     }
 
     function opDone() {
