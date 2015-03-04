@@ -2,8 +2,6 @@ package tchannel
 
 import (
 	"code.uber.internal/infra/mmihic/tchannel-go/typed"
-	_ "encoding/hex"
-	"errors"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -14,11 +12,11 @@ func TestNoFragmentation(t *testing.T) {
 	in, out := buildChannels(ChecksumTypeCrc32)
 
 	arg1 := []byte("Hello")
-	w1 := newArgumentWriter(out, true)
-	if _, err := w1.Write(arg1); err != nil {
+	w := newArgumentWriter(out)
+	if _, err := w.Write(arg1); err != nil {
 		require.Nil(t, err)
 	}
-	require.Nil(t, w1.EndArgument())
+	require.Nil(t, w.EndArgument(true))
 
 	// Should be a single frame
 	// fragment flags(1), checksum type (1), checksum(5), chunk size(2), chunk(5)
@@ -47,31 +45,29 @@ func TestFragmentationRoundTrip(t *testing.T) {
 	for i := range arg1 {
 		arg1[i] = byte(i % 0x0F)
 	}
-	w1 := newArgumentWriter(out, false)
-	if _, err := w1.Write(arg1); err != nil {
+	w := newArgumentWriter(out)
+	if _, err := w.Write(arg1); err != nil {
 		require.Nil(t, err)
 	}
-	require.Nil(t, w1.EndArgument())
+	require.Nil(t, w.EndArgument(false))
 
 	arg2 := make([]byte, MaxFramePayloadSize+229)
 	for i := range arg2 {
 		arg2[i] = byte(i%0x0F) + 0x10
 	}
-	w2 := newArgumentWriter(out, false)
-	if _, err := w2.Write(arg2); err != nil {
+	if _, err := w.Write(arg2); err != nil {
 		require.Nil(t, err)
 	}
-	require.Nil(t, w2.EndArgument())
+	require.Nil(t, w.EndArgument(false))
 
 	arg3 := make([]byte, MaxFramePayloadSize+72)
 	for i := range arg3 {
 		arg3[i] = byte(i%0x0F) + 0x20
 	}
-	w3 := newArgumentWriter(out, true)
-	if _, err := w3.Write(arg3); err != nil {
+	if _, err := w.Write(arg3); err != nil {
 		require.Nil(t, err)
 	}
-	require.Nil(t, w3.EndArgument())
+	require.Nil(t, w.EndArgument(true))
 
 	// Read the three arguments
 	r1 := newArgumentReader(in, false)
@@ -108,36 +104,33 @@ func TestArgEndOnFragmentBoundary(t *testing.T) {
 	// of the full frame minus the header content for the fragment.  Header content consists of
 	// 1 byte flag, 1 byte checksum type, 4 byte checksum value, for a total of 6 bytes
 	fragmentContentSize := int(MaxFramePayloadSize) - 6
-	fmt.Printf("Fragment size is %d\n", fragmentContentSize)
 	arg1 := make([]byte, fragmentContentSize-2) // reserve 2 bytes for the arg chunk size
 	for i := range arg1 {
 		arg1[i] = byte(i % 0x0F)
 	}
-	w1 := newArgumentWriter(out, false)
-	if _, err := w1.Write(arg1); err != nil {
+	w := newArgumentWriter(out)
+	if _, err := w.Write(arg1); err != nil {
 		require.Nil(t, err)
 	}
-	require.Nil(t, w1.EndArgument())
+	require.Nil(t, w.EndArgument(false))
 
 	arg2 := make([]byte, len(arg1)-2) // additional 2 byte trailing size for arg1
 	for i := range arg2 {
 		arg2[i] = byte(i % 0x1F)
 	}
-	w2 := newArgumentWriter(out, false)
-	if _, err := w2.Write(arg2); err != nil {
+	if _, err := w.Write(arg2); err != nil {
 		require.Nil(t, err)
 	}
-	require.Nil(t, w2.EndArgument())
+	require.Nil(t, w.EndArgument(false))
 
 	arg3 := make([]byte, len(arg2)) // additional 2 byte trailing size for arg2
 	for i := range arg3 {
 		arg3[i] = byte(i % 0x2F)
 	}
-	w3 := newArgumentWriter(out, true)
-	if _, err := w3.Write(arg3); err != nil {
+	if _, err := w.Write(arg3); err != nil {
 		require.Nil(t, err)
 	}
-	require.Nil(t, w3.EndArgument())
+	require.Nil(t, w.EndArgument(true))
 
 	// We should have sent 4 fragments (one for arg1, one for zero arg1 size + arg2,
 	// one for zero arg2 size + arg3, one for zero arg3 size)
@@ -209,31 +202,18 @@ func (in *inboundFragments) waitForFragment() (*inboundFragment, error) {
 
 type outboundFragments struct {
 	fragmentSize  int
-	current       *outboundFragment
 	checksum      Checksum
 	ch            chan<- *Frame
 	sentFragments []*Frame
 }
 
-func (out *outboundFragments) openFragment() (*outboundFragment, error) {
-	if out.current == nil {
-		var err error
-		if out.current, err = newOutboundFragment(&Frame{}, &sampleMessage{}, out.checksum); err != nil {
-			return nil, err
-		}
-	}
-
-	return out.current, nil
+func (out *outboundFragments) startFragment() (*outboundFragment, error) {
+	return newOutboundFragment(&Frame{}, &sampleMessage{}, out.checksum)
 }
 
-func (out *outboundFragments) sendFragment(last bool) error {
-	if out.current == nil {
-		return errors.New("no open fragment")
-	}
-
-	f := out.current.finish(last)
+func (out *outboundFragments) sendFragment(toSend *outboundFragment, last bool) error {
+	f := toSend.finish(last)
 	out.ch <- f
-	out.current = nil
 	out.sentFragments = append(out.sentFragments, f)
 	return nil
 }

@@ -21,6 +21,7 @@ var (
 )
 
 const (
+	// Flag indicating there are more fragments to come
 	flagMoreFragments = 0x01
 )
 
@@ -41,6 +42,11 @@ func (f *outboundFragment) bytesRemaining() int {
 
 // Finishes a fragment, optionally marking it as the last fragment
 func (f *outboundFragment) finish(last bool) *Frame {
+	// If we still have a chunk open, close it before finishing the fragment
+	if f.chunkOpen() {
+		f.endChunk()
+	}
+
 	if last {
 		f.frame.Payload[0] &= ^byte(flagMoreFragments)
 	} else {
@@ -69,9 +75,14 @@ func (f *outboundFragment) writeChunkData(b []byte) (int, error) {
 	return len(b), nil
 }
 
+// Returns true if the fragment can fit a new chunk
+func (f *outboundFragment) canFitNewChunk() bool {
+	return len(f.remaining) > 2
+}
+
 // Begins a new argument chunk at the current location in the fragment
 func (f *outboundFragment) beginChunk() error {
-	if len(f.chunkStart) > 0 {
+	if f.chunkOpen() {
 		return NewWriteIOError("fragment-chunk-start", ErrChunkAlreadyOpen)
 	}
 
@@ -83,7 +94,7 @@ func (f *outboundFragment) beginChunk() error {
 
 // Ends a previously opened chunk, recording the chunk size
 func (f *outboundFragment) endChunk() error {
-	if len(f.chunkStart) == 0 {
+	if !f.chunkOpen() {
 		return NewWriteIOError("fragment-chunk-end", ErrNoOpenChunk)
 	}
 
@@ -92,6 +103,9 @@ func (f *outboundFragment) endChunk() error {
 	f.chunkSize = 0
 	return nil
 }
+
+// Returns true if the fragment has a chunk open
+func (f *outboundFragment) chunkOpen() bool { return len(f.chunkStart) > 0 }
 
 // Creates a new outboundFragment around a frame and message, with a running checksum
 func newOutboundFragment(frame *Frame, msg Message, checksum Checksum) (*outboundFragment, error) {
@@ -132,30 +146,27 @@ func newOutboundFragment(frame *Frame, msg Message, checksum Checksum) (*outboun
 type outboundFragmentChannel interface {
 	// Opens a fragment for sending.  If there is an existing incomplete fragment on the channel,
 	// that fragment will be returned.  Otherwise a new fragment is allocated
-	openFragment() (*outboundFragment, error)
+	startFragment() (*outboundFragment, error)
 
-	// Sends the current open fragment, optionally marking it as the last fragment
-	sendFragment(last bool) error
+	// Ends the currently open fragment, optionally marking it as the last fragment
+	sendFragment(f *outboundFragment, last bool) error
 }
 
-// An ArgumentWriter is an io.Writer for an individual TChannel argument, capable of breaking
+// An ArgumentWriter is an io.Writer for a collection of arguments, capable of breaking
 // large arguments into multiple chunks spread across several fragments.  Upstream code can
 // send argument data via the standard io.Writer interface, but should call EndArgument to
 // indicate when they are finished with the current argument to setup the stream for the
 // next argument in the list (or to complete the message, if this is the last argument)
 type ArgumentWriter struct {
-	fragments        outboundFragmentChannel
-	fragment         *outboundFragment
-	alignsAtEnd      bool
-	complete         bool
-	lastArgInMessage bool
+	fragments   outboundFragmentChannel
+	fragment    *outboundFragment
+	alignsAtEnd bool
+	complete    bool
 }
 
-// Creates a new ArgumentWriter that creates and sends fragments through the provided channel.  If last
-// is true, this is the final argument in the message, and the message will be marked complete once
-// the argument is fully streamed.
-func newArgumentWriter(ch outboundFragmentChannel, last bool) *ArgumentWriter {
-	return &ArgumentWriter{fragments: ch, lastArgInMessage: last}
+// Creates a new ArgumentWriter that creates and sends fragments through the provided channel.
+func newArgumentWriter(ch outboundFragmentChannel) *ArgumentWriter {
+	return &ArgumentWriter{fragments: ch}
 }
 
 // Writes argument bytes, potentially splitting them across fragments
@@ -166,19 +177,21 @@ func (w *ArgumentWriter) Write(b []byte) (int, error) {
 
 	written := 0
 	for len(b) > 0 {
-		w.alignsAtEnd = false
+		// If we lack a fragment, get one
 		if w.fragment == nil {
 			var err error
-			w.fragment, err = w.fragments.openFragment()
-			if err != nil {
+			if w.fragment, err = w.fragments.startFragment(); err != nil {
 				return written, err
 			}
+		}
 
-			if w.fragment.bytesRemaining() > 2 {
+		// If we're not in a chunk, start one.  If the current fragment does not have enough room
+		// to start a new chunk, then send that fragment and ask for another
+		if !w.fragment.chunkOpen() {
+			if w.fragment.canFitNewChunk() {
 				w.fragment.beginChunk()
 			} else {
-				// Not even enough room for the chunk header, send and start a new fragment
-				w.fragments.sendFragment(false)
+				w.fragments.sendFragment(w.fragment, false)
 				w.fragment = nil
 				continue
 			}
@@ -194,7 +207,7 @@ func (w *ArgumentWriter) Write(b []byte) (int, error) {
 			written += bytesRemaining
 
 			w.fragment.endChunk()
-			if err := w.fragments.sendFragment(false); err != nil {
+			if err := w.fragments.sendFragment(w.fragment, false); err != nil {
 				return written, err
 			}
 
@@ -210,7 +223,7 @@ func (w *ArgumentWriter) Write(b []byte) (int, error) {
 			// If we filled the fragment, send it on down
 			if w.fragment.bytesRemaining() == 0 {
 				w.fragment.endChunk()
-				if err := w.fragments.sendFragment(false); err != nil {
+				if err := w.fragments.sendFragment(w.fragment, false); err != nil {
 					return written, err
 				}
 
@@ -227,8 +240,8 @@ func (w *ArgumentWriter) Write(b []byte) (int, error) {
 	return written, nil
 }
 
-// Marks the argument as being complete
-func (w *ArgumentWriter) EndArgument() error {
+// Marks the argument as being complete.  If last is true, this is the last argument in the message
+func (w *ArgumentWriter) EndArgument(last bool) error {
 	if w.alignsAtEnd {
 		// The last argument chunk aligned with the end of a fragment boundary - send another fragment
 		// containing an empty chunk so readers know the argument is complete
@@ -237,7 +250,7 @@ func (w *ArgumentWriter) EndArgument() error {
 		}
 
 		var err error
-		w.fragment, err = w.fragments.openFragment()
+		w.fragment, err = w.fragments.startFragment()
 		if err != nil {
 			return err
 		}
@@ -245,17 +258,18 @@ func (w *ArgumentWriter) EndArgument() error {
 		w.fragment.beginChunk()
 	}
 
-	if w.fragment != nil {
+	if w.fragment.chunkOpen() {
 		w.fragment.endChunk()
-		if w.lastArgInMessage {
-			if err := w.fragments.sendFragment(true); err != nil {
-				return err
-			}
-		}
 	}
 
-	w.fragment = nil
-	w.complete = true
+	if last {
+		if err := w.fragments.sendFragment(w.fragment, true); err != nil {
+			return err
+		}
+
+		w.complete = true
+	}
+
 	return nil
 }
 
