@@ -46,7 +46,6 @@ function TChannelV2Handler(channel, options) {
         objectMode: true
     });
     self.channel = channel;
-    self.runInOp = options.runInOp;
     self.remoteHostPort = null; // filled in by identify message
     self.lastSentFrameId = 0;
 }
@@ -124,9 +123,7 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
         return callback(new Error('call request before init request')); // TODO typed error
     }
     var req = self.buildIncomingRequest(reqFrame);
-    var res = self.buildOutgoingResponse(req);
-    var handler = self.channel.getEndpointHandler(req.name);
-    self.runInOp(handler, req, res.send.bind(res));
+    self.emit('call.incoming.request', req);
     callback();
 };
 
