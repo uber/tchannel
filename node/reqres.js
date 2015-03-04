@@ -79,14 +79,20 @@ function TChannelOutgoingRequest(id, options, sendFrame) {
     self.headers = options.headers || {};
     self.checksumType = options.checksumType || 0;
     self.sendFrame = sendFrame;
+    self.sent = false;
 }
 
 inherits(TChannelOutgoingRequest, EventEmitter);
 
 TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     var self = this;
-    self.sendFrame(arg1, arg2, arg3);
     if (callback) self.hookupCallback(callback);
+    if (self.sent) {
+        throw new Error('request already sent');
+    }
+    self.sent = true;
+    self.sendFrame(arg1, arg2, arg3);
+    self.emit('end');
     return self;
 };
 
@@ -122,12 +128,17 @@ function TChannelOutgoingResponse(id, options, sendFrame) {
     self.arg2 = options.arg2 || emptyBuffer;
     self.arg3 = options.arg3 || emptyBuffer;
     self.sendFrame = sendFrame;
+    self.sent = false;
 }
 
 inherits(TChannelOutgoingResponse, EventEmitter);
 
 TChannelOutgoingResponse.prototype.send = function send(err, res1, res2) {
     var self = this;
+    if (self.sent) {
+        throw new Error('response already sent');
+    }
+    self.sent = true;
     if (err) {
         self.ok = false;
         var errArg = isError(err) ? err.message : JSON.stringify(err); // TODO: better
@@ -135,6 +146,7 @@ TChannelOutgoingResponse.prototype.send = function send(err, res1, res2) {
     } else {
         self.sendFrame(self.name, res1, res2);
     }
+    self.emit('end');
 };
 
 module.exports.IncomingRequest = TChannelIncomingRequest;
