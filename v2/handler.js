@@ -223,15 +223,9 @@ TChannelV2Handler.prototype.sendResponseFrame = function sendResponseFrame(res, 
 TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest(options) {
     var self = this;
     var id = self.nextFrameId();
-    // TODO: provide some sort of channel default for "service"
-    // TODO: generate tracing if empty?
-    // TODO: refactor callers
-    if (options.checksum === undefined || options.checksum === null) {
+    if (options.checksumType === undefined || options.checksumType === null) {
         options.checksumType = v2.Checksum.Types.FarmHash32;
-    } else {
-        options.checksumType = options.checksum;
     }
-    options.ttl = options.timeout || 1; // TODO: better default, support for dynamic
     var req = TChannelOutgoingRequest(id, options, sendRequestFrame);
     return req;
     function sendRequestFrame(arg1, arg2, arg3) {
