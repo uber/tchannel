@@ -699,9 +699,17 @@ TChannelConnection.prototype.completeOutOp = function completeOutOp(id, err, arg
     op.callback(err, arg1, arg2);
 };
 
-// send a req frame
 /* jshint maxparams:5 */
+// TODO: deprecated, callers should use .request directly
 TChannelConnection.prototype.send = function send(options, arg1, arg2, arg3, callback) {
+    var self = this;
+    var req = self.request(options, callback);
+    req.send(arg1, arg2, arg3);
+};
+/* jshint maxparams:4 */
+
+// create a request
+TChannelConnection.prototype.request = function request(options, callback) {
     var self = this;
     // TODO: use this to protect against >4Mi outstanding messages edge case
     // (e.g. zombie operation bug, incredible throughput, or simply very long
@@ -709,15 +717,18 @@ TChannelConnection.prototype.send = function send(options, arg1, arg2, arg3, cal
     // if (self.outOps[id]) {
     //  throw new Error('duplicate frame id in flight'); // TODO typed error
     // }
+    // TODO: provide some sort of channel default for "service"
+    // TODO: generate tracing if empty?
+    // TODO: refactor callers
+    options.checksumType = options.checksum;
+    options.ttl = options.timeout || 1; // TODO: better default, support for dynamic
     var req = self.handler.buildOutgoingRequest(options);
     var id = req.id;
     self.outOps[id] = new TChannelClientOp(
         options, self.channel.now(), callback);
     self.pendingCount++;
-    req.send(arg1, arg2, arg3);
     return req;
 };
-/* jshint maxparams:4 */
 
 TChannelConnection.prototype.runInOp = function runInOp(handler, options, res) {
     var self = this;
