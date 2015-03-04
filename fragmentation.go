@@ -177,67 +177,86 @@ func (w *ArgumentWriter) Write(b []byte) (int, error) {
 
 	written := 0
 	for len(b) > 0 {
-		// If we lack a fragment, get one
-		if w.fragment == nil {
-			var err error
-			if w.fragment, err = w.fragments.startFragment(); err != nil {
-				return written, err
-			}
-		}
-
-		// If we're not in a chunk, start one.  If the current fragment does not have enough room
-		// to start a new chunk, then send that fragment and ask for another
-		if !w.fragment.chunkOpen() {
-			if w.fragment.canFitNewChunk() {
-				w.fragment.beginChunk()
-			} else {
-				w.fragments.sendFragment(w.fragment, false)
-				w.fragment = nil
-				continue
-			}
+		// Make sure we have a fragment and an open chunk
+		if err := w.ensureOpenChunk(); err != nil {
+			return written, err
 		}
 
 		bytesRemaining := w.fragment.bytesRemaining()
 		if bytesRemaining < len(b) {
-			// Not enough space remaining in this fragment - send what we can and start a new fragment
+			// Not enough space remaining in this fragment - write what we can, finish this fragment,
+			// and start a new fragment for the remainder of the argument
 			if n, err := w.fragment.writeChunkData(b[:bytesRemaining]); err != nil {
 				return written + n, err
 			}
 
-			written += bytesRemaining
-
-			w.fragment.endChunk()
-			if err := w.fragments.sendFragment(w.fragment, false); err != nil {
+			if err := w.finishFragment(false); err != nil {
 				return written, err
 			}
 
-			w.fragment = nil
+			written += bytesRemaining
 			b = b[bytesRemaining:]
 		} else {
+			// Enough space remaining in this fragment - write the full chunk and be done with it
 			if n, err := w.fragment.writeChunkData(b); err != nil {
 				return written + n, err
 			}
 
 			written += len(b)
-
-			// If we filled the fragment, send it on down
-			if w.fragment.bytesRemaining() == 0 {
-				w.fragment.endChunk()
-				if err := w.fragments.sendFragment(w.fragment, false); err != nil {
-					return written, err
-				}
-
-				w.fragment = nil
-				w.alignsAtEnd = true
-			} else {
-				w.alignsAtEnd = false
-			}
-
+			w.alignsAtEnd = w.fragment.bytesRemaining() == 0
 			b = nil
 		}
 	}
 
+	// If the fragment is complete, send it immediately
+	if w.fragment.bytesRemaining() == 0 {
+		if err := w.finishFragment(false); err != nil {
+			return written, err
+		}
+	}
+
 	return written, nil
+}
+
+// Ensures that we have a fragment and an open chunk
+func (w *ArgumentWriter) ensureOpenChunk() error {
+	for {
+		// No fragment - start a new one
+		if w.fragment == nil {
+			var err error
+			if w.fragment, err = w.fragments.startFragment(); err != nil {
+				return err
+			}
+		}
+
+		// Fragment has an open chunk - we are good to go
+		if w.fragment.chunkOpen() {
+			return nil
+		}
+
+		// Fragment can fit a new chunk - start it and hand off
+		if w.fragment.canFitNewChunk() {
+			w.fragment.beginChunk()
+			return nil
+		}
+
+		// Fragment cannot fit the new chunk - finish the current fragment and get a new one
+		if err := w.finishFragment(false); err != nil {
+			return err
+		}
+	}
+}
+
+// Finishes with the current fragment, closing any open chunk and sending the fragment down the channel
+func (w *ArgumentWriter) finishFragment(last bool) error {
+	w.fragment.endChunk()
+	if err := w.fragments.sendFragment(w.fragment, last); err != nil {
+		w.fragment = nil
+		return err
+	}
+
+	w.fragment = nil
+	return nil
 }
 
 // Marks the argument as being complete.  If last is true, this is the last argument in the message
