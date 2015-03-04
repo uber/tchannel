@@ -24,6 +24,7 @@ var TypedError = require('error/typed');
 var Duplex = require('stream').Duplex;
 var util = require('util');
 
+var TChannelOutgoingRequest = require('../reqres').OutgoingRequest;
 var TChannelOutgoingResponse = require('../reqres').OutgoingResponse;
 var TChannelIncomingRequest = require('../reqres').IncomingRequest;
 var TChannelIncomingResponse = require('../reqres').IncomingResponse;
@@ -186,21 +187,14 @@ TChannelV2Handler.prototype.sendInitResponse = function sendInitResponse(reqFram
 };
 
 /* jshint maxparams:6 */
-TChannelV2Handler.prototype.sendRequestFrame = function sendRequestFrame(options, arg1, arg2, arg3) {
+TChannelV2Handler.prototype.sendRequestFrame = function sendRequestFrame(req, arg1, arg2, arg3) {
     var self = this;
-    var id = self.nextFrameId();
-    var flags = 0; // TODO: streaming
-    var ttl = options.timeout || 1; // TODO: better default, support for dynamic
-    var tracing = options.tracing || null; // TODO: generate
-    var service = options.service || null; // TODO: provide some sort of channel default
-    var headers = options.headers || {};
-    var csum;
-    if (options.checksum === undefined || options.checksum === null) {
-        csum = v2.Checksum.Types.FarmHash32;
-    } else {
-        csum = options.checksum;
-    }
-    var reqBody = v2.CallRequest(flags, ttl, tracing, service, headers, csum, arg1, arg2, arg3);
+    var id = req.id;
+    var reqBody = v2.CallRequest(
+        0, req.ttl, req.tracing,
+        req.service, req.headers,
+        req.checksumType,
+        arg1, arg2, arg3);
     var reqFrame = v2.Frame(id, reqBody);
     self.push(reqFrame);
     return id;
@@ -225,6 +219,25 @@ TChannelV2Handler.prototype.sendResponseFrame = function sendResponseFrame(res, 
     self.push(resFrame);
 };
 /* jshint maxparams:4 */
+
+TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest(options) {
+    var self = this;
+    var id = self.nextFrameId();
+    // TODO: provide some sort of channel default for "service"
+    // TODO: generate tracing if empty?
+    // TODO: refactor callers
+    if (options.checksum === undefined || options.checksum === null) {
+        options.checksumType = v2.Checksum.Types.FarmHash32;
+    } else {
+        options.checksumType = options.checksum;
+    }
+    options.ttl = options.timeout || 1; // TODO: better default, support for dynamic
+    var req = TChannelOutgoingRequest(id, options, sendRequestFrame);
+    return req;
+    function sendRequestFrame(arg1, arg2, arg3) {
+        self.sendRequestFrame(req, arg1, arg2, arg3);
+    }
+};
 
 TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingResponse(req) {
     var self = this;

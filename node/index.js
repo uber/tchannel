@@ -709,11 +709,13 @@ TChannelConnection.prototype.send = function send(options, arg1, arg2, arg3, cal
     // if (self.outOps[id]) {
     //  throw new Error('duplicate frame id in flight'); // TODO typed error
     // }
-
-    var id = self.handler.sendRequestFrame(options, arg1, arg2, arg3);
+    var req = self.handler.buildOutgoingRequest(options);
+    var id = req.id;
     self.outOps[id] = new TChannelClientOp(
         options, self.channel.now(), callback);
     self.pendingCount++;
+    req.send(arg1, arg2, arg3);
+    return req;
 };
 /* jshint maxparams:4 */
 
