@@ -411,9 +411,6 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
         // fulfill to
         runInOp: function runInOp(handler, options, sendResponseFrame) {
             self.runInOp(handler, options, sendResponseFrame);
-        },
-        completeOutOp: function completeOutOp(err, id, res1, res2) {
-            self.completeOutOp(id, err, res1, res2);
         }
     });
 
