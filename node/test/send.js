@@ -24,7 +24,7 @@ var parallel = require('run-parallel');
 var Buffer = require('buffer').Buffer;
 var allocCluster = require('./lib/alloc-cluster.js');
 
-allocCluster.test('send() to a server', 2, function t(cluster, assert) {
+allocCluster.test('request().send() to a server', 2, function t(cluster, assert) {
     var one = cluster.channels[0];
     var two = cluster.channels[1];
     var hostOne = cluster.hosts[0];
@@ -174,7 +174,9 @@ allocCluster.test('send() to a server', 2, function t(cluster, assert) {
 /*eslint max-params: [2, 6] */
 /*jshint maxparams: 6 */
 function sendRes(channel, opts, op, h, b, cb) {
-    channel.send(opts, op, h, b, onResult);
+    channel
+        .request(opts, onResult)
+        .send(op, h, b);
 
     function onResult(err, res1, res2) {
         cb(err, {

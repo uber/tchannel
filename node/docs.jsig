@@ -14,11 +14,19 @@ type Timers : {
 type IP : String
 type HostInfo : String
 type TChannelValue :
-    Buffer | String | Object | null | undefined | Any
+    Buffer | String | null | undefined
 
 type TChannelConnection : {
     direction: "in" | "out",
     remoteAddr: HostInfo
+}
+
+TChannelOutgoingRequest : {
+    send: (
+        arg1: Buffer | String,
+        arg2: TChannelValue,
+        arg3: TChannelValue
+    ) => void
 }
 
 type TChannel : {
@@ -32,20 +40,17 @@ type TChannel : {
             res2: TChannelValue
         ) => void
     ) => void) => void,
-    send: (
+    request: (
         options: {
             host: HostInfo,
             timeout?: Number
         },
-        arg1: Buffer | String,
-        arg2: TChannelValue,
-        arg3: TChannelValue,
         cb: (
             err?: Error,
             res1: Buffer | null,
             res2: Buffer | null
         ) => void
-    ) => void,
+    ) => TChannelOutgoingRequest,
     listen: (port:Number, hostname:String, Callback<Error>?) => void,
     close: (Callback<Error>) => void,
 

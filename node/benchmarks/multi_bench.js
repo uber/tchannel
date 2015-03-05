@@ -80,7 +80,9 @@ Test.prototype.new_client = function (id) {
     new_client.create_time = Date.now();
     new_client.listen(port, "127.0.0.1", function (err) {
         // sending a ping to pre-connect the socket
-        new_client.send({host: '127.0.0.1:4040'}, 'ping', null, null, function () {});
+        new_client
+            .request({host: '127.0.0.1:4040'}, noop)
+            .send('ping', null, null);
 
         new_client.on("identified", function (peer) {
             self.connect_latency.update(Date.now() - new_client.create_time);
@@ -134,23 +136,27 @@ Test.prototype.send_next = function () {
         cur_client = this.commands_sent % this.clients.length,
         start = Date.now();
 
-    this.clients[cur_client].send({
-        host: '127.0.0.1:4040',
-        timeout: 10000,
-        service: 'benchmark',
-        headers: {
-            benchHeader1: 'bench value one',
-            benchHeader2: 'bench value two',
-            benchHeader3: 'bench value three'
-        }
-    }, this.arg1, this.arg2, this.arg3, function (err, res1, res2) {
+    this.clients[cur_client]
+        .request({
+            host: '127.0.0.1:4040',
+            timeout: 10000,
+            service: 'benchmark',
+            headers: {
+                benchHeader1: 'bench value one',
+                benchHeader2: 'bench value two',
+                benchHeader3: 'bench value three'
+            }
+        }, done)
+        .send(this.arg1, this.arg2, this.arg3);
+
+    function done(err, res1, res2) {
         if (err) {
             throw err;
         }
         self.commands_completed++;
         self.command_latency.update(Date.now() - start);
         self.fill_pipeline();
-    });
+    }
 };
 
 Test.prototype.get_stats = function () {
@@ -224,3 +230,6 @@ function next(i, j, done) {
 next(0, 0, function() {
     process.exit(0);
 });
+
+function noop() {
+}

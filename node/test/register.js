@@ -187,7 +187,9 @@ allocCluster.test('register() with different results', 2, function t(cluster, as
 });
 
 function sendCall(channel, opts, op, cb) {
-    channel.send(opts, op, null, null, onResult);
+    channel
+        .request(opts, onResult)
+        .send(op, null, null);
 
     function onResult(err, res1, res2) {
         cb(null, {
