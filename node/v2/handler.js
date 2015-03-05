@@ -175,7 +175,7 @@ TChannelV2Handler.prototype.handleError = function handleError(errFrame, callbac
         // fatal error not associated with a prior frame
         callback(err);
     } else {
-        self.completeOutOp(err, id, null, null);
+        self.completeOutOp(err, err.originalId, null, null);
         callback();
     }
 };
