@@ -48,6 +48,12 @@ type Message interface {
 // Parameters to an InitReq/InitRes
 type InitParams map[string]string
 
+// Standard init params
+const (
+	InitParamHostPort    = "host_port"
+	InitParamProcessName = "process_name"
+)
+
 type initMessage struct {
 	id         uint32
 	Version    uint16
@@ -400,3 +406,57 @@ func (c *CallResContinue) Id() uint32                      { return c.id }
 func (c *CallResContinue) Type() MessageType               { return MessageTypeCallResContinue }
 func (c *CallResContinue) read(r typed.ReadBuffer) error   { return nil }
 func (c *CallResContinue) write(w typed.WriteBuffer) error { return nil }
+
+// An Error message, a system-level error response to a request or a protocol level error
+type ErrorMessage struct {
+	id                uint32
+	ErrorCode         SystemErrorCode
+	OriginalMessageId uint32
+	Message           string
+}
+
+func (m *ErrorMessage) Id() uint32        { return m.id }
+func (m *ErrorMessage) Type() MessageType { return MessageTypeError }
+func (m *ErrorMessage) read(r typed.ReadBuffer) error {
+	errCode, err := r.ReadByte()
+	if err != nil {
+		return err
+	}
+
+	m.ErrorCode = SystemErrorCode(errCode)
+
+	if m.OriginalMessageId, err = r.ReadUint32(); err != nil {
+		return err
+	}
+
+	msgSize, err := r.ReadUint16()
+	if err != nil {
+		return err
+	}
+
+	if m.Message, err = r.ReadString(int(msgSize)); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *ErrorMessage) write(w typed.WriteBuffer) error {
+	if err := w.WriteByte(byte(m.ErrorCode)); err != nil {
+		return err
+	}
+
+	if err := w.WriteUint32(m.OriginalMessageId); err != nil {
+		return err
+	}
+
+	if err := w.WriteUint16(uint16(len(m.Message))); err != nil {
+		return err
+	}
+
+	if err := w.WriteString(m.Message); err != nil {
+		return err
+	}
+
+	return nil
+}

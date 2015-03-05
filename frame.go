@@ -35,6 +35,11 @@ type Frame struct {
 	Payload [MaxFramePayloadSize]byte
 }
 
+// Returns the slice of the payload actually used, as defined by the header
+func (f *Frame) SizedPayload() []byte {
+	return f.Payload[:f.Header.Size]
+}
+
 func (fh *FrameHeader) read(r typed.ReadBuffer) error {
 	var err error
 	fh.Size, err = r.ReadUint16()

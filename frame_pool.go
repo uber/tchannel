@@ -10,7 +10,9 @@ type FramePool interface {
 }
 
 // The DefaultFramePool uses the heap as the pool
-type DefaultFramePool struct{}
+var DefaultFramePool = defaultFramePool{}
 
-func (p DefaultFramePool) Get() *Frame      { return &Frame{} }
-func (p DefaultFramePool) Release(f *Frame) {}
+type defaultFramePool struct{}
+
+func (p defaultFramePool) Get() *Frame      { return &Frame{} }
+func (p defaultFramePool) Release(f *Frame) {}
