@@ -30,8 +30,18 @@ var net = require('net');
 var format = require('util').format;
 var inspect = require('util').inspect;
 var Spy = require('./v2/spy');
+var TypedError = require('error/typed');
 
 var dumpEnabled = /\btchannel_dump\b/.test(process.env.NODE_DEBUG || '');
+
+var TChannelApplicationError = TypedError({
+    type: 'tchannel.application',
+    message: 'tchannel application error code {code}',
+    code: null,
+    arg1: null,
+    arg2: null,
+    arg3: null
+});
 
 function TChannel(options) {
     if (!(this instanceof TChannel)) {
@@ -404,6 +414,19 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
         },
         completeOutOp: function completeOutOp(err, id, res1, res2) {
             self.completeOutOp(id, err, res1, res2);
+        }
+    });
+
+    self.handler.on('call.incoming.response', function onCallResponse(res) {
+        if (res.isOK()) {
+            self.completeOutOp(res.id, null, res.arg2, res.arg3);
+        } else {
+            self.completeOutOp(res.id, TChannelApplicationError({
+                code: res.code,
+                arg1: res.arg1,
+                arg2: res.arg2,
+                arg3: res.arg3
+            }), res.arg2, null);
         }
     });
 
