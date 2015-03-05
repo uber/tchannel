@@ -19,6 +19,7 @@
 // THE SOFTWARE.
 
 var TChannel = require('../index.js');
+var CountedReadySignal = require('ready-signal/counted');
 
 var server = new TChannel();
 var client = new TChannel();
@@ -33,7 +34,9 @@ client.register('ping', function onPing(arg1, arg2, peerInfo, pingCb) {
     pingCb(null, 'pong', null);
 });
 
-var listening = after(2, function (err) {
+
+var ready = CountedReadySignal(2);
+var listening = ready(function (err) {
     if (err) {
         throw err;
     }
@@ -47,5 +50,5 @@ var listening = after(2, function (err) {
 
 });
 
-server.listen(4040, '127.0.0.1', listening);
-client.listen(4041, '127.0.0.1', listening);
+server.listen(4040, '127.0.0.1', ready.signal);
+client.listen(4041, '127.0.0.1', ready.signal);

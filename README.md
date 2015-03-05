@@ -16,12 +16,13 @@ Status is being tracked in #78.
 
 ```js
 var TChannel = require('tchannel');
-var after = require('after');
+var CountedReadySignal = require('ready-signal/counted');
 
 var server = new TChannel();
 var client = new TChannel();
 
-var listening = after(2, function (err) {
+var ready = CountedReadySignal(2);
+var listening = ready(function (err) {
     // ...forward or handle err
 
     // normal response
@@ -42,8 +43,8 @@ var listening = after(2, function (err) {
 
 });
 
-server.listen(4040, '127.0.0.1', listening);
-client.listen(4041, '127.0.0.1', listening);
+server.listen(4040, '127.0.0.1', ready.signal);
+client.listen(4041, '127.0.0.1', ready.signal);
 ```
 
 This example registers two functions on the "server". "func 1" always works and "func 2" always 
