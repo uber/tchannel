@@ -46,11 +46,7 @@ function TChannelV2Handler(channel, options) {
         objectMode: true
     });
     self.channel = channel;
-    // TODO: may be better suited to pull out an operation collection
-    // abstraction and then encapsulate through that rather than this
-    // run/complete approach
     self.runInOp = options.runInOp;
-    self.completeOutOp = options.completeOutOp;
     self.remoteHostPort = null; // filled in by identify message
     self.lastSentFrameId = 0;
 }
