@@ -30,8 +30,18 @@ var net = require('net');
 var format = require('util').format;
 var inspect = require('util').inspect;
 var Spy = require('./v2/spy');
+var TypedError = require('error/typed');
 
 var dumpEnabled = /\btchannel_dump\b/.test(process.env.NODE_DEBUG || '');
+
+var TChannelApplicationError = TypedError({
+    type: 'tchannel.application',
+    message: 'tchannel application error code {code}',
+    code: null,
+    arg1: null,
+    arg2: null,
+    arg3: null
+});
 
 function TChannel(options) {
     if (!(this instanceof TChannel)) {
@@ -395,16 +405,30 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 
     self.reader = new v2.Reader(v2.Frame);
     self.writer = new v2.Writer();
-    self.handler = new v2.Handler(self.channel, {
-        // TODO: the op boundary is probably better handled by an operation
-        // collection abstraction that the handler can submit to and then later
-        // fulfill to
-        runInOp: function runInOp(handler, options, sendResponseFrame) {
-            self.runInOp(handler, options, sendResponseFrame);
-        },
-        completeOutOp: function completeOutOp(err, id, res1, res2) {
-            self.completeOutOp(id, err, res1, res2);
+    self.handler = new v2.Handler(self.channel);
+
+    // TODO: refactor op boundary to pass full req/res around
+    self.handler.on('call.incoming.request', function onCallRequest(req) {
+        var handler = self.channel.getEndpointHandler(req.name);
+        var res = self.handler.buildOutgoingResponse(req);
+        self.runInOp(handler, req, res);
+    });
+
+    self.handler.on('call.incoming.response', function onCallResponse(res) {
+        if (res.isOK()) {
+            self.completeOutOp(res.id, null, res.arg2, res.arg3);
+        } else {
+            self.completeOutOp(res.id, TChannelApplicationError({
+                code: res.code,
+                arg1: res.arg1,
+                arg2: res.arg2,
+                arg3: res.arg3
+            }), res.arg2, null);
         }
+    });
+
+    self.handler.on('call.incoming.error', function onCallError(err) {
+        self.completeOutOp(err.originalId, err, null, null);
     });
 
     self.socket.setNoDelay(true);
@@ -693,7 +717,7 @@ TChannelConnection.prototype.send = function send(options, arg1, arg2, arg3, cal
 };
 /* jshint maxparams:4 */
 
-TChannelConnection.prototype.runInOp = function runInOp(handler, options, sendResponseFrame) {
+TChannelConnection.prototype.runInOp = function runInOp(handler, options, res) {
     var self = this;
     var id = options.id;
     self.inPending++;
@@ -708,7 +732,7 @@ TChannelConnection.prototype.runInOp = function runInOp(handler, options, sendRe
             });
             return;
         }
-        sendResponseFrame(err, res1, res2);
+        res.send(err, res1, res2);
         delete self.inOps[id];
         self.inPending--;
     }
