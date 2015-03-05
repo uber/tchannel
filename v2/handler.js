@@ -26,6 +26,7 @@ var util = require('util');
 
 var TChannelOutgoingResponse = require('../reqres').OutgoingResponse;
 var TChannelIncomingRequest = require('../reqres').IncomingRequest;
+var TChannelIncomingResponse = require('../reqres').IncomingResponse;
 var v2 = require('./index');
 
 module.exports = TChannelV2Handler;
@@ -147,12 +148,8 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
     if (self.remoteHostPort === null) {
         return callback(new Error('call response before init response')); // TODO typed error
     }
-    var id = resFrame.id;
-    var code = resFrame.body.code;
-    var arg1 = resFrame.body.arg1;
-    var arg2 = resFrame.body.arg2;
-    var arg3 = resFrame.body.arg3;
-    if (code === v2.CallResponse.Codes.OK) {
+    var res = self.buildIncomingResponse(resFrame);
+    if (res.isOK()) {
         self.completeOutOp(null, id, arg2, arg3);
     } else {
         self.completeOutOp(TChannelApplicationError({
@@ -282,6 +279,16 @@ TChannelV2Handler.prototype.buildIncomingRequest = function buildIncomingRequest
         arg3: reqFrame.body.arg3
     });
     return req;
+};
+
+TChannelV2Handler.prototype.buildIncomingResponse = function buildIncomingResponse(resFrame) {
+    var res = TChannelIncomingResponse(resFrame.id, {
+        code: resFrame.body.code,
+        arg1: resFrame.body.arg1,
+        arg2: resFrame.body.arg2,
+        arg3: resFrame.body.arg3
+    });
+    return res;
 };
 
 function isError(obj) {
