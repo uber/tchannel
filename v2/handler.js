@@ -37,15 +37,6 @@ var TChannelUnhandledFrameTypeError = TypedError({
     typeCode: null
 });
 
-var TChannelApplicationError = TypedError({
-    type: 'tchannel.application',
-    message: 'tchannel application error code {code}',
-    code: null,
-    arg1: null,
-    arg2: null,
-    arg3: null
-});
-
 function TChannelV2Handler(channel, options) {
     if (!(this instanceof TChannelV2Handler)) {
         return new TChannelV2Handler(channel, options);
@@ -149,16 +140,7 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
         return callback(new Error('call response before init response')); // TODO typed error
     }
     var res = self.buildIncomingResponse(resFrame);
-    if (res.isOK()) {
-        self.completeOutOp(null, id, arg2, arg3);
-    } else {
-        self.completeOutOp(TChannelApplicationError({
-            code: code,
-            arg1: arg1,
-            arg2: arg2,
-            arg3: arg3
-        }), id, arg2, null);
-    }
+    self.emit('call.incoming.response', res);
     callback();
 };
 
