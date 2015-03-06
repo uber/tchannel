@@ -20,6 +20,9 @@
 
 'use strict';
 
+var EventEmitter = require('events').EventEmitter;
+var inherits = require('util').inherits;
+
 var emptyTracing = Buffer(25); // TODO: proper tracing object
 var emptyBuffer = Buffer(0);
 
@@ -31,6 +34,7 @@ function TChannelIncomingRequest(id, options) {
     }
     options = options || {};
     var self = this;
+    EventEmitter.call(self);
     self.id = id || 0;
     self.ttl = options.ttl || 0;
     self.tracing = options.tracing || emptyTracing;
@@ -42,18 +46,23 @@ function TChannelIncomingRequest(id, options) {
     self.arg3 = options.arg3 || emptyBuffer;
 }
 
+inherits(TChannelIncomingRequest, EventEmitter);
+
 function TChannelIncomingResponse(id, options) {
     if (!(this instanceof TChannelIncomingResponse)) {
         return new TChannelIncomingResponse(id, options);
     }
     options = options || {};
     var self = this;
+    EventEmitter.call(self);
     self.id = id || 0;
     self.code = options.code || 0;
     self.arg1 = options.arg1 || emptyBuffer;
     self.arg2 = options.arg2 || emptyBuffer;
     self.arg3 = options.arg3 || emptyBuffer;
 }
+
+inherits(TChannelIncomingResponse, EventEmitter);
 
 TChannelIncomingResponse.prototype.isOK = function isOK() {
     var self = this;
@@ -66,6 +75,7 @@ function TChannelOutgoingRequest(id, options, sendFrame) {
     }
     options = options || {};
     var self = this;
+    EventEmitter.call(self);
     self.id = id || 0;
     self.ttl = options.ttl || 0;
     self.tracing = options.tracing || emptyTracing;
@@ -74,6 +84,8 @@ function TChannelOutgoingRequest(id, options, sendFrame) {
     self.checksumType = options.checksumType || 0;
     self.sendFrame = sendFrame;
 }
+
+inherits(TChannelOutgoingRequest, EventEmitter);
 
 TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3) {
     var self = this;
@@ -86,6 +98,7 @@ function TChannelOutgoingResponse(id, options, sendFrame) {
     }
     options = options || {};
     var self = this;
+    EventEmitter.call(self);
     self.id = id || 0;
     self.code = options.code || 0;
     self.tracing = options.tracing || emptyTracing;
@@ -96,6 +109,8 @@ function TChannelOutgoingResponse(id, options, sendFrame) {
     self.arg3 = options.arg3 || emptyBuffer;
     self.sendFrame = sendFrame;
 }
+
+inherits(TChannelOutgoingResponse, EventEmitter);
 
 TChannelOutgoingResponse.prototype.send = function send(err, res1, res2) {
     var self = this;
