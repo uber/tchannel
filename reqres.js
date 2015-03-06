@@ -121,6 +121,7 @@ function TChannelOutgoingResponse(id, options, sendFrame) {
     self.tracing = options.tracing || emptyTracing;
     self.headers = options.headers || {};
     self.checksumType = options.checksumType || 0;
+    self.ok = true;
     self.name = options.name || '';
     self.arg2 = options.arg2 || emptyBuffer;
     self.arg3 = options.arg3 || emptyBuffer;
@@ -131,10 +132,22 @@ inherits(TChannelOutgoingResponse, EventEmitter);
 
 TChannelOutgoingResponse.prototype.send = function send(err, res1, res2) {
     var self = this;
-    self.sendFrame(err, res1, res2);
+    if (err) {
+        self.ok = false;
+        var errArg = isError(err) ? err.message : JSON.stringify(err); // TODO: better
+        self.sendFrame(self.name, res1, errArg);
+    } else {
+        self.sendFrame(self.name, res1, res2);
+    }
 };
 
 module.exports.IncomingRequest = TChannelIncomingRequest;
 module.exports.IncomingResponse = TChannelIncomingResponse;
 module.exports.OutgoingRequest = TChannelOutgoingRequest;
 module.exports.OutgoingResponse = TChannelOutgoingResponse;
+
+function isError(obj) {
+    return typeof obj === 'object' && (
+        Object.prototype.toString.call(obj) === '[object Error]' ||
+        obj instanceof Error);
+}
