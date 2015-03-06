@@ -42,9 +42,11 @@ allocCluster.test('emits endpoint event', 2, {
         endpoints.push(name);
     });
 
-    two.send({
-        host: cluster.hosts[0]
-    }, '/hello', '', '', onHello);
+    two
+        .request({
+            host: cluster.hosts[0]
+        }, onHello)
+        .send('/hello', '', '');
 
     function onHello(err, res1, res2) {
         assert.ifError(err);

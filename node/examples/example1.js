@@ -40,12 +40,16 @@ var listening = ready(function (err) {
         throw err;
     }
 
-    client.send({host: '127.0.0.1:4040'}, 'func 1', "arg 1", "arg 2", function (err, res1, res2) {
-        console.log('normal res: ' + res1.toString() + ' ' + res2.toString());
-    });
-    client.send({host: '127.0.0.1:4040'}, 'func 2', "arg 1", "arg 2", function (err, res1, res2) {
-        console.log('err res: ' + err.message);
-    });
+    client
+        .request({host: '127.0.0.1:4040'}, function (err, res1, res2) {
+            console.log('normal res: ' + res1.toString() + ' ' + res2.toString());
+        })
+        .send('func 1', "arg 1", "arg 2");
+    client
+        .request({host: '127.0.0.1:4040'}, function (err, res1, res2) {
+            console.log('err res: ' + err.message);
+        })
+        .send('func 2', "arg 1", "arg 2");
 
 });
 

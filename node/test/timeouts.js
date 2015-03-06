@@ -34,21 +34,28 @@ allocCluster.test('requests will timeout', 2, {
     one.register('/normal-proxy', normalProxy);
     one.register('/timeout', timeout);
 
-    two.send({
-        host: hostOne,
-        timeout: 1000
-    }, '/normal-proxy', 'h', 'b', function onResp(err, h, b) {
+    two
+        .request({
+            host: hostOne,
+            timeout: 1000
+        }, onResp)
+        .send('/normal-proxy', 'h', 'b');
+
+    function onResp(err, h, b) {
         assert.ifError(err);
 
         assert.equal(String(h), 'h');
         assert.equal(String(b), 'b');
 
-        two.send({
-            host: hostOne,
-            timeout: 1000
-        }, '/timeout', 'h', 'b', onTimeout);
+        two
+            .request({
+                host: hostOne,
+                timeout: 1000
+            }, onTimeout)
+            .send('/timeout', 'h', 'b');
+
         timers.advance(2500);
-    });
+    }
 
     function onTimeout(err) {
         assert.equal(err && err.message, 'timed out', 'expected timeout error');

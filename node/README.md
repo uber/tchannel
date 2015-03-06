@@ -34,12 +34,16 @@ var listening = ready(function (err) {
     server.register('func 2', function (arg1, arg2, peerInfo, cb) {
         cb(new Error('it failed'));
     });
-    client.send({host: '127.0.0.1:4040'}, 'func 1', "arg 1", "arg 2", function (err, res1, res2) {
-        console.log('normal res: ' + res1.toString() + ' ' + res2.toString());
-    });
-    client.send({host: '127.0.0.1:4040'}, 'func 2', "arg 1", "arg 2", function (err, res1, res2) {
-        console.log('err res: ' + err.message);
-    });
+    client
+        .request({host: '127.0.0.1:4040'}, function (err, res1, res2) {
+            console.log('normal res: ' + res1.toString() + ' ' + res2.toString());
+        })
+        .send('func 1', "arg 1", "arg 2");
+    client
+        .request({host: '127.0.0.1:4040'}, function (err, res1, res2) {
+            console.log('err res: ' + err.message);
+        })
+        .send('func 2', "arg 1", "arg 2");
 
 });
 
@@ -110,15 +114,17 @@ tchannel : (options: {
     timeoutFuzz?: Number
 }) => {
     register: (op: String, fn: Function) => void,
-    send: (
+    request: (
         options: Object,
-        arg1: String,
-        arg2: Any,
-        arg3: Any,
         cb: Function
-    ) => void,
+    ) => tchannelRequest,
     quit: (Callback<Error>) => void,
 }
+
+tchannelRequest : {
+    send: (arg1: Buffer|String, arg2: Buffer|String, arg3: Buffer|String) => void
+}
+
 ```
 
 To create a `channel` you call `TChannel` with some options.
@@ -173,9 +179,9 @@ default value: `5000`
 
 A default timeout for request timeouts.
 
-For every outgoing request which does not have a set timeout
-    i.e. every `.send()` without a timeout we will default
-    the timeout period to be this value.
+For every outgoing request which does not have a set timeout i.e. every
+`.rquest()` without a timeout we will default the timeout period to be this
+value.
 
 This means every outgoing operation will be terminated with
     a timeout error if the timeout is hit.
@@ -241,13 +247,13 @@ When you register an operation you must implement a very
 
 #### `arg1`
 
-The first argument you take is the `head` send by the client.
+The first argument you take is the `head` sent by the client.
 
 This will always be a `Buffer`
 
 #### `arg2`
 
-The second argument you take is the `body` send by the client.
+The second argument you take is the `body` sent by the client.
 
 This will always be a `Buffer`
 
@@ -275,27 +281,32 @@ The `res2` is the body to return to the client.
  - If you pass `undefined` it will cast it to `Buffer(0)`
  - If you pass `null` it will cast it to `Buffer(0)`
 
-### `channel.send(options, arg1, arg2, arg3, cb)`
+### `channel.request(options, arg1, arg2, arg3, cb)`
 
 ```ocaml
-send: (
+request: (
     options: {
         host: String,
         timeout?: Number
     },
-    arg1: Buffer | String,
-    arg2: Buffer | String | Object | Any,
-    arg3: Buffer | String | Object | Any,
     cb: (
         err?: Error,
         res1: Buffer,
         res2: Buffer
     ) => void
-) => void
+) => tchannelRequest
+
+tchannelRequest : {
+    send: (
+        arg1: Buffer | String,
+        arg2: Buffer | String,
+        arg3: Buffer | String
+    ) => void
+}
+
 ```
 
-`send()` is used for a channel to send an outgoing message
-    to another channel.
+`request()` is used to initiate an outgoing request to another channel.
 
 `TChannel` will format the head (arg2) and body (arg3) for you
 
@@ -335,8 +346,8 @@ The third argument will be the `body` to send to the server.
 
 #### `cb(err, res1, res2)`
 
-When you `send()` a message to another tchannel server it will
-    give you a callback
+When you `request.send()` a message to another tchannel server it will give you
+a callback
 
 The callback will either get called with `cb(err)` or with
     `cb(null, res1, res2)`

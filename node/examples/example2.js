@@ -21,6 +21,8 @@
 var TChannel = require('../index.js');
 var CountedReadySignal = require('ready-signal/counted');
 
+var async = require('async');
+
 var server = new TChannel();
 var client = new TChannel();
 
@@ -41,13 +43,26 @@ var listening = ready(function (err) {
         throw err;
     }
 
-    client.send({host: '127.0.0.1:4040'}, 'ping', null, null, function (err, res1, res2) {
-        console.log('ping res from client: ' + res1 + ' ' + res2);
-        server.send({host: '127.0.0.1:4041'}, 'ping', null, null, function (err, res1, res2) {
-            console.log('ping res server: ' + res1 + ' ' + res2);
-        });
-    });
+    async.series([
+        function pingOne(done) {
+            client
+                .request({host: '127.0.0.1:4040'}, function (err, res1, res2) {
+                    console.log('ping res from client: ' + res1 + ' ' + res2);
+                    done();
+                })
+                .send('ping', null, null);
+        },
 
+        function pingTwo(done) {
+            server
+                .request({host: '127.0.0.1:4041'}, function (err, res1, res2) {
+                    console.log('ping res server: ' + res1 + ' ' + res2);
+                    done();
+                })
+                .send('ping', null, null);
+        }
+
+    ], function() {});
 });
 
 server.listen(4040, '127.0.0.1', ready.signal);
