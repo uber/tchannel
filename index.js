@@ -425,12 +425,13 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
         if (res.isOK()) {
             self.completeOutOp(res.id, null, res.arg2, res.arg3);
         } else {
-            self.completeOutOp(res.id, TChannelApplicationError({
+            var op = self.popOutOp(res.id);
+            op.req.emit('error', TChannelApplicationError({
                 code: res.code,
                 arg1: res.arg1,
                 arg2: res.arg2,
                 arg3: res.arg3
-            }), res.arg2, null);
+            }));
         }
     });
 
