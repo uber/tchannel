@@ -670,7 +670,7 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
         var op = self.outOps[id];
         delete self.outOps[id];
         // TODO: shared mutable object... use Object.create(err)?
-        op.callback(err, null, null);
+        op.req.emit('error', err);
     });
 
     self.inPending = 0;
