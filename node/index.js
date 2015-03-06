@@ -105,7 +105,15 @@ function TChannel(options) {
         }
     });
     self.serverSocket.on('error', function onServerSocketError(err) {
-        self.logger.error(self.hostPort + ' server socket error: ' + inspect(err));
+        var serverError = new Error('tchannel: ' + err.message);
+        serverError.code = err.code;
+        serverError.errno = err.errno;
+        serverError.syscall = err.syscall;
+        serverError.requestedPort = self.requestedPort;
+        serverError.host = self.host;
+
+        self.logger.error(self.hostPort + ' server socket error: ' + inspect(serverError));
+        self.emit('error', serverError);
     });
     self.serverSocket.on('close', function onServerSocketClose() {
         self.logger.warn('server socket close');
