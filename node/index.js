@@ -422,10 +422,10 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     });
 
     self.handler.on('call.incoming.response', function onCallResponse(res) {
+        var op = self.popOutOp(res.id);
         if (res.isOK()) {
-            self.completeOutOp(res.id, null, res.arg2, res.arg3);
+            op.req.emit('response', res);
         } else {
-            var op = self.popOutOp(res.id);
             op.req.emit('error', TChannelApplicationError({
                 code: res.code,
                 arg1: res.arg1,
