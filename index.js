@@ -627,7 +627,8 @@ TChannelConnection.prototype.checkOutOpsForTimeout = function checkOutOpsForTime
 TChannelConnection.prototype.onReqTimeout = function onReqTimeout(op) {
     var self = this;
     op.timedOut = true;
-    op.callback(new Error('timed out'), null, null); // TODO typed error
+    op.req.emit('error', new Error('timed out')); // TODO typed error
+    // TODO: why don't we pop the op?
     self.lastTimeoutTime = self.channel.now();
 };
 
