@@ -35,15 +35,15 @@ var listening = ready(function (err) {
         cb(new Error('it failed'));
     });
     client
-        .request({host: '127.0.0.1:4040'}, function (err, res1, res2) {
-            console.log('normal res: ' + res1.toString() + ' ' + res2.toString());
-        })
-        .send('func 1', "arg 1", "arg 2");
+        .request({host: '127.0.0.1:4040'})
+        .send('func 1', "arg 1", "arg 2", function (err, res) {
+            console.log('normal res: ' + res.arg2.toString() + ' ' + res.arg3.toString());
+        });
     client
-        .request({host: '127.0.0.1:4040'}, function (err, res1, res2) {
+        .request({host: '127.0.0.1:4040'})
+        .send('func 2', "arg 1", "arg 2", function (err, res) {
             console.log('err res: ' + err.message);
-        })
-        .send('func 2', "arg 1", "arg 2");
+        });
 
 });
 
@@ -122,7 +122,13 @@ tchannel : (options: {
 }
 
 tchannelRequest : {
-    send: (arg1: Buffer|String, arg2: Buffer|String, arg3: Buffer|String) => void
+    on: (name: String, listener: Function) => void,
+    send: (
+        arg1: Buffer|String,
+        arg2: Buffer|String,
+        arg3: Buffer|String,
+        cb: ?Function
+    ) => void
 }
 
 ```
@@ -297,10 +303,12 @@ request: (
 ) => tchannelRequest
 
 tchannelRequest : {
+    on: (name: String, listener: Function) => void,
     send: (
         arg1: Buffer | String,
         arg2: Buffer | String,
-        arg3: Buffer | String
+        arg3: Buffer | String,
+        cb: ?Function
     ) => void
 }
 
