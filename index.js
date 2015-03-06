@@ -281,7 +281,7 @@ TChannel.prototype.send = function send(options, arg1, arg2, arg3, callback) {
 };
 /* jshint maxparams:4 */
 
-TChannel.prototype.request = function send(options, callback) {
+TChannel.prototype.request = function send(options) {
     var self = this;
     if (self.destroyed) {
         throw new Error('cannot send() to destroyed tchannel'); // TODO typed error
@@ -293,7 +293,7 @@ TChannel.prototype.request = function send(options, callback) {
     }
 
     var peer = self.getOutConnection(dest);
-    return peer.request(options, callback);
+    return peer.request(options);
 };
 
 TChannel.prototype.getOutConnection = function getOutConnection(dest) {
@@ -717,7 +717,7 @@ TChannelConnection.prototype.completeOutOp = function completeOutOp(id, err, arg
 };
 
 // create a request
-TChannelConnection.prototype.request = function request(options, callback) {
+TChannelConnection.prototype.request = function request(options) {
     var self = this;
     // TODO: use this to protect against >4Mi outstanding messages edge case
     // (e.g. zombie operation bug, incredible throughput, or simply very long
@@ -732,7 +732,7 @@ TChannelConnection.prototype.request = function request(options, callback) {
     options.ttl = options.timeout || 1; // TODO: better default, support for dynamic
     var req = self.handler.buildOutgoingRequest(options);
     var id = req.id;
-    self.outOps[id] = new TChannelClientOp(req, self.channel.now(), callback);
+    self.outOps[id] = new TChannelClientOp(req, self.channel.now());
     self.pendingCount++;
     return req;
 };
@@ -793,10 +793,9 @@ TChannelServerOp.prototype.sendResponse = function sendResponse(err, res1, res2)
     self.callback(err, res1, res2);
 };
 
-function TChannelClientOp(req, start, callback) {
+function TChannelClientOp(req, start) {
     var self = this;
     self.req = req;
-    self.callback = callback;
     self.start = start;
     self.timedOut = false;
 }
