@@ -87,9 +87,26 @@ function TChannelOutgoingRequest(id, options, sendFrame) {
 
 inherits(TChannelOutgoingRequest, EventEmitter);
 
-TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3) {
+TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     var self = this;
     self.sendFrame(arg1, arg2, arg3);
+    if (callback) self.hookupCallback(callback);
+    return self;
+};
+
+TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callback) {
+    var self = this;
+    self.once('error', onError);
+    self.once('response', onResponse);
+    function onError(err) {
+        self.removeListener('response', onResponse);
+        callback(err, null);
+    }
+    function onResponse(res) {
+        self.removeListener('error', onError);
+        callback(null, res);
+    }
+    return self;
 };
 
 function TChannelOutgoingResponse(id, options, sendFrame) {
