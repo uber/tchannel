@@ -692,7 +692,7 @@ TChannelConnection.prototype.onFrame = function onFrame(/* frame */) {
     }
 };
 
-TChannelConnection.prototype.completeOutOp = function completeOutOp(id, err, arg1, arg2) {
+TChannelConnection.prototype.popOutOp = function popOutOp(id) {
     var self = this;
     var op = self.outOps[id];
     if (!op) {
@@ -703,6 +703,12 @@ TChannelConnection.prototype.completeOutOp = function completeOutOp(id, err, arg
     }
     delete self.outOps[id];
     self.outPending--;
+    return op;
+};
+
+TChannelConnection.prototype.completeOutOp = function completeOutOp(id, err, arg1, arg2) {
+    var self = this;
+    var op = self.popOutOp(id);
     op.callback(err, arg1, arg2);
 };
 
