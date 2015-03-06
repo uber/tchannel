@@ -710,12 +710,6 @@ TChannelConnection.prototype.popOutOp = function popOutOp(id) {
     return op;
 };
 
-TChannelConnection.prototype.completeOutOp = function completeOutOp(id, err, arg1, arg2) {
-    var self = this;
-    var op = self.popOutOp(id);
-    op.callback(err, arg1, arg2);
-};
-
 // create a request
 TChannelConnection.prototype.request = function request(options) {
     var self = this;
