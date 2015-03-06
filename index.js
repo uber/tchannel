@@ -435,7 +435,8 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     });
 
     self.handler.on('call.incoming.error', function onCallError(err) {
-        self.completeOutOp(err.originalId, err, null, null);
+        var op = self.popOutOp(err.originalId);
+        op.req.emit('error', err);
     });
 
     self.socket.setNoDelay(true);
