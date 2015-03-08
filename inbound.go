@@ -140,16 +140,7 @@ func (p *inboundCallPipeline) withReqLock(f func() error) error {
 func (p *inboundCallPipeline) dispatchInbound(call *InboundCall) {
 	p.log.Debug("Received incoming call for %s from %s", call.ServiceName(), p.remotePeerInfo)
 
-	// Read the full operation name
-	warg1, err := call.expectArg1()
-	if err != nil {
-		p.log.Error("Could not begin reading operation from %s: %v", p.remotePeerInfo, err)
-		p.inboundCallComplete(call.id)
-		return
-	}
-
-	arg1, err := ioutil.ReadAll(warg1)
-	if err != nil {
+	if err := call.readOperation(); err != nil {
 		p.log.Error("Could not read operation from %s: %v", p.remotePeerInfo, err)
 		p.inboundCallComplete(call.id)
 		return
@@ -158,15 +149,15 @@ func (p *inboundCallPipeline) dispatchInbound(call *InboundCall) {
 	// NB(mmihic): Don't cast operation name to string here - this will create a copy
 	// of the byte array, where as aliasing to string in the map look up can be optimized
 	// by the compiler to avoid the copy.  See https://github.com/golang/go/issues/3512
-	h := p.handlers.find(call.ServiceName(), arg1)
+	h := p.handlers.find(call.ServiceName(), call.Operation())
 	if h == nil {
-		p.log.Error("Could not find handler for %s:%s", call.ServiceName(), arg1)
+		p.log.Error("Could not find handler for %s:%s", call.ServiceName(), call.Operation())
 		call.Response().SendSystemError(ErrHandlerNotFound)
 		return
 	}
 
-	p.log.Debug("Dispatching %s:%s from %s", call.ServiceName(), arg1, p.remotePeerInfo)
-	h.Handle(call.ctx.ctx, call.ServiceName(), arg1, call)
+	p.log.Debug("Dispatching %s:%s from %s", call.ServiceName(), call.Operation(), p.remotePeerInfo)
+	h.Handle(call.ctx.ctx, call)
 }
 
 // An InboundCall is an incoming call from a peer
@@ -176,6 +167,7 @@ type InboundCall struct {
 	res              *InboundCallResponse
 	ctx              inboundCallContext
 	serviceName      string
+	operation        []byte
 	state            inboundCallState
 	recvLastFragment bool
 	recvCh           <-chan *Frame
@@ -188,7 +180,7 @@ type inboundCallState int
 
 const (
 	inboundCallPreRead inboundCallState = iota
-	inboundCallReadingArg1
+	inboundCallReadyForArg2
 	inboundCallReadingArg2
 	inboundCallReadingArg3
 	inboundCallAllRead
@@ -200,31 +192,38 @@ func (call *InboundCall) ServiceName() string {
 	return call.serviceName
 }
 
-// Begins the process of reading the first argument from the inbound call.  Returns an io.Reader
-// that can be used to read the bytestream of the first argument.  This method is private and should
-// only be called by the dispatch infrastructure, which needs the operation name to determine how
-// to route the incoming call
-func (call *InboundCall) expectArg1() (io.Reader, error) {
+// Returns the operation being called
+func (call *InboundCall) Operation() []byte {
+	return call.operation
+}
+
+// Reads the entire operation name (arg1) from the request stream.
+func (call *InboundCall) readOperation() error {
 	if call.state != inboundCallPreRead {
-		call.pipeline.log.Warning("Call in state %d", call.state)
-		return nil, call.failed(ErrInboundCallStateMismatch)
+		return call.failed(ErrInboundCallStateMismatch)
 	}
 
-	call.state = inboundCallReadingArg1
-	call.lastArgReader = newArgumentReader(call, false)
-	return call.lastArgReader, nil
+	r := newArgumentReader(call, false)
+	arg1, err := ioutil.ReadAll(r)
+	if err != nil {
+		return call.failed(err)
+	}
+
+	if err := r.EndArgument(); err != nil {
+		return call.failed(err)
+	}
+
+	call.state = inboundCallReadyForArg2
+	call.operation = arg1
+	return nil
 }
 
 // Begins the process of reading the second argument from the inbound call.  Returns an io.Reader
 // that can be used to read the bytestream of the second argument.  The first argument must have been
 // fully read before this method is called.
 func (call *InboundCall) ExpectArg2() (io.Reader, error) {
-	if call.state != inboundCallReadingArg1 {
+	if call.state != inboundCallReadyForArg2 {
 		return nil, call.failed(ErrInboundCallStateMismatch)
-	}
-
-	if err := call.lastArgReader.EndArgument(); err != nil {
-		return nil, call.failed(err)
 	}
 
 	call.state = inboundCallReadingArg2
@@ -250,6 +249,7 @@ func (call *InboundCall) ExpectArg3() (io.Reader, error) {
 
 }
 
+// Marks the call as failed
 func (call *InboundCall) failed(err error) error {
 	call.state = inboundCallError
 	call.pipeline.inboundCallComplete(call.id)
@@ -258,6 +258,15 @@ func (call *InboundCall) failed(err error) error {
 
 // Closes the inbound call, confirming that all inbound arguments have been read
 func (call *InboundCall) Close() error {
+	if call.state != inboundCallReadingArg3 {
+		return call.failed(ErrInboundCallStateMismatch)
+	}
+
+	if err := call.lastArgReader.EndArgument(); err != nil {
+		return call.failed(err)
+	}
+
+	call.state = inboundCallAllRead
 	return nil
 }
 

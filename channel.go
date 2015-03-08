@@ -11,11 +11,11 @@ import (
 // Handler for incoming calls
 type Handler interface {
 	// Handles an incoming call for service
-	Handle(ctx context.Context, serviceName string, operation []byte, call *InboundCall)
+	Handle(ctx context.Context, call *InboundCall)
 }
 
 // A handler which is just a function
-type HandlerFunc func(ctx context.Context, serviceName string, operation []byte, call *InboundCall)
+type HandlerFunc func(ctx context.Context, call *InboundCall)
 
 // Creates a Handler around a HandlerFunc
 func HandleFunc(f HandlerFunc) Handler {
@@ -26,8 +26,8 @@ type funcHandler struct {
 	f HandlerFunc
 }
 
-func (h *funcHandler) Handle(ctx context.Context, serviceName string, operation []byte, call *InboundCall) {
-	h.f(ctx, serviceName, operation, call)
+func (h *funcHandler) Handle(ctx context.Context, call *InboundCall) {
+	h.f(ctx, call)
 }
 
 // Options used to create a TChannel

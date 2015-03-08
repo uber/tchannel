@@ -14,11 +14,11 @@ import (
 
 var testLog = logging.MustGetLogger("test")
 
-func serverBusy(ctx context.Context, serviceName string, operation []byte, call *InboundCall) {
+func serverBusy(ctx context.Context, call *InboundCall) {
 	call.Response().SendSystemError(ErrServerBusy)
 }
 
-func echo(ctx context.Context, serviceName string, operation []byte, call *InboundCall) {
+func echo(ctx context.Context, call *InboundCall) {
 	rarg2, err := call.ExpectArg2()
 	if err != nil {
 		testLog.Error("could not start arg2: %v", err)
