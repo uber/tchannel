@@ -197,29 +197,35 @@ type outboundCallState int
 
 const (
 	outboundCallPreWrite outboundCallState = iota
-	outboundCallWritingArg1
+	outboundCallReadyToWriteArg2
 	outboundCallWritingArg2
 	outboundCallWritingArg3
 	outboundCallSent
 	outboundCallError
 )
 
-// Begins writing the first argument to the call, returning an io.Writer for that argument's contents
-func (call *OutboundCall) BeginArg1() (io.Writer, error) {
+// Writes the operation (arg1) to the call
+func (call *OutboundCall) writeOperation(operation []byte) error {
 	if call.state != outboundCallPreWrite {
-		return nil, call.failed(ErrArgMismatch)
+		return call.failed(ErrArgMismatch)
 	}
-	call.state = outboundCallWritingArg1
-	return call.argWriter, nil
+
+	if _, err := call.argWriter.Write(operation); err != nil {
+		return call.failed(err)
+	}
+
+	if err := call.argWriter.EndArgument(false); err != nil {
+		return call.failed(err)
+	}
+
+	call.state = outboundCallReadyToWriteArg2
+	return nil
 }
 
 // Begins writing the second argument to the call, returning an io.Writer for that argument's contents
 func (call *OutboundCall) BeginArg2() (io.Writer, error) {
-	if call.state != outboundCallWritingArg1 {
+	if call.state != outboundCallReadyToWriteArg2 {
 		return nil, call.failed(ErrArgMismatch)
-	}
-	if err := call.argWriter.EndArgument(false); err != nil {
-		return nil, call.failed(err)
 	}
 
 	call.state = outboundCallWritingArg2

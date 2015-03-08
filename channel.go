@@ -108,12 +108,7 @@ func (ch *TChannel) BeginCall(ctx context.Context, hostPort,
 		return nil, err
 	}
 
-	warg1, err := call.BeginArg1()
-	if err != nil {
-		return nil, err
-	}
-
-	if _, err := warg1.Write([]byte(operationName)); err != nil {
+	if err := call.writeOperation([]byte(operationName)); err != nil {
 		return nil, err
 	}
 
