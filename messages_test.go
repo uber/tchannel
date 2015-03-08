@@ -79,7 +79,7 @@ func TestCallReqContinue(t *testing.T) {
 func TestCallRes(t *testing.T) {
 	r := CallRes{
 		id:           0xDEADBEEF,
-		ResponseCode: ResponseError,
+		ResponseCode: ResponseApplicationError,
 		Headers: CallHeaders{
 			"r": "c",
 			"f": "d",
@@ -105,6 +105,17 @@ func TestCallResContinue(t *testing.T) {
 	assert.Equal(t, uint32(0xDEADBEEF), r.Id())
 	assert.Equal(t, MessageTypeCallResContinue, r.Type())
 	assertRoundTrip(t, &r, &CallResContinue{id: 0xDEADBEEF})
+}
+
+func TestErrorMessage(t *testing.T) {
+	m := ErrorMessage{
+		ErrorCode:         ErrorCodeBusy,
+		OriginalMessageId: 0xDEADBEEF,
+		Message:           "go away",
+	}
+
+	assert.Equal(t, MessageTypeError, m.Type())
+	assertRoundTrip(t, &m, &ErrorMessage{})
 }
 
 func assertRoundTrip(t *testing.T, expected Message, actual Message) {

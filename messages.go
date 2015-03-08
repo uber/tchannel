@@ -318,8 +318,8 @@ func (c *CallReqContinue) write(w typed.WriteBuffer) error { return nil }
 type ResponseCode byte
 
 const (
-	ResponseOK    ResponseCode = 0x00
-	ResponseError ResponseCode = 0x01
+	ResponseOK               ResponseCode = 0x00
+	ResponseApplicationError ResponseCode = 0x01
 )
 
 // A response to a CallReq

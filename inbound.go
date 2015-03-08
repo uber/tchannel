@@ -400,13 +400,14 @@ func (call *InboundCallResponse) failed(err error) error {
 	return err
 }
 
+// Begins a new response fragment
 func (call *InboundCallResponse) startFragment() (*outboundFragment, error) {
 	frame := call.pipeline.framePool.Get()
 	var msg Message
 	if !call.startedFirstFragment {
 		responseCode := ResponseOK
 		if call.applicationError {
-			responseCode = ResponseError
+			responseCode = ResponseApplicationError
 		}
 
 		msg = &CallRes{
@@ -422,6 +423,7 @@ func (call *InboundCallResponse) startFragment() (*outboundFragment, error) {
 	return newOutboundFragment(frame, msg, call.checksum)
 }
 
+// Sends a response fragment back to the peer
 func (call *InboundCallResponse) sendFragment(f *outboundFragment, last bool) error {
 	select {
 	case call.pipeline.sendCh <- f.finish(last):
