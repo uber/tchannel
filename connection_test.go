@@ -188,24 +188,6 @@ func TestServerBusy(t *testing.T) {
 	assert.Equal(t, ErrorCodeBusy, GetSystemErrorCode(err))
 }
 
-/*
-func TestBadProtocolVersionFromInitiatingPeer(t *testing.T) {
-}
-
-func TestBadProtocolVersionFromReceivingPeer(t *testing.T) {
-}
-
-func TestHangupDuringInit(t *testing.T) {
-}
-
-func TestHangupDuringInboundCallRead(t *testing.T) {
-}
-
-func TestCancelDuringInboundCallRead(t *testing.T) {
-}
-
-*/
-
 func sendRecv(ctx context.Context, ch *TChannel, hostPort string, serviceName, operation string,
 	arg2, arg3 []byte) ([]byte, []byte, error) {
 
