@@ -84,6 +84,10 @@ func main() {
 		panic(err)
 	}
 
+	if resp.ApplicationError() {
+		log.Warning("Peer returned an application error")
+	}
+
 	r, err := resp.ExpectArg2()
 	if err != nil {
 		panic(err)
