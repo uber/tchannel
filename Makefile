@@ -2,6 +2,7 @@ GODEPS = $(realpath ./Godeps/_workspace)
 GOPATH := $(GODEPS):$(GOPATH)
 PATH := $(GODEPS)/bin:$(PATH)
 PKGS := ./  ./typed
+BUILD := ./build
 
 # target: all - Run tests
 all: test
@@ -14,7 +15,7 @@ help:
 clean:
 	echo Cleaning build artifacts...
 	go clean
-	rm -rf out
+	rm -rf $(BUILD)
 	echo
 
 # target: fmt - Formats go code
@@ -42,9 +43,9 @@ vet:
 # target: examples - builds example servers
 examples: test
 	echo Building examples...
-	mkdir -p out
-	go build -o out/server ./examples/server
-	go build -o out/client ./examples/client
+	mkdir -p $(BUILD)
+	go build -o $(BUILD)/server ./examples/server
+	go build -o $(BUILD)/client ./examples/client
 
 .PHONY: all help clean fmt format test vet 
 .SILENT: all help clean fmt format test vet
