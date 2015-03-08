@@ -17,6 +17,12 @@ func serverBusy(ctx context.Context, call *InboundCall) {
 	call.Response().SendSystemError(ErrServerBusy)
 }
 
+func timeout(ctx context.Context, call *InboundCall) {
+	deadline, _ := ctx.Deadline()
+	time.Sleep(deadline.Add(time.Second * 1).Sub(time.Now()))
+	echo(ctx, call)
+}
+
 func echo(ctx context.Context, call *InboundCall) {
 	rarg2, err := call.ExpectArg2()
 	if err != nil {
@@ -165,6 +171,22 @@ func TestServerBusy(t *testing.T) {
 	_, _, err = sendRecv(ctx, ch, "localhost:8070", "TestService", "busy", []byte("Arg2"), []byte("Arg3"))
 	require.NotNil(t, err)
 	assert.Equal(t, ErrorCodeBusy, GetSystemErrorCode(err))
+}
+
+func TestTimeout(t *testing.T) {
+	ch, err := NewChannel(":8071", nil)
+	require.Nil(t, err)
+
+	ch.Register(HandleFunc(timeout), "TestService", "timeout")
+	go ch.ListenAndHandle()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+	defer cancel()
+
+	_, _, err = sendRecv(ctx, ch, "localhost:8071", "TestService", "timeout", []byte("Arg2"), []byte("Arg3"))
+
+	// TODO(mmihic): Maybe translate this into ErrTimeout (or vice versa)?
+	assert.Equal(t, context.DeadlineExceeded, err)
 }
 
 func sendRecv(ctx context.Context, ch *TChannel, hostPort string, serviceName, operation string,

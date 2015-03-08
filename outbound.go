@@ -7,6 +7,7 @@ import (
 	"github.com/op/go-logging"
 	"io"
 	"sync"
+	"time"
 )
 
 var (
@@ -38,6 +39,16 @@ func newOutboundCallPipeline(remotePeerInfo PeerInfo, sendCh chan<- *Frame,
 
 func (p *outboundCallPipeline) beginCall(ctx context.Context, reqId uint32, serviceName string,
 	checksumType ChecksumType) (*OutboundCall, error) {
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		return nil, ErrTimeout
+	}
+
+	timeToLive := deadline.Sub(time.Now())
+	if timeToLive < 0 {
+		return nil, ErrTimeout
+	}
+
 	call := &OutboundCall{
 		id:       reqId,
 		ctx:      ctx,
@@ -47,6 +58,7 @@ func (p *outboundCallPipeline) beginCall(ctx context.Context, reqId uint32, serv
 			TraceFlags: 0x00,          // TODO(mmihic): Enable tracing based on ctx
 			Headers:    CallHeaders{}, // TODO(mmihic): Format headers etc
 			Service:    []byte(serviceName),
+			TimeToLive: timeToLive,
 		},
 		recvCh:   make(chan *Frame, 512), // TODO(mmihic): Control channel size
 		checksum: checksumType.New(),
