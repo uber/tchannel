@@ -218,7 +218,7 @@ type OutboundCallResponse struct {
 
 // if true, the call resulted in an application level error
 func (call *OutboundCallResponse) ApplicationError() bool {
-	return call.res.ResponseCode == ResponseError
+	return call.res.ResponseCode == ResponseApplicationError
 }
 
 // Called by the application to begin processing the response arg2.  Returns an io.Reader that
