@@ -7,6 +7,7 @@ import (
 	"github.com/op/go-logging"
 	"io"
 	"io/ioutil"
+	"time"
 )
 
 var log = logging.MustGetLogger("tchannel.server")
@@ -77,6 +78,20 @@ func badRequest(ctx context.Context, call *tchannel.InboundCall) {
 	call.Response().SendSystemError(tchannel.ErrHandlerNotFound)
 }
 
+func timeout(ctx context.Context, call *tchannel.InboundCall) {
+	deadline, _ := ctx.Deadline()
+	log.Info("Client requested timeout in %dms", int(deadline.Sub(time.Now()).Seconds()*1000))
+
+	pastDeadline := deadline.Add(time.Second * 2)
+	time.Sleep(pastDeadline.Sub(time.Now()))
+	echo(ctx, call)
+}
+
+func appError(ctx context.Context, call *tchannel.InboundCall) {
+	call.Response().SetApplicationError()
+	echo(ctx, call)
+}
+
 var bindAddr = getopt.StringLong("bind", 'b', "0.0.0.0:10500", "host and port on which to bind")
 
 func main() {
@@ -90,6 +105,8 @@ func main() {
 	ch.Register(tchannel.HandleFunc(echo), "TestService", "echo")
 	ch.Register(tchannel.HandleFunc(serverBusy), "TestService", "busy")
 	ch.Register(tchannel.HandleFunc(badRequest), "TestService", "badRequest")
+	ch.Register(tchannel.HandleFunc(appError), "TestService", "appError")
+	ch.Register(tchannel.HandleFunc(timeout), "TestService", "timeout")
 
 	if err := ch.ListenAndHandle(); err != nil {
 		panic(err)
