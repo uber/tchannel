@@ -28,7 +28,7 @@ test: clean
 	LC_ALL="en_US.UTF-8" \
 		go test $(PKGS) -parallel 4 $(TEST_ARG)
 	echo
-	$(MAKE) vet
+	#$(MAKE) vet
 
 # target: vet - Vets CLI for issues
 vet:
