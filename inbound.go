@@ -30,14 +30,15 @@ type inboundCallPipeline struct {
 }
 
 // Creates a new pipeline for handling inbound calls
-func newInboundCallPipeline(sendCh chan<- *Frame, handlers *handlerMap,
+func newInboundCallPipeline(remotePeerInfo PeerInfo, sendCh chan<- *Frame, handlers *handlerMap,
 	framePool FramePool, log *logging.Logger) *inboundCallPipeline {
 	return &inboundCallPipeline{
-		sendCh:       sendCh,
-		framePool:    framePool,
-		handlers:     handlers,
-		activeReqChs: make(map[uint32]chan *Frame),
-		log:          log,
+		remotePeerInfo: remotePeerInfo,
+		sendCh:         sendCh,
+		framePool:      framePool,
+		handlers:       handlers,
+		activeReqChs:   make(map[uint32]chan *Frame),
+		log:            log,
 	}
 }
 

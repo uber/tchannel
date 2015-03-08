@@ -37,6 +37,7 @@ var (
 	ErrConnectionWaitingOnPeerInit = errors.New("connection is waiting for the peer to sent init")
 	ErrSendBufferFull              = errors.New("connection send buffer is full, cannot send frame")
 	ErrRecvBufferFull              = errors.New("connection recv buffer is full, cannot recv frame")
+	ErrCannotHandleInitRes         = errors.New("could not return init-res to handshake thread")
 )
 
 // Options used during the creation of a TChannelConnection
@@ -66,13 +67,13 @@ type TChannelConnection struct {
 	conn           net.Conn
 	localPeerInfo  PeerInfo
 	remotePeerInfo PeerInfo
-	sendCh         chan *Frame // channel for sending frames
+	sendCh         chan *Frame
 	state          connectionState
 	stateMut       sync.RWMutex
-	reqMut         sync.Mutex
-	activeResChs   map[uint32]chan<- *Frame // map of frame channels for incoming requests
 	inbound        *inboundCallPipeline
+	outbound       *outboundCallPipeline
 	nextMessageId  uint32
+	initResCh      chan *Frame
 }
 
 type connectionState int
@@ -146,13 +147,13 @@ func newConnection(ch *TChannel, conn net.Conn, initialState connectionState,
 		framePool:     framePool,
 		state:         initialState,
 		sendCh:        make(chan *Frame, sendBufferSize),
-		activeResChs:  make(map[uint32]chan<- *Frame),
 		localPeerInfo: opts.PeerInfo,
 		checksumType:  opts.ChecksumType,
 	}
 
 	// TODO(mmihic): Possibly defer until after handshake is successful
-	c.inbound = newInboundCallPipeline(c.sendCh, &ch.handlers, framePool, ch.log)
+	c.inbound = newInboundCallPipeline(c.remotePeerInfo, c.sendCh, &ch.handlers, c.framePool, c.log)
+	c.outbound = newOutboundCallPipeline(c.remotePeerInfo, c.sendCh, c.framePool, c.log)
 
 	go c.readFrames()
 	go c.writeFrames()
@@ -181,11 +182,7 @@ func (c *TChannelConnection) sendInit(ctx context.Context) error {
 	}
 
 	initMsgId := c.NextMessageId()
-	initResCh := make(chan *Frame)
-	c.withReqLock(func() error {
-		c.activeResChs[initMsgId] = initResCh
-		return nil
-	})
+	c.initResCh = make(chan *Frame)
 
 	req := InitReq{initMessage{id: initMsgId}}
 	req.Version = CurrentProtocolVersion
@@ -195,13 +192,13 @@ func (c *TChannelConnection) sendInit(ctx context.Context) error {
 	}
 
 	if err := c.sendMessage(&req); err != nil {
-		c.outboundCallComplete(initMsgId)
+		c.initResCh = nil
 		return c.connectionError(err)
 	}
 
 	res := InitRes{initMessage{id: initMsgId}}
-	err = c.recvMessage(ctx, &res, initResCh)
-	c.outboundCallComplete(initMsgId)
+	err = c.recvMessage(ctx, &res, c.initResCh)
+	c.initResCh = nil
 	if err != nil {
 		return c.connectionError(err)
 	}
@@ -302,7 +299,11 @@ func (c *TChannelConnection) handleInitRes(frame *Frame) {
 		return
 	}
 
-	c.forwardResFrame(frame)
+	select {
+	case c.initResCh <- frame: // Ok
+	default:
+		c.connectionError(ErrCannotHandleInitRes)
+	}
 }
 
 // Sends a standalone message (typically a control message)
@@ -382,14 +383,6 @@ func (c *TChannelConnection) withStateRLock(f func() error) error {
 	return f()
 }
 
-// Runs a function with the request map lock held
-func (c *TChannelConnection) withReqLock(f func() error) error {
-	c.reqMut.Lock()
-	defer c.reqMut.Unlock()
-
-	return f()
-}
-
 // Main loop that reads frames from the network connection and dispatches to the appropriate handler.
 // Run within its own goroutine to prevent overlapping reads on the socket.  Most handlers simply
 // send the incoming frame to a channel; the init handlers are a notable exception, since we cannot
@@ -425,9 +418,9 @@ func (c *TChannelConnection) readFrames() {
 		case MessageTypeCallReqContinue:
 			c.inbound.handleCallReqContinue(frame)
 		case MessageTypeCallRes:
-			c.handleCallRes(frame)
+			c.outbound.handleCallRes(frame)
 		case MessageTypeCallResContinue:
-			c.handleCallResContinue(frame)
+			c.outbound.handleCallResContinue(frame)
 		case MessageTypeInitReq:
 			c.handleInitReq(frame)
 		case MessageTypeInitRes:

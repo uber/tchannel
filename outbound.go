@@ -3,9 +3,11 @@ package tchannel
 import (
 	"errors"
 	"io"
+	"sync"
 
 	"code.google.com/p/go.net/context"
 	"code.uber.internal/infra/mmihic/tchannel-go/typed"
+	"github.com/op/go-logging"
 )
 
 var (
@@ -13,6 +15,133 @@ var (
 	ErrUnexpectedFragmentType  = errors.New("unexpected message type received on fragment stream")
 	ErrOutboundCallStillActive = errors.New("outbound call still active (possible id wrap?)")
 )
+
+// Pipeline for sending outgoing requests for service to a peer
+type outboundCallPipeline struct {
+	remotePeerInfo PeerInfo
+	activeResChs   map[uint32]chan *Frame
+	sendCh         chan<- *Frame
+	reqLock        sync.Mutex
+	framePool      FramePool
+	log            *logging.Logger
+}
+
+func newOutboundCallPipeline(remotePeerInfo PeerInfo, sendCh chan<- *Frame,
+	framePool FramePool, log *logging.Logger) *outboundCallPipeline {
+	return &outboundCallPipeline{
+		remotePeerInfo: remotePeerInfo,
+		sendCh:         sendCh,
+		framePool:      framePool,
+		activeResChs:   make(map[uint32]chan *Frame),
+		log:            log,
+	}
+}
+
+func (p *outboundCallPipeline) beginCall(ctx context.Context, reqId uint32, serviceName string,
+	checksumType ChecksumType) (*OutboundCall, error) {
+	call := &OutboundCall{
+		id:       reqId,
+		ctx:      ctx,
+		pipeline: p,
+		req: CallReq{
+			id:         reqId,
+			TraceFlags: 0x00,          // TODO(mmihic): Enable tracing based on ctx
+			Headers:    CallHeaders{}, // TODO(mmihic): Format headers etc
+			Service:    []byte(serviceName),
+		},
+		recvCh:   make(chan *Frame, 512), // TODO(mmihic): Control channel size
+		checksum: checksumType.New(),
+	}
+
+	if err := p.withReqLock(func() error {
+		if p.activeResChs[call.id] != nil {
+			return ErrOutboundCallStillActive
+		}
+
+		p.activeResChs[call.id] = call.recvCh
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	call.argWriter = newArgumentWriter(call)
+	return call, nil
+}
+
+// Marks an outbound call as being complete
+func (p *outboundCallPipeline) outboundCallComplete(messageId uint32) {
+	p.withReqLock(func() error {
+		delete(p.activeResChs, messageId)
+		return nil
+	})
+}
+
+// TODO(mmihic): Eventually these will have different semantics
+// Handles a CallRes frame.  Finds the response channel corresponding to that
+// message and sends it the frame
+func (p *outboundCallPipeline) handleCallRes(frame *Frame) {
+	p.forwardResFrame(frame)
+}
+
+func (p *outboundCallPipeline) handleCallResContinue(frame *Frame) {
+	p.forwardResFrame(frame)
+}
+
+func (p *outboundCallPipeline) forwardResFrame(frame *Frame) {
+	var resCh chan<- *Frame
+	p.withReqLock(func() error {
+		resCh = p.activeResChs[frame.Header.Id]
+		return nil
+	})
+
+	if resCh == nil {
+		// This is ok, just means the request timed out or was cancelled or had an error or whatever
+		return
+	}
+
+	select {
+	case resCh <- frame:
+		// Ok
+	default:
+		// Application isn't reading frames fast enough, kill it off
+		close(resCh)
+		p.outboundCallComplete(frame.Header.Id)
+	}
+}
+
+func (p *outboundCallPipeline) handleError(frame *Frame, errorMessage *ErrorMessage) {
+	requestId := errorMessage.OriginalMessageId
+	p.log.Warning("Peer %s reported error %d for request %d",
+		p.remotePeerInfo, errorMessage.ErrorCode, requestId)
+
+	var resCh chan<- *Frame
+	p.withReqLock(func() error {
+		resCh = p.activeResChs[requestId]
+		return nil
+	})
+
+	if resCh == nil {
+		p.log.Warning("Received error for non-existent req %d from %s", requestId, p.remotePeerInfo)
+		return
+	}
+
+	select {
+	case resCh <- frame: // Ok
+	default:
+		// Can't write to frame channel, most likely the application has stopped reading from it
+		p.log.Warning("Could not enqueue error %s(%s) frame to %d from %s",
+			errorMessage.ErrorCode, errorMessage.Message, requestId, p.remotePeerInfo)
+		close(resCh)
+		p.outboundCallComplete(requestId)
+	}
+}
+
+func (p *outboundCallPipeline) withReqLock(f func() error) error {
+	p.reqLock.Lock()
+	defer p.reqLock.Unlock()
+
+	return f()
+}
 
 // Begins a call on a remote service.  Takes an execution context and a target service name, and returns
 // a call object that can be used to write the arguments and wait for the response
@@ -34,34 +163,7 @@ func (c *TChannelConnection) BeginCall(ctx context.Context, serviceName string) 
 		return nil, err
 	}
 
-	reqId := c.NextMessageId()
-	call := &OutboundCall{
-		id:   reqId,
-		ctx:  ctx,
-		conn: c,
-		req: CallReq{
-			id:         reqId,
-			TraceFlags: 0x00,          // TODO(mmihic): Enable tracing based on ctx
-			Headers:    CallHeaders{}, // TODO(mmihic): Format headers etc
-			Service:    []byte(serviceName),
-		},
-		recvCh:   make(chan *Frame, 512), // TODO(mmihic): Control channel size
-		checksum: c.checksumType.New(),
-	}
-
-	if err := c.withReqLock(func() error {
-		if c.activeResChs[call.id] != nil {
-			return ErrOutboundCallStillActive
-		}
-
-		c.activeResChs[call.id] = call.recvCh
-		return nil
-	}); err != nil {
-		return nil, err
-	}
-
-	call.argWriter = newArgumentWriter(call)
-	return call, nil
+	return c.outbound.beginCall(ctx, c.NextMessageId(), serviceName, c.checksumType)
 }
 
 // A call to a remote peer.  A client makes a call by calling BeginCall on the TChannel, writing
@@ -72,7 +174,7 @@ type OutboundCall struct {
 	id                uint32
 	req               CallReq
 	checksum          Checksum
-	conn              *TChannelConnection
+	pipeline          *outboundCallPipeline
 	ctx               context.Context
 	argWriter         *ArgumentWriter
 	state             outboundCallState
@@ -139,10 +241,10 @@ func (call *OutboundCall) RoundTrip() (*OutboundCallResponse, error) {
 
 	call.state = outboundCallSent
 	res := &OutboundCallResponse{
-		id:     call.id,
-		ctx:    call.ctx,
-		conn:   call.conn,
-		recvCh: call.recvCh,
+		id:       call.id,
+		ctx:      call.ctx,
+		pipeline: call.pipeline,
+		recvCh:   call.recvCh,
 	}
 
 	// Wait for the first fragment to arrive
@@ -152,14 +254,14 @@ func (call *OutboundCall) RoundTrip() (*OutboundCallResponse, error) {
 
 // Marks a call as having failed
 func (call *OutboundCall) failed(err error) error {
-	call.conn.outboundCallComplete(call.id)
+	call.pipeline.outboundCallComplete(call.id)
 	call.state = outboundCallError
 	return err
 }
 
 // Starts a new fragment to send to the remote peer
 func (call *OutboundCall) startFragment() (*outboundFragment, error) {
-	frame := call.conn.framePool.Get()
+	frame := call.pipeline.framePool.Get()
 
 	var msg Message
 	if !call.sentFirstFragment {
@@ -183,7 +285,7 @@ func (call *OutboundCall) sendFragment(fragment *outboundFragment, last bool) er
 	case <-call.ctx.Done():
 		return call.failed(call.ctx.Err())
 
-	case call.conn.sendCh <- fragment.finish(last):
+	case call.pipeline.sendCh <- fragment.finish(last):
 		return nil
 
 	default:
@@ -196,7 +298,7 @@ type OutboundCallResponse struct {
 	id               uint32
 	res              CallRes
 	checksum         Checksum
-	conn             *TChannelConnection
+	pipeline         *outboundCallPipeline
 	ctx              context.Context
 	recvCh           chan *Frame
 	arg              int
@@ -275,10 +377,10 @@ func (call *OutboundCallResponse) waitForFragment() (*inboundFragment, error) {
 
 		default:
 			// TODO(mmihic): Should be treated as a protocol error
-			call.conn.log.Warning("Received unexpected message %d for %d from %s",
-				int(frame.Header.Type), frame.Header.Id, call.conn.remotePeerInfo)
+			call.pipeline.log.Warning("Received unexpected message %d for %d from %s",
+				int(frame.Header.Type), frame.Header.Id, call.pipeline.remotePeerInfo)
 
-			return nil, call.conn.connectionError(ErrUnexpectedFragmentType)
+			return nil, call.failed(ErrUnexpectedFragmentType)
 		}
 	}
 }
@@ -297,52 +399,8 @@ func (call *OutboundCallResponse) parseFragment(frame *Frame, msg Message) (*inb
 
 // Indicates that the call has failed
 func (call *OutboundCallResponse) failed(err error) error {
-	call.conn.outboundCallComplete(call.id)
+	call.pipeline.outboundCallComplete(call.id)
 	return err
-}
-
-// Marks an outbound call as being complete
-func (c *TChannelConnection) outboundCallComplete(messageId uint32) {
-	c.withReqLock(func() error {
-		delete(c.activeResChs, messageId)
-		return nil
-	})
-}
-
-// TODO(mmihic): Eventually these will have different semantics
-// Handles a CallRes frame.  Finds the response channel corresponding to that
-// message and sends it the frame
-func (c *TChannelConnection) handleCallRes(frame *Frame) {
-	c.forwardResFrame(frame)
-}
-
-func (c *TChannelConnection) handleCallResContinue(frame *Frame) {
-	c.forwardResFrame(frame)
-}
-
-func (c *TChannelConnection) handleCallResError(frame *Frame) {
-	c.forwardResFrame(frame)
-}
-
-func (c *TChannelConnection) forwardResFrame(frame *Frame) {
-	var resCh chan<- *Frame
-	c.withReqLock(func() error {
-		resCh = c.activeResChs[frame.Header.Id]
-		return nil
-	})
-
-	if resCh == nil {
-		// This is ok, just means the request timed out or was cancelled or had an error or whatever
-		return
-	}
-
-	select {
-	case resCh <- frame:
-		// Ok
-	default:
-		// Application isn't reading frames fast enough, kill it off
-		c.outboundCallComplete(frame.Header.Id)
-	}
 }
 
 // Handles an error coming back from the peer server.
@@ -360,29 +418,5 @@ func (c *TChannelConnection) handleError(frame *Frame) {
 		c.connectionError(errorMessage.AsSystemError())
 		return
 	}
-
-	requestId := errorMessage.OriginalMessageId
-	c.log.Warning("Peer %s reported error %d for request %d",
-		c.remotePeerInfo, errorMessage.ErrorCode, requestId)
-
-	var resCh chan<- *Frame
-	c.withReqLock(func() error {
-		resCh = c.activeResChs[requestId]
-		return nil
-	})
-
-	if resCh == nil {
-		c.log.Warning("Received error for non-existent req %d from %s", requestId, c.remotePeerInfo)
-		return
-	}
-
-	select {
-	case resCh <- frame: // Ok
-	default:
-		// Can't write to frame channel, most likely the application has stopped reading from it
-		c.log.Warning("Could not enqueue error %s(%s) frame to %d from %s",
-			errorMessage.ErrorCode, errorMessage.Message, requestId, c.remotePeerInfo)
-		c.outboundCallComplete(requestId)
-
-	}
+	c.outbound.handleError(frame, &errorMessage)
 }
