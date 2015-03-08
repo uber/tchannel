@@ -80,6 +80,8 @@ func badRequest(ctx context.Context, call *tchannel.InboundCall) {
 var bindAddr = getopt.StringLong("bind", 'b', "0.0.0.0:10500", "host and port on which to bind")
 
 func main() {
+	getopt.Parse()
+
 	ch, err := tchannel.NewChannel(*bindAddr, nil)
 	if err != nil {
 		panic(err)

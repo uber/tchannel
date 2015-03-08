@@ -44,7 +44,8 @@ examples: test
 	echo Building examples...
 	mkdir -p out
 	go build -o out/server ./examples/server
+	go build -o out/client ./examples/client
 
 .PHONY: all help clean fmt format test vet 
 .SILENT: all help clean fmt format test vet
-
+	
