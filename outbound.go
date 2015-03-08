@@ -1,13 +1,12 @@
 package tchannel
 
 import (
+	"code.google.com/p/go.net/context"
+	"code.uber.internal/personal/mmihic/tchannel-go/typed"
 	"errors"
+	"github.com/op/go-logging"
 	"io"
 	"sync"
-
-	"code.google.com/p/go.net/context"
-	"code.uber.internal/infra/mmihic/tchannel-go/typed"
-	"github.com/op/go-logging"
 )
 
 var (

@@ -1,7 +1,7 @@
 package tchannel
 
 import (
-	"code.uber.internal/infra/mmihic/tchannel-go/typed"
+	"code.uber.internal/personal/mmihic/tchannel-go/typed"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

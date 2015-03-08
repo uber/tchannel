@@ -2,7 +2,7 @@ package tchannel
 
 import (
 	"bytes"
-	"code.uber.internal/infra/mmihic/tchannel-go/typed"
+	"code.uber.internal/personal/mmihic/tchannel-go/typed"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"

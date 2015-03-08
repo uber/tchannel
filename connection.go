@@ -7,12 +7,10 @@ import (
 	"net"
 	"sync"
 	"sync/atomic"
-	_ "time"
 
 	"code.google.com/p/go.net/context"
+	"code.uber.internal/personal/mmihic/tchannel-go/typed"
 	"github.com/op/go-logging"
-
-	"code.uber.internal/infra/mmihic/tchannel-go/typed"
 )
 
 // Information about a TChannel peer

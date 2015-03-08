@@ -6,7 +6,7 @@ import (
 	"errors"
 	"io"
 
-	"code.uber.internal/infra/mmihic/tchannel-go/typed"
+	"code.uber.internal/personal/mmihic/tchannel-go/typed"
 )
 
 var (
