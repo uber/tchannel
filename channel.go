@@ -57,6 +57,7 @@ type TChannel struct {
 	l                 net.Listener
 }
 
+// Creates a new channel bound to the given host and port
 func NewChannel(hostPort string, opts *TChannelOptions) (*TChannel, error) {
 	if opts == nil {
 		opts = &TChannelOptions{}
@@ -82,6 +83,41 @@ func NewChannel(hostPort string, opts *TChannelOptions) (*TChannel, error) {
 // Registers a handler for a service+operation pair
 func (ch *TChannel) Register(h Handler, serviceName, operationName string) {
 	ch.handlers.register(h, serviceName, operationName)
+}
+
+// Begins a new call to a remote peer
+func (ch *TChannel) BeginCall(ctx context.Context, hostPort,
+	serviceName, operationName string) (*OutboundCall, error) {
+	// TODO(mmihic): Keep-alive, manage pools, use existing inbound if possible, all that jazz
+	nconn, err := net.Dial("tcp", hostPort)
+	if err != nil {
+		return nil, err
+	}
+
+	conn, err := newOutboundConnection(ch, nconn, &ch.connectionOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := conn.sendInit(ctx); err != nil {
+		return nil, err
+	}
+
+	call, err := conn.BeginCall(ctx, serviceName)
+	if err != nil {
+		return nil, err
+	}
+
+	warg1, err := call.BeginArg1()
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := warg1.Write([]byte(operationName)); err != nil {
+		return nil, err
+	}
+
+	return call, nil
 }
 
 // Runs the channel listener, accepting and managing new connections.  Blocks until the channel is closed.

@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"io"
 	"io/ioutil"
-	"net"
 	"testing"
 	"time"
 )
@@ -83,33 +82,13 @@ func TestRoundTrip(t *testing.T) {
 
 	go ch.ListenAndHandle()
 
-	out, err := net.Dial("tcp", "localhost:8050")
-	require.Nil(t, err)
-
-	conn, err := newOutboundConnection(ch, out, nil)
-	require.Nil(t, err)
-
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
-	if err := conn.sendInit(ctx); err != nil {
-		require.Nil(t, err)
-	}
 
-	call, err := conn.BeginCall(ctx, "Capture")
-	if err != nil {
-		require.Nil(t, err)
-	}
+	call, err := ch.BeginCall(ctx, "localhost:8050", "Capture", "ping")
+	require.Nil(t, err)
 
-	w, err := call.BeginArg1()
-	if err != nil {
-		require.Nil(t, err)
-	}
-
-	if _, err := w.Write([]byte("ping")); err != nil {
-		require.Nil(t, err)
-	}
-
-	w, err = call.BeginArg2()
+	w, err := call.BeginArg2()
 	if err != nil {
 		require.Nil(t, err)
 	}
@@ -191,35 +170,12 @@ func TestServerBusy(t *testing.T) {
 func sendRecv(ctx context.Context, ch *TChannel, hostPort string, serviceName, operation string,
 	arg2, arg3 []byte) ([]byte, []byte, error) {
 
-	netConn, err := net.Dial("tcp", hostPort)
+	call, err := ch.BeginCall(ctx, hostPort, serviceName, operation)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	conn, err := newOutboundConnection(ch, netConn, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if err := conn.sendInit(ctx); err != nil {
-		return nil, nil, err
-	}
-
-	call, err := conn.BeginCall(ctx, serviceName)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	w, err := call.BeginArg1()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if _, err := w.Write([]byte(operation)); err != nil {
-		return nil, nil, err
-	}
-
-	w, err = call.BeginArg2()
+	w, err := call.BeginArg2()
 	if err != nil {
 		return nil, nil, err
 	}
