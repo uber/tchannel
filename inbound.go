@@ -43,7 +43,6 @@ func newInboundCallPipeline(sendCh chan<- *Frame, handlers *handlerMap,
 
 // Handles an incoming call request, dispatching the call to the worker pool
 func (p *inboundCallPipeline) handleCallReq(frame *Frame) {
-	p.log.Info("Handling incoming call")
 	reqCh := make(chan *Frame, 512) // TODO(mmihic): Control incoming buffer size
 	err := p.withReqLock(func() error {
 		if p.activeReqChs[frame.Header.Id] != nil {
@@ -138,34 +137,34 @@ func (p *inboundCallPipeline) withReqLock(f func() error) error {
 
 // Dispatches an inbound call to the appropriate handler
 func (p *inboundCallPipeline) dispatchInbound(call *InboundCall) {
-	p.log.Info("Received incoming call for %s", call.ServiceName())
+	p.log.Debug("Received incoming call for %s from %s", call.ServiceName(), p.remotePeerInfo)
 
 	// Read the full operation name
 	warg1, err := call.expectArg1()
 	if err != nil {
-		p.log.Error("Could no begin reading operation: %v", err)
-		call.Response().SendSystemError(err)
+		p.log.Error("Could not begin reading operation from %s: %v", p.remotePeerInfo, err)
+		p.inboundCallComplete(call.id)
 		return
 	}
 
 	arg1, err := ioutil.ReadAll(warg1)
 	if err != nil {
-		p.log.Error("Could not read operation: %v", err)
-		call.Response().SendSystemError(err)
+		p.log.Error("Could not read operation from %s: %v", p.remotePeerInfo, err)
+		p.inboundCallComplete(call.id)
 		return
 	}
-
-	p.log.Info("Dispatching operation %s", arg1)
 
 	// NB(mmihic): Don't cast operation name to string here - this will create a copy
 	// of the byte array, where as aliasing to string in the map look up can be optimized
 	// by the compiler to avoid the copy.  See https://github.com/golang/go/issues/3512
 	h := p.handlers.find(call.ServiceName(), arg1)
 	if h == nil {
+		p.log.Error("Could not find handler for %s:%s", call.ServiceName(), arg1)
 		call.Response().SendSystemError(ErrHandlerNotFound)
 		return
 	}
 
+	p.log.Debug("Dispatching %s:%s from %s", call.ServiceName(), arg1, p.remotePeerInfo)
 	h.Handle(call.ctx.ctx, call.ServiceName(), arg1, call)
 }
 
