@@ -5,10 +5,12 @@ import (
 	"io"
 
 	"code.google.com/p/go.net/context"
+	"code.uber.internal/infra/mmihic/tchannel-go/typed"
 )
 
 var (
 	ErrArgMismatch             = errors.New("argument mismatch")
+	ErrUnexpectedFragmentType  = errors.New("unexpected message type received on fragment stream")
 	ErrOutboundCallStillActive = errors.New("outbound call still active (possible id wrap?)")
 )
 
@@ -143,22 +145,9 @@ func (call *OutboundCall) RoundTrip() (*OutboundCallResponse, error) {
 		recvCh: call.recvCh,
 	}
 
-	select {
-	case <-call.ctx.Done():
-		return nil, call.failed(call.ctx.Err())
-
-	case frame := <-call.recvCh:
-		firstFragment, err := newInboundFragment(frame, &res.res, nil)
-		if err != nil {
-			return nil, call.failed(err)
-		}
-
-		res.curFragment = firstFragment
-		res.recvLastFragment = firstFragment.last
-		res.checksum = firstFragment.checksum
-	}
-
-	return res, nil
+	// Wait for the first fragment to arrive
+	_, err := res.waitForFragment()
+	return res, err
 }
 
 // Marks a call as having failed
@@ -269,16 +258,41 @@ func (call *OutboundCallResponse) waitForFragment() (*inboundFragment, error) {
 		return nil, call.failed(call.ctx.Err())
 
 	case frame := <-call.recvCh:
-		resContinue := CallResContinue{id: call.res.id}
-		fragment, err := newInboundFragment(frame, &resContinue, call.checksum)
-		if err != nil {
-			return nil, call.failed(err)
-		}
+		switch frame.Header.Type {
+		case MessageTypeCallRes:
+			return call.parseFragment(frame, &call.res)
 
-		call.curFragment = fragment
-		call.recvLastFragment = fragment.last
-		return fragment, nil
+		case MessageTypeCallResContinue:
+			return call.parseFragment(frame, &CallResContinue{})
+
+		case MessageTypeError:
+			// TODO(mmihic): Might want to change the channel to support either a frame
+			// or an error message, and dispatch depending on which is sent.  Would
+			// avoid the need for a double parse
+			var err ErrorMessage
+			err.read(typed.NewReadBuffer(frame.SizedPayload()))
+			return nil, call.failed(err.AsSystemError())
+
+		default:
+			// TODO(mmihic): Should be treated as a protocol error
+			call.conn.log.Warning("Received unexpected message %d for %d from %s",
+				int(frame.Header.Type), frame.Header.Id, call.conn.remotePeerInfo)
+
+			return nil, call.conn.connectionError(ErrUnexpectedFragmentType)
+		}
 	}
+}
+
+func (call *OutboundCallResponse) parseFragment(frame *Frame, msg Message) (*inboundFragment, error) {
+	fragment, err := newInboundFragment(frame, msg, call.checksum)
+	if err != nil {
+		return nil, call.failed(err)
+	}
+
+	call.checksum = fragment.checksum
+	call.curFragment = fragment
+	call.recvLastFragment = fragment.last
+	return fragment, nil
 }
 
 // Indicates that the call has failed
@@ -331,5 +345,44 @@ func (c *TChannelConnection) forwardResFrame(frame *Frame) {
 	}
 }
 
+// Handles an error coming back from the peer server.
 func (c *TChannelConnection) handleError(frame *Frame) {
+	var errorMessage ErrorMessage
+	rbuf := typed.NewReadBuffer(frame.SizedPayload())
+	if err := errorMessage.read(rbuf); err != nil {
+		c.log.Warning("Unable to read Error frame from %s: %v", c.remotePeerInfo, err)
+		c.connectionError(err)
+		return
+	}
+
+	if errorMessage.ErrorCode == ErrorCodeProtocol {
+		c.log.Warning("Peer %s reported protocol error: %s", c.remotePeerInfo, errorMessage.Message)
+		c.connectionError(errorMessage.AsSystemError())
+		return
+	}
+
+	requestId := errorMessage.OriginalMessageId
+	c.log.Warning("Peer %s reported error %d for request %d",
+		c.remotePeerInfo, errorMessage.ErrorCode, requestId)
+
+	var resCh chan<- *Frame
+	c.withReqLock(func() error {
+		resCh = c.activeResChs[requestId]
+		return nil
+	})
+
+	if resCh == nil {
+		c.log.Warning("Received error for non-existent req %d from %s", requestId, c.remotePeerInfo)
+		return
+	}
+
+	select {
+	case resCh <- frame: // Ok
+	default:
+		// Can't write to frame channel, most likely the application has stopped reading from it
+		c.log.Warning("Could not enqueue error %s(%s) frame to %d from %s",
+			errorMessage.ErrorCode, errorMessage.Message, requestId, c.remotePeerInfo)
+		c.outboundCallComplete(requestId)
+
+	}
 }

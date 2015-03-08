@@ -460,3 +460,8 @@ func (m *ErrorMessage) write(w typed.WriteBuffer) error {
 
 	return nil
 }
+
+func (m ErrorMessage) AsSystemError() error {
+	// TODO(mmihic): Might be nice to return one of the well defined error types
+	return NewSystemError(m.ErrorCode, m.Message)
+}

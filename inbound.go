@@ -322,9 +322,10 @@ func (call *InboundCallResponse) SendSystemError(err error) error {
 
 	// Send the error frame
 	frame, err := MarshalMessage(&ErrorMessage{
-		id:        call.id,
-		ErrorCode: GetSystemErrorCode(err),
-		Message:   err.Error()}, call.pipeline.framePool)
+		id:                call.id,
+		OriginalMessageId: call.id,
+		ErrorCode:         GetSystemErrorCode(err),
+		Message:           err.Error()}, call.pipeline.framePool)
 
 	if err != nil {
 		// Nothing we can do here
