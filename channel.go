@@ -51,7 +51,6 @@ type TChannel struct {
 	log               *logging.Logger
 	hostPort          string
 	processName       string
-	workerPoolSize    int
 	connectionOptions TChannelConnectionOptions
 	handlers          handlerMap
 	l                 net.Listener
