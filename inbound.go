@@ -316,10 +316,6 @@ const (
 
 // Sends a system error response to the peer
 func (call *InboundCallResponse) SendSystemError(err error) error {
-	if call.state != inboundCallResponsePreSend {
-		return ErrInboundCallResponseStateMismatch
-	}
-
 	// Fail all future attempts to read fragments
 	call.ctx.Cancel()
 	call.state = inboundCallResponseComplete
