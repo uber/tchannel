@@ -41,7 +41,7 @@ vet:
 	echo
 
 # target: examples - builds example servers
-examples: test
+examples: clean
 	echo Building examples...
 	mkdir -p $(BUILD)
 	go build -o $(BUILD)/server ./examples/server
