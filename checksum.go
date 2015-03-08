@@ -42,7 +42,7 @@ func (t ChecksumType) New() Checksum {
 	return nil
 }
 
-// Interface for a Checksum calculated
+// Interface for a Checksum calculated off an ongoing bytestream
 type Checksum interface {
 	// The typecode for this checksum
 	TypeCode() ChecksumType
