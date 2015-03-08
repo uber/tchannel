@@ -394,49 +394,36 @@ type inboundFragmentChannel interface {
 type ArgumentReader struct {
 	fragments           inboundFragmentChannel
 	chunk               []byte
-	alignOnEnd          bool
 	lastChunkInFragment bool
 	lastArgInMessage    bool
 }
 
 func (r *ArgumentReader) Read(b []byte) (int, error) {
-	read := 0
+	totalRead := 0
 
 	for len(b) > 0 {
-		r.alignOnEnd = false
 		if len(r.chunk) == 0 {
 			if r.lastChunkInFragment {
 				// We've already consumed the last chunk for this argument
-				return read, NewReadIOError("chunk-data-last-chunk", io.EOF)
+				return totalRead, io.EOF
 			}
 
 			nextFragment, err := r.fragments.waitForFragment()
 			if err != nil {
-				return read, err
+				return totalRead, err
 			}
 
 			r.chunk = nextFragment.nextChunk()
 			r.lastChunkInFragment = nextFragment.hasMoreChunks() // Remaining chunks are for other args
 		}
 
-		read += copy(b, r.chunk)
-		if len(b) <= len(r.chunk) {
-			// We can satisfy the entire requested byte stream from the current chunk
-			r.chunk = r.chunk[len(b):]
-			r.alignOnEnd = len(r.chunk) == 0 && !r.lastChunkInFragment
-			b = nil
-		} else if r.lastChunkInFragment {
-			// The last chunk we read was the last chunk for this argument, so there is no
-			// more data available for this argument
-			return read, NewReadIOError("premature-end-of-argument", io.EOF)
-		} else {
-			// There might be more data for this argument in another fragment, wait for that fragment
-			b = b[len(r.chunk):]
-			r.chunk = nil
-		}
+		read := copy(b, r.chunk)
+		totalRead += read
+		r.chunk = r.chunk[read:]
+		b = b[read:]
 	}
 
-	return read, nil
+	return totalRead, nil
 }
 
 // Marks the current argument as complete, confirming that we've read the entire argument and have nothing left over
@@ -445,7 +432,7 @@ func (r *ArgumentReader) EndArgument() error {
 		return ErrMoreDataInArgument
 	}
 
-	if r.alignOnEnd && !r.lastArgInMessage {
+	if !r.lastChunkInFragment && !r.lastArgInMessage {
 		// We finished on a fragment boundary - get the next fragment and confirm there is only a zero
 		// length chunk header
 		nextFragment, err := r.fragments.waitForFragment()
