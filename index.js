@@ -28,9 +28,9 @@ var globalNow = Date.now;
 var globalRandom = Math.random;
 var net = require('net');
 var format = require('util').format;
-var inspect = require('util').inspect;
 var Spy = require('./v2/spy');
 var TypedError = require('error/typed');
+var WrappedError = require('error/wrapped');
 
 var dumpEnabled = /\btchannel_dump\b/.test(process.env.NODE_DEBUG || '');
 
@@ -41,6 +41,13 @@ var TChannelApplicationError = TypedError({
     arg1: null,
     arg2: null,
     arg3: null
+});
+
+var TChannelListenError = WrappedError({
+    type: 'tchannel.server.listen-failed',
+    message: 'tchannel: {origMessage}',
+    requestedPort: null,
+    host: null
 });
 
 function TChannel(options) {
@@ -105,15 +112,20 @@ function TChannel(options) {
         }
     });
     self.serverSocket.on('error', function onServerSocketError(err) {
-        var serverError = new Error('tchannel: ' + err.message);
-        serverError.code = err.code;
-        serverError.errno = err.errno;
-        serverError.syscall = err.syscall;
-        serverError.requestedPort = self.requestedPort;
-        serverError.host = self.host;
+        if (err.code === 'EADDRINUSE') {
+            err = TChannelListenError(err, {
+                requestedPort: self.requestedPort,
+                host: self.host
+            });
+        }
 
-        self.logger.error(self.hostPort + ' server socket error: ' + inspect(serverError));
-        self.emit('error', serverError);
+        self.logger.error('server socket error', {
+            err: err,
+            requestedPort: self.requestedPort,
+            host: self.host,
+            hostPort: self.hostPort || null
+        });
+        self.emit('error', err);
     });
     self.serverSocket.on('close', function onServerSocketClose() {
         self.logger.warn('server socket close');
