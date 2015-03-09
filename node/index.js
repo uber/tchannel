@@ -275,12 +275,13 @@ TChannel.prototype.addPeer = function addPeer(hostPort, connection) {
 // TODO: deprecated, callers should use .request directly
 TChannel.prototype.send = function send(options, arg1, arg2, arg3, callback) {
     var self = this;
-    var req = self.request(options, callback);
-    req.send(arg1, arg2, arg3);
+    return self
+        .request(options)
+        .send(arg1, arg2, arg3, callback);
 };
 /* jshint maxparams:4 */
 
-TChannel.prototype.request = function send(options, callback) {
+TChannel.prototype.request = function send(options) {
     var self = this;
     if (self.destroyed) {
         throw new Error('cannot send() to destroyed tchannel'); // TODO typed error
@@ -292,7 +293,7 @@ TChannel.prototype.request = function send(options, callback) {
     }
 
     var peer = self.getOutConnection(dest);
-    return peer.request(options, callback);
+    return peer.request(options);
 };
 
 TChannel.prototype.getOutConnection = function getOutConnection(dest) {
@@ -422,20 +423,22 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     });
 
     self.handler.on('call.incoming.response', function onCallResponse(res) {
-        if (res.isOK()) {
-            self.completeOutOp(res.id, null, res.arg2, res.arg3);
+        var op = self.popOutOp(res.id);
+        if (res.ok) {
+            op.req.emit('response', res);
         } else {
-            self.completeOutOp(res.id, TChannelApplicationError({
+            op.req.emit('error', TChannelApplicationError({
                 code: res.code,
                 arg1: res.arg1,
                 arg2: res.arg2,
                 arg3: res.arg3
-            }), res.arg2, null);
+            }));
         }
     });
 
     self.handler.on('call.incoming.error', function onCallError(err) {
-        self.completeOutOp(err.originalId, err, null, null);
+        var op = self.popOutOp(err.originalId);
+        op.req.emit('error', err);
     });
 
     self.socket.setNoDelay(true);
@@ -614,7 +617,7 @@ TChannelConnection.prototype.checkOutOpsForTimeout = function checkOutOpsForTime
                 });
             continue;
         }
-        var timeout = op.options.timeout || self.channel.reqTimeoutDefault;
+        var timeout = op.req.ttl || self.channel.reqTimeoutDefault;
         var duration = now - op.start;
         if (duration > timeout) {
             delete ops[opKey];
@@ -627,7 +630,8 @@ TChannelConnection.prototype.checkOutOpsForTimeout = function checkOutOpsForTime
 TChannelConnection.prototype.onReqTimeout = function onReqTimeout(op) {
     var self = this;
     op.timedOut = true;
-    op.callback(new Error('timed out'), null, null); // TODO typed error
+    op.req.emit('error', new Error('timed out')); // TODO typed error
+    // TODO: why don't we pop the op?
     self.lastTimeoutTime = self.channel.now();
 };
 
@@ -669,7 +673,7 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
         var op = self.outOps[id];
         delete self.outOps[id];
         // TODO: shared mutable object... use Object.create(err)?
-        op.callback(err, null, null);
+        op.req.emit('error', err);
     });
 
     self.inPending = 0;
@@ -692,7 +696,7 @@ TChannelConnection.prototype.onFrame = function onFrame(/* frame */) {
     }
 };
 
-TChannelConnection.prototype.completeOutOp = function completeOutOp(id, err, arg1, arg2) {
+TChannelConnection.prototype.popOutOp = function popOutOp(id) {
     var self = this;
     var op = self.outOps[id];
     if (!op) {
@@ -703,11 +707,11 @@ TChannelConnection.prototype.completeOutOp = function completeOutOp(id, err, arg
     }
     delete self.outOps[id];
     self.outPending--;
-    op.callback(err, arg1, arg2);
+    return op;
 };
 
 // create a request
-TChannelConnection.prototype.request = function request(options, callback) {
+TChannelConnection.prototype.request = function request(options) {
     var self = this;
     // TODO: use this to protect against >4Mi outstanding messages edge case
     // (e.g. zombie operation bug, incredible throughput, or simply very long
@@ -722,18 +726,17 @@ TChannelConnection.prototype.request = function request(options, callback) {
     options.ttl = options.timeout || 1; // TODO: better default, support for dynamic
     var req = self.handler.buildOutgoingRequest(options);
     var id = req.id;
-    self.outOps[id] = new TChannelClientOp(
-        options, self.channel.now(), callback);
+    self.outOps[id] = new TChannelClientOp(req, self.channel.now());
     self.pendingCount++;
     return req;
 };
 
-TChannelConnection.prototype.runInOp = function runInOp(handler, options, res) {
+TChannelConnection.prototype.runInOp = function runInOp(handler, req, res) {
     var self = this;
-    var id = options.id;
+    var id = req.id;
     self.inPending++;
     var op = self.inOps[id] = new TChannelServerOp(self,
-        handler, self.channel.now(), options, opDone);
+        handler, self.channel.now(), req, opDone);
 
     function opDone(err, res1, res2) {
         if (self.inOps[id] !== op) {
@@ -750,9 +753,9 @@ TChannelConnection.prototype.runInOp = function runInOp(handler, options, res) {
 };
 
 /* jshint maxparams:6 */
-function TChannelServerOp(connection, handler, start, options, callback) {
+function TChannelServerOp(connection, handler, start, req, callback) {
     var self = this;
-    self.options = options;
+    self.req = req;
     self.connection = connection;
     self.logger = connection.logger;
     self.handler = handler;
@@ -761,7 +764,7 @@ function TChannelServerOp(connection, handler, start, options, callback) {
     self.callback = callback;
     self.responseSent = false;
     process.nextTick(function runHandler() {
-        self.handler(self.options.arg2, self.options.arg3, connection.remoteName, sendResponse);
+        self.handler(self.req.arg2, self.req.arg3, connection.remoteName, sendResponse);
     });
     function sendResponse(err, res1, res2) {
         self.sendResponse(err, res1, res2);
@@ -784,10 +787,9 @@ TChannelServerOp.prototype.sendResponse = function sendResponse(err, res1, res2)
     self.callback(err, res1, res2);
 };
 
-function TChannelClientOp(options, start, callback) {
+function TChannelClientOp(req, start) {
     var self = this;
-    self.options = options;
-    self.callback = callback;
+    self.req = req;
     self.start = start;
     self.timedOut = false;
 }

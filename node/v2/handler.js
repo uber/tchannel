@@ -200,20 +200,19 @@ TChannelV2Handler.prototype.sendRequestFrame = function sendRequestFrame(req, ar
     return id;
 };
 
-TChannelV2Handler.prototype.sendResponseFrame = function sendResponseFrame(res, err, res1, res2) {
+TChannelV2Handler.prototype.sendResponseFrame = function sendResponseFrame(res, arg1, arg2, arg3) {
     // TODO: refactor this all the way back out through the op handler calling convention
     var self = this;
     var resBody;
     var flags = 0; // TODO: streaming
-    if (err) {
-        var errArg = isError(err) ? err.message : JSON.stringify(err); // TODO: better
-        resBody = v2.CallResponse(
-            flags, v2.CallResponse.Codes.Error, res.tracing,
-            res.headers, res.checksumType, res.name, res1, errArg);
-    } else {
+    if (res.ok) {
         resBody = v2.CallResponse(
             flags, v2.CallResponse.Codes.OK, res.tracing,
-            res.headers, res.checksumType, res.name, res1, res2);
+            res.headers, res.checksumType, arg1, arg2, arg3);
+    } else {
+        resBody = v2.CallResponse(
+            flags, v2.CallResponse.Codes.Error, res.tracing,
+            res.headers, res.checksumType, arg1, arg2, arg3);
     }
     var resFrame = v2.Frame(res.id, resBody);
     self.push(resFrame);
@@ -242,8 +241,8 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
         name: req.name,
     }, sendResponseFrame);
     return res;
-    function sendResponseFrame(err, res1, res2) {
-        self.sendResponseFrame(res, err, res1, res2);
+    function sendResponseFrame(arg1, arg2, arg3) {
+        self.sendResponseFrame(res, arg1, arg2, arg3);
     }
 };
 
@@ -272,9 +271,3 @@ TChannelV2Handler.prototype.buildIncomingResponse = function buildIncomingRespon
     });
     return res;
 };
-
-function isError(obj) {
-    return typeof obj === 'object' && (
-        Object.prototype.toString.call(obj) === '[object Error]' ||
-        obj instanceof Error);
-}

@@ -45,14 +45,14 @@ allocCluster.test('emits endpoint event', 2, {
     two
         .request({
             host: cluster.hosts[0]
-        }, onHello)
-        .send('/hello', '', '');
+        })
+        .send('/hello', '', '', onHello);
 
-    function onHello(err, res1, res2) {
+    function onHello(err, res) {
         assert.ifError(err);
 
-        assert.equal(String(res1), '');
-        assert.equal(String(res2), 'hello');
+        assert.equal(String(res.arg2), '');
+        assert.equal(String(res.arg3), 'hello');
 
         assert.deepEqual(endpoints, [
             {

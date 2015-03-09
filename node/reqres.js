@@ -20,6 +20,9 @@
 
 'use strict';
 
+var EventEmitter = require('events').EventEmitter;
+var inherits = require('util').inherits;
+
 var emptyTracing = Buffer(25); // TODO: proper tracing object
 var emptyBuffer = Buffer(0);
 
@@ -31,6 +34,7 @@ function TChannelIncomingRequest(id, options) {
     }
     options = options || {};
     var self = this;
+    EventEmitter.call(self);
     self.id = id || 0;
     self.ttl = options.ttl || 0;
     self.tracing = options.tracing || emptyTracing;
@@ -42,23 +46,24 @@ function TChannelIncomingRequest(id, options) {
     self.arg3 = options.arg3 || emptyBuffer;
 }
 
+inherits(TChannelIncomingRequest, EventEmitter);
+
 function TChannelIncomingResponse(id, options) {
     if (!(this instanceof TChannelIncomingResponse)) {
         return new TChannelIncomingResponse(id, options);
     }
     options = options || {};
     var self = this;
+    EventEmitter.call(self);
     self.id = id || 0;
     self.code = options.code || 0;
     self.arg1 = options.arg1 || emptyBuffer;
     self.arg2 = options.arg2 || emptyBuffer;
     self.arg3 = options.arg3 || emptyBuffer;
+    self.ok = self.code === 0; // TODO: probably okay, but a bit jank
 }
 
-TChannelIncomingResponse.prototype.isOK = function isOK() {
-    var self = this;
-    return self.code === 0; // TODO: probably okay, but a bit jank
-};
+inherits(TChannelIncomingResponse, EventEmitter);
 
 function TChannelOutgoingRequest(id, options, sendFrame) {
     if (!(this instanceof TChannelOutgoingRequest)) {
@@ -66,6 +71,7 @@ function TChannelOutgoingRequest(id, options, sendFrame) {
     }
     options = options || {};
     var self = this;
+    EventEmitter.call(self);
     self.id = id || 0;
     self.ttl = options.ttl || 0;
     self.tracing = options.tracing || emptyTracing;
@@ -75,9 +81,28 @@ function TChannelOutgoingRequest(id, options, sendFrame) {
     self.sendFrame = sendFrame;
 }
 
-TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3) {
+inherits(TChannelOutgoingRequest, EventEmitter);
+
+TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     var self = this;
     self.sendFrame(arg1, arg2, arg3);
+    if (callback) self.hookupCallback(callback);
+    return self;
+};
+
+TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callback) {
+    var self = this;
+    self.once('error', onError);
+    self.once('response', onResponse);
+    function onError(err) {
+        self.removeListener('response', onResponse);
+        callback(err, null);
+    }
+    function onResponse(res) {
+        self.removeListener('error', onError);
+        callback(null, res);
+    }
+    return self;
 };
 
 function TChannelOutgoingResponse(id, options, sendFrame) {
@@ -86,23 +111,39 @@ function TChannelOutgoingResponse(id, options, sendFrame) {
     }
     options = options || {};
     var self = this;
+    EventEmitter.call(self);
     self.id = id || 0;
     self.code = options.code || 0;
     self.tracing = options.tracing || emptyTracing;
     self.headers = options.headers || {};
     self.checksumType = options.checksumType || 0;
+    self.ok = true;
     self.name = options.name || '';
     self.arg2 = options.arg2 || emptyBuffer;
     self.arg3 = options.arg3 || emptyBuffer;
     self.sendFrame = sendFrame;
 }
 
+inherits(TChannelOutgoingResponse, EventEmitter);
+
 TChannelOutgoingResponse.prototype.send = function send(err, res1, res2) {
     var self = this;
-    self.sendFrame(err, res1, res2);
+    if (err) {
+        self.ok = false;
+        var errArg = isError(err) ? err.message : JSON.stringify(err); // TODO: better
+        self.sendFrame(self.name, res1, errArg);
+    } else {
+        self.sendFrame(self.name, res1, res2);
+    }
 };
 
 module.exports.IncomingRequest = TChannelIncomingRequest;
 module.exports.IncomingResponse = TChannelIncomingResponse;
 module.exports.OutgoingRequest = TChannelOutgoingRequest;
 module.exports.OutgoingResponse = TChannelOutgoingResponse;
+
+function isError(obj) {
+    return typeof obj === 'object' && (
+        Object.prototype.toString.call(obj) === '[object Error]' ||
+        obj instanceof Error);
+}

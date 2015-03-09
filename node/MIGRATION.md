@@ -10,9 +10,22 @@ chan
     .send(options, a1, a2, a3, cb);
 ```
 
-After:
+After (simple):
 ```
 chan
-    .request(options, cb)
+    .request(options)
+    .send(a1, a2, a3, cb);
+```
+
+After (if needed/useful):
+```
+chan
+    .request(options)
+    .on('error', function onError(err) {
+        console.error('too bad:', err);
+    })
+    .on('response', function onResponse(res) {
+        console.log('got:', res.arg2, res.arg3);
+    })
     .send(a1, a2, a3);
 ```
