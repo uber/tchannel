@@ -108,9 +108,8 @@ allocCluster.test('register() with different results', 2, function t(cluster, as
 
         var errorCall = results.errorCall;
         assert.ok(errorCall.err);
+        assert.equal(String(errorCall.err.arg2), '');
         assert.equal(String(errorCall.err.arg3), 'abc');
-        assert.deepEqual(errorCall.head, Buffer(0));
-        assert.equal(errorCall.body, null);
 
         var bufferHead = results.bufferHead;
         assert.equal(bufferHead.err, null);
@@ -188,14 +187,14 @@ allocCluster.test('register() with different results', 2, function t(cluster, as
 
 function sendCall(channel, opts, op, cb) {
     channel
-        .request(opts, onResult)
-        .send(op, null, null);
+        .request(opts)
+        .send(op, null, null, onResult);
 
-    function onResult(err, res1, res2) {
+    function onResult(err, res) {
         cb(null, {
             err: err,
-            head: res1,
-            body: res2
+            head: res && res.arg2,
+            body: res && res.arg3
         });
     }
 }

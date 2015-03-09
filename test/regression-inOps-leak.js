@@ -35,8 +35,8 @@ allocCluster.test('does not leak inOps', 2, {
         .request({
             host: cluster.hosts[0],
             timeout: 100
-        }, onTimeout)
-        .send('/timeout', 'h', 'b');
+        })
+        .send('/timeout', 'h', 'b', onTimeout);
 
     function onTimeout(err) {
         two.timeoutCheckInterval = 99999;
