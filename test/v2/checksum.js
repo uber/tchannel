@@ -39,7 +39,7 @@ var CRC32Buffer = Buffer([
 
 var Farm32Buffer = Buffer([
     Checksum.Types.FarmHash32, // csumtype:1
-    0x9b, 0x59, 0xe9, 0xf3     // csum:4
+    0xee, 0xd8, 0x6e, 0xa9     // csum:4
 ]);
 
 test('read and verify none checksum', function t(assert) {
