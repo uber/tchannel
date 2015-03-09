@@ -424,7 +424,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 
     self.handler.on('call.incoming.response', function onCallResponse(res) {
         var op = self.popOutOp(res.id);
-        if (res.isOK()) {
+        if (res.ok) {
             op.req.emit('response', res);
         } else {
             op.req.emit('error', TChannelApplicationError({
