@@ -175,13 +175,13 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
 /*jshint maxparams: 6 */
 function sendRes(channel, opts, op, h, b, cb) {
     channel
-        .request(opts, onResult)
-        .send(op, h, b);
+        .request(opts)
+        .send(op, h, b, onResult);
 
-    function onResult(err, res1, res2) {
+    function onResult(err, res) {
         cb(err, {
-            head: res1,
-            body: res2
+            head: res.arg2,
+            body: res.arg3
         });
     }
 }
