@@ -81,7 +81,7 @@ Test.prototype.new_client = function (id) {
     new_client.listen(port, "127.0.0.1", function (err) {
         // sending a ping to pre-connect the socket
         new_client
-            .request({host: '127.0.0.1:4040'}, noop)
+            .request({host: '127.0.0.1:4040'})
             .send('ping', null, null);
 
         new_client.on("identified", function (peer) {
@@ -146,10 +146,10 @@ Test.prototype.send_next = function () {
                 benchHeader2: 'bench value two',
                 benchHeader3: 'bench value three'
             }
-        }, done)
-        .send(this.arg1, this.arg2, this.arg3);
+        })
+        .send(this.arg1, this.arg2, this.arg3, done);
 
-    function done(err, res1, res2) {
+    function done(err, res) {
         if (err) {
             throw err;
         }
@@ -230,6 +230,3 @@ function next(i, j, done) {
 next(0, 0, function() {
     process.exit(0);
 });
-
-function noop() {
-}
