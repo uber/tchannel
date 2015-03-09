@@ -5,10 +5,7 @@ import (
 	"code.google.com/p/go.net/context"
 	"code.uber.internal/personal/mmihic/tchannel-go"
 	"github.com/op/go-logging"
-	"io"
-	"io/ioutil"
 	"os"
-	"strings"
 	"time"
 )
 
@@ -21,23 +18,18 @@ var arg2 = getopt.StringLong("arg2", '2', "", "Input for arg2.  Curl-style, use 
 var arg3 = getopt.StringLong("arg3", '3', "", "Input for arg3.  Curl-style, use @foo.txt to read from foo.txt")
 var timeout = getopt.IntLong("timeout", 't', 30, "Timeout (in seconds)")
 
-func writeArg(w io.Writer, arg string) error {
-	var r io.Reader
-	var err error
+func asArgument(arg string) tchannel.OutputArgument {
 	if arg[0] == '@' {
-		if r, err = os.Open(arg[1:]); err != nil {
-			return err
+		f, err := os.Open(arg[1:])
+		if err != nil {
+			panic(err)
 		}
-	} else {
-		r = strings.NewReader(arg)
+
+		return tchannel.NewFileArgument(f)
 	}
 
-	_, err = io.Copy(w, r)
-	if err != io.EOF {
-		return err
-	}
+	return tchannel.BytesOutput([]byte(arg))
 
-	return nil
 }
 
 func main() {
@@ -61,52 +53,27 @@ func main() {
 		panic(err)
 	}
 
-	w, err := call.BeginArg2()
-	if err != nil {
+	if err := call.WriteArg2(asArgument(*arg2)); err != nil {
 		panic(err)
 	}
 
-	if err := writeArg(w, *arg2); err != nil {
+	if err := call.WriteArg3(asArgument(*arg3)); err != nil {
 		panic(err)
 	}
 
-	w, err = call.BeginArg3()
-	if err != nil {
+	var respArg2 tchannel.BytesInput
+	if err := call.Response().ReadArg2(&respArg2); err != nil {
 		panic(err)
 	}
 
-	if err := writeArg(w, *arg3); err != nil {
-		panic(err)
-	}
-
-	resp, err := call.RoundTrip()
-	if err != nil {
-		panic(err)
-	}
-
-	if resp.ApplicationError() {
-		log.Warning("Peer returned an application error")
-	}
-
-	r, err := resp.ExpectArg2()
-	if err != nil {
-		panic(err)
-	}
-
-	respArg2, err := ioutil.ReadAll(r)
-	if err != nil {
-		panic(err)
+	if call.Response().ApplicationError() {
+		log.Warning("Server returned application error")
 	}
 
 	log.Info("resp-arg2: %s", respArg2)
 
-	r, err = resp.ExpectArg3()
-	if err != nil {
-		panic(err)
-	}
-
-	respArg3, err := ioutil.ReadAll(r)
-	if err != nil {
+	var respArg3 tchannel.BytesInput
+	if err := call.Response().ReadArg3(&respArg3); err != nil {
 		panic(err)
 	}
 

@@ -1,11 +1,11 @@
 package tchannel
 
 import (
-	"net"
-	"time"
-
 	"code.google.com/p/go.net/context"
 	"github.com/op/go-logging"
+	"io"
+	"net"
+	"time"
 )
 
 // Handler for incoming calls
@@ -26,9 +26,10 @@ type funcHandler struct {
 	f HandlerFunc
 }
 
-func (h *funcHandler) Handle(ctx context.Context, call *InboundCall) {
-	h.f(ctx, call)
-}
+func (h *funcHandler) Handle(ctx context.Context, call *InboundCall) { h.f(ctx, call) }
+
+type ResponseBodyWriter func(w io.Writer, call *InboundCall)
+type RequestBodyReader func(r io.Reader)
 
 // Options used to create a TChannel
 type TChannelOptions struct {

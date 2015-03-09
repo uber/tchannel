@@ -94,55 +94,16 @@ func TestRoundTrip(t *testing.T) {
 	call, err := ch.BeginCall(ctx, "localhost:8050", "Capture", "ping")
 	require.Nil(t, err)
 
-	w, err := call.BeginArg2()
-	if err != nil {
-		require.Nil(t, err)
-	}
+	require.Nil(t, call.WriteArg2(BytesOutput("Hello Header")))
+	require.Nil(t, call.WriteArg3(BytesOutput("Body Sent")))
 
-	if _, err := w.Write([]byte("Hello Header")); err != nil {
-		require.Nil(t, err)
-	}
+	var respArg2 BytesInput
+	require.Nil(t, call.Response().ReadArg2(&respArg2))
+	assert.Equal(t, []byte("Hello Header"), []byte(respArg2))
 
-	w, err = call.BeginArg3()
-	if err != nil {
-		require.Nil(t, err)
-	}
-
-	if _, err := w.Write([]byte("Body Sent")); err != nil {
-		require.Nil(t, err)
-	}
-
-	resp, err := call.RoundTrip()
-	if err != nil {
-		require.Nil(t, err)
-	}
-
-	require.False(t, resp.ApplicationError())
-	rarg2, err := resp.ExpectArg2()
-	if err != nil {
-		require.Nil(t, err)
-	}
-
-	arg2, err := ioutil.ReadAll(rarg2)
-	if err != nil {
-		require.Nil(t, err)
-	}
-
-	assert.Equal(t, []byte("Hello Header"), arg2)
-
-	rarg3, err := resp.ExpectArg3()
-	if err != nil {
-		require.Nil(t, err)
-	}
-
-	arg3, err := ioutil.ReadAll(rarg3)
-	if err != nil {
-		require.Nil(t, err)
-	}
-
-	assert.Equal(t, []byte("Body Sent"), arg3)
-
-	require.Nil(t, resp.Close())
+	var respArg3 BytesInput
+	require.Nil(t, call.Response().ReadArg3(&respArg3))
+	assert.Equal(t, []byte("Body Sent"), []byte(respArg3))
 }
 
 func TestBadRequest(t *testing.T) {
@@ -197,52 +158,23 @@ func sendRecv(ctx context.Context, ch *TChannel, hostPort string, serviceName, o
 		return nil, nil, err
 	}
 
-	w, err := call.BeginArg2()
-	if err != nil {
+	if err := call.WriteArg2(BytesOutput(arg2)); err != nil {
 		return nil, nil, err
 	}
 
-	if _, err := w.Write(arg2); err != nil {
+	if err := call.WriteArg3(BytesOutput(arg3)); err != nil {
 		return nil, nil, err
 	}
 
-	w, err = call.BeginArg3()
-	if err != nil {
+	var respArg2 BytesInput
+	if err := call.Response().ReadArg2(&respArg2); err != nil {
 		return nil, nil, err
 	}
 
-	if _, err := w.Write([]byte("Body Sent")); err != nil {
+	var respArg3 BytesInput
+	if err := call.Response().ReadArg3(&respArg3); err != nil {
 		return nil, nil, err
 	}
 
-	resp, err := call.RoundTrip()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	rarg2, err := resp.ExpectArg2()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	respArg2, err := ioutil.ReadAll(rarg2)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	rarg3, err := resp.ExpectArg3()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	respArg3, err := ioutil.ReadAll(rarg3)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if err := resp.Close(); err != nil {
-		return nil, nil, err
-	}
-
-	return respArg2, respArg3, nil
+	return []byte(respArg2), []byte(respArg3), nil
 }

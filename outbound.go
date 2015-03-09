@@ -64,6 +64,13 @@ func (p *outboundCallPipeline) beginCall(ctx context.Context, reqId uint32, serv
 		checksum: checksumType.New(),
 	}
 
+	call.res = &OutboundCallResponse{
+		id:       call.id,
+		ctx:      call.ctx,
+		pipeline: call.pipeline,
+		recvCh:   call.recvCh,
+	}
+
 	if err := p.withReqLock(func() error {
 		if p.activeResChs[call.id] != nil {
 			return ErrOutboundCallStillActive
@@ -191,6 +198,7 @@ type OutboundCall struct {
 	state             outboundCallState
 	sentFirstFragment bool
 	recvCh            chan *Frame
+	res               *OutboundCallResponse
 }
 
 type outboundCallState int
@@ -198,11 +206,15 @@ type outboundCallState int
 const (
 	outboundCallPreWrite outboundCallState = iota
 	outboundCallReadyToWriteArg2
-	outboundCallWritingArg2
-	outboundCallWritingArg3
+	outboundCallReadyToWriteArg3
 	outboundCallSent
 	outboundCallError
 )
+
+// Provides access to the response object
+func (call *OutboundCall) Response() *OutboundCallResponse {
+	return call.res
+}
 
 // Writes the operation (arg1) to the call
 func (call *OutboundCall) writeOperation(operation []byte) error {
@@ -222,51 +234,41 @@ func (call *OutboundCall) writeOperation(operation []byte) error {
 	return nil
 }
 
-// Begins writing the second argument to the call, returning an io.Writer for that argument's contents
-func (call *OutboundCall) BeginArg2() (io.Writer, error) {
+// Writes the second argument part to the request, blocking until the argument is written
+func (call *OutboundCall) WriteArg2(arg OutputArgument) error {
 	if call.state != outboundCallReadyToWriteArg2 {
-		return nil, call.failed(ErrArgMismatch)
+		return call.failed(ErrArgMismatch)
 	}
 
-	call.state = outboundCallWritingArg2
-	return call.partWriter, nil
-}
-
-// Begins writing the third argument to the call, returning an io.Writer for that argument's contents
-func (call *OutboundCall) BeginArg3() (io.Writer, error) {
-	if call.state != outboundCallWritingArg2 {
-		return nil, call.failed(ErrArgMismatch)
+	if err := arg.WriteTo(call.partWriter); err != nil {
+		return call.failed(err)
 	}
 
 	if err := call.partWriter.endPart(false); err != nil {
-		return nil, call.failed(err)
+		return call.failed(err)
 	}
 
-	call.state = outboundCallWritingArg3
-	return call.partWriter, nil
+	call.state = outboundCallReadyToWriteArg3
+	return nil
 }
 
-// Sends the call and returns the response
-func (call *OutboundCall) RoundTrip() (*OutboundCallResponse, error) {
-	if call.state != outboundCallWritingArg3 {
-		return nil, call.failed(ErrArgMismatch)
+// Writes the third argument to the request, blocking until the argument is written
+func (call *OutboundCall) WriteArg3(arg OutputArgument) error {
+	if call.state != outboundCallReadyToWriteArg3 {
+		return call.failed(ErrArgMismatch)
+	}
+
+	if err := arg.WriteTo(call.partWriter); err != nil {
+		return call.failed(err)
 	}
 
 	if err := call.partWriter.endPart(true); err != nil {
-		return nil, call.failed(err)
+		return call.failed(err)
 	}
 
+	call.partWriter = nil
 	call.state = outboundCallSent
-	res := &OutboundCallResponse{
-		id:       call.id,
-		ctx:      call.ctx,
-		pipeline: call.pipeline,
-		recvCh:   call.recvCh,
-	}
-
-	// Wait for the first fragment to arrive
-	_, err := res.waitForFragment()
-	return res, err
+	return nil
 }
 
 // Marks a call as having failed
@@ -318,47 +320,61 @@ type OutboundCallResponse struct {
 	pipeline         *outboundCallPipeline
 	ctx              context.Context
 	recvCh           chan *Frame
-	arg              int
+	state            outboundCallResponseState
 	curFragment      *inFragment
 	recvLastFragment bool
 	lastPartReader   *multiPartReader
 }
 
+type outboundCallResponseState int
+
+const (
+	outboundCallResponseReadyToReadArg2 = iota
+	outboundCallResponseReadyToReadArg3
+	outboundCallResponseComplete
+)
+
 // if true, the call resulted in an application level error
 func (call *OutboundCallResponse) ApplicationError() bool {
+	// TODO(mmihic): Wait for first fragment
 	return call.res.ResponseCode == ResponseApplicationError
 }
 
-// Called by the application to begin processing the response arg2.  Returns an io.Reader that
-// can be used to read the contents of the arg2.
-func (call *OutboundCallResponse) ExpectArg2() (io.Reader, error) {
-	if call.arg != 0 || call.lastPartReader != nil {
-		return nil, ErrArgMismatch
+// Reads the second argument from the response
+func (call *OutboundCallResponse) ReadArg2(arg InputArgument) error {
+	if call.state != outboundCallResponseReadyToReadArg2 {
+		return call.failed(ErrArgMismatch)
 	}
 
-	call.arg++
-	call.lastPartReader = newMultiPartReader(call, false)
-	return call.lastPartReader, nil
+	r := newMultiPartReader(call, false)
+	if err := arg.ReadFrom(r); err != nil {
+		return call.failed(err)
+	}
+
+	if err := r.endPart(); err != nil {
+		return call.failed(err)
+	}
+
+	call.state = outboundCallResponseReadyToReadArg3
+	return nil
 }
 
-// Called by the application to begin processing the response arg3.  Returns an io.Reader that
-// can be used to read the contents of arg3.
-func (call *OutboundCallResponse) ExpectArg3() (io.Reader, error) {
-	if call.arg != 1 || call.lastPartReader == nil {
-		return nil, ErrArgMismatch
+// Reads the third argument from the response
+func (call *OutboundCallResponse) ReadArg3(arg InputArgument) error {
+	if call.state != outboundCallResponseReadyToReadArg3 {
+		return call.failed(ErrArgMismatch)
 	}
 
-	call.arg++
-	call.lastPartReader = newMultiPartReader(call, true)
-	return call.lastPartReader, nil
-}
-
-// Closes the call, confirming that the last argument has been fully processed
-func (call *OutboundCallResponse) Close() error {
-	if call.lastPartReader != nil {
-		return call.lastPartReader.endPart()
+	r := newMultiPartReader(call, true)
+	if err := arg.ReadFrom(r); err != nil {
+		return call.failed(err)
 	}
 
+	if err := r.endPart(); err != nil {
+		return call.failed(err)
+	}
+
+	call.state = outboundCallResponseComplete
 	return nil
 }
 
