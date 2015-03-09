@@ -728,12 +728,12 @@ TChannelConnection.prototype.request = function request(options, callback) {
     return req;
 };
 
-TChannelConnection.prototype.runInOp = function runInOp(handler, options, res) {
+TChannelConnection.prototype.runInOp = function runInOp(handler, req, res) {
     var self = this;
-    var id = options.id;
+    var id = req.id;
     self.inPending++;
     var op = self.inOps[id] = new TChannelServerOp(self,
-        handler, self.channel.now(), options, opDone);
+        handler, self.channel.now(), req, opDone);
 
     function opDone(err, res1, res2) {
         if (self.inOps[id] !== op) {
