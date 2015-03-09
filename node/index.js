@@ -750,9 +750,9 @@ TChannelConnection.prototype.runInOp = function runInOp(handler, req, res) {
 };
 
 /* jshint maxparams:6 */
-function TChannelServerOp(connection, handler, start, options, callback) {
+function TChannelServerOp(connection, handler, start, req, callback) {
     var self = this;
-    self.options = options;
+    self.req = req;
     self.connection = connection;
     self.logger = connection.logger;
     self.handler = handler;
@@ -761,7 +761,7 @@ function TChannelServerOp(connection, handler, start, options, callback) {
     self.callback = callback;
     self.responseSent = false;
     process.nextTick(function runHandler() {
-        self.handler(self.options.arg2, self.options.arg3, connection.remoteName, sendResponse);
+        self.handler(self.req.arg2, self.req.arg3, connection.remoteName, sendResponse);
     });
     function sendResponse(err, res1, res2) {
         self.sendResponse(err, res1, res2);
