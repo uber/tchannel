@@ -60,14 +60,10 @@ function TChannelIncomingResponse(id, options) {
     self.arg1 = options.arg1 || emptyBuffer;
     self.arg2 = options.arg2 || emptyBuffer;
     self.arg3 = options.arg3 || emptyBuffer;
+    self.ok = self.code === 0; // TODO: probably okay, but a bit jank
 }
 
 inherits(TChannelIncomingResponse, EventEmitter);
-
-TChannelIncomingResponse.prototype.isOK = function isOK() {
-    var self = this;
-    return self.code === 0; // TODO: probably okay, but a bit jank
-};
 
 function TChannelOutgoingRequest(id, options, sendFrame) {
     if (!(this instanceof TChannelOutgoingRequest)) {
