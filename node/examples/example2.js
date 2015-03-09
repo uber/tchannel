@@ -46,20 +46,20 @@ var listening = ready(function (err) {
     async.series([
         function pingOne(done) {
             client
-                .request({host: '127.0.0.1:4040'}, function (err, res1, res2) {
-                    console.log('ping res from client: ' + res1 + ' ' + res2);
+                .request({host: '127.0.0.1:4040'})
+                .send('ping', null, null, function (err, res) {
+                    console.log('ping res from client: ' + res.arg2 + ' ' + res.arg3);
                     done();
-                })
-                .send('ping', null, null);
+                });
         },
 
         function pingTwo(done) {
             server
-                .request({host: '127.0.0.1:4041'}, function (err, res1, res2) {
-                    console.log('ping res server: ' + res1 + ' ' + res2);
+                .request({host: '127.0.0.1:4041'})
+                .send('ping', null, null, function (err, res) {
+                    console.log('ping res server: ' + res.arg2 + ' ' + res.arg3);
                     done();
-                })
-                .send('ping', null, null);
+                });
         }
 
     ], function() {});
