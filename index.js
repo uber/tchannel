@@ -614,7 +614,7 @@ TChannelConnection.prototype.checkOutOpsForTimeout = function checkOutOpsForTime
                 });
             continue;
         }
-        var timeout = op.options.timeout || self.channel.reqTimeoutDefault;
+        var timeout = op.req.ttl || self.channel.reqTimeoutDefault;
         var duration = now - op.start;
         if (duration > timeout) {
             delete ops[opKey];
@@ -722,8 +722,7 @@ TChannelConnection.prototype.request = function request(options, callback) {
     options.ttl = options.timeout || 1; // TODO: better default, support for dynamic
     var req = self.handler.buildOutgoingRequest(options);
     var id = req.id;
-    self.outOps[id] = new TChannelClientOp(
-        options, self.channel.now(), callback);
+    self.outOps[id] = new TChannelClientOp(req, self.channel.now(), callback);
     self.pendingCount++;
     return req;
 };
@@ -784,9 +783,9 @@ TChannelServerOp.prototype.sendResponse = function sendResponse(err, res1, res2)
     self.callback(err, res1, res2);
 };
 
-function TChannelClientOp(options, start, callback) {
+function TChannelClientOp(req, start, callback) {
     var self = this;
-    self.options = options;
+    self.req = req;
     self.callback = callback;
     self.start = start;
     self.timedOut = false;
