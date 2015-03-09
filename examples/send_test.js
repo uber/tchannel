@@ -57,28 +57,40 @@ var ready = CountedReadySignal(3);
 
 var listening = ready(function (err) {
 
-    client.send({host: '127.0.0.1:4040'}, 'ping', null, null, function (err, res1, res2) {
-        console.log('ping res from client: ' + res1 + ' ' + res2);
-        server.send({host: '127.0.0.1:4041'}, 'ping', null, null, function (err, res1, res2) {
-            console.log('ping res server: ' + res1 + ' ' + res2);
+    client
+        .request({host: '127.0.0.1:4040'})
+        .send('ping', null, null, function (err, res) {
+            console.log('ping res from client: ' + res.arg2 + ' ' + res.arg3);
+            server
+                .request({host: '127.0.0.1:4041'})
+                .send('ping', null, null, function (err, res) {
+                    console.log('ping res server: ' + res.arg2 + ' ' + res.arg3);
+                });
         });
-    });
 
     // very aggressive settings. Not recommended for real life.
-    client2.send({host: '127.0.0.1:4040', timeout: 500}, 'func 3', 'arg2', 'arg3', function (err, res1, res2) {
-        console.log('2 slow res: ' + formatRes(err, res1, res2));
-        client2.send({host: '127.0.0.1:4040', timeout: 500}, 'func 3', 'arg2', 'arg3', function (err, res1, res2) {
-            console.log('3 slow res: ' + formatRes(err, res1, res2));
+    client2
+        .request({host: '127.0.0.1:4040', timeout: 500})
+        .send('func 3', 'arg2', 'arg3', function (err, res) {
+            console.log('2 slow res: ' + formatRes(err, res));
+            client2
+                .request({host: '127.0.0.1:4040', timeout: 500})
+                .send('func 3', 'arg2', 'arg3', function (err, res) {
+                    console.log('3 slow res: ' + formatRes(err, res));
+                });
+
+            client2
+                .request({host: '127.0.0.1:4040', timeout: 500})
+                .send('func 3', 'arg2', 'arg3', function (err, res) {
+                    console.log('4 slow res: ' + formatRes(err, res));
+                });
         });
 
-        client2.send({host: '127.0.0.1:4040', timeout: 500}, 'func 3', 'arg2', 'arg3', function (err, res1, res2) {
-            console.log('4 slow res: ' + formatRes(err, res1, res2));
+    client2
+        .request({host: '127.0.0.1:4040', timeout: 500})
+        .send('func 1', 'arg2', 'arg3', function (err, res) {
+            console.log('1 fast res: ' + formatRes(err, res));
         });
-    });
-
-    client2.send({host: '127.0.0.1:4040', timeout: 500}, 'func 1', 'arg2', 'arg3', function (err, res1, res2) {
-        console.log('1 fast res: ' + formatRes(err, res1, res2));
-    });
 
 });
 
@@ -86,17 +98,17 @@ server.listen(4040, '127.0.0.1', ready.signal);
 client.listen(4041, '127.0.0.1', ready.signal);
 client2.listen(4042, '127.0.0.1', ready.signal);
 
-function formatRes(err, res1, res2) {
+function formatRes(err, res) {
     var ret = [];
 
     if (err) {
         ret.push('err=' + err.message);
     }
-    if (res1) {
-        ret.push('res1=' + res1.toString());
+    if (res.arg2) {
+        ret.push('arg2=' + res.arg2.toString());
     }
-    if (res2) {
-        ret.push('res2=' + res2.toString());
+    if (res.arg3) {
+        ret.push('arg3=' + res.arg3.toString());
     }
     return ret.join(' ');
 }
