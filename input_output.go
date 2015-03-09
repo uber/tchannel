@@ -8,11 +8,13 @@ import (
 
 // A InputArgument is able to read an argument from a call body
 type InputArgument interface {
+	// Reads the argument from the given io.Reader
 	ReadFrom(r io.Reader) error
 }
 
 // A OutputArgument is able to write an argument to a call body
 type OutputArgument interface {
+	// Writes the argument to the given io.Writer
 	WriteTo(w io.Writer) error
 }
 
@@ -49,11 +51,15 @@ func NewFileArgument(f *os.File) FileArgument {
 }
 
 func (f FileArgument) WriteTo(w io.Writer) error {
-	_, err := io.Copy(w, f.f)
-	return err
+	if _, err := io.Copy(w, f.f); err != nil && err != io.EOF {
+		return err
+	}
+	return nil
 }
 
 func (f FileArgument) ReadFrom(r io.Reader) error {
-	_, err := io.Copy(f.f, r)
-	return err
+	if _, err := io.Copy(f.f, r); err != nil && err != io.EOF {
+		return err
+	}
+	return nil
 }
