@@ -27,9 +27,15 @@ fmt format:
 # target: test - Runs tests
 test: clean 
 	echo Testing packages:
-	LC_ALL="en_US.UTF-8" \
-		go test $(PKGS) -parallel 4 $(TEST_ARG)
-	echo
+	mkdir -p $(BUILD)
+	go test ./ $(TEST_ARG) -parallel=4
+
+# target: cover - Runs tests under code coverage
+cover: clean
+	echo Testing packages:
+	mkdir -p $(BUILD)
+	go test ./ $(TEST_ARG)  -coverprofile=$(BUILD)/coverage.out
+	go tool cover -html=$(BUILD)/coverage.out
 	# TODO(mmihic): Temporarily disabled while working out false positives
 	# from go-logging
 	#$(MAKE) vet
@@ -43,9 +49,9 @@ vet:
 # target: examples - builds example servers
 examples: clean
 	echo Building examples...
-	mkdir -p $(BUILD)
-	go build -o $(BUILD)/server ./examples/server
-	go build -o $(BUILD)/client ./examples/client
+	mkdir -p $(BUILD)/examples
+	go build -o $(BUILD)/examples/server ./examples/server
+	go build -o $(BUILD)/examples/client ./examples/client
 
 .PHONY: all help clean fmt format test vet 
 .SILENT: all help clean fmt format test vet
