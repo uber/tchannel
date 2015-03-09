@@ -13,10 +13,10 @@ var (
 	ErrTooLarge                   = errors.New("data exceeds remaining fragment size")
 	ErrMismatchedChecksumTypes    = errors.New("peer sent a different checksum type for fragment")
 	ErrMismatchedChecksum         = errors.New("local checksum differs from peer")
-	ErrMoreDataInArgument         = errors.New("more data remaining in argument")
+	ErrMoreDataInPart             = errors.New("more data remaining in argument")
 	ErrChunkAlreadyOpen           = errors.New("chunk already open")
 	ErrNoOpenChunk                = errors.New("no open chunk")
-	ErrArgumentComplete           = errors.New("argument is already marked complete")
+	ErrPartComplete               = errors.New("argument is already marked complete")
 	ErrAlignedAtEndOfOpenFragment = errors.New("implementation error; align-at-end of open fragment")
 )
 
@@ -26,7 +26,7 @@ const (
 )
 
 // An outbound fragment is a fragment being sent to a peer
-type outboundFragment struct {
+type outFragment struct {
 	frame         *Frame
 	checksum      Checksum
 	checksumBytes []byte
@@ -36,12 +36,12 @@ type outboundFragment struct {
 }
 
 // Returns the number of bytes remaining in the fragment
-func (f *outboundFragment) bytesRemaining() int {
+func (f *outFragment) bytesRemaining() int {
 	return len(f.remaining)
 }
 
 // Finishes a fragment, optionally marking it as the last fragment
-func (f *outboundFragment) finish(last bool) *Frame {
+func (f *outFragment) finish(last bool) *Frame {
 	// If we still have a chunk open, close it before finishing the fragment
 	if f.chunkOpen() {
 		f.endChunk()
@@ -58,8 +58,8 @@ func (f *outboundFragment) finish(last bool) *Frame {
 	return f.frame
 }
 
-// Writes data for a chunked argument into the fragment.  The data must fit into the fragment
-func (f *outboundFragment) writeChunkData(b []byte) (int, error) {
+// Writes data for a chunked part into the fragment.  The data must fit into the fragment
+func (f *outFragment) writeChunkData(b []byte) (int, error) {
 	if len(b) > len(f.remaining) {
 		return 0, NewWriteIOError("fragment-chunk-data", ErrTooLarge)
 	}
@@ -76,12 +76,12 @@ func (f *outboundFragment) writeChunkData(b []byte) (int, error) {
 }
 
 // Returns true if the fragment can fit a new chunk
-func (f *outboundFragment) canFitNewChunk() bool {
+func (f *outFragment) canFitNewChunk() bool {
 	return len(f.remaining) > 2
 }
 
-// Begins a new argument chunk at the current location in the fragment
-func (f *outboundFragment) beginChunk() error {
+// Begins a new chunk at the current location in the fragment
+func (f *outFragment) beginChunk() error {
 	if f.chunkOpen() {
 		return NewWriteIOError("fragment-chunk-start", ErrChunkAlreadyOpen)
 	}
@@ -93,7 +93,7 @@ func (f *outboundFragment) beginChunk() error {
 }
 
 // Ends a previously opened chunk, recording the chunk size
-func (f *outboundFragment) endChunk() error {
+func (f *outFragment) endChunk() error {
 	if !f.chunkOpen() {
 		return NewWriteIOError("fragment-chunk-end", ErrNoOpenChunk)
 	}
@@ -105,11 +105,11 @@ func (f *outboundFragment) endChunk() error {
 }
 
 // Returns true if the fragment has a chunk open
-func (f *outboundFragment) chunkOpen() bool { return len(f.chunkStart) > 0 }
+func (f *outFragment) chunkOpen() bool { return len(f.chunkStart) > 0 }
 
-// Creates a new outboundFragment around a frame and message, with a running checksum
-func newOutboundFragment(frame *Frame, msg Message, checksum Checksum) (*outboundFragment, error) {
-	f := &outboundFragment{
+// Creates a new outFragment around a frame and message, with a running checksum
+func newOutboundFragment(frame *Frame, msg Message, checksum Checksum) (*outFragment, error) {
+	f := &outFragment{
 		frame:    frame,
 		checksum: checksum,
 	}
@@ -143,36 +143,35 @@ func newOutboundFragment(frame *Frame, msg Message, checksum Checksum) (*outboun
 
 // A pseudo-channel for sending fragments to a remote peer.
 // TODO(mmihic): Not happy with this name, or with this exact interface
-type outboundFragmentChannel interface {
+type outFragmentChannel interface {
 	// Opens a fragment for sending.  If there is an existing incomplete fragment on the channel,
 	// that fragment will be returned.  Otherwise a new fragment is allocated
-	startFragment() (*outboundFragment, error)
+	startFragment() (*outFragment, error)
 
 	// Ends the currently open fragment, optionally marking it as the last fragment
-	sendFragment(f *outboundFragment, last bool) error
+	sendFragment(f *outFragment, last bool) error
 }
 
-// An ArgumentWriter is an io.Writer for a collection of arguments, capable of breaking
-// large arguments into multiple chunks spread across several fragments.  Upstream code can
-// send argument data via the standard io.Writer interface, but should call EndArgument to
-// indicate when they are finished with the current argument to setup the stream for the
-// next argument in the list (or to complete the message, if this is the last argument)
-type ArgumentWriter struct {
-	fragments   outboundFragmentChannel
-	fragment    *outboundFragment
+// An multiPartWriter is an io.Writer for a collection of parts, capable of breaking
+// large part into multiple chunks spread across several fragments.  Upstream code can
+// send part data via the standard io.Writer interface, but should call endPart to
+// indicate when they are finished with the current part.
+type multiPartWriter struct {
+	fragments   outFragmentChannel
+	fragment    *outFragment
 	alignsAtEnd bool
 	complete    bool
 }
 
-// Creates a new ArgumentWriter that creates and sends fragments through the provided channel.
-func newArgumentWriter(ch outboundFragmentChannel) *ArgumentWriter {
-	return &ArgumentWriter{fragments: ch}
+// Creates a new multiPartWriter that creates and sends fragments through the provided channel.
+func newMultiPartWriter(ch outFragmentChannel) *multiPartWriter {
+	return &multiPartWriter{fragments: ch}
 }
 
-// Writes argument bytes, potentially splitting them across fragments
-func (w *ArgumentWriter) Write(b []byte) (int, error) {
+// Writes part bytes, potentially splitting them across fragments
+func (w *multiPartWriter) Write(b []byte) (int, error) {
 	if w.complete {
-		return 0, ErrArgumentComplete
+		return 0, ErrPartComplete
 	}
 
 	written := 0
@@ -185,7 +184,7 @@ func (w *ArgumentWriter) Write(b []byte) (int, error) {
 		bytesRemaining := w.fragment.bytesRemaining()
 		if bytesRemaining < len(b) {
 			// Not enough space remaining in this fragment - write what we can, finish this fragment,
-			// and start a new fragment for the remainder of the argument
+			// and start a new fragment for the remainder of the part
 			if n, err := w.fragment.writeChunkData(b[:bytesRemaining]); err != nil {
 				return written + n, err
 			}
@@ -219,7 +218,7 @@ func (w *ArgumentWriter) Write(b []byte) (int, error) {
 }
 
 // Ensures that we have a fragment and an open chunk
-func (w *ArgumentWriter) ensureOpenChunk() error {
+func (w *multiPartWriter) ensureOpenChunk() error {
 	for {
 		// No fragment - start a new one
 		if w.fragment == nil {
@@ -248,7 +247,7 @@ func (w *ArgumentWriter) ensureOpenChunk() error {
 }
 
 // Finishes with the current fragment, closing any open chunk and sending the fragment down the channel
-func (w *ArgumentWriter) finishFragment(last bool) error {
+func (w *multiPartWriter) finishFragment(last bool) error {
 	w.fragment.endChunk()
 	if err := w.fragments.sendFragment(w.fragment, last); err != nil {
 		w.fragment = nil
@@ -259,11 +258,11 @@ func (w *ArgumentWriter) finishFragment(last bool) error {
 	return nil
 }
 
-// Marks the argument as being complete.  If last is true, this is the last argument in the message
-func (w *ArgumentWriter) EndArgument(last bool) error {
+// Marks the part as being complete.  If last is true, this is the last part in the message
+func (w *multiPartWriter) endPart(last bool) error {
 	if w.alignsAtEnd {
-		// The last argument chunk aligned with the end of a fragment boundary - send another fragment
-		// containing an empty chunk so readers know the argument is complete
+		// The last part chunk aligned with the end of a fragment boundary - send another fragment
+		// containing an empty chunk so readers know the part is complete
 		if w.fragment != nil {
 			return ErrAlignedAtEndOfOpenFragment
 		}
@@ -292,17 +291,17 @@ func (w *ArgumentWriter) EndArgument(last bool) error {
 	return nil
 }
 
-// An inboundFragment is a fragment received from a peer
-type inboundFragment struct {
+// An inFragment is a fragment received from a peer
+type inFragment struct {
 	frame    *Frame   // The frame containing the fragment
 	last     bool     // true if this is the last fragment from the peer for this message
 	checksum Checksum // Checksum for the fragment chunks
-	chunks   [][]byte // The argument chunks contained in the fragment
+	chunks   [][]byte // The part chunks contained in the fragment
 }
 
-// Creates a new inboundFragment from an incoming frame and an expected message
-func newInboundFragment(frame *Frame, msg Message, checksum Checksum) (*inboundFragment, error) {
-	f := &inboundFragment{
+// Creates a new inFragment from an incoming frame and an expected message
+func newInboundFragment(frame *Frame, msg Message, checksum Checksum) (*inFragment, error) {
+	f := &inFragment{
 		frame:    frame,
 		checksum: checksum,
 	}
@@ -365,7 +364,7 @@ func newInboundFragment(frame *Frame, msg Message, checksum Checksum) (*inboundF
 }
 
 // Consumes the next chunk in the fragment
-func (f *inboundFragment) nextChunk() []byte {
+func (f *inFragment) nextChunk() []byte {
 	if len(f.chunks) == 0 {
 		return nil
 	}
@@ -376,35 +375,35 @@ func (f *inboundFragment) nextChunk() []byte {
 }
 
 // returns true if there are more chunks remaining in the fragment
-func (f *inboundFragment) hasMoreChunks() bool {
+func (f *inFragment) hasMoreChunks() bool {
 	return len(f.chunks) > 0
 }
 
 // Psuedo-channel for receiving inbound fragments from a peer
-type inboundFragmentChannel interface {
+type inFragmentChannel interface {
 	// Waits for a fragment to become available.  May return immediately if there is already an open unconsumed
 	// fragment, or block until the next fragment appears
-	waitForFragment() (*inboundFragment, error)
+	waitForFragment() (*inFragment, error)
 }
 
-// An ArgumentReader is an io.Reader for an individual TChannel argument, capable of reading large
-// arguments that have been split across fragments.  Upstream code can use the ArgumentReader like
-// a regular io.Reader to extract the argument bytes, and should call EndArgument when they have finished
-// reading a given argument, to prepare the stream for the next argument.
-type ArgumentReader struct {
-	fragments           inboundFragmentChannel
+// An multiPartReader is an io.Reader for an individual TChannel part, capable of reading large
+// part that have been split across fragments.  Upstream code can use the multiPartReader like
+// a regular io.Reader to extract the bytes part, and should call endPart when they have finished
+// reading a given part, to prepare the stream for the next part.
+type multiPartReader struct {
+	fragments           inFragmentChannel
 	chunk               []byte
 	lastChunkInFragment bool
-	lastArgInMessage    bool
+	lastPartInMessage   bool
 }
 
-func (r *ArgumentReader) Read(b []byte) (int, error) {
+func (r *multiPartReader) Read(b []byte) (int, error) {
 	totalRead := 0
 
 	for len(b) > 0 {
 		if len(r.chunk) == 0 {
 			if r.lastChunkInFragment {
-				// We've already consumed the last chunk for this argument
+				// We've already consumed the last chunk for this part
 				return totalRead, io.EOF
 			}
 
@@ -426,13 +425,13 @@ func (r *ArgumentReader) Read(b []byte) (int, error) {
 	return totalRead, nil
 }
 
-// Marks the current argument as complete, confirming that we've read the entire argument and have nothing left over
-func (r *ArgumentReader) EndArgument() error {
+// Marks the current part as complete, confirming that we've read the entire part and have nothing left over
+func (r *multiPartReader) endPart() error {
 	if len(r.chunk) > 0 {
-		return ErrMoreDataInArgument
+		return ErrMoreDataInPart
 	}
 
-	if !r.lastChunkInFragment && !r.lastArgInMessage {
+	if !r.lastChunkInFragment && !r.lastPartInMessage {
 		// We finished on a fragment boundary - get the next fragment and confirm there is only a zero
 		// length chunk header
 		nextFragment, err := r.fragments.waitForFragment()
@@ -442,11 +441,11 @@ func (r *ArgumentReader) EndArgument() error {
 
 		r.chunk = nextFragment.nextChunk()
 		if len(r.chunk) > 0 {
-			return ErrMoreDataInArgument
+			return ErrMoreDataInPart
 		}
 	}
 
-	if r.lastArgInMessage {
+	if r.lastPartInMessage {
 		// TODO(mmihic): Confirm no more chunks in fragment
 		// TODO(mmihic): Confirm no more fragments in message
 	}
@@ -454,6 +453,6 @@ func (r *ArgumentReader) EndArgument() error {
 	return nil
 }
 
-func newArgumentReader(ch inboundFragmentChannel, last bool) *ArgumentReader {
-	return &ArgumentReader{fragments: ch, lastArgInMessage: last}
+func newMultiPartReader(ch inFragmentChannel, last bool) *multiPartReader {
+	return &multiPartReader{fragments: ch, lastPartInMessage: last}
 }

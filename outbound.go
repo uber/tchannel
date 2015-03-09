@@ -75,7 +75,7 @@ func (p *outboundCallPipeline) beginCall(ctx context.Context, reqId uint32, serv
 		return nil, err
 	}
 
-	call.argWriter = newArgumentWriter(call)
+	call.partWriter = newMultiPartWriter(call)
 	return call, nil
 }
 
@@ -187,7 +187,7 @@ type OutboundCall struct {
 	checksum          Checksum
 	pipeline          *outboundCallPipeline
 	ctx               context.Context
-	argWriter         *ArgumentWriter
+	partWriter        *multiPartWriter
 	state             outboundCallState
 	sentFirstFragment bool
 	recvCh            chan *Frame
@@ -210,11 +210,11 @@ func (call *OutboundCall) writeOperation(operation []byte) error {
 		return call.failed(ErrArgMismatch)
 	}
 
-	if _, err := call.argWriter.Write(operation); err != nil {
+	if _, err := call.partWriter.Write(operation); err != nil {
 		return call.failed(err)
 	}
 
-	if err := call.argWriter.EndArgument(false); err != nil {
+	if err := call.partWriter.endPart(false); err != nil {
 		return call.failed(err)
 	}
 
@@ -229,7 +229,7 @@ func (call *OutboundCall) BeginArg2() (io.Writer, error) {
 	}
 
 	call.state = outboundCallWritingArg2
-	return call.argWriter, nil
+	return call.partWriter, nil
 }
 
 // Begins writing the third argument to the call, returning an io.Writer for that argument's contents
@@ -238,12 +238,12 @@ func (call *OutboundCall) BeginArg3() (io.Writer, error) {
 		return nil, call.failed(ErrArgMismatch)
 	}
 
-	if err := call.argWriter.EndArgument(false); err != nil {
+	if err := call.partWriter.endPart(false); err != nil {
 		return nil, call.failed(err)
 	}
 
 	call.state = outboundCallWritingArg3
-	return call.argWriter, nil
+	return call.partWriter, nil
 }
 
 // Sends the call and returns the response
@@ -252,7 +252,7 @@ func (call *OutboundCall) RoundTrip() (*OutboundCallResponse, error) {
 		return nil, call.failed(ErrArgMismatch)
 	}
 
-	if err := call.argWriter.EndArgument(true); err != nil {
+	if err := call.partWriter.endPart(true); err != nil {
 		return nil, call.failed(err)
 	}
 
@@ -277,7 +277,7 @@ func (call *OutboundCall) failed(err error) error {
 }
 
 // Starts a new fragment to send to the remote peer
-func (call *OutboundCall) startFragment() (*outboundFragment, error) {
+func (call *OutboundCall) startFragment() (*outFragment, error) {
 	frame := call.pipeline.framePool.Get()
 
 	var msg Message
@@ -297,7 +297,7 @@ func (call *OutboundCall) startFragment() (*outboundFragment, error) {
 }
 
 // Sends a complete fragment to the remote peer
-func (call *OutboundCall) sendFragment(fragment *outboundFragment, last bool) error {
+func (call *OutboundCall) sendFragment(fragment *outFragment, last bool) error {
 	select {
 	case <-call.ctx.Done():
 		return call.failed(call.ctx.Err())
@@ -319,9 +319,9 @@ type OutboundCallResponse struct {
 	ctx              context.Context
 	recvCh           chan *Frame
 	arg              int
-	curFragment      *inboundFragment
+	curFragment      *inFragment
 	recvLastFragment bool
-	lastArgReader    *ArgumentReader
+	lastPartReader   *multiPartReader
 }
 
 // if true, the call resulted in an application level error
@@ -332,38 +332,38 @@ func (call *OutboundCallResponse) ApplicationError() bool {
 // Called by the application to begin processing the response arg2.  Returns an io.Reader that
 // can be used to read the contents of the arg2.
 func (call *OutboundCallResponse) ExpectArg2() (io.Reader, error) {
-	if call.arg != 0 || call.lastArgReader != nil {
+	if call.arg != 0 || call.lastPartReader != nil {
 		return nil, ErrArgMismatch
 	}
 
 	call.arg++
-	call.lastArgReader = newArgumentReader(call, false)
-	return call.lastArgReader, nil
+	call.lastPartReader = newMultiPartReader(call, false)
+	return call.lastPartReader, nil
 }
 
 // Called by the application to begin processing the response arg3.  Returns an io.Reader that
 // can be used to read the contents of arg3.
 func (call *OutboundCallResponse) ExpectArg3() (io.Reader, error) {
-	if call.arg != 1 || call.lastArgReader == nil {
+	if call.arg != 1 || call.lastPartReader == nil {
 		return nil, ErrArgMismatch
 	}
 
 	call.arg++
-	call.lastArgReader = newArgumentReader(call, true)
-	return call.lastArgReader, nil
+	call.lastPartReader = newMultiPartReader(call, true)
+	return call.lastPartReader, nil
 }
 
 // Closes the call, confirming that the last argument has been fully processed
 func (call *OutboundCallResponse) Close() error {
-	if call.lastArgReader != nil {
-		return call.lastArgReader.EndArgument()
+	if call.lastPartReader != nil {
+		return call.lastPartReader.endPart()
 	}
 
 	return nil
 }
 
-// Implementation of inboundFragmentChannel
-func (call *OutboundCallResponse) waitForFragment() (*inboundFragment, error) {
+// Implementation of inFragmentChannel
+func (call *OutboundCallResponse) waitForFragment() (*inFragment, error) {
 	if call.curFragment != nil && call.curFragment.hasMoreChunks() {
 		return call.curFragment, nil
 	}
@@ -402,7 +402,7 @@ func (call *OutboundCallResponse) waitForFragment() (*inboundFragment, error) {
 	}
 }
 
-func (call *OutboundCallResponse) parseFragment(frame *Frame, msg Message) (*inboundFragment, error) {
+func (call *OutboundCallResponse) parseFragment(frame *Frame, msg Message) (*inFragment, error) {
 	fragment, err := newInboundFragment(frame, msg, call.checksum)
 	if err != nil {
 		return nil, call.failed(err)

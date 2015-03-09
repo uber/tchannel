@@ -12,11 +12,11 @@ func TestNoFragmentation(t *testing.T) {
 	in, out := buildChannels(ChecksumTypeCrc32)
 
 	arg1 := []byte("Hello")
-	w := newArgumentWriter(out)
+	w := newMultiPartWriter(out)
 	if _, err := w.Write(arg1); err != nil {
 		require.Nil(t, err)
 	}
-	require.Nil(t, w.EndArgument(true))
+	require.Nil(t, w.endPart(true))
 
 	// Should be a single frame
 	// fragment flags(1), checksum type (1), checksum(5), chunk size(2), chunk(5)
@@ -27,14 +27,14 @@ func TestNoFragmentation(t *testing.T) {
 		[]byte("Hello")})
 	assertFramesEqual(t, expectedFrames, out.sentFragments, "no fragmentation")
 
-	r1 := newArgumentReader(in, true)
+	r1 := newMultiPartReader(in, true)
 	rarg1 := make([]byte, len(arg1))
 	if _, err := r1.Read(rarg1); err != nil {
 		require.Nil(t, err)
 	}
 
 	assert.Equal(t, arg1, rarg1)
-	require.Nil(t, r1.EndArgument())
+	require.Nil(t, r1.endPart())
 }
 
 func TestFragmentationRoundTrip(t *testing.T) {
@@ -45,11 +45,11 @@ func TestFragmentationRoundTrip(t *testing.T) {
 	for i := range arg1 {
 		arg1[i] = byte(i % 0x0F)
 	}
-	w := newArgumentWriter(out)
+	w := newMultiPartWriter(out)
 	if _, err := w.Write(arg1); err != nil {
 		require.Nil(t, err)
 	}
-	require.Nil(t, w.EndArgument(false))
+	require.Nil(t, w.endPart(false))
 
 	arg2 := make([]byte, MaxFramePayloadSize+229)
 	for i := range arg2 {
@@ -58,7 +58,7 @@ func TestFragmentationRoundTrip(t *testing.T) {
 	if _, err := w.Write(arg2); err != nil {
 		require.Nil(t, err)
 	}
-	require.Nil(t, w.EndArgument(false))
+	require.Nil(t, w.endPart(false))
 
 	arg3 := make([]byte, MaxFramePayloadSize+72)
 	for i := range arg3 {
@@ -67,33 +67,33 @@ func TestFragmentationRoundTrip(t *testing.T) {
 	if _, err := w.Write(arg3); err != nil {
 		require.Nil(t, err)
 	}
-	require.Nil(t, w.EndArgument(true))
+	require.Nil(t, w.endPart(true))
 
 	// Read the three arguments
-	r1 := newArgumentReader(in, false)
+	r1 := newMultiPartReader(in, false)
 
 	rarg1 := make([]byte, len(arg1))
 	if _, err := r1.Read(rarg1); err != nil {
 		require.Nil(t, err)
 	}
 	assert.Equal(t, arg1, rarg1)
-	require.Nil(t, r1.EndArgument())
+	require.Nil(t, r1.endPart())
 
-	r2 := newArgumentReader(in, false)
+	r2 := newMultiPartReader(in, false)
 	rarg2 := make([]byte, len(arg2))
 	if _, err := r2.Read(rarg2); err != nil {
 		require.Nil(t, err)
 	}
 	assert.Equal(t, arg2, rarg2)
-	require.Nil(t, r2.EndArgument())
+	require.Nil(t, r2.endPart())
 
-	r3 := newArgumentReader(in, true)
+	r3 := newMultiPartReader(in, true)
 	rarg3 := make([]byte, len(arg3))
 	if _, err := r3.Read(rarg3); err != nil {
 		require.Nil(t, err)
 	}
 	assert.Equal(t, arg3, rarg3)
-	require.Nil(t, r3.EndArgument())
+	require.Nil(t, r3.endPart())
 }
 
 func TestArgEndOnFragmentBoundary(t *testing.T) {
@@ -108,11 +108,11 @@ func TestArgEndOnFragmentBoundary(t *testing.T) {
 	for i := range arg1 {
 		arg1[i] = byte(i % 0x0F)
 	}
-	w := newArgumentWriter(out)
+	w := newMultiPartWriter(out)
 	if _, err := w.Write(arg1); err != nil {
 		require.Nil(t, err)
 	}
-	require.Nil(t, w.EndArgument(false))
+	require.Nil(t, w.endPart(false))
 
 	arg2 := make([]byte, len(arg1)-2) // additional 2 byte trailing size for arg1
 	for i := range arg2 {
@@ -121,7 +121,7 @@ func TestArgEndOnFragmentBoundary(t *testing.T) {
 	if _, err := w.Write(arg2); err != nil {
 		require.Nil(t, err)
 	}
-	require.Nil(t, w.EndArgument(false))
+	require.Nil(t, w.endPart(false))
 
 	arg3 := make([]byte, len(arg2)) // additional 2 byte trailing size for arg2
 	for i := range arg3 {
@@ -130,7 +130,7 @@ func TestArgEndOnFragmentBoundary(t *testing.T) {
 	if _, err := w.Write(arg3); err != nil {
 		require.Nil(t, err)
 	}
-	require.Nil(t, w.EndArgument(true))
+	require.Nil(t, w.endPart(true))
 
 	// We should have sent 4 fragments (one for arg1, one for zero arg1 size + arg2,
 	// one for zero arg2 size + arg3, one for zero arg3 size)
@@ -139,44 +139,44 @@ func TestArgEndOnFragmentBoundary(t *testing.T) {
 	lastFragment := sentFragments[len(sentFragments)-1]
 	require.Equal(t, 8, int(lastFragment.Header.Size)) // 1 byte flags, 1 byte checksum type, 4 bytes checksum, 2 bytes size (0)
 
-	r1 := newArgumentReader(in, false)
+	r1 := newMultiPartReader(in, false)
 
 	rarg1 := make([]byte, len(arg1))
 	if _, err := r1.Read(rarg1); err != nil {
 		require.Nil(t, err)
 	}
 	assert.Equal(t, arg1, rarg1)
-	require.Nil(t, r1.EndArgument())
+	require.Nil(t, r1.endPart())
 
-	r2 := newArgumentReader(in, false)
+	r2 := newMultiPartReader(in, false)
 	rarg2 := make([]byte, len(arg2))
 	if _, err := r2.Read(rarg2); err != nil {
 		require.Nil(t, err)
 	}
 	assert.Equal(t, arg2, rarg2)
-	require.Nil(t, r2.EndArgument())
+	require.Nil(t, r2.endPart())
 
-	r3 := newArgumentReader(in, true)
+	r3 := newMultiPartReader(in, true)
 	rarg3 := make([]byte, len(arg3))
 	if _, err := r3.Read(rarg3); err != nil {
 		require.Nil(t, err)
 	}
 	assert.Equal(t, arg3, rarg3)
-	require.Nil(t, r3.EndArgument())
+	require.Nil(t, r3.endPart())
 }
 
-func buildChannels(checksumType ChecksumType) (*inboundFragments, *outboundFragments) {
+func buildChannels(checksumType ChecksumType) (*inFragments, *outFragments) {
 	ch := make(chan *Frame, 512)
 
-	in := &inboundFragments{ch: ch}
-	out := &outboundFragments{ch: ch, checksum: checksumType.New()}
+	in := &inFragments{ch: ch}
+	out := &outFragments{ch: ch, checksum: checksumType.New()}
 	return in, out
 }
 
-type inboundFragments struct {
+type inFragments struct {
 	checksum Checksum
 	ch       <-chan *Frame
-	current  *inboundFragment
+	current  *inFragment
 }
 
 type sampleMessage struct{}
@@ -186,7 +186,7 @@ func (m *sampleMessage) Type() MessageType               { return MessageTypeCal
 func (m *sampleMessage) read(r typed.ReadBuffer) error   { return nil }
 func (m *sampleMessage) write(w typed.WriteBuffer) error { return nil }
 
-func (in *inboundFragments) waitForFragment() (*inboundFragment, error) {
+func (in *inFragments) waitForFragment() (*inFragment, error) {
 	if in.current == nil || !in.current.hasMoreChunks() {
 		var err error
 		f := <-in.ch
@@ -200,18 +200,18 @@ func (in *inboundFragments) waitForFragment() (*inboundFragment, error) {
 	return in.current, nil
 }
 
-type outboundFragments struct {
+type outFragments struct {
 	fragmentSize  int
 	checksum      Checksum
 	ch            chan<- *Frame
 	sentFragments []*Frame
 }
 
-func (out *outboundFragments) startFragment() (*outboundFragment, error) {
+func (out *outFragments) startFragment() (*outFragment, error) {
 	return newOutboundFragment(&Frame{}, &sampleMessage{}, out.checksum)
 }
 
-func (out *outboundFragments) sendFragment(toSend *outboundFragment, last bool) error {
+func (out *outFragments) sendFragment(toSend *outFragment, last bool) error {
 	f := toSend.finish(last)
 	out.ch <- f
 	out.sentFragments = append(out.sentFragments, f)
