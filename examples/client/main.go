@@ -25,7 +25,7 @@ func asArgument(arg string) tchannel.OutputArgument {
 			panic(err)
 		}
 
-		return tchannel.NewFileArgument(f)
+		return tchannel.NewStreamingOutputArgument(f)
 	}
 
 	return tchannel.BytesOutput([]byte(arg))

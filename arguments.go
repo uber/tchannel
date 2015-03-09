@@ -3,7 +3,6 @@ package tchannel
 import (
 	"io"
 	"io/ioutil"
-	"os"
 )
 
 // A InputArgument is able to read an argument from a call body
@@ -41,24 +40,29 @@ func (p *BytesInput) ReadFrom(r io.Reader) error {
 	return nil
 }
 
-// FileArgument wraps an os.File and allows it to be used as an input or output argument
-type FileArgument struct {
-	f *os.File
+// StreamingOutputArgument streams the contents of the given io.Reader
+type StreamingOutputArgument struct {
+	r io.Reader
 }
 
-func NewFileArgument(f *os.File) FileArgument {
-	return FileArgument{f: f}
-}
+func NewStreamingOutputArgument(r io.Reader) OutputArgument { return StreamingOutputArgument{r} }
 
-func (f FileArgument) WriteTo(w io.Writer) error {
-	if _, err := io.Copy(w, f.f); err != nil && err != io.EOF {
+func (arg StreamingOutputArgument) WriteTo(w io.Writer) error {
+	if _, err := io.Copy(w, arg.r); err != nil && err != io.EOF {
 		return err
 	}
 	return nil
 }
 
-func (f FileArgument) ReadFrom(r io.Reader) error {
-	if _, err := io.Copy(f.f, r); err != nil && err != io.EOF {
+// StreamingInputArgument streams the contents of the argument to the given io.Writer
+type StreamingInputArgument struct {
+	w io.Writer
+}
+
+func NewStreamingInputArgument(w io.Writer) InputArgument { return StreamingInputArgument{w} }
+
+func (arg StreamingInputArgument) ReadFrom(r io.Reader) error {
+	if _, err := io.Copy(arg.w, r); err != nil && err != io.EOF {
 		return err
 	}
 	return nil
