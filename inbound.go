@@ -74,7 +74,7 @@ func (p *inboundCallPipeline) handleCallReq(frame *Frame) {
 	res := &InboundCallResponse{
 		id:       frame.Header.Id,
 		pipeline: p,
-		state:    inboundCallResponsePreSend,
+		state:    inboundCallResponseReadyToWriteArg2,
 		ctx:      ctxWrapper,
 		checksum: ChecksumTypeCrc32.New(), // TODO(mmihic): Make configurable or mirror req?
 	}
@@ -172,7 +172,6 @@ type InboundCall struct {
 	recvLastFragment bool
 	recvCh           <-chan *Frame
 	curFragment      *inFragment
-	lastPartReader   *multiPartReader
 	checksum         Checksum
 }
 
@@ -180,9 +179,8 @@ type inboundCallState int
 
 const (
 	inboundCallPreRead inboundCallState = iota
-	inboundCallReadyForArg2
-	inboundCallReadingArg2
-	inboundCallReadingArg3
+	inboundCallReadyToReadArg2
+	inboundCallReadyToReadArg3
 	inboundCallAllRead
 	inboundCallError
 )
@@ -213,40 +211,47 @@ func (call *InboundCall) readOperation() error {
 		return call.failed(err)
 	}
 
-	call.state = inboundCallReadyForArg2
+	call.state = inboundCallReadyToReadArg2
 	call.operation = arg1
 	return nil
 }
 
-// Begins the process of reading the second argument from the inbound call.  Returns an io.Reader
-// that can be used to read the bytestream of the second argument.  The first argument must have been
-// fully read before this method is called.
-func (call *InboundCall) ExpectArg2() (io.Reader, error) {
-	if call.state != inboundCallReadyForArg2 {
-		return nil, call.failed(ErrInboundCallStateMismatch)
+// Reads the second argument from the inbound call.
+func (call *InboundCall) ReadArg2(arg InputArgument) error {
+	if call.state != inboundCallReadyToReadArg2 {
+		return call.failed(ErrInboundCallStateMismatch)
 	}
 
-	call.state = inboundCallReadingArg2
-	call.lastPartReader = newMultiPartReader(call, false)
-	return call.lastPartReader, nil
+	r := newMultiPartReader(call, false)
+	if err := arg.ReadFrom(r); err != nil {
+		return call.failed(err)
+	}
+
+	if err := r.endPart(); err != nil {
+		return call.failed(err)
+	}
+
+	call.state = inboundCallReadyToReadArg3
+	return nil
 }
 
-// Begins the process of reading the third argument from the inbound call.  Returns an io.Reader
-// that can be used to read the bytestream of the third argument.  The second argument must have
-// been fully read before this method is called.
-func (call *InboundCall) ExpectArg3() (io.Reader, error) {
-	if call.state != inboundCallReadingArg2 {
-		return nil, call.failed(ErrInboundCallStateMismatch)
+// Reads the third argument from the inbound call.
+func (call *InboundCall) ReadArg3(arg InputArgument) error {
+	if call.state != inboundCallReadyToReadArg3 {
+		return call.failed(ErrInboundCallStateMismatch)
 	}
 
-	if err := call.lastPartReader.endPart(); err != nil {
-		return nil, call.failed(err)
+	r := newMultiPartReader(call, true)
+	if err := arg.ReadFrom(r); err != nil {
+		return call.failed(err)
 	}
 
-	call.state = inboundCallReadingArg3
-	call.lastPartReader = newMultiPartReader(call, true)
-	return call.lastPartReader, nil
+	if err := r.endPart(); err != nil {
+		return call.failed(err)
+	}
 
+	call.state = inboundCallAllRead
+	return nil
 }
 
 // Marks the call as failed
@@ -254,20 +259,6 @@ func (call *InboundCall) failed(err error) error {
 	call.state = inboundCallError
 	call.pipeline.inboundCallComplete(call.id)
 	return err
-}
-
-// Closes the inbound call, confirming that all inbound arguments have been read
-func (call *InboundCall) Close() error {
-	if call.state != inboundCallReadingArg3 {
-		return call.failed(ErrInboundCallStateMismatch)
-	}
-
-	if err := call.lastPartReader.endPart(); err != nil {
-		return call.failed(err)
-	}
-
-	call.state = inboundCallAllRead
-	return nil
 }
 
 // Provides access to the response object
@@ -317,9 +308,8 @@ type InboundCallResponse struct {
 type inboundCallResponseState int
 
 const (
-	inboundCallResponsePreSend inboundCallResponseState = iota
-	inboundCallResponseWritingArg2
-	inboundCallResponseWritingArg3
+	inboundCallResponseReadyToWriteArg2 inboundCallResponseState = iota
+	inboundCallResponseReadyToWriteArg3
 	inboundCallResponseComplete
 	inboundCallResponseError
 )
@@ -356,7 +346,7 @@ func (call *InboundCallResponse) SendSystemError(err error) error {
 
 // Marks the response as being an application error.  Must be marked before any arguments are begun
 func (call *InboundCallResponse) SetApplicationError() error {
-	if call.state != inboundCallResponsePreSend {
+	if call.state != inboundCallResponseReadyToWriteArg2 {
 		return ErrInboundCallResponseStateMismatch
 	}
 
@@ -364,35 +354,32 @@ func (call *InboundCallResponse) SetApplicationError() error {
 	return nil
 }
 
-// Begins writing arg 2.  Returns an io.Writer that can be used to stream the contents of the second argument.
-func (call *InboundCallResponse) BeginArg2() (io.Writer, error) {
-	if call.state != inboundCallResponsePreSend {
-		return nil, call.failed(ErrInboundCallResponseStateMismatch)
+// Writes the second argument in the response
+func (call *InboundCallResponse) WriteArg2(arg OutputArgument) error {
+	if call.state != inboundCallResponseReadyToWriteArg2 {
+		return call.failed(ErrInboundCallResponseStateMismatch)
 	}
 
-	call.state = inboundCallResponseWritingArg2
-	return call.partWriter, nil
-}
-
-// Begins writing arg 3.  Returns an io.Writer that can be used to stream the contents of the third argument.
-// The second argument is considered complete once the third argument has begun
-func (call *InboundCallResponse) BeginArg3() (io.Writer, error) {
-	if call.state != inboundCallResponseWritingArg2 {
-		return nil, call.failed(ErrInboundCallResponseStateMismatch)
+	if err := arg.WriteTo(call.partWriter); err != nil {
+		return call.failed(err)
 	}
 
 	if err := call.partWriter.endPart(false); err != nil {
-		return nil, call.failed(err)
+		return call.failed(err)
 	}
 
-	call.state = inboundCallResponseWritingArg3
-	return call.partWriter, nil
+	call.state = inboundCallResponseReadyToWriteArg3
+	return nil
 }
 
-// Sends the completed response to the peer.
-func (call *InboundCallResponse) Send() error {
-	if call.state != inboundCallResponseWritingArg3 {
+// Writes the third argument in the resonose
+func (call *InboundCallResponse) WriteArg3(arg OutputArgument) error {
+	if call.state != inboundCallResponseReadyToWriteArg3 {
 		return call.failed(ErrInboundCallResponseStateMismatch)
+	}
+
+	if err := arg.WriteTo(call.partWriter); err != nil {
+		return call.failed(err)
 	}
 
 	if err := call.partWriter.endPart(true); err != nil {
@@ -400,7 +387,6 @@ func (call *InboundCallResponse) Send() error {
 	}
 
 	call.state = inboundCallResponseComplete
-	call.pipeline.inboundCallComplete(call.id)
 	return nil
 }
 

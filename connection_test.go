@@ -5,8 +5,6 @@ import (
 	"github.com/op/go-logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"io"
-	"io/ioutil"
 	"testing"
 	"time"
 )
@@ -24,58 +22,29 @@ func timeout(ctx context.Context, call *InboundCall) {
 }
 
 func echo(ctx context.Context, call *InboundCall) {
-	rarg2, err := call.ExpectArg2()
-	if err != nil {
+	var inArg2 BytesInput
+	if err := call.ReadArg2(&inArg2); err != nil {
 		testLog.Error("could not start arg2: %v", err)
 		return
 	}
 
-	arg2, err := ioutil.ReadAll(rarg2)
-	if err != nil && err != io.EOF {
-		testLog.Error("could not read arg2: %v", err)
-		return
-	}
+	testLog.Info("Arg2: %s", inArg2)
 
-	testLog.Info("Arg2: %s", arg2)
-
-	rarg3, err := call.ExpectArg3()
-	if err != nil {
+	var inArg3 BytesInput
+	if err := call.ReadArg3(&inArg3); err != nil {
 		testLog.Error("could not start arg3: %v", err)
 		return
 	}
 
-	arg3, err := ioutil.ReadAll(rarg3)
-	if err != nil && err != io.EOF {
-		testLog.Error("could not read arg3: %v", err)
-		return
-	}
+	testLog.Info("Arg3: %s", inArg3)
 
-	testLog.Info("Arg3: %s", arg3)
-
-	warg2, err := call.Response().BeginArg2()
-	if err != nil {
-		testLog.Error("coult not start writing arg2: %v", err)
-		return
-	}
-
-	if _, err := warg2.Write(arg2); err != nil {
+	if err := call.Response().WriteArg2(BytesOutput(inArg2)); err != nil {
 		testLog.Error("could not write arg2: %v", err)
 		return
 	}
 
-	warg3, err := call.Response().BeginArg3()
-	if err != nil {
-		testLog.Error("could not start writing arg3: %v", err)
-		return
-	}
-
-	if _, err := warg3.Write(arg3); err != nil {
+	if err := call.Response().WriteArg3(BytesOutput(inArg3)); err != nil {
 		testLog.Error("could not write arg3: %v", err)
-		return
-	}
-
-	if err := call.Response().Send(); err != nil {
-		testLog.Error("could not send full response: %v", err)
 		return
 	}
 }

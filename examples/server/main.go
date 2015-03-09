@@ -5,69 +5,37 @@ import (
 	"code.google.com/p/go.net/context"
 	"code.uber.internal/personal/mmihic/tchannel-go"
 	"github.com/op/go-logging"
-	"io"
-	"io/ioutil"
 	"time"
 )
 
 var log = logging.MustGetLogger("tchannel.server")
 
 func echo(ctx context.Context, call *tchannel.InboundCall) {
-	rarg2, err := call.ExpectArg2()
-	if err != nil {
+	var inArg2 tchannel.BytesInput
+	if err := call.ReadArg2(&inArg2); err != nil {
 		log.Error("could not start arg2: %v", err)
 		return
 	}
 
-	arg2, err := ioutil.ReadAll(rarg2)
-	if err != nil && err != io.EOF {
-		log.Error("could not read arg2: %v", err)
-		return
-	}
+	log.Info("Arg2: %s", inArg2)
 
-	log.Info("Arg2: %s", arg2)
-
-	rarg3, err := call.ExpectArg3()
-	if err != nil {
+	var inArg3 tchannel.BytesInput
+	if err := call.ReadArg3(&inArg3); err != nil {
 		log.Error("could not start arg3: %v", err)
 		return
 	}
 
-	arg3, err := ioutil.ReadAll(rarg3)
-	if err != nil && err != io.EOF {
-		log.Error("could not read arg3: %v", err)
-		return
-	}
+	log.Info("Arg3: %s", inArg3)
 
-	log.Info("Arg3: %s", arg3)
-
-	warg2, err := call.Response().BeginArg2()
-	if err != nil {
-		log.Error("coult not start writing arg2: %v", err)
-		return
-	}
-
-	if _, err := warg2.Write(arg2); err != nil {
+	if err := call.Response().WriteArg2(tchannel.BytesOutput(inArg2)); err != nil {
 		log.Error("could not write arg2: %v", err)
 		return
 	}
 
-	warg3, err := call.Response().BeginArg3()
-	if err != nil {
-		log.Error("could not start writing arg3: %v", err)
-		return
-	}
-
-	if _, err := warg3.Write(arg3); err != nil {
+	if err := call.Response().WriteArg3(tchannel.BytesOutput(inArg3)); err != nil {
 		log.Error("could not write arg3: %v", err)
 		return
 	}
-
-	if err := call.Response().Send(); err != nil {
-		log.Error("could not send full response: %v", err)
-		return
-	}
-
 }
 
 func serverBusy(ctx context.Context, call *tchannel.InboundCall) {
