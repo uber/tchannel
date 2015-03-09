@@ -277,7 +277,7 @@ func (call *OutboundCall) failed(err error) error {
 }
 
 // Starts a new fragment to send to the remote peer
-func (call *OutboundCall) startFragment() (*outFragment, error) {
+func (call *OutboundCall) beginFragment() (*outFragment, error) {
 	frame := call.pipeline.framePool.Get()
 
 	var msg Message
@@ -297,7 +297,7 @@ func (call *OutboundCall) startFragment() (*outFragment, error) {
 }
 
 // Sends a complete fragment to the remote peer
-func (call *OutboundCall) sendFragment(fragment *outFragment, last bool) error {
+func (call *OutboundCall) flushFragment(fragment *outFragment, last bool) error {
 	select {
 	case <-call.ctx.Done():
 		return call.failed(call.ctx.Err())

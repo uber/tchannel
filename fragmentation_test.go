@@ -207,11 +207,11 @@ type outFragments struct {
 	sentFragments []*Frame
 }
 
-func (out *outFragments) startFragment() (*outFragment, error) {
+func (out *outFragments) beginFragment() (*outFragment, error) {
 	return newOutboundFragment(&Frame{}, &sampleMessage{}, out.checksum)
 }
 
-func (out *outFragments) sendFragment(toSend *outFragment, last bool) error {
+func (out *outFragments) flushFragment(toSend *outFragment, last bool) error {
 	f := toSend.finish(last)
 	out.ch <- f
 	out.sentFragments = append(out.sentFragments, f)

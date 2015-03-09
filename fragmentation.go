@@ -146,10 +146,10 @@ func newOutboundFragment(frame *Frame, msg Message, checksum Checksum) (*outFrag
 type outFragmentChannel interface {
 	// Opens a fragment for sending.  If there is an existing incomplete fragment on the channel,
 	// that fragment will be returned.  Otherwise a new fragment is allocated
-	startFragment() (*outFragment, error)
+	beginFragment() (*outFragment, error)
 
 	// Ends the currently open fragment, optionally marking it as the last fragment
-	sendFragment(f *outFragment, last bool) error
+	flushFragment(f *outFragment, last bool) error
 }
 
 // An multiPartWriter is an io.Writer for a collection of parts, capable of breaking
@@ -223,7 +223,7 @@ func (w *multiPartWriter) ensureOpenChunk() error {
 		// No fragment - start a new one
 		if w.fragment == nil {
 			var err error
-			if w.fragment, err = w.fragments.startFragment(); err != nil {
+			if w.fragment, err = w.fragments.beginFragment(); err != nil {
 				return err
 			}
 		}
@@ -249,7 +249,7 @@ func (w *multiPartWriter) ensureOpenChunk() error {
 // Finishes with the current fragment, closing any open chunk and sending the fragment down the channel
 func (w *multiPartWriter) finishFragment(last bool) error {
 	w.fragment.endChunk()
-	if err := w.fragments.sendFragment(w.fragment, last); err != nil {
+	if err := w.fragments.flushFragment(w.fragment, last); err != nil {
 		w.fragment = nil
 		return err
 	}
@@ -268,7 +268,7 @@ func (w *multiPartWriter) endPart(last bool) error {
 		}
 
 		var err error
-		w.fragment, err = w.fragments.startFragment()
+		w.fragment, err = w.fragments.beginFragment()
 		if err != nil {
 			return err
 		}
@@ -281,7 +281,7 @@ func (w *multiPartWriter) endPart(last bool) error {
 	}
 
 	if last {
-		if err := w.fragments.sendFragment(w.fragment, true); err != nil {
+		if err := w.fragments.flushFragment(w.fragment, true); err != nil {
 			return err
 		}
 
