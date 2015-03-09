@@ -673,11 +673,11 @@ This behavior changes slightly when messages are fragmented. See the
 
 ### Checksum types:
 
-`type:1` | scheme          | value length
----------|-----------------|-------------
-`0x00`   | none            | 0 bytes
-`0x01`   | crc32           | 4 bytes
-`0x02`   | farm hash32 x86 | 4 bytes
+`type:1` | scheme                 | value length
+---------|------------------------|-------------
+`0x00`   | none                   | 0 bytes
+`0x01`   | crc32                  | 4 bytes
+`0x02`   | farmhash Fingerprint32 | 4 bytes
 
 CRC32 is intended as a checksum, and many implementations exist, including
 SSE4.2 instructions on supported platforms.

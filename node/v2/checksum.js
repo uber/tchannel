@@ -20,7 +20,7 @@
 
 'use strict';
 
-var farm32 = require('farmhash').hash32;
+var farm32 = require('farmhash').fingerprint32;
 var crc32 = require('crc').crc32;
 
 var TypedError = require('error/typed');
