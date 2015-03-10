@@ -184,12 +184,12 @@ const (
 	inboundCallError
 )
 
-// Returns the name of the service being called
+// ServiceName returns the name of the service being called
 func (call *InboundCall) ServiceName() string {
 	return call.serviceName
 }
 
-// Returns the operation being called
+// Operation teturns the operation being called
 func (call *InboundCall) Operation() []byte {
 	return call.operation
 }
@@ -212,7 +212,8 @@ func (call *InboundCall) readOperation() error {
 	return nil
 }
 
-// Reads the second argument from the inbound call.
+// ReadArg2 reads the second argument from the inbound call, blocking until the entire
+// argument has been read or an error/timeout occurs.
 func (call *InboundCall) ReadArg2(arg Input) error {
 	if call.state != inboundCallReadyToReadArg2 {
 		return call.failed(errCallStateMismatch)
@@ -227,7 +228,8 @@ func (call *InboundCall) ReadArg2(arg Input) error {
 	return nil
 }
 
-// Reads the third argument from the inbound call.
+// ReadArg3 reads the third argument from the inbound call, blocking until th entire
+// argument has been read or an error/timeout occurs.
 func (call *InboundCall) ReadArg3(arg Input) error {
 	if call.state != inboundCallReadyToReadArg3 {
 		return call.failed(errCallStateMismatch)
@@ -249,7 +251,8 @@ func (call *InboundCall) failed(err error) error {
 	return err
 }
 
-// Provides access to the response object
+// Response provides access to the InboundCallResponse object which can be used
+// to write back to the calling peer
 func (call *InboundCall) Response() *InboundCallResponse {
 	return call.res
 }
@@ -281,7 +284,7 @@ func (call *InboundCall) waitForFragment() (*inFragment, error) {
 	}
 }
 
-// Used to send the response back to the calling peer
+// An InboundCallResponse is used to send the response back to the calling peer
 type InboundCallResponse struct {
 	id                   uint32
 	ctx                  context.Context
@@ -303,14 +306,15 @@ const (
 	inboundCallResponseError
 )
 
-// Sends a system error response to the peer
+// SendSystemError returns a system error response to the peer.  The call is considered
+// complete after this method is called, and no further data can be written.
 func (call *InboundCallResponse) SendSystemError(err error) error {
 	// Fail all future attempts to read fragments
 	call.cancel()
 	call.state = inboundCallResponseComplete
 
 	// Send the error frame
-	frame, err := MarshalMessage(&errorMessage{
+	frame, err := marshalMessage(&errorMessage{
 		id:                call.id,
 		originalMessageID: call.id,
 		errorCode:         GetSystemErrorCode(err),
@@ -333,7 +337,8 @@ func (call *InboundCallResponse) SendSystemError(err error) error {
 	return nil
 }
 
-// Marks the response as being an application error.  Must be marked before any arguments are begun
+// SetApplicationError marks the response as being an application error.  This method can
+// only be called before any arguments have been sent to the calling peer.
 func (call *InboundCallResponse) SetApplicationError() error {
 	if call.state != inboundCallResponseReadyToWriteArg2 {
 		return errCallStateMismatch
@@ -343,7 +348,8 @@ func (call *InboundCallResponse) SetApplicationError() error {
 	return nil
 }
 
-// Writes the second argument in the response
+// WriteArg2 writes the second argument in the response, blocking until the argument is
+// fully written or an error/timeout has occurred.
 func (call *InboundCallResponse) WriteArg2(arg Output) error {
 	if call.state != inboundCallResponseReadyToWriteArg2 {
 		return call.failed(errCallStateMismatch)
@@ -357,7 +363,8 @@ func (call *InboundCallResponse) WriteArg2(arg Output) error {
 	return nil
 }
 
-// Writes the third argument in the resonose
+// WriteArg3 writes the third argument in the response, blocking until the argument is
+// fully written or an error/timeout has occurred.
 func (call *InboundCallResponse) WriteArg3(arg Output) error {
 	if call.state != inboundCallResponseReadyToWriteArg3 {
 		return call.failed(errCallStateMismatch)

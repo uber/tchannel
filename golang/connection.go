@@ -29,17 +29,25 @@ func (p PeerInfo) String() string {
 const CurrentProtocolVersion = 0x02
 
 var (
-	ErrConnectionClosed            = errors.New("connection is closed")
-	ErrConnectionNotReady          = errors.New("connection is not yet ready")
-	ErrConnectionAlreadyActive     = errors.New("connection is already active")
-	ErrConnectionWaitingOnPeerInit = errors.New("connection is waiting for the peer to sent init")
-	ErrSendBufferFull              = errors.New("connection send buffer is full, cannot send frame")
-	ErrRecvBufferFull              = errors.New("connection recv buffer is full, cannot recv frame")
-	ErrCannotHandleInitRes         = errors.New("could not return init-res to handshake thread")
+	// ErrConnectionClosed is returned when a caller performs an operation on a closed connection
+	ErrConnectionClosed = errors.New("connection is closed")
+
+	// ErrConnectionNotReady is returned when a caller attempts to send a request through
+	// a connection which has not yet been initialized
+	ErrConnectionNotReady = errors.New("connection is not yet ready")
+
+	// ErrSendBufferFull is returned when a message cannot be sent to the peer because
+	// the frame sending buffer has become full.  Typically this indicates that the
+	// connection is stuck and writes have become backed up
+	ErrSendBufferFull = errors.New("connection send buffer is full, cannot send frame")
+
+	errConnectionAlreadyActive     = errors.New("connection is already active")
+	errConnectionWaitingOnPeerInit = errors.New("connection is waiting for the peer to sent init")
+	errCannotHandleInitRes         = errors.New("could not return init-res to handshake thread")
 )
 
-// Options used during the creation of a TChannelConnection
-type TChannelConnectionOptions struct {
+// ConnectionOptions are options that control the behavior of a Connection
+type ConnectionOptions struct {
 	// The identity of the local peer
 	PeerInfo PeerInfo
 
@@ -56,8 +64,8 @@ type TChannelConnectionOptions struct {
 	ChecksumType ChecksumType
 }
 
-// A connection to a remote peer.
-type TChannelConnection struct {
+// Connection represents a connection to a remote peer.
+type Connection struct {
 	ch             *TChannel
 	log            *logging.Logger
 	checksumType   ChecksumType
@@ -103,24 +111,24 @@ const (
 
 // Creates a new TChannelConnection around an outbound connection initiated to a peer
 func newOutboundConnection(ch *TChannel, conn net.Conn,
-	opts *TChannelConnectionOptions) (*TChannelConnection, error) {
+	opts *ConnectionOptions) (*Connection, error) {
 	c := newConnection(ch, conn, connectionWaitingToSendInitReq, opts)
 	return c, nil
 }
 
 // Creates a new TChannelConnection based on an incoming connection from a peer
 func newInboundConnection(ch *TChannel, conn net.Conn,
-	opts *TChannelConnectionOptions) (*TChannelConnection, error) {
+	opts *ConnectionOptions) (*Connection, error) {
 	c := newConnection(ch, conn, connectionWaitingToRecvInitReq, opts)
 	return c, nil
 }
 
 // Creates a new connection in a given initial state
 func newConnection(ch *TChannel, conn net.Conn, initialState connectionState,
-	opts *TChannelConnectionOptions) *TChannelConnection {
+	opts *ConnectionOptions) *Connection {
 
 	if opts == nil {
-		opts = &TChannelConnectionOptions{}
+		opts = &ConnectionOptions{}
 	}
 
 	sendBufferSize := opts.SendBufferSize
@@ -138,7 +146,7 @@ func newConnection(ch *TChannel, conn net.Conn, initialState connectionState,
 		framePool = DefaultFramePool
 	}
 
-	c := &TChannelConnection{
+	c := &Connection{
 		ch:            ch,
 		log:           ch.log,
 		conn:          conn,
@@ -159,18 +167,18 @@ func newConnection(ch *TChannel, conn net.Conn, initialState connectionState,
 }
 
 // Initiates a handshake with a peer.
-func (c *TChannelConnection) sendInit(ctx context.Context) error {
+func (c *Connection) sendInit(ctx context.Context) error {
 	err := c.withStateLock(func() error {
 		switch c.state {
 		case connectionWaitingToSendInitReq:
 			c.state = connectionWaitingToRecvInitRes
 			return nil
 		case connectionWaitingToRecvInitReq:
-			return ErrConnectionWaitingOnPeerInit
+			return errConnectionWaitingOnPeerInit
 		case connectionClosed, connectionStartClose, connectionInboundClosed:
 			return ErrConnectionClosed
 		case connectionActive, connectionWaitingToRecvInitRes:
-			return ErrConnectionAlreadyActive
+			return errConnectionAlreadyActive
 		default:
 			return fmt.Errorf("connection in unknown state %d", c.state)
 		}
@@ -220,7 +228,7 @@ func (c *TChannelConnection) sendInit(ctx context.Context) error {
 
 // Handles an incoming InitReq.  If we are waiting for the peer to send us an InitReq, and the
 // InitReq is valid, send a corresponding InitRes and mark ourselves as active
-func (c *TChannelConnection) handleInitReq(frame *Frame) {
+func (c *Connection) handleInitReq(frame *Frame) {
 	if err := c.withStateRLock(func() error {
 		return nil
 	}); err != nil {
@@ -272,7 +280,7 @@ func (c *TChannelConnection) handleInitReq(frame *Frame) {
 // the goroutine doing initialization has a chance to process the InitRes.  We probably want to move
 // the InitRes checking to here (where it will run in the receiver goroutine and thus block new incoming
 // messages), and simply signal the init goroutine that we are done
-func (c *TChannelConnection) handleInitRes(frame *Frame) {
+func (c *Connection) handleInitRes(frame *Frame) {
 	if err := c.withStateRLock(func() error {
 		switch c.state {
 		case connectionWaitingToRecvInitRes:
@@ -281,13 +289,13 @@ func (c *TChannelConnection) handleInitRes(frame *Frame) {
 			return ErrConnectionClosed
 
 		case connectionActive:
-			return ErrConnectionAlreadyActive
+			return errConnectionAlreadyActive
 
 		case connectionWaitingToSendInitReq:
 			return ErrConnectionNotReady
 
 		case connectionWaitingToRecvInitReq:
-			return ErrConnectionWaitingOnPeerInit
+			return errConnectionWaitingOnPeerInit
 
 		default:
 			return fmt.Errorf("Connection in unknown state %d", c.state)
@@ -300,13 +308,13 @@ func (c *TChannelConnection) handleInitRes(frame *Frame) {
 	select {
 	case c.initResCh <- frame: // Ok
 	default:
-		c.connectionError(ErrCannotHandleInitRes)
+		c.connectionError(errCannotHandleInitRes)
 	}
 }
 
 // Sends a standalone message (typically a control message)
-func (c *TChannelConnection) sendMessage(msg message) error {
-	f, err := MarshalMessage(msg, c.framePool)
+func (c *Connection) sendMessage(msg message) error {
+	f, err := marshalMessage(msg, c.framePool)
 	if err != nil {
 		return nil
 	}
@@ -320,7 +328,7 @@ func (c *TChannelConnection) sendMessage(msg message) error {
 }
 
 // Receives a standalone message (typically a control message)
-func (c *TChannelConnection) recvMessage(ctx context.Context, msg message, resCh <-chan *Frame) error {
+func (c *Connection) recvMessage(ctx context.Context, msg message, resCh <-chan *Frame) error {
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -333,13 +341,13 @@ func (c *TChannelConnection) recvMessage(ctx context.Context, msg message, resCh
 	}
 }
 
-// Reserves the next available message id for this connection
-func (c *TChannelConnection) NextMessageID() uint32 {
+// NextMessageID reserves the next available message id for this connection
+func (c *Connection) NextMessageID() uint32 {
 	return atomic.AddUint32(&c.nextMessageID, 1)
 }
 
 // Handles a connection error
-func (c *TChannelConnection) connectionError(err error) error {
+func (c *Connection) connectionError(err error) error {
 	doClose := false
 	c.withStateLock(func() error {
 		if c.state != connectionClosed {
@@ -357,7 +365,7 @@ func (c *TChannelConnection) connectionError(err error) error {
 }
 
 // Closes the network connection and all network-related channels
-func (c *TChannelConnection) closeNetwork() {
+func (c *Connection) closeNetwork() {
 	// NB(mmihic): The sender goroutine	will exit once the connection is closed; no need to close
 	// the send channel (and closing the send channel would be dangerous since other goroutine might be sending)
 	if err := c.conn.Close(); err != nil {
@@ -366,7 +374,7 @@ func (c *TChannelConnection) closeNetwork() {
 }
 
 // Performs an action with the connection state mutex locked
-func (c *TChannelConnection) withStateLock(f func() error) error {
+func (c *Connection) withStateLock(f func() error) error {
 	c.stateMut.Lock()
 	defer c.stateMut.Unlock()
 
@@ -374,7 +382,7 @@ func (c *TChannelConnection) withStateLock(f func() error) error {
 }
 
 // Performs an action with the connection state mutex held in a read lock
-func (c *TChannelConnection) withStateRLock(f func() error) error {
+func (c *Connection) withStateRLock(f func() error) error {
 	c.stateMut.RLock()
 	defer c.stateMut.RUnlock()
 
@@ -385,7 +393,7 @@ func (c *TChannelConnection) withStateRLock(f func() error) error {
 // Run within its own goroutine to prevent overlapping reads on the socket.  Most handlers simply
 // send the incoming frame to a channel; the init handlers are a notable exception, since we cannot
 // process new frames until the initialization is complete.
-func (c *TChannelConnection) readFrames() {
+func (c *Connection) readFrames() {
 	fhBuf := typed.NewReadBufferWithSize(FrameHeaderSize)
 
 	for {
@@ -433,7 +441,7 @@ func (c *TChannelConnection) readFrames() {
 
 // Main loop that pulls frames from the send channel and writes them to the connection.
 // Run in its own goroutine to prevent overlapping writes on the network socket.
-func (c *TChannelConnection) writeFrames() {
+func (c *Connection) writeFrames() {
 	fhBuf := typed.NewWriteBufferWithSize(FrameHeaderSize)
 	for f := range c.sendCh {
 		fhBuf.Reset()
@@ -461,7 +469,7 @@ func (c *TChannelConnection) writeFrames() {
 }
 
 // Creates a new frame around a message
-func MarshalMessage(msg message, pool FramePool) (*Frame, error) {
+func marshalMessage(msg message, pool FramePool) (*Frame, error) {
 	f := pool.Get()
 
 	wbuf := typed.NewWriteBuffer(f.Payload[:])

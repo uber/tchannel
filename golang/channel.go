@@ -28,9 +28,9 @@ type funcHandler struct {
 func (h *funcHandler) Handle(ctx context.Context, call *InboundCall) { h.f(ctx, call) }
 
 // Options used to create a TChannel
-type TChannelOptions struct {
+type ChannelOptions struct {
 	// Default Connection options
-	DefaultConnectionOptions TChannelConnectionOptions
+	DefaultConnectionOptions ConnectionOptions
 
 	// The name of the process, for logging and reporting to peers
 	ProcessName string
@@ -48,15 +48,15 @@ type TChannel struct {
 	log               *logging.Logger
 	hostPort          string
 	processName       string
-	connectionOptions TChannelConnectionOptions
+	connectionOptions ConnectionOptions
 	handlers          handlerMap
 	l                 net.Listener
 }
 
 // Creates a new channel bound to the given host and port
-func NewChannel(hostPort string, opts *TChannelOptions) (*TChannel, error) {
+func NewChannel(hostPort string, opts *ChannelOptions) (*TChannel, error) {
 	if opts == nil {
-		opts = &TChannelOptions{}
+		opts = &ChannelOptions{}
 	}
 
 	logger := opts.Logger

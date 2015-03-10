@@ -164,7 +164,7 @@ func (p *outboundCallPipeline) withReqLock(f func() error) error {
 	return f()
 }
 
-func (c *TChannelConnection) beginCall(ctx context.Context, serviceName string) (*OutboundCall, error) {
+func (c *Connection) beginCall(ctx context.Context, serviceName string) (*OutboundCall, error) {
 	if err := c.withStateRLock(func() error {
 		switch c.state {
 		case connectionActive, connectionStartClose, connectionInboundClosed:
@@ -423,7 +423,7 @@ func (call *OutboundCallResponse) failed(err error) error {
 // connection will be closed.  If the error is a reqest specific error, it will
 // be written to the request's response channel and converted into a SystemError
 // returned from the next reader or access call.
-func (c *TChannelConnection) handleError(frame *Frame) {
+func (c *Connection) handleError(frame *Frame) {
 	var errorMessage errorMessage
 	rbuf := typed.NewReadBuffer(frame.SizedPayload())
 	if err := errorMessage.read(rbuf); err != nil {

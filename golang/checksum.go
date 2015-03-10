@@ -51,16 +51,16 @@ func (t ChecksumType) New() Checksum {
 
 // A Checksum calculates a running checksum against a bytestream
 type Checksum interface {
-	// The typecode for this checksum
+	// TypeCode returns the type of this checksum
 	TypeCode() ChecksumType
 
-	// The size of the checksum
+	// Size returns the size of the calculated checksum
 	Size() int
 
-	// Adds bytes to the checksum calculation
+	// Add adds bytes to the checksum calculation
 	Add(b []byte) []byte
 
-	// Calculates the current checksum value
+	// Sum returns the current checksum value
 	Sum() []byte
 }
 
