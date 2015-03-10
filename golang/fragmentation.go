@@ -115,13 +115,13 @@ func (f *outFragment) endChunk() error {
 func (f *outFragment) chunkOpen() bool { return len(f.chunkStart) > 0 }
 
 // Creates a new outFragment around a frame and message, with a running checksum
-func newOutboundFragment(frame *Frame, msg Message, checksum Checksum) (*outFragment, error) {
+func newOutboundFragment(frame *Frame, msg message, checksum Checksum) (*outFragment, error) {
 	f := &outFragment{
 		frame:    frame,
 		checksum: checksum,
 	}
-	f.frame.Header.Id = msg.Id()
-	f.frame.Header.Type = msg.Type()
+	f.frame.Header.ID = msg.ID()
+	f.frame.Header.messageType = msg.messageType()
 
 	wbuf := typed.NewWriteBuffer(f.frame.Payload[:])
 
@@ -316,7 +316,7 @@ type inFragment struct {
 }
 
 // Creates a new inFragment from an incoming frame and an expected message
-func newInboundFragment(frame *Frame, msg Message, checksum Checksum) (*inFragment, error) {
+func newInboundFragment(frame *Frame, msg message, checksum Checksum) (*inFragment, error) {
 	f := &inFragment{
 		frame:    frame,
 		checksum: checksum,

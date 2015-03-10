@@ -182,8 +182,8 @@ type inFragments struct {
 
 type sampleMessage struct{}
 
-func (m *sampleMessage) Id() uint32                      { return 0xDEADBEEF }
-func (m *sampleMessage) Type() MessageType               { return MessageTypeCallReq }
+func (m *sampleMessage) ID() uint32                      { return 0xDEADBEEF }
+func (m *sampleMessage) messageType() messageType        { return messageTypeCallReq }
 func (m *sampleMessage) read(r typed.ReadBuffer) error   { return nil }
 func (m *sampleMessage) write(w typed.WriteBuffer) error { return nil }
 

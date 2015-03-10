@@ -69,7 +69,7 @@ type TChannelConnection struct {
 	stateMut       sync.RWMutex
 	inbound        *inboundCallPipeline
 	outbound       *outboundCallPipeline
-	nextMessageId  uint32
+	nextMessageID  uint32
 	initResCh      chan *Frame
 }
 
@@ -178,12 +178,12 @@ func (c *TChannelConnection) sendInit(ctx context.Context) error {
 		return err
 	}
 
-	initMsgId := c.NextMessageId()
+	initMsgID := c.NextMessageID()
 	c.initResCh = make(chan *Frame)
 
-	req := InitReq{initMessage{id: initMsgId}}
+	req := initReq{initMessage{id: initMsgID}}
 	req.Version = CurrentProtocolVersion
-	req.InitParams = InitParams{
+	req.initParams = initParams{
 		InitParamHostPort:    c.localPeerInfo.HostPort,
 		InitParamProcessName: c.localPeerInfo.ProcessName,
 	}
@@ -193,7 +193,7 @@ func (c *TChannelConnection) sendInit(ctx context.Context) error {
 		return c.connectionError(err)
 	}
 
-	res := InitRes{initMessage{id: initMsgId}}
+	res := initRes{initMessage{id: initMsgID}}
 	err = c.recvMessage(ctx, &res, c.initResCh)
 	c.initResCh = nil
 	if err != nil {
@@ -204,8 +204,8 @@ func (c *TChannelConnection) sendInit(ctx context.Context) error {
 		return c.connectionError(fmt.Errorf("Unsupported protocol version %d from peer", res.Version))
 	}
 
-	c.remotePeerInfo.HostPort = res.InitParams[InitParamHostPort]
-	c.remotePeerInfo.ProcessName = res.InitParams[InitParamProcessName]
+	c.remotePeerInfo.HostPort = res.initParams[InitParamHostPort]
+	c.remotePeerInfo.ProcessName = res.initParams[InitParamProcessName]
 
 	c.withStateLock(func() error {
 		if c.state == connectionWaitingToRecvInitRes {
@@ -227,7 +227,7 @@ func (c *TChannelConnection) handleInitReq(frame *Frame) {
 		return
 	}
 
-	var req InitReq
+	var req initReq
 	rbuf := typed.NewReadBuffer(frame.SizedPayload())
 	if err := req.read(rbuf); err != nil {
 		// TODO(mmihic): Technically probably a protocol error
@@ -241,11 +241,11 @@ func (c *TChannelConnection) handleInitReq(frame *Frame) {
 		return
 	}
 
-	c.remotePeerInfo.HostPort = req.InitParams[InitParamHostPort]
-	c.remotePeerInfo.ProcessName = req.InitParams[InitParamProcessName]
+	c.remotePeerInfo.HostPort = req.initParams[InitParamHostPort]
+	c.remotePeerInfo.ProcessName = req.initParams[InitParamProcessName]
 
-	res := InitRes{initMessage{id: frame.Header.Id}}
-	res.InitParams = InitParams{
+	res := initRes{initMessage{id: frame.Header.ID}}
+	res.initParams = initParams{
 		InitParamHostPort:    c.localPeerInfo.HostPort,
 		InitParamProcessName: c.localPeerInfo.ProcessName,
 	}
@@ -304,7 +304,7 @@ func (c *TChannelConnection) handleInitRes(frame *Frame) {
 }
 
 // Sends a standalone message (typically a control message)
-func (c *TChannelConnection) sendMessage(msg Message) error {
+func (c *TChannelConnection) sendMessage(msg message) error {
 	f, err := MarshalMessage(msg, c.framePool)
 	if err != nil {
 		return nil
@@ -319,7 +319,7 @@ func (c *TChannelConnection) sendMessage(msg Message) error {
 }
 
 // Receives a standalone message (typically a control message)
-func (c *TChannelConnection) recvMessage(ctx context.Context, msg Message, resCh <-chan *Frame) error {
+func (c *TChannelConnection) recvMessage(ctx context.Context, msg message, resCh <-chan *Frame) error {
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -333,8 +333,8 @@ func (c *TChannelConnection) recvMessage(ctx context.Context, msg Message, resCh
 }
 
 // Reserves the next available message id for this connection
-func (c *TChannelConnection) NextMessageId() uint32 {
-	return atomic.AddUint32(&c.nextMessageId, 1)
+func (c *TChannelConnection) NextMessageID() uint32 {
+	return atomic.AddUint32(&c.nextMessageID, 1)
 }
 
 // Handles a connection error
@@ -400,7 +400,7 @@ func (c *TChannelConnection) readFrames() {
 			return
 		}
 
-		c.log.Info("Recvd: id=%d:type=%d:sz=%d", frame.Header.Id, frame.Header.Type, frame.Header.Size)
+		c.log.Info("Recvd: id=%d:type=%d:sz=%d", frame.Header.ID, frame.Header.messageType, frame.Header.Size)
 
 		if _, err := c.conn.Read(frame.SizedPayload()); err != nil {
 			c.connectionError(err)
@@ -409,20 +409,20 @@ func (c *TChannelConnection) readFrames() {
 
 		c.log.Info("Rcvd: %s", hex.EncodeToString(frame.SizedPayload()))
 
-		switch frame.Header.Type {
-		case MessageTypeCallReq:
+		switch frame.Header.messageType {
+		case messageTypeCallReq:
 			c.inbound.handleCallReq(frame)
-		case MessageTypeCallReqContinue:
+		case messageTypeCallReqContinue:
 			c.inbound.handleCallReqContinue(frame)
-		case MessageTypeCallRes:
+		case messageTypeCallRes:
 			c.outbound.handleCallRes(frame)
-		case MessageTypeCallResContinue:
+		case messageTypeCallResContinue:
 			c.outbound.handleCallResContinue(frame)
-		case MessageTypeInitReq:
+		case messageTypeInitReq:
 			c.handleInitReq(frame)
-		case MessageTypeInitRes:
+		case messageTypeInitRes:
 			c.handleInitRes(frame)
-		case MessageTypeError:
+		case messageTypeError:
 			c.handleError(frame)
 		default:
 			// TODO(mmihic): Log and close connection with protocol error
@@ -437,7 +437,7 @@ func (c *TChannelConnection) writeFrames() {
 	for f := range c.sendCh {
 		fhBuf.Reset()
 
-		c.log.Info("Send: id=%d:type=%d:sz=%d", f.Header.Id, f.Header.Type, f.Header.Size)
+		c.log.Info("Send: id=%d:type=%d:sz=%d", f.Header.ID, f.Header.messageType, f.Header.Size)
 		c.log.Info("Send: %s", hex.EncodeToString(f.SizedPayload()))
 
 		if err := f.Header.write(fhBuf); err != nil {
@@ -460,7 +460,7 @@ func (c *TChannelConnection) writeFrames() {
 }
 
 // Creates a new frame around a message
-func MarshalMessage(msg Message, pool FramePool) (*Frame, error) {
+func MarshalMessage(msg message, pool FramePool) (*Frame, error) {
 	f := pool.Get()
 
 	wbuf := typed.NewWriteBuffer(f.Payload[:])
@@ -468,8 +468,8 @@ func MarshalMessage(msg Message, pool FramePool) (*Frame, error) {
 		return nil, err
 	}
 
-	f.Header.Id = msg.Id()
-	f.Header.Type = msg.Type()
+	f.Header.ID = msg.ID()
+	f.Header.messageType = msg.messageType()
 	f.Header.Size = uint16(wbuf.BytesWritten())
 	return f, nil
 }

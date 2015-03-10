@@ -11,116 +11,116 @@ import (
 )
 
 func TestInitReq(t *testing.T) {
-	req := InitReq{
+	req := initReq{
 		initMessage{
 			id:      0xDEADBEEF,
 			Version: 0x02,
-			InitParams: InitParams{
+			initParams: initParams{
 				"lang": "en_US",
 				"tz":   "GMT",
 			},
 		},
 	}
 
-	assert.Equal(t, uint32(0xDEADBEEF), req.Id(), "ids do not match")
-	assert.Equal(t, MessageTypeInitReq, req.Type(), "types do not match")
-	assertRoundTrip(t, &req, &InitReq{initMessage{id: 0xDEADBEEF}})
+	assert.Equal(t, uint32(0xDEADBEEF), req.ID(), "ids do not match")
+	assert.Equal(t, messageTypeInitReq, req.messageType(), "types do not match")
+	assertRoundTrip(t, &req, &initReq{initMessage{id: 0xDEADBEEF}})
 }
 
 func TestInitRes(t *testing.T) {
-	res := InitRes{
+	res := initRes{
 		initMessage{
 			id:      0xDEADBEEF,
 			Version: 0x04,
-			InitParams: InitParams{
+			initParams: initParams{
 				"lang": "en_US",
 				"tz":   "GMT",
 			},
 		},
 	}
 
-	assert.Equal(t, uint32(0xDEADBEEF), res.Id(), "ids do not match")
-	assert.Equal(t, MessageTypeInitRes, res.Type(), "types do not match")
-	assertRoundTrip(t, &res, &InitRes{initMessage{id: 0xDEADBEEF}})
+	assert.Equal(t, uint32(0xDEADBEEF), res.ID(), "ids do not match")
+	assert.Equal(t, messageTypeInitRes, res.messageType(), "types do not match")
+	assertRoundTrip(t, &res, &initRes{initMessage{id: 0xDEADBEEF}})
 }
 
 func TestCallReq(t *testing.T) {
-	r := CallReq{
+	r := callReq{
 		id:         0xDEADBEEF,
 		TimeToLive: time.Second * 45,
 		Tracing: Tracing{
-			TraceId:  294390430934,
-			ParentId: 398348934,
-			SpanId:   12762782,
+			TraceID:  294390430934,
+			ParentID: 398348934,
+			SpanID:   12762782,
 		},
 		TraceFlags: 0x01,
-		Headers: CallHeaders{
+		Headers: callHeaders{
 			"r": "c",
 			"f": "d",
 		},
 		Service: []byte("udr"),
 	}
 
-	assert.Equal(t, uint32(0xDEADBEEF), r.Id())
-	assert.Equal(t, MessageTypeCallReq, r.Type())
-	assertRoundTrip(t, &r, &CallReq{id: 0xDEADBEEF})
+	assert.Equal(t, uint32(0xDEADBEEF), r.ID())
+	assert.Equal(t, messageTypeCallReq, r.messageType())
+	assertRoundTrip(t, &r, &callReq{id: 0xDEADBEEF})
 }
 
 func TestCallReqContinue(t *testing.T) {
-	r := CallReqContinue{
+	r := callReqContinue{
 		id: 0xDEADBEEF,
 	}
 
-	assert.Equal(t, uint32(0xDEADBEEF), r.Id())
-	assert.Equal(t, MessageTypeCallReqContinue, r.Type())
-	assertRoundTrip(t, &r, &CallReqContinue{id: 0xDEADBEEF})
+	assert.Equal(t, uint32(0xDEADBEEF), r.ID())
+	assert.Equal(t, messageTypeCallReqContinue, r.messageType())
+	assertRoundTrip(t, &r, &callReqContinue{id: 0xDEADBEEF})
 }
 
 func TestCallRes(t *testing.T) {
-	r := CallRes{
+	r := callRes{
 		id:           0xDEADBEEF,
-		ResponseCode: ResponseApplicationError,
-		Headers: CallHeaders{
+		ResponseCode: responseApplicationError,
+		Headers: callHeaders{
 			"r": "c",
 			"f": "d",
 		},
 		Tracing: Tracing{
-			TraceId:  294390430934,
-			ParentId: 398348934,
-			SpanId:   12762782,
+			TraceID:  294390430934,
+			ParentID: 398348934,
+			SpanID:   12762782,
 		},
 		TraceFlags: 0x04,
 	}
 
-	assert.Equal(t, uint32(0xDEADBEEF), r.Id())
-	assert.Equal(t, MessageTypeCallRes, r.Type())
-	assertRoundTrip(t, &r, &CallRes{id: 0xDEADBEEF})
+	assert.Equal(t, uint32(0xDEADBEEF), r.ID())
+	assert.Equal(t, messageTypeCallRes, r.messageType())
+	assertRoundTrip(t, &r, &callRes{id: 0xDEADBEEF})
 }
 
 func TestCallResContinue(t *testing.T) {
-	r := CallResContinue{
+	r := callResContinue{
 		id: 0xDEADBEEF,
 	}
 
-	assert.Equal(t, uint32(0xDEADBEEF), r.Id())
-	assert.Equal(t, MessageTypeCallResContinue, r.Type())
-	assertRoundTrip(t, &r, &CallResContinue{id: 0xDEADBEEF})
+	assert.Equal(t, uint32(0xDEADBEEF), r.ID())
+	assert.Equal(t, messageTypeCallResContinue, r.messageType())
+	assertRoundTrip(t, &r, &callResContinue{id: 0xDEADBEEF})
 }
 
 func TestErrorMessage(t *testing.T) {
-	m := ErrorMessage{
-		ErrorCode:         ErrorCodeBusy,
-		OriginalMessageId: 0xDEADBEEF,
-		Message:           "go away",
+	m := errorMessage{
+		errorCode:         ErrorCodeBusy,
+		originalMessageID: 0xDEADBEEF,
+		message:           "go away",
 	}
 
-	assert.Equal(t, MessageTypeError, m.Type())
-	assertRoundTrip(t, &m, &ErrorMessage{})
+	assert.Equal(t, messageTypeError, m.messageType())
+	assertRoundTrip(t, &m, &errorMessage{})
 }
 
-func assertRoundTrip(t *testing.T, expected Message, actual Message) {
+func assertRoundTrip(t *testing.T, expected message, actual message) {
 	w := typed.NewWriteBufferWithSize(1024)
-	require.Nil(t, expected.write(w), fmt.Sprintf("error writing message %s", expected.Type()))
+	require.Nil(t, expected.write(w), fmt.Sprintf("error writing message %s", expected.messageType()))
 
 	var b bytes.Buffer
 	w.FlushTo(&b)
@@ -128,7 +128,7 @@ func assertRoundTrip(t *testing.T, expected Message, actual Message) {
 	r := typed.NewReadBufferWithSize(1024)
 	_, err := r.FillFrom(bytes.NewReader(b.Bytes()), len(b.Bytes()))
 	require.Nil(t, err)
-	require.Nil(t, actual.read(r), fmt.Sprintf("error reading message %s", expected.Type()))
+	require.Nil(t, actual.read(r), fmt.Sprintf("error reading message %s", expected.messageType()))
 
-	assert.Equal(t, expected, actual, fmt.Sprintf("pre- and post-marshal %s do not match", expected.Type()))
+	assert.Equal(t, expected, actual, fmt.Sprintf("pre- and post-marshal %s do not match", expected.messageType()))
 }

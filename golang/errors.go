@@ -47,7 +47,7 @@ func (se SystemError) Error() string {
 }
 
 // Returns the SystemError code, for sending to a peer
-func (se SystemError) ErrorCode() SystemErrorCode {
+func (se SystemError) errorCode() SystemErrorCode {
 	return se.code
 }
 
@@ -55,7 +55,7 @@ func (se SystemError) ErrorCode() SystemErrorCode {
 // get the code directly.  Otherwise treat it as an unexpected error
 func GetSystemErrorCode(err error) SystemErrorCode {
 	if se, ok := err.(SystemError); ok {
-		return se.ErrorCode()
+		return se.errorCode()
 	}
 
 	return ErrorCodeUnexpected

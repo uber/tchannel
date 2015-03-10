@@ -52,10 +52,10 @@ func (p *outboundCallPipeline) beginCall(ctx context.Context, requestID uint32, 
 		id:       requestID,
 		ctx:      ctx,
 		pipeline: p,
-		req: CallReq{
-			id:         reqId,
-			TraceFlags: 0x00,          // TODO(mmihic): Enable tracing based on ctx
-			Headers:    CallHeaders{}, // TODO(mmihic): Format headers etc
+		req: callReq{
+			id:         requestID,
+			TraceFlags: 0x00, // TODO(mmihic): Enable tracing based on ctx
+			Headers:    callHeaders{},
 			Service:    []byte(serviceName),
 			TimeToLive: timeToLive,
 		},
@@ -108,7 +108,7 @@ func (p *outboundCallPipeline) handleCallResContinue(frame *Frame) {
 func (p *outboundCallPipeline) forwardResFrame(frame *Frame) {
 	var resCh chan<- *Frame
 	p.withReqLock(func() error {
-		resCh = p.activeResChs[frame.Header.Id]
+		resCh = p.activeResChs[frame.Header.ID]
 		return nil
 	})
 
@@ -123,15 +123,15 @@ func (p *outboundCallPipeline) forwardResFrame(frame *Frame) {
 	default:
 		// Application isn't reading frames fast enough, kill it off
 		close(resCh)
-		p.outboundCallComplete(frame.Header.Id)
+		p.outboundCallComplete(frame.Header.ID)
 	}
 }
 
 // Handles an error frame for an active request.
-func (p *outboundCallPipeline) handleError(frame *Frame, errorMessage *ErrorMessage) {
-	requestID := errorMessage.OriginalMessageID
+func (p *outboundCallPipeline) handleError(frame *Frame, errorMessage *errorMessage) {
+	requestID := errorMessage.originalMessageID
 	p.log.Warning("Peer %s reported error %d for request %d",
-		p.remotePeerInfo, errorMessage.ErrorCode, requestID)
+		p.remotePeerInfo, errorMessage.errorCode, requestID)
 
 	var resCh chan<- *Frame
 	p.withReqLock(func() error {
@@ -149,7 +149,7 @@ func (p *outboundCallPipeline) handleError(frame *Frame, errorMessage *ErrorMess
 	default:
 		// Can't write to frame channel, most likely the application has stopped reading from it
 		p.log.Warning("Could not enqueue error %s(%s) frame to %d from %s",
-			errorMessage.ErrorCode, errorMessage.Message, requestID, p.remotePeerInfo)
+			errorMessage.errorCode, errorMessage.message, requestID, p.remotePeerInfo)
 		close(resCh)
 		p.outboundCallComplete(requestID)
 	}
@@ -180,7 +180,7 @@ func (c *TChannelConnection) beginCall(ctx context.Context, serviceName string) 
 		return nil, err
 	}
 
-	return c.outbound.beginCall(ctx, c.NextMessageId(), serviceName, c.checksumType)
+	return c.outbound.beginCall(ctx, c.NextMessageID(), serviceName, c.checksumType)
 }
 
 // An OutboundCall is an active call to a remote peer.  A client makes a call by calling BeginCall on the TChannel,
@@ -188,7 +188,7 @@ func (c *TChannelConnection) beginCall(ctx context.Context, serviceName string) 
 // the ReadArg2() and ReadArg3() methods on the Response() object.
 type OutboundCall struct {
 	id                uint32
-	req               CallReq
+	req               callReq
 	checksum          Checksum
 	pipeline          *outboundCallPipeline
 	ctx               context.Context
@@ -267,12 +267,12 @@ func (call *OutboundCall) failed(err error) error {
 func (call *OutboundCall) beginFragment() (*outFragment, error) {
 	frame := call.pipeline.framePool.Get()
 
-	var msg Message
+	var msg message
 	if !call.sentFirstFragment {
 		msg = &call.req
 		call.sentFirstFragment = true
 	} else {
-		msg = &CallReqContinue{id: call.id}
+		msg = &callReqContinue{id: call.id}
 	}
 
 	frag, err := newOutboundFragment(frame, msg, call.checksum)
@@ -300,7 +300,7 @@ func (call *OutboundCall) flushFragment(fragment *outFragment, last bool) error 
 // An OutboundCallResponse is the response to an outbound call
 type OutboundCallResponse struct {
 	id                 uint32
-	res                CallRes
+	res                callRes
 	checksum           Checksum
 	pipeline           *outboundCallPipeline
 	ctx                context.Context
@@ -325,7 +325,7 @@ const (
 // fragment is available, if the first fragment hasn't been received.
 func (call *OutboundCallResponse) ApplicationError() bool {
 	// TODO(mmihic): Wait for first fragment
-	return call.res.ResponseCode == ResponseApplicationError
+	return call.res.ResponseCode == responseApplicationError
 }
 
 // ReadArg2 reads the second argument from the response, blocking until the argument is read or
@@ -375,25 +375,25 @@ func (call *OutboundCallResponse) waitForFragment() (*inFragment, error) {
 		return nil, call.failed(call.ctx.Err())
 
 	case frame := <-call.recvCh:
-		switch frame.Header.Type {
-		case MessageTypeCallRes:
+		switch frame.Header.messageType {
+		case messageTypeCallRes:
 			return call.parseFragment(frame, &call.res)
 
-		case MessageTypeCallResContinue:
-			return call.parseFragment(frame, &CallResContinue{})
+		case messageTypeCallResContinue:
+			return call.parseFragment(frame, &callResContinue{})
 
-		case MessageTypeError:
+		case messageTypeError:
 			// TODO(mmihic): Might want to change the channel to support either a frame
 			// or an error message, and dispatch depending on which is sent.  Would
 			// avoid the need for a double parse
-			var err ErrorMessage
+			var err errorMessage
 			err.read(typed.NewReadBuffer(frame.SizedPayload()))
 			return nil, call.failed(err.AsSystemError())
 
 		default:
 			// TODO(mmihic): Should be treated as a protocol error
 			call.pipeline.log.Warning("Received unexpected message %d for %d from %s",
-				int(frame.Header.Type), frame.Header.Id, call.pipeline.remotePeerInfo)
+				int(frame.Header.messageType), frame.Header.ID, call.pipeline.remotePeerInfo)
 
 			return nil, call.failed(errUnexpectedFragmentType)
 		}
@@ -401,7 +401,7 @@ func (call *OutboundCallResponse) waitForFragment() (*inFragment, error) {
 }
 
 // Parses an incoming fragment frame as a particular message type
-func (call *OutboundCallResponse) parseFragment(frame *Frame, msg Message) (*inFragment, error) {
+func (call *OutboundCallResponse) parseFragment(frame *Frame, msg message) (*inFragment, error) {
 	fragment, err := newInboundFragment(frame, msg, call.checksum)
 	if err != nil {
 		return nil, call.failed(err)
@@ -424,7 +424,7 @@ func (call *OutboundCallResponse) failed(err error) error {
 // be written to the request's response channel and converted into a SystemError
 // returned from the next reader or access call.
 func (c *TChannelConnection) handleError(frame *Frame) {
-	var errorMessage ErrorMessage
+	var errorMessage errorMessage
 	rbuf := typed.NewReadBuffer(frame.SizedPayload())
 	if err := errorMessage.read(rbuf); err != nil {
 		c.log.Warning("Unable to read Error frame from %s: %v", c.remotePeerInfo, err)
@@ -432,8 +432,8 @@ func (c *TChannelConnection) handleError(frame *Frame) {
 		return
 	}
 
-	if errorMessage.ErrorCode == ErrorCodeProtocol {
-		c.log.Warning("Peer %s reported protocol error: %s", c.remotePeerInfo, errorMessage.Message)
+	if errorMessage.errorCode == ErrorCodeProtocol {
+		c.log.Warning("Peer %s reported protocol error: %s", c.remotePeerInfo, errorMessage.message)
 		c.connectionError(errorMessage.AsSystemError())
 		return
 	}

@@ -17,13 +17,13 @@ type FrameHeader struct {
 	Size uint16
 
 	// The type of message represented by the frame
-	Type MessageType
+	messageType messageType
 
 	// Left empty
 	reserved1 byte
 
 	// The id of the message represented by the frame
-	Id uint32
+	ID uint32
 
 	// Left empty
 	reserved [8]byte
@@ -52,13 +52,13 @@ func (fh *FrameHeader) read(r typed.ReadBuffer) error {
 		return NewReadIOError("frame type", err)
 	}
 
-	fh.Type = MessageType(msgType)
+	fh.messageType = messageType(msgType)
 
 	if _, err := r.ReadByte(); err != nil {
 		return NewReadIOError("frame reserved1", err)
 	}
 
-	fh.Id, err = r.ReadUint32()
+	fh.ID, err = r.ReadUint32()
 	if err != nil {
 		return NewReadIOError("frame msg id", err)
 	}
@@ -75,7 +75,7 @@ func (fh *FrameHeader) write(w typed.WriteBuffer) error {
 		return NewWriteIOError("frame size", err)
 	}
 
-	if err := w.WriteByte(byte(fh.Type)); err != nil {
+	if err := w.WriteByte(byte(fh.messageType)); err != nil {
 		return NewWriteIOError("frame type", err)
 	}
 
@@ -83,7 +83,7 @@ func (fh *FrameHeader) write(w typed.WriteBuffer) error {
 		return NewWriteIOError("frame reserved1", err)
 	}
 
-	if err := w.WriteUint32(fh.Id); err != nil {
+	if err := w.WriteUint32(fh.ID); err != nil {
 		return NewWriteIOError("frame msg id", err)
 	}
 

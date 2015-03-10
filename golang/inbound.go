@@ -43,11 +43,11 @@ func newInboundCallPipeline(remotePeerInfo PeerInfo, sendCh chan<- *Frame, handl
 func (p *inboundCallPipeline) handleCallReq(frame *Frame) {
 	reqCh := make(chan *Frame, 512) // TODO(mmihic): Control incoming buffer size
 	err := p.withReqLock(func() error {
-		if p.activeReqChs[frame.Header.Id] != nil {
+		if p.activeReqChs[frame.Header.ID] != nil {
 			return ErrInboundRequestAlreadyActive
 		}
 
-		p.activeReqChs[frame.Header.Id] = reqCh
+		p.activeReqChs[frame.Header.ID] = reqCh
 		return nil
 	})
 
@@ -56,18 +56,18 @@ func (p *inboundCallPipeline) handleCallReq(frame *Frame) {
 		return
 	}
 
-	var callReq CallReq
+	var callReq callReq
 	firstFragment, err := newInboundFragment(frame, &callReq, nil)
 	if err != nil {
 		// TODO(mmihic): Probably want to treat this as a protocol error
 		p.log.Error("Could not decode call req %d from %s: %v",
-			frame.Header.Id, p.remotePeerInfo, err)
+			frame.Header.ID, p.remotePeerInfo, err)
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), callReq.TimeToLive)
 	res := &InboundCallResponse{
-		id:       frame.Header.Id,
+		id:       frame.Header.ID,
 		pipeline: p,
 		state:    inboundCallResponseReadyToWriteArg2,
 		ctx:      ctx,
@@ -77,7 +77,7 @@ func (p *inboundCallPipeline) handleCallReq(frame *Frame) {
 	res.body = newBodyWriter(res)
 
 	call := &InboundCall{
-		id:               frame.Header.Id,
+		id:               frame.Header.ID,
 		pipeline:         p,
 		res:              res,
 		recvCh:           reqCh,
@@ -96,7 +96,7 @@ func (p *inboundCallPipeline) handleCallReq(frame *Frame) {
 func (p *inboundCallPipeline) handleCallReqContinue(frame *Frame) {
 	var reqCh chan<- *Frame
 	p.withReqLock(func() error {
-		reqCh = p.activeReqChs[frame.Header.Id]
+		reqCh = p.activeReqChs[frame.Header.ID]
 		return nil
 	})
 
@@ -111,15 +111,15 @@ func (p *inboundCallPipeline) handleCallReqContinue(frame *Frame) {
 	default:
 		// Application not reading fragments quickly enough; kill off the request
 		// TODO(mmihic): Send down a server busy error frame
-		p.inboundCallComplete(frame.Header.Id)
+		p.inboundCallComplete(frame.Header.ID)
 		close(reqCh)
 	}
 }
 
 // Called when an inbound request has completed (either successfully or due to timeout or error)
-func (p *inboundCallPipeline) inboundCallComplete(messageId uint32) {
+func (p *inboundCallPipeline) inboundCallComplete(messageID uint32) {
 	p.withReqLock(func() error {
-		delete(p.activeReqChs, messageId)
+		delete(p.activeReqChs, messageID)
 		return nil
 	})
 }
@@ -268,7 +268,7 @@ func (call *InboundCall) waitForFragment() (*inFragment, error) {
 		return nil, call.failed(call.ctx.Err())
 
 	case frame := <-call.recvCh:
-		reqContinue := CallReqContinue{id: call.res.id}
+		reqContinue := callReqContinue{id: call.res.id}
 		fragment, err := newInboundFragment(frame, &reqContinue, call.checksum)
 		if err != nil {
 			return nil, call.failed(err)
@@ -309,11 +309,11 @@ func (call *InboundCallResponse) SendSystemError(err error) error {
 	call.state = inboundCallResponseComplete
 
 	// Send the error frame
-	frame, err := MarshalMessage(&ErrorMessage{
+	frame, err := MarshalMessage(&errorMessage{
 		id:                call.id,
-		OriginalMessageId: call.id,
-		ErrorCode:         GetSystemErrorCode(err),
-		Message:           err.Error()}, call.pipeline.framePool)
+		originalMessageID: call.id,
+		errorCode:         GetSystemErrorCode(err),
+		message:           err.Error()}, call.pipeline.framePool)
 
 	if err != nil {
 		// Nothing we can do here
@@ -380,21 +380,20 @@ func (call *InboundCallResponse) failed(err error) error {
 // Begins a new response fragment
 func (call *InboundCallResponse) beginFragment() (*outFragment, error) {
 	frame := call.pipeline.framePool.Get()
-	var msg Message
+	var msg message
 	if !call.startedFirstFragment {
-		responseCode := ResponseOK
+		responseCode := responseOK
 		if call.applicationError {
-			responseCode = ResponseApplicationError
+			responseCode = responseApplicationError
 		}
 
-		msg = &CallRes{
+		msg = &callRes{
 			id:           call.id,
 			ResponseCode: responseCode,
-			Headers:      CallHeaders{},
-			// TODO(mmihic): Tracing
+			Headers:      callHeaders{},
 		}
 	} else {
-		msg = &CallResContinue{id: call.id}
+		msg = &callResContinue{id: call.id}
 	}
 
 	return newOutboundFragment(frame, msg, call.checksum)
