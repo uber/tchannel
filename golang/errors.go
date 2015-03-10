@@ -7,7 +7,7 @@ import (
 
 const (
 	// Message id for protocol level errors
-	InvalidMessageId uint32 = 0xFFFFFFFF
+	InvalidMessageID uint32 = 0xFFFFFFFF
 )
 
 // Recognized system error codes

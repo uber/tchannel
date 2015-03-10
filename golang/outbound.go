@@ -217,7 +217,7 @@ func (call *OutboundCall) Response() *OutboundCallResponse {
 // Writes the operation (arg1) to the call
 func (call *OutboundCall) writeOperation(operation []byte) error {
 	if call.state != outboundCallReadyToWriteArg1 {
-		return call.failed(ErrCallStateMismatch)
+		return call.failed(errCallStateMismatch)
 	}
 
 	if err := call.body.WriteArgument(BytesOutput(operation), false); err != nil {
@@ -231,7 +231,7 @@ func (call *OutboundCall) writeOperation(operation []byte) error {
 // WriteArg2 writes the the second argument part to the request, blocking until the argument is written
 func (call *OutboundCall) WriteArg2(arg Output) error {
 	if call.state != outboundCallReadyToWriteArg2 {
-		return call.failed(ErrCallStateMismatch)
+		return call.failed(errCallStateMismatch)
 	}
 
 	if err := call.body.WriteArgument(arg, false); err != nil {
@@ -245,7 +245,7 @@ func (call *OutboundCall) WriteArg2(arg Output) error {
 // WriteArg3 writes the third argument to the request, blocking until the argument is written
 func (call *OutboundCall) WriteArg3(arg Output) error {
 	if call.state != outboundCallReadyToWriteArg3 {
-		return call.failed(ErrCallStateMismatch)
+		return call.failed(errCallStateMismatch)
 	}
 
 	if err := call.body.WriteArgument(arg, true); err != nil {
@@ -332,7 +332,7 @@ func (call *OutboundCallResponse) ApplicationError() bool {
 // an error/timeout has occurred.
 func (call *OutboundCallResponse) ReadArg2(arg Input) error {
 	if call.state != outboundCallResponseReadyToReadArg2 {
-		return call.failed(ErrCallStateMismatch)
+		return call.failed(errCallStateMismatch)
 	}
 
 	r := newBodyReader(call, false)
@@ -348,7 +348,7 @@ func (call *OutboundCallResponse) ReadArg2(arg Input) error {
 // an error/timeout has occurred.
 func (call *OutboundCallResponse) ReadArg3(arg Input) error {
 	if call.state != outboundCallResponseReadyToReadArg3 {
-		return call.failed(ErrCallStateMismatch)
+		return call.failed(errCallStateMismatch)
 	}
 
 	r := newBodyReader(call, true)
