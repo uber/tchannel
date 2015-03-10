@@ -40,3 +40,6 @@ class SocketConnection(Connection):
 
     def next(self):
         return next(self.reader)
+
+    # Python 3. Yay.
+    __next__ = next
