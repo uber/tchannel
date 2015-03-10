@@ -22,7 +22,7 @@ func TestNoFragmentation(t *testing.T) {
 	// fragment flags(1), checksum type (1), checksum(5), chunk size(2), chunk(5)
 	expectedFrames := typed.CombineBuffers([][]byte{
 		[]byte{0x00, byte(ChecksumTypeCrc32)},
-		NewCrc32Checksum().Add([]byte("Hello")),
+		ChecksumTypeCrc32.New().Add([]byte("Hello")),
 		[]byte{0x00, 0x05},
 		[]byte("Hello")})
 	assertFramesEqual(t, expectedFrames, out.sentFragments, "no fragmentation")

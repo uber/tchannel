@@ -6,12 +6,17 @@ import (
 )
 
 const (
+	// MaxFramePayloadSize is the maximum size of the payload for a single frame
 	MaxFramePayloadSize = math.MaxUint16
-	FrameHeaderSize     = 16
-	MaxFrameSize        = MaxFramePayloadSize + FrameHeaderSize
+
+	// FrameHeaderSize is the size of the header element for a frame
+	FrameHeaderSize = 16
+
+	// MaxFrameSize is the total maximum size for a frame
+	MaxFrameSize = MaxFramePayloadSize + FrameHeaderSize
 )
 
-// Header for frames
+// FrameHeader is the header for a frame, containing the MessageType and size
 type FrameHeader struct {
 	// The size of the frame, not including the header
 	Size uint16
@@ -29,13 +34,16 @@ type FrameHeader struct {
 	reserved [8]byte
 }
 
-// A frame, consisting of a header and a payload
+// A Frame is a header and payload
 type Frame struct {
-	Header  FrameHeader
+	// The header for the frame
+	Header FrameHeader
+
+	// The payload for the frame
 	Payload [MaxFramePayloadSize]byte
 }
 
-// Returns the slice of the payload actually used, as defined by the header
+// SizedPayload returns the slice of the payload actually used, as defined by the header
 func (f *Frame) SizedPayload() []byte {
 	return f.Payload[:f.Header.Size]
 }

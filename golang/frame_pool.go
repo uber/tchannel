@@ -1,6 +1,6 @@
 package tchannel
 
-// Pool for managing and re-using frames
+// A FramePool is a pool for managing and re-using frames
 type FramePool interface {
 	// Retrieves a new frame from the pool
 	Get() *Frame

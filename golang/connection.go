@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 )
 
-// Information about a TChannel peer
+// PeerInfo contains nformation about a TChannel peer
 type PeerInfo struct {
 	// The host and port that can be used to contact the peer, as encoded by net.JoinHostPort
 	HostPort string
@@ -25,6 +25,7 @@ func (p PeerInfo) String() string {
 	return fmt.Sprintf("%s(%s)", p.HostPort, p.ProcessName)
 }
 
+// CurrentProtocolVersion is the current version of the TChannel protocol supported by this stack
 const CurrentProtocolVersion = 0x02
 
 var (

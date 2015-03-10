@@ -199,7 +199,7 @@ func (ch callHeaders) write(w typed.WriteBuffer) error {
 	return nil
 }
 
-// Zipkin tracing info
+// Tracing represents Zipkin-style tracing info
 type Tracing struct {
 	// The outer trace id.  Established at the outermost edge service and propagated through all calls
 	TraceID uint64
