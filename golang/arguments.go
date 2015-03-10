@@ -1,6 +1,7 @@
 package tchannel
 
 import (
+	"encoding/json"
 	"io"
 	"io/ioutil"
 )
@@ -66,4 +67,41 @@ func (arg StreamingInput) ReadFrom(r io.Reader) error {
 		return err
 	}
 	return nil
+}
+
+// JSONInput reads an interface encoded as a JSON object
+type JSONInput struct {
+	data interface{}
+}
+
+func NewJSONInput(data interface{}) Input {
+	return JSONInput{data}
+}
+
+func (in JSONInput) ReadFrom(r io.Reader) error {
+	var bytes BytesInput
+
+	if err := bytes.ReadFrom(r); err != nil {
+		return err
+	}
+
+	return json.Unmarshal([]byte(bytes), in.data)
+}
+
+// JSONOutput writes an interface as an encoded JSON object
+type JSONOutput struct {
+	data interface{}
+}
+
+func NewJSONOutput(data interface{}) Output {
+	return JSONOutput{data}
+}
+
+func (out JSONOutput) WriteTo(w io.Writer) error {
+	bytes, err := json.Marshal(out.data)
+	if err != nil {
+		return err
+	}
+
+	return BytesOutput(bytes).WriteTo(w)
 }
