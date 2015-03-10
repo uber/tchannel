@@ -119,6 +119,32 @@ func TestTimeout(t *testing.T) {
 	assert.Equal(t, context.DeadlineExceeded, err)
 }
 
+func TestFragmentation(t *testing.T) {
+	ch, err := NewChannel(":8072", nil)
+	require.Nil(t, err)
+
+	ch.Register(HandleFunc(echo), "TestService", "echo")
+	go ch.ListenAndHandle()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+	defer cancel()
+
+	arg2 := make([]byte, MaxFramePayloadSize*2)
+	for i := 0; i < len(arg2); i++ {
+		arg2[i] = byte(i&0x0F) + 50
+	}
+
+	arg3 := make([]byte, MaxFramePayloadSize*3)
+	for i := 0; i < len(arg3); i++ {
+		arg3[i] = byte(i&0xF0) + 100
+	}
+
+	respArg2, respArg3, err := sendRecv(ctx, ch, "localhost:8072", "TestService", "echo", arg2, arg3)
+	require.Nil(t, err)
+	assert.Equal(t, arg2, respArg2)
+	assert.Equal(t, arg3, respArg3)
+}
+
 func sendRecv(ctx context.Context, ch *TChannel, hostPort string, serviceName, operation string,
 	arg2, arg3 []byte) ([]byte, []byte, error) {
 
