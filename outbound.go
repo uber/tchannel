@@ -11,7 +11,6 @@ import (
 )
 
 var (
-	ErrArgMismatch             = errors.New("argument mismatch")
 	ErrUnexpectedFragmentType  = errors.New("unexpected message type received on fragment stream")
 	ErrOutboundCallStillActive = errors.New("outbound call still active (possible id wrap?)")
 )
@@ -105,6 +104,7 @@ func (p *outboundCallPipeline) handleCallResContinue(frame *Frame) {
 	p.forwardResFrame(frame)
 }
 
+// Forwards a response frame to the appropriate response handling channel
 func (p *outboundCallPipeline) forwardResFrame(frame *Frame) {
 	var resCh chan<- *Frame
 	p.withReqLock(func() error {
@@ -127,6 +127,7 @@ func (p *outboundCallPipeline) forwardResFrame(frame *Frame) {
 	}
 }
 
+// Handles an error frame for an active request.
 func (p *outboundCallPipeline) handleError(frame *Frame, errorMessage *ErrorMessage) {
 	requestId := errorMessage.OriginalMessageId
 	p.log.Warning("Peer %s reported error %d for request %d",
@@ -154,6 +155,8 @@ func (p *outboundCallPipeline) handleError(frame *Frame, errorMessage *ErrorMess
 	}
 }
 
+// Performs a function with the pipeline's request lock held.  Typically modifies
+// the map of active request channels
 func (p *outboundCallPipeline) withReqLock(f func() error) error {
 	p.reqLock.Lock()
 	defer p.reqLock.Unlock()
@@ -163,7 +166,6 @@ func (p *outboundCallPipeline) withReqLock(f func() error) error {
 
 // Begins a call on a remote service.  Takes an execution context and a target service name, and returns
 // a call object that can be used to write the arguments and wait for the response
-
 // TODO(mmihic): Support options such as argument scheme and retries
 func (c *TChannelConnection) BeginCall(ctx context.Context, serviceName string) (*OutboundCall, error) {
 	if err := c.withStateRLock(func() error {
@@ -204,7 +206,7 @@ type OutboundCall struct {
 type outboundCallState int
 
 const (
-	outboundCallPreWrite outboundCallState = iota
+	outboundCallReadyToWriteArg1 outboundCallState = iota
 	outboundCallReadyToWriteArg2
 	outboundCallReadyToWriteArg3
 	outboundCallSent
@@ -218,8 +220,8 @@ func (call *OutboundCall) Response() *OutboundCallResponse {
 
 // Writes the operation (arg1) to the call
 func (call *OutboundCall) writeOperation(operation []byte) error {
-	if call.state != outboundCallPreWrite {
-		return call.failed(ErrArgMismatch)
+	if call.state != outboundCallReadyToWriteArg1 {
+		return call.failed(ErrCallStateMismatch)
 	}
 
 	if _, err := call.partWriter.Write(operation); err != nil {
@@ -237,7 +239,7 @@ func (call *OutboundCall) writeOperation(operation []byte) error {
 // Writes the second argument part to the request, blocking until the argument is written
 func (call *OutboundCall) WriteArg2(arg Output) error {
 	if call.state != outboundCallReadyToWriteArg2 {
-		return call.failed(ErrArgMismatch)
+		return call.failed(ErrCallStateMismatch)
 	}
 
 	if err := arg.WriteTo(call.partWriter); err != nil {
@@ -255,7 +257,7 @@ func (call *OutboundCall) WriteArg2(arg Output) error {
 // Writes the third argument to the request, blocking until the argument is written
 func (call *OutboundCall) WriteArg3(arg Output) error {
 	if call.state != outboundCallReadyToWriteArg3 {
-		return call.failed(ErrArgMismatch)
+		return call.failed(ErrCallStateMismatch)
 	}
 
 	if err := arg.WriteTo(call.partWriter); err != nil {
@@ -343,7 +345,7 @@ func (call *OutboundCallResponse) ApplicationError() bool {
 // Reads the second argument from the response
 func (call *OutboundCallResponse) ReadArg2(arg Input) error {
 	if call.state != outboundCallResponseReadyToReadArg2 {
-		return call.failed(ErrArgMismatch)
+		return call.failed(ErrCallStateMismatch)
 	}
 
 	r := newMultiPartReader(call, false)
@@ -362,7 +364,7 @@ func (call *OutboundCallResponse) ReadArg2(arg Input) error {
 // Reads the third argument from the response
 func (call *OutboundCallResponse) ReadArg3(arg Input) error {
 	if call.state != outboundCallResponseReadyToReadArg3 {
-		return call.failed(ErrArgMismatch)
+		return call.failed(ErrCallStateMismatch)
 	}
 
 	r := newMultiPartReader(call, true)
@@ -418,6 +420,7 @@ func (call *OutboundCallResponse) waitForFragment() (*inFragment, error) {
 	}
 }
 
+// Parses an incoming fragment frame as a particular message type
 func (call *OutboundCallResponse) parseFragment(frame *Frame, msg Message) (*inFragment, error) {
 	fragment, err := newInboundFragment(frame, msg, call.checksum)
 	if err != nil {
@@ -436,7 +439,10 @@ func (call *OutboundCallResponse) failed(err error) error {
 	return err
 }
 
-// Handles an error coming back from the peer server.
+// Handles an error coming back from the peer server. If the error is a protocol level error, the entire
+// connection will be closed.  If the error is a reqest specific error, it will
+// be written to the request's response channel and converted into a SystemError
+// returned from the next reader or access call.
 func (c *TChannelConnection) handleError(frame *Frame) {
 	var errorMessage ErrorMessage
 	rbuf := typed.NewReadBuffer(frame.SizedPayload())

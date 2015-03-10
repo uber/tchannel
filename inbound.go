@@ -1,21 +1,19 @@
 package tchannel
 
 import (
+	"code.google.com/p/go.net/context"
 	"errors"
+	"github.com/op/go-logging"
 	"io"
 	"io/ioutil"
 	"sync"
-
-	"code.google.com/p/go.net/context"
-	"github.com/op/go-logging"
 )
 
 var (
 	ErrHandlerNotFound = NewSystemError(ErrorCodeBadRequest, "no handler for service and operation")
 
-	ErrInboundCallStateMismatch         = errors.New("inbound call in bad state")
-	ErrInboundCallResponseStateMismatch = errors.New("inbound call response in bad state")
-	ErrInboundRequestAlreadyActive      = errors.New("inbound request is already active; possible duplicate client id")
+	ErrCallStateMismatch           = errors.New("attempting to read / write outside of expected state")
+	ErrInboundRequestAlreadyActive = errors.New("inbound request is already active; possible duplicate client id")
 )
 
 // Pipeline for handling incoming requests for service
@@ -62,7 +60,7 @@ func (p *inboundCallPipeline) handleCallReq(frame *Frame) {
 	var callReq CallReq
 	firstFragment, err := newInboundFragment(frame, &callReq, nil)
 	if err != nil {
-		// TODO(mmihic): Probably protocol error
+		// TODO(mmihic): Probably want to treat this as a protocol error
 		p.log.Error("Could not decode call req %d from %s: %v",
 			frame.Header.Id, p.remotePeerInfo, err)
 		return
@@ -89,7 +87,7 @@ func (p *inboundCallPipeline) handleCallReq(frame *Frame) {
 		curFragment:      firstFragment,
 		recvLastFragment: firstFragment.last,
 		serviceName:      string(callReq.Service),
-		state:            inboundCallPreRead,
+		state:            inboundCallReadyToReadArg1,
 	}
 
 	go p.dispatchInbound(call)
@@ -179,7 +177,7 @@ type InboundCall struct {
 type inboundCallState int
 
 const (
-	inboundCallPreRead inboundCallState = iota
+	inboundCallReadyToReadArg1 inboundCallState = iota
 	inboundCallReadyToReadArg2
 	inboundCallReadyToReadArg3
 	inboundCallAllRead
@@ -198,8 +196,8 @@ func (call *InboundCall) Operation() []byte {
 
 // Reads the entire operation name (arg1) from the request stream.
 func (call *InboundCall) readOperation() error {
-	if call.state != inboundCallPreRead {
-		return call.failed(ErrInboundCallStateMismatch)
+	if call.state != inboundCallReadyToReadArg1 {
+		return call.failed(ErrCallStateMismatch)
 	}
 
 	r := newMultiPartReader(call, false)
@@ -220,7 +218,7 @@ func (call *InboundCall) readOperation() error {
 // Reads the second argument from the inbound call.
 func (call *InboundCall) ReadArg2(arg Input) error {
 	if call.state != inboundCallReadyToReadArg2 {
-		return call.failed(ErrInboundCallStateMismatch)
+		return call.failed(ErrCallStateMismatch)
 	}
 
 	r := newMultiPartReader(call, false)
@@ -239,7 +237,7 @@ func (call *InboundCall) ReadArg2(arg Input) error {
 // Reads the third argument from the inbound call.
 func (call *InboundCall) ReadArg3(arg Input) error {
 	if call.state != inboundCallReadyToReadArg3 {
-		return call.failed(ErrInboundCallStateMismatch)
+		return call.failed(ErrCallStateMismatch)
 	}
 
 	r := newMultiPartReader(call, true)
@@ -349,7 +347,7 @@ func (call *InboundCallResponse) SendSystemError(err error) error {
 // Marks the response as being an application error.  Must be marked before any arguments are begun
 func (call *InboundCallResponse) SetApplicationError() error {
 	if call.state != inboundCallResponseReadyToWriteArg2 {
-		return ErrInboundCallResponseStateMismatch
+		return ErrCallStateMismatch
 	}
 
 	call.applicationError = true
@@ -359,9 +357,10 @@ func (call *InboundCallResponse) SetApplicationError() error {
 // Writes the second argument in the response
 func (call *InboundCallResponse) WriteArg2(arg Output) error {
 	if call.state != inboundCallResponseReadyToWriteArg2 {
-		return call.failed(ErrInboundCallResponseStateMismatch)
+		return call.failed(ErrCallStateMismatch)
 	}
 
+	// TODO: consider pushing this process down to the part writer
 	if err := arg.WriteTo(call.partWriter); err != nil {
 		return call.failed(err)
 	}
@@ -377,7 +376,7 @@ func (call *InboundCallResponse) WriteArg2(arg Output) error {
 // Writes the third argument in the resonose
 func (call *InboundCallResponse) WriteArg3(arg Output) error {
 	if call.state != inboundCallResponseReadyToWriteArg3 {
-		return call.failed(ErrInboundCallResponseStateMismatch)
+		return call.failed(ErrCallStateMismatch)
 	}
 
 	if err := arg.WriteTo(call.partWriter); err != nil {
@@ -428,19 +427,9 @@ func (call *InboundCallResponse) flushFragment(f *outFragment, last bool) error 
 	case call.pipeline.sendCh <- f.finish(last):
 		return nil
 	default:
-		// TODO(mmihic): Probably need to abort the whole thing
+		// TODO(mmihic): Probably need to abort the whole request
 		return ErrSendBufferFull
 	}
-}
-
-// Wrapper around a context and cancel object
-type inboundCallContext struct {
-	ctx    context.Context
-	cancel context.CancelFunc
-}
-
-func (ctx inboundCallContext) Cancel() {
-	ctx.cancel()
 }
 
 // Manages handlers
