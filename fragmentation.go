@@ -10,14 +10,15 @@ import (
 )
 
 var (
-	ErrTooLarge                   = errors.New("impl error, data exceeds remaining fragment size")
-	ErrMismatchedChecksumTypes    = errors.New("peer sent a different checksum type for fragment")
-	ErrMismatchedChecksum         = errors.New("local checksum differs from peer")
-	ErrDataLeftover               = errors.New("more data remaining in argument")
-	ErrChunkAlreadyOpen           = errors.New("impl error, beginChunk called with an already open chunk")
-	ErrNoOpenChunk                = errors.New("impl error, writeChunkData or endChunk called with no open chunk")
-	ErrWriteAfterComplete         = errors.New("attempted to write to a stream after the last fragment sent")
-	ErrAlignedAtEndOfOpenFragment = errors.New("impl error; align-at-end of open fragment")
+	ErrMismatchedChecksumTypes = errors.New("peer sent a different checksum type for fragment")
+	ErrWriteAfterComplete      = errors.New("attempted to write to a stream after the last fragment sent")
+	ErrMismatchedChecksum      = errors.New("local checksum differs from peer")
+	ErrDataLeftover            = errors.New("more data remaining in argument")
+
+	errTooLarge                   = errors.New("impl error, data exceeds remaining fragment size")
+	errAlignedAtEndOfOpenFragment = errors.New("impl error; align-at-end of open fragment")
+	errNoOpenChunk                = errors.New("impl error, writeChunkData or endChunk called with no open chunk")
+	errChunkAlreadyOpen           = errors.New("impl error, beginChunk called with an already open chunk")
 )
 
 const (
@@ -61,11 +62,11 @@ func (f *outFragment) finish(last bool) *Frame {
 // Writes data for a chunked part into the fragment.  The data must fit into the fragment
 func (f *outFragment) writeChunkData(b []byte) (int, error) {
 	if len(b) > len(f.remaining) {
-		return 0, NewWriteIOError("fragment-chunk-data", ErrTooLarge)
+		return 0, errTooLarge
 	}
 
 	if len(f.chunkStart) == 0 {
-		return 0, NewWriteIOError("fragment-chunk-data", ErrNoOpenChunk)
+		return 0, errNoOpenChunk
 	}
 
 	copy(f.remaining, b)
@@ -83,7 +84,7 @@ func (f *outFragment) canFitNewChunk() bool {
 // Begins a new chunk at the current location in the fragment
 func (f *outFragment) beginChunk() error {
 	if f.chunkOpen() {
-		return NewWriteIOError("fragment-chunk-start", ErrChunkAlreadyOpen)
+		return errChunkAlreadyOpen
 	}
 
 	f.chunkStart = f.remaining[0:2]
@@ -95,7 +96,7 @@ func (f *outFragment) beginChunk() error {
 // Ends a previously opened chunk, recording the chunk size
 func (f *outFragment) endChunk() error {
 	if !f.chunkOpen() {
-		return NewWriteIOError("fragment-chunk-end", ErrNoOpenChunk)
+		return errNoOpenChunk
 	}
 
 	binary.BigEndian.PutUint16(f.chunkStart, uint16(f.chunkSize))
@@ -120,17 +121,17 @@ func newOutboundFragment(frame *Frame, msg Message, checksum Checksum) (*outFrag
 
 	// Reserve fragment flag
 	if err := wbuf.WriteByte(0); err != nil {
-		return nil, NewWriteIOError("fragment-flag", err)
+		return nil, err
 	}
 
 	// Write message specific header
 	if err := msg.write(wbuf); err != nil {
-		return nil, NewWriteIOError("fragment-message-header", err)
+		return nil, err
 	}
 
 	// Write checksum type and reserve bytes needed
 	if err := wbuf.WriteByte(byte(f.checksum.TypeCode())); err != nil {
-		return nil, NewWriteIOError("fragment-checksum-type", err)
+		return nil, err
 	}
 
 	f.remaining = f.frame.Payload[wbuf.CurrentPos():]
@@ -273,7 +274,7 @@ func (w *multiPartWriter) endPart(last bool) error {
 		// The last part chunk aligned with the end of a fragment boundary - send another fragment
 		// containing an empty chunk so readers know the part is complete
 		if w.fragment != nil {
-			return ErrAlignedAtEndOfOpenFragment
+			return errAlignedAtEndOfOpenFragment
 		}
 
 		var err error
@@ -321,20 +322,20 @@ func newInboundFragment(frame *Frame, msg Message, checksum Checksum) (*inFragme
 	// Fragment flags
 	flags, err := rbuf.ReadByte()
 	if err != nil {
-		return nil, NewReadIOError("fragment-flags", err)
+		return nil, err
 	}
 
 	f.last = (flags & flagMoreFragments) == 0
 
 	// Message header
 	if err := msg.read(rbuf); err != nil {
-		return nil, NewReadIOError("fragment-msg-header", err)
+		return nil, err
 	}
 
 	// Read checksum type and bytes
 	checksumType, err := rbuf.ReadByte()
 	if err != nil {
-		return nil, NewReadIOError("fragment-checksum-type", err)
+		return nil, err
 	}
 
 	if f.checksum == nil {
@@ -345,19 +346,19 @@ func newInboundFragment(frame *Frame, msg Message, checksum Checksum) (*inFragme
 
 	peerChecksum, err := rbuf.ReadBytes(f.checksum.TypeCode().ChecksumSize())
 	if err != nil {
-		return nil, NewReadIOError("fragment-checksum", err)
+		return nil, err
 	}
 
 	// Slice the remainder into chunks and confirm checksum
 	for rbuf.BytesRemaining() > 0 {
 		chunkSize, err := rbuf.ReadUint16()
 		if err != nil {
-			return nil, NewReadIOError("chunk-size", err)
+			return nil, err
 		}
 
 		chunkBytes, err := rbuf.ReadBytes(int(chunkSize))
 		if err != nil {
-			return nil, NewReadIOError("input-chunk-data", err)
+			return nil, err
 		}
 
 		f.chunks = append(f.chunks, chunkBytes)
