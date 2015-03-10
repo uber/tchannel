@@ -7,6 +7,7 @@ import time
 import tornado.iostream
 import tornado.ioloop
 
+from options import get_args
 from tchannel.tornado.connection import TornadoConnection
 
 
@@ -36,11 +37,12 @@ class MyClient(object):
 
 @tornado.gen.coroutine
 def main():
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8888
+    args = get_args()
+
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     stream = tornado.iostream.IOStream(sock)
-    yield stream.connect(('localhost', port))
-    print("Connected to port %d..." % port)
+    yield stream.connect((args.host, args.port))
+    print("Connected to port %d..." % args.port)
     client = MyClient(stream, sock)
 
     yield client.initiate_handshake()

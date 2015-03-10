@@ -5,6 +5,7 @@ import sys
 import tornado.ioloop
 import tornado.tcpserver
 
+from options import get_args
 from tchannel.tornado.connection import TornadoConnection
 
 
@@ -29,20 +30,19 @@ class MyServer(tornado.tcpserver.TCPServer):
         )
         connection.handle_calls(self.handle_call)
 
-    def handle_call(self, data, connection):
+    def handle_call(self, context, connection):
         """Handle a TChannel CALL_REQ message."""
-        if not data:
+        if not context:
             print("All done with connection")
             return
 
-        frame, message = data
-        print("Received message: %s" % message)
+        print("Received message: %s" % context.message)
         connection.handle_calls(self.handle_call)
 
 
 if __name__ == '__main__':
-    port = 8888
+    args = get_args()
     server = MyServer()
-    server.listen(port)
-    print("Listening on port %d..." % port)
+    server.listen(args.port)
+    print("Listening on port %d..." % args.port)
     tornado.ioloop.IOLoop.instance().start()

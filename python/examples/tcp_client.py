@@ -5,6 +5,7 @@ import socket
 import sys
 import time
 
+from options import get_args
 from tchannel.socket import SocketConnection
 
 
@@ -28,10 +29,11 @@ class MyClient(object):
 
 
 if __name__ == '__main__':
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8888
+    args = get_args()
+
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect(('localhost', port))
-    print("Connected to port %d..." % port)
+    sock.connect((args.host, args.port))
+    print("Connected to port %d..." % args.port)
     client = MyClient(sock)
 
     N = 10000
