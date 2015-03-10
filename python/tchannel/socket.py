@@ -37,3 +37,6 @@ class SocketConnection(Connection):
     def await(self, callback):
         """Decode a full message and return"""
         callback(next(self.reader))
+
+    def next(self):
+        return next(self.reader)
