@@ -146,6 +146,6 @@ def test_ping_pong(server_manager):
         resp = tmessage.PingResponseMessage()
         server_manager.expect_ping().and_return(resp)
 
-        for i in xrange(1000):
+        for i in range(1000):
             conn.ping()
             assert resp == next(conn).message
