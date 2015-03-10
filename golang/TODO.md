@@ -27,7 +27,6 @@ h1. Cleanup
 [ ] Pass remotePeerInfo into inbound and outbound pipelines, once handshaking is complete.  Alternately don't create those pipelines until after 
 [ ] Benchmark
 [ ] Review and edit godocs 
-[ ] Add README.md
 
 h1. Tests
 
