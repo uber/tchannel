@@ -35,9 +35,9 @@ class MyHandler(SocketServer.BaseRequestHandler):
         # Connection is automatically closed when this function returns
         print("Closing connection to %s:%d" % self.client_address)
 
-    def handle_call(self, context, message, connection):
+    def handle_call(self, context, connection):
         """Handle a TChannel CALL_REQ message."""
-        print("Received message: %s" % message)
+        print("Received message: %s" % context.message)
 
 
 if __name__ == '__main__':
