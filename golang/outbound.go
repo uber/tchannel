@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	ErrUnexpectedFragmentType  = errors.New("unexpected message type received on fragment stream")
-	ErrOutboundCallStillActive = errors.New("outbound call still active (possible id wrap?)")
+	errUnexpectedFragmentType  = errors.New("unexpected message type received on fragment stream")
+	errOutboundCallStillActive = errors.New("outbound call still active (possible id wrap?)")
 )
 
 // Pipeline for sending outgoing requests for service to a peer
@@ -36,7 +36,7 @@ func newOutboundCallPipeline(remotePeerInfo PeerInfo, sendCh chan<- *Frame,
 	}
 }
 
-func (p *outboundCallPipeline) beginCall(ctx context.Context, reqId uint32, serviceName string,
+func (p *outboundCallPipeline) beginCall(ctx context.Context, requestID uint32, serviceName string,
 	checksumType ChecksumType) (*OutboundCall, error) {
 	deadline, ok := ctx.Deadline()
 	if !ok {
@@ -49,7 +49,7 @@ func (p *outboundCallPipeline) beginCall(ctx context.Context, reqId uint32, serv
 	}
 
 	call := &OutboundCall{
-		id:       reqId,
+		id:       requestID,
 		ctx:      ctx,
 		pipeline: p,
 		req: CallReq{
@@ -72,7 +72,7 @@ func (p *outboundCallPipeline) beginCall(ctx context.Context, reqId uint32, serv
 
 	if err := p.withReqLock(func() error {
 		if p.activeResChs[call.id] != nil {
-			return ErrOutboundCallStillActive
+			return errOutboundCallStillActive
 		}
 
 		p.activeResChs[call.id] = call.recvCh
@@ -86,9 +86,9 @@ func (p *outboundCallPipeline) beginCall(ctx context.Context, reqId uint32, serv
 }
 
 // Marks an outbound call as being complete
-func (p *outboundCallPipeline) outboundCallComplete(messageId uint32) {
+func (p *outboundCallPipeline) outboundCallComplete(messageID uint32) {
 	p.withReqLock(func() error {
-		delete(p.activeResChs, messageId)
+		delete(p.activeResChs, messageID)
 		return nil
 	})
 }
@@ -129,18 +129,18 @@ func (p *outboundCallPipeline) forwardResFrame(frame *Frame) {
 
 // Handles an error frame for an active request.
 func (p *outboundCallPipeline) handleError(frame *Frame, errorMessage *ErrorMessage) {
-	requestId := errorMessage.OriginalMessageId
+	requestID := errorMessage.OriginalMessageID
 	p.log.Warning("Peer %s reported error %d for request %d",
-		p.remotePeerInfo, errorMessage.ErrorCode, requestId)
+		p.remotePeerInfo, errorMessage.ErrorCode, requestID)
 
 	var resCh chan<- *Frame
 	p.withReqLock(func() error {
-		resCh = p.activeResChs[requestId]
+		resCh = p.activeResChs[requestID]
 		return nil
 	})
 
 	if resCh == nil {
-		p.log.Warning("Received error for non-existent req %d from %s", requestId, p.remotePeerInfo)
+		p.log.Warning("Received error for non-existent req %d from %s", requestID, p.remotePeerInfo)
 		return
 	}
 
@@ -149,9 +149,9 @@ func (p *outboundCallPipeline) handleError(frame *Frame, errorMessage *ErrorMess
 	default:
 		// Can't write to frame channel, most likely the application has stopped reading from it
 		p.log.Warning("Could not enqueue error %s(%s) frame to %d from %s",
-			errorMessage.ErrorCode, errorMessage.Message, requestId, p.remotePeerInfo)
+			errorMessage.ErrorCode, errorMessage.Message, requestID, p.remotePeerInfo)
 		close(resCh)
-		p.outboundCallComplete(requestId)
+		p.outboundCallComplete(requestID)
 	}
 }
 
@@ -164,10 +164,7 @@ func (p *outboundCallPipeline) withReqLock(f func() error) error {
 	return f()
 }
 
-// Begins a call on a remote service.  Takes an execution context and a target service name, and returns
-// a call object that can be used to write the arguments and wait for the response
-// TODO(mmihic): Support options such as argument scheme and retries
-func (c *TChannelConnection) BeginCall(ctx context.Context, serviceName string) (*OutboundCall, error) {
+func (c *TChannelConnection) beginCall(ctx context.Context, serviceName string) (*OutboundCall, error) {
 	if err := c.withStateRLock(func() error {
 		switch c.state {
 		case connectionActive, connectionStartClose, connectionInboundClosed:
@@ -186,10 +183,9 @@ func (c *TChannelConnection) BeginCall(ctx context.Context, serviceName string) 
 	return c.outbound.beginCall(ctx, c.NextMessageId(), serviceName, c.checksumType)
 }
 
-// A call to a remote peer.  A client makes a call by calling BeginCall on the TChannel, writing
-// argument content via the writers returned from BeginArg1(), BeginArg2(), BeginArg3(), and finally
-// calling Send().  Send() returns an OutboundCallResponse that can be used to wait for and read
-// the response content.
+// An OutboundCall is an active call to a remote peer.  A client makes a call by calling BeginCall on the TChannel,
+// writing argument content via WriteArg2() and WriteArg3(), and then reading reading response data via
+// the ReadArg2() and ReadArg3() methods on the Response() object.
 type OutboundCall struct {
 	id                uint32
 	req               CallReq
@@ -213,7 +209,7 @@ const (
 	outboundCallError
 )
 
-// Provides access to the response object
+// Response provides access to the call's response object, which can be used to read response arguments
 func (call *OutboundCall) Response() *OutboundCallResponse {
 	return call.res
 }
@@ -232,7 +228,7 @@ func (call *OutboundCall) writeOperation(operation []byte) error {
 	return nil
 }
 
-// Writes the second argument part to the request, blocking until the argument is written
+// WriteArg2 writes the the second argument part to the request, blocking until the argument is written
 func (call *OutboundCall) WriteArg2(arg Output) error {
 	if call.state != outboundCallReadyToWriteArg2 {
 		return call.failed(ErrCallStateMismatch)
@@ -246,7 +242,7 @@ func (call *OutboundCall) WriteArg2(arg Output) error {
 	return nil
 }
 
-// Writes the third argument to the request, blocking until the argument is written
+// WriteArg3 writes the third argument to the request, blocking until the argument is written
 func (call *OutboundCall) WriteArg3(arg Output) error {
 	if call.state != outboundCallReadyToWriteArg3 {
 		return call.failed(ErrCallStateMismatch)
@@ -301,7 +297,7 @@ func (call *OutboundCall) flushFragment(fragment *outFragment, last bool) error 
 	}
 }
 
-// Response to an outbound call
+// An OutboundCallResponse is the response to an outbound call
 type OutboundCallResponse struct {
 	id                 uint32
 	res                CallRes
@@ -323,13 +319,17 @@ const (
 	outboundCallResponseComplete
 )
 
-// if true, the call resulted in an application level error
+// ApplicationError returns true if the call resulted in an application level error
+// TODO(mmihic): In current implementation, you must have called ReadArg2 before this
+// method returns the proper value.  We should instead have this block until the first
+// fragment is available, if the first fragment hasn't been received.
 func (call *OutboundCallResponse) ApplicationError() bool {
 	// TODO(mmihic): Wait for first fragment
 	return call.res.ResponseCode == ResponseApplicationError
 }
 
-// Reads the second argument from the response
+// ReadArg2 reads the second argument from the response, blocking until the argument is read or
+// an error/timeout has occurred.
 func (call *OutboundCallResponse) ReadArg2(arg Input) error {
 	if call.state != outboundCallResponseReadyToReadArg2 {
 		return call.failed(ErrCallStateMismatch)
@@ -344,7 +344,8 @@ func (call *OutboundCallResponse) ReadArg2(arg Input) error {
 	return nil
 }
 
-// Reads the third argument from the response
+// ReadArg3 reads the third argument from the response, blocking until the argument is read or
+// an error/timeout has occurred.
 func (call *OutboundCallResponse) ReadArg3(arg Input) error {
 	if call.state != outboundCallResponseReadyToReadArg3 {
 		return call.failed(ErrCallStateMismatch)
@@ -394,7 +395,7 @@ func (call *OutboundCallResponse) waitForFragment() (*inFragment, error) {
 			call.pipeline.log.Warning("Received unexpected message %d for %d from %s",
 				int(frame.Header.Type), frame.Header.Id, call.pipeline.remotePeerInfo)
 
-			return nil, call.failed(ErrUnexpectedFragmentType)
+			return nil, call.failed(errUnexpectedFragmentType)
 		}
 	}
 }

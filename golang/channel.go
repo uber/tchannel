@@ -76,12 +76,14 @@ func NewChannel(hostPort string, opts *TChannelOptions) (*TChannel, error) {
 	return ch, nil
 }
 
-// Registers a handler for a service+operation pair
+// Register regsters a handler for a service+operation pair
 func (ch *TChannel) Register(h Handler, serviceName, operationName string) {
 	ch.handlers.register(h, serviceName, operationName)
 }
 
-// Begins a new call to a remote peer
+// BeginCall starts a new call to a remote peer, returning an OutboundCall that can
+// be used to write the arguments of the call
+// TODO(mmihic): Support CallOptions such as format, request specific checksums, retries, etc
 func (ch *TChannel) BeginCall(ctx context.Context, hostPort,
 	serviceName, operationName string) (*OutboundCall, error) {
 	// TODO(mmihic): Keep-alive, manage pools, use existing inbound if possible, all that jazz
@@ -99,7 +101,7 @@ func (ch *TChannel) BeginCall(ctx context.Context, hostPort,
 		return nil, err
 	}
 
-	call, err := conn.BeginCall(ctx, serviceName)
+	call, err := conn.beginCall(ctx, serviceName)
 	if err != nil {
 		return nil, err
 	}

@@ -18,9 +18,10 @@ type Output interface {
 	WriteTo(w io.Writer) error
 }
 
-// Outputs a set of bytes to a message
+// A BytesOutput writes a byte slice as a call argument
 type BytesOutput []byte
 
+// Writes out the byte stream
 func (out BytesOutput) WriteTo(w io.Writer) error {
 	if _, err := w.Write(out); err != nil {
 		return err
@@ -29,9 +30,10 @@ func (out BytesOutput) WriteTo(w io.Writer) error {
 	return nil
 }
 
-// Reads in an argument as a set of bytes
+// A BytesInput reads an entire call argument into a byte slice
 type BytesInput []byte
 
+// Reads the call argument into the byte slice
 func (in *BytesInput) ReadFrom(r io.Reader) error {
 	var err error
 	if *in, err = ioutil.ReadAll(r); err != nil && err != io.EOF {
@@ -46,8 +48,10 @@ type StreamingOutput struct {
 	r io.Reader
 }
 
+// Creates a new StreamingOutput around an io.Reader
 func NewStreamingOutput(r io.Reader) Output { return StreamingOutput{r} }
 
+// Streams the contents of the io.Reader to the output
 func (out StreamingOutput) WriteTo(w io.Writer) error {
 	if _, err := io.Copy(w, out.r); err != nil && err != io.EOF {
 		return err
@@ -60,8 +64,10 @@ type StreamingInput struct {
 	w io.Writer
 }
 
+// Creates a new StreamingInput around an io.Writer
 func NewStreamingInput(w io.Writer) Input { return StreamingInput{w} }
 
+// Streams the contents of an argument to the output io.Writer
 func (in StreamingInput) ReadFrom(r io.Reader) error {
 	if _, err := io.Copy(in.w, r); err != nil && err != io.EOF {
 		return err
@@ -74,8 +80,10 @@ type JSONInput struct {
 	data interface{}
 }
 
+// Creates a new JSONInput around an arbitrary data interface
 func NewJSONInput(data interface{}) Input { return JSONInput{data} }
 
+// Reads the json content from the argument
 func (in JSONInput) ReadFrom(r io.Reader) error {
 	var bytes BytesInput
 
@@ -91,8 +99,10 @@ type JSONOutput struct {
 	data interface{}
 }
 
+// Creates a new JSONOutput around an arbitrary data interface
 func NewJSONOutput(data interface{}) Output { return JSONOutput{data} }
 
+// Writes the data to the call argument as json format
 func (out JSONOutput) WriteTo(w io.Writer) error {
 	bytes, err := json.Marshal(out.data)
 	if err != nil {
