@@ -5,7 +5,6 @@ import (
 	"errors"
 	"github.com/op/go-logging"
 	"io"
-	"io/ioutil"
 	"sync"
 )
 
@@ -201,12 +200,9 @@ func (call *InboundCall) readOperation() error {
 	}
 
 	r := newMultiPartReader(call, false)
-	arg1, err := ioutil.ReadAll(r)
-	if err != nil {
-		return call.failed(err)
-	}
 
-	if err := r.endPart(); err != nil {
+	var arg1 BytesInput
+	if err := r.ReadPart(&arg1, false); err != nil {
 		return call.failed(err)
 	}
 
@@ -222,11 +218,7 @@ func (call *InboundCall) ReadArg2(arg Input) error {
 	}
 
 	r := newMultiPartReader(call, false)
-	if err := arg.ReadFrom(r); err != nil {
-		return call.failed(err)
-	}
-
-	if err := r.endPart(); err != nil {
+	if err := r.ReadPart(arg, false); err != nil {
 		return call.failed(err)
 	}
 
@@ -241,11 +233,7 @@ func (call *InboundCall) ReadArg3(arg Input) error {
 	}
 
 	r := newMultiPartReader(call, true)
-	if err := arg.ReadFrom(r); err != nil {
-		return call.failed(err)
-	}
-
-	if err := r.endPart(); err != nil {
+	if err := r.ReadPart(arg, true); err != nil {
 		return call.failed(err)
 	}
 
@@ -360,12 +348,7 @@ func (call *InboundCallResponse) WriteArg2(arg Output) error {
 		return call.failed(ErrCallStateMismatch)
 	}
 
-	// TODO: consider pushing this process down to the part writer
-	if err := arg.WriteTo(call.partWriter); err != nil {
-		return call.failed(err)
-	}
-
-	if err := call.partWriter.endPart(false); err != nil {
+	if err := call.partWriter.WritePart(arg, false); err != nil {
 		return call.failed(err)
 	}
 
@@ -379,11 +362,7 @@ func (call *InboundCallResponse) WriteArg3(arg Output) error {
 		return call.failed(ErrCallStateMismatch)
 	}
 
-	if err := arg.WriteTo(call.partWriter); err != nil {
-		return call.failed(err)
-	}
-
-	if err := call.partWriter.endPart(true); err != nil {
+	if err := call.partWriter.WritePart(arg, true); err != nil {
 		return call.failed(err)
 	}
 

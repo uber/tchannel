@@ -224,11 +224,7 @@ func (call *OutboundCall) writeOperation(operation []byte) error {
 		return call.failed(ErrCallStateMismatch)
 	}
 
-	if _, err := call.partWriter.Write(operation); err != nil {
-		return call.failed(err)
-	}
-
-	if err := call.partWriter.endPart(false); err != nil {
+	if err := call.partWriter.WritePart(BytesOutput(operation), false); err != nil {
 		return call.failed(err)
 	}
 
@@ -242,11 +238,7 @@ func (call *OutboundCall) WriteArg2(arg Output) error {
 		return call.failed(ErrCallStateMismatch)
 	}
 
-	if err := arg.WriteTo(call.partWriter); err != nil {
-		return call.failed(err)
-	}
-
-	if err := call.partWriter.endPart(false); err != nil {
+	if err := call.partWriter.WritePart(arg, false); err != nil {
 		return call.failed(err)
 	}
 
@@ -260,15 +252,10 @@ func (call *OutboundCall) WriteArg3(arg Output) error {
 		return call.failed(ErrCallStateMismatch)
 	}
 
-	if err := arg.WriteTo(call.partWriter); err != nil {
+	if err := call.partWriter.WritePart(arg, true); err != nil {
 		return call.failed(err)
 	}
 
-	if err := call.partWriter.endPart(true); err != nil {
-		return call.failed(err)
-	}
-
-	call.partWriter = nil
 	call.state = outboundCallSent
 	return nil
 }
@@ -349,12 +336,8 @@ func (call *OutboundCallResponse) ReadArg2(arg Input) error {
 	}
 
 	r := newMultiPartReader(call, false)
-	if err := arg.ReadFrom(r); err != nil {
-		return call.failed(err)
-	}
-
-	if err := r.endPart(); err != nil {
-		return call.failed(err)
+	if err := r.ReadPart(arg, false); err != nil {
+		return err
 	}
 
 	call.state = outboundCallResponseReadyToReadArg3
@@ -368,11 +351,7 @@ func (call *OutboundCallResponse) ReadArg3(arg Input) error {
 	}
 
 	r := newMultiPartReader(call, true)
-	if err := arg.ReadFrom(r); err != nil {
-		return call.failed(err)
-	}
-
-	if err := r.endPart(); err != nil {
+	if err := r.ReadPart(arg, true); err != nil {
 		return call.failed(err)
 	}
 

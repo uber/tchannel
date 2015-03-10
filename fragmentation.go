@@ -168,6 +168,15 @@ func newMultiPartWriter(ch outFragmentChannel) *multiPartWriter {
 	return &multiPartWriter{fragments: ch}
 }
 
+// Writes an entire part
+func (w *multiPartWriter) WritePart(output Output, last bool) error {
+	if err := output.WriteTo(w); err != nil {
+		return err
+	}
+
+	return w.endPart(last)
+}
+
 // Writes part bytes, potentially splitting them across fragments
 func (w *multiPartWriter) Write(b []byte) (int, error) {
 	if w.complete {
@@ -395,6 +404,15 @@ type multiPartReader struct {
 	chunk               []byte
 	lastChunkInFragment bool
 	lastPartInMessage   bool
+}
+
+// Reads an input part from the stream
+func (r *multiPartReader) ReadPart(input Input, last bool) error {
+	if err := input.ReadFrom(r); err != nil {
+		return err
+	}
+
+	return r.endPart()
 }
 
 func (r *multiPartReader) Read(b []byte) (int, error) {
