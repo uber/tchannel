@@ -66,7 +66,7 @@ func (f *outFragment) finish(last bool) *Frame {
 	return f.frame
 }
 
-// Writes data for a chunked part into the fragment.  The data must fit into the fragment
+// Writes data for a chunked argument into the fragment.  The data must fit into the fragment
 func (f *outFragment) writeChunkData(b []byte) (int, error) {
 	if len(b) > len(f.remaining) {
 		return 0, errTooLarge
@@ -160,33 +160,33 @@ type outFragmentChannel interface {
 	flushFragment(f *outFragment, last bool) error
 }
 
-// An multiPartWriter is an io.Writer for a collection of parts, capable of breaking
-// large part into multiple chunks spread across several fragments.  Upstream code can
-// send part data via the standard io.Writer interface, but should call endPart to
-// indicate when they are finished with the current part.
-type multiPartWriter struct {
+// An bodyWriter is an io.Writer for a collection of arguments, capable of breaking
+// large arguments into multiple chunks spread across several fragments.  Upstream code can
+// send argument data via the standard io.Writer interface, but should call endArgument to
+// indicate when they are finished with the current argument.
+type bodyWriter struct {
 	fragments   outFragmentChannel
 	fragment    *outFragment
 	alignsAtEnd bool
 	complete    bool
 }
 
-// Creates a new multiPartWriter that creates and sends fragments through the provided channel.
-func newMultiPartWriter(ch outFragmentChannel) *multiPartWriter {
-	return &multiPartWriter{fragments: ch}
+// Creates a new bodyWriter that creates and sends fragments through the provided channel.
+func newBodyWriter(ch outFragmentChannel) *bodyWriter {
+	return &bodyWriter{fragments: ch}
 }
 
-// Writes an entire part
-func (w *multiPartWriter) WritePart(output Output, last bool) error {
+// Writes an entire argument
+func (w *bodyWriter) WriteArgument(output Output, last bool) error {
 	if err := output.WriteTo(w); err != nil {
 		return err
 	}
 
-	return w.endPart(last)
+	return w.endArgument(last)
 }
 
-// Writes part bytes, potentially splitting them across fragments
-func (w *multiPartWriter) Write(b []byte) (int, error) {
+// Writes argument bytes, potentially splitting them across fragments
+func (w *bodyWriter) Write(b []byte) (int, error) {
 	if w.complete {
 		return 0, ErrWriteAfterComplete
 	}
@@ -201,7 +201,7 @@ func (w *multiPartWriter) Write(b []byte) (int, error) {
 		bytesRemaining := w.fragment.bytesRemaining()
 		if bytesRemaining < len(b) {
 			// Not enough space remaining in this fragment - write what we can, finish this fragment,
-			// and start a new fragment for the remainder of the part
+			// and start a new fragment for the remainder of the argument
 			if n, err := w.fragment.writeChunkData(b[:bytesRemaining]); err != nil {
 				return written + n, err
 			}
@@ -235,7 +235,7 @@ func (w *multiPartWriter) Write(b []byte) (int, error) {
 }
 
 // Ensures that we have a fragment and an open chunk
-func (w *multiPartWriter) ensureOpenChunk() error {
+func (w *bodyWriter) ensureOpenChunk() error {
 	for {
 		// No fragment - start a new one
 		if w.fragment == nil {
@@ -264,7 +264,7 @@ func (w *multiPartWriter) ensureOpenChunk() error {
 }
 
 // Finishes with the current fragment, closing any open chunk and sending the fragment down the channel
-func (w *multiPartWriter) finishFragment(last bool) error {
+func (w *bodyWriter) finishFragment(last bool) error {
 	w.fragment.endChunk()
 	if err := w.fragments.flushFragment(w.fragment, last); err != nil {
 		w.fragment = nil
@@ -275,11 +275,11 @@ func (w *multiPartWriter) finishFragment(last bool) error {
 	return nil
 }
 
-// Marks the part as being complete.  If last is true, this is the last part in the message
-func (w *multiPartWriter) endPart(last bool) error {
+// Marks the argument as being complete.  If last is true, this is the last argument in the message
+func (w *bodyWriter) endArgument(last bool) error {
 	if w.alignsAtEnd {
-		// The last part chunk aligned with the end of a fragment boundary - send another fragment
-		// containing an empty chunk so readers know the part is complete
+		// The last argument chunk aligned with the end of a fragment boundary - send another fragment
+		// containing an empty chunk so readers know the argument is complete
 		if w.fragment != nil {
 			return errAlignedAtEndOfOpenFragment
 		}
@@ -313,7 +313,7 @@ type inFragment struct {
 	frame    *Frame   // The frame containing the fragment
 	last     bool     // true if this is the last fragment from the peer for this message
 	checksum Checksum // Checksum for the fragment chunks
-	chunks   [][]byte // The part chunks contained in the fragment
+	chunks   [][]byte // The argument chunks contained in the fragment
 }
 
 // Creates a new inFragment from an incoming frame and an expected message
@@ -403,33 +403,34 @@ type inFragmentChannel interface {
 	waitForFragment() (*inFragment, error)
 }
 
-// An multiPartReader is an io.Reader for an individual TChannel part, capable of reading large
-// part that have been split across fragments.  Upstream code can use the multiPartReader like
-// a regular io.Reader to extract the bytes part, and should call endPart when they have finished
-// reading a given part, to prepare the stream for the next part.
-type multiPartReader struct {
+// An bodyReader is an io.Reader for an individual TChannel argument, capable of reading large
+// arguments that have been split across fragments.  Upstream code can use the bodyReader like
+// a regular io.Reader to extract the argument data, and should call endArgument when they have finished
+// reading a given argument, to prepare the stream for the next argument.
+// TODO(mmihic): Refactor to handle all arguments of the body. similar to bodyWriter
+type bodyReader struct {
 	fragments           inFragmentChannel
 	chunk               []byte
 	lastChunkInFragment bool
 	lastPartInMessage   bool
 }
 
-// Reads an input part from the stream
-func (r *multiPartReader) ReadPart(input Input, last bool) error {
+// Reads an input argument from the stream
+func (r *bodyReader) ReadArgument(input Input, last bool) error {
 	if err := input.ReadFrom(r); err != nil {
 		return err
 	}
 
-	return r.endPart()
+	return r.endArgument()
 }
 
-func (r *multiPartReader) Read(b []byte) (int, error) {
+func (r *bodyReader) Read(b []byte) (int, error) {
 	totalRead := 0
 
 	for len(b) > 0 {
 		if len(r.chunk) == 0 {
 			if r.lastChunkInFragment {
-				// We've already consumed the last chunk for this part
+				// We've already consumed the last chunk for this argument
 				return totalRead, io.EOF
 			}
 
@@ -451,8 +452,8 @@ func (r *multiPartReader) Read(b []byte) (int, error) {
 	return totalRead, nil
 }
 
-// Marks the current part as complete, confirming that we've read the entire part and have nothing left over
-func (r *multiPartReader) endPart() error {
+// Marks the current argment as complete, confirming that we've read the entire argumentand have nothing left over
+func (r *bodyReader) endArgument() error {
 	if len(r.chunk) > 0 {
 		return ErrDataLeftover
 	}
@@ -479,6 +480,6 @@ func (r *multiPartReader) endPart() error {
 	return nil
 }
 
-func newMultiPartReader(ch inFragmentChannel, last bool) *multiPartReader {
-	return &multiPartReader{fragments: ch, lastPartInMessage: last}
+func newBodyReader(ch inFragmentChannel, last bool) *bodyReader {
+	return &bodyReader{fragments: ch, lastPartInMessage: last}
 }

@@ -81,7 +81,7 @@ func (p *outboundCallPipeline) beginCall(ctx context.Context, reqId uint32, serv
 		return nil, err
 	}
 
-	call.partWriter = newMultiPartWriter(call)
+	call.body = newBodyWriter(call)
 	return call, nil
 }
 
@@ -196,7 +196,7 @@ type OutboundCall struct {
 	checksum          Checksum
 	pipeline          *outboundCallPipeline
 	ctx               context.Context
-	partWriter        *multiPartWriter
+	body              *bodyWriter
 	state             outboundCallState
 	sentFirstFragment bool
 	recvCh            chan *Frame
@@ -224,7 +224,7 @@ func (call *OutboundCall) writeOperation(operation []byte) error {
 		return call.failed(ErrCallStateMismatch)
 	}
 
-	if err := call.partWriter.WritePart(BytesOutput(operation), false); err != nil {
+	if err := call.body.WriteArgument(BytesOutput(operation), false); err != nil {
 		return call.failed(err)
 	}
 
@@ -238,7 +238,7 @@ func (call *OutboundCall) WriteArg2(arg Output) error {
 		return call.failed(ErrCallStateMismatch)
 	}
 
-	if err := call.partWriter.WritePart(arg, false); err != nil {
+	if err := call.body.WriteArgument(arg, false); err != nil {
 		return call.failed(err)
 	}
 
@@ -252,7 +252,7 @@ func (call *OutboundCall) WriteArg3(arg Output) error {
 		return call.failed(ErrCallStateMismatch)
 	}
 
-	if err := call.partWriter.WritePart(arg, true); err != nil {
+	if err := call.body.WriteArgument(arg, true); err != nil {
 		return call.failed(err)
 	}
 
@@ -303,16 +303,16 @@ func (call *OutboundCall) flushFragment(fragment *outFragment, last bool) error 
 
 // Response to an outbound call
 type OutboundCallResponse struct {
-	id               uint32
-	res              CallRes
-	checksum         Checksum
-	pipeline         *outboundCallPipeline
-	ctx              context.Context
-	recvCh           chan *Frame
-	state            outboundCallResponseState
-	curFragment      *inFragment
-	recvLastFragment bool
-	lastPartReader   *multiPartReader
+	id                 uint32
+	res                CallRes
+	checksum           Checksum
+	pipeline           *outboundCallPipeline
+	ctx                context.Context
+	recvCh             chan *Frame
+	state              outboundCallResponseState
+	curFragment        *inFragment
+	recvLastFragment   bool
+	lastArgumentReader *bodyReader
 }
 
 type outboundCallResponseState int
@@ -335,8 +335,8 @@ func (call *OutboundCallResponse) ReadArg2(arg Input) error {
 		return call.failed(ErrCallStateMismatch)
 	}
 
-	r := newMultiPartReader(call, false)
-	if err := r.ReadPart(arg, false); err != nil {
+	r := newBodyReader(call, false)
+	if err := r.ReadArgument(arg, false); err != nil {
 		return err
 	}
 
@@ -350,8 +350,8 @@ func (call *OutboundCallResponse) ReadArg3(arg Input) error {
 		return call.failed(ErrCallStateMismatch)
 	}
 
-	r := newMultiPartReader(call, true)
-	if err := r.ReadPart(arg, true); err != nil {
+	r := newBodyReader(call, true)
+	if err := r.ReadArgument(arg, true); err != nil {
 		return call.failed(err)
 	}
 

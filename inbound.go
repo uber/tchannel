@@ -74,7 +74,7 @@ func (p *inboundCallPipeline) handleCallReq(frame *Frame) {
 		cancel:   cancel,
 		checksum: ChecksumTypeCrc32.New(), // TODO(mmihic): Make configurable or mirror req?
 	}
-	res.partWriter = newMultiPartWriter(res)
+	res.body = newBodyWriter(res)
 
 	call := &InboundCall{
 		id:               frame.Header.Id,
@@ -199,10 +199,10 @@ func (call *InboundCall) readOperation() error {
 		return call.failed(ErrCallStateMismatch)
 	}
 
-	r := newMultiPartReader(call, false)
+	r := newBodyReader(call, false)
 
 	var arg1 BytesInput
-	if err := r.ReadPart(&arg1, false); err != nil {
+	if err := r.ReadArgument(&arg1, false); err != nil {
 		return call.failed(err)
 	}
 
@@ -217,8 +217,8 @@ func (call *InboundCall) ReadArg2(arg Input) error {
 		return call.failed(ErrCallStateMismatch)
 	}
 
-	r := newMultiPartReader(call, false)
-	if err := r.ReadPart(arg, false); err != nil {
+	r := newBodyReader(call, false)
+	if err := r.ReadArgument(arg, false); err != nil {
 		return call.failed(err)
 	}
 
@@ -232,8 +232,8 @@ func (call *InboundCall) ReadArg3(arg Input) error {
 		return call.failed(ErrCallStateMismatch)
 	}
 
-	r := newMultiPartReader(call, true)
-	if err := r.ReadPart(arg, true); err != nil {
+	r := newBodyReader(call, true)
+	if err := r.ReadArgument(arg, true); err != nil {
 		return call.failed(err)
 	}
 
@@ -289,7 +289,7 @@ type InboundCallResponse struct {
 	pipeline             *inboundCallPipeline
 	state                inboundCallResponseState
 	startedFirstFragment bool
-	partWriter           *multiPartWriter
+	body                 *bodyWriter
 	applicationError     bool
 }
 
@@ -348,7 +348,7 @@ func (call *InboundCallResponse) WriteArg2(arg Output) error {
 		return call.failed(ErrCallStateMismatch)
 	}
 
-	if err := call.partWriter.WritePart(arg, false); err != nil {
+	if err := call.body.WriteArgument(arg, false); err != nil {
 		return call.failed(err)
 	}
 
@@ -362,7 +362,7 @@ func (call *InboundCallResponse) WriteArg3(arg Output) error {
 		return call.failed(ErrCallStateMismatch)
 	}
 
-	if err := call.partWriter.WritePart(arg, true); err != nil {
+	if err := call.body.WriteArgument(arg, true); err != nil {
 		return call.failed(err)
 	}
 
