@@ -28,7 +28,7 @@ fmt format:
 test: clean 
 	echo Testing packages:
 	mkdir -p $(BUILD)
-	go test ./ $(TEST_ARG) -parallel=4
+	go test $(PKGS) $(TEST_ARG) -parallel=4
 
 # target: cover - Runs tests under code coverage
 cover: clean
