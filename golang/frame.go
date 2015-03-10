@@ -44,27 +44,27 @@ func (fh *FrameHeader) read(r typed.ReadBuffer) error {
 	var err error
 	fh.Size, err = r.ReadUint16()
 	if err != nil {
-		return NewReadIOError("frame size", err)
+		return err
 	}
 
 	msgType, err := r.ReadByte()
 	if err != nil {
-		return NewReadIOError("frame type", err)
+		return err
 	}
 
 	fh.messageType = messageType(msgType)
 
 	if _, err := r.ReadByte(); err != nil {
-		return NewReadIOError("frame reserved1", err)
+		return err
 	}
 
 	fh.ID, err = r.ReadUint32()
 	if err != nil {
-		return NewReadIOError("frame msg id", err)
+		return err
 	}
 
 	if _, err := r.ReadBytes(len(fh.reserved)); err != nil {
-		return NewReadIOError("frame reserved1", err)
+		return err
 	}
 
 	return nil
@@ -72,23 +72,23 @@ func (fh *FrameHeader) read(r typed.ReadBuffer) error {
 
 func (fh *FrameHeader) write(w typed.WriteBuffer) error {
 	if err := w.WriteUint16(fh.Size); err != nil {
-		return NewWriteIOError("frame size", err)
+		return err
 	}
 
 	if err := w.WriteByte(byte(fh.messageType)); err != nil {
-		return NewWriteIOError("frame type", err)
+		return err
 	}
 
 	if err := w.WriteByte(fh.reserved1); err != nil {
-		return NewWriteIOError("frame reserved1", err)
+		return err
 	}
 
 	if err := w.WriteUint32(fh.ID); err != nil {
-		return NewWriteIOError("frame msg id", err)
+		return err
 	}
 
 	if err := w.WriteBytes(fh.reserved[:]); err != nil {
-		return NewWriteIOError("frame reserved2", err)
+		return err
 	}
 
 	return nil

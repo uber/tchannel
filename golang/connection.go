@@ -441,17 +441,17 @@ func (c *TChannelConnection) writeFrames() {
 		c.log.Info("Send: %s", hex.EncodeToString(f.SizedPayload()))
 
 		if err := f.Header.write(fhBuf); err != nil {
-			c.connectionError(NewWriteIOError("frame-header", err))
+			c.connectionError(err)
 			return
 		}
 
 		if _, err := fhBuf.FlushTo(c.conn); err != nil {
-			c.connectionError(NewWriteIOError("frame-header-flush", err))
+			c.connectionError(err)
 			return
 		}
 
 		if _, err := c.conn.Write(f.SizedPayload()); err != nil {
-			c.connectionError(NewWriteIOError("frame-payload", err))
+			c.connectionError(err)
 			return
 		}
 
