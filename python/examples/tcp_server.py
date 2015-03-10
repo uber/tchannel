@@ -8,6 +8,7 @@ except ImportError:
 
 import sys
 
+from options import get_args
 from tchannel.socket import SocketConnection
 
 
@@ -41,7 +42,8 @@ class MyHandler(SocketServer.BaseRequestHandler):
 
 
 if __name__ == '__main__':
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8888
-    server = SocketServer.TCPServer(("localhost", port), MyHandler)
-    print("Listening on port %d..." % port)
+    args = get_args()
+
+    server = SocketServer.TCPServer((args.host, args.port), MyHandler)
+    print("Listening on port %d..." % args.port)
     server.serve_forever()
