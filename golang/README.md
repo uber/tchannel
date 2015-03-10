@@ -12,7 +12,7 @@ NOTE: `master:golang` is **not yet stable**
 import (
     "encoding/json"
     "time"
-    "github.com/uber/tchannel"
+    "github.com/uber/tchannel/golang"
     "code.google.com/p/go.net/context"
     "fmt"
 )
@@ -82,8 +82,8 @@ func main() {
     var responseHeaders Headers
     var pong Pong
     if err := client.RoundTrip("localhost:8050", "PingService", "ping",
-        NewJSONOutput(Headers{}),  NewJSONOutput(Ping{Message: "Hello world"}),
-        NewJSONInput(&responseHeaders), NewJSONInput(&pong)); err != nil {
+        tchannel.NewJSONOutput(Headers{}),  tchannel.NewJSONOutput(Ping{Message: "Hello world"}),
+        tchannel.NewJSONInput(&responseHeaders), tchannel.NewJSONInput(&pong)); err != nil {
         panic(err)
     }
 
