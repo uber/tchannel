@@ -39,27 +39,37 @@ const (
 	// ErrorCodeBadRequest indicates that the request was malformed, and could not be processed.
 	// Callers should not bother to retry the request, as there
 	ErrorCodeBadRequest SystemErrorCode = 0x06
-	ErrorCodeProtocol   SystemErrorCode = 0xFF
+
+	// ErrorCodeProtocol indincates a fatal protocol error communicating with the peer.  The connection
+	// will be terminated.
+	ErrorCodeProtocol SystemErrorCode = 0xFF
 )
 
 var (
-	ErrServerBusy       = NewSystemError(ErrorCodeBusy, "server busy")
+	// ErrServerBusy is a SystemError indicating the server is busy
+	ErrServerBusy = NewSystemError(ErrorCodeBusy, "server busy")
+
+	// ErrRequestCancelled is a SystemError indicating the request has been cancelled on the peer
 	ErrRequestCancelled = NewSystemError(ErrorCodeCancelled, "request cancelled")
-	ErrTimeout          = NewSystemError(ErrorCodeTimeout, "timeout")
+
+	// ErrTimeout is a SytemError indicating the request has timed out
+	ErrTimeout = NewSystemError(ErrorCodeTimeout, "timeout")
 )
 
-// A system error, containing the error code along with the message
+// A SystemError is a system-level error, containing an error code and message
+// TODO(mmihic): Probably we want to hide this interface, and let application code
+// just deal with standard raw errors.
 type SystemError struct {
 	code SystemErrorCode
 	msg  string
 }
 
-// Defines a new SystemError
+// NewSystemError defines a new SystemError with a code and message
 func NewSystemError(code SystemErrorCode, msg string) error {
 	return SystemError{code: code, msg: msg}
 }
 
-// Returns the SystemError message, conforming to the error interface
+// Error returns the SystemError message, conforming to the error interface
 func (se SystemError) Error() string {
 	return se.msg
 }
@@ -69,7 +79,7 @@ func (se SystemError) errorCode() SystemErrorCode {
 	return se.code
 }
 
-// Gets the system error code to report for the given error.  If the error is a SystemError, we can
+// GetSystemErrorCode returns the code to report for the given error.  If the error is a SystemError, we can
 // get the code directly.  Otherwise treat it as an unexpected error
 func GetSystemErrorCode(err error) SystemErrorCode {
 	if se, ok := err.(SystemError); ok {

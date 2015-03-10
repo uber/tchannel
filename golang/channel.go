@@ -7,27 +7,22 @@ import (
 	"time"
 )
 
-// Handler for incoming calls
+// A Handler is an object hat can be registered with a Channel
+// to process incoming calls for a given service and operation
 type Handler interface {
 	// Handles an incoming call for service
 	Handle(ctx context.Context, call *InboundCall)
 }
 
-// A handler which is just a function
+// The HandlerFunc is an adapter to allow the use of ordering functions as
+// TChannel handlers.  If f is a function with the appropriate signature,
+// HandlerFunc(f) is a Hander object that calls f
 type HandlerFunc func(ctx context.Context, call *InboundCall)
 
-// Creates a Handler around a HandlerFunc
-func HandleFunc(f HandlerFunc) Handler {
-	return &funcHandler{f}
-}
+// Handle calls f(ctx, call)
+func (f HandlerFunc) Handle(ctx context.Context, call *InboundCall) { f(ctx, call) }
 
-type funcHandler struct {
-	f HandlerFunc
-}
-
-func (h *funcHandler) Handle(ctx context.Context, call *InboundCall) { h.f(ctx, call) }
-
-// Options used to create a TChannel
+// ChannelOptions are used to control parameters on a create a TChannel
 type ChannelOptions struct {
 	// Default Connection options
 	DefaultConnectionOptions ConnectionOptions
@@ -53,7 +48,7 @@ type TChannel struct {
 	l                 net.Listener
 }
 
-// Creates a new channel bound to the given host and port
+// NewChannel creates a new Channel that will bind to the given host and port
 func NewChannel(hostPort string, opts *ChannelOptions) (*TChannel, error) {
 	if opts == nil {
 		opts = &ChannelOptions{}
@@ -113,7 +108,8 @@ func (ch *TChannel) BeginCall(ctx context.Context, hostPort,
 	return call, nil
 }
 
-// Runs the channel listener, accepting and managing new connections.  Blocks until the channel is closed.
+// ListenAndHandle runs a listener to accept and manage new incoming connections.
+// Blocks until the channel is closed.
 func (ch *TChannel) ListenAndHandle() error {
 	var err error
 	ch.l, err = net.Listen("tcp", ch.hostPort)
