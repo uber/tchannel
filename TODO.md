@@ -6,7 +6,7 @@ h1. Functionality
     - Should return from blocking calls with context.Cancelled
 
 [ ] Cancel on start and cancel on finish
-[ ] Pass Zipkin Tracing info as Context, propagate to Context
+[ ] Pass Zipkin Tracing info as Context value, propagate to outbound Context
 [ ] Implement Farm32
 [ ] Outbound connection pool management
 [ ] Track connections and do graceful shutdown when the channel is closed
@@ -18,7 +18,7 @@ h1. Functionality
 
 h1. Cleanup
 
-[ ] Get rid of custom IOError type - not needed and dangerous
+[ ] Get rid of custom IOError type - not needed and misleading
 [ ] Refactor bodyReader to work like bodyWriter and operate over the entire body not just an argument
 [ ] Move message dumping into a separate hexer, make configurable
 [ ] Remove hard-dependency on go-logging and replace with Logger interface
@@ -26,7 +26,8 @@ h1. Cleanup
 [ ] Implement real FramePool based on sync.Pool
 [ ] Pass remotePeerInfo into inbound and outbound pipelines, once handshaking is complete.  Alternately don't create those pipelines until after 
 [ ] Benchmark
-[ ] Check for leaks
+[ ] Review and edit godocs 
+[ ] Add README.md
 
 h1. Tests
 
