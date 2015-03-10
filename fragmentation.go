@@ -10,10 +10,17 @@ import (
 )
 
 var (
+	// Peer sent a different checksum type for a continuation fragment
 	ErrMismatchedChecksumTypes = errors.New("peer sent a different checksum type for fragment")
-	ErrWriteAfterComplete      = errors.New("attempted to write to a stream after the last fragment sent")
-	ErrMismatchedChecksum      = errors.New("local checksum differs from peer")
-	ErrDataLeftover            = errors.New("more data remaining in argument")
+
+	// Caller attempted to write to a body after the last fragment was sent
+	ErrWriteAfterComplete = errors.New("attempted to write to a stream after the last fragment sent")
+
+	// Local checksum calculation differs from that reported by peer
+	ErrMismatchedChecksum = errors.New("local checksum differs from peer")
+
+	// Caller considers an argument complete, but there is more data remaining in the argument
+	ErrDataLeftover = errors.New("more data remaining in argument")
 
 	errTooLarge                   = errors.New("impl error, data exceeds remaining fragment size")
 	errAlignedAtEndOfOpenFragment = errors.New("impl error; align-at-end of open fragment")
