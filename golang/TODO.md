@@ -1,33 +1,33 @@
 h1. Functionality
 
-[ ] Cancel outbound requests
+- [ ] Cancel outbound requests
     - Sends cancel message to server
     - If server has made requests, should cancel those requests as well
     - Should return from blocking calls with context.Cancelled
 
-[ ] Cancel on start and cancel on finish
-[ ] Pass Zipkin Tracing info as Context value, propagate to outbound Context
-[ ] Implement Farm32
-[ ] Outbound connection pool management
-[ ] Track connections and do graceful shutdown when the channel is closed
-[ ] Provide a way to throttle max # of incoming requests
-[ ] Retry on retryable errors
-[ ] Allow setting the content type headers
-[ ] Add JSONInput/JSONOutput argument types
-[ ] Add ThriftInput/ThriftOutput argument types
+- [ ] Cancel on start and cancel on finish
+- [ ] Pass Zipkin Tracing info as Context value, propagate to outbound Context
+- [ ] Implement Farm32
+- [ ] Outbound connection pool management
+- [ ] Track connections and do graceful shutdown when the channel is closed
+- [ ] Provide a way to throttle max # of incoming requests
+- [ ] Retry on retryable errors
+- [ ] Allow setting the content type headers
+- [ ] Add JSONInput/JSONOutput argument types
+- [ ] Add ThriftInput/ThriftOutput argument types
+- [ ] Implement ping/pong handling
 
 h1. Cleanup
 
-[ ] Get rid of custom IOError type - not needed and misleading
-[ ] Refactor bodyReader to work like bodyWriter and operate over the entire body not just an argument
-[ ] Move message dumping into a separate hexer, make configurable
-[ ] Remove hard-dependency on go-logging and replace with Logger interface
-[ ] Make sure we don't leak frames anywhere (I know we do)
-[ ] Implement real FramePool based on sync.Pool
-[ ] Pass remotePeerInfo into inbound and outbound pipelines, once handshaking is complete.  Alternately don't create those pipelines until after 
-[ ] Benchmark
-[ ] Review and edit godocs 
-[ ] Add README.md
+- [ ] Get rid of custom IOError type - not needed and misleading
+- [ ] Refactor bodyReader to work like bodyWriter and operate over the entire body not just an argument
+- [ ] Move message dumping into a separate hexer, make configurable
+- [ ] Remove hard-dependency on go-logging and replace with Logger interface
+- [ ] Make sure we don't leak frames anywhere (I know we do)
+- [ ] Implement real FramePool based on sync.Pool
+- [ ] Pass remotePeerInfo into inbound and outbound pipelines, once handshaking is complete.  Alternately don't create those pipelines until after 
+- [ ] Benchmark
+- [ ] Review and edit godocs 
 
 h1. Tests
 

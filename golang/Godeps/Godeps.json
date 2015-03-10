@@ -1,5 +1,5 @@
 {
-	"ImportPath": "code.uber.internal/personal/mmihic/tchannel-go",
+	"ImportPath": "github.com/uber/tchannel/golang",
 	"GoVersion": "go1.4.1",
 	"Packages": [
 		"./..."

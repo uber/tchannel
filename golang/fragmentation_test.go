@@ -1,10 +1,30 @@
 package tchannel
 
+// Copyright (c) 2015 Uber Technologies, Inc.
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
 import (
-	"code.uber.internal/personal/mmihic/tchannel-go/typed"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/uber/tchannel/golang/typed"
 	"testing"
 )
 
@@ -22,7 +42,7 @@ func TestNoFragmentation(t *testing.T) {
 	// fragment flags(1), checksum type (1), checksum(5), chunk size(2), chunk(5)
 	expectedFrames := typed.CombineBuffers([][]byte{
 		[]byte{0x00, byte(ChecksumTypeCrc32)},
-		NewCrc32Checksum().Add([]byte("Hello")),
+		ChecksumTypeCrc32.New().Add([]byte("Hello")),
 		[]byte{0x00, 0x05},
 		[]byte("Hello")})
 	assertFramesEqual(t, expectedFrames, out.sentFragments, "no fragmentation")
@@ -182,8 +202,8 @@ type inFragments struct {
 
 type sampleMessage struct{}
 
-func (m *sampleMessage) Id() uint32                      { return 0xDEADBEEF }
-func (m *sampleMessage) Type() MessageType               { return MessageTypeCallReq }
+func (m *sampleMessage) ID() uint32                      { return 0xDEADBEEF }
+func (m *sampleMessage) messageType() messageType        { return messageTypeCallReq }
 func (m *sampleMessage) read(r typed.ReadBuffer) error   { return nil }
 func (m *sampleMessage) write(w typed.WriteBuffer) error { return nil }
 

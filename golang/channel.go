@@ -1,40 +1,51 @@
 package tchannel
 
+// Copyright (c) 2015 Uber Technologies, Inc.
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
 import (
 	"code.google.com/p/go.net/context"
 	"github.com/op/go-logging"
-	"io"
 	"net"
 	"time"
 )
 
-// Handler for incoming calls
+// A Handler is an object hat can be registered with a Channel
+// to process incoming calls for a given service and operation
 type Handler interface {
 	// Handles an incoming call for service
 	Handle(ctx context.Context, call *InboundCall)
 }
 
-// A handler which is just a function
+// The HandlerFunc is an adapter to allow the use of ordering functions as
+// TChannel handlers.  If f is a function with the appropriate signature,
+// HandlerFunc(f) is a Hander object that calls f
 type HandlerFunc func(ctx context.Context, call *InboundCall)
 
-// Creates a Handler around a HandlerFunc
-func HandleFunc(f HandlerFunc) Handler {
-	return &funcHandler{f}
-}
+// Handle calls f(ctx, call)
+func (f HandlerFunc) Handle(ctx context.Context, call *InboundCall) { f(ctx, call) }
 
-type funcHandler struct {
-	f HandlerFunc
-}
-
-func (h *funcHandler) Handle(ctx context.Context, call *InboundCall) { h.f(ctx, call) }
-
-type ResponseBodyWriter func(w io.Writer, call *InboundCall)
-type RequestBodyReader func(r io.Reader)
-
-// Options used to create a TChannel
-type TChannelOptions struct {
+// ChannelOptions are used to control parameters on a create a TChannel
+type ChannelOptions struct {
 	// Default Connection options
-	DefaultConnectionOptions TChannelConnectionOptions
+	DefaultConnectionOptions ConnectionOptions
 
 	// The name of the process, for logging and reporting to peers
 	ProcessName string
@@ -52,15 +63,15 @@ type TChannel struct {
 	log               *logging.Logger
 	hostPort          string
 	processName       string
-	connectionOptions TChannelConnectionOptions
+	connectionOptions ConnectionOptions
 	handlers          handlerMap
 	l                 net.Listener
 }
 
-// Creates a new channel bound to the given host and port
-func NewChannel(hostPort string, opts *TChannelOptions) (*TChannel, error) {
+// NewChannel creates a new Channel that will bind to the given host and port
+func NewChannel(hostPort string, opts *ChannelOptions) (*TChannel, error) {
 	if opts == nil {
-		opts = &TChannelOptions{}
+		opts = &ChannelOptions{}
 	}
 
 	logger := opts.Logger
@@ -80,12 +91,14 @@ func NewChannel(hostPort string, opts *TChannelOptions) (*TChannel, error) {
 	return ch, nil
 }
 
-// Registers a handler for a service+operation pair
+// Register regsters a handler for a service+operation pair
 func (ch *TChannel) Register(h Handler, serviceName, operationName string) {
 	ch.handlers.register(h, serviceName, operationName)
 }
 
-// Begins a new call to a remote peer
+// BeginCall starts a new call to a remote peer, returning an OutboundCall that can
+// be used to write the arguments of the call
+// TODO(mmihic): Support CallOptions such as format, request specific checksums, retries, etc
 func (ch *TChannel) BeginCall(ctx context.Context, hostPort,
 	serviceName, operationName string) (*OutboundCall, error) {
 	// TODO(mmihic): Keep-alive, manage pools, use existing inbound if possible, all that jazz
@@ -103,7 +116,7 @@ func (ch *TChannel) BeginCall(ctx context.Context, hostPort,
 		return nil, err
 	}
 
-	call, err := conn.BeginCall(ctx, serviceName)
+	call, err := conn.beginCall(ctx, serviceName)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +128,8 @@ func (ch *TChannel) BeginCall(ctx context.Context, hostPort,
 	return call, nil
 }
 
-// Runs the channel listener, accepting and managing new connections.  Blocks until the channel is closed.
+// ListenAndHandle runs a listener to accept and manage new incoming connections.
+// Blocks until the channel is closed.
 func (ch *TChannel) ListenAndHandle() error {
 	var err error
 	ch.l, err = net.Listen("tcp", ch.hostPort)

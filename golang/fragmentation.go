@@ -1,25 +1,46 @@
 package tchannel
 
+// Copyright (c) 2015 Uber Technologies, Inc.
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
 import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"github.com/uber/tchannel/golang/typed"
 	"io"
-
-	"code.uber.internal/personal/mmihic/tchannel-go/typed"
 )
 
 var (
-	// Peer sent a different checksum type for a continuation fragment
+	// ErrMismatchedChecksumTypes is returned when a peer sends a continuation fragment containing
+	// a different checksum type from that used for the original message
 	ErrMismatchedChecksumTypes = errors.New("peer sent a different checksum type for fragment")
 
-	// Caller attempted to write to a body after the last fragment was sent
+	// ErrWriteAfterComplete is returned when a caller attempts to write to a body after the last fragment was sent
 	ErrWriteAfterComplete = errors.New("attempted to write to a stream after the last fragment sent")
 
-	// Local checksum calculation differs from that reported by peer
+	// ErrMismatchedChecksum is returned when a local checksum calculation differs from that reported by peer
 	ErrMismatchedChecksum = errors.New("local checksum differs from peer")
 
-	// Caller considers an argument complete, but there is more data remaining in the argument
+	// ErrDataLeftover is returned when a caller considers an argument complete, but there is more data
+	// remaining in the argument
 	ErrDataLeftover = errors.New("more data remaining in argument")
 
 	errTooLarge                   = errors.New("impl error, data exceeds remaining fragment size")
@@ -116,13 +137,13 @@ func (f *outFragment) endChunk() error {
 func (f *outFragment) chunkOpen() bool { return len(f.chunkStart) > 0 }
 
 // Creates a new outFragment around a frame and message, with a running checksum
-func newOutboundFragment(frame *Frame, msg Message, checksum Checksum) (*outFragment, error) {
+func newOutboundFragment(frame *Frame, msg message, checksum Checksum) (*outFragment, error) {
 	f := &outFragment{
 		frame:    frame,
 		checksum: checksum,
 	}
-	f.frame.Header.Id = msg.Id()
-	f.frame.Header.Type = msg.Type()
+	f.frame.Header.ID = msg.ID()
+	f.frame.Header.messageType = msg.messageType()
 
 	wbuf := typed.NewWriteBuffer(f.frame.Payload[:])
 
@@ -317,7 +338,7 @@ type inFragment struct {
 }
 
 // Creates a new inFragment from an incoming frame and an expected message
-func newInboundFragment(frame *Frame, msg Message, checksum Checksum) (*inFragment, error) {
+func newInboundFragment(frame *Frame, msg message, checksum Checksum) (*inFragment, error) {
 	f := &inFragment{
 		frame:    frame,
 		checksum: checksum,
