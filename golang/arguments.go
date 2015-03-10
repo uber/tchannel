@@ -6,13 +6,13 @@ import (
 	"io/ioutil"
 )
 
-// A Input is able to read an argument from a call body
+// An Input is able to read an argument from a call body
 type Input interface {
 	// Reads the argument from the given io.Reader
 	ReadFrom(r io.Reader) error
 }
 
-// A Output is able to write an argument to a call body
+// An Output is able to write an argument to a call body
 type Output interface {
 	// Writes the argument to the given io.Writer
 	WriteTo(w io.Writer) error
@@ -21,8 +21,8 @@ type Output interface {
 // Outputs a set of bytes to a message
 type BytesOutput []byte
 
-func (p BytesOutput) WriteTo(w io.Writer) error {
-	if _, err := w.Write(p); err != nil {
+func (out BytesOutput) WriteTo(w io.Writer) error {
+	if _, err := w.Write(out); err != nil {
 		return err
 	}
 
@@ -32,9 +32,9 @@ func (p BytesOutput) WriteTo(w io.Writer) error {
 // Reads in an argument as a set of bytes
 type BytesInput []byte
 
-func (p *BytesInput) ReadFrom(r io.Reader) error {
+func (in *BytesInput) ReadFrom(r io.Reader) error {
 	var err error
-	if *p, err = ioutil.ReadAll(r); err != nil && err != io.EOF {
+	if *in, err = ioutil.ReadAll(r); err != nil && err != io.EOF {
 		return err
 	}
 
@@ -48,8 +48,8 @@ type StreamingOutput struct {
 
 func NewStreamingOutput(r io.Reader) Output { return StreamingOutput{r} }
 
-func (arg StreamingOutput) WriteTo(w io.Writer) error {
-	if _, err := io.Copy(w, arg.r); err != nil && err != io.EOF {
+func (out StreamingOutput) WriteTo(w io.Writer) error {
+	if _, err := io.Copy(w, out.r); err != nil && err != io.EOF {
 		return err
 	}
 	return nil
@@ -62,8 +62,8 @@ type StreamingInput struct {
 
 func NewStreamingInput(w io.Writer) Input { return StreamingInput{w} }
 
-func (arg StreamingInput) ReadFrom(r io.Reader) error {
-	if _, err := io.Copy(arg.w, r); err != nil && err != io.EOF {
+func (in StreamingInput) ReadFrom(r io.Reader) error {
+	if _, err := io.Copy(in.w, r); err != nil && err != io.EOF {
 		return err
 	}
 	return nil
@@ -74,9 +74,7 @@ type JSONInput struct {
 	data interface{}
 }
 
-func NewJSONInput(data interface{}) Input {
-	return JSONInput{data}
-}
+func NewJSONInput(data interface{}) Input { return JSONInput{data} }
 
 func (in JSONInput) ReadFrom(r io.Reader) error {
 	var bytes BytesInput
@@ -93,9 +91,7 @@ type JSONOutput struct {
 	data interface{}
 }
 
-func NewJSONOutput(data interface{}) Output {
-	return JSONOutput{data}
-}
+func NewJSONOutput(data interface{}) Output { return JSONOutput{data} }
 
 func (out JSONOutput) WriteTo(w io.Writer) error {
 	bytes, err := json.Marshal(out.data)
