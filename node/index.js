@@ -144,24 +144,26 @@ TChannel.prototype.address = function address() {
     return self.serverSocket.address();
 };
 
-TChannel.prototype.getEndpointHandler = function getEndpointHandler(name) {
+TChannel.prototype.handleRequest = function handleRequest(req, res) {
     var self = this;
+
+    var name = req.name;
     var handler = self.endpoints[name];
     if (typeof handler !== 'function') {
-        handler = function noSuchHandler(arg2, arg3, remoteAddr, cb) {
-            var err = new Error('no such operation'); // TODO: typed error
-            err.op = name;
-            cb(err, null, null);
-        };
         self.emit('endpoint.missing', {
             name: name
         });
+        var err = new Error('no such operation'); // TODO: typed error
+        err.op = name;
+        res.send(err, null, null);
     } else if (self.endpoints[name]) {
         self.emit('endpoint', {
             name: name
         });
+        handler(req.arg2, req.arg3, req.remoteAddr, function handlerCallback(err, res1, res2) {
+            res.send(err, res1, res2);
+        });
     }
-    return handler;
 };
 
 TChannel.prototype.register = function register(op, callback) {
@@ -417,9 +419,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 
     // TODO: refactor op boundary to pass full req/res around
     self.handler.on('call.incoming.request', function onCallRequest(req) {
-        var handler = self.channel.getEndpointHandler(req.name);
-        var res = self.handler.buildOutgoingResponse(req);
-        self.runInOp(handler, req, res);
+        self.handleCallRequest(req);
     });
 
     self.handler.on('call.incoming.response', function onCallResponse(res) {
@@ -731,42 +731,42 @@ TChannelConnection.prototype.request = function request(options) {
     return req;
 };
 
-TChannelConnection.prototype.runInOp = function runInOp(handler, req, res) {
+TChannelConnection.prototype.handleCallRequest = function handleCallRequest(req) {
     var self = this;
+    req.remoteAddr = self.remoteName;
+    var res = self.handler.buildOutgoingResponse(req);
     var id = req.id;
     self.inPending++;
-    var op = self.inOps[id] = new TChannelServerOp(self,
-        handler, self.channel.now(), req, opDone);
+    var op = self.inOps[id] = new TChannelServerOp(self, self.channel.now(), req, res);
+    res.once('end', opDone);
+    process.nextTick(runHandler);
 
-    function opDone(err, res1, res2) {
+    function runHandler() {
+        self.channel.handleRequest(req, res);
+    }
+
+    function opDone() {
         if (self.inOps[id] !== op) {
-            self.logger.warn('attempt to send frame for mismatched operation', {
+            self.logger.warn('mismatched opDone callback', {
                 hostPort: self.channel.hostPort,
                 opId: id
             });
             return;
         }
-        res.send(err, res1, res2);
         delete self.inOps[id];
         self.inPending--;
     }
 };
 
-/* jshint maxparams:6 */
-function TChannelServerOp(connection, handler, start, req, callback) {
+function TChannelServerOp(connection, start, req, res) {
     var self = this;
     self.req = req;
+    self.res = res;
     self.connection = connection;
     self.logger = connection.logger;
-    self.handler = handler;
     self.timedOut = false;
     self.start = start;
-    self.callback = callback;
-    process.nextTick(function runHandler() {
-        self.handler(self.req.arg2, self.req.arg3, connection.remoteName, self.callback);
-    });
 }
-/* jshint maxparams:4 */
 
 function TChannelClientOp(req, start) {
     var self = this;
