@@ -12,6 +12,18 @@ type testObject struct {
 	Value int    `json:"value"`
 }
 
+func TestStreamingInputOutput(t *testing.T) {
+	b := []byte("This is a pseudo-streamed value")
+	r := bytes.NewReader(b)
+
+	var buffer bytes.Buffer
+	var w bytes.Buffer
+
+	require.Nil(t, NewStreamingOutput(r).WriteTo(&buffer))
+	require.Nil(t, NewStreamingInput(&w).ReadFrom(&buffer))
+	assert.Equal(t, b, w.Bytes())
+}
+
 func TestJSONInputOutput(t *testing.T) {
 	obj := testObject{Name: "Foo", Value: 20756}
 
