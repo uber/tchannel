@@ -4,9 +4,8 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"github.com/uber/tchannel/golang/typed"
 	"io"
-
-	"code.uber.internal/personal/mmihic/tchannel-go/typed"
 )
 
 var (

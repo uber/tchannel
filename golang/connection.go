@@ -1,16 +1,15 @@
 package tchannel
 
 import (
+	"code.google.com/p/go.net/context"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/op/go-logging"
+	"github.com/uber/tchannel/golang/typed"
 	"net"
 	"sync"
 	"sync/atomic"
-
-	"code.google.com/p/go.net/context"
-	"code.uber.internal/personal/mmihic/tchannel-go/typed"
-	"github.com/op/go-logging"
 )
 
 // Information about a TChannel peer

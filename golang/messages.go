@@ -1,7 +1,7 @@
 package tchannel
 
 import (
-	"code.uber.internal/personal/mmihic/tchannel-go/typed"
+	"github.com/uber/tchannel/golang/typed"
 	"io"
 	"time"
 )

@@ -2,9 +2,9 @@ package tchannel
 
 import (
 	"code.google.com/p/go.net/context"
-	"code.uber.internal/personal/mmihic/tchannel-go/typed"
 	"errors"
 	"github.com/op/go-logging"
+	"github.com/uber/tchannel/golang/typed"
 	"io"
 	"sync"
 	"time"
