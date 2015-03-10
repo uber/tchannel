@@ -50,6 +50,15 @@ var TChannelListenError = WrappedError({
     host: null
 });
 
+var NoHandlerError = TypedError({
+    type: 'tchannel.no-handler',
+    message: 'no handler defined'
+});
+
+function noHandlerHandler(req, res) {
+    res.send(NoHandlerError());
+}
+
 function TChannel(options) {
     if (!(this instanceof TChannel)) {
         return new TChannel(options);
@@ -84,13 +93,14 @@ function TChannel(options) {
 
     self.peers = Object.create(null);
 
-    self.endpoints = Object.create(null);
+    self.handler = self.options.handler || noHandlerHandler;
+
     // TChannel advances through the following states.
     self.listened = false;
     self.listening = false;
     self.destroyed = false;
 
-    self.serverSocket = new net.createServer(function onServerSocketConnection(sock) {
+    self.serverSocket = net.createServer(function onServerSocketConnection(sock) {
         if (!self.destroyed) {
             var remoteAddr = sock.remoteAddress + ':' + sock.remotePort;
             var conn = new TChannelConnection(self, sock, 'in', remoteAddr);
@@ -162,38 +172,6 @@ TChannel.prototype.listen = function listen(port, host, callback) {
 TChannel.prototype.address = function address() {
     var self = this;
     return self.serverSocket.address();
-};
-
-TChannel.prototype.handleRequest = function handleRequest(req, res) {
-    var self = this;
-
-    var name = req.name;
-    var handler = self.endpoints[name];
-    if (typeof handler !== 'function') {
-        self.emit('endpoint.missing', {
-            name: name
-        });
-        var err = new Error('no such operation'); // TODO: typed error
-        err.op = name;
-        res.send(err, null, null);
-    } else if (self.endpoints[name]) {
-        self.emit('endpoint', {
-            name: name
-        });
-        handler(req.arg2, req.arg3, req.remoteAddr, function handlerCallback(err, res1, res2) {
-            res.send(err, res1, res2);
-        });
-    }
-};
-
-TChannel.prototype.register = function register(op, callback) {
-    var self = this;
-
-    if (self.endpoints[op]) {
-        throw new Error('endpoint ' + op + ' is already defined'); // TODO typed error
-    }
-
-    self.endpoints[op] = callback;
 };
 
 // not public, used by addPeer
@@ -762,7 +740,7 @@ TChannelConnection.prototype.handleCallRequest = function handleCallRequest(req)
     process.nextTick(runHandler);
 
     function runHandler() {
-        self.channel.handleRequest(req, res);
+        self.channel.handler(req, res);
     }
 
     function opDone() {
