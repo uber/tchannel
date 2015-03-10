@@ -67,7 +67,7 @@ Checksum.objOrType = function objOrType(arg) {
 Checksum.Types = {
     None: 0x00,
     CRC32: 0x01,
-    FarmHash32: 0x02
+    Farm32: 0x02
 };
 
 Checksum.read = read.chained(read.UInt8, function(type, buffer, offset) {
