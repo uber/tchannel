@@ -69,13 +69,12 @@ func (p *inboundCallPipeline) handleCallReq(frame *Frame) {
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), callReq.TimeToLive)
-	ctxWrapper := inboundCallContext{ctx, cancel}
-
 	res := &InboundCallResponse{
 		id:       frame.Header.Id,
 		pipeline: p,
 		state:    inboundCallResponseReadyToWriteArg2,
-		ctx:      ctxWrapper,
+		ctx:      ctx,
+		cancel:   cancel,
 		checksum: ChecksumTypeCrc32.New(), // TODO(mmihic): Make configurable or mirror req?
 	}
 	res.partWriter = newMultiPartWriter(res)
@@ -85,7 +84,8 @@ func (p *inboundCallPipeline) handleCallReq(frame *Frame) {
 		pipeline:         p,
 		res:              res,
 		recvCh:           reqCh,
-		ctx:              ctxWrapper,
+		ctx:              ctx,
+		cancel:           cancel,
 		curFragment:      firstFragment,
 		recvLastFragment: firstFragment.last,
 		serviceName:      string(callReq.Service),
@@ -157,7 +157,7 @@ func (p *inboundCallPipeline) dispatchInbound(call *InboundCall) {
 	}
 
 	p.log.Debug("Dispatching %s:%s from %s", call.ServiceName(), call.Operation(), p.remotePeerInfo)
-	h.Handle(call.ctx.ctx, call)
+	h.Handle(call.ctx, call)
 }
 
 // An InboundCall is an incoming call from a peer
@@ -165,7 +165,8 @@ type InboundCall struct {
 	id               uint32
 	pipeline         *inboundCallPipeline
 	res              *InboundCallResponse
-	ctx              inboundCallContext
+	ctx              context.Context
+	cancel           context.CancelFunc
 	serviceName      string
 	operation        []byte
 	state            inboundCallState
@@ -217,7 +218,7 @@ func (call *InboundCall) readOperation() error {
 }
 
 // Reads the second argument from the inbound call.
-func (call *InboundCall) ReadArg2(arg InputArgument) error {
+func (call *InboundCall) ReadArg2(arg Input) error {
 	if call.state != inboundCallReadyToReadArg2 {
 		return call.failed(ErrInboundCallStateMismatch)
 	}
@@ -236,7 +237,7 @@ func (call *InboundCall) ReadArg2(arg InputArgument) error {
 }
 
 // Reads the third argument from the inbound call.
-func (call *InboundCall) ReadArg3(arg InputArgument) error {
+func (call *InboundCall) ReadArg3(arg Input) error {
 	if call.state != inboundCallReadyToReadArg3 {
 		return call.failed(ErrInboundCallStateMismatch)
 	}
@@ -296,7 +297,8 @@ func (call *InboundCall) waitForFragment() (*inFragment, error) {
 // Used to send the response back to the calling peer
 type InboundCallResponse struct {
 	id                   uint32
-	ctx                  inboundCallContext
+	ctx                  context.Context
+	cancel               context.CancelFunc
 	checksum             Checksum
 	pipeline             *inboundCallPipeline
 	state                inboundCallResponseState
@@ -317,7 +319,7 @@ const (
 // Sends a system error response to the peer
 func (call *InboundCallResponse) SendSystemError(err error) error {
 	// Fail all future attempts to read fragments
-	call.ctx.Cancel()
+	call.cancel()
 	call.state = inboundCallResponseComplete
 
 	// Send the error frame
@@ -355,7 +357,7 @@ func (call *InboundCallResponse) SetApplicationError() error {
 }
 
 // Writes the second argument in the response
-func (call *InboundCallResponse) WriteArg2(arg OutputArgument) error {
+func (call *InboundCallResponse) WriteArg2(arg Output) error {
 	if call.state != inboundCallResponseReadyToWriteArg2 {
 		return call.failed(ErrInboundCallResponseStateMismatch)
 	}
@@ -373,7 +375,7 @@ func (call *InboundCallResponse) WriteArg2(arg OutputArgument) error {
 }
 
 // Writes the third argument in the resonose
-func (call *InboundCallResponse) WriteArg3(arg OutputArgument) error {
+func (call *InboundCallResponse) WriteArg3(arg Output) error {
 	if call.state != inboundCallResponseReadyToWriteArg3 {
 		return call.failed(ErrInboundCallResponseStateMismatch)
 	}
@@ -439,14 +441,6 @@ type inboundCallContext struct {
 
 func (ctx inboundCallContext) Cancel() {
 	ctx.cancel()
-}
-
-func (ctx inboundCallContext) Done() <-chan struct{} {
-	return ctx.ctx.Done()
-}
-
-func (ctx inboundCallContext) Err() error {
-	return ctx.ctx.Err()
 }
 
 // Manages handlers

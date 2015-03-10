@@ -235,7 +235,7 @@ func (call *OutboundCall) writeOperation(operation []byte) error {
 }
 
 // Writes the second argument part to the request, blocking until the argument is written
-func (call *OutboundCall) WriteArg2(arg OutputArgument) error {
+func (call *OutboundCall) WriteArg2(arg Output) error {
 	if call.state != outboundCallReadyToWriteArg2 {
 		return call.failed(ErrArgMismatch)
 	}
@@ -253,7 +253,7 @@ func (call *OutboundCall) WriteArg2(arg OutputArgument) error {
 }
 
 // Writes the third argument to the request, blocking until the argument is written
-func (call *OutboundCall) WriteArg3(arg OutputArgument) error {
+func (call *OutboundCall) WriteArg3(arg Output) error {
 	if call.state != outboundCallReadyToWriteArg3 {
 		return call.failed(ErrArgMismatch)
 	}
@@ -341,7 +341,7 @@ func (call *OutboundCallResponse) ApplicationError() bool {
 }
 
 // Reads the second argument from the response
-func (call *OutboundCallResponse) ReadArg2(arg InputArgument) error {
+func (call *OutboundCallResponse) ReadArg2(arg Input) error {
 	if call.state != outboundCallResponseReadyToReadArg2 {
 		return call.failed(ErrArgMismatch)
 	}
@@ -360,7 +360,7 @@ func (call *OutboundCallResponse) ReadArg2(arg InputArgument) error {
 }
 
 // Reads the third argument from the response
-func (call *OutboundCallResponse) ReadArg3(arg InputArgument) error {
+func (call *OutboundCallResponse) ReadArg3(arg Input) error {
 	if call.state != outboundCallResponseReadyToReadArg3 {
 		return call.failed(ErrArgMismatch)
 	}

@@ -5,14 +5,14 @@ import (
 	"io/ioutil"
 )
 
-// A InputArgument is able to read an argument from a call body
-type InputArgument interface {
+// A Input is able to read an argument from a call body
+type Input interface {
 	// Reads the argument from the given io.Reader
 	ReadFrom(r io.Reader) error
 }
 
-// A OutputArgument is able to write an argument to a call body
-type OutputArgument interface {
+// A Output is able to write an argument to a call body
+type Output interface {
 	// Writes the argument to the given io.Writer
 	WriteTo(w io.Writer) error
 }
@@ -40,28 +40,28 @@ func (p *BytesInput) ReadFrom(r io.Reader) error {
 	return nil
 }
 
-// StreamingOutputArgument streams the contents of the given io.Reader
-type StreamingOutputArgument struct {
+// StreamingOutput streams the contents of the given io.Reader
+type StreamingOutput struct {
 	r io.Reader
 }
 
-func NewStreamingOutputArgument(r io.Reader) OutputArgument { return StreamingOutputArgument{r} }
+func NewStreamingOutput(r io.Reader) Output { return StreamingOutput{r} }
 
-func (arg StreamingOutputArgument) WriteTo(w io.Writer) error {
+func (arg StreamingOutput) WriteTo(w io.Writer) error {
 	if _, err := io.Copy(w, arg.r); err != nil && err != io.EOF {
 		return err
 	}
 	return nil
 }
 
-// StreamingInputArgument streams the contents of the argument to the given io.Writer
-type StreamingInputArgument struct {
+// StreamingInput streams the contents of the argument to the given io.Writer
+type StreamingInput struct {
 	w io.Writer
 }
 
-func NewStreamingInputArgument(w io.Writer) InputArgument { return StreamingInputArgument{w} }
+func NewStreamingInput(w io.Writer) Input { return StreamingInput{w} }
 
-func (arg StreamingInputArgument) ReadFrom(r io.Reader) error {
+func (arg StreamingInput) ReadFrom(r io.Reader) error {
 	if _, err := io.Copy(arg.w, r); err != nil && err != io.EOF {
 		return err
 	}
