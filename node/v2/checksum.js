@@ -20,7 +20,7 @@
 
 'use strict';
 
-var farm32 = require('farmhash').hash32;
+var farm32 = require('farmhash').fingerprint32;
 var crc32 = require('crc').crc32;
 
 var TypedError = require('error/typed');
@@ -67,7 +67,7 @@ Checksum.objOrType = function objOrType(arg) {
 Checksum.Types = {
     None: 0x00,
     CRC32: 0x01,
-    FarmHash32: 0x02
+    Farm32: 0x02
 };
 
 Checksum.read = read.chained(read.UInt8, function(type, buffer, offset) {

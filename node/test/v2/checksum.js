@@ -38,8 +38,8 @@ var CRC32Buffer = Buffer([
 ]);
 
 var Farm32Buffer = Buffer([
-    Checksum.Types.FarmHash32, // csumtype:1
-    0x9b, 0x59, 0xe9, 0xf3     // csum:4
+    Checksum.Types.Farm32, // csumtype:1
+    0xee, 0xd8, 0x6e, 0xa9     // csum:4
 ]);
 
 test('read and verify none checksum', function t(assert) {
@@ -64,13 +64,13 @@ test('read and verify crc32 checksum', function t(assert) {
     });
 });
 
-test('read and verify farmhash32 checksum', function t(assert) {
+test('read and verify farm32 checksum', function t(assert) {
     testRead(assert, Checksum.read, Farm32Buffer, function checkFarmHash32(csum, done) {
-        assert.equal(csum.type, Checksum.Types.FarmHash32, 'expected type: farmhash32');
+        assert.equal(csum.type, Checksum.Types.Farm32, 'expected type: farm32');
         var good = csum.verify(parts[0], parts[1], parts[2]);
-        assert.equal(good, null, 'farmhash32 expected to verify parts');
+        assert.equal(good, null, 'farm32 expected to verify parts');
         var bad = csum.verify(uparts[0], uparts[1], uparts[2]);
-        assert.equal(bad && bad.type, 'tchannel.checksum', 'farmhash32 expected to fail');
+        assert.equal(bad && bad.type, 'tchannel.checksum', 'farm32 expected to fail');
         done();
     });
 });
@@ -101,15 +101,15 @@ test('write correct crc32 checksum', function t(assert) {
     assert.end();
 });
 
-test('write correct farmhash32 checksum', function t(assert) {
-    var csum = Checksum(Checksum.Types.FarmHash32);
+test('write correct farm32 checksum', function t(assert) {
+    var csum = Checksum(Checksum.Types.Farm32);
     csum.update(parts[0], parts[1], parts[2]);
     assert.deepEqual(
         csum.write().create(),
-        Farm32Buffer, 'farmhash32 writes correct checksum');
+        Farm32Buffer, 'farm32 writes correct checksum');
     csum.update(uparts[0], uparts[1], uparts[2]);
     assert.notDeepEqual(
         csum.write().create(),
-        Farm32Buffer, 'farmhash32 rejects bad data');
+        Farm32Buffer, 'farm32 rejects bad data');
     assert.end();
 });
