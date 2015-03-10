@@ -1,0 +1,4 @@
+*.swp
+statsdex
+.DS_Store
+build
