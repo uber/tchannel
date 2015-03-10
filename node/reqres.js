@@ -42,7 +42,7 @@ function TChannelIncomingRequest(id, options) {
     self.remoteAddr = null;
     self.headers = options.headers || {};
     self.checksumType = options.checksumType || 0;
-    self.name = options.name || '';
+    self.arg1 = options.arg1 || emptyBuffer;
     self.arg2 = options.arg2 || emptyBuffer;
     self.arg3 = options.arg3 || emptyBuffer;
 }
@@ -125,7 +125,7 @@ function TChannelOutgoingResponse(id, options, sendFrame) {
     self.headers = options.headers || {};
     self.checksumType = options.checksumType || 0;
     self.ok = true;
-    self.name = options.name || '';
+    self.arg1 = options.arg1 || emptyBuffer;
     self.arg2 = options.arg2 || emptyBuffer;
     self.arg3 = options.arg3 || emptyBuffer;
     self.sendFrame = sendFrame;
