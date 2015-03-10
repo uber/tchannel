@@ -51,7 +51,7 @@ server.listen(4040, '127.0.0.1', ready.signal);
 client.listen(4041, '127.0.0.1', ready.signal);
 ```
 
-This example registers two functions on the "server". "func 1" always works and "func 2" always 
+This example registers two functions on the "server". "func 1" always works and "func 2" always
 returns an error. The client sends a request for each function, then prints the result.
 
 Note that every instance is bidirectional. New connections are initiated on demand.
@@ -87,7 +87,7 @@ to stringify and parse outside of TChannel.
 This design supports efficient routing and forwarding of data where the routing information needs
 to parse only the first or second field, but the 3rd field is forwarded without parsing.
 
-There is no notion of client and server in this system. Every TChannel instance is capable of 
+There is no notion of client and server in this system. Every TChannel instance is capable of
 making or receiving requests, and thus requires a unique port on which to listen. This requirement may
 change in the future.
 
@@ -186,7 +186,7 @@ default value: `5000`
 A default timeout for request timeouts.
 
 For every outgoing request which does not have a set timeout i.e. every
-`.rquest()` without a timeout we will default the timeout period to be this
+`.request()` without a timeout we will default the timeout period to be this
 value.
 
 This means every outgoing operation will be terminated with
