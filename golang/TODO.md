@@ -15,6 +15,7 @@ h1. Functionality
 - [ ] Allow setting the content type headers
 - [ ] Add JSONInput/JSONOutput argument types
 - [ ] Add ThriftInput/ThriftOutput argument types
+- [ ] Implement ping/pong handling
 
 h1. Cleanup
 
