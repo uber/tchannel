@@ -10,14 +10,14 @@ import (
 )
 
 var (
-	ErrTooLarge                   = errors.New("data exceeds remaining fragment size")
+	ErrTooLarge                   = errors.New("impl error, data exceeds remaining fragment size")
 	ErrMismatchedChecksumTypes    = errors.New("peer sent a different checksum type for fragment")
 	ErrMismatchedChecksum         = errors.New("local checksum differs from peer")
-	ErrMoreDataInPart             = errors.New("more data remaining in argument")
-	ErrChunkAlreadyOpen           = errors.New("chunk already open")
-	ErrNoOpenChunk                = errors.New("no open chunk")
-	ErrPartComplete               = errors.New("argument is already marked complete")
-	ErrAlignedAtEndOfOpenFragment = errors.New("implementation error; align-at-end of open fragment")
+	ErrDataLeftover               = errors.New("more data remaining in argument")
+	ErrChunkAlreadyOpen           = errors.New("impl error, beginChunk called with an already open chunk")
+	ErrNoOpenChunk                = errors.New("impl error, writeChunkData or endChunk called with no open chunk")
+	ErrWriteAfterComplete         = errors.New("attempted to write to a stream after the last fragment sent")
+	ErrAlignedAtEndOfOpenFragment = errors.New("impl error; align-at-end of open fragment")
 )
 
 const (
@@ -180,7 +180,7 @@ func (w *multiPartWriter) WritePart(output Output, last bool) error {
 // Writes part bytes, potentially splitting them across fragments
 func (w *multiPartWriter) Write(b []byte) (int, error) {
 	if w.complete {
-		return 0, ErrPartComplete
+		return 0, ErrWriteAfterComplete
 	}
 
 	written := 0
@@ -446,7 +446,7 @@ func (r *multiPartReader) Read(b []byte) (int, error) {
 // Marks the current part as complete, confirming that we've read the entire part and have nothing left over
 func (r *multiPartReader) endPart() error {
 	if len(r.chunk) > 0 {
-		return ErrMoreDataInPart
+		return ErrDataLeftover
 	}
 
 	if !r.lastChunkInFragment && !r.lastPartInMessage {
@@ -459,7 +459,7 @@ func (r *multiPartReader) endPart() error {
 
 		r.chunk = nextFragment.nextChunk()
 		if len(r.chunk) > 0 {
-			return ErrMoreDataInPart
+			return ErrDataLeftover
 		}
 	}
 
