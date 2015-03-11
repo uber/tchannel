@@ -147,3 +147,91 @@ def test_error_message_name():
     error = messages.ErrorMessage()
     error.code = 0x03
     assert error.error_name() == 'busy'
+
+
+def test_call_req_parse():
+    buff = bytearray([
+        0x00,                    # flags:1
+        0x00, 0x00, 0x04, 0x00,  # ttl:4
+
+        # tracing:24
+        0x00, 0x01, 0x02, 0x03,  # span_id:8
+        0x04, 0x05, 0x06, 0x07,  #
+        0x08, 0x09, 0x0a, 0x0b,  # parent_id:8
+        0x0c, 0x0d, 0x0e, 0x0f,  #
+        0x10, 0x11, 0x12, 0x13,  # trace_id:8
+        0x14, 0x15, 0x16, 0x17,  #
+        0x01,                    # traceflags:1
+
+        0x06,                    # service~1
+        0x61, 0x70, 0x61, 0x63,  # ...
+        0x68, 0x65,              # ...
+        0x01,                    # nh:1
+        0x03, 0x6b, 0x65, 0x79,  # (hk~1 hv~1){nh}
+        0x03, 0x76, 0x61, 0x6c,  # ...
+        0x00,                    # csumtype:1 (csum:4){0,1}
+        0x00, 0x02, 0x6f, 0x6e,  # arg1~2
+        0x00, 0x02, 0x74, 0x6f,  # arg2~2
+        0x00, 0x02, 0x74, 0x65   # arg3~2
+    ])
+
+    msg = messages.CallRequestMessage()
+    msg.parse(BytesIO(buff), len(buff))
+
+    assert msg.flags == 0
+    assert msg.ttl == 1024
+
+    assert msg.span_id == 283686952306183
+    assert msg.parent_id == 579005069656919567
+    assert msg.trace_id == 1157726452361532951
+    assert msg.traceflags == 1
+
+    assert msg.service == 'apache'
+    assert msg.headers == {'key': 'val'}
+    assert msg.checksum_type == 0
+
+    assert msg.arg_1 == b'on'
+    assert msg.arg_2 == b'to'
+    assert msg.arg_3 == b'te'
+
+
+def test_call_res_parse():
+    buff = bytearray([
+        0x00,                    # flags:1
+        0x00,                    # code:1
+
+        # tracing:24
+        0x00, 0x01, 0x02, 0x03,  # span_id:8
+        0x04, 0x05, 0x06, 0x07,  #
+        0x08, 0x09, 0x0a, 0x0b,  # parent_id:8
+        0x0c, 0x0d, 0x0e, 0x0f,  #
+        0x10, 0x11, 0x12, 0x13,  # trace_id:8
+        0x14, 0x15, 0x16, 0x17,  #
+        0x01,                    # traceflags:1
+
+        0x01,                    # nh:1
+        0x03, 0x6b, 0x65, 0x79,  # (hk~1 hv~1){nh}
+        0x03, 0x76, 0x61, 0x6c,  # ...
+        0x00,                    # csumtype:1 (csum:4){0,1}
+        0x00, 0x02, 0x6f, 0x6e,  # arg1~2
+        0x00, 0x02, 0x74, 0x6f,  # arg2~2
+        0x00, 0x02, 0x74, 0x65   # arg3~2
+    ])
+
+    msg = messages.CallResponseMessage()
+    msg.parse(BytesIO(buff), len(buff))
+
+    assert msg.flags == 0
+    assert msg.code == 0
+
+    assert msg.span_id == 283686952306183
+    assert msg.parent_id == 579005069656919567
+    assert msg.trace_id == 1157726452361532951
+    assert msg.traceflags == 1
+
+    assert msg.headers == {'key': 'val'}
+    assert msg.checksum_type == 0
+
+    assert msg.arg_1 == b'on'
+    assert msg.arg_2 == b'to'
+    assert msg.arg_3 == b'te'

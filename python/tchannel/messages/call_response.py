@@ -39,7 +39,6 @@ class CallResponseMessage(CallRequestMessage):
         self.code = read_number(payload, self.CODE_SIZE)
 
         self.parse_trace(payload)
-
         self.headers, _ = self._read_headers(
             payload,
             self.NH_SIZE,
@@ -47,13 +46,11 @@ class CallResponseMessage(CallRequestMessage):
         )
 
         self.checksum_type = read_number(payload, self.CSUMTYPE_SIZE)
-        csum_size = self.CHECKSUM[self.checksum_type]
-
         if self.checksum_type:
+            csum_size = self.CHECKSUM[self.checksum_type]
             self.checksum = read_number(payload, csum_size)
 
         self.parse_args(payload)
-
         self.extra_space_check(payload)
 
     def serialize(self, out):
@@ -62,7 +59,5 @@ class CallResponseMessage(CallRequestMessage):
         out.extend(write_number(self.code, self.code_SIZE))
 
         self.serialize_trace(out)
-
         self.serialize_header_and_checksum(out)
-
         self.serialize_args(out)

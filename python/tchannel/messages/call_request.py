@@ -94,12 +94,11 @@ class CallRequestMessage(BaseMessage):
         )
 
         self.checksum_type = read_number(payload, self.CSUMTYPE_SIZE)
-        csum_size = self.CHECKSUM[self.checksum_type]
         if self.checksum_type:
+            csum_size = self.CHECKSUM[self.checksum_type]
             self.checksum = read_number(payload, csum_size)
 
         self.parse_args(payload)
-
         self.extra_space_check(payload)
 
     def extra_space_check(self, payload):
@@ -140,7 +139,7 @@ class CallRequestMessage(BaseMessage):
         self._write_headers(out, self.headers, self.NH_SIZE, self.HEADER_SIZE)
 
         out.extend(write_number(self.checksum_type, self.CSUMTYPE_SIZE))
-        if self.checksum_type:
+        if self.checksum_type and self.checksum:
             out.extend(write_number(self.checksum,
                                     self.CHECKSUM[self.checksum_type]))
 
