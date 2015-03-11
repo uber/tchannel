@@ -9,6 +9,15 @@ from ..parser import write_key_value
 class BaseMessage(object):
     """Represent common functionality across all TChannel messages."""
     message_type = None
+    __slots__ = ()
+
+    def __eq__(self, other):
+        if other is None:
+            return False
+        return all(
+            getattr(self, attr) == getattr(other, attr)
+            for attr in self.__slots__
+        )
 
     def parse(self, payload, size):
         """Parse a payload into a message.
