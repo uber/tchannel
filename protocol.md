@@ -243,7 +243,7 @@ name/values are the same, but identify the server.
 Schema:
 ```
 flags:1 ttl:4 tracing:24 traceflags:1
-service~2 nh:1 (hk~1 hv~1){nh}
+service~1 nh:1 (hk~1 hv~1){nh}
 csumtype:1 (csum:4){0,1} arg1~2 arg2~2 arg3~2
 ```
 
@@ -313,7 +313,7 @@ flag   | description
 When this flag is not set, the tracing data is still required to be present in
 the frame, but the tracing data will not necessarily be sent to zipkin.
 
-### service~2
+### service~1
 
 UTF-8 string identifying the destination service to which this request should be
 routed.
@@ -759,6 +759,6 @@ the "more fragments remain" flag was not set.
 
 type | id | payload | state after parsing
 -----|----|---------|--------------------
-0x03 | 1  | flags:1=0x1, ttl:4=0x2328, tracing:24=0x1,0x2,0x3, traceflags:1=0x1, service~2=0x5"svc A", nh:1=0x1, hk~1=0x1"k", hv~1=0xA"abcdefghij", csumtype:1=0x2 csum:4=0xBEEF arg1~2=0x2<2 bytes> | sending arg1
+0x03 | 1  | flags:1=0x1, ttl:4=0x2328, tracing:24=0x1,0x2,0x3, traceflags:1=0x1, service~1=0x5"svc A", nh:1=0x1, hk~1=0x1"k", hv~1=0xA"abcdefghij", csumtype:1=0x2 csum:4=0xBEEF arg1~2=0x2<2 bytes> | sending arg1
 0x13 | 1  | flags:1=0x1, csumtype:1=0x2 csum:4=0xDEAD arg1~2=0x2<2 bytes> arg2~2=0x2<2 bytes> | sending arg2
 0x13 | 1  | flags:1=0x0, csumtype:1=0x2 csum:4=0xF00F arg2~2=0x0<0 bytes> arg3~2=0x8<8 bytes> | complete

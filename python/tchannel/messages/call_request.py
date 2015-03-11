@@ -38,7 +38,7 @@ class CallRequestMessage(BaseMessage):
     TTL_SIZE = 4
     TRACE_SIZE = 8
     TRACEFLAGS_SIZE = 1
-    SERVICE_SIZE = 2
+    SERVICE_SIZE = 1
     NH_SIZE = 1
     HEADER_SIZE = 1
     CSUMTYPE_SIZE = 1
