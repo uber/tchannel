@@ -38,7 +38,7 @@ emptyTracing.fill(0);
 
 /* jshint maxparams:10 */
 
-// flags:1 ttl:4 tracing:24 traceflags:1 service~2 nh:1 (hk~1 hv~1){nh} csumtype:1 (csum:4){0,1} arg1~2 arg2~2 arg3~2
+// flags:1 ttl:4 tracing:24 traceflags:1 service~1 nh:1 (hk~1 hv~1){nh} csumtype:1 (csum:4){0,1} arg1~2 arg2~2 arg3~2
 function CallRequest(flags, ttl, tracing, service, headers, csum, arg1, arg2, arg3) {
     if (!(this instanceof CallRequest)) {
         return new CallRequest(flags, ttl, tracing, service, headers, csum, arg1, arg2, arg3);
@@ -70,7 +70,7 @@ CallRequest.read = read.chained(read.series([
     read.UInt8,     // flags:1
     read.UInt32BE,  // ttl:4
     read.fixed(25), // tracing:24 traceflags:1
-    read.buf2,      // service~2
+    read.buf1,      // service~1
     header.read,    // nh:1 (hk~1 hv~1){nh}
     Checksum.read,  // csumtype:1 (csum:4){0,1}
     read.buf2,      // arg1~2
@@ -102,7 +102,7 @@ CallRequest.prototype.write = function writeCallReq() {
         write.UInt8(self.flags, 'CallRequest flags'),         // flags:1
         write.UInt32BE(self.ttl, 'CallRequest ttl'),          // ttl:4
         write.fixed(25, self.tracing, 'CallRequest tracing'), // tracing:24 traceflags:1
-        write.buf2(self.service, 'CallRequest service'),      // service~2
+        write.buf1(self.service, 'CallRequest service'),      // service~1
         header.write(self.headers),                           // nh:1 (hk~1 hv~1){nh}
         self.csum.write(),                                    // csumtype:1 (csum:4){0,1}
         write.buf2(self.arg1, 'CallRequest arg1'),            // arg1~2
