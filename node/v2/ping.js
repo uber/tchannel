@@ -19,7 +19,6 @@
 'use strict';
 
 var read = require('../lib/read');
-var write = require('../lib/write');
 
 module.exports.Request = PingRequest;
 module.exports.Response = PingResponse;
