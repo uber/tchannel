@@ -21,12 +21,12 @@ package tchannel
 // THE SOFTWARE.
 
 import (
-	"code.google.com/p/go.net/context"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/op/go-logging"
 	"github.com/uber/tchannel/golang/typed"
+	"golang.org/x/net/context"
 	"net"
 	"sync"
 	"sync/atomic"

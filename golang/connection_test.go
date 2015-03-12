@@ -21,10 +21,10 @@ package tchannel
 // THE SOFTWARE.
 
 import (
-	"code.google.com/p/go.net/context"
 	"github.com/op/go-logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/net/context"
 	"testing"
 	"time"
 )
@@ -73,7 +73,7 @@ func TestRoundTrip(t *testing.T) {
 	ch, err := NewChannel(":8050", nil)
 	require.Nil(t, err)
 
-	ch.Register(HandleFunc(echo), "Capture", "ping")
+	ch.Register(HandlerFunc(echo), "Capture", "ping")
 
 	go ch.ListenAndHandle()
 
@@ -112,7 +112,7 @@ func TestServerBusy(t *testing.T) {
 	ch, err := NewChannel(":8070", nil)
 	require.Nil(t, err)
 
-	ch.Register(HandleFunc(serverBusy), "TestService", "busy")
+	ch.Register(HandlerFunc(serverBusy), "TestService", "busy")
 	go ch.ListenAndHandle()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
@@ -127,7 +127,7 @@ func TestTimeout(t *testing.T) {
 	ch, err := NewChannel(":8071", nil)
 	require.Nil(t, err)
 
-	ch.Register(HandleFunc(timeout), "TestService", "timeout")
+	ch.Register(HandlerFunc(timeout), "TestService", "timeout")
 	go ch.ListenAndHandle()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
@@ -143,7 +143,7 @@ func TestFragmentation(t *testing.T) {
 	ch, err := NewChannel(":8072", nil)
 	require.Nil(t, err)
 
-	ch.Register(HandleFunc(echo), "TestService", "echo")
+	ch.Register(HandlerFunc(echo), "TestService", "echo")
 	go ch.ListenAndHandle()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)

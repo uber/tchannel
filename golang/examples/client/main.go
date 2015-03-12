@@ -2,9 +2,9 @@ package main
 
 import (
 	"code.google.com/p/getopt"
-	"code.google.com/p/go.net/context"
-	"code.uber.internal/personal/mmihic/tchannel-go"
 	"github.com/op/go-logging"
+	"github.com/uber/tchannel/golang"
+	"golang.org/x/net/context"
 	"os"
 	"time"
 )
@@ -18,14 +18,14 @@ var arg2 = getopt.StringLong("arg2", '2', "", "Input for arg2.  Curl-style, use 
 var arg3 = getopt.StringLong("arg3", '3', "", "Input for arg3.  Curl-style, use @foo.txt to read from foo.txt")
 var timeout = getopt.IntLong("timeout", 't', 30, "Timeout (in seconds)")
 
-func asArgument(arg string) tchannel.OutputArgument {
+func asArgument(arg string) tchannel.Output {
 	if arg[0] == '@' {
 		f, err := os.Open(arg[1:])
 		if err != nil {
 			panic(err)
 		}
 
-		return tchannel.NewStreamingOutputArgument(f)
+		return tchannel.NewStreamingOutput(f)
 	}
 
 	return tchannel.BytesOutput([]byte(arg))

@@ -2,9 +2,9 @@ package main
 
 import (
 	"code.google.com/p/getopt"
-	"code.google.com/p/go.net/context"
-	"code.uber.internal/personal/mmihic/tchannel-go"
 	"github.com/op/go-logging"
+	"github.com/uber/tchannel/golang"
+	"golang.org/x/net/context"
 	"time"
 )
 
@@ -70,11 +70,11 @@ func main() {
 		panic(err)
 	}
 
-	ch.Register(tchannel.HandleFunc(echo), "TestService", "echo")
-	ch.Register(tchannel.HandleFunc(serverBusy), "TestService", "busy")
-	ch.Register(tchannel.HandleFunc(badRequest), "TestService", "badRequest")
-	ch.Register(tchannel.HandleFunc(appError), "TestService", "appError")
-	ch.Register(tchannel.HandleFunc(timeout), "TestService", "timeout")
+	ch.Register(tchannel.HandlerFunc(echo), "TestService", "echo")
+	ch.Register(tchannel.HandlerFunc(serverBusy), "TestService", "busy")
+	ch.Register(tchannel.HandlerFunc(badRequest), "TestService", "badRequest")
+	ch.Register(tchannel.HandlerFunc(appError), "TestService", "appError")
+	ch.Register(tchannel.HandlerFunc(timeout), "TestService", "timeout")
 
 	if err := ch.ListenAndHandle(); err != nil {
 		panic(err)

@@ -21,9 +21,9 @@ package tchannel
 // THE SOFTWARE.
 
 import (
-	"code.google.com/p/go.net/context"
 	"errors"
 	"github.com/op/go-logging"
+	"golang.org/x/net/context"
 	"io"
 	"sync"
 )
