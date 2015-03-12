@@ -225,7 +225,13 @@ name            | format             | description
 `process_name` | *arbitrary string* | additional identifier for this instance, used for logging
 
 For forward compatibility, implementations should ignore headers other than
-these.
+these listed above.
+
+For connections where listening for new connections is not possible or doesn't make sense,
+implementations should send a `host_port` value of `0.0.0.0:0`. This special value tells
+receiving implementations to use the results of `getpeername` or equivalent API to uniquely
+identify this connection. It also tells receivers that this address is not valid beyond this
+connection, so it should not be forwarded to other nodes.
 
 ## Payload: init res (type 0x02)
 
