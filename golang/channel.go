@@ -21,8 +21,8 @@ package tchannel
 // THE SOFTWARE.
 
 import (
-	"code.google.com/p/go.net/context"
 	"github.com/op/go-logging"
+	"golang.org/x/net/context"
 	"net"
 	"time"
 )
