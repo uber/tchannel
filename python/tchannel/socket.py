@@ -50,9 +50,16 @@ class SocketConnection(Connection):
         for call in self.reader:
             handler(call, connection=self)
 
-    def await(self, callback):
+    def await(self, callback=None):
         """Decode a full message and return"""
-        return callback(next(self.reader))
+        try:
+            ctx = next(self.reader)
+        except StopIteration:
+            ctx = None
+        if callback:
+            return callback(ctx)
+        else:
+            return ctx
 
     def next(self):
         return next(self.reader)

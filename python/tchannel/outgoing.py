@@ -1,11 +1,29 @@
 from __future__ import absolute_import
 
+import sys
 import enum
 import socket
+import Queue as queue
+from collections import namedtuple
+from threading import Lock, Thread
 from functools import partial
+
+from concurrent.futures import Future
 
 from .socket import SocketConnection
 from .messages import CallRequestMessage
+
+
+class SettableFuture(Future):
+
+    def set_result(self, result):
+        return super(SettableFuture, self).set_result(result)
+
+    def set_exception(self, exception=None):
+        e, tb = sys.exc_info()[1:]
+        if not exception:
+            exception = e
+        super(SettableFuture, self).set_exception_info(exception, tb)
 
 
 class TChannelException(Exception):
@@ -15,7 +33,7 @@ class TChannelException(Exception):
 
 class TChannelApplicationException(TChannelException):
     """The remote application returned an exception.
-    
+
     This is not a protocol error. This means a response was received with the
     ``code`` flag set to fail."""
     def __init__(self, code, arg_1, arg_2, arg_3):
@@ -31,6 +49,8 @@ class TChannelApplicationException(TChannelException):
 
 class TChannelOutOps(object):
     """Encapsulates outgoing operations for a TChannel connection."""
+
+    Request = namedtuple('Request', 'message, future')
 
     @enum.unique
     class State(enum.IntEnum):
@@ -57,10 +77,56 @@ class TChannelOutOps(object):
         self._conn = SocketConnection(self._sock)
 
         self._state = self.State.init
+        self._outstanding = queue.Queue()
         self._on_close = on_close or (lambda x: x)
+
+        self._sender = Thread(target=self._start_sender)
+        self._receiver = Thread(target=self._start_receiver)
+        self._timeout = 0.5
+        self._id_counter = 0
+        self._counter_lock = Lock()
 
         if perform_handshake:
             self.handshake()
+
+        self._futures = {}
+        self._sender.start()
+        self._receiver.start()
+
+    def _submit(self, message, future):
+        self._outstanding.put(self.Request(message, future))
+
+    def _next_message_id(self):
+        with self._counter_lock:
+            self._id_counter += 1
+            return self._id_counter
+
+    def _start_sender(self):
+        while not self.closed():
+            try:
+                request = self._outstanding.get(timeout=self._timeout)
+            except queue.Empty:
+                continue
+
+            if request is None:
+                break
+
+            msg = request.message
+            if msg is None:
+                break
+
+            msg_id = self._next_message_id()
+            self._futures[msg_id] = request.future
+
+            self._conn.frame_and_write(msg, message_id=msg_id)
+
+    def _start_receiver(self):
+        while not self.closed():
+            try:
+                ctx = self._conn.await()
+            except socket.timeout:
+                continue
+            self._futures[ctx.message_id].set_result(ctx.message)
 
     def handshake(self):
         """Perform a handshake with the remote host over the given connection.
@@ -110,10 +176,11 @@ class TChannelOutOps(object):
         msg.trace_id = 0
         msg.traceflags = 0
         msg.ttl = 1
-        # wat
+        # ^wat
 
-        self._conn.frame_and_write(msg)
-        response = self._conn.await(lambda ctx: ctx.message)
+        future = SettableFuture()
+        self._submit(msg, future)
+        response = future.result()
 
         if response.code != 0:
             raise TChannelApplicationException(
@@ -126,16 +193,20 @@ class TChannelOutOps(object):
         """Returns True if the connection has been closed."""
         return self._state == self.State.closed
 
-    def close(self):
+    def close(self, wait=True):
         """Manually close this connection
 
         It is generally not necessary to call this manually because the
         TChannel instance will clean up after itself.
         """
-        if not self.closed():
-            self._sock.close()
-            self._state = self.State.closed
-            self._on_close(self)
+        if self.closed():
+            return
+        self._state = self.State.closed
+        self._outstanding.put(None)
+        self._sender.join()
+        self._receiver.join()
+        self._sock.close()
+        self._on_close(self)
 
     def __del__(self):
         try:
@@ -158,10 +229,7 @@ class OutgoingTChannel(object):
 
     All open connections are automatically closed when the context manager
     exits.
-
-    This class is NOT thread-safe.
     """
-    # FIXME: Make me thread safe
 
     def __init__(self, name):
         """Initialize an OutgoingTChannel with the given process name.
@@ -172,6 +240,7 @@ class OutgoingTChannel(object):
         """
         assert name, 'A process name is required'
         self._name = name
+        self._lock = Lock()
         self._connections = {}
 
     def _get_connection(self, host, port):
@@ -191,16 +260,30 @@ class OutgoingTChannel(object):
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect((host, port))
+        sock.settimeout(0.5)
 
-        conn = self._connections[(host, port)] = TChannelOutOps(
-            self._name,
-            sock,
-            on_close=partial(self._on_conn_close, host=host, port=port),
-        )
+        with self._lock:
+            if (host, port) in self._connections:
+                # Someone else established the connection while we were
+                # waiting.
+                sock.close()
+                return self._connections[(host, port)]
+            conn = self._connections[(host, port)] = TChannelOutOps(
+                self._name,
+                sock,
+                on_close=partial(self._on_conn_close, host, port),
+            )
+
         return conn
 
     def _on_conn_close(self, host, port, connection):
-        self._connections.pop((host, port), None)
+        with self._lock:
+            if (host, port) in self._connections:
+                # `is` check instead of == because we want to ensure that
+                # we're not accidentally removing a different connection for
+                # the same host:port.
+                if self._connections[(host, port)] is connection:
+                    del self._connections[(host, port)]
 
     def request(self, host, port=None):
         """Prepare to make a request to the given destination.

@@ -47,12 +47,10 @@ class Connection(object):
         """Frame and write a message over a connection."""
         if message_id is None:
             message_id = self.next_message_id()
-
         try:
             self._writer.write(message_id, message)
         except ProtocolException as e:
             raise InvalidMessageException(e.message)
-
         return message_id
 
     def ping(self):
