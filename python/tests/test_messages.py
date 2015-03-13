@@ -216,7 +216,7 @@ def test_call_req_parse(call_request_bytes):
     assert msg.arg_3 == b'te'
 
 
-def test_extra_space_check(caplog, call_request_bytes):
+def test_extra_space_check(call_request_bytes):
     buff = call_request_bytes
     message = messages.CallRequestMessage()
 
