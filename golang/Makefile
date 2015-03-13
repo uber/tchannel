@@ -13,6 +13,7 @@ setup:
 
 install: 
 	mkdir -p $(GODEPS)
+	go get github.com/tools/godep
 	GOPATH=$(GODEPS) godep restore
 
 help:
