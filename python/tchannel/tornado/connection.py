@@ -41,8 +41,9 @@ class TornadoConnection(Connection):
     def on_close(self):
         self.closed = True
 
-    def await(self, callback):
+    def await(self, callback=None):
         """Wait for the next message and call ``callback.``"""
+        callback = callback or (lambda context: None)
         return self.reader.read(callback=callback)
 
     def handle_calls(self, handler):

@@ -27,7 +27,7 @@ class Connection(object):
         """
         raise NotImplementedError()
 
-    def await(self, callback):
+    def await(self, callback=None):
         """Decode a full message off the wire."""
         raise NotImplementedError()
 
