@@ -17,18 +17,6 @@ def tcurl(host, endpoint, headers, body):
 
     client = TChannel()
 
-    def handle_call(context):
-        """Handle a TChannel CALL_REQ message."""
-        if not context:
-            log.debug("didn't receive context")
-            return
-
-        log.debug("received message %s", context.message)
-        log.debug(context.message.arg_1)
-        log.debug(context.message.arg_1)
-        log.debug(context.message.arg_2)
-        log.debug(context.message.arg_3)
-
     print
     print "Sending this to", host
     print "*" * 80
