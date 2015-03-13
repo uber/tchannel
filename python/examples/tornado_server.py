@@ -6,6 +6,7 @@ import tornado.ioloop
 import tornado.tcpserver
 
 from options import get_args
+from tchannel.messages import CallResponseMessage
 from tchannel.tornado.connection import TornadoConnection
 
 
@@ -37,6 +38,25 @@ class MyServer(tornado.tcpserver.TCPServer):
             return
 
         print("Received message: %s" % context.message)
+
+        if context.message.arg_1:
+            response = CallResponseMessage()
+            response.flags = 0
+            response.code = 200
+            response.span_id = 0
+            response.parent_id = 0
+            response.trace_id = 0
+            response.traceflags = 0
+            response.headers = {'currently': 'broken'}
+            response.checksum_type = 0
+            response.checksum = 0
+            response.arg_1 = context.message.arg_1
+            response.arg_2 = 'hello world'
+            response.arg_3 = context.message.arg_3
+
+            connection.frame_and_write(response)
+
+
         connection.handle_calls(self.handle_call)
 
 
