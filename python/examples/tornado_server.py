@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 from __future__ import absolute_import
+
+import random
 import sys
 
 import tornado.ioloop
@@ -56,7 +58,11 @@ class MyServer(tornado.tcpserver.TCPServer):
             response.arg_2 = 'hello world'
             response.arg_3 = context.message.arg_3
 
-            connection.frame_and_write(response)
+            # Simulate some response delay
+            tornado.ioloop.IOLoop.instance().call_later(
+                random.random(),
+                lambda: connection.frame_and_write(response)
+            )
 
         elif context.message.message_type == Types.PING_REQ:
             connection.pong()
