@@ -14,3 +14,7 @@ class ProtocolException(TChannelException):
 class InvalidMessageException(ProtocolException):
     """Represent an invalid message."""
     pass
+
+
+class TimeoutException(TChannelException):
+    pass
