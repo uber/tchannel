@@ -380,7 +380,7 @@ TChannel.prototype.close = function close(callback) {
         });
         conn.closing = true;
         conn.resetAll(new Error('shutdown from quit')); // TODO typed error
-        sock.end();
+        sock.destroy();
     });
 
     var serverSocket = self.serverSocket;
