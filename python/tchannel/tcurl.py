@@ -50,9 +50,9 @@ def tcurl(host, endpoint, headers, body):
     print
     print "Got this from", host
     print "*" * 80
-    print " arg1:", response.arg_1
-    print " arg2:", response.arg_2
-    print " arg3:", response.arg_3
+    print " arg1:", getattr(response, 'arg_1', None)
+    print " arg2:", getattr(response, 'arg_2', None)
+    print " arg3:", getattr(response, 'arg_3', None)
 
 
 def parse_args():
