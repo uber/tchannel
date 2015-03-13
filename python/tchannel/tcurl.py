@@ -2,7 +2,6 @@ from __future__ import absolute_import
 
 import argparse
 import logging
-import os
 import sys
 
 import tornado.ioloop
@@ -24,7 +23,6 @@ def tcurl(host, endpoint, headers, body):
             log.debug("didn't receive context")
             return
 
-        #connection.pong()
         log.debug("received message %s", context.message)
         log.debug(context.message.arg_1)
         log.debug(context.message.arg_1)
