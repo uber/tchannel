@@ -1,9 +1,10 @@
-GODEPS = ./Godeps/_workspace
-GOPATH := $(GODEPS):$(GOPATH)
+GODEPS := $(shell pwd)/Godeps/_workspace
+OLDGOPATH := $(GOPATH)
 PATH := $(GODEPS)/bin:$(PATH)
 PKGS := . ./typed ./examples/server ./examples/client
 BUILD := ./build
 SRCS := $(foreach pkg,$(PKGS),$(wildcard $(pkg)/*.go))
+export GOPATH = $(GODEPS):$(OLDGOPATH)
 
 all: test examples
 
@@ -13,7 +14,7 @@ setup:
 
 install: 
 	mkdir -p $(GODEPS)
-	go get github.com/tools/godep
+	GOPATH=$(GODEPS) go get github.com/tools/godep
 	GOPATH=$(GODEPS) godep restore
 
 help:
