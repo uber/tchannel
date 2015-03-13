@@ -217,11 +217,11 @@ def test_call_req_parse(call_request_bytes):
 
 
 def test_extra_space_check(call_request_bytes):
-    buff = call_request_bytes
+    buff = call_request_bytes + bytearray(b'a little sumpin xtra')
     message = messages.CallRequestMessage()
 
     with pytest.raises(exceptions.InvalidMessageException):
-        message.parse(BytesIO(buff + 'sumpin xtra'), len(buff))
+        message.parse(BytesIO(buff), len(buff))
 
 
 def test_call_res_parse():
