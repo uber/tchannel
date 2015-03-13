@@ -13,7 +13,10 @@ setup:
 	mkdir -p $(BUILD)/examples
 
 install: 
-	mkdir -p $(GODEPS)
+	# Totally insane, but necessary to setup a proper GOPATH given that we are not
+	# running under a standard go travis environment
+	mkdir -p $(GODEPS)/src/github.com/uber/tchannel
+	ln -s $(shell pwd) $(GODEPS)/src/github.com/uber/tchannel/golang
 	GOPATH=$(GODEPS) go get github.com/tools/godep
 	GOPATH=$(GODEPS) godep restore
 
