@@ -19,9 +19,11 @@ log = logging.getLogger('tchannel')
 class TChannel(object):
     """Manages inbound and outbound connections to various hosts."""
 
-    def __init__(self):
+    def __init__(self, process_name=None):
         self.peers = {}
-        self.process_name = "%s[%s]" % (sys.argv[0], os.getpid())
+        self.process_name = (
+            process_name or "%s[%s]" % (sys.argv[0], os.getpid())
+        )
 
         # TODO: self.server_socket = self.make_in_connection()
 
@@ -48,7 +50,7 @@ class TChannel(object):
 
     @tornado.gen.coroutine
     def make_out_connection(self, hostport):
-        host, port = hostport.split(":")
+        host, port = hostport.rsplit(":", 1)
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         stream = tornado.iostream.IOStream(sock)
@@ -86,10 +88,7 @@ class TChannel(object):
         # TODO: handle inbound requests
         raise NotImplementedError
 
-    @tornado.gen.coroutine
     def request(self, hostport):
-
-        peer_connection = yield self.get_peer(hostport)
 
         class TChannelClientOp(object):
             # Do we want/need to track these if we have timeouts? Maybe for
@@ -116,6 +115,7 @@ class TChannel(object):
 
                 # Make this return a message ID so we can match it up with the
                 # response.
+                peer_connection = yield self.get_peer(hostport)
                 yield peer_connection.frame_and_write(message)
 
                 log.debug("awaiting response")
@@ -132,4 +132,4 @@ class TChannel(object):
 
                 raise tornado.gen.Return(response.message)
 
-        raise tornado.gen.Return(TChannelClientOp())
+        return TChannelClientOp()

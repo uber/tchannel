@@ -39,7 +39,7 @@ def tcurl(host, endpoint, headers, body):
     print " arg3:", body
     print
 
-    request = yield client.request(host)
+    request = client.request(host)
 
     response = yield request.send(
         endpoint,
