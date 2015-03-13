@@ -1,10 +1,10 @@
 from __future__ import absolute_import
 
-import logging
 import os
 
 from .base import BaseMessage
 from .types import Types
+from ..exceptions import InvalidMessageException
 from ..parser import read_number
 from ..parser import read_variable_length_key
 from ..parser import write_number
@@ -107,7 +107,9 @@ class CallRequestMessage(BaseMessage):
         end = payload.tell()
 
         if cur != end:
-            logging.error("Extra space exists in the end of payload!")
+            raise InvalidMessageException(
+                "Too many bytes in the payload"
+            )
 
     def serialize_trace(self, out):
         out.extend(write_number(self.span_id, self.TRACE_SIZE))

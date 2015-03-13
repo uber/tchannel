@@ -27,6 +27,34 @@ def init_request_message():
 
 
 @pytest.fixture
+def call_request_bytes():
+    return bytearray([
+        0x00,                    # flags:1
+        0x00, 0x00, 0x04, 0x00,  # ttl:4
+
+        # tracing:24
+        0x00, 0x01, 0x02, 0x03,  # span_id:8
+        0x04, 0x05, 0x06, 0x07,  #
+        0x08, 0x09, 0x0a, 0x0b,  # parent_id:8
+        0x0c, 0x0d, 0x0e, 0x0f,  #
+        0x10, 0x11, 0x12, 0x13,  # trace_id:8
+        0x14, 0x15, 0x16, 0x17,  #
+        0x01,                    # traceflags:1
+
+        0x06,                    # service~1
+        0x61, 0x70, 0x61, 0x63,  # ...
+        0x68, 0x65,              # ...
+        0x01,                    # nh:1
+        0x03, 0x6b, 0x65, 0x79,  # (hk~1 hv~1){nh}
+        0x03, 0x76, 0x61, 0x6c,  # ...
+        0x00,                    # csumtype:1 (csum:4){0,1}
+        0x00, 0x02, 0x6f, 0x6e,  # arg1~2
+        0x00, 0x02, 0x74, 0x6f,  # arg2~2
+        0x00, 0x02, 0x74, 0x65   # arg3~2
+    ])
+
+
+@pytest.fixture
 def init_request_with_headers():
     header_name = b'test_header'
     header_value = b'something'
@@ -80,6 +108,9 @@ def test_valid_ping_request():
     (messages.InitRequestMessage, {
         'headers': {'one': '2'}
     }),
+    (messages.InitResponseMessage, {
+        'headers': {}
+    }),
     (messages.PingRequestMessage, {}),
     (messages.PingResponseMessage, {}),
     (messages.ErrorMessage, {
@@ -115,7 +146,21 @@ def test_valid_ping_request():
         'arg_1': b'hi',
         'arg_2': b'\x00',
         'arg_3': None,
-    })
+    }),
+    (messages.CallResponseMessage, {
+        'flags': 1,
+        'code': 1,
+        'span_id': 1,
+        'parent_id': 2,
+        'trace_id': 3,
+        'traceflags': 4,
+        'headers': {},
+        'checksum_type': 0x01,
+        'checksum': 1,
+        'arg_1': None,
+        'arg_2': None,
+        'arg_3': None,
+    }),
 ])
 def test_roundtrip_message(message_class, attrs):
     """Verify all message types serialize and deserialize properly."""
@@ -149,32 +194,8 @@ def test_error_message_name():
     assert error.error_name() == 'busy'
 
 
-def test_call_req_parse():
-    buff = bytearray([
-        0x00,                    # flags:1
-        0x00, 0x00, 0x04, 0x00,  # ttl:4
-
-        # tracing:24
-        0x00, 0x01, 0x02, 0x03,  # span_id:8
-        0x04, 0x05, 0x06, 0x07,  #
-        0x08, 0x09, 0x0a, 0x0b,  # parent_id:8
-        0x0c, 0x0d, 0x0e, 0x0f,  #
-        0x10, 0x11, 0x12, 0x13,  # trace_id:8
-        0x14, 0x15, 0x16, 0x17,  #
-        0x01,                    # traceflags:1
-
-        0x06,                    # service~1
-        0x61, 0x70, 0x61, 0x63,  # ...
-        0x68, 0x65,              # ...
-        0x01,                    # nh:1
-        0x03, 0x6b, 0x65, 0x79,  # (hk~1 hv~1){nh}
-        0x03, 0x76, 0x61, 0x6c,  # ...
-        0x00,                    # csumtype:1 (csum:4){0,1}
-        0x00, 0x02, 0x6f, 0x6e,  # arg1~2
-        0x00, 0x02, 0x74, 0x6f,  # arg2~2
-        0x00, 0x02, 0x74, 0x65   # arg3~2
-    ])
-
+def test_call_req_parse(call_request_bytes):
+    buff = call_request_bytes
     msg = messages.CallRequestMessage()
     msg.parse(BytesIO(buff), len(buff))
 
@@ -193,6 +214,14 @@ def test_call_req_parse():
     assert msg.arg_1 == b'on'
     assert msg.arg_2 == b'to'
     assert msg.arg_3 == b'te'
+
+
+def test_extra_space_check(call_request_bytes):
+    buff = call_request_bytes + bytearray(b'a little sumpin xtra')
+    message = messages.CallRequestMessage()
+
+    with pytest.raises(exceptions.InvalidMessageException):
+        message.parse(BytesIO(buff), len(buff))
 
 
 def test_call_res_parse():
@@ -235,3 +264,7 @@ def test_call_res_parse():
     assert msg.arg_1 == b'on'
     assert msg.arg_2 == b'to'
     assert msg.arg_3 == b'te'
+
+
+def test_equality_check_against_none(init_request_with_headers):
+    assert (messages.InitRequestMessage() == None) is False

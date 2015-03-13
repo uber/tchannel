@@ -56,7 +56,7 @@ class CallResponseMessage(CallRequestMessage):
     def serialize(self, out):
         """Write a call request message out to a buffer."""
         out.extend(write_number(self.flags, self.FLAGS_SIZE))
-        out.extend(write_number(self.code, self.code_SIZE))
+        out.extend(write_number(self.code, self.CODE_SIZE))
 
         self.serialize_trace(out)
         self.serialize_header_and_checksum(out)
