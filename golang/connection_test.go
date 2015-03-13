@@ -70,8 +70,9 @@ func echo(ctx context.Context, call *InboundCall) {
 }
 
 func TestRoundTrip(t *testing.T) {
-	ch, err := NewChannel(":8050", nil)
+	ch, err := NewChannel(":0", nil)
 	require.Nil(t, err)
+	testLog.Info("Running on %s", ch.HostPort())
 
 	ch.Register(HandlerFunc(echo), "Capture", "ping")
 
@@ -80,7 +81,7 @@ func TestRoundTrip(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
-	call, err := ch.BeginCall(ctx, "localhost:8050", "Capture", "ping")
+	call, err := ch.BeginCall(ctx, ch.HostPort(), "Capture", "ping")
 	require.Nil(t, err)
 
 	require.Nil(t, call.WriteArg2(BytesOutput("Hello Header")))
@@ -96,20 +97,20 @@ func TestRoundTrip(t *testing.T) {
 }
 
 func TestBadRequest(t *testing.T) {
-	ch, err := NewChannel(":8051", nil)
+	ch, err := NewChannel(":0", nil)
 	require.Nil(t, err)
 	go ch.ListenAndHandle()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
-	_, _, err = sendRecv(ctx, ch, "localhost:8051", "Nowhere", "Noone", []byte("Headers"), []byte("Body"))
+	_, _, err = sendRecv(ctx, ch, ch.HostPort(), "Nowhere", "Noone", []byte("Headers"), []byte("Body"))
 	require.NotNil(t, err)
 	assert.Equal(t, ErrorCodeBadRequest, GetSystemErrorCode(err))
 }
 
 func TestServerBusy(t *testing.T) {
-	ch, err := NewChannel(":8070", nil)
+	ch, err := NewChannel(":0", nil)
 	require.Nil(t, err)
 
 	ch.Register(HandlerFunc(serverBusy), "TestService", "busy")
@@ -118,13 +119,13 @@ func TestServerBusy(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
-	_, _, err = sendRecv(ctx, ch, "localhost:8070", "TestService", "busy", []byte("Arg2"), []byte("Arg3"))
+	_, _, err = sendRecv(ctx, ch, ch.HostPort(), "TestService", "busy", []byte("Arg2"), []byte("Arg3"))
 	require.NotNil(t, err)
 	assert.Equal(t, ErrorCodeBusy, GetSystemErrorCode(err))
 }
 
 func TestTimeout(t *testing.T) {
-	ch, err := NewChannel(":8071", nil)
+	ch, err := NewChannel(":0", nil)
 	require.Nil(t, err)
 
 	ch.Register(HandlerFunc(timeout), "TestService", "timeout")
@@ -133,14 +134,14 @@ func TestTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 	defer cancel()
 
-	_, _, err = sendRecv(ctx, ch, "localhost:8071", "TestService", "timeout", []byte("Arg2"), []byte("Arg3"))
+	_, _, err = sendRecv(ctx, ch, ch.HostPort(), "TestService", "timeout", []byte("Arg2"), []byte("Arg3"))
 
 	// TODO(mmihic): Maybe translate this into ErrTimeout (or vice versa)?
 	assert.Equal(t, context.DeadlineExceeded, err)
 }
 
 func TestFragmentation(t *testing.T) {
-	ch, err := NewChannel(":8072", nil)
+	ch, err := NewChannel(":0", nil)
 	require.Nil(t, err)
 
 	ch.Register(HandlerFunc(echo), "TestService", "echo")
@@ -159,7 +160,7 @@ func TestFragmentation(t *testing.T) {
 		arg3[i] = byte(i&0xF0) + 100
 	}
 
-	respArg2, respArg3, err := sendRecv(ctx, ch, "localhost:8072", "TestService", "echo", arg2, arg3)
+	respArg2, respArg3, err := sendRecv(ctx, ch, ch.HostPort(), "TestService", "echo", arg2, arg3)
 	require.Nil(t, err)
 	assert.Equal(t, arg2, respArg2)
 	assert.Equal(t, arg3, respArg3)

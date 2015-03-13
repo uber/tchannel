@@ -68,7 +68,8 @@ type TChannel struct {
 	l                 net.Listener
 }
 
-// NewChannel creates a new Channel that will bind to the given host and port
+// NewChannel creates a new Channel that will bind to the given host and port.  If no port is provided,
+// the channel will start on an OS assigned port
 func NewChannel(hostPort string, opts *ChannelOptions) (*TChannel, error) {
 	if opts == nil {
 		opts = &ChannelOptions{}
@@ -81,14 +82,33 @@ func NewChannel(hostPort string, opts *ChannelOptions) (*TChannel, error) {
 
 	ch := &TChannel{
 		connectionOptions: opts.DefaultConnectionOptions,
-		hostPort:          hostPort,
 		processName:       opts.ProcessName,
 		log:               logger,
 	}
 
-	ch.connectionOptions.PeerInfo.HostPort = hostPort
+	addr, err := net.ResolveTCPAddr("tcp", hostPort)
+	if err != nil {
+		ch.log.Error("Could not resolve network %s: %v", hostPort, err)
+		return nil, err
+	}
+
+	l, err := net.ListenTCP("tcp", addr)
+	if err != nil {
+		ch.log.Error("Could not listen on %s: %v", hostPort, err)
+		return nil, err
+	}
+
+	ch.l = l
+	ch.hostPort = l.Addr().String()
+	ch.connectionOptions.PeerInfo.HostPort = ch.hostPort
 	ch.connectionOptions.PeerInfo.ProcessName = ch.processName
+	ch.log.Info("%s listening on %s", ch.processName, ch.hostPort)
 	return ch, nil
+}
+
+// HostPort returns the host and port on which the Channel is listening
+func (ch *TChannel) HostPort() string {
+	return ch.hostPort
 }
 
 // Register regsters a handler for a service+operation pair
@@ -131,14 +151,6 @@ func (ch *TChannel) BeginCall(ctx context.Context, hostPort,
 // ListenAndHandle runs a listener to accept and manage new incoming connections.
 // Blocks until the channel is closed.
 func (ch *TChannel) ListenAndHandle() error {
-	var err error
-	ch.l, err = net.Listen("tcp", ch.hostPort)
-	if err != nil {
-		ch.log.Error("Could not listen on %s: %v", ch.hostPort, err)
-		return err
-	}
-
-	ch.log.Info("%s listening on %s", ch.processName, ch.hostPort)
 	acceptBackoff := 0 * time.Millisecond
 
 	for {
