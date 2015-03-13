@@ -11,6 +11,7 @@ import tornado.iostream
 from .tornado.connection import TornadoConnection
 from .exceptions import InvalidMessageException
 from .messages import CallRequestMessage
+from .timeout import timeout
 
 
 log = logging.getLogger('tchannel')
@@ -122,8 +123,8 @@ class TChannel(object):
 
                 # Pull this out into its own loop, look up response message ids
                 # and dispatch them to handlers.
-                #with timeout():
-                response = yield peer_connection.await()
+                with timeout(peer_connection):
+                    response = yield peer_connection.await()
 
                 log.debug("got response")
 
