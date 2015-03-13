@@ -108,7 +108,7 @@ class CallRequestMessage(BaseMessage):
 
         if cur != end:
             raise InvalidMessageException(
-                "Extra space exists in the end of payload!"
+                "Too many bytes in the payload"
             )
 
     def serialize_trace(self, out):
