@@ -80,6 +80,9 @@ def test_valid_ping_request():
     (messages.InitRequestMessage, {
         'headers': {'one': '2'}
     }),
+    (messages.InitResponseMessage, {
+        'headers': {}
+    }),
     (messages.PingRequestMessage, {}),
     (messages.PingResponseMessage, {}),
     (messages.ErrorMessage, {
@@ -115,7 +118,21 @@ def test_valid_ping_request():
         'arg_1': b'hi',
         'arg_2': b'\x00',
         'arg_3': None,
-    })
+    }),
+    (messages.CallResponseMessage, {
+        'flags': 1,
+        'code': 1,
+        'span_id': 1,
+        'parent_id': 2,
+        'trace_id': 3,
+        'traceflags': 4,
+        'headers': {},
+        'checksum_type': 0x01,
+        'checksum': 1,
+        'arg_1': None,
+        'arg_2': None,
+        'arg_3': None,
+    }),
 ])
 def test_roundtrip_message(message_class, attrs):
     """Verify all message types serialize and deserialize properly."""
