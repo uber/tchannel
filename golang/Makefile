@@ -1,7 +1,7 @@
-GODEPS = $(shell godep path)
+GODEPS = ./Godeps/_workspace
 GOPATH := $(GODEPS):$(GOPATH)
 PATH := $(GODEPS)/bin:$(PATH)
-PKGS := . ./typed
+PKGS := . ./typed ./examples/server ./examples/client
 BUILD := ./build
 SRCS := $(foreach pkg,$(PKGS),$(wildcard $(pkg)/*.go))
 
