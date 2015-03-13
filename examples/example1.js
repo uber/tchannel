@@ -27,7 +27,9 @@ var client = new TChannel();
 // normal response
 server.register('func 1', function (arg1, arg2, peerInfo, cb) {
     console.log('func 1 responding immediately 1:' + arg1.toString() + ' 2:' + arg2.toString());
-    cb(null, 'result', 'indeed it did');
+    setTimeout(function() {
+        cb(null, 'result', 'indeed it did');
+    }, Math.random() * 1000);
 });
 // err response
 server.register('func 2', function (arg1, arg2, peerInfo, cb) {
