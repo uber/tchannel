@@ -252,3 +252,7 @@ def test_call_res_parse():
     assert msg.arg_1 == b'on'
     assert msg.arg_2 == b'to'
     assert msg.arg_3 == b'te'
+
+
+def test_equality_check_against_none(init_request_with_headers):
+    assert (messages.InitRequestMessage() == None) is False
