@@ -17,13 +17,13 @@ def tcurl(host, endpoint, headers, body):
 
     client = TChannel()
 
-    print
-    print "Sending this to", host
-    print "*" * 80
-    print " arg1:", endpoint
-    print " arg2:", headers
-    print " arg3:", body
-    print
+    print("")
+    print("Sending this to %s" % host)
+    print("*" * 80)
+    print(" arg1: %s" % endpoint)
+    print(" arg2: %s" % headers)
+    print(" arg3: %s" % body)
+    print("")
 
     request = client.request(host)
 
@@ -33,12 +33,12 @@ def tcurl(host, endpoint, headers, body):
         body,
     )
 
-    print
-    print "Got this from", host
-    print "*" * 80
-    print " arg1:", getattr(response, 'arg_1', None)
-    print " arg2:", getattr(response, 'arg_2', None)
-    print " arg3:", getattr(response, 'arg_3', None)
+    print("")
+    print("Got this from %s" % host)
+    print("*" * 80)
+    print(" arg1: %s" % getattr(response, 'arg_1', None))
+    print(" arg2: %s" % getattr(response, 'arg_2', None))
+    print(" arg3: %s" % getattr(response, 'arg_3', None))
 
     raise tornado.gen.Return(response)
 
