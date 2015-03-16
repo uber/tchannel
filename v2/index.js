@@ -52,6 +52,4 @@ module.exports.Checksum = require('./checksum');
 
 module.exports.Frame = Frame;
 
-module.exports.Reader = require('./reader');
 module.exports.Handler = require('./handler');
-module.exports.Writer = require('./writer');
