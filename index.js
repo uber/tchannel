@@ -60,7 +60,7 @@ var InvalidHandlerForRegister = TypedError({
 var noHandlerHandler = {
     type: 'no-handler.handler',
     handleRequest: function noHandlerHandler(req, res) {
-        res.send(NoHandlerError());
+        res.sendNotOk(null, NoHandlerError().message);
     }
 };
 

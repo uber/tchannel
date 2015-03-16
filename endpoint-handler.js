@@ -75,10 +75,10 @@ TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, re
     var name = String(req.arg1);
     var handler = self.endpoints[name];
     if (!handler) {
-        res.send(NoSuchEndpointError({
+        res.sendNotOk(null, NoSuchEndpointError({
             service: self.serviceName,
             endpoint: name
-        }));
+        }).message);
         return;
     }
     handler(req, res);
