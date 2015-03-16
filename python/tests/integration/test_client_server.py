@@ -19,9 +19,9 @@ def call_response():
     resp.headers = {}
     resp.checksum_type = 0
     resp.checksum = 0
-    resp.arg_1 = 'hello'
-    resp.arg_2 = ''
-    resp.arg_3 = 'world'
+    resp.arg_1 = b'hello'
+    resp.arg_2 = None
+    resp.arg_3 = b'world'
     return resp
 
 
@@ -37,7 +37,7 @@ def test_tcp_ping_pong(server_manager):
 
 @pytest.mark.gen_test
 def test_tchannel_call_request(server_manager, call_response):
-    endpoint = 'tchannelpeertest'
+    endpoint = b'tchannelpeertest'
     call_response.arg_1 = endpoint
 
     server_manager.expect_call_request(endpoint).and_return(call_response)
@@ -46,7 +46,7 @@ def test_tchannel_call_request(server_manager, call_response):
 
     hostport = 'localhost:%d' % (server_manager.port)
 
-    response = yield tchannel.request(hostport).send(endpoint, '', '')
+    response = yield tchannel.request(hostport).send(endpoint, None, None)
 
     assert response.arg_1 == call_response.arg_1
     assert response.arg_3 == call_response.arg_3
@@ -54,14 +54,14 @@ def test_tchannel_call_request(server_manager, call_response):
 
 @pytest.mark.gen_test
 def test_tcurl(server_manager, call_response):
-    endpoint = 'tcurltest'
+    endpoint = b'tcurltest'
     call_response.arg_1 = endpoint
 
     server_manager.expect_call_request(endpoint).and_return(call_response)
 
     hostport = 'localhost:%d' % (server_manager.port)
 
-    response = yield tcurl(hostport, endpoint, '', '')
+    response = yield tcurl(hostport, endpoint, None, None)
 
     assert response.arg_1 == call_response.arg_1
     assert response.arg_3 == call_response.arg_3
