@@ -70,6 +70,10 @@ TChannelV2Handler.prototype._write = function _write(frame, encoding, callback) 
             return self.handleCallRequest(frame, callback);
         case v2.Types.CallResponse:
             return self.handleCallResponse(frame, callback);
+        case v2.Types.PingRequest:
+            return self.handlePingRequest(frame, callback);
+        case v2.Types.PingResponse:
+            return self.handlePingResponse(frame, callback);
         case v2.Types.Error:
             return self.handleError(frame, callback);
         default:
@@ -135,6 +139,29 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
     }
     var res = self.buildIncomingResponse(resFrame);
     self.emit('call.incoming.response', res);
+    callback();
+};
+
+TChannelV2Handler.prototype.handlePingRequest = function handlePingRequest(reqFrame, callback) {
+    var self = this;
+    if (self.remoteHostPort === null) {
+        return callback(new Error('ping request before init request')); // TODO typed error
+    }
+    // TODO parse request frame for frame identifier
+    // TODO construct ping response for given request identifier
+    // TODO respond with ping response on selfsame connection
+    self.emit('ping.incoming.request');
+    callback();
+};
+
+TChannelV2Handler.prototype.handlePingResponse = function handlePingResponse(resFrame, callback) {
+    var self = this;
+    if (self.remoteHostPort === null) {
+        return callback(new Error('ping response before init request')); // TODO typed error
+    }
+    // TODO parse response frame for identifier
+    // TODO forward ping response to callback attached to ping identifier
+    self.emit('ping.incoming.response');
     callback();
 };
 

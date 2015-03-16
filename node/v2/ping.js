@@ -33,7 +33,8 @@ function PingRequest(version, headers) {
 PingRequest.TypeCode = 0xd0;
 
 // Pings requests have no body.
-PingRequest.read = read.skip(0);
+PingRequest.read = read.null;
+PingRequest.write = write.null;
 
 function PingResponse(version, headers) {
     var self = this;
@@ -45,4 +46,5 @@ function PingResponse(version, headers) {
 PingResponse.TypeCode = 0xd1;
 
 // Pongs  have no body.
-PingResponse.read = read.skip(0);
+PingResponse.read = read.null;
+PingResponse.write = write.null;
