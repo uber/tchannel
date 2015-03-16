@@ -241,10 +241,8 @@ type TChannelOutgoingResponse : {
     arg2: Buffer,
     arg3: Buffer,
 
-    send: (
-        ((err: Error, res1: Buffer) => void) &
-        ((err: null, res1: Buffer, res2: Buffer) => void)
-    )
+    sendOk: (res1: Buffer, res2: Buffer) => void,
+    sendNotOk: (res1: Buffer, res2: Buffer) => void
 }
 
 type TChannelHandler : {
@@ -270,12 +268,11 @@ The incoming req has
  - `arg3` as a `Buffer`.
  - `service` as a `String`
 
-The outgoing response has a `send()` method.
+The outgoing response has a `sendOk()` and `sendNotOk()` method.
 
- - You can call `send(Error, res1)` to send a not-ok response.
-   It will serialize your error for you, with the message as
-   res2.
- - You can call `send(null, res1, res2)` to set `res1` and `res2`
+ - You can call `sendNotOk(res1, res2)` to send a not-ok response.
+   `res1` and `res2` are buffers.
+ - You can call `sendOk(res1, res2)` to set `res1` and `res2`
    as Buffers for the Call response
 
 ### `channel.listen(port, host, callback?)`
@@ -304,8 +301,11 @@ request: (options: {
         arg3: Buffer | String,
         cb: (
             err?: Error,
-            res1: Buffer,
-            res2: Buffer
+            res: {
+                ok: Boolean,
+                arg2: Buffer,
+                arg3: Buffer
+            }
         ) => void
     ) => void
 }
@@ -349,19 +349,22 @@ The second argument will be the `head` to send to the server,
 The third argument will be the `body` to send to the server.
     This will be `arg2` in the servers operation function.
 
-#### `cb(err, res1, res2)`
+#### `cb(err, res)`
 
 When you `request.send()` a message to another tchannel server it will
 give you a callback
 
 The callback will either get called with `cb(err)` or with
-    `cb(null, res1, res2)`
+    `cb(null, resp)`
 
- - `err` will either be `null` or an `Error`. This can be an
-    error send from the remote server or another type of error
-    like a timeout, IO or 404 error.
- - `res1` will be the `head` response from the server as a buffer
- - `res2` will be the `body` response from the server as a buffer
+ - `err` will either be `null` or an `Error`. This can be 
+    an error like a timeout, IO or tchannel error frame.
+ - `resp` will be set, this can be an OK response or an error
+    from the remote server.
+ - `resp.ok` will be a boolean, dependening on whether this is
+    an OK response or an application level error.
+ - `resp.arg2` will be the `head` response from the server as a buffer
+ - `resp.arg3` will be the `body` response from the server as a buffer
 
 ### `channel.close(cb)`
 
