@@ -174,7 +174,7 @@ decode some part of the payload.
 An identifier for this message that is chosen by the sender of a request. This
 id is only valid for this sender on this connection. This is similar to how TCP
 has a sequence number in each direction. Each side of a connection may happen
-to select overlapping message ids, which is fine because they are directional.
+to select overlapping message ids, which is fine because they are bi-directional.
 
 `id` represents the top level message id. Both request frames and response
 frames use the same id, which is how they are matched up. A single id may be
