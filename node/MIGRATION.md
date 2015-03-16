@@ -33,7 +33,7 @@ chan.handler.register('my-endpoint', function (req, res) {
     res.sendNotOk(null, 'oops');
 
     // or
-    res.sendOk(null, 'res1', 'res2');
+    res.sendOk('res1', 'res2');
 });
 ```
 
