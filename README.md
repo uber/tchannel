@@ -291,66 +291,6 @@ The eventual host and port combination must uniquely identify the
 TChannel server and it is strongly recommended that the host be the
 public IP address.
 
-<!-- ### `channel.register(op, fn)`
-
-```ocaml
-register: (
-    op: String,
-    fn: (
-        arg1: Buffer,
-        arg2: Buffer,
-        hostInfo: String,
-        cb: (
-            err?: Error,
-            res1: Buffer | String | Object | Any,
-            res2: Buffer | String | Object | Any
-        ) => void
-    ) => void
-) => void
-```
-
-You can call `register` on a channel and it allows you to
-    register named operations on the server.
-
-When you register an operation you must implement a very
-    specific interface.
- -->
-#### `arg1`
-
-The first argument you take is the `head` sent by the client.
-
-This will always be a `Buffer`
-
-#### `arg2`
-
-The second argument you take is the `body` sent by the client.
-
-This will always be a `Buffer`
-
-#### `hostInfo`
-
-The third argument will be the host information of the calling
-    client. This will be `{ip}:{port}`
-
-#### `cb(err, res1, res2)`
-
-Your operation takes a callback as the fourth argument. This
-    must always be called.
-
-This should either be called with an err (`cb(err)`) or without
-    an err (`cb(null, head, body)`).
-
-The `err` must always be an `Error`.
-The `res1` is the head to return to the client
-The `res2` is the body to return to the client.
-
-`TChannel` will format the head (res1) and body (res2) for you
-
- - If you pass a `Buffer` it uses the buffer.
- - If you pass a `String` it will cast it to a buffer.
- - If you pass `undefined` it will cast it to `Buffer(0)`
- - If you pass `null` it will cast it to `Buffer(0)`
-
 ### `channel.request(options)`
 
 ```ocaml
