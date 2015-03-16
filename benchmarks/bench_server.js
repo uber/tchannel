@@ -32,7 +32,7 @@ server.on('socketClose', function (conn, err) {
 });
 
 server.handler.register('ping', function onPing(req, res) {
-	res.send(null, 'pong', null);
+	res.sendOk('pong', null);
 });
 
 function safeParse(str) {
@@ -46,15 +46,15 @@ function safeParse(str) {
 server.handler.register('set', function onSet(req, res) {
 	var parts = safeParse(req.arg2.toString('utf8'));
 	keys[parts[0]] = parts[1];
-	res.send(null, 'ok', 'really ok');
+	res.sendOk('ok', 'really ok');
 });
 
 server.handler.register('get', function onGet(req, res) {
 	var str = req.arg2.toString('utf8');
 	if (keys[str] !== undefined) {
-		res.send(null, JSON.stringify(keys[str].length), JSON.stringify(keys[str]));
+		res.sendOk(JSON.stringify(keys[str].length), JSON.stringify(keys[str]));
 	} else {
-		res.send(new Error('key not found: ' + str));
+		res.sendNotOk(null, 'key not found: ' + str);
 	}
 });
 
