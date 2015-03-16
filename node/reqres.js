@@ -143,9 +143,9 @@ TChannelOutgoingResponse.prototype.send = function send(err, res1, res2) {
     if (err) {
         self.ok = false;
         var errArg = isError(err) ? err.message : JSON.stringify(err); // TODO: better
-        self.sendFrame(self.name, res1, errArg);
+        self.sendFrame(self.arg1, res1, errArg);
     } else {
-        self.sendFrame(self.name, res1, res2);
+        self.sendFrame(self.arg1, res1, res2);
     }
     self.emit('end');
 };
