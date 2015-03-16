@@ -32,6 +32,7 @@ var WrappedError = require('error/wrapped');
 var v2 = require('./v2');
 var nullLogger = require('./null-logger.js');
 var Spy = require('./v2/spy');
+var EndpointHandler = require('./endpoint-handler.js');
 
 var dumpEnabled = /\btchannel_dump\b/.test(process.env.NODE_DEBUG || '');
 
@@ -56,7 +57,17 @@ var NoHandlerError = TypedError({
     message: 'no handler defined'
 });
 
+var InvalidHandlerForRegister = TypedError({
+    type: 'tchannel.invalid-handler.for-registration',
+    message: 'Found unexpected handler when calling `.register()`.\n' +
+        'You cannot set a custom handler when using `.register()`.\n' +
+        '`.register()` is deprecated; use a proper handler.',
+    handlerType: null,
+    handler: null
+});
+
 var noHandlerHandler = {
+    type: 'no-handler.handler',
     handleRequest: function noHandlerHandler(req, res) {
         res.send(NoHandlerError());
     }
@@ -170,6 +181,46 @@ TChannel.prototype.listen = function listen(port, host, callback) {
     self.host = host;
     var serverSocket = self.serverSocket;
     serverSocket.listen(port, host, callback);
+};
+
+TChannel.prototype.register = function register(name, handler) {
+    var self = this;
+
+    var handlerType = self.handler && self.handler.type;
+
+    switch (handlerType) {
+        case 'no-handler.handler':
+            // lazyily set up the legacy handler
+            self.handler = EndpointHandler();
+            self.handler.type = 'legacy-handler.handler';
+
+            break;
+
+        case 'legacy-handler.handler':
+            // If its still the legacy handler then we are good.
+            break;
+
+        default:
+            throw InvalidHandlerForRegister({
+                handlerType: handlerType,
+                handler: self.handler
+            });
+    }
+
+    self.handler.register(name, onReqRes);
+
+    function onReqRes(req, res) {
+        handler(
+            req.arg2,
+            req.arg3,
+            req.remoteAddr,
+            onResponse
+        );
+
+        function onResponse(err, res1, res2) {
+            res.send(err, res1, res2);
+        }
+    }
 };
 
 TChannel.prototype.address = function address() {

@@ -50,6 +50,7 @@ function TChannelEndpointHandler(serviceName) {
     var self = this;
     self.serviceName = serviceName;
     self.endpoints = Object.create(null);
+    self.type = null;
 }
 
 TChannelEndpointHandler.prototype.register = function register(name, handler) {
