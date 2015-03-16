@@ -30,10 +30,10 @@ chan.handler.register('my-endpoint', function (req, res) {
     // req.arg2, req.arg3, req.remoteAddr
 
     // either
-    res.send(new Error('oops'));
+    res.sendNotOk(null, 'oops');
 
     // or
-    res.send(null, 'res1', 'res2');
+    res.sendOk(null, 'res1', 'res2');
 });
 ```
 
@@ -42,14 +42,23 @@ chan.handler.register('my-endpoint', function (req, res) {
 Before:
 ```
 chan
-    .send(options, a1, a2, a3, cb);
+    .send(options, a1, a2, a3, function (err, res1, res2) {
+        // CallResponse error is in `err`
+        // CallResponse ok is in `res1`, `res2`
+    });
 ```
 
 After (simple):
 ```
 chan
     .request(options)
-    .send(a1, a2, a3, cb);
+    .send(a1, a2, a3, function (err, res) {
+        // CallResponse is in `res.arg2`, `res.arg3`
+        // res has an `.ok` field that is tells whether it is
+        // an error or not.
+
+        // `err` is for IO & timeouts. Also tchannel error frames
+    });
 ```
 
 After (if needed/useful):
