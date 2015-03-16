@@ -89,7 +89,7 @@ allocCluster.test('requests will timeout', 2, {
     }
 
     function normalProxy(req, res) {
-        res.send(null, req.arg2, req.arg3);
+        res.sendOk(req.arg2, req.arg3);
     }
     function timeout(/* head, body, hostInfo, cb */) {
         // do not call cb();

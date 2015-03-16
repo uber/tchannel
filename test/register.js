@@ -33,39 +33,39 @@ allocCluster.test('register() with different results', 2, function t(cluster, as
     one.handler = EndpointHandler();
 
     one.handler.register('/error', function error(req, res) {
-        res.send(new Error('abc'));
+        res.sendNotOk(null, 'abc');
     });
 
     one.handler.register('/buffer-head', function buffer(req, res) {
-        res.send(null, new Buffer('abc'), null);
+        res.sendOk(new Buffer('abc'), null);
     });
     one.handler.register('/string-head', function string(req, res) {
-        res.send(null, 'abc', null);
+        res.sendOk('abc', null);
     });
     one.handler.register('/object-head', function object(req, res) {
-        res.send(null, JSON.stringify({ value: 'abc' }), null);
+        res.sendOk(JSON.stringify({ value: 'abc' }), null);
     });
     one.handler.register('/null-head', function nullH(req, res) {
-        res.send(null, null, null);
+        res.sendOk(null, null);
     });
     one.handler.register('/undef-head', function undefH(req, res) {
-        res.send(null, undefined, null);
+        res.sendOk(undefined, null);
     });
 
     one.handler.register('/buffer-body', function buffer(req, res) {
-        res.send(null, null, new Buffer('abc'));
+        res.sendOk(null, new Buffer('abc'));
     });
     one.handler.register('/string-body', function string(req, res) {
-        res.send(null, null, 'abc');
+        res.sendOk(null, 'abc');
     });
     one.handler.register('/object-body', function object(req, res) {
-        res.send(null, null, JSON.stringify({ value: 'abc' }));
+        res.sendOk(null, JSON.stringify({ value: 'abc' }));
     });
     one.handler.register('/null-body', function nullB(req, res) {
-        res.send(null, null, null);
+        res.sendOk(null, null);
     });
     one.handler.register('/undef-body', function undefB(req, res) {
-        res.send(null, null, undefined);
+        res.sendOk(null, undefined);
     });
 
     parallel({
@@ -110,9 +110,11 @@ allocCluster.test('register() with different results', 2, function t(cluster, as
         assert.ifError(err);
 
         var errorCall = results.errorCall;
-        assert.ok(errorCall.err);
-        assert.equal(String(errorCall.err.arg2), '');
-        assert.equal(String(errorCall.err.arg3), 'abc');
+        assert.equal(errorCall.err, null);
+        assert.ok(Buffer.isBuffer(errorCall.head));
+        assert.equal(String(errorCall.head), '');
+        assert.ok(Buffer.isBuffer(errorCall.body));
+        assert.equal(String(errorCall.body), 'abc');
 
         var bufferHead = results.bufferHead;
         assert.equal(bufferHead.err, null);
