@@ -12,39 +12,41 @@ from concurrent.futures import Future
 
 from .socket import SocketConnection
 from .messages import CallRequestMessage
+from .exceptions import TChannelApplicationException
 
 
 class SettableFuture(Future):
+    """Future with support for `set_result` and `set_exception`."""
+    # These operations are implemented in Future but are not part of the
+    # "public interface". This class makes the dependency on those methods
+    # more concrete. If the methods ever get removed, we can implement our own
+    # versions.
 
     def set_result(self, result):
+        """Set the result of this Future to the given value.
+
+        All consumers waiting on the output of this future will unblock.
+
+        :param result:
+            Result value of the future
+        """
         return super(SettableFuture, self).set_result(result)
 
-    def set_exception(self, exception=None):
-        e, tb = sys.exc_info()[1:]
-        if not exception:
-            exception = e
-        super(SettableFuture, self).set_exception_info(exception, tb)
+    def set_exception(self, exception=None, traceback=None):
+        """Put an exception into this Future.
 
+        All blocked `result()` calls will re-raise the given exception. If the
+        exception or the traceback is omitted, they will automatically be
+        determined using `sys.exc_info`.
 
-class TChannelException(Exception):
-    """Base class for TChannel-related exceptions."""
-    pass
-
-
-class TChannelApplicationException(TChannelException):
-    """The remote application returned an exception.
-
-    This is not a protocol error. This means a response was received with the
-    ``code`` flag set to fail."""
-    def __init__(self, code, arg_1, arg_2, arg_3):
-        super(TChannelException, self).__init__(
-            'TChannel application error (%s, %s, %s)' % (arg_1, arg_2, arg_3)
-        )
-
-        self.code = code
-        self.arg_1 = arg_1
-        self.arg_2 = arg_2
-        self.arg_3 = arg_3
+        :param exception:
+            Exception for the Future
+        :param traceback:
+            Traceback of the exception
+        """
+        if not exception or not traceback:
+            exception, traceback = sys.exc_info()[1:]
+        super(SettableFuture, self).set_exception_info(exception, traceback)
 
 
 class TChannelOutOps(object):
@@ -94,14 +96,30 @@ class TChannelOutOps(object):
         self._receiver.start()
 
     def _submit(self, message, future):
+        """Submit the given message for sending.
+
+        Returns immediately.
+
+        :param message:
+            Message to be sent.
+        :param future:
+            Future to which the response for this message will be written.
+        """
         self._outstanding.put(self.Request(message, future))
 
     def _next_message_id(self):
+        """Return the next available message ID."""
         with self._counter_lock:
             self._id_counter += 1
             return self._id_counter
 
     def _start_sender(self):
+        """Responsible for sending requests over the wire.
+
+        The sender monitors the `_outstanding` queue and writes incoming
+        requests down the connection. The future for each request is recorded
+        in `_futures`.
+        """
         while not self.closed():
             try:
                 request = self._outstanding.get(timeout=self._timeout)
@@ -121,12 +139,21 @@ class TChannelOutOps(object):
             self._conn.frame_and_write(msg, message_id=msg_id)
 
     def _start_receiver(self):
+        """Responsible for receiving and dispatching requests.
+
+        The receiver polls the connection for incoming frames and dispatches
+        the responses to the correct future based on the message ID.
+        """
         while not self.closed():
             try:
                 ctx = self._conn.await()
             except socket.timeout:
                 continue
+            if ctx is None:
+                break  # end of stream
             self._futures[ctx.message_id].set_result(ctx.message)
+            # TODO: We should probably discard the frame if it didn't have a
+            # corresponding future.
 
     def handshake(self):
         """Perform a handshake with the remote host over the given connection.
@@ -152,10 +179,10 @@ class TChannelOutOps(object):
     def send(self, arg_1, arg_2, arg_3, service=None):
         """Send the given arguments over the wire.
 
-        ``arg_1``, ``arg_2``, and ``arg_3`` are represent the triple being
-        sent over the wire.
+        ``arg_1``, ``arg_2``, and ``arg_3`` represent the triple being sent
+        over the wire.
 
-        `service` is the name of the service being called. Defaults to an
+        `service` is the name of the service being called. It defaults to an
         empty string.
         """
         assert (
@@ -180,8 +207,9 @@ class TChannelOutOps(object):
 
         future = SettableFuture()
         self._submit(msg, future)
-        response = future.result()
 
+        # Wait till the response for this message has been received.
+        response = future.result()  # TODO: Timeout?
         if response.code != 0:
             raise TChannelApplicationException(
                 response.code, response.arg_1, response.arg_2, response.arg_3
@@ -202,10 +230,15 @@ class TChannelOutOps(object):
         if self.closed():
             return
         self._state = self.State.closed
+
+        # A None request informs the sender it's time to go.
         self._outstanding.put(None)
         self._sender.join()
-        self._receiver.join()
+
+        # Closing the socket should stop the receiver waiting.
         self._sock.close()
+        self._receiver.join()
+
         self._on_close(self)
 
     def __del__(self):
