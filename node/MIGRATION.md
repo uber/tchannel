@@ -2,6 +2,41 @@
 
 # Upgrading from 1.x to 2.x
 
+## .register() -> .handler.register()
+
+Before:
+
+```
+chan.register('my-endpoint', function (arg2, arg3, hi, cb) {
+    // either
+    cb(new Error('oops'));
+
+    // or
+    cb(null, 'res1', 'res2');
+})
+```
+
+After:
+
+```
+var TChannel = require('tchannel');
+var EndpointHandler = require('tchannel/endpoint-handler');
+
+var chan = TChannel({
+    handler: EndpointHandler()
+});
+
+chan.handler.register('my-endpoint', function (req, res) {
+    // req.arg2, req.arg3, req.remoteAddr
+
+    // either
+    res.send(new Error('oops'));
+
+    // or
+    res.send(null, 'res1', 'res2');
+});
+```
+
 ## .send() -> .request().send()
 
 Before:
