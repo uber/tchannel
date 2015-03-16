@@ -19,38 +19,43 @@
 // THE SOFTWARE.
 
 var TChannel = require('../index.js');
+var EndpointHandler = require('../endpoint-handler.js');
 var CountedReadySignal = require('ready-signal/counted');
 
-var server = new TChannel();
-var client = new TChannel();
+var server = new TChannel({
+    handler: EndpointHandler()
+});
+var client = new TChannel({
+    handler: EndpointHandler()
+});
 var client2 = new TChannel({timeoutCheckInterval: 100, timeoutFuzz: 5});
 
 // normal response
-server.register('func 1', function (arg1, arg2, peerInfo, cb) {
+server.handler.register('func 1', function (req, res) {
     console.log('func 1 responding immediately');
-    cb(null, 'result', 'indeed it did');
+    res.send(null, 'result', 'indeed it did');
 });
 // err response
-server.register('func 2', function (arg1, arg2, peerInfo, cb) {
-    cb(new Error('it failed'));
+server.handler.register('func 2', function (req, res) {
+    res.send(new Error('it failed'));
 });
 // slow response
-server.register('func 3', function (arg1, arg2, peerInfo, cb) {
+server.handler.register('func 3', function (req, res) {
     console.log('func 3 starting response timer');
     setTimeout(function () {
         console.log('func 3 responding now');
-        cb(null, 'slow result', 'sorry for the delay');
+        res.send(null, 'slow result', 'sorry for the delay');
     }, 1000);
 });
 
 // bidirectional messages
-server.register('ping', function onPing(arg1, arg2, peerInfo, pingCb) {
-    console.log('server got ping req from ' + peerInfo);
-    pingCb(null, 'pong', null);
+server.handler.register('ping', function onPing(req, res) {
+    console.log('server got ping req from ' + req.remoteAddr);
+    res.send(null, 'pong', null);
 });
-client.register('ping', function onPing(arg1, arg2, peerInfo, pingCb) {
-    console.log('client got ping req from ' + peerInfo);
-    pingCb(null, 'pong', null);
+client.handler.register('ping', function onPing(req, res) {
+    console.log('client got ping req from ' + req.remoteAddr);
+    res.send(null, 'pong', null);
 });
 
 var ready = CountedReadySignal(3);
@@ -101,13 +106,14 @@ client2.listen(4042, '127.0.0.1', ready.signal);
 function formatRes(err, res) {
     var ret = [];
 
+
     if (err) {
         ret.push('err=' + err.message);
     }
-    if (res.arg2) {
+    if (res && res.arg2) {
         ret.push('arg2=' + res.arg2.toString());
     }
-    if (res.arg3) {
+    if (res && res.arg3) {
         ret.push('arg3=' + res.arg3.toString());
     }
     return ret.join(' ');
