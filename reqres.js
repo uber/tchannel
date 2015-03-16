@@ -155,6 +155,7 @@ TChannelOutgoingResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
 
     self.sent = true;
     self.ok = false;
+    self.code = 1;
 
     self.sendFrame(self.arg1, res1, res2);
     self.emit('end');
