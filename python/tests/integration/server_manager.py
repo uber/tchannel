@@ -84,8 +84,9 @@ class ServerManager(object):
 
     def expect_call_request(self, endpoint):
         def matcher(message):
+            expected_type = tmessage.CallRequestMessage.message_type
             return (
-                message.message_type == tmessage.CallRequestMessage.message_type and
+                message.message_type == expected_type and
                 message.arg_1 == endpoint
             )
         exp = Expectation(matcher)
