@@ -20,17 +20,19 @@
 
 'use strict';
 
-var v2 = require('./v2');
-var nullLogger = require('./null-logger.js');
 var globalClearTimeout = require('timers').clearTimeout;
 var globalSetTimeout = require('timers').setTimeout;
 var globalNow = Date.now;
 var globalRandom = Math.random;
 var net = require('net');
 var format = require('util').format;
-var Spy = require('./v2/spy');
 var TypedError = require('error/typed');
 var WrappedError = require('error/wrapped');
+
+var v2 = require('./v2');
+var nullLogger = require('./null-logger.js');
+var Spy = require('./v2/spy');
+var EndpointHandler = require('./endpoint-handler.js');
 
 var dumpEnabled = /\btchannel_dump\b/.test(process.env.NODE_DEBUG || '');
 
@@ -49,6 +51,27 @@ var TChannelListenError = WrappedError({
     requestedPort: null,
     host: null
 });
+
+var NoHandlerError = TypedError({
+    type: 'tchannel.no-handler',
+    message: 'no handler defined'
+});
+
+var InvalidHandlerForRegister = TypedError({
+    type: 'tchannel.invalid-handler.for-registration',
+    message: 'Found unexpected handler when calling `.register()`.\n' +
+        'You cannot set a custom handler when using `.register()`.\n' +
+        '`.register()` is deprecated; use a proper handler.',
+    handlerType: null,
+    handler: null
+});
+
+var noHandlerHandler = {
+    type: 'no-handler.handler',
+    handleRequest: function noHandlerHandler(req, res) {
+        res.send(NoHandlerError());
+    }
+};
 
 function TChannel(options) {
     if (!(this instanceof TChannel)) {
@@ -84,13 +107,14 @@ function TChannel(options) {
 
     self.peers = Object.create(null);
 
-    self.endpoints = Object.create(null);
+    self.handler = self.options.handler || noHandlerHandler;
+
     // TChannel advances through the following states.
     self.listened = false;
     self.listening = false;
     self.destroyed = false;
 
-    self.serverSocket = new net.createServer(function onServerSocketConnection(sock) {
+    self.serverSocket = net.createServer(function onServerSocketConnection(sock) {
         if (!self.destroyed) {
             var remoteAddr = sock.remoteAddress + ':' + sock.remotePort;
             var conn = new TChannelConnection(self, sock, 'in', remoteAddr);
@@ -159,41 +183,50 @@ TChannel.prototype.listen = function listen(port, host, callback) {
     serverSocket.listen(port, host, callback);
 };
 
+// TODO: deprecated, callers should use .handler directly
+TChannel.prototype.register = function register(name, handler) {
+    var self = this;
+
+    var handlerType = self.handler && self.handler.type;
+
+    switch (handlerType) {
+        case 'no-handler.handler':
+            // lazyily set up the legacy handler
+            self.handler = EndpointHandler();
+            self.handler.type = 'legacy-handler.handler';
+
+            break;
+
+        case 'legacy-handler.handler':
+            // If its still the legacy handler then we are good.
+            break;
+
+        default:
+            throw InvalidHandlerForRegister({
+                handlerType: handlerType,
+                handler: self.handler
+            });
+    }
+
+    self.handler.register(name, onReqRes);
+
+    function onReqRes(req, res) {
+        handler(
+            req.arg2,
+            req.arg3,
+            req.remoteAddr,
+            onResponse
+        );
+
+        function onResponse(err, res1, res2) {
+            res.send(err, res1, res2);
+        }
+    }
+};
+
 TChannel.prototype.address = function address() {
     var self = this;
     return self.serverSocket.address();
-};
-
-TChannel.prototype.handleRequest = function handleRequest(req, res) {
-    var self = this;
-
-    var name = req.name;
-    var handler = self.endpoints[name];
-    if (typeof handler !== 'function') {
-        self.emit('endpoint.missing', {
-            name: name
-        });
-        var err = new Error('no such operation'); // TODO: typed error
-        err.op = name;
-        res.send(err, null, null);
-    } else if (self.endpoints[name]) {
-        self.emit('endpoint', {
-            name: name
-        });
-        handler(req.arg2, req.arg3, req.remoteAddr, function handlerCallback(err, res1, res2) {
-            res.send(err, res1, res2);
-        });
-    }
-};
-
-TChannel.prototype.register = function register(op, callback) {
-    var self = this;
-
-    if (self.endpoints[op]) {
-        throw new Error('endpoint ' + op + ' is already defined'); // TODO typed error
-    }
-
-    self.endpoints[op] = callback;
 };
 
 // not public, used by addPeer
@@ -762,7 +795,7 @@ TChannelConnection.prototype.handleCallRequest = function handleCallRequest(req)
     process.nextTick(runHandler);
 
     function runHandler() {
-        self.channel.handleRequest(req, res);
+        self.channel.handler.handleRequest(req, res);
     }
 
     function opDone() {
