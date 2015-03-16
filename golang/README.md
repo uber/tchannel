@@ -142,7 +142,7 @@ change in the future.
 
 ## Tests
 
-`make test` or `make cover1
+`make test` or `make cover`
 
 ## Contributors
 
