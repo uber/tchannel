@@ -35,7 +35,7 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
     one.handler.register('foo', function foo(req, res) {
         assert.ok(Buffer.isBuffer(req.arg2));
         assert.ok(Buffer.isBuffer(req.arg3));
-        res.send(null, req.arg2, req.arg3);
+        res.sendOk(req.arg2, req.arg3);
     });
 
     parallel({

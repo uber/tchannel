@@ -134,19 +134,30 @@ function TChannelOutgoingResponse(id, options, sendFrame) {
 
 inherits(TChannelOutgoingResponse, EventEmitter);
 
-TChannelOutgoingResponse.prototype.send = function send(err, res1, res2) {
+TChannelOutgoingResponse.prototype.sendOk = function send(res1, res2) {
     var self = this;
     if (self.sent) {
         throw new Error('response already sent');
     }
+
     self.sent = true;
-    if (err) {
-        self.ok = false;
-        var errArg = isError(err) ? err.message : JSON.stringify(err); // TODO: better
-        self.sendFrame(self.arg1, res1, errArg);
-    } else {
-        self.sendFrame(self.arg1, res1, res2);
+    self.ok = true;
+
+    self.sendFrame(self.arg1, res1, res2);
+    self.emit('end');
+};
+
+TChannelOutgoingResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
+    var self = this;
+    if (self.sent) {
+        throw new Error('response already sent');
     }
+
+    self.sent = true;
+    self.ok = false;
+    self.code = 1;
+
+    self.sendFrame(self.arg1, res1, res2);
     self.emit('end');
 };
 
@@ -154,9 +165,3 @@ module.exports.IncomingRequest = TChannelIncomingRequest;
 module.exports.IncomingResponse = TChannelIncomingResponse;
 module.exports.OutgoingRequest = TChannelOutgoingRequest;
 module.exports.OutgoingResponse = TChannelOutgoingResponse;
-
-function isError(obj) {
-    return typeof obj === 'object' && (
-        Object.prototype.toString.call(obj) === '[object Error]' ||
-        obj instanceof Error);
-}

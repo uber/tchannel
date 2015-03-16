@@ -33,29 +33,29 @@ var client2 = new TChannel({timeoutCheckInterval: 100, timeoutFuzz: 5});
 // normal response
 server.handler.register('func 1', function (req, res) {
     console.log('func 1 responding immediately');
-    res.send(null, 'result', 'indeed it did');
+    res.sendOk('result', 'indeed it did');
 });
 // err response
 server.handler.register('func 2', function (req, res) {
-    res.send(new Error('it failed'));
+    res.sendNotOk(null, 'it failed');
 });
 // slow response
 server.handler.register('func 3', function (req, res) {
     console.log('func 3 starting response timer');
     setTimeout(function () {
         console.log('func 3 responding now');
-        res.send(null, 'slow result', 'sorry for the delay');
+        res.sendOk('slow result', 'sorry for the delay');
     }, 1000);
 });
 
 // bidirectional messages
 server.handler.register('ping', function onPing(req, res) {
     console.log('server got ping req from ' + req.remoteAddr);
-    res.send(null, 'pong', null);
+    res.sendOk('pong', null);
 });
 client.handler.register('ping', function onPing(req, res) {
     console.log('client got ping req from ' + req.remoteAddr);
-    res.send(null, 'pong', null);
+    res.sendOk('pong', null);
 });
 
 var ready = CountedReadySignal(3);

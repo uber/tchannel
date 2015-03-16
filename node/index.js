@@ -36,15 +36,6 @@ var EndpointHandler = require('./endpoint-handler.js');
 
 var dumpEnabled = /\btchannel_dump\b/.test(process.env.NODE_DEBUG || '');
 
-var TChannelApplicationError = TypedError({
-    type: 'tchannel.application',
-    message: 'tchannel application error code {code}',
-    code: null,
-    arg1: null,
-    arg2: null,
-    arg3: null
-});
-
 var TChannelListenError = WrappedError({
     type: 'tchannel.server.listen-failed',
     message: 'tchannel: {origMessage}',
@@ -69,7 +60,7 @@ var InvalidHandlerForRegister = TypedError({
 var noHandlerHandler = {
     type: 'no-handler.handler',
     handleRequest: function noHandlerHandler(req, res) {
-        res.send(NoHandlerError());
+        res.sendNotOk(null, NoHandlerError().message);
     }
 };
 
@@ -219,7 +210,11 @@ TChannel.prototype.register = function register(name, handler) {
         );
 
         function onResponse(err, res1, res2) {
-            res.send(err, res1, res2);
+            if (err) {
+                res.sendNotOk(res1, err.message);
+            } else {
+                res.sendOk(res1, res2);
+            }
         }
     }
 };
@@ -330,9 +325,22 @@ TChannel.prototype.addPeer = function addPeer(hostPort, connection) {
 // TODO: deprecated, callers should use .request directly
 TChannel.prototype.send = function send(options, arg1, arg2, arg3, callback) {
     var self = this;
+
     return self
         .request(options)
-        .send(arg1, arg2, arg3, callback);
+        .send(arg1, arg2, arg3, onResponse);
+
+    function onResponse(err, res) {
+        if (err) {
+            return callback(err);
+        }
+
+        if (!res.ok) {
+            return callback(new Error(String(res.arg3)));
+        }
+
+        return callback(null, res.arg2, res.arg3);
+    }
 };
 /* jshint maxparams:4 */
 
@@ -477,16 +485,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 
     self.handler.on('call.incoming.response', function onCallResponse(res) {
         var op = self.popOutOp(res.id);
-        if (res.ok) {
-            op.req.emit('response', res);
-        } else {
-            op.req.emit('error', TChannelApplicationError({
-                code: res.code,
-                arg1: res.arg1,
-                arg2: res.arg2,
-                arg3: res.arg3
-            }));
-        }
+        op.req.emit('response', res);
     });
 
     self.handler.on('call.incoming.error', function onCallError(err) {

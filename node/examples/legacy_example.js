@@ -1,5 +1,5 @@
 // Copyright (c) 2015 Uber Technologies, Inc.
-
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -18,44 +18,44 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-var TChannel = require('../index.js');
-var EndpointHandler = require('../endpoint-handler.js');
+'use strict';
+
+var console = require('console');
 var CountedReadySignal = require('ready-signal/counted');
 
-var server = new TChannel({
-    handler: EndpointHandler()
-});
-var client = new TChannel();
-
-// normal response
-server.handler.register('func 1', function (req, res) {
-    console.log('func 1 responding immediately 1:' + req.arg2.toString() + ' 2:' + req.arg3.toString());
-    res.sendOk('result', 'indeed it did');
-});
-// err response
-server.handler.register('func 2', function (req, res) {
-    res.sendNotOk(null, 'it failed');
-});
+var TChannel = require('../index.js');
 
 var ready = CountedReadySignal(2);
-var listening = ready(function (err) {
-    if (err) {
-        throw err;
-    }
+var server = new TChannel();
+server.listen(4040, '127.0.0.1', ready.signal);
+var client = new TChannel();
+client.listen(4041, '127.0.0.1', ready.signal);
 
-    client
-        .request({host: '127.0.0.1:4040'})
-        .send('func 1', "arg 1", "arg 2", function (err, res) {
-            console.log('normal res: ' + res.arg2.toString() + ' ' + res.arg3.toString());
-        });
-    client
-        .request({host: '127.0.0.1:4040'})
-        .send('func 2', "arg 1", "arg 2", function (err, res) {
-            console.log('err res: ' + res.ok + 
-                ' message: ' + String(res.arg3));
-        });
-
+// normal response
+server.register('func 1', function func1(arg1, arg2, peerInfo, cb) {
+    console.log('func 1 responding immediately 1:' +
+        arg1.toString() + ' 2:' + arg2.toString());
+    cb(null, 'result', 'indeed it did');
 });
 
-server.listen(4040, '127.0.0.1', ready.signal);
-client.listen(4041, '127.0.0.1', ready.signal);
+// err response
+server.register('func 2', function func2(arg1, arg2, peerInfo, cb) {
+    cb(new Error('it failed'));
+});
+
+ready(function onReady() {
+    client.send({
+        host: '127.0.0.1:4040'
+    }, 'func 1', 'arg 1', 'arg 2', function onResp1(err, res1, res2) {
+        if (err) {
+            console.log('unexpected err: ' + err.message);
+        }
+        console.log('normal res: ' + res1.toString() + ' ' + res2.toString());
+    });
+
+    client.send({
+        host: '127.0.0.1:4040'
+    }, 'func 2', 'arg 1', 'arg 2', function onResp2(err, res1, res2) {
+        console.log('err res: ' + err.message);
+    });
+});
