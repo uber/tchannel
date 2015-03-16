@@ -444,6 +444,9 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 
     self.handler.on('call.incoming.response', function onCallResponse(res) {
         var op = self.popOutOp(res.id);
+        if (!op) {
+            return;
+        }
         if (res.ok) {
             op.req.emit('response', res);
         } else {
@@ -720,9 +723,13 @@ TChannelConnection.prototype.popOutOp = function popOutOp(id) {
     var self = this;
     var op = self.outOps[id];
     if (!op) {
-        // TODO else case. We should warn about an incoming response for an
-        // operation we did not send out.  This could be because of a timeout
-        // or could be because of a confused / corrupted server.
+        // We warn about an incoming response for an operation we did not send
+        // out.  This could be because of a timeout or could be because of a
+        // confused / corrupted server.
+        self.logger.warn('dropped response for forgotten or lost request', {
+            hostPort: self.channel.hostPort,
+            opId: id
+        });
         return;
     }
     delete self.outOps[id];
