@@ -23,46 +23,49 @@
 var parallel = require('run-parallel');
 var Buffer = require('buffer').Buffer;
 var allocCluster = require('./lib/alloc-cluster.js');
+var EndpointHandler = require('../endpoint-handler.js');
 
 allocCluster.test('register() with different results', 2, function t(cluster, assert) {
     var one = cluster.channels[0];
     var two = cluster.channels[1];
     var hostOne = cluster.hosts[0];
 
-    one.register('/error', function error(h, b, hi, cb) {
-        cb(new Error('abc'));
+    one.handler = EndpointHandler();
+
+    one.handler.register('/error', function error(req, res) {
+        res.send(new Error('abc'));
     });
 
-    one.register('/buffer-head', function buffer(h, b, hi, cb) {
-        cb(null, new Buffer('abc'), null);
+    one.handler.register('/buffer-head', function buffer(req, res) {
+        res.send(null, new Buffer('abc'), null);
     });
-    one.register('/string-head', function string(h, b, hi, cb) {
-        cb(null, 'abc', null);
+    one.handler.register('/string-head', function string(req, res) {
+        res.send(null, 'abc', null);
     });
-    one.register('/object-head', function object(h, b, hi, cb) {
-        cb(null, JSON.stringify({ value: 'abc' }), null);
+    one.handler.register('/object-head', function object(req, res) {
+        res.send(null, JSON.stringify({ value: 'abc' }), null);
     });
-    one.register('/null-head', function nullH(h, b, hi, cb) {
-        cb(null, null, null);
+    one.handler.register('/null-head', function nullH(req, res) {
+        res.send(null, null, null);
     });
-    one.register('/undef-head', function undefH(h, b, hi, cb) {
-        cb(null, undefined, null);
+    one.handler.register('/undef-head', function undefH(req, res) {
+        res.send(null, undefined, null);
     });
 
-    one.register('/buffer-body', function buffer(h, b, hi, cb) {
-        cb(null, null, new Buffer('abc'));
+    one.handler.register('/buffer-body', function buffer(req, res) {
+        res.send(null, null, new Buffer('abc'));
     });
-    one.register('/string-body', function string(h, b, hi, cb) {
-        cb(null, null, 'abc');
+    one.handler.register('/string-body', function string(req, res) {
+        res.send(null, null, 'abc');
     });
-    one.register('/object-body', function object(h, b, hi, cb) {
-        cb(null, null, JSON.stringify({ value: 'abc' }));
+    one.handler.register('/object-body', function object(req, res) {
+        res.send(null, null, JSON.stringify({ value: 'abc' }));
     });
-    one.register('/null-body', function nullB(h, b, hi, cb) {
-        cb(null, null, null);
+    one.handler.register('/null-body', function nullB(req, res) {
+        res.send(null, null, null);
     });
-    one.register('/undef-body', function undefB(h, b, hi, cb) {
-        cb(null, null, undefined);
+    one.handler.register('/undef-body', function undefB(req, res) {
+        res.send(null, null, undefined);
     });
 
     parallel({

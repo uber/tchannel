@@ -27,6 +27,5 @@ require('./register.js');
 require('./identify.js');
 require('./tchannel.js');
 require('./regression-inOps-leak.js');
-require('./emits-endpoint.js');
 require('./v2/index.js');
 require('./regression-listening-on-used-port.js');
