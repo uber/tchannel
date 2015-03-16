@@ -21,6 +21,7 @@
 'use strict';
 
 var allocCluster = require('./lib/alloc-cluster.js');
+var EndpointHandler = require('../endpoint-handler');
 
 allocCluster.test('does not leak inOps', 2, {
     timeoutCheckInterval: 100,
@@ -29,7 +30,9 @@ allocCluster.test('does not leak inOps', 2, {
     var one = cluster.channels[0];
     var two = cluster.channels[1];
 
-    one.register('/timeout', timeout);
+    one.handler = EndpointHandler();
+
+    one.handler.register('/timeout', timeout);
 
     two
         .request({
