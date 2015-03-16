@@ -21,6 +21,15 @@ type TChannelConnection : {
     remoteAddr: HostInfo
 }
 
+type TChannelIncomingResponse : {
+    id: Number,
+    ok: Boolean,
+
+    arg1: Buffer,
+    arg2: Buffer,
+    arg3: Buffer
+}
+
 type TChannelOutgoingRequest : {
     id: Number,
     service: String,
@@ -28,7 +37,8 @@ type TChannelOutgoingRequest : {
     send: (
         arg1: Buffer | String,
         arg2: TChannelValue,
-        arg3: TChannelValue
+        arg3: TChannelValue,
+        cb: Callback<Error, res: TChannelIncomingResponse>
     ) => void
 }
 
@@ -50,10 +60,8 @@ type TChannelOutgoingResponse : {
     arg2: Buffer,
     arg3: Buffer,
 
-    send: (
-        ((err: Error, res1: Buffer) => void) &
-        ((err: null, res1: Buffer, res2: Buffer) => void)
-    )
+    sendOk: (res1: Buffer, res2: Buffer) => void,
+    sendNotOk: (res1: Buffer, res2: Buffer) => void
 }
 
 type TChannelHandler : {
