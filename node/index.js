@@ -325,9 +325,22 @@ TChannel.prototype.addPeer = function addPeer(hostPort, connection) {
 // TODO: deprecated, callers should use .request directly
 TChannel.prototype.send = function send(options, arg1, arg2, arg3, callback) {
     var self = this;
+
     return self
         .request(options)
-        .send(arg1, arg2, arg3, callback);
+        .send(arg1, arg2, arg3, onResponse);
+
+    function onResponse(err, res) {
+        if (err) {
+            return callback(err);
+        }
+
+        if (!res.ok) {
+            return callback(new Error(String(res.arg3)));
+        }
+
+        return callback(null, res.arg2, res.arg3);
+    }
 };
 /* jshint maxparams:4 */
 
