@@ -36,15 +36,6 @@ var EndpointHandler = require('./endpoint-handler.js');
 
 var dumpEnabled = /\btchannel_dump\b/.test(process.env.NODE_DEBUG || '');
 
-var TChannelApplicationError = TypedError({
-    type: 'tchannel.application',
-    message: 'tchannel application error code {code}',
-    code: null,
-    arg1: null,
-    arg2: null,
-    arg3: null
-});
-
 var TChannelListenError = WrappedError({
     type: 'tchannel.server.listen-failed',
     message: 'tchannel: {origMessage}',
@@ -477,16 +468,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 
     self.handler.on('call.incoming.response', function onCallResponse(res) {
         var op = self.popOutOp(res.id);
-        if (res.ok) {
-            op.req.emit('response', res);
-        } else {
-            op.req.emit('error', TChannelApplicationError({
-                code: res.code,
-                arg1: res.arg1,
-                arg2: res.arg2,
-                arg3: res.arg3
-            }));
-        }
+        op.req.emit('response', res);
     });
 
     self.handler.on('call.incoming.error', function onCallError(err) {
