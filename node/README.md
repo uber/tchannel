@@ -111,33 +111,33 @@ process.
 
 ```ocaml
 tchannel : (options: {
-    host: String,
-    port: Number,
-    logger?: Object,
-    timers?: Object,
+    handler?: {
+        handleRequest : (
+            req: Object,
+            res: Object
+        ) => void
+    },
+
+    logger?: Logger,
+    timers?: Timers,
 
     reqTimeoutDefault?: Number,
+    serverTimeoutDefault?: Number,
     timeoutCheckInterval?: Number,
     timeoutFuzz?: Number
 }) => {
-    register: (op: String, fn: Function) => void,
     request: (
-        options: Object,
-        cb: Function
-    ) => tchannelRequest,
-    quit: (Callback<Error>) => void,
+        options: Object
+    ) => {
+        send: (
+            arg1: Buffer,
+            arg2: Buffer,
+            arg3: Buffer,
+            cb?: Callback<Error>
+        )
+    },
+    close: (Callback<Error>) => void,
 }
-
-tchannelRequest : {
-    on: (name: String, listener: Function) => void,
-    send: (
-        arg1: Buffer|String,
-        arg2: Buffer|String,
-        arg3: Buffer|String,
-        cb: ?Function
-    ) => void
-}
-
 ```
 
 To create a `channel` you call `TChannel` with some options.
@@ -145,10 +145,9 @@ To create a `channel` you call `TChannel` with some options.
 ```js
 var TChannel = require('tchannel');
 
-var channel = TChannel({
-    host: '127.0.0.1',
-    port: 8080
-});
+var channel = TChannel();
+
+channel.listen(8080, '127.0.0.1');
 ```
 
 #### `options.logger`
@@ -193,8 +192,8 @@ default value: `5000`
 A default timeout for request timeouts.
 
 For every outgoing request which does not have a set timeout i.e. every
-`.request()` without a timeout we will default the timeout period to be this
-value.
+`.request()` without a timeout we will default the timeout period 
+to be this value.
 
 This means every outgoing operation will be terminated with
     a timeout error if the timeout is hit.
@@ -221,20 +220,78 @@ The client interval does not run every N milliseconds, it has
 
 This is used to avoid race conditions in the network.
 
-#### `channel.listen(port, host, callback?)
+#### `options.handler`
+
+```jsig
+type TChannelIncomingRequest : {
+    id: Number,
+    service: String,
+
+    arg1: Buffer,
+    arg2: Buffer,
+    arg3: Buffer
+}
+
+type TChannelOutgoingResponse : {
+    id: Number,
+    code: Number,
+    ok: Boolean,
+
+    arg1: Buffer,
+    arg2: Buffer,
+    arg3: Buffer,
+
+    send: (
+        ((err: Error, res1: Buffer) => void) &
+        ((err: null, res1: Buffer, res2: Buffer) => void)
+    )
+}
+
+type TChannelHandler : {
+    handleRequest : (
+        req: TChannelIncomingRequest,
+        res: TChannelOutgoingResponse
+    ) => void
+}
+```
+
+default value: A noHandler handler.
+
+The `handler` is required and must have a `handleRequest()`
+method.
+
+The `handleRequest` method takes two arguments, an incoming call 
+request and an outgoing call response.
+
+The incoming req has
+
+ - `arg1` as a `Buffer`.
+ - `arg2` as a `Buffer`.
+ - `arg3` as a `Buffer`.
+ - `service` as a `String`
+
+The outgoing response has a `send()` method.
+
+ - You can call `send(Error, res1)` to send a not-ok response.
+   It will serialize your error for you, with the message as
+   res2.
+ - You can call `send(null, res1, res2)` to set `res1` and `res2`
+   as Buffers for the Call response
+
+### `channel.listen(port, host, callback?)`
 
 Starts listening on the given port and host.
 
 Both port and host are mandatory.
 
-The port may be 0, indicating that the operating system must grant an available
-    ephemeral port.
+The port may be 0, indicating that the operating system must grant an
+available ephemeral port.
 
-The eventual host and port combination must uniquely identify the TChannel
-    server and it is strongly recommended that the host be the public IP
-    address.
+The eventual host and port combination must uniquely identify the
+TChannel server and it is strongly recommended that the host be the
+public IP address.
 
-### `channel.register(op, fn)`
+<!-- ### `channel.register(op, fn)`
 
 ```ocaml
 register: (
@@ -257,7 +314,7 @@ You can call `register` on a channel and it allows you to
 
 When you register an operation you must implement a very
     specific interface.
-
+ -->
 #### `arg1`
 
 The first argument you take is the `head` sent by the client.
@@ -294,31 +351,24 @@ The `res2` is the body to return to the client.
  - If you pass `undefined` it will cast it to `Buffer(0)`
  - If you pass `null` it will cast it to `Buffer(0)`
 
-### `channel.request(options, arg1, arg2, arg3, cb)`
+### `channel.request(options)`
 
 ```ocaml
-request: (
-    options: {
-        host: String,
-        timeout?: Number
-    },
-    cb: (
-        err?: Error,
-        res1: Buffer,
-        res2: Buffer
-    ) => void
-) => tchannelRequest
-
-tchannelRequest : {
-    on: (name: String, listener: Function) => void,
+request: (options: {
+    host: String,
+    timeout?: Number
+}) => {
     send: (
         arg1: Buffer | String,
         arg2: Buffer | String,
         arg3: Buffer | String,
-        cb: ?Function
+        cb: (
+            err?: Error,
+            res1: Buffer,
+            res2: Buffer
+        ) => void
     ) => void
 }
-
 ```
 
 `request()` is used to initiate an outgoing request to another channel.
@@ -361,8 +411,8 @@ The third argument will be the `body` to send to the server.
 
 #### `cb(err, res1, res2)`
 
-When you `request.send()` a message to another tchannel server it will give you
-a callback
+When you `request.send()` a message to another tchannel server it will
+give you a callback
 
 The callback will either get called with `cb(err)` or with
     `cb(null, res1, res2)`
@@ -373,11 +423,11 @@ The callback will either get called with `cb(err)` or with
  - `res1` will be the `head` response from the server as a buffer
  - `res2` will be the `body` response from the server as a buffer
 
-### `channel.quit(cb)`
+### `channel.close(cb)`
 
-When you want to close your channel you call `.quit()`. This
-    will cleanup the tcp server and any tcp sockets as well
-    as cleanup any inflight operations.
+When you want to close your channel you call `.close()`. This
+will cleanup the tcp server and any tcp sockets as well
+as cleanup any inflight operations.
 
 Your `cb` will get called when it's finished.
 
