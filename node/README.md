@@ -16,24 +16,30 @@ Status is being tracked in #78.
 
 ```js
 var TChannel = require('tchannel');
+var EndpointHandler = require('tchannel/endpoint-handler');
 var CountedReadySignal = require('ready-signal/counted');
 
-var server = new TChannel();
+var server = new TChannel({
+    handler: EndpointHandler()
+});
 var client = new TChannel();
+
+// normal response
+server.handler.register('func 1', function (req, res) {
+    console.log('func 1 responding immediately 1:' + req.arg2.toString() + ' 2:' + req.arg3.toString());
+    res.send(null, 'result', 'indeed it did');
+});
+// err response
+server.handler.register('func 2', function (req, res) {
+    res.send(new Error('it failed'));
+});
 
 var ready = CountedReadySignal(2);
 var listening = ready(function (err) {
-    // ...forward or handle err
+    if (err) {
+        throw err;
+    }
 
-    // normal response
-    server.register('func 1', function (arg1, arg2, peerInfo, cb) {
-        console.log('func 1 responding immediately 1:' + arg1.toString() + ' 2:' + arg2.toString());
-        cb(null, 'result', 'indeed it did');
-    });
-    // err response
-    server.register('func 2', function (arg1, arg2, peerInfo, cb) {
-        cb(new Error('it failed'));
-    });
     client
         .request({host: '127.0.0.1:4040'})
         .send('func 1', "arg 1", "arg 2", function (err, res) {
@@ -49,6 +55,7 @@ var listening = ready(function (err) {
 
 server.listen(4040, '127.0.0.1', ready.signal);
 client.listen(4041, '127.0.0.1', ready.signal);
+
 ```
 
 This example registers two functions on the "server". "func 1" always works and "func 2" always
