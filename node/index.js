@@ -183,6 +183,7 @@ TChannel.prototype.listen = function listen(port, host, callback) {
     serverSocket.listen(port, host, callback);
 };
 
+// TODO: deprecated, callers should use .handler directly
 TChannel.prototype.register = function register(name, handler) {
     var self = this;
 
