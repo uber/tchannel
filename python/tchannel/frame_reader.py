@@ -30,6 +30,7 @@ class FrameReader(object):
             try:
                 frame = frame_rw.read(self.connection)
             except ReadException as e:
+                # Other side of the connection was probably closed
                 raise ProtocolException(e.message)
 
             if not frame:
@@ -45,10 +46,12 @@ class FrameReader(object):
                 message = message_rw.read(BytesIO(frame.payload))
             except ReadException as e:
                 raise ProtocolException(e.message)
+
             yield Context(frame.header.message_id, message)
 
 
 class FrameWriter(object):
+
     def __init__(self, connection):
         self.connection = connection
 
@@ -69,5 +72,4 @@ class FrameWriter(object):
             ),
             payload
         )
-
         frame_rw.write(frame, self.connection)

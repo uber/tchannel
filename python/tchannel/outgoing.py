@@ -1,6 +1,5 @@
 from __future__ import absolute_import
 
-import sys
 import enum
 import socket
 import Queue as queue
@@ -8,45 +7,10 @@ from collections import namedtuple
 from threading import Lock, Thread
 from functools import partial
 
-from concurrent.futures import Future
-
 from .socket import SocketConnection
+from .future import SettableFuture
 from .messages import CallRequestMessage
 from .exceptions import TChannelApplicationException
-
-
-class SettableFuture(Future):
-    """Future with support for `set_result` and `set_exception`."""
-    # These operations are implemented in Future but are not part of the
-    # "public interface". This class makes the dependency on those methods
-    # more concrete. If the methods ever get removed, we can implement our own
-    # versions.
-
-    def set_result(self, result):
-        """Set the result of this Future to the given value.
-
-        All consumers waiting on the output of this future will unblock.
-
-        :param result:
-            Result value of the future
-        """
-        return super(SettableFuture, self).set_result(result)
-
-    def set_exception(self, exception=None, traceback=None):
-        """Put an exception into this Future.
-
-        All blocked `result()` calls will re-raise the given exception. If the
-        exception or the traceback is omitted, they will automatically be
-        determined using `sys.exc_info`.
-
-        :param exception:
-            Exception for the Future
-        :param traceback:
-            Traceback of the exception
-        """
-        if not exception or not traceback:
-            exception, traceback = sys.exc_info()[1:]
-        super(SettableFuture, self).set_exception_info(exception, traceback)
 
 
 class TChannelOutOps(object):
@@ -189,21 +153,7 @@ class TChannelOutOps(object):
             self._state == self.State.ready
         ), "Handshake not performed or connection closed"
 
-        msg = CallRequestMessage()
-        msg.service = service or ''
-        msg.arg_1 = arg_1
-        msg.arg_2 = arg_2
-        msg.arg_3 = arg_3
-        msg.checksum_type = 0
-        msg.checksum = 0
-        msg.flags = 0
-        msg.headers = {}
-        msg.parent_id = 0
-        msg.span_id = 0
-        msg.trace_id = 0
-        msg.traceflags = 0
-        msg.ttl = 1
-        # ^wat
+        msg = CallRequestMessage(arg_1=arg_1, arg_2=arg_2, arg_3=arg_3)
 
         future = SettableFuture()
         self._submit(msg, future)
