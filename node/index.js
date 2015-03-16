@@ -210,7 +210,11 @@ TChannel.prototype.register = function register(name, handler) {
         );
 
         function onResponse(err, res1, res2) {
-            res.send(err, res1, res2);
+            if (err) {
+                res.sendNotOk(res1, err.message);
+            } else {
+                res.sendOk(res1, res2);
+            }
         }
     }
 };
