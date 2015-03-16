@@ -19,19 +19,22 @@
 // THE SOFTWARE.
 
 var TChannel = require('../index.js');
+var EndpointHandler = require('../endpoint-handler.js');
 var CountedReadySignal = require('ready-signal/counted');
 
-var server = new TChannel();
+var server = new TChannel({
+    handler: EndpointHandler()
+});
 var client = new TChannel();
 
 // normal response
-server.register('func 1', function (arg1, arg2, peerInfo, cb) {
-    console.log('func 1 responding immediately 1:' + arg1.toString() + ' 2:' + arg2.toString());
-    cb(null, 'result', 'indeed it did');
+server.handler.register('func 1', function (req, res) {
+    console.log('func 1 responding immediately 1:' + req.arg2.toString() + ' 2:' + req.arg3.toString());
+    res.send(null, 'result', 'indeed it did');
 });
 // err response
-server.register('func 2', function (arg1, arg2, peerInfo, cb) {
-    cb(new Error('it failed'));
+server.handler.register('func 2', function (req, res) {
+    res.send(new Error('it failed'));
 });
 
 var ready = CountedReadySignal(2);
