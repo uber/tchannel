@@ -20,17 +20,18 @@
 
 'use strict';
 
-var v2 = require('./v2');
-var nullLogger = require('./null-logger.js');
 var globalClearTimeout = require('timers').clearTimeout;
 var globalSetTimeout = require('timers').setTimeout;
 var globalNow = Date.now;
 var globalRandom = Math.random;
 var net = require('net');
 var format = require('util').format;
-var Spy = require('./v2/spy');
 var TypedError = require('error/typed');
 var WrappedError = require('error/wrapped');
+
+var v2 = require('./v2');
+var nullLogger = require('./null-logger.js');
+var Spy = require('./v2/spy');
 
 var dumpEnabled = /\btchannel_dump\b/.test(process.env.NODE_DEBUG || '');
 
