@@ -1,6 +1,7 @@
 # Testing and coverage
 pytest
 pytest-cov
+pytest-tornado
 
 # Test all the pythons
 tox

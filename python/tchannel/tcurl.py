@@ -40,6 +40,8 @@ def tcurl(host, endpoint, headers, body):
     print " arg2:", getattr(response, 'arg_2', None)
     print " arg3:", getattr(response, 'arg_3', None)
 
+    raise tornado.gen.Return(response)
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -104,5 +106,5 @@ def main():
     )
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     main()

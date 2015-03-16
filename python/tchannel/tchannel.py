@@ -8,10 +8,10 @@ import socket
 import tornado.ioloop
 import tornado.iostream
 
-from .tornado.connection import TornadoConnection
 from .exceptions import InvalidMessageException
 from .messages import CallRequestMessage
-from .timeout import timeout
+from .tornado.connection import TornadoConnection
+from .tornado.timeout import timeout
 
 
 log = logging.getLogger('tchannel')
@@ -31,7 +31,7 @@ class TChannel(object):
     @tornado.gen.coroutine
     def add_peer(self, hostport):
         if hostport in self.peers:
-            return
+            raise tornado.gen.Return(self.peers[hostport])
 
         peer = yield self.make_out_connection(hostport)
         self.peers[hostport] = peer
@@ -39,7 +39,7 @@ class TChannel(object):
 
     def remove_peer(self, hostport):
         # TODO: Connection cleanup
-        self.peers.pop(hostport)
+        return self.peers.pop(hostport)
 
     @tornado.gen.coroutine
     def get_peer(self, hostport):
@@ -50,10 +50,13 @@ class TChannel(object):
         raise tornado.gen.Return(peer)
 
     @tornado.gen.coroutine
-    def make_out_connection(self, hostport):
+    def make_out_connection(self, hostport, sock=None):
         host, port = hostport.rsplit(":", 1)
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        # TODO: change this to tornado.tcpclient.TCPClient to do async DNS
+        # lookups.
         stream = tornado.iostream.IOStream(sock)
 
         log.debug("connecting to hostport %s", hostport)

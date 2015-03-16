@@ -26,9 +26,6 @@ class _IOStreamAdapter(object):
         """
         return self._stream.write(bytes(data), callback=callback)
 
-    def close(self):
-        self._stream.close()
-
 
 class TornadoConnection(Connection):
     """Handle speaking TChannel over a Tornado connection."""
@@ -51,3 +48,6 @@ class TornadoConnection(Connection):
 
     def handle_calls(self, handler):
         return self.await(callback=self.wrap(handler))
+
+    def close(self):
+        return self._connection._stream.close()
