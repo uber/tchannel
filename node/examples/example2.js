@@ -34,11 +34,11 @@ var client = new TChannel({
 // bidirectional messages
 server.handler.register('ping', function onPing(req, res) {
     console.log('server got ping req from ' + req.remoteAddr);
-    res.send(null, 'pong', null);
+    res.sendOk('pong', null);
 });
 client.handler.register('ping', function onPing(req, res) {
     console.log('client got ping req from ' + req.remoteAddr);
-    res.send(null, 'pong', null);
+    res.sendOk('pong', null);
 });
 
 

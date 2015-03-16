@@ -30,11 +30,11 @@ var client = new TChannel();
 // normal response
 server.handler.register('func 1', function (req, res) {
     console.log('func 1 responding immediately 1:' + req.arg2.toString() + ' 2:' + req.arg3.toString());
-    res.send(null, 'result', 'indeed it did');
+    res.sendOk('result', 'indeed it did');
 });
 // err response
 server.handler.register('func 2', function (req, res) {
-    res.send(new Error('it failed'));
+    res.sendNotOk(null, 'it failed');
 });
 
 var ready = CountedReadySignal(2);
@@ -51,7 +51,8 @@ var listening = ready(function (err) {
     client
         .request({host: '127.0.0.1:4040'})
         .send('func 2', "arg 1", "arg 2", function (err, res) {
-            console.log('err res: ' + err.message);
+            console.log('err res: ' + res.ok + 
+                ' message: ' + String(res.arg3));
         });
 
 });
