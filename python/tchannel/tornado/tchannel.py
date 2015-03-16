@@ -8,10 +8,10 @@ import socket
 import tornado.ioloop
 import tornado.iostream
 
-from .exceptions import InvalidMessageException
-from .messages import CallRequestMessage
-from .tornado.connection import TornadoConnection
-from .tornado.timeout import timeout
+from ..exceptions import InvalidMessageException
+from ..messages import CallRequestMessage
+from .connection import TornadoConnection
+from .timeout import timeout
 
 
 log = logging.getLogger('tchannel')

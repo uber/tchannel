@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import pytest
 
 import tchannel.messages as tmessage
-from tchannel.tchannel import TChannel
+from tchannel.tornado import TChannel
 from tchannel.tcurl import tcurl
 
 

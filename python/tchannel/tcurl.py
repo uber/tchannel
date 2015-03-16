@@ -6,7 +6,7 @@ import sys
 
 import tornado.ioloop
 
-from .tchannel import TChannel
+from .tornado import TChannel
 
 
 log = logging.getLogger('tchannel')

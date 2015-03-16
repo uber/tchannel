@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 import pytest
 
-from tchannel.tchannel import TChannel
+from tchannel.tornado import TChannel
 
 
 @pytest.mark.gen_test
