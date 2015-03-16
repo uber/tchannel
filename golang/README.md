@@ -8,7 +8,7 @@ NOTE: `master:golang` is **not yet stable**
 
 ## Example
 
-```golang
+```go
 import (
     "encoding/json"
     "time"
@@ -66,7 +66,7 @@ func main() {
     // Listen for incoming requests
     go server.ListenAndHandle()
 
-    // Create a new TChannel for sending requests.  
+    // Create a new TChannel for sending requests.
     client, err := tchannel.NewChannel("localhost:8051", nil)
     if err != nil {
         panic(err)
@@ -129,7 +129,7 @@ to stringify and parse outside of TChannel.
 This design supports efficient routing and forwarding of data where the routing information needs
 to parse only the first or second field, but the 3rd field is forwarded without parsing.
 
-There is no notion of client and server in this system. Every TChannel instance is capable of 
+There is no notion of client and server in this system. Every TChannel instance is capable of
 making or receiving requests, and thus requires a unique port on which to listen. This requirement may
 change in the future.
 
@@ -149,4 +149,3 @@ change in the future.
  - mmihic
 
 ## MIT Licenced
-
