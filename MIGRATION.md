@@ -57,7 +57,11 @@ chan
         // res has an `.ok` field that is tells whether it is
         // an error or not.
 
-        // `err` is for IO & timeouts. Also tchannel error frames
+        // This means that an application error returns
+        // `err` === null and a `resp` where `.ok` is false.
+
+        // If `err` is non null then it will be an err related
+        // to client TCP IO errors or TChannel error frames.
     });
 ```
 
