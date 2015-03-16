@@ -55,9 +55,11 @@ var NoHandlerError = TypedError({
     message: 'no handler defined'
 });
 
-function noHandlerHandler(req, res) {
-    res.send(NoHandlerError());
-}
+var noHandlerHandler = {
+    handleRequest: function noHandlerHandler(req, res) {
+        res.send(NoHandlerError());
+    }
+};
 
 function TChannel(options) {
     if (!(this instanceof TChannel)) {
@@ -740,7 +742,7 @@ TChannelConnection.prototype.handleCallRequest = function handleCallRequest(req)
     process.nextTick(runHandler);
 
     function runHandler() {
-        self.channel.handler(req, res);
+        self.channel.handler.handleRequest(req, res);
     }
 
     function opDone() {
