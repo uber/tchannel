@@ -54,6 +54,7 @@ function TChannelV2Handler(channel, options) {
         objectMode: true
     });
     self.channel = channel;
+    self.tracer = options.tracer;
     self.remoteHostPort = null; // filled in by identify message
     self.lastSentFrameId = 0;
     // TODO: GC these... maybe that's up to TChannel itself wrt ops

@@ -43,6 +43,7 @@ function TChannelIncomingRequest(id, options) {
     self.id = id || 0;
     self.ttl = options.ttl || 0;
     self.tracing = options.tracing || null;
+    self.tracer = options.tracer;
     self.service = options.service || '';
     self.remoteAddr = null;
     self.headers = options.headers || {};
@@ -105,6 +106,7 @@ function TChannelOutgoingRequest(id, options) {
     self.id = id || 0;
     self.ttl = options.ttl || 0;
     self.tracing = options.tracing || null;
+    self.tracer = options.tracer; // tracing agent
     self.service = options.service || '';
     self.headers = options.headers || {};
     self.checksumType = options.checksumType || 0;
@@ -172,10 +174,21 @@ TChannelOutgoingRequest.prototype.sendCallRequestContFrame = function sendCallRe
 
 TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     var self = this;
+
     if (callback) self.hookupCallback(callback);
     self.arg1.end(arg1);
     self.arg2.end(arg2);
     self.arg3.end(arg3);
+
+    if (self.tracer) {
+        // TODO: do in constructor and update here
+        self.span = self.tracer.setupNewSpan({
+            name: arg1
+        });
+
+        // TODO: better annotations
+        self.span.annotate('cs');   // client start
+    }
     return self;
 };
 
@@ -184,10 +197,16 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
     self.once('error', onError);
     self.once('response', onResponse);
     function onError(err) {
+        // TODO: better annotations
+        self.span.annotate('cr'); // client recv
+        self.tracer.report(self.span);
         self.removeListener('response', onResponse);
         callback(err, null);
     }
     function onResponse(res) {
+        // TODO: better annotations
+        self.span.annotate('cr');
+        self.tracer.report(self.span);
         self.removeListener('error', onError);
         if (callback.canStream) {
             callback(null, res);
@@ -217,6 +236,7 @@ function TChannelOutgoingResponse(id, options) {
     self.id = id || 0;
     self.code = options.code || 0;
     self.tracing = options.tracing || null;
+    self.tracer = options.tracer;
     self.headers = options.headers || {};
     self.checksumType = options.checksumType || 0;
     self.checksum = options.checksum || null;
@@ -295,6 +315,15 @@ TChannelOutgoingResponse.prototype.sendError = function sendError(codeString, me
         self.arg3.end();
         self.sendFrame.error(codeString, message);
     }
+
+    self.sent = true;
+    self.ok = true;
+
+    if (self.tracer) {
+        // TODO: better annotations
+        self.span.annotate('ss', Date.now()); // server send
+        self.tracer.report(self.span);
+    }
 };
 
 TChannelOutgoingResponse.prototype.setOk = function setOk(ok) {
@@ -312,6 +341,12 @@ TChannelOutgoingResponse.prototype.sendOk = function sendOk(res1, res2) {
     self.setOk(true);
     self.arg2.end(res1);
     self.arg3.end(res2);
+
+    if (self.tracer) {
+        // TODO: better annotations
+        self.span.annotate('ss', Date.now()); // server send
+        self.tracer.report(self.span);
+    }
 };
 
 TChannelOutgoingResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
@@ -319,6 +354,12 @@ TChannelOutgoingResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
     self.setOk(false);
     self.arg2.end(res1);
     self.arg3.end(res2);
+
+    if (self.tracer) {
+        // TODO: better annotations
+        self.span.annotate('ss', Date.now()); // server send
+        self.tracer.report(self.span);
+    }
 };
 
 module.exports.States = States;

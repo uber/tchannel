@@ -36,6 +36,7 @@ var v2 = require('./v2');
 var nullLogger = require('./null-logger.js');
 var Spy = require('./v2/spy');
 var EndpointHandler = require('./endpoint-handler.js');
+var TracingAgent = require('./tracer/agent');
 
 var dumpEnabled = /\btchannel_dump\b/.test(process.env.NODE_DEBUG || '');
 
@@ -134,6 +135,16 @@ function TChannel(options) {
 
             self.logger.info(self.hostPort + ' listening');
             self.emit('listening');
+
+            // TODO: make this in constructor and not listening event
+            self.tracer = new TracingAgent({
+                host: self.host,
+                port: address.port,
+                // TODO: wat to do with this? need serviceName, should not be
+                // passed into tchannel though. Take from autobahn and throw
+                // otherwise if tracing is enabled?
+                serviceName: self.options.serviceName
+            });
         }
     });
     self.serverSocket.on('error', function onServerSocketError(err) {
@@ -359,6 +370,10 @@ TChannel.prototype.request = function request(options) {
         throw new Error('cannot request() without options.host'); // TODO typed error
     }
 
+    // 'private' field on options for the tracer so it can get to
+    // TChannelOutgoingRequest#send
+    options._tracer = self.tracer;
+
     var peer = self.getOutConnection(dest);
     return peer.request(options);
 };
@@ -386,7 +401,8 @@ TChannel.prototype.makeSocket = function makeSocket(dest) {
 TChannel.prototype.makeOutConnection = function makeOutConnection(dest) {
     var self = this;
     var socket = self.makeSocket(dest);
-    var connection = new TChannelConnection(self, socket, 'out', dest);
+    var connection =
+        new TChannelConnection(self, socket, 'out', dest, self.tracer);
     return connection;
 };
 
@@ -453,7 +469,7 @@ TChannel.prototype.close = function close(callback) {
     }
 };
 
-function TChannelConnection(channel, socket, direction, remoteAddr) {
+function TChannelConnection(channel, socket, direction, remoteAddr, tracer) {
     var self = this;
     if (remoteAddr === channel.hostPort) {
         throw new Error('refusing to create self connection'); // TODO typed error
@@ -465,6 +481,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     self.direction = direction;
     self.remoteAddr = remoteAddr;
     self.timer = null;
+    self.tracer = tracer;
 
     self.remoteName = null; // filled in by identify message
 
@@ -479,7 +496,9 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 
     self.reader = ChunkReader(bufrw.UInt16BE, v2.Frame.RW);
     self.writer = ChunkWriter(v2.Frame.RW);
-    self.handler = new v2.Handler(self.channel);
+    self.handler = new v2.Handler(self.channel, {
+        tracer: self.tracer
+    });
 
     // TODO: refactor op boundary to pass full req/res around
     self.handler.on('call.incoming.request', function onCallRequest(req) {
@@ -793,8 +812,8 @@ TChannelConnection.prototype.request = function request(options) {
     //  throw new Error('duplicate frame id in flight'); // TODO typed error
     // }
     // TODO: provide some sort of channel default for "service"
-    // TODO: generate tracing if empty?
     // TODO: refactor callers
+
     options.checksumType = options.checksum;
     options.ttl = options.timeout || 1; // TODO: better default, support for dynamic
     var req = self.handler.buildOutgoingRequest(options);
