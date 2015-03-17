@@ -72,36 +72,43 @@ CodeNames[Codes.ProtocolError] = 'protocol error';
 var CodeErrors = {};
 CodeErrors[Codes.Timeout] = TypedError({
     type: 'tchannel.timeout',
+    isErrorFrame: true,
     errorCode: Codes.Timeout,
     originalId: null
 });
 CodeErrors[Codes.Cancelled] = TypedError({
     type: 'tchannel.canceled',
+    isErrorFrame: true,
     errorCode: Codes.Cancelled,
     originalId: null
 });
 CodeErrors[Codes.Busy] = TypedError({
     type: 'tchannel.busy',
+    isErrorFrame: true,
     errorCode: Codes.Busy,
     originalId: null
 });
 CodeErrors[Codes.Declined] = TypedError({
     type: 'tchannel.declined',
+    isErrorFrame: true,
     errorCode: Codes.Declined,
     originalId: null
 });
 CodeErrors[Codes.UnexpectedError] = TypedError({
     type: 'tchannel.unexpected',
+    isErrorFrame: true,
     errorCode: Codes.UnexpectedError,
     originalId: null
 });
 CodeErrors[Codes.BadRequest] = TypedError({
     type: 'tchannel.bad-request',
+    isErrorFrame: true,
     errorCode: Codes.BadRequest,
     originalId: null
 });
 CodeErrors[Codes.ProtocolError] = TypedError({
     type: 'tchannel.protocol',
+    isErrorFrame: true,
     errorCode: Codes.ProtocolError,
     originalId: null
 });

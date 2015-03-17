@@ -19,21 +19,26 @@
 // THE SOFTWARE.
 
 var TChannel = require('../index.js');
+var EndpointHandler = require('../endpoint-handler.js');
 var CountedReadySignal = require('ready-signal/counted');
 
 var async = require('async');
 
-var server = new TChannel();
-var client = new TChannel();
+var server = new TChannel({
+    handler: EndpointHandler()
+});
+var client = new TChannel({
+    handler: EndpointHandler()
+});
 
 // bidirectional messages
-server.register('ping', function onPing(arg1, arg2, peerInfo, pingCb) {
-    console.log('server got ping req from ' + peerInfo);
-    pingCb(null, 'pong', null);
+server.handler.register('ping', function onPing(req, res) {
+    console.log('server got ping req from ' + req.remoteAddr);
+    res.sendOk('pong', null);
 });
-client.register('ping', function onPing(arg1, arg2, peerInfo, pingCb) {
-    console.log('client got ping req from ' + peerInfo);
-    pingCb(null, 'pong', null);
+client.handler.register('ping', function onPing(req, res) {
+    console.log('client got ping req from ' + req.remoteAddr);
+    res.sendOk('pong', null);
 });
 
 
