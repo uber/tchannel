@@ -43,6 +43,14 @@ Frame.Types[Types.CallResponse] = call.Response;
 module.exports.CallRequest = call.Request;
 module.exports.CallResponse = call.Response;
 
+var ping = require('./ping');
+Types.PingRequest = ping.Request.TypeCode;
+Types.PingResponse = ping.Request.TypeCode;
+Frame.Types[Types.PingRequest] = ping.Requst;
+Frame.Types[Types.PingResponse] = ping.Response;
+module.exports.PingRequest = ping.Request;
+module.exports.PingResponse = ping.Response;
+
 var ErrorResponse = require('./error_response');
 Types.ErrorResponse = ErrorResponse.TypeCode;
 Frame.Types[Types.ErrorResponse] = ErrorResponse;

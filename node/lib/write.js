@@ -195,6 +195,10 @@ module.exports.fixed = function(n, source, name) {
     });
 };
 
+module.exports.null = function naught(buffer, offset) {
+    return offset;
+};
+
 module.exports.fill = function(c, n) {
     return new BufferWriter(n, function writeFill(buffer, offset) {
         var end = offset + n;

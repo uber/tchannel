@@ -92,6 +92,11 @@ module.exports.UInt32BE = readWidth(4, function UInt32BE(buffer, offset) {
     return buffer.readUInt32BE(offset);
 });
 
+module.exports.null = naught;
+function naught(buffer, offset) {
+    return [null, offset, null];
+};
+
 module.exports.skip = skip;
 
 function skip(n) {
