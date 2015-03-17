@@ -10,6 +10,7 @@ import tornado.iostream
 
 from .exceptions import InvalidMessageException
 from .messages import CallRequestMessage
+from tchannel.inbound_server import InboundServer
 from .tornado.connection import TornadoConnection
 from .tornado.timeout import timeout
 
@@ -20,13 +21,14 @@ log = logging.getLogger('tchannel')
 class TChannel(object):
     """Manages inbound and outbound connections to various hosts."""
 
-    def __init__(self, process_name=None):
+    def __init__(self, process_name=None, in_port=None):
         self.peers = {}
         self.process_name = (
             process_name or "%s[%s]" % (sys.argv[0], os.getpid())
         )
 
-        # TODO: self.server_socket = self.make_in_connection()
+        self.inbound_server = InboundServer()
+        self.make_in_connection(in_port)
 
     @tornado.gen.coroutine
     def add_peer(self, hostport):
@@ -81,12 +83,8 @@ class TChannel(object):
         raise tornado.gen.Return(connection)
 
     @tornado.gen.coroutine
-    def make_in_connection(self):
-        raise NotImplementedError
-
-    def listen(self):
-        # TODO: listen to inbound handshakes
-        raise NotImplementedError
+    def make_in_connection(self, port):
+        self.inbound_server.listen(port)
 
     def respond(self):
         # TODO: handle inbound requests

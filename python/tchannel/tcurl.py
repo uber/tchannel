@@ -11,11 +11,12 @@ from .tchannel import TChannel
 
 log = logging.getLogger('tchannel')
 
+client = TChannel()
+client.make_in_connection(9999)
+
 
 @tornado.gen.coroutine
 def tcurl(host, endpoint, headers, body):
-
-    client = TChannel()
 
     print("")
     print("Sending this to %s" % host)
@@ -81,6 +82,13 @@ def parse_args():
         action="store_true"
     )
 
+    parser.add_argument(
+        "-in", "--inport",
+        dest="in_port",
+        default="4040",
+        help="port listened by in bound server"
+    )
+
     return parser.parse_args()
 
 
@@ -101,10 +109,9 @@ def main():
 
     host, endpoint = args.host.split('/', 1)
 
-    tornado.ioloop.IOLoop.instance().run_sync(
-        lambda: tcurl(host, endpoint, args.headers, args.body)
-    )
+    tcurl(host, endpoint, args.headers, args.body)
 
+    tornado.ioloop.IOLoop.instance().start()
 
 if __name__ == '__main__':  # pragma: no cover
     main()
