@@ -45,6 +45,8 @@ function ErrorResponse(code, id, message) {
         self.id = id;
     }
     self.message = message ? write.bufferOrString(message) : emptyBuffer;
+
+    self.type = ErrorResponse.TypeCode;
 }
 
 ErrorResponse.TypeCode = 0xff;
