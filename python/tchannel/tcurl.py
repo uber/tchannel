@@ -23,7 +23,7 @@ def multi_tcurl(hostports, headers, bodies, profile=False):
     futures = [
         tcurl(client, hostport, header, body)
         for hostport, header, body
-        in itertools.izip(hostports, headers, bodies)
+        in getattr(itertools, 'izip', zip)(hostports, headers, bodies)
     ]
 
     start = time.time()
