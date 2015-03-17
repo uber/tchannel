@@ -129,7 +129,7 @@ function TChannelOutgoingResponse(id, options, senders) {
     self.arg1 = options.arg1 || emptyBuffer;
     self.arg2 = options.arg2 || emptyBuffer;
     self.arg3 = options.arg3 || emptyBuffer;
-    self.sendCallResponseFrame = senders.callResponseFrame
+    self.sendCallResponseFrame = senders.callResponseFrame;
     self.sendErrorFrame = senders.errorFrame;
     self.sent = false;
 }
