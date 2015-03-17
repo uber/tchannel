@@ -38,6 +38,12 @@ var TChannelUnhandledFrameTypeError = TypedError({
     typeCode: null
 });
 
+var InvalidCodeStringError = TypedError({
+    type: 'tchannel.invalid-code-string',
+    message: 'Invalid Error frame code: {codeString}',
+    codeString: null
+});
+
 function TChannelV2Handler(channel, options) {
     if (!(this instanceof TChannelV2Handler)) {
         return new TChannelV2Handler(channel, options);
@@ -70,7 +76,7 @@ TChannelV2Handler.prototype._write = function _write(frame, encoding, callback) 
             return self.handleCallRequest(frame, callback);
         case v2.Types.CallResponse:
             return self.handleCallResponse(frame, callback);
-        case v2.Types.Error:
+        case v2.Types.ErrorResponse:
             return self.handleError(frame, callback);
         default:
             return callback(TChannelUnhandledFrameTypeError({
@@ -140,9 +146,10 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
 
 TChannelV2Handler.prototype.handleError = function handleError(errFrame, callback) {
     var self = this;
+
     var id = errFrame.id;
     var code = errFrame.body.code;
-    var message = errFrame.body.message;
+    var message = String(errFrame.body.message);
     var err = v2.ErrorResponse.CodeErrors[code]({
         originalId: id,
         message: message
@@ -200,7 +207,7 @@ TChannelV2Handler.prototype.sendRequestFrame = function sendRequestFrame(req, ar
     return id;
 };
 
-TChannelV2Handler.prototype.sendResponseFrame = function sendResponseFrame(res, arg1, arg2, arg3) {
+TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFrame(res, arg1, arg2, arg3) {
     // TODO: refactor this all the way back out through the op handler calling convention
     var self = this;
     var resBody;
@@ -219,6 +226,21 @@ TChannelV2Handler.prototype.sendResponseFrame = function sendResponseFrame(res, 
 };
 /* jshint maxparams:4 */
 
+TChannelV2Handler.prototype.sendErrorFrame = function sendErrorFrame(req, codeString, message) {
+    var self = this;
+
+    var code = v2.ErrorResponse.Codes[codeString];
+    if (code === undefined) {
+        throw InvalidCodeStringError({
+            codeString: codeString
+        });
+    }
+
+    var errBody = v2.ErrorResponse(code, req.id, message);
+    var errFrame = v2.Frame(req.id, errBody);
+    self.push(errFrame);
+};
+
 TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest(options) {
     var self = this;
     var id = self.nextFrameId();
@@ -234,15 +256,24 @@ TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest
 
 TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingResponse(req) {
     var self = this;
+    var senders = {
+        callResponseFrame: sendCallResponseFrame,
+        errorFrame: sendErrorFrame
+    };
     var res = TChannelOutgoingResponse(req.id, {
         tracing: req.tracing,
         headers: {},
         checksumType: req.checksumType,
-        arg1: req.arg1,
-    }, sendResponseFrame);
+        arg1: req.arg1
+    }, senders);
     return res;
-    function sendResponseFrame(arg1, arg2, arg3) {
-        self.sendResponseFrame(res, arg1, arg2, arg3);
+
+    function sendCallResponseFrame(arg1, arg2, arg3) {
+        self.sendCallResponseFrame(res, arg1, arg2, arg3);
+    }
+
+    function sendErrorFrame(codeString, message) {
+        self.sendErrorFrame(req, codeString, message);
     }
 };
 

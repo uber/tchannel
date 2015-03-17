@@ -112,10 +112,11 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
     return self;
 };
 
-function TChannelOutgoingResponse(id, options, sendFrame) {
+function TChannelOutgoingResponse(id, options, senders) {
     if (!(this instanceof TChannelOutgoingResponse)) {
-        return new TChannelOutgoingResponse(id, options, sendFrame);
+        return new TChannelOutgoingResponse(id, options, senders);
     }
+
     options = options || {};
     var self = this;
     EventEmitter.call(self);
@@ -128,7 +129,8 @@ function TChannelOutgoingResponse(id, options, sendFrame) {
     self.arg1 = options.arg1 || emptyBuffer;
     self.arg2 = options.arg2 || emptyBuffer;
     self.arg3 = options.arg3 || emptyBuffer;
-    self.sendFrame = sendFrame;
+    self.sendCallResponseFrame = senders.callResponseFrame;
+    self.sendErrorFrame = senders.errorFrame;
     self.sent = false;
 }
 
@@ -143,7 +145,7 @@ TChannelOutgoingResponse.prototype.sendOk = function send(res1, res2) {
     self.sent = true;
     self.ok = true;
 
-    self.sendFrame(self.arg1, res1, res2);
+    self.sendCallResponseFrame(self.arg1, res1, res2);
     self.emit('end');
 };
 
@@ -157,7 +159,7 @@ TChannelOutgoingResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
     self.ok = false;
     self.code = 1;
 
-    self.sendFrame(self.arg1, res1, res2);
+    self.sendCallResponseFrame(self.arg1, res1, res2);
     self.emit('end');
 };
 
