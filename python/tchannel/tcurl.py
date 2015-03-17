@@ -39,7 +39,7 @@ def multi_tcurl(hostports, headers, bodies, profile=False):
         profiler.disable()
         profiler.create_stats()
         stats = pstats.Stats(profiler)
-        stats.strip_dirs().sort_stats('cumulative').print_stats(15)
+        stats.strip_dirs().sort_stats('tot').print_stats(15)
 
     stop = time.time()
 

@@ -81,10 +81,9 @@ class TChannel(object):
 
         yield connection.await_handshake_reply()
 
-        @tornado.gen.coroutine
         def handle_call_response(context, connection):
-            yield awaiting_responses[context.message_id].put(context)
-            print "GOING BACK TO LISTENING", len(awaiting_responses)
+            assert context.message_id in awaiting_responses
+            awaiting_responses[context.message_id].set_result(context)
             connection.handle_calls(handle_call_response)
 
         connection.handle_calls(handle_call_response)
@@ -92,16 +91,6 @@ class TChannel(object):
         log.debug("completed handshake")
 
         raise tornado.gen.Return(connection)
-
-    #@staticmethod
-    #def handle_call_response(context, connection):
-        #import ipdb; ipdb.set_trace()
-        #if context.message_id in awaiting_responses:
-            #yield awaiting_responses[context.message_id].put(context)
-        #else:
-            #print "WTF UNRECOGNIZED MESSAGE ID"
-
-        #connection.handle_calls(self.handle_response)
 
     @tornado.gen.coroutine
     def make_in_connection(self):
@@ -159,13 +148,11 @@ class TChannelClientOperation(object):
 
         # Pull this out into its own loop, look up response message ids
         # and dispatch them to handlers.
-        import toro
-        awaiting_responses[message_id] = toro.Queue(1)
+        awaiting_responses[message_id] = tornado.gen.Future()
 
         # TODO: use real timeout here
         #with timeout(peer_connection):
-        response = yield awaiting_responses[message_id].get()
-        #print "JUST GOT", message_id
+        response = yield awaiting_responses[message_id]
         del awaiting_responses[message_id]
 
         # TODO: Add a callback to remove ourselves from the ops
