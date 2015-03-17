@@ -112,14 +112,11 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
     return self;
 };
 
-function TChannelOutgoingResponse(
-    id, options, sendCallResponseFrame, sendErrorFrame
-) {
+function TChannelOutgoingResponse(id, options, senders) {
     if (!(this instanceof TChannelOutgoingResponse)) {
-        return new TChannelOutgoingResponse(
-            id, options, sendCallResponseFrame, sendErrorFrame
-        );
+        return new TChannelOutgoingResponse(id, options, senders);
     }
+
     options = options || {};
     var self = this;
     EventEmitter.call(self);
@@ -132,8 +129,8 @@ function TChannelOutgoingResponse(
     self.arg1 = options.arg1 || emptyBuffer;
     self.arg2 = options.arg2 || emptyBuffer;
     self.arg3 = options.arg3 || emptyBuffer;
-    self.sendCallResponseFrame = sendCallResponseFrame;
-    self.sendErrorFrame = sendErrorFrame;
+    self.sendCallResponseFrame = senders.callResponseFrame
+    self.sendErrorFrame = senders.errorFrame;
     self.sent = false;
 }
 

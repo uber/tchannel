@@ -226,20 +226,18 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
 };
 /* jshint maxparams:4 */
 
-TChannelV2Handler.prototype.sendErrorFrame = function sendErrorFrame(
-    res, codeString, message
-) {
+TChannelV2Handler.prototype.sendErrorFrame = function sendErrorFrame(req, codeString, message) {
     var self = this;
 
     var code = v2.ErrorResponse.Codes[codeString];
-    if (typeof code !== 'number') {
+    if (code === undefined) {
         throw InvalidCodeStringError({
             codeString: codeString
         });
     }
 
-    var errBody = v2.ErrorResponse(code, res.id, message);
-    var errFrame = v2.Frame(res.id, errBody);
+    var errBody = v2.ErrorResponse(code, req.id, message);
+    var errFrame = v2.Frame(req.id, errBody);
     self.push(errFrame);
 };
 
@@ -258,12 +256,16 @@ TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest
 
 TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingResponse(req) {
     var self = this;
+    var senders = {
+        callResponseFrame: sendCallResponseFrame,
+        errorFrame: sendErrorFrame
+    };
     var res = TChannelOutgoingResponse(req.id, {
         tracing: req.tracing,
         headers: {},
         checksumType: req.checksumType,
         arg1: req.arg1
-    }, sendCallResponseFrame, sendErrorFrame);
+    }, senders);
     return res;
 
     function sendCallResponseFrame(arg1, arg2, arg3) {
@@ -271,7 +273,7 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
     }
 
     function sendErrorFrame(codeString, message) {
-        self.sendErrorFrame(res, codeString, message);
+        self.sendErrorFrame(req, codeString, message);
     }
 };
 
