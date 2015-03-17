@@ -1,9 +1,12 @@
 from __future__ import absolute_import
 
 import argparse
+import cProfile
 import itertools
 import logging
+import pstats
 import sys
+import time
 
 import tornado.ioloop
 
@@ -14,7 +17,7 @@ log = logging.getLogger('tchannel')
 
 
 @tornado.gen.coroutine
-def multi_tcurl(hostports, headers, bodies):
+def multi_tcurl(hostports, headers, bodies, profile=False):
     client = TChannel()
 
     futures = [
@@ -23,7 +26,29 @@ def multi_tcurl(hostports, headers, bodies):
         in itertools.izip(hostports, headers, bodies)
     ]
 
+    start = time.time()
+
+    profiler = cProfile.Profile()
+
+    if profile:
+        profiler.enable()
+
     results = yield futures
+
+    if profile:
+        profiler.disable()
+        profiler.create_stats()
+        stats = pstats.Stats(profiler)
+        stats.strip_dirs().sort_stats('cumulative').print_stats(15)
+
+    stop = time.time()
+
+    log.debug(
+        "took %.2fs for %s requests (%.2f rps)",
+        stop - start,
+        len(futures),
+        len(futures) / (stop - start),
+    )
 
     raise tornado.gen.Return(results)
 
@@ -99,6 +124,12 @@ def parse_args(args=None):
         action="store_true"
     )
 
+    parser.add_argument(
+        "--profile",
+        dest="profile",
+        action="store_true"
+    )
+
     args = parser.parse_args(args)
 
     # Allow a body/header to specified once and shared across multiple requests.
@@ -125,7 +156,7 @@ def parse_args(args=None):
 
     # Transform something like "localhost:8888" into "localhost:8888/" so we
     # consider it as the '' endpoint.
-    args.host = [h if '/' in h else h + '/' for h in args.host]
+    args.host = (h if '/' in h else h + '/' for h in args.host)
 
     return args
 
@@ -141,7 +172,7 @@ def main():
         )
 
     tornado.ioloop.IOLoop.instance().run_sync(
-        lambda: multi_tcurl(args.host, args.headers, args.body)
+        lambda: multi_tcurl(args.host, args.headers, args.body, args.profile)
     )
 
 
