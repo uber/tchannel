@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 import socket
+import weakref
 
 import tornado.ioloop
 import tornado.iostream
@@ -11,7 +12,6 @@ import tornado.iostream
 from ..exceptions import InvalidMessageException
 from ..messages import CallRequestMessage
 from .connection import TornadoConnection
-from .timeout import timeout
 
 
 log = logging.getLogger('tchannel')
@@ -21,9 +21,8 @@ awaiting_responses = {}
 class TChannel(object):
     """Manages inbound and outbound connections to various hosts."""
 
-    peers = {}
-
     def __init__(self, process_name=None):
+        self.peers = {}
         self.process_name = (
             process_name or "%s[%s]" % (sys.argv[0], os.getpid())
         )
@@ -82,8 +81,13 @@ class TChannel(object):
         yield connection.await_handshake_reply()
 
         def handle_call_response(context, connection):
-            assert context.message_id in awaiting_responses
-            awaiting_responses[context.message_id].set_result(context)
+            if context and context.message_id in awaiting_responses:
+                awaiting_responses[context.message_id].set_result(context)
+            else:
+                log.warn(
+                    'unrecognized response for message %s',
+                    getattr(context, 'message_id', None),
+                )
             connection.handle_calls(handle_call_response)
 
         connection.handle_calls(handle_call_response)
@@ -105,21 +109,22 @@ class TChannel(object):
         raise NotImplementedError
 
     def request(self, hostport):
-        return TChannelClientOperation(hostport)
+        return TChannelClientOperation(hostport, self)
 
 
 class TChannelClientOperation(object):
 
-    def __init__(self, hostport):
+    def __init__(self, hostport, tchannel):
         self.hostport = hostport
         self.message_id = None
+        self.tchannel = weakref.ref(tchannel)
 
     @tornado.gen.coroutine
     def send(self, arg_1, arg_2, arg_3):
         # message = CallRequestMessage.from_context for zipkin shit
         # Make this return a message ID so we can match it up with the
         # response.
-        peer_connection = yield TChannel().get_peer(self.hostport)
+        peer_connection = yield self.tchannel().get_peer(self.hostport)
 
         self.message_id = message_id = peer_connection.next_message_id()
 
