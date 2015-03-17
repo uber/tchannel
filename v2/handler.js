@@ -38,6 +38,12 @@ var TChannelUnhandledFrameTypeError = TypedError({
     typeCode: null
 });
 
+var InvalidCodeStringError = TypedError({
+    type: 'tchannel.invalid-code-string',
+    message: 'Invalid Error frame code: {codeString}',
+    codeString: null
+});
+
 function TChannelV2Handler(channel, options) {
     if (!(this instanceof TChannelV2Handler)) {
         return new TChannelV2Handler(channel, options);
@@ -201,7 +207,7 @@ TChannelV2Handler.prototype.sendRequestFrame = function sendRequestFrame(req, ar
     return id;
 };
 
-TChannelV2Handler.prototype.sendResponseFrame = function sendResponseFrame(res, arg1, arg2, arg3) {
+TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFrame(res, arg1, arg2, arg3) {
     // TODO: refactor this all the way back out through the op handler calling convention
     var self = this;
     var resBody;
@@ -219,6 +225,23 @@ TChannelV2Handler.prototype.sendResponseFrame = function sendResponseFrame(res, 
     self.push(resFrame);
 };
 /* jshint maxparams:4 */
+
+TChannelV2Handler.prototype.sendErrorFrame = function sendErrorFrame(
+    res, codeString, message
+) {
+    var self = this;
+
+    var code = v2.ErrorResponse.Codes[codeString];
+    if (typeof code !== 'number') {
+        throw InvalidCodeStringError({
+            codeString: codeString
+        });
+    }
+
+    var errBody = v2.ErrorResponse(code, res.id, message);
+    var errFrame = v2.Frame(res.id, errBody);
+    self.push(errFrame);
+};
 
 TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest(options) {
     var self = this;
@@ -239,11 +262,16 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
         tracing: req.tracing,
         headers: {},
         checksumType: req.checksumType,
-        arg1: req.arg1,
-    }, sendResponseFrame);
+        arg1: req.arg1
+    }, sendCallResponseFrame, sendErrorFrame);
     return res;
-    function sendResponseFrame(arg1, arg2, arg3) {
-        self.sendResponseFrame(res, arg1, arg2, arg3);
+
+    function sendCallResponseFrame(arg1, arg2, arg3) {
+        self.sendCallResponseFrame(res, arg1, arg2, arg3);
+    }
+
+    function sendErrorFrame(codeString, message) {
+        self.sendErrorFrame(res, codeString, message);
     }
 };
 
