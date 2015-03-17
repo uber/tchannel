@@ -1,6 +1,5 @@
 from __future__ import absolute_import
 
-import itertools
 import functools
 import logging
 
@@ -16,10 +15,6 @@ log = logging.getLogger('tchannel')
 class Connection(object):
     """Encapsulate transporting TChannel over an underlying stream."""
 
-    # There's nothing wrong with multiple connections using overlapping message
-    # ids but this is just to be paranoid.
-    _id_sequence = itertools.count()
-
     def __init__(self, connection):
         """Initialize a TChannel connection with an underlying transport.
 
@@ -27,6 +22,7 @@ class Connection(object):
         """
         log.debug('making a new connection')
         self._connection = connection
+        self._id_sequence = 0
 
     def handle_calls(self, handler):
         """Dispatch calls to handler from the wire.
@@ -43,7 +39,8 @@ class Connection(object):
 
     def next_message_id(self):
         """Generate a new message ID."""
-        return self._id_sequence.next()
+        self._id_sequence += 1
+        return self._id_sequence
 
     def frame_and_write(self, message, callback=None, message_id=None):
         """Frame and write a message over a connection."""
