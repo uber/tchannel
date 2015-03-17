@@ -59,7 +59,7 @@ Codes.Busy = 0x03;
 Codes.Declined = 0x04;
 Codes.UnexpectedError = 0x05;
 Codes.BadRequest = 0x06;
-Codes.ProtocolError = 0xf;
+Codes.ProtocolError = 0xff;
 
 var CodeNames = Object.create(null);
 CodeNames[Codes.Timeout] = 'timeout';
