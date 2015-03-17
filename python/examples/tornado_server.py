@@ -17,12 +17,9 @@ from tchannel.tornado.connection import TornadoConnection
 class MyServer(tornado.tcpserver.TCPServer):
 
     def handle_stream(self, stream, address):
-        tchannel_connection = TornadoConnection(
-            connection=stream
-        )
+        tchannel_connection = TornadoConnection(connection=stream)
 
         print("Received request from %s:%d" % address)
-
         print("Waiting for TChannel handshake...")
         tchannel_connection.await_handshake(headers={
             'host_port': '%s:%s' % address,
@@ -46,23 +43,17 @@ class MyServer(tornado.tcpserver.TCPServer):
 
         if context.message.message_type == Types.PING_REQ:
             connection.pong(context.message_id)
-
         elif context.message.arg_1:
-            response = CallResponseMessage()
-            response.flags = 0
-            response.code = 200
-            response.span_id = 0
-            response.parent_id = 0
-            response.trace_id = 0
-            response.traceflags = 0
-            response.headers = {'currently': 'broken'}
-            response.checksum_type = 0
-            response.checksum = 0
-            response.arg_1 = context.message.arg_1
-            response.arg_2 = context.message.arg_2
-            response.arg_3 = (
-                'message id %s gave me an arg3 %s'
-                % (context.message_id, context.message.arg_3)
+            response = CallResponseMessage(
+                flags=0,
+                code=200,
+                headers={'currently': 'broken'},
+                arg_1=context.message.arg_1,
+                arg_2=context.message.arg_2,
+                arg_3=(
+                    'message id %s gave me an arg3 %s'
+                    % (context.message_id, context.message.arg_3)
+                ),
             )
 
             # Simulate some response delay

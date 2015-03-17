@@ -3,9 +3,9 @@ from __future__ import absolute_import
 import functools
 import logging
 
-from .frame import Frame
+from .frame_reader import FrameWriter
 from . import messages
-from .exceptions import InvalidMessageException
+from .exceptions import InvalidMessageException, ProtocolException
 from .messages.common import PROTOCOL_VERSION
 from .messages.types import Types
 
@@ -23,6 +23,7 @@ class Connection(object):
         log.debug('making a new connection')
         self._connection = connection
         self._id_sequence = 0
+        self._writer = FrameWriter(connection)
 
     def handle_calls(self, handler):
         """Dispatch calls to handler from the wire.
@@ -44,14 +45,15 @@ class Connection(object):
 
     def frame_and_write(self, message, callback=None, message_id=None):
         """Frame and write a message over a connection."""
-        message_id = (
-            message_id if message_id is not None else self.next_message_id()
-        )
-        frame = Frame(
-            message=message,
-            message_id=message_id,
-        )
-        return frame.write(self._connection, callback=callback)
+        if message_id is None:
+            message_id = self.next_message_id()
+
+        try:
+            self._writer.write(message_id, message)
+        except ProtocolException as e:
+            raise InvalidMessageException(e.message)
+
+        return message_id
 
     def ping(self):
         """Send a PING_REQ message to the remote end of the connection."""
@@ -107,10 +109,10 @@ class Connection(object):
 
     def initiate_handshake(self, headers, callback=None):
         """Send a handshake offer to a server."""
-        message = messages.InitRequestMessage()
-        message.version = PROTOCOL_VERSION
-        message.headers = headers
-
+        message = messages.InitRequestMessage(
+            version=PROTOCOL_VERSION,
+            headers=headers
+        )
         return self.frame_and_write(message, callback=callback)
 
     def await_handshake_reply(self, callback=None):

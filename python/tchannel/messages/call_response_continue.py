@@ -7,3 +7,5 @@ from .types import Types
 class CallResponseContinueMessage(CallResponseMessage):
     """Represent a continuation of a call response (across multiple frames)."""
     message_type = Types.CALL_RES_CONTINUE
+
+    # TODO

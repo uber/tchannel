@@ -9,20 +9,7 @@ from tchannel.tcurl import multi_tcurl
 
 @pytest.fixture
 def call_response():
-    resp = tmessage.CallResponseMessage()
-    resp.flags = 0
-    resp.code = 0
-    resp.span_id = 0
-    resp.parent_id = 0
-    resp.trace_id = 0
-    resp.traceflags = 0
-    resp.headers = {}
-    resp.checksum_type = 0
-    resp.checksum = 0
-    resp.arg_1 = b'hello'
-    resp.arg_2 = None
-    resp.arg_3 = b'world'
-    return resp
+    return tmessage.CallResponseMessage(arg_1=b'hello', arg_3='world')
 
 
 def test_tcp_ping_pong(server_manager):
