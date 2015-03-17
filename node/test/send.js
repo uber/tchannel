@@ -23,16 +23,19 @@
 var parallel = require('run-parallel');
 var Buffer = require('buffer').Buffer;
 var allocCluster = require('./lib/alloc-cluster.js');
+var EndpointHandler = require('../endpoint-handler');
 
 allocCluster.test('request().send() to a server', 2, function t(cluster, assert) {
     var one = cluster.channels[0];
     var two = cluster.channels[1];
     var hostOne = cluster.hosts[0];
 
-    one.register('foo', function foo(h, b, hi, cb) {
-        assert.ok(Buffer.isBuffer(h));
-        assert.ok(Buffer.isBuffer(b));
-        cb(null, h, b);
+    one.handler = EndpointHandler();
+
+    one.handler.register('foo', function foo(req, res) {
+        assert.ok(Buffer.isBuffer(req.arg2));
+        assert.ok(Buffer.isBuffer(req.arg3));
+        res.sendOk(req.arg2, req.arg3);
     });
 
     parallel({

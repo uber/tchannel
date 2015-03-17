@@ -19,7 +19,10 @@
 // THE SOFTWARE.
 
 var TChannel = require('../index');
-var server = new TChannel();
+var EndpointHandler = require('../endpoint-handler')
+var server = new TChannel({
+	handler: EndpointHandler()
+});
 server.listen(4040, '127.0.0.1');
 
 var keys = {};
@@ -28,8 +31,8 @@ server.on('socketClose', function (conn, err) {
 	// console.log('socket close: ' + conn.remoteName + ' ' + err);
 });
 
-server.register('ping', function onPing(arg1, arg2, hostInfo, pingCb) {
-	pingCb(null, 'pong', null);
+server.handler.register('ping', function onPing(req, res) {
+	res.sendOk('pong', null);
 });
 
 function safeParse(str) {
@@ -40,18 +43,18 @@ function safeParse(str) {
 	}
 }
 
-server.register('set', function onSet(arg1, arg2, hostInfo, setCb) {
-	var parts = safeParse(arg1.toString('utf8'));
+server.handler.register('set', function onSet(req, res) {
+	var parts = safeParse(req.arg2.toString('utf8'));
 	keys[parts[0]] = parts[1];
-	setCb(null, 'ok', 'really ok');
+	res.sendOk('ok', 'really ok');
 });
 
-server.register('get', function onGet(arg1, arg2, hostInfo, getCb) {
-	var str = arg1.toString('utf8');
+server.handler.register('get', function onGet(req, res) {
+	var str = req.arg2.toString('utf8');
 	if (keys[str] !== undefined) {
-		getCb(null, JSON.stringify(keys[str].length), JSON.stringify(keys[str]));
+		res.sendOk(JSON.stringify(keys[str].length), JSON.stringify(keys[str]));
 	} else {
-		getCb(new Error('key not found: ' + str));
+		res.sendNotOk(null, 'key not found: ' + str);
 	}
 });
 

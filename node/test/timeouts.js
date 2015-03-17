@@ -24,6 +24,8 @@ var TimeMock = require('time-mock');
 var allocCluster = require('./lib/alloc-cluster.js');
 var timers = TimeMock(Date.now());
 
+var EndpointHandler = require('../endpoint-handler');
+
 allocCluster.test('requests will timeout', 2, {
     timers: timers
 }, function t(cluster, assert) {
@@ -31,8 +33,10 @@ allocCluster.test('requests will timeout', 2, {
     var two = cluster.channels[1];
     var hostOne = cluster.hosts[0];
 
-    one.register('/normal-proxy', normalProxy);
-    one.register('/timeout', timeout);
+    one.handler = EndpointHandler();
+
+    one.handler.register('/normal-proxy', normalProxy);
+    one.handler.register('/timeout', timeout);
 
     two
         .request({
@@ -84,8 +88,8 @@ allocCluster.test('requests will timeout', 2, {
         assert.end();
     }
 
-    function normalProxy(head, body, hostInfo, cb) {
-        cb(null, head, body);
+    function normalProxy(req, res) {
+        res.sendOk(req.arg2, req.arg3);
     }
     function timeout(/* head, body, hostInfo, cb */) {
         // do not call cb();

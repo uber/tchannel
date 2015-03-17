@@ -238,7 +238,7 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
         tracing: req.tracing,
         headers: {},
         checksumType: req.checksumType,
-        name: req.name,
+        arg1: req.arg1,
     }, sendResponseFrame);
     return res;
     function sendResponseFrame(arg1, arg2, arg3) {
@@ -247,15 +247,14 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
 };
 
 TChannelV2Handler.prototype.buildIncomingRequest = function buildIncomingRequest(reqFrame) {
-    var name = String(reqFrame.body.arg1);
     var req = TChannelIncomingRequest(reqFrame.id, {
         id: reqFrame.id,
         ttl: reqFrame.ttl,
         tracing: reqFrame.tracing,
         service: reqFrame.service,
-        name: name,
         headers: reqFrame.headers,
         checksumType: reqFrame.body.csum.type,
+        arg1: reqFrame.body.arg1,
         arg2: reqFrame.body.arg2,
         arg3: reqFrame.body.arg3
     });

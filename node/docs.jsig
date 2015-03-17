@@ -21,37 +21,71 @@ type TChannelConnection : {
     remoteAddr: HostInfo
 }
 
-TChannelOutgoingRequest : {
+type TChannelIncomingResponse : {
+    id: Number,
+    ok: Boolean,
+
+    arg1: Buffer,
+    arg2: Buffer,
+    arg3: Buffer
+}
+
+type TChannelOutgoingRequest : {
+    id: Number,
+    service: String,
+
     send: (
         arg1: Buffer | String,
         arg2: TChannelValue,
-        arg3: TChannelValue
+        arg3: TChannelValue,
+        cb: Callback<Error, res: TChannelIncomingResponse>
+    ) => void
+}
+
+type TChannelIncomingRequest : {
+    id: Number,
+    service: String,
+
+    arg1: Buffer,
+    arg2: Buffer,
+    arg3: Buffer
+}
+
+type TChannelOutgoingResponse : {
+    id: Number,
+    code: Number,
+    ok: Boolean,
+
+    arg1: Buffer,
+    arg2: Buffer,
+    arg3: Buffer,
+
+    sendOk: (res1: Buffer, res2: Buffer) => void,
+    sendNotOk: (res1: Buffer, res2: Buffer) => void
+}
+
+type TChannelHandler : {
+    handleRequest : (
+        req: TChannelIncomingRequest,
+        res: TChannelOutgoingResponse
     ) => void
 }
 
 type TChannel : {
-    register: (op: String, fn: (
-        arg1: Buffer,
-        arg2: Buffer,
-        hostInfo: HostInfo,
-        cb: (
-            err?: Error,
-            res1: TChannelValue,
-            res2: TChannelValue
-        ) => void
-    ) => void) => void,
+    handler: TChannelHandler
+
     request: (
         options: {
             host: HostInfo,
             timeout?: Number
-        },
-        cb: (
-            err?: Error,
-            res1: Buffer | null,
-            res2: Buffer | null
-        ) => void
+        }
     ) => TChannelOutgoingRequest,
-    listen: (port:Number, hostname:String, Callback<Error>?) => void,
+
+    listen: (
+        port:Number,
+        hostname:String,
+        Callback<Error>?
+    ) => void,
     close: (Callback<Error>) => void,
 
     getPeer: (hostPort: HostInfo) => TChannelConnection,
@@ -61,12 +95,24 @@ type TChannel : {
 }
 
 tchannel : (options: {
-    host: IP,
-    port: Number,
+    handler?: TChannelHandler,
+
     logger?: Logger,
     timers?: Timers,
 
     reqTimeoutDefault?: Number,
+    serverTimeoutDefault?: Number,
     timeoutCheckInterval?: Number,
     timeoutFuzz?: Number
 }) => TChannel
+
+tchannel/endpoint-handler : (serviceName: String) =>
+    TChannelHandler & {
+        register: (
+            name: String,
+            handler: (
+                req: TChannelIncomingRequest,
+                res: TChannelOutgoingResponse
+            ) => void
+        )
+    }

@@ -16,24 +16,30 @@ Status is being tracked in #78.
 
 ```js
 var TChannel = require('tchannel');
+var EndpointHandler = require('tchannel/endpoint-handler');
 var CountedReadySignal = require('ready-signal/counted');
 
-var server = new TChannel();
+var server = new TChannel({
+    handler: EndpointHandler()
+});
 var client = new TChannel();
+
+// normal response
+server.handler.register('func 1', function (req, res) {
+    console.log('func 1 responding immediately 1:' + req.arg2.toString() + ' 2:' + req.arg3.toString());
+    res.sendOk('result', 'indeed it did');
+});
+// err response
+server.handler.register('func 2', function (req, res) {
+    res.sendNotOk(null, 'it failed');
+});
 
 var ready = CountedReadySignal(2);
 var listening = ready(function (err) {
-    // ...forward or handle err
+    if (err) {
+        throw err;
+    }
 
-    // normal response
-    server.register('func 1', function (arg1, arg2, peerInfo, cb) {
-        console.log('func 1 responding immediately 1:' + arg1.toString() + ' 2:' + arg2.toString());
-        cb(null, 'result', 'indeed it did');
-    });
-    // err response
-    server.register('func 2', function (arg1, arg2, peerInfo, cb) {
-        cb(new Error('it failed'));
-    });
     client
         .request({host: '127.0.0.1:4040'})
         .send('func 1', "arg 1", "arg 2", function (err, res) {
@@ -42,7 +48,8 @@ var listening = ready(function (err) {
     client
         .request({host: '127.0.0.1:4040'})
         .send('func 2', "arg 1", "arg 2", function (err, res) {
-            console.log('err res: ' + err.message);
+            console.log('err res: ' + res.ok + 
+                ' message: ' + String(res.arg3));
         });
 
 });
@@ -104,33 +111,33 @@ process.
 
 ```ocaml
 tchannel : (options: {
-    host: String,
-    port: Number,
-    logger?: Object,
-    timers?: Object,
+    handler?: {
+        handleRequest : (
+            req: Object,
+            res: Object
+        ) => void
+    },
+
+    logger?: Logger,
+    timers?: Timers,
 
     reqTimeoutDefault?: Number,
+    serverTimeoutDefault?: Number,
     timeoutCheckInterval?: Number,
     timeoutFuzz?: Number
 }) => {
-    register: (op: String, fn: Function) => void,
     request: (
-        options: Object,
-        cb: Function
-    ) => tchannelRequest,
-    quit: (Callback<Error>) => void,
+        options: Object
+    ) => {
+        send: (
+            arg1: Buffer,
+            arg2: Buffer,
+            arg3: Buffer,
+            cb?: Callback<Error>
+        )
+    },
+    close: (Callback<Error>) => void,
 }
-
-tchannelRequest : {
-    on: (name: String, listener: Function) => void,
-    send: (
-        arg1: Buffer|String,
-        arg2: Buffer|String,
-        arg3: Buffer|String,
-        cb: ?Function
-    ) => void
-}
-
 ```
 
 To create a `channel` you call `TChannel` with some options.
@@ -138,10 +145,9 @@ To create a `channel` you call `TChannel` with some options.
 ```js
 var TChannel = require('tchannel');
 
-var channel = TChannel({
-    host: '127.0.0.1',
-    port: 8080
-});
+var channel = TChannel();
+
+channel.listen(8080, '127.0.0.1');
 ```
 
 #### `options.logger`
@@ -186,8 +192,8 @@ default value: `5000`
 A default timeout for request timeouts.
 
 For every outgoing request which does not have a set timeout i.e. every
-`.request()` without a timeout we will default the timeout period to be this
-value.
+`.request()` without a timeout we will default the timeout period 
+to be this value.
 
 This means every outgoing operation will be terminated with
     a timeout error if the timeout is hit.
@@ -214,104 +220,95 @@ The client interval does not run every N milliseconds, it has
 
 This is used to avoid race conditions in the network.
 
-#### `channel.listen(port, host, callback?)
+#### `options.handler`
+
+```jsig
+type TChannelIncomingRequest : {
+    id: Number,
+    service: String,
+
+    arg1: Buffer,
+    arg2: Buffer,
+    arg3: Buffer
+}
+
+type TChannelOutgoingResponse : {
+    id: Number,
+    code: Number,
+    ok: Boolean,
+
+    arg1: Buffer,
+    arg2: Buffer,
+    arg3: Buffer,
+
+    sendOk: (res1: Buffer, res2: Buffer) => void,
+    sendNotOk: (res1: Buffer, res2: Buffer) => void
+}
+
+type TChannelHandler : {
+    handleRequest : (
+        req: TChannelIncomingRequest,
+        res: TChannelOutgoingResponse
+    ) => void
+}
+```
+
+default value: A noHandler handler.
+
+The `handler` is required and must have a `handleRequest()`
+method.
+
+The `handleRequest` method takes two arguments, an incoming call 
+request and an outgoing call response.
+
+The incoming req has
+
+ - `arg1` as a `Buffer`.
+ - `arg2` as a `Buffer`.
+ - `arg3` as a `Buffer`.
+ - `service` as a `String`
+
+The outgoing response has a `sendOk()` and `sendNotOk()` method.
+
+ - You can call `sendNotOk(res1, res2)` to send a not-ok response.
+   `res1` and `res2` are buffers.
+ - You can call `sendOk(res1, res2)` to set `res1` and `res2`
+   as Buffers for the Call response
+
+### `channel.listen(port, host, callback?)`
 
 Starts listening on the given port and host.
 
 Both port and host are mandatory.
 
-The port may be 0, indicating that the operating system must grant an available
-    ephemeral port.
+The port may be 0, indicating that the operating system must grant an
+available ephemeral port.
 
-The eventual host and port combination must uniquely identify the TChannel
-    server and it is strongly recommended that the host be the public IP
-    address.
+The eventual host and port combination must uniquely identify the
+TChannel server and it is strongly recommended that the host be the
+public IP address.
 
-### `channel.register(op, fn)`
-
-```ocaml
-register: (
-    op: String,
-    fn: (
-        arg1: Buffer,
-        arg2: Buffer,
-        hostInfo: String,
-        cb: (
-            err?: Error,
-            res1: Buffer | String | Object | Any,
-            res2: Buffer | String | Object | Any
-        ) => void
-    ) => void
-) => void
-```
-
-You can call `register` on a channel and it allows you to
-    register named operations on the server.
-
-When you register an operation you must implement a very
-    specific interface.
-
-#### `arg1`
-
-The first argument you take is the `head` sent by the client.
-
-This will always be a `Buffer`
-
-#### `arg2`
-
-The second argument you take is the `body` sent by the client.
-
-This will always be a `Buffer`
-
-#### `hostInfo`
-
-The third argument will be the host information of the calling
-    client. This will be `{ip}:{port}`
-
-#### `cb(err, res1, res2)`
-
-Your operation takes a callback as the fourth argument. This
-    must always be called.
-
-This should either be called with an err (`cb(err)`) or without
-    an err (`cb(null, head, body)`).
-
-The `err` must always be an `Error`.
-The `res1` is the head to return to the client
-The `res2` is the body to return to the client.
-
-`TChannel` will format the head (res1) and body (res2) for you
-
- - If you pass a `Buffer` it uses the buffer.
- - If you pass a `String` it will cast it to a buffer.
- - If you pass `undefined` it will cast it to `Buffer(0)`
- - If you pass `null` it will cast it to `Buffer(0)`
-
-### `channel.request(options, arg1, arg2, arg3, cb)`
+### `channel.request(options)`
 
 ```ocaml
-request: (
-    options: {
-        host: String,
-        timeout?: Number
-    },
-    cb: (
-        err?: Error,
-        res1: Buffer,
-        res2: Buffer
-    ) => void
-) => tchannelRequest
-
-tchannelRequest : {
-    on: (name: String, listener: Function) => void,
+request: (options: {
+    host: String,
+    timeout?: Number
+}) => {
     send: (
         arg1: Buffer | String,
         arg2: Buffer | String,
         arg3: Buffer | String,
-        cb: ?Function
+        cb: (
+            err?: Error,
+            res: {
+                ok: Boolean,
+                arg2: Buffer,
+                arg3: Buffer
+            }
+        ) => void
     ) => void
 }
-
 ```
 
 `request()` is used to initiate an outgoing request to another channel.
@@ -352,25 +349,28 @@ The second argument will be the `head` to send to the server,
 The third argument will be the `body` to send to the server.
     This will be `arg2` in the servers operation function.
 
-#### `cb(err, res1, res2)`
+#### `cb(err, res)`
 
-When you `request.send()` a message to another tchannel server it will give you
-a callback
+When you `request.send()` a message to another tchannel server it will
+give you a callback
 
 The callback will either get called with `cb(err)` or with
-    `cb(null, res1, res2)`
+    `cb(null, resp)`
 
- - `err` will either be `null` or an `Error`. This can be an
-    error send from the remote server or another type of error
-    like a timeout, IO or 404 error.
- - `res1` will be the `head` response from the server as a buffer
- - `res2` will be the `body` response from the server as a buffer
+ - `err` will either be `null` or an `Error`. This can be 
+    an error like a timeout, IO or tchannel error frame.
+ - `resp` will be set, this can be an OK response or an error
+    from the remote server.
+ - `resp.ok` will be a boolean, dependening on whether this is
+    an OK response or an application level error.
+ - `resp.arg2` will be the `head` response from the server as a buffer
+ - `resp.arg3` will be the `body` response from the server as a buffer
 
-### `channel.quit(cb)`
+### `channel.close(cb)`
 
-When you want to close your channel you call `.quit()`. This
-    will cleanup the tcp server and any tcp sockets as well
-    as cleanup any inflight operations.
+When you want to close your channel you call `.close()`. This
+will cleanup the tcp server and any tcp sockets as well
+as cleanup any inflight operations.
 
 Your `cb` will get called when it's finished.
 
