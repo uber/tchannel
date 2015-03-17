@@ -87,7 +87,6 @@ class MyServer(tornado.tcpserver.TCPServer):
         connection.handle_calls(self.handle_call)
 
 
-
 if __name__ == '__main__':
     args = get_args()
     server = MyServer()

@@ -42,9 +42,12 @@ class Connection(object):
 
     def frame_and_write(self, message, callback=None, message_id=None):
         """Frame and write a message over a connection."""
+        message_id = (
+            message_id if message_id is not None else self.next_message_id()
+        )
         frame = Frame(
             message=message,
-            message_id=message_id if message_id is not None else self.next_message_id(),
+            message_id=message_id,
         )
         return frame.write(self._connection, callback=callback)
 

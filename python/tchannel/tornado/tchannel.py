@@ -12,17 +12,18 @@ import tornado.iostream
 from ..exceptions import InvalidMessageException
 from ..messages import CallRequestMessage
 from .connection import TornadoConnection
+from .timeout import timeout
 
 
 log = logging.getLogger('tchannel')
 
-awaiting_responses = {}
 
 class TChannel(object):
     """Manages inbound and outbound connections to various hosts."""
 
     def __init__(self, process_name=None):
         self.peers = {}
+        self.awaiting_responses = {}
         self.process_name = (
             process_name or "%s[%s]" % (sys.argv[0], os.getpid())
         )
@@ -81,8 +82,8 @@ class TChannel(object):
         yield connection.await_handshake_reply()
 
         def handle_call_response(context, connection):
-            if context and context.message_id in awaiting_responses:
-                awaiting_responses[context.message_id].set_result(context)
+            if context and context.message_id in self.awaiting_responses:
+                self.awaiting_responses[context.message_id].set_result(context)
             else:
                 log.warn(
                     'unrecognized response for message %s',
@@ -153,12 +154,12 @@ class TChannelClientOperation(object):
 
         # Pull this out into its own loop, look up response message ids
         # and dispatch them to handlers.
-        awaiting_responses[message_id] = tornado.gen.Future()
+        self.tchannel().awaiting_responses[message_id] = tornado.gen.Future()
 
         # TODO: use real timeout here
-        #with timeout(peer_connection):
-        response = yield awaiting_responses[message_id]
-        del awaiting_responses[message_id]
+        with timeout(peer_connection):
+            response = yield self.tchannel().awaiting_responses[message_id]
+        del self.tchannel().awaiting_responses[message_id]
 
         # TODO: Add a callback to remove ourselves from the ops
         # list.

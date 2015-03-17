@@ -132,7 +132,8 @@ def parse_args(args=None):
 
     args = parser.parse_args(args)
 
-    # Allow a body/header to specified once and shared across multiple requests.
+    # Allow a body/header to specified once and shared across multiple
+    # requests.
     if args.headers and args.body and len(args.headers) != len(args.body):
         if len(args.headers) == 1:
             args.headers = args.headers * len(args.body)
@@ -142,7 +143,8 @@ def parse_args(args=None):
 
         else:
             raise argparse.ArgumentError(
-                "Multiple header/body arguments given but not of the same degree."
+                "Multiple header/body arguments given "
+                "but not of the same degree."
             )
 
     if len(args.host) != max(1, len(args.headers), len(args.body)):

@@ -7,11 +7,14 @@ from tchannel.tornado import TChannel
 
 @pytest.fixture
 def peer():
+
     class PeerFuture(object):
         def running(self):
             return False
+
         def result(self):
             return self
+
     return PeerFuture()
 
 
@@ -22,6 +25,7 @@ def test_add_peer_caching(peer):
     tchannel.peers = {'foo': peer}
     result = yield tchannel.add_peer('foo')
     assert result is peer
+
 
 def test_remove_peer(peer):
     tchannel = TChannel()
