@@ -276,7 +276,7 @@ func (m *callReq) read(r typed.ReadBuffer) error {
 		return err
 	}
 
-	serviceNameLen, err := r.ReadUint16()
+	serviceNameLen, err := r.ReadByte()
 	if err != nil {
 		return err
 	}
@@ -313,7 +313,7 @@ func (m *callReq) write(w typed.WriteBuffer) error {
 		return err
 	}
 
-	if err := w.WriteUint16(uint16(len(m.Service))); err != nil {
+	if err := w.WriteByte(byte(len(m.Service))); err != nil {
 		return err
 	}
 
