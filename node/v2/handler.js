@@ -70,7 +70,7 @@ TChannelV2Handler.prototype._write = function _write(frame, encoding, callback) 
             return self.handleCallRequest(frame, callback);
         case v2.Types.CallResponse:
             return self.handleCallResponse(frame, callback);
-        case v2.Types.Error:
+        case v2.Types.ErrorResponse:
             return self.handleError(frame, callback);
         default:
             return callback(TChannelUnhandledFrameTypeError({
