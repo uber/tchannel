@@ -49,18 +49,17 @@ function ErrorResponse(code, id, message) {
 
 ErrorResponse.TypeCode = 0xff;
 
-var Codes = {
-    // 0x00 not a valid value for "code", do not use.
-    Timeout: 0x01,
-    Cancelled: 0x02,
-    Busy: 0x03,
-    Declined: 0x04,
-    UnexpectedError: 0x05,
-    BadRequest: 0x06,
-    ProtocolError: 0xff
-};
+var Codes = Object.create(null);
+// 0x00 not a valid value for "code", do not use.
+Codes.Timeout = 0x01;
+Codes.Cancelled = 0x02;
+Codes.Busy = 0x03;
+Codes.Declined = 0x04;
+Codes.UnexpectedError = 0x05;
+Codes.BadRequest = 0x06;
+Codes.ProtocolError = 0xf;
 
-var CodeNames = {};
+var CodeNames = Object.create(null);
 CodeNames[Codes.Timeout] = 'timeout';
 CodeNames[Codes.Cancelled] = 'canceled';
 CodeNames[Codes.Busy] = 'busy';
@@ -69,7 +68,7 @@ CodeNames[Codes.UnexpectedError] = 'unexpected error';
 CodeNames[Codes.BadRequest] = 'bad request';
 CodeNames[Codes.ProtocolError] = 'protocol error';
 
-var CodeErrors = {};
+var CodeErrors = Object.create(null);
 CodeErrors[Codes.Timeout] = TypedError({
     type: 'tchannel.timeout',
     isErrorFrame: true,
