@@ -80,20 +80,20 @@ Checksum.RW = bufrw.Switch(bufrw.UInt8, rwCases, {
     dataKey: 'val'
 });
 
-// TODO: needs a prior
-Checksum.prototype.compute = function compute(arg1, arg2, arg3) {
+Checksum.prototype.compute = function compute(arg1, arg2, arg3, prior) {
+    if (typeof prior !== 'number') prior = 0;
     var self = this;
-    var csum = 0;
+    var csum = prior;
     switch (self.type) {
         case 0x00:
             break;
         case 0x01:
-            csum = crc32(arg1, 0);
+            csum = crc32(arg1, csum);
             csum = crc32(arg2, csum);
             csum = crc32(arg3, csum);
             break;
         case 0x02:
-            csum = farm32(arg1, 0);
+            csum = farm32(arg1, csum);
             csum = farm32(arg2, csum);
             csum = farm32(arg3, csum);
             break;
@@ -103,17 +103,17 @@ Checksum.prototype.compute = function compute(arg1, arg2, arg3) {
     return csum;
 };
 
-Checksum.prototype.update = function update(arg1, arg2, arg3) {
+Checksum.prototype.update = function update(arg1, arg2, arg3, prior) {
     var self = this;
-    self.val = self.compute(arg1, arg2, arg3);
+    self.val = self.compute(arg1, arg2, arg3, prior);
 };
 
-Checksum.prototype.verify = function verify(arg1, arg2, arg3) {
+Checksum.prototype.verify = function verify(arg1, arg2, arg3, prior) {
     var self = this;
     if (self.type === Checksum.Types.None) {
         return null;
     }
-    var val = self.compute(arg1, arg2, arg3);
+    var val = self.compute(arg1, arg2, arg3, prior);
     if (val === self.val) {
         return null;
     } else {
