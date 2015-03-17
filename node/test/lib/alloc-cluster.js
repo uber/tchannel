@@ -55,7 +55,8 @@ function allocCluster(n, opts) {
         var chan = TChannel(extend({
             logger: logger
         }, opts));
-        chan.listen(0, host);
+        var port = opts.listen && opts.listen[i] || 0;
+        chan.listen(port, host);
         ret.channels[i] = chan;
         chan.once('listening', chanReady);
 
