@@ -140,9 +140,10 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
 
 TChannelV2Handler.prototype.handleError = function handleError(errFrame, callback) {
     var self = this;
+
     var id = errFrame.id;
     var code = errFrame.body.code;
-    var message = errFrame.body.message;
+    var message = String(errFrame.body.message);
     var err = v2.ErrorResponse.CodeErrors[code]({
         originalId: id,
         message: message
