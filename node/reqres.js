@@ -23,7 +23,7 @@
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 
-var emptyTracing = Buffer(25); // TODO: proper tracing object
+var emptyTracing = require('./lib/trace/empty-tracing');
 var emptyBuffer = Buffer(0);
 
 // TODO: provide streams for arg2/3

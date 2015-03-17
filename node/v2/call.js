@@ -29,8 +29,7 @@ module.exports.Request = CallRequest;
 module.exports.Response = CallResponse;
 
 var emptyBuffer = new Buffer(0);
-var emptyTracing = new Buffer(25);
-emptyTracing.fill(0);
+var emptyTracing = require('./lib/trace/empty-tracing');
 
 // TODO: need to support fragmentation and continuation
 // TODO: validate transport header names?
@@ -43,6 +42,8 @@ function CallRequest(flags, ttl, tracing, service, headers, csum, arg1, arg2, ar
     if (!(this instanceof CallRequest)) {
         return new CallRequest(flags, ttl, tracing, service, headers, csum, arg1, arg2, arg3);
     }
+    if (Buffer.isBuffer(tracing))
+        throw new Error('callrequest instantiated with buffer tracing');
     var self = this;
     self.type = CallRequest.TypeCode;
     self.flags = flags || 0;
@@ -69,7 +70,10 @@ CallRequest.Flags = {
 CallRequest.read = read.chained(read.series([
     read.UInt8,     // flags:1
     read.UInt32BE,  // ttl:4
-    read.fixed(25), // tracing:24 traceflags:1
+    read.UInt64,    // spanid:8
+    read.UInt64,    // parentid:8
+    read.UInt64,    // traceid:8
+    read.UInt8,     // traceflags:1
     read.buf1,      // service~1
     header.read,    // nh:1 (hk~1 hv~1){nh}
     Checksum.read,  // csumtype:1 (csum:4){0,1}
@@ -82,15 +86,25 @@ CallRequest.read = read.chained(read.series([
         throw new Error('streaming call request not implemented');
     }
     var ttl = results[1];
-    var tracing = results[2];
-    var service = results[3];
-    var headers = results[4];
-    var csum = results[5];
-    var arg1 = results[6];
-    var arg2 = results[7];
-    var arg3 = results[8];
+    var spanid = results[2];
+    var parentid = results[3];
+    var traceid = results[4];
+    var traceflags = results[5];
+    var service = results[6];
+    var headers = results[7];
+    var csum = results[8];
+    var arg1 = results[9];
+    var arg2 = results[10];
+    var arg3 = results[11];
     var err = csum.verify(arg1, arg2, arg3);
+
     if (err) return [err, offset, null];
+    var tracing = {
+        spanid: spanid,
+        traceid: traceid,
+        parentid: parentid,
+        flags: traceflags
+    };
     var req = new CallRequest(flags, ttl, tracing, service, headers, csum, arg1, arg2, arg3);
     return [null, offset, req];
 });
@@ -101,7 +115,10 @@ CallRequest.prototype.write = function writeCallReq() {
     return write.series([
         write.UInt8(self.flags, 'CallRequest flags'),         // flags:1
         write.UInt32BE(self.ttl, 'CallRequest ttl'),          // ttl:4
-        write.fixed(25, self.tracing, 'CallRequest tracing'), // tracing:24 traceflags:1
+        write.UInt64(self.tracing.spanid, 'CallRequest tracing.spanid'), // tracing.spanid:8
+        write.UInt64(self.tracing.parentid, 'CallRequest tracing.parentid'), // tracing.parentid:8
+        write.UInt64(self.tracing.traceid, 'CallRequest tracing.traceid'), // tracing.traceid:8
+        write.UInt8(self.tracing.flags, 'CallRequest traceflags'), // traceflags:1
         write.buf1(self.service, 'CallRequest service'),      // service~1
         header.write(self.headers),                           // nh:1 (hk~1 hv~1){nh}
         self.csum.write(),                                    // csumtype:1 (csum:4){0,1}
@@ -146,7 +163,10 @@ CallResponse.Codes = {
 CallResponse.read = read.chained(read.series([
     read.UInt8,     // flags:1
     read.UInt8,     // code:1
-    read.fixed(25), // tracing:24 traceflags:1
+    read.UInt64,    // tracing.spanid
+    read.UInt64,    // tracing.parentid
+    read.UInt64,    // tracing.traceid
+    read.UInt8,     // traceflags
     header.read,    // nh:1 (hk~1 hv~1){nh}
     Checksum.read,  // csumtype:1 (csum:4){0,1}
     read.buf2,      // arg1~2
@@ -158,14 +178,25 @@ CallResponse.read = read.chained(read.series([
         throw new Error('streaming call request not implemented');
     }
     var code = results[1];
-    var tracing = results[2];
-    var headers = results[3];
-    var csum = results[4];
-    var arg1 = results[5];
-    var arg2 = results[6];
-    var arg3 = results[7];
+    var spanid = results[2];
+    var parentid = results[3];
+    var traceid = results[4];
+    var traceflags = results[5];
+    var headers = results[6];
+    var csum = results[7];
+    var arg1 = results[8];
+    var arg2 = results[9];
+    var arg3 = results[10];
     var err = csum.verify(arg1, arg2, arg3);
     if (err) return [err, offset, null];
+
+    var tracing = {
+        spanid: spanid,
+        traceid: traceid,
+        parentid: parentid,
+        flags: traceflags
+    };
+
     var res = new CallResponse(flags, code, tracing, headers, csum, arg1, arg2, arg3);
     return [null, offset, res];
 });
@@ -176,7 +207,10 @@ CallResponse.prototype.write = function writeCallRes() {
     return write.series([
         write.UInt8(self.flags, 'CallResponse flags'),         // flags:1
         write.UInt8(self.code, 'CallResponse code'),           // code:1
-        write.fixed(25, self.tracing, 'CallResponse tracing'), // tracing:24 traceflags:1
+        write.UInt64(self.tracing.spanid, 'CallResponse tracing.spanid'), // tracing.spanid:8
+        write.UInt64(self.tracing.parentid, 'CallResponse tracing.parentid'), // tracing.parentid:8
+        write.UInt64(self.tracing.traceid, 'CallResponse tracing.traceid'), // tracing.traceid:8
+        write.UInt8(self.tracing.flags, 'CallResponse traceflags'), // traceflags:1
         header.write(self.headers),                            // nh:1 (hk~1 hv~1){nh}
         self.csum.write(),                                     // csumtype:1 (csum:4){0,1}
         write.buf2(self.arg1, 'CallResponse arg1'),            // arg1~2

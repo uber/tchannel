@@ -179,6 +179,18 @@ module.exports.UInt32BE = function(val, name) {
     });
 };
 
+module.exports.UInt64 = function(val, name) {
+    if (!Buffer.isBuffer(val)) {
+        throw new Error(name + ' is not a buffer');
+        // TODO: typed error
+    }
+
+    return new BufferWriter(8, function writeUInt64(buffer, offset) {
+        val.copy(buffer, offset);
+        return offset + 8;
+    });
+};
+
 module.exports.fixed = function(n, source, name) {
     source = bufferOrString(source, name);
     if (source.length > n) {

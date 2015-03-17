@@ -88,6 +88,10 @@ var UInt16BE = module.exports.UInt16BE = readWidth(2, function UInt16BE(buffer, 
     return buffer.readUInt16BE(offset);
 });
 
+module.exports.UInt64 = readWidth(8, function UInt64(buffer, offset) {
+    return buffer.slice(offset, offset + 8);
+});
+
 module.exports.UInt32BE = readWidth(4, function UInt32BE(buffer, offset) {
     return buffer.readUInt32BE(offset);
 });
