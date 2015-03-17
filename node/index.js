@@ -28,6 +28,9 @@ var net = require('net');
 var format = require('util').format;
 var TypedError = require('error/typed');
 var WrappedError = require('error/wrapped');
+var bufrw = require('bufrw');
+var ChunkReader = require('bufrw/stream/chunk_reader');
+var ChunkWriter = require('bufrw/stream/chunk_writer');
 
 var v2 = require('./v2');
 var nullLogger = require('./null-logger.js');
@@ -474,8 +477,8 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     self.lastTimeoutTime = 0;
     self.closing = false;
 
-    self.reader = new v2.Reader(v2.Frame);
-    self.writer = new v2.Writer();
+    self.reader = ChunkReader(bufrw.UInt16BE, v2.Frame.RW);
+    self.writer = ChunkWriter(v2.Frame.RW);
     self.handler = new v2.Handler(self.channel);
 
     // TODO: refactor op boundary to pass full req/res around
@@ -502,7 +505,6 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
         self.onSocketErr(new Error('socket closed')); // TODO typed error
     });
 
-    // TODO: refactor handler to be objectMode Writable
     self.reader.on('data', function onReaderFrame(frame) {
         self.onFrame(frame);
     });

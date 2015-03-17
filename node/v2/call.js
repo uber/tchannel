@@ -20,8 +20,9 @@
 
 'use strict';
 
-var read = require('../lib/read');
-var write = require('../lib/write');
+var bufrw = require('bufrw');
+var WriteResult = bufrw.WriteResult;
+var ReadResult = bufrw.ReadResult;
 var Checksum = require('./checksum');
 var header = require('./header');
 
@@ -48,7 +49,7 @@ function CallRequest(flags, ttl, tracing, service, headers, csum, arg1, arg2, ar
     self.flags = flags || 0;
     self.ttl = ttl || 0;
     self.tracing = tracing || emptyTracing;
-    self.service = service || emptyBuffer;
+    self.service = service || '';
     self.headers = headers || {};
     if (csum === undefined || csum === null) {
         self.csum = Checksum(Checksum.Types.None);
@@ -66,50 +67,19 @@ CallRequest.Flags = {
     Fragment: 0x01
 };
 
-CallRequest.read = read.chained(read.series([
-    read.UInt8,     // flags:1
-    read.UInt32BE,  // ttl:4
-    read.fixed(25), // tracing:24 traceflags:1
-    read.buf1,      // service~1
-    header.read,    // nh:1 (hk~1 hv~1){nh}
-    Checksum.read,  // csumtype:1 (csum:4){0,1}
-    read.buf2,      // arg1~2
-    read.buf2,      // arg2~2
-    read.buf2       // arg3~2
-]), function buildCallReq(results, buffer, offset) {
-    var flags = results[0];
-    if (flags & CallRequest.Flags.Fragment) {
-        throw new Error('streaming call request not implemented');
-    }
-    var ttl = results[1];
-    var tracing = results[2];
-    var service = results[3];
-    var headers = results[4];
-    var csum = results[5];
-    var arg1 = results[6];
-    var arg2 = results[7];
-    var arg3 = results[8];
-    var err = csum.verify(arg1, arg2, arg3);
-    if (err) return [err, offset, null];
-    var req = new CallRequest(flags, ttl, tracing, service, headers, csum, arg1, arg2, arg3);
-    return [null, offset, req];
-});
-
-CallRequest.prototype.write = function writeCallReq() {
-    var self = this;
-    self.csum.update(self.arg1, self.arg2, self.arg3);
-    return write.series([
-        write.UInt8(self.flags, 'CallRequest flags'),         // flags:1
-        write.UInt32BE(self.ttl, 'CallRequest ttl'),          // ttl:4
-        write.fixed(25, self.tracing, 'CallRequest tracing'), // tracing:24 traceflags:1
-        write.buf1(self.service, 'CallRequest service'),      // service~1
-        header.write(self.headers),                           // nh:1 (hk~1 hv~1){nh}
-        self.csum.write(),                                    // csumtype:1 (csum:4){0,1}
-        write.buf2(self.arg1, 'CallRequest arg1'),            // arg1~2
-        write.buf2(self.arg2, 'CallRequest arg2'),            // arg2~2
-        write.buf2(self.arg3, 'CallRequest arg3')             // arg3~2
-    ]);
-};
+CallRequest.RW = bufrw.Struct(CallRequest, [
+    {call: {writeInto: prepareWrite}},
+    {name: 'flags', rw: bufrw.UInt8},            // flags:1
+    {name: 'ttl', rw: bufrw.UInt32BE},           // ttl:4
+    {name: 'tracing', rw: bufrw.FixedWidth(25)}, // tracing:24 traceflags:1
+    {name: 'service', rw: bufrw.str1},           // service~1
+    {name: 'headers', rw: header.header1},       // nh:1 (hk~1 hv~1){nh}
+    {name: 'csum', rw: Checksum.RW},             // csumtype:1 (csum:4){0,1}
+    {name: 'arg1', rw: bufrw.buf2},              // arg1~2
+    {name: 'arg2', rw: bufrw.buf2},              // arg2~2
+    {name: 'arg3', rw: bufrw.buf2},              // arg3~2
+    {call: {readFrom: readGuard}}
+]);
 
 // flags:1 code:1 tracing:24 traceflags:1 nh:1 (hk~1 hv~1){nh} csumtype:1 (csum:4){0,1} arg1~2 arg2~2 arg3~2
 function CallResponse(flags, code, tracing, headers, csum, arg1, arg2, arg3) {
@@ -143,44 +113,38 @@ CallResponse.Codes = {
     Error: 0x01
 };
 
-CallResponse.read = read.chained(read.series([
-    read.UInt8,     // flags:1
-    read.UInt8,     // code:1
-    read.fixed(25), // tracing:24 traceflags:1
-    header.read,    // nh:1 (hk~1 hv~1){nh}
-    Checksum.read,  // csumtype:1 (csum:4){0,1}
-    read.buf2,      // arg1~2
-    read.buf2,      // arg2~2
-    read.buf2       // arg3~2
-]), function buildCallRes(results, buffer, offset) {
-    var flags = results[0];
-    if (flags & CallResponse.Flags.Fragment) {
-        throw new Error('streaming call request not implemented');
-    }
-    var code = results[1];
-    var tracing = results[2];
-    var headers = results[3];
-    var csum = results[4];
-    var arg1 = results[5];
-    var arg2 = results[6];
-    var arg3 = results[7];
-    var err = csum.verify(arg1, arg2, arg3);
-    if (err) return [err, offset, null];
-    var res = new CallResponse(flags, code, tracing, headers, csum, arg1, arg2, arg3);
-    return [null, offset, res];
-});
+CallResponse.RW = bufrw.Struct(CallResponse, [
+    {call: {writeInto: prepareWrite}},
+    {name: 'flags', rw: bufrw.UInt8},            // flags:1
+    {name: 'code', rw: bufrw.UInt8},             // code:1
+    {name: 'tracing', rw: bufrw.FixedWidth(25)}, // tracing:24 traceflags:1
+    {name: 'headers', rw: header.header1},       // nh:1 (hk~1 hv~1){nh}
+    {name: 'csum', rw: Checksum.RW},             // csumtype:1 (csum:4){0},1}
+    {name: 'arg1', rw: bufrw.buf2},              // arg1~2
+    {name: 'arg2', rw: bufrw.buf2},              // arg2~2
+    {name: 'arg3', rw: bufrw.buf2},              // arg3~2
+    {call: {readFrom: readGuard}}
+]);
 
-CallResponse.prototype.write = function writeCallRes() {
-    var self = this;
-    self.csum.update(self.arg1, self.arg2, self.arg3);
-    return write.series([
-        write.UInt8(self.flags, 'CallResponse flags'),         // flags:1
-        write.UInt8(self.code, 'CallResponse code'),           // code:1
-        write.fixed(25, self.tracing, 'CallResponse tracing'), // tracing:24 traceflags:1
-        header.write(self.headers),                            // nh:1 (hk~1 hv~1){nh}
-        self.csum.write(),                                     // csumtype:1 (csum:4){0,1}
-        write.buf2(self.arg1, 'CallResponse arg1'),            // arg1~2
-        write.buf2(self.arg2, 'CallResponse arg2'),            // arg2~2
-        write.buf2(self.arg3, 'CallResponse arg3')             // arg3~2
-    ]);
-};
+function prepareWrite(body, buffer, offset) {
+    if (body.flags & CallRequest.Flags.Fragment) {
+        return WriteResult.error(
+            new Error('streaming call not implemented'),
+            offset);
+    }
+    body.csum.update(body.arg1, body.arg2, body.arg3);
+    return WriteResult.just(offset);
+}
+
+function readGuard(body, buffer, offset) {
+    if (body.flags & CallRequest.Flags.Fragment) {
+        return ReadResult.error(
+            new Error('streaming call not implemented'),
+            offset);
+    }
+    var err = body.csum.verify(body.arg1, body.arg2, body.arg3);
+    if (err) {
+        return ReadResult.error(err, offset);
+    }
+    return ReadResult.just(offset);
+}

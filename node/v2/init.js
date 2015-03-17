@@ -21,8 +21,9 @@
 'use strict';
 
 var TypedError = require('error/typed');
-var read = require('../lib/read');
-var write = require('../lib/write');
+var bufrw = require('bufrw');
+var WriteResult = bufrw.WriteResult;
+var ReadResult = bufrw.ReadResult;
 var header = require('./header');
 
 module.exports.Request = InitRequest;
@@ -48,39 +49,14 @@ function InitRequest(version, headers) {
 
 InitRequest.TypeCode = 0x01;
 
-function buildInitReqRes(Type, results, buffer, offset) {
-    var version = results[0];
-    var headers = results[1];
-    for (var i = 0; i < RequiredHeaderFields.length; ++i) {
-        var field = RequiredHeaderFields[i];
-        if (headers[field] === undefined) {
-            return [MissingInitHeaderError({field: field}), offset, null];
-        }
-    }
-    var req = new Type(version, headers);
-    return [null, offset, req];
-}
+InitRequest.RW = bufrw.Struct(InitRequest, [
+    {call: {writeInto: writeFieldGuard}},
+    {name: 'version', rw: bufrw.UInt16BE}, // version:2
+    {name: 'headers', rw: header.header2}, // nh:2 (hk~2 hv~2){nh}
+    {call: {readFrom: readFieldGuard}}
+]);
 
-InitRequest.read = read.chained(read.series([
-    read.UInt16BE, // version:2
-    header.read2   // nh:2 (hk~2 hv~2){nh}
-]), function buildInitReq(results, buffer, offset) {
-    return buildInitReqRes(InitRequest, results, buffer, offset);
-});
-
-InitRequest.prototype.write = function encode() {
-    var self = this;
-    for (var i = 0; i < RequiredHeaderFields.length; ++i) {
-        var field = RequiredHeaderFields[i];
-        if (self.headers[field] === undefined) {
-            throw MissingInitHeaderError({field: field});
-        }
-    }
-    return write.series([
-        write.UInt16BE(self.version), // version:2
-        header.write2(self.headers)   // nh:2 (hk~2 hv~2){nh}
-    ]);
-};
+// TODO: MissingInitHeaderError check / guard
 
 function InitResponse(version, headers) {
     if (!(this instanceof InitResponse)) {
@@ -91,11 +67,35 @@ function InitResponse(version, headers) {
     self.version = version || 0;
     self.headers = headers || {};
 }
+
 InitResponse.TypeCode = 0x02;
-InitResponse.read = read.chained(read.series([
-    read.UInt16BE, // version:2
-    header.read2   // nh:2 (hk~2 hv~2){nh}
-]), function buildInitReq(results, buffer, offset) {
-    return buildInitReqRes(InitResponse, results, buffer, offset);
-});
-InitResponse.prototype.write = InitRequest.prototype.write;
+
+InitResponse.RW = bufrw.Struct(InitResponse, [
+    {call: {writeInto: writeFieldGuard}},
+    {name: 'version', rw: bufrw.UInt16BE}, // version:2
+    {name: 'headers', rw: header.header2}, // nh:2 (hk~2 hv~2){nh}
+    {call: {readFrom: readFieldGuard}}
+]);
+
+
+function writeFieldGuard(initBody, buffer, offset) {
+    var err = requiredFieldGuard(initBody.headers);
+    if (err) return WriteResult.error(err, offset);
+    else return WriteResult.just(offset);
+}
+
+function readFieldGuard(initBody, buffer, offset) {
+    var err = requiredFieldGuard(initBody.headers);
+    if (err) return ReadResult.error(err, offset);
+    else return ReadResult.just(offset);
+}
+
+function requiredFieldGuard(headers) {
+    for (var i = 0; i < RequiredHeaderFields.length; i++) {
+        var field = RequiredHeaderFields[i];
+        if (headers[field] === undefined) {
+            return MissingInitHeaderError({field: field});
+        }
+    }
+    return null;
+}

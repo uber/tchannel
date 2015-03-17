@@ -20,57 +20,34 @@
 
 'use strict';
 
-var TypedError = require("error/typed");
-var read = require('../../lib/read.js');
-var write = require('../../lib/write.js');
-
-var SizeMismatchError = TypedError({
-    type: 'test-frame.size-mismatch',
-    message: 'size ({size}) mismatches buffer length ({bufferLength})',
-    size: null,
-    bufferLength: null
-});
+var bufrw = require('bufrw');
 
 module.exports = TestFrame;
-
-// size:1 payload~1
 
 function TestFrame(payload) {
     if (!(this instanceof TestFrame)) {
         return new TestFrame(payload);
     }
     var self = this;
+    self.size = 0;
     self.payload = payload;
 }
 
-TestFrame.read = read.chained(read.series([
-    read.UInt8, // size:1
-    read.buf1   // payload~1
-]), function(results, buffer, offset) {
-    var size = results[0];
-    var payload = results[1];
-    if (size !== buffer.length) {
-        // parser shouldn't let this happen
-        return [SizeMismatchError({
-            size: size,
-            bufferLength: buffer.length
-        }), offset, null];
-    }
-    var body = new TestFrame(payload);
-    return [null, offset, body];
-});
-
-TestFrame.prototype.write = function writeTestBody() {
-    var self = this;
-    var payload = write.buf1(self.payload);
-    var size = write.UInt8(1 + payload.length);
-    return write.series([
-        size,   // size:1
-        payload // payload~1
-    ]);
-};
+// size:1 payload~1
+TestFrame.struct = bufrw.Struct(TestFrame, [
+    {call: {
+        byteLength: function byteLength(frame) {
+            var res = bufrw.buf1.byteLength(frame.payload);
+            if (res.err) return res;
+            frame.size = 1 + res.length;
+            return bufrw.LengthResult.just(0);
+        }
+    }},
+    {name: 'size', rw: bufrw.UInt8},  // size:1
+    {name: 'payload', rw: bufrw.buf1} // payload~1
+]);
 
 TestFrame.prototype.toBuffer = function toBuffer() {
     var self = this;
-    return self.write().create();
+    return bufrw.toBuffer(TestFrame.struct, self);
 };
