@@ -59,7 +59,7 @@ def test_tcurl(server_manager, call_response):
 
     server_manager.expect_call_request(endpoint).and_return(call_response)
 
-    hostport = 'localhost:%d/%s' % (server_manager.port, endpoint)
+    hostport = 'localhost:%d/%s' % (server_manager.port, endpoint.decode('ascii'))
 
     [response] = yield multi_tcurl([hostport], [None], [None])
 

@@ -86,6 +86,9 @@ class ServerManager(object):
         return exp
 
     def expect_call_request(self, endpoint):
+        if not isinstance(endpoint, bytes):
+            endpoint = bytes(endpoint, 'ascii')
+
         def matcher(message):
             expected_type = tmessage.CallRequestMessage.message_type
             return (

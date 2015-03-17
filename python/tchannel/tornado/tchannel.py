@@ -136,12 +136,20 @@ class TChannelClientOperation(object):
         message.parent_id = 0
         message.trace_id = 0
         message.traceflags = 0
-        message.service = b'tcurl'
+        message.service = 'tcurl'
         message.headers = {}
         message.checksum_type = 0
-        message.arg_1 = arg_1
+
+        def safebytes(arg):
+            if arg is None:
+                return None
+            if isinstance(arg, bytes):
+                return arg
+            return bytes(arg.encode('ascii'))
+
+        message.arg_1 = safebytes(arg_1)
         message.arg_2 = arg_2
-        message.arg_3 = str(message_id)
+        message.arg_3 = arg_3
 
         log.debug("framing and writing message %s", message_id)
 
