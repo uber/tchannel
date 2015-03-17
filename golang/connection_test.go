@@ -21,15 +21,12 @@ package tchannel
 // THE SOFTWARE.
 
 import (
-	"github.com/op/go-logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
 	"testing"
 	"time"
 )
-
-var testLog = logging.MustGetLogger("test")
 
 func serverBusy(ctx context.Context, call *InboundCall) {
 	call.Response().SendSystemError(ErrServerBusy)
@@ -44,27 +41,19 @@ func timeout(ctx context.Context, call *InboundCall) {
 func echo(ctx context.Context, call *InboundCall) {
 	var inArg2 BytesInput
 	if err := call.ReadArg2(&inArg2); err != nil {
-		testLog.Error("could not start arg2: %v", err)
 		return
 	}
-
-	testLog.Info("Arg2: %s", inArg2)
 
 	var inArg3 BytesInput
 	if err := call.ReadArg3(&inArg3); err != nil {
-		testLog.Error("could not start arg3: %v", err)
 		return
 	}
 
-	testLog.Info("Arg3: %s", inArg3)
-
 	if err := call.Response().WriteArg2(BytesOutput(inArg2)); err != nil {
-		testLog.Error("could not write arg2: %v", err)
 		return
 	}
 
 	if err := call.Response().WriteArg3(BytesOutput(inArg3)); err != nil {
-		testLog.Error("could not write arg3: %v", err)
 		return
 	}
 }
@@ -72,7 +61,6 @@ func echo(ctx context.Context, call *InboundCall) {
 func TestRoundTrip(t *testing.T) {
 	ch, err := NewChannel(":0", nil)
 	require.Nil(t, err)
-	testLog.Info("Running on %s", ch.HostPort())
 
 	ch.Register(HandlerFunc(echo), "Capture", "ping")
 
@@ -147,9 +135,6 @@ func TestFragmentation(t *testing.T) {
 	ch.Register(HandlerFunc(echo), "TestService", "echo")
 	go ch.ListenAndHandle()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
-	defer cancel()
-
 	arg2 := make([]byte, MaxFramePayloadSize*2)
 	for i := 0; i < len(arg2); i++ {
 		arg2[i] = byte(i&0x0F) + 50
@@ -159,6 +144,9 @@ func TestFragmentation(t *testing.T) {
 	for i := 0; i < len(arg3); i++ {
 		arg3[i] = byte(i&0xF0) + 100
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
 
 	respArg2, respArg3, err := sendRecv(ctx, ch, ch.HostPort(), "TestService", "echo", arg2, arg3)
 	require.Nil(t, err)

@@ -40,6 +40,10 @@ test: clean setup
 	echo Testing packages:
 	go test $(PKGS) $(TEST_ARG) -parallel=4
 
+benchmark: clean setup
+	echo Running benchmarks:
+	go test $(PKGS) -bench=. -parallel=4
+	
 cover: clean setup
 	echo Testing packages:
 	mkdir -p $(BUILD)
