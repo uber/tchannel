@@ -81,6 +81,19 @@ TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, re
         }).message);
         return;
     }
+
+    // TODO: make this in the constructor and update it here with the correct
+    // tracing info
+    res.span = req.tracer.setupNewSpan({
+        spanid: req.tracing.spanid,
+        traceid: req.tracing.traceid,
+        parentid: req.tracing.parentid,
+        name: name
+    });
+
+    // TODO: better annotations
+    res.span.annotate('sr', Date.now());
+
     handler(req, res);
 };
 
