@@ -128,7 +128,7 @@ func TestTimeout(t *testing.T) {
 	assert.Equal(t, context.DeadlineExceeded, err)
 }
 
-func TestFragmentation(t *testing.T) {
+func testFragmentation(t *testing.T) {
 	ch, err := NewChannel(":0", nil)
 	require.Nil(t, err)
 
