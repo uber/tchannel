@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 import itertools
 import functools
+import logging
 
 from .frame import Frame
 from . import messages
@@ -9,10 +10,14 @@ from .exceptions import InvalidMessageException
 from .messages.common import PROTOCOL_VERSION
 from .messages.types import Types
 
+log = logging.getLogger('tchannel')
+
 
 class Connection(object):
     """Encapsulate transporting TChannel over an underlying stream."""
 
+    # There's nothing wrong with multiple connections using overlapping message
+    # ids but this is just to be paranoid.
     _id_sequence = itertools.count()
 
     def __init__(self, connection):
@@ -20,7 +25,7 @@ class Connection(object):
 
         ``connection`` must support ``read(num_bytes)`` and ``write(bytes_)``.
         """
-        print "MAKING A NEW CONNECTION"
+        log.debug('making a new connection')
         self._connection = connection
 
     def handle_calls(self, handler):

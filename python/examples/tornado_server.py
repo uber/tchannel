@@ -64,7 +64,7 @@ class MyServer(tornado.tcpserver.TCPServer):
 
             # Simulate some response delay
             tornado.ioloop.IOLoop.instance().call_later(
-                0.000001 * random.random(),
+                random.random(),
                 lambda: connection.frame_and_write(
                     response,
                     message_id=context.message_id,
