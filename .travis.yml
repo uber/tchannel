@@ -4,6 +4,7 @@ language: python
 env:
   - SUBDIR=node
   - SUBDIR=python
+  - SUBDIR=golang
 
 install:
   - make -C $SUBDIR install

@@ -21,15 +21,12 @@ package tchannel
 // THE SOFTWARE.
 
 import (
-	"github.com/op/go-logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
 	"testing"
 	"time"
 )
-
-var testLog = logging.MustGetLogger("test")
 
 func serverBusy(ctx context.Context, call *InboundCall) {
 	call.Response().SendSystemError(ErrServerBusy)
@@ -44,33 +41,25 @@ func timeout(ctx context.Context, call *InboundCall) {
 func echo(ctx context.Context, call *InboundCall) {
 	var inArg2 BytesInput
 	if err := call.ReadArg2(&inArg2); err != nil {
-		testLog.Error("could not start arg2: %v", err)
 		return
 	}
-
-	testLog.Info("Arg2: %s", inArg2)
 
 	var inArg3 BytesInput
 	if err := call.ReadArg3(&inArg3); err != nil {
-		testLog.Error("could not start arg3: %v", err)
 		return
 	}
 
-	testLog.Info("Arg3: %s", inArg3)
-
 	if err := call.Response().WriteArg2(BytesOutput(inArg2)); err != nil {
-		testLog.Error("could not write arg2: %v", err)
 		return
 	}
 
 	if err := call.Response().WriteArg3(BytesOutput(inArg3)); err != nil {
-		testLog.Error("could not write arg3: %v", err)
 		return
 	}
 }
 
 func TestRoundTrip(t *testing.T) {
-	ch, err := NewChannel(":8050", nil)
+	ch, err := NewChannel(":0", nil)
 	require.Nil(t, err)
 
 	ch.Register(HandlerFunc(echo), "Capture", "ping")
@@ -80,7 +69,7 @@ func TestRoundTrip(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
-	call, err := ch.BeginCall(ctx, "localhost:8050", "Capture", "ping")
+	call, err := ch.BeginCall(ctx, ch.HostPort(), "Capture", "ping")
 	require.Nil(t, err)
 
 	require.Nil(t, call.WriteArg2(BytesOutput("Hello Header")))
@@ -96,20 +85,20 @@ func TestRoundTrip(t *testing.T) {
 }
 
 func TestBadRequest(t *testing.T) {
-	ch, err := NewChannel(":8051", nil)
+	ch, err := NewChannel(":0", nil)
 	require.Nil(t, err)
 	go ch.ListenAndHandle()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
-	_, _, err = sendRecv(ctx, ch, "localhost:8051", "Nowhere", "Noone", []byte("Headers"), []byte("Body"))
+	_, _, err = sendRecv(ctx, ch, ch.HostPort(), "Nowhere", "Noone", []byte("Headers"), []byte("Body"))
 	require.NotNil(t, err)
 	assert.Equal(t, ErrorCodeBadRequest, GetSystemErrorCode(err))
 }
 
 func TestServerBusy(t *testing.T) {
-	ch, err := NewChannel(":8070", nil)
+	ch, err := NewChannel(":0", nil)
 	require.Nil(t, err)
 
 	ch.Register(HandlerFunc(serverBusy), "TestService", "busy")
@@ -118,13 +107,13 @@ func TestServerBusy(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
-	_, _, err = sendRecv(ctx, ch, "localhost:8070", "TestService", "busy", []byte("Arg2"), []byte("Arg3"))
+	_, _, err = sendRecv(ctx, ch, ch.HostPort(), "TestService", "busy", []byte("Arg2"), []byte("Arg3"))
 	require.NotNil(t, err)
 	assert.Equal(t, ErrorCodeBusy, GetSystemErrorCode(err))
 }
 
 func TestTimeout(t *testing.T) {
-	ch, err := NewChannel(":8071", nil)
+	ch, err := NewChannel(":0", nil)
 	require.Nil(t, err)
 
 	ch.Register(HandlerFunc(timeout), "TestService", "timeout")
@@ -133,21 +122,18 @@ func TestTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 	defer cancel()
 
-	_, _, err = sendRecv(ctx, ch, "localhost:8071", "TestService", "timeout", []byte("Arg2"), []byte("Arg3"))
+	_, _, err = sendRecv(ctx, ch, ch.HostPort(), "TestService", "timeout", []byte("Arg2"), []byte("Arg3"))
 
 	// TODO(mmihic): Maybe translate this into ErrTimeout (or vice versa)?
 	assert.Equal(t, context.DeadlineExceeded, err)
 }
 
-func TestFragmentation(t *testing.T) {
-	ch, err := NewChannel(":8072", nil)
+func testFragmentation(t *testing.T) {
+	ch, err := NewChannel(":0", nil)
 	require.Nil(t, err)
 
 	ch.Register(HandlerFunc(echo), "TestService", "echo")
 	go ch.ListenAndHandle()
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
-	defer cancel()
 
 	arg2 := make([]byte, MaxFramePayloadSize*2)
 	for i := 0; i < len(arg2); i++ {
@@ -159,7 +145,10 @@ func TestFragmentation(t *testing.T) {
 		arg3[i] = byte(i&0xF0) + 100
 	}
 
-	respArg2, respArg3, err := sendRecv(ctx, ch, "localhost:8072", "TestService", "echo", arg2, arg3)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	respArg2, respArg3, err := sendRecv(ctx, ch, ch.HostPort(), "TestService", "echo", arg2, arg3)
 	require.Nil(t, err)
 	assert.Equal(t, arg2, respArg2)
 	assert.Equal(t, arg3, respArg3)

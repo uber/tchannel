@@ -21,7 +21,6 @@ package tchannel
 // THE SOFTWARE.
 
 import (
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/op/go-logging"
@@ -429,14 +428,10 @@ func (c *Connection) readFrames() {
 			return
 		}
 
-		c.log.Info("Recvd: id=%d:type=%d:sz=%d", frame.Header.ID, frame.Header.messageType, frame.Header.Size)
-
 		if _, err := c.conn.Read(frame.SizedPayload()); err != nil {
 			c.connectionError(err)
 			return
 		}
-
-		c.log.Info("Rcvd: %s", hex.EncodeToString(frame.SizedPayload()))
 
 		switch frame.Header.messageType {
 		case messageTypeCallReq:
@@ -465,9 +460,6 @@ func (c *Connection) writeFrames() {
 	fhBuf := typed.NewWriteBufferWithSize(FrameHeaderSize)
 	for f := range c.sendCh {
 		fhBuf.Reset()
-
-		c.log.Info("Send: id=%d:type=%d:sz=%d", f.Header.ID, f.Header.messageType, f.Header.Size)
-		c.log.Info("Send: %s", hex.EncodeToString(f.SizedPayload()))
 
 		if err := f.Header.write(fhBuf); err != nil {
 			c.connectionError(err)
