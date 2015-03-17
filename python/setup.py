@@ -10,6 +10,12 @@ setup(
     license='MIT',
     url='https://github.com/uber/tchannel',
     packages=find_packages(),
-    install_requires=[],
-    entry_points={},
+    install_requires=[
+        'contextlib2',
+    ],
+    entry_points={
+        'console_scripts': [
+            'tcurl.py = tchannel.tcurl:main'
+        ]
+    },
 )

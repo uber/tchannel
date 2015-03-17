@@ -29,8 +29,10 @@ var client = new TChannel();
 
 // normal response
 server.handler.register('func 1', function (req, res) {
-    console.log('func 1 responding immediately 1:' + req.arg2.toString() + ' 2:' + req.arg3.toString());
-    res.sendOk('result', 'indeed it did');
+    console.log('func 1 responding with a small delay:' + req.arg2.toString() + ' 2:' + req.arg3.toString());
+    setTimeout(function() {
+        res.sendOk('result', 'indeed it did');
+    }, Math.random() * 1000);
 });
 // err response
 server.handler.register('func 2', function (req, res) {
@@ -51,7 +53,7 @@ var listening = ready(function (err) {
     client
         .request({host: '127.0.0.1:4040'})
         .send('func 2', "arg 1", "arg 2", function (err, res) {
-            console.log('err res: ' + res.ok + 
+            console.log('err res: ' + res.ok +
                 ' message: ' + String(res.arg3));
         });
 

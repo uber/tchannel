@@ -8,21 +8,8 @@ except ImportError:
     import socketserver as SocketServer
 from contextlib import contextmanager
 
-import pytest
-
 import tchannel.socket as tchannel
 import tchannel.messages as tmessage
-
-
-@pytest.fixture
-def random_open_port():
-    """Find and return a random open TCP port."""
-    sock = socket.socket(socket.AF_INET)
-    try:
-        sock.bind(('', 0))
-        return sock.getsockname()[1]
-    finally:
-        sock.close()
 
 
 class Expectation(object):
@@ -95,6 +82,17 @@ class ServerManager(object):
         self._expectations.append(exp)
         return exp
 
+    def expect_call_request(self, endpoint):
+        def matcher(message):
+            expected_type = tmessage.CallRequestMessage.message_type
+            return (
+                message.message_type == expected_type and
+                message.arg_1 == endpoint
+            )
+        exp = Expectation(matcher)
+        self._expectations.append(exp)
+        return exp
+
     def handle_call(self, context, connection):
         for exp in self._expectations:
             if exp.matches(context.message):
@@ -133,19 +131,3 @@ class ServerManager(object):
 
     def __exit__(self, *args):
         self.stop()
-
-
-@pytest.yield_fixture
-def server_manager(random_open_port):
-    with ServerManager(random_open_port) as manager:
-        yield manager
-
-
-def test_ping_pong(server_manager):
-    with server_manager.client_connection() as conn:
-        resp = tmessage.PingResponseMessage()
-        server_manager.expect_ping().and_return(resp)
-
-        for i in range(1000):
-            conn.ping()
-            assert resp == next(conn).message
