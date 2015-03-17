@@ -25,13 +25,12 @@ var WriteResult = bufrw.WriteResult;
 var ReadResult = bufrw.ReadResult;
 var Checksum = require('./checksum');
 var header = require('./header');
+var Tracing = require('./tracing');
 
 module.exports.Request = CallRequest;
 module.exports.Response = CallResponse;
 
 var emptyBuffer = new Buffer(0);
-var emptyTracing = new Buffer(25);
-emptyTracing.fill(0);
 
 // TODO: need to support fragmentation and continuation
 // TODO: validate transport header names?
@@ -48,7 +47,7 @@ function CallRequest(flags, ttl, tracing, service, headers, csum, arg1, arg2, ar
     self.type = CallRequest.TypeCode;
     self.flags = flags || 0;
     self.ttl = ttl || 0;
-    self.tracing = tracing || emptyTracing;
+    self.tracing = tracing || Tracing.emptyTracing;
     self.service = service || '';
     self.headers = headers || {};
     if (csum === undefined || csum === null) {
@@ -71,7 +70,7 @@ CallRequest.RW = bufrw.Struct(CallRequest, [
     {call: {writeInto: prepareWrite}},
     {name: 'flags', rw: bufrw.UInt8},            // flags:1
     {name: 'ttl', rw: bufrw.UInt32BE},           // ttl:4
-    {name: 'tracing', rw: bufrw.FixedWidth(25)}, // tracing:24 traceflags:1
+    {name: 'tracing', rw: Tracing.RW},           // tracing:24 traceflags:1
     {name: 'service', rw: bufrw.str1},           // service~1
     {name: 'headers', rw: header.header1},       // nh:1 (hk~1 hv~1){nh}
     {name: 'csum', rw: Checksum.RW},             // csumtype:1 (csum:4){0,1}
@@ -90,7 +89,7 @@ function CallResponse(flags, code, tracing, headers, csum, arg1, arg2, arg3) {
     self.type = CallResponse.TypeCode;
     self.flags = flags || 0;
     self.code = code || CallResponse.Codes.OK;
-    self.tracing = tracing || emptyTracing;
+    self.tracing = tracing || Tracing.emptyTracing;
     self.headers = headers || {};
     if (csum === undefined || csum === null) {
         self.csum = Checksum(Checksum.Types.None);
@@ -117,7 +116,7 @@ CallResponse.RW = bufrw.Struct(CallResponse, [
     {call: {writeInto: prepareWrite}},
     {name: 'flags', rw: bufrw.UInt8},            // flags:1
     {name: 'code', rw: bufrw.UInt8},             // code:1
-    {name: 'tracing', rw: bufrw.FixedWidth(25)}, // tracing:24 traceflags:1
+    {name: 'tracing', rw: Tracing.RW},           // tracing:24 traceflags:1
     {name: 'headers', rw: header.header1},       // nh:1 (hk~1 hv~1){nh}
     {name: 'csum', rw: Checksum.RW},             // csumtype:1 (csum:4){0},1}
     {name: 'arg1', rw: bufrw.buf2},              // arg1~2
