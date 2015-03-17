@@ -1,4 +1,6 @@
 from __future__ import absolute_import
+
+import itertools
 import functools
 
 from .frame import Frame
@@ -10,13 +12,16 @@ from .messages.types import Types
 
 class Connection(object):
     """Encapsulate transporting TChannel over an underlying stream."""
+
+    _id_sequence = itertools.count()
+
     def __init__(self, connection):
         """Initialize a TChannel connection with an underlying transport.
 
         ``connection`` must support ``read(num_bytes)`` and ``write(bytes_)``.
         """
+        print "MAKING A NEW CONNECTION"
         self._connection = connection
-        self._id_sequence = 0
 
     def handle_calls(self, handler):
         """Dispatch calls to handler from the wire.
@@ -33,14 +38,13 @@ class Connection(object):
 
     def next_message_id(self):
         """Generate a new message ID."""
-        self._id_sequence += 1
-        return self._id_sequence
+        return self._id_sequence.next()
 
-    def frame_and_write(self, message, callback=None):
+    def frame_and_write(self, message, callback=None, message_id=None):
         """Frame and write a message over a connection."""
         frame = Frame(
             message=message,
-            message_id=self.next_message_id(),
+            message_id=message_id if message_id is not None else self.next_message_id(),
         )
         return frame.write(self._connection, callback=callback)
 
@@ -90,7 +94,11 @@ class Connection(object):
         response.version = PROTOCOL_VERSION
         response.headers = self.handshake_headers
 
-        return self.frame_and_write(response, callback=self.handshake_callback)
+        return self.frame_and_write(
+            response,
+            message_id=context.message_id,
+            callback=self.handshake_callback,
+        )
 
     def initiate_handshake(self, headers, callback=None):
         """Send a handshake offer to a server."""

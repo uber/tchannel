@@ -12,6 +12,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         'contextlib2',
+        'toro',
     ],
     entry_points={
         'console_scripts': [

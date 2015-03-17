@@ -50,6 +50,7 @@ class Frame(object):
         stream.read(cls.BEFORE_ID_WIDTH)
 
         message_id = read_number(stream, cls.ID_WIDTH)
+        print "GOT FRAME WITH MESSAGE ID", message_id
 
         stream.read(cls.RESERVED_WIDTH)
 
@@ -80,6 +81,7 @@ class Frame(object):
 
         header_bytes.extend(self.BEFORE_ID_PADDING)
 
+        print "WRITING FRAME WITH MESSAGE ID", self._message_id
         header_bytes.extend(write_number(
             self._message_id,
             self.ID_WIDTH

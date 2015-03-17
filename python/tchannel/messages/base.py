@@ -9,6 +9,7 @@ from ..parser import write_key_value
 class BaseMessage(object):
     """Represent common functionality across all TChannel messages."""
     message_type = None
+    message_id = None
     __slots__ = ()
 
     def __eq__(self, other):
