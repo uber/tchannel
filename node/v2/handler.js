@@ -53,6 +53,7 @@ function TChannelV2Handler(channel, options) {
         objectMode: true
     });
     self.channel = channel;
+    self.tracer = options.tracer;
     self.remoteHostPort = null; // filled in by identify message
     self.lastSentFrameId = 0;
 }
@@ -278,7 +279,9 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
 };
 
 TChannelV2Handler.prototype.buildIncomingRequest = function buildIncomingRequest(reqFrame) {
+    var self = this;
     var req = TChannelIncomingRequest(reqFrame.id, {
+        tracer: self.tracer,
         id: reqFrame.id,
         ttl: reqFrame.ttl,
         tracing: reqFrame.tracing,
