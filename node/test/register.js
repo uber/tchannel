@@ -36,6 +36,10 @@ allocCluster.test('register() with different results', 2, function t(cluster, as
         res.sendNotOk(null, 'abc');
     });
 
+    one.handler.register('/error-frame', function errorFrame(req, res) {
+        res.sendErrorFrame('Busy', 'some message');
+    });
+
     one.handler.register('/buffer-head', function buffer(req, res) {
         res.sendOk(new Buffer('abc'), null);
     });
@@ -72,6 +76,9 @@ allocCluster.test('register() with different results', 2, function t(cluster, as
         'errorCall': sendCall.bind(null, two, {
             host: hostOne
         }, '/error'),
+        'errorFrameCall': sendCall.bind(null, two, {
+            host: hostOne
+        }, '/error-frame'),
 
         'bufferHead': sendCall.bind(null, two, {
             host: hostOne
@@ -115,6 +122,16 @@ allocCluster.test('register() with different results', 2, function t(cluster, as
         assert.equal(String(errorCall.head), '');
         assert.ok(Buffer.isBuffer(errorCall.body));
         assert.equal(String(errorCall.body), 'abc');
+
+        var errorFrameCall = results.errorFrameCall;
+        var frameErr = errorFrameCall.err;
+        assert.equal(frameErr.type, 'tchannel.busy');
+        assert.equal(frameErr.isErrorFrame, true);
+        assert.equal(frameErr.errorCode, 3);
+        assert.equal(typeof frameErr.originalId, 'number');
+        assert.equal(frameErr.message, 'some message');
+        assert.equal(errorFrameCall.head, null);
+        assert.equal(errorFrameCall.body, null);
 
         var bufferHead = results.bufferHead;
         assert.equal(bufferHead.err, null);

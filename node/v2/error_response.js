@@ -133,6 +133,7 @@ ErrorResponse.read = read.chained(read.series([
 
 ErrorResponse.prototype.write = function writeErrorRes() {
     var self = this;
+
     return write.series([
         write.UInt8(self.code, 'ErrorResponse code'),  // code:1
         write.UInt32BE(self.id, 'ErrorResponse id'),   // id:4
