@@ -81,8 +81,6 @@ Agent.prototype.setupNewSpan = function setupNewSpan(options, cb) {
         parentSpan.ready(function () {
             // propagate parentid from current span
             span.parentid = parentSpan.id;
-            console.log("propagating tracid: " + parentSpan.traceid.toString('hex'));
-            console.log("this spans parent is: " + span.parentid.toString('hex'));
             span.traceid = parentSpan.traceid;
 
             if (cb) cb();
