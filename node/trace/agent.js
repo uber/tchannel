@@ -46,6 +46,8 @@ function Agent (options) {
     self.endpoint =
         new Span.Endpoint(options.host, options.port, options.serviceName);
     self.logger = options.logger || NullLogtron();
+
+    self.logger.info('tracing enabled');
 }
 
 // ## setupNewSpan
@@ -53,26 +55,25 @@ function Agent (options) {
 Agent.prototype.setupNewSpan = function setupNewSpan(options) {
     var self = this;
 
-    var parentid, traceid;
-    if (self.getCurrentSpan()) {
-        // propagate parentid from current span
-        parentid = self.currentspan.id;
-        traceid = self.currentspan.traceid;
-    } else {
-        // root, so parent of 0
-        parentid = new Buffer(8);
-        parentid.fill(0);
-    }
-
 
     var span = new Span({
         logger: self.logger,
         endpoint: self.endpoint,
         name: options.name,
-        traceid: traceid,            // span will generate if unspecified
-        spanid: options.spanid,
-        parentid: parentid
+        spanid: options.spanid
     });
+
+    if (self.getCurrentSpan()) {
+        // Fucking ugly
+        var parentSpan = self.getCurrentSpan();
+        parentSpan.ready(function () {
+            // propagate parentid from current span
+            console.log("setting parent.spanid", parentSpan.id);
+            span.parentid = parentSpan.id;
+            span.traceid = parentSpan.traceid;
+        });
+    }
+
 
     self.setCurrentSpan(span);
 
@@ -96,7 +97,9 @@ Agent.prototype.report = function report(span) {
 
     // TODO: actual reporting
 
-    self.logger.info('got span', span);
+    span.ready(function spanReady() {
+        self.logger.info('got span: ' + span.toString());
+    });
 };
 
 

@@ -245,6 +245,7 @@ TChannelV2Handler.prototype.sendErrorFrame = function sendErrorFrame(req, codeSt
 TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest(options) {
     var self = this;
     var id = self.nextFrameId();
+    options.tracer = self.tracer;
     if (options.checksumType === undefined || options.checksumType === null) {
         options.checksumType = v2.Checksum.Types.FarmHash32;
     }
@@ -265,7 +266,8 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
         tracing: req.tracing,
         headers: {},
         checksumType: req.checksumType,
-        arg1: req.arg1
+        arg1: req.arg1,
+        tracer: self.tracer
     }, senders);
     return res;
 

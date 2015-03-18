@@ -21,11 +21,15 @@
 var TChannel = require('../index.js');
 var EndpointHandler = require('../endpoint-handler.js');
 var CountedReadySignal = require('ready-signal/counted');
+var DebugLogtron = require('debug-logtron');
+
+var logger = DebugLogtron('example');
 
 var server = new TChannel({
-    handler: EndpointHandler()
+    handler: EndpointHandler(),
+    logger: logger
 });
-var client = new TChannel();
+var client = new TChannel({logger: logger});
 
 // normal response
 server.handler.register('func 1', function (req, res) {
