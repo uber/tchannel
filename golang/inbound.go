@@ -35,61 +35,27 @@ var (
 	errInboundRequestAlreadyActive = errors.New("inbound request is already active; possible duplicate client id")
 )
 
-// Pipeline for handling incoming requests for service
-type inboundCallPipeline struct {
-	handlers       *handlerMap
-	remotePeerInfo PeerInfo
-	activeReqChs   map[uint32]chan *Frame
-	sendCh         chan<- *Frame
-	reqLock        sync.Mutex
-	framePool      FramePool
-	log            Logger
-}
-
-// Creates a new pipeline for handling inbound calls
-func newInboundCallPipeline(remotePeerInfo PeerInfo, sendCh chan<- *Frame, handlers *handlerMap,
-	framePool FramePool, log Logger) *inboundCallPipeline {
-	return &inboundCallPipeline{
-		remotePeerInfo: remotePeerInfo,
-		sendCh:         sendCh,
-		framePool:      framePool,
-		handlers:       handlers,
-		activeReqChs:   make(map[uint32]chan *Frame),
-		log:            log,
-	}
-}
-
 // Handles an incoming call request, dispatching the call to the worker pool
-func (p *inboundCallPipeline) handleCallReq(frame *Frame) {
-	reqCh := make(chan *Frame, 512) // TODO(mmihic): Control incoming buffer size
-	err := p.withReqLock(func() error {
-		if p.activeReqChs[frame.Header.ID] != nil {
-			return errInboundRequestAlreadyActive
-		}
-
-		p.activeReqChs[frame.Header.ID] = reqCh
-		return nil
-	})
-
-	if err != nil {
-		// TODO(mmihic): Possibly fail request
-		return
-	}
-
+func (c *Connection) handleCallReq(frame *Frame) {
 	var callReq callReq
 	firstFragment, err := newInboundFragment(frame, &callReq, nil)
 	if err != nil {
 		// TODO(mmihic): Probably want to treat this as a protocol error
-		p.log.Errorf("Could not decode call req %d from %s: %v",
-			frame.Header.ID, p.remotePeerInfo, err)
+		c.log.Errorf("could not decode %s: %v", frame.Header, err)
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), callReq.TimeToLive)
+	mex, err := c.inbound.newExchange(ctx, callReq.messageType(), callReq.ID(), 512)
+	if err != nil {
+		c.log.Errorf("could not register exchange for %s", frame.Header)
+		return
+	}
+
 	res := &InboundCallResponse{
 		id:       frame.Header.ID,
-		pipeline: p,
 		state:    inboundCallResponseReadyToWriteArg2,
+		conn:     c,
 		ctx:      ctx,
 		cancel:   cancel,
 		checksum: ChecksumTypeCrc32.New(), // TODO(mmihic): Make configurable or mirror req?
@@ -98,9 +64,9 @@ func (p *inboundCallPipeline) handleCallReq(frame *Frame) {
 
 	call := &InboundCall{
 		id:               frame.Header.ID,
-		pipeline:         p,
+		conn:             c,
 		res:              res,
-		recvCh:           reqCh,
+		recvCh:           mex.recvCh,
 		ctx:              ctx,
 		cancel:           cancel,
 		curFragment:      firstFragment,
@@ -109,52 +75,23 @@ func (p *inboundCallPipeline) handleCallReq(frame *Frame) {
 		state:            inboundCallReadyToReadArg1,
 	}
 
-	go p.dispatchInbound(call)
+	go c.dispatchInbound(call)
 }
 
 // Handles the continuation of a call request.  Adds the frame to the channel for that call.
-func (p *inboundCallPipeline) handleCallReqContinue(frame *Frame) {
-	var reqCh chan<- *Frame
-	p.withReqLock(func() error {
-		reqCh = p.activeReqChs[frame.Header.ID]
-		return nil
-	})
-
-	if reqCh == nil {
-		// This is ok, just means the request timed out or was cancelled etc
-		return
-	}
-
-	select {
-	case reqCh <- frame:
-		// Ok
-	default:
-		// Application not reading fragments quickly enough; kill off the request
-		// TODO(mmihic): Send down a server busy error frame
-		p.inboundCallComplete(frame.Header.ID)
-		close(reqCh)
+func (c *Connection) handleCallReqContinue(frame *Frame) {
+	if err := c.inbound.forwardPeerFrame(frame.Header.ID, frame); err != nil {
+		c.inbound.removeExchange(frame.Header.ID)
 	}
 }
 
 // Called when an inbound request has completed (either successfully or due to timeout or error)
-func (p *inboundCallPipeline) inboundCallComplete(messageID uint32) {
-	p.withReqLock(func() error {
-		delete(p.activeReqChs, messageID)
-		return nil
-	})
-}
-
-// Performs some action with the inbound request lock held.  Typically involves
-// mutating the activeReqChs.
-func (p *inboundCallPipeline) withReqLock(f func() error) error {
-	p.reqLock.Lock()
-	defer p.reqLock.Unlock()
-
-	return f()
+func (c *Connection) inboundCallComplete(messageID uint32) {
+	c.inbound.removeExchange(messageID)
 }
 
 // Dispatches an inbound call to the appropriate handler
-func (p *inboundCallPipeline) dispatchInbound(call *InboundCall) {
+func (p *Connection) dispatchInbound(call *InboundCall) {
 	p.log.Debugf("Received incoming call for %s from %s", call.ServiceName(), p.remotePeerInfo)
 
 	if err := call.readOperation(); err != nil {
@@ -180,7 +117,7 @@ func (p *inboundCallPipeline) dispatchInbound(call *InboundCall) {
 // An InboundCall is an incoming call from a peer
 type InboundCall struct {
 	id               uint32
-	pipeline         *inboundCallPipeline
+	conn             *Connection
 	res              *InboundCallResponse
 	ctx              context.Context
 	cancel           context.CancelFunc
@@ -266,7 +203,7 @@ func (call *InboundCall) ReadArg3(arg Input) error {
 // Marks the call as failed
 func (call *InboundCall) failed(err error) error {
 	call.state = inboundCallError
-	call.pipeline.inboundCallComplete(call.id)
+	call.conn.inboundCallComplete(call.id)
 	return err
 }
 
@@ -309,7 +246,7 @@ type InboundCallResponse struct {
 	ctx                  context.Context
 	cancel               context.CancelFunc
 	checksum             Checksum
-	pipeline             *inboundCallPipeline
+	conn                 *Connection
 	state                inboundCallResponseState
 	startedFirstFragment bool
 	body                 *bodyWriter
@@ -337,20 +274,20 @@ func (call *InboundCallResponse) SendSystemError(err error) error {
 		id:                call.id,
 		originalMessageID: call.id,
 		errorCode:         GetSystemErrorCode(err),
-		message:           err.Error()}, call.pipeline.framePool)
+		message:           err.Error()}, call.conn.framePool)
 
 	if err != nil {
 		// Nothing we can do here
-		call.pipeline.log.Warnf("Could not create outbound frame to %s for %d: %v",
-			call.pipeline.remotePeerInfo, call.id, err)
+		call.conn.log.Warnf("Could not create outbound frame to %s for %d: %v",
+			call.conn.remotePeerInfo, call.id, err)
 		return nil
 	}
 
 	select {
-	case call.pipeline.sendCh <- frame: // Good to go
+	case call.conn.sendCh <- frame: // Good to go
 	default: // Nothing we can do here anyway
-		call.pipeline.log.Warnf("Could not send error frame to %s for %d : %v",
-			call.pipeline.remotePeerInfo, call.id, err)
+		call.conn.log.Warnf("Could not send error frame to %s for %d : %v",
+			call.conn.remotePeerInfo, call.id, err)
 	}
 
 	return nil
@@ -400,13 +337,13 @@ func (call *InboundCallResponse) WriteArg3(arg Output) error {
 // Marks the call as failed
 func (call *InboundCallResponse) failed(err error) error {
 	call.state = inboundCallResponseError
-	call.pipeline.inboundCallComplete(call.id)
+	call.conn.inboundCallComplete(call.id)
 	return err
 }
 
 // Begins a new response fragment
 func (call *InboundCallResponse) beginFragment() (*outFragment, error) {
-	frame := call.pipeline.framePool.Get()
+	frame := call.conn.framePool.Get()
 	var msg message
 	if !call.startedFirstFragment {
 		responseCode := responseOK
@@ -429,7 +366,7 @@ func (call *InboundCallResponse) beginFragment() (*outFragment, error) {
 // Sends a response fragment back to the peer
 func (call *InboundCallResponse) flushFragment(f *outFragment, last bool) error {
 	select {
-	case call.pipeline.sendCh <- f.finish(last):
+	case call.conn.sendCh <- f.finish(last):
 		return nil
 	default:
 		// TODO(mmihic): Probably need to abort the whole request

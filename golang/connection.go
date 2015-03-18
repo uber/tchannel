@@ -94,10 +94,10 @@ type Connection struct {
 	sendCh         chan *Frame
 	state          connectionState
 	stateMut       sync.RWMutex
-	inbound        *inboundCallPipeline
-	outbound       *outboundCallPipeline
+	inbound        messageExchangeSet
+	outbound       messageExchangeSet
+	handlers       handlerMap
 	nextMessageID  uint32
-	initResCh      chan *Frame
 }
 
 type connectionState int
@@ -173,11 +173,16 @@ func newConnection(ch *TChannel, conn net.Conn, initialState connectionState,
 		sendCh:        make(chan *Frame, sendBufferSize),
 		localPeerInfo: opts.PeerInfo,
 		checksumType:  opts.ChecksumType,
+		inbound: messageExchangeSet{
+			log:       ch.log,
+			exchanges: make(map[uint32]*messageExchange),
+		},
+		outbound: messageExchangeSet{
+			log:       ch.log,
+			exchanges: make(map[uint32]*messageExchange),
+		},
+		handlers: ch.handlers,
 	}
-
-	// TODO(mmihic): Possibly defer until after handshake is successful
-	c.inbound = newInboundCallPipeline(c.remotePeerInfo, c.sendCh, &ch.handlers, c.framePool, c.log)
-	c.outbound = newOutboundCallPipeline(c.remotePeerInfo, c.sendCh, c.framePool, c.log)
 
 	go c.readFrames()
 	go c.writeFrames()
@@ -206,8 +211,6 @@ func (c *Connection) sendInit(ctx context.Context) error {
 	}
 
 	initMsgID := c.NextMessageID()
-	c.initResCh = make(chan *Frame)
-
 	req := initReq{initMessage{id: initMsgID}}
 	req.Version = CurrentProtocolVersion
 	req.initParams = initParams{
@@ -215,14 +218,19 @@ func (c *Connection) sendInit(ctx context.Context) error {
 		InitParamProcessName: c.localPeerInfo.ProcessName,
 	}
 
+	mex, err := c.outbound.newExchange(ctx, req.messageType(), req.ID(), 1)
+	if err != nil {
+		return c.connectionError(err)
+	}
+
+	defer c.outbound.removeExchange(req.ID())
+
 	if err := c.sendMessage(&req); err != nil {
-		c.initResCh = nil
 		return c.connectionError(err)
 	}
 
 	res := initRes{initMessage{id: initMsgID}}
-	err = c.recvMessage(ctx, &res, c.initResCh)
-	c.initResCh = nil
+	err = c.recvMessage(ctx, &res, mex.recvCh)
 	if err != nil {
 		return c.connectionError(err)
 	}
@@ -323,9 +331,7 @@ func (c *Connection) handleInitRes(frame *Frame) {
 		return
 	}
 
-	select {
-	case c.initResCh <- frame: // Ok
-	default:
+	if err := c.outbound.forwardPeerFrame(frame.Header.ID, frame); err != nil {
 		c.connectionError(errCannotHandleInitRes)
 	}
 }
@@ -434,13 +440,13 @@ func (c *Connection) readFrames() {
 
 		switch frame.Header.messageType {
 		case messageTypeCallReq:
-			c.inbound.handleCallReq(frame)
+			c.handleCallReq(frame)
 		case messageTypeCallReqContinue:
-			c.inbound.handleCallReqContinue(frame)
+			c.handleCallReqContinue(frame)
 		case messageTypeCallRes:
-			c.outbound.handleCallRes(frame)
+			c.handleCallRes(frame)
 		case messageTypeCallResContinue:
-			c.outbound.handleCallResContinue(frame)
+			c.handleCallResContinue(frame)
 		case messageTypeInitReq:
 			c.handleInitReq(frame)
 		case messageTypeInitRes:
