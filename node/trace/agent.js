@@ -52,30 +52,47 @@ function Agent (options) {
 
 // ## setupNewSpan
 // Sets up a new span for an outgoing rpc
-Agent.prototype.setupNewSpan = function setupNewSpan(options) {
+Agent.prototype.setupNewSpan = function setupNewSpan(options, cb) {
     var self = this;
 
+    var traceid;
+    if (self.getCurrentSpan()) {
+        traceid = true;
+    }
+
+    if (options.traceid) {
+        traceid = options.traceid;
+    }
 
     var span = new Span({
         logger: self.logger,
         endpoint: self.endpoint,
         name: options.name,
-        spanid: options.spanid
+        id: options.spanid,
+        // If there is a current span we don't want this new intance to
+        // generate his own traceid.
+        traceid: traceid
     });
 
+    // TODO: fix callback mess
     if (self.getCurrentSpan()) {
         // Fucking ugly
         var parentSpan = self.getCurrentSpan();
         parentSpan.ready(function () {
             // propagate parentid from current span
-            console.log("setting parent.spanid", parentSpan.id);
             span.parentid = parentSpan.id;
+            console.log("propagating tracid: " + parentSpan.traceid.toString('hex'));
+            console.log("this spans parent is: " + span.parentid.toString('hex'));
             span.traceid = parentSpan.traceid;
+
+            if (cb) cb();
         });
+    } else {
+        if (cb) process.nextTick(cb);
     }
 
 
-    self.setCurrentSpan(span);
+    //self.setCurrentSpan(span);
 
     return span;
 };
