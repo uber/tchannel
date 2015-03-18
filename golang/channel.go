@@ -148,6 +148,34 @@ func (ch *TChannel) BeginCall(ctx context.Context, hostPort,
 	return call, nil
 }
 
+// RoundTrip calls a peer and waits for the response
+func (ch *TChannel) RoundTrip(ctx context.Context, hostPort, serviceName, operationName string,
+	reqArg2, reqArg3 Output, resArg2, resArg3 Input) (bool, error) {
+
+	call, err := ch.BeginCall(ctx, hostPort, serviceName, operationName)
+	if err != nil {
+		return false, err
+	}
+
+	if err := call.WriteArg2(reqArg2); err != nil {
+		return false, err
+	}
+
+	if err := call.WriteArg3(reqArg3); err != nil {
+		return false, err
+	}
+
+	if err := call.Response().ReadArg2(resArg2); err != nil {
+		return false, err
+	}
+
+	if err := call.Response().ReadArg3(resArg3); err != nil {
+		return false, err
+	}
+
+	return call.Response().ApplicationError(), nil
+}
+
 // ListenAndHandle runs a listener to accept and manage new incoming connections.
 // Blocks until the channel is closed.
 func (ch *TChannel) ListenAndHandle() error {

@@ -157,26 +157,11 @@ func testFragmentation(t *testing.T) {
 func sendRecv(ctx context.Context, ch *TChannel, hostPort string, serviceName, operation string,
 	arg2, arg3 []byte) ([]byte, []byte, error) {
 
-	call, err := ch.BeginCall(ctx, hostPort, serviceName, operation)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if err := call.WriteArg2(BytesOutput(arg2)); err != nil {
-		return nil, nil, err
-	}
-
-	if err := call.WriteArg3(BytesOutput(arg3)); err != nil {
-		return nil, nil, err
-	}
-
 	var respArg2 BytesInput
-	if err := call.Response().ReadArg2(&respArg2); err != nil {
-		return nil, nil, err
-	}
-
 	var respArg3 BytesInput
-	if err := call.Response().ReadArg3(&respArg3); err != nil {
+	_, err := ch.RoundTrip(ctx, hostPort, serviceName, operation,
+		BytesOutput(arg2), BytesOutput(arg3), &respArg2, &respArg3)
+	if err != nil {
 		return nil, nil, err
 	}
 
