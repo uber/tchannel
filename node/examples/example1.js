@@ -54,6 +54,7 @@ var listening = ready(function (err) {
         .send('func 1', "arg 1", "arg 2", function (err, res) {
             console.log('normal res: ' + res.arg2.toString() + ' ' + res.arg3.toString());
         });
+
     client
         .request({host: '127.0.0.1:4040'})
         .send('func 2', "arg 1", "arg 2", function (err, res) {

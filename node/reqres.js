@@ -98,21 +98,21 @@ TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callbac
     // TODO: do in constructor and update here
     self.span = self.tracer.setupNewSpan({
         name: arg1
-    });
+    }, function () {
+        // TODO: avoid callback mess
+        self.span.ready(function () {
+            self.tracing = self.span.getTracing();
 
-    self.span.ready(function () {
-        self.tracing = self.span.getTracing();
-        console.log("got tracing before send:", self.tracing);
+            // TODO: better annotations
+            self.span.annotate('cs');   // client start
 
-        // TODO: better annotations
-        self.span.annotate('cs');   // client start
-
-        self.sent = true;
-        self.sendFrame(
-            arg1 ? Buffer(arg1) : null,
-            arg2 ? Buffer(arg2) : null,
-            arg3 ? Buffer(arg3) : null);
-        self.emit('end');
+            self.sent = true;
+            self.sendFrame(
+                arg1 ? Buffer(arg1) : null,
+                arg2 ? Buffer(arg2) : null,
+                arg3 ? Buffer(arg3) : null);
+            self.emit('end');
+        });
     });
     return self;
 };
@@ -126,6 +126,7 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
         self.span.annotate('cr'); // client recv
         self.tracer.report(self.span);
         self.removeListener('response', onResponse);
+        self.tracer.setCurrentSpan(self.span);
         callback(err, null);
     }
     function onResponse(res) {
@@ -133,6 +134,7 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
         self.span.annotate('cr');
         self.tracer.report(self.span);
         self.removeListener('error', onError);
+        self.tracer.setCurrentSpan(self.span);
         callback(null, res);
     }
     return self;

@@ -282,11 +282,12 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
 
 TChannelV2Handler.prototype.buildIncomingRequest = function buildIncomingRequest(reqFrame) {
     var self = this;
+
     var req = TChannelIncomingRequest(reqFrame.id, {
         tracer: self.tracer,
         id: reqFrame.id,
         ttl: reqFrame.ttl,
-        tracing: reqFrame.tracing,
+        tracing: reqFrame.body.tracing,
         service: reqFrame.service,
         headers: reqFrame.headers,
         checksumType: reqFrame.body.csum.type,
