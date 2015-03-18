@@ -45,7 +45,10 @@ func (c *Connection) handleCallReq(frame *Frame) {
 		return
 	}
 
+	c.log.Debugf("span=%s", callReq.Tracing)
 	ctx, cancel := context.WithTimeout(context.Background(), callReq.TimeToLive)
+	ctx = context.WithValue(ctx, tracingKey, &callReq.Tracing)
+
 	mex, err := c.inbound.newExchange(ctx, callReq.messageType(), callReq.ID(), 512)
 	if err != nil {
 		c.log.Errorf("could not register exchange for %s", frame.Header)
@@ -351,11 +354,17 @@ func (call *InboundCallResponse) beginFragment() (*outFragment, error) {
 			responseCode = responseApplicationError
 		}
 
-		msg = &callRes{
+		res := &callRes{
 			id:           call.id,
 			ResponseCode: responseCode,
 			Headers:      callHeaders{},
 		}
+
+		if span := CurrentSpan(call.ctx); span != nil {
+			res.Tracing = *span
+		}
+
+		msg = res
 	} else {
 		msg = &callResContinue{id: call.id}
 	}
