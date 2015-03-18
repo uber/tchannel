@@ -5,24 +5,37 @@ import pytest
 from tchannel.tornado import TChannel
 
 
+@pytest.fixture
+def peer():
+
+    class PeerFuture(object):
+        def running(self):
+            return False
+
+        def result(self):
+            return self
+
+    return PeerFuture()
+
+
 @pytest.mark.gen_test
-def test_add_peer_caching():
+def test_add_peer_caching(peer):
     "Connections are long-lived and should not be recreated."""
     tchannel = TChannel()
-    tchannel.peers = {'foo': 'bar'}
+    tchannel.peers = {'foo': peer}
     result = yield tchannel.add_peer('foo')
-    assert result == 'bar'
+    assert result is peer
 
 
-def test_remove_peer():
+def test_remove_peer(peer):
     tchannel = TChannel()
-    tchannel.peers = {'foo': 'bar'}
-    assert tchannel.remove_peer('foo') == 'bar'
+    tchannel.peers = {'foo': peer}
+    assert tchannel.remove_peer('foo') is peer
 
 
 @pytest.mark.gen_test
-def test_get_peer_with_caching():
+def test_get_peer_with_caching(peer):
     tchannel = TChannel()
-    tchannel.peers = {'foo': 'bar'}
+    tchannel.peers = {'foo': peer}
     result = yield tchannel.get_peer('foo')
-    assert result == 'bar'
+    assert result is peer

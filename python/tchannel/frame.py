@@ -1,10 +1,14 @@
 from __future__ import absolute_import
 
+import logging
+
 from .context import Context
 from .exceptions import ProtocolException
 from .mapping import get_message_class
 from .parser import read_number
 from .parser import write_number
+
+log = logging.getLogger('tchannel')
 
 
 class Frame(object):
@@ -51,6 +55,8 @@ class Frame(object):
 
         message_id = read_number(stream, cls.ID_WIDTH)
 
+        log.debug('decode frame for message %s', message_id)
+
         stream.read(cls.RESERVED_WIDTH)
 
         message = message_class()
@@ -79,6 +85,8 @@ class Frame(object):
         ))
 
         header_bytes.extend(self.BEFORE_ID_PADDING)
+
+        log.debug("writing frame for message %s", self._message_id)
 
         header_bytes.extend(write_number(
             self._message_id,

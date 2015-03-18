@@ -41,7 +41,10 @@ class Expectation(object):
     def and_return(self, resp):
         """Write the given Message as a response."""
         def respond(ctx, conn):
-            return conn.frame_and_write(resp)
+            return conn.frame_and_write(
+                resp,
+                message_id=ctx.message_id,
+            )
         self._respond = respond
 
 
@@ -83,6 +86,9 @@ class ServerManager(object):
         return exp
 
     def expect_call_request(self, endpoint):
+        if not isinstance(endpoint, bytes):
+            endpoint = bytes(endpoint, 'ascii')
+
         def matcher(message):
             expected_type = tmessage.CallRequestMessage.message_type
             return (

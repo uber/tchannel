@@ -15,6 +15,7 @@ from tchannel.tornado.connection import TornadoConnection
 
 
 class MyServer(tornado.tcpserver.TCPServer):
+
     def handle_stream(self, stream, address):
         tchannel_connection = TornadoConnection(
             connection=stream
@@ -55,13 +56,19 @@ class MyServer(tornado.tcpserver.TCPServer):
             response.checksum_type = 0
             response.checksum = 0
             response.arg_1 = context.message.arg_1
-            response.arg_2 = 'hello world'
-            response.arg_3 = context.message.arg_3
+            response.arg_2 = context.message.arg_2
+            response.arg_3 = (
+                'message id %s gave me an arg3 %s'
+                % (context.message_id, context.message.arg_3)
+            )
 
             # Simulate some response delay
             tornado.ioloop.IOLoop.instance().call_later(
                 random.random(),
-                lambda: connection.frame_and_write(response)
+                lambda: connection.frame_and_write(
+                    response,
+                    message_id=context.message_id,
+                )
             )
 
         elif context.message.message_type == Types.PING_REQ:
@@ -72,7 +79,10 @@ class MyServer(tornado.tcpserver.TCPServer):
             response.code = 0x06
             response.original_message_id = context.message_id
             response.message = response.error_name()
-            connection.frame_and_write(response)
+            connection.frame_and_write(
+                response,
+                message_id=context.message_id,
+            )
 
         connection.handle_calls(self.handle_call)
 
