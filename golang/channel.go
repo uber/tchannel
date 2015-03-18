@@ -21,8 +21,10 @@ package tchannel
 // THE SOFTWARE.
 
 import (
+	"fmt"
 	"golang.org/x/net/context"
 	"net"
+	"os"
 	"time"
 )
 
@@ -60,8 +62,7 @@ type ChannelOptions struct {
 // ListenAndHandle even if they do not offer any services
 type TChannel struct {
 	log               Logger
-	hostPort          string
-	processName       string
+	localPeerInfo     PeerInfo
 	connectionOptions ConnectionOptions
 	handlers          handlerMap
 	l                 net.Listener
@@ -81,8 +82,12 @@ func NewChannel(hostPort string, opts *ChannelOptions) (*TChannel, error) {
 
 	ch := &TChannel{
 		connectionOptions: opts.DefaultConnectionOptions,
-		processName:       opts.ProcessName,
 		log:               logger,
+	}
+
+	processName := opts.ProcessName
+	if len(processName) == 0 {
+		processName = fmt.Sprintf("%d", os.Getpid())
 	}
 
 	addr, err := net.ResolveTCPAddr("tcp", hostPort)
@@ -98,16 +103,24 @@ func NewChannel(hostPort string, opts *ChannelOptions) (*TChannel, error) {
 	}
 
 	ch.l = l
-	ch.hostPort = l.Addr().String()
-	ch.connectionOptions.PeerInfo.HostPort = ch.hostPort
-	ch.connectionOptions.PeerInfo.ProcessName = ch.processName
-	ch.log.Infof("%s listening on %s", ch.processName, ch.hostPort)
+
+	ch.localPeerInfo = PeerInfo{
+		HostPort:    l.Addr().String(),
+		ProcessName: processName,
+	}
+	ch.connectionOptions.PeerInfo = ch.localPeerInfo
+
+	ch.log.Infof("listening on %s", ch.localPeerInfo)
+	if ctxLog, ok := ch.log.(ContextLogger); ok {
+		ch.log = ctxLog.WithContext(LogContext{"localPeerInfo": ch.localPeerInfo.String()})
+	}
+
 	return ch, nil
 }
 
 // HostPort returns the host and port on which the Channel is listening
 func (ch *TChannel) HostPort() string {
-	return ch.hostPort
+	return ch.localPeerInfo.HostPort
 }
 
 // Register regsters a handler for a service+operation pair

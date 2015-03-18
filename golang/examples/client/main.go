@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-var log = examples.LogrusLogger{}
+var log = examples.StandardLogger()
 
 var peerAddr = getopt.StringLong("peer", 'p', "", "Host and port of remote peer")
 var serviceName = getopt.StringLong("service", 's', "", "Name of service to invoke")

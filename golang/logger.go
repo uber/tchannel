@@ -17,6 +17,19 @@ type Logger interface {
 	Debugf(msg string, args ...interface{})
 }
 
+// LogContext is additional context information that can be passed to a Logger
+type LogContext map[string]interface{}
+
+// A ContextLogger is a Logger which can be extended with additional context information
+// in the form of name/value pairs.  Useful for wrapping structured log libraries (e.g. logrus)
+type ContextLogger interface {
+	Logger
+
+	// WithContext extends this logger with additional context information, returning
+	// a new logger that will include this context in log events
+	WithContext(context LogContext) ContextLogger
+}
+
 // NullLogger is a logger that emits nowhere
 type NullLogger struct{}
 
