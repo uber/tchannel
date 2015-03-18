@@ -36,7 +36,7 @@ var v2 = require('./v2');
 var nullLogger = require('./null-logger.js');
 var Spy = require('./v2/spy');
 var EndpointHandler = require('./endpoint-handler.js');
-var TracingAgent = require('./tracer/agent');
+var TracingAgent = require('./trace/agent');
 
 var dumpEnabled = /\btchannel_dump\b/.test(process.env.NODE_DEBUG || '');
 
@@ -112,7 +112,8 @@ function TChannel(options) {
     self.serverSocket = net.createServer(function onServerSocketConnection(sock) {
         if (!self.destroyed) {
             var remoteAddr = sock.remoteAddress + ':' + sock.remotePort;
-            var conn = new TChannelConnection(self, sock, 'in', remoteAddr);
+            var conn = new TChannelConnection(
+                self, sock, 'in', remoteAddr, self.tracer);
             self.logger.debug('incoming server connection', {
                 hostPort: self.hostPort,
                 remoteAddr: conn.remoteAddr
@@ -131,6 +132,7 @@ function TChannel(options) {
 
             // TODO: make this in constructor and not listening event
             self.tracer = new TracingAgent({
+                logger: self.logger,
                 host: self.host,
                 port: address.port,
                 // TODO: wat to do with this? need serviceName, should not be
@@ -469,6 +471,7 @@ TChannel.prototype.close = function close(callback) {
     }
 };
 
+/* jshint maxparams:6 */
 function TChannelConnection(channel, socket, direction, remoteAddr, tracer) {
     var self = this;
     if (remoteAddr === channel.hostPort) {
@@ -797,6 +800,8 @@ TChannelConnection.prototype.request = function request(options) {
 
     options.checksumType = options.checksum;
     options.ttl = options.timeout || 1; // TODO: better default, support for dynamic
+    options.tracing = {};
+
     var req = self.handler.buildOutgoingRequest(options);
     var id = req.id;
     self.outOps[id] = new TChannelClientOp(req, self.channel.now());

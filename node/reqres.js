@@ -100,15 +100,20 @@ TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callbac
         name: arg1
     });
 
-    // TODO: better annotations
-    self.span.annotate('cs');   // client start
+    self.span.ready(function () {
+        self.tracing = self.span.getTracing();
+        console.log("got tracing before send:", self.tracing);
 
-    self.sent = true;
-    self.sendFrame(
-        arg1 ? Buffer(arg1) : null,
-        arg2 ? Buffer(arg2) : null,
-        arg3 ? Buffer(arg3) : null);
-    self.emit('end');
+        // TODO: better annotations
+        self.span.annotate('cs');   // client start
+
+        self.sent = true;
+        self.sendFrame(
+            arg1 ? Buffer(arg1) : null,
+            arg2 ? Buffer(arg2) : null,
+            arg3 ? Buffer(arg3) : null);
+        self.emit('end');
+    });
     return self;
 };
 
