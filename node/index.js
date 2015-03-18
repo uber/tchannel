@@ -142,6 +142,7 @@ function TChannel(options) {
                 logger: self.logger,
                 host: self.host,
                 port: address.port,
+                reporter: self.options.traceReporter,
                 // TODO: wat to do with this? need serviceName, should not be
                 // passed into tchannel though. Take from autobahn and throw
                 // otherwise if tracing is enabled?
