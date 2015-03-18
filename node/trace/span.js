@@ -79,14 +79,28 @@ function Span(options) {
 
 Span.prototype.toString = function toString() {
     var self = this;
-    return JSON.stringify({
+
+    var strAnnotations = self.annotations.map(function (ann) {
+        return "[" + ann.value + " " + ann.timestamp + "]";
+    }).join(' ');
+
+    return "SPAN: traceid: " + self.traceid.toString('hex') + " spanid: " +
+        self.id.toString('hex') + " parentid: " +
+        self.parentid.toString('hex') + " name: " + self.name +
+        " annotations: " + strAnnotations;
+};
+
+Span.prototype.toJSON = function toJSON() {
+    var self = this;
+    return {
         name: self.name,
+        endpoint: self.endpoint,
         traceid: self.traceid.toString('hex'),
         parentid: self.parentid.toString('hex'),
         spanid: self.id.toString('hex'),
         annotations: self.annotations,
         binaryAnnotations: self.binaryAnnotations
-    }, false, 4);
+    };
 };
 
 Span.prototype.ready = function ready(cb) {

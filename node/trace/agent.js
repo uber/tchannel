@@ -47,6 +47,8 @@ function Agent (options) {
         new Span.Endpoint(options.host, options.port, options.serviceName);
     self.logger = options.logger || NullLogtron();
 
+    self.reporter = options.reporter || null;
+
     self.logger.info('tracing enabled');
 }
 
@@ -69,28 +71,27 @@ Agent.prototype.setupNewSpan = function setupNewSpan(options, cb) {
         endpoint: self.endpoint,
         name: options.name,
         id: options.spanid,
+        parentid: options.parentid,
         // If there is a current span we don't want this new intance to
         // generate his own traceid.
         traceid: traceid
     });
 
     // TODO: fix callback mess
-    if (self.getCurrentSpan()) {
+    if (self.getCurrentSpan() && (!options.parentid && !options.traceid)) {
         // Fucking ugly
         var parentSpan = self.getCurrentSpan();
         parentSpan.ready(function () {
             // propagate parentid from current span
+
             span.parentid = parentSpan.id;
             span.traceid = parentSpan.traceid;
 
-            if (cb) cb();
+            if (cb) process.nextTick(cb);
         });
     } else {
         if (cb) process.nextTick(cb);
     }
-
-
-    //self.setCurrentSpan(span);
 
     return span;
 };
@@ -114,6 +115,9 @@ Agent.prototype.report = function report(span) {
 
     span.ready(function spanReady() {
         self.logger.info('got span: ' + span.toString());
+        if (typeof self.reporter === 'function') {
+            self.reporter(span);
+        }
     });
 };
 
