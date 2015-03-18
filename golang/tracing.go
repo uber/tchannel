@@ -23,8 +23,13 @@ package tchannel
 import (
 	"fmt"
 	"math/rand"
+	"time"
 
 	"golang.org/x/net/context"
+)
+
+var (
+	rng = rand.New(rand.NewSource(time.Now().UnixNano()))
 )
 
 // Span represents Zipkin-style span
@@ -46,7 +51,7 @@ const (
 
 // NewRootSpan creates a new top-level Span for a call-graph within the provided context
 func NewRootSpan() *Span {
-	return &Span{traceID: uint64(rand.Int63())}
+	return &Span{traceID: uint64(rng.Int63())}
 }
 
 // TraceID returns the trace id for the entire call graph of requests. Established at the outermost
@@ -76,7 +81,7 @@ func (s Span) NewChildSpan() *Span {
 	return &Span{
 		traceID:  s.traceID,
 		parentID: s.spanID,
-		spanID:   uint64(rand.Int63()),
+		spanID:   uint64(rng.Int63()),
 		flags:    s.flags,
 	}
 }
