@@ -82,8 +82,6 @@ TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, re
         return;
     }
 
-    console.log("in handle request, req.tracing:", req.tracing);
-
     // TODO: make this in the constructor and update it here with the correct
     // tracing info
     res.span = req.tracer.setupNewSpan({
