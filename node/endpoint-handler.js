@@ -96,6 +96,8 @@ TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, re
     // TODO: better annotations
     res.span.annotate('sr', Date.now());
 
+    req.tracer.setCurrentSpan(res.span);
+
     handler(req, res);
 };
 

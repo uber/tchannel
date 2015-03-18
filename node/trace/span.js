@@ -12,7 +12,7 @@ function mathRng(cb) {
 }
 
 function cryptoRng(cb) {
-    crypto.randomBytes(8, cb);
+    crypto.pseudoRandomBytes(8, cb);
 }
 
 function rng(logger, cb) {
