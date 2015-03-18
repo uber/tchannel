@@ -67,7 +67,6 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string) (*Outbou
 		conn: c,
 		req: callReq{
 			id:         requestID,
-			TraceFlags: 0x00, // TODO(mmihic): Enable tracing based on ctx
 			Headers:    callHeaders{},
 			Service:    []byte(serviceName),
 			TimeToLive: timeToLive,
@@ -80,6 +79,14 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string) (*Outbou
 			conn:   c,
 			recvCh: mex.recvCh,
 		},
+	}
+
+	span := CurrentSpan(ctx)
+	if span != nil {
+		call.req.Tracing = *span.NewChildSpan()
+	} else {
+		// TODO(mmihic): Potentially reject calls that are made outside a root context?
+		call.req.Tracing.EnableTracing(false)
 	}
 
 	call.body = newBodyWriter(call)

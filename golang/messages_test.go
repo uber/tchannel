@@ -68,12 +68,12 @@ func TestCallReq(t *testing.T) {
 	r := callReq{
 		id:         0xDEADBEEF,
 		TimeToLive: time.Second * 45,
-		Tracing: Tracing{
-			TraceID:  294390430934,
-			ParentID: 398348934,
-			SpanID:   12762782,
+		Tracing: Span{
+			traceID:  294390430934,
+			parentID: 398348934,
+			spanID:   12762782,
+			flags:    0x01,
 		},
-		TraceFlags: 0x01,
 		Headers: callHeaders{
 			"r": "c",
 			"f": "d",
@@ -104,12 +104,12 @@ func TestCallRes(t *testing.T) {
 			"r": "c",
 			"f": "d",
 		},
-		Tracing: Tracing{
-			TraceID:  294390430934,
-			ParentID: 398348934,
-			SpanID:   12762782,
+		Tracing: Span{
+			traceID:  294390430934,
+			parentID: 398348934,
+			spanID:   12762782,
+			flags:    0x04,
 		},
-		TraceFlags: 0x04,
 	}
 
 	assert.Equal(t, uint32(0xDEADBEEF), r.ID())

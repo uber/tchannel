@@ -219,24 +219,11 @@ func (ch callHeaders) write(w typed.WriteBuffer) error {
 	return nil
 }
 
-// Tracing represents Zipkin-style tracing info
-type Tracing struct {
-	// The outer trace id.  Established at the outermost edge service and propagated through all calls
-	TraceID uint64
-
-	// The id of the parent span in this call graph
-	ParentID uint64
-
-	// The id of this specific RPC
-	SpanID uint64
-}
-
 // A CallReq for service
 type callReq struct {
 	id         uint32
 	TimeToLive time.Duration
-	Tracing    Tracing
-	TraceFlags byte
+	Tracing    Span
 	Headers    callHeaders
 	Service    []byte
 }
@@ -251,22 +238,22 @@ func (m *callReq) read(r typed.ReadBuffer) error {
 	}
 
 	m.TimeToLive = time.Duration(ttl) * time.Millisecond
-	m.Tracing.TraceID, err = r.ReadUint64()
+	m.Tracing.traceID, err = r.ReadUint64()
 	if err != nil {
 		return err
 	}
 
-	m.Tracing.ParentID, err = r.ReadUint64()
+	m.Tracing.parentID, err = r.ReadUint64()
 	if err != nil {
 		return err
 	}
 
-	m.Tracing.SpanID, err = r.ReadUint64()
+	m.Tracing.spanID, err = r.ReadUint64()
 	if err != nil {
 		return err
 	}
 
-	m.TraceFlags, err = r.ReadByte()
+	m.Tracing.flags, err = r.ReadByte()
 	if err != nil {
 		return err
 	}
@@ -293,19 +280,19 @@ func (m *callReq) write(w typed.WriteBuffer) error {
 		return err
 	}
 
-	if err := w.WriteUint64(m.Tracing.TraceID); err != nil {
+	if err := w.WriteUint64(m.Tracing.traceID); err != nil {
 		return err
 	}
 
-	if err := w.WriteUint64(m.Tracing.ParentID); err != nil {
+	if err := w.WriteUint64(m.Tracing.parentID); err != nil {
 		return err
 	}
 
-	if err := w.WriteUint64(m.Tracing.SpanID); err != nil {
+	if err := w.WriteUint64(m.Tracing.spanID); err != nil {
 		return err
 	}
 
-	if err := w.WriteByte(m.TraceFlags); err != nil {
+	if err := w.WriteByte(m.Tracing.flags); err != nil {
 		return err
 	}
 
@@ -346,8 +333,7 @@ const (
 type callRes struct {
 	id           uint32
 	ResponseCode ResponseCode
-	Tracing      Tracing
-	TraceFlags   byte
+	Tracing      Span
 	Headers      callHeaders
 }
 
@@ -361,22 +347,22 @@ func (m *callRes) read(r typed.ReadBuffer) error {
 		return err
 	}
 	m.ResponseCode = ResponseCode(c)
-	m.Tracing.TraceID, err = r.ReadUint64()
+	m.Tracing.traceID, err = r.ReadUint64()
 	if err != nil {
 		return err
 	}
 
-	m.Tracing.ParentID, err = r.ReadUint64()
+	m.Tracing.parentID, err = r.ReadUint64()
 	if err != nil {
 		return err
 	}
 
-	m.Tracing.SpanID, err = r.ReadUint64()
+	m.Tracing.spanID, err = r.ReadUint64()
 	if err != nil {
 		return err
 	}
 
-	m.TraceFlags, err = r.ReadByte()
+	m.Tracing.flags, err = r.ReadByte()
 	if err != nil {
 		return err
 	}
@@ -394,19 +380,19 @@ func (m *callRes) write(w typed.WriteBuffer) error {
 		return err
 	}
 
-	if err := w.WriteUint64(m.Tracing.TraceID); err != nil {
+	if err := w.WriteUint64(m.Tracing.traceID); err != nil {
 		return err
 	}
 
-	if err := w.WriteUint64(m.Tracing.ParentID); err != nil {
+	if err := w.WriteUint64(m.Tracing.parentID); err != nil {
 		return err
 	}
 
-	if err := w.WriteUint64(m.Tracing.SpanID); err != nil {
+	if err := w.WriteUint64(m.Tracing.spanID); err != nil {
 		return err
 	}
 
-	if err := w.WriteByte(m.TraceFlags); err != nil {
+	if err := w.WriteByte(m.Tracing.flags); err != nil {
 		return err
 	}
 
