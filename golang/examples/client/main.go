@@ -2,14 +2,14 @@ package main
 
 import (
 	"code.google.com/p/getopt"
-	"github.com/op/go-logging"
 	"github.com/uber/tchannel/golang"
+	"github.com/uber/tchannel/golang/examples"
 	"golang.org/x/net/context"
 	"os"
 	"time"
 )
 
-var log = logging.MustGetLogger("tchannel.client")
+var log = examples.LogrusLogger{}
 
 var peerAddr = getopt.StringLong("peer", 'p', "", "Host and port of remote peer")
 var serviceName = getopt.StringLong("service", 's', "", "Name of service to invoke")
@@ -40,9 +40,12 @@ func main() {
 		os.Exit(-1)
 	}
 
-	ch, err := tchannel.NewChannel("0.0.0.0:0", nil)
+	ch, err := tchannel.NewChannel("0.0.0.0:0", &tchannel.ChannelOptions{
+		Logger: log,
+	})
 	if err != nil {
-		panic(err)
+		log.Errorf("Could not create client channel: %v", err)
+		os.Exit(-1)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(*timeout))
@@ -50,32 +53,37 @@ func main() {
 
 	call, err := ch.BeginCall(ctx, *peerAddr, *serviceName, *operationName)
 	if err != nil {
-		panic(err)
+		log.Errorf("Could not begin call to %s.%s@%s: %v", *serviceName, *operationName, *peerAddr, err)
+		os.Exit(-1)
 	}
 
 	if err := call.WriteArg2(asArgument(*arg2)); err != nil {
-		panic(err)
+		log.Errorf("Could not write arg2: %v", err)
+		os.Exit(-1)
 	}
 
 	if err := call.WriteArg3(asArgument(*arg3)); err != nil {
-		panic(err)
+		log.Errorf("Could not write arg3: %v", err)
+		os.Exit(-1)
 	}
 
 	var respArg2 tchannel.BytesInput
 	if err := call.Response().ReadArg2(&respArg2); err != nil {
-		panic(err)
+		log.Errorf("Could not read arg2: %v", err)
+		os.Exit(-1)
 	}
 
 	if call.Response().ApplicationError() {
-		log.Warning("Server returned application error")
+		log.Warnf("Server returned application error")
 	}
 
-	log.Info("resp-arg2: %s", respArg2)
+	log.Infof("resp-arg2: %s", respArg2)
 
 	var respArg3 tchannel.BytesInput
 	if err := call.Response().ReadArg3(&respArg3); err != nil {
-		panic(err)
+		log.Errorf("Could not read arg3: %v", err)
+		os.Exit(-1)
 	}
 
-	log.Info("resp-arg3: %s", respArg3)
+	log.Infof("resp-arg3: %s", respArg3)
 }

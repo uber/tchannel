@@ -11,8 +11,9 @@
 			"Rev": "b23bed28ee5ccc4746cae29f3a2a808d112c6a83"
 		},
 		{
-			"ImportPath": "github.com/op/go-logging",
-			"Rev": "fb0230561a6ba1cab17beb95f1faedc16584fdb8"
+			"ImportPath": "github.com/Sirupsen/logrus",
+			"Comment": "v0.6.6-2-g2cea0f0",
+			"Rev": "2cea0f0d141f56fae06df5b813ec4119d1c8ccbd"
 		},
 		{
 			"ImportPath": "github.com/stretchr/testify/assert",
