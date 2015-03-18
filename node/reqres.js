@@ -199,6 +199,8 @@ TChannelOutgoingResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
     self.emit('end');
 
     // TODO: better annotations
+    // TODO: when there's no handler this fails because we only setup a span
+    // when a handler is found
     self.span.annotate('ss', Date.now()); // server send
     self.tracer.report(self.span);
 };
