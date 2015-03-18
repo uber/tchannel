@@ -16,73 +16,6 @@ from .tornado import TChannel
 log = logging.getLogger('tchannel')
 
 
-@tornado.gen.coroutine
-def multi_tcurl(hostports, headers, bodies, profile=False):
-    client = TChannel()
-
-    futures = [
-        tcurl(client, hostport, header, body)
-        for hostport, header, body
-        in getattr(itertools, 'izip', zip)(hostports, headers, bodies)
-    ]
-
-    start = time.time()
-
-    profiler = cProfile.Profile()
-
-    if profile:
-        profiler.enable()
-
-    results = yield futures
-
-    if profile:
-        profiler.disable()
-        profiler.create_stats()
-        stats = pstats.Stats(profiler)
-        stats.strip_dirs().sort_stats('tot').print_stats(15)
-
-    stop = time.time()
-
-    log.debug(
-        "took %.2fs for %s requests (%.2f rps)",
-        stop - start,
-        len(futures),
-        len(futures) / (stop - start),
-    )
-
-    raise tornado.gen.Return(results)
-
-
-@tornado.gen.coroutine
-def tcurl(tchannel, hostport, headers, body):
-    host, endpoint = hostport.split('/', 1)
-
-    print("")
-    print("Sending this to %s" % host)
-    print("*" * 80)
-    print(" arg1: %s" % endpoint)
-    print(" arg2: %s" % headers)
-    print(" arg3: %s" % body)
-    print("")
-
-    request = tchannel.request(host)
-
-    response = yield request.send(
-        endpoint,
-        headers,
-        body,
-    )
-
-    print("")
-    print("Got this from %s for message %s" % (host, request.message_id))
-    print("*" * 80)
-    print(" arg1: %s" % getattr(response, 'arg_1', None))
-    print(" arg2: %s" % getattr(response, 'arg_2', None))
-    print(" arg3: %s" % getattr(response, 'arg_3', None))
-
-    raise tornado.gen.Return(response)
-
-
 def parse_args(args=None):
     args = args or sys.argv[1:]
 
@@ -163,7 +96,75 @@ def parse_args(args=None):
     return args
 
 
-def main():
+@tornado.gen.coroutine
+def multi_tcurl(hostports, headers, bodies, profile=False):
+    client = TChannel()
+
+    futures = [
+        tcurl(client, hostport, header, body)
+        for hostport, header, body
+        in getattr(itertools, 'izip', zip)(hostports, headers, bodies)
+    ]
+
+    start = time.time()
+
+    if profile:
+        profiler = cProfile.Profile()
+        profiler.enable()
+    else:
+        profiler = None
+
+    results = yield futures
+
+    if profiler:
+        profiler.disable()
+        profiler.create_stats()
+        stats = pstats.Stats(profiler)
+        stats.strip_dirs().sort_stats('tot').print_stats(15)
+
+    stop = time.time()
+
+    log.debug(
+        "took %.2fs for %s requests (%.2f rps)",
+        stop - start,
+        len(futures),
+        len(futures) / (stop - start),
+    )
+
+    raise tornado.gen.Return(results)
+
+
+@tornado.gen.coroutine
+def tcurl(tchannel, hostport, headers, body):
+    host, endpoint = hostport.split('/', 1)
+
+    print("")
+    print("Sending this to %s" % host)
+    print("*" * 80)
+    print(" arg1: %s" % endpoint)
+    print(" arg2: %s" % headers)
+    print(" arg3: %s" % body)
+    print("")
+
+    request = tchannel.request(host)
+
+    response = yield request.send(
+        endpoint,
+        headers,
+        body,
+    )
+
+    print("")
+    print("Got this from %s for message %s" % (host, request.message_id))
+    print("*" * 80)
+    print(" arg1: %s" % getattr(response, 'arg_1', None))
+    print(" arg2: %s" % getattr(response, 'arg_2', None))
+    print(" arg3: %s" % getattr(response, 'arg_3', None))
+
+    raise tornado.gen.Return(response)
+
+
+def main():  # pragma: no cover
     args = parse_args()
 
     if args.verbose:
