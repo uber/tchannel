@@ -21,6 +21,7 @@ package tchannel
 // THE SOFTWARE.
 
 import (
+	"fmt"
 	"github.com/uber/tchannel/golang/typed"
 	"math"
 )
@@ -67,6 +68,8 @@ type Frame struct {
 func (f *Frame) SizedPayload() []byte {
 	return f.Payload[:f.Header.Size]
 }
+
+func (fh FrameHeader) String() string { return fmt.Sprintf("%s[%d]", fh.messageType, fh.ID) }
 
 func (fh *FrameHeader) read(r typed.ReadBuffer) error {
 	var err error
