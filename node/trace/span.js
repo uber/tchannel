@@ -68,10 +68,35 @@ function Span(options) {
 
     self.name = options.name;
     self.parentid = options.parentid;
+    if (!options.parentid) {
+        self.parentid = new Buffer(8);
+        self.parentid.fill(0);
+    }
     self.annotations = [];
     self.binaryAnnotations = [];
     self.serviceName = options.serviceName;
 }
+
+Span.prototype.toString = function toString() {
+    var self = this;
+    return JSON.stringify({
+        name: self.name,
+        traceid: self.traceid.toString('hex'),
+        parentid: self.parentid.toString('hex'),
+        spanid: self.id.toString('hex'),
+        annotations: self.annotations,
+        binaryAnnotations: self.binaryAnnotations
+    }, false, 4);
+};
+
+Span.prototype.ready = function ready(cb) {
+    var self = this;
+    self._traceidReady(function () {
+        self._idReady(function () {
+            cb();
+        });
+    });
+};
 
 Span.prototype.getTracing = function getTracing() {
     var self = this;
@@ -79,7 +104,8 @@ Span.prototype.getTracing = function getTracing() {
     return {
         spanid: self.id,
         traceid: self.traceid,
-        parentid: self.parentid
+        parentid: self.parentid,
+        flags: 0
     };
 };
 
@@ -88,14 +114,14 @@ Span.prototype.annotate = function annotate(value, timestamp) {
 
     timestamp = timestamp || Date.now();
 
-    self.annotations.push(Annotation(value, self.host, timestamp));
+    self.annotations.push(Annotation(value, self.endpoint, timestamp));
 };
 
 Span.prototype.annotateBinary =
 function annotateBinary(key, value, type) {
     var self = this;
 
-    self.binaryAnnotations.push(BinaryAnnotation(key, value, type, self.host));
+    self.binaryAnnotations.push(BinaryAnnotation(key, value, type, self.endpoint));
 };
 
 function Endpoint(ipv4, port, serviceName) {

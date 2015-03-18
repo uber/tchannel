@@ -329,6 +329,7 @@ TChannelV2Handler.prototype.sendErrorFrame = function sendErrorFrame(req, codeSt
 TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest(options) {
     var self = this;
     var id = self.nextFrameId();
+    options.tracer = self.tracer;
     if (options.checksumType === undefined || options.checksumType === null) {
         options.checksumType = v2.Checksum.Types.Farm32;
     }
@@ -364,7 +365,8 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
             callResponse: sendCallResponseFrame,
             callResponseCont: sendCallResponseContFrame,
             error: sendErrorFrame
-        }
+        },
+        tracer: self.tracer
     });
     return res;
 
