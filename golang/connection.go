@@ -23,7 +23,6 @@ package tchannel
 import (
 	"errors"
 	"fmt"
-	"github.com/op/go-logging"
 	"github.com/uber/tchannel/golang/typed"
 	"golang.org/x/net/context"
 	"net"
@@ -86,7 +85,7 @@ type ConnectionOptions struct {
 // Connection represents a connection to a remote peer.
 type Connection struct {
 	ch             *TChannel
-	log            *logging.Logger
+	log            Logger
 	checksumType   ChecksumType
 	framePool      FramePool
 	conn           net.Conn
@@ -388,7 +387,7 @@ func (c *Connection) closeNetwork() {
 	// NB(mmihic): The sender goroutine	will exit once the connection is closed; no need to close
 	// the send channel (and closing the send channel would be dangerous since other goroutine might be sending)
 	if err := c.conn.Close(); err != nil {
-		c.log.Warning("could not close connection to peer %s: %v", c.remotePeerInfo, err)
+		c.log.Warnf("could not close connection to peer %s: %v", c.remotePeerInfo, err)
 	}
 }
 

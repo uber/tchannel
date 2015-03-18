@@ -21,7 +21,6 @@ package tchannel
 // THE SOFTWARE.
 
 import (
-	"github.com/op/go-logging"
 	"golang.org/x/net/context"
 	"net"
 	"time"
@@ -51,7 +50,7 @@ type ChannelOptions struct {
 	ProcessName string
 
 	// The logger to use for this channel
-	Logger *logging.Logger
+	Logger Logger
 }
 
 // A TChannel is a bi-directional connection to the peering and routing network.  Applications
@@ -60,7 +59,7 @@ type ChannelOptions struct {
 // listen for incoming peer connections.  Because channels are bi-directional, applications should call
 // ListenAndHandle even if they do not offer any services
 type TChannel struct {
-	log               *logging.Logger
+	log               Logger
 	hostPort          string
 	processName       string
 	connectionOptions ConnectionOptions
@@ -77,7 +76,7 @@ func NewChannel(hostPort string, opts *ChannelOptions) (*TChannel, error) {
 
 	logger := opts.Logger
 	if logger == nil {
-		logger = logging.MustGetLogger("tchannel.channel")
+		logger = NullLogger{}
 	}
 
 	ch := &TChannel{
@@ -88,13 +87,13 @@ func NewChannel(hostPort string, opts *ChannelOptions) (*TChannel, error) {
 
 	addr, err := net.ResolveTCPAddr("tcp", hostPort)
 	if err != nil {
-		ch.log.Error("Could not resolve network %s: %v", hostPort, err)
+		ch.log.Errorf("Could not resolve network %s: %v", hostPort, err)
 		return nil, err
 	}
 
 	l, err := net.ListenTCP("tcp", addr)
 	if err != nil {
-		ch.log.Error("Could not listen on %s: %v", hostPort, err)
+		ch.log.Errorf("Could not listen on %s: %v", hostPort, err)
 		return nil, err
 	}
 
@@ -102,7 +101,7 @@ func NewChannel(hostPort string, opts *ChannelOptions) (*TChannel, error) {
 	ch.hostPort = l.Addr().String()
 	ch.connectionOptions.PeerInfo.HostPort = ch.hostPort
 	ch.connectionOptions.PeerInfo.ProcessName = ch.processName
-	ch.log.Info("%s listening on %s", ch.processName, ch.hostPort)
+	ch.log.Infof("%s listening on %s", ch.processName, ch.hostPort)
 	return ch, nil
 }
 
@@ -194,11 +193,11 @@ func (ch *TChannel) ListenAndHandle() error {
 				if max := 1 * time.Second; acceptBackoff > max {
 					acceptBackoff = max
 				}
-				ch.log.Warning("accept error: %v; retrying in %v", err, acceptBackoff)
+				ch.log.Warnf("accept error: %v; retrying in %v", err, acceptBackoff)
 				time.Sleep(acceptBackoff)
 				continue
 			} else {
-				ch.log.Error("unrecoverable accept error: %v; closing server", err)
+				ch.log.Errorf("unrecoverable accept error: %v; closing server", err)
 				return nil
 			}
 		}
@@ -208,7 +207,7 @@ func (ch *TChannel) ListenAndHandle() error {
 		_, err = newInboundConnection(ch, netConn, &ch.connectionOptions)
 		if err != nil {
 			// Server is getting overloaded - begin rejecting new connections
-			ch.log.Error("could not create new TChannelConnection for incoming conn: %v", err)
+			ch.log.Errorf("could not create new TChannelConnection for incoming conn: %v", err)
 			netConn.Close()
 			continue
 		}

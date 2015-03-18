@@ -22,7 +22,6 @@ package tchannel
 
 import (
 	"errors"
-	"github.com/op/go-logging"
 	"golang.org/x/net/context"
 	"io"
 	"sync"
@@ -44,12 +43,12 @@ type inboundCallPipeline struct {
 	sendCh         chan<- *Frame
 	reqLock        sync.Mutex
 	framePool      FramePool
-	log            *logging.Logger
+	log            Logger
 }
 
 // Creates a new pipeline for handling inbound calls
 func newInboundCallPipeline(remotePeerInfo PeerInfo, sendCh chan<- *Frame, handlers *handlerMap,
-	framePool FramePool, log *logging.Logger) *inboundCallPipeline {
+	framePool FramePool, log Logger) *inboundCallPipeline {
 	return &inboundCallPipeline{
 		remotePeerInfo: remotePeerInfo,
 		sendCh:         sendCh,
@@ -81,7 +80,7 @@ func (p *inboundCallPipeline) handleCallReq(frame *Frame) {
 	firstFragment, err := newInboundFragment(frame, &callReq, nil)
 	if err != nil {
 		// TODO(mmihic): Probably want to treat this as a protocol error
-		p.log.Error("Could not decode call req %d from %s: %v",
+		p.log.Errorf("Could not decode call req %d from %s: %v",
 			frame.Header.ID, p.remotePeerInfo, err)
 		return
 	}
@@ -156,10 +155,10 @@ func (p *inboundCallPipeline) withReqLock(f func() error) error {
 
 // Dispatches an inbound call to the appropriate handler
 func (p *inboundCallPipeline) dispatchInbound(call *InboundCall) {
-	p.log.Debug("Received incoming call for %s from %s", call.ServiceName(), p.remotePeerInfo)
+	p.log.Debugf("Received incoming call for %s from %s", call.ServiceName(), p.remotePeerInfo)
 
 	if err := call.readOperation(); err != nil {
-		p.log.Error("Could not read operation from %s: %v", p.remotePeerInfo, err)
+		p.log.Errorf("Could not read operation from %s: %v", p.remotePeerInfo, err)
 		p.inboundCallComplete(call.id)
 		return
 	}
@@ -169,12 +168,12 @@ func (p *inboundCallPipeline) dispatchInbound(call *InboundCall) {
 	// by the compiler to avoid the copy.  See https://github.com/golang/go/issues/3512
 	h := p.handlers.find(call.ServiceName(), call.Operation())
 	if h == nil {
-		p.log.Error("Could not find handler for %s:%s", call.ServiceName(), call.Operation())
+		p.log.Errorf("Could not find handler for %s:%s", call.ServiceName(), call.Operation())
 		call.Response().SendSystemError(ErrHandlerNotFound)
 		return
 	}
 
-	p.log.Debug("Dispatching %s:%s from %s", call.ServiceName(), call.Operation(), p.remotePeerInfo)
+	p.log.Debugf("Dispatching %s:%s from %s", call.ServiceName(), call.Operation(), p.remotePeerInfo)
 	h.Handle(call.ctx, call)
 }
 
@@ -342,7 +341,7 @@ func (call *InboundCallResponse) SendSystemError(err error) error {
 
 	if err != nil {
 		// Nothing we can do here
-		call.pipeline.log.Warning("Could not create outbound frame to %s for %d: %v",
+		call.pipeline.log.Warnf("Could not create outbound frame to %s for %d: %v",
 			call.pipeline.remotePeerInfo, call.id, err)
 		return nil
 	}
@@ -350,7 +349,7 @@ func (call *InboundCallResponse) SendSystemError(err error) error {
 	select {
 	case call.pipeline.sendCh <- frame: // Good to go
 	default: // Nothing we can do here anyway
-		call.pipeline.log.Warning("Could not send error frame to %s for %d : %v",
+		call.pipeline.log.Warnf("Could not send error frame to %s for %d : %v",
 			call.pipeline.remotePeerInfo, call.id, err)
 	}
 

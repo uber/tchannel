@@ -2,38 +2,39 @@ package main
 
 import (
 	"code.google.com/p/getopt"
-	"github.com/op/go-logging"
 	"github.com/uber/tchannel/golang"
+	"github.com/uber/tchannel/golang/examples"
 	"golang.org/x/net/context"
+	"os"
 	"time"
 )
 
-var log = logging.MustGetLogger("tchannel.server")
+var log = examples.LogrusLogger{}
 
 func echo(ctx context.Context, call *tchannel.InboundCall) {
 	var inArg2 tchannel.BytesInput
 	if err := call.ReadArg2(&inArg2); err != nil {
-		log.Error("could not start arg2: %v", err)
+		log.Errorf("could not start arg2: %v", err)
 		return
 	}
 
-	log.Info("Arg2: %s", inArg2)
+	log.Infof("Arg2: %s", inArg2)
 
 	var inArg3 tchannel.BytesInput
 	if err := call.ReadArg3(&inArg3); err != nil {
-		log.Error("could not start arg3: %v", err)
+		log.Errorf("could not start arg3: %v", err)
 		return
 	}
 
-	log.Info("Arg3: %s", inArg3)
+	log.Infof("Arg3: %s", inArg3)
 
 	if err := call.Response().WriteArg2(tchannel.BytesOutput(inArg2)); err != nil {
-		log.Error("could not write arg2: %v", err)
+		log.Errorf("could not write arg2: %v", err)
 		return
 	}
 
 	if err := call.Response().WriteArg3(tchannel.BytesOutput(inArg3)); err != nil {
-		log.Error("could not write arg3: %v", err)
+		log.Errorf("could not write arg3: %v", err)
 		return
 	}
 }
@@ -48,7 +49,7 @@ func badRequest(ctx context.Context, call *tchannel.InboundCall) {
 
 func timeout(ctx context.Context, call *tchannel.InboundCall) {
 	deadline, _ := ctx.Deadline()
-	log.Info("Client requested timeout in %dms", int(deadline.Sub(time.Now()).Seconds()*1000))
+	log.Infof("Client requested timeout in %dms", int(deadline.Sub(time.Now()).Seconds()*1000))
 
 	pastDeadline := deadline.Add(time.Second * 2)
 	time.Sleep(pastDeadline.Sub(time.Now()))
@@ -65,9 +66,12 @@ var bindAddr = getopt.StringLong("bind", 'b', "0.0.0.0:10500", "host and port on
 func main() {
 	getopt.Parse()
 
-	ch, err := tchannel.NewChannel(*bindAddr, nil)
+	ch, err := tchannel.NewChannel(*bindAddr, &tchannel.ChannelOptions{
+		Logger: log,
+	})
 	if err != nil {
-		panic(err)
+		log.Errorf("could not create channel on %s: %v", *bindAddr, err)
+		os.Exit(-1)
 	}
 
 	ch.Register(tchannel.HandlerFunc(echo), "TestService", "echo")

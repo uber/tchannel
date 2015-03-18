@@ -22,7 +22,6 @@ package tchannel
 
 import (
 	"errors"
-	"github.com/op/go-logging"
 	"github.com/uber/tchannel/golang/typed"
 	"golang.org/x/net/context"
 	"io"
@@ -42,11 +41,11 @@ type outboundCallPipeline struct {
 	sendCh         chan<- *Frame
 	reqLock        sync.Mutex
 	framePool      FramePool
-	log            *logging.Logger
+	log            Logger
 }
 
 func newOutboundCallPipeline(remotePeerInfo PeerInfo, sendCh chan<- *Frame,
-	framePool FramePool, log *logging.Logger) *outboundCallPipeline {
+	framePool FramePool, log Logger) *outboundCallPipeline {
 	return &outboundCallPipeline{
 		remotePeerInfo: remotePeerInfo,
 		sendCh:         sendCh,
@@ -150,7 +149,7 @@ func (p *outboundCallPipeline) forwardResFrame(frame *Frame) {
 // Handles an error frame for an active request.
 func (p *outboundCallPipeline) handleError(frame *Frame, errorMessage *errorMessage) {
 	requestID := errorMessage.originalMessageID
-	p.log.Warning("Peer %s reported error %d for request %d",
+	p.log.Warnf("Peer %s reported error %d for request %d",
 		p.remotePeerInfo, errorMessage.errorCode, requestID)
 
 	var resCh chan<- *Frame
@@ -160,7 +159,7 @@ func (p *outboundCallPipeline) handleError(frame *Frame, errorMessage *errorMess
 	})
 
 	if resCh == nil {
-		p.log.Warning("Received error for non-existent req %d from %s", requestID, p.remotePeerInfo)
+		p.log.Warnf("Received error for non-existent req %d from %s", requestID, p.remotePeerInfo)
 		return
 	}
 
@@ -168,7 +167,7 @@ func (p *outboundCallPipeline) handleError(frame *Frame, errorMessage *errorMess
 	case resCh <- frame: // Ok
 	default:
 		// Can't write to frame channel, most likely the application has stopped reading from it
-		p.log.Warning("Could not enqueue error %s(%s) frame to %d from %s",
+		p.log.Warnf("Could not enqueue error %s(%s) frame to %d from %s",
 			errorMessage.errorCode, errorMessage.message, requestID, p.remotePeerInfo)
 		close(resCh)
 		p.outboundCallComplete(requestID)
@@ -412,7 +411,7 @@ func (call *OutboundCallResponse) waitForFragment() (*inFragment, error) {
 
 		default:
 			// TODO(mmihic): Should be treated as a protocol error
-			call.pipeline.log.Warning("Received unexpected message %d for %d from %s",
+			call.pipeline.log.Warnf("Received unexpected message %d for %d from %s",
 				int(frame.Header.messageType), frame.Header.ID, call.pipeline.remotePeerInfo)
 
 			return nil, call.failed(errUnexpectedFragmentType)
@@ -447,13 +446,13 @@ func (c *Connection) handleError(frame *Frame) {
 	var errorMessage errorMessage
 	rbuf := typed.NewReadBuffer(frame.SizedPayload())
 	if err := errorMessage.read(rbuf); err != nil {
-		c.log.Warning("Unable to read Error frame from %s: %v", c.remotePeerInfo, err)
+		c.log.Warnf("Unable to read Error frame from %s: %v", c.remotePeerInfo, err)
 		c.connectionError(err)
 		return
 	}
 
 	if errorMessage.errorCode == ErrorCodeProtocol {
-		c.log.Warning("Peer %s reported protocol error: %s", c.remotePeerInfo, errorMessage.message)
+		c.log.Warnf("Peer %s reported protocol error: %s", c.remotePeerInfo, errorMessage.message)
 		c.connectionError(errorMessage.AsSystemError())
 		return
 	}
