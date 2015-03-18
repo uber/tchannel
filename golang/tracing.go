@@ -62,8 +62,8 @@ func (s Span) NewChildSpan() *Span {
 }
 
 // NewRootContext creates a new root context for making outbound calls
-func NewRootContext() context.Context {
-	return context.WithValue(context.Background(), tracingKey, NewRootSpan())
+func NewRootContext(ctx context.Context) context.Context {
+	return context.WithValue(ctx, tracingKey, NewRootSpan())
 }
 
 // CurrentSpan returns the Span value for the provided Context

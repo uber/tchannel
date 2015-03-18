@@ -96,7 +96,7 @@ func TestTracingPropagates(t *testing.T) {
 
 	go ch.ListenAndHandle()
 
-	ctx, cancel := context.WithTimeout(NewRootContext(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(NewRootContext(context.Background()), 5*time.Second)
 	defer cancel()
 
 	headers := map[string]string{}
