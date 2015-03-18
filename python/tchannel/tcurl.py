@@ -1,6 +1,8 @@
 from __future__ import absolute_import
 
 import argparse
+import collections
+import contextlib
 import cProfile
 import itertools
 import logging
@@ -52,9 +54,26 @@ def parse_args(args=None):
     )
 
     parser.add_argument(
+        "-r", "--rps",
+        dest="rps",
+        type=int,
+        default=None,
+        help=(
+            "Throttle outgoing requests to this many per second."
+        ),
+    )
+
+    parser.add_argument(
         "-v", "--verbose",
         dest="verbose",
         action="store_true"
+    )
+
+    parser.add_argument(
+        "-q", "--quiet",
+        dest="quiet",
+        action="store_true",
+        help="Don't display request/response information.",
     )
 
     parser.add_argument(
@@ -97,54 +116,43 @@ def parse_args(args=None):
 
 
 @tornado.gen.coroutine
-def multi_tcurl(hostports, headers, bodies, profile=False):
+def multi_tcurl(
+    hostports,
+    headers,
+    bodies,
+    profile=False,
+    rps=None,
+    quiet=False,
+):
     client = TChannel()
 
-    futures = [
-        tcurl(client, hostport, header, body)
-        for hostport, header, body
-        in getattr(itertools, 'izip', zip)(hostports, headers, bodies)
-    ]
+    requests = getattr(itertools, 'izip', zip)(hostports, headers, bodies)
+    futures = []
 
-    start = time.time()
+    with timing(profile=profile) as info:
 
-    if profile:
-        profiler = cProfile.Profile()
-        profiler.enable()
-    else:
-        profiler = None
+        for hostport, header, body in requests:
+            info['requests'] += 1
 
-    results = yield futures
+            futures.append(tcurl(client, hostport, header, body, quiet))
 
-    if profiler:
-        profiler.disable()
-        profiler.create_stats()
-        stats = pstats.Stats(profiler)
-        stats.strip_dirs().sort_stats('tot').print_stats(15)
+            if rps:
+                yield tornado.gen.sleep(1.0 / rps)
 
-    stop = time.time()
-
-    log.debug(
-        "took %.2fs for %s requests (%.2f rps)",
-        stop - start,
-        len(futures),
-        len(futures) / (stop - start),
-    )
+        results = yield futures
 
     raise tornado.gen.Return(results)
 
 
 @tornado.gen.coroutine
-def tcurl(tchannel, hostport, headers, body):
+def tcurl(tchannel, hostport, headers, body, quiet=False):
     host, endpoint = hostport.split('/', 1)
 
-    print("")
-    print("Sending this to %s" % host)
-    print("*" * 80)
-    print(" arg1: %s" % endpoint)
-    print(" arg2: %s" % headers)
-    print(" arg3: %s" % body)
-    print("")
+    if not quiet:
+        log.info("> Host: %s" % host)
+        log.info("> Arg1: %s" % endpoint)
+        log.info("> Arg2: %s" % headers)
+        log.info("> Arg3: %s" % body)
 
     request = tchannel.request(host)
 
@@ -154,28 +162,68 @@ def tcurl(tchannel, hostport, headers, body):
         body,
     )
 
-    print("")
-    print("Got this from %s for message %s" % (host, request.message_id))
-    print("*" * 80)
-    print(" arg1: %s" % getattr(response, 'arg_1', None))
-    print(" arg2: %s" % getattr(response, 'arg_2', None))
-    print(" arg3: %s" % getattr(response, 'arg_3', None))
+    if not quiet:
+        log.info("< Host: %s" % host)
+        log.info("<  Msg: %s" % request.message_id)
+        log.info("< arg1: %s" % getattr(response, 'arg_1', None))
+        log.info("< arg2: %s" % getattr(response, 'arg_2', None))
+        log.info("< arg3: %s" % getattr(response, 'arg_3', None))
 
     raise tornado.gen.Return(response)
+
+
+@contextlib.contextmanager
+def timing(profile=False):
+    start = time.time()
+
+    if profile:
+        profiler = cProfile.Profile()
+        profiler.enable()
+    else:
+        profiler = None
+
+    info = collections.Counter()
+
+    yield info
+
+    if profiler:
+        profiler.disable()
+        profiler.create_stats()
+        stats = pstats.Stats(profiler)
+        stats.sort_stats('cumulative').print_stats(15)
+
+    stop = time.time()
+
+    # TODO: report errors/successes
+    log.debug(
+        "took %.2fs for %s requests (%.2f rps)",
+        stop - start,
+        info['requests'],
+        info['requests'] / (stop - start),
+    )
 
 
 def main():  # pragma: no cover
     args = parse_args()
 
+    logging.basicConfig(
+        format="%(name)s[%(process)s] %(levelname)s: %(message)s",
+        stream=sys.stdout,
+        level=logging.INFO,
+    )
+
     if args.verbose:
-        logging.basicConfig(
-            format="%(name)s[%(process)s] %(levelname)s: %(message)s",
-            stream=sys.stdout,
-            level=logging.DEBUG,
-        )
+        log.setLevel(logging.DEBUG)
 
     tornado.ioloop.IOLoop.instance().run_sync(
-        lambda: multi_tcurl(args.host, args.headers, args.body, args.profile)
+        lambda: multi_tcurl(
+            args.host,
+            args.headers,
+            args.body,
+            profile=args.profile,
+            rps=args.rps,
+            quiet=args.quiet,
+        )
     )
 
 
