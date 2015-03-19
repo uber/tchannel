@@ -44,7 +44,6 @@ function Agent (options) {
     // TODO: options validation
 
     self.logger = options.logger || NullLogtron();
-
     self.reporter = options.reporter || null;
 
     self.logger.info('tracing enabled');
@@ -89,6 +88,12 @@ Agent.prototype.setupNewSpan = function setupNewSpan(options) {
     }
 
     return span;
+};
+
+Agent.prototype.destroy = function destroy() {
+    var self = this;
+
+    process.removeAsyncListener(self.asyncListener);
 };
 
 Agent.prototype.setCurrentSpan = function setCurrentTracing(tracing) {
