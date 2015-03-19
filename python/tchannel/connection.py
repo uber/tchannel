@@ -130,3 +130,7 @@ class Connection(object):
         self.extract_handshake_headers(message)
         if self.handshake_reply_callback:
             self.handshake_reply_callback(message)
+
+    @classmethod
+    def outgoing(cls):
+        raise NotImplementedError

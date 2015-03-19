@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 from __future__ import absolute_import
-import socket
-import sys
+
 import time
 
 import tornado.iostream
@@ -11,47 +10,17 @@ from options import get_args
 from tchannel.tornado.connection import TornadoConnection
 
 
-class MyClient(object):
-    def __init__(self, connection, sock):
-        self.connection = TornadoConnection(connection)
-        self.sock = sock
-
-        print("Initiating TChannel handshake...")
-
-    @tornado.gen.coroutine
-    def initiate_handshake(self):
-        yield self.connection.initiate_handshake(headers={
-            'host_port': '%s:%s' % self.sock.getsockname(),
-            'process_name': sys.argv[0],
-        })
-
-        yield self.connection.await_handshake_reply()
-        print(
-            "Successfully completed handshake with %s" %
-            self.connection.remote_process_name
-        )
-
-    def ping(self):
-        return self.connection.ping()
-
-
 @tornado.gen.coroutine
 def main():
+
     args = get_args()
-
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    stream = tornado.iostream.IOStream(sock)
-    yield stream.connect((args.host, args.port))
-    print("Connected to port %d..." % args.port)
-    client = MyClient(stream, sock)
-
-    yield client.initiate_handshake()
+    conn = yield TornadoConnection.outgoing('%s:%d' % (args.host, args.port))
 
     N = 10000
     before = time.time()
     batch_size = 100
     for _ in xrange(N / batch_size):
-        yield [client.ping() for _ in xrange(batch_size)]
+        yield [conn.ping() for _ in xrange(batch_size)]
 
     after = time.time()
     elapsed = (after - before) * 1000

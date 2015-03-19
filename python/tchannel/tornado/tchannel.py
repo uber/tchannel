@@ -1,9 +1,6 @@
 from __future__ import absolute_import
 
 import logging
-import os
-import sys
-import socket
 import weakref
 
 import tornado.ioloop
@@ -33,7 +30,7 @@ class TChannel(object):
     @tornado.gen.coroutine
     def add_peer(self, hostport):
         if hostport not in self.peers:
-            self.peers[hostport] = self.make_out_connection(hostport)
+            self.peers[hostport] = TornadoConnection.outgoing(hostport)
             yield self.peers[hostport]
 
         # We only want one connection at a time, someone else is
@@ -52,50 +49,6 @@ class TChannel(object):
         peer = yield self.add_peer(hostport)
 
         raise tornado.gen.Return(peer)
-
-    # TODO: put this on the connection
-    @tornado.gen.coroutine
-    def make_out_connection(self, hostport, sock=None):
-        host, port = hostport.rsplit(":", 1)
-
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-        # TODO: change this to tornado.tcpclient.TCPClient to do async DNS
-        # lookups.
-        stream = tornado.iostream.IOStream(sock)
-
-        log.debug("connecting to hostport %s", hostport)
-
-        yield stream.connect((host, int(port)))
-
-        connection = TornadoConnection(stream)
-
-        log.debug("initiating handshake with %s", sock.getsockname())
-
-        yield connection.initiate_handshake(headers={
-            'host_port': '%s:%s' % sock.getsockname(),
-            'process_name': self.process_name,
-        })
-
-        log.debug("awaiting handshake reply")
-
-        yield connection.await_handshake_reply()
-
-        def handle_call_response(context, connection):
-            if context and context.message_id in self.awaiting_responses:
-                self.awaiting_responses[context.message_id].set_result(context)
-            else:
-                log.warn(
-                    'unrecognized response for message %s',
-                    getattr(context, 'message_id', None),
-                )
-            connection.handle_calls(handle_call_response)
-
-        connection.handle_calls(handle_call_response)
-
-        log.debug("completed handshake")
-
-        raise tornado.gen.Return(connection)
 
     @tornado.gen.coroutine
     def make_in_connection(self):

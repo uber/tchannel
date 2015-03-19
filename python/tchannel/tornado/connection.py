@@ -1,17 +1,25 @@
 from __future__ import absolute_import
 
 import functools
+import logging
+import os
+import socket
+import sys
+
+from tornado import gen
+from tornado import iostream
 
 from .. import frame
 from .. import messages
 from .. import exceptions
 from ..io import BytesIO
 from ..context import Context
+from ..exceptions import ConnectionClosedException
 from ..messages.types import Types
 from ..messages.common import PROTOCOL_VERSION
 
-from tornado import gen
-from tornado.iostream import StreamClosedError
+
+log = logging.getLogger('tchannel')
 
 
 class TornadoConnection(object):
@@ -48,7 +56,7 @@ class TornadoConnection(object):
         size_width = frame.frame_rw.size_rw.width()
         try:
             size_bytes = yield self.connection.read_bytes(size_width)
-        except StreamClosedError:
+        except iostream.StreamClosedError:
             raise gen.Return(None)
 
         size = frame.frame_rw.size_rw.read(BytesIO(size_bytes))
@@ -79,7 +87,7 @@ class TornadoConnection(object):
         try:
             yield self.connection.write(body)
             raise gen.Return(message_id)
-        except StreamClosedError:
+        except iostream.StreamClosedError:
             raise gen.Return(None)
 
     def handle_calls(self, handler):
@@ -141,3 +149,52 @@ class TornadoConnection(object):
     def pong(self, message_id=None):
         message = messages.PingResponseMessage()
         yield self.frame_and_write(message, message_id=message_id)
+
+    @classmethod
+    @gen.coroutine
+    def outgoing(cls, hostport, sock=None, process_name=None):
+        host, port = hostport.rsplit(":", 1)
+
+        sock = sock or socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        # TODO: change this to tornado.tcpclient.TCPClient to do async DNS
+        # lookups.
+        stream = iostream.IOStream(sock)
+
+        log.debug("connecting to hostport %s", hostport)
+
+        yield stream.connect((host, int(port)))
+
+        connection = cls(stream)
+
+        log.debug("initiating handshake with %s", sock.getsockname())
+
+        yield connection.initiate_handshake(headers={
+            'host_port': '%s:%s' % sock.getsockname(),
+            'process_name': process_name or "%s[%s]" % (sys.argv[0], os.getpid())
+        })
+
+        log.debug("awaiting handshake reply")
+
+        yield connection.await_handshake_reply()
+
+        def handle_call_response(context, connection):
+            if context is None:
+                log.warn('done with connection :/')
+                return connection.close()
+
+            if context and context.message_id in connection.awaiting_responses:
+                connection.awaiting_responses[context.message_id].set_result(context)
+                #connection.awaiting_responses.pop(context.message_id)
+            else:
+                log.warn(
+                    'unrecognized response for message %s',
+                    getattr(context, 'message_id', None),
+                )
+            connection.handle_calls(handle_call_response)
+
+        connection.handle_calls(handle_call_response)
+
+        log.debug("completed handshake")
+
+        raise gen.Return(connection)
