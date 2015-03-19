@@ -47,22 +47,12 @@ function Span(options) {
     if (options.id) {
         self.id = options.id;
         self._idReady.signal();
-    } /*else {
-        rng(self.logger, function rngDone(id) {
-            self.id = id;
-            self._idReady.signal();
-        });
-    }*/
+    }
 
     if (options.traceid) {
         self.traceid = options.traceid;
         self._traceidReady.signal();
-    } /*else {
-        rng(self.logger, function rngDone(id) {
-            self.traceid = id;
-            self._traceidReady.signal();
-        });
-    }*/
+    }
 
     self.endpoint = options.endpoint;
 

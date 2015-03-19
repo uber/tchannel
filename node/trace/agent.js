@@ -1,4 +1,3 @@
-var process = require('process');
 if (!process.addAsyncListener) {
     require('async-listener');
 }
@@ -53,15 +52,6 @@ function Agent (options) {
 // Sets up a new span for an outgoing rpc
 Agent.prototype.setupNewSpan = function setupNewSpan(options) {
     var self = this;
-
-    var traceid;
-    if (self.getCurrentSpan()) {
-        traceid = true;
-    }
-
-    if (options.traceid) {
-        traceid = options.traceid;
-    }
 
     var hostPortParts = options.hostPort.split(":");
     var host = hostPortParts[0], port = parseInt(hostPortParts[1], 10);
