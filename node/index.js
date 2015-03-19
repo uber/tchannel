@@ -372,10 +372,6 @@ TChannel.prototype.request = function send(options) {
         throw new Error('cannot send() without options.host'); // TODO typed error
     }
 
-    // 'private' field on options for the tracer so it can get to
-    // TChannelOutgoingRequest#send
-    options._tracer = self.tracer;
-
     var peer = self.getOutConnection(dest);
     return peer.request(options);
 };
