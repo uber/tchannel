@@ -109,19 +109,14 @@ class ServerManager(object):
         """Get an initiated Connection to this TChannel server."""
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(self.timeout)
-        try:
-            (host, port) = ('localhost', self.port)
-            sock.connect((host, port))
 
-            conn = tchannel.SocketConnection(sock)
-            conn.initiate_handshake(headers={
-                'host_port': '%s:%s' % (host, port),
-                'process_name': 'tchannel_client-%s' % port
-            })
-            conn.await_handshake_reply()
+        try:
+            conn = tchannel.SocketConnection.outgoing(
+                'localhost:%d' % self.port
+            )
             yield conn
         finally:
-            sock.close()
+            conn.close()
 
     def start(self):
         assert self.thread is None, 'server already started'

@@ -1,5 +1,7 @@
 from __future__ import absolute_import
 
+import socket
+
 from .frame_reader import FrameReader
 from .connection import Connection
 
@@ -54,6 +56,25 @@ class SocketConnection(Connection):
 
     def next(self):
         return next(self.reader)
+
+    @classmethod
+    def outgoing(cls, hostport):
+        host, port = hostport.rsplit(":", 1)
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect((host, int(port)))
+
+        conn = cls(sock)
+
+        conn.initiate_handshake(headers={
+            'host_port': '%s:%s' % (host, port),
+            'process_name': 'tchannel_client-%s' % port
+        })
+        conn.await_handshake_reply()
+        return conn
+
+    def close(self):
+        return self._connection._connection.close()
 
     # Python 3. Yay.
     __next__ = next

@@ -1,9 +1,6 @@
 from __future__ import absolute_import
 
 import logging
-import os
-import sys
-import socket
 import weakref
 
 import tornado.ioloop
@@ -21,19 +18,14 @@ log = logging.getLogger('tchannel')
 class TChannel(object):
     """Manages inbound and outbound connections to various hosts."""
 
-    def __init__(self, process_name=None, app=None):
+    def __init__(self, app=None):
         self.peers = {}
-        self.awaiting_responses = {}
-        self.process_name = (
-            process_name or "%s[%s]" % (sys.argv[0], os.getpid())
-        )
-
         self.inbound_server = InboundServer(app)
 
     @tornado.gen.coroutine
     def add_peer(self, hostport):
         if hostport not in self.peers:
-            self.peers[hostport] = self.make_out_connection(hostport)
+            self.peers[hostport] = TornadoConnection.outgoing(hostport)
             yield self.peers[hostport]
 
         # We only want one connection at a time, someone else is
@@ -52,50 +44,6 @@ class TChannel(object):
         peer = yield self.add_peer(hostport)
 
         raise tornado.gen.Return(peer)
-
-    # TODO: put this on the connection
-    @tornado.gen.coroutine
-    def make_out_connection(self, hostport, sock=None):
-        host, port = hostport.rsplit(":", 1)
-
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-        # TODO: change this to tornado.tcpclient.TCPClient to do async DNS
-        # lookups.
-        stream = tornado.iostream.IOStream(sock)
-
-        log.debug("connecting to hostport %s", hostport)
-
-        yield stream.connect((host, int(port)))
-
-        connection = TornadoConnection(stream)
-
-        log.debug("initiating handshake with %s", sock.getsockname())
-
-        yield connection.initiate_handshake(headers={
-            'host_port': '%s:%s' % sock.getsockname(),
-            'process_name': self.process_name,
-        })
-
-        log.debug("awaiting handshake reply")
-
-        yield connection.await_handshake_reply()
-
-        def handle_call_response(context, connection):
-            if context and context.message_id in self.awaiting_responses:
-                self.awaiting_responses[context.message_id].set_result(context)
-            else:
-                log.warn(
-                    'unrecognized response for message %s',
-                    getattr(context, 'message_id', None),
-                )
-            connection.handle_calls(handle_call_response)
-
-        connection.handle_calls(handle_call_response)
-
-        log.debug("completed handshake")
-
-        raise tornado.gen.Return(connection)
 
     @tornado.gen.coroutine
     def make_in_connection(self, port):
@@ -145,12 +93,11 @@ class TChannelClientOperation(object):
 
         # Pull this out into its own loop, look up response message ids
         # and dispatch them to handlers.
-        self.tchannel().awaiting_responses[message_id] = tornado.gen.Future()
+        peer_connection.awaiting_responses[message_id] = tornado.gen.Future()
 
         # TODO: use real timeout here
         with timeout(peer_connection):
-            response = yield self.tchannel().awaiting_responses[message_id]
-        del self.tchannel().awaiting_responses[message_id]
+            response = yield peer_connection.awaiting_responses[message_id]
 
         # TODO: Add a callback to remove ourselves from the ops
         # list.
