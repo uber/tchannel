@@ -23,7 +23,6 @@
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 
-var emptyTracing = Buffer(25); // TODO: proper tracing object
 var emptyBuffer = Buffer(0);
 
 // TODO: provide streams for arg2/3
@@ -37,7 +36,7 @@ function TChannelIncomingRequest(id, options) {
     EventEmitter.call(self);
     self.id = id || 0;
     self.ttl = options.ttl || 0;
-    self.tracing = options.tracing || emptyTracing;
+    self.tracing = options.tracing || null;
     self.service = options.service || '';
     self.remoteAddr = null;
     self.headers = options.headers || {};
@@ -75,7 +74,7 @@ function TChannelOutgoingRequest(id, options, sendFrame) {
     EventEmitter.call(self);
     self.id = id || 0;
     self.ttl = options.ttl || 0;
-    self.tracing = options.tracing || emptyTracing;
+    self.tracing = options.tracing || null;
     self.service = options.service || '';
     self.headers = options.headers || {};
     self.checksumType = options.checksumType || 0;
@@ -125,7 +124,7 @@ function TChannelOutgoingResponse(id, options, senders) {
     EventEmitter.call(self);
     self.id = id || 0;
     self.code = options.code || 0;
-    self.tracing = options.tracing || emptyTracing;
+    self.tracing = options.tracing || null;
     self.headers = options.headers || {};
     self.checksumType = options.checksumType || 0;
     self.ok = true;
