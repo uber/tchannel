@@ -36,3 +36,23 @@ class SettableFuture(Future):
         if not exception or not traceback:
             exception, traceback = sys.exc_info()[1:]
         super(SettableFuture, self).set_exception_info(exception, traceback)
+
+
+def transform_future(future, function):
+    """Transform the output of the given Future using the given function."""
+    assert function is not None
+    assert isinstance(future, Future)
+
+    result_future = SettableFuture()
+
+    def on_done(f):
+        try:
+            output = f.result()
+            result = function(output)
+        except:
+            result_future.set_exception()
+        else:
+            result_future.set_result(result)
+
+    future.add_done_callback(on_done)
+    return result_future

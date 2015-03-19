@@ -6,7 +6,7 @@ from .frame_reader import FrameReader, FrameWriter
 from . import messages
 from .messages.types import Types
 from .messages.common import PROTOCOL_VERSION
-from .exceptions import ProtocolException, InvalidMessageException
+from . import exceptions
 
 
 class _SocketIOAdapter(object):
@@ -94,8 +94,8 @@ class SocketConnection(object):
             message_id = self.next_message_id()
         try:
             self.writer.write(message_id, message)
-        except ProtocolException as e:
-            raise InvalidMessageException(e.message)
+        except exceptions.ProtocolException as e:
+            raise exceptions.InvalidMessageException(e.message)
         return message_id
 
     def ping(self):
@@ -111,9 +111,12 @@ class SocketConnection(object):
     def await_handshake(self, headers):
         """Negotiate a common protocol version with a client."""
         ctx = self.await()
+        if not ctx:
+            raise exceptions.TChannelException("Connection was closed.")
+
         message = ctx.message
         if message.message_type != Types.INIT_REQ:
-            raise InvalidMessageException(
+            raise exceptions.InvalidMessageException(
                 'You need to shake my hand first. Got: %d' %
                 message.message_type,
             )
@@ -124,10 +127,12 @@ class SocketConnection(object):
     def extract_handshake_headers(self, message):
         """Extract TChannel headers from a handshake."""
         if not message.host_port:
-            raise InvalidMessageException('Missing required header: host_port')
+            raise exceptions.InvalidMessageException(
+                'Missing required header: host_port'
+            )
 
         if not message.process_name:
-            raise InvalidMessageException(
+            raise exceptions.InvalidMessageException(
                 'Missing required header: process_name'
             )
 
@@ -146,9 +151,12 @@ class SocketConnection(object):
 
     def await_handshake_reply(self):
         context = self.await()
+        if not context:
+            raise exceptions.TChannelException("Connection was closed.")
+
         message = context.message
         if message.message_type != Types.INIT_RES:
-            raise InvalidMessageException(
+            raise exceptions.InvalidMessageException(
                 'Expected handshake response, got %d' %
                 message.message_type,
             )

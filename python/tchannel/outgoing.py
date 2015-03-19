@@ -8,15 +8,19 @@ from threading import Lock, Thread
 from functools import partial
 
 from .socket import SocketConnection
-from .future import SettableFuture
+from .futures import SettableFuture, transform_future
 from .messages import CallRequestMessage
 from .exceptions import TChannelApplicationException
 
 
 class TChannelOutOps(object):
-    """Encapsulates outgoing operations for a TChannel connection."""
+    """Encapsulates outgoing operations for a TChannel connection.
+
+    Each connection has a sending and receiving thread that goes with it."""
 
     Request = namedtuple('Request', 'message, future')
+
+    TIMEOUT = 0.5
 
     @enum.unique
     class State(enum.IntEnum):
@@ -24,7 +28,8 @@ class TChannelOutOps(object):
         ready = 1
         closed = 2
 
-    def __init__(self, name, sock, on_close=None, perform_handshake=True):
+    def __init__(self, name, sock, on_close=None, perform_handshake=True,
+                 timeout=None):
         """Initialize a TChannelOutOps.
 
         :param name:
@@ -48,7 +53,7 @@ class TChannelOutOps(object):
 
         self._sender = Thread(target=self._start_sender)
         self._receiver = Thread(target=self._start_receiver)
-        self._timeout = 0.5
+        self._timeout = timeout or self.TIMEOUT
         self._id_counter = 0
         self._counter_lock = Lock()
 
@@ -137,10 +142,11 @@ class TChannelOutOps(object):
             'host_port': '0.0.0.0:0',  # We can't receive requests
             'process_name': self._name
         })
-        self._conn.await_handshake_reply()
+        resp = self._conn.await_handshake_reply()
         self._state = self.State.ready
+        return resp
 
-    def send(self, arg_1, arg_2, arg_3, service=None):
+    def send(self, arg_1, arg_2, arg_3, service=None, async=False):
         """Send the given arguments over the wire.
 
         ``arg_1``, ``arg_2``, and ``arg_3`` represent the triple being sent
@@ -148,6 +154,12 @@ class TChannelOutOps(object):
 
         `service` is the name of the service being called. It defaults to an
         empty string.
+
+        :param async:
+            Whether this should block for the response. The function returns a
+            Future if True.
+        :raises TChannelApplicationException:
+            If the remote server did not respond with status code 0.
         """
         assert (
             self._state == self.State.ready
@@ -158,14 +170,22 @@ class TChannelOutOps(object):
         future = SettableFuture()
         self._submit(msg, future)
 
-        # Wait till the response for this message has been received.
-        response = future.result()  # TODO: Timeout?
-        if response.code != 0:
-            raise TChannelApplicationException(
-                response.code, response.arg_1, response.arg_2, response.arg_3
-            )
+        def handle_response(response):
+            if response.code != 0:
+                raise TChannelApplicationException(
+                    response.code,
+                    response.arg_1,
+                    response.arg_2,
+                    response.arg_3,
+                )
+            return response
 
-        return response.arg_1, response.arg_2, response.arg_3
+        result_future = transform_future(future, handle_response)
+        if async:
+            return result_future
+        else:
+            # Wait till the response for this message has been received.
+            return result_future.result()  # TODO: timeout?
 
     def closed(self):
         """Returns True if the connection has been closed."""
@@ -210,11 +230,17 @@ class OutgoingTChannel(object):
                 'func 1', 'arg 1', 'arg 2'
             )
 
+            resp_future = chan.request('localhost:4040').send(
+                'func 1', 'arg 1', 'arg 2', async=True
+            )
+
     All open connections are automatically closed when the context manager
     exits.
     """
 
-    def __init__(self, name):
+    TIMEOUT = 0.5
+
+    def __init__(self, name, timeout=None):
         """Initialize an OutgoingTChannel with the given process name.
 
         :param name:
@@ -225,6 +251,7 @@ class OutgoingTChannel(object):
         self._name = name
         self._lock = Lock()
         self._connections = {}
+        self._timeout = timeout or self.TIMEOUT
 
     def _get_connection(self, host, port):
         """Get a TChannel connection to the given destination.
@@ -243,7 +270,7 @@ class OutgoingTChannel(object):
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect((host, port))
-        sock.settimeout(0.5)
+        sock.settimeout(self._timeout)
 
         with self._lock:
             if (host, port) in self._connections:
@@ -255,6 +282,7 @@ class OutgoingTChannel(object):
                 self._name,
                 sock,
                 on_close=partial(self._on_conn_close, host, port),
+                timeout=self._timeout,
             )
 
         return conn
