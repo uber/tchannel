@@ -28,7 +28,7 @@ var EndpointHandler = require('../../endpoint-handler.js');
 
 var logger = DebugLogtron('example');
 
-var fixture = require('./basic_server_fixture.json');
+var fixture = require('./server_2_requests_fixture');
 var validators = require('../lib/simple-validators');
 
 test('basic tracing test', function (assert) {
@@ -132,7 +132,8 @@ test('basic tracing test', function (assert) {
                 return item.toJSON();
             });
 
-            validators.validate(assert, cleanspans, fixture);
+            validators.validateSpans(assert, cleanspans, fixture);
+
             assert.end();
             client.close();
             server.close();
