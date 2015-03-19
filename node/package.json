@@ -23,7 +23,8 @@
     "error": "^5.1.1",
     "farmhash": "^0.2.0",
     "hexer": "^1.2.0",
-    "async-listener": "^0.5.1"
+    "async-listener": "^0.5.1",
+    "null-logtron": "^2.2.0"
   },
   "devDependencies": {
     "ansi-color": "^0.2.1",
