@@ -196,15 +196,13 @@ TChannelV2Handler.prototype.sendInitResponse = function sendInitResponse(reqFram
 /* jshint maxparams:6 */
 TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame(req, arg1, arg2, arg3) {
     var self = this;
-    var id = req.id;
     var reqBody = v2.CallRequest(
         0, req.ttl, req.tracing,
         req.service, req.headers,
         req.checksumType,
         arg1, arg2, arg3);
-    var reqFrame = v2.Frame(id, reqBody);
+    var reqFrame = v2.Frame(req.id, reqBody);
     self.push(reqFrame);
-    return id;
 };
 
 TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFrame(res, arg1, arg2, arg3) {
