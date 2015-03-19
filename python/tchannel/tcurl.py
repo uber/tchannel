@@ -1,3 +1,4 @@
+#!/usr/bin/python
 from __future__ import absolute_import
 
 import argparse
@@ -10,8 +11,11 @@ import time
 
 import tornado.ioloop
 
-from .tornado import TChannel
-
+from tornado import httputil
+from .tchannel import TChannel
+from .tornado.http_request import HttpRequest
+from tornado.ioloop import IOLoop
+from tornado.web import RequestHandler, Application, url
 
 log = logging.getLogger('tchannel')
 
@@ -63,6 +67,13 @@ def parse_args(args=None):
         action="store_true"
     )
 
+    parser.add_argument(
+        "--listen",
+        dest="listen_port",
+        default="4040",
+        help="port listened by the tchannel in bound server"
+    )
+
     args = parser.parse_args(args)
 
     # Allow a body/header to specified once and shared across multiple
@@ -99,6 +110,7 @@ def parse_args(args=None):
 @tornado.gen.coroutine
 def multi_tcurl(hostports, headers, bodies, profile=False):
     client = TChannel()
+
 
     futures = [
         tcurl(client, hostport, header, body)
@@ -164,6 +176,12 @@ def tcurl(tchannel, hostport, headers, body):
     raise tornado.gen.Return(response)
 
 
+class MainHandler(tornado.web.RequestHandler):
+    def get(self):
+        self.request.write("Hello, world")
+        self.request.finish()
+
+
 def main():  # pragma: no cover
     args = parse_args()
 
@@ -174,10 +192,14 @@ def main():  # pragma: no cover
             level=logging.DEBUG,
         )
 
-    tornado.ioloop.IOLoop.instance().run_sync(
-        lambda: multi_tcurl(args.host, args.headers, args.body, args.profile)
-    )
+    application = tornado.web.Application([
+        (r"/hello", MainHandler),
+    ])
+    client = TChannel(app=application, in_port=args.listen_port)
+    client.make_in_connection(args.listen_port)
 
+    multi_tcurl(args.host, args.headers, args.body, args.profile)
+    tornado.ioloop.IOLoop.instance().start()
 
 if __name__ == '__main__':  # pragma: no cover
     main()
