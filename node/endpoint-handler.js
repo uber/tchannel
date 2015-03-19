@@ -43,12 +43,13 @@ var NoSuchEndpointError = TypedError({
     endpoint: null
 });
 
-function TChannelEndpointHandler(serviceName) {
+function TChannelEndpointHandler(serviceName, hostPort) {
     if (!(this instanceof TChannelEndpointHandler)) {
         return new TChannelEndpointHandler(serviceName);
     }
     var self = this;
     self.serviceName = serviceName;
+    self.hostPort = hostPort;
     self.endpoints = Object.create(null);
     self.type = null;
 }
@@ -82,19 +83,9 @@ TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, re
         return;
     }
 
-    // TODO: make this in the constructor and update it here with the correct
-    // tracing info
-    res.span = req.tracer.setupNewSpan({
-        spanid: req.tracing.spanid,
-        traceid: req.tracing.traceid,
-        parentid: req.tracing.parentid,
-        name: name
-    });
-
-    // TODO: better annotations
-    res.span.annotate('sr', Date.now());
-
-    req.tracer.setCurrentSpan(res.span);
+    if (res.span) {
+        res.span.name = name;
+    }
 
     handler(req, res);
 };

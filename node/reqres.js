@@ -80,6 +80,7 @@ function TChannelOutgoingRequest(id, options, sendFrame) {
     self.tracer = options.tracer; // tracing agent
     self.service = options.service || '';
     self.headers = options.headers || {};
+    self.host = options.host;
     self.checksumType = options.checksumType || 0;
     self.sendFrame = sendFrame;
     self.sent = false;
@@ -96,7 +97,9 @@ TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callbac
     }
 
     // TODO: do in constructor and update here
+    console.log("req happening, self.host: "+ self.host);
     self.span = self.tracer.setupNewSpan({
+        hostPort: self.host,
         name: arg1
     }, function () {
         // TODO: avoid callback mess
