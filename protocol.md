@@ -248,7 +248,7 @@ name/values are the same, but identify the server.
 
 Schema:
 ```
-flags:1 ttl:4 tracing:24 traceflags:1
+flags:1 ttl:4 tracing:25
 service~1 nh:1 (hk~1 hv~1){nh}
 csumtype:1 (csum:4){0,1} arg1~2 arg2~2 arg3~2
 ```
@@ -285,40 +285,9 @@ ttl can never be less than 0. Care should be taken when decrementing ttl to
 make sure it doesn't go below 0. Requests should never be sent with ttl of 0.
 If the ttl expires an error response should be generated.
 
-### tracing:24
+### tracing:25
 
-Tracing payload in zipkin format.
-
-Schema:
-```
-spanid:8 parentid:8 traceid:8
-```
-
-field      | type  | description
------------|-------|------------
-`spanid`   | int64 | that identifies the current *span*
-`parentid` | int64 | of the previous *span*
-`traceid`  | int64 | assigned by the original requestor
-
-A *span* is a logical operation like call or forward
-
-The `traceid` does not change as it propagates through various services.
-
-When a request enters our system the edge-most requester selects a `traceid`
-which will remain unchanged as this message and any dependent messages move
-through the system. Each time a new request is generated a new `spanid` is
-generated. If it was started from a previous request that id is moved to the
-`parentid`.
-
-### traceflags:1
-
-flag   | description
--------|------------
-`0x01` | tracing enabled for this request
-
-When this flag is not set, the tracing data is still required to be present in
-the frame, but the tracing data will not necessarily be sent to zipkin.
-
+Tracing payload, see tracing section.
 ### service~1
 
 UTF-8 string identifying the destination service to which this request should be
@@ -346,7 +315,7 @@ all traffic to a subset of instances for canary analysis.
 
 Schema:
 ```
-flags:1 code:1 tracing:24 traceflags:1
+flags:1 code:1 tracing:25
 nh:1 (hk~1 hv~1){nh}
 csumtype:1 (csum:4){0,1} arg1~2 arg2~2 arg3~2
 ```
@@ -379,7 +348,7 @@ safe to other "not ok" codes.
 
 Schema:
 ```
-why~2
+tracing:25 why~2
 ```
 
 This message forces the original response to a "call req" with an error
@@ -428,7 +397,7 @@ below.
 
 Schema:
 ```
-tracing:24
+tracing:25
 ```
 
 This message is used to claim or cancel a redundant request. When a request is
@@ -476,7 +445,7 @@ This message type has no body.
 
 Schema:
 ```
-code:1 id:4 message~2
+code:1 tracing:25 message~2
 ```
 
 Response message to a failure at the protocol level or when the system was
@@ -510,6 +479,41 @@ never seen before. We will likely need to adopt some kind of convention around
 the contents of this field, particularly so that they can be parseable for
 proper search indexing and aggregation. However, for the purposes of the
 protocol, the contents of "message" are intentionally not specified.
+
+## Tracing
+
+Schema:
+```
+spanid:8 parentid:8 traceid:8 traceflags:1
+```
+
+field        | type  | description
+-------------|-------|------------
+`spanid`     | int64 | that identifies the current *span*
+`parentid`   | int64 | of the previous *span*
+`traceid`    | int64 | assigned by the original requestor
+`traceflags` | uint8 | bit flags field
+
+A *span* is a logical operation like call or forward
+
+The `traceid` does not change as it propagates through various services.
+
+When a request enters our system the edge-most requester selects a `traceid`
+which will remain unchanged as this message and any dependent messages move
+through the system. Each time a new request is generated a new `spanid` is
+generated. If it was started from a previous request that id is moved to the
+`parentid`.
+
+
+Trace flags:
+
+flag   | description
+-------|------------
+`0x01` | tracing enabled for this request
+
+When the enabled flag is not set, the tracing data is still required to be
+present in the frame, but the tracing data will not necessarily be sent to
+zipkin.
 
 ## Transport Headers
 
