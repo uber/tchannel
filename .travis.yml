@@ -17,7 +17,7 @@ env:
   - SUBDIR=node
   - SUBDIR=golang
   - SUBDIR=python TOX_ENV=py27
-  - SUBDIR=python TOX_ENV=py34
+    #  - SUBDIR=python TOX_ENV=py34
   - SUBDIR=python TOX_ENV=cover
   - SUBDIR=python TOX_ENV=flake8
 
