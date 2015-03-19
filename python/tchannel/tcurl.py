@@ -1,3 +1,4 @@
+#!/usr/bin/python
 from __future__ import absolute_import
 
 import argparse
@@ -10,8 +11,11 @@ import time
 
 import tornado.ioloop
 
-from .tornado import TChannel
-
+from tornado import httputil
+from .tchannel import TChannel
+from .tornado.http_request import HttpRequest
+from tornado.ioloop import IOLoop
+from tornado.web import RequestHandler, Application, url
 
 log = logging.getLogger('tchannel')
 
@@ -174,7 +178,8 @@ def tcurl(tchannel, hostport, headers, body):
 
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
-        self.write("Hello, world")
+        self.request.write("Hello, world")
+        self.request.finish()
 
 
 def main():  # pragma: no cover
@@ -188,16 +193,13 @@ def main():  # pragma: no cover
         )
 
     application = tornado.web.Application([
-        (r"/", MainHandler),
+        (r"/hello", MainHandler),
     ])
     client = TChannel(app=application, in_port=args.listen_port)
     client.make_in_connection(args.listen_port)
 
-    tornado.ioloop.IOLoop.instance().run_sync(
-        lambda: multi_tcurl(args.host, args.headers, args.body, args.profile)
-    )
-
-
+    multi_tcurl(args.host, args.headers, args.body, args.profile)
+    tornado.ioloop.IOLoop.instance().start()
 
 if __name__ == '__main__':  # pragma: no cover
     main()
