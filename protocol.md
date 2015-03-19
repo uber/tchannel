@@ -320,13 +320,13 @@ nh:1 (hk~1 hv~1){nh}
 csumtype:1 (csum:4){0,1} arg1~2 arg2~2 arg3~2
 ```
 
-Very similar to call res (type 0x03), differing only in:
+Very similar to call req (type 0x03), differing only in:
 
 - adds a `code` field
 - no `ttl` field
 - no `service` field
 
-All common fields have identical definition to call res, see its section above for detail.
+All common fields have identical definition to call req, see its section above for detail.  It is not necessary for arg1 to have the same value between the call req and the call res; by convention, existing implementations leave arg1 at zero length for call res messages.
 
 Headers described below in the "Transport Headers" section.
 
