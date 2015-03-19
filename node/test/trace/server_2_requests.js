@@ -80,7 +80,7 @@ test('basic tracing test', function (assert) {
             server
                 .request({host: '127.0.0.1:4042'})
                 .send('subservice', 'arg1', 'arg2', function (err, subRes) {
-                    console.log("top level recv from subservice");
+                    console.log("top level recv from subservice: " + subRes);
                     if (err) return res.sendOk('error', err);
 
                     serverRequestsDone.signal();
@@ -91,7 +91,7 @@ test('basic tracing test', function (assert) {
             server
                 .request({host: '127.0.0.1:4042'})
                 .send('subservice2', 'arg1', 'arg2', function (err, subRes) {
-                    console.log("top level recv from subservice");
+                    console.log("top level recv from subservice: " + subRes);
                     if (err) return res.sendOk('error', err);
 
                     serverRequestsDone.signal();
@@ -116,7 +116,7 @@ test('basic tracing test', function (assert) {
         client
             .request({host: '127.0.0.1:4040'})
             .send('/top_level_endpoint', "arg 1", "arg 2", function (err, res) {
-                console.log("client recv from top level");
+                console.log("client recv from top level: " + res);
                 requestsDone.signal();
             });
 

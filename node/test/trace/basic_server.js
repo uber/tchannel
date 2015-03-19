@@ -92,7 +92,7 @@ test('basic tracing test', function (assert) {
         client
             .request({host: '127.0.0.1:4040'})
             .send('/top_level_endpoint', "arg 1", "arg 2", function (err, res) {
-                console.log("client recv from top level");
+                console.log("client recv from top level: " + res);
                 requestsDone.signal();
             });
 
