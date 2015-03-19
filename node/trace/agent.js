@@ -43,8 +43,6 @@ function Agent (options) {
 
     // TODO: options validation
 
-    self.endpoint =
-        new Span.Endpoint(options.host, options.port, options.serviceName);
     self.logger = options.logger || NullLogtron();
 
     self.reporter = options.reporter || null;
@@ -66,7 +64,6 @@ Agent.prototype.setupNewSpan = function setupNewSpan(options) {
         traceid = options.traceid;
     }
 
-    console.log("hostport: " + options.hostPort);
     var hostPortParts = options.hostPort.split(":");
     var host = hostPortParts[0], port = parseInt(hostPortParts[1], 10);
 
