@@ -14,7 +14,6 @@ from .. import messages
 from .. import exceptions
 from ..io import BytesIO
 from ..context import Context
-from ..exceptions import ConnectionClosedException
 from ..messages.types import Types
 from ..messages.common import PROTOCOL_VERSION
 
@@ -32,6 +31,8 @@ class TornadoConnection(object):
         self.remote_host = None
         self.remote_process_name = None
         self.requested_version = None
+        self.awaiting_responses = {}
+
         connection.set_close_callback(self.on_close)
 
     def next_message_id(self):
@@ -40,6 +41,7 @@ class TornadoConnection(object):
 
     def on_close(self):
         self.closed = True
+        self.awaiting_responses = {}
 
     def extract_handshake_headers(self, message):
         try:
@@ -171,7 +173,9 @@ class TornadoConnection(object):
 
         yield connection.initiate_handshake(headers={
             'host_port': '%s:%s' % sock.getsockname(),
-            'process_name': process_name or "%s[%s]" % (sys.argv[0], os.getpid())
+            'process_name': (
+                process_name or "%s[%s]" % (sys.argv[0], os.getpid())
+            ),
         })
 
         log.debug("awaiting handshake reply")
@@ -184,8 +188,10 @@ class TornadoConnection(object):
                 return connection.close()
 
             if context and context.message_id in connection.awaiting_responses:
-                connection.awaiting_responses[context.message_id].set_result(context)
-                #connection.awaiting_responses.pop(context.message_id)
+                resp_future = connection.awaiting_responses.pop(
+                    context.message_id,
+                )
+                resp_future.set_result(context)
             else:
                 log.warn(
                     'unrecognized response for message %s',

@@ -111,7 +111,9 @@ class ServerManager(object):
         sock.settimeout(self.timeout)
 
         try:
-            conn = tchannel.SocketConnection.outgoing('localhost:%d' % self.port)
+            conn = tchannel.SocketConnection.outgoing(
+                'localhost:%d' % self.port
+            )
             yield conn
         finally:
             conn.close()

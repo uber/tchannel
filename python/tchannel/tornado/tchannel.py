@@ -21,10 +21,6 @@ class TChannel(object):
     def __init__(self, process_name=None):
         self.peers = {}
         self.awaiting_responses = {}
-        self.process_name = (
-            process_name or "%s[%s]" % (sys.argv[0], os.getpid())
-        )
-
         # TODO: self.server_socket = self.make_in_connection()
 
     @tornado.gen.coroutine
@@ -106,12 +102,11 @@ class TChannelClientOperation(object):
 
         # Pull this out into its own loop, look up response message ids
         # and dispatch them to handlers.
-        self.tchannel().awaiting_responses[message_id] = tornado.gen.Future()
+        peer_connection.awaiting_responses[message_id] = tornado.gen.Future()
 
         # TODO: use real timeout here
         with timeout(peer_connection):
-            response = yield self.tchannel().awaiting_responses[message_id]
-        del self.tchannel().awaiting_responses[message_id]
+            response = yield peer_connection.awaiting_responses[message_id]
 
         # TODO: Add a callback to remove ourselves from the ops
         # list.
