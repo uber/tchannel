@@ -821,6 +821,22 @@ TChannelConnection.prototype.handleCallRequest = function handleCallRequest(req)
     process.nextTick(runHandler);
 
     function runHandler() {
+        // TODO: put setupNewSpan here
+        res.span = self.tracer.setupNewSpan({
+            spanid: req.tracing.spanid,
+            traceid: req.tracing.traceid,
+            parentid: req.tracing.parentid,
+            hostPort: self.channel.hostPort,
+            serviceName: self.channel.options.serviceName
+        });
+
+        // TODO: better annotations
+        res.span.annotate('sr', Date.now());
+
+        self.tracer.setCurrentSpan(res.span);
+
+        // Don't know name of the span yet but it'll be assigned in the
+        // endpoint handler
         self.channel.handler.handleRequest(req, res);
     }
 
