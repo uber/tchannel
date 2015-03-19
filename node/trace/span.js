@@ -141,7 +141,7 @@ Span.prototype.propagateIdsFrom = function propagateIdsFrom(span) {
 
     span.ready(function spanReady() {
         self.parentid = span.id;
-        self.traceid = span.id;
+        self.traceid = span.traceid;
 
         self._traceidReady.signal();
     });
