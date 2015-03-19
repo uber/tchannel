@@ -63,7 +63,7 @@ function testExpectations(desc, expected, func) {
 
             if (expectedI >= expected.length) {
                 finish(TooManyResults({
-                    got: expectedI,
+                    got: expectedI+1,
                     expected: expected.length
                 }));
                 return;
@@ -87,7 +87,7 @@ function testExpectations(desc, expected, func) {
         function done(err) {
             if (!err && expectedI < expected.length) {
                 err = TooFewResults({
-                    got: expectedI,
+                    got: expectedI+1,
                     expected: expected.length
                 });
             }
