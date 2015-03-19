@@ -47,22 +47,22 @@ function Span(options) {
     if (options.id) {
         self.id = options.id;
         self._idReady.signal();
-    } else {
+    } /*else {
         rng(self.logger, function rngDone(id) {
             self.id = id;
             self._idReady.signal();
         });
-    }
+    }*/
 
     if (options.traceid) {
         self.traceid = options.traceid;
         self._traceidReady.signal();
-    } else {
+    } /*else {
         rng(self.logger, function rngDone(id) {
             self.traceid = id;
             self._traceidReady.signal();
         });
-    }
+    }*/
 
     self.endpoint = options.endpoint;
 
@@ -109,6 +109,41 @@ Span.prototype.ready = function ready(cb) {
         self._idReady(function () {
             cb();
         });
+    });
+};
+
+// Generate a trace/span id for this span
+Span.prototype.generateIds = function generateIds() {
+    var self = this;
+
+    rng(self.logger, function rngDone(data) {
+        self.id = self.traceid = data;
+
+        self._idReady.signal();
+        self._traceidReady.signal();
+    });
+};
+
+// Generate just a span id
+Span.prototype.generateSpanid = function generateSpanid() {
+    var self = this;
+
+    rng(self.logger, function rngDone(data) {
+        self.id = data;
+
+        self._idReady.signal();
+    });
+};
+
+// ##
+Span.prototype.propagateIdsFrom = function propagateIdsFrom(span) {
+    var self = this;
+
+    span.ready(function spanReady() {
+        self.parentid = span.id;
+        self.traceid = span.id;
+
+        self._traceidReady.signal();
     });
 };
 

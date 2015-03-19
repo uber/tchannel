@@ -54,7 +54,7 @@ function Agent (options) {
 
 // ## setupNewSpan
 // Sets up a new span for an outgoing rpc
-Agent.prototype.setupNewSpan = function setupNewSpan(options, cb) {
+Agent.prototype.setupNewSpan = function setupNewSpan(options) {
     var self = this;
 
     var traceid;
@@ -76,25 +76,19 @@ Agent.prototype.setupNewSpan = function setupNewSpan(options, cb) {
         name: options.name,
         id: options.spanid,
         parentid: options.parentid,
-        // If there is a current span we don't want this new intance to
-        // generate his own traceid.
-        traceid: traceid
+        traceid: options.traceid
     });
 
-    // TODO: fix callback mess
-    if (self.getCurrentSpan() && (!options.parentid && !options.traceid)) {
-        // Fucking ugly
-        var parentSpan = self.getCurrentSpan();
-        parentSpan.ready(function () {
-            // propagate parentid from current span
-
-            span.parentid = parentSpan.id;
-            span.traceid = parentSpan.traceid;
-
-            if (cb) process.nextTick(cb);
-        });
-    } else {
-        if (cb) process.nextTick(cb);
+    var parentSpan = self.getCurrentSpan();
+    if (parentSpan && (!options.parentid && !options.traceid)) {
+        // If there's a parentSpan and the parentid and traceid weren't
+        // specified, we need to propagate the ids from the parent span.
+        span.propagateIdsFrom(parentSpan);
+        span.generateSpanid();
+    } else if (!parentSpan && (!options.traceid && !options.spanid)) {
+        // No ids were specified and there's no parent span. Generate a new
+        // id and use it as the spanid and traceid.
+        span.generateIds();
     }
 
     return span;

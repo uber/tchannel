@@ -101,22 +101,23 @@ TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callbac
     self.span = self.tracer.setupNewSpan({
         hostPort: self.host,
         name: arg1
-    }, function () {
-        // TODO: avoid callback mess
-        self.span.ready(function () {
-            self.tracing = self.span.getTracing();
-
-            // TODO: better annotations
-            self.span.annotate('cs');   // client start
-
-            self.sent = true;
-            self.sendFrame(
-                arg1 ? Buffer(arg1) : null,
-                arg2 ? Buffer(arg2) : null,
-                arg3 ? Buffer(arg3) : null);
-            self.emit('end');
-        });
     });
+
+    self.span.ready(function () {
+        self.tracing = self.span.getTracing();
+        console.log("tracing is:", self.tracing);
+
+        // TODO: better annotations
+        self.span.annotate('cs');   // client start
+
+        self.sent = true;
+        self.sendFrame(
+            arg1 ? Buffer(arg1) : null,
+            arg2 ? Buffer(arg2) : null,
+            arg3 ? Buffer(arg3) : null);
+        self.emit('end');
+    });
+
     return self;
 };
 
