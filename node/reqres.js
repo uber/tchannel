@@ -109,6 +109,7 @@ function TChannelOutgoingRequest(id, options) {
     self.tracer = options.tracer; // tracing agent
     self.service = options.service || '';
     self.headers = options.headers || {};
+    self.host = options.host;
     self.checksumType = options.checksumType || 0;
     self.checksum = options.checksum || null;
     self.sendFrame = options.sendFrame;

@@ -66,9 +66,13 @@ Agent.prototype.setupNewSpan = function setupNewSpan(options, cb) {
         traceid = options.traceid;
     }
 
+    console.log("hostport: " + options.hostPort);
+    var hostPortParts = options.hostPort.split(":");
+    var host = hostPortParts[0], port = parseInt(hostPortParts[1], 10);
+
     var span = new Span({
         logger: self.logger,
-        endpoint: self.endpoint,
+        endpoint: new Span.Endpoint(host, port, options.serviceName),
         name: options.name,
         id: options.spanid,
         parentid: options.parentid,
