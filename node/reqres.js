@@ -97,7 +97,6 @@ TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callbac
     }
 
     // TODO: do in constructor and update here
-    console.log("req happening, self.host: "+ self.host);
     self.span = self.tracer.setupNewSpan({
         hostPort: self.host,
         name: arg1
@@ -105,7 +104,6 @@ TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callbac
 
     self.span.ready(function () {
         self.tracing = self.span.getTracing();
-        console.log("tracing is:", self.tracing);
 
         // TODO: better annotations
         self.span.annotate('cs');   // client start
