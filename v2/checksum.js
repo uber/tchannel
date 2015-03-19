@@ -80,22 +80,23 @@ Checksum.RW = bufrw.Switch(bufrw.UInt8, rwCases, {
     dataKey: 'val'
 });
 
-Checksum.prototype.compute = function compute(arg1, arg2, arg3, prior) {
+Checksum.prototype.compute = function compute(args, prior) {
     if (typeof prior !== 'number') prior = 0;
     var self = this;
     var csum = prior;
+    var i;
     switch (self.type) {
         case 0x00:
             break;
         case 0x01:
-            csum = crc32(arg1, csum);
-            csum = crc32(arg2, csum);
-            csum = crc32(arg3, csum);
+            for (i = 0; i < args.length; i++) {
+                csum = crc32(args[i], csum);
+            }
             break;
         case 0x02:
-            csum = farm32(arg1, csum);
-            csum = farm32(arg2, csum);
-            csum = farm32(arg3, csum);
+            for (i = 0; i < args.length; i++) {
+                csum = farm32(args[i], csum);
+            }
             break;
         default:
             throw new Error('invalid checksum type ' + self.type);
@@ -103,17 +104,17 @@ Checksum.prototype.compute = function compute(arg1, arg2, arg3, prior) {
     return csum;
 };
 
-Checksum.prototype.update = function update(arg1, arg2, arg3, prior) {
+Checksum.prototype.update = function update(args, prior) {
     var self = this;
-    self.val = self.compute(arg1, arg2, arg3, prior);
+    self.val = self.compute(args, prior);
 };
 
-Checksum.prototype.verify = function verify(arg1, arg2, arg3, prior) {
+Checksum.prototype.verify = function verify(args, prior) {
     var self = this;
     if (self.type === Checksum.Types.None) {
         return null;
     }
-    var val = self.compute(arg1, arg2, arg3, prior);
+    var val = self.compute(args, prior);
     if (val === self.val) {
         return null;
     } else {

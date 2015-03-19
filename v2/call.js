@@ -131,7 +131,7 @@ function prepareWrite(body, buffer, offset) {
             new Error('streaming call not implemented'),
             offset);
     }
-    body.csum.update(body.arg1, body.arg2, body.arg3);
+    body.csum.update([body.arg1, body.arg2, body.arg3]);
     return WriteResult.just(offset);
 }
 
@@ -141,7 +141,7 @@ function readGuard(body, buffer, offset) {
             new Error('streaming call not implemented'),
             offset);
     }
-    var err = body.csum.verify(body.arg1, body.arg2, body.arg3);
+    var err = body.csum.verify([body.arg1, body.arg2, body.arg3]);
     if (err) {
         return ReadResult.error(err, offset);
     }
