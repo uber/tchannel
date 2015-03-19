@@ -11,7 +11,21 @@ class _SocketIOAdapter(object):
 
     def read(self, size, callback=None):
         assert not callback, 'async not supported for sockets'
-        return self._connection.recv(size)
+        result = self._connection.recv(size)
+        remaining = size - len(result)
+
+        if remaining > 0:
+            chunks = [result]
+            while remaining > 0:
+                s = self._connection.recv(remaining)
+                if not s:  # end of stream reached
+                    break
+
+                remaining -= len(s)
+                chunks.append(s)
+            result = "".join(chunks)
+
+        return result
 
     def write(self, data, callback=None):
         assert not callback, 'async not supported for sockets'

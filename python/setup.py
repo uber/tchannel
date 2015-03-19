@@ -11,7 +11,7 @@ setup(
     url='https://github.com/uber/tchannel',
     packages=find_packages(),
     install_requires=[
-        'contextlib2',
+        'contextlib2', 'enum34'
     ],
     entry_points={
         'console_scripts': [

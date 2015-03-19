@@ -1,9 +1,11 @@
 from __future__ import absolute_import
 
 from .exceptions import ProtocolException
-from .frame import Frame
+from .context import Context
+from . import messages
 from .io import BytesIO
-from .parser import read_number_string
+from .rw import ReadException
+from .frame import frame_rw, FrameHeader, Frame
 
 
 class FrameReader(object):
@@ -25,24 +27,47 @@ class FrameReader(object):
         This usually occurs when the other end of the connection closes.
         """
         while True:
-            size_bytes = self.connection.read(Frame.SIZE_WIDTH)
-            # Read will return zero bytes when the other side of the connection
-            # closes.
-            if not size_bytes:
+            try:
+                frame = frame_rw.read(self.connection)
+            except ReadException as e:
+                raise ProtocolException(e.message)
+
+            if not frame:
                 break
 
-            message_length = read_number_string(size_bytes, Frame.SIZE_WIDTH)
-
-            chunk = self.connection.read(message_length - Frame.SIZE_WIDTH)
-            if not chunk:
+            message_rw = messages.RW.get(frame.header.message_type)
+            if not message_rw:
                 raise ProtocolException(
-                    'Expected %d bytes available, got none' % message_length
+                    "Unknown message type %d" % frame.header.message_type
                 )
 
-            if len(chunk) != message_length - Frame.SIZE_WIDTH:
-                raise ProtocolException(
-                    'Expected %d bytes, got %d' %
-                    (len(chunk), message_length - Frame.SIZE_WIDTH)
-                )
+            try:
+                message = message_rw.read(BytesIO(frame.payload))
+            except ReadException as e:
+                raise ProtocolException(e.message)
+            yield Context(frame.header.message_id, message)
 
-            yield Frame.decode(BytesIO(chunk), message_length)
+
+class FrameWriter(object):
+    def __init__(self, connection):
+        self.connection = connection
+
+    def write(self, message_id, message):
+        message_rw = messages.RW.get(message.message_type)
+        if not message_rw:
+            raise ProtocolException(
+                "Unknown message type %d for '%s'" % (
+                    message.message_type, str(message)
+                )
+            )
+
+        payload = message_rw.write(message, BytesIO()).getvalue()
+        frame = Frame(
+            FrameHeader(
+                message_type=message.message_type,
+                message_id=message_id,
+            ),
+            payload
+        )
+
+        frame_rw.write(frame, self.connection)

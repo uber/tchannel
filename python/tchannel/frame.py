@@ -1,101 +1,62 @@
 from __future__ import absolute_import
 
 import logging
+from collections import namedtuple
 
-from .context import Context
-from .exceptions import ProtocolException
-from .mapping import get_message_class
-from .parser import read_number
-from .parser import write_number
+from . import rw
+from .io import BytesIO
 
 log = logging.getLogger('tchannel')
 
 
-class Frame(object):
-    """Perform operations on a single TChannel frame."""
-    SIZE_WIDTH = 2
-    ID_WIDTH = 4
-    TYPE_WIDTH = 1
-    FLAGS_WIDTH = 1
-    PRELUDE_SIZE = 0x10  # this many bytes of framing before payload
+FrameHeader = namedtuple('FrameHeader', 'message_type message_id')
+Frame = namedtuple('Frame', 'header payload')
 
-    # 8 bytes are reserved
-    RESERVED_WIDTH = 8
-    RESERVED_PADDING = b'\x00' * RESERVED_WIDTH
 
-    BEFORE_ID_WIDTH = 1
-    BEFORE_ID_PADDING = b'\x00' * BEFORE_ID_WIDTH
+class FrameReadWriter(rw.ReadWriter):
 
-    def __init__(self, message, message_id):
-        self._message = message
-        self._message_id = message_id
+    # ReadWriter for Frame size
+    size_rw = rw.number(2)  # size:2
 
-    @classmethod
-    def decode(cls, stream, message_length=None):
-        """Decode a sequence of bytes into a frame and message.
+    # ReadWriter for FrameHeaders
+    header_rw = rw.instance(
+        FrameHeader,
+        ('message_type', rw.number(1)),             # type:1
+        (rw.skip, rw.constant(rw.number(1), 0)),    # reserved:1
+        ('message_id', rw.number(4)),               # id:4
+        (rw.skip, rw.constant(rw.number(8), 0)),    # reserved:8
+    )
 
-        :param stream: a byte stream
-        :param message_length: length of the message in bytes including framing
-        """
-        if message_length is None:
-            message_length = read_number(stream, cls.SIZE_WIDTH)
+    def read(self, stream, size=None):
+        if not size:
+            try:
+                size = self.size_rw.read(stream)
+            except rw.ReadException:
+                return None
+        if not size:
+            return None
 
-        if message_length < cls.PRELUDE_SIZE:
-            raise ProtocolException(
-                'Illegal frame length: %d' % message_length
-            )
+        body = self.take(stream, size - self.size_rw.width())
 
-        message_type = read_number(stream, cls.TYPE_WIDTH)
-        message_class = get_message_class(message_type)
-        if not message_class:
-            raise ProtocolException('Unknown message type: %d' % message_type)
+        header_width = self.header_rw.width()
+        header_body, payload = body[:header_width], body[header_width:]
 
-        # Throw away this many bytes
-        stream.read(cls.BEFORE_ID_WIDTH)
+        header = self.header_rw.read(BytesIO(header_body))
+        log.debug('decode frame for message %s', header.message_id)
+        return Frame(header, payload)
 
-        message_id = read_number(stream, cls.ID_WIDTH)
+    def write(self, frame, stream):
+        prelude_size = self.size_rw.width() + self.header_rw.width()
+        size = prelude_size + len(frame.payload)
 
-        log.debug('decode frame for message %s', message_id)
+        self.size_rw.write(size, stream)
+        self.header_rw.write(frame.header, stream)
+        log.debug("writing frame for message %s", frame.header.message_id)
+        stream.write(frame.payload)
 
-        stream.read(cls.RESERVED_WIDTH)
+        return stream
 
-        message = message_class()
-        remaining_bytes = message_length - cls.PRELUDE_SIZE
-        if remaining_bytes:
-            message.parse(stream, remaining_bytes)
-        context = Context(message_id=message_id, message=message)
-        return context
+    def width(self):
+        return self.size_rw.width() + self.header_rw.width()
 
-    def write(self, connection, callback=None):
-        """Write a frame out to a connection."""
-        payload = bytearray()
-        self._message.serialize(payload)
-        payload_length = len(payload)
-
-        header_bytes = bytearray()
-
-        header_bytes.extend(write_number(
-            payload_length + self.PRELUDE_SIZE,
-            self.SIZE_WIDTH
-        ))
-
-        header_bytes.extend(write_number(
-            self._message.message_type,
-            self.TYPE_WIDTH
-        ))
-
-        header_bytes.extend(self.BEFORE_ID_PADDING)
-
-        log.debug("writing frame for message %s", self._message_id)
-
-        header_bytes.extend(write_number(
-            self._message_id,
-            self.ID_WIDTH
-        ))
-
-        # 8 bytes of reserved data
-        header_bytes.extend(self.RESERVED_PADDING)
-
-        # Then the payload
-        header_bytes.extend(payload)
-        return connection.write(header_bytes, callback=callback)
+frame_rw = FrameReadWriter()

@@ -126,19 +126,7 @@ class TChannelClientOperation(object):
         # Make this return a message ID so we can match it up with the
         # response.
         peer_connection = yield self.tchannel().get_peer(self.hostport)
-
         self.message_id = message_id = peer_connection.next_message_id()
-
-        message = CallRequestMessage()
-        message.flags = 0
-        message.ttl = 0
-        message.span_id = 0
-        message.parent_id = 0
-        message.trace_id = 0
-        message.traceflags = 0
-        message.service = 'tcurl'
-        message.headers = {}
-        message.checksum_type = 0
 
         def safebytes(arg):
             if arg is None:
@@ -147,9 +135,12 @@ class TChannelClientOperation(object):
                 return arg
             return bytes(arg.encode('ascii'))
 
-        message.arg_1 = safebytes(arg_1)
-        message.arg_2 = arg_2
-        message.arg_3 = arg_3
+        message = CallRequestMessage(
+            service='tcurl',
+            arg_1=safebytes(arg_1),
+            arg_2=arg_2,
+            arg_3=arg_3,
+        )
 
         log.debug("framing and writing message %s", message_id)
 

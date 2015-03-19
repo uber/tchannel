@@ -1,7 +1,7 @@
 project := tchannel
 
 flake8 := flake8
-pytest := py.test -sv --tb short --cov-config .coveragerc --cov \
+pytest := py.test --tb short --cov-config .coveragerc --cov \
           $(project) tests
 
 html_report := --cov-report html

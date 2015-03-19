@@ -1,31 +1,21 @@
 from __future__ import absolute_import
 
-from ..parser import read_number
-from ..parser import write_number
-
+from .base import BaseMessage
 from .types import Types
-from .call_request import CallRequestMessage
+from .. import rw
+from . import common
 
 
-class CallResponseMessage(CallRequestMessage):
+class CallResponseMessage(BaseMessage):
     """Respond to an RPC call."""
     message_type = Types.CALL_RES
 
     __slots__ = (
         'flags',
         'code',
-
-        # Zipkin-style tracing data
-        'span_id',
-        'parent_id',
-        'trace_id',
-
-        'traceflags',
-
+        'tracing',
         'headers',
-        'checksum_type',
         'checksum',
-
         'arg_1',
         'arg_2',
         'arg_3',
@@ -33,31 +23,43 @@ class CallResponseMessage(CallRequestMessage):
 
     CODE_SIZE = 1
 
-    def parse(self, payload, size):
-        """Parse a call request message from a payload."""
-        self.flags = read_number(payload, self.FLAGS_SIZE)
-        self.code = read_number(payload, self.CODE_SIZE)
+    def __init__(
+        self,
+        flags=0,
+        code=0,
+        tracing=None,
+        headers=None,
+        checksum=None,
+        arg_1=None,
+        arg_2=None,
+        arg_3=None,
+    ):
+        self.flags = flags
+        self.code = code
+        self.tracing = tracing or common.Tracing(0, 0, 0, 0)
+        self.headers = dict(headers) if headers else {}
+        self.checksum = (common.ChecksumType.none, None)
+        self.arg_1 = arg_1 or ''
+        self.arg_2 = arg_2 or ''
+        self.arg_3 = arg_3 or ''
 
-        self.parse_trace(payload)
-        self.headers, _ = self._read_headers(
-            payload,
-            self.NH_SIZE,
-            self.HEADER_SIZE,
-        )
 
-        self.checksum_type = read_number(payload, self.CSUMTYPE_SIZE)
-        if self.checksum_type:
-            csum_size = self.CHECKSUM[self.checksum_type]
-            self.checksum = read_number(payload, csum_size)
+call_res_rw = rw.instance(
+    CallResponseMessage,
+    ("flags", rw.number(1)),    # flags:1
+    ("code", rw.number(1)),     # code:1
 
-        self.parse_args(payload)
-        self.extra_space_check(payload)
+    ("tracing", common.tracing_rw),     # tracing:24
+                                        # traceflags: 1
 
-    def serialize(self, out):
-        """Write a call request message out to a buffer."""
-        out.extend(write_number(self.flags, self.FLAGS_SIZE))
-        out.extend(write_number(self.code, self.CODE_SIZE))
+    ("headers", rw.headers(             # nh:1 (hk~1 hv~1){nh}
+        rw.number(1),
+        rw.len_prefixed_string(rw.number(1))
+    )),
 
-        self.serialize_trace(out)
-        self.serialize_header_and_checksum(out)
-        self.serialize_args(out)
+    ("checksum", common.checksum_rw),   # csumtype:1 (csum:4){0, 1}
+
+    ("arg_1", rw.len_prefixed_string(rw.number(2), is_binary=True)),  # arg1~2
+    ("arg_2", rw.len_prefixed_string(rw.number(2), is_binary=True)),  # arg2~2
+    ("arg_3", rw.len_prefixed_string(rw.number(2), is_binary=True)),  # arg3~2
+)
