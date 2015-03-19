@@ -418,7 +418,9 @@ TChannel.prototype.close = function close(callback) {
     }
 
     self.destroyed = true;
-    self.tracer.destroy();
+    if (self.tracer) {
+        self.tracer.destroy();
+    }
     var peers = self.getPeers();
     var counter = peers.length + 1;
 
