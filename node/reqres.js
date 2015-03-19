@@ -202,8 +202,11 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
         self.span.annotate('cr'); // client recv
         self.tracer.report(self.span);
         self.removeListener('response', onResponse);
+
+        var prev = self.tracer.getCurrentSpan();
         self.tracer.setCurrentSpan(self.span);
         callback(err, null);
+        self.tracer.setCurrentSpan(prev);
     }
     function onResponse(res) {
         // TODO: better annotations
