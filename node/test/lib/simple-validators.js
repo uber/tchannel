@@ -15,6 +15,37 @@ module.exports.checkId = function (idStore, idKey) {
     };
 };
 
+module.exports.validateSpans =
+function validateSpans(assert, actual, expected) {
+    // Spans may be received in a different order than in the fixture, so we
+    // need to find a way to identify them in order to check their contents.
+    // Unfortunately since the ids are randomly generated we can't use those.
+    // So we base an id off the contents and then validate.
+
+    var actualById = {};
+    var expectedById = {};
+
+    function mapSpanToUniqueId(item) {
+        return item.name + item.endpoint.ipv4 + item.endpoint.port +
+            item.annotations.reduce(function (str, item) {
+                return str + item.value;
+            }, "");
+    }
+
+    actual.forEach(function (item) {
+        actualById[mapSpanToUniqueId(item)] = item;
+    });
+
+    expected.forEach(function (item) {
+        expectedById[mapSpanToUniqueId(item)] = item;
+    });
+
+    console.dir(actualById);
+    console.dir(expectedById);
+
+    module.exports.validate(assert, actualById, expectedById);
+};
+
 module.exports.validate = function validate(assert, actual, expected) {
     Object.keys(expected).forEach(function (key) {
         var actualValue = actual[key];

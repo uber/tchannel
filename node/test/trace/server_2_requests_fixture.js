@@ -36,7 +36,7 @@ module.exports = [
         "name": "subservice2",
         "endpoint": {
             "ipv4": "127.0.0.1",
-            "port": 4040
+            "port": 4042
         },
         "traceid": validators.checkId(idStore, 'traceid'),
         "parentid": validators.checkId(idStore, 'first_spanid'),
@@ -47,7 +47,7 @@ module.exports = [
                 "timestamp": validators.timestamp,
                 "host": {
                     "ipv4": "127.0.0.1",
-                    "port": 4040
+                    "port": 4042
                 }
             },
             {
@@ -55,7 +55,7 @@ module.exports = [
                 "timestamp": validators.timestamp,
                 "host": {
                     "ipv4": "127.0.0.1",
-                    "port": 4040
+                    "port": 4042
                 }
             }
         ],
@@ -94,7 +94,7 @@ module.exports = [
         "name": "subservice",
         "endpoint": {
             "ipv4": "127.0.0.1",
-            "port": 4040
+            "port": 4042
         },
         "traceid": validators.checkId(idStore, 'traceid'),
         "parentid": validators.checkId(idStore, 'first_spanid'),
@@ -105,7 +105,7 @@ module.exports = [
                 "timestamp": validators.timestamp,
                 "host": {
                     "ipv4": "127.0.0.1",
-                    "port": 4040
+                    "port": 4042
                 }
             },
             {
@@ -113,7 +113,7 @@ module.exports = [
                 "timestamp": validators.timestamp,
                 "host": {
                     "ipv4": "127.0.0.1",
-                    "port": 4040
+                    "port": 4042
                 }
             }
         ],
@@ -152,7 +152,7 @@ module.exports = [
         "name": "/top_level_endpoint",
         "endpoint": {
             "ipv4": "127.0.0.1",
-            "port": 4041
+            "port": 4040
         },
         "traceid": validators.checkId(idStore, 'traceid'),
         "parentid": "0000000000000000",
@@ -163,7 +163,7 @@ module.exports = [
                 "timestamp": validators.timestamp,
                 "host": {
                     "ipv4": "127.0.0.1",
-                    "port": 4041
+                    "port": 4040
                 }
             },
             {
@@ -171,7 +171,7 @@ module.exports = [
                 "timestamp": validators.timestamp,
                 "host": {
                     "ipv4": "127.0.0.1",
-                    "port": 4041
+                    "port": 4040
                 }
             }
         ],
