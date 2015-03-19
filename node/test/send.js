@@ -22,8 +22,121 @@
 
 var parallel = require('run-parallel');
 var Buffer = require('buffer').Buffer;
+var extend = require('xtend');
 var allocCluster = require('./lib/alloc-cluster.js');
 var EndpointHandler = require('../endpoint-handler');
+
+var Cases = [
+
+    {
+        name: 'bufferOp',
+        op: Buffer('foo'),
+        reqHead: null,
+        reqBody: null,
+        resHead: '',
+        resBody: ''
+    },
+
+    {
+        name: 'stringOp',
+        op: 'foo',
+        reqHead: null,
+        reqBody: null,
+        resHead: '',
+        resBody: ''
+    },
+
+    {
+        name: 'bufferHead',
+        op: 'foo',
+        reqHead: Buffer('abc'),
+        reqBody: null,
+        resHead: 'abc',
+        resBody: ''
+    },
+
+    {
+        name: 'stringHead',
+        op: 'foo',
+        reqHead: 'abc',
+        reqBody: null,
+        resHead: 'abc',
+        resBody: ''
+    },
+
+    {
+        name: 'objectHead',
+        op: 'foo',
+        reqHead: JSON.stringify({value: 'abc'}),
+        reqBody: null,
+        resHead: '{"value":"abc"}',
+        resBody: ''
+    },
+
+    {
+        name: 'nullHead',
+        op: 'foo',
+        reqHead: null,
+        reqBody: null,
+        resHead: '',
+        resBody: ''
+    },
+
+    {
+        name: 'undefinedHead',
+        op: 'foo',
+        reqHead: undefined,
+        reqBody: null,
+        resHead: '',
+        resBody: ''
+    },
+
+    {
+        name: 'bufferBody',
+        op: 'foo',
+        reqHead: null,
+        reqBody: Buffer('abc'),
+        resHead: '',
+        resBody: 'abc'
+    },
+
+    {
+        name: 'stringBody',
+        op: 'foo',
+        reqHead: null,
+        reqBody: 'abc',
+        resHead: '',
+        resBody: 'abc'
+    },
+
+    {
+        name: 'objectBody',
+        op: 'foo',
+        reqHead: null,
+        reqBody: JSON.stringify({value: 'abc'}),
+        resHead: '',
+        resBody: '{"value":"abc"}'
+    },
+
+    {
+        name: 'nullBody',
+        op: 'foo',
+        reqHead: null,
+        reqBody: null,
+        resHead: '',
+        resBody: ''
+    },
+
+    {
+        name: 'undefinedBody',
+        op: 'foo',
+        reqHead: null,
+        reqBody: undefined,
+        resHead: '',
+        resBody: ''
+    },
+
+];
 
 allocCluster.test('request().send() to a server', 2, function t(cluster, assert) {
     var one = cluster.channels[0];
@@ -38,44 +151,13 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
         res.sendOk(req.arg2, req.arg3);
     });
 
-    parallel({
-        'bufferOp': sendRes.bind(null, two, {
-            host: hostOne
-        }, new Buffer('foo'), null, null),
-        'stringOp': sendRes.bind(null, two, {
-            host: hostOne
-        }, 'foo', null, null),
-        'bufferHead': sendRes.bind(null, two, {
-            host: hostOne
-        }, 'foo', new Buffer('abc'), null),
-        'stringHead': sendRes.bind(null, two, {
-            host: hostOne
-        }, 'foo', 'abc', null),
-        'objectHead': sendRes.bind(null, two, {
-            host: hostOne
-        }, 'foo', JSON.stringify({ value: 'abc' }), null),
-        'nullHead': sendRes.bind(null, two, {
-            host: hostOne
-        }, 'foo', null, null),
-        'undefinedHead': sendRes.bind(null, two, {
-            host: hostOne
-        }, 'foo', undefined, null),
-        'bufferBody': sendRes.bind(null, two, {
-            host: hostOne
-        }, 'foo', null, new Buffer('abc')),
-        'stringBody': sendRes.bind(null, two, {
-            host: hostOne
-        }, 'foo', null, 'abc'),
-        'objectBody': sendRes.bind(null, two, {
-            host: hostOne
-        }, 'foo', null, JSON.stringify({ value: 'abc' })),
-        'nullBody': sendRes.bind(null, two, {
-            host: hostOne
-        }, 'foo', null, null),
-        'undefinedBody': sendRes.bind(null, two, {
-            host: hostOne
-        }, 'foo', null, undefined)
-    }, function onResults(err, results) {
+    parallel(Cases.map(function eachTestCase(testCase) {
+        testCase = extend({
+            channel: two,
+            opts: {host: hostOne},
+        }, testCase);
+        return sendTest(testCase, assert);
+    }), function onResults(err) {
         assert.ifError(err);
 
         var peersOne = one.getPeers();
@@ -98,93 +180,26 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
             assert.equal(Object.keys(outPeer.outOps).length, 0, 'outPeer should have no outOps');
         }
 
-        var stringOp = results.stringOp;
-        assert.ok(Buffer.isBuffer(stringOp.head));
-        assert.equal(stringOp.head.length, 0);
-        assert.ok(Buffer.isBuffer(stringOp.body));
-        assert.equal(stringOp.body.length, 0);
-
-        var bufferOp = results.bufferOp;
-        assert.ok(Buffer.isBuffer(bufferOp.head));
-        assert.equal(bufferOp.head.length, 0);
-        assert.ok(Buffer.isBuffer(bufferOp.body));
-        assert.equal(bufferOp.body.length, 0);
-
-        var bufferHead = results.bufferHead;
-        assert.ok(Buffer.isBuffer(bufferHead.head));
-        assert.equal(String(bufferHead.head), 'abc');
-        assert.ok(Buffer.isBuffer(bufferHead.body));
-        assert.equal(bufferHead.body.length, 0);
-
-        var stringHead = results.stringHead;
-        assert.ok(Buffer.isBuffer(stringHead.head));
-        assert.equal(String(stringHead.head), 'abc');
-        assert.ok(Buffer.isBuffer(stringHead.body));
-        assert.equal(stringHead.body.length, 0);
-
-        var objectHead = results.objectHead;
-        assert.ok(Buffer.isBuffer(objectHead.head));
-        assert.equal(String(objectHead.head), '{"value":"abc"}');
-        assert.ok(Buffer.isBuffer(objectHead.body));
-        assert.equal(objectHead.body.length, 0);
-
-        var nullHead = results.nullHead;
-        assert.ok(Buffer.isBuffer(nullHead.head));
-        assert.equal(String(nullHead.head), '');
-        assert.ok(Buffer.isBuffer(nullHead.body));
-        assert.equal(nullHead.body.length, 0);
-
-        var undefinedHead = results.undefinedHead;
-        assert.ok(Buffer.isBuffer(undefinedHead.head));
-        assert.equal(String(undefinedHead.head), '');
-        assert.ok(Buffer.isBuffer(undefinedHead.body));
-        assert.equal(undefinedHead.body.length, 0);
-
-        var bufferBody = results.bufferBody;
-        assert.ok(Buffer.isBuffer(bufferBody.head));
-        assert.equal(String(bufferBody.head), '');
-        assert.ok(Buffer.isBuffer(bufferBody.body));
-        assert.equal(String(bufferBody.body), 'abc');
-
-        var stringBody = results.stringBody;
-        assert.ok(Buffer.isBuffer(stringBody.head));
-        assert.equal(String(stringBody.head), '');
-        assert.ok(Buffer.isBuffer(stringBody.body));
-        assert.equal(String(stringBody.body), 'abc');
-
-        var objectBody = results.objectBody;
-        assert.ok(Buffer.isBuffer(objectBody.head));
-        assert.equal(String(objectBody.head), '');
-        assert.ok(Buffer.isBuffer(objectBody.body));
-        assert.equal(String(objectBody.body), '{"value":"abc"}');
-
-        var nullBody = results.nullBody;
-        assert.ok(Buffer.isBuffer(nullBody.head));
-        assert.equal(String(nullBody.head), '');
-        assert.ok(Buffer.isBuffer(nullBody.body));
-        assert.equal(String(nullBody.body), '');
-
-        var undefinedBody = results.undefinedBody;
-        assert.ok(Buffer.isBuffer(undefinedBody.head));
-        assert.equal(String(undefinedBody.head), '');
-        assert.ok(Buffer.isBuffer(undefinedBody.body));
-        assert.equal(String(undefinedBody.body), '');
-
         assert.end();
     });
 });
 
-/*eslint max-params: [2, 6] */
-/*jshint maxparams: 6 */
-function sendRes(channel, opts, op, h, b, cb) {
-    channel
-        .request(opts)
-        .send(op, h, b, onResult);
-
-    function onResult(err, res) {
-        cb(err, {
-            head: res.arg2,
-            body: res.arg3
-        });
-    }
+function sendTest(testCase, assert) {
+    return function runSendTest(callback) {
+        testCase.channel
+            .request(testCase.opts)
+            .send(testCase.op, testCase.reqHead, testCase.reqBody, onResult);
+        function onResult(err, res) {
+            var head = res.arg2;
+            var body = res.arg3;
+            assert.ifError(err, testCase.name + ': no result error');
+            if (!err) {
+                assert.ok(Buffer.isBuffer(head));
+                assert.ok(Buffer.isBuffer(body));
+                assert.equal(head ? String(head) : head, testCase.resHead);
+                assert.equal(body ? String(body) : body, testCase.resBody);
+            }
+            callback();
+        }
+    };
 }
