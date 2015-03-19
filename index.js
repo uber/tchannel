@@ -266,6 +266,9 @@ TChannel.prototype.removePeer = function removePeer(hostPort, conn) {
     // objects... note how these current semantics can implicitly convert
     // an in socket to an out socket
     list.splice(index, 1);
+    if (!list.length) {
+        delete self.peers[hostPort];
+    }
 };
 
 TChannel.prototype.getPeers = function getPeers() {
