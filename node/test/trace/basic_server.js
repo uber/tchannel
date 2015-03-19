@@ -109,7 +109,7 @@ test('basic tracing test', function (assert) {
             var cleanspans = spans.map(function (item) {
                 return item.toJSON();
             });
-            validators.validate(assert, cleanspans, fixture);
+            validators.validateSpans(assert, cleanspans, fixture);
 
             assert.end();
             client.close();
