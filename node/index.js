@@ -712,14 +712,16 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
 
     self.clearTimeoutTimer();
 
-    self.emit('reset');
+    self.emit('reset', err);
 
     // requests that we've received we can delete, but these reqs may have started their
     //   own outgoing work, which is hard to cancel. By setting this.closing, we make sure
     //   that once they do finish that their callback will swallow the response.
     inOpKeys.forEach(function eachInOp(id) {
         // TODO: we could support an op.cancel opt-in callback
+        var op = self.inOps[id];
         delete self.inOps[id];
+        op.res.emit('error', err);
     });
 
     // for all outgoing requests, forward the triggering error to the user callback

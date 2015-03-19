@@ -53,27 +53,27 @@ test('Checksum: read/write', testRW.cases(Checksum.RW, [
 
 test('verify none checksum', function t(assert) {
     var csum = Checksum(Checksum.Types.None);
-    var good = csum.verify(parts[0], parts[1], parts[2]);
+    var good = csum.verify(parts);
     assert.equal(good, null, 'none expected to verify parts');
-    var bad = csum.verify(uparts[0], uparts[1], uparts[2]);
+    var bad = csum.verify(uparts);
     assert.equal(bad, null, 'none expected to accept anything');
     assert.end();
 });
 
 test('verify crc32 checksum', function t(assert) {
     var csum = Checksum(Checksum.Types.CRC32, CRC32Hash);
-    var good = csum.verify(parts[0], parts[1], parts[2]);
+    var good = csum.verify(parts);
     assert.equal(good, null, 'crc32 expected to verify parts');
-    var bad = csum.verify(uparts[0], uparts[1], uparts[2]);
+    var bad = csum.verify(uparts);
     assert.equal(bad && bad.type, 'tchannel.checksum', 'crc32 expected to fail');
     assert.end();
 });
 
 test('read and verify farm32 checksum', function t(assert) {
     var csum = Checksum(Checksum.Types.Farm32, Farm32Hash);
-    var good = csum.verify(parts[0], parts[1], parts[2]);
+    var good = csum.verify(parts);
     assert.equal(good, null, 'farm32 expected to verify parts');
-    var bad = csum.verify(uparts[0], uparts[1], uparts[2]);
+    var bad = csum.verify(uparts);
     assert.equal(bad && bad.type, 'tchannel.checksum', 'farm32 expected to fail');
     assert.end();
 });
