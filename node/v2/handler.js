@@ -53,6 +53,7 @@ function TChannelV2Handler(channel, options) {
         objectMode: true
     });
     self.channel = channel;
+    self.tracer = options.tracer;
     self.remoteHostPort = null; // filled in by identify message
     self.lastSentFrameId = 0;
 }
@@ -244,6 +245,7 @@ TChannelV2Handler.prototype.sendErrorFrame = function sendErrorFrame(req, codeSt
 TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest(options) {
     var self = this;
     var id = self.nextFrameId();
+    options.tracer = self.tracer;
     if (options.checksumType === undefined || options.checksumType === null) {
         options.checksumType = v2.Checksum.Types.FarmHash32;
     }
@@ -264,7 +266,8 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
         tracing: req.tracing,
         headers: {},
         checksumType: req.checksumType,
-        arg1: req.arg1
+        arg1: req.arg1,
+        tracer: self.tracer
     }, senders);
     return res;
 
@@ -278,10 +281,13 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
 };
 
 TChannelV2Handler.prototype.buildIncomingRequest = function buildIncomingRequest(reqFrame) {
+    var self = this;
+
     var req = TChannelIncomingRequest(reqFrame.id, {
+        tracer: self.tracer,
         id: reqFrame.id,
         ttl: reqFrame.ttl,
-        tracing: reqFrame.tracing,
+        tracing: reqFrame.body.tracing,
         service: reqFrame.service,
         headers: reqFrame.headers,
         checksumType: reqFrame.body.csum.type,

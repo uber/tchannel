@@ -43,12 +43,13 @@ var NoSuchEndpointError = TypedError({
     endpoint: null
 });
 
-function TChannelEndpointHandler(serviceName) {
+function TChannelEndpointHandler(serviceName, hostPort) {
     if (!(this instanceof TChannelEndpointHandler)) {
         return new TChannelEndpointHandler(serviceName);
     }
     var self = this;
     self.serviceName = serviceName;
+    self.hostPort = hostPort;
     self.endpoints = Object.create(null);
     self.type = null;
 }
@@ -81,6 +82,11 @@ TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, re
         }).message);
         return;
     }
+
+    if (res.span) {
+        res.span.name = name;
+    }
+
     handler(req, res);
 };
 
