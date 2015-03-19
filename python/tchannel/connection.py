@@ -58,10 +58,10 @@ class Connection(object):
         message = messages.PingRequestMessage()
         return self.frame_and_write(message)
 
-    def pong(self):
+    def pong(self, message_id):
         """Reply to a PING_REQ message with a PING_RES."""
         message = messages.PingResponseMessage()
-        return self.frame_and_write(message)
+        return self.frame_and_write(message, message_id=message_id)
 
     def wrap(self, callback):
         if callback:

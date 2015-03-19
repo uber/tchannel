@@ -44,7 +44,10 @@ class MyServer(tornado.tcpserver.TCPServer):
 
         print("Received message: %s" % context.message)
 
-        if context.message.arg_1:
+        if context.message.message_type == Types.PING_REQ:
+            connection.pong(context.message_id)
+
+        elif context.message.arg_1:
             response = CallResponseMessage()
             response.flags = 0
             response.code = 200
@@ -70,9 +73,6 @@ class MyServer(tornado.tcpserver.TCPServer):
                     message_id=context.message_id,
                 )
             )
-
-        elif context.message.message_type == Types.PING_REQ:
-            connection.pong()
 
         else:
             response = ErrorMessage()

@@ -83,8 +83,8 @@ def test_ping(tchannel_pair):
     """Validate the ping/pong exchange."""
     server, client = tchannel_pair
 
-    client.ping()
-    server.pong()
+    message_id = client.ping()
+    server.pong(message_id)
 
 
 def test_handle_calls(tchannel_pair):
