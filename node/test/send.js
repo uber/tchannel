@@ -158,7 +158,7 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
         }, testCase);
         return sendTest(testCase, assert);
     }), function onResults(err) {
-        assert.ifError(err);
+        assert.ifError(err, 'no errors from sending');
 
         var peersOne = one.getPeers();
         var peersTwo = two.getPeers();
@@ -194,10 +194,10 @@ function sendTest(testCase, assert) {
             var body = res.arg3;
             assert.ifError(err, testCase.name + ': no result error');
             if (!err) {
-                assert.ok(Buffer.isBuffer(head));
-                assert.ok(Buffer.isBuffer(body));
-                assert.equal(head ? String(head) : head, testCase.resHead);
-                assert.equal(body ? String(body) : body, testCase.resBody);
+                assert.ok(Buffer.isBuffer(head), testCase.name + ': got head buffer');
+                assert.ok(Buffer.isBuffer(body), testCase.name + ': got body buffer');
+                assert.equal(head ? String(head) : head, testCase.resHead, testCase.name + ': expected head content');
+                assert.equal(body ? String(body) : body, testCase.resBody, testCase.name + ': expected body content');
             }
             callback();
         }
