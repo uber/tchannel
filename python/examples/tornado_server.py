@@ -74,7 +74,6 @@ class MyServer(tornado.tcpserver.TCPServer):
                 )
             )
 
-
         else:
             response = ErrorMessage()
             response.code = 0x06
