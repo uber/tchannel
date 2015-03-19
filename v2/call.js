@@ -27,6 +27,10 @@ var Checksum = require('./checksum');
 var header = require('./header');
 var Tracing = require('./tracing');
 
+var Flags = {
+    Fragment: 0x01
+};
+
 module.exports.Request = CallRequest;
 module.exports.Response = CallResponse;
 
@@ -62,9 +66,7 @@ function CallRequest(flags, ttl, tracing, service, headers, csum, arg1, arg2, ar
 
 CallRequest.TypeCode = 0x03;
 
-CallRequest.Flags = {
-    Fragment: 0x01
-};
+CallRequest.Flags = Flags;
 
 CallRequest.RW = bufrw.Struct(CallRequest, [
     {call: {writeInto: prepareWrite}},
@@ -103,9 +105,7 @@ function CallResponse(flags, code, tracing, headers, csum, arg1, arg2, arg3) {
 
 CallResponse.TypeCode = 0x04;
 
-CallResponse.Flags = {
-    Fragment: 0x01
-};
+CallResponse.Flags = CallRequest.Flags;
 
 CallResponse.Codes = {
     OK: 0x00,
