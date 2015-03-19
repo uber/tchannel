@@ -40,9 +40,6 @@ function validateSpans(assert, actual, expected) {
         expectedById[mapSpanToUniqueId(item)] = item;
     });
 
-    console.dir(actualById);
-    console.dir(expectedById);
-
     module.exports.validate(assert, actualById, expectedById);
 };
 
