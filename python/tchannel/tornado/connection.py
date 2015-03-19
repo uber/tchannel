@@ -12,6 +12,7 @@ from ..messages.common import PROTOCOL_VERSION
 
 from tornado import gen
 from tornado.iostream import StreamClosedError
+from tchannel.messages import CallResponseMessage
 
 
 class TornadoConnection(object):
@@ -24,6 +25,7 @@ class TornadoConnection(object):
         self.remote_host = None
         self.remote_process_name = None
         self.requested_version = None
+        self.response = CallResponseMessage()
         connection.set_close_callback(self.on_close)
 
     def next_message_id(self):
@@ -63,7 +65,6 @@ class TornadoConnection(object):
     @gen.coroutine
     def frame_and_write(self, message, message_id=None):
         message_id = message_id or self.next_message_id()
-
         payload = messages.RW[message.message_type].write(
             message, BytesIO()
         ).getvalue()
@@ -141,3 +142,21 @@ class TornadoConnection(object):
     def pong(self, message_id=None):
         message = messages.PingResponseMessage()
         yield self.frame_and_write(message, message_id=message_id)
+
+    def write_headers(self, start_line, headers, chunk=None, callback=None):
+        self.response.headers = headers or {'currently': 'broken'}
+
+    def write(self, chunk, callback=None):
+        self.response.arg_3 += chunk
+        # TODO callback implementation
+
+    def set_close_callback(self, callback):
+        # TODO implement close callback
+        pass
+
+    @gen.coroutine
+    def finish(self):
+        """ write response """
+        self.response.arg_1 = "from inbound"
+        self.response.arg_2 = "inbound"
+        yield self.frame_and_write(self.response)
