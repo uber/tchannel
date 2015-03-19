@@ -19,7 +19,7 @@ def test_tcp_ping_pong(server_manager):
 
         for i in range(1000):
             conn.ping()
-            assert resp == next(conn).message
+            assert resp == conn.await().message
 
 
 @pytest.mark.gen_test

@@ -67,7 +67,7 @@ def test_handshake_with_callback(tchannel_pair, dummy_headers):
 
     client.initiate_handshake(headers=dummy_headers)
     server.await_handshake(headers=dummy_headers)
-    client.await_handshake_reply(callback=lambda x: None)
+    client.await_handshake_reply()
 
 
 def test_handshake_pong(tchannel_pair):
@@ -105,7 +105,7 @@ def test_finish_connection(tchannel_pair):
     """Ensure we break out of the endless loop when client closes."""
     server, client = tchannel_pair
     client.ping()
-    client._connection._connection.close()
+    client.connection.close()
 
     def _handle(data, connection):
         pass

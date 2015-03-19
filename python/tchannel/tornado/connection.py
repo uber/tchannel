@@ -49,13 +49,18 @@ class TornadoConnection(object):
         self.awaiting_responses = {}
 
     def extract_handshake_headers(self, message):
-        try:
-            self.remote_host = message.headers[message.HOST_PORT]
-            self.remote_process_name = message.headers[message.PROCESS_NAME]
-        except KeyError as e:
+        if not message.host_port:
             raise exceptions.InvalidMessageException(
-                'Missing required header: %s' % e
+                'Missing required header: host_port'
             )
+
+        if not message.process_name:
+            raise exceptions.InvalidMessageException(
+                'Missing required header: process_name'
+            )
+
+        self.remote_host = message.host_port
+        self.remote_process_name = message.process_name
         self.requested_version = message.version
 
     def await(self):
