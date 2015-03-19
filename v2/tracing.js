@@ -43,13 +43,11 @@ Tracing.RW = bufrw.Struct(Tracing, [
     {name: 'flags', rw: bufrw.UInt8}
 ]);
 
-Tracing.emptyTracing = {
-    spanid: new Buffer(8),
-    parentid: new Buffer(8),
-    traceid: new Buffer(8),
-    flags: 0
-};
+var emptySpanId = Buffer(8);
+var emptyParentId = Buffer(8);
+var emptyTraceId = Buffer(8);
+emptySpanId.fill(0);
+emptyParentId.fill(0);
+emptyTraceId.fill(0);
 
-Tracing.emptyTracing.spanid.fill(0);
-Tracing.emptyTracing.parentid.fill(0);
-Tracing.emptyTracing.traceid.fill(0);
+Tracing.emptyTracing = Tracing(emptySpanId, emptyParentId, emptyTraceId, 0);
