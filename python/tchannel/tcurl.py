@@ -86,8 +86,9 @@ def parse_args(args=None):
     parser.add_argument(
         "--listen",
         dest="in_port",
-        default="4040",
-        help="port listened by inbound server"
+        default=None,
+        type=int,
+        help="Port for inbound connections"
     )
 
     args = parser.parse_args(args)
@@ -142,14 +143,17 @@ def multi_tcurl(
     hostports,
     headers,
     bodies,
-    in_port=4040,
+    in_port=None,
     profile=False,
     rps=None,
     quiet=False,
 ):
     app = make_app()
     client = TChannel(app=app)
-    client.make_in_connection(in_port)
+
+    if in_port:
+        client.make_in_connection(in_port)
+
     requests = getattr(itertools, 'izip', zip)(hostports, headers, bodies)
     futures = []
 
@@ -219,7 +223,7 @@ def timing(profile=False):
     stop = time.time()
 
     # TODO: report errors/successes
-    log.debug(
+    log.info(
         "took %.2fs for %s requests (%.2f rps)",
         stop - start,
         info['requests'],
@@ -240,6 +244,7 @@ def main():  # pragma: no cover
         log.setLevel(logging.DEBUG)
 
     tornado.httputil.HTTPServerRequest = HttpRequest
+
     multi_tcurl(
         args.host,
         args.headers,
@@ -249,7 +254,11 @@ def main():  # pragma: no cover
         rps=args.rps,
         quiet=args.quiet
     )
-    tornado.ioloop.IOLoop.instance().start()
+
+    if args.in_port:
+        tornado.ioloop.IOLoop.instance().start()
+    else:
+        tornado.ioloop.IOLoop.instance().run_sync(lambda: None)
 
 
 if __name__ == '__main__':  # pragma: no cover
