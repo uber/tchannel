@@ -6,6 +6,19 @@ network multiplexing and framing protocol for RPC
 
 NOTE: `master:golang` is **not yet stable**
 
+## Getting started
+
+tchannel uses godep to manage dependencies.  To get started:
+
+```bash
+mkdir -p $GOPATH/github.com/uber
+cd $GOPATH/github.com/uber && git clone git@github.com/uber/tchannel.git
+go get github.com/tool/godep
+cd $GOPATH/github.com/uber/tchannel/golang
+godep restore
+make
+```
+
 ## Example
 
 ```go
