@@ -10,11 +10,11 @@ from tchannel.tornado.timeout import timeout
 @pytest.mark.gen_test
 def test_timeout():
 
-    sleep_time = 0.001
+    sleep_time = 0.01
 
     @tornado.gen.coroutine
     def slow_method():
-        yield tornado.gen.sleep(sleep_time * 2)
+        yield tornado.gen.sleep(sleep_time * 10)
         raise tornado.gen.Return('foo')
 
     slow_future = slow_method()
