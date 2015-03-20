@@ -20,45 +20,29 @@
 
 'use strict';
 
+var bufrw = require('bufrw');
 var inherits = require('util').inherits;
-var Readable = require('stream').Readable;
+var IterStream = require('./iter_stream');
 
 function LCGStream(options) {
     if (!(this instanceof LCGStream)) {
         return new LCGStream(options);
     }
     var self = this;
-    Readable.call(self);
-    self._limit = options.limit || Math.pow(2, 16); // enough for anyone
-    self._cur = 0;
+    IterStream.call(self, bufrw.UInt32BE, options);
+
     // linear congruential generator w/ lol settings
-    self._rng = {
-        last: options.seed || Math.floor(Math.pow(2, 32) * Math.random()),
-        m: Math.pow(2, 32),
-        a: 214013,
-        c: 253101
-    };
-
+    self._last = options.seed || Math.floor(Math.pow(2, 32) * Math.random());
+    self._mod = Math.pow(2, 32);
+    self._mul = 214013;
+    self._add = 253101;
 }
-inherits(LCGStream, Readable);
+inherits(LCGStream, IterStream);
 
-LCGStream.prototype._read = function _read(size) {
+LCGStream.prototype._next = function _next() {
     var self = this;
-    var remain = Math.max(0, self._limit - self._cur);
-    size = Math.min(remain, size);
-    if (!size) {
-        self.push(null);
-        return;
-    }
-    var count = Math.floor(size / 4);
-    var buf = new Buffer(4 * count);
-    for (var i = 0, o = 0; i < count; i++, o += 4) {
-        var n = (self._rng.a * self._rng.last + self._rng.c) % self._rng.m;
-        self._rng.last = n;
-        buf.writeUInt32BE(n, o);
-    }
-    self.push(buf);
-    self._cur += buf.length;
+    self._last = (self._mul * self._last + self._add) % self._mod;
+    return self._last;
 };
 
 module.exports = LCGStream;
