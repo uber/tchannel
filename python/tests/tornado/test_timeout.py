@@ -2,26 +2,23 @@ from __future__ import absolute_import
 
 import pytest
 import tornado.gen
-import tornado.ioloop
-import tornado.testing
 
+from tchannel.exceptions import TimeoutException
 from tchannel.tornado.timeout import timeout
 
 
-class TimeoutTestCase(tornado.testing.AsyncTestCase):
+@pytest.mark.gen_test
+def test_timeout():
 
-    @pytest.fixture(autouse=True)
-    def make_server_client(self, tornado_pair):
-        self.server, self.client = tornado_pair
+    sleep_time = 0.001
 
-    def get_new_ioloop(self):
-        return tornado.ioloop.IOLoop.instance()
+    @tornado.gen.coroutine
+    def slow_method():
+        yield tornado.gen.sleep(sleep_time * 2)
+        raise tornado.gen.Return('foo')
 
-    @tornado.testing.gen_test
-    def test_server_timeout(self):
-        with timeout(self.client, seconds=0.001):
-            future = self.client.initiate_handshake(headers={})
-            yield tornado.gen.sleep(0.001)
-            yield future
+    slow_future = slow_method()
 
-        assert self.client.closed
+    with timeout(slow_future, sleep_time):
+        with pytest.raises(TimeoutException):
+            yield slow_future
