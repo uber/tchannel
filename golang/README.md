@@ -8,15 +8,44 @@ NOTE: `master:golang` is **not yet stable**
 
 ## Getting started
 
-tchannel uses godep to manage dependencies.  To get started:
+Get Mercurial and Golang from your package manager of choice.
 
 ```bash
-mkdir -p $GOPATH/github.com/uber
-cd $GOPATH/github.com/uber && git clone git@github.com/uber/tchannel.git
-go get github.com/tool/godep
-cd $GOPATH/github.com/uber/tchannel/golang
+brew install hg
+brew install golang
+mkdir -p ~/golang/src
+```
+
+Set up your environment for your shell of choice.
+
+```bash
+export GOPATH="${HOME}/golang"
+export PATH="${PATH}":"${GOPATH}"/bin
+```
+
+TChannel uses godep to manage dependencies.  To get started:
+
+```bash
+mkdir -p $GOPATH/src/github.com/uber
+cd $GOPATH/src/github.com/uber && git clone git@github.com/uber/tchannel.git
+go get github.com/tools/godep
+cd $GOPATH/src/github.com/uber/tchannel/golang
 godep restore
 make
+```
+
+To try out.
+
+```bash
+cd build/examples
+./server
+```
+
+Note host:port then run client.
+
+```bash
+cd build/examples
+./client -o echo -2 hi -3 hi -p localhost:10500 -s TestService
 ```
 
 ## Example
