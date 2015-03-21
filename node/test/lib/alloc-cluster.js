@@ -33,23 +33,21 @@ module.exports = allocCluster;
 function allocCluster(n, opts) {
     opts = opts || {};
 
-    var ready = CountedReadySignal(n);
-
     var host = 'localhost';
     var logger = debugLogtron('tchannel');
-    var ret = {
+    var cluster = {
         logger: logger,
         hosts: new Array(n),
         channels: new Array(n),
         destroy: destroy,
-        ready: ready
+        ready: CountedReadySignal(n)
     };
 
     for (var i=0; i<n; i++) {
         createChannel(i);
     }
 
-    return ret;
+    return cluster;
 
     function createChannel(i) {
         var chan = TChannel(extend({
@@ -57,20 +55,20 @@ function allocCluster(n, opts) {
         }, opts));
         var port = opts.listen && opts.listen[i] || 0;
         chan.listen(port, host);
-        ret.channels[i] = chan;
+        cluster.channels[i] = chan;
         chan.once('listening', chanReady);
 
         function chanReady() {
             var port = chan.address().port;
-            ret.hosts[i] = util.format('%s:%s', host, port);
-            ready.signal();
+            cluster.hosts[i] = util.format('%s:%s', host, port);
+            cluster.ready.signal(cluster);
         }
     }
 
     function destroy(cb) {
-        parallel(ret.channels.map(function(chan) {
+        parallel(cluster.channels.map(function(chan) {
             return function(done) {
-                chan.quit(done);
+                if (!chan.destroyed) chan.quit(done);
             };
         }), cb);
     }
@@ -81,8 +79,7 @@ allocCluster.test = function testCluster(desc, n, opts, t) {
         t = opts;
         opts = {};
     }
-    var cluster = allocCluster(n, opts);
-    cluster.ready(function clusterReady() {
+    allocCluster(n, opts).ready(function clusterReady(cluster) {
         test(desc, function t2(assert) {
             assert.once('end', function testEnded() {
                 cluster.destroy();
