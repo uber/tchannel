@@ -37,7 +37,7 @@ function allocCluster(n, opts) {
 
     var host = 'localhost';
     var logger = debugLogtron('tchannel');
-    var ret = {
+    var cluster = {
         logger: logger,
         hosts: new Array(n),
         channels: new Array(n),
@@ -49,7 +49,7 @@ function allocCluster(n, opts) {
         createChannel(i);
     }
 
-    return ret;
+    return cluster;
 
     function createChannel(i) {
         var chan = TChannel(extend({
@@ -57,18 +57,18 @@ function allocCluster(n, opts) {
         }, opts));
         var port = opts.listen && opts.listen[i] || 0;
         chan.listen(port, host);
-        ret.channels[i] = chan;
+        cluster.channels[i] = chan;
         chan.once('listening', chanReady);
 
         function chanReady() {
             var port = chan.address().port;
-            ret.hosts[i] = util.format('%s:%s', host, port);
-            ready.signal();
+            cluster.hosts[i] = util.format('%s:%s', host, port);
+            cluster.ready.signal();
         }
     }
 
     function destroy(cb) {
-        parallel(ret.channels.map(function(chan) {
+        parallel(cluster.channels.map(function(chan) {
             return function(done) {
                 chan.quit(done);
             };
