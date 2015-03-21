@@ -63,7 +63,7 @@ function allocCluster(n, opts) {
         function chanReady() {
             var port = chan.address().port;
             cluster.hosts[i] = util.format('%s:%s', host, port);
-            cluster.ready.signal();
+            cluster.ready.signal(cluster);
         }
     }
 
