@@ -79,8 +79,7 @@ allocCluster.test = function testCluster(desc, n, opts, t) {
         t = opts;
         opts = {};
     }
-    var cluster = allocCluster(n, opts);
-    cluster.ready(function clusterReady() {
+    allocCluster(n, opts).ready(function clusterReady(cluster) {
         test(desc, function t2(assert) {
             assert.once('end', function testEnded() {
                 cluster.destroy();
