@@ -68,7 +68,7 @@ function allocCluster(n, opts) {
     function destroy(cb) {
         parallel(cluster.channels.map(function(chan) {
             return function(done) {
-                chan.quit(done);
+                if (!chan.destroyed) chan.quit(done);
             };
         }), cb);
     }
