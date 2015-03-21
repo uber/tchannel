@@ -33,8 +33,6 @@ module.exports = allocCluster;
 function allocCluster(n, opts) {
     opts = opts || {};
 
-    var ready = CountedReadySignal(n);
-
     var host = 'localhost';
     var logger = debugLogtron('tchannel');
     var cluster = {
@@ -42,7 +40,7 @@ function allocCluster(n, opts) {
         hosts: new Array(n),
         channels: new Array(n),
         destroy: destroy,
-        ready: ready
+        ready: CountedReadySignal(n)
     };
 
     for (var i=0; i<n; i++) {
