@@ -24,6 +24,7 @@ var TypedError = require('error/typed');
 var inherits = require('util').inherits;
 var Transform = require('stream').Transform;
 var hex = require('hexer');
+var util = require('util');
 
 var BrokenReaderStateError = TypedError({
     type: 'tchannel.broken-reader-state',
@@ -45,11 +46,14 @@ function ChunkSpy(sink, options) {
     options = options || {};
     Transform.call(this, options);
     var self = this;
+    self.prefix = options.prefix;
     self.hex = hex.Transform(options);
     self.frameLengthSize = options.frameLengthSize || 2;
     self.buffer = Buffer(0);
+    self.frameCount = 0;
     self.expecting = self.frameLengthSize;
     self.state = States.PendingLength;
+    self.sink = sink;
     self.hex.pipe(sink);
     switch (self.frameLengthSize) {
         case 1:
@@ -85,6 +89,7 @@ ChunkSpy.prototype._transform = function _transform(chunk, encoding, callback) {
                     self.expecting = self._readLength.call(self.buffer, 0);
                     self.state = States.Seeking;
                     self.hex.reset();
+                    self.sink.write(util.format('%sframe %s\n', self.prefix, ++self.frameCount));
                 }
                 break;
             case States.Seeking:
