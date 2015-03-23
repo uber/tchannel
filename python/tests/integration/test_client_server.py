@@ -4,6 +4,8 @@ import pytest
 
 import tchannel.messages as tmessage
 from tchannel import tcurl
+from tchannel.exceptions import TChannelApplicationException
+from tchannel.outgoing import OutgoingTChannel
 from tchannel.tornado import TChannel
 
 
@@ -19,7 +21,41 @@ def test_tcp_ping_pong(server_manager):
 
         for i in range(1000):
             conn.ping()
-            assert resp == next(conn).message
+            assert resp == conn.await().message
+
+
+def test_outgoing_tchannel(server_manager, call_response):
+    endpoint = b'tchanneltest'
+    call_response.arg_1 = endpoint
+
+    port = server_manager.port
+    host_port = 'localhost:' + str(port)
+
+    with OutgoingTChannel('test_outgoing_tchannel') as chan:
+        chan.request(host_port).handshake()
+        server_manager.expect_call_request(endpoint).and_return(call_response)
+
+        response = chan.request(host_port).send(endpoint, None, None)
+
+        assert response.arg_1 == call_response.arg_1
+        assert response.arg_3 == call_response.arg_3
+
+
+def test_outgoing_tchannel_exception(server_manager, call_response):
+    endpoint = b'tchanneltest'
+    call_response.arg_1 = endpoint
+    call_response.code = 1
+
+    port = server_manager.port
+    host_port = 'localhost:' + str(port)
+
+    with OutgoingTChannel('test_outgoing_tchannel_exception') as chan:
+        chan.request(host_port).handshake()
+        with pytest.raises(TChannelApplicationException):
+            server_manager.expect_call_request(
+                endpoint
+            ).and_return(call_response)
+            chan.request(host_port).send(endpoint, None, None)
 
 
 @pytest.mark.gen_test

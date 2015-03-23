@@ -18,6 +18,7 @@ from ..messages import CallResponseMessage
 from ..messages.types import Types
 from ..messages.common import PROTOCOL_VERSION
 
+from tornado.concurrent import Future
 
 log = logging.getLogger('tchannel')
 
@@ -48,38 +49,47 @@ class TornadoConnection(object):
         self.awaiting_responses = {}
 
     def extract_handshake_headers(self, message):
-        try:
-            self.remote_host = message.headers[message.HOST_PORT]
-            self.remote_process_name = message.headers[message.PROCESS_NAME]
-        except KeyError as e:
+        if not message.host_port:
             raise exceptions.InvalidMessageException(
-                'Missing required header: %s' % e
+                'Missing required header: host_port'
             )
+
+        if not message.process_name:
+            raise exceptions.InvalidMessageException(
+                'Missing required header: process_name'
+            )
+
+        self.remote_host = message.host_port
+        self.remote_process_name = message.process_name
         self.requested_version = message.version
 
-    @gen.coroutine
     def await(self):
+        future = Future()
+
+        def on_body(size, body):
+            f = frame.frame_rw.read(BytesIO(body), size=size)
+            message_rw = messages.RW[f.header.message_type]
+            message = message_rw.read(BytesIO(f.payload))
+            future.set_result(Context(f.header.message_id, message))
+
+        def on_read_size(size_bytes):
+            size = frame.frame_rw.size_rw.read(BytesIO(size_bytes))
+            return self.connection.read_bytes(
+                size - size_width,
+                callback=(lambda body: on_body(size, body))
+            )
+
         size_width = frame.frame_rw.size_rw.width()
-        try:
-            size_bytes = yield self.connection.read_bytes(size_width)
-        except iostream.StreamClosedError:
-            raise gen.Return(None)
+        self.connection.read_bytes(size_width, callback=on_read_size)
 
-        size = frame.frame_rw.size_rw.read(BytesIO(size_bytes))
-        body = yield self.connection.read_bytes(size - size_width)
+        return future
 
-        f = frame.frame_rw.read(BytesIO(body), size=size)
-        message_rw = messages.RW[f.header.message_type]
-
-        message = message_rw.read(BytesIO(f.payload))
-        raise gen.Return(Context(f.header.message_id, message))
-
-    @gen.coroutine
     def frame_and_write(self, message, message_id=None):
         message_id = message_id or self.next_message_id()
         payload = messages.RW[message.message_type].write(
             message, BytesIO()
         ).getvalue()
+
         f = frame.Frame(
             header=frame.FrameHeader(
                 message_type=message.message_type,
@@ -89,14 +99,17 @@ class TornadoConnection(object):
         )
 
         body = frame.frame_rw.write(f, BytesIO()).getvalue()
-        try:
-            yield self.connection.write(body)
-            raise gen.Return(message_id)
-        except iostream.StreamClosedError:
-            raise gen.Return(None)
+        return self.connection.write(body)
 
     def handle_calls(self, handler):
-        return self.await(callback=self.wrap(handler))
+        future = Future()
+
+        def handle(f):
+            handler(f.result(), self)
+            future.set_result(None)
+
+        self.await().add_done_callback(handle)
+        return future
 
     def wrap(self, f):
         return functools.partial(f, connection=self)
@@ -104,13 +117,12 @@ class TornadoConnection(object):
     def close(self):
         return self.connection.close()
 
-    @gen.coroutine
     def initiate_handshake(self, headers):
         message = messages.InitRequestMessage(
             version=PROTOCOL_VERSION,
             headers=headers
         )
-        yield self.frame_and_write(message)
+        return self.frame_and_write(message)
 
     @gen.coroutine
     def await_handshake_reply(self):
@@ -145,15 +157,13 @@ class TornadoConnection(object):
 
         raise gen.Return(self)
 
-    @gen.coroutine
     def ping(self, message_id=None):
         message = messages.PingRequestMessage()
-        yield self.frame_and_write(message, message_id=message_id)
+        return self.frame_and_write(message, message_id=message_id)
 
-    @gen.coroutine
     def pong(self, message_id=None):
         message = messages.PingResponseMessage()
-        yield self.frame_and_write(message, message_id=message_id)
+        return self.frame_and_write(message, message_id=message_id)
 
     @classmethod
     @gen.coroutine
@@ -219,9 +229,8 @@ class TornadoConnection(object):
         # TODO implement close callback
         pass
 
-    @gen.coroutine
     def finish(self):
         """ write response """
         self.response.arg_1 = "from inbound"
         self.response.arg_2 = "inbound"
-        yield self.frame_and_write(self.response)
+        return self.frame_and_write(self.response)

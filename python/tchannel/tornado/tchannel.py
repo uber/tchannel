@@ -21,6 +21,7 @@ class TChannel(object):
     def __init__(self, app=None):
         self.peers = {}
         self.inbound_server = InboundServer(app)
+        self.endpoints = {}
 
     @tornado.gen.coroutine
     def add_peer(self, hostport):
@@ -51,6 +52,22 @@ class TChannel(object):
 
     def request(self, hostport):
         return TChannelClientOperation(hostport, self)
+
+    def route(self, rule, **opts):
+        def decorator(handler):
+            self.register_handler(rule, handler, **opts)
+            return handler
+
+        return decorator
+
+    def register_handler(self, rule, handler, **opts):
+        self.endpoints[rule] = {
+            "handler": handler,
+            "opts": opts
+        }
+
+    def dispatch_request(self, rule):
+        return self.endpoints.get(rule, None)
 
 
 class TChannelClientOperation(object):
