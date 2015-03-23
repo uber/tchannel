@@ -83,6 +83,16 @@ CallRequest.RW = bufrw.Struct(CallRequest, [
     {call: {readFrom: readGuard}}
 ]);
 
+CallRequest.prototype.updateChecksum = function updateChecksum() {
+    var self = this;
+    return self.csum.update(self.args);
+};
+
+CallRequest.prototype.verifyChecksum = function verifyChecksum() {
+    var self = this;
+    return self.csum.verify(self.args);
+};
+
 // flags:1 code:1 tracing:24 traceflags:1 nh:1 (hk~1 hv~1){nh} csumtype:1 (csum:4){0,1} (arg~2)*
 function CallResponse(flags, code, tracing, headers, csum, arg1, arg2, arg3) {
     if (!(this instanceof CallResponse)) {
@@ -126,13 +136,23 @@ CallResponse.RW = bufrw.Struct(CallResponse, [
     {call: {readFrom: readGuard}}
 ]);
 
+CallResponse.prototype.updateChecksum = function updateChecksum() {
+    var self = this;
+    return self.csum.update(self.args);
+};
+
+CallResponse.prototype.verifyChecksum = function verifyChecksum() {
+    var self = this;
+    return self.csum.verify(self.args);
+};
+
 function prepareWrite(body, buffer, offset) {
     if (body.flags & CallRequest.Flags.Fragment) {
         return WriteResult.error(
             new Error('streaming call not implemented'),
             offset);
     }
-    body.csum.update(body.args);
+    body.updateChecksum();
     return WriteResult.just(offset);
 }
 
@@ -142,7 +162,7 @@ function readGuard(body, buffer, offset) {
             new Error('streaming call not implemented'),
             offset);
     }
-    var err = body.csum.verify(body.args);
+    var err = body.verifyChecksum();
     if (err) {
         return ReadResult.error(err, offset);
     }
