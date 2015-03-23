@@ -65,11 +65,14 @@ function TChannelIncomingResponse(id, options) {
 
 inherits(TChannelIncomingResponse, EventEmitter);
 
-function TChannelOutgoingRequest(id, options, sendFrame) {
+function TChannelOutgoingRequest(id, options) {
     if (!(this instanceof TChannelOutgoingRequest)) {
-        return new TChannelOutgoingRequest(id, options, sendFrame);
+        return new TChannelOutgoingRequest(id, options);
     }
     options = options || {};
+    if (!options.sendFrame) {
+        throw new Error('missing sendFrame');
+    }
     var self = this;
     EventEmitter.call(self);
     self.id = id || 0;
@@ -78,7 +81,7 @@ function TChannelOutgoingRequest(id, options, sendFrame) {
     self.service = options.service || '';
     self.headers = options.headers || {};
     self.checksumType = options.checksumType || 0;
-    self.sendFrame = sendFrame;
+    self.sendFrame = options.sendFrame;
     self.sent = false;
 }
 
@@ -91,7 +94,7 @@ TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callbac
         throw new Error('request already sent');
     }
     self.sent = true;
-    self.sendFrame(
+    self.sendFrame.callRequest(
         arg1 ? Buffer(arg1) : null,
         arg2 ? Buffer(arg2) : null,
         arg3 ? Buffer(arg3) : null);
