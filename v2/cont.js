@@ -54,6 +54,44 @@ CallRequestCont.RW = bufrw.Struct(CallRequestCont, {
     args: ArgsRW(bufrw.buf2) // (arg~2)+
 });
 
+CallRequestCont.prototype.splitArgs = function splitArgs(args, maxSize) {
+    var self = this;
+    // assert not self.args
+    var lenRes = self.constructor.RW.byteLength(self);
+    if (lenRes.err) throw lenRes.err;
+    var maxBodySize = maxSize - lenRes.length;
+    var remain = maxBodySize;
+    var ret = [];
+    var isLast = !(self.flags & Flags.Fragment);
+    self.flags |= Flags.Fragment;
+    var argSize = 2;
+
+    while (args.length) {
+        var first = [];
+        for (var i = 0; i < args.length; i++) {
+            var argLength = argSize + args[i].length;
+            if (argLength <= remain) {
+                first.push(args[i]);
+                remain -= argLength;
+            } else {
+                first.push(args[i].slice(0, remain - argSize));
+                args = [args[i].slice(remain - argSize)].concat(args.slice(i+1));
+                break;
+            }
+        }
+        self.args = first;
+        ret.push(self);
+        if (i < args.length) {
+            self = new self.constructor(self.flags | Flags.Fragment, self.csum.type);
+        } else {
+            break;
+        }
+    }
+    if (isLast) ret[ret.length - 1].flags &= ~ Flags.Fragment;
+
+    return ret;
+};
+
 CallRequestCont.prototype.updateChecksum = function updateChecksum(prior) {
     var self = this;
     return self.csum.update(self.args, prior);
@@ -89,6 +127,8 @@ CallResponseCont.RW = bufrw.Struct(CallResponseCont, {
     csum: Checksum.RW,       // csumtype:1 (csum:4){0},1}
     args: ArgsRW(bufrw.buf2) // (arg~2)+
 });
+
+CallResponseCont.prototype.splitArgs = CallRequestCont.prototype.splitArgs;
 
 CallResponseCont.prototype.updateChecksum = function updateChecksum(prior) {
     var self = this;

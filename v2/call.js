@@ -35,7 +35,6 @@ var Flags = {
 module.exports.Request = CallRequest;
 module.exports.Response = CallResponse;
 
-// TODO: need to support fragmentation and continuation
 // TODO: validate transport header names?
 // TODO: Checksum-like class for tracing
 
@@ -61,6 +60,8 @@ function CallRequest(flags, ttl, tracing, service, headers, csum, args) {
     self.args = args || [];
 }
 
+CallRequest.Cont = require('./cont').RequestCont;
+
 CallRequest.TypeCode = 0x03;
 
 CallRequest.Flags = Flags;
@@ -76,6 +77,43 @@ CallRequest.RW = bufrw.Struct(CallRequest, [
     {name: 'args', rw: ArgsRW(bufrw.buf2)},      // (arg~2)*
     {call: {readFrom: readGuard}}
 ]);
+
+CallRequest.prototype.splitArgs = function splitArgs(args, maxSize) {
+    var self = this;
+    // assert not self.args
+    var lenRes = self.constructor.RW.byteLength(self);
+    if (lenRes.err) throw lenRes.err;
+    var maxBodySize = maxSize - lenRes.length;
+    var remain = maxBodySize;
+    var first = [];
+    var argSize = 2;
+
+    for (var i = 0; i < args.length; i++) {
+        var argLength = argSize + args[i].length;
+        if (argLength < remain) {
+            first.push(args[i]);
+            remain -= argLength;
+        } else {
+            first.push(args[i].slice(0, remain - argSize));
+            args = [args[i].slice(remain - argSize)].concat(args.slice(i));
+            break;
+        }
+    }
+
+    self.args = first;
+    var ret = [self];
+
+    if (i < args.length) {
+        var isLast = !(self.flags & CallRequest.Flags.Fragment);
+        self.flags |= Flags.Fragment;
+        var cont = self.constructor.Cont(self.flags, self.csum.type);
+        ret = cont.splitArgs(args);
+        ret.unshift(self);
+        if (isLast) ret[ret.length - 1].flags &= ~ CallRequest.Flags.Fragment;
+    }
+
+    return ret;
+};
 
 CallRequest.prototype.updateChecksum = function updateChecksum() {
     var self = this;
@@ -106,6 +144,8 @@ function CallResponse(flags, code, tracing, headers, csum, args) {
     self.args = args || [];
 }
 
+CallResponse.Cont = require('./cont').ResponseCont;
+
 CallResponse.TypeCode = 0x04;
 
 CallResponse.Flags = CallRequest.Flags;
@@ -125,6 +165,8 @@ CallResponse.RW = bufrw.Struct(CallResponse, [
     {name: 'args', rw: ArgsRW(bufrw.buf2)},      // (arg~2)*
     {call: {readFrom: readGuard}}
 ]);
+
+CallResponse.prototype.splitArgs = CallRequest.prototype.splitArgs;
 
 CallResponse.prototype.updateChecksum = function updateChecksum() {
     var self = this;
