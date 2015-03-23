@@ -24,10 +24,11 @@ var TypedError = require('error/typed');
 var Duplex = require('stream').Duplex;
 var util = require('util');
 
-var TChannelOutgoingRequest = require('../reqres').OutgoingRequest;
-var TChannelOutgoingResponse = require('../reqres').OutgoingResponse;
-var TChannelIncomingRequest = require('../reqres').IncomingRequest;
-var TChannelIncomingResponse = require('../reqres').IncomingResponse;
+var reqres = require('../reqres');
+var TChannelOutgoingRequest = reqres.OutgoingRequest;
+var TChannelOutgoingResponse = reqres.OutgoingResponse;
+var TChannelIncomingRequest = reqres.IncomingRequest;
+var TChannelIncomingResponse = reqres.IncomingResponse;
 var v2 = require('./index');
 
 module.exports = TChannelV2Handler;
