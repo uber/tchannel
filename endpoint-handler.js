@@ -20,6 +20,7 @@
 
 'use strict';
 
+var parallel = require('run-parallel');
 var TypedError = require('error/typed');
 
 var EndpointAlreadyDefinedError = TypedError({
@@ -72,16 +73,30 @@ TChannelEndpointHandler.prototype.register = function register(name, handler) {
 
 TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, res) {
     var self = this;
-    var name = String(req.arg1);
-    var handler = self.endpoints[name];
-    if (!handler) {
-        res.sendNotOk(null, NoSuchEndpointError({
-            service: self.serviceName,
-            endpoint: name
-        }).message);
-        return;
-    }
-    handler(req, res);
+    // TODO: waterfall
+    req.arg1.onValueReady(function arg1Ready(err, arg1) {
+        if (err) throw err; // TODO: protocol error, respond with error frame
+        var name = String(arg1);
+        var handler = self.endpoints[name];
+        if (!handler) {
+            res.sendNotOk(null, NoSuchEndpointError({
+                service: self.serviceName,
+                endpoint: name
+            }).message);
+            return;
+        }
+        if (handler.canStream) {
+            handler(req, res);
+        } else {
+            parallel({
+                arg2: req.arg2.onValueReady,
+                arg3: req.arg3.onValueReady
+            }, function argsDone(err, args) {
+                if (err) throw err; // TODO: protocol error, respond with error frame
+                else handler(req, res, args.arg2, args.arg3);
+            });
+        }
+    });
 };
 
 module.exports = TChannelEndpointHandler;
