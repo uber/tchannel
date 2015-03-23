@@ -350,15 +350,15 @@ TChannel.prototype.send = function send(options, arg1, arg2, arg3, callback) {
 };
 /* jshint maxparams:4 */
 
-TChannel.prototype.request = function send(options) {
+TChannel.prototype.request = function request(options) {
     var self = this;
     if (self.destroyed) {
-        throw new Error('cannot send() to destroyed tchannel'); // TODO typed error
+        throw new Error('cannot request() to destroyed tchannel'); // TODO typed error
     }
 
     var dest = options.host;
     if (!dest) {
-        throw new Error('cannot send() without options.host'); // TODO typed error
+        throw new Error('cannot request() without options.host'); // TODO typed error
     }
 
     var peer = self.getOutConnection(dest);
