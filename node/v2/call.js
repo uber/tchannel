@@ -21,6 +21,7 @@
 'use strict';
 
 var bufrw = require('bufrw');
+var ArgsRW = require('./args');
 var WriteResult = bufrw.WriteResult;
 var ReadResult = bufrw.ReadResult;
 var Checksum = require('./checksum');
@@ -42,7 +43,7 @@ var emptyBuffer = new Buffer(0);
 
 /* jshint maxparams:10 */
 
-// flags:1 ttl:4 tracing:24 traceflags:1 service~1 nh:1 (hk~1 hv~1){nh} csumtype:1 (csum:4){0,1} arg1~2 arg2~2 arg3~2
+// flags:1 ttl:4 tracing:24 traceflags:1 service~1 nh:1 (hk~1 hv~1){nh} csumtype:1 (csum:4){0,1} (arg~2)*
 function CallRequest(flags, ttl, tracing, service, headers, csum, arg1, arg2, arg3) {
     if (!(this instanceof CallRequest)) {
         return new CallRequest(flags, ttl, tracing, service, headers, csum, arg1, arg2, arg3);
@@ -59,9 +60,11 @@ function CallRequest(flags, ttl, tracing, service, headers, csum, arg1, arg2, ar
     } else {
         self.csum = Checksum.objOrType(csum);
     }
-    self.arg1 = arg1 || emptyBuffer;
-    self.arg2 = arg2 || emptyBuffer;
-    self.arg3 = arg3 || emptyBuffer;
+    self.args = [
+        arg1 || emptyBuffer,
+        arg2 || emptyBuffer,
+        arg3 || emptyBuffer
+    ];
 }
 
 CallRequest.TypeCode = 0x03;
@@ -76,13 +79,11 @@ CallRequest.RW = bufrw.Struct(CallRequest, [
     {name: 'service', rw: bufrw.str1},           // service~1
     {name: 'headers', rw: header.header1},       // nh:1 (hk~1 hv~1){nh}
     {name: 'csum', rw: Checksum.RW},             // csumtype:1 (csum:4){0,1}
-    {name: 'arg1', rw: bufrw.buf2},              // arg1~2
-    {name: 'arg2', rw: bufrw.buf2},              // arg2~2
-    {name: 'arg3', rw: bufrw.buf2},              // arg3~2
+    {name: 'args', rw: ArgsRW(bufrw.buf2)},      // (arg~2)*
     {call: {readFrom: readGuard}}
 ]);
 
-// flags:1 code:1 tracing:24 traceflags:1 nh:1 (hk~1 hv~1){nh} csumtype:1 (csum:4){0,1} arg1~2 arg2~2 arg3~2
+// flags:1 code:1 tracing:24 traceflags:1 nh:1 (hk~1 hv~1){nh} csumtype:1 (csum:4){0,1} (arg~2)*
 function CallResponse(flags, code, tracing, headers, csum, arg1, arg2, arg3) {
     if (!(this instanceof CallResponse)) {
         return new CallResponse(flags, code, tracing, headers, csum, arg1, arg2, arg3);
@@ -98,9 +99,11 @@ function CallResponse(flags, code, tracing, headers, csum, arg1, arg2, arg3) {
     } else {
         self.csum = Checksum.objOrType(csum);
     }
-    self.arg1 = arg1 || emptyBuffer;
-    self.arg2 = arg2 || emptyBuffer;
-    self.arg3 = arg3 || emptyBuffer;
+    self.args = [
+        arg1 || emptyBuffer,
+        arg2 || emptyBuffer,
+        arg3 || emptyBuffer
+    ];
 }
 
 CallResponse.TypeCode = 0x04;
@@ -119,9 +122,7 @@ CallResponse.RW = bufrw.Struct(CallResponse, [
     {name: 'tracing', rw: Tracing.RW},           // tracing:24 traceflags:1
     {name: 'headers', rw: header.header1},       // nh:1 (hk~1 hv~1){nh}
     {name: 'csum', rw: Checksum.RW},             // csumtype:1 (csum:4){0},1}
-    {name: 'arg1', rw: bufrw.buf2},              // arg1~2
-    {name: 'arg2', rw: bufrw.buf2},              // arg2~2
-    {name: 'arg3', rw: bufrw.buf2},              // arg3~2
+    {name: 'args', rw: ArgsRW(bufrw.buf2)},      // (arg~2)*
     {call: {readFrom: readGuard}}
 ]);
 
@@ -131,7 +132,7 @@ function prepareWrite(body, buffer, offset) {
             new Error('streaming call not implemented'),
             offset);
     }
-    body.csum.update([body.arg1, body.arg2, body.arg3]);
+    body.csum.update(body.args);
     return WriteResult.just(offset);
 }
 
@@ -141,7 +142,7 @@ function readGuard(body, buffer, offset) {
             new Error('streaming call not implemented'),
             offset);
     }
-    var err = body.csum.verify([body.arg1, body.arg2, body.arg3]);
+    var err = body.csum.verify(body.args);
     if (err) {
         return ReadResult.error(err, offset);
     }
