@@ -35,9 +35,7 @@ class TornadoConnection(object):
         self.requested_version = None
         self.awaiting_responses = {}
 
-        # TODO: put this in awaiting responses
         self.response = CallResponseMessage()
-
         connection.set_close_callback(self.on_close)
 
     def next_message_id(self):
@@ -231,6 +229,10 @@ class TornadoConnection(object):
 
     def finish(self):
         """ write response """
-        self.response.arg_1 = "from inbound"
+        self.response.arg_1 = "response from inbound server"
         self.response.arg_2 = "inbound"
-        return self.frame_and_write(self.response)
+        self.frame_and_write(self.response)
+
+        # reset response message
+        self.response = CallResponseMessage()
+        return

@@ -1,30 +1,30 @@
 import pytest
 
-from tchannel.tornado import TChannel
+from tchannel.req_handler import TChannelRequestHandler
 
 
 @pytest.fixture
-def dummy_tchannel():
-    return TChannel()
+def dummy_req():
+    return TChannelRequestHandler()
 
 
-def dummy_endpoint(header, body, opts):
+def dummy_endpoint(request, response, opts):
     pass
 
 
-def test_dispatch(dummy_tchannel):
-    tchannel = dummy_tchannel
-    tchannel.register_handler(
+def test_dispatch(dummy_req):
+    req = dummy_req
+    req.register_handler(
         r"/hello",
         dummy_endpoint
     )
 
-    @tchannel.route(r"/")
-    def dummy_endpoint1(header, body, opts):
+    @req.route(r"/")
+    def dummy_endpoint1(request, response, opts):
         pass
 
-    endpoint = tchannel.dispatch_request("/hello")
+    endpoint = req._find_endpoint("/hello")
     assert endpoint["handler"] == dummy_endpoint
 
-    endpoint = tchannel.dispatch_request("/")
+    endpoint = req._find_endpoint("/")
     assert endpoint["handler"] == dummy_endpoint1
