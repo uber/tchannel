@@ -77,7 +77,7 @@ class TChannelRequest(object):
 class TChannelResponse(object):
     """TChannel Response Wrapper"""
 
-    __slots__ = ('_connection')
+    __slots__ = ('_connection',)
 
     def __init__(self, conn):
         self._connection = conn

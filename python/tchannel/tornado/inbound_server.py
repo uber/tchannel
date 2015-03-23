@@ -15,7 +15,6 @@ class InboundServer(tornado.tcpserver.TCPServer):
 
         assert req_handler is not None
         self.req_handler = req_handler
-        self.peers = {}
 
     def build_stream(self):
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -25,7 +24,7 @@ class InboundServer(tornado.tcpserver.TCPServer):
         tchannel_connection = TornadoConnection(
             connection=stream
         )
-        self.peers[tchannel_connection] = self.req_handler
+
         print "Inbound Server handle stream"
 
         print("Received request from %s:%d" % address)
@@ -49,4 +48,4 @@ class InboundServer(tornado.tcpserver.TCPServer):
         :param context: a context contains call request message
         :param conn: incoming tornado connection
         """
-        self.peers[conn].handle_request(context, conn)
+        self.req_handler.handle_request(context, conn)
