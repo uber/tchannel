@@ -10,13 +10,12 @@ from tchannel.tornado.connection import TornadoConnection
 
 
 class InboundServer(tornado.tcpserver.TCPServer):
-    def __init__(self, req_handler, options=None):
-        assert req_handler is not None
-
-        self.req_handler = req_handler
-        self.options = options
-        self.peers = {}
+    def __init__(self, req_handler):
         super(InboundServer, self).__init__()
+
+        assert req_handler is not None
+        self.req_handler = req_handler
+        self.peers = {}
 
     def build_stream(self):
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)

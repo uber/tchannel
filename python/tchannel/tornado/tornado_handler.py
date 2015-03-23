@@ -1,7 +1,7 @@
 import json
 from tornado import httputil
 from tornado.httputil import RequestStartLine
-from ..req_handler import RequestHandler
+from ..handler import RequestHandler
 
 
 class TornadoRequestHandler(RequestHandler):
@@ -20,6 +20,9 @@ class TornadoRequestHandler(RequestHandler):
         request_delegate = self.start_serving(conn)
         message = context.message
         # process http message
+        """TODO need a better way to figure out
+        message's method type
+        """
         if message.headers["as"] == "http":
             method = "GET"
             if (hasattr(message, "arg_3") and
@@ -31,13 +34,13 @@ class TornadoRequestHandler(RequestHandler):
             try:
                 headers = json.loads(message.arg_2)
             except:
-                headers = {}
+                headers = []
 
             body = message.arg_3 if hasattr(message, "arg_3") else ""
             request_delegate.headers_received(start_line, headers)
             request_delegate.data_received(body)
             request_delegate.finish()
-
+        # TODO process message in json/thrift format
 
 class _ServerRequestAdapter():
     """Adapts the `TChannelMessageDelegate` interface to the interface expected

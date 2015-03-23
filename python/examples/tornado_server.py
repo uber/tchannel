@@ -1,86 +1,54 @@
-#!/usr/bin/env python
 from __future__ import absolute_import
 
-import random
+import argparse
 import sys
 
 import tornado.ioloop
-import tornado.tcpserver
-
-from options import get_args
-from tchannel.messages import CallResponseMessage
-from tchannel.messages import ErrorMessage
-from tchannel.messages.types import Types
-from tchannel.tornado.connection import TornadoConnection
+import tornado.web
+from tchannel.tornado import TChannel
+from tchannel.tornado.tornado_handler import TornadoRequestHandler
 
 
-class MyServer(tornado.tcpserver.TCPServer):
+def parse_args(args=None):
+    args = args or sys.argv[1:]
 
-    def handle_stream(self, stream, address):
-        tchannel_connection = TornadoConnection(connection=stream)
+    parser = argparse.ArgumentParser()
 
-        print("Received request from %s:%d" % address)
-        print("Waiting for TChannel handshake...")
-        tchannel_connection.await_handshake(headers={
-            'host_port': '%s:%s' % address,
-            'process_name': sys.argv[0],
-        }, callback=self.handshake_complete)
+    parser.add_argument(
+        "--listen",
+        dest="in_port",
+        default=None,
+        type=int,
+        help="Port for inbound connections"
+    )
 
-    def handshake_complete(self, connection):
-        print(
-            "Successfully completed handshake with %s" %
-            connection.remote_process_name
-        )
-        connection.handle_calls(self.handle_call)
-
-    def handle_call(self, context, connection):
-        """Handle a TChannel CALL_REQ message."""
-        if not context:
-            print("All done with connection")
-            return
-
-        print("Received message: %s" % context.message)
-
-        if context.message.message_type == Types.PING_REQ:
-            connection.pong(context.message_id)
-        elif context.message.arg_1:
-            response = CallResponseMessage(
-                flags=0,
-                code=200,
-                headers={'currently': 'broken'},
-                arg_1=context.message.arg_1,
-                arg_2=context.message.arg_2,
-                arg_3=(
-                    'message id %s gave me an arg3 %s'
-                    % (context.message_id, context.message.arg_3)
-                ),
-            )
-
-            # Simulate some response delay
-            tornado.ioloop.IOLoop.instance().call_later(
-                random.random(),
-                lambda: connection.frame_and_write(
-                    response,
-                    message_id=context.message_id,
-                )
-            )
-
-        else:
-            response = ErrorMessage()
-            response.code = 0x06
-            response.original_message_id = context.message_id
-            response.message = response.error_name()
-            connection.frame_and_write(
-                response,
-                message_id=context.message_id,
-            )
-
-        connection.handle_calls(self.handle_call)
+    args = parser.parse_args(args)
+    return args
 
 
-if __name__ == '__main__':
-    args = get_args()
-    server = MyServer()
-    server.listen(args.port)
-    print("Listening on port %d..." % args.port)
+class MainHandler(tornado.web.RequestHandler):
+    def get(self):
+        self.request.write("Hello, world")
+
+
+def make_app():
+    application = tornado.web.Application([
+        (r"/hello", MainHandler),
+    ])
+
+    return application
+
+
+def main():  # pragma: no cover
+    args = parse_args()
+
+    app = make_app()
+    tchannel = TChannel()
+    tornado_req_handler = TornadoRequestHandler(app)
+    server = tchannel.host(args.in_port, tornado_req_handler)
+    server.listen()
     tornado.ioloop.IOLoop.instance().start()
+
+
+if __name__ == '__main__':  # pragma: no cover
+    main()

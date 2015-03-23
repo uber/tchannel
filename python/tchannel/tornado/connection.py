@@ -217,7 +217,7 @@ class TornadoConnection(object):
         raise gen.Return(connection)
 
     def write_headers(self, start_line, headers, chunk=None, callback=None):
-        self.response.headers = headers or {'currently': 'broken'}
+        self.response.arg_1 = headers or ''
 
     def write(self, chunk, callback=None):
         self.response.arg_3 += chunk
@@ -228,9 +228,8 @@ class TornadoConnection(object):
         pass
 
     def finish(self):
-        """ write response """
-        self.response.arg_1 = "response from inbound server"
-        self.response.arg_2 = "inbound"
+        """write response"""
+        self.response.arg_2 = ''
         self.frame_and_write(self.response)
 
         # reset response message

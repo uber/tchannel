@@ -1,28 +1,18 @@
 from __future__ import absolute_import
 
 import argparse
-import logging
 import sys
 
 import tornado.ioloop
 import tornado.web
 from tchannel.tornado import TChannel
-from tchannel.req_handler import TChannelRequestHandler
-
-
-log = logging.getLogger('tchannel')
+from tchannel.handler import TChannelRequestHandler
 
 
 def parse_args(args=None):
     args = args or sys.argv[1:]
 
     parser = argparse.ArgumentParser()
-
-    parser.add_argument(
-        "-v", "--verbose",
-        dest="verbose",
-        action="store_true"
-    )
 
     parser.add_argument(
         "--listen",
@@ -46,15 +36,6 @@ def handler2(request, response, opts):
 
 def main():  # pragma: no cover
     args = parse_args()
-
-    logging.basicConfig(
-        format="%(name)s[%(process)s] %(levelname)s: %(message)s",
-        stream=sys.stdout,
-        level=logging.INFO,
-    )
-
-    if args.verbose:
-        log.setLevel(logging.DEBUG)
 
     client = TChannel()
 

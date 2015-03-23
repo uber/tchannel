@@ -45,18 +45,17 @@ class TChannel(object):
         raise tornado.gen.Return(peer)
 
     def request(self, hostport):
-        return TChannelClientOperation(hostport, self,)
+        return TChannelClientOperation(hostport, self)
 
-    def host(self, port, handler, options=None):
-        return TChannelServerOperation(port, self, handler, options)
+    def host(self, port, handler):
+        return TChannelServerOperation(port, handler)
 
 
 class TChannelServerOperation(object):
 
-    def __init__(self, port, tchannel, handler, options):
-        self.inbound_server = InboundServer(handler, options)
+    def __init__(self, port, handler):
+        self.inbound_server = InboundServer(handler)
         self.port = port
-        self.tchannel = weakref.ref(tchannel)
 
     def listen(self):
         self.inbound_server.listen(self.port)

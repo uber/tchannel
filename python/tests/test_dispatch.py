@@ -1,6 +1,6 @@
 import pytest
 
-from tchannel.req_handler import TChannelRequestHandler
+from tchannel.handler import TChannelRequestHandler
 
 
 @pytest.fixture
