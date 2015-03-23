@@ -27,6 +27,7 @@ var emptyBuffer = Buffer(0);
 
 var States = Object.create(null);
 States.Initial = 0;
+States.Done = 2;
 
 // TODO: provide streams for arg2/3
 
@@ -91,18 +92,20 @@ function TChannelOutgoingRequest(id, options) {
     self.checksumType = options.checksumType || 0;
     self.checksum = options.checksum || null;
     self.sendFrame = options.sendFrame;
-    self.sent = false;
 }
 
 inherits(TChannelOutgoingRequest, EventEmitter);
 
 TChannelOutgoingRequest.prototype.sendCallRequestFrame = function sendCallRequestFrame(args) {
     var self = this;
-    if (self.sent) {
-        throw new Error('request already sent');
+    switch (self.state) {
+        case States.Initial:
+            self.sendFrame.callRequest(args);
+            self.state = States.Done;
+            break;
+        case States.Done:
+            throw new Error('request already done'); // TODO: typed error
     }
-    self.sendFrame.callRequest(args);
-    self.sent = true;
 };
 
 TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
@@ -158,18 +161,20 @@ function TChannelOutgoingResponse(id, options) {
     self.arg1 = options.arg1 || emptyBuffer;
     self.arg2 = options.arg2 || emptyBuffer;
     self.arg3 = options.arg3 || emptyBuffer;
-    self.sent = false;
 }
 
 inherits(TChannelOutgoingResponse, EventEmitter);
 
 TChannelOutgoingResponse.prototype.sendCallResponseFrame = function sendCallResponseFrame(args) {
     var self = this;
-    if (self.sent) {
-        throw new Error('response already sent');
+    switch (self.state) {
+        case States.Initial:
+            self.sendFrame.callResponse(args);
+            self.state = States.Done;
+            break;
+        case States.Done:
+            throw new Error('response already done'); // TODO: typed error
     }
-    self.sendFrame.callResponse(args);
-    self.sent = true;
 };
 
 TChannelOutgoingResponse.prototype.sendErrorFrame = function sendErrorFrame(codeString, message) {
@@ -184,8 +189,8 @@ TChannelOutgoingResponse.prototype.sendErrorFrame = function sendErrorFrame(code
 
 TChannelOutgoingResponse.prototype.setOk = function setOk(ok) {
     var self = this;
-    if (self.sent) {
-        throw new Error('response already sent');
+    if (self.state !== States.Initial) {
+        throw new Error('response already started'); // TODO typed error
     }
     self.ok = ok;
     self.code = ok ? 0 : 1; // TODO: too coupled to v2 specifics?
