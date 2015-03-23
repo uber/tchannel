@@ -254,16 +254,16 @@ TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest
 
 TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingResponse(req) {
     var self = this;
-    var senders = {
-        callResponseFrame: sendCallResponseFrame,
-        errorFrame: sendErrorFrame
-    };
     var res = TChannelOutgoingResponse(req.id, {
         tracing: req.tracing,
         headers: {},
         checksumType: req.checksumType,
-        arg1: req.arg1
-    }, senders);
+        arg1: req.arg1,
+        sendFrame: {
+            callResponse: sendCallResponseFrame,
+            error: sendErrorFrame
+        }
+    });
     return res;
 
     function sendCallResponseFrame(arg1, arg2, arg3) {

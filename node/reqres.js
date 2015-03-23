@@ -114,12 +114,14 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
     return self;
 };
 
-function TChannelOutgoingResponse(id, options, senders) {
+function TChannelOutgoingResponse(id, options) {
     if (!(this instanceof TChannelOutgoingResponse)) {
-        return new TChannelOutgoingResponse(id, options, senders);
+        return new TChannelOutgoingResponse(id, options);
     }
-
     options = options || {};
+    if (!options.sendFrame) {
+        throw new Error('missing sendFrame');
+    }
     var self = this;
     EventEmitter.call(self);
     self.id = id || 0;
@@ -128,15 +130,24 @@ function TChannelOutgoingResponse(id, options, senders) {
     self.headers = options.headers || {};
     self.checksumType = options.checksumType || 0;
     self.ok = true;
+    self.sendFrame = options.sendFrame;
     self.arg1 = options.arg1 || emptyBuffer;
     self.arg2 = options.arg2 || emptyBuffer;
     self.arg3 = options.arg3 || emptyBuffer;
-    self.sendCallResponseFrame = senders.callResponseFrame;
-    self.sendErrorFrame = senders.errorFrame;
     self.sent = false;
 }
 
 inherits(TChannelOutgoingResponse, EventEmitter);
+
+TChannelOutgoingResponse.prototype.sendCallResponseFrame = function sendCallResponseFrame(arg1, res1, res2) {
+    var self = this;
+    self.sendFrame.callResponse(arg1, res1, res2);
+};
+
+TChannelOutgoingResponse.prototype.sendErrorFrame = function sendErrorFrame(codeString, message) {
+    var self = this;
+    self.sendFrame.error(codeString, message);
+};
 
 TChannelOutgoingResponse.prototype.sendOk = function send(res1, res2) {
     var self = this;
