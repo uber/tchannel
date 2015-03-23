@@ -1,10 +1,15 @@
+import collections
+
+EndPoint = collections.namedtuple('EndPoint', ['handler', 'opts'])
+
+
 class RequestHandler(object):
 
     def __init__(self):
         pass
 
     def handle_request(self, context, conn):
-        raise NotImplementedError
+        raise NotImplementedError()
 
 
 class TChannelRequestHandler(RequestHandler):
@@ -21,7 +26,7 @@ class TChannelRequestHandler(RequestHandler):
         endpoint = self._find_endpoint(request.method)
         if endpoint is not None:
             response = TChannelResponse(conn)
-            endpoint["handler"](request, response, endpoint["opts"])
+            endpoint.handler(request, response, endpoint.opts)
             response.finish()
 
     def route(self, rule, **opts):
@@ -32,10 +37,7 @@ class TChannelRequestHandler(RequestHandler):
         return decorator
 
     def register_handler(self, rule, handler, **opts):
-        self.endpoints[rule] = {
-            "handler": handler,
-            "opts": opts
-        }
+        self.endpoints[rule] = EndPoint(handler=handler, opts=opts)
 
     def _find_endpoint(self, rule):
         return self.endpoints.get(rule, None)

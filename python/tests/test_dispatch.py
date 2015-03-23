@@ -24,7 +24,7 @@ def test_dispatch(dummy_req):
         pass
 
     endpoint = req._find_endpoint("/hello")
-    assert endpoint["handler"] == dummy_endpoint
+    assert endpoint.handler == dummy_endpoint
 
     endpoint = req._find_endpoint("/")
-    assert endpoint["handler"] == dummy_endpoint1
+    assert endpoint.handler == dummy_endpoint1

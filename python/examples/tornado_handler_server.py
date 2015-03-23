@@ -1,12 +1,7 @@
 from __future__ import absolute_import
 
 import argparse
-import collections
-import contextlib
-import cProfile
-import itertools
 import logging
-import pstats
 import sys
 
 import tornado.ioloop

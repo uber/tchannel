@@ -65,6 +65,7 @@ def main():  # pragma: no cover
     handler.register_handler(
         r"/ok", handler2
     )
+
     @handler.route("/bye")
     def handler3(request, response, opts):
         response.write("handler3 says bye")
