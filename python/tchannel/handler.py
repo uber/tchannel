@@ -16,8 +16,8 @@ class RequestHandler(object):
     def handle_request(self, context, conn):
         """Handle incoming request
 
-        :param context: incoming message context
-        :param conn: incoming connection
+        :param context: context contains received CallRequestMessage
+        :param conn: An incoming TornadoConnection
         """
         raise NotImplementedError()
 
@@ -28,10 +28,10 @@ class TChannelRequestHandler(RequestHandler):
         self.endpoints = {}
 
     def handle_request(self, context, conn):
-        """Handle incoming request
+        """dispatch incoming request to particular endpoint
 
-        :param context: incoming message context
-        :param conn: incoming connection
+        :param context: context contains received CallRequestMessage
+        :param conn: An incoming TornadoConnection
         """
         request = TChannelRequest(context, conn)
         endpoint = self._find_endpoint(request.method)

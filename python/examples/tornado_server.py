@@ -41,7 +41,6 @@ def make_app():
 
 def main():  # pragma: no cover
     args = parse_args()
-
     app = make_app()
     tchannel = TChannel()
     tornado_req_handler = TornadoRequestHandler(app)

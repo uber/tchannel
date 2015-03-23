@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 import functools
+import json
 import logging
 import os
 import socket
@@ -217,7 +218,7 @@ class TornadoConnection(object):
         raise gen.Return(connection)
 
     def write_headers(self, start_line, headers, chunk=None, callback=None):
-        self.response.arg_1 = headers or ''
+        self.response.arg_2 = json.dumps(headers) or ''
 
     def write(self, chunk, callback=None):
         self.response.arg_3 += chunk
@@ -229,9 +230,7 @@ class TornadoConnection(object):
 
     def finish(self):
         """write response"""
-        self.response.arg_2 = ''
         self.frame_and_write(self.response)
-
         # reset response message
         self.response = CallResponseMessage()
         return

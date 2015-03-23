@@ -1,7 +1,12 @@
 import json
+
 from tornado import httputil
 from tornado.httputil import RequestStartLine
 from ..handler import RequestHandler
+import tornado.httputil
+
+from http_request import HttpRequest
+tornado.httputil.HTTPServerRequest = HttpRequest
 
 
 class TornadoRequestHandler(RequestHandler):
@@ -12,10 +17,10 @@ class TornadoRequestHandler(RequestHandler):
         return _ServerRequestAdapter(self, request_conn)
 
     def handle_request(self, context, conn):
-        """Handle incoming request
+        """dispatch incoming request to particular endpoint
 
-        :param context: incoming message context
-        :param conn: incoming connection
+        :param context: context contains received CallRequestMessage
+        :param conn: An incoming TornadoConnection
         """
         request_delegate = self.start_serving(conn)
         message = context.message
@@ -34,13 +39,13 @@ class TornadoRequestHandler(RequestHandler):
             try:
                 headers = json.loads(message.arg_2)
             except:
-                headers = []
-
+                headers = {}
             body = message.arg_3 if hasattr(message, "arg_3") else ""
             request_delegate.headers_received(start_line, headers)
             request_delegate.data_received(body)
             request_delegate.finish()
         # TODO process message in json/thrift format
+
 
 class _ServerRequestAdapter():
     """Adapts the `TChannelMessageDelegate` interface to the interface expected
