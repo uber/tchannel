@@ -66,8 +66,8 @@ type message interface {
 	// The type of the message
 	messageType() messageType
 
-	read(r typed.ReadBuffer) error
-	write(r typed.WriteBuffer) error
+	read(r *typed.ReadBuffer) error
+	write(w *typed.WriteBuffer) error
 }
 
 // Parameters to an initReq/InitRes
@@ -85,7 +85,7 @@ type initMessage struct {
 	initParams initParams
 }
 
-func (m *initMessage) read(r typed.ReadBuffer) error {
+func (m *initMessage) read(r *typed.ReadBuffer) error {
 	var err error
 	m.Version, err = r.ReadUint16()
 	if err != nil {
@@ -118,7 +118,7 @@ func (m *initMessage) read(r typed.ReadBuffer) error {
 	}
 }
 
-func (m *initMessage) write(w typed.WriteBuffer) error {
+func (m *initMessage) write(w *typed.WriteBuffer) error {
 	if err := w.WriteUint16(m.Version); err != nil {
 		return err
 	}
@@ -165,7 +165,7 @@ func (m *initRes) messageType() messageType { return messageTypeInitRes }
 // Headers passed as part of a CallReq/CallRes
 type callHeaders map[string]string
 
-func (ch callHeaders) read(r typed.ReadBuffer) error {
+func (ch callHeaders) read(r *typed.ReadBuffer) error {
 	nh, err := r.ReadByte()
 	if err != nil {
 		return err
@@ -198,7 +198,7 @@ func (ch callHeaders) read(r typed.ReadBuffer) error {
 	return nil
 }
 
-func (ch callHeaders) write(w typed.WriteBuffer) error {
+func (ch callHeaders) write(w *typed.WriteBuffer) error {
 	if err := w.WriteByte(byte(len(ch))); err != nil {
 		return err
 	}
@@ -235,7 +235,7 @@ type callReq struct {
 
 func (m *callReq) ID() uint32               { return m.id }
 func (m *callReq) messageType() messageType { return messageTypeCallReq }
-func (m *callReq) read(r typed.ReadBuffer) error {
+func (m *callReq) read(r *typed.ReadBuffer) error {
 	var err error
 	ttl, err := r.ReadUint32()
 	if err != nil {
@@ -280,7 +280,7 @@ func (m *callReq) read(r typed.ReadBuffer) error {
 	return nil
 }
 
-func (m *callReq) write(w typed.WriteBuffer) error {
+func (m *callReq) write(w *typed.WriteBuffer) error {
 	if err := w.WriteUint32(uint32(m.TimeToLive.Seconds() * 1000)); err != nil {
 		return err
 	}
@@ -321,10 +321,10 @@ type callReqContinue struct {
 	id uint32
 }
 
-func (c *callReqContinue) ID() uint32                      { return c.id }
-func (c *callReqContinue) messageType() messageType        { return messageTypeCallReqContinue }
-func (c *callReqContinue) read(r typed.ReadBuffer) error   { return nil }
-func (c *callReqContinue) write(w typed.WriteBuffer) error { return nil }
+func (c *callReqContinue) ID() uint32                       { return c.id }
+func (c *callReqContinue) messageType() messageType         { return messageTypeCallReqContinue }
+func (c *callReqContinue) read(r *typed.ReadBuffer) error   { return nil }
+func (c *callReqContinue) write(w *typed.WriteBuffer) error { return nil }
 
 // ResponseCode to a CallReq
 type ResponseCode byte
@@ -345,7 +345,7 @@ type callRes struct {
 func (m *callRes) ID() uint32               { return m.id }
 func (m *callRes) messageType() messageType { return messageTypeCallRes }
 
-func (m *callRes) read(r typed.ReadBuffer) error {
+func (m *callRes) read(r *typed.ReadBuffer) error {
 	var err error
 	c, err := r.ReadByte()
 	if err != nil {
@@ -380,7 +380,7 @@ func (m *callRes) read(r typed.ReadBuffer) error {
 	return nil
 }
 
-func (m *callRes) write(w typed.WriteBuffer) error {
+func (m *callRes) write(w *typed.WriteBuffer) error {
 	if err := w.WriteByte(byte(m.ResponseCode)); err != nil {
 		return err
 	}
@@ -413,10 +413,10 @@ type callResContinue struct {
 	id uint32
 }
 
-func (c *callResContinue) ID() uint32                      { return c.id }
-func (c *callResContinue) messageType() messageType        { return messageTypeCallResContinue }
-func (c *callResContinue) read(r typed.ReadBuffer) error   { return nil }
-func (c *callResContinue) write(w typed.WriteBuffer) error { return nil }
+func (c *callResContinue) ID() uint32                       { return c.id }
+func (c *callResContinue) messageType() messageType         { return messageTypeCallResContinue }
+func (c *callResContinue) read(r *typed.ReadBuffer) error   { return nil }
+func (c *callResContinue) write(w *typed.WriteBuffer) error { return nil }
 
 // An Error message, a system-level error response to a request or a protocol level error
 type errorMessage struct {
@@ -428,7 +428,7 @@ type errorMessage struct {
 
 func (m *errorMessage) ID() uint32               { return m.id }
 func (m *errorMessage) messageType() messageType { return messageTypeError }
-func (m *errorMessage) read(r typed.ReadBuffer) error {
+func (m *errorMessage) read(r *typed.ReadBuffer) error {
 	errCode, err := r.ReadByte()
 	if err != nil {
 		return err
@@ -452,7 +452,7 @@ func (m *errorMessage) read(r typed.ReadBuffer) error {
 	return nil
 }
 
-func (m *errorMessage) write(w typed.WriteBuffer) error {
+func (m *errorMessage) write(w *typed.WriteBuffer) error {
 	if err := w.WriteByte(byte(m.errorCode)); err != nil {
 		return err
 	}
