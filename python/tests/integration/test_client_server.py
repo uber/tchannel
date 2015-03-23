@@ -17,7 +17,6 @@ def call_response():
 
 
 def test_tcp_ping_pong(server_manager):
-
     with server_manager.client_connection() as conn:
         resp = tmessage.PingResponseMessage()
         server_manager.expect_ping().and_return(resp)
