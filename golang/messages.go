@@ -21,6 +21,7 @@ package tchannel
 // THE SOFTWARE.
 
 import (
+	"fmt"
 	"github.com/uber/tchannel/golang/typed"
 	"io"
 	"time"
@@ -41,16 +42,20 @@ const (
 
 var messageTypeNames = map[messageType]string{
 	messageTypeInitReq:         "initReq",
-	messageTypeInitRes:         "InitRes",
-	messageTypeCallReq:         "CallReq",
-	messageTypeCallReqContinue: "CallReqContinue",
-	messageTypeCallRes:         "CallRes",
-	messageTypeCallResContinue: "CallResContinue",
+	messageTypeInitRes:         "initRes",
+	messageTypeCallReq:         "callReq",
+	messageTypeCallReqContinue: "callReqContinue",
+	messageTypeCallRes:         "callRes",
+	messageTypeCallResContinue: "callResContinue",
 	messageTypeError:           "Error",
 }
 
 func (t messageType) String() string {
-	return messageTypeNames[t]
+	if name := messageTypeNames[t]; name != "" {
+		return name
+	}
+
+	return fmt.Sprintf("unknown: %x", int(t))
 }
 
 // Base interface for messages.  Has an id and a type, and knows how to read and write onto a binary stream
