@@ -20,6 +20,42 @@
 
 'use strict';
 
+/* TestSearch provides a framework to search for test failures.
+ *
+ * To use it you need to define 3 functions:
+ * 1) function test(state, assert)
+ * 2) function init()
+ * 3) function next(state)
+ *
+ * The overview is that:
+ * - search = TestSearch({init, test, next})
+ * - search.run(assert)
+ *   - search first populates the frontier by calling init
+ *   - search then proceeds by shifting the frontier...
+ *   - ...running test with that shifted state...
+ *   - ...and then expanding the frontier by calling next(state)
+ *   - search halts when the frontier is empty, or if .stop() has been called
+ *
+ * All functions are called with the search object as `this` and you MUST use
+ * `this` rather than any local variable binding you may have had for your
+ * TestSearch instance.
+ *
+ * The idea is that you started out with some sensible test(assert) which is
+ * naturally parametrizable.  If so, then TestSearch can help you parametrize
+ * and explore those parameters.
+ *
+ * So it all comes down to the staet object where your test parameters live.
+ * These state objects will be created by your init function.  This init
+ * function should call `this.expand(expander)` where expander is a
+ * function(emit).  The expander function should call emit one or more times to
+ * add initial state to the frontier.
+ *
+ */
+
+// ---
+
+// TODO: shift next(state) => next(result)?
+
 var extend = require('xtend');
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
@@ -150,7 +186,7 @@ TestSearch.prototype.runTest = function runTest(state, done) {
 
 TestSearch.prototype.handleTestResult = function handleTestResult(result) {
     var self = this;
-    self.expand(self.next.bind(self, result.state));
+    self.expand(self.ext.bind(self, result.state));
     self.result(result);
 };
 

@@ -106,6 +106,16 @@ test('bisection test', function t(assert) {
         if (isNaN(sizeLimit)) die('invalid sizeLimit');
     }
 
+    /*
+     * withHeaderOnly -- if set, init will seed {hSize: N, bSize: 0}
+     * withBodyOnly   -- if set, init will seed {hSize: 0, bSize: N}
+     * withBoth       -- if set, init will seed {hSize: N, bSize: N}
+     * basis          -- N values foro init seeding and exploration
+     * mul            -- overrides basis's N values for exploration
+     * sizeLimit      -- halt the exploration phase after this value
+     * timeout        -- max time in ms for a single test
+     */
+
     var search = TestStreamSearch({
         stopOnFirstFailure: argv.first,
         traceDetails: argv.trace,
