@@ -157,15 +157,19 @@ TChannelOutgoingResponse.prototype.sendErrorFrame = function sendErrorFrame(code
     self.sendFrame.error(codeString, message);
 };
 
-TChannelOutgoingResponse.prototype.sendOk = function send(res1, res2) {
+TChannelOutgoingResponse.prototype.setOk = function setOk(ok) {
     var self = this;
     if (self.sent) {
         throw new Error('response already sent');
     }
+    self.ok = ok;
+    self.code = ok ? 0 : 1; // TODO: too coupled to v2 specifics?
+};
 
+TChannelOutgoingResponse.prototype.sendOk = function sendOk(res1, res2) {
+    var self = this;
+    self.setOk(true);
     self.sent = true;
-    self.ok = true;
-
     self.sendCallResponseFrame(self.arg1,
         res1 ? Buffer(res1) : null,
         res2 ? Buffer(res2) : null);
@@ -174,14 +178,8 @@ TChannelOutgoingResponse.prototype.sendOk = function send(res1, res2) {
 
 TChannelOutgoingResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
     var self = this;
-    if (self.sent) {
-        throw new Error('response already sent');
-    }
-
+    self.setOk(false);
     self.sent = true;
-    self.ok = false;
-    self.code = 1;
-
     self.sendCallResponseFrame(self.arg1,
         res1 ? Buffer(res1) : null,
         res2 ? Buffer(res2) : null);
