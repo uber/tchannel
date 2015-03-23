@@ -303,7 +303,8 @@ TChannelV2Handler.prototype.buildIncomingRequest = function buildIncomingRequest
         checksumType: reqFrame.body.csum.type,
         arg1: reqFrame.body.args[0],
         arg2: reqFrame.body.args[1],
-        arg3: reqFrame.body.args[2]
+        arg3: reqFrame.body.args[2],
+        checksum: reqFrame.body.csum
     });
     return req;
 };
@@ -313,7 +314,8 @@ TChannelV2Handler.prototype.buildIncomingResponse = function buildIncomingRespon
         code: resFrame.body.code,
         arg1: resFrame.body.args[0],
         arg2: resFrame.body.args[1],
-        arg3: resFrame.body.args[2]
+        arg3: resFrame.body.args[2],
+        checksum: resFrame.body.csum
     });
     return res;
 };
