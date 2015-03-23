@@ -36,9 +36,7 @@ var testTracing = Tracing(
 var testReq = Call.Request(
     0, 1024, testTracing, 'apache', {key: 'val'},
     Checksum.Types.Farm32,
-    Buffer('on'),
-    Buffer('to'),
-    Buffer('te')
+    [Buffer('on'), Buffer('to'), Buffer('te')]
 );
 testReq.updateChecksum();
 
@@ -85,9 +83,7 @@ test('Call.Request.RW: read/write payload', testRW.cases(Call.Request.RW, [
 var testRes = Call.Response(
     0, Call.Response.Codes.OK, testTracing, {key: 'val'},
     Checksum.Types.Farm32,
-    Buffer('ON'),
-    Buffer('TO'),
-    Buffer('TE')
+    [Buffer('ON'), Buffer('TO'), Buffer('TE')]
 );
 testRes.updateChecksum();
 
