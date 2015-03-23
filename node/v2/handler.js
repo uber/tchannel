@@ -216,6 +216,7 @@ TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame
     reqBody.updateChecksum();
     var reqFrame = v2.Frame(req.id, reqBody);
     self.push(reqFrame);
+    req.checksum = reqBody.csum;
 };
 
 TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFrame(res, arg1, arg2, arg3) {
@@ -235,6 +236,7 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
     resBody.updateChecksum();
     var resFrame = v2.Frame(res.id, resBody);
     self.push(resFrame);
+    res.checksum = resBody.csum;
 };
 /* jshint maxparams:4 */
 
