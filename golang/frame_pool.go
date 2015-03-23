@@ -34,5 +34,5 @@ var DefaultFramePool = defaultFramePool{}
 
 type defaultFramePool struct{}
 
-func (p defaultFramePool) Get() *Frame      { return &Frame{} }
+func (p defaultFramePool) Get() *Frame      { return NewFrame(MaxFramePayloadSize) }
 func (p defaultFramePool) Release(f *Frame) {}

@@ -418,22 +418,10 @@ func (c *Connection) withStateRLock(f func() error) error {
 // send the incoming frame to a channel; the init handlers are a notable exception, since we cannot
 // process new frames until the initialization is complete.
 func (c *Connection) readFrames() {
-	fhBuf := typed.NewReadBufferWithSize(FrameHeaderSize)
-
 	for {
-		if _, err := fhBuf.FillFrom(c.conn, FrameHeaderSize); err != nil {
-			c.connectionError(err)
-			return
-		}
-
 		frame := c.framePool.Get()
-		if err := frame.Header.read(fhBuf); err != nil {
-			// TODO(mmihic): Should be a protocol error
-			c.connectionError(err)
-			return
-		}
-
-		if _, err := c.conn.Read(frame.SizedPayload()); err != nil {
+		if err := frame.ReadFrom(c.conn); err != nil {
+			c.framePool.Release(frame)
 			c.connectionError(err)
 			return
 		}
@@ -462,26 +450,13 @@ func (c *Connection) readFrames() {
 // Main loop that pulls frames from the send channel and writes them to the connection.
 // Run in its own goroutine to prevent overlapping writes on the network socket.
 func (c *Connection) writeFrames() {
-	fhBuf := typed.NewWriteBufferWithSize(FrameHeaderSize)
 	for f := range c.sendCh {
-		fhBuf.Reset()
+		defer c.framePool.Release(f)
 
-		if err := f.Header.write(fhBuf); err != nil {
+		if err := f.WriteTo(c.conn); err != nil {
 			c.connectionError(err)
 			return
 		}
-
-		if _, err := fhBuf.FlushTo(c.conn); err != nil {
-			c.connectionError(err)
-			return
-		}
-
-		if _, err := c.conn.Write(f.SizedPayload()); err != nil {
-			c.connectionError(err)
-			return
-		}
-
-		c.framePool.Release(f)
 	}
 }
 

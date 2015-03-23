@@ -202,10 +202,10 @@ type inFragments struct {
 
 type sampleMessage struct{}
 
-func (m *sampleMessage) ID() uint32                      { return 0xDEADBEEF }
-func (m *sampleMessage) messageType() messageType        { return messageTypeCallReq }
-func (m *sampleMessage) read(r typed.ReadBuffer) error   { return nil }
-func (m *sampleMessage) write(w typed.WriteBuffer) error { return nil }
+func (m *sampleMessage) ID() uint32                       { return 0xDEADBEEF }
+func (m *sampleMessage) messageType() messageType         { return messageTypeCallReq }
+func (m *sampleMessage) read(r *typed.ReadBuffer) error   { return nil }
+func (m *sampleMessage) write(w *typed.WriteBuffer) error { return nil }
 
 func (in *inFragments) waitForFragment() (*inFragment, error) {
 	if in.current == nil || !in.current.hasMoreChunks() {
@@ -229,7 +229,7 @@ type outFragments struct {
 }
 
 func (out *outFragments) beginFragment() (*outFragment, error) {
-	return newOutboundFragment(&Frame{}, &sampleMessage{}, out.checksum)
+	return newOutboundFragment(NewFrame(MaxFramePayloadSize), &sampleMessage{}, out.checksum)
 }
 
 func (out *outFragments) flushFragment(toSend *outFragment, last bool) error {
