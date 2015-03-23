@@ -20,6 +20,7 @@
 
 'use strict';
 
+require('./argstream.js');
 require('./safe-quit.js');
 require('./timeouts.js');
 require('./send.js');
