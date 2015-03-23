@@ -23,6 +23,7 @@ package tchannel
 import (
 	"fmt"
 	"github.com/uber/tchannel/golang/typed"
+	"io"
 	"math"
 )
 
@@ -57,11 +58,58 @@ type FrameHeader struct {
 
 // A Frame is a header and payload
 type Frame struct {
+	buffer       []byte // full buffer, including payload and header
+	headerBuffer []byte // slice referencing just the header
+
 	// The header for the frame
 	Header FrameHeader
 
 	// The payload for the frame
-	Payload [MaxFramePayloadSize]byte
+	Payload []byte
+}
+
+// NewFrame allocates a new frame with the given payload capacity
+func NewFrame(payloadCapacity int) *Frame {
+	f := &Frame{}
+	f.buffer = make([]byte, payloadCapacity+FrameHeaderSize)
+	f.Payload = f.buffer[FrameHeaderSize:]
+	f.headerBuffer = f.buffer[:FrameHeaderSize]
+	return f
+}
+
+// ReadFrom reads the frame from the given io.Reader
+func (f *Frame) ReadFrom(r io.Reader) error {
+	// TODO(mmihic): Eliminate the allocation of this read buffer
+	rbuf := typed.NewReadBuffer(f.headerBuffer)
+	if _, err := rbuf.FillFrom(r, FrameHeaderSize); err != nil {
+		return err
+	}
+
+	if err := f.Header.read(rbuf); err != nil {
+		return err
+	}
+
+	if _, err := r.Read(f.SizedPayload()); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// WriteTo writes the frame to the given io.Writer
+func (f *Frame) WriteTo(w io.Writer) error {
+	// TODO(mmihic): Eliminate this allocation
+	wbuf := typed.NewWriteBuffer(f.headerBuffer)
+	if err := f.Header.write(wbuf); err != nil {
+		return err
+	}
+
+	fullFrame := f.buffer[:FrameHeaderSize+f.Header.Size]
+	if _, err := w.Write(fullFrame); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // SizedPayload returns the slice of the payload actually used, as defined by the header

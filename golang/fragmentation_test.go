@@ -229,7 +229,7 @@ type outFragments struct {
 }
 
 func (out *outFragments) beginFragment() (*outFragment, error) {
-	return newOutboundFragment(&Frame{}, &sampleMessage{}, out.checksum)
+	return newOutboundFragment(NewFrame(MaxFramePayloadSize), &sampleMessage{}, out.checksum)
 }
 
 func (out *outFragments) flushFragment(toSend *outFragment, last bool) error {
