@@ -212,7 +212,7 @@ TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame
         0, req.ttl, req.tracing,
         req.service, req.headers,
         req.checksumType,
-        arg1, arg2, arg3);
+        [arg1, arg2, arg3]);
     reqBody.updateChecksum();
     var reqFrame = v2.Frame(req.id, reqBody);
     self.push(reqFrame);
@@ -227,11 +227,11 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
     if (res.ok) {
         resBody = v2.CallResponse(
             flags, v2.CallResponse.Codes.OK, res.tracing,
-            res.headers, res.checksumType, arg1, arg2, arg3);
+            res.headers, res.checksumType, [arg1, arg2, arg3]);
     } else {
         resBody = v2.CallResponse(
             flags, v2.CallResponse.Codes.Error, res.tracing,
-            res.headers, res.checksumType, arg1, arg2, arg3);
+            res.headers, res.checksumType, [arg1, arg2, arg3]);
     }
     resBody.updateChecksum();
     var resFrame = v2.Frame(res.id, resBody);

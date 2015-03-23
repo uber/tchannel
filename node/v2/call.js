@@ -35,8 +35,6 @@ var Flags = {
 module.exports.Request = CallRequest;
 module.exports.Response = CallResponse;
 
-var emptyBuffer = new Buffer(0);
-
 // TODO: need to support fragmentation and continuation
 // TODO: validate transport header names?
 // TODO: Checksum-like class for tracing
@@ -44,9 +42,9 @@ var emptyBuffer = new Buffer(0);
 /* jshint maxparams:10 */
 
 // flags:1 ttl:4 tracing:24 traceflags:1 service~1 nh:1 (hk~1 hv~1){nh} csumtype:1 (csum:4){0,1} (arg~2)*
-function CallRequest(flags, ttl, tracing, service, headers, csum, arg1, arg2, arg3) {
+function CallRequest(flags, ttl, tracing, service, headers, csum, args) {
     if (!(this instanceof CallRequest)) {
-        return new CallRequest(flags, ttl, tracing, service, headers, csum, arg1, arg2, arg3);
+        return new CallRequest(flags, ttl, tracing, service, headers, csum, args);
     }
     var self = this;
     self.type = CallRequest.TypeCode;
@@ -60,11 +58,7 @@ function CallRequest(flags, ttl, tracing, service, headers, csum, arg1, arg2, ar
     } else {
         self.csum = Checksum.objOrType(csum);
     }
-    self.args = [
-        arg1 || emptyBuffer,
-        arg2 || emptyBuffer,
-        arg3 || emptyBuffer
-    ];
+    self.args = args || [];
 }
 
 CallRequest.TypeCode = 0x03;
@@ -94,9 +88,9 @@ CallRequest.prototype.verifyChecksum = function verifyChecksum() {
 };
 
 // flags:1 code:1 tracing:24 traceflags:1 nh:1 (hk~1 hv~1){nh} csumtype:1 (csum:4){0,1} (arg~2)*
-function CallResponse(flags, code, tracing, headers, csum, arg1, arg2, arg3) {
+function CallResponse(flags, code, tracing, headers, csum, args) {
     if (!(this instanceof CallResponse)) {
-        return new CallResponse(flags, code, tracing, headers, csum, arg1, arg2, arg3);
+        return new CallResponse(flags, code, tracing, headers, csum, args);
     }
     var self = this;
     self.type = CallResponse.TypeCode;
@@ -109,11 +103,7 @@ function CallResponse(flags, code, tracing, headers, csum, arg1, arg2, arg3) {
     } else {
         self.csum = Checksum.objOrType(csum);
     }
-    self.args = [
-        arg1 || emptyBuffer,
-        arg2 || emptyBuffer,
-        arg3 || emptyBuffer
-    ];
+    self.args = args || [];
 }
 
 CallResponse.TypeCode = 0x04;
