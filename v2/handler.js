@@ -206,20 +206,20 @@ TChannelV2Handler.prototype.sendInitResponse = function sendInitResponse(reqFram
 };
 
 /* jshint maxparams:6 */
-TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame(req, arg1, arg2, arg3) {
+TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame(req, args) {
     var self = this;
     var reqBody = v2.CallRequest(
         0, req.ttl, req.tracing,
         req.service, req.headers,
         req.checksumType,
-        [arg1, arg2, arg3]);
+        args);
     reqBody.updateChecksum();
     var reqFrame = v2.Frame(req.id, reqBody);
     self.push(reqFrame);
     req.checksum = reqBody.csum;
 };
 
-TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFrame(res, arg1, arg2, arg3) {
+TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFrame(res, args) {
     // TODO: refactor this all the way back out through the op handler calling convention
     var self = this;
     var resBody;
@@ -227,11 +227,11 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
     if (res.ok) {
         resBody = v2.CallResponse(
             flags, v2.CallResponse.Codes.OK, res.tracing,
-            res.headers, res.checksumType, [arg1, arg2, arg3]);
+            res.headers, res.checksumType, args);
     } else {
         resBody = v2.CallResponse(
             flags, v2.CallResponse.Codes.Error, res.tracing,
-            res.headers, res.checksumType, [arg1, arg2, arg3]);
+            res.headers, res.checksumType, args);
     }
     resBody.updateChecksum();
     var resFrame = v2.Frame(res.id, resBody);
@@ -266,8 +266,8 @@ TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest
     };
     var req = TChannelOutgoingRequest(id, options);
     return req;
-    function sendCallRequestFrame(arg1, arg2, arg3) {
-        self.sendCallRequestFrame(req, arg1, arg2, arg3);
+    function sendCallRequestFrame(args) {
+        self.sendCallRequestFrame(req, args);
     }
 };
 
@@ -285,8 +285,8 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
     });
     return res;
 
-    function sendCallResponseFrame(arg1, arg2, arg3) {
-        self.sendCallResponseFrame(res, arg1, arg2, arg3);
+    function sendCallResponseFrame(args) {
+        self.sendCallResponseFrame(res, args);
     }
 
     function sendErrorFrame(codeString, message) {
