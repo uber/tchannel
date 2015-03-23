@@ -12,6 +12,7 @@ import time
 
 import tornado.ioloop
 import tornado.web
+
 from .tornado.http_request import HttpRequest
 from .tornado import TChannel
 
@@ -231,8 +232,9 @@ def timing(profile=False):
     )
 
 
-def main():  # pragma: no cover
-    args = parse_args()
+@tornado.gen.coroutine
+def main(argv=None):
+    args = parse_args(argv)
 
     logging.basicConfig(
         format="%(name)s[%(process)s] %(levelname)s: %(message)s",
@@ -243,9 +245,10 @@ def main():  # pragma: no cover
     if args.verbose:
         log.setLevel(logging.DEBUG)
 
+    # TODO: get rid of this
     tornado.httputil.HTTPServerRequest = HttpRequest
 
-    multi_tcurl(
+    results = yield multi_tcurl(
         args.host,
         args.headers,
         args.body,
@@ -253,13 +256,22 @@ def main():  # pragma: no cover
         profile=args.profile,
         rps=args.rps,
         quiet=args.quiet
+
     )
 
-    if args.in_port:
-        tornado.ioloop.IOLoop.instance().start()
+    raise tornado.gen.Return(results)
+
+
+def start_ioloop():  # pragma: no cover
+    args = parse_args()
+    ioloop = tornado.ioloop.IOLoop.instance()
+
+    if not args.in_port:
+        ioloop.run_sync(main)
     else:
-        tornado.ioloop.IOLoop.instance().run_sync(lambda: None)
+        main()
+        ioloop.start()
 
 
 if __name__ == '__main__':  # pragma: no cover
-    main()
+    start_ioloop()
