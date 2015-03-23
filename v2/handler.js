@@ -129,7 +129,13 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
     if (self.remoteHostPort === null) {
         return callback(new Error('call request before init request')); // TODO typed error
     }
+    var err = reqFrame.body.verifyChecksum();
+    if (err) {
+        callback(err); // TODO wrap context
+        return;
+    }
     var req = self.buildIncomingRequest(reqFrame);
+    req.checksum = reqFrame.body.csum;
     self.emit('call.incoming.request', req);
     callback();
 };
@@ -139,7 +145,13 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
     if (self.remoteHostPort === null) {
         return callback(new Error('call response before init response')); // TODO typed error
     }
+    var err = resFrame.body.verifyChecksum();
+    if (err) {
+        callback(err); // TODO wrap context
+        return;
+    }
     var res = self.buildIncomingResponse(resFrame);
+    res.checksum = resFrame.body.csum;
     self.emit('call.incoming.response', res);
     callback();
 };
@@ -201,6 +213,7 @@ TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame
         req.service, req.headers,
         req.checksumType,
         arg1, arg2, arg3);
+    reqBody.updateChecksum();
     var reqFrame = v2.Frame(req.id, reqBody);
     self.push(reqFrame);
 };
@@ -219,6 +232,7 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
             flags, v2.CallResponse.Codes.Error, res.tracing,
             res.headers, res.checksumType, arg1, arg2, arg3);
     }
+    resBody.updateChecksum();
     var resFrame = v2.Frame(res.id, resBody);
     self.push(resFrame);
 };
