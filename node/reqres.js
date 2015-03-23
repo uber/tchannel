@@ -25,6 +25,9 @@ var inherits = require('util').inherits;
 
 var emptyBuffer = Buffer(0);
 
+var States = Object.create(null);
+States.Initial = 0;
+
 // TODO: provide streams for arg2/3
 
 function TChannelIncomingRequest(id, options) {
@@ -34,6 +37,7 @@ function TChannelIncomingRequest(id, options) {
     options = options || {};
     var self = this;
     EventEmitter.call(self);
+    self.state = States.Initial;
     self.id = id || 0;
     self.ttl = options.ttl || 0;
     self.tracing = options.tracing || null;
@@ -56,6 +60,7 @@ function TChannelIncomingResponse(id, options) {
     options = options || {};
     var self = this;
     EventEmitter.call(self);
+    self.state = States.Initial;
     self.id = id || 0;
     self.code = options.code || 0;
     self.checksum = options.checksum || null;
@@ -77,6 +82,7 @@ function TChannelOutgoingRequest(id, options) {
     }
     var self = this;
     EventEmitter.call(self);
+    self.state = States.Initial;
     self.id = id || 0;
     self.ttl = options.ttl || 0;
     self.tracing = options.tracing || null;
@@ -136,6 +142,7 @@ function TChannelOutgoingResponse(id, options) {
     }
     var self = this;
     EventEmitter.call(self);
+    self.state = States.Initial;
     self.id = id || 0;
     self.code = options.code || 0;
     self.tracing = options.tracing || null;
@@ -195,6 +202,7 @@ TChannelOutgoingResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
     self.emit('end');
 };
 
+module.exports.States = States;
 module.exports.IncomingRequest = TChannelIncomingRequest;
 module.exports.IncomingResponse = TChannelIncomingResponse;
 module.exports.OutgoingRequest = TChannelOutgoingRequest;
