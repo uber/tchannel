@@ -1,5 +1,3 @@
-package tchannel
-
 // Copyright (c) 2015 Uber Technologies, Inc.
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,19 +18,36 @@ package tchannel
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// A FramePool is a pool for managing and re-using frames
-type FramePool interface {
-	// Retrieves a new frame from the pool
-	Get() *Frame
+'use strict';
 
-	// Releases a frame back to the pool
-	Release(f *Frame)
-}
+var test = require('tape');
+var bufrw = require('bufrw');
+var testRW = require('bufrw/test_rw');
+var ArgsRW = require('../../v2/args.js');
 
-// The DefaultFramePool uses the heap as the pool
-var DefaultFramePool = defaultFramePool{}
+test('ArgsRW: read/write payload', testRW.cases(ArgsRW(bufrw.buf2), [
 
-type defaultFramePool struct{}
+    [[], []],
 
-func (p defaultFramePool) Get() *Frame      { return NewFrame(MaxFramePayloadSize) }
-func (p defaultFramePool) Release(f *Frame) {}
+    [
+        [Buffer('on')], [
+            0x00, 0x02, 0x6f, 0x6e  // arg1~2
+        ]
+    ],
+
+    [
+        [Buffer('on'), Buffer('to')], [
+            0x00, 0x02, 0x6f, 0x6e, // arg1~2
+            0x00, 0x02, 0x74, 0x6f  // arg2~2
+        ]
+    ],
+
+    [
+        [Buffer('on'), Buffer('to'), Buffer('te')], [
+            0x00, 0x02, 0x6f, 0x6e, // arg1~2
+            0x00, 0x02, 0x74, 0x6f, // arg2~2
+            0x00, 0x02, 0x74, 0x65  // arg3~2
+        ]
+    ]
+
+]));

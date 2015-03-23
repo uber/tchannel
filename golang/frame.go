@@ -23,6 +23,7 @@ package tchannel
 import (
 	"fmt"
 	"github.com/uber/tchannel/golang/typed"
+	"io"
 	"math"
 )
 
@@ -57,11 +58,60 @@ type FrameHeader struct {
 
 // A Frame is a header and payload
 type Frame struct {
+	buffer       []byte // full buffer, including payload and header
+	headerBuffer []byte // slice referencing just the header
+
 	// The header for the frame
 	Header FrameHeader
 
 	// The payload for the frame
-	Payload [MaxFramePayloadSize]byte
+	Payload []byte
+}
+
+// NewFrame allocates a new frame with the given payload capacity
+func NewFrame(payloadCapacity int) *Frame {
+	f := &Frame{}
+	f.buffer = make([]byte, payloadCapacity+FrameHeaderSize)
+	f.Payload = f.buffer[FrameHeaderSize:]
+	f.headerBuffer = f.buffer[:FrameHeaderSize]
+	return f
+}
+
+// ReadFrom reads the frame from the given io.Reader
+func (f *Frame) ReadFrom(r io.Reader) error {
+	var rbuf typed.ReadBuffer
+	rbuf.Wrap(f.headerBuffer)
+
+	if _, err := rbuf.FillFrom(r, FrameHeaderSize); err != nil {
+		return err
+	}
+
+	if err := f.Header.read(&rbuf); err != nil {
+		return err
+	}
+
+	if _, err := r.Read(f.SizedPayload()); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// WriteTo writes the frame to the given io.Writer
+func (f *Frame) WriteTo(w io.Writer) error {
+	var wbuf typed.WriteBuffer
+	wbuf.Wrap(f.headerBuffer)
+
+	if err := f.Header.write(&wbuf); err != nil {
+		return err
+	}
+
+	fullFrame := f.buffer[:FrameHeaderSize+f.Header.Size]
+	if _, err := w.Write(fullFrame); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // SizedPayload returns the slice of the payload actually used, as defined by the header
@@ -71,7 +121,7 @@ func (f *Frame) SizedPayload() []byte {
 
 func (fh FrameHeader) String() string { return fmt.Sprintf("%s[%d]", fh.messageType, fh.ID) }
 
-func (fh *FrameHeader) read(r typed.ReadBuffer) error {
+func (fh *FrameHeader) read(r *typed.ReadBuffer) error {
 	var err error
 	fh.Size, err = r.ReadUint16()
 	if err != nil {
@@ -101,7 +151,7 @@ func (fh *FrameHeader) read(r typed.ReadBuffer) error {
 	return nil
 }
 
-func (fh *FrameHeader) write(w typed.WriteBuffer) error {
+func (fh *FrameHeader) write(w *typed.WriteBuffer) error {
 	if err := w.WriteUint16(fh.Size); err != nil {
 		return err
 	}

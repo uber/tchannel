@@ -245,7 +245,10 @@ TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest
     if (options.checksumType === undefined || options.checksumType === null) {
         options.checksumType = v2.Checksum.Types.FarmHash32;
     }
-    var req = TChannelOutgoingRequest(id, options, sendCallRequestFrame);
+    options.sendFrame = {
+        callRequest: sendCallRequestFrame
+    };
+    var req = TChannelOutgoingRequest(id, options);
     return req;
     function sendCallRequestFrame(arg1, arg2, arg3) {
         self.sendCallRequestFrame(req, arg1, arg2, arg3);
@@ -254,16 +257,16 @@ TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest
 
 TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingResponse(req) {
     var self = this;
-    var senders = {
-        callResponseFrame: sendCallResponseFrame,
-        errorFrame: sendErrorFrame
-    };
     var res = TChannelOutgoingResponse(req.id, {
         tracing: req.tracing,
         headers: {},
         checksumType: req.checksumType,
-        arg1: req.arg1
-    }, senders);
+        arg1: req.arg1,
+        sendFrame: {
+            callResponse: sendCallResponseFrame,
+            error: sendErrorFrame
+        }
+    });
     return res;
 
     function sendCallResponseFrame(arg1, arg2, arg3) {
