@@ -11,9 +11,7 @@ import sys
 import time
 
 import tornado.ioloop
-import tornado.web
-
-from .tornado.http_request import HttpRequest
+from .handler import TChannelRequestHandler
 from .tornado import TChannel
 
 
@@ -125,35 +123,38 @@ def parse_args(args=None):
     return args
 
 
-class MainHandler(tornado.web.RequestHandler):
-    def get(self):
-        self.request.write("Hello, world")
-        self.request.finish()
+def handler1(request, response, opts):
+    response.write("handler1 says hi")
 
 
-def make_app():
-    application = tornado.web.Application([
-        (r"/hello", MainHandler),
-    ])
+def handler2(request, response, opts):
+    response.write("handler2 says ok")
 
-    return application
+
+def create_server(tchannel, in_port):
+
+    handler = TChannelRequestHandler()
+    handler.register_handler(
+        r"/hi", handler1
+    )
+    handler.register_handler(
+        r"/ok", handler2
+    )
+
+    server = tchannel.host(in_port, handler)
+    server.listen()
 
 
 @tornado.gen.coroutine
 def multi_tcurl(
+    tchannel,
     hostports,
     headers,
     bodies,
-    in_port=None,
     profile=False,
     rps=None,
     quiet=False,
 ):
-    app = make_app()
-    client = TChannel(app=app)
-
-    if in_port:
-        client.make_in_connection(in_port)
 
     requests = getattr(itertools, 'izip', zip)(hostports, headers, bodies)
     futures = []
@@ -163,7 +164,7 @@ def multi_tcurl(
         for hostport, header, body in requests:
             info['requests'] += 1
 
-            futures.append(tcurl(client, hostport, header, body, quiet))
+            futures.append(tcurl(tchannel, hostport, header, body, quiet))
 
             if rps:
                 yield tornado.gen.sleep(1.0 / rps)
@@ -245,14 +246,15 @@ def main(argv=None):
     if args.verbose:
         log.setLevel(logging.DEBUG)
 
-    # TODO: get rid of this
-    tornado.httputil.HTTPServerRequest = HttpRequest
+    tchannel = TChannel()
+    if args.in_port:
+        create_server(tchannel, args.in_port)
 
     results = yield multi_tcurl(
+        tchannel,
         args.host,
         args.headers,
         args.body,
-        args.in_port,
         profile=args.profile,
         rps=args.rps,
         quiet=args.quiet
