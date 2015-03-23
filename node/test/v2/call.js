@@ -33,65 +33,97 @@ var testTracing = Tracing(
     24
 );
 
+var testReq = Call.Request(
+    0, 1024, testTracing, 'apache', {key: 'val'},
+    Checksum.Types.Farm32,
+    Buffer('on'),
+    Buffer('to'),
+    Buffer('te')
+);
+testReq.updateChecksum();
+
+var testReqBytes = [
+    0x00,                   // flags:1
+    0x00, 0x00, 0x04, 0x00, // ttl:4
+    0x00, 0x01, 0x02, 0x03, // tracing:24
+    0x04, 0x05, 0x06, 0x07, // ...
+    0x08, 0x09, 0x0a, 0x0b, // ...
+    0x0c, 0x0d, 0x0e, 0x0f, // ...
+    0x10, 0x11, 0x12, 0x13, // ...
+    0x14, 0x15, 0x16, 0x17, // ...
+    0x18,                   // traceflags:1
+    0x06,                   // service~1
+    0x61, 0x70, 0x61, 0x63, // ...
+    0x68, 0x65,             // ...
+    0x01,                   // nh:1
+    0x03, 0x6b, 0x65, 0x79, // (hk~1 hv~1){nh}
+    0x03, 0x76, 0x61, 0x6c, // ...
+    Checksum.Types.Farm32,  // csumtype:1
+    0x8e, 0x09, 0xa1, 0xbd, // (csum:4){0,1}
+    0x00, 0x02, 0x6f, 0x6e, // arg1~2
+    0x00, 0x02, 0x74, 0x6f, // arg2~2
+    0x00, 0x02, 0x74, 0x65  // arg3~2
+];
+
 test('Call.Request.RW: read/write payload', testRW.cases(Call.Request.RW, [
-    [
-        Call.Request(
-            0, 1024, testTracing, 'apache', {key: 'val'},
-            Checksum.Types.Farm32,
-            Buffer('on'),
-            Buffer('to'),
-            Buffer('te')
-        ), [
-            0x00,                   // flags:1
-            0x00, 0x00, 0x04, 0x00, // ttl:4
-            0x00, 0x01, 0x02, 0x03, // tracing:24
-            0x04, 0x05, 0x06, 0x07, // ...
-            0x08, 0x09, 0x0a, 0x0b, // ...
-            0x0c, 0x0d, 0x0e, 0x0f, // ...
-            0x10, 0x11, 0x12, 0x13, // ...
-            0x14, 0x15, 0x16, 0x17, // ...
-            0x18,                   // traceflags:1
-            0x06,                   // service~1
-            0x61, 0x70, 0x61, 0x63, // ...
-            0x68, 0x65,             // ...
-            0x01,                   // nh:1
-            0x03, 0x6b, 0x65, 0x79, // (hk~1 hv~1){nh}
-            0x03, 0x76, 0x61, 0x6c, // ...
-            Checksum.Types.Farm32,  // csumtype:1
-            0x8e, 0x09, 0xa1, 0xbd, // (csum:4){0,1}
-            0x00, 0x02, 0x6f, 0x6e, // arg1~2
-            0x00, 0x02, 0x74, 0x6f, // arg2~2
-            0x00, 0x02, 0x74, 0x65  // arg3~2
-        ]
-    ]
+    {
+        lengthTest: {
+            length: testReqBytes.length,
+            value: testReq
+        },
+        writeTest: {
+            bytes: testReqBytes,
+            value: testReq
+        },
+        readTest: {
+            bytes: testReqBytes,
+            value: testReq
+        }
+    }
 ]));
 
+var testRes = Call.Response(
+    0, Call.Response.Codes.OK, testTracing, {key: 'val'},
+    Checksum.Types.Farm32,
+    Buffer('ON'),
+    Buffer('TO'),
+    Buffer('TE')
+);
+testRes.updateChecksum();
+
+var testResBytes = [
+    0x00,                   // flags:1
+    Call.Response.Codes.OK, // code:1
+    0x00, 0x01, 0x02, 0x03, // tracing:24
+    0x04, 0x05, 0x06, 0x07, // ...
+    0x08, 0x09, 0x0a, 0x0b, // ...
+    0x0c, 0x0d, 0x0e, 0x0f, // ...
+    0x10, 0x11, 0x12, 0x13, // ...
+    0x14, 0x15, 0x16, 0x17, // ...
+    0x18,                   // traceflags:1
+    0x01,                   // nh:1
+    0x03, 0x6b, 0x65, 0x79, // (hk~1 hv~1){nh}
+    0x03, 0x76, 0x61, 0x6c, // ...
+    Checksum.Types.Farm32,  // csumtype:1
+    0x8d, 0x82, 0xe8, 0xba, // (csum:4){0,1}
+    0x00, 0x02, 0x4f, 0x4e, // arg1~2
+    0x00, 0x02, 0x54, 0x4f, // arg2~2
+    0x00, 0x02, 0x54, 0x45  // arg3~2
+];
+
 test('Call.Response.RW: read/write payload', testRW.cases(Call.Response.RW, [
-    [
-        Call.Response(
-            0, Call.Response.Codes.OK, testTracing, {key: 'val'},
-            Checksum.Types.Farm32,
-            Buffer('ON'),
-            Buffer('TO'),
-            Buffer('TE')
-        ), [
-            0x00,                   // flags:1
-            Call.Response.Codes.OK, // code:1
-            0x00, 0x01, 0x02, 0x03, // tracing:24
-            0x04, 0x05, 0x06, 0x07, // ...
-            0x08, 0x09, 0x0a, 0x0b, // ...
-            0x0c, 0x0d, 0x0e, 0x0f, // ...
-            0x10, 0x11, 0x12, 0x13, // ...
-            0x14, 0x15, 0x16, 0x17, // ...
-            0x18,                   // traceflags:1
-            0x01,                   // nh:1
-            0x03, 0x6b, 0x65, 0x79, // (hk~1 hv~1){nh}
-            0x03, 0x76, 0x61, 0x6c, // ...
-            Checksum.Types.Farm32,  // csumtype:1
-            0x8d, 0x82, 0xe8, 0xba, // (csum:4){0,1}
-            0x00, 0x02, 0x4f, 0x4e, // arg1~2
-            0x00, 0x02, 0x54, 0x4f, // arg2~2
-            0x00, 0x02, 0x54, 0x45  // arg3~2
-        ]
-    ]
+    {
+        lengthTest: {
+            length: testResBytes.length,
+            value: testRes
+        },
+        writeTest: {
+            bytes: testResBytes,
+            value: testRes
+        },
+        readTest: {
+            bytes: testResBytes,
+            value: testRes
+        }
+    }
 ]));

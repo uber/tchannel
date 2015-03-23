@@ -152,7 +152,6 @@ function prepareWrite(body, buffer, offset) {
             new Error('streaming call not implemented'),
             offset);
     }
-    body.updateChecksum();
     return WriteResult.just(offset);
 }
 
@@ -161,10 +160,6 @@ function readGuard(body, buffer, offset) {
         return ReadResult.error(
             new Error('streaming call not implemented'),
             offset);
-    }
-    var err = body.verifyChecksum();
-    if (err) {
-        return ReadResult.error(err, offset);
     }
     return ReadResult.just(offset);
 }
