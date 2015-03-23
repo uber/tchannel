@@ -87,6 +87,11 @@ function TChannelOutgoingRequest(id, options) {
 
 inherits(TChannelOutgoingRequest, EventEmitter);
 
+TChannelOutgoingRequest.prototype.sendCallRequestFrame = function sendCallRequestFrame(arg1, arg2, arg3) {
+    var self = this;
+    self.sendFrame.callRequest(arg1, arg2, arg3);
+};
+
 TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     var self = this;
     if (callback) self.hookupCallback(callback);
@@ -94,7 +99,7 @@ TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callbac
         throw new Error('request already sent');
     }
     self.sent = true;
-    self.sendFrame.callRequest(
+    self.sendCallRequestFrame(
         arg1 ? Buffer(arg1) : null,
         arg2 ? Buffer(arg2) : null,
         arg3 ? Buffer(arg3) : null);
