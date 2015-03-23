@@ -245,7 +245,10 @@ TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest
     if (options.checksumType === undefined || options.checksumType === null) {
         options.checksumType = v2.Checksum.Types.FarmHash32;
     }
-    var req = TChannelOutgoingRequest(id, options, sendCallRequestFrame);
+    options.sendFrame = {
+        callRequest: sendCallRequestFrame
+    };
+    var req = TChannelOutgoingRequest(id, options);
     return req;
     function sendCallRequestFrame(arg1, arg2, arg3) {
         self.sendCallRequestFrame(req, arg1, arg2, arg3);
