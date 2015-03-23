@@ -582,6 +582,12 @@ TChannelConnection.prototype.onReaderError = function onReaderError(err) {
         localName: self.channel.hostPort,
         error: err
     });
+
+    // TODO instead of resetting send an error frame first.
+    // and reset the socket after sending an error frame
+    self.resetAll(new Error('tchannel read error'));
+    // resetAll() does not close the socket
+    self.socket.destroy();
 };
 
 // timeout check runs every timeoutCheckInterval +/- some random fuzz. Range is from
