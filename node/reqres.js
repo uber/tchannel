@@ -40,6 +40,7 @@ function TChannelIncomingRequest(id, options) {
     self.service = options.service || '';
     self.remoteAddr = null;
     self.headers = options.headers || {};
+    self.checksum = options.checksum || null;
     self.checksumType = options.checksumType || 0;
     self.arg1 = options.arg1 || emptyBuffer;
     self.arg2 = options.arg2 || emptyBuffer;
@@ -57,6 +58,7 @@ function TChannelIncomingResponse(id, options) {
     EventEmitter.call(self);
     self.id = id || 0;
     self.code = options.code || 0;
+    self.checksum = options.checksum || null;
     self.arg1 = options.arg1 || emptyBuffer;
     self.arg2 = options.arg2 || emptyBuffer;
     self.arg3 = options.arg3 || emptyBuffer;
@@ -81,6 +83,7 @@ function TChannelOutgoingRequest(id, options) {
     self.service = options.service || '';
     self.headers = options.headers || {};
     self.checksumType = options.checksumType || 0;
+    self.checksum = options.checksum || null;
     self.sendFrame = options.sendFrame;
     self.sent = false;
 }
@@ -137,6 +140,7 @@ function TChannelOutgoingResponse(id, options) {
     self.tracing = options.tracing || null;
     self.headers = options.headers || {};
     self.checksumType = options.checksumType || 0;
+    self.checksum = options.checksum || null;
     self.ok = true;
     self.sendFrame = options.sendFrame;
     self.arg1 = options.arg1 || emptyBuffer;
