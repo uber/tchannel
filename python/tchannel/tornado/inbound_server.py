@@ -46,7 +46,7 @@ class InboundServer(tornado.tcpserver.TCPServer):
     def preprocess_request(self, context, conn):
         """ call handler to process request
 
-        :param context: incoming msg context
-        :param conn: incoming connection
+        :param context: a context contains call request message
+        :param conn: incoming tornado connection
         """
         self.peers[conn].handle_request(context, conn)
