@@ -13,7 +13,7 @@ setup(
     install_requires=['contextlib2', 'enum34', 'futures'],
     entry_points={
         'console_scripts': [
-            'tcurl.py = tchannel.tcurl:main'
+            'tcurl.py = tchannel.tcurl:start_ioloop'
         ]
     },
 )

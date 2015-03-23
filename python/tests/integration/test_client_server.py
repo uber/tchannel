@@ -3,10 +3,10 @@ from __future__ import absolute_import
 import pytest
 
 import tchannel.messages as tmessage
+from tchannel import tcurl
 from tchannel.exceptions import TChannelApplicationException
 from tchannel.outgoing import OutgoingTChannel
 from tchannel.tornado import TChannel
-from tchannel.tcurl import multi_tcurl
 
 
 @pytest.fixture
@@ -86,7 +86,7 @@ def test_tcurl(server_manager, call_response):
         server_manager.port, endpoint.decode('ascii')
     )
 
-    [response] = yield multi_tcurl([hostport], [None], [None])
+    [response] = yield tcurl.main(['--host', hostport])
 
     assert response.arg_1 == call_response.arg_1
     assert response.arg_3 == call_response.arg_3

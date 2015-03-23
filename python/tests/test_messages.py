@@ -226,4 +226,4 @@ def test_call_res_parse():
 
 
 def test_equality_check_against_none(init_request_with_headers):
-    assert (messages.InitRequestMessage() == None) is False
+    assert messages.InitRequestMessage().__eq__(None) is False
