@@ -88,6 +88,7 @@ CallRequest.prototype.splitArgs = function splitArgs(args, maxSize) {
     var first = [];
     var argSize = 2;
 
+    var split = false;
     for (var i = 0; i < args.length; i++) {
         var argLength = argSize + args[i].length;
         if (argLength < remain) {
@@ -95,7 +96,8 @@ CallRequest.prototype.splitArgs = function splitArgs(args, maxSize) {
             remain -= argLength;
         } else {
             first.push(args[i].slice(0, remain - argSize));
-            args = [args[i].slice(remain - argSize)].concat(args.slice(i));
+            args = [args[i].slice(remain - argSize)].concat(args.slice(i+1));
+            split = true;
             break;
         }
     }
@@ -103,7 +105,7 @@ CallRequest.prototype.splitArgs = function splitArgs(args, maxSize) {
     self.args = first;
     var ret = [self];
 
-    if (i < args.length) {
+    if (split) {
         var isLast = !(self.flags & CallRequest.Flags.Fragment);
         self.flags |= Flags.Fragment;
         var cont = self.constructor.Cont(self.flags, self.csum.type);
