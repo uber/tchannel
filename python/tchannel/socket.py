@@ -21,7 +21,7 @@ class _SocketIOAdapter(object):
         self._connection = connection
 
     def read(self, size):
-        result = self._recv(size)
+        result = self._connection.recv(size)
 
         remaining = size - len(result)
 
@@ -29,7 +29,7 @@ class _SocketIOAdapter(object):
         if remaining > 0:
             chunks = [result]
             while remaining > 0:
-                s = self._recv(remaining)
+                s = self._connection.recv(remaining)
 
                 if not s:  # end of stream reached
                     break
@@ -41,23 +41,10 @@ class _SocketIOAdapter(object):
         return result
 
     def write(self, data):
-        try:
-            return self._connection.sendall(data)
-        except socket.error as e:
-            log.warn('socket error while writing: %s', e)
-            self._connection.close()
-            raise ConnectionClosedException("failed to write")
+        return self._connection.sendall(data)
 
     def close(self):
         self._connection.close()
-
-    def _recv(self, size):
-        try:
-            return self._connection.recv(size)
-        except socket.error as e:
-            log.warn('socket error while reading: %s', e)
-            self._connection.close()
-            raise ConnectionClosedException("failed to read")
 
 
 class SocketConnection(object):
@@ -70,6 +57,7 @@ class SocketConnection(object):
         self.connection = _SocketIOAdapter(connection)
         self.writer = FrameWriter(self.connection)
         self.reader = FrameReader(self.connection).read()
+        self.closed = False
 
         self._id_sequence = 0
 
@@ -83,6 +71,11 @@ class SocketConnection(object):
             ctx = next(self.reader)
         except StopIteration:
             ctx = None
+        except socket.error as e:
+            log.warn('socket error while reading: %s', e)
+            self.close()
+            raise ConnectionClosedException("failed to read")
+
         return ctx
 
     def next_message_id(self):
@@ -122,6 +115,11 @@ class SocketConnection(object):
             self.writer.write(message_id, message)
         except exceptions.ProtocolException as e:
             raise exceptions.InvalidMessageException(e.message)
+        except socket.error as e:
+            log.warn('socket error while writing: %s', e)
+            self.close()
+            raise ConnectionClosedException("failed to write")
+
         return message_id
 
     def ping(self):

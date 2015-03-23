@@ -72,58 +72,50 @@ class TornadoConnection(object):
         self.remote_process_name = message.process_name
         self.requested_version = message.version
 
-    @gen.coroutine
     def await(self):
-#<<<<<<< Updated upstream
-        #future = Future()
+        # This is the context we'll return for any inbound messages.
+        context_future = gen.Future()
 
-        #def on_body(size, body):
-            #f = frame.frame_rw.read(BytesIO(body), size=size)
-            #message_rw = messages.RW[f.header.message_type]
-            #message = message_rw.read(BytesIO(f.payload))
-            #future.set_result(Context(f.header.message_id, message))
+        def on_body(read_body_future, size):
+            if read_body_future.exception():
+                return on_error(read_body_future)
 
-        #def on_read_size(size_bytes):
-            #size = frame.frame_rw.size_rw.read(bytesio(size_bytes))
-            #return self.connection.read_bytes(
-                #size - size_width,
-                #callback=(lambda body: on_body(size, body))
-            #)
-#=======
-        #size_width = frame.frame_rw.size_rw.width()
-        #try:
-            #size_bytes = yield self.connection.read_bytes(size_width)
-        #except iostream.StreamClosedError:
-            #log.warn("no longer awaiting")
-            #self.close()
-            #raise gen.Return(None)
+            body = read_body_future.result()
+            f = frame.frame_rw.read(BytesIO(body), size=size)
+            message_rw = messages.RW[f.header.message_type]
+            message = message_rw.read(BytesIO(f.payload))
 
-        #size = frame.frame_rw.size_rw.read(BytesIO(size_bytes))
-        #body = yield self.connection.read_bytes(size - size_width)
-#>>>>>>> Stashed changes
+            context_future.set_result(Context(f.header.message_id, message))
+
+        def on_read_size(read_size_future):
+            if read_size_future.exception():
+                return on_error(read_size_future)
+
+            size_bytes = read_size_future.result()
+            size = frame.frame_rw.size_rw.read(BytesIO(size_bytes))
+            read_body_future = self.connection.read_bytes(size - size_width)
+            read_body_future.add_done_callback(
+                lambda future: on_body(future, size)
+            )
+            return read_body_future
+
+        def on_error(future):
+            exception = future.exception()
+
+            if isinstance(exception, iostream.StreamClosedError):
+                log.warn("no longer awaiting")
+                self.close()
 
         size_width = frame.frame_rw.size_rw.width()
+        read_size_future = self.connection.read_bytes(size_width)
 
-        try:
-            size_bytes = yield self.connection.read_bytes(size_width)
-            size = frame.frame_rw.size_rw.read(BytesIO(size_bytes))
+        read_size_future.add_done_callback(on_read_size)
 
-            body = yield self.connection.read_bytes(size - size_width)
-        except iostream.StreamClosedError:
-            log.warn("no longer awaiting")
-            self.close()
-            raise gen.Return(None)
-
-        f = frame.frame_rw.read(BytesIO(body), size=size)
-        message_rw = messages.RW[f.header.message_type]
-        message = message_rw.read(BytesIO(f.payload))
-
-        raise gen.Return(Context(f.header.message_id, message))
+        return context_future
 
     def frame_and_write(self, message, message_id=None):
         # TODO: track awaiting responses in here
         message_id = message_id or self.next_message_id()
-
 
         if message.message_type in (
             messages.Types.CALL_REQ,
@@ -146,18 +138,8 @@ class TornadoConnection(object):
         )
 
         body = frame.frame_rw.write(f, BytesIO()).getvalue()
-#<<<<<<< Updated upstream
-        #return self.connection.write(body)
-#=======
-        #try:
+
         return self.connection.write(body)
-            #yield self.connection.write(body)
-            #raise gen.Return(message_id)
-        #except iostream.StreamClosedError:
-            #log.warn("unable to frame and write")
-            #self.close()
-            #raise ConnectionClosedException("unable to frame and write")
-#>>>>>>> Stashed changes
 
     def handle_calls(self, handler):
         future = Future()

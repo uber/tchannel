@@ -9,7 +9,6 @@ import tornado.iostream
 from ..exceptions import InvalidMessageException
 from ..messages import CallRequestMessage
 from .connection import TornadoConnection
-from .timeout import timeout
 from .inbound_server import InboundServer
 
 log = logging.getLogger('tchannel')
@@ -101,6 +100,7 @@ class TChannelClientOperation(object):
 
         log.debug("framing and writing message %s", message_id)
 
+        # TODO: return response future here?
         yield peer_connection.frame_and_write(
             message,
             message_id=message_id,
@@ -108,9 +108,8 @@ class TChannelClientOperation(object):
 
         # Pull this out into its own loop, look up response message ids
         # and dispatch them to handlers.
-
-        #with timeout(response_future):
-        # TODO: better interface
+        # with timeout(response_future):
+        # TODO: better interface for these responses
         response = yield peer_connection.awaiting_responses[message_id]
 
         log.debug("got response for message %s", response.message_id)

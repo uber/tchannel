@@ -27,4 +27,3 @@ def unused_port():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind(('', 0))
     return sock.getsockname()[1]
-

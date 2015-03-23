@@ -1,14 +1,12 @@
 from __future__ import absolute_import
 
 import pytest
-import tornado.ioloop
 
 import tchannel.messages as tmessage
 from tchannel import tcurl
+from tchannel.exceptions import ConnectionClosedException
 from tchannel.exceptions import TChannelApplicationException
 from tchannel.outgoing import OutgoingTChannel
-from tchannel.tornado import TChannel
-from tchannel.exceptions import ConnectionClosedException
 from tchannel.tornado import TChannel
 from tchannel.tornado.connection import TornadoConnection
 
@@ -62,10 +60,6 @@ def test_outgoing_tchannel_exception(server_manager, call_response):
             ).and_return(call_response)
             chan.request(host_port).send(endpoint, None, None)
 
-        assert conn.closed is False
-
-    assert conn.closed is True
-
 
 def test_tcp_client_with_server_gone_away(server_manager):
 
@@ -74,7 +68,8 @@ def test_tcp_client_with_server_gone_away(server_manager):
 
         with pytest.raises(ConnectionClosedException):
             conn.ping()
-            assert conn.closed
+
+        assert conn.closed
 
 
 @pytest.mark.gen_test
@@ -89,8 +84,10 @@ def test_tornado_client_with_server_gone_away(server_manager):
 
     server_manager.stop()
 
+    conn.ping()
+
     with pytest.raises(ConnectionClosedException):
-        yield conn.ping()
+        yield conn.awaiting_responses.values()
 
     assert conn.closed
 
