@@ -65,11 +65,14 @@ function TChannelIncomingResponse(id, options) {
 
 inherits(TChannelIncomingResponse, EventEmitter);
 
-function TChannelOutgoingRequest(id, options, sendFrame) {
+function TChannelOutgoingRequest(id, options) {
     if (!(this instanceof TChannelOutgoingRequest)) {
-        return new TChannelOutgoingRequest(id, options, sendFrame);
+        return new TChannelOutgoingRequest(id, options);
     }
     options = options || {};
+    if (!options.sendFrame) {
+        throw new Error('missing sendFrame');
+    }
     var self = this;
     EventEmitter.call(self);
     self.id = id || 0;
@@ -78,11 +81,16 @@ function TChannelOutgoingRequest(id, options, sendFrame) {
     self.service = options.service || '';
     self.headers = options.headers || {};
     self.checksumType = options.checksumType || 0;
-    self.sendFrame = sendFrame;
+    self.sendFrame = options.sendFrame;
     self.sent = false;
 }
 
 inherits(TChannelOutgoingRequest, EventEmitter);
+
+TChannelOutgoingRequest.prototype.sendCallRequestFrame = function sendCallRequestFrame(arg1, arg2, arg3) {
+    var self = this;
+    self.sendFrame.callRequest(arg1, arg2, arg3);
+};
 
 TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     var self = this;
@@ -91,7 +99,7 @@ TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callbac
         throw new Error('request already sent');
     }
     self.sent = true;
-    self.sendFrame(
+    self.sendCallRequestFrame(
         arg1 ? Buffer(arg1) : null,
         arg2 ? Buffer(arg2) : null,
         arg3 ? Buffer(arg3) : null);
@@ -114,12 +122,14 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
     return self;
 };
 
-function TChannelOutgoingResponse(id, options, senders) {
+function TChannelOutgoingResponse(id, options) {
     if (!(this instanceof TChannelOutgoingResponse)) {
-        return new TChannelOutgoingResponse(id, options, senders);
+        return new TChannelOutgoingResponse(id, options);
     }
-
     options = options || {};
+    if (!options.sendFrame) {
+        throw new Error('missing sendFrame');
+    }
     var self = this;
     EventEmitter.call(self);
     self.id = id || 0;
@@ -128,25 +138,38 @@ function TChannelOutgoingResponse(id, options, senders) {
     self.headers = options.headers || {};
     self.checksumType = options.checksumType || 0;
     self.ok = true;
+    self.sendFrame = options.sendFrame;
     self.arg1 = options.arg1 || emptyBuffer;
     self.arg2 = options.arg2 || emptyBuffer;
     self.arg3 = options.arg3 || emptyBuffer;
-    self.sendCallResponseFrame = senders.callResponseFrame;
-    self.sendErrorFrame = senders.errorFrame;
     self.sent = false;
 }
 
 inherits(TChannelOutgoingResponse, EventEmitter);
 
-TChannelOutgoingResponse.prototype.sendOk = function send(res1, res2) {
+TChannelOutgoingResponse.prototype.sendCallResponseFrame = function sendCallResponseFrame(arg1, res1, res2) {
+    var self = this;
+    self.sendFrame.callResponse(arg1, res1, res2);
+};
+
+TChannelOutgoingResponse.prototype.sendErrorFrame = function sendErrorFrame(codeString, message) {
+    var self = this;
+    self.sendFrame.error(codeString, message);
+};
+
+TChannelOutgoingResponse.prototype.setOk = function setOk(ok) {
     var self = this;
     if (self.sent) {
         throw new Error('response already sent');
     }
+    self.ok = ok;
+    self.code = ok ? 0 : 1; // TODO: too coupled to v2 specifics?
+};
 
+TChannelOutgoingResponse.prototype.sendOk = function sendOk(res1, res2) {
+    var self = this;
+    self.setOk(true);
     self.sent = true;
-    self.ok = true;
-
     self.sendCallResponseFrame(self.arg1,
         res1 ? Buffer(res1) : null,
         res2 ? Buffer(res2) : null);
@@ -155,14 +178,8 @@ TChannelOutgoingResponse.prototype.sendOk = function send(res1, res2) {
 
 TChannelOutgoingResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
     var self = this;
-    if (self.sent) {
-        throw new Error('response already sent');
-    }
-
+    self.setOk(false);
     self.sent = true;
-    self.ok = false;
-    self.code = 1;
-
     self.sendCallResponseFrame(self.arg1,
         res1 ? Buffer(res1) : null,
         res2 ? Buffer(res2) : null);
