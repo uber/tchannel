@@ -17,6 +17,6 @@ def timeout(future, seconds=2):
         if future.running():
             future.set_exception(TimeoutException())
 
-    tornado.ioloop.IOLoop.instance().add_callback(raise_timeout())
+    tornado.ioloop.IOLoop.instance().add_callback(raise_timeout)
 
     yield

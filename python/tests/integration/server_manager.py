@@ -107,9 +107,6 @@ class ServerManager(object):
     @contextmanager
     def client_connection(self):
         """Get an initiated Connection to this TChannel server."""
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(self.timeout)
-
         try:
             conn = tchannel.SocketConnection.outgoing(
                 'localhost:%d' % self.port
@@ -125,6 +122,7 @@ class ServerManager(object):
 
     def stop(self):
         self.server.shutdown()
+        self.thread.join()
 
     def __enter__(self):
         self.start()

@@ -1,12 +1,18 @@
 from __future__ import absolute_import
 
+import logging
 import socket
 
-from .frame_reader import FrameReader, FrameWriter
-from . import messages
-from .messages.types import Types
-from .messages.common import PROTOCOL_VERSION
 from . import exceptions
+from . import messages
+from .exceptions import ConnectionClosedException
+from .frame_reader import FrameReader
+from .frame_reader import FrameWriter
+from .messages.common import PROTOCOL_VERSION
+from .messages.types import Types
+
+
+log = logging.getLogger('tchannel')
 
 
 class _SocketIOAdapter(object):
@@ -15,14 +21,16 @@ class _SocketIOAdapter(object):
         self._connection = connection
 
     def read(self, size):
-        result = self._connection.recv(size)
+        result = self._recv(size)
+
         remaining = size - len(result)
 
         # Ensure that we read as much data as was requested.
         if remaining > 0:
             chunks = [result]
             while remaining > 0:
-                s = self._connection.recv(remaining)
+                s = self._recv(remaining)
+
                 if not s:  # end of stream reached
                     break
 
@@ -33,10 +41,23 @@ class _SocketIOAdapter(object):
         return result
 
     def write(self, data):
-        return self._connection.sendall(data)
+        try:
+            return self._connection.sendall(data)
+        except socket.error as e:
+            log.warn('socket error while writing: %s', e)
+            self._connection.close()
+            raise ConnectionClosedException("failed to write")
 
     def close(self):
         self._connection.close()
+
+    def _recv(self, size):
+        try:
+            return self._connection.recv(size)
+        except socket.error as e:
+            log.warn('socket error while reading: %s', e)
+            self._connection.close()
+            raise ConnectionClosedException("failed to read")
 
 
 class SocketConnection(object):
@@ -85,7 +106,12 @@ class SocketConnection(object):
         conn.await_handshake_reply()
         return conn
 
+    @classmethod
+    def incoming(cls, hostport, handler):
+        raise NotImplementedError
+
     def close(self):
+        self.closed = True
         return self.connection.close()
 
     def frame_and_write(self, message, message_id=None):

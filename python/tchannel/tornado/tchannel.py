@@ -106,15 +106,12 @@ class TChannelClientOperation(object):
             message_id=message_id,
         )
 
-        log.debug("awaiting response for message %s", message_id)
-
         # Pull this out into its own loop, look up response message ids
         # and dispatch them to handlers.
-        response_future = tornado.gen.Future()
-        peer_connection.awaiting_responses[message_id] = response_future
 
-        with timeout(response_future):
-            response = yield response_future
+        #with timeout(response_future):
+        # TODO: better interface
+        response = yield peer_connection.awaiting_responses[message_id]
 
         log.debug("got response for message %s", response.message_id)
 

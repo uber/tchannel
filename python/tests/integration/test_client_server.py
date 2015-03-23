@@ -1,12 +1,16 @@
 from __future__ import absolute_import
 
 import pytest
+import tornado.ioloop
 
 import tchannel.messages as tmessage
 from tchannel import tcurl
 from tchannel.exceptions import TChannelApplicationException
 from tchannel.outgoing import OutgoingTChannel
 from tchannel.tornado import TChannel
+from tchannel.exceptions import ConnectionClosedException
+from tchannel.tornado import TChannel
+from tchannel.tornado.connection import TornadoConnection
 
 
 @pytest.fixture
@@ -15,6 +19,7 @@ def call_response():
 
 
 def test_tcp_ping_pong(server_manager):
+
     with server_manager.client_connection() as conn:
         resp = tmessage.PingResponseMessage()
         server_manager.expect_ping().and_return(resp)
@@ -56,6 +61,47 @@ def test_outgoing_tchannel_exception(server_manager, call_response):
                 endpoint
             ).and_return(call_response)
             chan.request(host_port).send(endpoint, None, None)
+
+        assert conn.closed is False
+
+    assert conn.closed is True
+
+
+def test_tcp_client_with_server_gone_away(server_manager):
+
+    with server_manager.client_connection() as conn:
+        server_manager.stop()
+
+        with pytest.raises(ConnectionClosedException):
+            conn.ping()
+            assert conn.closed
+
+
+@pytest.mark.gen_test
+def test_tornado_client_with_server_gone_away(server_manager):
+    "Establish a connection to the server and then kill the server."""
+
+    conn = yield TornadoConnection.outgoing(
+        'localhost:%s' % server_manager.port,
+    )
+
+    assert not conn.closed
+
+    server_manager.stop()
+
+    with pytest.raises(ConnectionClosedException):
+        yield conn.ping()
+
+    assert conn.closed
+
+
+@pytest.mark.gen_test
+def test_tornado_client_with_server_not_there(unused_port):
+
+    with pytest.raises(ConnectionClosedException):
+        yield TornadoConnection.outgoing(
+            'localhost:%d' % unused_port,
+        )
 
 
 @pytest.mark.gen_test
