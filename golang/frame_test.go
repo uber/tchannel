@@ -30,7 +30,7 @@ import (
 
 func TestFraming(t *testing.T) {
 	fh := FrameHeader{
-		Size:        uint16(0xFF34),
+		size:        uint16(0xFF34),
 		messageType: messageTypeCallReq,
 		ID:          0xDEADBEEF,
 	}

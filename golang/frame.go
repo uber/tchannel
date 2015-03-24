@@ -28,20 +28,20 @@ import (
 )
 
 const (
-	// MaxFramePayloadSize is the maximum size of the payload for a single frame
-	MaxFramePayloadSize = math.MaxUint16
+	// MaxFrameSize is the total maximum size for a frame
+	MaxFrameSize = math.MaxUint16
 
 	// FrameHeaderSize is the size of the header element for a frame
 	FrameHeaderSize = 16
 
-	// MaxFrameSize is the total maximum size for a frame
-	MaxFrameSize = MaxFramePayloadSize + FrameHeaderSize
+	// MaxFramePayloadSize is the maximum size of the payload for a single frame
+	MaxFramePayloadSize = MaxFrameSize - FrameHeaderSize
 )
 
 // FrameHeader is the header for a frame, containing the MessageType and size
 type FrameHeader struct {
-	// The size of the frame, not including the header
-	Size uint16
+	// The size of the frame including the header
+	size uint16
 
 	// The type of message represented by the frame
 	messageType messageType
@@ -54,6 +54,77 @@ type FrameHeader struct {
 
 	// Left empty
 	reserved [8]byte
+}
+
+// SetPayloadSize sets the size of the frame payload
+func (fh *FrameHeader) SetPayloadSize(size uint16) {
+	fh.size = size + FrameHeaderSize
+}
+
+// PayloadSize returns the size of the frame payload
+func (fh FrameHeader) PayloadSize() uint16 {
+	return fh.size - FrameHeaderSize
+}
+
+// FrameSize returns the total size of the frame
+func (fh FrameHeader) FrameSize() uint16 {
+	return fh.size
+}
+
+func (fh FrameHeader) String() string { return fmt.Sprintf("%s[%d]", fh.messageType, fh.ID) }
+
+func (fh *FrameHeader) read(r *typed.ReadBuffer) error {
+	var err error
+	fh.size, err = r.ReadUint16()
+	if err != nil {
+		return err
+	}
+
+	msgType, err := r.ReadByte()
+	if err != nil {
+		return err
+	}
+
+	fh.messageType = messageType(msgType)
+
+	if _, err := r.ReadByte(); err != nil {
+		return err
+	}
+
+	fh.ID, err = r.ReadUint32()
+	if err != nil {
+		return err
+	}
+
+	if _, err := r.ReadBytes(len(fh.reserved)); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (fh *FrameHeader) write(w *typed.WriteBuffer) error {
+	if err := w.WriteUint16(fh.size); err != nil {
+		return err
+	}
+
+	if err := w.WriteByte(byte(fh.messageType)); err != nil {
+		return err
+	}
+
+	if err := w.WriteByte(fh.reserved1); err != nil {
+		return err
+	}
+
+	if err := w.WriteUint32(fh.ID); err != nil {
+		return err
+	}
+
+	if err := w.WriteBytes(fh.reserved[:]); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // A Frame is a header and payload
@@ -106,7 +177,7 @@ func (f *Frame) WriteTo(w io.Writer) error {
 		return err
 	}
 
-	fullFrame := f.buffer[:FrameHeaderSize+f.Header.Size]
+	fullFrame := f.buffer[:f.Header.FrameSize()]
 	if _, err := w.Write(fullFrame); err != nil {
 		return err
 	}
@@ -116,61 +187,5 @@ func (f *Frame) WriteTo(w io.Writer) error {
 
 // SizedPayload returns the slice of the payload actually used, as defined by the header
 func (f *Frame) SizedPayload() []byte {
-	return f.Payload[:f.Header.Size]
-}
-
-func (fh FrameHeader) String() string { return fmt.Sprintf("%s[%d]", fh.messageType, fh.ID) }
-
-func (fh *FrameHeader) read(r *typed.ReadBuffer) error {
-	var err error
-	fh.Size, err = r.ReadUint16()
-	if err != nil {
-		return err
-	}
-
-	msgType, err := r.ReadByte()
-	if err != nil {
-		return err
-	}
-
-	fh.messageType = messageType(msgType)
-
-	if _, err := r.ReadByte(); err != nil {
-		return err
-	}
-
-	fh.ID, err = r.ReadUint32()
-	if err != nil {
-		return err
-	}
-
-	if _, err := r.ReadBytes(len(fh.reserved)); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (fh *FrameHeader) write(w *typed.WriteBuffer) error {
-	if err := w.WriteUint16(fh.Size); err != nil {
-		return err
-	}
-
-	if err := w.WriteByte(byte(fh.messageType)); err != nil {
-		return err
-	}
-
-	if err := w.WriteByte(fh.reserved1); err != nil {
-		return err
-	}
-
-	if err := w.WriteUint32(fh.ID); err != nil {
-		return err
-	}
-
-	if err := w.WriteBytes(fh.reserved[:]); err != nil {
-		return err
-	}
-
-	return nil
+	return f.Payload[:f.Header.PayloadSize()]
 }
