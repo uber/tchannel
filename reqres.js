@@ -51,6 +51,9 @@ function TChannelIncomingRequest(id, options) {
     self.arg1 = options.arg1 || emptyBuffer;
     self.arg2 = options.arg2 || emptyBuffer;
     self.arg3 = options.arg3 || emptyBuffer;
+    self.on('finish', function onFinish() {
+        self.state = States.Done;
+    });
 }
 
 inherits(TChannelIncomingRequest, EventEmitter);
@@ -70,6 +73,9 @@ function TChannelIncomingResponse(id, options) {
     self.arg2 = options.arg2 || emptyBuffer;
     self.arg3 = options.arg3 || emptyBuffer;
     self.ok = self.code === 0; // TODO: probably okay, but a bit jank
+    self.on('finish', function onFinish() {
+        self.state = States.Done;
+    });
 }
 
 inherits(TChannelIncomingResponse, EventEmitter);
@@ -93,6 +99,9 @@ function TChannelOutgoingRequest(id, options) {
     self.checksumType = options.checksumType || 0;
     self.checksum = options.checksum || null;
     self.sendFrame = options.sendFrame;
+    self.on('finish', function onFinish() {
+        self.state = States.Done;
+    });
 }
 
 inherits(TChannelOutgoingRequest, EventEmitter);
@@ -200,6 +209,9 @@ function TChannelOutgoingResponse(id, options) {
     self.arg1 = options.arg1 || emptyBuffer;
     self.arg2 = options.arg2 || emptyBuffer;
     self.arg3 = options.arg3 || emptyBuffer;
+    self.on('finish', function onFinish() {
+        self.state = States.Done;
+    });
 }
 
 inherits(TChannelOutgoingResponse, EventEmitter);
