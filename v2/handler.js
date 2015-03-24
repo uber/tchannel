@@ -419,7 +419,7 @@ TChannelV2Handler.prototype.buildIncomingRequest = function buildIncomingRequest
         tracing: reqFrame.body.tracing,
         service: reqFrame.body.service,
         headers: reqFrame.body.headers,
-        checksum: reqFrame.body.csum
+        checksum: v2.Checksum(reqFrame.body.csum.type)
     });
     req.handleFrame(reqFrame.body.args);
     return req;
@@ -428,7 +428,7 @@ TChannelV2Handler.prototype.buildIncomingRequest = function buildIncomingRequest
 TChannelV2Handler.prototype.buildIncomingResponse = function buildIncomingResponse(resFrame) {
     var res = TChannelIncomingResponse(resFrame.id, {
         code: resFrame.body.code,
-        checksum: resFrame.body.csum
+        checksum: v2.Checksum(resFrame.body.csum.type)
     });
     res.handleFrame(resFrame.body.args);
     return res;
