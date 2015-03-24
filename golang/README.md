@@ -175,7 +175,7 @@ There is no notion of client and server in this system. Every TChannel instance 
 making or receiving requests, and thus requires a unique port on which to listen. This requirement may
 change in the future.
 
- - See [docs/protocol.md](docs/protocol.md) for more details
+ - See [protocol.md](../docs/protocol.md) for more details
 
 ## Further examples
 
