@@ -590,10 +590,6 @@ TChannelConnection.prototype.onReaderError = function onReaderError(err) {
         localName: self.channel.hostPort
     });
 
-    self.channel.logger.error('tchannel read error', {
-        error: err
-    });
-
     // TODO instead of resetting send an error frame first.
     // and reset the socket after sending an error frame
     self.resetAll(readError);
