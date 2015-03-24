@@ -27,6 +27,7 @@ var emptyBuffer = Buffer(0);
 
 var States = Object.create(null);
 States.Initial = 0;
+States.Streaming = 1;
 States.Done = 2;
 
 // TODO: provide streams for arg2/3
@@ -103,6 +104,8 @@ TChannelOutgoingRequest.prototype.sendCallRequestFrame = function sendCallReques
             self.sendFrame.callRequest(args);
             self.state = States.Done;
             break;
+        case States.Streaming:
+            throw new Error('first request frame already sent'); // TODO: typed error
         case States.Done:
             throw new Error('request already done'); // TODO: typed error
     }
@@ -171,6 +174,8 @@ TChannelOutgoingResponse.prototype.sendCallResponseFrame = function sendCallResp
             self.sendFrame.callResponse(args);
             self.state = States.Done;
             break;
+        case States.Streaming:
+            throw new Error('first response frame already sent'); // TODO: typed error
         case States.Done:
             throw new Error('response already done'); // TODO: typed error
     }
