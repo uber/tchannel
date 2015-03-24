@@ -810,7 +810,7 @@ TChannelConnection.prototype.handleCallRequest = function handleCallRequest(req)
     var id = req.id;
     self.inPending++;
     var op = self.inOps[id] = new TChannelServerOp(self, self.channel.now(), req, res);
-    res.once('end', opDone);
+    res.once('finish', opDone);
     process.nextTick(runHandler);
 
     function runHandler() {
