@@ -20,10 +20,11 @@
 
 'use strict';
 
-var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
+var parallel = require('run-parallel');
 
-var emptyBuffer = Buffer(0);
+var InArgStream = require('./argstream').InArgStream;
+var OutArgStream = require('./argstream').OutArgStream;
 
 var States = Object.create(null);
 States.Initial = 0;
@@ -31,15 +32,13 @@ States.Streaming = 1;
 States.Done = 2;
 States.Error = 3;
 
-// TODO: provide streams for arg2/3
-
 function TChannelIncomingRequest(id, options) {
     if (!(this instanceof TChannelIncomingRequest)) {
         return new TChannelIncomingRequest(id, options);
     }
     options = options || {};
     var self = this;
-    EventEmitter.call(self);
+    InArgStream.call(self);
     self.state = States.Initial;
     self.id = id || 0;
     self.ttl = options.ttl || 0;
@@ -53,14 +52,7 @@ function TChannelIncomingRequest(id, options) {
     });
 }
 
-inherits(TChannelIncomingRequest, EventEmitter);
-
-TChannelIncomingRequest.prototype.handleFrame = function handleFrame(parts) {
-    var self = this;
-    self.arg1 = parts[0] || emptyBuffer;
-    self.arg2 = parts[1] || emptyBuffer;
-    self.arg3 = parts[2] || emptyBuffer;
-};
+inherits(TChannelIncomingRequest, InArgStream);
 
 TChannelIncomingRequest.prototype.finish = function finish() {
     var self = this;
@@ -77,7 +69,7 @@ function TChannelIncomingResponse(id, options) {
     }
     options = options || {};
     var self = this;
-    EventEmitter.call(self);
+    InArgStream.call(self);
     self.state = States.Initial;
     self.id = id || 0;
     self.code = options.code || 0;
@@ -88,14 +80,7 @@ function TChannelIncomingResponse(id, options) {
     });
 }
 
-inherits(TChannelIncomingResponse, EventEmitter);
-
-TChannelIncomingResponse.prototype.handleFrame = function handleFrame(parts) {
-    var self = this;
-    self.arg1 = parts[0] || emptyBuffer;
-    self.arg2 = parts[1] || emptyBuffer;
-    self.arg3 = parts[2] || emptyBuffer;
-};
+inherits(TChannelIncomingResponse, InArgStream);
 
 TChannelIncomingResponse.prototype.finish = function finish() {
     var self = this;
@@ -115,7 +100,7 @@ function TChannelOutgoingRequest(id, options) {
         throw new Error('missing sendFrame');
     }
     var self = this;
-    EventEmitter.call(self);
+    OutArgStream.call(self);
     self.state = States.Initial;
     self.id = id || 0;
     self.ttl = options.ttl || 0;
@@ -129,11 +114,13 @@ function TChannelOutgoingRequest(id, options) {
         self.sendParts(parts, isLast);
     });
     self.on('finish', function onFinish() {
+        // TODO: should be redundant with self.sendCallRequest(Cont)Frame
+        // having been called with isLast=true
         self.state = States.Done;
     });
 }
 
-inherits(TChannelOutgoingRequest, EventEmitter);
+inherits(TChannelOutgoingRequest, OutArgStream);
 
 TChannelOutgoingRequest.prototype.sendParts = function sendParts(parts, isLast) {
     var self = this;
@@ -183,15 +170,9 @@ TChannelOutgoingRequest.prototype.sendCallRequestContFrame = function sendCallRe
 TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     var self = this;
     if (callback) self.hookupCallback(callback);
-    if (self.state !== States.Initial) {
-        throw new Error('request already sent');
-    }
-    self.sendCallRequestFrame([
-        arg1 ? Buffer(arg1) : Buffer(0),
-        arg2 ? Buffer(arg2) : Buffer(0),
-        arg3 ? Buffer(arg3) : Buffer(0)
-    ], true);
-    self.emit('finish');
+    self.arg1.end(arg1);
+    self.arg2.end(arg2);
+    self.arg3.end(arg3);
     return self;
 };
 
@@ -208,8 +189,11 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
         if (callback.canStream) {
             callback(null, res);
         } else {
-            process.nextTick(function() {
-                callback(null, res);
+            parallel({
+                arg2: res.arg2.onValueReady,
+                arg3: res.arg3.onValueReady
+            }, function argsDone(err, args) {
+                callback(err, res, args.arg2, args.arg3);
             });
         }
     }
@@ -225,7 +209,7 @@ function TChannelOutgoingResponse(id, options) {
         throw new Error('missing sendFrame');
     }
     var self = this;
-    EventEmitter.call(self);
+    OutArgStream.call(self);
     self.state = States.Initial;
     self.id = id || 0;
     self.code = options.code || 0;
@@ -235,18 +219,17 @@ function TChannelOutgoingResponse(id, options) {
     self.checksum = options.checksum || null;
     self.ok = true;
     self.sendFrame = options.sendFrame;
-    self.arg1 = options.arg1 || emptyBuffer;
-    self.arg2 = options.arg2 || emptyBuffer;
-    self.arg3 = options.arg3 || emptyBuffer;
     self.on('frame', function onFrame(parts, isLast) {
         self.sendParts(parts, isLast);
     });
     self.on('finish', function onFinish() {
+        // TODO: should be redundant with self.sendCallResponse(Cont)Frame
+        // having been called with isLast=true
         self.state = States.Done;
     });
 }
 
-inherits(TChannelOutgoingResponse, EventEmitter);
+inherits(TChannelOutgoingResponse, OutArgStream);
 
 TChannelOutgoingResponse.prototype.sendParts = function sendParts(parts, isLast) {
     var self = this;
@@ -313,28 +296,21 @@ TChannelOutgoingResponse.prototype.setOk = function setOk(ok) {
     }
     self.ok = ok;
     self.code = ok ? 0 : 1; // TODO: too coupled to v2 specifics?
+    self.arg1.end();
 };
 
 TChannelOutgoingResponse.prototype.sendOk = function sendOk(res1, res2) {
     var self = this;
     self.setOk(true);
-    self.sendCallResponseFrame([
-        self.arg1 || Buffer(0),
-        res1 ? Buffer(res1) : Buffer(0),
-        res2 ? Buffer(res2) : Buffer(0)
-    ], true);
-    self.emit('finish');
+    self.arg2.end(res1);
+    self.arg3.end(res2);
 };
 
 TChannelOutgoingResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
     var self = this;
     self.setOk(false);
-    self.sendCallResponseFrame([
-        self.arg1 || Buffer(0),
-        res1 ? Buffer(res1) : Buffer(0),
-        res2 ? Buffer(res2) : Buffer(0)
-    ], true);
-    self.emit('finish');
+    self.arg2.end(res1);
+    self.arg3.end(res2);
 };
 
 module.exports.States = States;
