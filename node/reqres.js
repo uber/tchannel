@@ -48,15 +48,19 @@ function TChannelIncomingRequest(id, options) {
     self.headers = options.headers || {};
     self.checksum = options.checksum || null;
     self.checksumType = options.checksumType || 0;
-    self.arg1 = options.arg1 || emptyBuffer;
-    self.arg2 = options.arg2 || emptyBuffer;
-    self.arg3 = options.arg3 || emptyBuffer;
     self.on('finish', function onFinish() {
         self.state = States.Done;
     });
 }
 
 inherits(TChannelIncomingRequest, EventEmitter);
+
+TChannelIncomingRequest.prototype.handleFrame = function handleFrame(parts) {
+    var self = this;
+    self.arg1 = parts[0] || emptyBuffer;
+    self.arg2 = parts[1] || emptyBuffer;
+    self.arg3 = parts[2] || emptyBuffer;
+};
 
 TChannelIncomingRequest.prototype.finish = function finish() {
     var self = this;
@@ -78,9 +82,6 @@ function TChannelIncomingResponse(id, options) {
     self.id = id || 0;
     self.code = options.code || 0;
     self.checksum = options.checksum || null;
-    self.arg1 = options.arg1 || emptyBuffer;
-    self.arg2 = options.arg2 || emptyBuffer;
-    self.arg3 = options.arg3 || emptyBuffer;
     self.ok = self.code === 0; // TODO: probably okay, but a bit jank
     self.on('finish', function onFinish() {
         self.state = States.Done;
@@ -88,6 +89,13 @@ function TChannelIncomingResponse(id, options) {
 }
 
 inherits(TChannelIncomingResponse, EventEmitter);
+
+TChannelIncomingResponse.prototype.handleFrame = function handleFrame(parts) {
+    var self = this;
+    self.arg1 = parts[0] || emptyBuffer;
+    self.arg2 = parts[1] || emptyBuffer;
+    self.arg3 = parts[2] || emptyBuffer;
+};
 
 TChannelIncomingResponse.prototype.finish = function finish() {
     var self = this;
