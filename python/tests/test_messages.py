@@ -109,7 +109,7 @@ def test_valid_ping_request():
         'tracing': messages.Tracing(0, 0, 0, 0),
         'service': 'kodenom',
         'headers': {},
-        'checksum': (messages.ChecksumType.none, 0),
+        'checksum': (messages.ChecksumType.none, None),
         'arg_1': None,
         'arg_2': None,
         'arg_3': None,

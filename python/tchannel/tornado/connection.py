@@ -9,6 +9,7 @@ import sys
 
 from tornado import gen
 from tornado import iostream
+from tornado.concurrent import Future
 
 from .. import frame
 from .. import messages
@@ -18,9 +19,8 @@ from ..context import Context
 from ..exceptions import ConnectionClosedException
 from ..messages import CallResponseMessage
 from ..messages.types import Types
-from ..messages.common import PROTOCOL_VERSION
+from ..messages.common import PROTOCOL_VERSION, generate_checksum
 
-from tornado.concurrent import Future
 
 log = logging.getLogger('tchannel')
 
@@ -114,6 +114,7 @@ class TornadoConnection(object):
 
     def frame_and_write(self, message, message_id=None):
         # TODO: track awaiting responses in here
+        generate_checksum(message)
         message_id = message_id or self.next_message_id()
 
         if message.message_type in (

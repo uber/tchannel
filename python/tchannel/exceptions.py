@@ -29,6 +29,11 @@ class ReadException(TChannelException):
     pass
 
 
+class InvalidChecksumException(TChannelException):
+    """Represent invalid checksum type in the message"""
+    pass
+
+
 class TChannelApplicationException(TChannelException):
     """The remote application returned an exception.
 
