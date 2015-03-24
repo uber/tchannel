@@ -80,6 +80,10 @@ TChannelV2Handler.prototype._write = function _write(frame, encoding, callback) 
             return self.handleCallRequest(frame, callback);
         case v2.Types.CallResponse:
             return self.handleCallResponse(frame, callback);
+        case v2.Types.CallRequestCont:
+            return self.handleCallRequestCont(frame, callback);
+        case v2.Types.CallResponseCont:
+            return self.handleCallResponseCont(frame, callback);
         case v2.Types.ErrorResponse:
             return self.handleError(frame, callback);
         default:
@@ -164,6 +168,82 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
     }
     self.emit('call.incoming.response', res);
     callback();
+};
+
+TChannelV2Handler.prototype.handleCallRequestCont = function handleCallRequestCont(reqFrame, callback) {
+    var self = this;
+    if (self.remoteHostPort === null) {
+        return callback(new Error('call request cont before init request')); // TODO typed error
+    }
+
+    var id = reqFrame.id;
+    var req = self.streamingReq[id];
+    if (!req) {
+        return callback(new Error('call request cont for unknown request')); // TODO typed error
+    }
+
+    var checksum = req.checksum;
+    if (checksum.type !== reqFrame.body.csum.type) {
+        callback(new Error('checksum type changed mid-tream')); // TODO typed error
+        return;
+    }
+
+    var err = reqFrame.body.verifyChecksum(checksum.val);
+    if (err) {
+        callback(err); // TODO wrap context
+        return;
+    }
+    req.checksum = reqFrame.body.csum;
+
+    switch (req.state) {
+        case reqres.States.Initial:
+            callback(new Error('got cont to initial req')); // TODO typed error
+            break;
+        case reqres.States.Streaming:
+            callback(new Error('not implemented'));
+            break;
+        case reqres.States.Done:
+            callback(new Error('got cont to done req')); // TODO typed error
+            break;
+    }
+};
+
+TChannelV2Handler.prototype.handleCallResponseCont = function handleCallResponseCont(resFrame, callback) {
+    var self = this;
+    if (self.remoteHostPort === null) {
+        return callback(new Error('call response cont before init response')); // TODO typed error
+    }
+
+    var id = resFrame.id;
+    var res = self.streamingRes[id];
+    if (!res) {
+        return callback(new Error('call response cont for unknown response')); // TODO typed error
+    }
+
+    var checksum = res.checksum;
+    if (checksum.type !== resFrame.body.csum.type) {
+        callback(new Error('checksum type changed mid-tream')); // TODO typed error
+        return;
+    }
+
+    var err = resFrame.body.verifyChecksum(checksum.val);
+    if (err) {
+        callback(err); // TODO wrap context
+        return;
+    }
+    res.checksum = resFrame.body.csum;
+
+    switch (res.state) {
+        case reqres.States.Initial:
+            callback(new Error('got cont to initial res')); // TODO typed error
+            break;
+        case reqres.States.Streaming:
+            callback(new Error('not implemented'));
+            break;
+        case reqres.States.Done:
+            callback(new Error('got cont to done res')); // TODO typed error
+            break;
+    }
 };
 
 TChannelV2Handler.prototype.handleError = function handleError(errFrame, callback) {
