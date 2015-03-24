@@ -215,40 +215,24 @@ TChannelV2Handler.prototype.sendInitResponse = function sendInitResponse(reqFram
     self.push(resFrame);
 };
 
-/* jshint maxparams:6 */
-TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame(req, args) {
+TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame(req, flags, args) {
     var self = this;
-    var reqBody = v2.CallRequest(
-        0, req.ttl, req.tracing,
-        req.service, req.headers,
-        req.checksumType,
-        args);
+    var reqBody = v2.CallRequest(flags, req.ttl, req.tracing, req.service, req.headers, req.checksumType, args);
     reqBody.updateChecksum();
     var reqFrame = v2.Frame(req.id, reqBody);
     self.push(reqFrame);
     req.checksum = reqBody.csum;
 };
 
-TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFrame(res, args) {
-    // TODO: refactor this all the way back out through the op handler calling convention
+TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFrame(res, flags, args) {
     var self = this;
-    var resBody;
-    var flags = 0; // TODO: streaming
-    if (res.ok) {
-        resBody = v2.CallResponse(
-            flags, v2.CallResponse.Codes.OK, res.tracing,
-            res.headers, res.checksumType, args);
-    } else {
-        resBody = v2.CallResponse(
-            flags, v2.CallResponse.Codes.Error, res.tracing,
-            res.headers, res.checksumType, args);
-    }
+    var code = res.ok ? v2.CallResponse.Codes.OK : v2.CallResponse.Codes.Error;
+    var resBody = v2.CallResponse(flags, code, res.tracing, res.headers, res.checksumType, args);
     resBody.updateChecksum();
     var resFrame = v2.Frame(res.id, resBody);
     self.push(resFrame);
     res.checksum = resBody.csum;
 };
-/* jshint maxparams:4 */
 
 TChannelV2Handler.prototype.sendErrorFrame = function sendErrorFrame(req, codeString, message) {
     var self = this;
@@ -276,8 +260,11 @@ TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest
     };
     var req = TChannelOutgoingRequest(id, options);
     return req;
-    function sendCallRequestFrame(args) {
-        self.sendCallRequestFrame(req, args);
+
+    function sendCallRequestFrame(args, isLast) {
+        var flags = 0;
+        if (!isLast) throw new Error('not implemented');
+        self.sendCallRequestFrame(req, flags, args);
     }
 };
 
@@ -295,8 +282,10 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
     });
     return res;
 
-    function sendCallResponseFrame(args) {
-        self.sendCallResponseFrame(res, args);
+    function sendCallResponseFrame(args, isLast) {
+        var flags = 0;
+        if (!isLast) throw new Error('not implemented');
+        self.sendCallResponseFrame(res, flags, args);
     }
 
     function sendErrorFrame(codeString, message) {
