@@ -46,6 +46,13 @@ var TChannelListenError = WrappedError({
     host: null
 });
 
+var TChannelReadProtocolError = WrappedError({
+    type: 'tchannel.protocol.read-failed',
+    message: 'tchannel read failure: {origMessage}',
+    remoteName: null,
+    localName: null
+});
+
 var NoHandlerError = TypedError({
     type: 'tchannel.no-handler',
     message: 'no handler defined'
@@ -577,15 +584,19 @@ require('util').inherits(TChannelConnection, require('events').EventEmitter);
 
 TChannelConnection.prototype.onReaderError = function onReaderError(err) {
     var self = this;
-    self.channel.logger.error('tchannel read error', {
+
+    var readError = TChannelReadProtocolError(err, {
         remoteName: self.remoteName,
-        localName: self.channel.hostPort,
+        localName: self.channel.hostPort
+    });
+
+    self.channel.logger.error('tchannel read error', {
         error: err
     });
 
     // TODO instead of resetting send an error frame first.
     // and reset the socket after sending an error frame
-    self.resetAll(new Error('tchannel read error'));
+    self.resetAll(readError);
     // resetAll() does not close the socket
     self.socket.destroy();
 };
