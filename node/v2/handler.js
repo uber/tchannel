@@ -200,7 +200,7 @@ TChannelV2Handler.prototype.handleCallRequestCont = function handleCallRequestCo
             callback(new Error('got cont to initial req')); // TODO typed error
             break;
         case reqres.States.Streaming:
-            callback(new Error('not implemented'));
+            self._contReqRes(req, reqFrame, callback);
             break;
         case reqres.States.Done:
             callback(new Error('got cont to done req')); // TODO typed error
@@ -238,7 +238,7 @@ TChannelV2Handler.prototype.handleCallResponseCont = function handleCallResponse
             callback(new Error('got cont to initial res')); // TODO typed error
             break;
         case reqres.States.Streaming:
-            callback(new Error('not implemented'));
+            self._contReqRes(res, resFrame, callback);
             break;
         case reqres.States.Done:
             callback(new Error('got cont to done res')); // TODO typed error
@@ -263,6 +263,10 @@ TChannelV2Handler.prototype.handleError = function handleError(errFrame, callbac
         self.emit('call.incoming.error', err);
         callback();
     }
+};
+
+TChannelV2Handler.prototype._contReqRes = function _contReqRes(r, frame, callback) {
+    callback(new Error('not implemented'));
 };
 
 TChannelV2Handler.prototype.sendInitRequest = function sendInitRequest() {
