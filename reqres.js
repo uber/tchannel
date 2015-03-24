@@ -99,6 +99,9 @@ function TChannelOutgoingRequest(id, options) {
     self.checksumType = options.checksumType || 0;
     self.checksum = options.checksum || null;
     self.sendFrame = options.sendFrame;
+    self.on('frame', function onFrame(parts, isLast) {
+        self.sendParts(parts, isLast);
+    });
     self.on('finish', function onFinish() {
         self.state = States.Done;
     });
@@ -209,6 +212,9 @@ function TChannelOutgoingResponse(id, options) {
     self.arg1 = options.arg1 || emptyBuffer;
     self.arg2 = options.arg2 || emptyBuffer;
     self.arg3 = options.arg3 || emptyBuffer;
+    self.on('frame', function onFrame(parts, isLast) {
+        self.sendParts(parts, isLast);
+    });
     self.on('finish', function onFinish() {
         self.state = States.Done;
     });
