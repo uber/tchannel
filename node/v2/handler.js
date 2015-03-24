@@ -217,21 +217,24 @@ TChannelV2Handler.prototype.sendInitResponse = function sendInitResponse(reqFram
 
 TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame(req, flags, args) {
     var self = this;
-    var reqBody = v2.CallRequest(flags, req.ttl, req.tracing, req.service, req.headers, req.checksumType, args);
-    reqBody.updateChecksum();
-    var reqFrame = v2.Frame(req.id, reqBody);
-    self.push(reqFrame);
-    req.checksum = reqBody.csum;
+    var reqBody = v2.CallRequest(flags, req.ttl, req.tracing, req.service, req.headers, req.checksumType);
+    req.checksum = self._sendCallBodies(req.id, reqBody.csum, reqBody, args);
 };
 
 TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFrame(res, flags, args) {
     var self = this;
     var code = res.ok ? v2.CallResponse.Codes.OK : v2.CallResponse.Codes.Error;
-    var resBody = v2.CallResponse(flags, code, res.tracing, res.headers, res.checksumType, args);
-    resBody.updateChecksum();
-    var resFrame = v2.Frame(res.id, resBody);
-    self.push(resFrame);
-    res.checksum = resBody.csum;
+    var resBody = v2.CallResponse(flags, code, res.tracing, res.headers, res.checksumType);
+    res.checksum = self._sendCallBodies(res.id, resBody.csum, resBody, args);
+};
+
+TChannelV2Handler.prototype._sendCallBodies = function _sendCallBodies(id, checksum, body, args) {
+    var self = this;
+    body.args = args;
+    body.updateChecksum();
+    var frame = v2.Frame(id, body);
+    self.push(frame);
+    return checksum;
 };
 
 TChannelV2Handler.prototype.sendErrorFrame = function sendErrorFrame(req, codeString, message) {
