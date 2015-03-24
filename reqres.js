@@ -111,10 +111,9 @@ TChannelOutgoingRequest.prototype.sendCallRequestFrame = function sendCallReques
 TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     var self = this;
     if (callback) self.hookupCallback(callback);
-    if (self.sent) {
+    if (self.state !== States.Initial) {
         throw new Error('request already sent');
     }
-    self.sent = true;
     self.sendCallRequestFrame([
         arg1 ? Buffer(arg1) : null,
         arg2 ? Buffer(arg2) : null,
