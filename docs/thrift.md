@@ -76,7 +76,7 @@ service CommentService {
 For `getComments(1234, 10, 100)`, the `arg3` for `call req` will contain the
 binary-encoded version of the following struct:
 
-```json
+```
 {
     1: 1234,
     2: 10,
@@ -87,7 +87,7 @@ binary-encoded version of the following struct:
 If the call succeeds, the `call res` body contains the following binary-encoded
 struct:
 
-```json
+```
 {
     0: [
         { /* comment fields go here */ },
@@ -100,7 +100,7 @@ struct:
 If the call fails with an `EntityDoesNotExist` exception, the body contains the
 following binary-encoded struct:
 
-```json
+```
 {
     2: { /* EntityDoesNotExist fields go here */ }
 }
