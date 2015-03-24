@@ -251,7 +251,8 @@ class TornadoConnection(object):
                 resp_future = connection.awaiting_responses.pop(
                     context.message_id,
                 )
-                resp_future.set_result(context)
+                if resp_future.running():
+                    resp_future.set_result(context)
             else:
                 log.warn(
                     'unrecognized response for message %s',
