@@ -130,8 +130,8 @@ allocCluster.test('register() with different results', 2, function t(cluster, as
         assert.equal(frameErr.errorCode, 3);
         assert.equal(typeof frameErr.originalId, 'number');
         assert.equal(frameErr.message, 'some message');
-        assert.equal(errorFrameCall.head, null);
-        assert.equal(errorFrameCall.body, null);
+        assert.equal(errorFrameCall.head, undefined);
+        assert.equal(errorFrameCall.body, undefined);
 
         var bufferHead = results.bufferHead;
         assert.equal(bufferHead.err, null);
@@ -212,11 +212,11 @@ function sendCall(channel, opts, op, cb) {
         .request(opts)
         .send(op, null, null, onResult);
 
-    function onResult(err, res) {
+    function onResult(err, res, arg2, arg3) {
         cb(null, {
             err: err,
-            head: res && res.arg2,
-            body: res && res.arg3
+            head: arg2,
+            body: arg3
         });
     }
 }
