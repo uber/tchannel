@@ -25,9 +25,8 @@ class TornadoRequestHandler(RequestHandler):
         request_delegate = self.start_serving(conn)
         message = context.message
         # process http message
-        """TODO need a better way to figure out
-        message's method type
-        """
+        # TODO need a better way to figure out
+        # message's method type
         if message.headers["as"] == "http":
             method = "GET"
             if (message.arg_3 is not None and
@@ -43,7 +42,9 @@ class TornadoRequestHandler(RequestHandler):
             request_delegate.headers_received(start_line, headers)
             request_delegate.data_received(body)
             request_delegate.finish()
-        # TODO process message in json/thrift format
+        else:
+            # TODO process message in json/thrift format
+            raise NotImplementedError()
 
 
 class _ServerRequestAdapter():

@@ -42,8 +42,8 @@ class TChannelRequestHandler(RequestHandler):
             except:
                 # TODO add tchannel error handling here
                 pass
-
-            response.finish()
+            finally:
+                response.finish()
         else:
             # TODO error handling if endpoint is not found
             raise NotImplementedError()
