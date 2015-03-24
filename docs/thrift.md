@@ -196,8 +196,8 @@ Uncaught Exceptions
 -------------------
 
 For uncaught server-side exceptions that are not defined in the Thrift IDL,
-server implementations must respond with a TChannel `error` message with error
-code (`code:1`) `0x05` (unexpected error).
+server implementations should attempt to respond with a TChannel `error`
+message with error code (`code:1`) `0x05` (unexpected error).
 
   [Arguments]: #arguments
   [`arg1`]: #arg1
