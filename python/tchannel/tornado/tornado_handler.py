@@ -30,8 +30,7 @@ class TornadoRequestHandler(RequestHandler):
         """
         if message.headers["as"] == "http":
             method = "GET"
-            if (hasattr(message, "arg_3") and
-                    message.arg_3 is not None and
+            if (message.arg_3 is not None and
                     message.arg_3 != ""):
                 method = "POST"
 
