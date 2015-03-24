@@ -165,7 +165,7 @@ TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callbac
         arg2 ? Buffer(arg2) : null,
         arg3 ? Buffer(arg3) : null
     ]);
-    self.emit('end');
+    self.emit('finish');
     return self;
 };
 
@@ -294,7 +294,7 @@ TChannelOutgoingResponse.prototype.sendOk = function sendOk(res1, res2) {
         res1 ? Buffer(res1) : null,
         res2 ? Buffer(res2) : null
     ]);
-    self.emit('end');
+    self.emit('finish');
 };
 
 TChannelOutgoingResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
@@ -305,7 +305,7 @@ TChannelOutgoingResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
         res1 ? Buffer(res1) : null,
         res2 ? Buffer(res2) : null
     ]);
-    self.emit('end');
+    self.emit('finish');
 };
 
 module.exports.States = States;
