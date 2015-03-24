@@ -1,11 +1,10 @@
 from __future__ import absolute_import
 
-from .exceptions import ProtocolException
-from .context import Context
 from . import messages
 from .io import BytesIO
-from .rw import ReadException
 from .frame import frame_rw, FrameHeader, Frame
+from .context import Context
+from .exceptions import ReadException, ProtocolException
 
 
 class FrameReader(object):
