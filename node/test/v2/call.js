@@ -121,3 +121,71 @@ test('Call.Response.RW: read/write payload', testRW.cases(Call.Response.RW, [
         }
     }
 ]));
+
+var extend = require('xtend');
+var CountStream = require('./test/lib/count_stream');
+var TestIsolateSearch = require('./test/lib/test_isolate_search');
+
+test('fragementation', function t(assert) {
+    var maxSize = 0x40;
+    var reqOverhead = 0x22;
+    var reqContOverhead = 0x02;
+
+    TestIsolateSearch({
+        init: init,
+        explore: explore,
+        isolate: isolate,
+        test: test,
+        sizeLimit: maxSize * 4,
+        basis: [0, 1, 2]
+    }).run(assert);
+
+    function test(state, assert) {
+        var arg1 = CountStream({limit: state.arg1}).read();
+        var arg2 = CountStream({limit: state.arg2}).read();
+        var arg3 = CountStream({limit: state.arg3}).read();
+
+        var body = Call.Request(0, 0, testTracing, '', {}, Checksum.Types.None);
+        var bodies = body.splitArgs([arg1, arg2, arg3], maxSize);
+
+        // reqOverhead
+        // reqContOverhead
+
+        assert.end();
+    }
+
+    function init() {
+        var self = this;
+        self.expand(function(emit) {
+            self.options.basis.forEach(function(n) {
+                emit(self.makeSpec({arg1: n, arg2: 0, arg3: 0}));
+                // emit(self.makeSpec({arg1: n, arg2: 0, arg3: 0}));
+                // emit(self.makeSpec({arg1: n, arg2: 0, arg3: 0}));
+            });
+        });
+    }
+
+    function explore(spec, emit) {
+        var self = this;
+        var state = spec.test
+        var sizeLimit = self.options.sizeLimit;
+        self.options.basis.forEach(function(n) {
+            if (n * state.arg1 < sizeLimit) emit(extend(state, {arg1: n * state.arg1}));
+            // if (n * state.arg2 < sizeLimit) emit(extend(state, {arg2: n * state.arg2}));
+            // if (n * state.arg3 < sizeLimit) emit(extend(state, {arg3: n * state.arg3}));
+        });
+    }
+
+    function isolate(spec, emit) {
+        var good = spec.good;
+        var bad = spec.bad;
+        if (bad.arg1 - good.arg1 > 1) extend(good, {arg1: mid(good.arg1, bad.arg1)});
+        // if (bad.arg2 - good.arg2 > 1) extend(good, {arg2: mid(good.arg2, bad.arg2)});
+        // if (bad.arg3 - good.arg3 > 1) extend(good, {arg3: mid(good.arg3, bad.arg3)});
+    }
+
+});
+
+function mid(a, b) {
+    return a + b/2 - a/2;
+}
