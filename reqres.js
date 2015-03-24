@@ -111,6 +111,20 @@ TChannelOutgoingRequest.prototype.sendCallRequestFrame = function sendCallReques
     }
 };
 
+TChannelOutgoingRequest.prototype.sendCallRequestContFrame = function sendCallRequestContFrame(args, isLast) {
+    var self = this;
+    switch (self.state) {
+        case States.Initial:
+            throw new Error('first request frame not sent'); // TODO: typed error
+        case States.Streaming:
+            self.sendFrame.callRequestCont(args, isLast);
+            if (isLast) self.state = States.Done;
+            break;
+        case States.Done:
+            throw new Error('request already done'); // TODO: typed error
+    }
+};
+
 TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     var self = this;
     if (callback) self.hookupCallback(callback);
@@ -176,6 +190,20 @@ TChannelOutgoingResponse.prototype.sendCallResponseFrame = function sendCallResp
             break;
         case States.Streaming:
             throw new Error('first response frame already sent'); // TODO: typed error
+        case States.Done:
+            throw new Error('response already done'); // TODO: typed error
+    }
+};
+
+TChannelOutgoingResponse.prototype.sendCallResponseContFrame = function sendCallResponseContFrame(args, isLast) {
+    var self = this;
+    switch (self.state) {
+        case States.Initial:
+            throw new Error('first response frame not sent'); // TODO: typed error
+        case States.Streaming:
+            self.sendFrame.callResponseCont(isLast, args);
+            if (isLast) self.state = States.Done;
+            break;
         case States.Done:
             throw new Error('response already done'); // TODO: typed error
     }
