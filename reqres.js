@@ -167,7 +167,13 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
     }
     function onResponse(res) {
         self.removeListener('error', onError);
-        callback(null, res);
+        if (callback.canStream) {
+            callback(null, res);
+        } else {
+            process.nextTick(function() {
+                callback(null, res);
+            });
+        }
     }
     return self;
 };
