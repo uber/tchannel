@@ -56,6 +56,9 @@ function TChannelV2Handler(channel, options) {
     self.channel = channel;
     self.remoteHostPort = null; // filled in by identify message
     self.lastSentFrameId = 0;
+    // TODO: GC these... maybe that's up to TChannel itself wrt ops
+    self.streamingReq = Object.create(null);
+    self.streamingRes = Object.create(null);
 }
 
 util.inherits(TChannelV2Handler, Duplex);
@@ -137,6 +140,9 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
     }
     var req = self.buildIncomingRequest(reqFrame);
     req.checksum = reqFrame.body.csum;
+    if (req.state === reqres.States.Streaming) {
+        self.streamingReq[req.id] = req;
+    }
     self.emit('call.incoming.request', req);
     callback();
 };
@@ -153,6 +159,9 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
     }
     var res = self.buildIncomingResponse(resFrame);
     res.checksum = resFrame.body.csum;
+    if (res.state === reqres.States.Streaming) {
+        self.streamingRes[res.id] = res;
+    }
     self.emit('call.incoming.response', res);
     callback();
 };
