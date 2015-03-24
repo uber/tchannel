@@ -97,6 +97,22 @@ function TChannelOutgoingRequest(id, options) {
 
 inherits(TChannelOutgoingRequest, EventEmitter);
 
+TChannelOutgoingRequest.prototype.sendParts = function sendParts(parts, isLast) {
+    var self = this;
+    switch (self.state) {
+        case States.Initial:
+            self.sendCallRequestFrame(parts, isLast);
+            break;
+        case States.Streaming:
+            self.sendCallRequestContFrame(parts, isLast);
+            break;
+        case States.Done:
+            // TODO: could probably happen normally, like say if a
+            // streaming request is canceled
+            throw new Error('got frame in done state'); // TODO: typed error
+    }
+};
+
 TChannelOutgoingRequest.prototype.sendCallRequestFrame = function sendCallRequestFrame(args, isLast) {
     var self = this;
     switch (self.state) {
@@ -181,6 +197,22 @@ function TChannelOutgoingResponse(id, options) {
 }
 
 inherits(TChannelOutgoingResponse, EventEmitter);
+
+TChannelOutgoingResponse.prototype.sendParts = function sendParts(parts, isLast) {
+    var self = this;
+    switch (self.state) {
+        case States.Initial:
+            self.sendCallResponseFrame(parts, isLast);
+            break;
+        case States.Streaming:
+            self.sendCallResponseContFrame(parts, isLast);
+            break;
+        case States.Done:
+            // TODO: could happen easily if an error frame is sent
+            // mid-stream causing a transition to Done
+            throw new Error('got frame in done state'); // TODO: typed error
+    }
+};
 
 TChannelOutgoingResponse.prototype.sendCallResponseFrame = function sendCallResponseFrame(args, isLast) {
     var self = this;
