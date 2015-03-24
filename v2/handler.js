@@ -233,8 +233,16 @@ TChannelV2Handler.prototype._handleCallFrame = function _handleCallFrame(r, fram
         return;
     }
 
+    var isLast = !(frame.body.flags & v2.CallRequest.Flags.Fragment);
     r.handleFrame(frame.body.args);
-    r.state = reqres.States.Done;
+    if (isLast) {
+        r.state = reqres.States.Done;
+    } else if (r.state === reqres.States.Initial) {
+        r.state = reqres.States.Streaming;
+        throw new Error('not implemented');
+    } else {
+        throw new Error('unknown frame handling state');
+    }
     callback();
 };
 
