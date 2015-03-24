@@ -97,12 +97,13 @@ function TChannelOutgoingRequest(id, options) {
 
 inherits(TChannelOutgoingRequest, EventEmitter);
 
-TChannelOutgoingRequest.prototype.sendCallRequestFrame = function sendCallRequestFrame(args) {
+TChannelOutgoingRequest.prototype.sendCallRequestFrame = function sendCallRequestFrame(args, isLast) {
     var self = this;
     switch (self.state) {
         case States.Initial:
-            self.sendFrame.callRequest(args);
-            self.state = States.Done;
+            self.sendFrame.callRequest(args, isLast);
+            if (isLast) self.state = States.Done;
+            else self.state = States.Streaming;
             break;
         case States.Streaming:
             throw new Error('first request frame already sent'); // TODO: typed error
@@ -181,12 +182,13 @@ function TChannelOutgoingResponse(id, options) {
 
 inherits(TChannelOutgoingResponse, EventEmitter);
 
-TChannelOutgoingResponse.prototype.sendCallResponseFrame = function sendCallResponseFrame(args) {
+TChannelOutgoingResponse.prototype.sendCallResponseFrame = function sendCallResponseFrame(args, isLast) {
     var self = this;
     switch (self.state) {
         case States.Initial:
-            self.sendFrame.callResponse(args);
-            self.state = States.Done;
+            self.sendFrame.callResponse(args, isLast);
+            if (isLast) self.state = States.Done;
+            else self.state = States.Streaming;
             break;
         case States.Streaming:
             throw new Error('first response frame already sent'); // TODO: typed error
