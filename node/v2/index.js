@@ -43,6 +43,14 @@ Frame.Types[Types.CallResponse] = call.Response;
 module.exports.CallRequest = call.Request;
 module.exports.CallResponse = call.Response;
 
+var cont = require('./cont');
+Types.CallRequestCont = cont.RequestCont.TypeCode;
+Types.CallResponseCont = cont.ResponseCont.TypeCode;
+Frame.Types[Types.CallRequestCont] = cont.RequestCont;
+Frame.Types[Types.CallResponseCont] = cont.ResponseCont;
+module.exports.CallRequestCont = cont.RequestCont;
+module.exports.CallResponseCont = cont.ResponseCont;
+
 var ErrorResponse = require('./error_response');
 Types.ErrorResponse = ErrorResponse.TypeCode;
 Frame.Types[Types.ErrorResponse] = ErrorResponse;

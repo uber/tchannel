@@ -5,6 +5,7 @@ from collections import namedtuple
 
 from . import rw
 from .io import BytesIO
+from .exceptions import ReadException
 
 log = logging.getLogger('tchannel')
 
@@ -31,7 +32,7 @@ class FrameReadWriter(rw.ReadWriter):
         if not size:
             try:
                 size = self.size_rw.read(stream)
-            except rw.ReadException:
+            except ReadException:
                 return None
         if not size:
             return None

@@ -24,6 +24,11 @@ class ConnectionClosedException(TChannelException):
     pass
 
 
+class ReadException(TChannelException):
+    """Raised when there is an error while reading input."""
+    pass
+
+
 class TChannelApplicationException(TChannelException):
     """The remote application returned an exception.
 

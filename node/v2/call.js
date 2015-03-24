@@ -21,6 +21,7 @@
 'use strict';
 
 var bufrw = require('bufrw');
+var ArgsRW = require('./args');
 var WriteResult = bufrw.WriteResult;
 var ReadResult = bufrw.ReadResult;
 var Checksum = require('./checksum');
@@ -34,18 +35,15 @@ var Flags = {
 module.exports.Request = CallRequest;
 module.exports.Response = CallResponse;
 
-var emptyBuffer = new Buffer(0);
-
-// TODO: need to support fragmentation and continuation
 // TODO: validate transport header names?
 // TODO: Checksum-like class for tracing
 
 /* jshint maxparams:10 */
 
-// flags:1 ttl:4 tracing:24 traceflags:1 service~1 nh:1 (hk~1 hv~1){nh} csumtype:1 (csum:4){0,1} arg1~2 arg2~2 arg3~2
-function CallRequest(flags, ttl, tracing, service, headers, csum, arg1, arg2, arg3) {
+// flags:1 ttl:4 tracing:24 traceflags:1 service~1 nh:1 (hk~1 hv~1){nh} csumtype:1 (csum:4){0,1} (arg~2)*
+function CallRequest(flags, ttl, tracing, service, headers, csum, args) {
     if (!(this instanceof CallRequest)) {
-        return new CallRequest(flags, ttl, tracing, service, headers, csum, arg1, arg2, arg3);
+        return new CallRequest(flags, ttl, tracing, service, headers, csum, args);
     }
     var self = this;
     self.type = CallRequest.TypeCode;
@@ -59,10 +57,10 @@ function CallRequest(flags, ttl, tracing, service, headers, csum, arg1, arg2, ar
     } else {
         self.csum = Checksum.objOrType(csum);
     }
-    self.arg1 = arg1 || emptyBuffer;
-    self.arg2 = arg2 || emptyBuffer;
-    self.arg3 = arg3 || emptyBuffer;
+    self.args = args || [];
 }
+
+CallRequest.Cont = require('./cont').RequestCont;
 
 CallRequest.TypeCode = 0x03;
 
@@ -76,16 +74,63 @@ CallRequest.RW = bufrw.Struct(CallRequest, [
     {name: 'service', rw: bufrw.str1},           // service~1
     {name: 'headers', rw: header.header1},       // nh:1 (hk~1 hv~1){nh}
     {name: 'csum', rw: Checksum.RW},             // csumtype:1 (csum:4){0,1}
-    {name: 'arg1', rw: bufrw.buf2},              // arg1~2
-    {name: 'arg2', rw: bufrw.buf2},              // arg2~2
-    {name: 'arg3', rw: bufrw.buf2},              // arg3~2
+    {name: 'args', rw: ArgsRW(bufrw.buf2)},      // (arg~2)*
     {call: {readFrom: readGuard}}
 ]);
 
-// flags:1 code:1 tracing:24 traceflags:1 nh:1 (hk~1 hv~1){nh} csumtype:1 (csum:4){0,1} arg1~2 arg2~2 arg3~2
-function CallResponse(flags, code, tracing, headers, csum, arg1, arg2, arg3) {
+CallRequest.prototype.splitArgs = function splitArgs(args, maxSize) {
+    var self = this;
+    // assert not self.args
+    var lenRes = self.constructor.RW.byteLength(self);
+    if (lenRes.err) throw lenRes.err;
+    var maxBodySize = maxSize - lenRes.length;
+    var remain = maxBodySize;
+    var first = [];
+    var argSize = 2;
+
+    var split = false;
+    for (var i = 0; i < args.length; i++) {
+        var argLength = argSize + args[i].length;
+        if (argLength < remain) {
+            first.push(args[i]);
+            remain -= argLength;
+        } else {
+            first.push(args[i].slice(0, remain - argSize));
+            args = [args[i].slice(remain - argSize)].concat(args.slice(i+1));
+            split = true;
+            break;
+        }
+    }
+
+    self.args = first;
+    var ret = [self];
+
+    if (split) {
+        var isLast = !(self.flags & CallRequest.Flags.Fragment);
+        self.flags |= Flags.Fragment;
+        var cont = self.constructor.Cont(self.flags, self.csum.type);
+        ret = cont.splitArgs(args);
+        ret.unshift(self);
+        if (isLast) ret[ret.length - 1].flags &= ~ CallRequest.Flags.Fragment;
+    }
+
+    return ret;
+};
+
+CallRequest.prototype.updateChecksum = function updateChecksum() {
+    var self = this;
+    return self.csum.update(self.args);
+};
+
+CallRequest.prototype.verifyChecksum = function verifyChecksum() {
+    var self = this;
+    return self.csum.verify(self.args);
+};
+
+// flags:1 code:1 tracing:24 traceflags:1 nh:1 (hk~1 hv~1){nh} csumtype:1 (csum:4){0,1} (arg~2)*
+function CallResponse(flags, code, tracing, headers, csum, args) {
     if (!(this instanceof CallResponse)) {
-        return new CallResponse(flags, code, tracing, headers, csum, arg1, arg2, arg3);
+        return new CallResponse(flags, code, tracing, headers, csum, args);
     }
     var self = this;
     self.type = CallResponse.TypeCode;
@@ -98,10 +143,10 @@ function CallResponse(flags, code, tracing, headers, csum, arg1, arg2, arg3) {
     } else {
         self.csum = Checksum.objOrType(csum);
     }
-    self.arg1 = arg1 || emptyBuffer;
-    self.arg2 = arg2 || emptyBuffer;
-    self.arg3 = arg3 || emptyBuffer;
+    self.args = args || [];
 }
+
+CallResponse.Cont = require('./cont').ResponseCont;
 
 CallResponse.TypeCode = 0x04;
 
@@ -119,11 +164,21 @@ CallResponse.RW = bufrw.Struct(CallResponse, [
     {name: 'tracing', rw: Tracing.RW},           // tracing:24 traceflags:1
     {name: 'headers', rw: header.header1},       // nh:1 (hk~1 hv~1){nh}
     {name: 'csum', rw: Checksum.RW},             // csumtype:1 (csum:4){0},1}
-    {name: 'arg1', rw: bufrw.buf2},              // arg1~2
-    {name: 'arg2', rw: bufrw.buf2},              // arg2~2
-    {name: 'arg3', rw: bufrw.buf2},              // arg3~2
+    {name: 'args', rw: ArgsRW(bufrw.buf2)},      // (arg~2)*
     {call: {readFrom: readGuard}}
 ]);
+
+CallResponse.prototype.splitArgs = CallRequest.prototype.splitArgs;
+
+CallResponse.prototype.updateChecksum = function updateChecksum() {
+    var self = this;
+    return self.csum.update(self.args);
+};
+
+CallResponse.prototype.verifyChecksum = function verifyChecksum() {
+    var self = this;
+    return self.csum.verify(self.args);
+};
 
 function prepareWrite(body, buffer, offset) {
     if (body.flags & CallRequest.Flags.Fragment) {
@@ -131,7 +186,6 @@ function prepareWrite(body, buffer, offset) {
             new Error('streaming call not implemented'),
             offset);
     }
-    body.csum.update([body.arg1, body.arg2, body.arg3]);
     return WriteResult.just(offset);
 }
 
@@ -140,10 +194,6 @@ function readGuard(body, buffer, offset) {
         return ReadResult.error(
             new Error('streaming call not implemented'),
             offset);
-    }
-    var err = body.csum.verify([body.arg1, body.arg2, body.arg3]);
-    if (err) {
-        return ReadResult.error(err, offset);
     }
     return ReadResult.just(offset);
 }

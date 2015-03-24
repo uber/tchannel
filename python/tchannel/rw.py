@@ -2,6 +2,8 @@ from __future__ import absolute_import
 
 import struct
 
+from .exceptions import ReadException
+
 
 skip = '_'
 
@@ -178,11 +180,6 @@ def switch(switch_rw, cases):
         value matches, the corresponding ReadWriter will be executed.
     """
     return SwitchReadWriter(switch_rw, cases)
-
-
-class ReadException(Exception):
-    """Raised when there is an error while reading input."""
-    pass
 
 
 class ReadWriter(object):
