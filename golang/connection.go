@@ -471,6 +471,6 @@ func marshalMessage(msg message, pool FramePool) (*Frame, error) {
 
 	f.Header.ID = msg.ID()
 	f.Header.messageType = msg.messageType()
-	f.Header.Size = uint16(wbuf.BytesWritten())
+	f.Header.SetPayloadSize(uint16(wbuf.BytesWritten()))
 	return f, nil
 }

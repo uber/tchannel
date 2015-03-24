@@ -159,7 +159,7 @@ func TestArgEndOnFragmentBoundary(t *testing.T) {
 	lastFragment := sentFragments[len(sentFragments)-1]
 
 	// 1 byte flags, 1 byte checksum type, 4 bytes checksum, 2 bytes size (0)
-	require.Equal(t, 8, int(lastFragment.Header.Size))
+	require.Equal(t, 8, int(lastFragment.Header.PayloadSize()))
 	r1 := newBodyReader(in, false)
 
 	rarg1 := make([]byte, len(arg1))
@@ -243,8 +243,8 @@ func assertFramesEqual(t *testing.T, expected [][]byte, frames []*Frame, msg str
 	assert.Equal(t, len(expected), len(frames), fmt.Sprintf("incorrect number of frames for %s", msg))
 
 	for i := range expected {
-		assert.Equal(t, len(expected[i]), int(frames[i].Header.Size),
+		assert.Equal(t, len(expected[i]), int(frames[i].Header.PayloadSize()),
 			fmt.Sprintf("incorrect size for frame %d of %s", i, msg))
-		assert.Equal(t, expected[i], frames[i].Payload[:frames[i].Header.Size])
+		assert.Equal(t, expected[i], frames[i].Payload[:frames[i].Header.PayloadSize()])
 	}
 }

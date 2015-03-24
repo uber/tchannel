@@ -83,7 +83,7 @@ func (f *outFragment) finish(last bool) *Frame {
 	}
 
 	copy(f.checksumBytes, f.checksum.Sum())
-	f.frame.Header.Size = uint16(len(f.frame.Payload) - len(f.remaining))
+	f.frame.Header.SetPayloadSize((uint16(len(f.frame.Payload) - len(f.remaining))))
 	return f.frame
 }
 
@@ -344,7 +344,7 @@ func newInboundFragment(frame *Frame, msg message, checksum Checksum) (*inFragme
 		checksum: checksum,
 	}
 
-	payload := f.frame.Payload[:f.frame.Header.Size]
+	payload := f.frame.SizedPayload()
 	rbuf := typed.NewReadBuffer(payload)
 
 	// Fragment flags
