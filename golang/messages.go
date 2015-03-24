@@ -23,7 +23,6 @@ package tchannel
 import (
 	"fmt"
 	"github.com/uber/tchannel/golang/typed"
-	"io"
 	"time"
 )
 
@@ -93,10 +92,15 @@ func (m *initMessage) read(r *typed.ReadBuffer) error {
 	}
 
 	m.initParams = initParams{}
-	for {
+	np, err := r.ReadUint16()
+	if err != nil {
+		return err
+	}
+
+	for i := 0; i < int(np); i++ {
 		klen, err := r.ReadUint16()
-		if err == io.EOF {
-			return nil
+		if err != nil {
+			return err
 		}
 
 		k, err := r.ReadString(int(klen))
@@ -116,10 +120,16 @@ func (m *initMessage) read(r *typed.ReadBuffer) error {
 
 		m.initParams[k] = v
 	}
+
+	return nil
 }
 
 func (m *initMessage) write(w *typed.WriteBuffer) error {
 	if err := w.WriteUint16(m.Version); err != nil {
+		return err
+	}
+
+	if err := w.WriteUint16(uint16(len(m.initParams))); err != nil {
 		return err
 	}
 
