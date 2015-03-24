@@ -230,10 +230,15 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
 
 TChannelV2Handler.prototype._sendCallBodies = function _sendCallBodies(id, checksum, body, args) {
     var self = this;
-    body.args = args;
-    body.updateChecksum();
-    var frame = v2.Frame(id, body);
-    self.push(frame);
+    var bodies = body.splitArgs(args, v2.Frame.MaxBodySize);
+    if (bodies.length > 1) throw new Error('not implemented');
+    for (var i = 0; i < bodies.length; i++) {
+        body = bodies[i];
+        body.updateChecksum(checksum.val);
+        checksum = body.csum;
+        var frame = v2.Frame(id, body);
+        self.push(frame);
+    }
     return checksum;
 };
 
