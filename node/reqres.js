@@ -58,6 +58,15 @@ function TChannelIncomingRequest(id, options) {
 
 inherits(TChannelIncomingRequest, EventEmitter);
 
+TChannelIncomingRequest.prototype.finish = function finish() {
+    var self = this;
+    if (self.state === States.Done) {
+        throw new Error('request already done'); // TODO: typed error
+    } else {
+        self.state = States.Done;
+    }
+};
+
 function TChannelIncomingResponse(id, options) {
     if (!(this instanceof TChannelIncomingResponse)) {
         return new TChannelIncomingResponse(id, options);
@@ -79,6 +88,15 @@ function TChannelIncomingResponse(id, options) {
 }
 
 inherits(TChannelIncomingResponse, EventEmitter);
+
+TChannelIncomingResponse.prototype.finish = function finish() {
+    var self = this;
+    if (self.state === States.Done) {
+        throw new Error('response already done'); // TODO: typed error
+    } else {
+        self.state = States.Done;
+    }
+};
 
 function TChannelOutgoingRequest(id, options) {
     if (!(this instanceof TChannelOutgoingRequest)) {
