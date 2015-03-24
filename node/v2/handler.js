@@ -194,18 +194,7 @@ TChannelV2Handler.prototype.handleCallRequestCont = function handleCallRequestCo
         return;
     }
     req.checksum = reqFrame.body.csum;
-
-    switch (req.state) {
-        case reqres.States.Initial:
-            callback(new Error('got cont to initial req')); // TODO typed error
-            break;
-        case reqres.States.Streaming:
-            self._contReqRes(req, reqFrame, callback);
-            break;
-        case reqres.States.Done:
-            callback(new Error('got cont to done req')); // TODO typed error
-            break;
-    }
+    self._handleCallFrame(req, reqFrame, callback);
 };
 
 TChannelV2Handler.prototype.handleCallResponseCont = function handleCallResponseCont(resFrame, callback) {
@@ -232,18 +221,7 @@ TChannelV2Handler.prototype.handleCallResponseCont = function handleCallResponse
         return;
     }
     res.checksum = resFrame.body.csum;
-
-    switch (res.state) {
-        case reqres.States.Initial:
-            callback(new Error('got cont to initial res')); // TODO typed error
-            break;
-        case reqres.States.Streaming:
-            self._contReqRes(res, resFrame, callback);
-            break;
-        case reqres.States.Done:
-            callback(new Error('got cont to done res')); // TODO typed error
-            break;
-    }
+    self._handleCallFrame(res, resFrame, callback);
 };
 
 TChannelV2Handler.prototype.handleError = function handleError(errFrame, callback) {
@@ -265,7 +243,17 @@ TChannelV2Handler.prototype.handleError = function handleError(errFrame, callbac
     }
 };
 
-TChannelV2Handler.prototype._contReqRes = function _contReqRes(r, frame, callback) {
+TChannelV2Handler.prototype._handleCallFrame = function _handleCallFrame(r, frame, callback) {
+    if (r.state === reqres.States.Done) {
+        callback(new Error('got cont in done state')); // TODO typed error
+        return;
+    }
+
+    if (r.state === reqres.States.Initial) {
+        callback(new Error('got cont to initial req')); // TODO typed error
+        return;
+    }
+
     callback(new Error('not implemented'));
 };
 
