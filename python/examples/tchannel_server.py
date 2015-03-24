@@ -4,9 +4,8 @@ import argparse
 import sys
 
 import tornado.ioloop
-import tornado.web
 from tchannel.tornado import TChannel
-from tchannel.tornado.tornado_handler import TornadoRequestHandler
+from tchannel.handler import TChannelRequestHandler
 
 
 def parse_args(args=None):
@@ -26,25 +25,32 @@ def parse_args(args=None):
     return args
 
 
-class MainHandler(tornado.web.RequestHandler):
-    def get(self):
-        self.request.write("Hello, world")
+def handler1(request, response, opts):
+    response.write("handler1 says hi")
 
 
-def make_app():
-    application = tornado.web.Application([
-        (r"/hello", MainHandler),
-    ])
-
-    return application
+def handler2(request, response, opts):
+    response.write("handler2 says ok")
 
 
 def main():  # pragma: no cover
     args = parse_args()
-    app = make_app()
-    tchannel = TChannel()
-    tornado_req_handler = TornadoRequestHandler(app)
-    server = tchannel.host(args.in_port, tornado_req_handler)
+
+    client = TChannel()
+
+    handler = TChannelRequestHandler()
+    handler.register_handler(
+        r"/hi", handler1
+    )
+    handler.register_handler(
+        r"/ok", handler2
+    )
+
+    @handler.route("/bye")
+    def handler3(request, response, opts):
+        response.write("handler3 says bye")
+
+    server = client.host(args.in_port, handler)
     server.listen()
     tornado.ioloop.IOLoop.instance().start()
 

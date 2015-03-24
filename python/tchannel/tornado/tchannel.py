@@ -18,10 +18,8 @@ log = logging.getLogger('tchannel')
 class TChannel(object):
     """Manages inbound and outbound connections to various hosts."""
 
-    def __init__(self, app=None):
+    def __init__(self):
         self.peers = {}
-        self.inbound_server = InboundServer(app)
-        self.endpoints = {}
 
     @tornado.gen.coroutine
     def add_peer(self, hostport):
@@ -46,28 +44,21 @@ class TChannel(object):
 
         raise tornado.gen.Return(peer)
 
-    @tornado.gen.coroutine
-    def make_in_connection(self, port):
-        self.inbound_server.listen(port)
-
     def request(self, hostport):
         return TChannelClientOperation(hostport, self)
 
-    def route(self, rule, **opts):
-        def decorator(handler):
-            self.register_handler(rule, handler, **opts)
-            return handler
+    def host(self, port, handler):
+        return TChannelServerOperation(port, handler)
 
-        return decorator
 
-    def register_handler(self, rule, handler, **opts):
-        self.endpoints[rule] = {
-            "handler": handler,
-            "opts": opts
-        }
+class TChannelServerOperation(object):
 
-    def dispatch_request(self, rule):
-        return self.endpoints.get(rule, None)
+    def __init__(self, port, handler):
+        self.inbound_server = InboundServer(handler)
+        self.port = port
+
+    def listen(self):
+        self.inbound_server.listen(self.port)
 
 
 class TChannelClientOperation(object):
