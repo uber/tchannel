@@ -92,6 +92,7 @@ class TChannelClientOperation(object):
 
         log.debug("framing and writing message %s", message_id)
 
+        # TODO: return response future here?
         yield peer_connection.frame_and_write(
             message,
             message_id=message_id,

@@ -15,6 +15,7 @@ from .. import messages
 from .. import exceptions
 from ..io import BytesIO
 from ..context import Context
+from ..exceptions import ConnectionClosedException
 from ..messages import CallResponseMessage
 from ..messages.types import Types
 from ..messages.common import PROTOCOL_VERSION
@@ -45,6 +46,14 @@ class TornadoConnection(object):
 
     def on_close(self):
         self.closed = True
+
+        for message_id, response_future in self.awaiting_responses.iteritems():
+            response_future.set_exception(
+                ConnectionClosedException(
+                    "canceling outstanding request %d" % message_id
+                )
+            )
+
         self.awaiting_responses = {}
 
     def extract_handshake_headers(self, message):
@@ -63,28 +72,58 @@ class TornadoConnection(object):
         self.requested_version = message.version
 
     def await(self):
-        future = Future()
+        # This is the context we'll return for any inbound messages.
+        context_future = gen.Future()
 
-        def on_body(size, body):
+        def on_body(read_body_future, size):
+            if read_body_future.exception():
+                return on_error(read_body_future)
+
+            body = read_body_future.result()
             f = frame.frame_rw.read(BytesIO(body), size=size)
             message_rw = messages.RW[f.header.message_type]
             message = message_rw.read(BytesIO(f.payload))
-            future.set_result(Context(f.header.message_id, message))
 
-        def on_read_size(size_bytes):
+            context_future.set_result(Context(f.header.message_id, message))
+
+        def on_read_size(read_size_future):
+            if read_size_future.exception():
+                return on_error(read_size_future)
+
+            size_bytes = read_size_future.result()
             size = frame.frame_rw.size_rw.read(BytesIO(size_bytes))
-            return self.connection.read_bytes(
-                size - size_width,
-                callback=(lambda body: on_body(size, body))
+            read_body_future = self.connection.read_bytes(size - size_width)
+            read_body_future.add_done_callback(
+                lambda future: on_body(future, size)
             )
+            return read_body_future
+
+        def on_error(future):
+            exception = future.exception()
+
+            if isinstance(exception, iostream.StreamClosedError):
+                log.warn("no longer awaiting")
+                self.close()
 
         size_width = frame.frame_rw.size_rw.width()
-        self.connection.read_bytes(size_width, callback=on_read_size)
+        read_size_future = self.connection.read_bytes(size_width)
 
-        return future
+        read_size_future.add_done_callback(on_read_size)
+
+        return context_future
 
     def frame_and_write(self, message, message_id=None):
+        # TODO: track awaiting responses in here
         message_id = message_id or self.next_message_id()
+
+        if message.message_type in (
+            messages.Types.CALL_REQ,
+            messages.Types.INIT_REQ,
+            messages.Types.PING_REQ,
+        ):
+            log.debug("awaiting response for message %s", message_id)
+            self.awaiting_responses[message_id] = gen.Future()
+
         payload = messages.RW[message.message_type].write(
             message, BytesIO()
         ).getvalue()
@@ -98,6 +137,7 @@ class TornadoConnection(object):
         )
 
         body = frame.frame_rw.write(f, BytesIO()).getvalue()
+
         return self.connection.write(body)
 
     def handle_calls(self, handler):
@@ -129,6 +169,7 @@ class TornadoConnection(object):
         message = ctx.message
 
         if message.message_type != Types.INIT_RES:
+            log.warn("unexpected handshake response")
             raise exceptions.InvalidMessageException(
                 'Expected handshake response, got %d' %
                 message.message_type,
@@ -140,8 +181,10 @@ class TornadoConnection(object):
 
     @gen.coroutine
     def await_handshake(self, headers):
+        log.debug("awaiting handshake")
         ctx = yield self.await()
         message = ctx.message
+        log.debug("got handshake")
 
         if message.message_type != Types.INIT_REQ:
             raise exceptions.InvalidMessageException(
@@ -177,7 +220,11 @@ class TornadoConnection(object):
 
         log.debug("connecting to hostport %s", hostport)
 
-        yield stream.connect((host, int(port)))
+        try:
+            yield stream.connect((host, int(port)))
+        except socket.error as e:
+            log.warn("couldn't connect to host")
+            raise ConnectionClosedException("couldn't connect to host: %s", e)
 
         connection = cls(stream)
 
@@ -203,7 +250,8 @@ class TornadoConnection(object):
                 resp_future = connection.awaiting_responses.pop(
                     context.message_id,
                 )
-                resp_future.set_result(context)
+                if resp_future.running():
+                    resp_future.set_result(context)
             else:
                 log.warn(
                     'unrecognized response for message %s',

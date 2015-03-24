@@ -1,12 +1,18 @@
 from __future__ import absolute_import
 
+import logging
 import socket
 
-from .frame_reader import FrameReader, FrameWriter
-from . import messages
-from .messages.types import Types
-from .messages.common import PROTOCOL_VERSION
 from . import exceptions
+from . import messages
+from .exceptions import ConnectionClosedException
+from .frame_reader import FrameReader
+from .frame_reader import FrameWriter
+from .messages.common import PROTOCOL_VERSION
+from .messages.types import Types
+
+
+log = logging.getLogger('tchannel')
 
 
 class _SocketIOAdapter(object):
@@ -16,6 +22,7 @@ class _SocketIOAdapter(object):
 
     def read(self, size):
         result = self._connection.recv(size)
+
         remaining = size - len(result)
 
         # Ensure that we read as much data as was requested.
@@ -23,6 +30,7 @@ class _SocketIOAdapter(object):
             chunks = [result]
             while remaining > 0:
                 s = self._connection.recv(remaining)
+
                 if not s:  # end of stream reached
                     break
 
@@ -49,6 +57,7 @@ class SocketConnection(object):
         self.connection = _SocketIOAdapter(connection)
         self.writer = FrameWriter(self.connection)
         self.reader = FrameReader(self.connection).read()
+        self.closed = False
 
         self._id_sequence = 0
 
@@ -62,6 +71,11 @@ class SocketConnection(object):
             ctx = next(self.reader)
         except StopIteration:
             ctx = None
+        except socket.error as e:
+            log.warn('socket error while reading: %s', e)
+            self.close()
+            raise ConnectionClosedException("failed to read")
+
         return ctx
 
     def next_message_id(self):
@@ -85,7 +99,12 @@ class SocketConnection(object):
         conn.await_handshake_reply()
         return conn
 
+    @classmethod
+    def incoming(cls, hostport, handler):
+        raise NotImplementedError
+
     def close(self):
+        self.closed = True
         return self.connection.close()
 
     def frame_and_write(self, message, message_id=None):
@@ -96,6 +115,11 @@ class SocketConnection(object):
             self.writer.write(message_id, message)
         except exceptions.ProtocolException as e:
             raise exceptions.InvalidMessageException(e.message)
+        except socket.error as e:
+            log.warn('socket error while writing: %s', e)
+            self.close()
+            raise ConnectionClosedException("failed to write")
+
         return message_id
 
     def ping(self):

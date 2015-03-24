@@ -8,7 +8,7 @@ from tchannel.tornado.timeout import timeout
 
 
 @pytest.mark.gen_test
-def test_timeout():
+def test_timeout(io_loop):
 
     sleep_time = 0.01
 
@@ -19,6 +19,6 @@ def test_timeout():
 
     slow_future = slow_method()
 
-    with timeout(slow_future, sleep_time):
-        with pytest.raises(TimeoutException):
+    with pytest.raises(TimeoutException):
+        with timeout(slow_future, sleep_time, io_loop):
             yield slow_future
