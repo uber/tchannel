@@ -8,6 +8,11 @@ must be set to `thrift`. Requests will be made using `call req` messages and
 responses will be sent using `call res` messages, with values for `arg{1,2,3}`
 as defined in [Arguments][].
 
+For `call req`, the service name (`service~1`) should be set to the name of the
+TChannel service being called. This does not necessarily have to be the same as
+the Thrift `service` name. For example, the service being designed could be
+called `blog` but the Thrift `service` name could be `BlogService`.
+
 For `call res`,
 
 -   In case of success, the Response Code (`code:1`) must be set to `0x00`.
