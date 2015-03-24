@@ -175,25 +175,11 @@ TChannelV2Handler.prototype.handleCallRequestCont = function handleCallRequestCo
     if (self.remoteHostPort === null) {
         return callback(new Error('call request cont before init request')); // TODO typed error
     }
-
     var id = reqFrame.id;
     var req = self.streamingReq[id];
     if (!req) {
         return callback(new Error('call request cont for unknown request')); // TODO typed error
     }
-
-    var checksum = req.checksum;
-    if (checksum.type !== reqFrame.body.csum.type) {
-        callback(new Error('checksum type changed mid-tream')); // TODO typed error
-        return;
-    }
-
-    var err = reqFrame.body.verifyChecksum(checksum.val);
-    if (err) {
-        callback(err); // TODO wrap context
-        return;
-    }
-    req.checksum = reqFrame.body.csum;
     self._handleCallFrame(req, reqFrame, callback);
 };
 
@@ -202,25 +188,11 @@ TChannelV2Handler.prototype.handleCallResponseCont = function handleCallResponse
     if (self.remoteHostPort === null) {
         return callback(new Error('call response cont before init response')); // TODO typed error
     }
-
     var id = resFrame.id;
     var res = self.streamingRes[id];
     if (!res) {
         return callback(new Error('call response cont for unknown response')); // TODO typed error
     }
-
-    var checksum = res.checksum;
-    if (checksum.type !== resFrame.body.csum.type) {
-        callback(new Error('checksum type changed mid-tream')); // TODO typed error
-        return;
-    }
-
-    var err = resFrame.body.verifyChecksum(checksum.val);
-    if (err) {
-        callback(err); // TODO wrap context
-        return;
-    }
-    res.checksum = resFrame.body.csum;
     self._handleCallFrame(res, resFrame, callback);
 };
 
@@ -248,6 +220,19 @@ TChannelV2Handler.prototype._handleCallFrame = function _handleCallFrame(r, fram
         callback(new Error('got cont in done state')); // TODO typed error
         return;
     }
+
+    var checksum = r.checksum;
+    if (checksum.type !== frame.body.csum.type) {
+        callback(new Error('checksum type changed mid-tream')); // TODO typed error
+        return;
+    }
+
+    var err = frame.body.verifyChecksum(checksum.val);
+    if (err) {
+        callback(err); // TODO wrap context
+        return;
+    }
+    r.checksum = frame.body.csum;
 
     if (r.state === reqres.States.Initial) {
         callback(new Error('got cont to initial req')); // TODO typed error
