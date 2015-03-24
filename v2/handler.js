@@ -217,14 +217,14 @@ TChannelV2Handler.prototype.sendInitResponse = function sendInitResponse(reqFram
 
 TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame(req, flags, args) {
     var self = this;
-    var reqBody = v2.CallRequest(flags, req.ttl, req.tracing, req.service, req.headers, req.checksumType);
+    var reqBody = v2.CallRequest(flags, req.ttl, req.tracing, req.service, req.headers, req.checksum.type);
     req.checksum = self._sendCallBodies(req.id, reqBody.csum, reqBody, args);
 };
 
 TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFrame(res, flags, args) {
     var self = this;
     var code = res.ok ? v2.CallResponse.Codes.OK : v2.CallResponse.Codes.Error;
-    var resBody = v2.CallResponse(flags, code, res.tracing, res.headers, res.checksumType);
+    var resBody = v2.CallResponse(flags, code, res.tracing, res.headers, res.checksum.type);
     res.checksum = self._sendCallBodies(res.id, resBody.csum, resBody, args);
 };
 
@@ -275,6 +275,7 @@ TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest
     if (options.checksumType === undefined || options.checksumType === null) {
         options.checksumType = v2.Checksum.Types.FarmHash32;
     }
+    options.checksum = v2.Checksum(options.checksumType);
     options.sendFrame = {
         callRequest: sendCallRequestFrame,
         callRequestCont: sendCallRequestContFrame
@@ -301,6 +302,7 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
         tracing: req.tracing,
         headers: {},
         checksumType: req.checksumType,
+        checksum: v2.Checksum(req.checksumType),
         arg1: req.arg1,
         sendFrame: {
             callResponse: sendCallResponseFrame,
@@ -333,7 +335,6 @@ TChannelV2Handler.prototype.buildIncomingRequest = function buildIncomingRequest
         tracing: reqFrame.body.tracing,
         service: reqFrame.body.service,
         headers: reqFrame.body.headers,
-        checksumType: reqFrame.body.csum.type,
         checksum: reqFrame.body.csum
     });
     req.handleFrame(reqFrame.body.args);

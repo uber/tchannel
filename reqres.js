@@ -48,7 +48,6 @@ function TChannelIncomingRequest(id, options) {
     self.remoteAddr = null;
     self.headers = options.headers || {};
     self.checksum = options.checksum || null;
-    self.checksumType = options.checksumType || 0;
     self.on('finish', function onFinish() {
         self.state = States.Done;
     });
