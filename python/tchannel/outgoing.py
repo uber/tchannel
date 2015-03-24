@@ -31,6 +31,7 @@ from .socket import SocketConnection
 from .futures import SettableFuture, transform_future
 from .messages import CallRequestMessage
 from .exceptions import TChannelApplicationException
+from .exceptions import ConnectionClosedException
 
 
 class TChannelOutOps(object):
@@ -74,7 +75,7 @@ class TChannelOutOps(object):
         self._sender = Thread(target=self._start_sender)
         self._receiver = Thread(target=self._start_receiver)
         self._timeout = timeout or self.TIMEOUT
-        self._id_counter = 0
+        self.message_id = 0
         self._counter_lock = Lock()
 
         if perform_handshake:
@@ -99,8 +100,8 @@ class TChannelOutOps(object):
     def _next_message_id(self):
         """Return the next available message ID."""
         with self._counter_lock:
-            self._id_counter += 1
-            return self._id_counter
+            self.message_id += 1
+            return self.message_id
 
     def _start_sender(self):
         """Responsible for sending requests over the wire.
@@ -136,6 +137,8 @@ class TChannelOutOps(object):
             try:
                 ctx = self._conn.await()
             except socket.timeout:
+                continue
+            except ConnectionClosedException:
                 continue
             if ctx is None:
                 break  # end of stream

@@ -92,6 +92,8 @@ class SocketConnection(object):
             ctx = next(self.reader)
         except StopIteration:
             ctx = None
+        except socket.timeout:
+            ctx = None
         except socket.error as e:
             log.warn('socket error while reading: %s', e)
             self.close()
