@@ -1,5 +1,10 @@
 package tchannel
 
+import (
+	"fmt"
+	"sync"
+)
+
 // Copyright (c) 2015 Uber Technologies, Inc.
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -36,3 +41,47 @@ type defaultFramePool struct{}
 
 func (p defaultFramePool) Get() *Frame      { return NewFrame(MaxFramePayloadSize) }
 func (p defaultFramePool) Release(f *Frame) {}
+
+// An ErrorDetectingFramePool is a FramePool that can detect when a frame is double released or leaked.
+// Do not use this FramePool in production.
+type ErrorDetectingFramePool struct {
+	mut   sync.Mutex
+	inUse []*Frame
+}
+
+// Get retrieves a frame from the pool
+func (p *ErrorDetectingFramePool) Get() *Frame {
+	p.mut.Lock()
+	defer p.mut.Unlock()
+
+	frame := &Frame{}
+	p.inUse = append(p.inUse, frame)
+	return frame
+}
+
+// Release releases a frame back to the pool
+func (p *ErrorDetectingFramePool) Release(f *Frame) {
+	p.mut.Lock()
+	defer p.mut.Unlock()
+
+	for i := range p.inUse {
+		if f != p.inUse[i] {
+			continue
+		}
+
+		p.inUse = append(p.inUse[:i], p.inUse[i+1:]...)
+		return
+	}
+
+	panic(fmt.Sprintf("attempted release of unpooled or already released frame %s", f.Header))
+}
+
+// InUse returns the number of frames that are currently in-use by the application
+func (p *ErrorDetectingFramePool) InUse() []*Frame {
+	p.mut.Lock()
+	defer p.mut.Unlock()
+
+	frames := make([]*Frame, len(p.inUse))
+	copy(frames, p.inUse)
+	return frames
+}

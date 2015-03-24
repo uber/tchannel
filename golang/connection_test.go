@@ -29,16 +29,22 @@ import (
 )
 
 func serverBusy(ctx context.Context, call *InboundCall) {
+	defer call.Close()
+
 	call.Response().SendSystemError(ErrServerBusy)
 }
 
 func timeout(ctx context.Context, call *InboundCall) {
+	defer call.Close()
+
 	deadline, _ := ctx.Deadline()
 	time.Sleep(deadline.Add(time.Second * 1).Sub(time.Now()))
 	echo(ctx, call)
 }
 
 func echo(ctx context.Context, call *InboundCall) {
+	defer call.Close()
+
 	var inArg2 BytesInput
 	if err := call.ReadArg2(&inArg2); err != nil {
 		return
@@ -59,99 +65,89 @@ func echo(ctx context.Context, call *InboundCall) {
 }
 
 func TestRoundTrip(t *testing.T) {
-	ch, err := NewChannel(":0", nil)
-	require.Nil(t, err)
+	withTestChannel(t, func(ch *TChannel) {
+		ch.Register(HandlerFunc(echo), "Capture", "ping")
 
-	ch.Register(HandlerFunc(echo), "Capture", "ping")
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		defer cancel()
 
-	go ch.ListenAndHandle()
+		call, err := ch.BeginCall(ctx, ch.HostPort(), "Capture", "ping")
+		require.Nil(t, err)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
+		require.Nil(t, call.WriteArg2(BytesOutput("Hello Header")))
+		require.Nil(t, call.WriteArg3(BytesOutput("Body Sent")))
 
-	call, err := ch.BeginCall(ctx, ch.HostPort(), "Capture", "ping")
-	require.Nil(t, err)
+		var respArg2 BytesInput
+		require.Nil(t, call.Response().ReadArg2(&respArg2))
+		assert.Equal(t, []byte("Hello Header"), []byte(respArg2))
 
-	require.Nil(t, call.WriteArg2(BytesOutput("Hello Header")))
-	require.Nil(t, call.WriteArg3(BytesOutput("Body Sent")))
-
-	var respArg2 BytesInput
-	require.Nil(t, call.Response().ReadArg2(&respArg2))
-	assert.Equal(t, []byte("Hello Header"), []byte(respArg2))
-
-	var respArg3 BytesInput
-	require.Nil(t, call.Response().ReadArg3(&respArg3))
-	assert.Equal(t, []byte("Body Sent"), []byte(respArg3))
+		var respArg3 BytesInput
+		require.Nil(t, call.Response().ReadArg3(&respArg3))
+		assert.Equal(t, []byte("Body Sent"), []byte(respArg3))
+	})
 }
 
 func TestBadRequest(t *testing.T) {
-	ch, err := NewChannel(":0", nil)
-	require.Nil(t, err)
-	go ch.ListenAndHandle()
+	withTestChannel(t, func(ch *TChannel) {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		defer cancel()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
-
-	_, _, err = sendRecv(ctx, ch, ch.HostPort(), "Nowhere", "Noone", []byte("Headers"), []byte("Body"))
-	require.NotNil(t, err)
-	assert.Equal(t, ErrorCodeBadRequest, GetSystemErrorCode(err))
+		_, _, err := sendRecv(ctx, ch, ch.HostPort(), "Nowhere", "Noone", []byte("Headers"), []byte("Body"))
+		require.NotNil(t, err)
+		assert.Equal(t, ErrorCodeBadRequest, GetSystemErrorCode(err))
+	})
 }
 
 func TestServerBusy(t *testing.T) {
-	ch, err := NewChannel(":0", nil)
-	require.Nil(t, err)
+	withTestChannel(t, func(ch *TChannel) {
+		ch.Register(HandlerFunc(serverBusy), "TestService", "busy")
 
-	ch.Register(HandlerFunc(serverBusy), "TestService", "busy")
-	go ch.ListenAndHandle()
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		defer cancel()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
-
-	_, _, err = sendRecv(ctx, ch, ch.HostPort(), "TestService", "busy", []byte("Arg2"), []byte("Arg3"))
-	require.NotNil(t, err)
-	assert.Equal(t, ErrorCodeBusy, GetSystemErrorCode(err))
+		_, _, err := sendRecv(ctx, ch, ch.HostPort(), "TestService", "busy", []byte("Arg2"), []byte("Arg3"))
+		require.NotNil(t, err)
+		assert.Equal(t, ErrorCodeBusy, GetSystemErrorCode(err))
+	})
 }
 
 func TestTimeout(t *testing.T) {
-	ch, err := NewChannel(":0", nil)
-	require.Nil(t, err)
+	withTestChannel(t, func(ch *TChannel) {
+		ch.Register(HandlerFunc(timeout), "TestService", "timeout")
 
-	ch.Register(HandlerFunc(timeout), "TestService", "timeout")
-	go ch.ListenAndHandle()
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+		defer cancel()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
-	defer cancel()
+		_, _, err := sendRecv(ctx, ch, ch.HostPort(), "TestService", "timeout",
+			[]byte("Arg2"), []byte("Arg3"))
 
-	_, _, err = sendRecv(ctx, ch, ch.HostPort(), "TestService", "timeout", []byte("Arg2"), []byte("Arg3"))
-
-	// TODO(mmihic): Maybe translate this into ErrTimeout (or vice versa)?
-	assert.Equal(t, context.DeadlineExceeded, err)
+		// TODO(mmihic): Maybe translate this into ErrTimeout (or vice versa)?
+		assert.Equal(t, context.DeadlineExceeded, err)
+	})
 }
 
-func testFragmentation(t *testing.T) {
-	ch, err := NewChannel(":0", nil)
-	require.Nil(t, err)
+func TestFragmentation(t *testing.T) {
+	withTestChannel(t, func(ch *TChannel) {
+		ch.Register(HandlerFunc(echo), "TestService", "echo")
 
-	ch.Register(HandlerFunc(echo), "TestService", "echo")
-	go ch.ListenAndHandle()
+		arg2 := make([]byte, MaxFramePayloadSize*2)
+		for i := 0; i < len(arg2); i++ {
+			arg2[i] = byte(i&0x0F) + 50
+		}
 
-	arg2 := make([]byte, MaxFramePayloadSize*2)
-	for i := 0; i < len(arg2); i++ {
-		arg2[i] = byte(i&0x0F) + 50
-	}
+		arg3 := make([]byte, MaxFramePayloadSize*3)
+		for i := 0; i < len(arg3); i++ {
+			arg3[i] = byte(i&0xF0) + 100
+		}
 
-	arg3 := make([]byte, MaxFramePayloadSize*3)
-	for i := 0; i < len(arg3); i++ {
-		arg3[i] = byte(i&0xF0) + 100
-	}
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+		defer cancel()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-
-	respArg2, respArg3, err := sendRecv(ctx, ch, ch.HostPort(), "TestService", "echo", arg2, arg3)
-	require.Nil(t, err)
-	assert.Equal(t, arg2, respArg2)
-	assert.Equal(t, arg3, respArg3)
+		respArg2, respArg3, err := sendRecv(ctx, ch, ch.HostPort(), "TestService", "echo", arg2, arg3)
+		require.Nil(t, err)
+		assert.Equal(t, arg2, respArg2)
+		assert.Equal(t, arg3, respArg3)
+	})
 }
 
 func sendRecv(ctx context.Context, ch *TChannel, hostPort string, serviceName, operation string,
@@ -166,4 +162,22 @@ func sendRecv(ctx context.Context, ch *TChannel, hostPort string, serviceName, o
 	}
 
 	return []byte(respArg2), []byte(respArg3), nil
+}
+
+func withTestChannel(t *testing.T, f func(ch *TChannel)) {
+	fp := &ErrorDetectingFramePool{}
+
+	ch, err := NewChannel(":0", &ChannelOptions{FramePool: fp})
+	require.Nil(t, err)
+
+	go ch.ListenAndHandle()
+
+	f(ch)
+
+	leakedFrames := fp.InUse()
+	leakedFrameNames := make([]string, len(leakedFrames))
+	for i := range leakedFrames {
+		leakedFrameNames[i] = leakedFrames[i].Header.String()
+	}
+	assert.Equal(t, []string{}, leakedFrameNames, "frames leaked at end of test")
 }

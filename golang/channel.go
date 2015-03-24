@@ -51,6 +51,9 @@ type ChannelOptions struct {
 
 	// The logger to use for this channel
 	Logger Logger
+
+	// The FramePool to use for this channel
+	FramePool FramePool
 }
 
 // A TChannel is a bi-directional connection to the peering and routing network.  Applications
@@ -79,6 +82,11 @@ func NewChannel(hostPort string, opts *ChannelOptions) (*TChannel, error) {
 		logger = NullLogger{}
 	}
 
+	framePool := opts.FramePool
+	if framePool == nil {
+		framePool = DefaultFramePool
+	}
+
 	ch := &TChannel{
 		connectionOptions: opts.DefaultConnectionOptions,
 		processName:       opts.ProcessName,
@@ -102,6 +110,7 @@ func NewChannel(hostPort string, opts *ChannelOptions) (*TChannel, error) {
 	ch.connectionOptions.PeerInfo.HostPort = ch.hostPort
 	ch.connectionOptions.PeerInfo.ProcessName = ch.processName
 	ch.connectionOptions.ChecksumType = ChecksumTypeCrc32
+	ch.connectionOptions.FramePool = framePool
 	ch.log.Infof("%s listening on %s", ch.processName, ch.hostPort)
 	return ch, nil
 }

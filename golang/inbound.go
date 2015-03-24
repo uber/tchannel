@@ -94,26 +94,27 @@ func (c *Connection) inboundCallComplete(messageID uint32) {
 }
 
 // Dispatches an inbound call to the appropriate handler
-func (p *Connection) dispatchInbound(call *InboundCall) {
-	p.log.Debugf("Received incoming call for %s from %s", call.ServiceName(), p.remotePeerInfo)
+func (c *Connection) dispatchInbound(call *InboundCall) {
+	c.log.Debugf("Received incoming call for %s from %s", call.ServiceName(), c.remotePeerInfo)
 
 	if err := call.readOperation(); err != nil {
-		p.log.Errorf("Could not read operation from %s: %v", p.remotePeerInfo, err)
-		p.inboundCallComplete(call.id)
+		c.log.Errorf("Could not read operation from %s: %v", c.remotePeerInfo, err)
+		c.inboundCallComplete(call.id)
 		return
 	}
 
 	// NB(mmihic): Don't cast operation name to string here - this will create a copy
 	// of the byte array, where as aliasing to string in the map look up can be optimized
 	// by the compiler to avoid the copy.  See https://github.com/golang/go/issues/3512
-	h := p.handlers.find(call.ServiceName(), call.Operation())
+	h := c.handlers.find(call.ServiceName(), call.Operation())
 	if h == nil {
-		p.log.Errorf("Could not find handler for %s:%s", call.ServiceName(), call.Operation())
+		c.log.Errorf("Could not find handler for %s:%s", call.ServiceName(), call.Operation())
 		call.Response().SendSystemError(ErrHandlerNotFound)
+		call.Close()
 		return
 	}
 
-	p.log.Debugf("Dispatching %s:%s from %s", call.ServiceName(), call.Operation(), p.remotePeerInfo)
+	c.log.Debugf("Dispatching %s:%s from %s", call.ServiceName(), call.Operation(), c.remotePeerInfo)
 	h.Handle(call.ctx, call)
 }
 
@@ -151,6 +152,15 @@ func (call *InboundCall) ServiceName() string {
 // Operation teturns the operation being called
 func (call *InboundCall) Operation() []byte {
 	return call.operation
+}
+
+// Close closes the inbound call, releasing all associated resources
+func (call *InboundCall) Close() {
+	call.conn.inboundCallComplete(call.id)
+	if call.curFragment != nil {
+		call.conn.framePool.Release(call.curFragment.frame)
+		call.curFragment = nil
+	}
 }
 
 // Reads the entire operation name (arg1) from the request stream.
@@ -206,7 +216,7 @@ func (call *InboundCall) ReadArg3(arg Input) error {
 // Marks the call as failed
 func (call *InboundCall) failed(err error) error {
 	call.state = inboundCallError
-	call.conn.inboundCallComplete(call.id)
+	call.Close()
 	return err
 }
 
@@ -218,8 +228,13 @@ func (call *InboundCall) Response() *InboundCallResponse {
 
 // Acting like an inFragmentChannel
 func (call *InboundCall) waitForFragment() (*inFragment, error) {
-	if call.curFragment != nil && call.curFragment.hasMoreChunks() {
-		return call.curFragment, nil
+	if call.curFragment != nil {
+		if call.curFragment.hasMoreChunks() {
+			return call.curFragment, nil
+		}
+
+		call.conn.framePool.Release(call.curFragment.frame)
+		call.curFragment = nil
 	}
 
 	if call.recvLastFragment {

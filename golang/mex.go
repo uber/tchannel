@@ -33,6 +33,14 @@ func (mex *messageExchange) forwardPeerFrame(frame *Frame) error {
 	}
 }
 
+// drain closes and drains the message exchange, returning all pending frames to the pool
+func (mex *messageExchange) releaseTo(framePool FramePool) {
+	close(mex.recvCh)
+	for f := range mex.recvCh {
+		framePool.Release(f)
+	}
+}
+
 // messageExchangeSet manages a set of active message exchanges.  It is mainly
 // used to route frames from a peer to the appropriate messageExchange, or to cancel
 // or mark a messageExchange as being in error.  Each Connection maintains two
@@ -45,6 +53,7 @@ func (mex *messageExchange) forwardPeerFrame(frame *Frame) error {
 type messageExchangeSet struct {
 	log       Logger
 	exchanges map[uint32]*messageExchange
+	framePool FramePool
 	mut       sync.Mutex
 }
 
@@ -86,7 +95,12 @@ func (mexset *messageExchangeSet) removeExchange(msgID uint32) {
 	mexset.mut.Lock()
 	defer mexset.mut.Unlock()
 
+	mex := mexset.exchanges[msgID]
 	delete(mexset.exchanges, msgID)
+
+	if mex != nil {
+		go mex.releaseTo(mexset.framePool)
+	}
 }
 
 // forwardPeerFrame forwards a frame from the peer to the appropriate message exchange
@@ -100,9 +114,20 @@ func (mexset *messageExchangeSet) forwardPeerFrame(messageID uint32, frame *Fram
 
 	if mex == nil {
 		// This is ok since the exchange might have expired or been cancelled
+		mexset.framePool.Release(frame)
 		mexset.log.Warnf("received frame %s for message exchange that no longer exists", frame.Header)
 		return nil
 	}
 
 	return mex.forwardPeerFrame(frame)
+}
+
+// releaseAll releases all pending message exchanges
+func (mexset *messageExchangeSet) releaseAll() {
+	mexset.mut.Lock()
+	for _, mex := range mexset.exchanges {
+		go mex.releaseTo(mexset.framePool)
+	}
+	mexset.exchanges = map[uint32]*messageExchange{}
+	mexset.mut.Unlock()
 }

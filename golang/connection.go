@@ -176,10 +176,12 @@ func newConnection(ch *TChannel, conn net.Conn, initialState connectionState,
 		inbound: messageExchangeSet{
 			log:       ch.log,
 			exchanges: make(map[uint32]*messageExchange),
+			framePool: framePool,
 		},
 		outbound: messageExchangeSet{
 			log:       ch.log,
 			exchanges: make(map[uint32]*messageExchange),
+			framePool: framePool,
 		},
 		handlers: ch.handlers,
 	}
@@ -255,6 +257,8 @@ func (c *Connection) sendInit(ctx context.Context) error {
 // Handles an incoming InitReq.  If we are waiting for the peer to send us an InitReq, and the
 // InitReq is valid, send a corresponding InitRes and mark ourselves as active
 func (c *Connection) handleInitReq(frame *Frame) {
+	defer c.framePool.Release(frame)
+
 	if err := c.withStateRLock(func() error {
 		return nil
 	}); err != nil {
@@ -326,12 +330,15 @@ func (c *Connection) handleInitRes(frame *Frame) {
 		default:
 			return fmt.Errorf("Connection in unknown state %d", c.state)
 		}
+
 	}); err != nil {
+		c.framePool.Release(frame)
 		c.connectionError(err)
 		return
 	}
 
 	if err := c.outbound.forwardPeerFrame(frame.Header.ID, frame); err != nil {
+		c.framePool.Release(frame)
 		c.connectionError(errCannotHandleInitRes)
 	}
 }
@@ -358,9 +365,10 @@ func (c *Connection) recvMessage(ctx context.Context, msg message, resCh <-chan 
 		return ctx.Err()
 
 	case frame := <-resCh:
+		defer c.framePool.Release(frame)
+
 		msgBuf := typed.NewReadBuffer(frame.SizedPayload())
 		err := msg.read(msgBuf)
-		c.framePool.Release(frame)
 		return err
 	}
 }
@@ -395,6 +403,9 @@ func (c *Connection) closeNetwork() {
 	if err := c.conn.Close(); err != nil {
 		c.log.Warnf("could not close connection to peer %s: %v", c.remotePeerInfo, err)
 	}
+
+	c.inbound.releaseAll()
+	c.outbound.releaseAll()
 }
 
 // Performs an action with the connection state mutex locked
