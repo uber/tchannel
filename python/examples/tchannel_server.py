@@ -4,7 +4,6 @@ import argparse
 import sys
 
 import tornado.ioloop
-import tornado.web
 from tchannel.tornado import TChannel
 from tchannel.handler import TChannelRequestHandler
 
