@@ -228,6 +228,18 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
     res.checksum = self._sendCallBodies(res.id, resBody.csum, resBody, args);
 };
 
+TChannelV2Handler.prototype.sendCallRequestContFrame = function sendCallRequestContFrame(req, flags, args) {
+    var self = this;
+    var reqBody = v2.CallRequestCont(flags, req.checksum.type);
+    req.checksum = self._sendCallBodies(req.id, req.checksum, reqBody, args);
+};
+
+TChannelV2Handler.prototype.sendCallResponseContFrame = function sendCallResponseContFrame(res, flags, args) {
+    var self = this;
+    var resBody = v2.CallResponseCont(flags, res.checksum.type);
+    res.checksum = self._sendCallBodies(res.id, res.checksum, resBody, args);
+};
+
 TChannelV2Handler.prototype._sendCallBodies = function _sendCallBodies(id, checksum, body, args) {
     var self = this;
     var bodies = body.splitArgs(args, v2.Frame.MaxBodySize);
@@ -264,7 +276,8 @@ TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest
         options.checksumType = v2.Checksum.Types.FarmHash32;
     }
     options.sendFrame = {
-        callRequest: sendCallRequestFrame
+        callRequest: sendCallRequestFrame,
+        callRequestCont: sendCallRequestContFrame
     };
     var req = TChannelOutgoingRequest(id, options);
     return req;
@@ -273,6 +286,12 @@ TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest
         var flags = 0;
         if (!isLast) throw new Error('not implemented');
         self.sendCallRequestFrame(req, flags, args);
+    }
+
+    function sendCallRequestContFrame(args, isLast) {
+        var flags = 0;
+        if (!isLast) flags |= v2.CallResponse.Flags.Fragment;
+        self.sendCallRequestContFrame(req, flags, args);
     }
 };
 
@@ -285,6 +304,7 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
         arg1: req.arg1,
         sendFrame: {
             callResponse: sendCallResponseFrame,
+            callResponseCont: sendCallResponseContFrame,
             error: sendErrorFrame
         }
     });
@@ -294,6 +314,12 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
         var flags = 0;
         if (!isLast) throw new Error('not implemented');
         self.sendCallResponseFrame(res, flags, args);
+    }
+
+    function sendCallResponseContFrame(args, isLast) {
+        var flags = 0;
+        if (!isLast) flags |= v2.CallResponse.Flags.Fragment;
+        self.sendCallResponseContFrame(res, flags, args);
     }
 
     function sendErrorFrame(codeString, message) {
