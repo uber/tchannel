@@ -301,21 +301,17 @@ TChannelV2Handler.prototype.buildIncomingRequest = function buildIncomingRequest
         service: reqFrame.body.service,
         headers: reqFrame.body.headers,
         checksumType: reqFrame.body.csum.type,
-        arg1: reqFrame.body.args[0],
-        arg2: reqFrame.body.args[1],
-        arg3: reqFrame.body.args[2],
         checksum: reqFrame.body.csum
     });
+    req.handleFrame(reqFrame.body.args);
     return req;
 };
 
 TChannelV2Handler.prototype.buildIncomingResponse = function buildIncomingResponse(resFrame) {
     var res = TChannelIncomingResponse(resFrame.id, {
         code: resFrame.body.code,
-        arg1: resFrame.body.args[0],
-        arg2: resFrame.body.args[1],
-        arg3: resFrame.body.args[2],
         checksum: resFrame.body.csum
     });
+    res.handleFrame(resFrame.body.args);
     return res;
 };
