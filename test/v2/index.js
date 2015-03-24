@@ -25,5 +25,6 @@ require('./init.js');
 require('./checksum.js');
 require('./header.js');
 require('./call.js');
+require('./cont.js');
 require('./error_response.js');
 require('./args.js');
