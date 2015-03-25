@@ -171,6 +171,10 @@ OutArgStream.prototype.pause = function pause() {
     self.arg1.pause();
     self.arg2.pause();
     self.arg3.pause();
+    if (self._flushImmed) {
+        clearImmediate(self._flushImmed);
+        self._flushImmed = null;
+    }
 };
 
 OutArgStream.prototype.resume = function resume() {
@@ -179,6 +183,11 @@ OutArgStream.prototype.resume = function resume() {
     self.arg1.resume();
     self.arg2.resume();
     self.arg3.resume();
+    if (self.finished) {
+        self._flushParts(true);
+    } else if (self.frame && self.frame[0] && self.frame[0].length) {
+        self._deferFlushParts();
+    }
 };
 
 OutArgStream.prototype._handleFrameChunk = function _handleFrameChunk(n, chunk) {
@@ -220,7 +229,7 @@ OutArgStream.prototype._appendFrameChunk = function _appendFrameChunk(chunk) {
 
 OutArgStream.prototype._deferFlushParts = function _deferFlushParts() {
     var self = this;
-    if (!self._flushImmed) {
+    if (!self._flushImmed && !self.paused) {
         self._flushImmed = setImmediate(function() {
             self._flushParts();
         });
@@ -233,7 +242,7 @@ OutArgStream.prototype._flushParts = function _flushParts(isLast) {
         clearImmediate(self._flushImmed);
         self._flushImmed = null;
     }
-    if (self.finished) return;
+    if (self.paused || self.finished) return;
     isLast = Boolean(isLast);
     var frame = self.frame;
     self.frame = [Buffer(0)];
