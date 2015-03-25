@@ -190,7 +190,7 @@ TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callbac
         arg1 ? Buffer(arg1) : null,
         arg2 ? Buffer(arg2) : null,
         arg3 ? Buffer(arg3) : null
-    ]);
+    ], true);
     self.emit('finish');
     return self;
 };
@@ -319,7 +319,7 @@ TChannelOutgoingResponse.prototype.sendOk = function sendOk(res1, res2) {
         self.arg1,
         res1 ? Buffer(res1) : null,
         res2 ? Buffer(res2) : null
-    ]);
+    ], true);
     self.emit('finish');
 };
 
@@ -330,7 +330,7 @@ TChannelOutgoingResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
         self.arg1,
         res1 ? Buffer(res1) : null,
         res2 ? Buffer(res2) : null
-    ]);
+    ], true);
     self.emit('finish');
 };
 
