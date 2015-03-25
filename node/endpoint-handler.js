@@ -43,13 +43,12 @@ var NoSuchEndpointError = TypedError({
     endpoint: null
 });
 
-function TChannelEndpointHandler(serviceName, hostPort) {
+function TChannelEndpointHandler(serviceName) {
     if (!(this instanceof TChannelEndpointHandler)) {
         return new TChannelEndpointHandler(serviceName);
     }
     var self = this;
     self.serviceName = serviceName;
-    self.hostPort = hostPort;
     self.endpoints = Object.create(null);
     self.type = null;
 }
