@@ -1,4 +1,5 @@
 import collections
+from .messages import CallResponseMessage
 
 Endpoint = collections.namedtuple('Endpoint', ['handler', 'opts'])
 
@@ -36,7 +37,7 @@ class TChannelRequestHandler(RequestHandler):
         request = TChannelRequest(context, conn)
         endpoint = self._find_endpoint(request.method)
         if endpoint is not None:
-            response = TChannelResponse(conn)
+            response = TChannelResponse(request, conn)
             try:
                 endpoint.handler(request, response, endpoint.opts)
             except:
@@ -67,7 +68,8 @@ class TChannelRequest(object):
 
     __slots__ = ('message', 'header',
                  'body', 'method',
-                 'connection')
+                 'connection', 'context',
+                 'id')
 
     def __init__(self, context, conn):
         self.message = context.message
@@ -75,6 +77,8 @@ class TChannelRequest(object):
         self.body = self.message.arg_3
         self.method = self.message.arg_1
         self.connection = conn
+        self.context = context
+        self.id = context.message_id
 
         # TODO fill up more attributes
 
@@ -82,13 +86,22 @@ class TChannelRequest(object):
 class TChannelResponse(object):
     """TChannel Response Wrapper"""
 
-    __slots__ = ('_connection',)
+    __slots__ = ('_connection', '_request',
+                 'resp_msg', 'id')
 
-    def __init__(self, conn):
+    def __init__(self, request, conn):
         self._connection = conn
+        self._request = request
+        self.resp_msg = CallResponseMessage()
+        self.id = request.id
 
-    def write(self, msg):
-        self._connection.write(msg)
+    def write(self, chunk):
+        # build response message
+        self.resp_msg.arg_3 += chunk
 
     def finish(self):
-        self._connection.finish()
+        self._connection.finish(self)
+        self.resp_msg = CallResponseMessage()
+
+    def update_resp_id(self):
+        self.id += 1
