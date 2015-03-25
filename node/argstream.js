@@ -164,6 +164,20 @@ function OutArgStream() {
 
 inherits(OutArgStream, ArgStream);
 
+OutArgStream.prototype.pause = function pause() {
+    var self = this;
+    self.arg1.pause();
+    self.arg2.pause();
+    self.arg3.pause();
+};
+
+OutArgStream.prototype.resume = function resume() {
+    var self = this;
+    self.arg1.resume();
+    self.arg2.resume();
+    self.arg3.resume();
+};
+
 OutArgStream.prototype._handleFrameChunk = function _handleFrameChunk(n, chunk) {
     var self = this;
     if (n < self.currentArgN) {
