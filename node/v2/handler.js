@@ -342,6 +342,10 @@ TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest
         callRequestCont: sendCallRequestContFrame
     };
     var req = TChannelOutgoingRequest(id, options);
+    if (!self.isReady) {
+        req.pause();
+        self.once('ready', onReady);
+    }
     return req;
 
     function sendCallRequestFrame(args, isLast) {
@@ -354,6 +358,10 @@ TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest
         var flags = 0;
         if (!isLast) flags |= v2.CallResponse.Flags.Fragment;
         self.sendCallRequestContFrame(req, flags, args);
+    }
+
+    function onReady() {
+        req.resume();
     }
 };
 
@@ -370,6 +378,10 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
             error: sendErrorFrame
         }
     });
+    if (!self.isReady) {
+        res.pause();
+        self.once('ready', onReady);
+    }
     return res;
 
     function sendCallResponseFrame(args, isLast) {
@@ -386,6 +398,10 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
 
     function sendErrorFrame(codeString, message) {
         self.sendErrorFrame(req, codeString, message);
+    }
+
+    function onReady() {
+        res.resume();
     }
 };
 
