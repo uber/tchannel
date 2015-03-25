@@ -212,6 +212,10 @@ func (w *bodyWriter) Write(b []byte) (int, error) {
 		return 0, ErrWriteAfterComplete
 	}
 
+	if len(b) == 0 {
+		return 0, w.writeEmpty()
+	}
+
 	written := 0
 	for len(b) > 0 {
 		// Make sure we have a fragment and an open chunk
@@ -245,14 +249,39 @@ func (w *bodyWriter) Write(b []byte) (int, error) {
 		}
 	}
 
-	// If the fragment is complete, send it immediately
-	if w.fragment.bytesRemaining() == 0 {
-		if err := w.finishFragment(false); err != nil {
-			return written, err
-		}
+	if _, err := w.finishIfFull(); err != nil {
+		return written, err
 	}
 
 	return written, nil
+}
+
+func (w *bodyWriter) writeEmpty() error {
+	// Make sure we have a fragment and an open chunk
+	if err := w.ensureOpenChunk(); err != nil {
+		return err
+	}
+
+	fragmentFlushed, err := w.finishIfFull()
+	if err != nil {
+		return err
+	}
+
+	w.alignsAtEnd = fragmentFlushed
+	return nil
+}
+
+func (w *bodyWriter) finishIfFull() (bool, error) {
+	// If the fragment is complete, send it immediately
+	if w.fragment.bytesRemaining() > 0 {
+		return false, nil
+	}
+
+	if err := w.finishFragment(false); err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 // Ensures that we have a fragment and an open chunk
@@ -430,10 +459,10 @@ type inFragmentChannel interface {
 // reading a given argument, to prepare the stream for the next argument.
 // TODO(mmihic): Refactor to handle all arguments of the body. similar to bodyWriter
 type bodyReader struct {
-	fragments           inFragmentChannel
-	chunk               []byte
-	lastChunkInFragment bool
-	lastPartInMessage   bool
+	fragments            inFragmentChannel
+	chunk                []byte
+	lastChunkForArgument bool
+	lastPartInMessage    bool
 }
 
 // Reads an input argument from the stream
@@ -450,18 +479,18 @@ func (r *bodyReader) Read(b []byte) (int, error) {
 
 	for len(b) > 0 {
 		if len(r.chunk) == 0 {
-			if r.lastChunkInFragment {
+			if r.lastChunkForArgument {
 				// We've already consumed the last chunk for this argument
 				return totalRead, io.EOF
 			}
 
-			nextFragment, err := r.fragments.waitForFragment()
+			fragment, err := r.fragments.waitForFragment()
 			if err != nil {
 				return totalRead, err
 			}
 
-			r.chunk = nextFragment.nextChunk()
-			r.lastChunkInFragment = nextFragment.hasMoreChunks() // Remaining chunks are for other args
+			r.chunk = fragment.nextChunk()
+			r.lastChunkForArgument = fragment.hasMoreChunks() || fragment.last
 		}
 
 		read := copy(b, r.chunk)
@@ -479,7 +508,7 @@ func (r *bodyReader) endArgument() error {
 		return ErrDataLeftover
 	}
 
-	if !r.lastChunkInFragment && !r.lastPartInMessage {
+	if !r.lastChunkForArgument && !r.lastPartInMessage {
 		// We finished on a fragment boundary - get the next fragment and confirm there is only a zero
 		// length chunk header
 		nextFragment, err := r.fragments.waitForFragment()

@@ -273,11 +273,6 @@ func (m *callReq) read(r *typed.ReadBuffer) error {
 		return err
 	}
 
-	m.Headers = callHeaders{}
-	if err := m.Headers.read(r); err != nil {
-		return err
-	}
-
 	serviceNameLen, err := r.ReadByte()
 	if err != nil {
 		return err
@@ -287,6 +282,10 @@ func (m *callReq) read(r *typed.ReadBuffer) error {
 		return err
 	}
 
+	m.Headers = callHeaders{}
+	if err := m.Headers.read(r); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -311,15 +310,15 @@ func (m *callReq) write(w *typed.WriteBuffer) error {
 		return err
 	}
 
-	if err := m.Headers.write(w); err != nil {
-		return err
-	}
-
 	if err := w.WriteByte(byte(len(m.Service))); err != nil {
 		return err
 	}
 
 	if err := w.WriteBytes(m.Service); err != nil {
+		return err
+	}
+
+	if err := m.Headers.write(w); err != nil {
 		return err
 	}
 
