@@ -432,7 +432,6 @@ TChannel.prototype.close = function close(callback) {
             peerRemoteName: conn.remoteName,
             fromAddress: sock.address()
         });
-        conn.closing = true;
         conn.resetAll(new Error('shutdown from quit')); // TODO typed error
         sock.destroy();
     });
