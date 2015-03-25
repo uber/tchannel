@@ -114,6 +114,7 @@ TChannelV2Handler.prototype.handleInitRequest = function handleInitRequest(reqFr
     self.sendInitResponse(reqFrame);
     self.isReady = true;
     self.emit('init.request', init);
+    self.emit('ready');
     callback();
 };
 
@@ -132,6 +133,7 @@ TChannelV2Handler.prototype.handleInitResponse = function handleInitResponse(res
     self.remoteHostPort = init.hostPort;
     self.isReady = true;
     self.emit('init.response', init);
+    self.emit('ready');
     callback();
 };
 
