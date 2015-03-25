@@ -314,6 +314,7 @@ TChannelV2Handler.prototype.sendErrorFrame = function sendErrorFrame(req, codeSt
 
     var code = v2.ErrorResponse.Codes[codeString];
     if (code === undefined) {
+        // TODO: could/should map to UnexpectedError
         throw InvalidCodeStringError({
             codeString: codeString
         });
