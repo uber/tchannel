@@ -115,7 +115,6 @@ class TornadoConnection(object):
     def frame_and_write(self, message, message_id=None):
         # TODO: track awaiting responses in here
         generate_checksum(message)
-        message_id = message_id or self.next_message_id()
 
         if message.message_type in (
             messages.Types.CALL_REQ,
@@ -123,7 +122,10 @@ class TornadoConnection(object):
             messages.Types.PING_REQ,
         ):
             log.debug("awaiting response for message %s", message_id)
+            message_id = self.next_message_id()
             self.awaiting_responses[message_id] = gen.Future()
+        else:
+            assert message_id is not None, "responses need message ids"
 
         payload = messages.RW[message.message_type].write(
             message, BytesIO()
