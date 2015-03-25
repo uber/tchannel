@@ -26,8 +26,8 @@ var chan = TChannel({
     handler: EndpointHandler()
 });
 
-chan.handler.register('my-endpoint', function (req, res) {
-    // req.arg2, req.arg3, req.remoteAddr
+chan.handler.register('my-endpoint', function (req, res, arg2, arg3) {
+    // req.remoteAddr
 
     // either
     res.sendNotOk(null, 'oops');
@@ -52,9 +52,8 @@ After (simple):
 ```
 chan
     .request(options)
-    .send(a1, a2, a3, function (err, res) {
-        // CallResponse is in `res.arg2`, `res.arg3`
-        // res has an `.ok` field that is tells whether it is
+    .send(a1, a2, a3, function (err, res, arg2, arg3) {
+        // res has an `.ok` field that tells whether it is
         // an error or not.
 
         // This means that an application error returns
@@ -65,15 +64,44 @@ chan
     });
 ```
 
-After (if needed/useful):
+After (sync send w/ streaming callback):
 ```
+function onResponse(err, res) {
+    if (err) {
+        console.error('too bad:', err);
+    } else {
+        res.arg2.on('data', function onArg2Data(chunk) {...});
+        res.arg3.on('data', function onArg3Data(chunk) {...});
+        res.arg2.on('end', function onArg2End(chunk) {...});
+        res.arg3.on('end', function onArg3End(chunk) {...});
+    }
+}
+onResponse.canStream = true;
 chan
+    .request(options)
+    .send(a1, a2, a3, onResponse);
+```
+
+After (full streaming):
+```
+var req = chan
     .request(options)
     .on('error', function onError(err) {
         console.error('too bad:', err);
     })
     .on('response', function onResponse(res) {
-        console.log('got:', res.arg2, res.arg3);
-    })
-    .send(a1, a2, a3);
+        res.arg2.on('data', function onArg2Data(chunk) {...});
+        res.arg3.on('data', function onArg3Data(chunk) {...});
+        res.arg2.on('end', function onArg2End(chunk) {...});
+        res.arg3.on('end', function onArg3End(chunk) {...});
+    });
+req.arg1.end(a1);
+
+req.arg2.write(someArg2);
+req.arg2.write(moarArg2);
+req.arg2.end();
+
+req.arg3.write(someArg3);
+req.arg3.write(moarArg3);
+req.arg3.end();
 ```
