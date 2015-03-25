@@ -357,8 +357,8 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
     var res = TChannelOutgoingResponse(req.id, {
         tracing: req.tracing,
         headers: {},
-        checksumType: req.checksumType,
-        checksum: v2.Checksum(req.checksumType),
+        checksumType: req.checksum.type,
+        checksum: v2.Checksum(req.checksum.type),
         sendFrame: {
             callResponse: sendCallResponseFrame,
             callResponseCont: sendCallResponseContFrame,
