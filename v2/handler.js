@@ -228,19 +228,14 @@ TChannelV2Handler.prototype._handleCallFrame = function _handleCallFrame(r, fram
     }
     r.checksum = frame.body.csum;
 
-    if (r.state === reqres.States.Streaming) {
-        callback(new Error('not implemented'));
-        return;
-    }
-
     var isLast = !(frame.body.flags & v2.CallRequest.Flags.Fragment);
     r.handleFrame(frame.body.args);
     if (isLast) {
+        r.handleFrame(null);
         r.state = reqres.States.Done;
     } else if (r.state === reqres.States.Initial) {
         r.state = reqres.States.Streaming;
-        throw new Error('not implemented');
-    } else {
+    } else if (r.state !== reqres.States.Streaming) {
         throw new Error('unknown frame handling state');
     }
     callback();
@@ -304,7 +299,6 @@ TChannelV2Handler.prototype.sendCallResponseContFrame = function sendCallRespons
 TChannelV2Handler.prototype._sendCallBodies = function _sendCallBodies(id, checksum, body, args) {
     var self = this;
     var bodies = body.splitArgs(args, v2.Frame.MaxBodySize);
-    if (bodies.length > 1) throw new Error('not implemented');
     for (var i = 0; i < bodies.length; i++) {
         body = bodies[i];
         body.updateChecksum(checksum.val);
@@ -346,7 +340,7 @@ TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest
 
     function sendCallRequestFrame(args, isLast) {
         var flags = 0;
-        if (!isLast) throw new Error('not implemented');
+        if (!isLast) flags |= v2.CallResponse.Flags.Fragment;
         self.sendCallRequestFrame(req, flags, args);
     }
 
@@ -364,7 +358,6 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
         headers: {},
         checksumType: req.checksumType,
         checksum: v2.Checksum(req.checksumType),
-        arg1: req.arg1,
         sendFrame: {
             callResponse: sendCallResponseFrame,
             callResponseCont: sendCallResponseContFrame,
@@ -375,7 +368,7 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
 
     function sendCallResponseFrame(args, isLast) {
         var flags = 0;
-        if (!isLast) throw new Error('not implemented');
+        if (!isLast) flags |= v2.CallResponse.Flags.Fragment;
         self.sendCallResponseFrame(res, flags, args);
     }
 

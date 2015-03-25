@@ -22,8 +22,6 @@
 
 var bufrw = require('bufrw');
 var ArgsRW = require('./args');
-var WriteResult = bufrw.WriteResult;
-var ReadResult = bufrw.ReadResult;
 var Checksum = require('./checksum');
 var header = require('./header');
 var Tracing = require('./tracing');
@@ -67,7 +65,6 @@ CallRequest.TypeCode = 0x03;
 CallRequest.Flags = Flags;
 
 CallRequest.RW = bufrw.Struct(CallRequest, [
-    {call: {writeInto: prepareWrite}},
     {name: 'flags', rw: bufrw.UInt8},            // flags:1
     {name: 'ttl', rw: bufrw.UInt32BE},           // ttl:4
     {name: 'tracing', rw: Tracing.RW},           // tracing:24 traceflags:1
@@ -75,7 +72,6 @@ CallRequest.RW = bufrw.Struct(CallRequest, [
     {name: 'headers', rw: header.header1},       // nh:1 (hk~1 hv~1){nh}
     {name: 'csum', rw: Checksum.RW},             // csumtype:1 (csum:4){0,1}
     {name: 'args', rw: ArgsRW(bufrw.buf2)},      // (arg~2)*
-    {call: {readFrom: readGuard}}
 ]);
 
 CallRequest.prototype.splitArgs = function splitArgs(args, maxSize) {
@@ -158,14 +154,12 @@ CallResponse.Codes = {
 };
 
 CallResponse.RW = bufrw.Struct(CallResponse, [
-    {call: {writeInto: prepareWrite}},
     {name: 'flags', rw: bufrw.UInt8},            // flags:1
     {name: 'code', rw: bufrw.UInt8},             // code:1
     {name: 'tracing', rw: Tracing.RW},           // tracing:24 traceflags:1
     {name: 'headers', rw: header.header1},       // nh:1 (hk~1 hv~1){nh}
     {name: 'csum', rw: Checksum.RW},             // csumtype:1 (csum:4){0},1}
     {name: 'args', rw: ArgsRW(bufrw.buf2)},      // (arg~2)*
-    {call: {readFrom: readGuard}}
 ]);
 
 CallResponse.prototype.splitArgs = CallRequest.prototype.splitArgs;
@@ -179,21 +173,3 @@ CallResponse.prototype.verifyChecksum = function verifyChecksum() {
     var self = this;
     return self.csum.verify(self.args);
 };
-
-function prepareWrite(body, buffer, offset) {
-    if (body.flags & CallRequest.Flags.Fragment) {
-        return WriteResult.error(
-            new Error('streaming call not implemented'),
-            offset);
-    }
-    return WriteResult.just(offset);
-}
-
-function readGuard(body, buffer, offset) {
-    if (body.flags & CallRequest.Flags.Fragment) {
-        return ReadResult.error(
-            new Error('streaming call not implemented'),
-            offset);
-    }
-    return ReadResult.just(offset);
-}
