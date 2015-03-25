@@ -29,6 +29,7 @@ var States = Object.create(null);
 States.Initial = 0;
 States.Streaming = 1;
 States.Done = 2;
+States.Error = 3;
 
 // TODO: provide streams for arg2/3
 
@@ -47,7 +48,6 @@ function TChannelIncomingRequest(id, options) {
     self.remoteAddr = null;
     self.headers = options.headers || {};
     self.checksum = options.checksum || null;
-    self.checksumType = options.checksumType || 0;
     self.on('finish', function onFinish() {
         self.state = States.Done;
     });
@@ -187,10 +187,10 @@ TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callbac
         throw new Error('request already sent');
     }
     self.sendCallRequestFrame([
-        arg1 ? Buffer(arg1) : null,
-        arg2 ? Buffer(arg2) : null,
-        arg3 ? Buffer(arg3) : null
-    ]);
+        arg1 ? Buffer(arg1) : Buffer(0),
+        arg2 ? Buffer(arg2) : Buffer(0),
+        arg3 ? Buffer(arg3) : Buffer(0)
+    ], true);
     self.emit('finish');
     return self;
 };
@@ -258,9 +258,10 @@ TChannelOutgoingResponse.prototype.sendParts = function sendParts(parts, isLast)
             self.sendCallResponseContFrame(parts, isLast);
             break;
         case States.Done:
-            // TODO: could happen easily if an error frame is sent
-            // mid-stream causing a transition to Done
             throw new Error('got frame in done state'); // TODO: typed error
+        case States.Error:
+            // skip
+            break;
     }
 };
 
@@ -275,6 +276,7 @@ TChannelOutgoingResponse.prototype.sendCallResponseFrame = function sendCallResp
         case States.Streaming:
             throw new Error('first response frame already sent'); // TODO: typed error
         case States.Done:
+        case States.Error:
             throw new Error('response already done'); // TODO: typed error
     }
 };
@@ -285,21 +287,22 @@ TChannelOutgoingResponse.prototype.sendCallResponseContFrame = function sendCall
         case States.Initial:
             throw new Error('first response frame not sent'); // TODO: typed error
         case States.Streaming:
-            self.sendFrame.callResponseCont(isLast, args);
+            self.sendFrame.callResponseCont(args, isLast);
             if (isLast) self.state = States.Done;
             break;
         case States.Done:
+        case States.Error:
             throw new Error('response already done'); // TODO: typed error
     }
 };
 
 TChannelOutgoingResponse.prototype.sendErrorFrame = function sendErrorFrame(codeString, message) {
     var self = this;
-    if (self.state === States.Done) {
+    if (self.state === States.Done || self.state === States.Error) {
         throw new Error('response already done'); // TODO: typed error
     } else {
         self.sendFrame.error(codeString, message);
-        self.state = States.Done;
+        self.state = States.Error;
     }
 };
 
@@ -316,10 +319,10 @@ TChannelOutgoingResponse.prototype.sendOk = function sendOk(res1, res2) {
     var self = this;
     self.setOk(true);
     self.sendCallResponseFrame([
-        self.arg1,
-        res1 ? Buffer(res1) : null,
-        res2 ? Buffer(res2) : null
-    ]);
+        self.arg1 || Buffer(0),
+        res1 ? Buffer(res1) : Buffer(0),
+        res2 ? Buffer(res2) : Buffer(0)
+    ], true);
     self.emit('finish');
 };
 
@@ -327,10 +330,10 @@ TChannelOutgoingResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
     var self = this;
     self.setOk(false);
     self.sendCallResponseFrame([
-        self.arg1,
-        res1 ? Buffer(res1) : null,
-        res2 ? Buffer(res2) : null
-    ]);
+        self.arg1 || Buffer(0),
+        res1 ? Buffer(res1) : Buffer(0),
+        res2 ? Buffer(res2) : Buffer(0)
+    ], true);
     self.emit('finish');
 };
 
