@@ -188,9 +188,9 @@ TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callbac
         throw new Error('request already sent');
     }
     self.sendCallRequestFrame([
-        arg1 ? Buffer(arg1) : null,
-        arg2 ? Buffer(arg2) : null,
-        arg3 ? Buffer(arg3) : null
+        arg1 ? Buffer(arg1) : Buffer(0),
+        arg2 ? Buffer(arg2) : Buffer(0),
+        arg3 ? Buffer(arg3) : Buffer(0)
     ], true);
     self.emit('finish');
     return self;
@@ -320,9 +320,9 @@ TChannelOutgoingResponse.prototype.sendOk = function sendOk(res1, res2) {
     var self = this;
     self.setOk(true);
     self.sendCallResponseFrame([
-        self.arg1,
-        res1 ? Buffer(res1) : null,
-        res2 ? Buffer(res2) : null
+        self.arg1 || Buffer(0),
+        res1 ? Buffer(res1) : Buffer(0),
+        res2 ? Buffer(res2) : Buffer(0)
     ], true);
     self.emit('finish');
 };
@@ -331,9 +331,9 @@ TChannelOutgoingResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
     var self = this;
     self.setOk(false);
     self.sendCallResponseFrame([
-        self.arg1,
-        res1 ? Buffer(res1) : null,
-        res2 ? Buffer(res2) : null
+        self.arg1 || Buffer(0),
+        res1 ? Buffer(res1) : Buffer(0),
+        res2 ? Buffer(res2) : Buffer(0)
     ], true);
     self.emit('finish');
 };
