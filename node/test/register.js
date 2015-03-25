@@ -37,7 +37,7 @@ allocCluster.test('register() with different results', 2, function t(cluster, as
     });
 
     one.handler.register('/error-frame', function errorFrame(req, res) {
-        res.sendErrorFrame('Busy', 'some message');
+        res.sendError('Busy', 'some message');
     });
 
     one.handler.register('/buffer-head', function buffer(req, res) {

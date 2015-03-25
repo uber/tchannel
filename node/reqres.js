@@ -279,7 +279,7 @@ TChannelOutgoingResponse.prototype.sendCallResponseContFrame = function sendCall
     }
 };
 
-TChannelOutgoingResponse.prototype.sendErrorFrame = function sendErrorFrame(codeString, message) {
+TChannelOutgoingResponse.prototype.sendError = function sendError(codeString, message) {
     var self = this;
     if (self.state === States.Done || self.state === States.Error) {
         throw new Error('response already done'); // TODO: typed error
