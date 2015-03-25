@@ -285,7 +285,7 @@ TChannelOutgoingResponse.prototype.sendCallResponseContFrame = function sendCall
         case States.Initial:
             throw new Error('first response frame not sent'); // TODO: typed error
         case States.Streaming:
-            self.sendFrame.callResponseCont(isLast, args);
+            self.sendFrame.callResponseCont(args, isLast);
             if (isLast) self.state = States.Done;
             break;
         case States.Done:
