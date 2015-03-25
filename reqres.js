@@ -29,6 +29,7 @@ var States = Object.create(null);
 States.Initial = 0;
 States.Streaming = 1;
 States.Done = 2;
+States.Error = 3;
 
 // TODO: provide streams for arg2/3
 
@@ -258,9 +259,10 @@ TChannelOutgoingResponse.prototype.sendParts = function sendParts(parts, isLast)
             self.sendCallResponseContFrame(parts, isLast);
             break;
         case States.Done:
-            // TODO: could happen easily if an error frame is sent
-            // mid-stream causing a transition to Done
             throw new Error('got frame in done state'); // TODO: typed error
+        case States.Error:
+            // skip
+            break;
     }
 };
 
@@ -275,6 +277,7 @@ TChannelOutgoingResponse.prototype.sendCallResponseFrame = function sendCallResp
         case States.Streaming:
             throw new Error('first response frame already sent'); // TODO: typed error
         case States.Done:
+        case States.Error:
             throw new Error('response already done'); // TODO: typed error
     }
 };
@@ -289,17 +292,18 @@ TChannelOutgoingResponse.prototype.sendCallResponseContFrame = function sendCall
             if (isLast) self.state = States.Done;
             break;
         case States.Done:
+        case States.Error:
             throw new Error('response already done'); // TODO: typed error
     }
 };
 
 TChannelOutgoingResponse.prototype.sendErrorFrame = function sendErrorFrame(codeString, message) {
     var self = this;
-    if (self.state === States.Done) {
+    if (self.state === States.Done || self.state === States.Error) {
         throw new Error('response already done'); // TODO: typed error
     } else {
         self.sendFrame.error(codeString, message);
-        self.state = States.Done;
+        self.state = States.Error;
     }
 };
 
