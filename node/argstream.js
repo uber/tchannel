@@ -193,10 +193,12 @@ OutArgStream.prototype.resume = function resume() {
 OutArgStream.prototype._handleFrameChunk = function _handleFrameChunk(n, chunk) {
     var self = this;
     if (n < self.currentArgN) {
-        self.emit('error', ArgChunkOutOfOrderError({
-            current: self.currentArgN,
-            got: n
-        }));
+        if (chunk !== null) {
+            self.emit('error', ArgChunkOutOfOrderError({
+                current: self.currentArgN,
+                got: n
+            }));
+        }
     } else if (n > self.currentArgN) {
         if (n - self.currentArgN > 1) {
             self.emit('error', ArgChunkGapError({
