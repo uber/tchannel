@@ -59,6 +59,7 @@ function TChannelV2Handler(channel, options) {
     // TODO: GC these... maybe that's up to TChannel itself wrt ops
     self.streamingReq = Object.create(null);
     self.streamingRes = Object.create(null);
+    self.isReady = false;
 }
 
 util.inherits(TChannelV2Handler, Duplex);
@@ -111,6 +112,7 @@ TChannelV2Handler.prototype.handleInitRequest = function handleInitRequest(reqFr
     /* jshint camelcase:true */
     self.remoteHostPort = init.hostPort;
     self.sendInitResponse(reqFrame);
+    self.isReady = true;
     self.emit('init.request', init);
     callback();
 };
@@ -128,6 +130,7 @@ TChannelV2Handler.prototype.handleInitResponse = function handleInitResponse(res
     };
     /* jshint camelcase:true */
     self.remoteHostPort = init.hostPort;
+    self.isReady = true;
     self.emit('init.response', init);
     callback();
 };
