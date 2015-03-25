@@ -425,7 +425,7 @@ TChannel.prototype.close = function close(callback) {
             peerRemoteName: conn.remoteName,
             fromAddress: sock.address()
         });
-        conn.closing = true;
+        // conn.closing = true;
         conn.resetAll(new Error('shutdown from quit')); // TODO typed error
         sock.destroy();
     });
@@ -724,7 +724,7 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
         // TODO: we could support an op.cancel opt-in callback
         var op = self.inOps[id];
         delete self.inOps[id];
-        op.res.emit('error', err);
+        // op.res.emit('error', err);
     });
 
     // for all outgoing requests, forward the triggering error to the user callback
