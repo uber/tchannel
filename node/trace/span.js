@@ -18,39 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-var Ready = require('ready-signal');
-var crypto = require('crypto');
 var NullLogtron = require('null-logtron');
+
+var LCG = require('./lcg');
 
 module.exports = Span;
 module.exports.Endpoint = Endpoint;
 module.exports.Annotation = Annotation;
 module.exports.BinaryAnnotation = BinaryAnnotation;
-
-function mathRng(cb) {
-    cb(null, Math.random() * 100000000000000000);
-}
-
-// TODO: do something better here
-function cryptoRng(cb) {
-    crypto.pseudoRandomBytes(8, cb);
-}
-
-function rng(logger, cb) {
-    cryptoRng(function cryptoRngDone(err, data) {
-        if (err) {
-            logger.error('TChannel tracing: rng error', err);
-            return mathRng(function (err, data) {
-                // TODO: this is actually wrong and should store it into
-                // a buffer, assuming crypto won't fail for now during
-                // testing
-                cb(data);
-            });
-        }
-
-        cb(data);
-    });
-}
 
 function Span(options) {
     if (!(this instanceof Span)) {
@@ -62,18 +37,15 @@ function Span(options) {
 
     self.logger = options.logger || NullLogtron();
 
-    self._idReady = Ready();
-    self._traceidReady = Ready();
-
     if (options.id) {
         self.id = options.id;
-        self._idReady.signal();
     }
 
     if (options.traceid) {
         self.traceid = options.traceid;
-        self._traceidReady.signal();
     }
+
+    self.rng = new LCG();
 
     self.endpoint = options.endpoint;
 
@@ -114,48 +86,26 @@ Span.prototype.toJSON = function toJSON() {
     };
 };
 
-Span.prototype.ready = function ready(cb) {
-    var self = this;
-    self._traceidReady(function () {
-        self._idReady(function () {
-            cb();
-        });
-    });
-};
-
 // Generate a trace/span id for this span
 Span.prototype.generateIds = function generateIds() {
     var self = this;
 
-    rng(self.logger, function rngDone(data) {
-        self.id = self.traceid = data;
-
-        self._idReady.signal();
-        self._traceidReady.signal();
-    });
+    self.id = self.traceid = self.rng.rand64();
 };
 
 // Generate just a span id
 Span.prototype.generateSpanid = function generateSpanid() {
     var self = this;
 
-    rng(self.logger, function rngDone(data) {
-        self.id = data;
-
-        self._idReady.signal();
-    });
+    self.id = self.rng.rand64();
 };
 
 // ##
 Span.prototype.propagateIdsFrom = function propagateIdsFrom(span) {
     var self = this;
 
-    span.ready(function spanReady() {
-        self.parentid = span.id;
-        self.traceid = span.traceid;
-
-        self._traceidReady.signal();
-    });
+    self.parentid = span.id;
+    self.traceid = span.traceid;
 };
 
 Span.prototype.getTracing = function getTracing() {
