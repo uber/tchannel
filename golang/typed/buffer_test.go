@@ -100,3 +100,62 @@ func TestSeek(t *testing.T) {
 	require.Nil(t, err)
 	assert.Equal(t, "The quick brown fox", s)
 }
+
+func TestDeferredWrites(t *testing.T) {
+	w := NewWriteBufferWithSize(1024)
+	u16ref, err := w.DeferUint16()
+	require.Nil(t, err)
+
+	u32ref, err := w.DeferUint32()
+	require.Nil(t, err)
+
+	u64ref, err := w.DeferUint64()
+	require.Nil(t, err)
+
+	bref, err := w.DeferBytes(5)
+	require.Nil(t, err)
+
+	sref, err := w.DeferBytes(5)
+	require.Nil(t, err)
+
+	byteref, err := w.DeferByte()
+	require.Nil(t, err)
+
+	assert.Equal(t, 2+4+8+5+5+1, w.BytesWritten())
+
+	u16ref.Update(2040)
+	u32ref.Update(495404)
+	u64ref.Update(0x40950459)
+	bref.Update([]byte{0x30, 0x12, 0x45, 0x55, 0x65})
+	sref.UpdateString("where")
+	byteref.Update(0x44)
+
+	var buf bytes.Buffer
+	w.FlushTo(&buf)
+
+	r := NewReadBuffer(buf.Bytes())
+
+	u16, err := r.ReadUint16()
+	require.Nil(t, err)
+	assert.Equal(t, uint16(2040), u16)
+
+	u32, err := r.ReadUint32()
+	require.Nil(t, err)
+	assert.Equal(t, uint32(495404), u32)
+
+	u64, err := r.ReadUint64()
+	require.Nil(t, err)
+	assert.Equal(t, uint32(0x40950459), u64)
+
+	b, err := r.ReadBytes(5)
+	require.Nil(t, err)
+	assert.Equal(t, []byte{0x30, 0x12, 0x45, 0x55, 0x65}, b)
+
+	s, err := r.ReadString(5)
+	require.Nil(t, err)
+	assert.Equal(t, "where", s)
+
+	u8, err := r.ReadByte()
+	require.Nil(t, err)
+	assert.Equal(t, byte(0x44), u8)
+}
