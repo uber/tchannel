@@ -110,8 +110,8 @@ TChannelV2Handler.prototype.handleInitRequest = function handleInitRequest(reqFr
     };
     /* jshint camelcase:true */
     self.remoteHostPort = init.hostPort;
-    self.emit('init.request', init);
     self.sendInitResponse(reqFrame);
+    self.emit('init.request', init);
     callback();
 };
 
