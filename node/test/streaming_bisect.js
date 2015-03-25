@@ -109,7 +109,7 @@ test('bisection test', function t(assert) {
     var search = TestStreamSearch({
         stopOnFirstFailure: argv.first,
         traceDetails: argv.trace,
-        sizeLimit: sizeLimit || 512 * base2.Ki,
+        sizeLimit: sizeLimit || 128 * base2.Ki,
         timeout: argv.timeout
     }).instrument(argv.instrument);
 
@@ -147,8 +147,7 @@ test('bisection test', function t(assert) {
             withHeaderOnly: true,
             withBodyOnly: true,
             withBoth: false,
-            basis: [2, 3],
-            sizeLimit: sizeLimit || 128 * base2.Ki
+            basis: [2, 3]
         }
 
     ].map(function eachOptions(options) {
