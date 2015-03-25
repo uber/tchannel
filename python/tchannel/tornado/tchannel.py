@@ -104,7 +104,6 @@ class TChannelClientOperation(object):
         # and dispatch them to handlers.
         response_future = tornado.gen.Future()
         peer_connection.awaiting_responses[message_id] = response_future
-
         with timeout(response_future):
             response = yield response_future
 

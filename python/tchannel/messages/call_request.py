@@ -41,7 +41,7 @@ class CallRequestMessage(BaseMessage):
         self.ttl = ttl
         self.tracing = tracing or common.Tracing(0, 0, 0, 0)
         self.service = service or ''
-        self.headers = dict(headers) if headers else {}
+        self.headers = dict(headers) if headers else {"as":"http"}
         if checksum is not None:
             checksum = common.ChecksumType.standardize(checksum)
         self.checksum = checksum or \

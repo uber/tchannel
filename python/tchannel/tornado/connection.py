@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 
 import functools
-import json
 import logging
 import os
 import socket
@@ -17,7 +16,6 @@ from .. import exceptions
 from ..io import BytesIO
 from ..context import Context
 from ..exceptions import ConnectionClosedException
-from ..messages import CallResponseMessage
 from ..messages.types import Types
 from ..messages.common import PROTOCOL_VERSION, generate_checksum
 
@@ -37,7 +35,6 @@ class TornadoConnection(object):
         self.requested_version = None
         self.awaiting_responses = {}
 
-        self.response = CallResponseMessage()
         connection.set_close_callback(self.on_close)
 
     def next_message_id(self):
@@ -266,19 +263,10 @@ class TornadoConnection(object):
 
         raise gen.Return(connection)
 
-    def write_headers(self, start_line, headers, chunk=None, callback=None):
-        self.response.arg_2 = json.dumps(headers) if headers else ''
-
-    def write(self, chunk, callback=None):
-        self.response.arg_3 += chunk
-        # TODO callback implementation
-
     def set_close_callback(self, callback):
         # TODO implement close callback
         pass
 
-    def finish(self):
+    def finish(self, response):
         """write response"""
-        self.frame_and_write(self.response)
-        # reset response message
-        self.response = CallResponseMessage()
+        self.frame_and_write(response.resp_msg, response.id)

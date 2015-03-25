@@ -5,7 +5,9 @@ from tornado.httputil import RequestStartLine
 from ..handler import RequestHandler
 import tornado.httputil
 
-from http_request import HttpRequest
+from .http_request import HttpRequest
+from .tornado_http_connection import TornadoHttpConnection
+
 tornado.httputil.HTTPServerRequest = HttpRequest
 
 
@@ -13,8 +15,9 @@ class TornadoRequestHandler(RequestHandler):
     def __init__(self, app):
         self.request_callback = app
 
-    def start_serving(self, request_conn):
-        return _ServerRequestAdapter(self, request_conn)
+    def start_serving(self, request_conn, context):
+        http_conn = TornadoHttpConnection(request_conn.connection, context)
+        return _ServerRequestAdapter(self, http_conn)
 
     def handle_request(self, context, conn):
         """dispatch incoming request to particular endpoint
@@ -22,7 +25,7 @@ class TornadoRequestHandler(RequestHandler):
         :param context: context contains received CallRequestMessage
         :param conn: An incoming TornadoConnection
         """
-        request_delegate = self.start_serving(conn)
+        request_delegate = self.start_serving(conn, context)
         message = context.message
         # process http message
         # TODO need a better way to figure out
