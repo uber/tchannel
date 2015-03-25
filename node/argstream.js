@@ -148,13 +148,13 @@ function OutArgStream() {
         self._handleFrameChunk(3, chunk);
     });
 
-    self.arg1.on('finish', function onArg1Finish() {
+    self.arg1.on('end', function onArg1End() {
         self._handleFrameChunk(1, null);
     });
-    self.arg2.on('finish', function onArg2Finish() {
+    self.arg2.on('end', function onArg2End() {
         self._handleFrameChunk(2, null);
     });
-    self.arg3.on('finish', function onArg3Finish() {
+    self.arg3.on('end', function onArg3End() {
         self._handleFrameChunk(3, null);
         self._flushParts(true);
         self.finished = true;
