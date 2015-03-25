@@ -84,7 +84,6 @@ type ConnectionOptions struct {
 
 // Connection represents a connection to a remote peer.
 type Connection struct {
-	ch             *TChannel
 	log            Logger
 	checksumType   ChecksumType
 	framePool      FramePool
@@ -165,7 +164,6 @@ func newConnection(ch *TChannel, conn net.Conn, initialState connectionState,
 	}
 
 	c := &Connection{
-		ch:            ch,
 		log:           ch.log,
 		conn:          conn,
 		framePool:     framePool,
@@ -182,6 +180,11 @@ func newConnection(ch *TChannel, conn net.Conn, initialState connectionState,
 			exchanges: make(map[uint32]*messageExchange),
 		},
 		handlers: ch.handlers,
+	}
+
+	c.remotePeerInfo.HostPort = c.conn.RemoteAddr().String()
+	if ctxLog, ok := c.log.(ContextLogger); ok {
+		c.log = ctxLog.WithContext(LogContext{"remotePeerInfo": c.remotePeerInfo})
 	}
 
 	go c.readFrames()
@@ -235,12 +238,16 @@ func (c *Connection) sendInit(ctx context.Context) error {
 		return c.connectionError(err)
 	}
 
+	c.remotePeerInfo.HostPort = res.initParams[InitParamHostPort]
+	c.remotePeerInfo.ProcessName = res.initParams[InitParamProcessName]
+
+	if ctxLog, ok := c.log.(ContextLogger); ok {
+		c.log = ctxLog.WithContext(LogContext{"remotePeerInfo": c.remotePeerInfo})
+	}
+
 	if res.Version != CurrentProtocolVersion {
 		return c.connectionError(fmt.Errorf("Unsupported protocol version %d from peer", res.Version))
 	}
-
-	c.remotePeerInfo.HostPort = res.initParams[InitParamHostPort]
-	c.remotePeerInfo.ProcessName = res.initParams[InitParamProcessName]
 
 	c.withStateLock(func() error {
 		if c.state == connectionWaitingToRecvInitRes {
@@ -278,6 +285,9 @@ func (c *Connection) handleInitReq(frame *Frame) {
 
 	c.remotePeerInfo.HostPort = req.initParams[InitParamHostPort]
 	c.remotePeerInfo.ProcessName = req.initParams[InitParamProcessName]
+	if ctxLog, ok := c.log.(ContextLogger); ok {
+		c.log = ctxLog.WithContext(LogContext{"remotePeerInfo": c.remotePeerInfo})
+	}
 
 	res := initRes{initMessage{id: frame.Header.ID}}
 	res.initParams = initParams{
@@ -393,7 +403,7 @@ func (c *Connection) closeNetwork() {
 	// NB(mmihic): The sender goroutine	will exit once the connection is closed; no need to close
 	// the send channel (and closing the send channel would be dangerous since other goroutine might be sending)
 	if err := c.conn.Close(); err != nil {
-		c.log.Warnf("could not close connection to peer %s: %v", c.remotePeerInfo, err)
+		c.log.Warnf("could not close connection: %v", err)
 	}
 }
 

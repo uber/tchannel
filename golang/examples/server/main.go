@@ -29,7 +29,7 @@ import (
 	"time"
 )
 
-var log = examples.LogrusLogger{}
+var log = examples.StandardLogger()
 
 func echo(ctx context.Context, call *tchannel.InboundCall) {
 	var inArg2 tchannel.BytesInput
