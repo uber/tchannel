@@ -288,6 +288,7 @@ TChannelOutgoingResponse.prototype.sendError = function sendError(codeString, me
         throw new Error('response already done'); // TODO: typed error
     } else {
         // TODO: we could decide to flush any parts in a (first?) call res frame
+        self.finished = true;
         self.state = States.Error;
         self.arg1.end();
         self.arg2.end();
