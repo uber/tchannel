@@ -184,8 +184,11 @@ TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callbac
     if (self.tracer) {
         // TODO: do in constructor and update here
         self.span = self.tracer.setupNewSpan({
+            hostPort: self.host,
             name: arg1
         });
+
+        self.tracing = self.span.getTracing();
 
         // TODO: better annotations
         self.span.annotate('cs');   // client start
@@ -199,28 +202,55 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
     self.once('response', onResponse);
     function onError(err) {
         // TODO: better annotations
-        self.span.annotate('cr'); // client recv
-        self.tracer.report(self.span);
-        self.removeListener('response', onResponse);
+        var prevSpan;
+        if (self.tracer) {
+            self.span.annotate('cr'); // client recv
+            self.tracer.report(self.span);
 
-        var prev = self.tracer.getCurrentSpan();
-        self.tracer.setCurrentSpan(self.span);
+            prevSpan = self.tracer.getCurrentSpan();
+            self.tracer.setCurrentSpan(self.span);
+        }
+
+        self.removeListener('response', onResponse);
         callback(err, null);
-        self.tracer.setCurrentSpan(prev);
+
+        if (self.tracer) {
+            self.tracer.setCurrentSpan(prevSpan);
+        }
     }
     function onResponse(res) {
         // TODO: better annotations
-        self.span.annotate('cr');
-        self.tracer.report(self.span);
+        var prevSpan;
+        if (self.tracer) {
+            self.span.annotate('cr');
+            self.tracer.report(self.span);
+
+            prevSpan = self.tracer.getCurrentSpan();
+        }
+
         self.removeListener('error', onError);
         if (callback.canStream) {
+            if (self.tracer) {
+                self.tracer.setCurrentSpan(self.span);
+            }
+
             callback(null, res);
+
+            if (self.tracer) {
+                self.tracer.setCurrentSpan(prevSpan);
+            }
         } else {
             parallel({
                 arg2: res.arg2.onValueReady,
                 arg3: res.arg3.onValueReady
             }, function argsDone(err, args) {
+                if (self.tracer) {
+                    self.tracer.setCurrentSpan(self.span);
+                }
                 callback(err, res, args.arg2, args.arg3);
+                if (self.tracer) {
+                    self.tracer.setCurrentSpan(prevSpan);
+                }
             });
         }
     }

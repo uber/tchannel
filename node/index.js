@@ -116,6 +116,8 @@ function TChannel(options) {
     self.listening = false;
     self.destroyed = false;
 
+    self.tracer = null;
+
     self.serverSocket = net.createServer(function onServerSocketConnection(sock) {
         if (!self.destroyed) {
             var remoteAddr = sock.remoteAddress + ':' + sock.remotePort;
@@ -137,17 +139,20 @@ function TChannel(options) {
             self.logger.info(self.hostPort + ' listening');
             self.emit('listening');
 
-            // TODO: make this in constructor and not listening event
-            self.tracer = new TracingAgent({
-                logger: self.logger,
-                host: self.host,
-                port: address.port,
-                reporter: self.options.traceReporter,
-                // TODO: wat to do with this? need serviceName, should not be
-                // passed into tchannel though. Take from autobahn and throw
-                // otherwise if tracing is enabled?
-                serviceName: self.options.serviceName
-            });
+            if (self.options.trace) {
+                console.log("making tracer");
+                // TODO: make this in constructor and not listening event
+                self.tracer = new TracingAgent({
+                    logger: self.logger,
+                    host: self.host,
+                    port: address.port,
+                    reporter: self.options.traceReporter,
+                    // TODO: wat to do with this? need serviceName, should not
+                    // be passed into tchannel though. Take from autobahn and 
+                    // throw otherwise if tracing is enabled?
+                    serviceName: self.options.serviceName
+                });
+            }
         }
     });
     self.serverSocket.on('error', function onServerSocketError(err) {
@@ -819,7 +824,6 @@ TChannelConnection.prototype.request = function request(options) {
 
     options.checksumType = options.checksum;
     options.ttl = options.timeout || 1; // TODO: better default, support for dynamic
-    options.tracing = {};
 
     var req = self.handler.buildOutgoingRequest(options);
     var id = req.id;
@@ -840,18 +844,20 @@ TChannelConnection.prototype.handleCallRequest = function handleCallRequest(req)
 
     function runHandler() {
         // TODO: put setupNewSpan here
-        res.span = self.tracer.setupNewSpan({
-            spanid: req.tracing.spanid,
-            traceid: req.tracing.traceid,
-            parentid: req.tracing.parentid,
-            hostPort: self.channel.hostPort,
-            serviceName: self.channel.options.serviceName
-        });
+        if (self.tracer) {
+            res.span = self.tracer.setupNewSpan({
+                spanid: req.tracing.spanid,
+                traceid: req.tracing.traceid,
+                parentid: req.tracing.parentid,
+                hostPort: self.channel.hostPort,
+                serviceName: self.channel.options.serviceName
+            });
 
-        // TODO: better annotations
-        res.span.annotate('sr', Date.now());
+            // TODO: better annotations
+            res.span.annotate('sr', Date.now());
 
-        self.tracer.setCurrentSpan(res.span);
+            self.tracer.setCurrentSpan(res.span);
+        }
 
         // Don't know name of the span yet but it'll be assigned in the
         // endpoint handler
