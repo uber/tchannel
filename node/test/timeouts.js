@@ -45,11 +45,11 @@ allocCluster.test('requests will timeout', 2, {
         })
         .send('/normal-proxy', 'h', 'b', onResp);
 
-    function onResp(err, res) {
+    function onResp(err, res, arg2, arg3) {
         assert.ifError(err);
 
-        assert.equal(String(res.arg2), 'h');
-        assert.equal(String(res.arg3), 'b');
+        assert.equal(String(arg2), 'h');
+        assert.equal(String(arg3), 'b');
 
         two
             .request({
@@ -88,8 +88,8 @@ allocCluster.test('requests will timeout', 2, {
         assert.end();
     }
 
-    function normalProxy(req, res) {
-        res.sendOk(req.arg2, req.arg3);
+    function normalProxy(req, res, arg2, arg3) {
+        res.sendOk(arg2, arg3);
     }
     function timeout(/* head, body, hostInfo, cb */) {
         // do not call cb();
