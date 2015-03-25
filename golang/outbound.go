@@ -78,6 +78,7 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string) (*Outbou
 			ctx:    ctx,
 			conn:   c,
 			recvCh: mex.recvCh,
+			state:  outboundCallResponseReadyToReadArg1,
 		},
 	}
 
@@ -244,7 +245,8 @@ type OutboundCallResponse struct {
 type outboundCallResponseState int
 
 const (
-	outboundCallResponseReadyToReadArg2 = iota
+	outboundCallResponseReadyToReadArg1 = iota
+	outboundCallResponseReadyToReadArg2
 	outboundCallResponseReadyToReadArg3
 	outboundCallResponseComplete
 )
@@ -258,9 +260,29 @@ func (call *OutboundCallResponse) ApplicationError() bool {
 	return call.res.ResponseCode == responseApplicationError
 }
 
+// readOperation reads the operation
+func (call *OutboundCallResponse) readOperation(arg Input) error {
+	if call.state != outboundCallResponseReadyToReadArg1 {
+		return call.failed(errCallStateMismatch)
+	}
+
+	r := newBodyReader(call, false)
+	if err := r.ReadArgument(arg, false); err != nil {
+		return call.failed(err)
+	}
+
+	call.state = outboundCallResponseReadyToReadArg2
+	return nil
+}
+
 // ReadArg2 reads the second argument from the response, blocking until the argument is read or
 // an error/timeout has occurred.
 func (call *OutboundCallResponse) ReadArg2(arg Input) error {
+	var operation BytesInput
+	if err := call.readOperation(&operation); err != nil {
+		return err
+	}
+
 	if call.state != outboundCallResponseReadyToReadArg2 {
 		return call.failed(errCallStateMismatch)
 	}

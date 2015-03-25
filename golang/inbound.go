@@ -57,7 +57,7 @@ func (c *Connection) handleCallReq(frame *Frame) {
 
 	res := &InboundCallResponse{
 		id:       frame.Header.ID,
-		state:    inboundCallResponseReadyToWriteArg2,
+		state:    inboundCallResponseReadyToWriteArg1,
 		conn:     c,
 		ctx:      ctx,
 		cancel:   cancel,
@@ -259,7 +259,8 @@ type InboundCallResponse struct {
 type inboundCallResponseState int
 
 const (
-	inboundCallResponseReadyToWriteArg2 inboundCallResponseState = iota
+	inboundCallResponseReadyToWriteArg1 inboundCallResponseState = iota
+	inboundCallResponseReadyToWriteArg2
 	inboundCallResponseReadyToWriteArg3
 	inboundCallResponseComplete
 	inboundCallResponseError
@@ -307,9 +308,27 @@ func (call *InboundCallResponse) SetApplicationError() error {
 	return nil
 }
 
+// writeOperation writes the operation.
+func (call *InboundCallResponse) writeOperation(operation []byte) error {
+	if call.state != inboundCallResponseReadyToWriteArg1 {
+		return call.failed(errCallStateMismatch)
+	}
+
+	if err := call.body.WriteArgument(BytesOutput(operation), false); err != nil {
+		return call.failed(err)
+	}
+
+	call.state = inboundCallResponseReadyToWriteArg2
+	return nil
+}
+
 // WriteArg2 writes the second argument in the response, blocking until the argument is
 // fully written or an error/timeout has occurred.
 func (call *InboundCallResponse) WriteArg2(arg Output) error {
+	if err := call.writeOperation(nil); err != nil {
+		return err
+	}
+
 	if call.state != inboundCallResponseReadyToWriteArg2 {
 		return call.failed(errCallStateMismatch)
 	}
