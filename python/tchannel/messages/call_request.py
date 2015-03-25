@@ -42,7 +42,11 @@ class CallRequestMessage(BaseMessage):
         self.tracing = tracing or common.Tracing(0, 0, 0, 0)
         self.service = service or ''
         self.headers = dict(headers) if headers else {}
-        self.checksum = (common.ChecksumType.none, None)
+        if checksum is not None:
+            checksum = common.ChecksumType.standardize(checksum)
+        self.checksum = checksum or \
+            (common.ChecksumType.none, None)
+
         self.arg_1 = arg_1 or ''
         self.arg_2 = arg_2 or ''
         self.arg_3 = arg_3 or ''

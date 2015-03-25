@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 from __future__ import absolute_import
 
+import socket
 import sys
 import tornado.ioloop
 import tornado.tcpserver
-import socket
 
-from tchannel.tornado.connection import TornadoConnection
+from ..tornado.connection import TornadoConnection
+from ..exceptions import InvalidChecksumException
+from ..messages.common import verify_checksum
 
 
 class InboundServer(tornado.tcpserver.TCPServer):
@@ -48,4 +50,8 @@ class InboundServer(tornado.tcpserver.TCPServer):
         :param context: a context contains call request message
         :param conn: incoming tornado connection
         """
-        self.req_handler.handle_request(context, conn)
+        if verify_checksum(context.message):
+            self.req_handler.handle_request(context, conn)
+        else:
+            # TODO return Error message
+            raise InvalidChecksumException()

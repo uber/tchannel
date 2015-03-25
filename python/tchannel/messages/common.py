@@ -1,9 +1,13 @@
 from __future__ import absolute_import
 
+import zlib
+
 from collections import namedtuple
 from enum import IntEnum
 
 from .. import rw
+from ..exceptions import InvalidChecksumException
+from .types import Types
 
 PROTOCOL_VERSION = 0x02
 
@@ -24,6 +28,11 @@ class ChecksumType(IntEnum):
     crc32 = 0x01
     farm32 = 0x02
 
+    @staticmethod
+    def standardize(checksum):
+        return (ChecksumType(checksum[0]), checksum[1])
+
+
 checksum_rw = rw.switch(
     rw.number(1),   # csumtype:1
     {
@@ -32,3 +41,64 @@ checksum_rw = rw.switch(
         ChecksumType.farm32: rw.number(4),  # csum:4
     }
 )
+
+
+CHECKSUM_MSG_TYPES = [Types.CALL_REQ,
+                      Types.CALL_REQ_CONTINUE,
+                      Types.CALL_RES,
+                      Types.CALL_RES_CONTINUE]
+
+
+def compute_checksum(checksum_type, args, csum=0):
+    if csum is None:
+        csum = 0
+
+    if checksum_type == ChecksumType.none:
+        return None
+    elif checksum_type == ChecksumType.crc32:
+        for arg in args:
+            csum = zlib.crc32(arg, csum) & 0xffffffff
+    # TODO figure out farm32 cross platform issue
+    elif checksum_type == ChecksumType.farm32:
+        raise NotImplementedError()
+    else:
+        raise InvalidChecksumException()
+
+    return csum
+
+
+def generate_checksum(message):
+    """Generate checksum for messages with
+        CALL_REQ, CALL_REQ_CONTINUE,
+        CALL_RES,CALL_RES_CONTINUE types
+
+    :param message: outgoing message
+    """
+    if message.message_type in CHECKSUM_MSG_TYPES:
+        csum = compute_checksum(
+            message.checksum[0],
+            [message.arg_1,
+             message.arg_2,
+             message.arg_3])
+
+        message.checksum = (message.checksum[0], csum)
+
+
+def verify_checksum(message):
+    """
+    :return return True if message checksum type is None
+    or checksum is correct
+    """
+    if message.message_type in CHECKSUM_MSG_TYPES:
+        csum = compute_checksum(
+            message.checksum[0],
+            [message.arg_1,
+             message.arg_2,
+             message.arg_3])
+
+        if csum == message.checksum[1]:
+            return True
+        else:
+            return False
+    else:
+        return True
