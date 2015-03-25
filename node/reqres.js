@@ -135,6 +135,9 @@ TChannelOutgoingRequest.prototype.sendParts = function sendParts(parts, isLast) 
             // TODO: could probably happen normally, like say if a
             // streaming request is canceled
             throw new Error('got frame in done state'); // TODO: typed error
+        case States.Error:
+            // TODO: log warn
+            break;
     }
 };
 
@@ -243,7 +246,7 @@ TChannelOutgoingResponse.prototype.sendParts = function sendParts(parts, isLast)
         case States.Done:
             throw new Error('got frame in done state'); // TODO: typed error
         case States.Error:
-            // skip
+            // TODO: log warn
             break;
     }
 };
