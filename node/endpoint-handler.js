@@ -22,6 +22,7 @@
 
 var parallel = require('run-parallel');
 var TypedError = require('error/typed');
+var util = require('util');
 
 var EndpointAlreadyDefinedError = TypedError({
     type: 'endpoint-already-defined',
@@ -35,13 +36,6 @@ var EndpointAlreadyDefinedError = TypedError({
 var InvalidHandlerError = TypedError({
     type: 'invalid-handler',
     message: 'invalid handler function'
-});
-
-var NoSuchEndpointError = TypedError({
-    type: 'no-such-endpoint',
-    message: 'no such endpoint {endpoint} on service {service}',
-    service: null,
-    endpoint: null
 });
 
 function TChannelEndpointHandler(serviceName) {
@@ -79,10 +73,9 @@ TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, re
         var name = String(arg1);
         var handler = self.endpoints[name];
         if (!handler) {
-            res.sendNotOk(null, NoSuchEndpointError({
-                service: self.serviceName,
-                endpoint: name
-            }).message);
+            res.sendError('BadRequest', util.format(
+                'no such endpoint service=%j endpoint=%j',
+                self.serviceName, name));
             return;
         }
         if (handler.canStream) {
