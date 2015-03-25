@@ -21,6 +21,7 @@ package tchannel
 // THE SOFTWARE.
 
 import (
+	_ "encoding/hex"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,10 +34,7 @@ func TestNoFragmentation(t *testing.T) {
 
 	arg1 := []byte("Hello")
 	w := newBodyWriter(out)
-	if _, err := w.Write(arg1); err != nil {
-		require.Nil(t, err)
-	}
-	require.Nil(t, w.endArgument(true))
+	require.Nil(t, w.WriteArgument(BytesOutput(arg1), true))
 
 	// Should be a single frame
 	// fragment flags(1), checksum type (1), checksum(5), chunk size(2), chunk(5)
@@ -186,6 +184,24 @@ func TestArgEndOnFragmentBoundary(t *testing.T) {
 	require.Nil(t, r3.endArgument())
 }
 
+func TestEmptyFragments(t *testing.T) {
+	in, out := buildChannels(ChecksumTypeCrc32)
+
+	w := newBodyWriter(out)
+	require.Nil(t, w.WriteArgument(BytesOutput(nil), false))
+	require.Nil(t, w.WriteArgument(BytesOutput(nil), true))
+
+	r1 := newBodyReader(in, false)
+	var arg1 BytesInput
+	require.Nil(t, r1.ReadArgument(&arg1, false))
+	assert.Equal(t, 0, len(arg1))
+
+	r2 := newBodyReader(in, true)
+	var arg2 BytesInput
+	require.Nil(t, r2.ReadArgument(&arg2, true))
+	assert.Equal(t, 0, len(arg2))
+}
+
 func buildChannels(checksumType ChecksumType) (*inFragments, *outFragments) {
 	ch := make(chan *Frame, 512)
 
@@ -240,7 +256,7 @@ func (out *outFragments) flushFragment(toSend *outFragment, last bool) error {
 }
 
 func assertFramesEqual(t *testing.T, expected [][]byte, frames []*Frame, msg string) {
-	assert.Equal(t, len(expected), len(frames), fmt.Sprintf("incorrect number of frames for %s", msg))
+	require.Equal(t, len(expected), len(frames), fmt.Sprintf("incorrect number of frames for %s", msg))
 
 	for i := range expected {
 		assert.Equal(t, len(expected[i]), int(frames[i].Header.PayloadSize()),
