@@ -278,12 +278,14 @@ TChannelV2Handler.prototype.sendInitResponse = function sendInitResponse(reqFram
 
 TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame(req, flags, args) {
     var self = this;
+    if (!self.isReady) throw new Error('send call req frame before ready');
     var reqBody = v2.CallRequest(flags, req.ttl, req.tracing, req.service, req.headers, req.checksum.type);
     req.checksum = self._sendCallBodies(req.id, reqBody.csum, reqBody, args);
 };
 
 TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFrame(res, flags, args) {
     var self = this;
+    if (!self.isReady) throw new Error('send call res frame before ready');
     var code = res.ok ? v2.CallResponse.Codes.OK : v2.CallResponse.Codes.Error;
     var resBody = v2.CallResponse(flags, code, res.tracing, res.headers, res.checksum.type);
     res.checksum = self._sendCallBodies(res.id, resBody.csum, resBody, args);
@@ -291,12 +293,14 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
 
 TChannelV2Handler.prototype.sendCallRequestContFrame = function sendCallRequestContFrame(req, flags, args) {
     var self = this;
+    if (!self.isReady) throw new Error('send call req cont frame before ready');
     var reqBody = v2.CallRequestCont(flags, req.checksum.type);
     req.checksum = self._sendCallBodies(req.id, req.checksum, reqBody, args);
 };
 
 TChannelV2Handler.prototype.sendCallResponseContFrame = function sendCallResponseContFrame(res, flags, args) {
     var self = this;
+    if (!self.isReady) throw new Error('send call res cont frame before ready');
     var resBody = v2.CallResponseCont(flags, res.checksum.type);
     res.checksum = self._sendCallBodies(res.id, res.checksum, resBody, args);
 };
