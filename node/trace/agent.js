@@ -1,3 +1,23 @@
+// Copyright (c) 2015 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
 if (!process.addAsyncListener) {
     require('async-listener');
 }
@@ -43,9 +63,7 @@ function Agent (options) {
     // TODO: options validation
 
     self.logger = options.logger || NullLogtron();
-    self.reporter = options.reporter || null;
-
-    self.logger.info('tracing enabled');
+    self.reporter = options.reporter || self.reporter;
 }
 
 // ## setupNewSpan
@@ -86,13 +104,13 @@ Agent.prototype.destroy = function destroy() {
     process.removeAsyncListener(self.asyncListener);
 };
 
-Agent.prototype.setCurrentSpan = function setCurrentTracing(tracing) {
+Agent.prototype.setCurrentSpan = function setCurrentSpan(span) {
     var self = this;
 
-    self.currentSpan = tracing;
+    self.currentSpan = span;
 };
 
-Agent.prototype.getCurrentSpan = function getCurrentTracing() {
+Agent.prototype.getCurrentSpan = function getCurrentSpan() {
     var self = this;
 
     return self.currentSpan;
@@ -104,11 +122,13 @@ Agent.prototype.report = function report(span) {
     // TODO: actual reporting
 
     span.ready(function spanReady() {
-        self.logger.info('got span: ' + span.toString());
-        if (typeof self.reporter === 'function') {
-            self.reporter(span);
-        }
+        self.reporter(span);
     });
 };
 
+// Default reporter, just logs.
+Agent.prototype.reporter = function (span) {
+    var self = this;
 
+    self.logger.info('got span: ' + span.toString());
+};

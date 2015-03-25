@@ -44,7 +44,6 @@ function TChannelEndpointHandler(serviceName) {
     }
     var self = this;
     self.serviceName = serviceName;
-    self.hostPort = hostPort;
     self.endpoints = Object.create(null);
     self.type = null;
 }
