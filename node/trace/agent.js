@@ -119,16 +119,13 @@ Agent.prototype.getCurrentSpan = function getCurrentSpan() {
 Agent.prototype.report = function report(span) {
     var self = this;
 
-    // TODO: actual reporting
-
-    span.ready(function spanReady() {
-        self.reporter(span);
-    });
+    self.reporter(span);
 };
 
 // Default reporter, just logs.
 Agent.prototype.reporter = function (span) {
     var self = this;
 
+    // TODO: actual reporting
     self.logger.info('got span: ' + span.toString());
 };
