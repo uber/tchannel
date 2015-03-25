@@ -213,6 +213,62 @@ func (w *WriteBuffer) WriteString(s string) error {
 	return nil
 }
 
+// DeferByte reserves space in the buffer for a single byte, and returns a
+// reference that can be used to update that byte later
+func (w *WriteBuffer) DeferByte() (ByteRef, error) {
+	if len(w.remaining) == 0 {
+		return nil, ErrBufferFull
+	}
+
+	bufRef := ByteRef(w.remaining[0:])
+	w.remaining = w.remaining[1:]
+	return bufRef, nil
+}
+
+// DeferUint16 reserves space in the buffer for a uint16, and
+// returns a reference that can be used to update that uint16
+func (w *WriteBuffer) DeferUint16() (Uint16Ref, error) {
+	b, err := w.reserve(2)
+	if err != nil {
+		return nil, err
+	}
+
+	return Uint16Ref(b), nil
+}
+
+// DeferUint32 reserves space in the buffer for a uint32, and
+// returns a reference that can be used to update that uint32
+func (w *WriteBuffer) DeferUint32() (Uint32Ref, error) {
+	b, err := w.reserve(4)
+	if err != nil {
+		return nil, err
+	}
+
+	return Uint32Ref(b), nil
+}
+
+// DeferUint64 reserves space in the buffer for a uint64, and
+// returns a reference that can be used to update that uint64
+func (w *WriteBuffer) DeferUint64() (Uint64Ref, error) {
+	b, err := w.reserve(8)
+	if err != nil {
+		return nil, err
+	}
+
+	return Uint64Ref(b), nil
+}
+
+// DeferBytes reserves space in the buffer for a fixed sequence of bytes,
+// and returns a reference that can be used to update those bytes
+func (w *WriteBuffer) DeferBytes(n int) (BytesRef, error) {
+	b, err := w.reserve(n)
+	if err != nil {
+		return nil, err
+	}
+
+	return BytesRef(b), nil
+}
+
 func (w *WriteBuffer) reserve(n int) ([]byte, error) {
 	if len(w.remaining) < n {
 		return nil, ErrBufferFull
@@ -258,3 +314,36 @@ func (w *WriteBuffer) Wrap(b []byte) {
 	w.buffer = b
 	w.remaining = b
 }
+
+// A ByteRef is a reference to a byte in a bufffer
+type ByteRef []byte
+
+// Update updates the byte in the buffer
+func (ref ByteRef) Update(b byte) { ref[0] = b }
+
+// A Uint16Ref is a reference to a uint16 placeholder in a buffer
+type Uint16Ref []byte
+
+// Update updates the uint16 in the buffer
+func (ref Uint16Ref) Update(n uint16) { binary.BigEndian.PutUint16(ref, n) }
+
+// A Uint32Ref is a reference to a uint32 placeholder in a buffer
+type Uint32Ref []byte
+
+// Update updates the uint32 in the buffer
+func (ref Uint32Ref) Update(n uint32) { binary.BigEndian.PutUint32(ref, n) }
+
+// A Uint64Ref is a reference to a uin64 placeholder in a buffer
+type Uint64Ref []byte
+
+// Update updates the uint64 in the buffer
+func (ref Uint64Ref) Update(n uint64) { binary.BigEndian.PutUint64(ref, n) }
+
+// A BytesRef is a reference to a multi-byte placeholder in a buffer
+type BytesRef []byte
+
+// Update updates the bytes in the buffer
+func (ref BytesRef) Update(b []byte) { copy(ref, b) }
+
+// UpdateString updates the bytes in the buffer from a string
+func (ref BytesRef) UpdateString(s string) { copy(ref, s) }
