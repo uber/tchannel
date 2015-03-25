@@ -36,6 +36,7 @@ test('basic tracing test', function (assert) {
 
     var subservice = new TChannel({
         handler: EndpointHandler(),
+        trace: true,
         logger: logger,
         traceReporter: function (span) {
             spans.push(span);
@@ -45,6 +46,7 @@ test('basic tracing test', function (assert) {
 
     var server = new TChannel({
         handler: EndpointHandler(),
+        trace: true,
         logger: logger,
         traceReporter: function (span) {
             spans.push(span);
@@ -53,6 +55,7 @@ test('basic tracing test', function (assert) {
     });
 
     var client = new TChannel({
+        trace: true,
         logger: logger,
         traceReporter: function (span) {
             spans.push(span);

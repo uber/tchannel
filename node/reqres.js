@@ -96,16 +96,18 @@ TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callbac
         throw new Error('request already sent');
     }
 
-    // TODO: do in constructor and update here
-    self.span = self.tracer.setupNewSpan({
-        hostPort: self.host,
-        name: arg1
-    });
+    if (self.tracer) {
+        // TODO: do in constructor and update here
+        self.span = self.tracer.setupNewSpan({
+            hostPort: self.host,
+            name: arg1
+        });
 
-    self.tracing = self.span.getTracing();
+        self.tracing = self.span.getTracing();
 
-    // TODO: better annotations
-    self.span.annotate('cs');   // client start
+        // TODO: better annotations
+        self.span.annotate('cs');   // client start
+    }
 
     self.sent = true;
     self.sendFrame(
@@ -123,25 +125,39 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
     self.once('response', onResponse);
     function onError(err) {
         // TODO: better annotations
-        self.span.annotate('cr'); // client recv
-        self.tracer.report(self.span);
-        self.removeListener('response', onResponse);
+        var prevSpan;
+        if (self.tracer) {
+            self.span.annotate('cr'); // client recv
+            self.tracer.report(self.span);
 
-        var prev = self.tracer.getCurrentSpan();
-        self.tracer.setCurrentSpan(self.span);
+            prevSpan = self.tracer.getCurrentSpan();
+            self.tracer.setCurrentSpan(self.span);
+        }
+
+        self.removeListener('response', onResponse);
         callback(err, null);
-        self.tracer.setCurrentSpan(prev);
+
+        if (self.tracer) {
+            self.tracer.setCurrentSpan(prevSpan);
+        }
     }
     function onResponse(res) {
         // TODO: better annotations
-        self.span.annotate('cr');
-        self.tracer.report(self.span);
-        self.removeListener('error', onError);
+        var prevSpan;
+        if (self.tracer) {
+            self.span.annotate('cr');
+            self.tracer.report(self.span);
 
-        var prev = self.tracer.getCurrentSpan();
-        self.tracer.setCurrentSpan(self.span);
+            prevSpan = self.tracer.getCurrentSpan();
+            self.tracer.setCurrentSpan(self.span);
+        }
+
+        self.removeListener('error', onError);
         callback(null, res);
-        self.tracer.setCurrentSpan(prev);
+
+        if (self.tracer) {
+            self.tracer.setCurrentSpan(prevSpan);
+        }
     }
     return self;
 };
@@ -184,9 +200,11 @@ TChannelOutgoingResponse.prototype.sendOk = function send(res1, res2) {
         res2 ? Buffer(res2) : null);
     self.emit('end');
 
-    // TODO: better annotations
-    self.span.annotate('ss', Date.now()); // server send
-    self.tracer.report(self.span);
+    if (self.tracer) {
+        // TODO: better annotations
+        self.span.annotate('ss', Date.now()); // server send
+        self.tracer.report(self.span);
+    }
 };
 
 TChannelOutgoingResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
@@ -204,11 +222,14 @@ TChannelOutgoingResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
         res2 ? Buffer(res2) : null);
     self.emit('end');
 
-    // TODO: better annotations
-    // TODO: when there's no handler this fails because we only setup a span
-    // when a handler is found
-    self.span.annotate('ss', Date.now()); // server send
-    self.tracer.report(self.span);
+    if (self.tracer) {
+        // TODO: better annotations
+        // TODO: when there's no handler this fails because we only setup a span
+        // when a handler is found
+        self.span.annotate('ss', Date.now()); // server send
+        
+        self.tracer.report(self.span);
+    }
 };
 
 module.exports.IncomingRequest = TChannelIncomingRequest;
