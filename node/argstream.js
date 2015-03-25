@@ -160,12 +160,14 @@ function OutArgStream() {
         self.finished = true;
         self.emit('finish');
     });
+    self.paused = false;
 }
 
 inherits(OutArgStream, ArgStream);
 
 OutArgStream.prototype.pause = function pause() {
     var self = this;
+    self.paused = true;
     self.arg1.pause();
     self.arg2.pause();
     self.arg3.pause();
@@ -173,6 +175,7 @@ OutArgStream.prototype.pause = function pause() {
 
 OutArgStream.prototype.resume = function resume() {
     var self = this;
+    self.paused = false;
     self.arg1.resume();
     self.arg2.resume();
     self.arg3.resume();
