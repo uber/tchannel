@@ -101,6 +101,7 @@ func NewChannel(hostPort string, opts *ChannelOptions) (*TChannel, error) {
 	ch.hostPort = l.Addr().String()
 	ch.connectionOptions.PeerInfo.HostPort = ch.hostPort
 	ch.connectionOptions.PeerInfo.ProcessName = ch.processName
+	ch.connectionOptions.ChecksumType = ChecksumTypeCrc32
 	ch.log.Infof("%s listening on %s", ch.processName, ch.hostPort)
 	return ch, nil
 }
