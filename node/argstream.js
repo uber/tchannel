@@ -46,14 +46,8 @@ var ArgChunkOutOfOrderError = TypedError({
     type: 'arg-chunk-out-of-order',
     message: 'out of order arg chunk, current: {current} got: {got}',
     current: null,
-    got: null
-});
-
-var ArgChunkGapError = TypedError({
-    type: 'arg-chunk-gap',
-    message: 'arg chunk gap, current: {current} got: {got}',
-    current: null,
-    got: null
+    got: null,
+    chunk: null
 });
 
 function ArgStream() {
@@ -138,6 +132,7 @@ function OutArgStream() {
     self.finished = false;
     self.frame = [Buffer(0)];
     self.currentArgN = 1;
+    self.ended = [null, false, false, false];
     self.arg1.on('data', function onArg1Data(chunk) {
         self._handleFrameChunk(1, chunk);
     });
@@ -156,7 +151,10 @@ function OutArgStream() {
     });
     self.arg3.on('end', function onArg3End() {
         self._handleFrameChunk(3, null);
-        self._flushParts(true);
+        if (!self.paused) {
+            // console.log('arg3 end flush');
+            self._flushParts(true);
+        }
         self.finished = true;
         self.emit('finish');
     });
@@ -183,39 +181,54 @@ OutArgStream.prototype.resume = function resume() {
     self.arg1.resume();
     self.arg2.resume();
     self.arg3.resume();
-    if (self.finished) {
-        self._flushParts(true);
-    } else if (self.frame && self.frame[0] && self.frame[0].length) {
-        self._deferFlushParts();
-    }
+    // console.log('final flush on resume');
+    self._maybeFlush();
 };
 
 OutArgStream.prototype._handleFrameChunk = function _handleFrameChunk(n, chunk) {
     var self = this;
+    console.log(
+        'handleFrameChunk cur=%j chunk=%j paused=%j finished=%j chunk:',
+        self.currentArgN, n, self.paused, self.finished, chunk && chunk.toString());
+
     if (n < self.currentArgN) {
-        if (chunk !== null) {
+        if (chunk === null) {
+            self.ended[n] = true;
+        } else {
             self.emit('error', ArgChunkOutOfOrderError({
                 current: self.currentArgN,
-                got: n
+                got: n,
+                chunk: chunk
             }));
         }
+        return;
     } else if (n > self.currentArgN) {
-        if (n - self.currentArgN > 1) {
-            self.emit('error', ArgChunkGapError({
-                current: self.currentArgN,
-                got: n
-            }));
+        if (chunk === null) {
+            self.ended[n] = true;
+            return;
+        } else {
+            // if (n - self.currentArgN > 1) {
+            //     self.emit('error', ArgChunkGapError({
+            //         current: self.currentArgN,
+            //         got: n
+            //     }));
+            // }
+            while (++self.currentArgN < n) self.frame.push(Buffer(0));
+            self.frame.push(chunk);
+
         }
-        self.currentArgN++;
-        self.frame.push(chunk);
     } else if (chunk === null) {
-        if (++self.currentArgN <= 3) {
-            self.frame.push(Buffer(0));
-        }
+        self.ended[n] = true;
     } else {
         self._appendFrameChunk(chunk);
     }
-    self._deferFlushParts();
+
+    while (self.ended[self.currentArgN]) {
+        if (++self.currentArgN <= 3) self.frame.push(Buffer(0));
+    }
+    // console.log('yar', self.frame, self.currentArgN, self.ended);
+    // console.log('final flush');
+    self._maybeFlush();
 };
 
 OutArgStream.prototype._appendFrameChunk = function _appendFrameChunk(chunk) {
@@ -223,9 +236,24 @@ OutArgStream.prototype._appendFrameChunk = function _appendFrameChunk(chunk) {
     var i = self.frame.length - 1;
     var buf = self.frame[i];
     if (buf.length) {
-        self.frame[i] = Buffer.concat([buf, chunk]);
+        if (chunk.length) {
+            self.frame[i] = Buffer.concat([buf, chunk]);
+        }
     } else {
         self.frame[i] = chunk;
+    }
+};
+
+OutArgStream.prototype._maybeFlush = function _maybeFlush() {
+    var self = this;
+    if (self.finished && self.ended[1] && self.ended[2] && self.ended[3]) {
+        console.log('want to flush last now');
+        self._flushParts(true);
+    } else if (self.frame.length > 1 || self.frame[0].length) {
+        console.log('want to defer flush');
+        self._deferFlushParts();
+    } else {
+        console.log('NOT!', self.frame);
     }
 };
 
@@ -244,10 +272,12 @@ OutArgStream.prototype._flushParts = function _flushParts(isLast) {
         clearImmediate(self._flushImmed);
         self._flushImmed = null;
     }
-    if (self.paused || self.finished) return;
+    if (self.paused) return;
+    if (self.finished && !isLast) return;
     isLast = Boolean(isLast);
     var frame = self.frame;
     self.frame = [Buffer(0)];
+    console.log('flush', frame, isLast);
     if (frame.length) self.emit('frame', frame, isLast);
 };
 

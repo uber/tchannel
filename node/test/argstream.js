@@ -67,7 +67,7 @@ test.skip('setup sanity', argSearchTest(function t(state, assert) {
 }));
 
 test('argstream', function t(assert) {
-    var verbose = true;
+    var verbose = false;
     if (module === require.main) {
         var argv = require('minimist', {
             boolean: {
@@ -231,12 +231,15 @@ function writeFrames(frames, s, callback) {
                 if (!stream) return callback(new Error('ran out of arg streams'));
             }
             if (j === frame.length - 1 && i === frames.length - 1) {
+                console.log('write end', writingArg);
                 stream.end(frame[j]);
                 writingArg++;
             } else {
+                console.log('write', writingArg);
                 stream.write(frame[j]);
             }
         }
+        console.log('defer write');
         setImmediate(eachFrame, i+1);
     }
 }

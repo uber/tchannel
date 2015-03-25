@@ -113,17 +113,13 @@ function TChannelOutgoingRequest(id, options) {
     self.on('frame', function onFrame(parts, isLast) {
         self.sendParts(parts, isLast);
     });
-    self.on('finish', function onFinish() {
-        // TODO: should be redundant with self.sendCallRequest(Cont)Frame
-        // having been called with isLast=true
-        self.state = States.Done;
-    });
 }
 
 inherits(TChannelOutgoingRequest, OutArgStream);
 
 TChannelOutgoingRequest.prototype.sendParts = function sendParts(parts, isLast) {
     var self = this;
+    // console.log('send req parts', parts, isLast);
     switch (self.state) {
         case States.Initial:
             self.sendCallRequestFrame(parts, isLast);
@@ -225,17 +221,13 @@ function TChannelOutgoingResponse(id, options) {
     self.on('frame', function onFrame(parts, isLast) {
         self.sendParts(parts, isLast);
     });
-    self.on('finish', function onFinish() {
-        // TODO: should be redundant with self.sendCallResponse(Cont)Frame
-        // having been called with isLast=true
-        self.state = States.Done;
-    });
 }
 
 inherits(TChannelOutgoingResponse, OutArgStream);
 
 TChannelOutgoingResponse.prototype.sendParts = function sendParts(parts, isLast) {
     var self = this;
+    // console.log('send res parts', parts, isLast);
     switch (self.state) {
         case States.Initial:
             self.sendCallResponseFrame(parts, isLast);

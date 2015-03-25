@@ -250,6 +250,7 @@ TestSearch.prototype.reportResult = function reportResult(res, assert) {
         if (res.passed) {
             assert.pass(self.describeState(res.state));
         } else {
+            assert.comment(self.describeState(res.state));
             for (i = 0; i < res.results.length; i++) {
                 assert.emit('result', res.results[i]);
             }

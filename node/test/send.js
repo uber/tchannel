@@ -186,9 +186,8 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
 
 function sendTest(testCase, assert) {
     return function runSendTest(callback) {
-        testCase.channel
-            .request(testCase.opts)
-            .send(testCase.op, testCase.reqHead, testCase.reqBody, onResult);
+        var req = testCase.channel.request(testCase.opts);
+        req.send(testCase.op, testCase.reqHead, testCase.reqBody, onResult);
         function onResult(err, res, arg2, arg3) {
             var head = arg2;
             var body = arg3;
