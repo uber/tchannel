@@ -22,7 +22,6 @@ package tchannel
 
 import (
 	"bytes"
-	"encoding/binary"
 	"errors"
 	"github.com/uber/tchannel/golang/typed"
 	"io"
@@ -56,17 +55,18 @@ const (
 
 // An outbound fragment is a fragment being sent to a peer
 type outFragment struct {
-	frame         *Frame
-	checksum      Checksum
-	checksumBytes []byte
-	chunkStart    []byte
-	chunkSize     int
-	remaining     []byte
+	frame               *Frame
+	checksum            Checksum
+	flagsRef            typed.ByteRef
+	checksumRef         typed.BytesRef
+	currentChunkSizeRef typed.Uint16Ref
+	currentChunkSize    int
+	content             *typed.WriteBuffer
 }
 
 // Returns the number of bytes remaining in the fragment
 func (f *outFragment) bytesRemaining() int {
-	return len(f.remaining)
+	return f.content.BytesRemaining()
 }
 
 // Finishes a fragment, optionally marking it as the last fragment
@@ -77,36 +77,38 @@ func (f *outFragment) finish(last bool) *Frame {
 	}
 
 	if last {
-		f.frame.Payload[0] &= ^byte(flagMoreFragments)
+		f.flagsRef.Update(0)
 	} else {
-		f.frame.Payload[0] |= flagMoreFragments
+		f.flagsRef.Update(flagMoreFragments)
 	}
 
-	copy(f.checksumBytes, f.checksum.Sum())
-	f.frame.Header.SetPayloadSize((uint16(len(f.frame.Payload) - len(f.remaining))))
+	f.checksumRef.Update(f.checksum.Sum())
+	f.frame.Header.SetPayloadSize(uint16(f.content.BytesWritten()))
 	return f.frame
 }
 
 // Writes data for a chunked argument into the fragment.  The data must fit into the fragment
 func (f *outFragment) writeChunkData(b []byte) (int, error) {
-	if len(b) > len(f.remaining) {
-		return 0, errTooLarge
-	}
-
-	if len(f.chunkStart) == 0 {
+	if !f.chunkOpen() {
 		return 0, errNoOpenChunk
 	}
 
-	copy(f.remaining, b)
-	f.remaining = f.remaining[len(b):]
-	f.chunkSize += len(b)
+	if len(b) > f.bytesRemaining() {
+		return 0, errTooLarge
+	}
+
+	if err := f.content.WriteBytes(b); err != nil {
+		return 0, err
+	}
+
+	f.currentChunkSize += len(b)
 	f.checksum.Add(b)
 	return len(b), nil
 }
 
 // Returns true if the fragment can fit a new chunk
 func (f *outFragment) canFitNewChunk() bool {
-	return len(f.remaining) > 2
+	return f.bytesRemaining() > 2
 }
 
 // Begins a new chunk at the current location in the fragment
@@ -115,9 +117,8 @@ func (f *outFragment) beginChunk() error {
 		return errChunkAlreadyOpen
 	}
 
-	f.chunkStart = f.remaining[0:2]
-	f.chunkSize = 0
-	f.remaining = f.remaining[2:]
+	f.currentChunkSizeRef, _ = f.content.DeferUint16()
+	f.currentChunkSize = 0
 	return nil
 }
 
@@ -127,14 +128,14 @@ func (f *outFragment) endChunk() error {
 		return errNoOpenChunk
 	}
 
-	binary.BigEndian.PutUint16(f.chunkStart, uint16(f.chunkSize))
-	f.chunkStart = nil
-	f.chunkSize = 0
+	f.currentChunkSizeRef.Update(uint16(f.currentChunkSize))
+	f.currentChunkSizeRef = nil
+	f.currentChunkSize = 0
 	return nil
 }
 
 // Returns true if the fragment has a chunk open
-func (f *outFragment) chunkOpen() bool { return len(f.chunkStart) > 0 }
+func (f *outFragment) chunkOpen() bool { return f.currentChunkSizeRef != nil }
 
 // Creates a new outFragment around a frame and message, with a running checksum
 func newOutboundFragment(frame *Frame, msg message, checksum Checksum) (*outFragment, error) {
@@ -142,31 +143,24 @@ func newOutboundFragment(frame *Frame, msg message, checksum Checksum) (*outFrag
 		frame:    frame,
 		checksum: checksum,
 	}
+
 	f.frame.Header.ID = msg.ID()
 	f.frame.Header.messageType = msg.messageType()
-
-	wbuf := typed.NewWriteBuffer(f.frame.Payload[:])
-
-	// Reserve fragment flag
-	if err := wbuf.WriteByte(0); err != nil {
-		return nil, err
-	}
+	f.content = typed.NewWriteBuffer(f.frame.Payload[:])
+	f.flagsRef, _ = f.content.DeferByte()
 
 	// Write message specific header
-	if err := msg.write(wbuf); err != nil {
+	if err := msg.write(f.content); err != nil {
 		return nil, err
 	}
 
-	// Write checksum type and reserve bytes needed
-	if err := wbuf.WriteByte(byte(f.checksum.TypeCode())); err != nil {
+	// Write checksum type
+	if err := f.content.WriteByte(byte(f.checksum.TypeCode())); err != nil {
 		return nil, err
 	}
 
-	f.remaining = f.frame.Payload[wbuf.CurrentPos():]
-	f.checksumBytes = f.remaining[:f.checksum.TypeCode().ChecksumSize()]
-
-	// Everything remaining is available for content
-	f.remaining = f.remaining[f.checksum.TypeCode().ChecksumSize():]
+	// Reserve checksum bytes
+	f.checksumRef, _ = f.content.DeferBytes(f.checksum.TypeCode().ChecksumSize())
 	return f, nil
 }
 
@@ -389,7 +383,7 @@ func newInboundFragment(frame *Frame, msg message, checksum Checksum) (*inFragme
 		return nil, err
 	}
 
-	// Read checksum type and bytes
+	// Checksum type and bytes
 	checksumType, err := rbuf.ReadByte()
 	if err != nil {
 		return nil, err
