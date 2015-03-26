@@ -244,7 +244,7 @@ TChannelV2Handler.prototype._handleCallFrame = function _handleCallFrame(r, fram
 TChannelV2Handler.prototype.sendInitRequest = function sendInitRequest() {
     var self = this;
     var id = self.nextFrameId(); // TODO: assert(id === 1)?
-    var hostPort = self.channel.hostPort;
+    var hostPort = self.channel.hostPort || '0.0.0.0:0';
     var processName = self.channel.processName;
     var body = v2.InitRequest(v2.VERSION, {
         /* jshint camelcase:false */
