@@ -737,9 +737,8 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
     //   that once they do finish that their callback will swallow the response.
     inOpKeys.forEach(function eachInOp(id) {
         // TODO: we could support an op.cancel opt-in callback
-        var op = self.inOps[id];
         delete self.inOps[id];
-        op.res.emit('error', err);
+        // TODO report or handle or log errors or something
     });
 
     // for all outgoing requests, forward the triggering error to the user callback
