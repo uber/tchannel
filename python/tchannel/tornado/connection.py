@@ -6,9 +6,7 @@ import os
 import socket
 import sys
 
-from tornado import gen
-from tornado import iostream
-from tornado.concurrent import Future
+import tornado.gen
 
 from .. import frame
 from .. import messages
@@ -70,7 +68,7 @@ class TornadoConnection(object):
 
     def await(self):
         # This is the context we'll return for any inbound messages.
-        context_future = gen.Future()
+        context_future = tornado.gen.Future()
 
         def on_body(read_body_future, size):
             if read_body_future.exception():
@@ -98,7 +96,7 @@ class TornadoConnection(object):
         def on_error(future):
             exception = future.exception()
 
-            if isinstance(exception, iostream.StreamClosedError):
+            if isinstance(exception, tornado.iostream.StreamClosedError):
                 log.warn("no longer awaiting")
                 self.close()
 
@@ -120,7 +118,7 @@ class TornadoConnection(object):
             messages.Types.PING_REQ,
         ):
             log.debug("awaiting response for message %s", message_id)
-            self.awaiting_responses[message_id] = gen.Future()
+            self.awaiting_responses[message_id] = tornado.gen.Future()
 
         payload = messages.RW[message.message_type].write(
             message, BytesIO()
@@ -139,13 +137,21 @@ class TornadoConnection(object):
         return self.connection.write(body)
 
     def handle_calls(self, handler):
-        future = Future()
+        future = tornado.gen.Future()
 
         def handle(f):
             handler(f.result(), self)
             future.set_result(None)
 
-        self.await().add_done_callback(handle)
+        await_future = self.await()
+
+        await_future.add_done_callback(
+            lambda f: tornado.ioloop.IOLoop().instance().spawn_callback(
+                lambda: self.handle_calls(handler)
+            )
+        )
+        await_future.add_done_callback(handle)
+
         return future
 
     def wrap(self, f):
@@ -161,7 +167,7 @@ class TornadoConnection(object):
         )
         return self.frame_and_write(message)
 
-    @gen.coroutine
+    @tornado.gen.coroutine
     def await_handshake_reply(self):
         ctx = yield self.await()
         message = ctx.message
@@ -175,9 +181,9 @@ class TornadoConnection(object):
 
         self.extract_handshake_headers(message)
 
-        raise gen.Return(message)
+        raise tornado.gen.Return(message)
 
-    @gen.coroutine
+    @tornado.gen.coroutine
     def await_handshake(self, headers):
         log.debug("awaiting handshake")
         ctx = yield self.await()
@@ -195,7 +201,7 @@ class TornadoConnection(object):
         response = messages.InitResponseMessage(PROTOCOL_VERSION, headers)
         yield self.frame_and_write(response, message_id=ctx.message_id)
 
-        raise gen.Return(self)
+        raise tornado.gen.Return(self)
 
     def ping(self, message_id=None):
         message = messages.PingRequestMessage()
@@ -206,7 +212,7 @@ class TornadoConnection(object):
         return self.frame_and_write(message, message_id=message_id)
 
     @classmethod
-    @gen.coroutine
+    @tornado.gen.coroutine
     def outgoing(cls, hostport, sock=None, process_name=None):
         host, port = hostport.rsplit(":", 1)
 
@@ -214,7 +220,7 @@ class TornadoConnection(object):
 
         # TODO: change this to tornado.tcpclient.TCPClient to do async DNS
         # lookups.
-        stream = iostream.IOStream(sock)
+        stream = tornado.iostream.IOStream(sock)
 
         log.debug("connecting to hostport %s", hostport)
 
@@ -255,13 +261,12 @@ class TornadoConnection(object):
                     'unrecognized response for message %s',
                     getattr(context, 'message_id', None),
                 )
-            connection.handle_calls(handle_call_response)
 
         connection.handle_calls(handle_call_response)
 
         log.debug("completed handshake")
 
-        raise gen.Return(connection)
+        raise tornado.gen.Return(connection)
 
     def set_close_callback(self, callback):
         # TODO implement close callback
