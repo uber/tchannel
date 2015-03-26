@@ -28,7 +28,7 @@ var args = ['arg1', 'arg2', 'arg3'];
 var parts = args.map(function mapArg(arg) {return Buffer(arg);});
 var uparts = args.map(function mapArg(arg) {return Buffer(arg.toUpperCase());});
 
-var CRC32Hash = 0x0812fa3f;
+var CRC32Hash = 0x8c38c3af;
 var Farm32Hash = 0xeed86ea9;
 
 var NoneBytes = [
@@ -37,7 +37,7 @@ var NoneBytes = [
 
 var CRC32Bytes = [
     Checksum.Types.CRC32,  // csumtype:1
-    0x08, 0x12, 0xfa, 0x3f // csum:4
+    0x8c, 0x38, 0xc3, 0xaf // csum:4
 ];
 
 var Farm32Bytes = [

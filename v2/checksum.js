@@ -89,6 +89,7 @@ Checksum.prototype.compute = function compute(args, prior) {
         case 0x00:
             break;
         case 0x01:
+            if (csum === 0) csum = undefined;
             for (i = 0; i < args.length; i++) {
                 csum = crc32(args[i], csum);
             }
