@@ -1,28 +1,10 @@
 from __future__ import absolute_import
 
-import argparse
-import sys
-
 import tornado.ioloop
+
+from options import get_args
 from tchannel.tornado import TChannel
 from tchannel.handler import TChannelRequestHandler
-
-
-def parse_args(args=None):
-    args = args or sys.argv[1:]
-
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument(
-        "--listen",
-        dest="in_port",
-        default=None,
-        type=int,
-        help="Port for inbound connections"
-    )
-
-    args = parser.parse_args(args)
-    return args
 
 
 def handler1(request, response, opts):
@@ -34,7 +16,7 @@ def handler2(request, response, opts):
 
 
 def main():  # pragma: no cover
-    args = parse_args()
+    args = get_args()
 
     client = TChannel()
 
@@ -50,7 +32,7 @@ def main():  # pragma: no cover
     def handler3(request, response, opts):
         response.write("handler3 says bye")
 
-    server = client.host(args.in_port, handler)
+    server = client.host(args.port, handler)
     server.listen()
     tornado.ioloop.IOLoop.instance().start()
 

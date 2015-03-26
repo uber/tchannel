@@ -30,7 +30,7 @@ class TornadoRequestHandler(RequestHandler):
         # process http message
         # TODO need a better way to figure out
         # message's method type
-        if message.headers["as"] == "http":
+        if message.headers.get("as") == "http":
             method = "GET"
             if (message.arg_3 is not None and
                     message.arg_3 != ""):
