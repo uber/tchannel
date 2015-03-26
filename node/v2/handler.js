@@ -329,7 +329,7 @@ TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest
     var self = this;
     var id = self.nextFrameId();
     if (options.checksumType === undefined || options.checksumType === null) {
-        options.checksumType = v2.Checksum.Types.FarmHash32;
+        options.checksumType = v2.Checksum.Types.Farm32;
     }
     options.checksum = v2.Checksum(options.checksumType);
     options.sendFrame = {
@@ -357,8 +357,8 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
     var res = TChannelOutgoingResponse(req.id, {
         tracing: req.tracing,
         headers: {},
-        checksumType: req.checksumType,
-        checksum: v2.Checksum(req.checksumType),
+        checksumType: req.checksum.type,
+        checksum: v2.Checksum(req.checksum.type),
         sendFrame: {
             callResponse: sendCallResponseFrame,
             callResponseCont: sendCallResponseContFrame,
