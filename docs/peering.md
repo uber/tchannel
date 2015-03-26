@@ -120,7 +120,7 @@ PeerState :: {
     name  :: String
 
     // integration points
-    shouldRequest :: (options, other :: ?TChannelPeer) -> Number
+    shouldRequest :: (options, op, other :: ?TChannelPeer) -> Number
 
     // connection life cycle
     onConnSocket      :: (conn)      -> void
@@ -141,9 +141,11 @@ PeerState :: {
 ```
 
 Peer selection then is done by taking the maximum score returned by `peer.state.shouldRequest`:
+- if this selection is for a (re/se)try, then we have a pre-existing outgoing op
+  object that gets passed as the second arg to should Request
 - set selected peer and score to null and 0 respectively
 - for each host listed in options
-  - call `peer.state.shouldRequest(options, selected peer)`
+  - call `peer.state.shouldRequest(options, op, selected peer)`
   - if the returned score is greater than selected score, update the selected peer and score
 
 Obvious optimizations to the above, such as:
@@ -151,6 +153,13 @@ Obvious optimizations to the above, such as:
 - halting early if a returned score is above a certain threshold
 
 Can be evaluated later.
+
+Initially we'll implement a random selection function based on reservoir
+sampling.  Following steps will weight the sampling based on various metrics
+such as:
+- outstanding number of operations
+- response time-series data
+- error time-series data
 
 # Service Option
 
@@ -190,22 +199,8 @@ chan.request({
 
 ## Re-try Where?
 
-```
-selectRetryHost :: (chan, op) -> hostPort
-```
-
-Default selection function initially will be random.
-
-Beyond that we need to provide more data to drive other host selection
-strategies, such as:
-- peer data
-  - number of outstanding operations
-  - response time-series data and/or statistics
-  - error time-series data and/or statistics
-- op data
-  - what hostPorts has this operation been attempted on...
-  - ...with what results (if any)
-  - pivot req to be reqs plurality
+Retry host selection will be driven by the `PeerState` selection process as it
+was for initial host selection.
 
 # Se-Tries
 
@@ -237,11 +232,8 @@ chan.request({
 
 ## Se-try Where?
 
-```
-selectSetryHost :: (chan, op) -> hostPort
-```
-
-Default selection function initially will be random, same notes apply as for retries.
+Setry host selection will be driven by the `PeerState` selection process as it
+was for initial host selection.
 
 ## Interaction With Retries
 
