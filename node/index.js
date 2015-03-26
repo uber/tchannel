@@ -489,7 +489,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     self.handler.on('call.incoming.response', function onCallResponse(res) {
         var op = self.popOutOp(res.id);
         if (!op) {
-            self.logger.warn('response received for unknown or lost operation', {
+            self.logger.info('response received for unknown or lost operation', {
                 responseId: res.id,
                 remoteAddr: self.remoteAddr,
                 direction: self.direction,
@@ -502,6 +502,11 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 
     self.handler.on('call.incoming.error', function onCallError(err) {
         var op = self.popOutOp(err.originalId);
+        if (!op) {
+            self.logger.info('error received for unknown or lost operation', err);
+            return;
+        }
+
         op.req.emit('error', err);
     });
 
