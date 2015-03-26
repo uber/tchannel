@@ -86,6 +86,8 @@ peers      :: {
 TChannelPeer         :: {
     hostPort         :: String // "host:port"
     isEphemeral      :: Boolean
+    state            :: PeerState
+    setState         :: (state :: PeerState) -> void
     inPending        :: Number
     outPending       :: Number
     request          :: (options) -> TChannelOutgoingRequest
@@ -106,6 +108,49 @@ The `TChannelConnection <-> TChannel` relationship will change to be
 
 Once we make peers persist on channels, we'll need to provide for cleaning then
 up eventually.
+
+### Peer state and beyond
+
+The TChannelPeer.state field supports marking peers as down, suspected, slow,
+etc.  The scheme is that peer state will be an object that observes peer events
+and helps decide which peer will handle a given request.
+
+```
+PeerState :: {
+    name  :: String
+
+    // integration points
+    shouldRequest :: (options, other :: ?TChannelPeer) -> Number
+
+    // connection life cycle
+    onConnSocket      :: (conn)      -> void
+    onConnSocketClose :: (conn)      -> void
+    onConnSocketError :: (conn, err) -> void
+
+    // out ops
+    onOutOp      :: (op)      -> void
+    onOutOpDone  :: (op)      -> void
+    onOutOpError :: (op, err) -> void
+
+    // in ops
+    onInOp      :: (op)      -> void
+    onInOpDone  :: (op)      -> void
+    onInOpError :: (op, err) -> void
+
+}
+```
+
+Peer selection then is done by taking the maximum score returned by `peer.state.shouldRequest`:
+- set selected peer and score to null and 0 respectively
+- for each host listed in options
+  - call `peer.state.shouldRequest(options, selected peer)`
+  - if the returned score is greater than selected score, update the selected peer and score
+
+Obvious optimizations to the above, such as:
+- halting early with the best after N asked peers
+- halting early if a returned score is above a certain threshold
+
+Can be evaluated later.
 
 # Service Option
 
