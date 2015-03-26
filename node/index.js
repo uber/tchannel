@@ -140,7 +140,6 @@ function TChannel(options) {
             self.emit('listening');
 
             if (self.options.trace) {
-                console.log("making tracer");
                 // TODO: make this in constructor and not listening event
                 self.tracer = new TracingAgent({
                     logger: self.logger,
@@ -843,7 +842,6 @@ TChannelConnection.prototype.handleCallRequest = function handleCallRequest(req)
     process.nextTick(runHandler);
 
     function runHandler() {
-        // TODO: put setupNewSpan here
         if (self.tracer) {
             res.span = self.tracer.setupNewSpan({
                 spanid: req.tracing.spanid,
@@ -859,8 +857,6 @@ TChannelConnection.prototype.handleCallRequest = function handleCallRequest(req)
             self.tracer.setCurrentSpan(res.span);
         }
 
-        // Don't know name of the span yet but it'll be assigned in the
-        // endpoint handler
         self.channel.handler.handleRequest(req, res);
     }
 

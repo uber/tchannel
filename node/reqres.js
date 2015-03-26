@@ -351,9 +351,6 @@ TChannelOutgoingResponse.prototype.sendError = function sendError(codeString, me
         self.sendFrame.error(codeString, message);
     }
 
-    self.sent = true;
-    self.ok = true;
-
     if (self.tracer) {
         // TODO: better annotations
         self.span.annotate('ss', Date.now()); // server send
