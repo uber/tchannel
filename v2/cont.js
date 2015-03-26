@@ -70,13 +70,14 @@ CallRequestCont.prototype.splitArgs = function splitArgs(args, maxSize) {
         var first = [];
         var split = false;
         for (var i = 0; i < args.length; i++) {
-            var argLength = argSize + args[i].length;
+            var arg = args[i];
+            var argLength = argSize + arg.length;
             if (argLength <= remain) {
-                first.push(args[i]);
+                first.push(arg);
                 remain -= argLength;
             } else {
-                first.push(args[i].slice(0, remain - argSize));
-                args = [args[i].slice(remain - argSize)].concat(args.slice(i+1));
+                first.push(arg.slice(0, remain - argSize));
+                args = [arg.slice(remain - argSize)].concat(args.slice(i+1));
                 split = true;
                 break;
             }
