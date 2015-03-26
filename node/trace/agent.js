@@ -22,15 +22,15 @@ if (!process.addAsyncListener) {
     require('async-listener');
 }
 
-var NullLogtron = require('null-logtron');
+var DebugLogtron = require('debug-logtron');
 
 var Span = require('./span');
 
 module.exports = Agent;
 
-function Agent (options) {
+function Agent () {
     if (!(this instanceof Agent)) {
-        return new Agent(options);
+        return new Agent();
     }
     var self = this;
 
@@ -60,10 +60,33 @@ function Agent (options) {
 
     process.addAsyncListener(self.asyncListener);
 
-    // TODO: options validation
+    self.logger = DebugLogtron('tchannelTrace');
+}
 
-    self.logger = options.logger || NullLogtron();
-    self.reporter = options.reporter || self.reporter;
+Agent._instance = null;
+
+// Tracing agent is a singleton
+Agent.getInstance = function () {
+    // body...
+    if (Agent._instance === null) {
+        Agent._instance = Agent();
+    }
+
+    return Agent._instance;
+};
+
+Agent.prototype.configure = function configure(options) {
+    var self = this;
+
+    Object.keys(options).forEach(function eachOptionKey(optionKey) {
+        self[optionKey] = options[optionKey];
+    });
+};
+
+function compareBufs(buf1, buf2) {
+    if (!buf2) return false;
+    return (buf1.readUInt32BE(0) === buf2.readUInt32BE(0)) &&
+        (buf1.readUInt32BE(4) === buf2.readUInt32BE(4));
 }
 
 // ## setupNewSpan
@@ -73,6 +96,19 @@ Agent.prototype.setupNewSpan = function setupNewSpan(options) {
 
     var hostPortParts = options.hostPort.split(":");
     var host = hostPortParts[0], port = parseInt(hostPortParts[1], 10);
+
+    var empty = new Buffer([0, 0, 0, 0, 0, 0, 0, 0]);
+    if (compareBufs(empty, options.parentid)) {
+        options.parentid = null;
+    }
+
+    if (compareBufs(empty, options.traceid)) {
+        options.traceid = null;
+    }
+
+    if (compareBufs(empty, options.spanid)) {
+        options.spanid = null;
+    }
 
     var span = new Span({
         logger: self.logger,

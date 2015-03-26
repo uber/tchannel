@@ -44,6 +44,7 @@ var DebugLogtron = require('debug-logtron');
 var test = require('tape');
 
 var TChannel = require('../../index.js');
+var TracingAgent = require('../../trace/agent');
 var EndpointHandler = require('../../endpoint-handler.js');
 
 var logger = DebugLogtron('example');
@@ -55,36 +56,32 @@ test('basic tracing test', function (assert) {
 
     var spans = [];
 
-    var subservice = new TChannel({
-        handler: EndpointHandler(),
-        logger: logger,
-        trace: true,
-        traceReporter: function (span) {
+    TracingAgent.getInstance().configure({
+        reporter: function (span) {
             spans.push(span);
             console.log(span.toString());
         }
+    });
+
+    var subservice = new TChannel({
+        handler: EndpointHandler(),
+        serviceName: 'subservice',
+        logger: logger,
+        trace: true
     });
 
     var server = new TChannel({
+        serviceName: 'server',
         handler: EndpointHandler(),
         logger: logger,
-        trace: true,
-        traceReporter: function (span) {
-            spans.push(span);
-            console.log(span.toString());
-        }
+        trace: true
     });
 
     var client = new TChannel({
-        logger: logger,
-        trace: true,
-        traceReporter: function (span) {
-            spans.push(span);
-            console.log(span.toString());
-        }
+        logger: logger
     });
 
-    subservice.handler.register('subservice', function (req, res) {
+    subservice.handler.register('/foobar', function (req, res) {
         console.log("subserv sr");
         res.sendOk('result', 'success');
     });
@@ -94,8 +91,8 @@ test('basic tracing test', function (assert) {
         console.log("top level sending to subservice");
         setTimeout(function () {
             server
-                .request({host: '127.0.0.1:4042'})
-                .send('subservice', 'arg1', 'arg2', function (err, subRes) {
+                .request({host: '127.0.0.1:4042', service: 'subservice'})
+                .send('/foobar', 'arg1', 'arg2', function (err, subRes) {
                     console.log("top level recv from subservice");
                     if (err) return res.sendOk('error', err);
                     res.sendOk('result', 'success: ' + subRes);
@@ -113,7 +110,7 @@ test('basic tracing test', function (assert) {
 
         console.log("client making req");
         client
-            .request({host: '127.0.0.1:4040'})
+            .request({host: '127.0.0.1:4040', service: 'server'})
             .send('/top_level_endpoint', "arg 1", "arg 2", function (err, res) {
                 console.log("client recv from top level: " + res);
                 requestsDone.signal();

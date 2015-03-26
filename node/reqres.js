@@ -107,7 +107,10 @@ function TChannelOutgoingRequest(id, options) {
     self.ttl = options.ttl || 0;
     self.tracing = options.tracing || null;
     self.tracer = options.tracer; // tracing agent
+    self.span = null; // created on send
     self.service = options.service || '';
+    // the endpoint name to report to zipkin
+    self.tracingEndpointName = options.tracingEndpointName || self.service;
     self.headers = options.headers || {};
     self.host = options.host;
     self.checksumType = options.checksumType || 0;
@@ -176,15 +179,10 @@ TChannelOutgoingRequest.prototype.sendCallRequestContFrame = function sendCallRe
 TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     var self = this;
 
-    if (callback) self.hookupCallback(callback);
-    self.arg1.end(arg1);
-    self.arg2.end(arg2);
-    self.arg3.end(arg3);
-
     if (self.tracer) {
-        // TODO: do in constructor and update here
         self.span = self.tracer.setupNewSpan({
             hostPort: self.host,
+            serviceName: self.tracingEndpointName,
             name: arg1
         });
 
@@ -193,6 +191,12 @@ TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callbac
         // TODO: better annotations
         self.span.annotate('cs');   // client start
     }
+
+    if (callback) self.hookupCallback(callback);
+    self.arg1.end(arg1);
+    self.arg2.end(arg2);
+    self.arg3.end(arg3);
+
     return self;
 };
 

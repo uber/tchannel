@@ -24,21 +24,23 @@ var idStore = {};
 
 module.exports = [
     {
-        "name": "subservice2",
+        "name": "/barbaz",
         "endpoint": {
             "ipv4": "127.0.0.1",
-            "port": 4042
+            "port": 4042,
+            "serviceName": "subservice"
         },
         "traceid": validators.checkId(idStore, 'traceid'),
-        "parentid": validators.checkId(idStore, 'first_spanid'),
-        "spanid": validators.checkId(idStore, 'third_spanid'),
+        "parentid": validators.checkId(idStore, 'span0'),
+        "spanid": validators.checkId(idStore, 'span2'),
         "annotations": [
             {
                 "value": "sr",
                 "timestamp": validators.timestamp,
                 "host": {
                     "ipv4": "127.0.0.1",
-                    "port": 4042
+                    "port": 4042,
+                    "serviceName": "subservice"
                 }
             },
             {
@@ -46,28 +48,31 @@ module.exports = [
                 "timestamp": validators.timestamp,
                 "host": {
                     "ipv4": "127.0.0.1",
-                    "port": 4042
+                    "port": 4042,
+                    "serviceName": "subservice"
                 }
             }
         ],
         "binaryAnnotations": []
     },
     {
-        "name": "subservice2",
+        "name": "/barbaz",
         "endpoint": {
             "ipv4": "127.0.0.1",
-            "port": 4042
+            "port": 4042,
+            "serviceName": "subservice"
         },
         "traceid": validators.checkId(idStore, 'traceid'),
-        "parentid": validators.checkId(idStore, 'first_spanid'),
-        "spanid": validators.checkId(idStore, 'third_spanid'),
+        "parentid": validators.checkId(idStore, 'span0'),
+        "spanid": validators.checkId(idStore, 'span2'),
         "annotations": [
             {
                 "value": "cs",
                 "timestamp": validators.timestamp,
                 "host": {
                     "ipv4": "127.0.0.1",
-                    "port": 4042
+                    "port": 4042,
+                    "serviceName": "subservice"
                 }
             },
             {
@@ -75,28 +80,31 @@ module.exports = [
                 "timestamp": validators.timestamp,
                 "host": {
                     "ipv4": "127.0.0.1",
-                    "port": 4042
+                    "port": 4042,
+                    "serviceName": "subservice"
                 }
             }
         ],
         "binaryAnnotations": []
     },
     {
-        "name": "subservice",
+        "name": "/foobar",
         "endpoint": {
             "ipv4": "127.0.0.1",
-            "port": 4042
+            "port": 4042,
+            "serviceName": "subservice"
         },
         "traceid": validators.checkId(idStore, 'traceid'),
-        "parentid": validators.checkId(idStore, 'first_spanid'),
-        "spanid": validators.checkId(idStore, 'second_spanid'),
+        "parentid": validators.checkId(idStore, 'span0'),
+        "spanid": validators.checkId(idStore, 'span1'),
         "annotations": [
             {
                 "value": "sr",
                 "timestamp": validators.timestamp,
                 "host": {
                     "ipv4": "127.0.0.1",
-                    "port": 4042
+                    "port": 4042,
+                    "serviceName": "subservice"
                 }
             },
             {
@@ -104,28 +112,31 @@ module.exports = [
                 "timestamp": validators.timestamp,
                 "host": {
                     "ipv4": "127.0.0.1",
-                    "port": 4042
+                    "port": 4042,
+                    "serviceName": "subservice"
                 }
             }
         ],
         "binaryAnnotations": []
     },
     {
-        "name": "subservice",
+        "name": "/foobar",
         "endpoint": {
             "ipv4": "127.0.0.1",
-            "port": 4042
+            "port": 4042,
+            "serviceName": "subservice"
         },
         "traceid": validators.checkId(idStore, 'traceid'),
-        "parentid": validators.checkId(idStore, 'first_spanid'),
-        "spanid": validators.checkId(idStore, 'second_spanid'),
+        "parentid": validators.checkId(idStore, 'span0'),
+        "spanid": validators.checkId(idStore, 'span1'),
         "annotations": [
             {
                 "value": "cs",
                 "timestamp": validators.timestamp,
                 "host": {
                     "ipv4": "127.0.0.1",
-                    "port": 4042
+                    "port": 4042,
+                    "serviceName": "subservice"
                 }
             },
             {
@@ -133,7 +144,8 @@ module.exports = [
                 "timestamp": validators.timestamp,
                 "host": {
                     "ipv4": "127.0.0.1",
-                    "port": 4042
+                    "port": 4042,
+                    "serviceName": "subservice"
                 }
             }
         ],
@@ -143,18 +155,20 @@ module.exports = [
         "name": "/top_level_endpoint",
         "endpoint": {
             "ipv4": "127.0.0.1",
-            "port": 4040
+            "port": 4040,
+            "serviceName": "server"
         },
         "traceid": validators.checkId(idStore, 'traceid'),
         "parentid": "0000000000000000",
-        "spanid": validators.checkId(idStore, 'first_spanid'),
+        "spanid": validators.checkId(idStore, 'span0'),
         "annotations": [
             {
                 "value": "sr",
                 "timestamp": validators.timestamp,
                 "host": {
                     "ipv4": "127.0.0.1",
-                    "port": 4040
+                    "port": 4040,
+                    "serviceName": "server"
                 }
             },
             {
@@ -162,36 +176,8 @@ module.exports = [
                 "timestamp": validators.timestamp,
                 "host": {
                     "ipv4": "127.0.0.1",
-                    "port": 4040
-                }
-            }
-        ],
-        "binaryAnnotations": []
-    },
-    {
-        "name": "/top_level_endpoint",
-        "endpoint": {
-            "ipv4": "127.0.0.1",
-            "port": 4040
-        },
-        "traceid": validators.checkId(idStore, 'traceid'),
-        "parentid": "0000000000000000",
-        "spanid": validators.checkId(idStore, 'first_spanid'),
-        "annotations": [
-            {
-                "value": "cs",
-                "timestamp": validators.timestamp,
-                "host": {
-                    "ipv4": "127.0.0.1",
-                    "port": 4040
-                }
-            },
-            {
-                "value": "cr",
-                "timestamp": validators.timestamp,
-                "host": {
-                    "ipv4": "127.0.0.1",
-                    "port": 4040
+                    "port": 4040,
+                    "serviceName": "server"
                 }
             }
         ],

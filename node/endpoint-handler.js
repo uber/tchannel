@@ -79,18 +79,8 @@ TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, re
             return;
         }
 
-        if (req.tracer) {
-            // TODO: make this in the constructor and update it here with the correct
-            // tracing info
-            res.span = req.tracer.setupNewSpan({
-                spanid: req.tracing.spanid,
-                traceid: req.tracing.traceid,
-                parentid: req.tracing.parentid,
-                name: name
-            });
-
-            // TODO: better annotations; annotate when streaming done; etc
-            res.span.annotate('sr', Date.now());
+        if (res.span) {
+            res.span.name = name;
         }
 
         if (handler.canStream) {

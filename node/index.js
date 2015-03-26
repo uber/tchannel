@@ -116,7 +116,9 @@ function TChannel(options) {
     self.listening = false;
     self.destroyed = false;
 
-    self.tracer = null;
+    if (self.options.trace) {
+        self.tracer = TracingAgent.getInstance();
+    }
 
     self.serverSocket = net.createServer(function onServerSocketConnection(sock) {
         if (!self.destroyed) {
@@ -138,20 +140,6 @@ function TChannel(options) {
 
             self.logger.info(self.hostPort + ' listening');
             self.emit('listening');
-
-            if (self.options.trace) {
-                // TODO: make this in constructor and not listening event
-                self.tracer = new TracingAgent({
-                    logger: self.logger,
-                    host: self.host,
-                    port: address.port,
-                    reporter: self.options.traceReporter,
-                    // TODO: wat to do with this? need serviceName, should not
-                    // be passed into tchannel though. Take from autobahn and 
-                    // throw otherwise if tracing is enabled?
-                    serviceName: self.options.serviceName
-                });
-            }
         }
     });
     self.serverSocket.on('error', function onServerSocketError(err) {

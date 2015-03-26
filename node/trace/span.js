@@ -70,6 +70,7 @@ Span.prototype.toString = function toString() {
     return "SPAN: traceid: " + self.traceid.toString('hex') + " spanid: " +
         self.id.toString('hex') + " parentid: " +
         self.parentid.toString('hex') + " name: " + self.name +
+        " servicename: " + self.endpoint.serviceName + 
         " annotations: " + strAnnotations;
 };
 
