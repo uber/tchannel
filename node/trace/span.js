@@ -22,6 +22,8 @@ var NullLogtron = require('null-logtron');
 
 var LCG = require('./lcg');
 
+var rng = new LCG();
+
 module.exports = Span;
 module.exports.Endpoint = Endpoint;
 module.exports.Annotation = Annotation;
@@ -44,8 +46,6 @@ function Span(options) {
     if (options.traceid) {
         self.traceid = options.traceid;
     }
-
-    self.rng = new LCG();
 
     self.endpoint = options.endpoint;
 
@@ -90,14 +90,14 @@ Span.prototype.toJSON = function toJSON() {
 Span.prototype.generateIds = function generateIds() {
     var self = this;
 
-    self.id = self.traceid = self.rng.rand64();
+    self.id = self.traceid = rng.rand64();
 };
 
 // Generate just a span id
 Span.prototype.generateSpanid = function generateSpanid() {
     var self = this;
 
-    self.id = self.rng.rand64();
+    self.id = rng.rand64();
 };
 
 // ##
