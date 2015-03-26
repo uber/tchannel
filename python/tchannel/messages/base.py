@@ -25,3 +25,15 @@ class BaseMessage(object):
             str(self.__class__.__name__),
             ", ".join(attrs)
         )
+
+    def encode(self):
+        """ Encode all the strings in the msg using
+        encode type from common.py
+        """
+        pass
+
+    def decode(self):
+        """ Decode all the strings in the msg using
+        decode type from common.py
+        """
+        pass

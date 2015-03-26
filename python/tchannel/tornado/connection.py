@@ -7,6 +7,7 @@ import socket
 import sys
 
 import tornado.gen
+import tornado.ioloop
 
 from .. import frame
 from .. import messages
@@ -17,6 +18,7 @@ from ..exceptions import ConnectionClosedException, InvalidErrorCodeException
 from ..messages.types import Types
 from ..messages.common import PROTOCOL_VERSION, generate_checksum
 from ..messages.error import ErrorMessage, ErrorCode
+from .message_factory import MessageFactory
 
 
 log = logging.getLogger('tchannel')
@@ -33,7 +35,7 @@ class TornadoConnection(object):
         self.remote_process_name = None
         self.requested_version = None
         self.awaiting_responses = {}
-
+        self.message_builder = MessageFactory()
         connection.set_close_callback(self.on_close)
 
     def next_message_id(self):
@@ -108,8 +110,16 @@ class TornadoConnection(object):
 
         return context_future
 
+    @tornado.gen.coroutine
+    def message_and_write(self, message, message_id=None):
+        message_id = message_id or self.next_message_id()
+        fragment_msgs = self.message_factory.fragment(message)
+        for fragment in fragment_msgs:
+            yield self.frame_and_write(fragment, message_id)
+
     def frame_and_write(self, message, message_id=None):
         # TODO: track awaiting responses in here
+
         generate_checksum(message)
         message_id = message_id or self.next_message_id()
 
@@ -132,7 +142,6 @@ class TornadoConnection(object):
             ),
             payload=payload
         )
-
         body = frame.frame_rw.write(f, BytesIO()).getvalue()
 
         return self.connection.write(body)

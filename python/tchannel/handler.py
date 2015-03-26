@@ -102,9 +102,14 @@ class TChannelRequest(object):
 
     def __init__(self, context, conn):
         self.message = context.message
-        self.header = getattr(self.message, 'arg_2', None)
-        self.body = getattr(self.message, 'arg_3', None)
-        self.method = getattr(self.message, 'arg_1', None)
+
+        try:
+            self.method = self.message.args[0]
+            self.header = self.message.args[1]
+            self.body = self.message.args[2]
+        except:
+            pass
+
         self.connection = conn
         self.context = context
         self.id = context.message_id
@@ -116,21 +121,27 @@ class TChannelResponse(object):
     """TChannel Response Wrapper"""
 
     __slots__ = ('_connection', '_request',
-                 'resp_msg', 'id')
+                 'resp_msg', 'id', 'body',
+                 'headers')
 
     def __init__(self, request, conn):
         self._connection = conn
         self._request = request
-        self.resp_msg = CallResponseMessage()
+        self.body = ""
+        self.headers = ""
         self.id = request.id
+        self.resp_msg = None
 
     def write(self, chunk):
         # build response message
-        self.resp_msg.arg_3 += chunk
+        self.body += chunk
 
     def finish(self):
+        # TODO add status code into arg_1 area
+        self.resp_msg = CallResponseMessage(
+            args=["", self.headers, self.body]
+        )
         self._connection.finish(self)
-        self.resp_msg = CallResponseMessage()
 
     def update_resp_id(self):
         self.id += 1

@@ -55,7 +55,11 @@ def number(width_bytes):
     return NumberReadWriter(width_bytes)
 
 
-def len_prefixed_string(length_rw, is_binary=False):
+def args(length_rw):
+    return ArgsReaderWriter(length_rw)
+
+
+def len_prefixed_string(length_rw, is_binary=True):
     """Build a ReadWriter for strings prefixed with their length.
 
     .. code-block:: python
@@ -352,12 +356,36 @@ class NumberReadWriter(ReadWriter):
         return self._width
 
 
+class ArgsReaderWriter(ReadWriter):
+    def __init__(self, length_rw, num=3):
+        assert length_rw is not None
+        self._length_rw = length_rw
+        self._rw = len_prefixed_string(self._length_rw)
+        self.num = num
+
+    def read(self, stream):
+        args = []
+        try:
+            for _ in range(self.num):
+                args.append(self._rw.read(stream))
+        except ReadException:
+            pass
+        return args
+
+    def write(self, args, stream):
+        for arg in args:
+            self._rw.write(arg, stream)
+
+    def width(self):
+        return self.num * self._length_rw.width()
+
+
 class LengthPrefixedBlobReadWriter(ReadWriter):
     """See :py:func:`len_prefixed_string` for documentation."""
 
     __slots__ = ('_length', '_is_binary')
 
-    def __init__(self, length_rw, is_binary=False):
+    def __init__(self, length_rw, is_binary=True):
         assert length_rw is not None
         self._length = length_rw
         self._is_binary = is_binary
@@ -374,6 +402,7 @@ class LengthPrefixedBlobReadWriter(ReadWriter):
 
     def write(self, s, stream):
         if not self._is_binary:
+            import ipdb; ipdb.set_trace()
             s = s.encode('utf-8')
         length = len(s)
         self._length.write(length, stream)
@@ -460,6 +489,7 @@ class InstanceReadWriter(ReadWriter):
             raise ReadException(
                 "Failed to read %s: %s" % (self._cls, e.message)
             )
+
         return self._cls(**kwargs)
 
     def write(self, obj, stream):

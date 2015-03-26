@@ -53,6 +53,9 @@ class InvalidChecksumException(TChannelException):
     """Represent invalid checksum type in the message"""
     pass
 
+class StreamingException(TChannelException):
+    """Represent Streaming Message Exception"""
+    pass
 
 class InvalidErrorCodeException(TChannelException):
     """Represent Invalid Error Code exception"""
