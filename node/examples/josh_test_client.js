@@ -19,9 +19,9 @@
 // THE SOFTWARE.
 
 var argv = require('minimist')(process.argv.slice(2));
-var RNGStream = require('./test/lib/rng_stream');
+var RNGStream = require('../test/lib/rng_stream');
 
-var tchan = require('./index');
+var tchan = require('../index');
 var chan = tchan();
 var req = chan.request({
     host: '127.0.0.1:4040',
