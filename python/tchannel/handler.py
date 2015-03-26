@@ -47,7 +47,7 @@ class TChannelRequestHandler(RequestHandler):
                 response.finish()
         else:
             # TODO error handling if endpoint is not found
-            raise NotImplementedError()
+            raise NotImplementedError(request.method)
 
     def route(self, rule, **opts):
         def decorator(handler):
