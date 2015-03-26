@@ -55,3 +55,5 @@ class InboundServer(tornado.tcpserver.TCPServer):
         else:
             # TODO return Error message
             raise InvalidChecksumException()
+
+        conn.handle_calls(self.preprocess_request)
