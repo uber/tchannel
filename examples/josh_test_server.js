@@ -19,8 +19,8 @@
 // THE SOFTWARE.
 
 var util = require('util');
-var tchan = require('./index');
-var endhand = require('./endpoint-handler');
+var tchan = require('../index');
+var endhand = require('../endpoint-handler');
 var Logger = require('logtron');
 
 var chan = tchan({
