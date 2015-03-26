@@ -64,6 +64,7 @@ class ServerManager(object):
 
         self._expectations = []
         self.thread = None
+        self.ready = False
 
     def expect_ping(self):
         """Expect a Ping request.
@@ -106,6 +107,8 @@ class ServerManager(object):
         assert self.thread is None, 'server already started'
         self.thread = threading.Thread(target=self.serve)
         self.thread.start()
+        while not self.ready:
+            pass
 
     def stop(self):
         self.shutdown()
@@ -149,6 +152,7 @@ class TCPServerManager(ServerManager):
             conn.close()
 
     def serve(self):
+        self.ready = True
         self.server.serve_forever()
 
     def shutdown(self):
@@ -166,6 +170,7 @@ class TChannelServerManager(ServerManager):
 
     def serve(self):
         self.server.listen()
+        self.ready = True
         tornado.ioloop.IOLoop.current().start()
 
     def shutdown(self):
