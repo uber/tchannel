@@ -211,13 +211,8 @@ TChannel.prototype.register = function register(name, handler) {
 
     self.handler.register(name, onReqRes);
 
-    function onReqRes(req, res) {
-        handler(
-            req.arg2,
-            req.arg3,
-            req.remoteAddr,
-            onResponse
-        );
+    function onReqRes(req, res, arg2, arg3) {
+        handler(arg2, arg3, req.remoteAddr, onResponse);
 
         function onResponse(err, res1, res2) {
             if (err) {
@@ -343,16 +338,16 @@ TChannel.prototype.send = function send(options, arg1, arg2, arg3, callback) {
         .request(options)
         .send(arg1, arg2, arg3, onResponse);
 
-    function onResponse(err, res) {
+    function onResponse(err, res, arg2, arg3) {
         if (err) {
             return callback(err);
         }
 
         if (!res.ok) {
-            return callback(new Error(String(res.arg3)));
+            return callback(new Error(String(arg3)));
         }
 
-        return callback(null, res.arg2, res.arg3);
+        return callback(null, arg2, arg3);
     }
 };
 /* jshint maxparams:4 */
