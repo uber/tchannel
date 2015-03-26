@@ -24,6 +24,7 @@
     "farmhash": "^0.2.0",
     "hexer": "^1.2.0",
     "ready-signal": "^1.1.1",
+    "thriftify": "git+ssh://gitolite@code.uber.internal:github/uber/thriftify#v1.0.0-alpha2",
     "run-parallel": "^1.1.0",
     "async-listener": "^0.5.1",
     "null-logtron": "^2.2.0"

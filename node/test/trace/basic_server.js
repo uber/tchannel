@@ -45,6 +45,7 @@ var test = require('tape');
 
 var TracingAgent = require('../../trace/agent');
 var TChannel = require('../../index.js');
+var KafkaTraceReporter = require('../../trace/kafka_reporter');
 var EndpointHandler = require('../../endpoint-handler.js');
 
 var logger = DebugLogtron('example');
@@ -56,9 +57,16 @@ test('basic tracing test', function (assert) {
 
     var spans = [];
 
+    var reporter = KafkaTraceReporter({
+        topic: 'tchannel',
+        host: 'localhost',
+        port: 2182
+    });
+
     TracingAgent.getInstance().configure({
         reporter: function (span) {
             spans.push(span);
+            reporter.report(span);
             console.log(span.toString());
         }
     });
