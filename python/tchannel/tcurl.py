@@ -162,14 +162,15 @@ def multi_tcurl(
     with timing(profile=profile) as info:
 
         for hostport, header, body in requests:
-            info['requests'] += 1
-
             futures.append(tcurl(tchannel, hostport, header, body, quiet))
 
             if rps:
                 yield tornado.gen.sleep(1.0 / rps)
 
         results = yield futures
+
+        info['requests'] = len(futures)
+        info['failures'] = len([r for r in results if r is None])
 
     raise tornado.gen.Return(results)
 
@@ -179,25 +180,29 @@ def tcurl(tchannel, hostport, headers, body, quiet=False):
     host, endpoint = hostport.split('/', 1)
 
     if not quiet:
-        log.info("> Host: %s" % host)
-        log.info("> Arg1: %s" % endpoint)
-        log.info("> Arg2: %s" % headers)
-        log.info("> Arg3: %s" % body)
+        log.debug("> Host: %s" % host)
+        log.debug("> Arg1: %s" % endpoint)
+        log.debug("> Arg2: %s" % headers)
+        log.debug("> Arg3: %s" % body)
 
     request = tchannel.request(host)
 
-    response = yield request.send(
-        endpoint,
-        headers,
-        body,
-    )
+    try:
+        response = yield request.send(
+            endpoint,
+            headers,
+            body,
+        )
+    except:
+        log.debug("X Msg: %s" % request.message_id)
+        return
 
     if not quiet:
-        log.info("< Host: %s" % host)
-        log.info("<  Msg: %s" % request.message_id)
-        log.info("< arg1: %s" % getattr(response, 'arg_1', None))
-        log.info("< arg2: %s" % getattr(response, 'arg_2', None))
-        log.info("< arg3: %s" % getattr(response, 'arg_3', None))
+        log.debug("< Host: %s" % host)
+        log.debug("<  Msg: %s" % request.message_id)
+        log.debug("< arg1: %s" % getattr(response, 'arg_1', None))
+        log.debug("< arg2: %s" % getattr(response, 'arg_2', None))
+        log.debug("< arg3: %s" % getattr(response, 'arg_3', None))
 
     raise tornado.gen.Return(response)
 
@@ -226,10 +231,12 @@ def timing(profile=False):
 
     # TODO: report errors/successes
     log.info(
-        "took %.2fs for %s requests (%.2f rps)",
+        "took %.2fs for %s requests (%.2f rps) with %d failures (%.2f)",
         stop - start,
         info['requests'],
         info['requests'] / (stop - start),
+        info['failures'],
+        1.0 * info['failures'] / info['requests'],
     )
 
 
@@ -243,6 +250,7 @@ def main(argv=None):
         level=logging.INFO,
     )
 
+    log.setLevel(logging.INFO)
     if args.verbose:
         log.setLevel(logging.DEBUG)
 
