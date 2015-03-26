@@ -292,10 +292,6 @@ TChannel.prototype.getPeers = function getPeers() {
 TChannel.prototype.addPeer = function addPeer(hostPort, connection) {
     var self = this;
 
-    if (!self.listening) {
-        throw new Error('Can\'t addPeer until channel is listening'); // TODO typed error
-    }
-
     if (hostPort === self.hostPort) {
         throw new Error('refusing to add self peer'); // TODO typed error
     }
@@ -516,6 +512,9 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     });
     self.socket.on('close', function onSocketClose() {
         self.onSocketErr(new Error('socket closed')); // TODO typed error
+        if (self.remoteName === '0.0.0.0:0') {
+            self.channel.removePeer(self.remoteAddr, self);
+        }
     });
 
     self.reader.on('data', function onReaderFrame(frame) {
