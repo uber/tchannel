@@ -16,26 +16,26 @@ def call_response():
     return tmessage.CallResponseMessage(arg_1=b'hello', arg_3='world')
 
 
-def test_tcp_ping_pong(server_manager):
-    with server_manager.client_connection() as conn:
+def test_serial_ping_pong(tcp_server):
+    with tcp_server.client_connection() as conn:
         resp = tmessage.PingResponseMessage()
-        server_manager.expect_ping().and_return(resp)
+        tcp_server.expect_ping().and_return(resp)
 
         for i in range(1000):
             conn.ping()
             assert resp == conn.await().message
 
 
-def test_outgoing_tchannel(server_manager, call_response):
+def test_outgoing_tchannel(tcp_server, call_response):
     endpoint = b'tchanneltest'
     call_response.arg_1 = endpoint
 
-    port = server_manager.port
+    port = tcp_server.port
     host_port = 'localhost:' + str(port)
 
     with OutgoingTChannel('test_outgoing_tchannel') as chan:
         chan.request(host_port).handshake()
-        server_manager.expect_call_request(endpoint).and_return(call_response)
+        tcp_server.expect_call_request(endpoint).and_return(call_response)
 
         response = chan.request(host_port).send(endpoint, None, None)
 
@@ -43,27 +43,27 @@ def test_outgoing_tchannel(server_manager, call_response):
         assert response.arg_3 == call_response.arg_3
 
 
-def test_outgoing_tchannel_exception(server_manager, call_response):
+def test_outgoing_tchannel_exception(tcp_server, call_response):
     endpoint = b'tchanneltest'
     call_response.arg_1 = endpoint
     call_response.code = 1
 
-    port = server_manager.port
+    port = tcp_server.port
     host_port = 'localhost:' + str(port)
 
     with OutgoingTChannel('test_outgoing_tchannel_exception') as chan:
         chan.request(host_port).handshake()
         with pytest.raises(TChannelApplicationException):
-            server_manager.expect_call_request(
+            tcp_server.expect_call_request(
                 endpoint
             ).and_return(call_response)
             chan.request(host_port).send(endpoint, None, None)
 
 
-def test_tcp_client_with_server_gone_away(server_manager):
+def test_tcp_client_with_server_gone_away(tcp_server):
 
-    with server_manager.client_connection() as conn:
-        server_manager.stop()
+    with tcp_server.client_connection() as conn:
+        tcp_server.stop()
 
         with pytest.raises(ConnectionClosedException):
             conn.ping()
@@ -72,16 +72,16 @@ def test_tcp_client_with_server_gone_away(server_manager):
 
 
 @pytest.mark.gen_test
-def test_tornado_client_with_server_gone_away(server_manager):
+def test_tornado_client_with_server_gone_away(tcp_server):
     "Establish a connection to the server and then kill the server."""
 
     conn = yield TornadoConnection.outgoing(
-        'localhost:%s' % server_manager.port,
+        'localhost:%s' % tcp_server.port,
     )
 
     assert not conn.closed
 
-    server_manager.stop()
+    tcp_server.stop()
 
     conn.ping()
 
@@ -101,15 +101,15 @@ def test_tornado_client_with_server_not_there(unused_port):
 
 
 @pytest.mark.gen_test
-def test_tchannel_call_request(server_manager, call_response):
+def test_tchannel_call_request(tcp_server, call_response):
     endpoint = b'tchannelpeertest'
     call_response.arg_1 = endpoint
 
-    server_manager.expect_call_request(endpoint).and_return(call_response)
+    tcp_server.expect_call_request(endpoint).and_return(call_response)
 
     tchannel = TChannel()
 
-    hostport = 'localhost:%d' % (server_manager.port)
+    hostport = 'localhost:%d' % (tcp_server.port)
 
     response = yield tchannel.request(hostport).send(endpoint, None, None)
 
@@ -118,14 +118,14 @@ def test_tchannel_call_request(server_manager, call_response):
 
 
 @pytest.mark.gen_test
-def test_tcurl(server_manager, call_response):
+def test_tcurl(server, call_response):
     endpoint = b'tcurltest'
     call_response.arg_1 = endpoint
 
-    server_manager.expect_call_request(endpoint).and_return(call_response)
+    server.expect_call_request(endpoint).and_return(call_response)
 
     hostport = 'localhost:%d/%s' % (
-        server_manager.port, endpoint.decode('ascii')
+        server.port, endpoint.decode('ascii')
     )
 
     [response] = yield tcurl.main(['--host', hostport])
