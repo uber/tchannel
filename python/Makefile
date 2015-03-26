@@ -2,7 +2,7 @@ project := tchannel
 
 flake8 := flake8
 pytest := py.test --tb short --cov-config .coveragerc --cov $(project) \
-          --async-test-timeout=1 tests
+          --async-test-timeout=1 --timeout=30 tests
 
 html_report := --cov-report html
 test_args := --cov-report term-missing
