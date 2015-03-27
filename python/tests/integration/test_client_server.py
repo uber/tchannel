@@ -19,7 +19,6 @@ def call_response():
 def test_serial_ping_pong(tcp_server):
     with tcp_server.client_connection() as conn:
         resp = tmessage.PingResponseMessage()
-        tcp_server.expect_ping().and_return(resp)
 
         for i in range(1000):
             conn.ping()
@@ -128,7 +127,11 @@ def test_tcurl(server, call_response):
         server.port, endpoint.decode('ascii')
     )
 
-    [response] = yield tcurl.main(['--host', hostport])
+    responses = yield tcurl.main(['--host', hostport, '-d', ''])
 
-    assert response.arg_1 == call_response.arg_1
-    assert response.arg_3 == call_response.arg_3
+    # TODO: get multiple requests working here
+    assert len(responses) == 1
+
+    for response in responses:
+        assert response.arg_1 == call_response.arg_1
+        assert response.arg_3 == call_response.arg_3
