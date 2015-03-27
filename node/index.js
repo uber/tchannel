@@ -87,6 +87,7 @@ function TChannel(options) {
     }
 
     var self = this;
+    EventEmitter.call(self);
 
     self.options = options || {};
     self.logger = self.options.logger || nullLogger;
@@ -455,11 +456,12 @@ TChannel.prototype.close = function close(callback) {
 };
 
 function TChannelConnection(channel, socket, direction, remoteAddr) {
-    var self = this;
     if (remoteAddr === channel.hostPort) {
         throw new Error('refusing to create self connection'); // TODO typed error
     }
 
+    var self = this;
+    EventEmitter.call(self);
     self.channel = channel;
     self.logger = self.options.logger || nullLogger;
     self.random = self.options.random || globalRandom;
