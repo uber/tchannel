@@ -114,9 +114,10 @@ function TChannel(options) {
     self.handler = self.options.handler || noHandlerHandler;
 
     // populated by:
-    // - manually api (.addPeer etc)
+    // - manually api (.peers.add etc)
     // - incoming connections on any listening socket
-    self.peers = Object.create(null);
+    self.peers = TChannelPeers(self, self.options);
+    self._hookupPeers();
 
     // TChannel advances through the following states.
     self.listened = false;
@@ -169,6 +170,40 @@ TChannel.prototype.getServer = function getServer() {
         self.logger.warn('server socket close');
     });
     return self.serverSocket;
+};
+
+TChannel.prototype._hookupPeers = function _hookupPeers() {
+    var self = this;
+    self.peers.on('allocPeer', function(peer) {
+        self._hookupPeer(peer);
+    });
+};
+
+TChannel.prototype._hookupPeer = function _hookupPeer(peer) {
+    var self = this;
+
+    self.logger.debug('alloc peer', {
+        chanHostPort: self.hostPort,
+        peerHostPort: peer.hostPort,
+        initialState: peer.state.name
+    });
+
+    peer.on('stateChanged', function(oldState, newState) {
+        self.logger.debug('peer state changed', {
+            chanHostPort: self.hostPort,
+            peerHostPort: peer.hostPort,
+            oldState: oldState.name,
+            newState: newState.name
+        });
+    });
+
+    peer.on('allocConnection', function(conn) {
+        self.logger.debug('alloc peer connection', {
+            direction: conn.direction,
+            chanHostPort: self.hostPort,
+            peerHostPort: peer.hostPort
+        });
+    });
 };
 
 // Decoulping config and creation from the constructor.
@@ -241,102 +276,6 @@ TChannel.prototype.address = function address() {
     return self.serverSocket && self.serverSocket.address();
 };
 
-// not public, used by addPeer
-TChannel.prototype.setPeer = function setPeer(hostPort, conn) {
-    var self = this;
-    if (hostPort === self.hostPort) {
-        throw new Error('refusing to set self peer'); // TODO typed error
-    }
-
-    var list = self.peers[hostPort];
-    if (!list) {
-        list = self.peers[hostPort] = [];
-    }
-
-    if (conn.direction === 'out') {
-        list.unshift(conn);
-    } else {
-        list.push(conn);
-    }
-    return conn;
-};
-
-TChannel.prototype.getPeer = function getPeer(hostPort) {
-    var self = this;
-    var list = self.peers[hostPort];
-    return list && list[0] ? list[0] : null;
-};
-
-TChannel.prototype.removePeer = function removePeer(hostPort, conn) {
-    var self = this;
-    var list = self.peers[hostPort];
-    var index = list ? list.indexOf(conn) : -1;
-
-    if (index === -1) {
-        return;
-    }
-
-    // TODO: run (don't walk) away from "arrays" as peers, get to actual peer
-    // objects... note how these current semantics can implicitly convert
-    // an in socket to an out socket
-    list.splice(index, 1);
-    if (!list.length) {
-        delete self.peers[hostPort];
-    }
-};
-
-TChannel.prototype.getPeers = function getPeers() {
-    var self = this;
-    var keys = Object.keys(self.peers);
-
-    var peers = [];
-    for (var i = 0; i < keys.length; i++) {
-        var list = self.peers[keys[i]];
-
-        for (var j = 0; j < list.length; j++) {
-            peers.push(list[j]);
-        }
-    }
-
-    return peers;
-};
-
-TChannel.prototype.addPeer = function addPeer(hostPort, connection) {
-    var self = this;
-
-    if (hostPort === self.hostPort) {
-        throw new Error('refusing to add self peer'); // TODO typed error
-    }
-
-    if (!connection) {
-        connection = self.makeOutConnection(hostPort);
-    }
-
-    var existingPeer = self.getPeer(hostPort);
-    if (existingPeer !== null && existingPeer !== connection) { // TODO: how about === undefined?
-        self.logger.warn('allocated a connection twice', {
-            hostPort: hostPort,
-            direction: connection.direction
-            // TODO: more log context
-        });
-    }
-
-    self.logger.debug('alloc peer', {
-        source: self.hostPort,
-        destination: hostPort,
-        direction: connection.direction
-        // TODO: more log context
-    });
-    connection.once('reset', function onConnectionReset(/* err */) {
-        // TODO: log?
-        self.removePeer(hostPort, connection);
-    });
-    connection.once('socketClose', function onConnectionSocketClose(conn, err) {
-        self.emit('socketClose', conn, err);
-    });
-    return self.setPeer(hostPort, connection);
-};
-
 /* jshint maxparams:5 */
 // TODO: deprecated, callers should use .request directly
 TChannel.prototype.send = function send(options, arg1, arg2, arg3, callback) {
@@ -364,45 +303,9 @@ TChannel.prototype.request = function request(options) {
     var self = this;
     if (self.destroyed) {
         throw new Error('cannot request() to destroyed tchannel'); // TODO typed error
+    } else {
+        return self.peers.request(options);
     }
-
-    var dest = options.host;
-    if (!dest) {
-        throw new Error('cannot request() without options.host'); // TODO typed error
-    }
-
-    var peer = self.getOutConnection(dest);
-    return peer.request(options);
-};
-
-TChannel.prototype.getOutConnection = function getOutConnection(dest) {
-    var self = this;
-    var peer = self.getPeer(dest);
-    if (!peer) {
-        peer = self.addPeer(dest);
-    }
-    return peer;
-};
-
-TChannel.prototype.makeSocket = function makeSocket(dest) {
-    var parts = dest.split(':');
-    if (parts.length !== 2) {
-        throw new Error('invalid destination'); // TODO typed error
-    }
-    var host = parts[0];
-    var port = parts[1];
-    if (host === '0.0.0.0' || port === '0') {
-        throw new Error('cannot make out connection to ephemeral peer'); // TODO typed error
-    }
-    var socket = net.createConnection({host: host, port: port});
-    return socket;
-};
-
-TChannel.prototype.makeOutConnection = function makeOutConnection(dest) {
-    var self = this;
-    var socket = self.makeSocket(dest);
-    var connection = new TChannelConnection(self, socket, 'out', dest);
-    return connection;
 };
 
 TChannel.prototype.quit = // to provide backward compatibility.
@@ -414,27 +317,14 @@ TChannel.prototype.close = function close(callback) {
     }
 
     self.destroyed = true;
-    var peers = self.getPeers();
-    var counter = peers.length + 1;
-
     self.logger.debug('quitting tchannel', {
         hostPort: self.hostPort
     });
 
-    peers.forEach(function eachPeer(conn) {
-        var sock = conn.socket;
-        sock.once('close', onClose);
-
-        conn.clearTimeoutTimer();
-
-        self.logger.debug('destroy channel for', {
-            direction: conn.direction,
-            peerRemoteAddr: conn.remoteAddr,
-            peerRemoteName: conn.remoteName,
-            fromAddress: sock.address()
-        });
-        conn.resetAll(new Error('shutdown from quit')); // TODO typed error
-        sock.destroy();
+    var peers = self.peers.values();
+    var counter = peers.length + 1;
+    peers.forEach(function eachPeer(peer) {
+        peer.close(onClose);
     });
 
     if (self.serverSocket) {
@@ -533,7 +423,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     self.socket.on('close', function onSocketClose() {
         self.onSocketErr(new Error('socket closed')); // TODO typed error
         if (self.remoteName === '0.0.0.0:0') {
-            self.channel.removePeer(self.remoteAddr, self);
+            self.channel.peers.delete(self.remoteAddr);
         }
     });
 
@@ -562,7 +452,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     } else {
         self.handler.once('init.request', function onInIdentified(init) {
             self.remoteName = init.hostPort;
-            self.channel.addPeer(init.hostPort, self);
+            self.channel.peers.add(self.remoteName).addConnection(self);
             self.channel.emit('identified', {
                 hostPort: init.hostPort,
                 processName: init.processName
@@ -876,5 +766,211 @@ function TChannelClientOp(req, start) {
     self.start = start;
     self.timedOut = false;
 }
+
+function TChannelPeers(channel, options) {
+    if (!(this instanceof TChannelPeers)) {
+        return new TChannelPeers(channel, options);
+    }
+    var self = this;
+    EventEmitter.call(self);
+    self.channel = channel;
+    self.logger = self.channel.logger;
+    self.options = options || {};
+    self._map = Object.create(null);
+}
+
+inherits(TChannelPeers, EventEmitter);
+
+TChannelPeers.prototype.get = function get(hostPort) {
+    var self = this;
+    return self._map[hostPort] || null;
+};
+
+TChannelPeers.prototype.add = function add(hostPort) {
+    var self = this;
+    var peer = self._map[hostPort];
+    if (!peer) {
+        if (hostPort === self.channel.hostPort) {
+            throw new Error('refusing to add self peer'); // TODO typed error
+        }
+        peer = TChannelPeer(self.channel, hostPort);
+        self.emit('allocPeer', peer);
+        self._map[hostPort] = peer;
+    }
+    return peer;
+};
+
+TChannelPeers.prototype.addPeer = function addPeer(peer) {
+    var self = this;
+    if (!peer instanceof TChannelPeer) {
+        throw new Error('invalid peer'); // TODO typed error
+    }
+    if (self._map[peer.hostPort]) {
+        throw new Error('peer already defined'); // TODO typed error
+    }
+    self._map[peer.hostPort] = peer;
+};
+
+TChannelPeers.prototype.keys = function keys() {
+    var self = this;
+    var ks = Object.keys(self._map);
+    var ret = new Array(ks.length);
+    for (var i = 0; i < ks.length; i++) {
+        ret[i] = ks[i];
+    }
+    return ret;
+};
+
+TChannelPeers.prototype.values = function values() {
+    var self = this;
+    var keys = Object.keys(self._map);
+    var ret = new Array(keys.length);
+    for (var i = 0; i < keys.length; i++) {
+        ret[i] = self._map[keys[i]];
+    }
+    return ret;
+};
+
+TChannelPeers.prototype.entries = function entries() {
+    var self = this;
+    var keys = Object.keys(self._map);
+    var ret = new Array(keys.length);
+    for (var i = 0; i < keys.length; i++) {
+        ret[i] = [keys[i], self._map[keys[i]]];
+    }
+    return ret;
+};
+
+TChannelPeers.prototype.delete = function del(hostPort) {
+    var self = this;
+    var peer = self._map[hostPort];
+    delete self._map[hostPort];
+    return peer;
+};
+
+TChannelPeers.prototype.request = function request(options) {
+    var self = this;
+    var dest = options.host;
+    if (!dest) {
+        throw new Error('cannot request() without options.host'); // TODO typed error
+    }
+    var peer = self.add(dest);
+    return peer.request(options);
+};
+
+function TChannelPeer(channel, hostPort, options) {
+    if (!(this instanceof TChannelPeer)) {
+        return new TChannelPeer(channel, hostPort, options);
+    }
+    var self = this;
+    EventEmitter.call(self);
+    self.channel = channel;
+    self.logger = self.channel.logger;
+    self.options = options || {};
+    self.hostPort = hostPort;
+    self.isEphemeral = self.hostPort === '0.0.0.0:0';
+    self.connections = [];
+}
+
+inherits(TChannelPeer, EventEmitter);
+
+TChannelPeer.prototype.close = function close(callback) {
+    var self = this;
+    var counter = self.connections.length;
+    if (!counter) {
+        callback();
+    }
+    self.connections.forEach(function eachConn(conn) {
+        var sock = conn.socket;
+        sock.once('close', onClose);
+        conn.clearTimeoutTimer();
+        self.logger.debug('destroy channel for', {
+            direction: conn.direction,
+            peerRemoteAddr: conn.remoteAddr,
+            peerRemoteName: conn.remoteName,
+            fromAddress: sock.address()
+        });
+        conn.resetAll(new Error('shutdown from quit')); // TODO typed error
+        sock.destroy();
+    });
+    function onClose() {
+        if (--counter <= 0) {
+            if (counter < 0) {
+                self.logger.error('closed more sockets than expected', {
+                    counter: counter
+                });
+            }
+            callback();
+        }
+    }
+};
+
+TChannelPeer.prototype.connect = function connect() {
+    var self = this;
+    var conn = self.connections[self.connections.length - 1];
+    if (!conn) {
+        var socket = self.makeOutSocket();
+        conn = self.makeOutConnection(socket);
+        self.addConnection(conn);
+    }
+    return conn;
+};
+
+TChannelPeer.prototype.request = function request(options) {
+    var self = this;
+    return self.connect().request(options);
+};
+
+TChannelPeer.prototype.addConnection = function addConnection(conn) {
+    var self = this;
+    // TODO: first approx alert for self.connections.length > 2
+    // TODO: second approx support pruning
+    if (conn.direction === 'out') {
+        self.connections.push(conn);
+    } else {
+        self.connections.unshift(conn);
+    }
+    return conn;
+};
+
+TChannelPeer.prototype.removeConnection = function removeConnection(conn) {
+    var self = this;
+    var list = self.connections;
+    var index = list ? list.indexOf(conn) : -1;
+    if (index !== -1) {
+        return list.splice(index, 1)[0];
+    } else {
+        return null;
+    }
+};
+
+TChannelPeer.prototype.makeOutSocket = function makeOutSocket() {
+    var self = this;
+    var parts = self.hostPort.split(':');
+    if (parts.length !== 2) {
+        throw new Error('invalid destination'); // TODO typed error
+    }
+    var host = parts[0];
+    var port = parts[1];
+    if (host === '0.0.0.0' || port === '0') {
+        throw new Error('cannot make out connection to ephemeral peer'); // TODO typed error
+    }
+    var socket = net.createConnection({host: host, port: port});
+    return socket;
+};
+
+TChannelPeer.prototype.makeOutConnection = function makeOutConnection(socket) {
+    var self = this;
+    var chan = self.channel;
+    var conn = new TChannelConnection(chan, socket, 'out', self.hostPort);
+    conn.once('reset', onConnectionReset);
+    self.emit('allocConnection', conn);
+    return conn;
+
+    function onConnectionReset(/* err */) {
+        // TODO: log?
+        self.removeConnection(conn);
+    }
+};
 
 module.exports = TChannel;
