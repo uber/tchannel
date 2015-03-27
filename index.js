@@ -37,7 +37,7 @@ var nullLogger = require('./null-logger.js');
 var Spy = require('./v2/spy');
 var EndpointHandler = require('./endpoint-handler.js');
 
-var DEFAULT_OUTGOING_REQ_TIMEOUT = 1000;
+var DEFAULT_OUTGOING_REQ_TIMEOUT = 2000;
 var dumpEnabled = /\btchannel_dump\b/.test(process.env.NODE_DEBUG || '');
 
 var TChannelListenError = WrappedError({
