@@ -29,35 +29,33 @@ allocCluster.test('identify', 2, function t(cluster, assert) {
     var hostOne = cluster.hosts[0];
     var hostTwo = cluster.hosts[1];
 
-    assert.equal(one.getPeer(hostTwo), null, 'one has no peer two');
-    assert.equal(two.getPeer(hostOne), null, 'two has no peer one');
+    assert.equal(one.peers.get(hostTwo), null, 'one has no peer two');
+    assert.equal(two.peers.get(hostOne), null, 'two has no peer one');
 
     var idBar = barrier.keyed(2, function(idents, done) {
         assert.equal(idents.one.hostPort, hostTwo, 'one identified two');
         assert.equal(idents.two.hostPort, hostOne, 'two identified one');
 
-        var peersOne = one.getPeers();
-        var peersTwo = two.getPeers();
-
-        assert.equal(peersOne.length, 1, 'one should have 1 peer');
-        assert.equal(peersTwo.length, 1, 'two should have 1 peer');
-
-        var outPeer = one.getPeer(hostTwo);
-        if (outPeer) {
-            assert.equal(outPeer.direction, 'out', 'outPeer is out');
-            assert.equal(outPeer.remoteName, hostTwo, 'outgoing connection name filled in');
-        }
-
-        var inPeer = two.getPeer(hostOne);
-        if (inPeer) {
-            assert.equal(inPeer.direction, 'in', 'inPeer is in');
-            assert.equal(inPeer.remoteName, hostOne, 'incoming connection name filled in');
-        }
+        cluster.assertCleanState(assert, {
+            channels: [{
+                peers: [{
+                    connections: [{
+                        remoteName: hostTwo
+                    }]
+                }]
+            }, {
+                peers: [{
+                    connections: [{
+                        remoteName: hostOne
+                    }]
+                }]
+            }]
+        });
 
         done();
     }, assert.end);
 
     one.once('identified', idBar('one'));
     two.once('identified', idBar('two'));
-    one.addPeer(hostTwo);
+    one.peers.add(hostTwo).connect();
 });

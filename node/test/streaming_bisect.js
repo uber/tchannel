@@ -237,24 +237,21 @@ TestStreamSearch.prototype.test = function test(state, assert) {
             headStream: CountStream({limit: options.hSize}),
             bodyStream: CountStream({limit: options.bSize})
         }, assert, function streamingTestDone() {
-            var one = cluster.channels[0];
-            var two = cluster.channels[1];
-            var peersOne = one.getPeers();
-            var peersTwo = two.getPeers();
-            assert.equal(peersOne.length, 1, 'one should have 1 peer');
-            assert.equal(peersTwo.length, 1, 'two should have 1 peer');
-            var inPeer = peersOne[0];
-            if (inPeer) {
-                assert.equal(inPeer.direction, 'in', 'inPeer should be in');
-                assert.equal(Object.keys(inPeer.inOps).length, 0, 'inPeer should have no inOps');
-                assert.equal(Object.keys(inPeer.outOps).length, 0, 'inPeer should have no outOps');
-            }
-            var outPeer = peersTwo[0];
-            if (outPeer) {
-                assert.equal(outPeer.direction, 'out', 'outPeer should be out');
-                assert.equal(Object.keys(outPeer.inOps).length, 0, 'outPeer should have no inOps');
-                assert.equal(Object.keys(outPeer.outOps).length, 0, 'outPeer should have no outOps');
-            }
+            cluster.assertCleanState(assert, {
+                channels: [{
+                    peers: [{
+                        connections: [
+                            {direction: 'in', inOps: 0, outOps: 0}
+                        ]
+                    }]
+                }, {
+                    peers: [{
+                        connections: [
+                            {direction: 'out', inOps: 0, outOps: 0}
+                        ]
+                    }]
+                }]
+            });
             cluster.destroy(assert.end);
         });
     });

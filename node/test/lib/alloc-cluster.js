@@ -40,7 +40,8 @@ function allocCluster(n, opts) {
         hosts: new Array(n),
         channels: new Array(n),
         destroy: destroy,
-        ready: CountedReadySignal(n)
+        ready: CountedReadySignal(n),
+        assertCleanState: assertCleanState
     };
 
     for (var i=0; i<n; i++) {
@@ -48,6 +49,35 @@ function allocCluster(n, opts) {
     }
 
     return cluster;
+
+    function assertCleanState(assert, expected) {
+        cluster.channels.forEach(function eachChannel(chan, i) {
+            var chanExpect = expected.channels[i];
+            var peers = chan.peers.values();
+            assert.equal(peers.length, chanExpect.peers.length,
+                util.format('channel[%s] should have %s peer(s)',
+                            i, chanExpect.peers.length));
+            peers.forEach(function eachPeer(peer, j) {
+                var peerExpect = chanExpect.peers[j];
+                peer.connections.forEach(function eachConn(conn, k) {
+                    var connExpect = peerExpect.connections[k];
+                    var name = util.format('channel[%s] peer[%s] conn[%s]', i, j, k);
+                    Object.keys(connExpect).forEach(function eachProp(prop) {
+                        var desc = util.format('%s should .%s', name, prop);
+                        switch (prop) {
+                        case 'inOps':
+                        case 'outOps':
+                            assert.equal(Object.keys(conn[prop]).length, connExpect[prop], desc);
+                            break;
+                        default:
+                            assert.equal(conn[prop], connExpect[prop], desc);
+                        }
+                    });
+                });
+            });
+        });
+
+    }
 
     function createChannel(i) {
         var chan = TChannel(extend({
