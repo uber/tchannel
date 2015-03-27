@@ -77,10 +77,16 @@ Current shape is:
 
 Proposed new shape is:
 ```
-peers      :: {
-    set    :: (hostPort, TChannelConnection) -> TChannelPeer
-    get    :: (hostPort) -> TChannelPeer
-    remove :: (hostPort) -> void
+peers :: TChannelPeers
+
+TChannelPeers     :: {
+    addConnection :: (hostPort, TChannelConnection) -> TChannelPeer
+    get           :: (hostPort) -> TChannelPeer
+    add           :: (hostPort) -> TChannelPeer
+    remove        :: (hostPort) -> void
+    getAll        :: () -> List<TChannelPeer>
+    choosePeer    :: (options, op, n) -> List<TChannelPeer>
+    request       :: (options) -> TChannelOutgoingRequest
 }
 
 TChannelPeer         :: {
@@ -88,8 +94,7 @@ TChannelPeer         :: {
     isEphemeral      :: Boolean
     state            :: PeerState
     setState         :: (state :: PeerState) -> void
-    inPending        :: Number
-    outPending       :: Number
+    connect          :: () -> TChannelConnection
     request          :: (options) -> TChannelOutgoingRequest
     addConnection    :: (TChannelConnection) -> void
     removeConnection :: (TChannelConnection) -> void
@@ -120,22 +125,22 @@ PeerState :: {
     name  :: String
 
     // integration points
-    shouldRequest :: (options, op, other :: ?TChannelPeer) -> Number
+    shouldRequest :: (options, op) -> Number
 
     // connection life cycle
-    onConnSocket      :: (conn)      -> void
-    onConnSocketClose :: (conn)      -> void
-    onConnSocketError :: (conn, err) -> void
+    onConnSocket      :: (peer, conn)      -> void
+    onConnSocketClose :: (peer, conn)      -> void
+    onConnSocketError :: (peer, conn, err) -> void
 
     // out ops
-    onOutOp      :: (op)      -> void
-    onOutOpDone  :: (op)      -> void
-    onOutOpError :: (op, err) -> void
+    onOutOp      :: (peer, op)      -> void
+    onOutOpDone  :: (peer, op)      -> void
+    onOutOpError :: (peer, op, err) -> void
 
     // in ops
-    onInOp      :: (op)      -> void
-    onInOpDone  :: (op)      -> void
-    onInOpError :: (op, err) -> void
+    onInOp      :: (peer, op)      -> void
+    onInOpDone  :: (peer, op)      -> void
+    onInOpError :: (peer, op, err) -> void
 
 }
 ```
@@ -145,7 +150,7 @@ Peer selection then is done by taking the maximum score returned by `peer.state.
   object that gets passed as the second arg to should Request
 - set selected peer and score to null and 0 respectively
 - for each host listed in options
-  - call `peer.state.shouldRequest(options, op, selected peer)`
+  - call `peer.state.shouldRequest(options, op)`
   - if the returned score is greater than selected score, update the selected peer and score
 
 Obvious optimizations to the above, such as:
