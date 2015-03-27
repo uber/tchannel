@@ -18,18 +18,35 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-'use strict';
+module.exports = LCG;
 
-require('./argstream.js');
-require('./safe-quit.js');
-require('./timeouts.js');
-require('./send.js');
-require('./streaming.js');
-require('./streaming_bisect.js');
-require('./register.js');
-require('./identify.js');
-require('./tchannel.js');
-require('./regression-inOps-leak.js');
-require('./v2/index.js');
-require('./regression-listening-on-used-port.js');
-require('./trace/');
+function LCG () {
+    if (!(this instanceof LCG)) {
+        return new LCG();
+    }
+    var self = this;
+
+    self._rng = {
+        last: Math.floor(Math.pow(2, 32) * Math.random()),
+        m: Math.pow(2, 32),
+        a: 214013,
+        c: 253101
+    };
+}
+
+LCG.prototype.rand = function rand() {
+    var self = this;
+
+    var next = (self._rng.a * self._rng.last + self._rng.c) % self._rng.m;
+    self._rng.last = next;
+    return next;
+};
+
+LCG.prototype.rand64 = function rand64() {
+    var self = this;
+
+    var ret = new Buffer(8);
+    ret.writeUInt32BE(self.rand(), 0);
+    ret.writeUInt32BE(self.rand(), 4);
+    return ret;
+};

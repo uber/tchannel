@@ -54,6 +54,7 @@ function TChannelV2Handler(channel, options) {
         objectMode: true
     });
     self.channel = channel;
+    self.tracer = options.tracer;
     self.remoteHostPort = null; // filled in by identify message
     self.lastSentFrameId = 0;
     // TODO: GC these... maybe that's up to TChannel itself wrt ops
@@ -328,6 +329,7 @@ TChannelV2Handler.prototype.sendErrorFrame = function sendErrorFrame(req, codeSt
 TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest(options) {
     var self = this;
     var id = self.nextFrameId();
+    options.tracer = self.tracer;
     if (options.checksumType === undefined || options.checksumType === null) {
         options.checksumType = v2.Checksum.Types.Farm32;
     }
@@ -363,7 +365,8 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
             callResponse: sendCallResponseFrame,
             callResponseCont: sendCallResponseContFrame,
             error: sendErrorFrame
-        }
+        },
+        tracer: self.tracer
     });
     return res;
 

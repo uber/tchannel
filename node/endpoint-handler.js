@@ -78,6 +78,11 @@ TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, re
                 req.service, name));
             return;
         }
+
+        if (res.span) {
+            res.span.name = name;
+        }
+
         if (handler.canStream) {
             handler(req, res);
         } else {

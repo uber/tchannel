@@ -1,5 +1,5 @@
 // Copyright (c) 2015 Uber Technologies, Inc.
-//
+
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -20,16 +20,45 @@
 
 'use strict';
 
-require('./argstream.js');
-require('./safe-quit.js');
-require('./timeouts.js');
-require('./send.js');
-require('./streaming.js');
-require('./streaming_bisect.js');
-require('./register.js');
-require('./identify.js');
-require('./tchannel.js');
-require('./regression-inOps-leak.js');
-require('./v2/index.js');
-require('./regression-listening-on-used-port.js');
-require('./trace/');
+var test = require('tape');
+var testRW = require('bufrw/test_rw');
+var Tracing = require('../../v2/tracing.js');
+
+var testTracingBytes = [
+    0x00, 0x01, 0x02, 0x03, // spanid
+    0x04, 0x05, 0x06, 0x07,
+
+    0x08, 0x09, 0x0a, 0x0b, // parentid
+    0x0c, 0x0d, 0x0e, 0x0f, 
+
+    0x10, 0x11, 0x12, 0x13, // traceid
+    0x14, 0x15, 0x16, 0x17, 
+
+    0x01                    // traceflags:1
+];
+
+var testTracing = Tracing(
+    new Buffer([0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07]),
+    new Buffer([0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f]),
+    new Buffer([0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17]),
+    1
+);
+
+test('Tracing.RW: read/write payload', testRW.cases(Tracing.RW, [
+    {
+        lengthTest: {
+            length: testTracingBytes.length,
+            value: testTracing
+        },
+
+        writeTest: {
+            bytes: testTracingBytes,
+            value: testTracing
+        },
+
+        readTest: {
+            bytes: testTracingBytes,
+            value: testTracing
+        }
+    }
+]));
