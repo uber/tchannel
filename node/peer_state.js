@@ -37,4 +37,47 @@ TChannelPeerState.prototype.shouldRequest = function shouldRequest(/* op, option
     return 0;
 };
 
+// connection life cycle
+TChannelPeerState.prototype.onConnSocket = function onConnSocket(/* peer, conn */) {
+};
+
+TChannelPeerState.prototype.onConnSocketClose = function onConnSocketClose(/* peer, conn */) {
+};
+
+TChannelPeerState.prototype.onConnSocketError = function onConnSocketError(/* peer, conn, err */) {
+};
+
+// out op life cycle
+TChannelPeerState.prototype.onOutOp = function onOutOp(/* peer, op */) {
+};
+
+TChannelPeerState.prototype.onOutOpDone = function onOutOpDone(/* peer, op */) {
+};
+
+TChannelPeerState.prototype.onOutOpError = function onOutOpError(/* peer, op, err */) {
+};
+
+// in op life cycle
+TChannelPeerState.prototype.onInOp = function onInOp(/* peer, op */) {
+};
+
+TChannelPeerState.prototype.onInOpDone = function onInOpDone(/* peer, op */) {
+};
+
+TChannelPeerState.prototype.onInOpError = function onInOpError(/* peer, op, err */) {
+};
+
+// TODO: add hookups in peer / channel connection
+// peer.state.onConnSocket(peer, conn);
+// peer.state.onConnSocketClose(peer, conn);
+// peer.state.onConnSocketError(peer, conn, err);
+//
+// peer.state.onOutOp(peer, op);
+// peer.state.onOutOpDone(peer, op);
+// peer.state.onOutOpError(peer, op, err);
+//
+// peer.state.onInOp(peer, op);
+// peer.state.onInOpDone(peer, op);
+// peer.state.onInOpError(peer, op, err);
+
 module.exports = TChannelPeerState;
