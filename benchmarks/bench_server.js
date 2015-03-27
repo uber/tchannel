@@ -27,10 +27,6 @@ server.listen(4040, '127.0.0.1');
 
 var keys = {};
 
-server.on('socketClose', function (conn, err) {
-	// console.log('socket close: ' + conn.remoteName + ' ' + err);
-});
-
 server.handler.register('ping', function onPing(req, res) {
 	res.sendOk('pong', null);
 });

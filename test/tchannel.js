@@ -35,8 +35,8 @@ test('add peer: refuse to add self', function t(assert) {
   var server = new TChannel();
   server.listen(serverOptions.port, serverOptions.host, function listening() {
     assert.throws(function () {
-      server.addPeer(serverName);
-    }, new Error('refusing to add self peer'),
+      server.peers.add(serverName).connect();
+    }, /refusing to add self peer/,
       'Should refuse to add self as a peer');
     server.quit(assert.end);
   });
@@ -47,9 +47,8 @@ test('add peer: should successfully add peer', function t(assert) {
   var server = new TChannel();
   server.listen(serverOptions.port, serverOptions.host, function listening() {
     assert.doesNotThrow(function () {
-      server.addPeer(clientName);
-    }, new Error('refusing to add self peer'),
-      'Should successfully add peer');
+      server.peers.add(clientName).connect();
+    }, 'Should successfully add peer');
     server.quit(assert.end);
   });
 });
@@ -58,7 +57,7 @@ test('add peer: should successfully add peer', function t(assert) {
 test('add peer: get connection', function t(assert) {
   var server = new TChannel();
   server.listen(serverOptions.port, serverOptions.host, function listening() {
-    var connection = server.addPeer(clientName);
+    var connection = server.peers.add(clientName).connect();
 
     assert.ok(connection, 'A connection object should be returned');
     assert.equals(connection.remoteAddr, '127.0.0.1:4041', 'Remote address should match the client');
@@ -67,37 +66,10 @@ test('add peer: get connection', function t(assert) {
 });
 
 
-test('set peer: refuse to set self', function t(assert) {
+test('peer add, connect', function t(assert) {
   var server = new TChannel();
   server.listen(serverOptions.port, serverOptions.host, function listening() {
-    assert.throws(function () {
-      server.setPeer(serverName);
-    }, new Error('refusing to set self peer'),
-      'Should refuse to set self as a peer');
-    server.quit(assert.end);
-  });
-});
-
-
-test('set peer: should successfully set peer', function t(assert) {
-  var server = new TChannel();
-  server.listen(serverOptions.port, serverOptions.host, function listening() {
-    var conn = server.makeOutConnection(clientName);
-    assert.doesNotThrow(function () {
-      server.setPeer(clientName, conn);
-    }, new Error('refusing to set self peer'),
-      'Should successfully set peer');
-    server.quit(assert.end);
-  });
-});
-
-
-test('set peer: get connection', function t(assert) {
-  var server = new TChannel();
-  server.listen(serverOptions.port, serverOptions.host, function listening() {
-    var conn = server.makeOutConnection(clientName);
-    var connection = server.setPeer(clientName, conn);
-
+    var connection = server.peers.add(clientName).connect();
     assert.ok(connection, 'A connection object should be returned');
     assert.equals(connection.remoteAddr, '127.0.0.1:4041', 'Remote address should match the client');
     server.quit(assert.end);
@@ -108,7 +80,7 @@ test('set peer: get connection', function t(assert) {
 test('get peer: should fail to get non existent peer', function t(assert) {
   var server = new TChannel();
   server.listen(serverOptions.port, serverOptions.host, function listening() {
-    var peer = server.getPeer("idontexist");
+    var peer = server.peers.get("idontexist");
 
     assert.notOk(peer, 'Non existent peer should not be retuned');
     server.quit(assert.end);
@@ -119,9 +91,10 @@ test('get peer: should fail to get non existent peer', function t(assert) {
 test('get peer: should return requested peer', function t(assert) {
   var server = new TChannel();
   server.listen(serverOptions.port, serverOptions.host, function listening() {
-    server.addPeer(clientName);
-    assert.equals(clientName, server.getPeer(clientName).remoteAddr,
-      'The added peer should be returned');
+    server.peers.add(clientName).connect();
+    assert.equals(clientName,
+      server.peers.get(clientName).connections[0].remoteAddr,
+      'added peer connection');
     server.quit(assert.end);
   });
 });
@@ -130,13 +103,12 @@ test('get peer: should return requested peer', function t(assert) {
 test('get peers: should get all peers', function t(assert) {
   var server = new TChannel();
   server.listen(serverOptions.port, serverOptions.host, function listening() {
-    server.addPeer(clientName);
-    server.addPeer(client1Name);
-    assert.equals(server.getPeers().length, 2);
-    assert.equals(clientName, server.getPeers()[0].remoteAddr,
-      'Peer added first should be returned');
-    assert.equals(client1Name, server.getPeers()[1].remoteAddr,
-      'Peer added second should be returned');
+    server.peers.add(clientName).connect();
+    server.peers.add(client1Name).connect();
+    var peers = server.peers.values();
+    assert.equals(peers.length, 2);
+    assert.equals(clientName, peers[0].connections[0].remoteAddr, 'first peer connection');
+    assert.equals(client1Name, peers[1].connections[0].remoteAddr, 'first peer connection');
     server.quit(assert.end);
   });
 });
@@ -145,23 +117,9 @@ test('get peers: should get all peers', function t(assert) {
 test('remove peer: should remove requested peer', function t(assert) {
   var server = new TChannel();
   server.listen(serverOptions.port, serverOptions.host, function listening() {
-    server.removePeer(clientName, server.addPeer(clientName));
-    assert.notOk(server.getPeer(clientName),
+    server.peers.delete(clientName, server.peers.add(clientName).connect());
+    assert.notOk(server.peers.get(clientName),
       'Added peer should have been deleted. Nothing should be returned');
-    server.quit(assert.end);
-  });
-});
-
-
-test('getOut connection: get for existing peer', function t(assert) {
-  var server = new TChannel();
-  server.listen(serverOptions.port, serverOptions.host, function listening() {
-    server.addPeer(clientName);
-
-    assert.ok(server.getOutConnection(clientName),
-      'Added connection should be returned');
-    assert.equals(server.getOutConnection(clientName).remoteAddr, clientName,
-      'Remote address should match the client');
     server.quit(assert.end);
   });
 });
@@ -170,10 +128,11 @@ test('getOut connection: get for existing peer', function t(assert) {
 test('getOut connection: add and get for provided peer', function t(assert) {
   var server = new TChannel();
   server.listen(serverOptions.port, serverOptions.host, function listening() {
-    assert.ok(server.getOutConnection(clientName),
-      'Added connection should be returned');
-    assert.equals(server.getOutConnection(clientName).remoteAddr, clientName,
-      'Remote address should match the client');
+    var peer = server.peers.add(clientName);
+    assert.ok(peer, 'added peer should be returned');
+    var conn = peer.connect();
+    assert.ok(conn, 'added connections should be returned');
+    assert.equals(conn.remoteAddr, clientName, 'Remote address should match the client');
     server.quit(assert.end);
   });
 });
@@ -183,24 +142,9 @@ test('make socket: should throw for invalid destination', function t(assert) {
   var server = new TChannel();
   server.listen(serverOptions.port, serverOptions.host, function listening() {
     assert.throws(function () {
-      server.makeSocket('localhost');
-    }, new Error('invalid destination'),
+      server.peers.add('localhost').connect();
+    }, /invalid destination/,
       'Should reject invalid destination');
     server.quit(assert.end);
   });
 });
-
-
-//makeSocket creates net.createConnection. Can't test it as of now.
-// also cant test makeOutConnection for same reason.
-//test('make socket: should create for valid destination', function t(assert) {
-//  
-//  var server = new TChannel();
-//  server.listen(serverOptions.port, serverOptions.host);
-//  
-//  assert.doesNotThrow(function() {
-//    server.makeSocket(clientName);
-//  }, new Error('invalid destination'),
-//    'Should reject invalid destination');
-//  assert.end();
-//});
