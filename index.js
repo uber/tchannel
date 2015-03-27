@@ -869,7 +869,9 @@ function TChannelPeer(channel, hostPort, options) {
     self.options = options || {};
     self.hostPort = hostPort;
     self.isEphemeral = self.hostPort === '0.0.0.0:0';
+    self.state = null; // TODO
     self.connections = [];
+    self.setState(TChannelPeerHealthyState(self.channel));
 }
 
 inherits(TChannelPeer, EventEmitter);
@@ -902,6 +904,15 @@ TChannelPeer.prototype.close = function close(callback) {
             }
             callback();
         }
+    }
+};
+
+TChannelPeer.prototype.setState = function setState(state) {
+    var self = this;
+    if (!self.state || state.name !== self.state.name) {
+        var oldState = self.state;
+        self.state = state;
+        self.emit('stateChanged', oldState, state);
     }
 };
 
@@ -972,5 +983,21 @@ TChannelPeer.prototype.makeOutConnection = function makeOutConnection(socket) {
         self.removeConnection(conn);
     }
 };
+
+function TChannelPeerState(channel, name) {
+    var self = this;
+    self.channel = channel;
+    self.name = name;
+}
+
+function TChannelPeerHealthyState(channel) {
+    if (!(this instanceof TChannelPeerHealthyState)) {
+        return new TChannelPeerHealthyState(channel);
+    }
+    var self = this;
+    TChannelPeerState.call(self, channel, 'healthy');
+}
+
+inherits(TChannelPeerHealthyState, TChannelPeerState);
 
 module.exports = TChannel;
