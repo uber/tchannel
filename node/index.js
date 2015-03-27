@@ -91,6 +91,10 @@ function TChannel(options) {
     EventEmitter.call(self);
 
     self.options = extend({
+        reqTimeoutDefault: 5000,
+        serverTimeoutDefault: 5000,
+        timeoutCheckInterval: 1000,
+        timeoutFuzz: 100,
         // TODO: maybe we should always add pid to user-supplied?
         processName: format('%s[%s]', process.title, process.pid)
     }, options);
@@ -104,11 +108,6 @@ function TChannel(options) {
     self.hostPort = null;
     self.random = self.options.random || globalRandom;
     self.timers = self.options.timers || globalTimers;
-
-    self.reqTimeoutDefault = self.options.reqTimeoutDefault || 5000;
-    self.serverTimeoutDefault = self.options.serverTimeoutDefault || 5000;
-    self.timeoutCheckInterval = self.options.timeoutCheckInterval || 1000;
-    self.timeoutFuzz = self.options.timeoutFuzz || 100;
 
     self.peers = Object.create(null);
 
@@ -616,8 +615,8 @@ TChannelConnection.prototype.onReaderError = function onReaderError(err) {
 //   base - fuzz/2 to base + fuzz/2
 TChannelConnection.prototype.getTimeoutDelay = function getTimeoutDelay() {
     var self = this;
-    var base = self.channel.timeoutCheckInterval;
-    var fuzz = self.channel.timeoutFuzz;
+    var base = self.options.timeoutCheckInterval;
+    var fuzz = self.options.timeoutFuzz;
     return base + Math.round(Math.floor(self.random() * fuzz) - (fuzz / 2));
 };
 
@@ -670,7 +669,7 @@ TChannelConnection.prototype.checkInOpsForTimeout = function checkInOpsForTimeou
             continue;
         }
 
-        var timeout = self.channel.serverTimeoutDefault;
+        var timeout = self.options.serverTimeoutDefault;
         var duration = now - op.start;
         if (duration > timeout) {
             delete ops[opKey];
@@ -702,7 +701,7 @@ TChannelConnection.prototype.checkOutOpsForTimeout = function checkOutOpsForTime
                 });
             continue;
         }
-        var timeout = op.req.ttl || self.channel.reqTimeoutDefault;
+        var timeout = op.req.ttl || self.options.reqTimeoutDefault;
         var duration = now - op.start;
         if (duration > timeout) {
             delete ops[opKey];
