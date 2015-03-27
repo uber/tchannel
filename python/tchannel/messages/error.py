@@ -5,6 +5,7 @@ import enum
 from .. import rw
 from .base import BaseMessage
 from .types import Types
+from . import common
 
 
 @enum.unique
@@ -26,7 +27,7 @@ class ErrorMessage(BaseMessage):
 
     __slots__ = (
         'code',
-        'original_message_id',
+        'tracing',
         'message',
     )
 
@@ -53,6 +54,6 @@ class ErrorMessage(BaseMessage):
 error_rw = rw.instance(
     ErrorMessage,
     ('code', error_code_rw),                            # code:1
-    ('original_message_id', rw.number(4)),              # id:4
+    ('tracing', common.tracing_rw),                     # tracing:24
     ('message', rw.len_prefixed_string(rw.number(2)))   # message~2
 )
