@@ -18,21 +18,21 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-if (!process.addAsyncListener) {
-    require('async-listener');
-}
-
 var DebugLogtron = require('debug-logtron');
 
 var Span = require('./span');
 
-module.exports = Agent;
+module.exports = new Agent();
 
 function Agent () {
     if (!(this instanceof Agent)) {
         return new Agent();
     }
     var self = this;
+
+    if (!process.addAsyncListener) {
+        require('async-listener');
+    }
 
     self.currentSpan = null;
 
@@ -63,16 +63,8 @@ function Agent () {
     self.logger = DebugLogtron('tchannelTrace');
 }
 
-Agent._instance = null;
-
-// Tracing agent is a singleton
-Agent.getInstance = function () {
-    // body...
-    if (Agent._instance === null) {
-        Agent._instance = Agent();
-    }
-
-    return Agent._instance;
+Agent.prototype.getInstance = function () {
+    return this;
 };
 
 Agent.prototype.configure = function configure(options) {

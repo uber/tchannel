@@ -36,7 +36,6 @@ var v2 = require('./v2');
 var nullLogger = require('./null-logger.js');
 var Spy = require('./v2/spy');
 var EndpointHandler = require('./endpoint-handler.js');
-var TracingAgent = require('./trace/agent');
 
 var dumpEnabled = /\btchannel_dump\b/.test(process.env.NODE_DEBUG || '');
 
@@ -117,7 +116,8 @@ function TChannel(options) {
     self.destroyed = false;
 
     if (self.options.trace) {
-        self.tracer = TracingAgent.getInstance();
+        // lazy load trace agent
+        self.tracer = require('./trace/agent');
     }
 
     self.serverSocket = net.createServer(function onServerSocketConnection(sock) {
