@@ -20,10 +20,13 @@
 
 'use strict';
 
-var NodeSol = require('nodesol').NodeSol;
+var NodeSol = require('uber-nodesol-write').NodeSol;
 var Ready = require('ready-signal');
 var thriftify = require('thriftify');
+var path = require('path');
 var zipkinSpec = thriftify.newSpec(path.join(__dirname, 'zipkin.thrift'));
+
+module.exports = KafkaTraceReporter;
 
 function KafkaTraceReporter(options) {
     if (!(this instanceof KafkaTraceReporter)) {
@@ -35,21 +38,30 @@ function KafkaTraceReporter(options) {
     self.host = options.host;
     self.port = options.port;
 
-    self.ready = Ready();
-
     self.nodesol = new NodeSol({host: self.host, port: self.port});
-    self.nodesol.connect(self.ready.signal);
+}
+
+function ipToInt(ip){
+    var ipl = 0;
+    ip.split('.').forEach(function( octet ) {
+        ipl <<= 8;
+        ipl += parseInt(octet);
+    });
+    return (ipl >>> 0);
 }
 
 function jsonSpanToThriftSpan(span) {
     var annotations = span.annotations.map(function fixAnnotation(item) {
+        var timestampBuffer = new Buffer(8);
+        // wat
+        timestampBuffer.writeUInt32BE(Math.floor(item.timestamp / 1000), 0);
         return {
-            timestamp: item.timestamp / 1000,
+            timestamp: timestampBuffer,
             value: item.value,
             host: {
-                ipv4: item.endpoint.ipv4,
-                port: item.endpoint.port,
-                service_name: item.endpoint.serviceName
+                ipv4: ipToInt(span.endpoint.ipv4),
+                port: span.endpoint.port,
+                service_name: span.endpoint.serviceName
             }
         };
     });
@@ -58,8 +70,8 @@ function jsonSpanToThriftSpan(span) {
         trace_id: span.traceid,
         parent_id: span.parentid,
         id: span.id,
-        annotations: annotations,
-        binary_annotations: []  // TODO
+        annotations: annotations
+        //binary_annotations: []  // TODO
     };
 
     return mapped;
@@ -72,8 +84,9 @@ KafkaTraceReporter.prototype.report = function report(span) {
         .toBuffer(jsonSpanToThriftSpan(span), zipkinSpec, 'Span')
         .toString('base64');
 
-    self.ready(function () {
-        self.nodesol.produce(self.topic, base64ThriftSpan);
+    console.log("producing");
+    self.nodesol.produce(self.topic, base64ThriftSpan, function kafkaCb(err) {
+        if (err) console.log(err);
     });
 };
 

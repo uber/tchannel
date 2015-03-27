@@ -59,8 +59,8 @@ test('basic tracing test', function (assert) {
 
     var reporter = KafkaTraceReporter({
         topic: 'tchannel',
-        host: 'localhost',
-        port: 2182
+        //leafHost: 'localhost',
+        //leafPort: 2182
     });
 
     TracingAgent.getInstance().configure({
