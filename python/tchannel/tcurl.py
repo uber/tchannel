@@ -193,7 +193,7 @@ def tcurl(tchannel, hostport, headers, body, quiet=False):
             headers,
             body,
         )
-    except:
+    except Exception:
         log.debug("X Msg: %s" % request.message_id)
         return
 

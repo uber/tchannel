@@ -3,8 +3,9 @@ import socket
 
 import pytest
 
-from tchannel.socket import SocketConnection
 from tchannel.exceptions import InvalidMessageException
+from tchannel.handler import TChannelRequestHandler
+from tchannel.socket import SocketConnection
 
 
 @pytest.yield_fixture
@@ -92,13 +93,15 @@ def test_handle_calls(tchannel_pair):
     class _MyException(Exception):
         pass
 
-    def my_handler(context, connection):
-        raise _MyException()
+    class MyHandler(TChannelRequestHandler):
+        def handle_request(*args, **kwargs):
+            raise _MyException()
 
     server, client = tchannel_pair
     client.ping()
+
     with pytest.raises(_MyException):
-        server.handle_calls(my_handler)
+        server.handle_calls(MyHandler())
 
 
 def test_finish_connection(tchannel_pair):
@@ -107,6 +110,8 @@ def test_finish_connection(tchannel_pair):
     client.ping()
     client.connection.close()
 
-    def _handle(data, connection):
-        pass
-    server.handle_calls(_handle)
+    class MyHandler(TChannelRequestHandler):
+        def handle_request(*args, **kwargs):
+            pass
+
+    server.handle_calls(MyHandler())

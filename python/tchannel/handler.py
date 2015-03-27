@@ -1,5 +1,7 @@
 import collections
 from .messages import CallResponseMessage
+from .messages import PingRequestMessage
+from .messages import PingResponseMessage
 
 Endpoint = collections.namedtuple('Endpoint', ['handler', 'opts'])
 
@@ -34,17 +36,22 @@ class TChannelRequestHandler(RequestHandler):
         :param context: context contains received CallRequestMessage
         :param conn: An incoming TornadoConnection
         """
+        # TODO: stop passing conn around everywhere
         request = TChannelRequest(context, conn)
         endpoint = self._find_endpoint(request.method)
         if endpoint is not None:
             response = TChannelResponse(request, conn)
             try:
                 endpoint.handler(request, response, endpoint.opts)
-            except:
-                # TODO add tchannel error handling here
-                pass
+            # TODO add tchannel error handling here
             finally:
                 response.finish()
+
+        elif context.message.message_type == PingRequestMessage.message_type:
+            response = TChannelResponse(request, conn)
+            response.resp_msg = PingResponseMessage()
+            response.finish()
+
         else:
             # TODO error handling if endpoint is not found
             raise NotImplementedError(request.method)
@@ -73,9 +80,9 @@ class TChannelRequest(object):
 
     def __init__(self, context, conn):
         self.message = context.message
-        self.header = self.message.arg_2
-        self.body = self.message.arg_3
-        self.method = self.message.arg_1
+        self.header = getattr(self.message, 'arg_2', None)
+        self.body = getattr(self.message, 'arg_3', None)
+        self.method = getattr(self.message, 'arg_1', None)
         self.connection = conn
         self.context = context
         self.id = context.message_id
