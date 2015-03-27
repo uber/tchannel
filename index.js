@@ -850,13 +850,56 @@ TChannelPeers.prototype.delete = function del(hostPort) {
 
 TChannelPeers.prototype.request = function request(options) {
     var self = this;
-    var dest = options.host;
-    if (!dest) {
-        throw new Error('cannot request() without options.host'); // TODO typed error
+    var peers = self.choosePeer(options, null, 1);
+    var peer = peers[0];
+    if (!peer) {
+        // TODO: operational error?
+        throw new Error('no peer available for request'); // TODO: typed error
     }
-    var peer = self.add(dest);
     return peer.request(options);
 };
+
+TChannelPeers.prototype.choosePeer = function choosePeer(options, op, n) {
+    if (n > 1) throw new Error('not implemented'); // TODO heap select n
+    var self = this;
+
+    var hosts = null;
+    if (options.host) {
+        hosts = [options.host];
+    } else if (self.options.hosts) {
+        hosts = self.options.hosts;
+    } else {
+        hosts = Object.keys(self._map);
+    }
+    if (!hosts || !hosts.length) {
+        throw new Error('no hosts specified in request or channel options'); // TODO: typed error
+    }
+
+    var threshold = options.peerScoreThreshold;
+    if (threshold === undefined) threshold = self.options.peerScoreThreshold;
+    if (threshold === undefined) threshold = 0;
+
+    var selectedPeer = null, selectedScore = 0;
+    for (var i = 0; i < hosts.length; i++) {
+        var peer = self.add(hosts[i]);
+        var score = peer.state.shouldRequest(options, op);
+        var want = score > threshold &&
+                   (selectedPeer === null || score > selectedScore);
+        // TODO: provide visibility... event hook?
+        // self.logger.debug('choose peer score', {
+        //     host: hosts[i],
+        //     score: score,
+        //     threshold: threshold,
+        //     want: want
+        // });
+        if (want) {
+            selectedPeer = peer;
+            selectedScore = score;
+        }
+    }
+    return [selectedPeer];
+};
+
 
 function TChannelPeer(channel, hostPort, options) {
     if (!(this instanceof TChannelPeer)) {
@@ -990,6 +1033,13 @@ function TChannelPeerState(channel, name) {
     self.name = name;
 }
 
+TChannelPeerState.prototype.shouldRequest = function shouldRequest(/* options, op */) {
+    // TODO: op isn't quite right currently as a "TChannelClientOp", the
+    // intention is that the other (non-options) arg encapsulates all requests
+    // across retries and setries
+    return 0;
+};
+
 function TChannelPeerHealthyState(channel) {
     if (!(this instanceof TChannelPeerHealthyState)) {
         return new TChannelPeerHealthyState(channel);
@@ -999,5 +1049,11 @@ function TChannelPeerHealthyState(channel) {
 }
 
 inherits(TChannelPeerHealthyState, TChannelPeerState);
+
+TChannelPeerHealthyState.prototype.shouldRequest = function shouldRequest(/* options, op */) {
+    // return Math.random();
+    var self = this;
+    return 0.2 + self.channel.random() * 0.8;
+};
 
 module.exports = TChannel;
