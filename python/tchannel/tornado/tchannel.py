@@ -44,8 +44,8 @@ class TChannel(object):
 
         raise tornado.gen.Return(peer)
 
-    def request(self, hostport):
-        return TChannelClientOperation(hostport, self)
+    def request(self, hostport, service=None):
+        return TChannelClientOperation(hostport, service, self)
 
     def host(self, port, handler):
         return TChannelServerOperation(port, handler)
@@ -63,9 +63,10 @@ class TChannelServerOperation(object):
 
 class TChannelClientOperation(object):
 
-    def __init__(self, hostport, tchannel):
+    def __init__(self, hostport, service, tchannel):
         self.hostport = hostport
         self.message_id = None
+        self.service = service or ''
         self.tchannel = weakref.ref(tchannel)
 
     @tornado.gen.coroutine
@@ -84,7 +85,7 @@ class TChannelClientOperation(object):
             return bytes(arg.encode('ascii'))
 
         message = CallRequestMessage(
-            service='tcurl',
+            service=self.service,
             arg_1=safebytes(arg_1),
             arg_2=arg_2,
             arg_3=arg_3,
