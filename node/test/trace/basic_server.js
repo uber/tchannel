@@ -1,4 +1,3 @@
-// Copyright (c) 2015 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -59,8 +58,8 @@ test('basic tracing test', function (assert) {
 
     var reporter = KafkaTraceReporter({
         topic: 'tchannel',
-        //leafHost: 'localhost',
-        //leafPort: 2182
+        leafHost: 'localhost',
+        leafPort: 2181
     });
 
     TracingAgent.getInstance().configure({

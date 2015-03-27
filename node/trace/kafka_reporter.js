@@ -77,12 +77,22 @@ function jsonSpanToThriftSpan(span) {
     return mapped;
 }
 
+var once = false;
+
 KafkaTraceReporter.prototype.report = function report(span) {
     var self = this;
 
     var base64ThriftSpan = thriftify
         .toBuffer(jsonSpanToThriftSpan(span), zipkinSpec, 'Span')
         .toString('base64');
+
+    if (!once && self.nodesol.producers['tchannel']) {
+        once = true;
+        console.log("adding error handler");
+        self.nodesol.producers.tchannel.connection.on('error', function (err) {
+            console.log(err);
+        });
+    }
 
     console.log("producing");
     self.nodesol.produce(self.topic, base64ThriftSpan, function kafkaCb(err) {
