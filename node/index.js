@@ -91,6 +91,8 @@ function TChannel(options) {
     EventEmitter.call(self);
 
     self.options = extend({
+        // TODO: maybe we should always add pid to user-supplied?
+        processName: format('%s[%s]', process.title, process.pid)
     }, options);
 
     self.logger = self.options.logger || nullLogger;
@@ -102,9 +104,6 @@ function TChannel(options) {
     self.hostPort = null;
     self.random = self.options.random || globalRandom;
     self.timers = self.options.timers || globalTimers;
-    // TODO: maybe we should always add pid to user-supplied?
-    self.processName = self.options.processName ||
-        format('%s[%s]', process.title, process.pid);
 
     self.reqTimeoutDefault = self.options.reqTimeoutDefault || 5000;
     self.serverTimeoutDefault = self.options.serverTimeoutDefault || 5000;
