@@ -37,6 +37,7 @@ var nullLogger = require('./null-logger.js');
 var Spy = require('./v2/spy');
 var EndpointHandler = require('./endpoint-handler.js');
 
+var DEFAULT_OUTGOING_REQ_TIMEOUT = 2000;
 var dumpEnabled = /\btchannel_dump\b/.test(process.env.NODE_DEBUG || '');
 
 var TChannelListenError = WrappedError({
@@ -801,7 +802,9 @@ TChannelConnection.prototype.request = function request(options) {
     // TODO: generate tracing if empty?
     // TODO: refactor callers
     options.checksumType = options.checksum;
-    options.ttl = options.timeout || 1; // TODO: better default, support for dynamic
+
+    // TODO: better default, support for dynamic
+    options.ttl = options.timeout || DEFAULT_OUTGOING_REQ_TIMEOUT;
     var req = self.handler.buildOutgoingRequest(options);
     var id = req.id;
     self.outOps[id] = new TChannelClientOp(req, self.channel.now());
