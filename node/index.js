@@ -393,12 +393,7 @@ TChannel.prototype.makeOutConnection = function makeOutConnection(dest) {
     return connection;
 };
 
-// to provide backward compatibility.
-TChannel.prototype.quit = function close(callback) {
-    var self = this;
-    self.close(callback);
-};
-
+TChannel.prototype.quit = // to provide backward compatibility.
 TChannel.prototype.close = function close(callback) {
     var self = this;
 
