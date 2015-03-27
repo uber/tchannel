@@ -35,6 +35,9 @@ var ChunkReader = require('bufrw/stream/chunk_reader');
 var ChunkWriter = require('bufrw/stream/chunk_writer');
 var reqres = require('./reqres');
 
+var inherits = require('util').inherits;
+var EventEmitter = require('events').EventEmitter;
+
 var v2 = require('./v2');
 var nullLogger = require('./null-logger.js');
 var Spy = require('./v2/spy');
@@ -154,7 +157,7 @@ function TChannel(options) {
         self.logger.warn('server socket close');
     });
 }
-require('util').inherits(TChannel, require('events').EventEmitter);
+inherits(TChannel, EventEmitter);
 
 // Decoulping config and creation from the constructor.
 TChannel.prototype.listen = function listen(port, host, callback) {
@@ -587,7 +590,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
         self.timers.clearTimeout(self.timer);
     }
 }
-require('util').inherits(TChannelConnection, require('events').EventEmitter);
+inherits(TChannelConnection, EventEmitter);
 
 TChannelConnection.prototype.onReaderError = function onReaderError(err) {
     var self = this;
