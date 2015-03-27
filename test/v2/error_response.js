@@ -23,6 +23,14 @@
 var test = require('tape');
 var ErrorResponse = require('../../v2/error_response.js');
 var testRW = require('bufrw/test_rw');
+var Tracing = require('../../v2/tracing.js');
+
+var testTracing = Tracing(
+    new Buffer([0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07]),
+    new Buffer([0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f]),
+    new Buffer([0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17]),
+    24
+);
 
 test('ErrorResponse.RW: read/write payload', testRW.cases(ErrorResponse.RW, [
 
@@ -30,11 +38,17 @@ test('ErrorResponse.RW: read/write payload', testRW.cases(ErrorResponse.RW, [
     [
         ErrorResponse(
             ErrorResponse.Codes.ProtocolError,
-            0x01020304,
+            testTracing,
             'too bad.'
         ), [
             ErrorResponse.Codes.ProtocolError, // code:1
-            0x01, 0x02, 0x03, 0x04,            // id:4
+            0x00, 0x01, 0x02, 0x03,            // tracing:24
+            0x04, 0x05, 0x06, 0x07,            // ...
+            0x08, 0x09, 0x0a, 0x0b,            // ...
+            0x0c, 0x0d, 0x0e, 0x0f,            // ...
+            0x10, 0x11, 0x12, 0x13,            // ...
+            0x14, 0x15, 0x16, 0x17,            // ...
+            0x18,                              // traceflags:1
             0x00, 0x08, 0x74, 0x6f,            // message~2
             0x6f, 0x20, 0x62, 0x61,            // ...
             0x64, 0x2e                         // ...
