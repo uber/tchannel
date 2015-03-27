@@ -465,6 +465,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     var self = this;
     EventEmitter.call(self);
     self.channel = channel;
+    self.options = self.channel.options;
     self.logger = self.options.logger || nullLogger;
     self.random = self.options.random || globalRandom;
     self.timers = self.options.timers || globalTimers;
@@ -472,7 +473,6 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     self.direction = direction;
     self.remoteAddr = remoteAddr;
     self.timer = null;
-
     self.remoteName = null; // filled in by identify message
 
     // TODO: factor out an operation collection abstraction
@@ -486,7 +486,9 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 
     self.reader = ChunkReader(bufrw.UInt16BE, v2.Frame.RW);
     self.writer = ChunkWriter(v2.Frame.RW);
-    self.handler = new v2.Handler(self.channel);
+    self.handler = new v2.Handler(extend({
+        hostPort: self.channel.hostPort
+    }, self.options));
 
     // TODO: refactor op boundary to pass full req/res around
     self.handler.on('call.incoming.request', function onCallRequest(req) {
@@ -503,7 +505,6 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
             });
             return;
         }
-
         op.req.emit('response', res);
     });
 
