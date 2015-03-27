@@ -45,17 +45,17 @@ var InvalidCodeStringError = TypedError({
     codeString: null
 });
 
-function TChannelV2Handler(channel, options) {
+function TChannelV2Handler(options) {
     if (!(this instanceof TChannelV2Handler)) {
-        return new TChannelV2Handler(channel, options);
+        return new TChannelV2Handler(options);
     }
     var self = this;
     Duplex.call(self, {
         objectMode: true
     });
-    self.channel = channel;
-    self.hostPort = self.channel.options.hostPort;
-    self.processName = self.channel.options.processName;
+    self.options = options || {};
+    self.hostPort = self.options.hostPort;
+    self.processName = self.options.processName;
     self.remoteHostPort = null; // filled in by identify message
     self.lastSentFrameId = 0;
     // TODO: GC these... maybe that's up to TChannel itself wrt ops
