@@ -30,6 +30,7 @@ var net = require('net');
 var format = require('util').format;
 var TypedError = require('error/typed');
 var WrappedError = require('error/wrapped');
+var extend = require('xtend');
 var bufrw = require('bufrw');
 var ChunkReader = require('bufrw/stream/chunk_reader');
 var ChunkWriter = require('bufrw/stream/chunk_writer');
@@ -89,7 +90,9 @@ function TChannel(options) {
     var self = this;
     EventEmitter.call(self);
 
-    self.options = options || {};
+    self.options = extend({
+    }, options);
+
     self.logger = self.options.logger || nullLogger;
     // Filled in by the listen call:
     self.host = null;
