@@ -382,6 +382,9 @@ TChannel.prototype.makeSocket = function makeSocket(dest) {
     }
     var host = parts[0];
     var port = parts[1];
+    if (host === '0.0.0.0' || port === '0') {
+        throw new Error('cannot make out connection to ephemeral peer'); // TODO typed error
+    }
     var socket = net.createConnection({host: host, port: port});
     return socket;
 };
