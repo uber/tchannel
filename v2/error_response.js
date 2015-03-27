@@ -24,7 +24,7 @@ var bufrw = require('bufrw');
 var WriteResult = bufrw.WriteResult;
 var ReadResult = bufrw.ReadResult;
 var TypedError = require('error/typed');
-var Frame = require('./frame');
+var Tracing = require('./tracing');
 
 module.exports = ErrorResponse;
 
@@ -38,18 +38,14 @@ var InvalidErrorCodeError = TypedError({
 // TODO: enforce message ID of this frame is Frame.NullId when
 // errorBody.code.ProtocolError = ErrorResponse.Codes.ProtocolError
 
-// code:1 id:4 message~2
-function ErrorResponse(code, id, message) {
+// code:1 tracing:25 message~2
+function ErrorResponse(code, tracing, message) {
     if (!(this instanceof ErrorResponse)) {
-        return new ErrorResponse(code, id, message);
+        return new ErrorResponse(code, tracing, message);
     }
     var self = this;
     self.code = code || 0;
-    if (id === null || id === undefined) {
-        self.id = Frame.NullId;
-    } else {
-        self.id = id;
-    }
+    self.tracing = tracing || Tracing.emptyTracing;
     self.type = ErrorResponse.TypeCode;
     self.message = message || '';
 }
@@ -128,19 +124,19 @@ ErrorResponse.RW = bufrw.Struct(ErrorResponse, [
         if (CodeNames[body.code] === undefined) {
             return WriteResult.error(InvalidErrorCodeError({
                 errorCode: body.code,
-                originalId: body.id
+                tracing: body.tracing
             }), offset);
         }
         return WriteResult.just(offset);
     }}},
     {name: 'code', rw: bufrw.UInt8},   // code:1
-    {name: 'id', rw: bufrw.UInt32BE},  // id:4
+    {name: 'tracing', rw: Tracing.RW},  // tracing:25
     {name: 'message', rw: bufrw.str2}, // message~2
     {call: {writeInto: function writeGuard(body, buffer, offset) {
         if (CodeNames[body.code] === undefined) {
             return ReadResult.error(InvalidErrorCodeError({
                 errorCode: body.code,
-                originalId: body.id
+                tracing: body.tracing,
             }), offset);
         }
         return ReadResult.just(offset);

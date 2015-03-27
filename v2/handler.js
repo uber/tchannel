@@ -320,7 +320,7 @@ TChannelV2Handler.prototype.sendErrorFrame = function sendErrorFrame(req, codeSt
         });
     }
 
-    var errBody = v2.ErrorResponse(code, req.id, message);
+    var errBody = v2.ErrorResponse(code, req.tracing, message);
     var errFrame = v2.Frame(req.id, errBody);
     self.push(errFrame);
 };
