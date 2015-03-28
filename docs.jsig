@@ -16,11 +16,6 @@ type HostInfo : String
 type TChannelValue :
     Buffer | String | null | undefined
 
-type TChannelConnection : {
-    direction: "in" | "out",
-    remoteAddr: HostInfo
-}
-
 type TChannelIncomingResponse : {
     id: Number,
     ok: Boolean,
@@ -88,10 +83,6 @@ type TChannel : {
     ) => void,
     address: () => ?{port, family, address}
     close: (Callback<Error>) => void,
-
-    getPeer: (hostPort: HostInfo) => TChannelConnection,
-    getPeers: () => Array<TChannelConnection>,
-
     hostPort: HostInfo
 }
 
