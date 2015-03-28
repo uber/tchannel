@@ -41,10 +41,10 @@ class ErrorMessage(BaseMessage):
         ErrorCode.fatal: 'fatal protocol error'
     }
 
-    def __init__(self, code=None, original_message_id=None, message=None):
-        self.original_message_id = original_message_id
+    def __init__(self, code=None, tracing=None, message=None):
         self.code = ErrorCode(code) if code else ErrorCode.unexpected
         self.message = message or ''
+        self.tracing = tracing or common.Tracing(0, 0, 0, 0)
 
     def error_name(self):
         """Get a friendly error message."""
