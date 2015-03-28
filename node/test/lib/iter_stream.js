@@ -21,7 +21,7 @@
 'use strict';
 
 var inherits = require('util').inherits;
-var Readable = require('stream').Readable;
+var Readable = require('readable-stream').Readable;
 
 function IterStream(rw, options) {
     if (!(this instanceof IterStream)) {

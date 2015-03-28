@@ -38,7 +38,7 @@
 
 var inherits = require('util').inherits;
 var EventEmitter = require('events').EventEmitter;
-var PassThrough = require('stream').PassThrough;
+var PassThrough = require('readable-stream').PassThrough;
 var Ready = require('ready-signal');
 var TypedError = require('error/typed');
 
