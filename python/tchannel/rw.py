@@ -437,9 +437,13 @@ class InstanceReadWriter(ReadWriter):
                 if attr != skip:
                     kwargs[attr] = value
         except ReadException as e:
-            raise ReadException(
-                "Failed to read %s: %s" % (self._cls, e.message)
-            )
+            """ capture the read exception msg here but
+            don't raise it again for streaming message purpose.
+
+            For other type message, checksum will also detect it
+            as invalid message.
+            """
+            pass
         return self._cls(**kwargs)
 
     def write(self, obj, stream):

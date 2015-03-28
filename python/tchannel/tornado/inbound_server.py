@@ -5,10 +5,12 @@ import socket
 import sys
 import tornado.ioloop
 import tornado.tcpserver
+from ..context import Context
 
 from ..tornado.connection import TornadoConnection
 from ..exceptions import InvalidChecksumException
 from ..messages.common import verify_checksum
+from .message_builder import MessageBuilder
 
 
 class InboundServer(tornado.tcpserver.TCPServer):
@@ -17,6 +19,8 @@ class InboundServer(tornado.tcpserver.TCPServer):
 
         assert req_handler is not None
         self.req_handler = req_handler
+
+        self.message_builder = MessageBuilder()
 
     def build_stream(self):
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -50,8 +54,17 @@ class InboundServer(tornado.tcpserver.TCPServer):
         :param context: a context contains call request message
         :param conn: incoming tornado connection
         """
-        if verify_checksum(context.message):
-            self.req_handler.handle_request(context, conn)
+
+        message = self.message_builder.build(context.message_id,
+                                             context.message)
+        if message is not None:
+            if verify_checksum(message):
+                self.req_handler.handle_request(
+                    Context(context.message_id, message),
+                    conn)
+            else:
+                # TODO return Error message
+                raise InvalidChecksumException()
         else:
-            # TODO return Error message
-            raise InvalidChecksumException()
+            # buffer streaming frames
+            conn.handle_calls(self.preprocess_request)
