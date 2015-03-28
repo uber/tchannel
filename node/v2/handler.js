@@ -21,7 +21,7 @@
 'use strict';
 
 var TypedError = require('error/typed');
-var Duplex = require('stream').Duplex;
+var Duplex = require('readable-stream').Duplex;
 var util = require('util');
 
 var reqres = require('../reqres');
