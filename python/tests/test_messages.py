@@ -101,7 +101,6 @@ def test_valid_ping_request():
     (messages.ErrorMessage, messages.error_rw, {
         'code': 1,
         'message': 'hi',
-        'original_message_id': 1,
     }),
     (messages.CallRequestMessage, messages.call_req_rw, {
         'flags': 0,
@@ -144,13 +143,14 @@ def test_roundtrip_message(message_class, message_rw, attrs):
 
 
 @pytest.mark.parametrize('message_rw, byte_stream', [
-    (messages.error_rw, bytearray([
-        0, 0, 0, 0, 1, 0, 2
-    ] + list('hi')))
+    (messages.error_rw, bytearray(
+        [1] + [0] * 25 + [0, 2] + list('hi')))
 ])
 def test_parse_message(message_rw, byte_stream):
     """Verify all messages parse properly."""
-    message_rw.read(BytesIO(byte_stream))
+    error = message_rw.read(BytesIO(byte_stream))
+    assert error.code == 1
+    assert error.message == u'hi'
 
 
 def test_error_message_name():
