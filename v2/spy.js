@@ -22,7 +22,7 @@
 
 var TypedError = require('error/typed');
 var inherits = require('util').inherits;
-var Transform = require('stream').Transform;
+var Transform = require('readable-stream').Transform;
 var hex = require('hexer');
 var util = require('util');
 

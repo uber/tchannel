@@ -55,7 +55,7 @@
  */
 
 var async = require('async');
-var PassThrough = require('stream').PassThrough;
+var PassThrough = require('readable-stream').PassThrough;
 var test = require('tape');
 var util = require('util');
 var allocCluster = require('./lib/alloc-cluster.js');
