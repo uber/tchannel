@@ -63,11 +63,11 @@ var ready = CountedReadySignal(3);
 var listening = ready(function (err) {
 
     client
-        .request({host: '127.0.0.1:4040'})
+        .request({host: '0.0.0.0:4040'})
         .send('ping', null, null, function (err, res) {
             console.log('ping res from client: ' + res.arg2 + ' ' + res.arg3);
             server
-                .request({host: '127.0.0.1:4041'})
+                .request({host: '0.0.0.0:4041'})
                 .send('ping', null, null, function (err, res) {
                     console.log('ping res server: ' + res.arg2 + ' ' + res.arg3);
                 });
@@ -75,33 +75,33 @@ var listening = ready(function (err) {
 
     // very aggressive settings. Not recommended for real life.
     client2
-        .request({host: '127.0.0.1:4040', timeout: 500})
+        .request({host: '0.0.0.0:4040', timeout: 500})
         .send('func 3', 'arg2', 'arg3', function (err, res) {
             console.log('2 slow res: ' + formatRes(err, res));
             client2
-                .request({host: '127.0.0.1:4040', timeout: 500})
+                .request({host: '0.0.0.0:4040', timeout: 500})
                 .send('func 3', 'arg2', 'arg3', function (err, res) {
                     console.log('3 slow res: ' + formatRes(err, res));
                 });
 
             client2
-                .request({host: '127.0.0.1:4040', timeout: 500})
+                .request({host: '0.0.0.0:4040', timeout: 500})
                 .send('func 3', 'arg2', 'arg3', function (err, res) {
                     console.log('4 slow res: ' + formatRes(err, res));
                 });
         });
 
     client2
-        .request({host: '127.0.0.1:4040', timeout: 500})
+        .request({host: '0.0.0.0:4040', timeout: 500})
         .send('func 1', 'arg2', 'arg3', function (err, res) {
             console.log('1 fast res: ' + formatRes(err, res));
         });
 
 });
 
-server.listen(4040, '127.0.0.1', ready.signal);
-client.listen(4041, '127.0.0.1', ready.signal);
-client2.listen(4042, '127.0.0.1', ready.signal);
+server.listen(4040, '0.0.0.0', ready.signal);
+client.listen(4041, '0.0.0.0', ready.signal);
+client2.listen(4042, '0.0.0.0', ready.signal);
 
 function formatRes(err, res) {
     var ret = [];

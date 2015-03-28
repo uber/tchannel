@@ -43,7 +43,7 @@ chan.handler.register('start', start);
 control.canStream = true;
 chan.handler.register('control', control);
 
-chan.listen(4040, '127.0.0.1');
+chan.listen(4040, '0.0.0.0');
 
 var Sessions = {};
 var SessionId = 0;

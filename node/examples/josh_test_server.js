@@ -48,7 +48,7 @@ chan.handler.register('repl', repl);
 grepn.canStream = true;
 chan.handler.register('grepn', grepn);
 
-chan.listen(4040, '127.0.0.1');
+chan.listen(4040, '0.0.0.0');
 
 var spawn = require('child_pty').spawn;
 // var spawn = require('child_process').spawn;

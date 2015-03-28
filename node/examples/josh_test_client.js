@@ -24,7 +24,7 @@ var RNGStream = require('../test/lib/rng_stream');
 var tchan = require('../index');
 var chan = tchan();
 var req = chan.request({
-    host: '127.0.0.1:4040',
+    host: '0.0.0.0:4040',
     timeout: 1000
 });
 req.on('response', onResponse);
