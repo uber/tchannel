@@ -46,12 +46,12 @@ var listening = ready(function (err) {
     }
 
     client
-        .request({host: '127.0.0.1:4040'})
+        .request({host: '0.0.0.0:4040'})
         .send('func 1', "arg 1", "arg 2", function (err, res) {
             console.log('normal res: ' + res.arg2.toString() + ' ' + res.arg3.toString());
         });
     client
-        .request({host: '127.0.0.1:4040'})
+        .request({host: '0.0.0.0:4040'})
         .send('func 2', "arg 1", "arg 2", function (err, res) {
             console.log('err res: ' + res.ok +
                 ' message: ' + String(res.arg3));
@@ -59,5 +59,5 @@ var listening = ready(function (err) {
 
 });
 
-server.listen(4040, '127.0.0.1', ready.signal);
-client.listen(4041, '127.0.0.1', ready.signal);
+server.listen(4040, '0.0.0.0', ready.signal);
+client.listen(4041, '0.0.0.0', ready.signal);

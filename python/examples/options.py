@@ -9,6 +9,6 @@ def get_args():
     )
     parser.add_argument(
         "--host",
-        dest="host", default="localhost"
+        dest="host", default="0.0.0.0"
     )
     return parser.parse_args()

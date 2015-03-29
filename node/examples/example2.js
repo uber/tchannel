@@ -51,7 +51,7 @@ var listening = ready(function (err) {
     async.series([
         function pingOne(done) {
             client
-                .request({host: '127.0.0.1:4040'})
+                .request({host: '0.0.0.0:4040'})
                 .send('ping', null, null, function (err, res) {
                     console.log('ping res from client: ' + res.arg2 + ' ' + res.arg3);
                     done();
@@ -60,7 +60,7 @@ var listening = ready(function (err) {
 
         function pingTwo(done) {
             server
-                .request({host: '127.0.0.1:4041'})
+                .request({host: '0.0.0.0:4041'})
                 .send('ping', null, null, function (err, res) {
                     console.log('ping res server: ' + res.arg2 + ' ' + res.arg3);
                     done();
@@ -70,5 +70,5 @@ var listening = ready(function (err) {
     ], function() {});
 });
 
-server.listen(4040, '127.0.0.1', ready.signal);
-client.listen(4041, '127.0.0.1', ready.signal);
+server.listen(4040, '0.0.0.0', ready.signal);
+client.listen(4041, '0.0.0.0', ready.signal);

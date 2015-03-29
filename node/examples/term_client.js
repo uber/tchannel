@@ -27,7 +27,7 @@ startCommand(chan, process.argv.slice(2));
 
 function startCommand(chan, cmd) {
     var req = chan.request({
-        host: '127.0.0.1:4040',
+        host: '0.0.0.0:4040',
         timeout: 1000
     });
     req.on('response', onResponse);
@@ -80,7 +80,7 @@ function startCommand(chan, cmd) {
 
 function startControlChannel(chan, sessionId, callback) {
     var req = chan.request({
-        host: '127.0.0.1:4040',
+        host: '0.0.0.0:4040',
         timeout: 1000
     });
     req.on('response', onResponse);

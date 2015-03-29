@@ -27,9 +27,9 @@ var TChannel = require('../index.js');
 
 var ready = CountedReadySignal(2);
 var server = new TChannel();
-server.listen(4040, '127.0.0.1', ready.signal);
+server.listen(4040, '0.0.0.0', ready.signal);
 var client = new TChannel();
-client.listen(4041, '127.0.0.1', ready.signal);
+client.listen(4041, '0.0.0.0', ready.signal);
 
 // normal response
 server.register('func 1', function func1(arg1, arg2, peerInfo, cb) {
@@ -45,7 +45,7 @@ server.register('func 2', function func2(arg1, arg2, peerInfo, cb) {
 
 ready(function onReady() {
     client.send({
-        host: '127.0.0.1:4040'
+        host: '0.0.0.0:4040'
     }, 'func 1', 'arg 1', 'arg 2', function onResp1(err, res1, res2) {
         if (err) {
             console.log('unexpected err: ' + err.message);
@@ -54,7 +54,7 @@ ready(function onReady() {
     });
 
     client.send({
-        host: '127.0.0.1:4040'
+        host: '0.0.0.0:4040'
     }, 'func 2', 'arg 1', 'arg 2', function onResp2(err, res1, res2) {
         console.log('err res: ' + err.message);
     });
