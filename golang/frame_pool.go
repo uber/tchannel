@@ -2,6 +2,7 @@ package tchannel
 
 import (
 	"fmt"
+	"runtime"
 	"sync"
 )
 
@@ -46,7 +47,7 @@ func (p defaultFramePool) Release(f *Frame) {}
 // Do not use this FramePool in production.
 type ErrorDetectingFramePool struct {
 	mut   sync.Mutex
-	inUse []*Frame
+	inUse []*trackedFrame
 }
 
 // Get retrieves a frame from the pool
@@ -55,7 +56,7 @@ func (p *ErrorDetectingFramePool) Get() *Frame {
 	defer p.mut.Unlock()
 
 	frame := &Frame{}
-	p.inUse = append(p.inUse, frame)
+	p.inUse = append(p.inUse, p.track(frame))
 	return frame
 }
 
@@ -65,7 +66,7 @@ func (p *ErrorDetectingFramePool) Release(f *Frame) {
 	defer p.mut.Unlock()
 
 	for i := range p.inUse {
-		if f != p.inUse[i] {
+		if f != p.inUse[i].frame {
 			continue
 		}
 
@@ -76,12 +77,38 @@ func (p *ErrorDetectingFramePool) Release(f *Frame) {
 	panic(fmt.Sprintf("attempted release of unpooled or already released frame %s", f.Header))
 }
 
-// InUse returns the number of frames that are currently in-use by the application
-func (p *ErrorDetectingFramePool) InUse() []*Frame {
+func (p *ErrorDetectingFramePool) track(frame *Frame) *trackedFrame {
+	trackedFrame := &trackedFrame{
+		allocatedAt: make([]byte, 1024),
+		frame:       frame,
+	}
+	runtime.Stack(trackedFrame.allocatedAt, false)
+	return trackedFrame
+}
+
+// ReportLeaks reports any leaked frames
+func (p *ErrorDetectingFramePool) ReportLeaks(includeStack bool) bool {
 	p.mut.Lock()
 	defer p.mut.Unlock()
 
-	frames := make([]*Frame, len(p.inUse))
-	copy(frames, p.inUse)
-	return frames
+	if len(p.inUse) == 0 {
+		return false
+	}
+
+	for _, frame := range p.inUse {
+		fmt.Printf("Leaked frame %s\n", frame)
+		if includeStack {
+			fmt.Printf("Allocated at %s", frame.allocatedAt)
+		}
+	}
+
+	return true
 }
+
+// A trackedFrame contains tracking information about an allocated frame
+type trackedFrame struct {
+	allocatedAt []byte
+	frame       *Frame
+}
+
+func (f *trackedFrame) String() string { return f.frame.Header.String() }
