@@ -2,6 +2,7 @@ package tchannel
 
 import (
 	"fmt"
+	"time"
 )
 
 // Copyright (c) 2015 Uber Technologies, Inc.
@@ -56,10 +57,14 @@ var SimpleLogger = simpleLogger{}
 
 type simpleLogger struct{}
 
+const (
+	simpleLoggerStamp = "2006-01-02 15:04:05"
+)
+
 func (l simpleLogger) Errorf(msg string, args ...interface{}) { l.printfn("E", msg, args...) }
 func (l simpleLogger) Warnf(msg string, args ...interface{})  { l.printfn("W", msg, args...) }
 func (l simpleLogger) Infof(msg string, args ...interface{})  { l.printfn("I", msg, args...) }
 func (l simpleLogger) Debugf(msg string, args ...interface{}) { l.printfn("D", msg, args...) }
 func (l simpleLogger) printfn(prefix, msg string, args ...interface{}) {
-	fmt.Printf("%s %s\n", prefix, fmt.Sprintf(msg, args...))
+	fmt.Printf("%s [%s] %s\n", time.Now().Format(simpleLoggerStamp), prefix, fmt.Sprintf(msg, args...))
 }
