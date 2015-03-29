@@ -39,7 +39,6 @@ func timeout(ctx context.Context, call *InboundCall) {
 
 	deadline, _ := ctx.Deadline()
 	time.Sleep(deadline.Add(time.Second * 1).Sub(time.Now()))
-	echo(ctx, call)
 }
 
 func echo(ctx context.Context, call *InboundCall) {
@@ -84,7 +83,7 @@ func TestRoundTrip(t *testing.T) {
 		var respArg3 BytesInput
 		require.Nil(t, call.Response().ReadArg3(&respArg3))
 		assert.Equal(t, []byte("Body Sent"), []byte(respArg3))
-	})
+	}, true)
 }
 
 func TestBadRequest(t *testing.T) {
@@ -95,7 +94,7 @@ func TestBadRequest(t *testing.T) {
 		_, _, err := sendRecv(ctx, ch, ch.HostPort(), "Nowhere", "Noone", []byte("Headers"), []byte("Body"))
 		require.NotNil(t, err)
 		assert.Equal(t, ErrorCodeBadRequest, GetSystemErrorCode(err))
-	})
+	}, true)
 }
 
 func TestServerBusy(t *testing.T) {
@@ -108,7 +107,7 @@ func TestServerBusy(t *testing.T) {
 		_, _, err := sendRecv(ctx, ch, ch.HostPort(), "TestService", "busy", []byte("Arg2"), []byte("Arg3"))
 		require.NotNil(t, err)
 		assert.Equal(t, ErrorCodeBusy, GetSystemErrorCode(err))
-	})
+	}, true)
 }
 
 func TestTimeout(t *testing.T) {
@@ -123,7 +122,7 @@ func TestTimeout(t *testing.T) {
 
 		// TODO(mmihic): Maybe translate this into ErrTimeout (or vice versa)?
 		assert.Equal(t, context.DeadlineExceeded, err)
-	})
+	}, false) // NB(mmihic): Guaranteed to have frames outstanding, since client returns before server completes
 }
 
 func TestFragmentation(t *testing.T) {
@@ -147,7 +146,7 @@ func TestFragmentation(t *testing.T) {
 		require.Nil(t, err)
 		assert.Equal(t, arg2, respArg2)
 		assert.Equal(t, arg3, respArg3)
-	})
+	}, true)
 }
 
 func sendRecv(ctx context.Context, ch *TChannel, hostPort string, serviceName, operation string,
@@ -164,7 +163,7 @@ func sendRecv(ctx context.Context, ch *TChannel, hostPort string, serviceName, o
 	return []byte(respArg2), []byte(respArg3), nil
 }
 
-func withTestChannel(t *testing.T, f func(ch *TChannel)) {
+func withTestChannel(t *testing.T, f func(ch *TChannel), checkLeaks bool) {
 	fp := &ErrorDetectingFramePool{}
 
 	ch, err := NewChannel(":0", &ChannelOptions{
@@ -177,10 +176,7 @@ func withTestChannel(t *testing.T, f func(ch *TChannel)) {
 
 	f(ch)
 
-	leakedFrames := fp.InUse()
-	leakedFrameNames := make([]string, len(leakedFrames))
-	for i := range leakedFrames {
-		leakedFrameNames[i] = leakedFrames[i].Header.String()
+	if checkLeaks {
+		assert.False(t, fp.ReportLeaks(true))
 	}
-	assert.Equal(t, []string{}, leakedFrameNames, "frames leaked at end of test")
 }
