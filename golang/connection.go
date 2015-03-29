@@ -433,6 +433,7 @@ func (c *Connection) withStateRLock(f func() error) error {
 func (c *Connection) readFrames() {
 	for {
 		frame := c.framePool.Get()
+
 		if err := frame.ReadFrom(c.conn); err != nil {
 			c.framePool.Release(frame)
 			c.connectionError(err)
@@ -464,12 +465,13 @@ func (c *Connection) readFrames() {
 // Run in its own goroutine to prevent overlapping writes on the network socket.
 func (c *Connection) writeFrames() {
 	for f := range c.sendCh {
-		defer c.framePool.Release(f)
-
 		if err := f.WriteTo(c.conn); err != nil {
+			c.framePool.Release(f)
 			c.connectionError(err)
 			return
 		}
+
+		c.framePool.Release(f)
 	}
 }
 
