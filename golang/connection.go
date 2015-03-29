@@ -367,10 +367,9 @@ func (c *Connection) recvMessage(ctx context.Context, msg message, resCh <-chan 
 		return ctx.Err()
 
 	case frame := <-resCh:
-		defer c.framePool.Release(frame)
-
 		msgBuf := typed.NewReadBuffer(frame.SizedPayload())
 		err := msg.read(msgBuf)
+		c.framePool.Release(frame)
 		return err
 	}
 }
@@ -435,10 +434,13 @@ func (c *Connection) readFrames() {
 		frame := c.framePool.Get()
 
 		if err := frame.ReadFrom(c.conn); err != nil {
+			c.log.Warnf("Error reading frame from connection %v", err)
 			c.framePool.Release(frame)
 			c.connectionError(err)
 			return
 		}
+
+		c.log.Debugf("Received %s", frame.Header)
 
 		switch frame.Header.messageType {
 		case messageTypeCallReq:
