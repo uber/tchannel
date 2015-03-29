@@ -76,7 +76,7 @@ func NewChannel(hostPort string, opts *ChannelOptions) (*TChannel, error) {
 
 	logger := opts.Logger
 	if logger == nil {
-		logger = NullLogger{}
+		logger = NullLogger
 	}
 
 	ch := &TChannel{
