@@ -21,8 +21,11 @@ package tchannel
 // THE SOFTWARE.
 
 import (
+	"fmt"
 	"golang.org/x/net/context"
 	"net"
+	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -76,12 +79,17 @@ func NewChannel(hostPort string, opts *ChannelOptions) (*TChannel, error) {
 
 	logger := opts.Logger
 	if logger == nil {
-		logger = NullLogger{}
+		logger = NullLogger
+	}
+
+	processName := opts.ProcessName
+	if processName == "" {
+		processName = fmt.Sprintf("%s[%d]", filepath.Base(os.Args[0]), os.Getpid())
 	}
 
 	ch := &TChannel{
 		connectionOptions: opts.DefaultConnectionOptions,
-		processName:       opts.ProcessName,
+		processName:       processName,
 		log:               logger,
 	}
 

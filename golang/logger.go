@@ -1,5 +1,10 @@
 package tchannel
 
+import (
+	"fmt"
+	"time"
+)
+
 // Copyright (c) 2015 Uber Technologies, Inc.
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -38,16 +43,28 @@ type Logger interface {
 }
 
 // NullLogger is a logger that emits nowhere
-type NullLogger struct{}
+var NullLogger = nullLogger{}
 
-// Errorf logs a message at error priority
-func (l NullLogger) Errorf(msg string, args ...interface{}) {}
+type nullLogger struct{}
 
-// Warnf logs a message at warning priority
-func (l NullLogger) Warnf(msg string, args ...interface{}) {}
+func (l nullLogger) Errorf(msg string, args ...interface{}) {}
+func (l nullLogger) Warnf(msg string, args ...interface{})  {}
+func (l nullLogger) Infof(msg string, args ...interface{})  {}
+func (l nullLogger) Debugf(msg string, args ...interface{}) {}
 
-// Infof logs a message at info priority
-func (l NullLogger) Infof(msg string, args ...interface{}) {}
+// SimpleLogger prints logging information to the console
+var SimpleLogger = simpleLogger{}
 
-// Debugf logs a message at debug priority
-func (l NullLogger) Debugf(msg string, args ...interface{}) {}
+type simpleLogger struct{}
+
+const (
+	simpleLoggerStamp = "2006-01-02 15:04:05"
+)
+
+func (l simpleLogger) Errorf(msg string, args ...interface{}) { l.printfn("E", msg, args...) }
+func (l simpleLogger) Warnf(msg string, args ...interface{})  { l.printfn("W", msg, args...) }
+func (l simpleLogger) Infof(msg string, args ...interface{})  { l.printfn("I", msg, args...) }
+func (l simpleLogger) Debugf(msg string, args ...interface{}) { l.printfn("D", msg, args...) }
+func (l simpleLogger) printfn(prefix, msg string, args ...interface{}) {
+	fmt.Printf("%s [%s] %s\n", time.Now().Format(simpleLoggerStamp), prefix, fmt.Sprintf(msg, args...))
+}

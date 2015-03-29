@@ -23,13 +23,12 @@ package main
 import (
 	"code.google.com/p/getopt"
 	"github.com/uber/tchannel/golang"
-	"github.com/uber/tchannel/golang/examples"
 	"golang.org/x/net/context"
 	"os"
 	"time"
 )
 
-var log = examples.LogrusLogger{}
+var log = tchannel.SimpleLogger
 
 var peerAddr = getopt.StringLong("peer", 'p', "", "Host and port of remote peer")
 var serviceName = getopt.StringLong("service", 's', "", "Name of service to invoke")

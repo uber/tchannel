@@ -22,9 +22,10 @@ package tchannel
 
 import (
 	"errors"
-	"golang.org/x/net/context"
 	"io"
 	"sync"
+
+	"golang.org/x/net/context"
 )
 
 var (
@@ -37,7 +38,8 @@ var (
 
 // Handles an incoming call request, dispatching the call to the worker pool
 func (c *Connection) handleCallReq(frame *Frame) {
-	var callReq callReq
+	callReq := callReq{id: frame.Header.ID}
+
 	firstFragment, err := newInboundFragment(frame, &callReq, nil)
 	if err != nil {
 		// TODO(mmihic): Probably want to treat this as a protocol error
