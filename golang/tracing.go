@@ -25,6 +25,7 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/uber/tchannel/golang/typed"
 	"golang.org/x/net/context"
 )
 
@@ -42,6 +43,51 @@ type Span struct {
 
 func (s Span) String() string {
 	return fmt.Sprintf("TraceID=%d,ParentID=%d,SpanID=%d", s.traceID, s.parentID, s.spanID)
+}
+
+func (s *Span) read(r *typed.ReadBuffer) error {
+	var err error
+	s.traceID, err = r.ReadUint64()
+	if err != nil {
+		return err
+	}
+
+	s.parentID, err = r.ReadUint64()
+	if err != nil {
+		return err
+	}
+
+	s.spanID, err = r.ReadUint64()
+	if err != nil {
+		return err
+	}
+
+	s.flags, err = r.ReadByte()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Span) write(w *typed.WriteBuffer) error {
+	if err := w.WriteUint64(s.traceID); err != nil {
+		return err
+	}
+
+	if err := w.WriteUint64(s.parentID); err != nil {
+		return err
+	}
+
+	if err := w.WriteUint64(s.spanID); err != nil {
+		return err
+	}
+
+	if err := w.WriteByte(s.flags); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 const (

@@ -62,6 +62,7 @@ func (c *Connection) handleCallReq(frame *Frame) {
 		ctx:      ctx,
 		cancel:   cancel,
 		checksum: ChecksumTypeCrc32.New(), // TODO(mmihic): Make configurable or mirror req?
+		span:     callReq.Tracing,
 	}
 	res.body = newBodyWriter(res)
 
@@ -76,6 +77,7 @@ func (c *Connection) handleCallReq(frame *Frame) {
 		recvLastFragment: firstFragment.last,
 		serviceName:      string(callReq.Service),
 		state:            inboundCallReadyToReadArg1,
+		span:             callReq.Tracing,
 	}
 
 	go c.dispatchInbound(call)
@@ -131,6 +133,7 @@ type InboundCall struct {
 	recvCh           <-chan *Frame
 	curFragment      *inFragment
 	checksum         Checksum
+	span             Span
 }
 
 type inboundCallState int
@@ -254,6 +257,7 @@ type InboundCallResponse struct {
 	startedFirstFragment bool
 	body                 *bodyWriter
 	applicationError     bool
+	span                 Span
 }
 
 type inboundCallResponseState int
@@ -275,10 +279,10 @@ func (call *InboundCallResponse) SendSystemError(err error) error {
 
 	// Send the error frame
 	frame, err := marshalMessage(&errorMessage{
-		id:                call.id,
-		originalMessageID: call.id,
-		errorCode:         GetSystemErrorCode(err),
-		message:           err.Error()}, call.conn.framePool)
+		id:        call.id,
+		tracing:   call.span,
+		errorCode: GetSystemErrorCode(err),
+		message:   err.Error()}, call.conn.framePool)
 
 	if err != nil {
 		// Nothing we can do here

@@ -253,23 +253,7 @@ func (m *callReq) read(r *typed.ReadBuffer) error {
 	}
 
 	m.TimeToLive = time.Duration(ttl) * time.Millisecond
-	m.Tracing.traceID, err = r.ReadUint64()
-	if err != nil {
-		return err
-	}
-
-	m.Tracing.parentID, err = r.ReadUint64()
-	if err != nil {
-		return err
-	}
-
-	m.Tracing.spanID, err = r.ReadUint64()
-	if err != nil {
-		return err
-	}
-
-	m.Tracing.flags, err = r.ReadByte()
-	if err != nil {
+	if err := m.Tracing.read(r); err != nil {
 		return err
 	}
 
@@ -294,19 +278,7 @@ func (m *callReq) write(w *typed.WriteBuffer) error {
 		return err
 	}
 
-	if err := w.WriteUint64(m.Tracing.traceID); err != nil {
-		return err
-	}
-
-	if err := w.WriteUint64(m.Tracing.parentID); err != nil {
-		return err
-	}
-
-	if err := w.WriteUint64(m.Tracing.spanID); err != nil {
-		return err
-	}
-
-	if err := w.WriteByte(m.Tracing.flags); err != nil {
+	if err := m.Tracing.write(w); err != nil {
 		return err
 	}
 
@@ -321,7 +293,6 @@ func (m *callReq) write(w *typed.WriteBuffer) error {
 	if err := m.Headers.write(w); err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -361,23 +332,8 @@ func (m *callRes) read(r *typed.ReadBuffer) error {
 		return err
 	}
 	m.ResponseCode = ResponseCode(c)
-	m.Tracing.traceID, err = r.ReadUint64()
-	if err != nil {
-		return err
-	}
 
-	m.Tracing.parentID, err = r.ReadUint64()
-	if err != nil {
-		return err
-	}
-
-	m.Tracing.spanID, err = r.ReadUint64()
-	if err != nil {
-		return err
-	}
-
-	m.Tracing.flags, err = r.ReadByte()
-	if err != nil {
+	if err := m.Tracing.read(r); err != nil {
 		return err
 	}
 
@@ -394,19 +350,7 @@ func (m *callRes) write(w *typed.WriteBuffer) error {
 		return err
 	}
 
-	if err := w.WriteUint64(m.Tracing.traceID); err != nil {
-		return err
-	}
-
-	if err := w.WriteUint64(m.Tracing.parentID); err != nil {
-		return err
-	}
-
-	if err := w.WriteUint64(m.Tracing.spanID); err != nil {
-		return err
-	}
-
-	if err := w.WriteByte(m.Tracing.flags); err != nil {
+	if err := m.Tracing.write(w); err != nil {
 		return err
 	}
 
@@ -429,10 +373,10 @@ func (c *callResContinue) write(w *typed.WriteBuffer) error { return nil }
 
 // An Error message, a system-level error response to a request or a protocol level error
 type errorMessage struct {
-	id                uint32
-	errorCode         SystemErrorCode
-	originalMessageID uint32
-	message           string
+	id        uint32
+	errorCode SystemErrorCode
+	tracing   Span
+	message   string
 }
 
 func (m *errorMessage) ID() uint32               { return m.id }
@@ -444,8 +388,7 @@ func (m *errorMessage) read(r *typed.ReadBuffer) error {
 	}
 
 	m.errorCode = SystemErrorCode(errCode)
-
-	if m.originalMessageID, err = r.ReadUint32(); err != nil {
+	if err := m.tracing.read(r); err != nil {
 		return err
 	}
 
@@ -466,7 +409,7 @@ func (m *errorMessage) write(w *typed.WriteBuffer) error {
 		return err
 	}
 
-	if err := w.WriteUint32(m.originalMessageID); err != nil {
+	if err := m.tracing.write(w); err != nil {
 		return err
 	}
 

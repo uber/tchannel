@@ -390,8 +390,7 @@ func (c *Connection) handleError(frame *Frame) {
 		return
 	}
 
-	requestID := errorMessage.originalMessageID
-	if err := c.outbound.forwardPeerFrame(requestID, frame); err != nil {
-		c.outbound.removeExchange(requestID)
+	if err := c.outbound.forwardPeerFrame(frame.Header.ID, frame); err != nil {
+		c.outbound.removeExchange(frame.Header.ID)
 	}
 }
