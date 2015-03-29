@@ -12,6 +12,11 @@ var (
 	errMexChannelFull = NewSystemError(ErrorCodeBusy, "cannot send frame to message exchange channel")
 )
 
+const (
+	messageExchangeSetInbound  = "inbound"
+	messageExchangeSetOutbound = "outbound"
+)
+
 // A messageExchange tracks this channel's side of a message exchange with a peer.  Each
 // message exchange has a channel that can be used to receive frames from the peer, and
 // a Context that can controls when the exchange has timed out or been cancelled.
@@ -52,6 +57,7 @@ func (mex *messageExchange) releaseTo(framePool FramePool) {
 // even buggy code doesn't result in out of memory situations
 type messageExchangeSet struct {
 	log       Logger
+	name      string
 	exchanges map[uint32]*messageExchange
 	framePool FramePool
 	mut       sync.Mutex
@@ -60,6 +66,7 @@ type messageExchangeSet struct {
 // newExchange creates and adds a new message exchange to this set
 func (mexset *messageExchangeSet) newExchange(ctx context.Context,
 	msgType messageType, msgID uint32, bufferSize int) (*messageExchange, error) {
+	mexset.log.Debugf("Creating new %s message exchange for [%s:%d]", mexset.name, msgType, msgID)
 
 	mex := &messageExchange{
 		msgType: msgType,
@@ -73,8 +80,8 @@ func (mexset *messageExchangeSet) newExchange(ctx context.Context,
 
 	if existingMex := mexset.exchanges[mex.msgID]; existingMex != nil {
 		if existingMex == mex {
-			mexset.log.Warnf("mex for %s, %d registered multiple times",
-				mex.msgType, mex.msgID)
+			mexset.log.Warnf("%s mex for %s, %d registered multiple times",
+				mexset.name, mex.msgType, mex.msgID)
 		} else {
 			mexset.log.Warnf("msg id %d used for both active mex %s and new mex %s",
 				mex.msgID, existingMex.msgType, mex.msgType)
@@ -92,6 +99,8 @@ func (mexset *messageExchangeSet) newExchange(ctx context.Context,
 // removeExchange removes a messge exchange from the set, if it exists.  It's perfectly
 // fine to try and remove an exchange that has already completed
 func (mexset *messageExchangeSet) removeExchange(msgID uint32) {
+	mexset.log.Debugf("Removing %s message exchange %d", mexset.name, msgID)
+
 	mexset.mut.Lock()
 	defer mexset.mut.Unlock()
 
@@ -108,6 +117,8 @@ func (mexset *messageExchangeSet) removeExchange(msgID uint32) {
 // frame.  If we instead made the error frame message ID match the ID of the message in error, we could
 // drop this additional parameters
 func (mexset *messageExchangeSet) forwardPeerFrame(messageID uint32, frame *Frame) error {
+	mexset.log.Debugf("forwarding %s %s", mexset.name, frame.Header)
+
 	mexset.mut.Lock()
 	mex := mexset.exchanges[messageID]
 	mexset.mut.Unlock()

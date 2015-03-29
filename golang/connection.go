@@ -174,11 +174,13 @@ func newConnection(ch *TChannel, conn net.Conn, initialState connectionState,
 		localPeerInfo: opts.PeerInfo,
 		checksumType:  opts.ChecksumType,
 		inbound: messageExchangeSet{
+			name:      messageExchangeSetInbound,
 			log:       ch.log,
 			exchanges: make(map[uint32]*messageExchange),
 			framePool: framePool,
 		},
 		outbound: messageExchangeSet{
+			name:      messageExchangeSetOutbound,
 			log:       ch.log,
 			exchanges: make(map[uint32]*messageExchange),
 			framePool: framePool,

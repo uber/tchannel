@@ -140,7 +140,7 @@ func TestFragmentation(t *testing.T) {
 			arg3[i] = byte(i&0xF0) + 100
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 		defer cancel()
 
 		respArg2, respArg3, err := sendRecv(ctx, ch, ch.HostPort(), "TestService", "echo", arg2, arg3)
@@ -167,7 +167,10 @@ func sendRecv(ctx context.Context, ch *TChannel, hostPort string, serviceName, o
 func withTestChannel(t *testing.T, f func(ch *TChannel)) {
 	fp := &ErrorDetectingFramePool{}
 
-	ch, err := NewChannel(":0", &ChannelOptions{FramePool: fp})
+	ch, err := NewChannel(":0", &ChannelOptions{
+		Logger:    SimpleLogger,
+		FramePool: fp,
+	})
 	require.Nil(t, err)
 
 	go ch.ListenAndHandle()
