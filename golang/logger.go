@@ -56,10 +56,10 @@ var SimpleLogger = simpleLogger{}
 
 type simpleLogger struct{}
 
-func (l simpleLogger) Errorf(msg string, args ...interface{}) { l.printfn("E", msg, args) }
-func (l simpleLogger) Warnf(msg string, args ...interface{})  { l.printfn("W", msg, args) }
-func (l simpleLogger) Infof(msg string, args ...interface{})  { l.printfn("I", msg, args) }
-func (l simpleLogger) Debugf(msg string, args ...interface{}) { l.printfn("D", msg, args) }
+func (l simpleLogger) Errorf(msg string, args ...interface{}) { l.printfn("E", msg, args...) }
+func (l simpleLogger) Warnf(msg string, args ...interface{})  { l.printfn("W", msg, args...) }
+func (l simpleLogger) Infof(msg string, args ...interface{})  { l.printfn("I", msg, args...) }
+func (l simpleLogger) Debugf(msg string, args ...interface{}) { l.printfn("D", msg, args...) }
 func (l simpleLogger) printfn(prefix, msg string, args ...interface{}) {
-	fmt.Printf("%s %s\n", prefix, fmt.Sprintf(msg, args))
+	fmt.Printf("%s %s\n", prefix, fmt.Sprintf(msg, args...))
 }
