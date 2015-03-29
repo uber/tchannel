@@ -84,7 +84,7 @@ type ConnectionOptions struct {
 
 // Connection represents a connection to a remote peer.
 type Connection struct {
-	ch             *TChannel
+	ch             *Channel
 	log            Logger
 	checksumType   ChecksumType
 	framePool      FramePool
@@ -128,21 +128,21 @@ const (
 )
 
 // Creates a new TChannelConnection around an outbound connection initiated to a peer
-func newOutboundConnection(ch *TChannel, conn net.Conn,
+func newOutboundConnection(ch *Channel, conn net.Conn,
 	opts *ConnectionOptions) (*Connection, error) {
 	c := newConnection(ch, conn, connectionWaitingToSendInitReq, opts)
 	return c, nil
 }
 
 // Creates a new TChannelConnection based on an incoming connection from a peer
-func newInboundConnection(ch *TChannel, conn net.Conn,
+func newInboundConnection(ch *Channel, conn net.Conn,
 	opts *ConnectionOptions) (*Connection, error) {
 	c := newConnection(ch, conn, connectionWaitingToRecvInitReq, opts)
 	return c, nil
 }
 
 // Creates a new connection in a given initial state
-func newConnection(ch *TChannel, conn net.Conn, initialState connectionState,
+func newConnection(ch *Channel, conn net.Conn, initialState connectionState,
 	opts *ConnectionOptions) *Connection {
 
 	if opts == nil {
