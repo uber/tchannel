@@ -343,19 +343,17 @@ func (call *OutboundCallResponse) waitForFragment() (*inFragment, error) {
 			// TODO(mmihic): Might want to change the channel to support either a frame
 			// or an error message, and dispatch depending on which is sent.  Would
 			// avoid the need for a double parse
-			defer call.conn.framePool.Release(frame)
-
 			var err errorMessage
 			err.read(typed.NewReadBuffer(frame.SizedPayload()))
+			call.conn.framePool.Release(frame)
 			return nil, call.failed(err.AsSystemError())
 
 		default:
 			// TODO(mmihic): Should be treated as a protocol error
-			defer call.conn.framePool.Release(frame)
-
 			call.conn.log.Warnf("Received unexpected message %d for %d from %s",
 				int(frame.Header.messageType), frame.Header.ID, call.conn.remotePeerInfo)
 
+			call.conn.framePool.Release(frame)
 			return nil, call.failed(errUnexpectedFragmentType)
 		}
 	}
