@@ -55,7 +55,7 @@ func (p *ErrorDetectingFramePool) Get() *Frame {
 	p.mut.Lock()
 	defer p.mut.Unlock()
 
-	frame := &Frame{}
+	frame := NewFrame(MaxFramePayloadSize)
 	p.inUse = append(p.inUse, p.track(frame))
 	return frame
 }
