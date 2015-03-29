@@ -96,7 +96,7 @@ func (p *ErrorDetectingFramePool) ReportLeaks(includeStack bool) bool {
 	}
 
 	for _, frame := range p.inUse {
-		fmt.Printf("Leaked frame %s\n", frame)
+		fmt.Printf("Leaked frame (%p), %s\n", frame.frame, frame)
 		if includeStack {
 			fmt.Printf("Allocated at %s", frame.allocatedAt)
 		}
