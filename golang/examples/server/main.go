@@ -23,13 +23,12 @@ package main
 import (
 	"code.google.com/p/getopt"
 	"github.com/uber/tchannel/golang"
-	"github.com/uber/tchannel/golang/examples"
 	"golang.org/x/net/context"
 	"os"
 	"time"
 )
 
-var log = examples.LogrusLogger{}
+var log = tchannel.SimpleLogger
 
 func echo(ctx context.Context, call *tchannel.InboundCall) {
 	var inArg2 tchannel.BytesInput
