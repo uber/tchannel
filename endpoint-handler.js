@@ -77,7 +77,7 @@ TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, re
         var name = String(arg1);
         var handler = self.endpoints[name];
         if (!handler) {
-            res.sendError('BadRequest', util.format(
+            sendError('BadRequest', util.format(
                 'no such endpoint service=%j endpoint=%j',
                 req.service, name));
         } else if (handler.canStream) {
@@ -100,6 +100,10 @@ TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, re
         function compatHandle(handler, args) {
             handler(req, res, args.arg2, args.arg3);
         }
+    }
+
+    function sendError(code, mess) {
+        res.sendError(code, mess);
     }
 };
 
