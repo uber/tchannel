@@ -196,6 +196,38 @@ TChannel.prototype.getServer = function getServer() {
     return self.serverSocket;
 };
 
+TChannel.prototype.makeSubChannel = function makeSubChannel(options) {
+    var self = this;
+    if (!options) options = {};
+    if (self.serviceName) {
+        throw new Error('arbitrary-depth sub channels are unsupported'); // TODO typed error
+    }
+    if (!options.serviceName) {
+        throw new Error('must specify serviceName'); // TODO typed error
+    }
+    var opts = extend(self.options);
+    var keys = Object.keys(options);
+    for (var i = 0; i < keys.length; i++) {
+        switch (keys[i]) {
+            case 'peers':
+                break;
+            default:
+                opts[keys[i]] = options[keys[i]];
+        }
+    }
+    var chan = TChannel(opts);
+    if (options.peers) {
+        for (i = 0; i < options.peers.length; i++) {
+            if (typeof options.peers[i] === 'string') {
+                chan.peers.addPeer(self.peers.get(options.peers[i]));
+            } else {
+                chan.peers.addPeer(options.peers[i]);
+            }
+        }
+    }
+    return chan;
+};
+
 TChannel.prototype._hookupPeers = function _hookupPeers() {
     var self = this;
     self.peers.on('allocPeer', function(peer) {
