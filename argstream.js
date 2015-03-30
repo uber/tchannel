@@ -81,6 +81,9 @@ function ArgStream() {
 inherits(ArgStream, EventEmitter);
 
 function InArgStream() {
+    if (!(this instanceof InArgStream)) {
+        return new InArgStream();
+    }
     var self = this;
     ArgStream.call(self);
     self.streams = [self.arg1, self.arg2, self.arg3];
@@ -132,6 +135,9 @@ InArgStream.prototype.handleFrame = function handleFrame(parts) {
 };
 
 function OutArgStream() {
+    if (!(this instanceof OutArgStream)) {
+        return new OutArgStream();
+    }
     var self = this;
     ArgStream.call(self);
     self._flushImmed = null;
