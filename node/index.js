@@ -100,18 +100,24 @@ function TChannel(options) {
     }, options);
 
     self.logger = self.options.logger || nullLogger;
+
     // Filled in by the listen call:
     self.host = null;
     self.requestedPort = null;
+
     // Filled in by listening event:
     self.port = null;
     self.hostPort = null;
     self.random = self.options.random || globalRandom;
     self.timers = self.options.timers || globalTimers;
 
-    self.peers = Object.create(null);
-
+    // how to handle incoming requests
     self.handler = self.options.handler || noHandlerHandler;
+
+    // populated by:
+    // - manually api (.addPeer etc)
+    // - incoming connections on any listening socket
+    self.peers = Object.create(null);
 
     // TChannel advances through the following states.
     self.listened = false;
