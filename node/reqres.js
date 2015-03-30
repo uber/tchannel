@@ -27,6 +27,8 @@ var parallel = require('run-parallel');
 var InArgStream = require('./argstream').InArgStream;
 var OutArgStream = require('./argstream').OutArgStream;
 
+var emptyBuffer = Buffer(0);
+
 var States = Object.create(null);
 States.Initial = 0;
 States.Streaming = 1;
@@ -48,7 +50,7 @@ function TChannelIncomingRequest(id, options) {
     self.remoteAddr = null;
     self.headers = options.headers || {};
     self.checksum = options.checksum || null;
-    if (true) {
+    if (options.streamed) {
         self.streamed = true;
         self._argstream = InArgStream();
         self.arg1 = self._argstream.arg1;
@@ -60,6 +62,12 @@ function TChannelIncomingRequest(id, options) {
         self._argstream.on('finish', function onFinish() {
             self.emit('finish');
         });
+    } else {
+        self.streamed = false;
+        self._argstream = null;
+        self.arg1 = emptyBuffer;
+        self.arg2 = emptyBuffer;
+        self.arg3 = emptyBuffer;
     }
     self.on('finish', function onFinish() {
         self.state = States.Done;
@@ -73,7 +81,12 @@ TChannelIncomingRequest.prototype.handleFrame = function handleFrame(parts) {
     if (self.streamed) {
         self._argstream.handleFrame(parts);
     } else {
-        throw new Error('not implemented');
+        if (!parts) return;
+        if (parts.length !== 3 ||
+                self.state !== States.Initial) throw new Error('not implemented');
+        self.arg1 = parts[0] || emptyBuffer;
+        self.arg2 = parts[1] || emptyBuffer;
+        self.arg3 = parts[2] || emptyBuffer;
     }
 };
 
@@ -98,7 +111,7 @@ function TChannelIncomingResponse(id, options) {
     self.code = options.code || 0;
     self.checksum = options.checksum || null;
     self.ok = self.code === 0; // TODO: probably okay, but a bit jank
-    if (true) {
+    if (options.streamed) {
         self.streamed = true;
         self._argstream = InArgStream();
         self.arg1 = self._argstream.arg1;
@@ -110,6 +123,12 @@ function TChannelIncomingResponse(id, options) {
         self._argstream.on('finish', function onFinish() {
             self.emit('finish');
         });
+    } else {
+        self.streamed = false;
+        self._argstream = null;
+        self.arg1 = emptyBuffer;
+        self.arg2 = emptyBuffer;
+        self.arg3 = emptyBuffer;
     }
     self.on('finish', function onFinish() {
         self.state = States.Done;
@@ -123,7 +142,12 @@ TChannelIncomingResponse.prototype.handleFrame = function handleFrame(parts) {
     if (self.streamed) {
         self._argstream.handleFrame(parts);
     } else {
-        throw new Error('not implemented');
+        if (!parts) return;
+        if (parts.length !== 3 ||
+                self.state !== States.Initial) throw new Error('not implemented');
+        self.arg1 = parts[0] || emptyBuffer;
+        self.arg2 = parts[1] || emptyBuffer;
+        self.arg3 = parts[2] || emptyBuffer;
     }
 };
 
@@ -155,7 +179,7 @@ function TChannelOutgoingRequest(id, options) {
     self.checksumType = options.checksumType || 0;
     self.checksum = options.checksum || null;
     self.sendFrame = options.sendFrame;
-    if (true) {
+    if (options.streamed) {
         self.streamed = true;
         self._argstream = OutArgStream();
         self.arg1 = self._argstream.arg1;
@@ -170,6 +194,12 @@ function TChannelOutgoingRequest(id, options) {
         self._argstream.on('finish', function onFinish() {
             self.emit('finish');
         });
+    } else {
+        self.streamed = false;
+        self._argstream = null;
+        self.arg1 = null;
+        self.arg2 = null;
+        self.arg3 = null;
     }
 }
 
@@ -231,7 +261,12 @@ TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callbac
         self.arg2.end(arg2);
         self.arg3.end(arg3);
     } else {
-        throw new Error('not implemented');
+        self.sendCallRequestFrame([
+            arg1 ? Buffer(arg1) : emptyBuffer,
+            arg2 ? Buffer(arg2) : emptyBuffer,
+            arg3 ? Buffer(arg3) : emptyBuffer
+        ], true);
+        self.emit('finish');
     }
     return self;
 };
@@ -255,7 +290,7 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
                 arg3: res.arg3.onValueReady
             }, compatCall);
         } else {
-            throw new Error('not implemented');
+            compatCall(null, res);
         }
 
         function compatCall(err, args) {
@@ -284,7 +319,7 @@ function TChannelOutgoingResponse(id, options) {
     self.checksum = options.checksum || null;
     self.ok = true;
     self.sendFrame = options.sendFrame;
-    if (true) {
+    if (options.streamed) {
         self.streamed = true;
         self._argstream = OutArgStream();
         self.arg1 = self._argstream.arg1;
@@ -300,7 +335,11 @@ function TChannelOutgoingResponse(id, options) {
             self.emit('finish');
         });
     } else {
-        throw new Error('not implemented');
+        self.streamed = false;
+        self._argstream = null;
+        self.arg1 = null;
+        self.arg2 = null;
+        self.arg3 = null;
     }
 }
 
@@ -390,7 +429,12 @@ TChannelOutgoingResponse.prototype.sendOk = function sendOk(res1, res2) {
         self.arg2.end(res1);
         self.arg3.end(res2);
     } else {
-        throw new Error('not implemented');
+        self.sendCallResponseFrame([
+            self.arg1 || emptyBuffer,
+            res1 ? Buffer(res1) : emptyBuffer,
+            res2 ? Buffer(res2) : emptyBuffer
+        ], true);
+        self.emit('finish');
     }
 };
 
@@ -401,7 +445,12 @@ TChannelOutgoingResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
         self.arg2.end(res1);
         self.arg3.end(res2);
     } else {
-        throw new Error('not implemented');
+        self.sendCallResponseFrame([
+            self.arg1 || emptyBuffer,
+            res1 ? Buffer(res1) : emptyBuffer,
+            res2 ? Buffer(res2) : emptyBuffer
+        ], true);
+        self.emit('finish');
     }
 };
 

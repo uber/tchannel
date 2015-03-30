@@ -308,7 +308,9 @@ function streamingTest(testCase, assert, callback) {
     var resHeadStream = PassThrough();
     var resBodyStream = PassThrough();
 
-    var req = testCase.channel.request(testCase.opts);
+    var req = testCase.channel.request(extend({
+        streamed: true
+    }, testCase.opts));
     req.arg1.end(testCase.op);
     reqHeadStream.pipe(resHeadStream);
     reqHeadStream.pipe(req.arg2);
@@ -332,12 +334,16 @@ function streamingTest(testCase, assert, callback) {
                 verifyStream('arg3', res.arg3, resBodyStream),
             ], callback);
         } else {
-            throw new Error('not implemented');
+            verifyStreamChunk('arg2', 0, res.arg2, resHeadStream);
+            verifyDrained('arg2', resHeadStream);
+            verifyStreamChunk('arg3', 0, res.arg3, resBodyStream);
+            verifyDrained('arg3', resBodyStream);
+            callback();
         }
     }
 
     function verifyStreamChunk(name, offset, gotChunk, expected) {
-        var expectedChunk = expected.read(gotChunk.length);
+        var expectedChunk = expected.read(gotChunk.length) || Buffer(0);
         assert.deepEqual(gotChunk, expectedChunk, util.format(
             '%s: expected chunk %s bytes @%s',
             name,
@@ -382,7 +388,7 @@ function describe(params) {
 function echoHandler() {
     var handler = EndpointHandler();
     function foo(req, buildRes) {
-        var res = buildRes();
+        var res = buildRes({streamed: req.streamed});
         if (req.streamed) {
             res.setOk(true);
             req.arg2.on('data', function onArg2Data(chunk) {
@@ -397,6 +403,8 @@ function echoHandler() {
             req.arg3.on('end', function onArg3End() {
                 res.arg3.end();
             });
+        } else {
+            res.sendOk(req.arg2, req.arg3);
         }
     }
     foo.canStream = true;
