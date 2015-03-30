@@ -696,6 +696,8 @@ TChannelConnection.prototype.popOutOp = function popOutOp(id) {
 // create a request
 TChannelConnection.prototype.request = function request(options) {
     var self = this;
+    if (!options) options = {};
+
     // TODO: use this to protect against >4Mi outstanding messages edge case
     // (e.g. zombie operation bug, incredible throughput, or simply very long
     // timeout
