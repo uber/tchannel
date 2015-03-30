@@ -825,11 +825,11 @@ TChannelConnection.prototype.handleCallRequest = function handleCallRequest(req)
         self.channel.handler.handleRequest(req, buildResponse);
     }
 
-    function buildResponse() {
+    function buildResponse(options) {
         if (op.res && op.res.state !== reqres.States.Initial) {
             throw new Error('response already built and started'); // TODO: typed error
         }
-        op.res = self.handler.buildOutgoingResponse(req);
+        op.res = self.handler.buildOutgoingResponse(req, options);
         op.res.once('finish', opDone);
         return op.res;
     }
