@@ -70,6 +70,10 @@ TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, re
     // TODO: waterfall
     req.arg1.onValueReady(function arg1Ready(err, arg1) {
         if (err) throw err; // TODO: protocol error, respond with error frame
+        handleArg1(arg1);
+    });
+
+    function handleArg1(arg1) {
         var name = String(arg1);
         var handler = self.endpoints[name];
         if (!handler) {
@@ -89,7 +93,7 @@ TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, re
                 else handler(req, res, args.arg2, args.arg3);
             });
         }
-    });
+    }
 };
 
 module.exports = TChannelEndpointHandler;
