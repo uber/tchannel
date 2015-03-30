@@ -26,8 +26,11 @@ var timers = TimeMock(Date.now());
 
 var EndpointHandler = require('../endpoint-handler');
 
-allocCluster.test('requests will timeout', 2, {
-    timers: timers
+allocCluster.test('requests will timeout', {
+    numPeers: 2,
+    channelOptions: {
+        timers: timers
+    }
 }, function t(cluster, assert) {
     var one = cluster.channels[0];
     var two = cluster.channels[1];
