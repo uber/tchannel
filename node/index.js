@@ -822,8 +822,7 @@ TChannelConnection.prototype.handleCallRequest = function handleCallRequest(req)
     process.nextTick(runHandler);
 
     function runHandler() {
-        var res = buildResponse();
-        self.channel.handler.handleRequest(req, res);
+        self.channel.handler.handleRequest(req, buildResponse);
     }
 
     function buildResponse() {

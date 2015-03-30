@@ -144,8 +144,10 @@ function partsTest(testCase, assert) {
 
 function echoHandler() {
     var handler = EndpointHandler();
-    function foo(req, res) {
+    function foo(req, buildRes) {
+        var res = buildRes();
         res.setOk(true);
+
         req.arg2.on('data', function onArg2Data(chunk) {
             res.arg2.write(chunk);
         });

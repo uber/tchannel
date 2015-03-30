@@ -65,7 +65,7 @@ TChannelEndpointHandler.prototype.register = function register(name, handler) {
     return handler;
 };
 
-TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, res) {
+TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, buildResponse) {
     var self = this;
     // TODO: waterfall
     req.arg1.onValueReady(function arg1Ready(err, arg1) {
@@ -87,7 +87,7 @@ TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, re
                 'no such endpoint service=%j endpoint=%j',
                 req.service, name));
         } else if (handler.canStream) {
-            handler(req, res);
+            handler(req, buildResponse);
         } else {
             parallel({
                 arg2: req.arg2.onValueReady,
@@ -107,11 +107,13 @@ TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, re
         }
 
         function compatHandle(handler, args) {
+            var res = buildResponse();
             handler(req, res, args.arg2, args.arg3);
         }
     }
 
     function sendError(code, mess) {
+        var res = buildResponse();
         res.sendError(code, mess);
     }
 };
