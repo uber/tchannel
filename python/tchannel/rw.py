@@ -56,10 +56,15 @@ def number(width_bytes):
 
 
 def args(length_rw):
+    """Build a ReadWriter for args=[arg1, arg2, arg3]
+
+    :param length_rw:
+        ReadWriter for the length of each arg
+    """
     return ArgsReaderWriter(length_rw)
 
 
-def len_prefixed_string(length_rw, is_binary=True):
+def len_prefixed_string(length_rw, is_binary=False):
     """Build a ReadWriter for strings prefixed with their length.
 
     .. code-block:: python
@@ -245,6 +250,13 @@ class ReadWriter(object):
         """
         raise NotImplementedError()
 
+    def length(self, obj):
+        """Return the number of bytes will actually be written into io.
+
+        For cases where the width depends on the input, this should return the
+        length of data will be written into iostream."""
+        raise NotImplementedError()
+
     def width(self):
         """Return the number of bytes this ReadWriter is expected to take.
 
@@ -325,6 +337,9 @@ class DelegatingReadWriter(ReadWriter):
     def width(self):
         return self.__rw__.width()
 
+    def length(self, obj):
+        return self.__rw__.length(obj)
+
 
 class NumberReadWriter(ReadWriter):
     """See :py:func:`number` for documentation."""
@@ -355,12 +370,16 @@ class NumberReadWriter(ReadWriter):
     def width(self):
         return self._width
 
+    def length(self, obj):
+        return self._width
+
 
 class ArgsReaderWriter(ReadWriter):
     def __init__(self, length_rw, num=3):
         assert length_rw is not None
         self._length_rw = length_rw
-        self._rw = len_prefixed_string(self._length_rw)
+        self._rw = len_prefixed_string(self._length_rw,
+                                       is_binary=True)
         self.num = num
 
     def read(self, stream):
@@ -374,10 +393,21 @@ class ArgsReaderWriter(ReadWriter):
 
     def write(self, args, stream):
         for arg in args:
+            if arg is None:
+                arg = ""
             self._rw.write(arg, stream)
 
     def width(self):
         return self.num * self._length_rw.width()
+
+    def length(self, args):
+        size = 0
+        for arg in args:
+            if arg is None:
+                arg = ""
+            size += self._rw.length(arg)
+
+        return size
 
 
 class LengthPrefixedBlobReadWriter(ReadWriter):
@@ -385,7 +415,7 @@ class LengthPrefixedBlobReadWriter(ReadWriter):
 
     __slots__ = ('_length', '_is_binary')
 
-    def __init__(self, length_rw, is_binary=True):
+    def __init__(self, length_rw, is_binary=False):
         assert length_rw is not None
         self._length = length_rw
         self._is_binary = is_binary
@@ -402,7 +432,6 @@ class LengthPrefixedBlobReadWriter(ReadWriter):
 
     def write(self, s, stream):
         if not self._is_binary:
-            import ipdb; ipdb.set_trace()
             s = s.encode('utf-8')
         length = len(s)
         self._length.write(length, stream)
@@ -411,6 +440,12 @@ class LengthPrefixedBlobReadWriter(ReadWriter):
 
     def width(self):
         return self._length.width()
+
+    def length(self, s):
+        if not self._is_binary:
+            s = s.encode('utf-8')
+
+        return len(s) + self._length.width()
 
 
 class ChainReadWriter(ReadWriter):
@@ -434,6 +469,15 @@ class ChainReadWriter(ReadWriter):
 
     def width(self):
         return sum(link.width() for link in self._links)
+
+    def length(self, items):
+        assert len(items) == len(self._links)
+
+        size = 0
+        for item, link in zip(items, self._links):
+            size += link.length(item)
+
+        return size
 
 
 class NamedChainReadWriter(ReadWriter):
@@ -468,6 +512,15 @@ class NamedChainReadWriter(ReadWriter):
 
     def width(self):
         return sum(rw.width() for _, rw in self._pairs)
+
+    def length(self, obj):
+        size = 0
+        for name, rw in self._pairs:
+            if name != skip:
+                size += rw.length(obj[name])
+            else:
+                size += rw.length(None)
+        return size
 
 
 class InstanceReadWriter(ReadWriter):
@@ -504,6 +557,30 @@ class InstanceReadWriter(ReadWriter):
     def width(self):
         return sum(rw.width() for _, rw in self._pairs)
 
+    def length(self, obj):
+        size = 0
+        for attr, rw in self._pairs:
+            if attr != skip:
+                value = getattr(obj, attr)
+                size += rw.length(value)
+            else:
+                size += rw.length(None)
+
+        return size
+
+    def length_no_args(self, obj):
+        size = 0
+        for attr, rw in self._pairs:
+            if attr == "args":
+                continue
+            if attr != skip:
+                value = getattr(obj, attr)
+                size += rw.length(value)
+            else:
+                size += rw.length(None)
+
+        return size
+
 
 class HeadersReadWriter(ReadWriter):
     """See :py:func:`headers` for documentation."""
@@ -534,6 +611,17 @@ class HeadersReadWriter(ReadWriter):
     def width(self):
         return self._length.width()
 
+    def length(self, headers):
+        size = 0
+        if isinstance(headers, dict):
+            headers = headers.items()
+
+        size += self._length.length(len(headers))
+        for pair in headers:
+            size += self._pair.length(pair)
+
+        return size
+
 
 class NoneReadWriter(ReadWriter):
     def read(self, stream):
@@ -543,6 +631,9 @@ class NoneReadWriter(ReadWriter):
         return stream
 
     def width(self):
+        return 0
+
+    def length(self, obj):
         return 0
 
 
@@ -563,6 +654,9 @@ class ConstantReadWriter(ReadWriter):
         return stream
 
     def width(self):
+        return self._rw.width()
+
+    def length(self, obj):
         return self._rw.width()
 
 
@@ -592,3 +686,12 @@ class SwitchReadWriter(ReadWriter):
 
     def width(self):
         return self._switch.width()
+
+    def length(self, item):
+        k, v = item
+        size = 0
+        size += self._switch.length(k)
+        if v is not None and k in self._cases:
+            size += self._cases[k].length(v)
+
+        return size

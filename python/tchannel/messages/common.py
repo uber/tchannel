@@ -10,8 +10,6 @@ from ..exceptions import InvalidChecksumException
 from .types import Types
 
 PROTOCOL_VERSION = 0x02
-ENCODE_TYPE = 'utf-8'
-DECODE_TYPE = 'utf-8'
 
 
 class FlagsType(IntEnum):
@@ -104,28 +102,3 @@ def verify_checksum(message):
             return False
     else:
         return True
-
-
-def encode_str(arg):
-    if arg is not None:
-        return arg.encode(DECODE_TYPE)
-    else:
-        return arg
-
-
-def decode_str(arg):
-    if arg is not None:
-        return arg.decode(ENCODE_TYPE)
-    else:
-        return arg
-
-
-def encode_pair(k, v):
-    return (encode_str(k),
-            encode_str(v))
-
-
-def decode_pair(k, v):
-    return (decode_str(k),
-            decode_str(v))
-

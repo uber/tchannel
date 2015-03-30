@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 
 import socket
-
 import pytest
 
 from tests.integration.server_manager import TCPServerManager

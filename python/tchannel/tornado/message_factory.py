@@ -1,34 +1,41 @@
-from ..messages import Types
+from ..messages import Types, RW
 from ..exceptions import StreamingException
 from ..messages.common import FlagsType
 from ..messages.call_continue import CallContinueMessage
+from ..messages import common
 
 
 class MessageFactory(object):
+    """Provide the functionality to decompose and recompose
+    streaming messages.
+    """
 
     # 64KB Max frame size
     # 16B (size:2 | type:1 | reserved:1 | id:4 | reserved:8)
-    # 1 2 Bytes can represent 0~64KB-1
-    MAX_PAYLOAD_SIZE = 64*1024 - 16 - 1
+    # 1 2 Bytes can represent 0~2**16-1
+    MAX_PAYLOAD_SIZE = 0xFFEF   # 64*1024 - 16 - 1
 
     def __init__(self):
-        """key: message_id
-           value: incomplete messages
-        """
+        # key: message_id
+        # value: incomplete streaming messages
         self.message_buffer = {}
 
     def build(self, message_id, message):
         """buffer all the streaming messages based on the
         message id. Reconstruct all fragments together.
 
-        :param message_id: id
-        :param message: incoming message
-        :return: next complete message or None
+        :param message_id:
+            id
+        :param message:
+            incoming message
+        :return: next complete message or None if streaming
+            is not done
         """
         if message.message_type in [Types.CALL_REQ,
                                     Types.CALL_RES]:
-            if message.flags == 0x01:  # streaming message
-                message.flags = 0x00
+            # streaming message
+            if message.flags == common.FlagsType.fragment:
+                message.flags = common.FlagsType.none
                 self.message_buffer[message_id] = message
                 return None
         elif message.message_type in [Types.CALL_REQ_CONTINUE,
@@ -36,7 +43,9 @@ class MessageFactory(object):
             call_msg = self.message_buffer.get(message_id)
             if call_msg is None:
                 # missing call msg before continue msg
-                raise StreamingException()
+                raise StreamingException(
+                    "missing call message after receiving" +
+                    "continue message")
 
             dst = len(call_msg.args) - 1
             src = 0
@@ -54,11 +63,9 @@ class MessageFactory(object):
                 assert len(call_msg.args) == CallContinueMessage.max_args_num
 
                 self.message_buffer.pop(message_id, None)
-                call_msg.decode()
                 return call_msg
             else:
                 return None
-            message.decode()
         return message
 
     def fragment(self, message):
@@ -70,30 +77,25 @@ class MessageFactory(object):
 
         :param message: raw message
         :return: list of messages whose sizes <= max
-        payload size
+            payload size
         """
-        fragments = []
-
         if message.message_type in [Types.CALL_RES,
                                     Types.CALL_REQ]:
-            for i in range(len(message.args)):
-                if message.args[i] is None:
-                    message.args[i] = ""
 
-            message.encode()
-
-            payload_space = self.MAX_PAYLOAD_SIZE -\
-                message.get_meta_size()
+            rw = RW[message.message_type]
+            payload_space = (self.MAX_PAYLOAD_SIZE -
+                             rw.length_no_args(message))
+            # split a call/request message into an array
+            # with a call/request message and {0~n} continue
+            # message
             fragment_msg = message.fragment(payload_space)
-            fragments.append(message)
+            yield message
             while fragment_msg is not None:
                 message = fragment_msg
-                payload_space = self.MAX_PAYLOAD_SIZE -\
-                    message.get_meta_size()
+                rw = RW[message.message_type]
+                payload_space = (self.MAX_PAYLOAD_SIZE -
+                                 rw.length_no_args(message))
                 fragment_msg = message.fragment(payload_space)
-                fragments.append(message)
+                yield message
         else:
-            message.encode()
-            fragments.append(message)
-
-        return fragments
+            yield message

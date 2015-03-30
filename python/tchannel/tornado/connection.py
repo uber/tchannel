@@ -35,7 +35,7 @@ class TornadoConnection(object):
         self.remote_process_name = None
         self.requested_version = None
         self.awaiting_responses = {}
-        self.message_builder = MessageFactory()
+        self.message_factory = MessageFactory()
         connection.set_close_callback(self.on_close)
 
     def next_message_id(self):
@@ -111,7 +111,7 @@ class TornadoConnection(object):
         return context_future
 
     @tornado.gen.coroutine
-    def message_and_write(self, message, message_id=None):
+    def frame_and_write_stream(self, message, message_id=None):
         message_id = message_id or self.next_message_id()
         fragment_msgs = self.message_factory.fragment(message)
         for fragment in fragment_msgs:

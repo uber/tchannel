@@ -16,11 +16,13 @@ class CallResponseContinueMessage(CallContinueMessage):
         checksum=None,
         args=None,
     ):
-        super(CallResponseContinueMessage, self).__init__(flags, checksum, args)
+        super(CallResponseContinueMessage, self).\
+            __init__(flags, checksum, args)
 
     def fragment(self, space_left):
         fragment_msg = CallResponseContinueMessage()
-        return super(CallResponseContinueMessage, self).fragment(space_left, fragment_msg)
+        return super(CallResponseContinueMessage, self).\
+            fragment(space_left, fragment_msg)
 
 call_res_c_rw = rw.instance(
     CallResponseContinueMessage,

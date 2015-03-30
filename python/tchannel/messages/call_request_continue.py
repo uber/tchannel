@@ -20,7 +20,8 @@ class CallRequestContinueMessage(CallContinueMessage):
 
     def fragment(self, space_left):
         fragment_msg = CallRequestContinueMessage()
-        return super(CallRequestContinueMessage, self).fragment(space_left, fragment_msg)
+        return super(CallRequestContinueMessage, self).\
+            fragment(space_left, fragment_msg)
 
 
 call_req_c_rw = rw.instance(
