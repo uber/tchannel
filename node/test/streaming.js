@@ -128,10 +128,10 @@ function partsTest(testCase, assert) {
 
         function onResult(err, result) {
             // var res = result.result[0];
-            var head = result.result[1];
-            var body = result.result[2];
             assert.ifError(err, testCase.name + ': no result error');
             if (!err) {
+                var head = result.result[1];
+                var body = result.result[2];
                 assert.ok(Buffer.isBuffer(head), testCase.name + ': got head buffer');
                 assert.ok(Buffer.isBuffer(body), testCase.name + ': got body buffer');
                 assert.equal(head ? String(head) : head, testCase.resHead, testCase.name + ': expected head content');
