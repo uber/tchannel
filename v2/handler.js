@@ -352,19 +352,18 @@ TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest
     }
 };
 
-TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingResponse(req) {
+TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingResponse(req, options) {
     var self = this;
-    var res = TChannelOutgoingResponse(req.id, {
-        tracing: req.tracing,
-        headers: {},
-        checksumType: req.checksum.type,
-        checksum: v2.Checksum(req.checksum.type),
-        sendFrame: {
-            callResponse: sendCallResponseFrame,
-            callResponseCont: sendCallResponseContFrame,
-            error: sendErrorFrame
-        }
-    });
+    if (!options) options = {};
+    options.tracing = req.tracing;
+    options.checksumType = req.checksum.type;
+    options.checksum = v2.Checksum(req.checksum.type);
+    options.sendFrame = {
+        callResponse: sendCallResponseFrame,
+        callResponseCont: sendCallResponseContFrame,
+        error: sendErrorFrame
+    };
+    var res = TChannelOutgoingResponse(req.id, options);
     return res;
 
     function sendCallResponseFrame(args, isLast) {
