@@ -49,6 +49,7 @@ function TChannelIncomingRequest(id, options) {
     self.headers = options.headers || {};
     self.checksum = options.checksum || null;
     if (true) {
+        self.streamed = true;
         self._argstream = InArgStream();
         self.arg1 = self._argstream.arg1;
         self.arg2 = self._argstream.arg2;
@@ -69,8 +70,10 @@ inherits(TChannelIncomingRequest, EventEmitter);
 
 TChannelIncomingRequest.prototype.handleFrame = function handleFrame(parts) {
     var self = this;
-    if (true) {
+    if (self.streamed) {
         self._argstream.handleFrame(parts);
+    } else {
+        throw new Error('not implemented');
     }
 };
 
@@ -96,6 +99,7 @@ function TChannelIncomingResponse(id, options) {
     self.checksum = options.checksum || null;
     self.ok = self.code === 0; // TODO: probably okay, but a bit jank
     if (true) {
+        self.streamed = true;
         self._argstream = InArgStream();
         self.arg1 = self._argstream.arg1;
         self.arg2 = self._argstream.arg2;
@@ -116,8 +120,10 @@ inherits(TChannelIncomingResponse, EventEmitter);
 
 TChannelIncomingResponse.prototype.handleFrame = function handleFrame(parts) {
     var self = this;
-    if (true) {
+    if (self.streamed) {
         self._argstream.handleFrame(parts);
+    } else {
+        throw new Error('not implemented');
     }
 };
 
@@ -150,6 +156,7 @@ function TChannelOutgoingRequest(id, options) {
     self.checksum = options.checksum || null;
     self.sendFrame = options.sendFrame;
     if (true) {
+        self.streamed = true;
         self._argstream = OutArgStream();
         self.arg1 = self._argstream.arg1;
         self.arg2 = self._argstream.arg2;
@@ -219,10 +226,12 @@ TChannelOutgoingRequest.prototype.sendCallRequestContFrame = function sendCallRe
 TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     var self = this;
     if (callback) self.hookupCallback(callback);
-    if (true) {
+    if (self.streamed) {
         self.arg1.end(arg1);
         self.arg2.end(arg2);
         self.arg3.end(arg3);
+    } else {
+        throw new Error('not implemented');
     }
     return self;
 };
@@ -240,11 +249,13 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
         self.removeListener('error', onError);
         if (callback.canStream) {
             callback(null, res);
-        } else {
+        } else if (res.streamed) {
             parallel({
                 arg2: res.arg2.onValueReady,
                 arg3: res.arg3.onValueReady
             }, compatCall);
+        } else {
+            throw new Error('not implemented');
         }
 
         function compatCall(err, args) {
@@ -274,6 +285,7 @@ function TChannelOutgoingResponse(id, options) {
     self.ok = true;
     self.sendFrame = options.sendFrame;
     if (true) {
+        self.streamed = true;
         self._argstream = OutArgStream();
         self.arg1 = self._argstream.arg1;
         self.arg2 = self._argstream.arg2;
@@ -287,6 +299,8 @@ function TChannelOutgoingResponse(id, options) {
         self._argstream.on('finish', function onFinish() {
             self.emit('finish');
         });
+    } else {
+        throw new Error('not implemented');
     }
 }
 
@@ -346,7 +360,7 @@ TChannelOutgoingResponse.prototype.sendError = function sendError(codeString, me
         throw new Error('response already done'); // TODO: typed error
     } else {
         self.state = States.Error;
-        if (true) {
+        if (self.streamed) {
             // TODO: we could decide to flush any parts in a (first?) call res frame
             self._argstream.finished = true;
             self.arg1.end();
@@ -364,7 +378,7 @@ TChannelOutgoingResponse.prototype.setOk = function setOk(ok) {
     }
     self.ok = ok;
     self.code = ok ? 0 : 1; // TODO: too coupled to v2 specifics?
-    if (true) {
+    if (self.streamed) {
         self.arg1.end();
     }
 };
@@ -372,18 +386,22 @@ TChannelOutgoingResponse.prototype.setOk = function setOk(ok) {
 TChannelOutgoingResponse.prototype.sendOk = function sendOk(res1, res2) {
     var self = this;
     self.setOk(true);
-    if (true) {
+    if (self.streamed) {
         self.arg2.end(res1);
         self.arg3.end(res2);
+    } else {
+        throw new Error('not implemented');
     }
 };
 
 TChannelOutgoingResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
     var self = this;
     self.setOk(false);
-    if (true) {
+    if (self.streamed) {
         self.arg2.end(res1);
         self.arg3.end(res2);
+    } else {
+        throw new Error('not implemented');
     }
 };
 
