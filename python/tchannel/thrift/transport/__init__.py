@@ -20,9 +20,10 @@
 
 from __future__ import absolute_import
 
+from .base import TChannelTransportBase  # noqa
+from .socket import TChannelTransport  # noqa
+
 try:
-    import thrift  # noqa
+    from .tornado import TChannelTornadoTransport  # noqa
 except ImportError:
-    raise ImportError(
-        "The thrift library must be installed to use tchannel.thrift"
-    )
+    pass
