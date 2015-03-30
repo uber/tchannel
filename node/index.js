@@ -42,6 +42,7 @@ var v2 = require('./v2');
 var nullLogger = require('./null-logger.js');
 // var Spy = require('./v2/spy'); TODO
 var EndpointHandler = require('./endpoint-handler.js');
+var TChannelServiceNameHandler = require('./service-name-handler');
 
 var DEFAULT_OUTGOING_REQ_TIMEOUT = 2000;
 // var dumpEnabled = /\btchannel_dump\b/.test(process.env.NODE_DEBUG || ''); TODO
@@ -73,11 +74,6 @@ var TChannelWriteProtocolError = WrappedError({
     localName: null
 });
 
-var NoHandlerError = TypedError({
-    type: 'tchannel.no-handler',
-    message: 'no handler defined'
-});
-
 var InvalidHandlerForRegister = TypedError({
     type: 'tchannel.invalid-handler.for-registration',
     message: 'Found unexpected handler when calling `.register()`.\n' +
@@ -86,13 +82,6 @@ var InvalidHandlerForRegister = TypedError({
     handlerType: null,
     handler: null
 });
-
-var noHandlerHandler = {
-    type: 'no-handler.handler',
-    handleRequest: function noHandlerHandler(req, buildRes) {
-        buildRes().sendError('UnexpectedError', NoHandlerError().message);
-    }
-};
 
 function TChannel(options) {
     if (!(this instanceof TChannel)) {
@@ -135,7 +124,11 @@ function TChannel(options) {
 
     // how to handle incoming requests
     if (!self.options.handler) {
-        self.handler = noHandlerHandler;
+        if (!self.serviceName) {
+            self.handler = TChannelServiceNameHandler(self);
+        } else {
+            self.handler = EndpointHandler(self.serviceName);
+        }
     } else {
         self.handler = self.options.handler;
         delete self.options.handler;
@@ -303,14 +296,9 @@ TChannel.prototype.register = function register(name, handler) {
     var handlerType = self.handler && self.handler.type;
 
     switch (handlerType) {
-        case 'no-handler.handler':
-            // lazyily set up the legacy handler
-            self.handler = EndpointHandler();
-
-            break;
-
         case 'tchannel.endpoint-handler':
             // If its still the legacy handler then we are good.
+            self.handler.register(name, onReqRes);
             break;
 
         default:
@@ -319,8 +307,6 @@ TChannel.prototype.register = function register(name, handler) {
                 handler: self.handler
             });
     }
-
-    self.handler.register(name, onReqRes);
 
     function onReqRes(req, res, arg2, arg3) {
         handler(arg2, arg3, req.remoteAddr, onResponse);
