@@ -26,118 +26,6 @@ var extend = require('xtend');
 var allocCluster = require('./lib/alloc-cluster.js');
 var EndpointHandler = require('../endpoint-handler');
 
-var Cases = [
-
-    {
-        name: 'bufferOp',
-        op: Buffer('foo'),
-        reqHead: null,
-        reqBody: null,
-        resHead: '',
-        resBody: ''
-    },
-
-    {
-        name: 'stringOp',
-        op: 'foo',
-        reqHead: null,
-        reqBody: null,
-        resHead: '',
-        resBody: ''
-    },
-
-    {
-        name: 'bufferHead',
-        op: 'foo',
-        reqHead: Buffer('abc'),
-        reqBody: null,
-        resHead: 'abc',
-        resBody: ''
-    },
-
-    {
-        name: 'stringHead',
-        op: 'foo',
-        reqHead: 'abc',
-        reqBody: null,
-        resHead: 'abc',
-        resBody: ''
-    },
-
-    {
-        name: 'objectHead',
-        op: 'foo',
-        reqHead: JSON.stringify({value: 'abc'}),
-        reqBody: null,
-        resHead: '{"value":"abc"}',
-        resBody: ''
-    },
-
-    {
-        name: 'nullHead',
-        op: 'foo',
-        reqHead: null,
-        reqBody: null,
-        resHead: '',
-        resBody: ''
-    },
-
-    {
-        name: 'undefinedHead',
-        op: 'foo',
-        reqHead: undefined,
-        reqBody: null,
-        resHead: '',
-        resBody: ''
-    },
-
-    {
-        name: 'bufferBody',
-        op: 'foo',
-        reqHead: null,
-        reqBody: Buffer('abc'),
-        resHead: '',
-        resBody: 'abc'
-    },
-
-    {
-        name: 'stringBody',
-        op: 'foo',
-        reqHead: null,
-        reqBody: 'abc',
-        resHead: '',
-        resBody: 'abc'
-    },
-
-    {
-        name: 'objectBody',
-        op: 'foo',
-        reqHead: null,
-        reqBody: JSON.stringify({value: 'abc'}),
-        resHead: '',
-        resBody: '{"value":"abc"}'
-    },
-
-    {
-        name: 'nullBody',
-        op: 'foo',
-        reqHead: null,
-        reqBody: null,
-        resHead: '',
-        resBody: ''
-    },
-
-    {
-        name: 'undefinedBody',
-        op: 'foo',
-        reqHead: null,
-        reqBody: undefined,
-        resHead: '',
-        resBody: ''
-    },
-
-];
-
 allocCluster.test('request().send() to a server', 2, function t(cluster, assert) {
     var one = cluster.channels[0];
     var two = cluster.channels[1];
@@ -151,7 +39,117 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
         res.sendOk(arg2, arg3);
     });
 
-    parallel(Cases.map(function eachTestCase(testCase) {
+    parallel([
+
+        {
+            name: 'bufferOp',
+            op: Buffer('foo'),
+            reqHead: null,
+            reqBody: null,
+            resHead: '',
+            resBody: ''
+        },
+
+        {
+            name: 'stringOp',
+            op: 'foo',
+            reqHead: null,
+            reqBody: null,
+            resHead: '',
+            resBody: ''
+        },
+
+        {
+            name: 'bufferHead',
+            op: 'foo',
+            reqHead: Buffer('abc'),
+            reqBody: null,
+            resHead: 'abc',
+            resBody: ''
+        },
+
+        {
+            name: 'stringHead',
+            op: 'foo',
+            reqHead: 'abc',
+            reqBody: null,
+            resHead: 'abc',
+            resBody: ''
+        },
+
+        {
+            name: 'objectHead',
+            op: 'foo',
+            reqHead: JSON.stringify({value: 'abc'}),
+            reqBody: null,
+            resHead: '{"value":"abc"}',
+            resBody: ''
+        },
+
+        {
+            name: 'nullHead',
+            op: 'foo',
+            reqHead: null,
+            reqBody: null,
+            resHead: '',
+            resBody: ''
+        },
+
+        {
+            name: 'undefinedHead',
+            op: 'foo',
+            reqHead: undefined,
+            reqBody: null,
+            resHead: '',
+            resBody: ''
+        },
+
+        {
+            name: 'bufferBody',
+            op: 'foo',
+            reqHead: null,
+            reqBody: Buffer('abc'),
+            resHead: '',
+            resBody: 'abc'
+        },
+
+        {
+            name: 'stringBody',
+            op: 'foo',
+            reqHead: null,
+            reqBody: 'abc',
+            resHead: '',
+            resBody: 'abc'
+        },
+
+        {
+            name: 'objectBody',
+            op: 'foo',
+            reqHead: null,
+            reqBody: JSON.stringify({value: 'abc'}),
+            resHead: '',
+            resBody: '{"value":"abc"}'
+        },
+
+        {
+            name: 'nullBody',
+            op: 'foo',
+            reqHead: null,
+            reqBody: null,
+            resHead: '',
+            resBody: ''
+        },
+
+        {
+            name: 'undefinedBody',
+            op: 'foo',
+            reqHead: null,
+            reqBody: undefined,
+            resHead: '',
+            resBody: ''
+        },
+
+    ].map(function eachTestCase(testCase) {
         testCase = extend({
             channel: two,
             opts: {host: hostOne},
