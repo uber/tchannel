@@ -78,7 +78,7 @@ var InvalidHandlerForRegister = TypedError({
 var noHandlerHandler = {
     type: 'no-handler.handler',
     handleRequest: function noHandlerHandler(req, buildRes) {
-        buildRes().sendNotOk(null, NoHandlerError().message);
+        buildRes().sendError('UnexpectedError', NoHandlerError().message);
     }
 };
 
