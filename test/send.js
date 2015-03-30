@@ -25,6 +25,7 @@ var Buffer = require('buffer').Buffer;
 var extend = require('xtend');
 var allocCluster = require('./lib/alloc-cluster.js');
 var EndpointHandler = require('../endpoint-handler');
+var TChannel = require('../index.js');
 
 allocCluster.test('request().send() to a server', 2, function t(cluster, assert) {
     var one = cluster.channels[0];
@@ -175,6 +176,92 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
         assert.end();
     });
 });
+
+allocCluster.test('request().send() to a pool of servers', 4, function t(cluster, assert) {
+    var client = TChannel({
+        random: randSeq([
+            1.0, 0.1, 0.1, 0.1, // .request, chan 1 wins
+            0.0,                // timeout fuzz
+            0.1, 1.0, 0.1, 0.1, // .request, chan 2 wins
+            0.0,                // timeout fuzz
+            0.1, 0.1, 1.0, 0.1, // .request, chan 3 wins
+            0.0,                // timeout fuzz
+            0.1, 0.1, 0.1, 1.0, // .request, chan 4 wins
+            0.0,                // timeout fuzz
+            1.0, 0.1, 0.1, 0.1, // .request, chan 1 wins
+            0.1, 1.0, 0.1, 0.1, // .request, chan 2 wins
+            0.1, 0.1, 1.0, 0.1, // .request, chan 3 wins
+            0.1, 0.1, 0.1, 1.0  // .request, chan 4 wins
+        ])
+    });
+
+    cluster.channels.forEach(function each(chan, i) {
+        var chanNum = i + 1;
+        chan.handler = EndpointHandler();
+        chan.handler.register('foo', function foo(req, res, arg2, arg3) {
+            res.sendOk(arg2, arg3 + ' served by ' + chanNum);
+        });
+        client.peers.add(chan.hostPort);
+    });
+
+    parallel([
+
+        { name: 'msg1', op: 'foo',
+          reqHead: '', reqBody: 'msg1',
+          resHead: '', resBody: 'msg1 served by 1' },
+        { name: 'msg2', op: 'foo',
+          reqHead: '', reqBody: 'msg2',
+          resHead: '', resBody: 'msg2 served by 2' },
+        { name: 'msg3', op: 'foo',
+          reqHead: '', reqBody: 'msg3',
+          resHead: '', resBody: 'msg3 served by 3' },
+        { name: 'msg4', op: 'foo',
+          reqHead: '', reqBody: 'msg4',
+          resHead: '', resBody: 'msg4 served by 4' },
+
+        { name: 'msg5', op: 'foo',
+          reqHead: '', reqBody: 'msg5',
+          resHead: '', resBody: 'msg5 served by 1' },
+        { name: 'msg6', op: 'foo',
+          reqHead: '', reqBody: 'msg6',
+          resHead: '', resBody: 'msg6 served by 2' },
+        { name: 'msg7', op: 'foo',
+          reqHead: '', reqBody: 'msg7',
+          resHead: '', resBody: 'msg7 served by 3' },
+        { name: 'msg8', op: 'foo',
+          reqHead: '', reqBody: 'msg8',
+          resHead: '', resBody: 'msg8 served by 4' },
+
+    ].map(function eachTestCase(testCase) {
+        return sendTest(extend({
+            logger: cluster.logger,
+            channel: client
+        }, testCase), assert);
+    }), function onResults(err) {
+        assert.ifError(err, 'no errors from sending');
+        cluster.assertCleanState(assert, {
+            channels: cluster.channels.map(function each() {
+                return {
+                    peers: [{
+                        connections: [
+                            {direction: 'in', inOps: 0, outOps: 0}
+                        ]
+                    }]
+                };
+            })
+        });
+        assert.end();
+    });
+});
+
+function randSeq(seq) {
+    var i = 0;
+    return function random() {
+        var r = seq[i];
+        i = (i + 1) % seq.length;
+        return r;
+    };
+}
 
 function sendTest(testCase, assert) {
     return function runSendTest(callback) {
