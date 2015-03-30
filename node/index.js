@@ -122,6 +122,13 @@ function TChannel(options) {
     // Filled in by listening event:
     self.hostPort = null;
 
+    // name of the service running over this channel
+    self.serviceName = '';
+    if (self.options.serviceName) {
+        self.serviceName = self.options.serviceName;
+        delete self.options.serviceName;
+    }
+
     // how to handle incoming requests
     if (!self.options.handler) {
         self.handler = noHandlerHandler;
@@ -320,7 +327,12 @@ TChannel.prototype.send = function send(options, arg1, arg2, arg3, callback) {
 /* jshint maxparams:4 */
 
 TChannel.prototype.request = function channelRequest(options) {
+    options = extend(options);
     var self = this;
+    if (!options.service && self.serviceName) {
+        options.service = self.serviceName;
+    }
+    // TODO: moar defaults
     if (self.destroyed) {
         throw new Error('cannot request() to destroyed tchannel'); // TODO typed error
     } else {
