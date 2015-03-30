@@ -28,7 +28,8 @@ startCommand(chan, process.argv.slice(2));
 function startCommand(chan, cmd) {
     var req = chan.request({
         host: '127.0.0.1:4040',
-        timeout: 1000
+        timeout: 1000,
+        streamed: true
     });
     req.on('response', onResponse);
     req.on('error', onError);
@@ -81,7 +82,8 @@ function startCommand(chan, cmd) {
 function startControlChannel(chan, sessionId, callback) {
     var req = chan.request({
         host: '127.0.0.1:4040',
-        timeout: 1000
+        timeout: 1000,
+        streamed: true
     });
     req.on('response', onResponse);
     req.on('error', onError);
