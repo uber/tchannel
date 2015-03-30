@@ -336,29 +336,37 @@ function streamingTest(testCase, assert, callback) {
         }
     }
 
+    function verifyStreamChunk(name, offset, gotChunk, expected) {
+        var expectedChunk = expected.read(gotChunk.length);
+        assert.deepEqual(gotChunk, expectedChunk, util.format(
+            '%s: expected chunk %s bytes @%s',
+            name,
+            prettyBytes(gotChunk.length),
+            '0x' + offset.toString(16))
+        );
+        return offset + gotChunk.length;
+    }
+
+    function verifyDrained(name, expected) {
+        var remain = expected.read();
+        assert.equal(remain, null, name + ': got all expected data (bytes)');
+        assert.equal(remain && remain.length || 0, 0, name + ': got all expected data (length)');
+    }
+
     function verifyStream(name, got, expected) {
         return function verifyStreamThunk(streamDone) {
             var offset = 0;
             got.on('data', onData);
             got.on('error', finish);
             got.on('end', finish);
+
             function onData(gotChunk) {
-                var expectedChunk = expected.read(gotChunk.length);
-                assert.deepEqual(gotChunk, expectedChunk, util.format(
-                    '%s: expected chunk %s bytes @%s',
-                    name,
-                    prettyBytes(gotChunk.length),
-                    '0x' + offset.toString(16))
-                );
-                offset += gotChunk.length;
+                offset = verifyStreamChunk(name, offset, gotChunk, expected);
             }
+
             function finish(err) {
                 assert.ifError(err, name + ': no error');
-                if (!err) {
-                    var remain = expected.read();
-                    assert.equal(remain, null, name + ': got all expected data (bytes)');
-                    assert.equal(remain && remain.length || 0, 0, name + ': got all expected data (length)');
-                }
+                if (!err) verifyDrained(name, expected);
                 streamDone();
             }
         };
