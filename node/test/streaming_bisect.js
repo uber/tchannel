@@ -308,7 +308,9 @@ function streamingTest(testCase, assert, callback) {
     var resHeadStream = PassThrough();
     var resBodyStream = PassThrough();
 
-    var req = testCase.channel.request(testCase.opts);
+    var req = testCase.channel.request(extend({
+        streamed: true
+    }, testCase.opts));
     req.arg1.end(testCase.op);
     reqHeadStream.pipe(resHeadStream);
     reqHeadStream.pipe(req.arg2);
@@ -326,10 +328,35 @@ function streamingTest(testCase, assert, callback) {
             callback();
             return;
         }
-        async.series([
-            verifyStream('arg2', res.arg2, resHeadStream),
-            verifyStream('arg3', res.arg3, resBodyStream),
-        ], callback);
+        if (res.streamed) {
+            async.series([
+                verifyStream('arg2', res.arg2, resHeadStream),
+                verifyStream('arg3', res.arg3, resBodyStream),
+            ], callback);
+        } else {
+            verifyStreamChunk('arg2', 0, res.arg2, resHeadStream);
+            verifyDrained('arg2', resHeadStream);
+            verifyStreamChunk('arg3', 0, res.arg3, resBodyStream);
+            verifyDrained('arg3', resBodyStream);
+            callback();
+        }
+    }
+
+    function verifyStreamChunk(name, offset, gotChunk, expected) {
+        var expectedChunk = expected.read(gotChunk.length) || Buffer(0);
+        assert.deepEqual(gotChunk, expectedChunk, util.format(
+            '%s: expected chunk %s bytes @%s',
+            name,
+            prettyBytes(gotChunk.length),
+            '0x' + offset.toString(16))
+        );
+        return offset + gotChunk.length;
+    }
+
+    function verifyDrained(name, expected) {
+        var remain = expected.read();
+        assert.equal(remain, null, name + ': got all expected data (bytes)');
+        assert.equal(remain && remain.length || 0, 0, name + ': got all expected data (length)');
     }
 
     function verifyStream(name, got, expected) {
@@ -338,23 +365,14 @@ function streamingTest(testCase, assert, callback) {
             got.on('data', onData);
             got.on('error', finish);
             got.on('end', finish);
+
             function onData(gotChunk) {
-                var expectedChunk = expected.read(gotChunk.length);
-                assert.deepEqual(gotChunk, expectedChunk, util.format(
-                    '%s: expected chunk %s bytes @%s',
-                    name,
-                    prettyBytes(gotChunk.length),
-                    '0x' + offset.toString(16))
-                );
-                offset += gotChunk.length;
+                offset = verifyStreamChunk(name, offset, gotChunk, expected);
             }
+
             function finish(err) {
                 assert.ifError(err, name + ': no error');
-                if (!err) {
-                    var remain = expected.read();
-                    assert.equal(remain, null, name + ': got all expected data (bytes)');
-                    assert.equal(remain && remain.length || 0, 0, name + ': got all expected data (length)');
-                }
+                if (!err) verifyDrained(name, expected);
                 streamDone();
             }
         };
@@ -369,22 +387,25 @@ function describe(params) {
 
 function echoHandler() {
     var handler = EndpointHandler();
-    function foo(req, res) {
-        res.setOk(true);
-        req.arg2.on('data', function onArg2Data(chunk) {
-            res.arg2.write(chunk);
-        });
-        req.arg2.on('end', function onArg2End() {
-            res.arg2.end();
-        });
-
-        req.arg3.on('data', function onArg3Data(chunk) {
-            res.arg3.write(chunk);
-        });
-        req.arg3.on('end', function onArg3End() {
-            res.arg3.end();
-        });
-
+    function foo(req, buildRes) {
+        var res = buildRes({streamed: req.streamed});
+        if (req.streamed) {
+            res.setOk(true);
+            req.arg2.on('data', function onArg2Data(chunk) {
+                res.arg2.write(chunk);
+            });
+            req.arg2.on('end', function onArg2End() {
+                res.arg2.end();
+            });
+            req.arg3.on('data', function onArg3Data(chunk) {
+                res.arg3.write(chunk);
+            });
+            req.arg3.on('end', function onArg3End() {
+                res.arg3.end();
+            });
+        } else {
+            res.sendOk(req.arg2, req.arg3);
+        }
     }
     foo.canStream = true;
     handler.register('foo', foo);

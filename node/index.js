@@ -31,6 +31,7 @@ var WrappedError = require('error/wrapped');
 var bufrw = require('bufrw');
 var ChunkReader = require('bufrw/stream/chunk_reader');
 var ChunkWriter = require('bufrw/stream/chunk_writer');
+var reqres = require('./reqres');
 
 var v2 = require('./v2');
 var nullLogger = require('./null-logger.js');
@@ -815,15 +816,22 @@ TChannelConnection.prototype.request = function request(options) {
 TChannelConnection.prototype.handleCallRequest = function handleCallRequest(req) {
     var self = this;
     req.remoteAddr = self.remoteName;
-    var res = self.handler.buildOutgoingResponse(req);
     var id = req.id;
     self.inPending++;
-    var op = self.inOps[id] = new TChannelServerOp(self, self.channel.now(), req, res);
-    res.once('finish', opDone);
+    var op = self.inOps[id] = new TChannelServerOp(self, self.channel.now(), req);
     process.nextTick(runHandler);
 
     function runHandler() {
-        self.channel.handler.handleRequest(req, res);
+        self.channel.handler.handleRequest(req, buildResponse);
+    }
+
+    function buildResponse(options) {
+        if (op.res && op.res.state !== reqres.States.Initial) {
+            throw new Error('response already built and started'); // TODO: typed error
+        }
+        op.res = self.handler.buildOutgoingResponse(req, options);
+        op.res.once('finish', opDone);
+        return op.res;
     }
 
     function opDone() {
@@ -842,7 +850,7 @@ TChannelConnection.prototype.handleCallRequest = function handleCallRequest(req)
 function TChannelServerOp(connection, start, req, res) {
     var self = this;
     self.req = req;
-    self.res = res;
+    self.res = res || null;
     self.connection = connection;
     self.logger = connection.logger;
     self.timedOut = false;

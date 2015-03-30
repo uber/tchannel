@@ -352,19 +352,18 @@ TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest
     }
 };
 
-TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingResponse(req) {
+TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingResponse(req, options) {
     var self = this;
-    var res = TChannelOutgoingResponse(req.id, {
-        tracing: req.tracing,
-        headers: {},
-        checksumType: req.checksum.type,
-        checksum: v2.Checksum(req.checksum.type),
-        sendFrame: {
-            callResponse: sendCallResponseFrame,
-            callResponseCont: sendCallResponseContFrame,
-            error: sendErrorFrame
-        }
-    });
+    if (!options) options = {};
+    options.tracing = req.tracing;
+    options.checksumType = req.checksum.type;
+    options.checksum = v2.Checksum(req.checksum.type);
+    options.sendFrame = {
+        callResponse: sendCallResponseFrame,
+        callResponseCont: sendCallResponseContFrame,
+        error: sendErrorFrame
+    };
+    var res = TChannelOutgoingResponse(req.id, options);
     return res;
 
     function sendCallResponseFrame(args, isLast) {
@@ -390,13 +389,15 @@ TChannelV2Handler.prototype.buildIncomingRequest = function buildIncomingRequest
         tracing: reqFrame.body.tracing,
         service: reqFrame.body.service,
         headers: reqFrame.body.headers,
-        checksum: v2.Checksum(reqFrame.body.csum.type)
+        checksum: v2.Checksum(reqFrame.body.csum.type),
+        streamed: reqFrame.body.flags & v2.CallRequest.Flags.Fragment
     });
 };
 
 TChannelV2Handler.prototype.buildIncomingResponse = function buildIncomingResponse(resFrame) {
     return TChannelIncomingResponse(resFrame.id, {
         code: resFrame.body.code,
-        checksum: v2.Checksum(resFrame.body.csum.type)
+        checksum: v2.Checksum(resFrame.body.csum.type),
+        streamed: resFrame.body.flags & v2.CallRequest.Flags.Fragment
     });
 };

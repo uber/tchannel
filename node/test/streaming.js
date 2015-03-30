@@ -98,7 +98,9 @@ allocCluster.test('streaming echo w/ streaming callback', 2, function t(cluster,
 
 function partsTest(testCase, assert) {
     return function runSendTest(callback) {
-        var req = testCase.channel.request(testCase.opts);
+        var req = testCase.channel.request(extend({
+            streamed: true
+        }, testCase.opts));
         var resultReady = Ready();
         req.hookupCallback(resultReady.signal);
         req.arg1.end(testCase.op);
@@ -128,10 +130,10 @@ function partsTest(testCase, assert) {
 
         function onResult(err, result) {
             // var res = result.result[0];
-            var head = result.result[1];
-            var body = result.result[2];
             assert.ifError(err, testCase.name + ': no result error');
             if (!err) {
+                var head = result.result[1];
+                var body = result.result[2];
                 assert.ok(Buffer.isBuffer(head), testCase.name + ': got head buffer');
                 assert.ok(Buffer.isBuffer(body), testCase.name + ': got body buffer');
                 assert.equal(head ? String(head) : head, testCase.resHead, testCase.name + ': expected head content');
@@ -144,8 +146,10 @@ function partsTest(testCase, assert) {
 
 function echoHandler() {
     var handler = EndpointHandler();
-    function foo(req, res) {
+    function foo(req, buildRes) {
+        var res = buildRes({streamed: true});
         res.setOk(true);
+
         req.arg2.on('data', function onArg2Data(chunk) {
             res.arg2.write(chunk);
         });

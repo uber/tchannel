@@ -51,11 +51,12 @@ var SessionId = 0;
 var spawnPty = require('child_pty').spawn;
 // var spawn = require('child_process').spawn;
 
-function start(req, res) {
-    withJsonArg2(req, res, function(arg2) {
+function start(req, buildRes) {
+    withJsonArg2(req, buildRes, function(arg2) {
         var sessionId = ++SessionId;
         var session = Sessions[sessionId] = TermSession(arg2.command);
 
+        var res = buildRes({streamed: true});
         res.setOk(true);
         res.arg2.end(JSON.stringify({
             sessionId: sessionId
@@ -64,15 +65,16 @@ function start(req, res) {
     });
 }
 
-function control(req, res) {
-    withJsonArg2(req, res, function(arg2) {
+function control(req, buildRes) {
+    withJsonArg2(req, buildRes, function(arg2) {
         var sessionId = arg2.sessionId;
         var session = Sessions[sessionId];
         if (!session) {
-            res.sendNotOk(null, 'invalid sessionId');
+            buildRes().sendNotOk(null, 'invalid sessionId');
             return;
         }
 
+        var res = buildRes({streamed: true});
         res.setOk(true);
         res.arg2.end();
         session.control(req, res);
@@ -128,13 +130,11 @@ TermSession.prototype.control = function control(req, res) {
     });
 };
 
-function withJsonArg2(req, res, callback) {
+function withJsonArg2(req, buildRes, callback) {
     req.arg2.onValueReady(function(err, arg2) {
-        if (err) {
-            return res.sendError('ProtocolError');
-        }
+        if (err) return buildRes().sendError('ProtocolError');
         safeParse(arg2, function(err, val) {
-            if (err) res.sendError('BadRequest');
+            if (err) return buildRes().sendError('BadRequest');
             else callback(val);
         });
     });

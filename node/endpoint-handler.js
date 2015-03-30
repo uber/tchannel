@@ -65,31 +65,62 @@ TChannelEndpointHandler.prototype.register = function register(name, handler) {
     return handler;
 };
 
-TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, res) {
+TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, buildResponse) {
     var self = this;
-    // TODO: waterfall
-    req.arg1.onValueReady(function arg1Ready(err, arg1) {
-        if (err) throw err; // TODO: protocol error, respond with error frame
+    if (req.streamed) {
+        req.arg1.onValueReady(function arg1Ready(err, arg1) {
+            if (err) {
+                // TODO: log error
+                sendError('UnexpectedError', util.format(
+                    'error accumulating arg1: %s: %s',
+                    err.constructor.name, err.message));
+            } else {
+                handleArg1(arg1);
+            }
+        });
+    } else {
+        handleArg1(req.arg1);
+    }
+
+    function handleArg1(arg1) {
         var name = String(arg1);
         var handler = self.endpoints[name];
         if (!handler) {
-            res.sendError('BadRequest', util.format(
+            sendError('BadRequest', util.format(
                 'no such endpoint service=%j endpoint=%j',
                 req.service, name));
-            return;
-        }
-        if (handler.canStream) {
-            handler(req, res);
-        } else {
+        } else if (handler.canStream) {
+            handler(req, buildResponse);
+        } else if (req.streamed) {
             parallel({
                 arg2: req.arg2.onValueReady,
                 arg3: req.arg3.onValueReady
-            }, function argsDone(err, args) {
-                if (err) throw err; // TODO: protocol error, respond with error frame
-                else handler(req, res, args.arg2, args.arg3);
-            });
+            }, argsDone);
+        } else {
+            compatHandle(handler, req);
         }
-    });
+
+        function argsDone(err, args) {
+            if (err) {
+                // TODO: log error
+                sendError('UnexpectedError', util.format(
+                    'error accumulating arg2/arg3: %s: %s',
+                    err.constructor.name, err.message));
+            } else {
+                compatHandle(handler, args);
+            }
+        }
+
+        function compatHandle(handler, args) {
+            var res = buildResponse({streamed: false});
+            handler(req, res, args.arg2, args.arg3);
+        }
+    }
+
+    function sendError(code, mess) {
+        var res = buildResponse({streamed: false});
+        res.sendError(code, mess);
+    }
 };
 
 module.exports = TChannelEndpointHandler;
