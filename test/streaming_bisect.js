@@ -216,7 +216,9 @@ TestStreamSearch.prototype.init = function init() {
 TestStreamSearch.prototype.test = function test(state, assert) {
     var options = state.test;
     var name = describe(options);
-    var cluster = allocCluster(2);
+    var cluster = allocCluster({
+        numPeers: 2
+    });
     cluster.ready(function clusterReady() {
         for (var i = 0; i < cluster.hosts.length; i++) {
             assert.comment(util.format(

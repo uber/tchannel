@@ -23,9 +23,12 @@
 var allocCluster = require('./lib/alloc-cluster.js');
 var EndpointHandler = require('../endpoint-handler');
 
-allocCluster.test('does not leak inOps', 2, {
-    timeoutCheckInterval: 100,
-    serverTimeoutDefault: 100
+allocCluster.test('does not leak inOps', {
+    numPeers: 2,
+    channelOptions: {
+        timeoutCheckInterval: 100,
+        serverTimeoutDefault: 100
+    }
 }, function t(cluster, assert) {
     var one = cluster.channels[0];
     var two = cluster.channels[1];
