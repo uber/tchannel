@@ -25,7 +25,8 @@ var tchan = require('../index');
 var chan = tchan();
 var req = chan.request({
     host: '127.0.0.1:4040',
-    timeout: 1000
+    timeout: 1000,
+    streamed: true
 });
 req.on('response', onResponse);
 req.arg1.end(argv._[0]);
@@ -42,8 +43,4 @@ function onResponse(res) {
     res.arg3.on('end', function() {
         chan.quit();
     });
-}
-
-function onError(err) {
-    console.error(err);
 }

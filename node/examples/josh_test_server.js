@@ -53,9 +53,11 @@ chan.listen(4040, '127.0.0.1');
 var spawn = require('child_pty').spawn;
 // var spawn = require('child_process').spawn;
 
-function exec(req, res) {
+function exec(req, buildRes) {
     req.arg2.onValueReady(function(err, cmd) {
-        if (err) return res.sendError('ProtocolError');
+        if (err) return buildRes().sendError('ProtocolError');
+
+        var res = buildRes({streamed: true});
         cmd = String(cmd);
         // TODO shlex
         var parts = cmd.split(/ +/);
@@ -69,12 +71,13 @@ function exec(req, res) {
     });
 }
 
-function grepn(req, res) {
+function grepn(req, buildRes) {
     var split2 = require('split2');
     var through2 = require('through2');
     req.arg2.onValueReady(function(err, needle) {
-        if (err) return res.sendError('ProtocolError');
+        if (err) return buildRes().sendError('ProtocolError');
 
+        var res = buildRes({streamed: true});
         var pat = new RegExp(needle);
         console.log('GREPN', pat);
 
@@ -90,12 +93,12 @@ function grepn(req, res) {
     });
 }
 
-function repl(req, res) {
-    var repl = require('repl');
+function repl(req, buildRes) {
     console.log('repl', req.id);
+    var res = buildRes({streamed: true});
     res.setOk(true);
     req.arg2.end();
-    repl.start({
+    require('repl').start({
         prompt: '> ',
         input: req.arg3,
         output: res.arg3,
@@ -103,7 +106,8 @@ function repl(req, res) {
     });
 }
 
-function echo(req, res) {
+function echo(req, buildRes) {
+    var res = buildRes({streamed: true});
     res.setOk(true);
     console.log('echo', req.id);
     req.arg2.pipe(res.arg2);
