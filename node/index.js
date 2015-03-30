@@ -129,6 +129,9 @@ function TChannel(options) {
         delete self.options.serviceName;
     }
 
+    // populated by makeSubChannel
+    self.topChannel = null;
+
     // how to handle incoming requests
     if (!self.options.handler) {
         self.handler = noHandlerHandler;
@@ -216,6 +219,7 @@ TChannel.prototype.makeSubChannel = function makeSubChannel(options) {
         }
     }
     var chan = TChannel(opts);
+    chan.topChannel = self;
     if (options.peers) {
         for (i = 0; i < options.peers.length; i++) {
             if (typeof options.peers[i] === 'string') {
@@ -945,8 +949,12 @@ TChannelPeers.prototype.add = function add(hostPort, options) {
         if (hostPort === self.channel.hostPort) {
             return self.selfPeer;
         }
-        peer = TChannelPeer(self.channel, hostPort, options);
-        self.emit('allocPeer', peer);
+        if (self.channel.topChannel) {
+            peer = self.channel.topChannel.peers.add(hostPort);
+        } else {
+            peer = TChannelPeer(self.channel, hostPort, options);
+            self.emit('allocPeer', peer);
+        }
         self._map[hostPort] = peer;
     }
     return peer;
@@ -1202,7 +1210,7 @@ TChannelPeer.prototype.makeOutSocket = function makeOutSocket() {
 
 TChannelPeer.prototype.makeOutConnection = function makeOutConnection(socket) {
     var self = this;
-    var chan = self.channel;
+    var chan = self.channel.topChannel || self.channel;
     var conn = new TChannelConnection(chan, socket, 'out', self.hostPort);
     self.emit('allocConnection', conn);
     return conn;
