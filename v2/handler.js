@@ -389,13 +389,15 @@ TChannelV2Handler.prototype.buildIncomingRequest = function buildIncomingRequest
         tracing: reqFrame.body.tracing,
         service: reqFrame.body.service,
         headers: reqFrame.body.headers,
-        checksum: v2.Checksum(reqFrame.body.csum.type)
+        checksum: v2.Checksum(reqFrame.body.csum.type),
+        streamed: reqFrame.body.flags & v2.CallRequest.Flags.Fragment
     });
 };
 
 TChannelV2Handler.prototype.buildIncomingResponse = function buildIncomingResponse(resFrame) {
     return TChannelIncomingResponse(resFrame.id, {
         code: resFrame.body.code,
-        checksum: v2.Checksum(resFrame.body.csum.type)
+        checksum: v2.Checksum(resFrame.body.csum.type),
+        streamed: resFrame.body.flags & v2.CallRequest.Flags.Fragment
     });
 };

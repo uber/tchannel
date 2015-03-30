@@ -79,7 +79,7 @@ TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, bu
             }
         });
     } else {
-        throw new Error('not implemented');
+        handleArg1(req.arg1);
     }
 
     function handleArg1(arg1) {
@@ -97,7 +97,7 @@ TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, bu
                 arg3: req.arg3.onValueReady
             }, argsDone);
         } else {
-            throw new Error('not implemented');
+            compatHandle(handler, req);
         }
 
         function argsDone(err, args) {
@@ -112,13 +112,13 @@ TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, bu
         }
 
         function compatHandle(handler, args) {
-            var res = buildResponse();
+            var res = buildResponse({streamed: false});
             handler(req, res, args.arg2, args.arg3);
         }
     }
 
     function sendError(code, mess) {
-        var res = buildResponse();
+        var res = buildResponse({streamed: false});
         res.sendError(code, mess);
     }
 };
