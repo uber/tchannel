@@ -20,18 +20,24 @@
 
 'use strict';
 
-var globalClearTimeout = require('timers').clearTimeout;
-var globalSetTimeout = require('timers').setTimeout;
-var globalNow = Date.now;
+var globalTimers = {
+    setTimeout: require('timers').setTimeout,
+    clearTimeout: require('timers').clearTimeout,
+    now: Date.now
+};
 var globalRandom = Math.random;
 var net = require('net');
 var format = require('util').format;
 var TypedError = require('error/typed');
 var WrappedError = require('error/wrapped');
+var extend = require('xtend');
 var bufrw = require('bufrw');
 var ChunkReader = require('bufrw/stream/chunk_reader');
 var ChunkWriter = require('bufrw/stream/chunk_writer');
 var reqres = require('./reqres');
+
+var inherits = require('util').inherits;
+var EventEmitter = require('events').EventEmitter;
 
 var v2 = require('./v2');
 var nullLogger = require('./null-logger.js');
@@ -82,8 +88,17 @@ function TChannel(options) {
     }
 
     var self = this;
+    EventEmitter.call(self);
 
-    self.options = options || {};
+    self.options = extend({
+        reqTimeoutDefault: 5000,
+        serverTimeoutDefault: 5000,
+        timeoutCheckInterval: 1000,
+        timeoutFuzz: 100,
+        // TODO: maybe we should always add pid to user-supplied?
+        processName: format('%s[%s]', process.title, process.pid)
+    }, options);
+
     self.logger = self.options.logger || nullLogger;
     // Filled in by the listen call:
     self.host = null;
@@ -91,22 +106,8 @@ function TChannel(options) {
     // Filled in by listening event:
     self.port = null;
     self.hostPort = null;
-    // TODO: maybe we should always add pid to user-supplied?
-    self.processName = self.options.processName ||
-        format('%s[%s]', process.title, process.pid);
-    self.random = self.options.random ?
-        self.options.random : globalRandom;
-    self.setTimeout = self.options.timers ?
-        self.options.timers.setTimeout : globalSetTimeout;
-    self.clearTimeout = self.options.timers ?
-        self.options.timers.clearTimeout : globalClearTimeout;
-    self.now = self.options.timers ?
-        self.options.timers.now : globalNow;
-
-    self.reqTimeoutDefault = self.options.reqTimeoutDefault || 5000;
-    self.serverTimeoutDefault = self.options.serverTimeoutDefault || 5000;
-    self.timeoutCheckInterval = self.options.timeoutCheckInterval || 1000;
-    self.timeoutFuzz = self.options.timeoutFuzz || 100;
+    self.random = self.options.random || globalRandom;
+    self.timers = self.options.timers || globalTimers;
 
     self.peers = Object.create(null);
 
@@ -158,7 +159,7 @@ function TChannel(options) {
         self.logger.warn('server socket close');
     });
 }
-require('util').inherits(TChannel, require('events').EventEmitter);
+inherits(TChannel, EventEmitter);
 
 // Decoulping config and creation from the constructor.
 TChannel.prototype.listen = function listen(port, host, callback) {
@@ -381,6 +382,9 @@ TChannel.prototype.makeSocket = function makeSocket(dest) {
     }
     var host = parts[0];
     var port = parts[1];
+    if (host === '0.0.0.0' || port === '0') {
+        throw new Error('cannot make out connection to ephemeral peer'); // TODO typed error
+    }
     var socket = net.createConnection({host: host, port: port});
     return socket;
 };
@@ -392,12 +396,7 @@ TChannel.prototype.makeOutConnection = function makeOutConnection(dest) {
     return connection;
 };
 
-// to provide backward compatibility.
-TChannel.prototype.quit = function close(callback) {
-    var self = this;
-    self.close(callback);
-};
-
+TChannel.prototype.quit = // to provide backward compatibility.
 TChannel.prototype.close = function close(callback) {
     var self = this;
 
@@ -456,18 +455,21 @@ TChannel.prototype.close = function close(callback) {
 };
 
 function TChannelConnection(channel, socket, direction, remoteAddr) {
-    var self = this;
     if (remoteAddr === channel.hostPort) {
         throw new Error('refusing to create self connection'); // TODO typed error
     }
 
+    var self = this;
+    EventEmitter.call(self);
     self.channel = channel;
-    self.logger = self.channel.logger;
+    self.options = self.channel.options;
+    self.logger = self.options.logger || nullLogger;
+    self.random = self.options.random || globalRandom;
+    self.timers = self.options.timers || globalTimers;
     self.socket = socket;
     self.direction = direction;
     self.remoteAddr = remoteAddr;
     self.timer = null;
-
     self.remoteName = null; // filled in by identify message
 
     // TODO: factor out an operation collection abstraction
@@ -481,7 +483,9 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 
     self.reader = ChunkReader(bufrw.UInt16BE, v2.Frame.RW);
     self.writer = ChunkWriter(v2.Frame.RW);
-    self.handler = new v2.Handler(self.channel);
+    self.handler = new v2.Handler(extend({
+        hostPort: self.channel.hostPort
+    }, self.options));
 
     // TODO: refactor op boundary to pass full req/res around
     self.handler.on('call.incoming.request', function onCallRequest(req) {
@@ -498,7 +502,6 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
             });
             return;
         }
-
         op.req.emit('response', res);
     });
 
@@ -586,10 +589,10 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
         ;
 
     function clearTimer() {
-        self.channel.clearTimeout(self.timer);
+        self.timers.clearTimeout(self.timer);
     }
 }
-require('util').inherits(TChannelConnection, require('events').EventEmitter);
+inherits(TChannelConnection, EventEmitter);
 
 TChannelConnection.prototype.onReaderError = function onReaderError(err) {
     var self = this;
@@ -610,14 +613,14 @@ TChannelConnection.prototype.onReaderError = function onReaderError(err) {
 //   base - fuzz/2 to base + fuzz/2
 TChannelConnection.prototype.getTimeoutDelay = function getTimeoutDelay() {
     var self = this;
-    var base = self.channel.timeoutCheckInterval;
-    var fuzz = self.channel.timeoutFuzz;
-    return base + Math.round(Math.floor(self.channel.random() * fuzz) - (fuzz / 2));
+    var base = self.options.timeoutCheckInterval;
+    var fuzz = self.options.timeoutFuzz;
+    return base + Math.round(Math.floor(self.random() * fuzz) - (fuzz / 2));
 };
 
 TChannelConnection.prototype.startTimeoutTimer = function startTimeoutTimer() {
     var self = this;
-    self.timer = self.channel.setTimeout(function onChannelTimeout() {
+    self.timer = self.timers.setTimeout(function onChannelTimeout() {
         // TODO: worth it to clear the fired self.timer objcet?
         self.onTimeoutCheck();
     }, self.getTimeoutDelay());
@@ -626,7 +629,7 @@ TChannelConnection.prototype.startTimeoutTimer = function startTimeoutTimer() {
 TChannelConnection.prototype.clearTimeoutTimer = function clearTimeoutTimer() {
     var self = this;
     if (self.timer) {
-        self.channel.clearTimeout(self.timer);
+        self.timers.clearTimeout(self.timer);
         self.timer = null;
     }
 };
@@ -654,7 +657,7 @@ TChannelConnection.prototype.onTimeoutCheck = function onTimeoutCheck() {
 TChannelConnection.prototype.checkInOpsForTimeout = function checkInOpsForTimeout(ops) {
     var self = this;
     var opKeys = Object.keys(ops);
-    var now = self.channel.now();
+    var now = self.timers.now();
 
     for (var i = 0; i < opKeys.length; i++) {
         var opKey = opKeys[i];
@@ -664,7 +667,7 @@ TChannelConnection.prototype.checkInOpsForTimeout = function checkInOpsForTimeou
             continue;
         }
 
-        var timeout = self.channel.serverTimeoutDefault;
+        var timeout = self.options.serverTimeoutDefault;
         var duration = now - op.start;
         if (duration > timeout) {
             delete ops[opKey];
@@ -676,7 +679,7 @@ TChannelConnection.prototype.checkInOpsForTimeout = function checkInOpsForTimeou
 TChannelConnection.prototype.checkOutOpsForTimeout = function checkOutOpsForTimeout(ops) {
     var self = this;
     var opKeys = Object.keys(ops);
-    var now = self.channel.now();
+    var now = self.timers.now();
     for (var i = 0; i < opKeys.length ; i++) {
         var opKey = opKeys[i];
         var op = ops[opKey];
@@ -696,7 +699,7 @@ TChannelConnection.prototype.checkOutOpsForTimeout = function checkOutOpsForTime
                 });
             continue;
         }
-        var timeout = op.req.ttl || self.channel.reqTimeoutDefault;
+        var timeout = op.req.ttl || self.options.reqTimeoutDefault;
         var duration = now - op.start;
         if (duration > timeout) {
             delete ops[opKey];
@@ -711,7 +714,7 @@ TChannelConnection.prototype.onReqTimeout = function onReqTimeout(op) {
     op.timedOut = true;
     op.req.emit('error', new Error('timed out')); // TODO typed error
     // TODO: why don't we pop the op?
-    self.lastTimeoutTime = self.channel.now();
+    self.lastTimeoutTime = self.timers.now();
 };
 
 // this socket is completely broken, and is going away
@@ -808,7 +811,7 @@ TChannelConnection.prototype.request = function request(options) {
     options.ttl = options.timeout || DEFAULT_OUTGOING_REQ_TIMEOUT;
     var req = self.handler.buildOutgoingRequest(options);
     var id = req.id;
-    self.outOps[id] = new TChannelClientOp(req, self.channel.now());
+    self.outOps[id] = new TChannelClientOp(req, self.timers.now());
     self.pendingCount++;
     return req;
 };
@@ -818,7 +821,7 @@ TChannelConnection.prototype.handleCallRequest = function handleCallRequest(req)
     req.remoteAddr = self.remoteName;
     var id = req.id;
     self.inPending++;
-    var op = self.inOps[id] = new TChannelServerOp(self, self.channel.now(), req);
+    var op = self.inOps[id] = new TChannelServerOp(self, self.timers.now(), req);
     process.nextTick(runHandler);
 
     function runHandler() {

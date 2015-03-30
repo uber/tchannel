@@ -45,15 +45,17 @@ var InvalidCodeStringError = TypedError({
     codeString: null
 });
 
-function TChannelV2Handler(channel, options) {
+function TChannelV2Handler(options) {
     if (!(this instanceof TChannelV2Handler)) {
-        return new TChannelV2Handler(channel, options);
+        return new TChannelV2Handler(options);
     }
     var self = this;
     Duplex.call(self, {
         objectMode: true
     });
-    self.channel = channel;
+    self.options = options || {};
+    self.hostPort = self.options.hostPort;
+    self.processName = self.options.processName;
     self.remoteHostPort = null; // filled in by identify message
     self.lastSentFrameId = 0;
     // TODO: GC these... maybe that's up to TChannel itself wrt ops
@@ -244,8 +246,8 @@ TChannelV2Handler.prototype._handleCallFrame = function _handleCallFrame(r, fram
 TChannelV2Handler.prototype.sendInitRequest = function sendInitRequest() {
     var self = this;
     var id = self.nextFrameId(); // TODO: assert(id === 1)?
-    var hostPort = self.channel.hostPort || '0.0.0.0:0';
-    var processName = self.channel.processName;
+    var hostPort = self.hostPort || '0.0.0.0:0';
+    var processName = self.processName;
     var body = v2.InitRequest(v2.VERSION, {
         /* jshint camelcase:false */
         host_port: hostPort,
@@ -259,8 +261,8 @@ TChannelV2Handler.prototype.sendInitRequest = function sendInitRequest() {
 TChannelV2Handler.prototype.sendInitResponse = function sendInitResponse(reqFrame) {
     var self = this;
     var id = reqFrame.id;
-    var hostPort = self.channel.hostPort;
-    var processName = self.channel.processName;
+    var hostPort = self.hostPort;
+    var processName = self.processName;
     var body = v2.InitResponse(v2.VERSION, {
         /* jshint camelcase:false */
         host_port: hostPort,
