@@ -167,10 +167,15 @@ def multi_tcurl(
             if rps:
                 yield tornado.gen.sleep(1.0 / rps)
 
-        results = yield futures
+        wait_iterator = tornado.gen.WaitIterator(*futures)
+        results = []
 
-        info['requests'] = len(futures)
-        info['failures'] = len([r for r in results if r is None])
+        while not wait_iterator.done():
+            try:
+                info['requests'] += 1
+                results.append((yield wait_iterator.next()))
+            except Exception:
+                info['failures'] += 1
 
     raise tornado.gen.Return(results)
 
@@ -187,15 +192,11 @@ def tcurl(tchannel, hostport, headers, body, quiet=False):
 
     request = tchannel.request(host)
 
-    try:
-        response = yield request.send(
-            endpoint,
-            headers,
-            body,
-        )
-    except Exception:
-        log.debug("X Msg: %s" % request.message_id)
-        return
+    response = yield request.send(
+        endpoint,
+        headers,
+        body,
+    )
 
     if not quiet:
         log.debug("< Host: %s" % host)
