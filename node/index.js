@@ -131,6 +131,7 @@ function TChannel(options) {
 
     // populated by makeSubChannel
     self.topChannel = null;
+    self.subChannels = self.serviceName ? null : {};
 
     // how to handle incoming requests
     if (!self.options.handler) {
@@ -208,6 +209,9 @@ TChannel.prototype.makeSubChannel = function makeSubChannel(options) {
     if (!options.serviceName) {
         throw new Error('must specify serviceName'); // TODO typed error
     }
+    if (self.subChannels[options.serviceName]) {
+        throw new Error('sub channel already exists'); // TODO typed error
+    }
     var opts = extend(self.options);
     var keys = Object.keys(options);
     for (var i = 0; i < keys.length; i++) {
@@ -229,6 +233,7 @@ TChannel.prototype.makeSubChannel = function makeSubChannel(options) {
             }
         }
     }
+    self.subChannels[chan.serviceName] = chan;
     return chan;
 };
 
