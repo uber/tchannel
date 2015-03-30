@@ -20,6 +20,7 @@
 
 'use strict';
 
+var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 var parallel = require('run-parallel');
 
@@ -38,7 +39,7 @@ function TChannelIncomingRequest(id, options) {
     }
     options = options || {};
     var self = this;
-    InArgStream.call(self);
+    EventEmitter.call(self);
     self.state = States.Initial;
     self.id = id || 0;
     self.ttl = options.ttl || 0;
@@ -47,12 +48,31 @@ function TChannelIncomingRequest(id, options) {
     self.remoteAddr = null;
     self.headers = options.headers || {};
     self.checksum = options.checksum || null;
+    if (true) {
+        self._argstream = InArgStream();
+        self.arg1 = self._argstream.arg1;
+        self.arg2 = self._argstream.arg2;
+        self.arg3 = self._argstream.arg3;
+        self._argstream.on('error', function passError(err) {
+            self.emit('error', err);
+        });
+        self._argstream.on('finish', function onFinish() {
+            self.emit('finish');
+        });
+    }
     self.on('finish', function onFinish() {
         self.state = States.Done;
     });
 }
 
-inherits(TChannelIncomingRequest, InArgStream);
+inherits(TChannelIncomingRequest, EventEmitter);
+
+TChannelIncomingRequest.prototype.handleFrame = function handleFrame(parts) {
+    var self = this;
+    if (true) {
+        self._argstream.handleFrame(parts);
+    }
+};
 
 TChannelIncomingRequest.prototype.finish = function finish() {
     var self = this;
@@ -69,18 +89,37 @@ function TChannelIncomingResponse(id, options) {
     }
     options = options || {};
     var self = this;
-    InArgStream.call(self);
+    EventEmitter.call(self);
     self.state = States.Initial;
     self.id = id || 0;
     self.code = options.code || 0;
     self.checksum = options.checksum || null;
     self.ok = self.code === 0; // TODO: probably okay, but a bit jank
+    if (true) {
+        self._argstream = InArgStream();
+        self.arg1 = self._argstream.arg1;
+        self.arg2 = self._argstream.arg2;
+        self.arg3 = self._argstream.arg3;
+        self._argstream.on('error', function passError(err) {
+            self.emit('error', err);
+        });
+        self._argstream.on('finish', function onFinish() {
+            self.emit('finish');
+        });
+    }
     self.on('finish', function onFinish() {
         self.state = States.Done;
     });
 }
 
-inherits(TChannelIncomingResponse, InArgStream);
+inherits(TChannelIncomingResponse, EventEmitter);
+
+TChannelIncomingResponse.prototype.handleFrame = function handleFrame(parts) {
+    var self = this;
+    if (true) {
+        self._argstream.handleFrame(parts);
+    }
+};
 
 TChannelIncomingResponse.prototype.finish = function finish() {
     var self = this;
@@ -100,7 +139,7 @@ function TChannelOutgoingRequest(id, options) {
         throw new Error('missing sendFrame');
     }
     var self = this;
-    OutArgStream.call(self);
+    EventEmitter.call(self);
     self.state = States.Initial;
     self.id = id || 0;
     self.ttl = options.ttl || 0;
@@ -110,17 +149,24 @@ function TChannelOutgoingRequest(id, options) {
     self.checksumType = options.checksumType || 0;
     self.checksum = options.checksum || null;
     self.sendFrame = options.sendFrame;
-    self.on('frame', function onFrame(parts, isLast) {
-        self.sendParts(parts, isLast);
-    });
-    self.on('finish', function onFinish() {
-        // TODO: should be redundant with self.sendCallRequest(Cont)Frame
-        // having been called with isLast=true
-        self.state = States.Done;
-    });
+    if (true) {
+        self._argstream = OutArgStream();
+        self.arg1 = self._argstream.arg1;
+        self.arg2 = self._argstream.arg2;
+        self.arg3 = self._argstream.arg3;
+        self._argstream.on('error', function passError(err) {
+            self.emit('error', err);
+        });
+        self._argstream.on('frame', function onFrame(parts, isLast) {
+            self.sendParts(parts, isLast);
+        });
+        self._argstream.on('finish', function onFinish() {
+            self.emit('finish');
+        });
+    }
 }
 
-inherits(TChannelOutgoingRequest, OutArgStream);
+inherits(TChannelOutgoingRequest, EventEmitter);
 
 TChannelOutgoingRequest.prototype.sendParts = function sendParts(parts, isLast) {
     var self = this;
@@ -173,9 +219,11 @@ TChannelOutgoingRequest.prototype.sendCallRequestContFrame = function sendCallRe
 TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     var self = this;
     if (callback) self.hookupCallback(callback);
-    self.arg1.end(arg1);
-    self.arg2.end(arg2);
-    self.arg3.end(arg3);
+    if (true) {
+        self.arg1.end(arg1);
+        self.arg2.end(arg2);
+        self.arg3.end(arg3);
+    }
     return self;
 };
 
@@ -187,6 +235,7 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
         self.removeListener('response', onResponse);
         callback(err, null);
     }
+
     function onResponse(res) {
         self.removeListener('error', onError);
         if (callback.canStream) {
@@ -195,9 +244,11 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
             parallel({
                 arg2: res.arg2.onValueReady,
                 arg3: res.arg3.onValueReady
-            }, function argsDone(err, args) {
-                callback(err, res, args.arg2, args.arg3);
-            });
+            }, compatCall);
+        }
+
+        function compatCall(err, args) {
+            callback(err, res, args.arg2, args.arg3);
         }
     }
     return self;
@@ -212,7 +263,7 @@ function TChannelOutgoingResponse(id, options) {
         throw new Error('missing sendFrame');
     }
     var self = this;
-    OutArgStream.call(self);
+    EventEmitter.call(self);
     self.state = States.Initial;
     self.id = id || 0;
     self.code = options.code || 0;
@@ -222,17 +273,24 @@ function TChannelOutgoingResponse(id, options) {
     self.checksum = options.checksum || null;
     self.ok = true;
     self.sendFrame = options.sendFrame;
-    self.on('frame', function onFrame(parts, isLast) {
-        self.sendParts(parts, isLast);
-    });
-    self.on('finish', function onFinish() {
-        // TODO: should be redundant with self.sendCallResponse(Cont)Frame
-        // having been called with isLast=true
-        self.state = States.Done;
-    });
+    if (true) {
+        self._argstream = OutArgStream();
+        self.arg1 = self._argstream.arg1;
+        self.arg2 = self._argstream.arg2;
+        self.arg3 = self._argstream.arg3;
+        self._argstream.on('error', function passError(err) {
+            self.emit('error', err);
+        });
+        self._argstream.on('frame', function onFrame(parts, isLast) {
+            self.sendParts(parts, isLast);
+        });
+        self._argstream.on('finish', function onFinish() {
+            self.emit('finish');
+        });
+    }
 }
 
-inherits(TChannelOutgoingResponse, OutArgStream);
+inherits(TChannelOutgoingResponse, EventEmitter);
 
 TChannelOutgoingResponse.prototype.sendParts = function sendParts(parts, isLast) {
     var self = this;
@@ -287,12 +345,14 @@ TChannelOutgoingResponse.prototype.sendError = function sendError(codeString, me
     if (self.state === States.Done || self.state === States.Error) {
         throw new Error('response already done'); // TODO: typed error
     } else {
-        // TODO: we could decide to flush any parts in a (first?) call res frame
-        self.finished = true;
         self.state = States.Error;
-        self.arg1.end();
-        self.arg2.end();
-        self.arg3.end();
+        if (true) {
+            // TODO: we could decide to flush any parts in a (first?) call res frame
+            self._argstream.finished = true;
+            self.arg1.end();
+            self.arg2.end();
+            self.arg3.end();
+        }
         self.sendFrame.error(codeString, message);
     }
 };
@@ -304,21 +364,27 @@ TChannelOutgoingResponse.prototype.setOk = function setOk(ok) {
     }
     self.ok = ok;
     self.code = ok ? 0 : 1; // TODO: too coupled to v2 specifics?
-    self.arg1.end();
+    if (true) {
+        self.arg1.end();
+    }
 };
 
 TChannelOutgoingResponse.prototype.sendOk = function sendOk(res1, res2) {
     var self = this;
     self.setOk(true);
-    self.arg2.end(res1);
-    self.arg3.end(res2);
+    if (true) {
+        self.arg2.end(res1);
+        self.arg3.end(res2);
+    }
 };
 
 TChannelOutgoingResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
     var self = this;
     self.setOk(false);
-    self.arg2.end(res1);
-    self.arg3.end(res2);
+    if (true) {
+        self.arg2.end(res1);
+        self.arg3.end(res2);
+    }
 };
 
 module.exports.States = States;
