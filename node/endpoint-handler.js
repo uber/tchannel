@@ -80,9 +80,7 @@ TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, re
             res.sendError('BadRequest', util.format(
                 'no such endpoint service=%j endpoint=%j',
                 req.service, name));
-            return;
-        }
-        if (handler.canStream) {
+        } else if (handler.canStream) {
             handler(req, res);
         } else {
             parallel({
