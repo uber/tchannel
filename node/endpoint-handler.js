@@ -69,8 +69,14 @@ TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, re
     var self = this;
     // TODO: waterfall
     req.arg1.onValueReady(function arg1Ready(err, arg1) {
-        if (err) throw err; // TODO: protocol error, respond with error frame
-        handleArg1(arg1);
+        if (err) {
+            // TODO: log error
+            sendError('UnexpectedError', util.format(
+                'error accumulating arg1: %s: %s',
+                err.constructor.name, err.message));
+        } else {
+            handleArg1(arg1);
+        }
     });
 
     function handleArg1(arg1) {
@@ -91,7 +97,10 @@ TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, re
 
         function argsDone(err, args) {
             if (err) {
-                throw err; // TODO: protocol error, respond with error frame
+                // TODO: log error
+                sendError('UnexpectedError', util.format(
+                    'error accumulating arg2/arg3: %s: %s',
+                    err.constructor.name, err.message));
             } else {
                 compatHandle(handler, args);
             }
