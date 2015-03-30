@@ -865,6 +865,7 @@ TChannelPeers.prototype.choosePeer = function choosePeer(options, op, n) {
     if (n > 1) throw new Error('not implemented'); // TODO heap select n
     var self = this;
 
+    if (!options) options = {};
     var hosts = null;
     if (options.host) {
         hosts = [options.host];
