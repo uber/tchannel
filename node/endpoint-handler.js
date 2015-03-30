@@ -67,17 +67,20 @@ TChannelEndpointHandler.prototype.register = function register(name, handler) {
 
 TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, buildResponse) {
     var self = this;
-    // TODO: waterfall
-    req.arg1.onValueReady(function arg1Ready(err, arg1) {
-        if (err) {
-            // TODO: log error
-            sendError('UnexpectedError', util.format(
-                'error accumulating arg1: %s: %s',
-                err.constructor.name, err.message));
-        } else {
-            handleArg1(arg1);
-        }
-    });
+    if (req.streamed) {
+        req.arg1.onValueReady(function arg1Ready(err, arg1) {
+            if (err) {
+                // TODO: log error
+                sendError('UnexpectedError', util.format(
+                    'error accumulating arg1: %s: %s',
+                    err.constructor.name, err.message));
+            } else {
+                handleArg1(arg1);
+            }
+        });
+    } else {
+        throw new Error('not implemented');
+    }
 
     function handleArg1(arg1) {
         var name = String(arg1);
@@ -88,11 +91,13 @@ TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, bu
                 req.service, name));
         } else if (handler.canStream) {
             handler(req, buildResponse);
-        } else {
+        } else if (req.streamed) {
             parallel({
                 arg2: req.arg2.onValueReady,
                 arg3: req.arg3.onValueReady
             }, argsDone);
+        } else {
+            throw new Error('not implemented');
         }
 
         function argsDone(err, args) {

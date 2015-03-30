@@ -326,10 +326,14 @@ function streamingTest(testCase, assert, callback) {
             callback();
             return;
         }
-        async.series([
-            verifyStream('arg2', res.arg2, resHeadStream),
-            verifyStream('arg3', res.arg3, resBodyStream),
-        ], callback);
+        if (res.streamed) {
+            async.series([
+                verifyStream('arg2', res.arg2, resHeadStream),
+                verifyStream('arg3', res.arg3, resBodyStream),
+            ], callback);
+        } else {
+            throw new Error('not implemented');
+        }
     }
 
     function verifyStream(name, got, expected) {
@@ -371,21 +375,21 @@ function echoHandler() {
     var handler = EndpointHandler();
     function foo(req, buildRes) {
         var res = buildRes();
-        res.setOk(true);
-        req.arg2.on('data', function onArg2Data(chunk) {
-            res.arg2.write(chunk);
-        });
-        req.arg2.on('end', function onArg2End() {
-            res.arg2.end();
-        });
-
-        req.arg3.on('data', function onArg3Data(chunk) {
-            res.arg3.write(chunk);
-        });
-        req.arg3.on('end', function onArg3End() {
-            res.arg3.end();
-        });
-
+        if (req.streamed) {
+            res.setOk(true);
+            req.arg2.on('data', function onArg2Data(chunk) {
+                res.arg2.write(chunk);
+            });
+            req.arg2.on('end', function onArg2End() {
+                res.arg2.end();
+            });
+            req.arg3.on('data', function onArg3Data(chunk) {
+                res.arg3.write(chunk);
+            });
+            req.arg3.on('end', function onArg3End() {
+                res.arg3.end();
+            });
+        }
     }
     foo.canStream = true;
     handler.register('foo', foo);
