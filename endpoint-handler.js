@@ -86,10 +86,19 @@ TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, re
             parallel({
                 arg2: req.arg2.onValueReady,
                 arg3: req.arg3.onValueReady
-            }, function argsDone(err, args) {
-                if (err) throw err; // TODO: protocol error, respond with error frame
-                else handler(req, res, args.arg2, args.arg3);
-            });
+            }, argsDone);
+        }
+
+        function argsDone(err, args) {
+            if (err) {
+                throw err; // TODO: protocol error, respond with error frame
+            } else {
+                compatHandle(handler, args);
+            }
+        }
+
+        function compatHandle(handler, args) {
+            handler(req, res, args.arg2, args.arg3);
         }
     }
 };
