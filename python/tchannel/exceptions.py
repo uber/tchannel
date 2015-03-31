@@ -54,6 +54,14 @@ class InvalidChecksumException(TChannelException):
     pass
 
 
+class InvalidErrorCodeException(TChannelException):
+    """Represent Invalid Error Code exception"""
+    def __init__(self, code):
+        super(InvalidErrorCodeException, self).__init__(
+            'Invalid Error Code (%s)' % (code))
+        self.code = code
+
+
 class TChannelApplicationException(TChannelException):
     """The remote application returned an exception.
 
