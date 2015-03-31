@@ -30,6 +30,7 @@ from .frame_reader import FrameReader
 from .frame_reader import FrameWriter
 from .messages.common import PROTOCOL_VERSION
 from .messages.types import Types
+from .tornado.message_factory import MessageFactory
 
 
 log = logging.getLogger('tchannel')
@@ -78,7 +79,7 @@ class SocketConnection(object):
         self.writer = FrameWriter(self.connection)
         self.reader = FrameReader(self.connection).read()
         self.closed = False
-
+        self.message_factory = MessageFactory()
         self._id_sequence = 0
 
     def handle_calls(self, handler):
@@ -126,6 +127,12 @@ class SocketConnection(object):
     def close(self):
         self.closed = True
         return self.connection.close()
+
+    def frame_and_write_stream(self, message, message_id=None):
+        message_id = message_id or self.next_message_id()
+        fragment_msgs = self.message_factory.fragment(message)
+        for fragment in fragment_msgs:
+            self.frame_and_write(fragment, message_id)
 
     def frame_and_write(self, message, message_id=None):
         """Frame and write a message over a connection."""
@@ -197,7 +204,6 @@ class SocketConnection(object):
         context = self.await()
         if not context:
             raise exceptions.TChannelException("Connection was closed.")
-
         message = context.message
         if message.message_type != Types.INIT_RES:
             raise exceptions.InvalidMessageException(
@@ -210,4 +216,4 @@ class SocketConnection(object):
 
     def finish(self, response):
         """write response"""
-        self.frame_and_write(response.resp_msg, response.id)
+        self.frame_and_write_stream(response.resp_msg, response.id)

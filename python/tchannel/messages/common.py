@@ -12,6 +12,10 @@ from .types import Types
 PROTOCOL_VERSION = 0x02
 
 
+class FlagsType(IntEnum):
+    none = 0x00,
+    fragment = 0x01
+
 Tracing = namedtuple('Tracing', 'span_id parent_id trace_id traceflags')
 
 tracing_rw = rw.instance(
@@ -77,9 +81,7 @@ def generate_checksum(message):
     if message.message_type in CHECKSUM_MSG_TYPES:
         csum = compute_checksum(
             message.checksum[0],
-            [message.arg_1,
-             message.arg_2,
-             message.arg_3])
+            message.args)
 
         message.checksum = (message.checksum[0], csum)
 
@@ -92,9 +94,7 @@ def verify_checksum(message):
     if message.message_type in CHECKSUM_MSG_TYPES:
         csum = compute_checksum(
             message.checksum[0],
-            [message.arg_1,
-             message.arg_2,
-             message.arg_3])
+            message.args)
 
         if csum == message.checksum[1]:
             return True

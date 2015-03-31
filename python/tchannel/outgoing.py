@@ -124,8 +124,7 @@ class TChannelOutOps(object):
 
             msg_id = self._next_message_id()
             self._futures[msg_id] = request.future
-
-            self._conn.frame_and_write(msg, message_id=msg_id)
+            self._conn.frame_and_write_stream(msg, message_id=msg_id)
 
     def _start_receiver(self):
         """Responsible for receiving and dispatching requests.
@@ -185,7 +184,7 @@ class TChannelOutOps(object):
             self._state == self.State.ready
         ), "Handshake not performed or connection closed"
 
-        msg = CallRequestMessage(arg_1=arg_1, arg_2=arg_2, arg_3=arg_3)
+        msg = CallRequestMessage(args=[arg_1, arg_2, arg_3])
 
         future = SettableFuture()
         self._submit(msg, future)
@@ -194,9 +193,7 @@ class TChannelOutOps(object):
             if response.code != 0:
                 raise TChannelApplicationException(
                     response.code,
-                    response.arg_1,
-                    response.arg_2,
-                    response.arg_3,
+                    response.args,
                 )
             return response
 

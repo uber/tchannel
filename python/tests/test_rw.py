@@ -1,3 +1,5 @@
+# encoding=utf8
+
 # Copyright (c) 2015 Uber Technologies, Inc.
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -18,7 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-# encoding=utf8
 from __future__ import absolute_import
 
 from collections import namedtuple
@@ -95,7 +96,7 @@ def test_number(num, width, bs):
     ('hello world', 4, [0, 0, 0, 11] + list('hello world')),
 ])
 def test_len_prefixed_string(s, len_width, bs):
-    s_rw = rw.len_prefixed_string(rw.number(len_width))
+    s_rw = rw.len_prefixed_string(rw.number(len_width), is_binary=False)
     assert s_rw.read(bio(bs)) == s
     assert s_rw.write(s, BytesIO()).getvalue() == bytearray(bs)
 

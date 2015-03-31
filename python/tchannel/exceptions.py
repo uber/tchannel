@@ -54,6 +54,11 @@ class InvalidChecksumException(TChannelException):
     pass
 
 
+class StreamingException(TChannelException):
+    """Represent Streaming Message Exception"""
+    pass
+
+
 class InvalidErrorCodeException(TChannelException):
     """Represent Invalid Error Code exception"""
     def __init__(self, code):
@@ -68,12 +73,10 @@ class TChannelApplicationException(TChannelException):
     This is not a protocol error. This means a response was received with the
     ``code`` flag set to fail.
     """
-    def __init__(self, code, arg_1, arg_2, arg_3):
+    def __init__(self, code, args):
         super(TChannelException, self).__init__(
-            'TChannel application error (%s, %s, %s)' % (arg_1, arg_2, arg_3)
+            'TChannel application error (%s)' % (args)
         )
 
         self.code = code
-        self.arg_1 = arg_1
-        self.arg_2 = arg_2
-        self.arg_3 = arg_3
+        self.args = args

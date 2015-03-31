@@ -102,13 +102,15 @@ class TCPServerManager(ServerManager):
     @contextmanager
     def client_connection(self):
         """Get an initiated Connection to this TChannel server."""
+        conn = None
         try:
             conn = socket_tchannel.SocketConnection.outgoing(
                 'localhost:%d' % self.port
             )
             yield conn
         finally:
-            conn.close()
+            if conn is not None:
+                conn.close()
 
     def serve(self):
         self.ready = True

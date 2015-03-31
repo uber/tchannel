@@ -19,8 +19,7 @@
 # THE SOFTWARE.
 
 import collections
-from .messages import CallResponseMessage
-from .messages import PingRequestMessage
+from .messages import CallResponseMessage, Types
 from .messages import PingResponseMessage
 from .messages.error import ErrorCode
 
@@ -58,25 +57,25 @@ class TChannelRequestHandler(RequestHandler):
         :param conn: An incoming TornadoConnection
         """
         # TODO: stop passing conn around everywhere
-        request = TChannelRequest(context, conn)
-        endpoint = self._find_endpoint(request.method)
-        if endpoint is not None:
-            response = TChannelResponse(request, conn)
-            try:
-                endpoint.handler(request, response, endpoint.opts)
-            # TODO add tchannel error handling here
-            finally:
-                response.finish()
-
-        elif context.message.message_type == PingRequestMessage.message_type:
-            response = TChannelResponse(request, conn)
-            response.resp_msg = PingResponseMessage()
-            response.finish()
-
+        if context.message.message_type == Types.PING_REQ:
+            conn.frame_and_write(PingResponseMessage(), context.message_id)
+        elif context.message.message_type == Types.CALL_REQ:
+            request = TChannelRequest(context, conn)
+            endpoint = self._find_endpoint(getattr(request, 'endpoint', None))
+            if endpoint is not None:
+                response = TChannelResponse(context, conn)
+                try:
+                    endpoint.handler(request, response, endpoint.opts)
+                # TODO add tchannel error handling here
+                finally:
+                    response.finish()
+            else:
+                msg = "no such endpoint service={0} endpoint={1}".format(
+                    context.message.service, context.message.args[0])
+                conn.send_error(ErrorCode.bad_request, msg, context.message_id)
         else:
-            msg = "no such endpoint service={0} endpoint={1}".format(
-                context.message.service, context.message.arg_1)
-            conn.send_error(ErrorCode.bad_request, msg, context.message_id)
+            # TODO handle other type message
+            raise NotImplementedError()
 
     def route(self, rule, **opts):
         def decorator(handler):
@@ -96,15 +95,19 @@ class TChannelRequest(object):
     """TChannel Request Wrapper"""
 
     __slots__ = ('message', 'header',
-                 'body', 'method',
+                 'body', 'endpoint',
                  'connection', 'context',
                  'id')
 
     def __init__(self, context, conn):
         self.message = context.message
-        self.header = getattr(self.message, 'arg_2', None)
-        self.body = getattr(self.message, 'arg_3', None)
-        self.method = getattr(self.message, 'arg_1', None)
+
+        assert len(getattr(self.message, "args", [])) == 3
+
+        self.endpoint = self.message.args[0]
+        self.header = self.message.args[1]
+        self.body = self.message.args[2]
+
         self.connection = conn
         self.context = context
         self.id = context.message_id
@@ -115,22 +118,33 @@ class TChannelRequest(object):
 class TChannelResponse(object):
     """TChannel Response Wrapper"""
 
-    __slots__ = ('_connection', '_request',
-                 'resp_msg', 'id')
+    __slots__ = ('_connection',
+                 'resp_msg', 'id',
+                 'arg1', 'arg2', 'arg3',
+                 'headers')
 
-    def __init__(self, request, conn):
+    def __init__(self, context, conn):
         self._connection = conn
-        self._request = request
-        self.resp_msg = CallResponseMessage()
-        self.id = request.id
+        self.arg1 = ""
+        self.arg2 = ""
+        self.arg3 = ""
+        self.id = context.message_id
+        self.resp_msg = None
 
-    def write(self, chunk):
+    def write(self, arg1="", arg2="", arg3=""):
         # build response message
-        self.resp_msg.arg_3 += chunk
+        self.arg1 += arg1
+        self.arg2 += arg2
+        self.arg3 += arg3
 
     def finish(self):
+        # TODO add status code into arg_1 area
+        if self.resp_msg is None:
+            self.resp_msg = CallResponseMessage(
+                args=[self.arg1, self.arg2, self.arg3]
+            )
         self._connection.finish(self)
-        self.resp_msg = CallResponseMessage()
+        self.resp_msg = None
 
     def update_resp_id(self):
         self.id += 1

@@ -86,15 +86,15 @@ class TChannelClientOperation(object):
 
         message = CallRequestMessage(
             service=self.service,
-            arg_1=safebytes(arg_1),
-            arg_2=arg_2,
-            arg_3=arg_3,
+            args=[safebytes(arg_1),
+                  arg_3,
+                  arg_3],
         )
 
         log.debug("framing and writing message %s", message_id)
 
         # TODO: return response future here?
-        yield peer_connection.frame_and_write(
+        yield peer_connection.frame_and_write_stream(
             message,
             message_id=message_id,
         )
