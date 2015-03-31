@@ -106,7 +106,6 @@ function TChannel(options) {
     self.requestedPort = null;
 
     // Filled in by listening event:
-    self.port = null;
     self.hostPort = null;
     self.random = self.options.random || globalRandom;
     self.timers = self.options.timers || globalTimers;
