@@ -86,6 +86,7 @@ type TChannel : {
         hostname:String,
         Callback<Error>?
     ) => void,
+    address: () => ?{port, family, address}
     close: (Callback<Error>) => void,
 
     getPeer: (hostPort: HostInfo) => TChannelConnection,
