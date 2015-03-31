@@ -13,9 +13,10 @@ from .. import messages
 from .. import exceptions
 from ..io import BytesIO
 from ..context import Context
-from ..exceptions import ConnectionClosedException
+from ..exceptions import ConnectionClosedException, InvalidErrorCodeException
 from ..messages.types import Types
 from ..messages.common import PROTOCOL_VERSION, generate_checksum
+from ..messages.error import ErrorMessage, ErrorCode
 
 
 log = logging.getLogger('tchannel')
@@ -275,3 +276,15 @@ class TornadoConnection(object):
     def finish(self, response):
         """write response"""
         self.frame_and_write(response.resp_msg, response.id)
+
+    def send_error(self, code, message, message_id):
+        if code not in ErrorMessage.ERROR_CODES.keys():
+            raise InvalidErrorCodeException(code)
+
+        self.frame_and_write(
+            ErrorMessage(
+                code=ErrorCode.bad_request,
+                message=message
+            ),
+            message_id
+        )

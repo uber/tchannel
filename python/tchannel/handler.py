@@ -2,6 +2,7 @@ import collections
 from .messages import CallResponseMessage
 from .messages import PingRequestMessage
 from .messages import PingResponseMessage
+from .messages.error import ErrorCode
 
 Endpoint = collections.namedtuple('Endpoint', ['handler', 'opts'])
 
@@ -53,8 +54,9 @@ class TChannelRequestHandler(RequestHandler):
             response.finish()
 
         else:
-            # TODO error handling if endpoint is not found
-            raise NotImplementedError(request.method)
+            msg = "no such endpoint service={0} endpoint={1}".format(
+                context.message.service, context.message.arg_1)
+            conn.send_error(ErrorCode.bad_request, msg, context.message_id)
 
     def route(self, rule, **opts):
         def decorator(handler):

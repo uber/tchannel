@@ -9,6 +9,8 @@ from tchannel.exceptions import TChannelApplicationException
 from tchannel.outgoing import OutgoingTChannel
 from tchannel.tornado import TChannel
 from tchannel.tornado.connection import TornadoConnection
+from tchannel.messages.error import ErrorCode
+from tchannel.messages import Types
 
 
 @pytest.fixture
@@ -135,3 +137,16 @@ def test_tcurl(server, call_response):
     for response in responses:
         assert response.arg_1 == call_response.arg_1
         assert response.arg_3 == call_response.arg_3
+
+
+@pytest.mark.gen_test
+def test_endpoint_not_found(tchannel_server, call_response):
+    endpoint = b'tchanneltest'
+    tchannel_server.expect_call_request(endpoint).and_return(call_response)
+    tchannel = TChannel()
+
+    hostport = 'localhost:%d' % (tchannel_server.port)
+
+    response = yield tchannel.request(hostport).send("", "", "")
+    assert response.message_type == Types.ERROR
+    assert response.code == ErrorCode.bad_request
