@@ -100,24 +100,37 @@ function TChannel(options) {
     }, options);
 
     self.logger = self.options.logger || nullLogger;
+
     // Filled in by the listen call:
     self.host = null;
     self.requestedPort = null;
+
     // Filled in by listening event:
-    self.port = null;
     self.hostPort = null;
     self.random = self.options.random || globalRandom;
     self.timers = self.options.timers || globalTimers;
 
-    self.peers = Object.create(null);
-
+    // how to handle incoming requests
     self.handler = self.options.handler || noHandlerHandler;
+
+    // populated by:
+    // - manually api (.addPeer etc)
+    // - incoming connections on any listening socket
+    self.peers = Object.create(null);
 
     // TChannel advances through the following states.
     self.listened = false;
     self.listening = false;
     self.destroyed = false;
 
+    // lazily created by .getServer (usually from .listen)
+    self.serverSocket = null;
+}
+inherits(TChannel, EventEmitter);
+
+TChannel.prototype.getServer = function getServer() {
+    var self = this;
+    if (self.serverSocket) return;
     self.serverSocket = net.createServer(function onServerSocketConnection(sock) {
         if (!self.destroyed) {
             var remoteAddr = sock.remoteAddress + ':' + sock.remotePort;
@@ -128,13 +141,11 @@ function TChannel(options) {
             });
         }
     });
-
     self.serverSocket.on('listening', function onServerSocketListening() {
         if (!self.destroyed) {
             var address = self.serverSocket.address();
             self.hostPort = self.host + ':' + address.port;
             self.listening = true;
-
             self.logger.info(self.hostPort + ' listening');
             self.emit('listening');
         }
@@ -146,7 +157,6 @@ function TChannel(options) {
                 host: self.host
             });
         }
-
         self.logger.error('server socket error', {
             err: err,
             requestedPort: self.requestedPort,
@@ -158,8 +168,8 @@ function TChannel(options) {
     self.serverSocket.on('close', function onServerSocketClose() {
         self.logger.warn('server socket close');
     });
-}
-inherits(TChannel, EventEmitter);
+    return self.serverSocket;
+};
 
 // Decoulping config and creation from the constructor.
 TChannel.prototype.listen = function listen(port, host, callback) {
@@ -183,8 +193,7 @@ TChannel.prototype.listen = function listen(port, host, callback) {
     self.listened = true;
     self.requestedPort = port;
     self.host = host;
-    var serverSocket = self.serverSocket;
-    serverSocket.listen(port, host, callback);
+    self.getServer().listen(port, host, callback);
 };
 
 // TODO: deprecated, callers should use .handler directly
@@ -229,7 +238,7 @@ TChannel.prototype.register = function register(name, handler) {
 
 TChannel.prototype.address = function address() {
     var self = this;
-    return self.serverSocket.address();
+    return self.serverSocket && self.serverSocket.address();
 };
 
 // not public, used by addPeer
@@ -428,16 +437,17 @@ TChannel.prototype.close = function close(callback) {
         sock.destroy();
     });
 
-    var serverSocket = self.serverSocket;
-    if (serverSocket.address()) {
-        closeServerSocket();
-    } else {
-        serverSocket.once('listening', closeServerSocket);
+    if (self.serverSocket) {
+        if (self.serverSocket.address()) {
+            closeServerSocket();
+        } else {
+            self.serverSocket.once('listening', closeServerSocket);
+        }
     }
 
     function closeServerSocket() {
-        serverSocket.once('close', onClose);
-        serverSocket.close();
+        self.serverSocket.once('close', onClose);
+        self.serverSocket.close();
     }
 
     function onClose() {
