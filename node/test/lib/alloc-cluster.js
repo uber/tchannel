@@ -30,29 +30,59 @@ var debugLogtron = require('debug-logtron');
 
 module.exports = allocCluster;
 
-function allocCluster(n, opts) {
+function allocCluster(opts) {
     opts = opts || {};
 
     var host = 'localhost';
     var logger = debugLogtron('tchannel');
     var cluster = {
         logger: logger,
-        hosts: new Array(n),
-        channels: new Array(n),
+        hosts: new Array(opts.numPeers),
+        channels: new Array(opts.numPeers),
         destroy: destroy,
-        ready: CountedReadySignal(n)
+        ready: CountedReadySignal(opts.numPeers),
+        assertCleanState: assertCleanState
     };
+    var channelOptions = extend({
+        logger: logger
+    }, opts.channelOptions || opts);
 
-    for (var i=0; i<n; i++) {
+    for (var i = 0; i < opts.numPeers; i++) {
         createChannel(i);
     }
 
     return cluster;
 
+    function assertCleanState(assert, expected) {
+        cluster.channels.forEach(function eachChannel(chan, i) {
+            var chanExpect = expected.channels[i];
+            var peers = chan.peers.values();
+            assert.equal(peers.length, chanExpect.peers.length,
+                util.format('channel[%s] should have %s peer(s)',
+                            i, chanExpect.peers.length));
+            peers.forEach(function eachPeer(peer, j) {
+                var peerExpect = chanExpect.peers[j];
+                peer.connections.forEach(function eachConn(conn, k) {
+                    var connExpect = peerExpect.connections[k];
+                    var name = util.format('channel[%s] peer[%s] conn[%s]', i, j, k);
+                    Object.keys(connExpect).forEach(function eachProp(prop) {
+                        var desc = util.format('%s should .%s', name, prop);
+                        switch (prop) {
+                        case 'inOps':
+                        case 'outOps':
+                            assert.equal(Object.keys(conn[prop]).length, connExpect[prop], desc);
+                            break;
+                        default:
+                            assert.equal(conn[prop], connExpect[prop], desc);
+                        }
+                    });
+                });
+            });
+        });
+    }
+
     function createChannel(i) {
-        var chan = TChannel(extend({
-            logger: logger
-        }, opts));
+        var chan = TChannel(extend(channelOptions));
         var port = opts.listen && opts.listen[i] || 0;
         chan.listen(port, host);
         cluster.channels[i] = chan;
@@ -74,13 +104,18 @@ function allocCluster(n, opts) {
     }
 }
 
-allocCluster.test = function testCluster(desc, n, opts, t) {
+allocCluster.test = function testCluster(desc, opts, t) {
+    if (typeof opts === 'number') {
+        opts = {
+            numPeers: opts
+        };
+    }
     if (typeof opts === 'function') {
         t = opts;
         opts = {};
     }
     test(desc, function t2(assert) {
-        allocCluster(n, opts).ready(function clusterReady(cluster) {
+        allocCluster(opts).ready(function clusterReady(cluster) {
             assert.once('end', function testEnded() {
                 cluster.destroy();
             });
@@ -88,4 +123,3 @@ allocCluster.test = function testCluster(desc, n, opts, t) {
         });
     });
 };
-

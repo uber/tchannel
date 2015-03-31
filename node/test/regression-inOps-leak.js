@@ -23,9 +23,12 @@
 var allocCluster = require('./lib/alloc-cluster.js');
 var EndpointHandler = require('../endpoint-handler');
 
-allocCluster.test('does not leak inOps', 2, {
-    timeoutCheckInterval: 100,
-    serverTimeoutDefault: 100
+allocCluster.test('does not leak inOps', {
+    numPeers: 2,
+    channelOptions: {
+        timeoutCheckInterval: 100,
+        serverTimeoutDefault: 100
+    }
 }, function t(cluster, assert) {
     var one = cluster.channels[0];
     var two = cluster.channels[1];
@@ -34,6 +37,7 @@ allocCluster.test('does not leak inOps', 2, {
 
     one.handler.register('/timeout', timeout);
 
+    two.timeoutCheckInterval = 99999;
     two
         .request({
             host: cluster.hosts[0],
@@ -42,30 +46,23 @@ allocCluster.test('does not leak inOps', 2, {
         .send('/timeout', 'h', 'b', onTimeout);
 
     function onTimeout(err) {
-        two.timeoutCheckInterval = 99999;
         assert.equal(err && err.message, 'timed out', 'should have a timeout error');
-
-        var peersOne = one.getPeers();
-        var peersTwo = two.getPeers();
-
-        assert.equal(peersOne.length, 1, 'one should have 1 peer');
-        assert.equal(peersTwo.length, 1, 'two should have 1 peer');
-
-        var inPeer = peersOne[0];
-        if (inPeer) {
-            assert.equal(inPeer.direction, 'in', 'inPeer should be in');
-            inPeer.onTimeoutCheck();
-            assert.equal(Object.keys(inPeer.inOps).length, 0, 'inPeer should have no inOps');
-            assert.equal(Object.keys(inPeer.outOps).length, 0, 'inPeer should have no outOps');
-        }
-
-        var outPeer = peersTwo[0];
-        if (outPeer) {
-            assert.equal(outPeer.direction, 'out', 'outPeer should be out');
-            assert.equal(Object.keys(outPeer.inOps).length, 0, 'outPeer should have no inOps');
-            assert.equal(Object.keys(outPeer.outOps).length, 0, 'outPeer should have no outOps');
-        }
-
+        one.peers.get(two.hostPort).connections[0].onTimeoutCheck();
+        cluster.assertCleanState(assert, {
+            channels: [{
+                peers: [{
+                    connections: [
+                        {direction: 'in', inOps: 0, outOps: 0}
+                    ]
+                }]
+            }, {
+                peers: [{
+                    connections: [
+                        {direction: 'out', inOps: 0, outOps: 0}
+                    ]
+                }]
+            }]
+        });
         assert.end();
     }
 
