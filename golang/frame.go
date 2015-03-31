@@ -189,3 +189,22 @@ func (f *Frame) WriteTo(w io.Writer) error {
 func (f *Frame) SizedPayload() []byte {
 	return f.Payload[:f.Header.PayloadSize()]
 }
+
+func (f *Frame) write(msg message) error {
+	var wbuf typed.WriteBuffer
+	wbuf.Wrap(f.Payload[:])
+	if err := msg.write(&wbuf); err != nil {
+		return err
+	}
+
+	f.Header.ID = msg.ID()
+	f.Header.messageType = msg.messageType()
+	f.Header.SetPayloadSize(uint16(wbuf.BytesWritten()))
+	return nil
+}
+
+func (f *Frame) read(msg message) error {
+	var rbuf typed.ReadBuffer
+	rbuf.Wrap(f.SizedPayload())
+	return msg.read(&rbuf)
+}
