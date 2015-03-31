@@ -135,7 +135,7 @@ func (ch *Channel) BeginCall(ctx context.Context, hostPort,
 		return nil, err
 	}
 
-	conn, err := newOutboundConnection(ch, nconn, &ch.connectionOptions)
+	conn, err := newOutboundConnection(nconn, ch.handlers, ch.log, &ch.connectionOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +213,7 @@ func (ch *Channel) ListenAndHandle() error {
 
 		acceptBackoff = 0
 
-		_, err = newInboundConnection(ch, netConn, &ch.connectionOptions)
+		_, err = newInboundConnection(netConn, ch.handlers, ch.log, &ch.connectionOptions)
 		if err != nil {
 			// Server is getting overloaded - begin rejecting new connections
 			ch.log.Errorf("could not create new TChannelConnection for incoming conn: %v", err)

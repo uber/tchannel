@@ -84,7 +84,6 @@ type ConnectionOptions struct {
 
 // Connection represents a connection to a remote peer.
 type Connection struct {
-	ch             *Channel
 	log            Logger
 	checksumType   ChecksumType
 	framePool      FramePool
@@ -128,21 +127,19 @@ const (
 )
 
 // Creates a new TChannelConnection around an outbound connection initiated to a peer
-func newOutboundConnection(ch *Channel, conn net.Conn,
+func newOutboundConnection(conn net.Conn, handlers handlerMap, log Logger,
 	opts *ConnectionOptions) (*Connection, error) {
-	c := newConnection(ch, conn, connectionWaitingToSendInitReq, opts)
-	return c, nil
+	return newConnection(conn, connectionWaitingToSendInitReq, handlers, log, opts), nil
 }
 
 // Creates a new TChannelConnection based on an incoming connection from a peer
-func newInboundConnection(ch *Channel, conn net.Conn,
+func newInboundConnection(conn net.Conn, handlers handlerMap, log Logger,
 	opts *ConnectionOptions) (*Connection, error) {
-	c := newConnection(ch, conn, connectionWaitingToRecvInitReq, opts)
-	return c, nil
+	return newConnection(conn, connectionWaitingToRecvInitReq, handlers, log, opts), nil
 }
 
 // Creates a new connection in a given initial state
-func newConnection(ch *Channel, conn net.Conn, initialState connectionState,
+func newConnection(conn net.Conn, initialState connectionState, handlers handlerMap, log Logger,
 	opts *ConnectionOptions) *Connection {
 
 	if opts == nil {
@@ -165,8 +162,7 @@ func newConnection(ch *Channel, conn net.Conn, initialState connectionState,
 	}
 
 	c := &Connection{
-		ch:            ch,
-		log:           ch.log,
+		log:           log,
 		conn:          conn,
 		framePool:     framePool,
 		state:         initialState,
@@ -175,15 +171,15 @@ func newConnection(ch *Channel, conn net.Conn, initialState connectionState,
 		checksumType:  opts.ChecksumType,
 		inbound: messageExchangeSet{
 			name:      messageExchangeSetInbound,
-			log:       ch.log,
+			log:       log,
 			exchanges: make(map[uint32]*messageExchange),
 		},
 		outbound: messageExchangeSet{
 			name:      messageExchangeSetOutbound,
-			log:       ch.log,
+			log:       log,
 			exchanges: make(map[uint32]*messageExchange),
 		},
-		handlers: ch.handlers,
+		handlers: handlers,
 	}
 
 	go c.readFrames()
