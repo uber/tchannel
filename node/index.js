@@ -639,7 +639,7 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
 
     self.clearTimeoutTimer();
 
-    self.emit('reset', err);
+    self.emit('error', err);
 
     // requests that we've received we can delete, but these reqs may have started their
     //   own outgoing work, which is hard to cancel. By setting this.closing, we make sure
@@ -1019,7 +1019,7 @@ TChannelPeer.prototype.makeOutConnection = function makeOutConnection(socket) {
     var self = this;
     var chan = self.channel;
     var conn = new TChannelConnection(chan, socket, 'out', self.hostPort);
-    conn.once('reset', onConnectionReset);
+    conn.once('error', onConnectionReset);
     self.emit('allocConnection', conn);
     return conn;
 
