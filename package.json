@@ -25,7 +25,8 @@
     "hexer": "^1.2.0",
     "readable-stream": "1.0.33",
     "ready-signal": "^1.1.1",
-    "run-parallel": "^1.1.0"
+    "run-parallel": "^1.1.0",
+    "xtend": "^4.0.0"
   },
   "devDependencies": {
     "ansi-color": "^0.2.1",
@@ -45,8 +46,7 @@
     "tape": "^3.0.3",
     "through2": "^0.6.3",
     "time-mock": "^0.1.2",
-    "uber-licence": "^1.1.0",
-    "xtend": "^4.0.0"
+    "uber-licence": "^1.1.0"
   },
   "pre-commit": [],
   "pre-commit.silent": true
