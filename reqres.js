@@ -317,7 +317,7 @@ function TChannelOutgoingResponse(id, options) {
     self.headers = options.headers || {};
     self.checksumType = options.checksumType || 0;
     self.checksum = options.checksum || null;
-    self.ok = true;
+    self.ok = self.code === 0;
     self.sendFrame = options.sendFrame;
     if (options.streamed) {
         self.streamed = true;
