@@ -45,24 +45,15 @@ class TChannel(object):
     def add_peer(self, hostport):
         if hostport not in self.peers:
             self.peers[hostport] = TornadoConnection.outgoing(hostport)
-            yield self.peers[hostport]
-
-        # We only want one connection at a time, someone else is
-        # connecting so wait for them without blocking.
-        while self.peers[hostport].running():
-            yield tornado.gen.sleep(0.0)
-
-        raise tornado.gen.Return(self.peers[hostport].result())
+        connection = yield self.peers[hostport]
+        raise tornado.gen.Return(connection)
 
     def remove_peer(self, hostport):
         # TODO: Connection cleanup
         return self.peers.pop(hostport)
 
-    @tornado.gen.coroutine
     def get_peer(self, hostport):
-        peer = yield self.add_peer(hostport)
-
-        raise tornado.gen.Return(peer)
+        return self.add_peer(hostport)
 
     def request(self, hostport, service=None):
         return TChannelClientOperation(hostport, service, self)

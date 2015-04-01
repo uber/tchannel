@@ -231,11 +231,12 @@ def tcurl(tchannel, hostport, headers, body, service, quiet=False):
     )
 
     if not quiet:
+        (arg1, arg2, arg3) = response.args
         log.debug("< Host: %s" % host)
         log.debug("<  Msg: %s" % request.message_id)
-        log.debug("< arg1: %s" % getattr(response, 'arg_1', None))
-        log.debug("< arg2: %s" % getattr(response, 'arg_2', None))
-        log.debug("< arg3: %s" % getattr(response, 'arg_3', None))
+        log.debug("< arg1: %s" % arg1)
+        log.debug("< arg2: %s" % arg2)
+        log.debug("< arg3: %s" % arg3)
 
     raise tornado.gen.Return(response)
 
