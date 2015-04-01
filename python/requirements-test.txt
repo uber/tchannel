@@ -12,6 +12,7 @@ flake8==2.2.5
 
 # Optional dependency, but must be tested er'ry time
 tornado>=4.0,<5.0
+thrift==0.9.2
 
 # checksum calculation
 pyfarmhash
