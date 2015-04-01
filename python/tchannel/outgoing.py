@@ -20,6 +20,8 @@
 
 from __future__ import absolute_import
 
+import os
+import sys
 import enum
 import socket
 import Queue as queue
@@ -266,15 +268,14 @@ class OutgoingTChannel(object):
 
     TIMEOUT = 0.5
 
-    def __init__(self, name, timeout=None):
+    def __init__(self, name=None, timeout=None):
         """Initialize an OutgoingTChannel with the given process name.
 
         :param name:
             Process name used when talking to remote servers. This is used for
             logging only.
         """
-        assert name, 'A process name is required'
-        self._name = name
+        self._name = name or ("%s[%s]" % (sys.argv[0], str(os.getpid())))
         self._lock = Lock()
         self._connections = {}
         self._timeout = timeout or self.TIMEOUT

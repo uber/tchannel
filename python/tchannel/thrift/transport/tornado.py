@@ -32,6 +32,7 @@ except ImportError:
     from toro import Queue
 
 from tchannel.io import BytesIO
+from tchannel.messages.common import Types
 from .base import TChannelTransportBase
 
 
@@ -102,11 +103,33 @@ class TChannelTornadoTransport(TChannelTransportBase):
         buff = TTransport.TMemoryBuffer()
 
         # This is so dirty, /I can't even.../
-        TBinaryProtocol.TBinaryProtocol(buff).writeMessageBegin(
-            endpoint,
-            Thrift.TMessageType.REPLY,  # TODO exceptions
-            seqid,
-        )
+        binary = TBinaryProtocol.TBinaryProtocol(buff)
+        if response.message_type == Types.CALL_RES:
+            binary.writeMessageBegin(
+                endpoint,
+                Thrift.TMessageType.REPLY,
+                seqid,
+            )
+            buff.write(response.args[2])
+            binary.writeMessageEnd()
+        elif response.message_type == Types.ERROR:
+            binary.writeMessageBegin(
+                endpoint,
+                Thrift.TMessageType.EXCEPTION,
+                seqid
+            )
+            self._to_tappexception(response).write(binary)
+            binary.writeMessageEnd()
+        else:
+            raise NotImplementedError(
+                "Unsupported response message: %s" % str(response)
+            )
 
-        buff.write(response.args[2])
         self._response_queue.put(buff.getvalue())
+
+    @classmethod
+    def _to_tappexception(cls, response):
+        # TODO: map error codes to TApplicationException error types
+        # TODO: move this into parent class and use in TChannelTransport
+        assert response.message_type == Types.ERROR
+        return Thrift.TApplicationException(message=response.message)

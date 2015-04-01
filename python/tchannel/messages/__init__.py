@@ -21,7 +21,7 @@
 from __future__ import absolute_import
 
 from .types import Types
-from .error import ErrorMessage, error_rw
+from .error import ErrorMessage, ErrorCode, error_rw
 from .common import Tracing, ChecksumType
 from .call_request import CallRequestMessage, call_req_rw
 from .call_response import CallResponseMessage, call_res_rw
@@ -52,6 +52,7 @@ __all__ = [
     "CallResponseMessage",
     "CallResponseContinueMessage",
     "ErrorMessage",
+    "ErrorCode",
     "InitRequestMessage",
     "InitResponseMessage",
     "PingRequestMessage",

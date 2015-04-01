@@ -57,7 +57,7 @@ def test_outgoing_tchannel(tcp_server, call_response):
 
     with OutgoingTChannel('test_outgoing_tchannel') as chan:
         chan.request(host_port).handshake()
-        tcp_server.expect_call_request(endpoint).and_return(call_response)
+        tcp_server.expect_call(endpoint).and_return(call_response)
 
         response = chan.request(host_port).send(endpoint, None, None)
 
@@ -76,7 +76,7 @@ def test_outgoing_tchannel_exception(tcp_server, call_response):
     with OutgoingTChannel('test_outgoing_tchannel_exception') as chan:
         chan.request(host_port).handshake()
         with pytest.raises(TChannelApplicationException):
-            tcp_server.expect_call_request(
+            tcp_server.expect_call(
                 endpoint
             ).and_return(call_response)
             chan.request(host_port).send(endpoint, None, None)
@@ -127,7 +127,7 @@ def test_tchannel_call_request(tcp_server, call_response):
     endpoint = b'tchannelpeertest'
     call_response.args[0] = endpoint
 
-    tcp_server.expect_call_request(endpoint).and_return(call_response)
+    tcp_server.expect_call(endpoint).and_return(call_response)
 
     tchannel = TChannel()
 
@@ -157,7 +157,7 @@ def test_tchannel_call_request_streaming(tchannel_server, call_response,
     endpoint = b'tchannelpeertest'
     call_response.args[0] = endpoint
 
-    tchannel_server.expect_call_request(endpoint).and_return(call_response)
+    tchannel_server.expect_call(endpoint).and_return(call_response)
 
     tchannel = TChannel()
 
@@ -174,7 +174,7 @@ def test_tcurl(server, call_response):
     endpoint = b'tcurltest'
     call_response.args[0] = endpoint
 
-    server.expect_call_request(endpoint).and_return(call_response)
+    server.expect_call(endpoint).and_return(call_response)
 
     hostport = 'localhost:%d/%s' % (
         server.port, endpoint.decode('ascii')
@@ -192,7 +192,7 @@ def test_tcurl(server, call_response):
 @pytest.mark.gen_test
 def test_endpoint_not_found(tchannel_server, call_response):
     endpoint = b'tchanneltest'
-    tchannel_server.expect_call_request(endpoint).and_return(call_response)
+    tchannel_server.expect_call(endpoint).and_return(call_response)
     tchannel = TChannel()
 
     hostport = 'localhost:%d' % (tchannel_server.port)

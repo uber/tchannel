@@ -22,6 +22,7 @@ from __future__ import absolute_import
 
 import socket
 import sys
+import logging
 import tornado.ioloop
 import tornado.tcpserver
 from ..context import Context
@@ -50,18 +51,15 @@ class InboundServer(tornado.tcpserver.TCPServer):
             connection=stream
         )
 
-        print "Inbound Server handle stream"
+        logging.debug("Received request from %s:%d" % address)
 
-        print("Received request from %s:%d" % address)
-
-        print("Waiting for TChannel handshake...")
         tchannel_connection.await_handshake(headers={
             'host_port': '%s:%s' % address,
             'process_name': sys.argv[0],
         }, callback=self.handshake_complete)
 
     def handshake_complete(self, connection):
-        print(
+        logging.debug(
             "Successfully completed handshake with %s" %
             connection.remote_process_name
         )
@@ -73,7 +71,6 @@ class InboundServer(tornado.tcpserver.TCPServer):
         :param context: a context contains call request message
         :param conn: incoming tornado connection
         """
-
         message = self.message_factory.build(context.message_id,
                                              context.message)
         if message is not None:
