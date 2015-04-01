@@ -986,7 +986,13 @@ TChannelPeer.prototype.addConnection = function addConnection(conn) {
     } else {
         self.connections.unshift(conn);
     }
+    conn.once('error', onConnectionError);
     return conn;
+
+    function onConnectionError(/* err */) {
+        // TODO: log?
+        self.removeConnection(conn);
+    }
 };
 
 TChannelPeer.prototype.removeConnection = function removeConnection(conn) {
@@ -1019,14 +1025,8 @@ TChannelPeer.prototype.makeOutConnection = function makeOutConnection(socket) {
     var self = this;
     var chan = self.channel;
     var conn = new TChannelConnection(chan, socket, 'out', self.hostPort);
-    conn.once('error', onConnectionReset);
     self.emit('allocConnection', conn);
     return conn;
-
-    function onConnectionReset(/* err */) {
-        // TODO: log?
-        self.removeConnection(conn);
-    }
 };
 
 function TChannelPeerState(channel, name) {
