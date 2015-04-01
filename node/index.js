@@ -647,13 +647,14 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     });
 
     self.handler.on('call.incoming.error', function onCallError(err) {
-        var op = self.popOutOp(err.originalId);
+        var op = self.popOutOp(err.originalId); // TODO bork bork
         if (!op) {
             self.logger.info('error received for unknown or lost operation', err);
             return;
         }
 
         op.req.emit('error', err);
+        // TODO: should terminate corresponding inc res
     });
 
     self.socket.setNoDelay(true);
