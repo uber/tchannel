@@ -42,3 +42,7 @@ cache:
     - node_modules
     - .tox
     - $HOME/.cache/pip
+
+before_install:
+  - apt-get update
+  - apt-get install thrift
