@@ -689,7 +689,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
         });
     }
 
-    socket.once('close', clearTimer);
+    self.socket.once('close', clearTimer);
 
     var stream = self.socket;
 
