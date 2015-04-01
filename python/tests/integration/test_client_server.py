@@ -142,14 +142,16 @@ def test_tchannel_call_request(tcp_server, call_response):
 # increase the LARGE_AMOUNT to even bigger
 @pytest.mark.gen_test
 @pytest.mark.parametrize('arg2, arg3', [
-    ("", big_arg()),
-    (big_arg(), ""),
-    ("test", big_arg()),
-    (big_arg(),  "test"),
-    (big_arg(), big_arg()),
-    ("", ""),
-    ("test", "test"),
-])
+        ("", big_arg()),
+        (big_arg(), ""),
+        ("test", big_arg()),
+        (big_arg(),  "test"),
+        (big_arg(), big_arg()),
+        ("", ""),
+        ("test", "test"),
+    ],
+    ids=lambda arg: str(len(arg))
+)
 def test_tchannel_call_request_streaming(tchannel_server, call_response,
                                          arg2, arg3):
     endpoint = b'tchannelpeertest'
@@ -162,6 +164,7 @@ def test_tchannel_call_request_streaming(tchannel_server, call_response,
     hostport = 'localhost:%d' % (tchannel_server.port)
 
     response = yield tchannel.request(hostport).send(endpoint, arg2, arg3)
+
     assert response.args[0] == call_response.args[0]
     assert response.args[2] == call_response.args[2]
 
