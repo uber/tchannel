@@ -964,11 +964,12 @@ TChannelPeer.prototype.setState = function setState(state) {
 TChannelPeer.prototype.connect = function connect() {
     var self = this;
     var conn = self.connections[self.connections.length - 1];
-    if (!conn) {
-        var socket = self.makeOutSocket();
-        conn = self.makeOutConnection(socket);
-        self.addConnection(conn);
+    if (conn) {
+        return conn;
     }
+    var socket = self.makeOutSocket();
+    conn = self.makeOutConnection(socket);
+    self.addConnection(conn);
     return conn;
 };
 
