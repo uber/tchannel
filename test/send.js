@@ -263,18 +263,29 @@ allocCluster.test('request().send() to self', 1, function t(cluster, assert) {
         assert.ok(Buffer.isBuffer(arg3), 'handler got an arg3 buffer');
         res.sendOk(arg2, arg3);
     });
+    one.handler.register('bar', function bar(req, res, arg2, arg3) {
+        assert.ok(Buffer.isBuffer(arg2), 'handler got an arg2 buffer');
+        assert.ok(Buffer.isBuffer(arg3), 'handler got an arg3 buffer');
+        res.sendNotOk(arg2, arg3);
+    });
 
-    parallel([
-
-        { name: 'msg1', op: 'foo',
-          reqHead: 'head1', reqBody: 'msg1',
-          resHead: 'head1', resBody: 'msg1',
-          opts: {
-              host: one.hostPort
-          }
-        },
-
-    ].map(function eachTestCase(testCase) {
+    parallel([{
+        name: 'msg1', op: 'foo',
+        reqHead: 'head1', reqBody: 'msg1',
+        resHead: 'head1', resBody: 'msg1',
+        opts: {
+            host: one.hostPort
+        }
+    },
+    {
+        name: 'msg2', op: 'bar',
+        reqHead: 'head2', reqBody: 'msg2',
+        resHead: 'head2', resBody: 'msg2',
+        resOk: false,
+        opts: {
+            host: one.hostPort
+        }
+    }].map(function eachTestCase(testCase) {
         testCase = extend({
             channel: one
         }, testCase);
@@ -287,8 +298,34 @@ allocCluster.test('request().send() to self', 1, function t(cluster, assert) {
             }]
         });
         assert.end();
-        console.log('assert end');
     });
+});
+
+allocCluster.test('self send() with error frame', 1, function t(cluster, assert) {
+    var one = cluster.channels[0];
+
+    one.handler = EndpointHandler();
+    one.handler.register('foo', function foo(req, res) {
+        res.sendError('Cancelled', 'bye lol');
+    });
+
+    one.request({
+        host: one.hostPort
+    }).send('foo', '', '', onResponse);
+
+    function onResponse(err, resp) {
+        assert.equal(err.message, 'bye lol');
+        assert.deepEqual(err, {
+            type: 'tchannel.canceled',
+            isErrorFrame: true,
+            errorCode: 2,
+            originalId: 0,
+            name: 'TchannelCanceledError',
+            message: 'bye lol'
+        });
+
+        assert.end();
+    }
 });
 
 function randSeq(seq) {
@@ -315,6 +352,12 @@ function sendTest(testCase, assert) {
                 assert.equal(head ? String(head) : head, testCase.resHead, testCase.name + ': expected head content');
                 assert.equal(body ? String(body) : body, testCase.resBody, testCase.name + ': expected body content');
             }
+
+            if ('resOk' in testCase) {
+                assert.equal(res.ok, testCase.resOk,
+                    testCase.name + ': expected res ok');
+            }
+
             callback();
         }
     };
