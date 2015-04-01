@@ -425,22 +425,17 @@ TChannelOutgoingResponse.prototype.setOk = function setOk(ok) {
 TChannelOutgoingResponse.prototype.sendOk = function sendOk(res1, res2) {
     var self = this;
     self.setOk(true);
-    if (self.streamed) {
-        self.arg2.end(res1);
-        self.arg3.end(res2);
-    } else {
-        self.sendCallResponseFrame([
-            self.arg1 || emptyBuffer,
-            res1 ? Buffer(res1) : emptyBuffer,
-            res2 ? Buffer(res2) : emptyBuffer
-        ], true);
-        self.emit('finish');
-    }
+    self.send(res1, res2);
 };
 
 TChannelOutgoingResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
     var self = this;
     self.setOk(false);
+    self.send(res1, res2);
+};
+
+TChannelOutgoingResponse.prototype.send = function send(res1, res2) {
+    var self = this;
     if (self.streamed) {
         self.arg2.end(res1);
         self.arg3.end(res2);
