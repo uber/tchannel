@@ -254,6 +254,43 @@ allocCluster.test('request().send() to a pool of servers', 4, function t(cluster
     });
 });
 
+allocCluster.test('request().send() to self', 1, function t(cluster, assert) {
+    var one = cluster.channels[0];
+
+    one.handler = EndpointHandler();
+    one.handler.register('foo', function foo(req, res, arg2, arg3) {
+        assert.ok(Buffer.isBuffer(arg2), 'handler got an arg2 buffer');
+        assert.ok(Buffer.isBuffer(arg3), 'handler got an arg3 buffer');
+        res.sendOk(arg2, arg3);
+    });
+
+    parallel([
+
+        { name: 'msg1', op: 'foo',
+          reqHead: 'head1', reqBody: 'msg1',
+          resHead: 'head1', resBody: 'msg1',
+          opts: {
+              host: one.hostPort
+          }
+        },
+
+    ].map(function eachTestCase(testCase) {
+        testCase = extend({
+            channel: one
+        }, testCase);
+        return sendTest(testCase, assert);
+    }), function onResults(err) {
+        assert.ifError(err, 'no errors from sending');
+        cluster.assertCleanState(assert, {
+            channels: [{
+                peers: []
+            }]
+        });
+        assert.end();
+        console.log('assert end');
+    });
+});
+
 function randSeq(seq) {
     var i = 0;
     return function random() {
