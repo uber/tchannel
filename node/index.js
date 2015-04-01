@@ -819,13 +819,14 @@ function TChannelPeers(channel, options) {
     self.logger = self.channel.logger;
     self.options = options || {};
     self._map = Object.create(null);
+    self.selfPeer = TChannelSelfPeer(self.channel);
 }
 
 inherits(TChannelPeers, EventEmitter);
 
 TChannelPeers.prototype.close = function close(callback) {
     var self = this;
-    var peers = self.values();
+    var peers = [self.selfPeer].concat(self.values());
     var counter = peers.length;
     peers.forEach(function eachPeer(peer) {
         peer.close(onClose);
@@ -853,7 +854,7 @@ TChannelPeers.prototype.add = function add(hostPort) {
     var peer = self._map[hostPort];
     if (!peer) {
         if (hostPort === self.channel.hostPort) {
-            throw new Error('refusing to add self peer'); // TODO typed error
+            return self.selfPeer;
         }
         peer = TChannelPeer(self.channel, hostPort);
         self.emit('allocPeer', peer);
@@ -1078,6 +1079,27 @@ TChannelPeer.prototype.makeOutConnection = function makeOutConnection(socket) {
         // TODO: log?
         self.removeConnection(conn);
     }
+};
+
+function TChannelSelfPeer(channel) {
+    if (!(this instanceof TChannelSelfPeer)) {
+        return new TChannelSelfPeer(channel);
+    }
+    var self = this;
+    TChannelPeer.call(self, channel, channel.hostPort);
+}
+inherits(TChannelSelfPeer, TChannelPeer);
+
+TChannelSelfPeer.prototype.connect = function connect() {
+    throw new Error('not implemented');
+};
+
+TChannelSelfPeer.prototype.makeOutSocket = function makeOutSocket() {
+    throw new Error('refusing to make self out socket');
+};
+
+TChannelSelfPeer.prototype.makeOutConnection = function makeOutConnection(/* socket */) {
+    throw new Error('refusing to make self out connection');
 };
 
 function TChannelPeerState(channel, name) {
