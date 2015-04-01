@@ -1267,3 +1267,4 @@ TChannelPeerHealthyState.prototype.shouldRequest = function shouldRequest(/* op,
 };
 
 module.exports = TChannel;
+module.exports.PeerState = TChannelPeerState;
