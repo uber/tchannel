@@ -129,9 +129,8 @@ func TestCallResContinue(t *testing.T) {
 
 func TestErrorMessage(t *testing.T) {
 	m := errorMessage{
-		errorCode:         ErrorCodeBusy,
-		originalMessageID: 0xDEADBEEF,
-		message:           "go away",
+		errorCode: ErrorCodeBusy,
+		message:   "go away",
 	}
 
 	assert.Equal(t, messageTypeError, m.messageType())
