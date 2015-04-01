@@ -26,21 +26,8 @@ var TChannel = require('../index.js');
 var serverOptions = {host: '127.0.0.1', port: 4040};
 var clientOptions = {host: '127.0.0.1', port: 4041};
 var client1Options = {host: '127.0.0.1', port: 4042};
-var serverName = serverOptions.host + ':' + serverOptions.port;
 var clientName = clientOptions.host + ':' + clientOptions.port;
 var client1Name = client1Options.host + ':' + client1Options.port;
-
-
-test('add peer: refuse to add self', function t(assert) {
-  var server = new TChannel();
-  server.listen(serverOptions.port, serverOptions.host, function listening() {
-    assert.throws(function () {
-      server.peers.add(serverName).connect();
-    }, /refusing to add self peer/,
-      'Should refuse to add self as a peer');
-    server.quit(assert.end);
-  });
-});
 
 
 test('add peer: should successfully add peer', function t(assert) {
