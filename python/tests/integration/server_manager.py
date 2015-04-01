@@ -40,11 +40,6 @@ class Expectation(object):
         # raw message to respond with
         self.response = None
 
-    @classmethod
-    def messageType(cls, msg_typ):
-        """Build an expectation that expects a mesasge with the given type."""
-        return cls(lambda msg: msg.message_type == msg_typ)
-
     def and_return(self, resp):
         """Write the given Message as a response."""
         self.response = resp
@@ -61,7 +56,7 @@ class ServerManager(object):
         self.thread = None
         self.ready = False
 
-    def expect_call_request(self, endpoint):
+    def expect_call(self, endpoint):
         if not isinstance(endpoint, bytes):
             endpoint = bytes(endpoint, 'ascii')
 

@@ -88,8 +88,9 @@ class TChannelRequestHandler(RequestHandler):
                     if result is None:
                         response.finish()
             else:
-                msg = "no such endpoint service={0} endpoint={1}".format(
-                    context.message.service, context.message.args[0])
+                msg = "Endpoint '%s' for service '%s' is not defined." % (
+                    context.message.args[0], context.message.service
+                )
                 return conn.send_error(
                     ErrorCode.bad_request,
                     msg,

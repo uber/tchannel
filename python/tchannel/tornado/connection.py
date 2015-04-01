@@ -120,7 +120,6 @@ class TornadoConnection(object):
             exception = future.exception()
 
             if isinstance(exception, tornado.iostream.StreamClosedError):
-                log.warn("no longer awaiting")
                 self.close()
 
         size_width = frame.frame_rw.size_rw.width()
