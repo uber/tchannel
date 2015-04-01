@@ -1081,6 +1081,86 @@ TChannelPeer.prototype.makeOutConnection = function makeOutConnection(socket) {
     }
 };
 
+function TChannelSelfConnection(channel) {
+    if (!(this instanceof TChannelSelfConnection)) {
+        return new TChannelSelfConnection(channel);
+    }
+    var self = this;
+    TChannelConnectionBase.call(self, channel, 'in', channel.hostPort);
+    self.idCount = 0;
+}
+inherits(TChannelSelfConnection, TChannelConnectionBase);
+
+TChannelSelfConnection.prototype.buildOutgoingRequest = function buildOutgoingRequest(options) {
+    var self = this;
+    var id = self.idCount++;
+    if (!options) options = {};
+    options.sendFrame = {
+        callRequest: passParts,
+        callRequestCont: passParts
+    };
+    var outreq = reqres.OutgoingRequest(id, options);
+    var inreq = reqres.IncomingRequest(id, options);
+    inreq.once('error', onError);
+    inreq.once('response', onResponse);
+    self.handleCallRequest(inreq);
+    return outreq;
+
+    function onError(err) {
+        self.popOutOp(id);
+        inreq.removeListener('response', onResponse);
+        outreq.emit('error', err);
+    }
+
+    function onResponse(res) {
+        self.popOutOp(id);
+        inreq.removeListener('error', onError);
+        outreq.emit('response', res);
+    }
+
+    function passParts(args, isLast ) {
+        inreq.handleFrame(args);
+        if (isLast) inreq.handleFrame(null);
+        if (!self.closing) self.lastTimeoutTime = 0;
+    }
+};
+
+TChannelSelfConnection.prototype.buildOutgoingResponse = function buildOutgoingResponse(req, options) {
+    var self = this;
+    if (!options) options = {};
+    options.tracing = req.tracing;
+
+    // options.checksum = v2.Checksum(None);
+
+    options.sendFrame = {
+        callResponse: passParts,
+        callResponseCont: passParts,
+        error: passError
+    };
+    var outres = reqres.OutgoingResponse(req.id, options);
+    var inres = reqres.IncomingResponse(req.id, options);
+    var first = true;
+    return outres;
+
+    function passParts(args, isLast) {
+        inres.handleFrame(args);
+        if (isLast) inres.handleFrame(null);
+        if (first) {
+            first = false;
+            req.emit('response', inres);
+        }
+        if (!self.closing) self.lastTimeoutTime = 0;
+    }
+
+    function passError(codeString, message) {
+        var err = new Error(format('%s: %s', codeString, message));
+        // TODO: proper error classes... requires coupling to v2?
+        req.emit('error', err);
+        // TODO: should terminate corresponding inc res
+        if (!self.closing) self.lastTimeoutTime = 0;
+    }
+};
+
 function TChannelSelfPeer(channel) {
     if (!(this instanceof TChannelSelfPeer)) {
         return new TChannelSelfPeer(channel);
@@ -1091,7 +1171,17 @@ function TChannelSelfPeer(channel) {
 inherits(TChannelSelfPeer, TChannelPeer);
 
 TChannelSelfPeer.prototype.connect = function connect() {
-    throw new Error('not implemented');
+    var self = this;
+    while (self.connections[0] &&
+           self.connections[0].closing) {
+        self.connections[0].shift();
+    }
+    var conn = self.connections[0];
+    if (!conn) {
+        conn = TChannelSelfConnection(self.channel);
+        self.connections.push(conn);
+    }
+    return conn;
 };
 
 TChannelSelfPeer.prototype.makeOutSocket = function makeOutSocket() {
