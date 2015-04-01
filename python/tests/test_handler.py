@@ -24,6 +24,7 @@ import pytest
 import tornado
 
 from tchannel.handler import TChannelRequestHandler
+from tchannel.messages import Types
 
 
 @pytest.fixture
@@ -34,9 +35,9 @@ def handler():
 @pytest.fixture
 def message():
     message = InstanceDouble('tchannel.messages.base.BaseMessage')
-    message.message_type = 0
+    message.message_type = Types.CALL_REQ
     message.service = ''
-    message.arg_1 = 'test'
+    message.args = ['test', None, None]
     return message
 
 

@@ -90,7 +90,11 @@ class TChannelRequestHandler(RequestHandler):
             else:
                 msg = "no such endpoint service={0} endpoint={1}".format(
                     context.message.service, context.message.args[0])
-                return conn.send_error(ErrorCode.bad_request, msg, context.message_id)
+                return conn.send_error(
+                    ErrorCode.bad_request,
+                    msg,
+                    context.message_id,
+                )
 
         # TODO handle other type message
         raise NotImplementedError()
