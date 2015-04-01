@@ -882,12 +882,7 @@ TChannelPeers.prototype.addPeer = function addPeer(peer) {
 
 TChannelPeers.prototype.keys = function keys() {
     var self = this;
-    var ks = Object.keys(self._map);
-    var ret = new Array(ks.length);
-    for (var i = 0; i < ks.length; i++) {
-        ret[i] = ks[i];
-    }
-    return ret;
+    return Object.keys(self._map);
 };
 
 TChannelPeers.prototype.values = function values() {
