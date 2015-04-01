@@ -26,18 +26,48 @@ from collections import namedtuple
 
 import pytest
 from doubles import allow, expect, InstanceDouble
+from hypothesis import specifiers, given, assume
+
 
 from tchannel import rw
 from tchannel.io import BytesIO
 from tchannel.exceptions import ReadException
 
 
+number_width = specifiers.sampled_from([1, 2, 4, 8])
+
+
 def bio(bs):
     return BytesIO(bytearray(bs))
 
 
-def test_none_r():
-    stream = BytesIO('a b c')
+def roundtrip(value, v_rw):
+    return v_rw.read(bio(v_rw.write(value, BytesIO()).getvalue()))
+
+
+@given(int, number_width)
+def test_number_roundtrip(num, width):
+    num = num % (2 ** width - 1)
+    assert roundtrip(num, rw.number(width)) == num
+
+
+@given(unicode, number_width)
+def test_len_prefixed_string_roundtrip(s, len_width):
+    assume(len(s.encode('utf-8')) <= 2 ** len_width - 1)
+    assert roundtrip(s, rw.len_prefixed_string(rw.number(len_width))) == s
+
+
+@given(str, number_width)
+def test_len_prefixed_string_binary_roundtrip(s, len_width):
+    assume(len(s) <= 2 ** len_width - 1)
+    assert roundtrip(
+        s, rw.len_prefixed_string(rw.number(len_width), is_binary=True)
+    ) == s
+
+
+@given(str)
+def test_none_r(bs):
+    stream = bio(bs)
     assert rw.none().read(stream) is None
     stream.read() == 'a b c'
 
