@@ -639,7 +639,7 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
 
     self.clearTimeoutTimer();
 
-    self.emit('reset', err);
+    self.emit('error', err);
 
     // requests that we've received we can delete, but these reqs may have started their
     //   own outgoing work, which is hard to cancel. By setting this.closing, we make sure
@@ -963,12 +963,14 @@ TChannelPeer.prototype.setState = function setState(state) {
 
 TChannelPeer.prototype.connect = function connect() {
     var self = this;
-    var conn = self.connections[self.connections.length - 1];
-    if (!conn) {
-        var socket = self.makeOutSocket();
-        conn = self.makeOutConnection(socket);
-        self.addConnection(conn);
+    var conn;
+    for (var i = self.connections.length - 1; i >= 0; i--) {
+        conn = self.connections[i];
+        if (!conn.closing) return conn;
     }
+    var socket = self.makeOutSocket();
+    conn = self.makeOutConnection(socket);
+    self.addConnection(conn);
     return conn;
 };
 
@@ -986,7 +988,13 @@ TChannelPeer.prototype.addConnection = function addConnection(conn) {
     } else {
         self.connections.unshift(conn);
     }
+    conn.once('error', onConnectionError);
     return conn;
+
+    function onConnectionError(/* err */) {
+        // TODO: log?
+        self.removeConnection(conn);
+    }
 };
 
 TChannelPeer.prototype.removeConnection = function removeConnection(conn) {
@@ -1019,14 +1027,8 @@ TChannelPeer.prototype.makeOutConnection = function makeOutConnection(socket) {
     var self = this;
     var chan = self.channel;
     var conn = new TChannelConnection(chan, socket, 'out', self.hostPort);
-    conn.once('reset', onConnectionReset);
     self.emit('allocConnection', conn);
     return conn;
-
-    function onConnectionReset(/* err */) {
-        // TODO: log?
-        self.removeConnection(conn);
-    }
 };
 
 function TChannelPeerState(channel, name) {
