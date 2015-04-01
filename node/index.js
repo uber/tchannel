@@ -921,6 +921,11 @@ TChannelPeers.prototype.request = function request(options) {
     var self = this;
     var peers = self.choosePeer(options, null, 1);
     var peer = peers[0];
+
+    if (!peer) {
+        throw new Error('no peer available for request'); // TODO: typed error
+    }
+
     if (!peer) {
         // TODO: operational error?
         throw new Error('no peer available for request'); // TODO: typed error
@@ -941,9 +946,7 @@ TChannelPeers.prototype.choosePeer = function choosePeer(options, op, n) {
     } else {
         hosts = Object.keys(self._map);
     }
-    if (!hosts || !hosts.length) {
-        throw new Error('no hosts specified in request or channel options'); // TODO: typed error
-    }
+    if (!hosts || !hosts.length) return [];
 
     var threshold = options.peerScoreThreshold;
     if (threshold === undefined) threshold = self.options.peerScoreThreshold;
