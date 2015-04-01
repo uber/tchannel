@@ -1182,7 +1182,7 @@ TChannelSelfPeer.prototype.connect = function connect() {
     var conn = self.connections[0];
     if (!conn) {
         conn = TChannelSelfConnection(self.channel);
-        self.connections.push(conn);
+        self.addConnection(conn);
     }
     return conn;
 };
