@@ -376,6 +376,18 @@ function TChannelConnectionBase(channel, direction, remoteAddr) {
 }
 inherits(TChannelConnectionBase, EventEmitter);
 
+TChannelConnectionBase.prototype.close = function close(callback) {
+    var self = this;
+    self.clearTimeoutTimer();
+    self.logger.debug('destroy channel for', {
+        direction: self.direction,
+        peerRemoteAddr: self.remoteAddr,
+        peerRemoteName: self.remoteName
+    });
+    self.resetAll(new Error('shutdown from quit')); // TODO typed error
+    process.nextTick(callback);
+};
+
 // timeout check runs every timeoutCheckInterval +/- some random fuzz. Range is from
 //   base - fuzz/2 to base + fuzz/2
 TChannelConnectionBase.prototype.getTimeoutDelay = function getTimeoutDelay() {
@@ -726,6 +738,21 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 }
 inherits(TChannelConnection, TChannelConnectionBase);
 
+TChannelConnection.prototype.close = function close(callback) {
+    var self = this;
+    var sock = self.socket;
+    sock.once('close', callback);
+    self.clearTimeoutTimer();
+    self.logger.debug('destroy channel for', {
+        direction: self.direction,
+        peerRemoteAddr: self.remoteAddr,
+        peerRemoteName: self.remoteName,
+        fromAddress: sock.address()
+    });
+    self.resetAll(new Error('shutdown from quit')); // TODO typed error
+    sock.destroy();
+};
+
 TChannelConnection.prototype.onReaderError = function onReaderError(err) {
     var self = this;
 
@@ -962,17 +989,7 @@ TChannelPeer.prototype.close = function close(callback) {
         callback();
     }
     self.connections.forEach(function eachConn(conn) {
-        var sock = conn.socket;
-        sock.once('close', onClose);
-        conn.clearTimeoutTimer();
-        self.logger.debug('destroy channel for', {
-            direction: conn.direction,
-            peerRemoteAddr: conn.remoteAddr,
-            peerRemoteName: conn.remoteName,
-            fromAddress: sock.address()
-        });
-        conn.resetAll(new Error('shutdown from quit')); // TODO typed error
-        sock.destroy();
+        conn.close(onClose);
     });
     function onClose() {
         if (--counter <= 0) {
