@@ -63,6 +63,15 @@ def parse_args(args=None):
     )
 
     parser.add_argument(
+        "-s", "--service",
+        dest="service",
+        default=None,
+        help=(
+            "Name of destination service (for tchannel routing)."
+        ),
+    )
+
+    parser.add_argument(
         "-H", "--headers",
         dest="headers",
         default=[None],
@@ -171,6 +180,7 @@ def multi_tcurl(
     hostports,
     headers,
     bodies,
+    service,
     profile=False,
     rps=None,
     quiet=False,
@@ -182,7 +192,9 @@ def multi_tcurl(
     with timing(profile=profile) as info:
 
         for hostport, header, body in requests:
-            futures.append(tcurl(tchannel, hostport, header, body, quiet))
+            futures.append(
+                tcurl(tchannel, hostport, header, body, service, quiet)
+            )
 
             if rps:
                 yield tornado.gen.sleep(1.0 / rps)
@@ -201,7 +213,7 @@ def multi_tcurl(
 
 
 @tornado.gen.coroutine
-def tcurl(tchannel, hostport, headers, body, quiet=False):
+def tcurl(tchannel, hostport, headers, body, service, quiet=False):
     host, endpoint = hostport.split('/', 1)
 
     if not quiet:
@@ -210,7 +222,7 @@ def tcurl(tchannel, hostport, headers, body, quiet=False):
         log.debug("> Arg2: %s" % headers)
         log.debug("> Arg3: %s" % body)
 
-    request = tchannel.request(host)
+    request = tchannel.request(host, service)
 
     response = yield request.send(
         endpoint,
@@ -284,6 +296,7 @@ def main(argv=None):
         args.host,
         args.headers,
         args.body,
+        args.service,
         profile=args.profile,
         rps=args.rps,
         quiet=args.quiet
