@@ -987,7 +987,12 @@ function TChannelPeer(channel, hostPort, options) {
     self.isEphemeral = self.hostPort === '0.0.0.0:0';
     self.state = null; // TODO
     self.connections = [];
-    self.setState(TChannelPeerHealthyState);
+    if (self.options.initialState) {
+        self.setState(self.options.initialState);
+        delete self.options.initialState;
+    } else {
+        self.setState(TChannelPeerHealthyState);
+    }
 }
 
 inherits(TChannelPeer, EventEmitter);
