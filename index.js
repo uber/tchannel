@@ -111,7 +111,12 @@ function TChannel(options) {
     self.hostPort = null;
 
     // how to handle incoming requests
-    self.handler = self.options.handler || noHandlerHandler;
+    if (!self.options.handler) {
+        self.handler = noHandlerHandler;
+    } else {
+        self.handler = self.options.handler;
+        delete self.options.handler;
+    }
 
     // populated by:
     // - manually api (.peers.add etc)
