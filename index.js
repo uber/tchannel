@@ -855,14 +855,14 @@ TChannelPeers.prototype.get = function get(hostPort) {
     return self._map[hostPort] || null;
 };
 
-TChannelPeers.prototype.add = function add(hostPort) {
+TChannelPeers.prototype.add = function add(hostPort, options) {
     var self = this;
     var peer = self._map[hostPort];
     if (!peer) {
         if (hostPort === self.channel.hostPort) {
             return self.selfPeer;
         }
-        peer = TChannelPeer(self.channel, hostPort);
+        peer = TChannelPeer(self.channel, hostPort, options);
         self.emit('allocPeer', peer);
         self._map[hostPort] = peer;
     }
