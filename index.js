@@ -320,11 +320,8 @@ TChannel.prototype.close = function close(callback) {
         hostPort: self.hostPort
     });
 
-    var peers = self.peers.values();
-    var counter = peers.length + 1;
-    peers.forEach(function eachPeer(peer) {
-        peer.close(onClose);
-    });
+    var counter = 2;
+    self.peers.close(onClose);
 
     if (self.serverSocket) {
         if (self.serverSocket.address()) {
@@ -781,6 +778,26 @@ function TChannelPeers(channel, options) {
 }
 
 inherits(TChannelPeers, EventEmitter);
+
+TChannelPeers.prototype.close = function close(callback) {
+    var self = this;
+    var peers = self.values();
+    var counter = peers.length;
+    peers.forEach(function eachPeer(peer) {
+        peer.close(onClose);
+    });
+
+    function onClose() {
+        if (--counter <= 0) {
+            if (counter < 0) {
+                self.logger.error('closed more sockets than expected', {
+                    counter: counter
+                });
+            }
+            callback();
+        }
+    }
+};
 
 TChannelPeers.prototype.get = function get(hostPort) {
     var self = this;
