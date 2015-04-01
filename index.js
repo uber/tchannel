@@ -955,7 +955,7 @@ TChannelPeers.prototype.choosePeer = function choosePeer(options, op, n) {
     var selectedPeer = null, selectedScore = 0;
     for (var i = 0; i < hosts.length; i++) {
         var peer = self.add(hosts[i]);
-        var score = peer.state.shouldRequest(options, op);
+        var score = peer.state.shouldRequest(op, options);
         var want = score > threshold &&
                    (selectedPeer === null || score > selectedScore);
         // TODO: provide visibility... event hook?
@@ -1235,7 +1235,7 @@ function TChannelPeerState(channel, peer) {
     self.peer = peer;
 }
 
-TChannelPeerState.prototype.shouldRequest = function shouldRequest(/* options, op */) {
+TChannelPeerState.prototype.shouldRequest = function shouldRequest(/* op, options */) {
     // TODO: op isn't quite right currently as a "TChannelClientOp", the
     // intention is that the other (non-options) arg encapsulates all requests
     // across retries and setries
@@ -1254,7 +1254,7 @@ inherits(TChannelPeerHealthyState, TChannelPeerState);
 
 TChannelPeerHealthyState.prototype.name = 'healthy';
 
-TChannelPeerHealthyState.prototype.shouldRequest = function shouldRequest(/* options, op */) {
+TChannelPeerHealthyState.prototype.shouldRequest = function shouldRequest(/* op, options */) {
     // return Math.random();
     var self = this;
     return 0.2 + self.channel.random() * 0.8;
