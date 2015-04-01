@@ -17,9 +17,14 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
+from __future__ import absolute_import
 
 import collections
-from .messages import CallResponseMessage, Types
+
+import tornado
+
+from .messages import CallResponseMessage
+from .messages import Types
 from .messages import PingResponseMessage
 from .messages.error import ErrorCode
 
@@ -58,24 +63,41 @@ class TChannelRequestHandler(RequestHandler):
         """
         # TODO: stop passing conn around everywhere
         if context.message.message_type == Types.PING_REQ:
-            conn.frame_and_write(PingResponseMessage(), context.message_id)
-        elif context.message.message_type == Types.CALL_REQ:
+            return conn.frame_and_write(
+                PingResponseMessage(),
+                context.message_id,
+            )
+
+        if context.message.message_type == Types.CALL_REQ:
             request = TChannelRequest(context, conn)
             endpoint = self._find_endpoint(getattr(request, 'endpoint', None))
             if endpoint is not None:
                 response = TChannelResponse(context, conn)
+                result = None
                 try:
-                    endpoint.handler(request, response, endpoint.opts)
+                    result = endpoint.handler(request, response, endpoint.opts)
+                    if isinstance(result, tornado.gen.Future):
+                        result.add_done_callback(lambda f: response.finish())
+                        tornado.ioloop.IOLoop.current().add_future(
+                            result,
+                            lambda f: f.exception()
+                        )
+                    return result
                 # TODO add tchannel error handling here
                 finally:
-                    response.finish()
+                    if result is None:
+                        response.finish()
             else:
                 msg = "no such endpoint service={0} endpoint={1}".format(
                     context.message.service, context.message.args[0])
-                conn.send_error(ErrorCode.bad_request, msg, context.message_id)
-        else:
-            # TODO handle other type message
-            raise NotImplementedError()
+                return conn.send_error(
+                    ErrorCode.bad_request,
+                    msg,
+                    context.message_id,
+                )
+
+        # TODO handle other type message
+        raise NotImplementedError()
 
     def route(self, rule, **opts):
         def decorator(handler):
