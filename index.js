@@ -100,6 +100,8 @@ function TChannel(options) {
     }, options);
 
     self.logger = self.options.logger || nullLogger;
+    self.random = self.options.random || globalRandom;
+    self.timers = self.options.timers || globalTimers;
 
     // Filled in by the listen call:
     self.host = null;
@@ -107,8 +109,6 @@ function TChannel(options) {
 
     // Filled in by listening event:
     self.hostPort = null;
-    self.random = self.options.random || globalRandom;
-    self.timers = self.options.timers || globalTimers;
 
     // how to handle incoming requests
     self.handler = self.options.handler || noHandlerHandler;
