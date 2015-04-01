@@ -997,6 +997,19 @@ function TChannelPeer(channel, hostPort, options) {
 
 inherits(TChannelPeer, EventEmitter);
 
+TChannelPeer.prototype.isConnected = function isConnected(direction) {
+    var self = this;
+    for (var i = 0; i < self.connections.length; i++) {
+        var conn = self.connections[i];
+        if (direction && conn.direction !== direction) {
+            continue;
+        } else if (conn.remoteName !== null) {
+            return true;
+        }
+    }
+    return false;
+};
+
 TChannelPeer.prototype.close = function close(callback) {
     var self = this;
     var counter = self.connections.length;
