@@ -905,6 +905,17 @@ TChannelPeers.prototype.entries = function entries() {
     return ret;
 };
 
+TChannelPeers.prototype.clear = function clear() {
+    var self = this;
+    var keys = self.keys();
+    var vals = new Array(keys.length);
+    for (var i = 0; i < keys.length; i++) {
+        vals[i] = self._map[keys[i]];
+        delete self._map[keys[i]];
+    }
+    return vals;
+};
+
 TChannelPeers.prototype.delete = function del(hostPort) {
     var self = this;
     var peer = self._map[hostPort];
