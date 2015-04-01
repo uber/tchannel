@@ -1229,9 +1229,10 @@ TChannelSelfPeer.prototype.makeOutConnection = function makeOutConnection(/* soc
     throw new Error('refusing to make self out connection');
 };
 
-function TChannelPeerState(channel) {
+function TChannelPeerState(channel, peer) {
     var self = this;
     self.channel = channel;
+    self.peer = peer;
 }
 
 TChannelPeerState.prototype.shouldRequest = function shouldRequest(/* options, op */) {
@@ -1241,12 +1242,12 @@ TChannelPeerState.prototype.shouldRequest = function shouldRequest(/* options, o
     return 0;
 };
 
-function TChannelPeerHealthyState(channel) {
+function TChannelPeerHealthyState(channel, peer) {
     if (!(this instanceof TChannelPeerHealthyState)) {
-        return new TChannelPeerHealthyState(channel);
+        return new TChannelPeerHealthyState(channel, peer);
     }
     var self = this;
-    TChannelPeerState.call(self, channel);
+    TChannelPeerState.call(self, channel, peer);
 }
 
 inherits(TChannelPeerHealthyState, TChannelPeerState);
