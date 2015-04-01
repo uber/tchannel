@@ -987,7 +987,7 @@ function TChannelPeer(channel, hostPort, options) {
     self.isEphemeral = self.hostPort === '0.0.0.0:0';
     self.state = null; // TODO
     self.connections = [];
-    self.setState(TChannelPeerHealthyState(self.channel));
+    self.setState(TChannelPeerHealthyState);
 }
 
 inherits(TChannelPeer, EventEmitter);
@@ -1013,8 +1013,9 @@ TChannelPeer.prototype.close = function close(callback) {
     }
 };
 
-TChannelPeer.prototype.setState = function setState(state) {
+TChannelPeer.prototype.setState = function setState(StateType) {
     var self = this;
+    var state = StateType(self.channel, self);
     if (!self.state || state.name !== self.state.name) {
         var oldState = self.state;
         self.state = state;
