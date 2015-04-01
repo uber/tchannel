@@ -100,6 +100,8 @@ function TChannel(options) {
     }, options);
 
     self.logger = self.options.logger || nullLogger;
+    self.random = self.options.random || globalRandom;
+    self.timers = self.options.timers || globalTimers;
 
     // Filled in by the listen call:
     self.host = null;
@@ -107,11 +109,14 @@ function TChannel(options) {
 
     // Filled in by listening event:
     self.hostPort = null;
-    self.random = self.options.random || globalRandom;
-    self.timers = self.options.timers || globalTimers;
 
     // how to handle incoming requests
-    self.handler = self.options.handler || noHandlerHandler;
+    if (!self.options.handler) {
+        self.handler = noHandlerHandler;
+    } else {
+        self.handler = self.options.handler;
+        delete self.options.handler;
+    }
 
     // populated by:
     // - manually api (.peers.add etc)
@@ -850,14 +855,14 @@ TChannelPeers.prototype.get = function get(hostPort) {
     return self._map[hostPort] || null;
 };
 
-TChannelPeers.prototype.add = function add(hostPort) {
+TChannelPeers.prototype.add = function add(hostPort, options) {
     var self = this;
     var peer = self._map[hostPort];
     if (!peer) {
         if (hostPort === self.channel.hostPort) {
             return self.selfPeer;
         }
-        peer = TChannelPeer(self.channel, hostPort);
+        peer = TChannelPeer(self.channel, hostPort, options);
         self.emit('allocPeer', peer);
         self._map[hostPort] = peer;
     }
@@ -877,12 +882,7 @@ TChannelPeers.prototype.addPeer = function addPeer(peer) {
 
 TChannelPeers.prototype.keys = function keys() {
     var self = this;
-    var ks = Object.keys(self._map);
-    var ret = new Array(ks.length);
-    for (var i = 0; i < ks.length; i++) {
-        ret[i] = ks[i];
-    }
-    return ret;
+    return Object.keys(self._map);
 };
 
 TChannelPeers.prototype.values = function values() {
@@ -905,6 +905,17 @@ TChannelPeers.prototype.entries = function entries() {
     return ret;
 };
 
+TChannelPeers.prototype.clear = function clear() {
+    var self = this;
+    var keys = self.keys();
+    var vals = new Array(keys.length);
+    for (var i = 0; i < keys.length; i++) {
+        vals[i] = self._map[keys[i]];
+        delete self._map[keys[i]];
+    }
+    return vals;
+};
+
 TChannelPeers.prototype.delete = function del(hostPort) {
     var self = this;
     var peer = self._map[hostPort];
@@ -916,6 +927,11 @@ TChannelPeers.prototype.request = function request(options) {
     var self = this;
     var peers = self.choosePeer(options, null, 1);
     var peer = peers[0];
+
+    if (!peer) {
+        throw new Error('no peer available for request'); // TODO: typed error
+    }
+
     if (!peer) {
         // TODO: operational error?
         throw new Error('no peer available for request'); // TODO: typed error
@@ -936,9 +952,7 @@ TChannelPeers.prototype.choosePeer = function choosePeer(options, op, n) {
     } else {
         hosts = Object.keys(self._map);
     }
-    if (!hosts || !hosts.length) {
-        throw new Error('no hosts specified in request or channel options'); // TODO: typed error
-    }
+    if (!hosts || !hosts.length) return [];
 
     var threshold = options.peerScoreThreshold;
     if (threshold === undefined) threshold = self.options.peerScoreThreshold;
@@ -947,7 +961,7 @@ TChannelPeers.prototype.choosePeer = function choosePeer(options, op, n) {
     var selectedPeer = null, selectedScore = 0;
     for (var i = 0; i < hosts.length; i++) {
         var peer = self.add(hosts[i]);
-        var score = peer.state.shouldRequest(options, op);
+        var score = peer.state.shouldRequest(op, options);
         var want = score > threshold &&
                    (selectedPeer === null || score > selectedScore);
         // TODO: provide visibility... event hook?
@@ -979,10 +993,28 @@ function TChannelPeer(channel, hostPort, options) {
     self.isEphemeral = self.hostPort === '0.0.0.0:0';
     self.state = null; // TODO
     self.connections = [];
-    self.setState(TChannelPeerHealthyState(self.channel));
+    if (self.options.initialState) {
+        self.setState(self.options.initialState);
+        delete self.options.initialState;
+    } else {
+        self.setState(TChannelPeerHealthyState);
+    }
 }
 
 inherits(TChannelPeer, EventEmitter);
+
+TChannelPeer.prototype.isConnected = function isConnected(direction) {
+    var self = this;
+    for (var i = 0; i < self.connections.length; i++) {
+        var conn = self.connections[i];
+        if (direction && conn.direction !== direction) {
+            continue;
+        } else if (conn.remoteName !== null) {
+            return true;
+        }
+    }
+    return false;
+};
 
 TChannelPeer.prototype.close = function close(callback) {
     var self = this;
@@ -1005,13 +1037,21 @@ TChannelPeer.prototype.close = function close(callback) {
     }
 };
 
-TChannelPeer.prototype.setState = function setState(state) {
+TChannelPeer.prototype.setState = function setState(StateType) {
     var self = this;
-    if (!self.state || state.name !== self.state.name) {
-        var oldState = self.state;
-        self.state = state;
-        self.emit('stateChanged', oldState, state);
+    var currentName = self.state && self.state.name;
+    if (currentName &&
+        StateType.prototype.name &&
+        StateType.prototype.name === currentName) {
+        return;
     }
+    var state = StateType(self.channel, self);
+    if (state && state.name === currentName) {
+        return;
+    }
+    var oldState = self.state;
+    self.state = state;
+    self.emit('stateChanged', oldState, state);
 };
 
 TChannelPeer.prototype.connect = function connect() {
@@ -1195,33 +1235,36 @@ TChannelSelfPeer.prototype.makeOutConnection = function makeOutConnection(/* soc
     throw new Error('refusing to make self out connection');
 };
 
-function TChannelPeerState(channel, name) {
+function TChannelPeerState(channel, peer) {
     var self = this;
     self.channel = channel;
-    self.name = name;
+    self.peer = peer;
 }
 
-TChannelPeerState.prototype.shouldRequest = function shouldRequest(/* options, op */) {
+TChannelPeerState.prototype.shouldRequest = function shouldRequest(/* op, options */) {
     // TODO: op isn't quite right currently as a "TChannelClientOp", the
     // intention is that the other (non-options) arg encapsulates all requests
     // across retries and setries
     return 0;
 };
 
-function TChannelPeerHealthyState(channel) {
+function TChannelPeerHealthyState(channel, peer) {
     if (!(this instanceof TChannelPeerHealthyState)) {
-        return new TChannelPeerHealthyState(channel);
+        return new TChannelPeerHealthyState(channel, peer);
     }
     var self = this;
-    TChannelPeerState.call(self, channel, 'healthy');
+    TChannelPeerState.call(self, channel, peer);
 }
 
 inherits(TChannelPeerHealthyState, TChannelPeerState);
 
-TChannelPeerHealthyState.prototype.shouldRequest = function shouldRequest(/* options, op */) {
+TChannelPeerHealthyState.prototype.name = 'healthy';
+
+TChannelPeerHealthyState.prototype.shouldRequest = function shouldRequest(/* op, options */) {
     // return Math.random();
     var self = this;
     return 0.2 + self.channel.random() * 0.8;
 };
 
 module.exports = TChannel;
+module.exports.PeerState = TChannelPeerState;
