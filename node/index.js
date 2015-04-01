@@ -241,11 +241,10 @@ TChannel.prototype.register = function register(name, handler) {
         case 'no-handler.handler':
             // lazyily set up the legacy handler
             self.handler = EndpointHandler();
-            self.handler.type = 'legacy-handler.handler';
 
             break;
 
-        case 'legacy-handler.handler':
+        case 'tchannel.endpoint-handler':
             // If its still the legacy handler then we are good.
             break;
 

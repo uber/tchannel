@@ -1,15 +1,15 @@
 # Copyright (c) 2015 Uber Technologies, Inc.
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -31,6 +31,7 @@ from .socket import SocketConnection
 from .futures import SettableFuture, transform_future
 from .messages import CallRequestMessage
 from .exceptions import TChannelApplicationException
+from .exceptions import ConnectionClosedException
 
 
 class TChannelOutOps(object):
@@ -49,7 +50,7 @@ class TChannelOutOps(object):
         closed = 2
 
     def __init__(self, name, sock, on_close=None, perform_handshake=True,
-                 timeout=None):
+                 timeout=None, remote_service=None):
         """Initialize a TChannelOutOps.
 
         :param name:
@@ -62,10 +63,13 @@ class TChannelOutOps(object):
         :param perform_handshake:
             If True (the default), perform a handshake with the remote host
             immediately
+        :param remote_service:
+            Name of the remote service
         """
         self._name = name
         self._sock = sock
         self._conn = SocketConnection(self._sock)
+        self._remote_service = remote_service or ''
 
         self._state = self.State.init
         self._outstanding = queue.Queue()
@@ -74,7 +78,7 @@ class TChannelOutOps(object):
         self._sender = Thread(target=self._start_sender)
         self._receiver = Thread(target=self._start_receiver)
         self._timeout = timeout or self.TIMEOUT
-        self._id_counter = 0
+        self.message_id = 0
         self._counter_lock = Lock()
 
         if perform_handshake:
@@ -99,8 +103,8 @@ class TChannelOutOps(object):
     def _next_message_id(self):
         """Return the next available message ID."""
         with self._counter_lock:
-            self._id_counter += 1
-            return self._id_counter
+            self.message_id += 1
+            return self.message_id
 
     def _start_sender(self):
         """Responsible for sending requests over the wire.
@@ -124,8 +128,7 @@ class TChannelOutOps(object):
 
             msg_id = self._next_message_id()
             self._futures[msg_id] = request.future
-
-            self._conn.frame_and_write(msg, message_id=msg_id)
+            self._conn.frame_and_write_stream(msg, message_id=msg_id)
 
     def _start_receiver(self):
         """Responsible for receiving and dispatching requests.
@@ -137,6 +140,8 @@ class TChannelOutOps(object):
             try:
                 ctx = self._conn.await()
             except socket.timeout:
+                continue
+            except ConnectionClosedException:
                 continue
             if ctx is None:
                 break  # end of stream
@@ -185,7 +190,10 @@ class TChannelOutOps(object):
             self._state == self.State.ready
         ), "Handshake not performed or connection closed"
 
-        msg = CallRequestMessage(arg_1=arg_1, arg_2=arg_2, arg_3=arg_3)
+        msg = CallRequestMessage(
+            args=[arg_1, arg_2, arg_3],
+            service=self._remote_service,
+        )
 
         future = SettableFuture()
         self._submit(msg, future)
@@ -194,9 +202,7 @@ class TChannelOutOps(object):
             if response.code != 0:
                 raise TChannelApplicationException(
                     response.code,
-                    response.arg_1,
-                    response.arg_2,
-                    response.arg_3,
+                    response.args,
                 )
             return response
 
@@ -273,7 +279,7 @@ class OutgoingTChannel(object):
         self._connections = {}
         self._timeout = timeout or self.TIMEOUT
 
-    def _get_connection(self, host, port):
+    def _get_connection(self, host, port, service_name):
         """Get a TChannel connection to the given destination.
 
         :param host:
@@ -303,6 +309,7 @@ class OutgoingTChannel(object):
                 sock,
                 on_close=partial(self._on_conn_close, host, port),
                 timeout=self._timeout,
+                remote_service=service_name
             )
 
         return conn
@@ -316,7 +323,7 @@ class OutgoingTChannel(object):
                 if self._connections[(host, port)] is connection:
                     del self._connections[(host, port)]
 
-    def request(self, host, port=None):
+    def request(self, host_port, service_name=None):
         """Prepare to make a request to the given destination.
 
         Accepts either a `host` and `port` specifying the destination, or a
@@ -332,15 +339,17 @@ class OutgoingTChannel(object):
             except TChannelApplicationException as e:
                 (d, e, f) = e.arg_1, e.arg_2, e.arg_3
 
-        :param host:
-            Remote host
-        :param port:
-            Port on the remote host
+        :param host_port:
+            Remote host and port
+        :param service_name:
+            Name of the remote service
         """
-        if not port:
-            host, port = host.rsplit(':', 1)
+        service_name = service_name or ''
+
+        host, port = host_port.rsplit(':', 1)
         port = int(port)
-        return self._get_connection(host, port)
+
+        return self._get_connection(host, port, service_name)
 
     def close(self):
         for conn in self._connections.values():

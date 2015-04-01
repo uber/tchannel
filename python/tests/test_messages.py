@@ -1,15 +1,15 @@
 # Copyright (c) 2015 Uber Technologies, Inc.
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -19,13 +19,16 @@
 # THE SOFTWARE.
 
 from __future__ import absolute_import
-import struct
 
+import struct
 import pytest
 
 from tchannel import messages
 from tchannel.messages.common import PROTOCOL_VERSION
 from tchannel.io import BytesIO
+from tchannel.messages import CallRequestMessage
+from tchannel.tornado.message_factory import MessageFactory
+from tests.util import big_arg
 
 
 def make_short_bytes(value):
@@ -129,9 +132,7 @@ def test_valid_ping_request():
         'service': 'kodenom',
         'headers': {},
         'checksum': (messages.ChecksumType.none, None),
-        'arg_1': None,
-        'arg_2': None,
-        'arg_3': None,
+        'args': None,
     }),
     (messages.CallRequestMessage, messages.call_req_rw, {
         'flags': 0x01,
@@ -140,9 +141,7 @@ def test_valid_ping_request():
         'service': 'with_checksum',
         'headers': {},
         'checksum': (messages.ChecksumType.crc32, 3),
-        'arg_1': b'hi',
-        'arg_2': b'\x00',
-        'arg_3': None,
+        'args': [b'hi', b'\x00', ""],
     }),
     (messages.CallResponseMessage, messages.call_res_rw, {
         'flags': 1,
@@ -150,9 +149,7 @@ def test_valid_ping_request():
         'tracing': messages.Tracing(0, 0, 0, 1),
         'headers': {},
         'checksum': (messages.ChecksumType.crc32, 1),
-        'arg_1': None,
-        'arg_2': None,
-        'arg_3': None,
+        'args': None,
     }),
 ])
 def test_roundtrip_message(message_class, message_rw, attrs):
@@ -197,9 +194,7 @@ def test_call_req_parse(call_request_bytes):
     assert msg.headers == {'key': 'val'}
     assert msg.checksum == (messages.ChecksumType.none, None)
 
-    assert msg.arg_1 == b'on'
-    assert msg.arg_2 == b'to'
-    assert msg.arg_3 == b'te'
+    assert msg.args == [b'on', b'to', b'te']
 
 
 def test_call_res_parse():
@@ -240,10 +235,32 @@ def test_call_res_parse():
     assert msg.headers == {'key': 'val'}
     assert msg.checksum == (messages.ChecksumType.none, None)
 
-    assert msg.arg_1 == b'on'
-    assert msg.arg_2 == b'to'
-    assert msg.arg_3 == b'te'
+    assert msg.args == [b'on', b'to', b'te']
 
 
 def test_equality_check_against_none(init_request_with_headers):
     assert messages.InitRequestMessage().__eq__(None) is False
+
+
+# TODO test case will fail due to StreamClosedError when
+# increase the LARGE_AMOUNT to even bigger
+@pytest.mark.gen_test
+@pytest.mark.parametrize('arg2, arg3', [
+    ("", big_arg()),
+    (big_arg(), ""),
+    ("test", big_arg()),
+    (big_arg(),  "test"),
+    (big_arg(), big_arg()),
+    ("", ""),
+    ("test", "test"),
+])
+def test_message_fragment(arg2, arg3):
+    msg = CallRequestMessage(args=["", arg2, arg3])
+    origin_msg = CallRequestMessage(args=["", arg2, arg3])
+    message_factory = MessageFactory()
+    fragments = message_factory.fragment(msg)
+    recv_msg = None
+    for fragment in fragments:
+        recv_msg = message_factory.build(0, fragment)
+
+    assert origin_msg.args == recv_msg.args
