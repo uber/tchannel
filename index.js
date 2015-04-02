@@ -325,16 +325,18 @@ TChannel.prototype.close = function close(callback) {
         hostPort: self.hostPort
     });
 
-    var counter = 2;
-    self.peers.close(onClose);
+    var counter = 1;
 
     if (self.serverSocket) {
+        ++counter;
         if (self.serverSocket.address()) {
             closeServerSocket();
         } else {
             self.serverSocket.once('listening', closeServerSocket);
         }
     }
+
+    self.peers.close(onClose);
 
     function closeServerSocket() {
         self.serverSocket.once('close', onClose);
