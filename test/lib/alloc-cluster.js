@@ -56,17 +56,32 @@ function allocCluster(opts) {
     function assertCleanState(assert, expected) {
         cluster.channels.forEach(function eachChannel(chan, i) {
             var chanExpect = expected.channels[i];
+            if (!chanExpect) {
+                assert.fail(util.format('unexpected channel[%s]', i));
+                return;
+            }
+
             var peers = chan.peers.values();
-            assert.equal(peers.length, chanExpect.peers.length,
-                util.format('channel[%s] should have %s peer(s)',
-                            i, chanExpect.peers.length));
+            assert.equal(peers.length, chanExpect.peers.length, util.format(
+                'channel[%s] should have %s peer(s)', i, chanExpect.peers.length));
             peers.forEach(function eachPeer(peer, j) {
                 var peerExpect = chanExpect.peers[j];
+                if (!peerExpect) {
+                    assert.fail(util.format(
+                        'unexpected channel[%s] peer[%s]', i, j));
+                    return;
+                }
                 peer.connections.forEach(function eachConn(conn, k) {
                     var connExpect = peerExpect.connections[k];
-                    var name = util.format('channel[%s] peer[%s] conn[%s]', i, j, k);
+                    if (!connExpect) {
+                        assert.fail(util.format(
+                            'unexpected channel[%s] peer[%s] conn[%s]', i, j, k));
+                        return;
+                    }
                     Object.keys(connExpect).forEach(function eachProp(prop) {
-                        var desc = util.format('%s should .%s', name, prop);
+                        var desc = util.format(
+                            'channel[%s] peer[%s] conn[%s] should .%s',
+                            i, j, k, prop);
                         switch (prop) {
                         case 'inOps':
                         case 'outOps':
