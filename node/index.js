@@ -845,6 +845,7 @@ TChannelPeers.prototype.close = function close(callback) {
     peers.forEach(function eachPeer(peer) {
         peer.close(onClose);
     });
+    self.clear();
 
     function onClose() {
         if (--counter <= 0) {
