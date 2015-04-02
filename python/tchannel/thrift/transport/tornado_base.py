@@ -83,7 +83,6 @@ class TChannelTornadoTransportBase(TChannelTransportBase):
             "recv_call() not supported for Tornado. Use readFrame()."
         )
 
-    @gen.coroutine
     def flush(self):
         raise NotImplementedError("Must be implemented.")
 

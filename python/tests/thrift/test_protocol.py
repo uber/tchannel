@@ -20,7 +20,6 @@
 
 from __future__ import absolute_import
 
-from tchannel.outgoing import OutgoingTChannel
 from tchannel.thrift import protocol as tproto
 from tchannel.thrift import transport as ttrans
 
