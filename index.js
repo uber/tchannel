@@ -1189,6 +1189,8 @@ TChannelSelfConnection.prototype.buildOutgoingResponse = function buildOutgoingR
         inres.handleFrame(args);
         if (isLast) inres.handleFrame(null);
         if (first) {
+            inres.code = outres.code;
+            inres.ok = outres.ok;
             first = false;
             req.emit('response', inres);
         }
@@ -1196,8 +1198,11 @@ TChannelSelfConnection.prototype.buildOutgoingResponse = function buildOutgoingR
     }
 
     function passError(codeString, message) {
-        var err = new Error(format('%s: %s', codeString, message));
-        // TODO: proper error classes... requires coupling to v2?
+        var code = v2.ErrorResponse.Codes[codeString];
+        var err = v2.ErrorResponse.CodeErrors[code]({
+            originalId: req.id,
+            message: message
+        });
         req.emit('error', err);
         // TODO: should terminate corresponding inc res
         if (!self.closing) self.lastTimeoutTime = 0;
