@@ -22,7 +22,6 @@ from __future__ import absolute_import
 
 from thrift import Thrift
 
-from tornado import gen
 from tornado import ioloop
 try:
     from tornado.queues import Queue  # Included in Tornado 4.2

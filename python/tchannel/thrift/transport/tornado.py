@@ -25,11 +25,6 @@ from thrift.protocol import TBinaryProtocol
 from thrift.transport import TTransport
 
 from tornado import gen
-from tornado import ioloop
-try:
-    from tornado.queues import Queue  # Included in Tornado 4.2
-except ImportError:
-    from toro import Queue
 
 from tchannel.io import BytesIO
 from tchannel.messages.common import Types
