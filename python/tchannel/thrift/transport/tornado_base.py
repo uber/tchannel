@@ -61,6 +61,9 @@ class TChannelTornadoTransportBase(TChannelTransportBase):
     def readFrame(self):
         return self._response_queue.get()
 
+    def _writeFrame(self, value):
+        self._response_queue.put(value)
+
     def read(self, n):
         raise NotImplementedError(
             "read() must not be called directly. Use readFrame()."

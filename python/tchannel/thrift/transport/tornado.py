@@ -91,4 +91,4 @@ class TChannelTornadoTransport(TChannelTornadoTransportBase):
                 "Unsupported response message: %s" % str(response)
             )
 
-        self._response_queue.put(buff.getvalue())
+        self._writeFrame(buff.getvalue())
