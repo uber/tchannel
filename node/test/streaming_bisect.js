@@ -321,7 +321,7 @@ function streamingTest(testCase, assert, callback) {
     onResult.canStream = true;
     req.hookupCallback(onResult);
 
-    function onResult(err, res) {
+    function onResult(err, req, res) {
         assert.ifError(err, testCase.name + ': no result error');
         if (err) {
             callback();

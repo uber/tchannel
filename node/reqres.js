@@ -271,20 +271,41 @@ TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callbac
     return self;
 };
 
-TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callback) {
+TChannelOutgoingRequest.prototype.hookupStreamCallback = function hookupCallback(callback) {
     var self = this;
     self.once('error', onError);
     self.once('response', onResponse);
+
     function onError(err) {
         self.removeListener('response', onResponse);
-        callback(err, null);
+        callback(err, null, null);
     }
 
     function onResponse(res) {
         self.removeListener('error', onError);
-        if (callback.canStream) {
-            callback(null, res);
-        } else if (res.streamed) {
+        callback(null, self, res);
+    }
+
+    return self;
+};
+
+TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callback) {
+    var self = this;
+    if (callback.canStream) {
+        return self.hookupStreamCallback(callback);
+    }
+
+    self.once('error', onError);
+    self.once('response', onResponse);
+
+    function onError(err) {
+        self.removeListener('response', onResponse);
+        callback(err, null, null);
+    }
+
+    function onResponse(res) {
+        self.removeListener('error', onError);
+        if (res.streamed) {
             parallel({
                 arg2: res.arg2.onValueReady,
                 arg3: res.arg3.onValueReady
@@ -292,11 +313,11 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
         } else {
             compatCall(null, res);
         }
-
         function compatCall(err, args) {
             callback(err, res, args.arg2, args.arg3);
         }
     }
+
     return self;
 };
 
