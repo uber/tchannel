@@ -313,7 +313,7 @@ allocCluster.test('self send() with error frame', 1, function t(cluster, assert)
         host: one.hostPort
     }).send('foo', '', '', onResponse);
 
-    function onResponse(err, resp) {
+    function onResponse(err) {
         assert.equal(err.message, 'bye lol');
         assert.deepEqual(err, {
             type: 'tchannel.canceled',
