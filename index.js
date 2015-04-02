@@ -341,6 +341,8 @@ TChannel.prototype.address = function address() {
     var self = this;
     if (self.serverSocket) {
         return self.serverSocket.address() || null;
+    } else if (self.topChannel) {
+        return self.topChannel.address();
     } else {
         return null;
     }
