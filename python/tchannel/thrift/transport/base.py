@@ -27,8 +27,7 @@ from tchannel.io import BytesIO
 
 class TChannelTransportBase(TTransport.TTransportBase, object):
 
-    def __init__(self, tchannel, hostport, service_name):
-        self._tchannel = tchannel
+    def __init__(self, hostport, service_name):
         self._hostport = hostport
         self._service_name = service_name
 

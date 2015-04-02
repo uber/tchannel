@@ -58,9 +58,10 @@ class TChannelTransport(TTransport.CReadableTransport, TChannelTransportBase):
             name.
         """
         super(TChannelTransport, self).__init__(
-            tchannel, hostport, service_name
+            hostport, service_name
         )
 
+        self._tchannel = tchannel
         self._rbuf = BytesIO()
 
     def read(self, sz):

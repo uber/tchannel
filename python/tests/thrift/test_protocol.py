@@ -20,7 +20,6 @@
 
 from __future__ import absolute_import
 
-from tchannel.outgoing import OutgoingTChannel
 from tchannel.thrift import protocol as tproto
 from tchannel.thrift import transport as ttrans
 
@@ -65,7 +64,7 @@ def test_unframed(method, seqid):
     assume(len(method) > 0)
 
     transport_cls = type('SomeTransport', (ttrans.TChannelTransportBase,), {})
-    transport = transport_cls(OutgoingTChannel(), 'localhost:4040', 'foo')
+    transport = transport_cls('localhost:4040', 'foo')
     proto = tproto.TChannelProtocol('FooService', transport)
 
     expect(transport).init_call.with_args('FooService::' + method, seqid)
