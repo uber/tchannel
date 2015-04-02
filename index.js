@@ -171,7 +171,18 @@ TChannel.prototype.getServer = function getServer() {
             var address = self.serverSocket.address();
             self.hostPort = self.host + ':' + address.port;
             self.listening = true;
+
+            if (self.subChannels) {
+                Object.keys(self.subChannels).forEach(function each(serviceName) {
+                    var chan = self.subChannels[serviceName];
+                    if (!chan.hostPort) {
+                        chan.hostPort = self.hostPort;
+                    }
+                });
+            }
+
             self.logger.info(self.hostPort + ' listening');
+
             self.emit('listening');
         }
     });
@@ -227,6 +238,11 @@ TChannel.prototype.makeSubChannel = function makeSubChannel(options) {
         }
     }
     self.subChannels[chan.serviceName] = chan;
+
+    if (self.hostPort) {
+        chan.hostPort = self.hostPort;
+    }
+
     return chan;
 };
 
