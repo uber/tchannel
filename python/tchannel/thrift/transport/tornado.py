@@ -37,7 +37,19 @@ from .tornado_base import TChannelTornadoTransportBase
 
 
 class TChannelTornadoTransport(TChannelTornadoTransportBase):
+    """A Thrift Transport to send requests over an open TChannel connection.
 
+        .. code-block::
+
+        transport = TChannelTornadoTransport(
+            tchannel, host_port, 'foo_service'
+        )
+        transport.init_call('FooService::doBar')
+        transport.write('request body')
+        transport.flush()
+
+        response_body = yield transport.readFrame()
+    """
     def __init__(self, tchannel, hostport, service_name, io_loop=None):
         super(TChannelTornadoTransport, self).__init__(
             hostport, service_name

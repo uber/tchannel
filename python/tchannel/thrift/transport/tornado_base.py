@@ -38,17 +38,6 @@ class TChannelTornadoTransportBase(TChannelTransportBase):
 
     Works with Thrift clients generated with the ``tornado`` option enabled.
 
-    .. code-block::
-
-        transport = TChannelTornadoTransport(
-            tchannel, host_port, 'foo_service'
-        )
-        transport.init_call('FooService::doBar')
-        transport.write('request body')
-        transport.flush()
-
-        response_body = yield transport.readFrame()
-
     VERY IMPORTANT IMPLEMENTATION DETAIL: For Tornado responses, Thrift calls
     ``readFrame`` which produces the serialized payload. It then constructs a
     ``TMemoryBuffer`` and gets all the response details out of that. So we
