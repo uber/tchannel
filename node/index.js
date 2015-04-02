@@ -136,11 +136,14 @@ inherits(TChannel, EventEmitter);
 
 TChannel.prototype.getServer = function getServer() {
     var self = this;
-    if (self.serverSocket) return;
+    if (self.serverSocket) {
+        return self.serverSocket;
+    }
     self.serverSocket = net.createServer(function onServerSocketConnection(sock) {
         if (!self.destroyed) {
             var remoteAddr = sock.remoteAddress + ':' + sock.remotePort;
             var conn = new TChannelConnection(self, sock, 'in', remoteAddr);
+            self.emit('connection', conn);
             self.logger.debug('incoming server connection', {
                 hostPort: self.hostPort,
                 remoteAddr: conn.remoteAddr
@@ -277,7 +280,11 @@ TChannel.prototype.register = function register(name, handler) {
 
 TChannel.prototype.address = function address() {
     var self = this;
-    return self.serverSocket && self.serverSocket.address();
+    if (self.serverSocket) {
+        return self.serverSocket.address() || null;
+    } else {
+        return null;
+    }
 };
 
 /* jshint maxparams:5 */
@@ -693,7 +700,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
         self.handler.sendInitRequest();
         self.handler.once('init.response', function onOutIdentified(init) {
             self.remoteName = init.hostPort;
-            self.channel.emit('identified', {
+            self.emit('identified', {
                 hostPort: init.hostPort,
                 processName: init.processName
             });
@@ -702,7 +709,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
         self.handler.once('init.request', function onInIdentified(init) {
             self.remoteName = init.hostPort;
             self.channel.peers.add(self.remoteName).addConnection(self);
-            self.channel.emit('identified', {
+            self.emit('identified', {
                 hostPort: init.hostPort,
                 processName: init.processName
             });
@@ -839,6 +846,7 @@ TChannelPeers.prototype.close = function close(callback) {
     peers.forEach(function eachPeer(peer) {
         peer.close(onClose);
     });
+    self.clear();
 
     function onClose() {
         if (--counter <= 0) {
@@ -1034,7 +1042,7 @@ TChannelPeer.prototype.close = function close(callback) {
                     counter: counter
                 });
             }
-            callback();
+            self.state.close(callback);
         }
     }
 };
@@ -1056,16 +1064,24 @@ TChannelPeer.prototype.setState = function setState(StateType) {
     self.emit('stateChanged', oldState, state);
 };
 
-TChannelPeer.prototype.connect = function connect() {
+TChannelPeer.prototype.getOutConnection = function getOutConnection() {
     var self = this;
     var conn;
     for (var i = self.connections.length - 1; i >= 0; i--) {
         conn = self.connections[i];
         if (!conn.closing) return conn;
     }
-    var socket = self.makeOutSocket();
-    conn = self.makeOutConnection(socket);
-    self.addConnection(conn);
+    return null;
+};
+
+TChannelPeer.prototype.connect = function connect() {
+    var self = this;
+    var conn = self.getOutConnection();
+    if (!conn) {
+        var socket = self.makeOutSocket();
+        conn = self.makeOutConnection(socket);
+        self.addConnection(conn);
+    }
     return conn;
 };
 
@@ -1247,6 +1263,10 @@ function TChannelPeerState(channel, peer) {
     self.channel = channel;
     self.peer = peer;
 }
+
+TChannelPeerState.prototype.close = function close(callback) {
+    callback();
+};
 
 TChannelPeerState.prototype.shouldRequest = function shouldRequest(/* op, options */) {
     // TODO: op isn't quite right currently as a "TChannelClientOp", the
