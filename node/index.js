@@ -1077,9 +1077,11 @@ TChannelPeer.prototype.getOutConnection = function getOutConnection() {
 TChannelPeer.prototype.connect = function connect() {
     var self = this;
     var conn = self.getOutConnection();
-    var socket = self.makeOutSocket();
-    conn = self.makeOutConnection(socket);
-    self.addConnection(conn);
+    if (!conn) {
+        var socket = self.makeOutSocket();
+        conn = self.makeOutConnection(socket);
+        self.addConnection(conn);
+    }
     return conn;
 };
 
