@@ -35,7 +35,9 @@ from .message_factory import MessageFactory
 
 
 class TChannelServer(tornado.tcpserver.TCPServer):
-    """Implements a Tornado-based TChannel server."""
+    """Implements a basic Tornado-based TChannel server.
+
+    The server behavior is defined by using a ``RequestHandler``."""
 
     def __init__(self, handler, process_name=None):
         """Instantiate the server with the given handler.
@@ -65,7 +67,8 @@ class TChannelServer(tornado.tcpserver.TCPServer):
             if not verify_checksum(message):
                 # TODO: Probably send an Error frame back
                 raise InvalidChecksumException()
-            self.handler.handle_request(
+
+            self.handler.handle(
                 Context(context.message_id, message),
                 connection,
             )

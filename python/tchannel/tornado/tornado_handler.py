@@ -39,7 +39,7 @@ class TornadoRequestHandler(RequestHandler):
         http_conn = TornadoHttpConnection(request_conn.connection, context)
         return _ServerRequestAdapter(self, http_conn)
 
-    def handle_request(self, context, conn):
+    def handle(self, context, conn):
         """dispatch incoming request to particular endpoint
 
         :param context: context contains received CallRequestMessage

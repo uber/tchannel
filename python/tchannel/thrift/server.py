@@ -64,5 +64,5 @@ class ThriftRequestHandler(RequestHandler):
     def register(self, service_name, processor):
         self.services[service_name] = processor
 
-    def handle_request(self, context, connection):
+    def handle(self, context, connection):
         raise NotImplementedError()

@@ -67,7 +67,7 @@ def test_sync_handler(handler, context, conn):
 
     expect(conn).finish
 
-    handler.handle_request(context, conn)
+    handler.handle(context, conn)
 
 
 @pytest.mark.gen_test
@@ -81,4 +81,4 @@ def test_async_handler(handler, context, conn):
 
     expect(conn).finish
 
-    yield handler.handle_request(context, conn)
+    yield handler.handle(context, conn)

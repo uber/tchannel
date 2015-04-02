@@ -36,12 +36,12 @@ class RequestHandler(object):
 
     Usage example:
         class CustomerReqHandler(RequestHandler):
-            def handle_request(self, context, conn):
+            def handle(self, context, conn):
                 Add customized request handling
                 logic here
 
     """
-    def handle_request(self, context, conn):
+    def handle(self, context, conn):
         """Handle incoming request
 
         :param context: context contains received CallRequestMessage
@@ -55,7 +55,7 @@ class TChannelRequestHandler(RequestHandler):
         super(TChannelRequestHandler, self).__init__()
         self.endpoints = {}
 
-    def handle_request(self, context, conn):
+    def handle(self, context, conn):
         """dispatch incoming request to particular endpoint
 
         :param context: context contains received CallRequestMessage
