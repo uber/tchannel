@@ -143,6 +143,7 @@ TChannel.prototype.getServer = function getServer() {
         if (!self.destroyed) {
             var remoteAddr = sock.remoteAddress + ':' + sock.remotePort;
             var conn = new TChannelConnection(self, sock, 'in', remoteAddr);
+            self.emit('connection', conn);
             self.logger.debug('incoming server connection', {
                 hostPort: self.hostPort,
                 remoteAddr: conn.remoteAddr
@@ -699,7 +700,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
         self.handler.sendInitRequest();
         self.handler.once('init.response', function onOutIdentified(init) {
             self.remoteName = init.hostPort;
-            self.channel.emit('identified', {
+            self.emit('identified', {
                 hostPort: init.hostPort,
                 processName: init.processName
             });
@@ -708,7 +709,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
         self.handler.once('init.request', function onInIdentified(init) {
             self.remoteName = init.hostPort;
             self.channel.peers.add(self.remoteName).addConnection(self);
-            self.channel.emit('identified', {
+            self.emit('identified', {
                 hostPort: init.hostPort,
                 processName: init.processName
             });
