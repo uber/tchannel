@@ -28,14 +28,14 @@ var server = new TChannel({
 var client = new TChannel();
 
 // normal response
-server.handler.register('func 1', function (req, res) {
-    console.log('func 1 responding with a small delay:' + req.arg2.toString() + ' 2:' + req.arg3.toString());
+server.handler.register('func1', function (req, res) {
+    console.log('func1 responding with a small delay:' + req.arg2.toString() + ' 2:' + req.arg3.toString());
     setTimeout(function() {
         res.sendOk('result', 'indeed it did');
     }, Math.random() * 1000);
 });
 // err response
-server.handler.register('func 2', function (req, res) {
+server.handler.register('func2', function (req, res) {
     res.sendNotOk(null, 'it failed');
 });
 
@@ -47,12 +47,12 @@ var listening = ready(function (err) {
 
     client
         .request({host: '127.0.0.1:4040'})
-        .send('func 1', "arg 1", "arg 2", function (err, res) {
+        .send('func1', "arg 1", "arg 2", function (err, res) {
             console.log('normal res: ' + res.arg2.toString() + ' ' + res.arg3.toString());
         });
     client
         .request({host: '127.0.0.1:4040'})
-        .send('func 2', "arg 1", "arg 2", function (err, res) {
+        .send('func2', "arg 1", "arg 2", function (err, res) {
             console.log('err res: ' + res.ok +
                 ' message: ' + String(res.arg3));
         });
