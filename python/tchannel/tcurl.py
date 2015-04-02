@@ -171,10 +171,10 @@ def handler2(request, response, opts):
 def create_server(tchannel, in_port):
 
     handler = TChannelRequestHandler()
-    handler.register_handler(
+    handler.register(
         r"/hi", handler1
     )
-    handler.register_handler(
+    handler.register(
         r"/ok", handler2
     )
 

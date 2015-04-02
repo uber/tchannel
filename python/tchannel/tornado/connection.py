@@ -20,7 +20,6 @@
 
 from __future__ import absolute_import
 
-import functools
 import logging
 import os
 import socket
@@ -183,9 +182,6 @@ class TornadoConnection(object):
 
         return future
 
-    def wrap(self, f):
-        return functools.partial(f, connection=self)
-
     def close(self):
         return self.connection.close()
 
@@ -303,7 +299,7 @@ class TornadoConnection(object):
 
     def finish(self, response):
         """write response"""
-        self.frame_and_write(response.resp_msg, response.id)
+        self.frame_and_write(response.message, response.id)
 
     def send_error(self, code, message, message_id):
         if code not in ErrorMessage.ERROR_CODES.keys():

@@ -54,15 +54,11 @@ def blocking(request, response, opts):
 def get_example_handler():
     example_handler = TChannelRequestHandler()
 
-    example_handler.register_handler("hi", say_hi)
-
-    example_handler.register_handler("ok", say_ok)
-
-    example_handler.register_handler("echo", echo)
-
-    example_handler.register_handler("slow", slow)
-
-    example_handler.register_handler("blocking", blocking)
+    example_handler.register("hi", say_hi)
+    example_handler.register("ok", say_ok)
+    example_handler.register("echo", echo)
+    example_handler.register("slow", slow)
+    example_handler.register("blocking", blocking)
 
     @example_handler.route("bye")
     def say_bye(request, response, opts):

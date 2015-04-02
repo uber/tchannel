@@ -83,8 +83,9 @@ class SocketConnection(object):
         self._id_sequence = 0
 
     def handle_calls(self, handler):
+        """Hande incoming calls syncronously using the given RequestHandler."""
         for context in self.reader:
-            handler.handle_request(context, self)
+            handler.handle(context, self)
 
     def await(self):
         """Decode a full message and return"""
@@ -215,7 +216,3 @@ class SocketConnection(object):
 
         self.extract_handshake_headers(message)
         return message
-
-    def finish(self, response):
-        """write response"""
-        self.frame_and_write_stream(response.resp_msg, response.id)

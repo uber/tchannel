@@ -114,7 +114,7 @@ def test_handle_calls(tchannel_pair):
         pass
 
     class MyHandler(TChannelRequestHandler):
-        def handle_request(*args, **kwargs):
+        def handle(*args, **kwargs):
             raise _MyException()
 
     server, client = tchannel_pair
@@ -131,7 +131,7 @@ def test_finish_connection(tchannel_pair):
     client.connection.close()
 
     class MyHandler(TChannelRequestHandler):
-        def handle_request(*args, **kwargs):
+        def handle(*args, **kwargs):
             pass
 
     server.handle_calls(MyHandler())
