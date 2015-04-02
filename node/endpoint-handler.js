@@ -89,7 +89,7 @@ TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, bu
     function handleArg1(arg1) {
         var name = String(arg1);
         var handler = self.endpoints[name];
-        self.emit('handle.endpoint', arg1, handler);
+        self.emit('handle.endpoint', name, handler);
         if (!handler) {
             sendError('BadRequest', util.format(
                 'no such endpoint service=%j endpoint=%j',
