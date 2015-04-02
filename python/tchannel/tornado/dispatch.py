@@ -20,48 +20,21 @@
 
 from __future__ import absolute_import
 
-import random
-import time
+from tornado import gen, ioloop
 
-import tornado.gen
-
-from tchannel.tornado.dispatch import TornadoDispatcher
+from ..dispatch import RequestDispatcher
 
 
-def say_hi(request, response, opts):
-    response.write(arg3="hi")
+class TornadoDispatcher(RequestDispatcher):
+    """Dispatches requests to different endpoints based on ``arg1``"""
 
+    def _call_endpoint(self, endpoint, request, response):
+        future = gen.maybe_future(
+            endpoint.handler(request, response, endpoint.opts)
+        )
+        future.add_done_callback(lambda _: response.finish())
 
-def say_ok(request, response, opts):
-    response.write(arg3="ok")
+        # This is just to make sure that the Future gets consumed.
+        ioloop.IOLoop.current().add_future(future, lambda f: f.exception())
 
-
-def echo(request, response, opts):
-    response.write(arg3=request.message.args[2])
-
-
-@tornado.gen.coroutine
-def slow(request, response, opts):
-    yield tornado.gen.sleep(random.random())
-    response.write(arg3="done")
-
-
-def blocking(request, response, opts):
-    time.sleep(random.random())
-    response.write(arg3="yawn")
-
-
-def get_example_handler():
-    dispatcher = TornadoDispatcher()
-
-    dispatcher.register("hi", say_hi)
-    dispatcher.register("ok", say_ok)
-    dispatcher.register("echo", echo)
-    dispatcher.register("slow", slow)
-    dispatcher.register("blocking", blocking)
-
-    @dispatcher.route("bye")
-    def say_bye(request, response, opts):
-        response.write("bye bye!")
-
-    return dispatcher
+        return future
