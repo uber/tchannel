@@ -1062,13 +1062,19 @@ TChannelPeer.prototype.setState = function setState(StateType) {
     self.emit('stateChanged', oldState, state);
 };
 
-TChannelPeer.prototype.connect = function connect() {
+TChannelPeer.prototype.getOutConnection = function getOutConnection() {
     var self = this;
     var conn;
     for (var i = self.connections.length - 1; i >= 0; i--) {
         conn = self.connections[i];
         if (!conn.closing) return conn;
     }
+    return null;
+};
+
+TChannelPeer.prototype.connect = function connect() {
+    var self = this;
+    var conn = self.getOutConnection();
     var socket = self.makeOutSocket();
     conn = self.makeOutConnection(socket);
     self.addConnection(conn);
