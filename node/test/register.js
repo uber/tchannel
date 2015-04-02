@@ -130,8 +130,8 @@ allocCluster.test('register() with different results', 2, function t(cluster, as
         assert.equal(frameErr.errorCode, 3);
         assert.equal(typeof frameErr.originalId, 'number');
         assert.equal(frameErr.message, 'some message');
-        assert.equal(errorFrameCall.head, undefined);
-        assert.equal(errorFrameCall.body, undefined);
+        assert.equal(errorFrameCall.head || null, null);
+        assert.equal(errorFrameCall.body || null, null);
 
         var bufferHead = results.bufferHead;
         assert.equal(bufferHead.err, null);
