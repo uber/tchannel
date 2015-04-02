@@ -63,10 +63,9 @@ class ServerManager(object):
         expectation = Expectation()
 
         def handle_expected_endpoint(request, response, opts):
-            # TODO: just call `resp_msg` a `message`...
-            response.resp_msg = expectation.response
+            response.message = expectation.response
 
-        self.handler.register_handler(endpoint, handle_expected_endpoint)
+        self.handler.register(endpoint, handle_expected_endpoint)
 
         return expectation
 

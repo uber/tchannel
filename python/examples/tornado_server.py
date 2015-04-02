@@ -25,7 +25,7 @@ import tornado.web
 
 from options import get_args
 from tchannel.tornado import TChannel
-from tchannel.tornado.tornado_handler import TornadoRequestHandler
+from tchannel.tornado.handler import TornadoRequestHandler
 
 
 class MainHandler(tornado.web.RequestHandler):

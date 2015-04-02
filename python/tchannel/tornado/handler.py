@@ -26,12 +26,14 @@ from ..handler import RequestHandler
 import tornado.httputil
 
 from .http_request import HttpRequest
-from .tornado_http_connection import TornadoHttpConnection
+from .http_connection import TornadoHttpConnection
 
 tornado.httputil.HTTPServerRequest = HttpRequest
 
 
 class TornadoRequestHandler(RequestHandler):
+    """Implements a TChannel adapter over a Tornado-based web app."""
+
     def __init__(self, app):
         self.request_callback = app
 
@@ -40,11 +42,6 @@ class TornadoRequestHandler(RequestHandler):
         return _ServerRequestAdapter(self, http_conn)
 
     def handle(self, context, conn):
-        """dispatch incoming request to particular endpoint
-
-        :param context: context contains received CallRequestMessage
-        :param conn: An incoming TornadoConnection
-        """
         request_delegate = self.start_serving(conn, context)
         message = context.message
         # process http message

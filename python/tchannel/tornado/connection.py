@@ -299,7 +299,7 @@ class TornadoConnection(object):
 
     def finish(self, response):
         """write response"""
-        self.frame_and_write(response.resp_msg, response.id)
+        self.frame_and_write(response.message, response.id)
 
     def send_error(self, code, message, message_id):
         if code not in ErrorMessage.ERROR_CODES.keys():

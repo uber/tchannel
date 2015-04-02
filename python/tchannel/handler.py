@@ -32,142 +32,184 @@ Endpoint = collections.namedtuple('Endpoint', ['handler', 'opts'])
 
 
 class RequestHandler(object):
-    """Base class for request handlers.
+    """Specifies how a TChannel server handles incoming requests.
 
-    Usage example:
-        class CustomerReqHandler(RequestHandler):
-            def handle(self, context, conn):
-                Add customized request handling
-                logic here
-
+    This class is agnostic of whether specific implementations are synchronous
+    or Tornado-based.
     """
-    def handle(self, context, conn):
-        """Handle incoming request
 
-        :param context: context contains received CallRequestMessage
-        :param conn: An incoming TornadoConnection
+    def handle(self, context, connection):
+        """Handle an incoming request.
+
+        The handshake has already been completed.
+
+        :param context:
+            Context containing the incoming message.
+        :param connection:
+            Reference to the connection object
+        :returns:
+            Nothing. The connection object must be used to send the response
+            back.
         """
         raise NotImplementedError()
 
 
-class TChannelRequestHandler(RequestHandler):
+class BaseRequestHandler(RequestHandler):
+    """A minimal RequestHandler skeleton.
+
+    This implements a minimal base RequestHandler that implements methods
+    which should be mostly the same between implementations. Implementations
+    must inherit this class and override at least ``handle_call``.
+    """
+
+    _HANDLER_NAMES = {
+        Types.PING_REQ: 'ping',
+        Types.CALL_REQ: 'call'
+    }
+
+    def __init__(self):
+        super(BaseRequestHandler, self).__init__()
+
+    def handle(self, context, connection):
+        # TODO assert that the handshake was already completed
+        assert context, "context must not be None"
+
+        message_id = context.message_id
+        message = context.message
+
+        if message.message_type not in self._HANDLER_NAMES:
+            # TODO handle this more gracefully
+            raise NotImplementedError("Unexpected message: %s" % str(context))
+
+        handler_name = "handle_" + self._HANDLER_NAMES[message.message_type]
+        return getattr(self, handler_name)(message_id, message, connection)
+
+    def handle_ping(self, message_id, ping, connection):
+        return connection.frame_and_write(PingResponseMessage(), message_id)
+
+    def handle_call(self, message_id, call, connection):
+        raise NotImplementedError("Must be implemented.")
+
+
+class TChannelRequestHandler(BaseRequestHandler):
+    """A RequestHandler that dispatches to different endpoints.
+
+    Endpoints are registered using ``register`` or the ``route``
+    decorator.
+    """
+
     def __init__(self):
         super(TChannelRequestHandler, self).__init__()
         self.endpoints = {}
 
-    def handle(self, context, conn):
-        """dispatch incoming request to particular endpoint
+    def handle_call(self, message_id, call, connection):
+        request = Request(message_id, call, connection)
+        endpoint = self.endpoints.get(request.endpoint, None)
 
-        :param context: context contains received CallRequestMessage
-        :param conn: An incoming TornadoConnection
-        """
-        # TODO: stop passing conn around everywhere
-        if context.message.message_type == Types.PING_REQ:
-            return conn.frame_and_write(
-                PingResponseMessage(),
-                context.message_id,
+        if endpoint is None:
+            return connection.send_error(
+                ErrorCode.bad_request,
+                "Endpoint '%s' for service '%s' is not defined" % (
+                    call.args[0], call.service
+                ),
+                message_id,
             )
 
-        if context.message.message_type == Types.CALL_REQ:
-            request = TChannelRequest(context, conn)
-            endpoint = self._find_endpoint(getattr(request, 'endpoint', None))
-            if endpoint is not None:
-                response = TChannelResponse(context, conn)
-                result = None
-                try:
-                    result = endpoint.handler(request, response, endpoint.opts)
-                    if isinstance(result, tornado.gen.Future):
-                        result.add_done_callback(lambda f: response.finish())
-                        tornado.ioloop.IOLoop.current().add_future(
-                            result,
-                            lambda f: f.exception()
-                        )
-                    return result
-                # TODO add tchannel error handling here
-                finally:
-                    if result is None:
-                        response.finish()
-            else:
-                msg = "Endpoint '%s' for service '%s' is not defined." % (
-                    context.message.args[0], context.message.service
+        response = Response(message_id, connection)
+        result = None
+        try:
+            result = endpoint.handler(request, response, endpoint.opts)
+            if isinstance(result, tornado.gen.Future):
+                result.add_done_callback(lambda f: response.finish())
+                tornado.ioloop.IOLoop.current().add_future(
+                    result,
+                    lambda f: f.exception()
                 )
-                return conn.send_error(
-                    ErrorCode.bad_request,
-                    msg,
-                    context.message_id,
-                )
-
-        # TODO handle other type message
-        raise NotImplementedError()
+            return result
+        # TODO add tchannel error handling here
+        finally:
+            if result is None:
+                response.finish()
 
     def route(self, rule, **opts):
         def decorator(handler):
-            self.register_handler(rule, handler, **opts)
+            self.register(rule, handler, **opts)
             return handler
 
         return decorator
 
-    def register_handler(self, rule, handler, **opts):
+    def register(self, rule, handler, **opts):
+        """Register a new endpoint with the given name.
+
+        .. code-block:: python
+
+            def handler(request, response, opts):
+                print opts  # => {'foo': 'bar'}
+                # ...
+
+            handler.register('is_healthy', handler, foo='bar')
+
+        :param rule:
+            Name of the endpoint. Incoming Call Requests must have this as
+            ``arg1`` to dispatch to this handler.
+        :param handler:
+            A function that gets called with ``Request``, ``Response``, and
+            the ``opts`` dictionary.
+        :param opts:
+            Parameters to pass to the ``handler`` as a dictionary.
+        """
         self.endpoints[rule] = Endpoint(handler=handler, opts=opts)
 
-    def _find_endpoint(self, rule):
-        return self.endpoints.get(rule, None)
 
+class Request(object):
+    """Represents an incoming request to an endpoint."""
 
-class TChannelRequest(object):
-    """TChannel Request Wrapper"""
+    __slots__ = ('message', 'header', 'body', 'endpoint', 'id', 'connection')
 
-    __slots__ = ('message', 'header',
-                 'body', 'endpoint',
-                 'connection', 'context',
-                 'id')
+    def __init__(self, message_id, message, connection):
+        assert len(message.args) == 3
 
-    def __init__(self, context, conn):
-        self.message = context.message
-
-        assert len(getattr(self.message, "args", [])) == 3
+        self.id = message_id
+        self.message = message
+        self.connection = connection
 
         self.endpoint = self.message.args[0]
         self.header = self.message.args[1]
         self.body = self.message.args[2]
 
-        self.connection = conn
-        self.context = context
-        self.id = context.message_id
 
-        # TODO fill up more attributes
+class Response(object):
+    """An outgoing response.
 
+    Handlers will set either ``write`` or manually set the ``message`` to
+    specify the response message.
+    """
 
-class TChannelResponse(object):
-    """TChannel Response Wrapper"""
+    __slots__ = ('connection', 'message', 'id', 'arg1', 'arg2', 'arg3')
 
-    __slots__ = ('_connection',
-                 'resp_msg', 'id',
-                 'arg1', 'arg2', 'arg3',
-                 'headers')
+    def __init__(self, message_id, connection):
+        self.id = message_id
+        self.connection = connection
 
-    def __init__(self, context, conn):
-        self._connection = conn
         self.arg1 = ""
         self.arg2 = ""
         self.arg3 = ""
-        self.id = context.message_id
-        self.resp_msg = None
+
+        self.message = None
 
     def write(self, arg1="", arg2="", arg3=""):
-        # build response message
+        """Write the given args to the response."""
         self.arg1 += arg1
         self.arg2 += arg2
         self.arg3 += arg3
 
     def finish(self):
-        # TODO add status code into arg_1 area
-        if self.resp_msg is None:
-            self.resp_msg = CallResponseMessage(
+        """Finish writing the response."""
+        # TODO failure codes
+
+        if self.message is None:
+            self.message = CallResponseMessage(
                 args=[self.arg1, self.arg2, self.arg3]
             )
-        self._connection.finish(self)
-        self.resp_msg = None
 
-    def update_resp_id(self):
-        self.id += 1
+        return self.connection.frame_and_write(self.message, self.id)

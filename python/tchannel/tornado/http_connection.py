@@ -27,20 +27,17 @@ class TornadoHttpConnection(TornadoConnection):
     def __init__(self, connection, context):
         super(TornadoHttpConnection, self).__init__(connection)
         self.context = context
-        self.resp_msg = CallResponseMessage()
+        self.message = CallResponseMessage()
         self.id = context.message_id
 
     def write_headers(self, start_line, headers, chunk=None, callback=None):
-        self.resp_msg.args[1] = json.dumps(headers) if headers else ''
+        self.message.args[1] = json.dumps(headers) if headers else ''
 
     def write(self, chunk, callback=None):
-        self.resp_msg.args[2] += chunk
+        self.message.args[2] += chunk
         # TODO callback implementation
 
     def finish(self):
         """write response"""
-        self.frame_and_write_stream(self.resp_msg, self.id)
-        self.resp_msg = CallResponseMessage()
-
-    def update_resp_id(self):
-        self.id += 1
+        self.frame_and_write_stream(self.message, self.id)
+        self.message = CallResponseMessage()

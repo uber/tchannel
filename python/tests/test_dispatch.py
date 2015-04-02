@@ -34,7 +34,7 @@ def dummy_endpoint(request, response, opts):
 
 def test_dispatch(dummy_req):
     req = dummy_req
-    req.register_handler(
+    req.register(
         r"/hello",
         dummy_endpoint
     )
@@ -43,8 +43,8 @@ def test_dispatch(dummy_req):
     def dummy_endpoint1(request, response, opts):
         pass
 
-    endpoint = req._find_endpoint("/hello")
+    endpoint = req.endpoints.get("/hello")
     assert endpoint.handler == dummy_endpoint
 
-    endpoint = req._find_endpoint("/")
+    endpoint = req.endpoints.get("/")
     assert endpoint.handler == dummy_endpoint1

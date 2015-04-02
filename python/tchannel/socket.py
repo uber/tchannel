@@ -216,7 +216,3 @@ class SocketConnection(object):
 
         self.extract_handshake_headers(message)
         return message
-
-    def finish(self, response):
-        """write response"""
-        self.frame_and_write_stream(response.resp_msg, response.id)
