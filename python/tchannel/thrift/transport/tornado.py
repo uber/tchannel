@@ -56,8 +56,6 @@ class TChannelTornadoTransport(TChannelTornadoTransportBase):
         )
 
         self._tchannel = tchannel
-        self._response_queue = Queue()
-        self.io_loop = io_loop or ioloop.IOLoop.current()
 
     @gen.coroutine
     def flush(self):
