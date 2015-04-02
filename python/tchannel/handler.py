@@ -88,6 +88,18 @@ class BaseRequestHandler(RequestHandler):
         return connection.frame_and_write(PingResponseMessage(), message_id)
 
     def handle_call(self, message_id, call, connection):
+        """Handle an incoming call.
+
+        :param message_id:
+            Message ID of the request
+        :param call:
+            CallRequestMessage containing information about the call
+        :param connection:
+            Connection through which the call was made
+        :returns:
+            Nothing. The response must be sent using the
+            implementation-specific connection object.
+        """
         raise NotImplementedError("Must be implemented.")
 
 
@@ -96,6 +108,14 @@ class TChannelRequestHandler(BaseRequestHandler):
 
     Endpoints are registered using ``register`` or the ``route``
     decorator.
+
+    .. code-block:: python
+
+        handler = # ...
+
+        @hanlder.route('myMethod')
+        def myMethod(request, response, opts):
+            response.write('hello world')
     """
 
     def __init__(self):
@@ -212,4 +232,4 @@ class Response(object):
                 args=[self.arg1, self.arg2, self.arg3]
             )
 
-        return self.connection.frame_and_write(self.message, self.id)
+        return self.connection.frame_and_write_stream(self.message, self.id)

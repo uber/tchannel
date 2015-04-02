@@ -168,11 +168,13 @@ class TornadoConnection(object):
         future = tornado.gen.Future()
 
         def handle(f):
-            handler(f.result(), self)
-            future.set_result(None)
+            if f.exception():
+                future.set_exception(f.exception())
+            else:
+                handler(f.result(), self)
+                future.set_result(None)
 
         await_future = self.await()
-
         await_future.add_done_callback(
             lambda f: tornado.ioloop.IOLoop().instance().spawn_callback(
                 lambda: self.handle_calls(handler)

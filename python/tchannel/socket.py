@@ -42,7 +42,11 @@ class _SocketIOAdapter(object):
         self._connection = connection
 
     def read(self, size):
-        result = self._connection.recv(size)
+        try:
+            result = self._connection.recv(size)
+        except socket.timeout:
+            self._connection.close()
+            return ""
 
         remaining = size - len(result)
 
