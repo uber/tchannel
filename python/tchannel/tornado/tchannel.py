@@ -52,8 +52,10 @@ class TChannel(object):
         # TODO: Connection cleanup
         return self.peers.pop(hostport)
 
+    @tornado.gen.coroutine
     def get_peer(self, hostport):
-        return self.add_peer(hostport)
+        peer = yield self.add_peer(hostport)
+        raise tornado.gen.Return(peer)
 
     def request(self, hostport, service=None):
         return TChannelClientOperation(hostport, service, self)
