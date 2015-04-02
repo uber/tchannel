@@ -18,128 +18,96 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+'use strict';
+
 var chalk = require('chalk');
-var duplexer = require('duplexer');
-var endhand = require('../endpoint-handler');
 var Logger = require('logtron');
 var replr = require('replr');
-var safeParse = require('safe-json-parse');
-var split2 = require('split2');
+
 var tchan = require('../index');
+var endhand = require('../endpoint-handler');
+var TermServer = require('./term_server');
 
-var chan = tchan({
-    handler: endhand(),
-    logger: Logger({
-        meta: {
-            team: 'wat',
-            project: 'why'
-        },
-        backends: Logger.defaultBackends({
-            console: true
-        })
-    })
-});
-
-start.canStream = true;
-chan.handler.register('start', start);
-
-control.canStream = true;
-chan.handler.register('control', control);
-
-chan.listen(4040, '127.0.0.1');
-
-var Sessions = {};
-var SessionId = 0;
-
-var statefulThing = {
-    counter: 1
-};
-
-var replrServer = replr.create({
-    name: 'tchannel repl server example',
-    mode: 'noserver',
-    prompt: chalk.gray('tchanrepl> '),
-    useColors: true,
-    useGlobal: true,
-    ignoreUndefined: true,
-    exports: function replrExports() {
-        return {
-            increment: function increment() {
-                return statefulThing.counter++;
+function main() {
+    var chan = tchan({
+        serviceName: 'repl-server',
+        handler: endhand(),
+        logger: Logger({
+            meta: {
+                team: 'wat',
+                project: 'why'
             },
-            getStatefulThing: function getStatefulThing() {
-                return statefulThing;
-            }
-        };
-    }
-});
-
-function start(req, buildRes) {
-    var sessionId = ++SessionId;
-    var session = Sessions[sessionId] = ReplSession();
-
-    var res = buildRes({streamed: true});
-    res.setOk(true);
-    res.arg2.end(JSON.stringify({
-        sessionId: sessionId
-    }));
-    session.handle(req, res);
-}
-
-function control(req, buildRes) {
-    withJsonArg2(req, buildRes, function(arg2) {
-        var sessionId = arg2.sessionId;
-        var session = Sessions[sessionId];
-        if (!session) {
-            buildRes().sendNotOk(null, 'invalid sessionId');
-            return;
-        }
-
-        var res = buildRes({streamed: true});
-        res.setOk(true);
-        res.arg2.end();
-        session.control(req, res);
+            backends: Logger.defaultBackends({
+                console: true
+            })
+        })
     });
+
+    var statefulThing = {
+        counter: 1
+    };
+
+    var repler = replr.create({
+        name: 'tchannel repl server example',
+        mode: 'noserver',
+        prompt: chalk.gray('tchanrepl> '),
+        useColors: true,
+        useGlobal: true,
+        ignoreUndefined: true,
+        exports: function replrExports() {
+            return {
+                increment: function increment() {
+                    return statefulThing.counter++;
+                },
+                getStatefulThing: function getStatefulThing() {
+                    return statefulThing;
+                }
+            };
+        }
+    });
+
+    var server = TermServer({
+        logger: chan.logger,
+        create: function create(sessionId, options, callback) {
+            callback(null, ReplSession(repler, {
+                logger: chan.logger
+            }));
+        }
+    });
+    server.register(chan.handler);
+
+    chan.listen(4040, '127.0.0.1');
 }
 
-function ReplSession() {
+function ReplSession(repler, options) {
     if (!(this instanceof ReplSession)) {
-        return new ReplSession();
+        return new ReplSession(repler, options);
     }
+    options = options || {};
+    var self = this;
+    self.repler = repler;
+    self.logger = options.logger;
 }
 
-ReplSession.prototype.handle = function handle(req, res) {
-    setImmediate(startReplSession);
-
-    function startReplSession() {
-        replrServer.open(duplexer(res.arg3, req.arg3));
-    }
+ReplSession.prototype.start = function start(stream) {
+    // function startReplSession() {
+    //     setImmediate(startReplSession);
+    // }
+    var self = this;
+    self.repler.open(stream);
 };
 
-ReplSession.prototype.control = function control(req, res) {
+ReplSession.prototype.control = function control(stream) {
     var self = this;
-    var i = req.arg3.pipe(split2(JSON.parse));
-    i.on('data', function(obj) {
+    stream.on('data', function(obj) {
         if (obj.op === 'resize') {
-            chan.logger.info('resize to', obj);
+            self.logger.info('resize to', obj);
         } else {
-            chan.logger.error('invalid control op', obj);
+            self.logger.error('invalid control op', obj);
         }
     });
-    i.on('end', function() {
-        res.arg3.end();
-    });
-    i.on('error', function(err) {
-        chan.logger.error('control arg3 error', err);
-    });
 };
 
-function withJsonArg2(req, buildRes, callback) {
-    req.arg2.onValueReady(function(err, arg2) {
-        if (err) return buildRes().sendError('ProtocolError');
-        safeParse(arg2, function(err, val) {
-            if (err) return buildRes().sendError('BadRequest');
-            else callback(val);
-        });
-    });
+if (require.main === module) {
+    main();
 }
