@@ -18,33 +18,27 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import pytest
-
-from tchannel.handler import TChannelRequestHandler
-
-
-@pytest.fixture
-def dummy_req():
-    return TChannelRequestHandler()
+from tchannel.dispatch import RequestDispatcher
 
 
 def dummy_endpoint(request, response, opts):
     pass
 
 
-def test_dispatch(dummy_req):
-    req = dummy_req
-    req.register(
+def test_dispatch():
+    dispatcher = RequestDispatcher()
+
+    dispatcher.register(
         r"/hello",
         dummy_endpoint
     )
 
-    @req.route(r"/")
+    @dispatcher.route(r"/")
     def dummy_endpoint1(request, response, opts):
         pass
 
-    endpoint = req.endpoints.get("/hello")
+    endpoint = dispatcher.endpoints.get("/hello")
     assert endpoint.handler == dummy_endpoint
 
-    endpoint = req.endpoints.get("/")
+    endpoint = dispatcher.endpoints.get("/")
     assert endpoint.handler == dummy_endpoint1

@@ -24,7 +24,7 @@ import socket
 import pytest
 
 from tchannel.exceptions import InvalidMessageException
-from tchannel.handler import TChannelRequestHandler
+from tchannel.handler import RequestHandler
 from tchannel.socket import SocketConnection
 
 
@@ -113,7 +113,7 @@ def test_handle_calls(tchannel_pair):
     class _MyException(Exception):
         pass
 
-    class MyHandler(TChannelRequestHandler):
+    class MyHandler(RequestHandler):
         def handle(*args, **kwargs):
             raise _MyException()
 
@@ -130,7 +130,7 @@ def test_finish_connection(tchannel_pair):
     client.ping()
     client.connection.close()
 
-    class MyHandler(TChannelRequestHandler):
+    class MyHandler(RequestHandler):
         def handle(*args, **kwargs):
             pass
 

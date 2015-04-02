@@ -31,8 +31,8 @@ import sys
 import time
 
 import tornado.ioloop
-from .handler import TChannelRequestHandler
 from .tornado import TChannel
+from .tornado.dispatch import TornadoDispatcher
 
 
 log = logging.getLogger('tchannel')
@@ -170,7 +170,7 @@ def handler2(request, response, opts):
 
 def create_server(tchannel, in_port):
 
-    handler = TChannelRequestHandler()
+    handler = TornadoDispatcher()
     handler.register(
         r"/hi", handler1
     )

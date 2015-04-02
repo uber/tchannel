@@ -20,36 +20,21 @@
 
 from __future__ import absolute_import
 
-import tornado.ioloop
-import tornado.web
+from tornado import gen, ioloop
 
-from options import get_args
-from tchannel.tornado import TChannel
-from tchannel.tornado.handler import TornadoRequestHandler
+from ..dispatch import RequestDispatcher
 
 
-class MainHandler(tornado.web.RequestHandler):
-    def get(self):
-        self.request.write("Hello, world")
+class TornadoDispatcher(RequestDispatcher):
+    """Dispatches requests to different endpoints based on ``arg1``"""
 
+    def _call_endpoint(self, endpoint, request, response):
+        future = gen.maybe_future(
+            endpoint.handler(request, response, endpoint.opts)
+        )
+        future.add_done_callback(lambda _: response.finish())
 
-def make_app():
-    application = tornado.web.Application([
-        (r"/hello", MainHandler),
-    ])
+        # This is just to make sure that the Future gets consumed.
+        ioloop.IOLoop.current().add_future(future, lambda f: f.exception())
 
-    return application
-
-
-def main():  # pragma: no cover
-    args = get_args()
-    app = make_app()
-    tchannel = TChannel()
-    tornado_req_handler = TornadoRequestHandler(app)
-    server = tchannel.host(args.port, tornado_req_handler)
-    server.listen()
-    tornado.ioloop.IOLoop.instance().start()
-
-
-if __name__ == '__main__':  # pragma: no cover
-    main()
+        return future

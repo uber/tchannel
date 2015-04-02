@@ -25,7 +25,7 @@ import time
 
 import tornado.gen
 
-from tchannel.handler import TChannelRequestHandler
+from tchannel.tornado.dispatch import TornadoDispatcher
 
 
 def say_hi(request, response, opts):
@@ -52,16 +52,16 @@ def blocking(request, response, opts):
 
 
 def get_example_handler():
-    example_handler = TChannelRequestHandler()
+    dispatcher = TornadoDispatcher()
 
-    example_handler.register("hi", say_hi)
-    example_handler.register("ok", say_ok)
-    example_handler.register("echo", echo)
-    example_handler.register("slow", slow)
-    example_handler.register("blocking", blocking)
+    dispatcher.register("hi", say_hi)
+    dispatcher.register("ok", say_ok)
+    dispatcher.register("echo", echo)
+    dispatcher.register("slow", slow)
+    dispatcher.register("blocking", blocking)
 
-    @example_handler.route("bye")
+    @dispatcher.route("bye")
     def say_bye(request, response, opts):
         response.write("bye bye!")
 
-    return example_handler
+    return dispatcher

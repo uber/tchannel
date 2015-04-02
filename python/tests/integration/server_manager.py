@@ -29,7 +29,8 @@ from contextlib import contextmanager
 
 import tornado
 
-from tchannel.handler import TChannelRequestHandler
+from tchannel.dispatch import RequestDispatcher
+from tchannel.tornado.dispatch import TornadoDispatcher
 import tchannel.tornado.tchannel as tornado_tchannel
 import tchannel.socket as socket_tchannel
 
@@ -51,21 +52,22 @@ class ServerManager(object):
     def __init__(self, port, timeout=None):
         self.port = port
         self.timeout = timeout or self.TIMEOUT
-        self.handler = TChannelRequestHandler()
 
         self.thread = None
         self.ready = False
+        self.dispatcher = None
 
     def expect_call(self, endpoint):
+        assert self.dispatcher, "dispatcher not configured"
+
         if not isinstance(endpoint, bytes):
             endpoint = bytes(endpoint, 'ascii')
 
         expectation = Expectation()
 
+        @self.dispatcher.route(endpoint)
         def handle_expected_endpoint(request, response, opts):
             response.message = expectation.response
-
-        self.handler.register(endpoint, handle_expected_endpoint)
 
         return expectation
 
@@ -93,6 +95,7 @@ class TCPServerManager(ServerManager):
 
     def __init__(self, port, timeout=None):
         super(TCPServerManager, self).__init__(port, timeout)
+        self.dispatcher = RequestDispatcher()
 
         manager = self
 
@@ -109,7 +112,7 @@ class TCPServerManager(ServerManager):
                     'host_port': '%s:%s' % (host, port),
                     'process_name': 'tchannel_server-%s' % port
                 })
-                self.tchan_conn.handle_calls(manager.handler)
+                self.tchan_conn.handle_calls(manager.dispatcher)
 
         self.server = SocketServer.TCPServer(("", port), Handler)
 
@@ -139,8 +142,9 @@ class TChannelServerManager(ServerManager):
     def __init__(self, port, timeout=None):
         super(TChannelServerManager, self).__init__(port, timeout)
 
+        self.dispatcher = TornadoDispatcher()
         self.tchannel = tornado_tchannel.TChannel()
-        self.server = self.tchannel.host(port, self.handler)
+        self.server = self.tchannel.host(port, self.dispatcher)
 
     def serve(self):
         self.server.listen()

@@ -23,13 +23,9 @@ from doubles import InstanceDouble
 import pytest
 import tornado
 
-from tchannel.handler import TChannelRequestHandler
+from tchannel.tornado.dispatch import TornadoDispatcher
+from tchannel.dispatch import RequestDispatcher
 from tchannel.messages import Types
-
-
-@pytest.fixture
-def handler():
-    return TChannelRequestHandler()
 
 
 @pytest.fixture
@@ -54,31 +50,33 @@ def context(message):
 def conn():
     conn = InstanceDouble('tchannel.tornado.connection.TornadoConnection')
     allow(conn).send_error
-    allow(conn).frame_and_write
+    allow(conn).frame_and_write_stream
 
     return conn
 
 
-def test_sync_handler(handler, context, conn):
+def test_sync_handler(context, conn):
+    dispatcher = RequestDispatcher()
 
-    @handler.route("test")
+    @dispatcher.route("test")
     def sync(request, response, opts):
         response.write("done")
 
-    expect(conn).frame_and_write
+    expect(conn).frame_and_write_stream
 
-    handler.handle(context, conn)
+    dispatcher.handle(context, conn)
 
 
 @pytest.mark.gen_test
-def test_async_handler(handler, context, conn):
+def test_async_handler(context, conn):
+    dispatcher = TornadoDispatcher()
 
-    @handler.route("test")
+    @dispatcher.route("test")
     @tornado.gen.coroutine
     def async(request, response, opts):
         yield tornado.gen.sleep(0)
         response.write("done")
 
-    expect(conn).frame_and_write
+    expect(conn).frame_and_write_stream
 
-    yield handler.handle(context, conn)
+    yield dispatcher.handle(context, conn)
