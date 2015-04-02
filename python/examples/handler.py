@@ -29,22 +29,26 @@ from tchannel.handler import TChannelRequestHandler
 
 
 def say_hi(request, response, opts):
-    response.write("hi")
+    response.write(arg3="hi")
 
 
 def say_ok(request, response, opts):
-    response.write("ok")
+    response.write(arg3="ok")
+
+
+def echo(request, response, opts):
+    response.write(arg3=request.message.args[2])
 
 
 @tornado.gen.coroutine
 def slow(request, response, opts):
     yield tornado.gen.sleep(random.random())
-    response.write("done")
+    response.write(arg3="done")
 
 
 def blocking(request, response, opts):
     time.sleep(random.random())
-    response.write("yawn")
+    response.write(arg3="yawn")
 
 
 def get_example_handler():
@@ -53,6 +57,8 @@ def get_example_handler():
     example_handler.register_handler("hi", say_hi)
 
     example_handler.register_handler("ok", say_ok)
+
+    example_handler.register_handler("echo", echo)
 
     example_handler.register_handler("slow", slow)
 
