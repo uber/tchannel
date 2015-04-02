@@ -30,7 +30,7 @@ from ..exceptions import InvalidMessageException
 from ..messages import CallRequestMessage
 from .connection import TornadoConnection
 from .timeout import timeout
-from .inbound_server import InboundServer
+from .server import TChannelServer
 
 log = logging.getLogger('tchannel')
 
@@ -63,7 +63,7 @@ class TChannel(object):
 class TChannelServerOperation(object):
 
     def __init__(self, port, handler):
-        self.inbound_server = InboundServer(handler)
+        self.inbound_server = TChannelServer(handler)
         self.port = port
 
     def listen(self):

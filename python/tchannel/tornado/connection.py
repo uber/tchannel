@@ -20,7 +20,6 @@
 
 from __future__ import absolute_import
 
-import functools
 import logging
 import os
 import socket
@@ -182,9 +181,6 @@ class TornadoConnection(object):
         await_future.add_done_callback(handle)
 
         return future
-
-    def wrap(self, f):
-        return functools.partial(f, connection=self)
 
     def close(self):
         return self.connection.close()
