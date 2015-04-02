@@ -106,6 +106,14 @@ def parse_args(args=None):
     )
 
     parser.add_argument(
+        "--batch-size",
+        dest="batch_size",
+        type=int,
+        default=100,
+        help="Maximum number of outstanding requests.",
+    )
+
+    parser.add_argument(
         "--profile",
         dest="profile",
         action="store_true"
@@ -174,6 +182,14 @@ def create_server(tchannel, in_port):
     server.listen()
 
 
+def chunk(iterable, n):
+    while True:
+        chunk = tuple(itertools.islice(iterable, n))
+        if not chunk:
+            return
+        yield chunk
+
+
 @tornado.gen.coroutine
 def multi_tcurl(
     tchannel,
@@ -184,30 +200,33 @@ def multi_tcurl(
     profile=False,
     rps=None,
     quiet=False,
+    batch_size=100,
 ):
 
-    requests = getattr(itertools, 'izip', zip)(hostports, headers, bodies)
-    futures = []
+    all_requests = getattr(itertools, 'izip', zip)(hostports, headers, bodies)
 
     with timing(profile=profile) as info:
 
-        for hostport, header, body in requests:
-            futures.append(
-                tcurl(tchannel, hostport, header, body, service, quiet)
-            )
+        for requests in chunk(all_requests, batch_size):
+            futures = []
 
-            if rps:
-                yield tornado.gen.sleep(1.0 / rps)
+            for hostport, header, body in requests:
+                futures.append(
+                    tcurl(tchannel, hostport, header, body, service, quiet)
+                )
 
-        wait_iterator = tornado.gen.WaitIterator(*futures)
-        results = []
+                if rps:
+                    yield tornado.gen.sleep(1.0 / rps)
 
-        while not wait_iterator.done():
-            try:
-                info['requests'] += 1
-                results.append((yield wait_iterator.next()))
-            except Exception:
-                info['failures'] += 1
+            wait_iterator = tornado.gen.WaitIterator(*futures)
+            results = []
+
+            while not wait_iterator.done():
+                try:
+                    info['requests'] += 1
+                    results.append((yield wait_iterator.next()))
+                except Exception:
+                    info['failures'] += 1
 
     raise tornado.gen.Return(results)
 
@@ -300,8 +319,8 @@ def main(argv=None):
         args.service,
         profile=args.profile,
         rps=args.rps,
-        quiet=args.quiet
-
+        quiet=args.quiet,
+        batch_size=args.batch_size,
     )
 
     raise tornado.gen.Return(results)
