@@ -18,96 +18,41 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-var duplexer = require('duplexer');
-var replrClient = require('replr/bin/replr');
-var safeParse = require('safe-json-parse');
+'use strict';
 
-var tchan = require('../index');
-var chan = tchan();
+function main() {
+    var tchan = require('../index');
+    var replrClient = require('replr/bin/replr');
+    var TermClient = require('./term_client');
 
-startRepl(chan);
-
-function startRepl(chan) {
-    var req = chan.request({
-        host: '127.0.0.1:4040',
-        timeout: 1000,
-        streamed: true
+    var chan = tchan();
+    var client = TermClient(chan, {
+        request: {
+            host: '127.0.0.1:4040',
+            timeout: 1000,
+        }
     });
-    req.on('response', onResponse);
-    req.on('error', onError);
-
-    req.arg1.end('start');
-
-    function onResponse(res) {
-        var replStream = duplexer(req.arg3, res.arg3);
-        replrClient.attachStdinStdoutToReplStream(replStream);
-
-        withJsonResArg2(res, function(err, arg2) {
-            if (err) {
-                console.error(err);
-                return;
-            }
-
-            startControlChannel(chan, arg2.sessionId, controlChannelReady);
-
-            res.arg3.on('end', function() {
-                process.stdin.setRawMode(false);
-                chan.quit();
-            });
-        });
-    }
+    client.on('error', onError);
+    client.on('started', start);
+    client.on('finished', finish);
+    client.start();
 
     function onError(err) {
         console.error(err);
+        finish();
     }
 
-    function controlChannelReady(err, ctl) {
-        sendSize();
-        process.stdout.on('resize', sendSize);
+    function start() {
+        client.linkSize(process.stdout);
+        replrClient.attachStdinStdoutToReplStream(client.stream);
+    }
 
-        function sendSize() {
-            writeLDJson({
-                op: 'resize',
-                cols: process.stdout.columns,
-                rows: process.stdout.rows
-            });
-        }
-
-        function writeLDJson(o) {
-            ctl.req.arg3.write(JSON.stringify(o) + '\n');
-        }
+    function finish() {
+        process.stdin.setRawMode(false);
+        chan.quit();
     }
 }
 
-function startControlChannel(chan, sessionId, callback) {
-    var req = chan.request({
-        host: '127.0.0.1:4040',
-        timeout: 1000,
-        streamed: true
-    });
-    req.on('response', onResponse);
-    req.on('error', onError);
-
-    req.arg1.end('control');
-    req.arg2.end(JSON.stringify({
-        sessionId: sessionId
-    }));
-
-    function onResponse(res) {
-        callback(null, {
-            req: req,
-            res: res
-        });
-    }
-
-    function onError(err) {
-        callback(err, null);
-    }
-}
-
-function withJsonResArg2(res, callback) {
-    res.arg2.onValueReady(function(err, arg2) {
-        if (err) callback(err);
-        else safeParse(arg2, callback);
-    });
+if (require.main === module) {
+    main();
 }
