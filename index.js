@@ -409,6 +409,15 @@ TChannel.prototype.close = function close(callback) {
         }
     }
 
+    if (self.subChannels) {
+        var serviceNames = Object.keys(self.subChannels);
+        counter += serviceNames.length;
+        serviceNames.forEach(function each(serviceName) {
+            var svcchan = self.subChannels[serviceName];
+            svcchan.close(onClose);
+        });
+    }
+
     self.peers.close(onClose);
 
     function closeServerSocket() {
