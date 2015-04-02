@@ -136,7 +136,9 @@ inherits(TChannel, EventEmitter);
 
 TChannel.prototype.getServer = function getServer() {
     var self = this;
-    if (self.serverSocket) return;
+    if (self.serverSocket) {
+        return self.serverSocket;
+    }
     self.serverSocket = net.createServer(function onServerSocketConnection(sock) {
         if (!self.destroyed) {
             var remoteAddr = sock.remoteAddress + ':' + sock.remotePort;
