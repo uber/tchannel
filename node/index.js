@@ -279,7 +279,11 @@ TChannel.prototype.register = function register(name, handler) {
 
 TChannel.prototype.address = function address() {
     var self = this;
-    return self.serverSocket && self.serverSocket.address();
+    if (self.serverSocket) {
+        return self.serverSocket.address() || null;
+    } else {
+        return null;
+    }
 };
 
 /* jshint maxparams:5 */
