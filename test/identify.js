@@ -55,7 +55,11 @@ allocCluster.test('identify', 2, function t(cluster, assert) {
         done();
     }, assert.end);
 
-    one.once('identified', idBar('one'));
-    two.once('identified', idBar('two'));
-    one.peers.add(hostTwo).connect();
+    two.once('connection', function onConn(conn) {
+        conn.once('identified', idBar('two'));
+    });
+
+    var one2two = one.peers.add(hostTwo);
+    one2two.connect().once('identified', idBar('one'));
+
 });
