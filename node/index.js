@@ -1036,7 +1036,7 @@ TChannelPeer.prototype.close = function close(callback) {
                     counter: counter
                 });
             }
-            callback();
+            self.state.close(callback);
         }
     }
 };
@@ -1249,6 +1249,10 @@ function TChannelPeerState(channel, peer) {
     self.channel = channel;
     self.peer = peer;
 }
+
+TChannelPeerState.prototype.close = function close(callback) {
+    callback();
+};
 
 TChannelPeerState.prototype.shouldRequest = function shouldRequest(/* op, options */) {
     // TODO: op isn't quite right currently as a "TChannelClientOp", the
