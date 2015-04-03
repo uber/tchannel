@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+var async = require('async');
 var parseArgs = require('minimist');
 var argv = parseArgs(process.argv.slice(2), {
     alias: {
@@ -62,41 +63,45 @@ Test.prototype.copy = function () {
 };
 
 Test.prototype.run = function (callback) {
+    var self = this;
     var i;
 
     this.callback = callback;
 
-    for (i = 0; i < numClients ; i++) {
-        this.newClient(i);
-    }
-};
-
-Test.prototype.newClient = function (id) {
-    var self = this;
-
-    var port = 4041 + id;
-    var newClient = new TChannel();
-    newClient.createTime = Date.now();
-    newClient.listen(port, "127.0.0.1", function () {
-        // sending a ping to pre-connect the socket
-        newClient
-            .request({host: '127.0.0.1:4040'})
-            .send('ping', null, null);
-
-        newClient.on("identified", function () {
-            self.connectLatency.update(Date.now() - newClient.createTime);
-            self.readyLatency.update(Date.now() - newClient.createTime);
-            self.clientsReady++;
-            if (self.clientsReady === self.clients.length) {
-                self.onClientsReady();
-            }
-        });
-
-        self.clients[id] = newClient;
+    var ids = [];
+    for (i = 0; i < numClients ; i++) ids.push(i);
+    async.each(ids, function each(i, done) {
+        self.newClient(i, done);
+    }, function(err) {
+        if (err) {
+            console.error('failed to setup clients', err);
+        } else {
+            self.start();
+        }
     });
 };
 
-Test.prototype.onClientsReady = function () {
+Test.prototype.newClient = function (id, callback) {
+    var self = this;
+    var port = 4041 + id;
+    var newClient = new TChannel();
+    newClient.createTime = Date.now();
+    newClient.listen(port, "127.0.0.1", function (err) {
+        if (err) return callback(err);
+        self.clients[id] = newClient;
+        // sending a ping to pre-connect the socket
+        newClient
+            .request({host: '127.0.0.1:4040'})
+            .send('ping', null, null, function(err) {
+                if (err) return callback(err);
+                self.connectLatency.update(Date.now() - newClient.createTime);
+                self.readyLatency.update(Date.now() - newClient.createTime);
+                callback();
+            });
+    });
+};
+
+Test.prototype.start = function () {
     this.testStart = Date.now();
     this.fillPipeline();
 };
