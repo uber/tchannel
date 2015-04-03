@@ -61,6 +61,7 @@ class TChannelTransport(TTransport.CReadableTransport, TChannelTransportBase):
             hostport, service_name
         )
 
+        self._hostport = hostport
         self._tchannel = tchannel
         self._rbuf = BytesIO()
 

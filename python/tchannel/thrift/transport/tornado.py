@@ -49,6 +49,7 @@ class TChannelTornadoTransport(TChannelTornadoTransportBase):
             hostport, service_name
         )
 
+        self._hostport = hostport
         self._tchannel = tchannel
 
     @gen.coroutine

@@ -50,9 +50,9 @@ class TChannelTornadoTransportBase(TChannelTransportBase):
     ``TChannelTransportBase``.
     """
 
-    def __init__(self, hostport, service_name, io_loop=None):
+    def __init__(self, service_name, io_loop=None):
         super(TChannelTornadoTransportBase, self).__init__(
-            hostport, service_name
+            service_name
         )
 
         self._response_queue = Queue()
