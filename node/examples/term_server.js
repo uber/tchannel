@@ -18,57 +18,70 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-var tchan = require('../index');
-var endhand = require('../endpoint-handler');
-var Logger = require('logtron');
+'use strict';
+
+var duplexer = require('duplexer');
 var safeParse = require('safe-json-parse');
 var split2 = require('split2');
+var nullLogger = require('../null-logger.js');
 
-var chan = tchan({
-    handler: endhand(),
-    logger: Logger({
-        meta: {
-            team: 'wat',
-            project: 'why'
-        },
-        backends: Logger.defaultBackends({
-            console: true
-        })
-    })
-});
+function TermServer(options) {
+    if (!(this instanceof TermServer)) {
+        return new TermServer(options);
+    }
+    var self = this;
+    self.options = options || {};
+    self.logger = options.logger || nullLogger;
+    self.sessions = Object.create(null);
+    self.sessionId = 0;
+}
 
-start.canStream = true;
-chan.handler.register('start', start);
+TermServer.prototype.register = function register(handler, startName, controlName) {
+    var self = this;
 
-control.canStream = true;
-chan.handler.register('control', control);
+    start.canStream = true;
+    handler.register(startName || 'start', start);
 
-chan.listen(4040, '127.0.0.1');
+    control.canStream = true;
+    handler.register(controlName || 'control', control);
 
-var Sessions = {};
-var SessionId = 0;
+    function start(req, buildRes) {
+        self.start(req, buildRes);
+    }
 
-var spawnPty = require('child_pty').spawn;
-// var spawn = require('child_process').spawn;
+    function control(req, buildRes) {
+        self.control(req, buildRes);
+    }
+};
 
-function start(req, buildRes) {
-    withJsonArg2(req, buildRes, function(arg2) {
-        var sessionId = ++SessionId;
-        var session = Sessions[sessionId] = TermSession(arg2.command);
-
+TermServer.prototype.start = function start(req, buildRes) {
+    var self = this;
+    var sessionId = ++self.sessionId;
+    self.options.create(sessionId, {
+        logger: self.logger,
+        req: req,
+        buildRes: buildRes,
+    }, function created(err, session) {
+        if (err) {
+            buildRes().sendNotOk(null, err.message);
+            return;
+        }
+        self.sessions[sessionId] = session;
         var res = buildRes({streamed: true});
         res.setOk(true);
         res.arg2.end(JSON.stringify({
             sessionId: sessionId
         }));
-        session.handle(req, res);
+        var stream = duplexer(res.arg3, req.arg3);
+        session.start(stream);
     });
-}
+};
 
-function control(req, buildRes) {
+TermServer.prototype.control = function control(req, buildRes) {
+    var self = this;
     withJsonArg2(req, buildRes, function(arg2) {
         var sessionId = arg2.sessionId;
-        var session = Sessions[sessionId];
+        var session = self.sessions[sessionId];
         if (!session) {
             buildRes().sendNotOk(null, 'invalid sessionId');
             return;
@@ -77,65 +90,100 @@ function control(req, buildRes) {
         var res = buildRes({streamed: true});
         res.setOk(true);
         res.arg2.end();
-        session.control(req, res);
+        var stream = duplexer(
+            res.arg3, // TODO: ld json encoder
+            req.arg3.pipe(split2(JSON.parse)));
+        stream.on('error', function(err) {
+            self.logger.error('control arg3 error', err);
+        });
+        session.control(stream);
     });
+};
+
+module.exports = TermServer;
+
+function main() {
+    var tchan = require('../index');
+    var Logger = require('logtron');
+    var endhand = require('../endpoint-handler');
+
+    var chan = tchan({
+        serviceName: 'term-server',
+        handler: endhand(),
+        logger: Logger({
+            meta: {
+                team: 'wat',
+                project: 'why'
+            },
+            backends: Logger.defaultBackends({
+                console: true
+            })
+        })
+    });
+
+    var server = TermServer({
+        logger: chan.logger,
+        create: TermSession.create
+    });
+    server.register(chan.handler);
+
+    chan.listen(4040, '127.0.0.1');
 }
 
-function TermSession(cmd) {
+var spawnPty = require('child_pty').spawn;
+
+function TermSession(cmd, options) {
     if (!(this instanceof TermSession)) {
-        return new TermSession(cmd);
+        return new TermSession(cmd, options);
     }
+    options = options || {};
     var self = this;
     self.cmd = cmd;
     self.proc = null;
+    self.logger = options.logger;
 }
 
-TermSession.prototype.spawn = function spawn() {
-    var self = this;
-    if (!self.proc) {
-        self.proc = spawnPty(self.cmd[0], self.cmd.slice(1), {
-            // stdio: ['pipe', 'pipe', 'pipe']
-        });
-    }
-    return self.proc;
+TermSession.create = function create(sessionId, options, callback) {
+    withJsonArg2(options.req, options.buildRes, function(arg2) {
+        callback(null, TermSession(arg2.command, options));
+    });
 };
 
-TermSession.prototype.handle = function handle(req, res) {
+TermSession.prototype.start = function start(stream) {
     var self = this;
-    self.spawn();
-    req.arg3.pipe(self.proc.stdin); // , {end: true}
-    self.proc.stdout.pipe(res.arg3); // , {end: true}
-    // self.proc.stderr.pipe(res.arg3, {end: true});
+    self.proc = spawnPty(self.cmd[0], self.cmd.slice(1), {
+        // stdio: ['pipe', 'pipe', 'pipe']
+    });
+    self.proc.stdout
+        .pipe(stream)
+        .pipe(self.proc.stdin);
 };
 
-TermSession.prototype.control = function control(req, res) {
+TermSession.prototype.control = function control(stream) {
     var self = this;
-    var i = req.arg3.pipe(split2(JSON.parse));
-    i.on('data', function(obj) {
+    stream.on('data', function(obj) {
         if (obj.op === 'resize') {
-            chan.logger.info('resize to', obj);
+            self.logger.info('resize to', obj);
             self.proc.stdout.resize({
                 columns: obj.cols,
                 rows: obj.rows
             });
         } else {
-            chan.logger.error('invalid control op', obj);
+            self.logger.error('invalid control op', obj);
         }
-    });
-    i.on('end', function() {
-        res.arg3.end();
-    });
-    i.on('error', function(err) {
-        chan.logger.error('control arg3 error', err);
     });
 };
 
 function withJsonArg2(req, buildRes, callback) {
     req.arg2.onValueReady(function(err, arg2) {
-        if (err) return buildRes().sendError('ProtocolError');
+        if (err) return buildRes().sendError('UnexpectedError');
         safeParse(arg2, function(err, val) {
             if (err) return buildRes().sendError('BadRequest');
             else callback(val);
         });
     });
+}
+
+if (require.main === module) {
+    main();
 }

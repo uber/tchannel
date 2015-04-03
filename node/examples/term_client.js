@@ -18,96 +18,151 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-var safeParse = require('safe-json-parse');
+'use strict';
 
-var tchan = require('../index');
-var chan = tchan();
+var async = require('async');
+var duplexer = require('duplexer');
+var EventEmitter = require('events').EventEmitter;
+var inherits = require('util').inherits;
+var safeJsonParse = require('safe-json-parse');
+var extend = require('xtend');
+var extendInto = require('xtend/mutable');
 
-startCommand(chan, process.argv.slice(2));
+function TermClient(channel, options) {
+    if (!(this instanceof TermClient)) {
+        return new TermClient(channel, options);
+    }
+    var self = this;
+    EventEmitter.call(self);
+    self.channel = channel;
+    self.options = options || {};
+    self.session = null;
+    self.stream = null;
+    self.ctl = null;
+}
+inherits(TermClient, EventEmitter);
 
-function startCommand(chan, cmd) {
-    var req = chan.request({
-        host: '127.0.0.1:4040',
-        timeout: 1000,
-        streamed: true
-    });
-    req.on('response', onResponse);
-    req.on('error', onError);
+TermClient.prototype.start = function start() {
+    var self = this;
+    if (self.session) {
+        self.emit('error', new Error('already started')); // TODO typed
+        return;
+    }
 
-    req.arg1.end('start');
-    req.arg2.end(JSON.stringify({
-        command: cmd
-    }));
+    async.waterfall([
+        function startStream(next) {
+            self.request('start', self.options.arg2, next);
+        },
 
-    function onResponse(res) {
-        withJsonResArg2(res, function(err, arg2) {
-            if (err) {
-                console.error(err);
-                return;
+        function gotStream(req, res, next) {
+            self.stream = duplexer(req.arg3, res.arg3);
+            req.arg3.once('end', finish);
+            res.arg3.once('end', finish);
+            function finish() {
+                req.arg3.removeListener('end', finish);
+                res.arg3.removeListener('end', finish);
+                self.emit('finished');
             }
+            res.arg2.onValueReady(next);
+        },
 
-            process.stdin.setRawMode(true);
-            process.stdin.pipe(req.arg3);
-            startControlChannel(chan, arg2.sessionId, controlChannelReady);
-            res.arg3.pipe(process.stdout);
-            res.arg3.on('end', function() {
-                process.stdin.setRawMode(false);
-                chan.quit();
-            });
+        safeJsonParse,
+        function gotHead(head, next) {
+            self.session = head.sessionId;
+            self.request('control', JSON.stringify({
+                sessionId: self.session
+            }), next);
+        },
+
+        function gotControl(req, res, next) {
+            self.ctl = duplexer(req.arg3, res.arg3);
+            self.emit('started');
+            next();
+        }
+    ], function done(err) {
+        if (err) {
+            self.emit('error', err); // TODO wrap
+        }
+    });
+};
+
+TermClient.prototype.request = function request(arg1, arg2, callback) {
+    var self = this;
+    var req = self.channel.request(extend(self.options.request, {
+        streamed: true
+    }));
+    req.hookupStreamCallback(callback);
+    req.arg1.end(arg1);
+    if (arg2) req.arg2.end(arg2);
+};
+
+TermClient.prototype.linkSize = function linkSize(stream) {
+    var self = this;
+    sendSize();
+    stream.on('resize', sendSize);
+    function sendSize() {
+        self.sendControl('resize', {
+            cols: stream.columns,
+            rows: stream.rows
         });
     }
+};
+
+TermClient.prototype.sendControl = function sendControl(op, extra) {
+    var self = this;
+    if (!self.ctl) {
+        self.emit('error', new Error('no control channel to send op on'));
+        return;
+    }
+    var body = {
+        op: op
+    };
+    if (extra) {
+        extendInto(body, extra);
+    }
+    self.ctl.write(JSON.stringify(body) + '\n');
+};
+
+module.exports = TermClient;
+
+function main() {
+    var cmd = process.argv.slice(2);
+    var tchan = require('../index');
+    var chan = tchan();
+    var client = TermClient(chan, {
+        request: {
+            host: '127.0.0.1:4040',
+            timeout: 1000,
+        },
+        arg2: JSON.stringify({
+            command: cmd
+        })
+    });
+    client.on('error', onError);
+    client.on('started', start);
+    client.on('finished', finish);
+    client.start();
 
     function onError(err) {
         console.error(err);
+        finish();
     }
 
-    function controlChannelReady(err, ctl) {
-        sendSize();
-        process.stdout.on('resize', sendSize);
+    function start() {
+        client.linkSize(process.stdout);
+        process.stdin.setRawMode(true);
+        process.stdin
+            .pipe(client.stream)
+            .pipe(process.stdout);
+    }
 
-        function sendSize() {
-            writeLDJson({
-                op: 'resize',
-                cols: process.stdout.columns,
-                rows: process.stdout.rows
-            });
-        }
-
-        function writeLDJson(o) {
-            ctl.req.arg3.write(JSON.stringify(o) + '\n');
-        }
+    function finish() {
+        process.stdin.setRawMode(false);
+        process.stdin.end();
+        chan.close();
     }
 }
 
-function startControlChannel(chan, sessionId, callback) {
-    var req = chan.request({
-        host: '127.0.0.1:4040',
-        timeout: 1000,
-        streamed: true
-    });
-    req.on('response', onResponse);
-    req.on('error', onError);
-
-    req.arg1.end('control');
-    req.arg2.end(JSON.stringify({
-        sessionId: sessionId
-    }));
-
-    function onResponse(res) {
-        callback(null, {
-            req: req,
-            res: res
-        });
-    }
-
-    function onError(err) {
-        callback(err, null);
-    }
-}
-
-function withJsonResArg2(res, callback) {
-    res.arg2.onValueReady(function(err, arg2) {
-        if (err) callback(err);
-        else safeParse(arg2, callback);
-    });
+if (require.main === module) {
+    main();
 }
