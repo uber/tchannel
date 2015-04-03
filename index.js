@@ -83,6 +83,12 @@ var InvalidHandlerForRegister = TypedError({
     handler: null
 });
 
+var TopLevelRegisterError = TypedError({
+    type: 'tchannel.top-level-register',
+    message: 'Cannot register endpoints points on top-level channel.\n' +
+        'Provide serviceName to constructor, or create a sub-channel.'
+});
+
 function TChannel(options) {
     if (!(this instanceof TChannel)) {
         return new TChannel(options);
@@ -316,6 +322,9 @@ TChannel.prototype.register = function register(name, handler) {
             // If its still the legacy handler then we are good.
             self.handler.register(name, onReqRes);
             break;
+
+        case 'tchannel.service-name-handler':
+            throw TopLevelRegisterError();
 
         default:
             throw InvalidHandlerForRegister({
