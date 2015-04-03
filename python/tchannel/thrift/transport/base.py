@@ -27,10 +27,8 @@ from tchannel.io import BytesIO
 
 class TChannelTransportBase(TTransport.TTransportBase, object):
 
-    def __init__(self, hostport, service_name):
-        self._hostport = hostport
+    def __init__(self, service_name):
         self._service_name = service_name
-
         self._wbuf = BytesIO()
         self._seqid = None
         self._endpoint = None
