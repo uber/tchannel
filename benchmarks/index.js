@@ -31,10 +31,10 @@ var server = path.join(__dirname, 'bench_server.js');
 var bench = path.join(__dirname, 'multi_bench.js');
 
 var argv = parseArgs(process.argv.slice(2), {
-	alias: {
-		m: 'multiplicity',
-		o: 'output'
-	}
+    alias: {
+        m: 'multiplicity',
+        o: 'output'
+    }
 });
 var multiplicity = parseInt(argv.multiplicity) || 2;
 
@@ -46,25 +46,25 @@ var benchProc = childProcess.spawn('node', [bench, '--multiplicity', String(mult
 benchProc.stderr.pipe(process.stderr);
 
 benchProc.stdout
-	.pipe(ldj.parse())
-	.on('data', function(result) {
-		console.log(util.format(
-		    "%s, %s/%s min/max/avg/p95: %s/%s/%s/%s %sms total, %s ops/sec",
-		    lpad(result.descr, 13),
-		    lpad(result.pipeline, 5),
-		    result.numClients,
-		    lpad(result.min, 4),
-		    lpad(result.max, 4),
-		    lpad(result.mean.toFixed(2), 7),
-		    lpad(result.p95.toFixed(2), 7),
-		    lpad(result.elapsed, 6),
-		    lpad(result.rate.toFixed(2), 8)
-		));
-	});
+    .pipe(ldj.parse())
+    .on('data', function(result) {
+        console.log(util.format(
+            "%s, %s/%s min/max/avg/p95: %s/%s/%s/%s %sms total, %s ops/sec",
+            lpad(result.descr, 13),
+            lpad(result.pipeline, 5),
+            result.numClients,
+            lpad(result.min, 4),
+            lpad(result.max, 4),
+            lpad(result.mean.toFixed(2), 7),
+            lpad(result.p95.toFixed(2), 7),
+            lpad(result.elapsed, 6),
+            lpad(result.rate.toFixed(2), 8)
+        ));
+    });
 
 if (argv.output) {
-	benchProc.stdout
-		.pipe(fs.createWriteStream(argv.output, {encoding: 'utf8'}));
+    benchProc.stdout
+        .pipe(fs.createWriteStream(argv.output, {encoding: 'utf8'}));
 }
 
 
