@@ -21,8 +21,10 @@
 from __future__ import absolute_import
 
 from thrift import Thrift
-
+from thrift.protocol import TBinaryProtocol
+from thrift.transport import TTransport
 from tornado import ioloop
+
 try:
     from tornado.queues import Queue  # Included in Tornado 4.2
 except ImportError:
@@ -73,6 +75,34 @@ class TChannelTornadoTransportBase(TChannelTransportBase):
         raise NotImplementedError(
             "recv_call() not supported for Tornado. Use readFrame()."
         )
+
+    def _flush_internal(self, endpoint, response):
+        buff = TTransport.TMemoryBuffer()
+
+        # This is so dirty, /I can't even.../
+        binary = TBinaryProtocol.TBinaryProtocol(buff)
+        if response.message_type == Types.CALL_RES:
+            binary.writeMessageBegin(
+                endpoint,
+                Thrift.TMessageType.REPLY,
+                self.seqid,
+            )
+            buff.write(response.args[2])
+            binary.writeMessageEnd()
+        elif response.message_type == Types.ERROR:
+            binary.writeMessageBegin(
+                endpoint,
+                Thrift.TMessageType.EXCEPTION,
+                self.seqid
+            )
+            self._to_tappexception(response).write(binary)
+            binary.writeMessageEnd()
+        else:
+            raise NotImplementedError(
+                "Unsupported response message: %s" % str(response)
+            )
+
+        self._send_response(buff.getvalue())
 
     def flush(self):
         raise NotImplementedError("Must be implemented.")

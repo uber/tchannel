@@ -20,13 +20,8 @@
 
 from __future__ import absolute_import
 
-from thrift import Thrift
-from thrift.protocol import TBinaryProtocol
-from thrift.transport import TTransport
-
 from tornado import gen
 from tchannel.io import BytesIO
-from tchannel.messages.common import Types
 from .tornado_base import TChannelTornadoTransportBase
 
 
@@ -57,38 +52,12 @@ class TChannelTornadoTransport(TChannelTornadoTransportBase):
         payload = self._wbuf.getvalue()
         self._wbuf = BytesIO()  # avoid buffer leaking between requests
 
-        endpoint, seqid = self._endpoint, self._seqid
         response = yield self._tchannel.request(
             self._hostport, self._service_name
         ).send(
-            endpoint,
+            self.endpoint,
             '',  # TODO: headers
             payload,
         )
 
-        buff = TTransport.TMemoryBuffer()
-
-        # This is so dirty, /I can't even.../
-        binary = TBinaryProtocol.TBinaryProtocol(buff)
-        if response.message_type == Types.CALL_RES:
-            binary.writeMessageBegin(
-                endpoint,
-                Thrift.TMessageType.REPLY,
-                seqid,
-            )
-            buff.write(response.args[2])
-            binary.writeMessageEnd()
-        elif response.message_type == Types.ERROR:
-            binary.writeMessageBegin(
-                endpoint,
-                Thrift.TMessageType.EXCEPTION,
-                seqid
-            )
-            self._to_tappexception(response).write(binary)
-            binary.writeMessageEnd()
-        else:
-            raise NotImplementedError(
-                "Unsupported response message: %s" % str(response)
-            )
-
-        self._send_response(buff.getvalue())
+        self._flush_internal(self.endpoint, response)
