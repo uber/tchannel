@@ -60,7 +60,7 @@ class ThriftDispatcher(RequestHandler):
     __slots__ = ('services',)
 
     def __init__(self):
-        super(ThriftRequestHandler, self).__init__()
+        super(ThriftDispatcher, self).__init__()
         self.services = {}
 
     def register(self, service_name, processor):

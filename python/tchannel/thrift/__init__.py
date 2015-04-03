@@ -25,6 +25,13 @@ import inspect
 from thrift.transport import TTransport
 from thrift.protocol import TBinaryProtocol
 
+from .protocol import TChannelProtocolFactory, TChannelProtocol  # noqa
+from .transport import TChannelTransport  # noqa
+try:
+    from .transport.tornado import TChannelTornadoTransport  # noqa
+except ImportError:
+    pass
+
 
 def register(dispatcher, service_module, handler, service_name=None):
     """Registers the given service with the given dispatcher.
