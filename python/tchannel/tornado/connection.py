@@ -176,7 +176,7 @@ class TornadoConnection(object):
 
         await_future = self.await()
         await_future.add_done_callback(
-            lambda f: tornado.ioloop.IOLoop().instance().spawn_callback(
+            lambda f: tornado.ioloop.IOLoop().current().spawn_callback(
                 lambda: self.handle_calls(handler)
             )
         )
