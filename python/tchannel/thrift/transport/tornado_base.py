@@ -61,7 +61,7 @@ class TChannelTornadoTransportBase(TChannelTransportBase):
     def readFrame(self):
         return self._response_queue.get()
 
-    def _writeFrame(self, value):
+    def _send_response(self, value):
         self._response_queue.put(value)
 
     def read(self, n):
