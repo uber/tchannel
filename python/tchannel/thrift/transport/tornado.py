@@ -52,12 +52,13 @@ class TChannelTornadoTransport(TChannelTornadoTransportBase):
         payload = self._wbuf.getvalue()
         self._wbuf = BytesIO()  # avoid buffer leaking between requests
 
+        endpoint, seqid = self._endpoint, self._seqid
         response = yield self._tchannel.request(
             self._hostport, self._service_name
         ).send(
-            self.endpoint,
+            endpoint,
             '',  # TODO: headers
             payload,
         )
 
-        self._flush_internal(self.endpoint, response)
+        self._flush_internal(endpoint, response, seqid)

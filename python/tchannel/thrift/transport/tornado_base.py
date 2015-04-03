@@ -76,7 +76,7 @@ class TChannelTornadoTransportBase(TChannelTransportBase):
             "recv_call() not supported for Tornado. Use readFrame()."
         )
 
-    def _flush_internal(self, endpoint, response):
+    def _flush_internal(self, endpoint, response, seqid):
         buff = TTransport.TMemoryBuffer()
 
         # This is so dirty, /I can't even.../
@@ -85,7 +85,7 @@ class TChannelTornadoTransportBase(TChannelTransportBase):
             binary.writeMessageBegin(
                 endpoint,
                 Thrift.TMessageType.REPLY,
-                self.seqid,
+                seqid,
             )
             buff.write(response.args[2])
             binary.writeMessageEnd()
@@ -93,7 +93,7 @@ class TChannelTornadoTransportBase(TChannelTransportBase):
             binary.writeMessageBegin(
                 endpoint,
                 Thrift.TMessageType.EXCEPTION,
-                self.seqid
+                seqid
             )
             self._to_tappexception(response).write(binary)
             binary.writeMessageEnd()
