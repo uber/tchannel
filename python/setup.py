@@ -3,7 +3,7 @@ from setuptools import find_packages, setup
 
 setup(
     name='tchannel',
-    version='0.2.0',
+    version='0.3.0',
     author='Aiden Scandella, Abhinav Gupta, Bryce Lampe, Junchao Wu, Grayson Koonce',
     author_email='dev@uber.com',
     description='Network multiplexing and framing protocol for RPC',
