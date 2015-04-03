@@ -99,6 +99,8 @@ class RequestDispatcher(BaseRequestHandler):
         :param opts:
             Parameters to pass to the ``handler`` as a dictionary.
         """
+        assert rule, "rule must not be None"
+        assert handler, "handler must not be None"
         self.endpoints[rule] = Endpoint(handler=handler, opts=opts)
 
 
@@ -117,6 +119,10 @@ class Request(object):
         self.endpoint = self.message.args[0]
         self.header = self.message.args[1]
         self.body = self.message.args[2]
+
+    @property
+    def arg_scheme(self):
+        return self.message.headers.get('as', None)
 
 
 class Response(object):

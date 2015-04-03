@@ -31,14 +31,14 @@ def processor(thrift_module, implementation_class, exception_logger=None):
     raise NotImplementedError()
 
 
-class ThriftRequestHandler(RequestHandler):
+class ThriftDispatcher(RequestHandler):
     """A RequestHandler that delegates calls to a Thrift processor.
 
     .. code-block::
 
-        handler = ThriftRequestHandler()
+        dispatcher = ThriftDispatcher()
 
-        handler.register(
+        dispatcher.register(
             "UserService",
             processor(
                 blog_service.thrift.service.UserService,
@@ -46,13 +46,15 @@ class ThriftRequestHandler(RequestHandler):
             ),
         )
 
-        handler.register(
+        dispatcher.register(
             "PostService",
             processor(
                 blog_service.thrift.service.PostService,
                 PostServiceHandler,
             )
         )
+
+
     """
 
     __slots__ = ('services',)
