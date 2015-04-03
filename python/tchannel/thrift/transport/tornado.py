@@ -25,7 +25,6 @@ from thrift.protocol import TBinaryProtocol
 from thrift.transport import TTransport
 
 from tornado import gen
-
 from tchannel.io import BytesIO
 from tchannel.messages.common import Types
 from .tornado_base import TChannelTornadoTransportBase
@@ -91,4 +90,4 @@ class TChannelTornadoTransport(TChannelTornadoTransportBase):
                 "Unsupported response message: %s" % str(response)
             )
 
-        self._response_queue.put(buff.getvalue())
+        self._send_response(buff.getvalue())
