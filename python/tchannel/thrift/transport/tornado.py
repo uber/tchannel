@@ -40,9 +40,7 @@ class TChannelTornadoTransport(TChannelTornadoTransportBase):
         response_body = yield transport.readFrame()
     """
     def __init__(self, tchannel, hostport, service_name, io_loop=None):
-        super(TChannelTornadoTransport, self).__init__(
-            hostport, service_name
-        )
+        super(TChannelTornadoTransport, self).__init__(service_name, io_loop)
 
         self._hostport = hostport
         self._tchannel = tchannel
