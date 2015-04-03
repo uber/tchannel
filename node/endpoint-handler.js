@@ -26,15 +26,6 @@ var parallel = require('run-parallel');
 var TypedError = require('error/typed');
 var util = require('util');
 
-var EndpointAlreadyDefinedError = TypedError({
-    type: 'endpoint-already-defined',
-    message: 'endpoint {endpoint} already defined on service {service}',
-    service: null,
-    endpoint: null,
-    oldHandler: null,
-    newHandler:  null
-});
-
 var InvalidHandlerError = TypedError({
     type: 'invalid-handler',
     message: 'invalid handler function'
@@ -54,14 +45,6 @@ inherits(TChannelEndpointHandler, EventEmitter);
 
 TChannelEndpointHandler.prototype.register = function register(name, handler) {
     var self = this;
-    if (self.endpoints[name] !== undefined) {
-        throw EndpointAlreadyDefinedError({
-            service: self.serviceName,
-            endpoint: name,
-            oldHandler: self.endpoints[name],
-            newHandler: handler
-        });
-    }
     if (typeof handler !== 'function') {
         throw InvalidHandlerError();
     }
