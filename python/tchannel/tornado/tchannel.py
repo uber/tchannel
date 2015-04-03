@@ -21,6 +21,7 @@
 from __future__ import absolute_import
 
 import logging
+import threading
 import weakref
 
 import tornado.ioloop
@@ -38,8 +39,19 @@ log = logging.getLogger('tchannel')
 class TChannel(object):
     """Manages inbound and outbound connections to various hosts."""
 
+    # We don't want to duplicate outgoing connections, so all instances of this
+    # class will be a singleton.
+    _singleton = threading.local()
+
+    def __new__(cls):
+        if hasattr(cls._singleton, "instance"):
+            return cls._singleton.instance
+        return super(TChannel, cls).__new__(cls)
+
     def __init__(self):
         self.peers = {}
+
+        self._singleton.instance = self
 
     def add_peer(self, hostport):
         if hostport not in self.peers:
