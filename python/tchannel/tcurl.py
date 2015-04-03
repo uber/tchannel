@@ -328,7 +328,7 @@ def main(argv=None):
 
 def start_ioloop():  # pragma: no cover
     args = parse_args()
-    ioloop = tornado.ioloop.IOLoop.instance()
+    ioloop = tornado.ioloop.IOLoop.current()
 
     if not args.in_port:
         ioloop.run_sync(main)
