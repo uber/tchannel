@@ -38,11 +38,14 @@ var argv = parseArgs(process.argv.slice(2), {
 });
 var multiplicity = parseInt(argv.multiplicity) || 2;
 
+// TODO: does node have an analog of sys.executable?
+var node = process.argv[0];
+
 function run(script, args) {
     var name = script.replace(/\.js$/, '');
     args = args ? args.slice(0) : [];
     args.unshift(script);
-    var child = childProcess.spawn('node', args);
+    var child = childProcess.spawn(node, args);
     console.error('running', name, child.pid);
     return child;
 }
