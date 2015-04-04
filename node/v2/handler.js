@@ -22,7 +22,7 @@
 
 var bufrw = require('bufrw');
 var TypedError = require('error/typed');
-var Duplex = require('readable-stream').Duplex;
+var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 
 var reqres = require('../reqres');
@@ -51,9 +51,7 @@ function TChannelV2Handler(options) {
         return new TChannelV2Handler(options);
     }
     var self = this;
-    Duplex.call(self);
-    self._writableState.objectMode = true;
-    self._readableState.objectMode = false;
+    EventEmitter.call(self);
     self.options = options || {};
     self.hostPort = self.options.hostPort;
     self.processName = self.options.processName;
@@ -64,7 +62,7 @@ function TChannelV2Handler(options) {
     self.streamingRes = Object.create(null);
 }
 
-util.inherits(TChannelV2Handler, Duplex);
+util.inherits(TChannelV2Handler, EventEmitter);
 
 TChannelV2Handler.prototype.pushFrame = function pushFrame(frame) {
     var self = this;
@@ -74,7 +72,7 @@ TChannelV2Handler.prototype.pushFrame = function pushFrame(frame) {
     if (err) {
         self.emit('error', err);
     } else {
-        self.push(buffer);
+        self.emit('buffer', buffer);
     }
 };
 
@@ -84,7 +82,7 @@ TChannelV2Handler.prototype.nextFrameId = function nextFrameId() {
     return self.lastSentFrameId;
 };
 
-TChannelV2Handler.prototype._write = function _write(frame, encoding, callback) {
+TChannelV2Handler.prototype.handleFrame = function handleFrame(frame, callback) {
     var self = this;
     switch (frame.body.type) {
         case v2.Types.InitRequest:
@@ -106,10 +104,6 @@ TChannelV2Handler.prototype._write = function _write(frame, encoding, callback) 
                 typeCode: frame.body.type
             }));
     }
-};
-
-TChannelV2Handler.prototype._read = function _read(/* n */) {
-    /* noop */
 };
 
 TChannelV2Handler.prototype.handleInitRequest = function handleInitRequest(reqFrame, callback) {

@@ -19,7 +19,7 @@
     "url": "git@github.com:uber/tchannel"
   },
   "dependencies": {
-    "bufrw": "^0.9.9",
+    "bufrw": "^0.9.10",
     "crc": "^3.2.1",
     "error": "^5.1.1",
     "farmhash": "^0.2.0",
