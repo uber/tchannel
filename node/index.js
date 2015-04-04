@@ -33,7 +33,6 @@ var WrappedError = require('error/wrapped');
 var extend = require('xtend');
 var bufrw = require('bufrw');
 var ChunkReader = require('bufrw/stream/chunk_reader');
-var ChunkWriter = require('bufrw/stream/chunk_writer');
 var reqres = require('./reqres');
 
 var inherits = require('util').inherits;
@@ -640,7 +639,6 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     self.socket = socket;
 
     self.reader = ChunkReader(bufrw.UInt16BE, v2.Frame.RW);
-    self.writer = ChunkWriter(v2.Frame.RW);
     self.handler = new v2.Handler(extend({
         hostPort: self.channel.hostPort
     }, self.options));
@@ -676,6 +674,7 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     self.reader.on('data', onReaderFrame);
     self.reader.on('error', onReaderError);
 
+    self.handler.on('buffer', onHandlerBuffer);
     self.handler.on('error', onHandlerError);
     self.handler.on('call.incoming.request', onCallRequest);
     self.handler.on('call.incoming.response', onCallResponse);
@@ -691,7 +690,6 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     stream = stream
         .pipe(self.reader)
         .pipe(self.handler)
-        .pipe(self.writer)
         ;
     if (dumpEnabled) {
         stream = stream.pipe(Spy(process.stdout, {
@@ -701,6 +699,16 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     stream = stream
         .pipe(self.socket)
         ;
+
+    function onHandlerBuffer(buf) {
+        self.socket.write(buf);
+    }
+
+    function onHandlerError(err) {
+        self.resetAll(err);
+        // resetAll() does not close the socket
+        self.socket.destroy();
+    }
 
     function onReaderFrame() {
         if (!self.closing) {
@@ -737,12 +745,6 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
         }
         op.req.emit('error', err);
         // TODO: should terminate corresponding inc res
-    }
-
-    function onHandlerError(err) {
-        self.resetAll(err);
-        // resetAll() does not close the socket
-        self.socket.destroy();
     }
 
     function onTimedOut() {
