@@ -23,19 +23,20 @@
 var bufrw = require('bufrw');
 var TypedError = require('error/typed');
 
-var BufferTooSmallError = TypedError({
-    type: 'tchannel.buffer-too-small',
-    message: 'buffer too small, needed {expected} only have {got} bytess',
-    expected: null,
-    got: null
-});
+// var BufferTooSmallError = TypedError({
+//     type: 'tchannel.buffer-too-small',
+//     message: 'buffer too small, needed {expected} only have {got} bytess',
+//     expected: null,
+//     got: null
+// });
 
-var ExtraFrameDataError = TypedError({
-    type: 'tchannel.extra-frame-data',
-    message: 'got {trailing} bytes of extra frame data beyond body',
-    frame: null,
-    trailing: null
-});
+// TODO need?
+// var ExtraFrameDataError = TypedError({
+//     type: 'tchannel.extra-frame-data',
+//     message: 'got {trailing} bytes of extra frame data beyond body',
+//     frame: null,
+//     trailing: null
+// });
 
 var FieldTooLargeError = TypedError({
     type: 'tchannel.field-too-large',
@@ -77,69 +78,129 @@ Frame.MaxId = 0xfffffffe;
 Frame.NullId = 0xffffffff;
 
 // size:2: type:1 reserved:1 id:4 reserved:8 ...
-Frame.RW = bufrw.Struct(Frame, [
-    {call: {
-        writeInto: function writeInto(frame, buffer, offset) {
-            var body = frame.body;
-            var bodyRW = body.constructor.RW;
-            var res = bodyRW.byteLength(body);
-            if (res.err) {
-                return bufrw.WriteResult.error(res.err);
-            }
-            if (res.length > Frame.MaxBodySize) {
-                return bufrw.WriteResult.error(FieldTooLargeError({
-                    field: 'frame body',
-                    length: res.length,
-                    max: Frame.MaxBodySize
-                }));
-            }
-            frame.size = Frame.Overhead + res.length;
-            var got = buffer.length - offset;
-            if (got < frame.size) {
-                return bufrw.WriteResult.error(BufferTooSmallError({
-                    expected: frame.size,
-                    got: got
-                }));
-            }
-            return bufrw.WriteResult.just(offset);
-        }
-    }},
-    {name: 'size', rw: bufrw.UInt16BE}, // size:2
-    {name: 'type', rw: bufrw.UInt8},    // type:1
-    {rw: bufrw.Skip(1)},                // reserved:1
-    {name: 'id', rw: bufrw.UInt32BE},   // id:4
-    {rw: bufrw.Skip(8)},                // reserved:8
-    {name: 'body', call: {              // ...
-        byteLength: function byteLength(frame) {
-            var body = frame.body;
-            var bodyRW = body.constructor.RW;
-            return bodyRW.byteLength(body);
-        },
-        writeInto: function writeInto(frame, buffer, offset) {
-            var body = frame.body;
-            var bodyRW = body.constructor.RW;
-            return bodyRW.writeInto(body, buffer, offset);
-        },
-        readFrom: function readBodyFrom(frame, buffer, offset) {
-            var BodyType = Frame.Types[frame.type];
-            if (!BodyType) {
-                return bufrw.ReadResult.error(InvalidFrameTypeError({
-                    typeNumber: frame.type
-                }), offset);
-            }
-            var res = BodyType.RW.readFrom(buffer, offset);
-            if (res.err) return res;
-            offset = res.offset;
-            if (offset < buffer.length) {
-                return bufrw.ReadResult.error(ExtraFrameDataError({
-                    frame: frame,
-                    trailing: buffer.length - offset
-                }), offset, frame);
-            }
-            return res;
-        }
-    }}
-]);
+Frame.RW = bufrw.Base(frameLength, readFrameFrom, writeFrameInto);
+
+function frameLength(frame) {
+    var body = frame.body;
+    var bodyRW = body.constructor.RW;
+
+    var length = 0;
+    length += bufrw.UInt16BE.width;
+    length += bufrw.UInt8.width;
+    length += 1;
+    length += bufrw.UInt32BE.width;
+    length += 8;
+
+    var res = bodyRW.byteLength(body);
+    if (!res.err) {
+        res.length += length;
+    }
+    return res;
+}
+
+function readFrameFrom(buffer, offset) {
+    var frame = Frame();
+
+    var res;
+
+    res = bufrw.UInt16BE.readFrom(buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+    frame.size = res.value;
+
+    res = bufrw.UInt8.readFrom(buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+    frame.type = res.value;
+
+    var BodyType = Frame.Types[frame.type];
+    if (!BodyType) {
+        return bufrw.ReadResult.error(InvalidFrameTypeError({
+            typeNumber: frame.type
+        }), offset);
+    }
+
+    offset += 1;
+
+    res = bufrw.UInt32BE.readFrom(buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+    frame.id = res.value;
+
+    offset += 8;
+
+    res = BodyType.RW.readFrom(buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+    frame.body = res.value;
+
+    // TODO need?
+    // if (offset < buffer.length) {
+    //     return bufrw.ReadResult.error(ExtraFrameDataError({
+    //         frame: frame,
+    //         trailing: buffer.length - offset
+    //     }), offset, frame);
+    // }
+
+    res.value = frame;
+    return res;
+}
+
+function writeFrameInto(frame, buffer, offset) {
+    var body = frame.body;
+    var bodyRW = body.constructor.RW;
+
+    // TODO: need?
+    // var got = buffer.length - offset;
+    // if (got < frame.size) {
+    //     return bufrw.WriteResult.error(BufferTooSmallError({
+    //         expected: frame.size,
+    //         got: got
+    //     }));
+    // }
+
+    var res;
+    var end;
+    var start = offset;
+
+    // skip size, write later
+    offset += bufrw.UInt16BE.width;
+
+    res = bufrw.UInt8.writeInto(frame.type, buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+
+    end = offset + 1;
+    buffer.fill(0, offset, end);
+    offset = end;
+
+    res = bufrw.UInt32BE.writeInto(frame.id, buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+
+    end = offset + 8;
+    buffer.fill(0, offset, end);
+    offset = end;
+
+    res = bodyRW.writeInto(body, buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+
+    frame.size = res.offset - start;
+    if (frame.size > Frame.MaxSize) {
+        return bufrw.WriteResult.error(FieldTooLargeError({
+            field: 'frame body',
+            length: frame.size - Frame.Overhead,
+            max: Frame.MaxBodySize
+        }));
+    }
+
+    res = bufrw.UInt16BE.writeInto(frame.size, buffer, start);
+    if (res.err) return res;
+    res.offset = offset;
+
+    return res;
+}
 
 Frame.prototype.fromBuffer = function toBuffer(buffer) {
     var self = this;
