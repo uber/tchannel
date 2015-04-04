@@ -19,43 +19,43 @@
 // THE SOFTWARE.
 
 var TChannel = require('../index');
-var EndpointHandler = require('../endpoint-handler')
+var EndpointHandler = require('../endpoint-handler');
 var server = new TChannel({
-	handler: EndpointHandler()
+    handler: EndpointHandler()
 });
 server.listen(4040, '127.0.0.1');
 
 var keys = {};
 
 server.handler.register('ping', function onPing(req, res) {
-	res.sendOk('pong', null);
+    res.sendOk('pong', null);
 });
 
 function safeParse(str) {
-	try {
-		return JSON.parse(str);
-	} catch (e) {
-		return null;
-	}
+    try {
+        return JSON.parse(str);
+    } catch (e) {
+        return null;
+    }
 }
 
 server.handler.register('set', function onSet(req, res) {
-	var parts = safeParse(req.arg2.toString('utf8'));
-	keys[parts[0]] = parts[1];
-	res.sendOk('ok', 'really ok');
+    var parts = safeParse(req.arg2.toString('utf8'));
+    keys[parts[0]] = parts[1];
+    res.sendOk('ok', 'really ok');
 });
 
 server.handler.register('get', function onGet(req, res) {
-	var str = req.arg2.toString('utf8');
-	if (keys[str] !== undefined) {
-		res.sendOk(JSON.stringify(keys[str].length), JSON.stringify(keys[str]));
-	} else {
-		res.sendNotOk(null, 'key not found: ' + str);
-	}
+    var str = req.arg2.toString('utf8');
+    if (keys[str] !== undefined) {
+        res.sendOk(JSON.stringify(keys[str].length), JSON.stringify(keys[str]));
+    } else {
+        res.sendNotOk(null, 'key not found: ' + str);
+    }
 });
 
 // setInterval(function () {
-// 	Object.keys(keys).forEach(function (key) {
-// 		console.log(key + '=' + keys[key].length + ' bytes');
-// 	});
+//  Object.keys(keys).forEach(function (key) {
+//      console.log(key + '=' + keys[key].length + ' bytes');
+//  });
 // }, 1000);

@@ -31,40 +31,52 @@ var server = path.join(__dirname, 'bench_server.js');
 var bench = path.join(__dirname, 'multi_bench.js');
 
 var argv = parseArgs(process.argv.slice(2), {
-	alias: {
-		m: 'multiplicity',
-		o: 'output'
-	}
+    alias: {
+        m: 'multiplicity',
+        o: 'output'
+    }
 });
 var multiplicity = parseInt(argv.multiplicity) || 2;
 
-var serverProc = childProcess.spawn('node', [server]);
+// TODO: does node have an analog of sys.executable?
+var node = process.argv[0];
+
+function run(script, args) {
+    var name = script.replace(/\.js$/, '');
+    args = args ? args.slice(0) : [];
+    args.unshift(script);
+    var child = childProcess.spawn(node, args);
+    console.error('running', name, child.pid);
+    return child;
+}
+
+var serverProc = run(server);
 serverProc.stdout.pipe(process.stderr);
 serverProc.stderr.pipe(process.stderr);
 
-var benchProc = childProcess.spawn('node', [bench, '--multiplicity', String(multiplicity)]);
+var benchProc = run(bench, ['--multiplicity', String(multiplicity)]);
 benchProc.stderr.pipe(process.stderr);
 
 benchProc.stdout
-	.pipe(ldj.parse())
-	.on('data', function(result) {
-		console.log(util.format(
-		    "%s, %s/%s min/max/avg/p95: %s/%s/%s/%s %sms total, %s ops/sec",
-		    lpad(result.descr, 13),
-		    lpad(result.pipeline, 5),
-		    result.numClients,
-		    lpad(result.min, 4),
-		    lpad(result.max, 4),
-		    lpad(result.mean.toFixed(2), 7),
-		    lpad(result.p95.toFixed(2), 7),
-		    lpad(result.elapsed, 6),
-		    lpad(result.rate.toFixed(2), 8)
-		));
-	});
+    .pipe(ldj.parse())
+    .on('data', function(result) {
+        console.log(util.format(
+            "%s, %s/%s min/max/avg/p95: %s/%s/%s/%s %sms total, %s ops/sec",
+            lpad(result.descr, 13),
+            lpad(result.pipeline, 5),
+            result.numClients,
+            lpad(result.min, 4),
+            lpad(result.max, 4),
+            lpad(result.mean.toFixed(2), 7),
+            lpad(result.p95.toFixed(2), 7),
+            lpad(result.elapsed, 6),
+            lpad(result.rate.toFixed(2), 8)
+        ));
+    });
 
 if (argv.output) {
-	benchProc.stdout
-		.pipe(fs.createWriteStream(argv.output, {encoding: 'utf8'}));
+    benchProc.stdout
+        .pipe(fs.createWriteStream(argv.output, {encoding: 'utf8'}));
 }
 
 

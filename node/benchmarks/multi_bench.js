@@ -18,12 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+var async = require('async');
 var parseArgs = require('minimist');
 var argv = parseArgs(process.argv.slice(2), {
     alias: {
-        m: multiplicity,
-        c: numClients,
-        r: numRequests
+        m: 'multiplicity',
+        c: 'numClients',
+        r: 'numRequests'
     }
 });
 var multiplicity = parseInt(argv.multiplicity, 10) || 2;
@@ -33,10 +34,9 @@ var numRequests = parseInt(argv.numRequests, 10) || 20000;
 var TChannel = require("../index"),
     metrics = require("metrics"),
     tests = [],
-    client_options = {
-        return_buffers: false
-    },
-    small_str, large_str, small_buf, large_buf;
+    clientOptions = {
+        returnBuffers: false
+    };
 
 function Test(args) {
     this.args = args;
@@ -44,18 +44,18 @@ function Test(args) {
     this.arg1 = new Buffer(args.command);
     this.arg2 = args.args ? new Buffer(args.args) : null;
     this.arg3 = null;
-    
+
     this.callback = null;
     this.clients = [];
-    this.clients_ready = 0;
-    this.commands_sent = 0;
-    this.commands_completed = 0;
-    this.max_pipeline = this.args.pipeline || numRequests;
-    this.client_options = args.client_options || client_options;
-    
-    this.connect_latency = new metrics.Histogram();
-    this.ready_latency = new metrics.Histogram();
-    this.command_latency = new metrics.Histogram();
+    this.clientsReady = 0;
+    this.commandsSent = 0;
+    this.commandsCompleted = 0;
+    this.maxPipeline = this.args.pipeline || numRequests;
+    this.clientOptions = args.clientOptions || clientOptions;
+
+    this.connectLatency = new metrics.Histogram();
+    this.readyLatency = new metrics.Histogram();
+    this.commandLatency = new metrics.Histogram();
 }
 
 Test.prototype.copy = function () {
@@ -63,66 +63,70 @@ Test.prototype.copy = function () {
 };
 
 Test.prototype.run = function (callback) {
+    var self = this;
     var i;
 
     this.callback = callback;
 
-    for (i = 0; i < numClients ; i++) {
-        this.new_client(i);
-    }
-};
-
-Test.prototype.new_client = function (id) {
-    var self = this, new_client;
-    
-    var port = 4041 + id;
-    new_client = new TChannel();
-    new_client.create_time = Date.now();
-    new_client.listen(port, "127.0.0.1", function (err) {
-        // sending a ping to pre-connect the socket
-        new_client
-            .request({host: '127.0.0.1:4040'})
-            .send('ping', null, null);
-
-        new_client.on("identified", function (peer) {
-            self.connect_latency.update(Date.now() - new_client.create_time);
-            self.ready_latency.update(Date.now() - new_client.create_time);
-            self.clients_ready++;
-            if (self.clients_ready === self.clients.length) {
-                self.on_clients_ready();
-            }
-        });
-
-        self.clients[id] = new_client;
+    var ids = [];
+    for (i = 0; i < numClients ; i++) ids.push(i);
+    async.each(ids, function each(i, done) {
+        self.newClient(i, done);
+    }, function(err) {
+        if (err) {
+            console.error('failed to setup clients', err);
+        } else {
+            self.start();
+        }
     });
 };
 
-Test.prototype.on_clients_ready = function () {
-    this.test_start = Date.now();
-    this.fill_pipeline();
-};
-
-Test.prototype.fill_pipeline = function () {
-    var pipeline = this.commands_sent - this.commands_completed;
-
-    while (this.commands_sent < numRequests && pipeline < this.max_pipeline) {
-        this.commands_sent++;
-        pipeline++;
-        this.send_next();
-    }
-    
-    if (this.commands_completed === numRequests) {
-        this.print_stats();
-        this.stop_clients();
-    }
-};
-
-Test.prototype.stop_clients = function () {
+Test.prototype.newClient = function (id, callback) {
     var self = this;
-    
+    var port = 4041 + id;
+    var newClient = new TChannel();
+    newClient.createTime = Date.now();
+    newClient.listen(port, "127.0.0.1", function (err) {
+        if (err) return callback(err);
+        self.clients[id] = newClient;
+        // sending a ping to pre-connect the socket
+        newClient
+            .request({host: '127.0.0.1:4040'})
+            .send('ping', null, null, function(err) {
+                if (err) return callback(err);
+                self.connectLatency.update(Date.now() - newClient.createTime);
+                self.readyLatency.update(Date.now() - newClient.createTime);
+                callback();
+            });
+    });
+};
+
+Test.prototype.start = function () {
+    this.testStart = Date.now();
+    this.fillPipeline();
+};
+
+Test.prototype.fillPipeline = function () {
+    var pipeline = this.commandsSent - this.commandsCompleted;
+
+    while (this.commandsSent < numRequests && pipeline < this.maxPipeline) {
+        this.commandsSent++;
+        pipeline++;
+        this.sendNext();
+    }
+
+    if (this.commandsCompleted === numRequests) {
+        this.printStats();
+        this.stopClients();
+    }
+};
+
+Test.prototype.stopClients = function () {
+    var self = this;
+
     this.clients.forEach(function (client, pos) {
         if (pos === self.clients.length - 1) {
-            client.quit(function (err, res) {
+            client.quit(function () {
                 self.callback();
             });
         } else {
@@ -131,12 +135,12 @@ Test.prototype.stop_clients = function () {
     });
 };
 
-Test.prototype.send_next = function () {
-    var self = this,
-        cur_client = this.commands_sent % this.clients.length,
-        start = Date.now();
+Test.prototype.sendNext = function () {
+    var self = this;
+    var curClient = this.commandsSent % this.clients.length;
+    var start = Date.now();
 
-    this.clients[cur_client]
+    this.clients[curClient]
         .request({
             host: '127.0.0.1:4040',
             timeout: 10000,
@@ -149,69 +153,67 @@ Test.prototype.send_next = function () {
         })
         .send(this.arg1, this.arg2, this.arg3, done);
 
-    function done(err, res) {
+    function done(err) {
         if (err) {
             throw err;
         }
-        self.commands_completed++;
-        self.command_latency.update(Date.now() - start);
-        self.fill_pipeline();
+        self.commandsCompleted++;
+        self.commandLatency.update(Date.now() - start);
+        self.fillPipeline();
     }
 };
 
-Test.prototype.get_stats = function () {
-    var obj = this.command_latency.printObj();
+Test.prototype.getStats = function () {
+    var obj = this.commandLatency.printObj();
     obj.descr = this.args.descr;
     obj.pipeline = this.args.pipeline;
-    obj.numClients = this.clients_ready;
-    obj.elapsed = Date.now() - this.test_start;
+    obj.numClients = this.clientsReady;
+    obj.elapsed = Date.now() - this.testStart;
     obj.rate = numRequests / (obj.elapsed / 1000);
     return obj;
 };
 
-Test.prototype.print_stats = function () {
-    var obj = this.get_stats();
+Test.prototype.printStats = function () {
+    var obj = this.getStats();
     process.stdout.write(JSON.stringify(obj) + "\n");
 };
 
-small_str = "1234";
-small_buf = new Buffer(small_str);
-large_str = (new Array(4097).join("-"));
-large_buf = new Buffer(large_str);
-var small_str_set = JSON.stringify(['foo_rand000000000000', small_str]);
-var small_buf_set = new Buffer(small_str_set);
-var large_str_set = JSON.stringify(['foo_rand000000000001', large_str]);
-var large_buf_set = new Buffer(large_str_set);
+var smallStr = "1234";
+var largeStr = new Array(4097).join("-");
+var smallStrSet = JSON.stringify(['foo_rand000000000000', smallStr]);
+var smallBufSet = new Buffer(smallStrSet);
+var largeStrSet = JSON.stringify(['foo_rand000000000001', largeStr]);
+var largeBufSet = new Buffer(largeStrSet);
 
 tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: 1}));
 tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: 50}));
 tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: 200}));
 tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: 20000}));
 
-tests.push(new Test({descr: "SET small str", command: "set", args: small_str_set, pipeline: 1}));
-tests.push(new Test({descr: "SET small str", command: "set", args: small_str_set, pipeline: 50}));
-tests.push(new Test({descr: "SET small str", command: "set", args: small_str_set, pipeline: 200}));
-tests.push(new Test({descr: "SET small str", command: "set", args: small_str_set, pipeline: 20000}));
+tests.push(new Test({descr: "SET small str", command: "set", args: smallStrSet, pipeline: 1}));
+tests.push(new Test({descr: "SET small str", command: "set", args: smallStrSet, pipeline: 50}));
+tests.push(new Test({descr: "SET small str", command: "set", args: smallStrSet, pipeline: 200}));
+tests.push(new Test({descr: "SET small str", command: "set", args: smallStrSet, pipeline: 20000}));
 
-tests.push(new Test({descr: "SET small buf", command: "set", args: small_buf_set, pipeline: 1}));
-tests.push(new Test({descr: "SET small buf", command: "set", args: small_buf_set, pipeline: 50}));
-tests.push(new Test({descr: "SET small buf", command: "set", args: small_buf_set, pipeline: 200}));
-tests.push(new Test({descr: "SET small buf", command: "set", args: small_buf_set, pipeline: 20000}));
+tests.push(new Test({descr: "SET small buf", command: "set", args: smallBufSet, pipeline: 1}));
+tests.push(new Test({descr: "SET small buf", command: "set", args: smallBufSet, pipeline: 50}));
+tests.push(new Test({descr: "SET small buf", command: "set", args: smallBufSet, pipeline: 200}));
+tests.push(new Test({descr: "SET small buf", command: "set", args: smallBufSet, pipeline: 20000}));
 
 tests.push(new Test({descr: "GET small str", command: "get", args: "foo_rand000000000000", pipeline: 1}));
 tests.push(new Test({descr: "GET small str", command: "get", args: "foo_rand000000000000", pipeline: 50}));
 tests.push(new Test({descr: "GET small str", command: "get", args: "foo_rand000000000000", pipeline: 200}));
 tests.push(new Test({descr: "GET small str", command: "get", args: "foo_rand000000000000", pipeline: 20000}));
 
-tests.push(new Test({descr: "SET large str", command: "set", args: large_str_set, pipeline: 1}));
-tests.push(new Test({descr: "SET large str", command: "set", args: large_str_set, pipeline: 50}));
-tests.push(new Test({descr: "SET large str", command: "set", args: large_str_set, pipeline: 200}));
-tests.push(new Test({descr: "SET large str", command: "set", args: large_str_set, pipeline: 20000}));
+tests.push(new Test({descr: "SET large str", command: "set", args: largeStrSet, pipeline: 1}));
+tests.push(new Test({descr: "SET large str", command: "set", args: largeStrSet, pipeline: 50}));
+tests.push(new Test({descr: "SET large str", command: "set", args: largeStrSet, pipeline: 200}));
+tests.push(new Test({descr: "SET large str", command: "set", args: largeStrSet, pipeline: 20000}));
 
-tests.push(new Test({descr: "SET large buf", command: "set", args: large_buf_set, pipeline: 1}));
-tests.push(new Test({descr: "SET large buf", command: "set", args: large_buf_set, pipeline: 50}));
-tests.push(new Test({descr: "SET large buf", command: "set", args: large_buf_set, pipeline: 200}));
-tests.push(new Test({descr: "SET large buf", command: "set", args: large_buf_set, pipeline: 20000}));
+tests.push(new Test({descr: "SET large buf", command: "set", args: largeBufSet, pipeline: 1}));
+tests.push(new Test({descr: "SET large buf", command: "set", args: largeBufSet, pipeline: 50}));
+tests.push(new Test({descr: "SET large buf", command: "set", args: largeBufSet, pipeline: 200}));
+tests.push(new Test({descr: "SET large buf", command: "set", args: largeBufSet, pipeline: 20000}));
 
 tests.push(new Test({descr: "GET large str", command: "get", args: 'foo_rand000000000001', pipeline: 1}));
 tests.push(new Test({descr: "GET large str", command: "get", args: 'foo_rand000000000001', pipeline: 50}));
