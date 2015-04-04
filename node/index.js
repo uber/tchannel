@@ -396,7 +396,7 @@ inherits(TChannelConnectionBase, EventEmitter);
 TChannelConnectionBase.prototype.close = function close(callback) {
     var self = this;
     self.resetAll(SocketClosedError({reason: 'local close'}));
-    process.nextTick(callback);
+    callback();
 };
 
 // timeout check runs every timeoutCheckInterval +/- some random fuzz. Range is from
