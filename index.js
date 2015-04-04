@@ -702,8 +702,10 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
         .pipe(self.socket)
         ;
 
-    function onReaderFrame(frame) {
-        self.onFrame(frame);
+    function onReaderFrame() {
+        if (!self.closing) {
+            self.lastTimeoutTime = 0;
+        }
     }
 
     function onReaderError(err) {
@@ -802,13 +804,6 @@ TChannelConnection.prototype.onSocketErr = function onSocketErr(err) {
     var self = this;
     if (!self.closing) {
         self.resetAll(err);
-    }
-};
-
-TChannelConnection.prototype.onFrame = function onFrame(/* frame */) {
-    var self = this;
-    if (!self.closing) {
-        self.lastTimeoutTime = 0;
     }
 };
 
