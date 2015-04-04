@@ -675,6 +675,7 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     self.mach.emit = handleReadFrame;
 
     self.handler.on('buffer', onHandlerBuffer);
+    self.handler.on('buffer.shared', onHandlerSharedBuffer);
     self.handler.on('error', onHandlerError);
     self.handler.on('call.incoming.request', onCallRequest);
     self.handler.on('call.incoming.response', onCallResponse);
@@ -703,6 +704,12 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
 
     function onHandlerBuffer(buf) {
         self.socket.write(buf);
+    }
+
+    function onHandlerSharedBuffer(buf) {
+        var copy = new Buffer(buf.length);
+        buf.copy(copy);
+        self.socket.write(copy);
     }
 
     function onHandlerError(err) {
