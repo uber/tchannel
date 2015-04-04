@@ -20,6 +20,7 @@
 
 'use strict';
 
+var bufrw = require('bufrw');
 var TypedError = require('error/typed');
 var Duplex = require('readable-stream').Duplex;
 var util = require('util');
@@ -50,9 +51,9 @@ function TChannelV2Handler(options) {
         return new TChannelV2Handler(options);
     }
     var self = this;
-    Duplex.call(self, {
-        objectMode: true
-    });
+    Duplex.call(self);
+    self._writableState.objectMode = true;
+    self._readableState.objectMode = false;
     self.options = options || {};
     self.hostPort = self.options.hostPort;
     self.processName = self.options.processName;
@@ -64,6 +65,18 @@ function TChannelV2Handler(options) {
 }
 
 util.inherits(TChannelV2Handler, Duplex);
+
+TChannelV2Handler.prototype.pushFrame = function pushFrame(frame) {
+    var self = this;
+    var tup = bufrw.toBufferTuple(v2.Frame.RW, frame);
+    var err = tup[0];
+    var buffer = tup[1];
+    if (err) {
+        self.emit('error', err);
+    } else {
+        self.push(buffer);
+    }
+};
 
 TChannelV2Handler.prototype.nextFrameId = function nextFrameId() {
     var self = this;
@@ -255,7 +268,7 @@ TChannelV2Handler.prototype.sendInitRequest = function sendInitRequest() {
         /* jshint camelcase:true */
     });
     var reqFrame = new v2.Frame(id, body);
-    self.push(reqFrame);
+    self.pushFrame(reqFrame);
 };
 
 TChannelV2Handler.prototype.sendInitResponse = function sendInitResponse(reqFrame) {
@@ -270,7 +283,7 @@ TChannelV2Handler.prototype.sendInitResponse = function sendInitResponse(reqFram
         /* jshint camelcase:true */
     });
     var resFrame = new v2.Frame(id, body);
-    self.push(resFrame);
+    self.pushFrame(resFrame);
 };
 
 TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame(req, flags, args) {
@@ -310,7 +323,7 @@ TChannelV2Handler.prototype._sendCallBodies = function _sendCallBodies(id, body,
         body.updateChecksum(checksum && checksum.val || 0);
         checksum = body.csum;
         var frame = new v2.Frame(id, body);
-        self.push(frame);
+        self.pushFrame(frame);
     }
     return checksum;
 };
@@ -328,7 +341,7 @@ TChannelV2Handler.prototype.sendErrorFrame = function sendErrorFrame(req, codeSt
 
     var errBody = new v2.ErrorResponse(code, req.tracing, message);
     var errFrame = new v2.Frame(req.id, errBody);
-    self.push(errFrame);
+    self.pushFrame(errFrame);
 };
 
 TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest(options) {
