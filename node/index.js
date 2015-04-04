@@ -743,7 +743,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
         ;
 
     function clearTimer() {
-        self.timers.clearTimeout(self.timer);
+        self.clearTimeoutTimer(); // TODO probably not needed, both resetAll and close call it
     }
 
     self.on('timedOut', function onTimedOut() {
