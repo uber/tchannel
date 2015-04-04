@@ -32,7 +32,7 @@ var TypedError = require('error/typed');
 var WrappedError = require('error/wrapped');
 var extend = require('xtend');
 var bufrw = require('bufrw');
-var ChunkReader = require('bufrw/stream/chunk_reader');
+var ReadMachine = require('bufrw/stream/read_machine');
 var reqres = require('./reqres');
 
 var inherits = require('util').inherits;
@@ -40,11 +40,11 @@ var EventEmitter = require('events').EventEmitter;
 
 var v2 = require('./v2');
 var nullLogger = require('./null-logger.js');
-var Spy = require('./v2/spy');
+// var Spy = require('./v2/spy'); TODO
 var EndpointHandler = require('./endpoint-handler.js');
 
 var DEFAULT_OUTGOING_REQ_TIMEOUT = 2000;
-var dumpEnabled = /\btchannel_dump\b/.test(process.env.NODE_DEBUG || '');
+// var dumpEnabled = /\btchannel_dump\b/.test(process.env.NODE_DEBUG || ''); TODO
 
 var SocketClosedError = TypedError({
     type: 'tchannel.socket-closed',
@@ -637,11 +637,10 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     var self = this;
     TChannelConnectionBase.call(self, channel, direction, remoteAddr);
     self.socket = socket;
-
-    self.reader = ChunkReader(bufrw.UInt16BE, v2.Frame.RW);
     self.handler = new v2.Handler(extend({
         hostPort: self.channel.hostPort
     }, self.options));
+    self.mach = ReadMachine(bufrw.UInt16BE, v2.Frame.RW);
 
     self.setupSocket();
     self.setupHandler();
@@ -653,8 +652,23 @@ TChannelConnection.prototype.setupSocket = function setupSocket() {
     var self = this;
 
     self.socket.setNoDelay(true);
+    self.socket.on('data', onSocketChunk);
     self.socket.on('close', onSocketClose);
     self.socket.on('error', onSocketError);
+
+    function onSocketChunk(chunk) {
+        self.mach.handleChunk(chunk, chunkHandled);
+    }
+
+    function chunkHandled(err) {
+        if (err) {
+            self.resetAll(TChannelReadProtocolError(err, {
+                remoteName: self.remoteName,
+                localName: self.channel.hostPort
+            }));
+            self.socket.destroy();
+        }
+    }
 
     function onSocketClose() {
         self.resetAll(SocketClosedError({reason: 'remote clossed'}));
@@ -671,8 +685,7 @@ TChannelConnection.prototype.setupSocket = function setupSocket() {
 TChannelConnection.prototype.setupHandler = function setupHandler() {
     var self = this;
 
-    self.reader.on('data', onReaderFrame);
-    self.reader.on('error', onReaderError);
+    self.mach.emit = handleReadFrame;
 
     self.handler.on('buffer', onHandlerBuffer);
     self.handler.on('error', onHandlerError);
@@ -681,24 +694,25 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     self.handler.on('call.incoming.error', onCallError);
     self.on('timedOut', onTimedOut);
 
-    var stream = self.socket;
-    if (dumpEnabled) {
-        stream = stream.pipe(Spy(process.stdout, {
-            prefix: '>>> ' + self.remoteAddr + ' '
-        }));
-    }
-    stream = stream
-        .pipe(self.reader)
-        .pipe(self.handler)
-        ;
-    if (dumpEnabled) {
-        stream = stream.pipe(Spy(process.stdout, {
-            prefix: '<<< ' + self.remoteAddr + ' '
-        }));
-    }
-    stream = stream
-        .pipe(self.socket)
-        ;
+    // TODO: restore dumping from old:
+    // var stream = self.socket;
+    // if (dumpEnabled) {
+    //     stream = stream.pipe(Spy(process.stdout, {
+    //         prefix: '>>> ' + self.remoteAddr + ' '
+    //     }));
+    // }
+    // stream = stream
+    //     .pipe(self.reader)
+    //     .pipe(self.handler)
+    //     ;
+    // if (dumpEnabled) {
+    //     stream = stream.pipe(Spy(process.stdout, {
+    //         prefix: '<<< ' + self.remoteAddr + ' '
+    //     }));
+    // }
+    // stream = stream
+    //     .pipe(self.socket)
+    //     ;
 
     function onHandlerBuffer(buf) {
         self.socket.write(buf);
@@ -710,14 +724,17 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
         self.socket.destroy();
     }
 
-    function onReaderFrame() {
+    function handleReadFrame(frame) {
         if (!self.closing) {
             self.lastTimeoutTime = 0;
         }
+        self.handler.handleFrame(frame, handledFrame);
     }
 
-    function onReaderError(err) {
-        self.onReaderError(err);
+    function handledFrame(err) {
+        if (err) {
+            onHandlerError(err);
+        }
     }
 
     function onCallRequest(req) {
@@ -784,21 +801,6 @@ TChannelConnection.prototype.close = function close(callback) {
     var self = this;
     self.socket.once('close', callback);
     self.resetAll(SocketClosedError({reason: 'local close'}));
-    self.socket.destroy();
-};
-
-TChannelConnection.prototype.onReaderError = function onReaderError(err) {
-    var self = this;
-
-    var readError = TChannelReadProtocolError(err, {
-        remoteName: self.remoteName,
-        localName: self.channel.hostPort
-    });
-
-    // TODO instead of resetting send an error frame first.
-    // and reset the socket after sending an error frame
-    self.resetAll(readError);
-    // resetAll() does not close the socket
     self.socket.destroy();
 };
 
