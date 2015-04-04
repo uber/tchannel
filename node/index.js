@@ -681,6 +681,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
         if (self.remoteName === '0.0.0.0:0') {
             self.channel.peers.delete(self.remoteAddr);
         }
+        self.clearTimeoutTimer(); // TODO probably not needed, both resetAll and close call it
     });
 
     self.reader.on('data', function onReaderFrame(frame) {
@@ -716,8 +717,6 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
         });
     }
 
-    self.socket.once('close', clearTimer);
-
     var stream = self.socket;
 
     if (dumpEnabled) {
@@ -741,10 +740,6 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     stream = stream
         .pipe(self.socket)
         ;
-
-    function clearTimer() {
-        self.clearTimeoutTimer(); // TODO probably not needed, both resetAll and close call it
-    }
 
     self.on('timedOut', function onTimedOut() {
         self.logger.warn(self.channel.hostPort + ' destroying socket from timeouts');
