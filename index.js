@@ -736,21 +736,25 @@ TChannelConnection.prototype.start = function start() {
     var self = this;
     if (self.direction === 'out') {
         self.handler.sendInitRequest();
-        self.handler.once('init.response', function onOutIdentified(init) {
-            self.remoteName = init.hostPort;
-            self.emit('identified', {
-                hostPort: init.hostPort,
-                processName: init.processName
-            });
-        });
+        self.handler.once('init.response', onOutIdentified);
     } else {
-        self.handler.once('init.request', function onInIdentified(init) {
-            self.remoteName = init.hostPort;
-            self.channel.peers.add(self.remoteName).addConnection(self);
-            self.emit('identified', {
-                hostPort: init.hostPort,
-                processName: init.processName
-            });
+        self.handler.once('init.request', onInIdentified);
+    }
+
+    function onOutIdentified(init) {
+        self.remoteName = init.hostPort;
+        self.emit('identified', {
+            hostPort: init.hostPort,
+            processName: init.processName
+        });
+    }
+
+    function onInIdentified(init) {
+        self.remoteName = init.hostPort;
+        self.channel.peers.add(self.remoteName).addConnection(self);
+        self.emit('identified', {
+            hostPort: init.hostPort,
+            processName: init.processName
         });
     }
 };
