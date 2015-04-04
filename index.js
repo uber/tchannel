@@ -699,26 +699,6 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
         self.socket.destroy();
     });
 
-    if (direction === 'out') {
-        self.handler.sendInitRequest();
-        self.handler.once('init.response', function onOutIdentified(init) {
-            self.remoteName = init.hostPort;
-            self.emit('identified', {
-                hostPort: init.hostPort,
-                processName: init.processName
-            });
-        });
-    } else {
-        self.handler.once('init.request', function onInIdentified(init) {
-            self.remoteName = init.hostPort;
-            self.channel.peers.add(self.remoteName).addConnection(self);
-            self.emit('identified', {
-                hostPort: init.hostPort,
-                processName: init.processName
-            });
-        });
-    }
-
     var stream = self.socket;
 
     if (dumpEnabled) {
@@ -747,8 +727,33 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
         self.logger.warn(self.channel.hostPort + ' destroying socket from timeouts');
         self.socket.destroy();
     });
+
+    self.start();
 }
 inherits(TChannelConnection, TChannelConnectionBase);
+
+TChannelConnection.prototype.start = function start() {
+    var self = this;
+    if (self.direction === 'out') {
+        self.handler.sendInitRequest();
+        self.handler.once('init.response', function onOutIdentified(init) {
+            self.remoteName = init.hostPort;
+            self.emit('identified', {
+                hostPort: init.hostPort,
+                processName: init.processName
+            });
+        });
+    } else {
+        self.handler.once('init.request', function onInIdentified(init) {
+            self.remoteName = init.hostPort;
+            self.channel.peers.add(self.remoteName).addConnection(self);
+            self.emit('identified', {
+                hostPort: init.hostPort,
+                processName: init.processName
+            });
+        });
+    }
+};
 
 TChannelConnection.prototype.close = function close(callback) {
     var self = this;
