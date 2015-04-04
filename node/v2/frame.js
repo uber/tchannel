@@ -71,7 +71,8 @@ function Frame(id, body) {
 }
 
 Frame.Overhead = 0x10;
-Frame.MaxBodySize = 0xffff - Frame.Overhead;
+Frame.MaxSize = 0xffff;
+Frame.MaxBodySize = Frame.MaxSize - Frame.Overhead;
 Frame.MaxId = 0xfffffffe;
 Frame.NullId = 0xffffffff;
 

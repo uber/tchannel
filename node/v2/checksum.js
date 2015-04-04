@@ -27,7 +27,7 @@ var TypedError = require('error/typed');
 
 var ChecksumError = TypedError({
     type: 'tchannel.checksum',
-    message: 'invalid checksum',
+    message: 'invalid checksum (type {checksumType}) expected: {expectedValue} actual: {actualValue}',
     checksumType: null,
     expectedValue: null,
     actualValue: null
