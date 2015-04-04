@@ -38,11 +38,18 @@ var argv = parseArgs(process.argv.slice(2), {
 });
 var multiplicity = parseInt(argv.multiplicity) || 2;
 
-var serverProc = childProcess.spawn('node', [server]);
+function run(script, args) {
+    args = args ? args.slice(0) : [];
+    args.unshift(script);
+    var child = childProcess.spawn('node', args);
+    return child;
+}
+
+var serverProc = run(server);
 serverProc.stdout.pipe(process.stderr);
 serverProc.stderr.pipe(process.stderr);
 
-var benchProc = childProcess.spawn('node', [bench, '--multiplicity', String(multiplicity)]);
+var benchProc = run(bench, ['--multiplicity', String(multiplicity)]);
 benchProc.stderr.pipe(process.stderr);
 
 benchProc.stdout
