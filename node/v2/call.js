@@ -55,46 +55,121 @@ function CallRequest(flags, ttl, tracing, service, headers, csum, args) {
     self._flagsOffset = 0;
 }
 
-var flagsReadLen = {
-    byteLength: flagsLength,
-    writeInto: saveFlagsOffset,
-    readFrom: readFlagsFrom
-};
+CallRequest.Cont = require('./cont').RequestCont;
+CallRequest.TypeCode = 0x03;
+CallRequest.RW = bufrw.Base(callReqLength, readCallReqFrom, writeCallReqInto);
 
-var flagsRetWrite = {
-    writeInto: writeFlagsInto,
-};
+function callReqLength(body) {
+    var res;
+    var length = 0;
 
-function saveFlagsOffset(body, buffer, offset) {
-    body._flagsOffset = offset;
-    return bufrw.WriteResult.just(offset + bufrw.UInt8.width);
-}
+    // flags:1
+    length += bufrw.UInt8.width;
 
-function flagsLength() {
-    return bufrw.LengthResult.just(bufrw.UInt8.width);
-}
+    // ttl:4
+    length += bufrw.UInt32BE.width;
 
-function writeFlagsInto(body, buffer, offset) {
-    var res = bufrw.UInt8.writeInto(body.flags, buffer, body._flagsOffset);
-    if (!res.err) res.offset = offset;
+    // tracing:24 traceflags:1
+    res = Tracing.RW.byteLength(body.tracing);
+    if (res.err) return res;
+    length += res.length;
+
+    // service~1
+    res = bufrw.str1.byteLength(body.service);
+    if (res.err) return res;
+    length += res.length;
+
+    // nh:1 (hk~1 hv~1){nh}
+    res = header.header1.byteLength(body.headers);
+    if (res.err) return res;
+    length += res.length;
+
+    // csumtype:1 (csum:4){0,1} (arg~2)*
+    res = argsrw.byteLength(body);
+    if (!res.err) res.length += length;
+
     return res;
 }
 
-function readFlagsFrom(body, buffer, offset) {
-    return bufrw.UInt8.readFrom(buffer, offset);
+function readCallReqFrom(buffer, offset) {
+    var res;
+    var body = new CallRequest();
+
+    // flags:1
+    res = bufrw.UInt8.readFrom(buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+    body.flags = res.value;
+
+    // ttl:4
+    res = bufrw.UInt32BE.readFrom(buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+    body.ttl = res.value;
+
+    // tracing:24 traceflags:1
+    res = Tracing.RW.readFrom(buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+    body.tracing = res.value;
+
+    // service~1
+    res = bufrw.str1.readFrom(buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+    body.service = res.value;
+
+    // nh:1 (hk~1 hv~1){nh}
+    res = header.header1.readFrom(buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+    body.headers = res.value;
+
+    // csumtype:1 (csum:4){0,1} (arg~2)*
+    res = argsrw.readFrom(body, buffer, offset);
+    if (!res.err) res.value = body;
+
+    return res;
 }
 
-CallRequest.Cont = require('./cont').RequestCont;
-CallRequest.TypeCode = 0x03;
-CallRequest.RW = bufrw.Struct(CallRequest, [
-    {name: 'flags', call: flagsReadLen},   // flags:1 -- skipped at first
-    {name: 'ttl', rw: bufrw.UInt32BE},     // ttl:4
-    {name: 'tracing', rw: Tracing.RW},     // tracing:24 traceflags:1
-    {name: 'service', rw: bufrw.str1},     // service~1
-    {name: 'headers', rw: header.header1}, // nh:1 (hk~1 hv~1){nh}
-    {call: argsrw},                        // (arg~2)*
-    {call: flagsRetWrite}                  // -- rw flags last
-]);
+function writeCallReqInto(body, buffer, offset) {
+    var start = offset;
+    var res;
+
+    // flags:1 -- filled in later after argsrw
+    offset += bufrw.UInt8.width;
+
+    // ttl:4
+    res = bufrw.UInt32BE.writeInto(body.ttl, buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+
+    // tracing:24 traceflags:1
+    res = Tracing.RW.writeInto(body.tracing, buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+
+    // service~1
+    res = bufrw.str1.writeInto(body.service, buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+
+    // nh:1 (hk~1 hv~1){nh}
+    res = header.header1.writeInto(body.headers, buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+
+    // csumtype:1 (csum:4){0,1} (arg~2)* -- (may mutate body.flags)
+    res = argsrw.writeInto(body, buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+
+    // now we know the final flags, write them
+    res = bufrw.UInt8.writeInto(body.flags, buffer, start);
+    if (!res.err) res.offset = offset;
+
+    return res;
+}
 
 CallRequest.prototype.verifyChecksum = function verifyChecksum() {
     var self = this;
@@ -118,14 +193,102 @@ function CallResponse(flags, code, tracing, headers, csum, args) {
 CallResponse.Cont = require('./cont').ResponseCont;
 CallResponse.TypeCode = 0x04;
 CallResponse.Codes = ResponseCodes;
-CallResponse.RW = bufrw.Struct(CallResponse, [
-    {name: 'flags', call: flagsReadLen},   // flags:1 -- skipped at first
-    {name: 'code', rw: bufrw.UInt8},       // code:1
-    {name: 'tracing', rw: Tracing.RW},     // tracing:24 traceflags:1
-    {name: 'headers', rw: header.header1}, // nh:1 (hk~1 hv~1){nh}
-    {call: argsrw},                        // (arg~2)*
-    {call: flagsRetWrite}                  // -- rw flags last
-]);
+CallResponse.RW = bufrw.Base(callResLength, readCallResFrom, writeCallResInto);
+
+function callResLength(body) {
+    var res;
+    var length = 0;
+
+    // flags:1
+    length += bufrw.UInt8.width;
+    // code:1
+    length += bufrw.UInt8.width;
+
+    // tracing:24 traceflags:1
+    res = Tracing.RW.byteLength(body.tracing);
+    if (res.err) return res;
+    length += res.length;
+
+    // nh:1 (hk~1 hv~1){nh}
+    res = header.header1.byteLength(body.headers);
+    if (res.err) return res;
+    length += res.length;
+
+    // csumtype:1 (csum:4){0,1} (arg~2)*
+    res = argsrw.byteLength(body);
+    if (!res.err) res.length += length;
+
+    return res;
+}
+
+function readCallResFrom(buffer, offset) {
+    var res;
+    var body = new CallResponse();
+
+    // flags:1
+    res = bufrw.UInt8.readFrom(buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+    body.flags = res.value;
+
+    // code:1
+    res = bufrw.UInt8.readFrom(buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+    body.code = res.value;
+
+    // tracing:24 traceflags:1
+    res = Tracing.RW.readFrom(buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+    body.tracing = res.value;
+
+    // nh:1 (hk~1 hv~1){nh}
+    res = header.header1.readFrom(buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+    body.headers = res.value;
+
+    // csumtype:1 (csum:4){0,1} (arg~2)*
+    res = argsrw.readFrom(body, buffer, offset);
+    if (!res.err) res.value = body;
+
+    return res;
+}
+
+function writeCallResInto(body, buffer, offset) {
+    var start = offset;
+    var res;
+
+    // flags:1 -- filled in later after argsrw
+    offset += bufrw.UInt8.width;
+
+    // code:1
+    res = bufrw.UInt8.writeInto(body.code, buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+
+    // tracing:24 traceflags:1
+    res = Tracing.RW.writeInto(body.tracing, buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+
+    // nh:1 (hk~1 hv~1){nh}
+    res = header.header1.writeInto(body.headers, buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+
+    // csumtype:1 (csum:4){0,1} (arg~2)* -- (may mutate body.flags)
+    res = argsrw.writeInto(body, buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+
+    // now we know the final flags, write them
+    res = bufrw.UInt8.writeInto(body.flags, buffer, start);
+    if (!res.err) res.offset = offset;
+
+    return res;
+}
 
 CallResponse.prototype.verifyChecksum = function verifyChecksum() {
     var self = this;
