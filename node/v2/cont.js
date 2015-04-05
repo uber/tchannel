@@ -86,11 +86,6 @@ CallRequestCont.prototype.splitArgs = function splitArgs(args, maxSize) {
     return ret;
 };
 
-CallRequestCont.prototype.updateChecksum = function updateChecksum(prior) {
-    var self = this;
-    return self.csum.update(self.args, prior);
-};
-
 CallRequestCont.prototype.verifyChecksum = function verifyChecksum(prior) {
     var self = this;
     return self.csum.verify(self.args, prior);
@@ -112,11 +107,6 @@ CallResponseCont.RW = bufrw.Struct(CallResponseCont, [
 ]);
 
 CallResponseCont.prototype.splitArgs = CallRequestCont.prototype.splitArgs;
-
-CallResponseCont.prototype.updateChecksum = function updateChecksum(prior) {
-    var self = this;
-    return self.csum.update(self.args, prior);
-};
 
 CallResponseCont.prototype.verifyChecksum = function verifyChecksum(prior) {
     var self = this;
