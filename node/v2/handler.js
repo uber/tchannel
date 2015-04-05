@@ -219,7 +219,7 @@ TChannelV2Handler.prototype._handleCallFrame = function _handleCallFrame(r, fram
 
     var checksum = r.checksum;
     if (checksum.type !== frame.body.csum.type) {
-        callback(new Error('checksum type changed mid-tream')); // TODO typed error
+        callback(new Error('checksum type changed mid-stream')); // TODO typed error
         return;
     }
 
@@ -275,14 +275,18 @@ TChannelV2Handler.prototype.sendInitResponse = function sendInitResponse(reqFram
 
 TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame(req, flags, args) {
     var self = this;
-    var reqBody = v2.CallRequest(flags, req.ttl, req.tracing, req.service, req.headers, req.checksum.type);
+    var reqBody = v2.CallRequest(
+        flags, req.ttl, req.tracing, req.service, req.headers,
+        req.checksum.type);
     req.checksum = self._sendCallBodies(req.id, reqBody.csum, reqBody, args);
 };
 
 TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFrame(res, flags, args) {
     var self = this;
     var code = res.ok ? v2.CallResponse.Codes.OK : v2.CallResponse.Codes.Error;
-    var resBody = v2.CallResponse(flags, code, res.tracing, res.headers, res.checksum.type);
+    var resBody = v2.CallResponse(
+        flags, code, res.tracing, res.headers,
+        res.checksum.type);
     res.checksum = self._sendCallBodies(res.id, resBody.csum, resBody, args);
 };
 
