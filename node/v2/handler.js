@@ -230,7 +230,7 @@ TChannelV2Handler.prototype._handleCallFrame = function _handleCallFrame(r, fram
     }
     r.checksum = frame.body.csum;
 
-    var isLast = !(frame.body.flags & v2.CallRequest.Flags.Fragment);
+    var isLast = !(frame.body.flags & v2.CallFlags.Fragment);
     r.handleFrame(frame.body.args);
     if (isLast) {
         r.handleFrame(null);
@@ -347,13 +347,13 @@ TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest
 
     function sendCallRequestFrame(args, isLast) {
         var flags = 0;
-        if (!isLast) flags |= v2.CallResponse.Flags.Fragment;
+        if (!isLast) flags |= v2.CallFlags.Fragment;
         self.sendCallRequestFrame(req, flags, args);
     }
 
     function sendCallRequestContFrame(args, isLast) {
         var flags = 0;
-        if (!isLast) flags |= v2.CallResponse.Flags.Fragment;
+        if (!isLast) flags |= v2.CallFlags.Fragment;
         self.sendCallRequestContFrame(req, flags, args);
     }
 };
@@ -374,13 +374,13 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
 
     function sendCallResponseFrame(args, isLast) {
         var flags = 0;
-        if (!isLast) flags |= v2.CallResponse.Flags.Fragment;
+        if (!isLast) flags |= v2.CallFlags.Fragment;
         self.sendCallResponseFrame(res, flags, args);
     }
 
     function sendCallResponseContFrame(args, isLast) {
         var flags = 0;
-        if (!isLast) flags |= v2.CallResponse.Flags.Fragment;
+        if (!isLast) flags |= v2.CallFlags.Fragment;
         self.sendCallResponseContFrame(res, flags, args);
     }
 
@@ -396,7 +396,7 @@ TChannelV2Handler.prototype.buildIncomingRequest = function buildIncomingRequest
         service: reqFrame.body.service,
         headers: reqFrame.body.headers,
         checksum: v2.Checksum(reqFrame.body.csum.type),
-        streamed: reqFrame.body.flags & v2.CallRequest.Flags.Fragment
+        streamed: reqFrame.body.flags & v2.CallFlags.Fragment
     });
 };
 
@@ -404,6 +404,6 @@ TChannelV2Handler.prototype.buildIncomingResponse = function buildIncomingRespon
     return TChannelIncomingResponse(resFrame.id, {
         code: resFrame.body.code,
         checksum: v2.Checksum(resFrame.body.csum.type),
-        streamed: resFrame.body.flags & v2.CallRequest.Flags.Fragment
+        streamed: resFrame.body.flags & v2.CallFlags.Fragment
     });
 };

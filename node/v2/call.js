@@ -27,9 +27,10 @@ var header = require('./header');
 var Tracing = require('./tracing');
 var argsrw = ArgsRW(bufrw.buf2);
 
-var Flags = {
-    Fragment: 0x01
-};
+var Flags;
+process.nextTick(function() {
+    Flags = require('./index').CallFlags;
+});
 
 var ResponseCodes = {
     OK: 0x00,
@@ -62,7 +63,6 @@ function CallRequest(flags, ttl, tracing, service, headers, csum, args) {
 
 CallRequest.Cont = require('./cont').RequestCont;
 CallRequest.TypeCode = 0x03;
-CallRequest.Flags = Flags;
 CallRequest.RW = bufrw.Struct(CallRequest, [
     {name: 'flags', rw: bufrw.UInt8},      // flags:1
     {name: 'ttl', rw: bufrw.UInt32BE},     // ttl:4
@@ -102,12 +102,12 @@ CallRequest.prototype.splitArgs = function splitArgs(args, maxSize) {
     var ret = [self];
 
     if (split) {
-        var isLast = !(self.flags & CallRequest.Flags.Fragment);
+        var isLast = !(self.flags & Flags.Fragment);
         self.flags |= Flags.Fragment;
         var cont = self.constructor.Cont(self.flags, self.csum.type);
         ret = cont.splitArgs(args, maxSize);
         ret.unshift(self);
-        if (isLast) ret[ret.length - 1].flags &= ~ CallRequest.Flags.Fragment;
+        if (isLast) ret[ret.length - 1].flags &= ~ Flags.Fragment;
     }
 
     return ret;
@@ -140,7 +140,6 @@ function CallResponse(flags, code, tracing, headers, csum, args) {
 
 CallResponse.Cont = require('./cont').ResponseCont;
 CallResponse.TypeCode = 0x04;
-CallResponse.Flags = CallRequest.Flags;
 CallResponse.Codes = ResponseCodes;
 CallResponse.RW = bufrw.Struct(CallResponse, [
     {name: 'flags', rw: bufrw.UInt8},      // flags:1
