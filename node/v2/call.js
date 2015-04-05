@@ -50,11 +50,7 @@ function CallRequest(flags, ttl, tracing, service, headers, csum, args) {
     self.tracing = tracing || Tracing.emptyTracing;
     self.service = service || '';
     self.headers = headers || {};
-    if (csum === undefined || csum === null) {
-        self.csum = Checksum(Checksum.Types.None);
-    } else {
-        self.csum = Checksum.objOrType(csum);
-    }
+    self.csum = Checksum.objOrType(csum);
     self.args = args || [];
 }
 
@@ -135,11 +131,7 @@ function CallResponse(flags, code, tracing, headers, csum, args) {
     self.code = code || CallResponse.Codes.OK;
     self.tracing = tracing || Tracing.emptyTracing;
     self.headers = headers || {};
-    if (csum === undefined || csum === null) {
-        self.csum = Checksum(Checksum.Types.None);
-    } else {
-        self.csum = Checksum.objOrType(csum);
-    }
+    self.csum = Checksum.objOrType(csum);
     self.args = args || [];
 }
 

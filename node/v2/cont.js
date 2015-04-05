@@ -36,11 +36,7 @@ function CallRequestCont(flags, csum, args) {
     var self = this;
     self.type = CallRequestCont.TypeCode;
     self.flags = flags || 0;
-    if (csum === undefined || csum === null) {
-        self.csum = Checksum(Checksum.Types.None);
-    } else {
-        self.csum = Checksum.objOrType(csum);
-    }
+    self.csum = Checksum.objOrType(csum);
     self.args = args || [];
 }
 
@@ -113,11 +109,7 @@ function CallResponseCont(flags, csum, args) {
     var self = this;
     self.type = CallResponseCont.TypeCode;
     self.flags = flags || 0;
-    if (csum === undefined || csum === null) {
-        self.csum = Checksum(Checksum.Types.None);
-    } else {
-        self.csum = Checksum.objOrType(csum);
-    }
+    self.csum = Checksum.objOrType(csum);
     self.args = args || [];
 }
 
