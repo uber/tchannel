@@ -77,18 +77,22 @@ ArgsRW.prototype.byteLength = function byteLength(body) {
 
 ArgsRW.prototype.writeInto = function writeInto(body, buffer, offset) {
     var self = this;
+    var start = offset;
     var res;
 
-    body.csum.update(body.args, body.csum.val);
-    res = Checksum.RW.writeInto(body.csum, buffer, offset);
-    if (res.err) return res;
-    offset = res.offset;
+    var lenres = Checksum.RW.byteLength(body.csum);
+    if (lenres.err) return WriteResult.error(lenres.err);
+    offset += lenres.length;
 
     for (var i = 0; i < body.args.length; i++) {
         res = self.argrw.writeInto(body.args[i], buffer, offset);
         if (res.err) return res;
         offset = res.offset;
     }
+
+    body.csum.update(body.args, body.csum.val);
+    res = Checksum.RW.writeInto(body.csum, buffer, start);
+    if (!res.err) res.offset = offset;
 
     return res;
 };
