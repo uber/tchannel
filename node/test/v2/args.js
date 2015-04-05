@@ -133,6 +133,18 @@ test('ArgsRW: read/write payload', testRW.cases(TestBody.RW, [
             0x00, 0x02, 0x74, 0x6f, // arg2~2
             0x00, 0x02, 0x74, 0x65  // arg3~2
         ]
+    ],
+
+    [
+        TestBody(
+            null,
+            [Buffer('on'), Buffer(0), Buffer(0)]
+        ), [
+            0x00,                   // csumtype:1
+            0x00, 0x02, 0x6f, 0x6e, // arg1~2
+            0x00, 0x00,             // arg2~2
+            0x00, 0x00              // arg3~2
+        ]
     ]
 
 ]));

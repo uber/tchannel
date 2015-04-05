@@ -286,8 +286,8 @@ TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame
     var self = this;
     var reqBody = v2.CallRequest(
         flags, req.ttl, req.tracing, req.service, req.headers,
-        req.checksum.type);
-    req.checksum = self._sendCallBodies(req.id, reqBody, args, null);
+        req.checksum.type, args);
+    req.checksum = self._sendCallBodies(req.id, reqBody, null);
 };
 
 TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFrame(res, flags, args) {
@@ -295,32 +295,33 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
     var code = res.ok ? v2.CallResponse.Codes.OK : v2.CallResponse.Codes.Error;
     var resBody = v2.CallResponse(
         flags, code, res.tracing, res.headers,
-        res.checksum.type);
-    res.checksum = self._sendCallBodies(res.id, resBody, args, null);
+        res.checksum.type, args);
+    res.checksum = self._sendCallBodies(res.id, resBody, null);
 };
 
 TChannelV2Handler.prototype.sendCallRequestContFrame = function sendCallRequestContFrame(req, flags, args) {
     var self = this;
-    var reqBody = v2.CallRequestCont(flags, req.checksum.type);
-    req.checksum = self._sendCallBodies(req.id, reqBody, args, req.checksum);
+    var reqBody = v2.CallRequestCont(flags, req.checksum.type, args);
+    req.checksum = self._sendCallBodies(req.id, reqBody, req.checksum);
 };
 
 TChannelV2Handler.prototype.sendCallResponseContFrame = function sendCallResponseContFrame(res, flags, args) {
     var self = this;
-    var resBody = v2.CallResponseCont(flags, res.checksum.type);
-    res.checksum = self._sendCallBodies(res.id, resBody, args, res.checksum);
+    var resBody = v2.CallResponseCont(flags, res.checksum.type, args);
+    res.checksum = self._sendCallBodies(res.id, resBody, res.checksum);
 };
 
-TChannelV2Handler.prototype._sendCallBodies = function _sendCallBodies(id, body, args, checksum) {
+TChannelV2Handler.prototype._sendCallBodies = function _sendCallBodies(id, body, checksum) {
     var self = this;
-    var bodies = body.splitArgs(args, v2.Frame.MaxBodySize);
-    for (var i = 0; i < bodies.length; i++) {
-        body = bodies[i];
+    var frame;
+
+    // jshint boss:true
+    do {
         if (checksum) body.csum = checksum;
-        var frame = v2.Frame(id, body);
+        frame = v2.Frame(id, body);
         self.pushFrame(frame);
         checksum = body.csum;
-    }
+    } while (body = body.cont);
     return checksum;
 };
 
