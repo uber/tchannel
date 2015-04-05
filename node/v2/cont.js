@@ -25,9 +25,10 @@ var Checksum = require('./checksum');
 var ArgsRW = require('./args');
 var argsrw = ArgsRW(bufrw.buf2);
 
-var Flags = {
-    Fragment: 0x01
-};
+var Flags;
+process.nextTick(function() {
+    Flags = require('./index').CallFlags;
+});
 
 // flags:1 csumtype:1 (csum:4){0,1} (arg~2)+
 function CallRequestCont(flags, csum, args) {
@@ -42,7 +43,6 @@ function CallRequestCont(flags, csum, args) {
 }
 
 CallRequestCont.TypeCode = 0x13;
-CallRequestCont.Flags = Flags;
 CallRequestCont.RW = bufrw.Struct(CallRequestCont, [
     {name: 'flags', rw: bufrw.UInt8}, // flags:1
     {name: 'csum', rw: Checksum.RW},  // csumtype:1 (csum:4){0,1}
@@ -113,7 +113,6 @@ function CallResponseCont(flags, csum, args) {
 }
 
 CallResponseCont.TypeCode = 0x14;
-CallResponseCont.Flags = Flags;
 CallResponseCont.RW = bufrw.Struct(CallResponseCont, [
     {name: 'flags', rw: bufrw.UInt8}, // flags:1
     {name: 'csum', rw: Checksum.RW},  // csumtype:1 (csum:4){0},1}
