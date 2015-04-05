@@ -23,13 +23,15 @@
 var test = require('tape');
 var bufrw = require('bufrw');
 var testRW = require('bufrw/test_rw');
+var Checksum = require('../../v2/checksum.js');
 var ArgsRW = require('../../v2/args.js');
 
-function TestBody(args) {
+function TestBody(csum, args) {
     if (!(this instanceof TestBody)) {
-        return new TestBody(args);
+        return new TestBody(csum, args);
     }
     var self = this;
+    self.csum = Checksum.objOrType(csum);
     self.args = args || [];
 }
 
@@ -40,25 +42,29 @@ TestBody.RW = bufrw.Struct(TestBody, [
 test('ArgsRW: read/write payload', testRW.cases(TestBody.RW, [
 
     [
-        TestBody([]), [
+        TestBody(null, []), [
+            0x00 // csumtype:1
         ]
     ],
 
     [
-        TestBody([Buffer('on')]), [
-            0x00, 0x02, 0x6f, 0x6e  // arg1~2
+        TestBody(null, [Buffer('on')]), [
+            0x00,                  // csumtype:1
+            0x00, 0x02, 0x6f, 0x6e // arg1~2
         ]
     ],
 
     [
-        TestBody([Buffer('on'), Buffer('to')]), [
+        TestBody(null, [Buffer('on'), Buffer('to')]), [
+            0x00,                   // csumtype:1
             0x00, 0x02, 0x6f, 0x6e, // arg1~2
             0x00, 0x02, 0x74, 0x6f  // arg2~2
         ]
     ],
 
     [
-        TestBody([Buffer('on'), Buffer('to'), Buffer('te')]), [
+        TestBody(null, [Buffer('on'), Buffer('to'), Buffer('te')]), [
+            0x00,                   // csumtype:1
             0x00, 0x02, 0x6f, 0x6e, // arg1~2
             0x00, 0x02, 0x74, 0x6f, // arg2~2
             0x00, 0x02, 0x74, 0x65  // arg3~2

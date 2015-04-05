@@ -23,6 +23,7 @@
 var TypedError = require('error/typed');
 var inherits = require('util').inherits;
 var bufrw = require('bufrw');
+var Checksum = require('./checksum');
 
 var LengthResult = bufrw.LengthResult;
 var WriteResult = bufrw.WriteResult;
@@ -50,6 +51,10 @@ ArgsRW.prototype.byteLength = function byteLength(body) {
     var length = 0;
     var res;
 
+    res = Checksum.RW.byteLength(body.csum);
+    if (res.err) return res;
+    length += res.length;
+
     if (body.args === null) {
         return LengthResult.just(length);
     }
@@ -74,6 +79,10 @@ ArgsRW.prototype.writeInto = function writeInto(body, buffer, offset) {
     var self = this;
     var res;
 
+    res = Checksum.RW.writeInto(body.csum, buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+
     for (var i = 0; i < body.args.length; i++) {
         res = self.argrw.writeInto(body.args[i], buffer, offset);
         if (res.err) return res;
@@ -86,6 +95,11 @@ ArgsRW.prototype.writeInto = function writeInto(body, buffer, offset) {
 ArgsRW.prototype.readFrom = function readFrom(body, buffer, offset) {
     var self = this;
     var res;
+
+    res = Checksum.RW.readFrom(buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+    body.csum = res.value;
 
     body.args = [];
     while (offset < buffer.length) {

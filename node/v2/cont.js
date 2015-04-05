@@ -45,7 +45,6 @@ function CallRequestCont(flags, csum, args) {
 CallRequestCont.TypeCode = 0x13;
 CallRequestCont.RW = bufrw.Struct(CallRequestCont, [
     {name: 'flags', rw: bufrw.UInt8}, // flags:1
-    {name: 'csum', rw: Checksum.RW},  // csumtype:1 (csum:4){0,1}
     {call: argsrw}                    // (arg~2)+
 ]);
 
@@ -115,7 +114,6 @@ function CallResponseCont(flags, csum, args) {
 CallResponseCont.TypeCode = 0x14;
 CallResponseCont.RW = bufrw.Struct(CallResponseCont, [
     {name: 'flags', rw: bufrw.UInt8}, // flags:1
-    {name: 'csum', rw: Checksum.RW},  // csumtype:1 (csum:4){0},1}
     {call: argsrw}                    // (arg~2)+
 ]);
 
