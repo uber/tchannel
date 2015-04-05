@@ -32,7 +32,7 @@ function TestBody(csum, args) {
         return new TestBody(csum, args);
     }
     var self = this;
-    self.csum = Checksum.objOrType(csum);
+    self.csum = new Checksum.objOrType(csum);
     self.args = args || [];
 }
 
@@ -101,7 +101,7 @@ test('ArgsRW: read/write payload', testRW.cases(TestBody.RW, [
 
     [
         TestBody(
-            Checksum(Checksum.Types.CRC32, crc32('prior')),
+            new Checksum(Checksum.Types.CRC32, crc32('prior')),
             [Buffer('on')]
         ), [
             0x01,                   // csumtype:1
@@ -112,7 +112,7 @@ test('ArgsRW: read/write payload', testRW.cases(TestBody.RW, [
 
     [
         TestBody(
-            Checksum(Checksum.Types.CRC32, crc32('prior')),
+            new Checksum(Checksum.Types.CRC32, crc32('prior')),
             [Buffer('on'), Buffer('to')]
         ), [
             0x01,                   // csumtype:1
@@ -124,7 +124,7 @@ test('ArgsRW: read/write payload', testRW.cases(TestBody.RW, [
 
     [
         TestBody(
-            Checksum(Checksum.Types.CRC32, crc32('prior')),
+            new Checksum(Checksum.Types.CRC32, crc32('prior')),
             [Buffer('on'), Buffer('to'), Buffer('te')]
         ), [
             0x01,                   // csumtype:1
@@ -132,6 +132,18 @@ test('ArgsRW: read/write payload', testRW.cases(TestBody.RW, [
             0x00, 0x02, 0x6f, 0x6e, // arg1~2
             0x00, 0x02, 0x74, 0x6f, // arg2~2
             0x00, 0x02, 0x74, 0x65  // arg3~2
+        ]
+    ],
+
+    [
+        TestBody(
+            null,
+            [Buffer('on'), Buffer(0), Buffer(0)]
+        ), [
+            0x00,                   // csumtype:1
+            0x00, 0x02, 0x6f, 0x6e, // arg1~2
+            0x00, 0x00,             // arg2~2
+            0x00, 0x00              // arg3~2
         ]
     ]
 

@@ -24,6 +24,7 @@ var TypedError = require('error/typed');
 var inherits = require('util').inherits;
 var bufrw = require('bufrw');
 var Checksum = require('./checksum');
+var v2 = require('./index');
 
 var LengthResult = bufrw.LengthResult;
 var WriteResult = bufrw.WriteResult;
@@ -84,10 +85,17 @@ ArgsRW.prototype.writeInto = function writeInto(body, buffer, offset) {
     if (lenres.err) return WriteResult.error(lenres.err);
     offset += lenres.length;
 
-    for (var i = 0; i < body.args.length; i++) {
-        res = self.argrw.writeInto(body.args[i], buffer, offset);
+    if (body.cont === null) {
+        res = self.writeFragmentInto(body, buffer, offset);
         if (res.err) return res;
         offset = res.offset;
+    } else {
+        // assume that something else already did the fragmentation correctly
+        for (var i = 0; i < body.args.length; i++) {
+            res = self.argrw.writeInto(body.args[i], buffer, offset);
+            if (res.err) return res;
+            offset = res.offset;
+        }
     }
 
     body.csum.update(body.args, body.csum.val);
@@ -115,6 +123,39 @@ ArgsRW.prototype.readFrom = function readFrom(body, buffer, offset) {
     }
 
     return ReadResult.just(offset, body);
+};
+
+ArgsRW.prototype.writeFragmentInto = function writeFragmentInto(body, buffer, offset) {
+    var self = this;
+    var res;
+    var i = 0;
+    var overhead = self.argrw.sizerw.width;
+    var remain = buffer.length - offset;
+
+    do {
+        var arg = body.args[i] || Buffer(0);
+        var min = overhead + arg.length ? 1 : 0;
+        if (remain < min) break;
+        var need = overhead + arg.length;
+        if (need > remain) {
+            var j = remain - overhead;
+            body.args[i] = arg.slice(0, j);
+            body.cont = new body.constructor.Cont(
+                body.flags & v2.CallFlags.Fragment,
+                body.csum, // share on purpose
+                body.args.splice(i + 1)
+            );
+            body.cont.args.unshift(arg.slice(j));
+            body.flags |= v2.CallFlags.Fragment;
+            arg = body.args[i];
+        }
+        res = self.argrw.writeInto(arg, buffer, offset);
+        if (res.err) return res;
+        offset = res.offset;
+        remain = buffer.length - offset;
+    } while (remain >= overhead && ++i < body.args.length);
+
+    return res || WriteResult.just(offset);
 };
 
 module.exports = ArgsRW;
