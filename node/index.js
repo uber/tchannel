@@ -529,7 +529,8 @@ TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
         err = new Error('unknown connection reset'); // TODO typed error
     }
 
-    self.logger[err ? 'warn' : 'info']('resetting connection', {
+    var isError = err.type !== 'tchannel.socket-closed';
+    self.logger[isError ? 'warn' : 'info']('resetting connection', {
         error: err,
         remoteName: self.remoteName,
         localName: self.channel.hostPort,
@@ -539,7 +540,9 @@ TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
         outPending: self.outPending
     });
 
-    self.emit('error', err);
+    if (isError) {
+        self.emit('error', err);
+    }
 
     // requests that we've received we can delete, but these reqs may have started their
     //   own outgoing work, which is hard to cancel. By setting this.closing, we make sure
