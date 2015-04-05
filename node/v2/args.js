@@ -45,23 +45,24 @@ function ArgsRW(argrw) {
 }
 inherits(ArgsRW, bufrw.Base);
 
-ArgsRW.prototype.byteLength = function byteLength(args) {
+ArgsRW.prototype.byteLength = function byteLength(body) {
     var self = this;
     var length = 0;
     var res;
-    if (args === null) {
+
+    if (body.args === null) {
         return LengthResult.just(length);
     }
 
-    if (!Array.isArray(args)) {
+    if (!Array.isArray(body.args)) {
         return LengthResult.error(InvalidArgumentError({
-            argType: typeof args,
-            argConstructor: args.constructor.name
+            argType: typeof body.args,
+            argConstructor: body.args.constructor.name
         }));
     }
 
-    for (var i = 0; i < args.length; i++) {
-        res = self.argrw.byteLength(args[i]);
+    for (var i = 0; i < body.args.length; i++) {
+        res = self.argrw.byteLength(body.args[i]);
         if (res.err) return res;
         length += res.length;
     }
@@ -69,12 +70,12 @@ ArgsRW.prototype.byteLength = function byteLength(args) {
     return LengthResult.just(length);
 };
 
-ArgsRW.prototype.writeInto = function writeInto(args, buffer, offset) {
+ArgsRW.prototype.writeInto = function writeInto(body, buffer, offset) {
     var self = this;
     var res;
 
-    for (var i = 0; i < args.length; i++) {
-        res = self.argrw.writeInto(args[i], buffer, offset);
+    for (var i = 0; i < body.args.length; i++) {
+        res = self.argrw.writeInto(body.args[i], buffer, offset);
         if (res.err) return res;
         offset = res.offset;
     }
@@ -82,19 +83,19 @@ ArgsRW.prototype.writeInto = function writeInto(args, buffer, offset) {
     return WriteResult.just(offset);
 };
 
-ArgsRW.prototype.readFrom = function readFrom(buffer, offset) {
+ArgsRW.prototype.readFrom = function readFrom(body, buffer, offset) {
     var self = this;
-    var args = [];
     var res;
 
+    body.args = [];
     while (offset < buffer.length) {
         res = self.argrw.readFrom(buffer, offset);
         if (res.err) return res;
         offset = res.offset;
-        args.push(res.value);
+        body.args.push(res.value);
     }
 
-    return ReadResult.just(offset, args);
+    return ReadResult.just(offset, body);
 };
 
 module.exports = ArgsRW;
