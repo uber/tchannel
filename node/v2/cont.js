@@ -39,42 +39,59 @@ function CallRequestCont(flags, csum, args) {
     self._flagsOffset = 0;
 }
 
-var flagsReadLen = {
-    byteLength: flagsLength,
-    writeInto: saveFlagsOffset,
-    readFrom: readFlagsFrom
-};
+CallRequestCont.TypeCode = 0x13;
+CallRequestCont.Cont = CallRequestCont;
+CallRequestCont.RW = bufrw.Base(callReqContLength, readCallReqContFrom, writeCallReqContInto);
 
-var flagsRetWrite = {
-    writeInto: writeFlagsInto,
-};
+function callReqContLength(body) {
+    var res;
+    var length = 0;
 
-function saveFlagsOffset(body, buffer, offset) {
-    body._flagsOffset = offset;
-    return bufrw.WriteResult.just(offset + bufrw.UInt8.width);
-}
+    // flags:1
+    length += bufrw.UInt8.width;
 
-function flagsLength() {
-    return bufrw.LengthResult.just(bufrw.UInt8.width);
-}
+    // csumtype:1 (csum:4){0,1} (arg~2)*
+    res = argsrw.byteLength(body);
+    if (!res.err) res.length += length;
 
-function writeFlagsInto(body, buffer, offset) {
-    var res = bufrw.UInt8.writeInto(body.flags, buffer, body._flagsOffset);
-    if (!res.err) res.offset = offset;
     return res;
 }
 
-function readFlagsFrom(body, buffer, offset) {
-    return bufrw.UInt8.readFrom(buffer, offset);
+function readCallReqContFrom(buffer, offset) {
+    var res;
+    var body = CallRequestCont();
+
+    // flags:1
+    res = bufrw.UInt8.readFrom(buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+    body.flags = res.value;
+
+    // csumtype:1 (csum:4){0,1} (arg~2)*
+    res = argsrw.readFrom(body, buffer, offset);
+    if (!res.err) res.value = body;
+
+    return res;
 }
 
-CallRequestCont.TypeCode = 0x13;
-CallRequestCont.Cont = CallRequestCont;
-CallRequestCont.RW = bufrw.Struct(CallRequestCont, [
-    {name: 'flags', call: flagsReadLen}, // flags:1 -- skipped at first
-    {call: argsrw},                      // (arg~2)+
-    {call: flagsRetWrite}                // -- rw flags last
-]);
+function writeCallReqContInto(body, buffer, offset) {
+    var start = offset;
+    var res;
+
+    // flags:1 -- skip for now, write args frist
+    offset += bufrw.UInt8.width;
+
+    // csumtype:1 (csum:4){0,1} (arg~2)* -- (may mutate body.flags)
+    res = argsrw.writeInto(body, buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+
+    // now we know the final flags, write them
+    res = bufrw.UInt8.writeInto(body.flags, buffer, start);
+    if (!res.err) res.offset = offset;
+
+    return res;
+}
 
 CallRequestCont.prototype.verifyChecksum = function verifyChecksum(prior) {
     var self = this;
@@ -97,11 +114,57 @@ function CallResponseCont(flags, csum, args) {
 
 CallResponseCont.TypeCode = 0x14;
 CallResponseCont.Cont = CallResponseCont;
-CallResponseCont.RW = bufrw.Struct(CallResponseCont, [
-    {name: 'flags', call: flagsReadLen}, // flags:1 -- skipped at first
-    {call: argsrw},                      // (arg~2)+
-    {call: flagsRetWrite}                // -- rw flags last
-]);
+CallResponseCont.RW = bufrw.Base(callResContLength, readCallResContFrom, writeCallResContInto);
+
+function callResContLength(body) {
+    var res;
+    var length = 0;
+
+    // flags:1
+    length += bufrw.UInt8.width;
+
+    // csumtype:1 (csum:4){0,1} (arg~2)*
+    res = argsrw.byteLength(body);
+    if (!res.err) res.length += length;
+
+    return res;
+}
+
+function readCallResContFrom(buffer, offset) {
+    var res;
+    var body = CallResponseCont();
+
+    // flags:1
+    res = bufrw.UInt8.readFrom(buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+    body.flags = res.value;
+
+    // csumtype:1 (csum:4){0,1} (arg~2)*
+    res = argsrw.readFrom(body, buffer, offset);
+    if (!res.err) res.value = body;
+
+    return res;
+}
+
+function writeCallResContInto(body, buffer, offset) {
+    var start = offset;
+    var res;
+
+    // flags:1 -- skip for now, write args frist
+    offset += bufrw.UInt8.width;
+
+    // csumtype:1 (csum:4){0,1} (arg~2)* -- (may mutate body.flags)
+    res = argsrw.writeInto(body, buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+
+    // now we know the final flags, write them
+    res = bufrw.UInt8.writeInto(body.flags, buffer, start);
+    if (!res.err) res.offset = offset;
+
+    return res;
+}
 
 CallResponseCont.prototype.verifyChecksum = function verifyChecksum(prior) {
     var self = this;
