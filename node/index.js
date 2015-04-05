@@ -180,9 +180,6 @@ TChannel.prototype.getServer = function getServer() {
         });
         self.emit('error', err);
     });
-    self.serverSocket.on('close', function onServerSocketClose() {
-        self.logger.warn('server socket close');
-    });
     return self.serverSocket;
 };
 
