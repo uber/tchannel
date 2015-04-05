@@ -46,46 +46,54 @@ function ArgsRW(argrw) {
 inherits(ArgsRW, bufrw.Base);
 
 ArgsRW.prototype.byteLength = function byteLength(args) {
+    var self = this;
+    var length = 0;
+    var res;
     if (args === null) {
-        args = [];
-    } else if (!Array.isArray(args)) {
+        return LengthResult.just(length);
+    }
+
+    if (!Array.isArray(args)) {
         return LengthResult.error(InvalidArgumentError({
             argType: typeof args,
             argConstructor: args.constructor.name
         }));
     }
-    var self = this;
-    var length = 0;
-    var res;
+
     for (var i = 0; i < args.length; i++) {
         res = self.argrw.byteLength(args[i]);
         if (res.err) return res;
         length += res.length;
     }
+
     return LengthResult.just(length);
 };
 
 ArgsRW.prototype.writeInto = function writeInto(args, buffer, offset) {
     var self = this;
     var res;
+
     for (var i = 0; i < args.length; i++) {
         res = self.argrw.writeInto(args[i], buffer, offset);
         if (res.err) return res;
         offset = res.offset;
     }
+
     return WriteResult.just(offset);
 };
 
 ArgsRW.prototype.readFrom = function readFrom(buffer, offset) {
     var self = this;
-    var res;
     var args = [];
+    var res;
+
     while (offset < buffer.length) {
         res = self.argrw.readFrom(buffer, offset);
         if (res.err) return res;
         offset = res.offset;
         args.push(res.value);
     }
+
     return ReadResult.just(offset, args);
 };
 
