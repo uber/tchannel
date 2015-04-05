@@ -676,7 +676,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
         self.onSocketErr(err);
     });
     self.socket.on('close', function onSocketClose() {
-        self.onSocketErr(new Error('socket closed')); // TODO typed error
+        self.resetAll(new Error('socket closed')); // TODO typed error
         if (self.remoteName === '0.0.0.0:0') {
             self.channel.peers.delete(self.remoteAddr);
         }
