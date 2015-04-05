@@ -550,8 +550,6 @@ TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
 
     self.inPending = 0;
     self.outPending = 0;
-
-    self.emit('socketClose', self, err);
 };
 
 TChannelConnectionBase.prototype.popOutOp = function popOutOp(id) {
