@@ -109,6 +109,8 @@ ArgsRW.prototype.readFrom = function readFrom(body, buffer, offset) {
     var self = this;
     var res;
 
+    // TODO: missing symmetry: verify csum (requires prior somehow)
+
     res = Checksum.RW.readFrom(buffer, offset);
     if (res.err) return res;
     offset = res.offset;
