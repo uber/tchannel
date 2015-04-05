@@ -66,7 +66,6 @@ CallRequest.RW = bufrw.Struct(CallRequest, [
     {name: 'tracing', rw: Tracing.RW},     // tracing:24 traceflags:1
     {name: 'service', rw: bufrw.str1},     // service~1
     {name: 'headers', rw: header.header1}, // nh:1 (hk~1 hv~1){nh}
-    {name: 'csum', rw: Checksum.RW},       // csumtype:1 (csum:4){0,1}
     {call: argsrw}                         // (arg~2)*
 ]);
 
@@ -140,7 +139,6 @@ CallResponse.RW = bufrw.Struct(CallResponse, [
     {name: 'code', rw: bufrw.UInt8},       // code:1
     {name: 'tracing', rw: Tracing.RW},     // tracing:24 traceflags:1
     {name: 'headers', rw: header.header1}, // nh:1 (hk~1 hv~1){nh}
-    {name: 'csum', rw: Checksum.RW},       // csumtype:1 (csum:4){0},1}
     {call: argsrw}                         // (arg~2)*
 ]);
 
