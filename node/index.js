@@ -47,6 +47,12 @@ var EndpointHandler = require('./endpoint-handler.js');
 var DEFAULT_OUTGOING_REQ_TIMEOUT = 2000;
 var dumpEnabled = /\btchannel_dump\b/.test(process.env.NODE_DEBUG || '');
 
+var SocketClosedError = TypedError({
+    type: 'tchannel.socket-closed',
+    message: 'socket closed, {reason}',
+    reason: null
+});
+
 var TChannelListenError = WrappedError({
     type: 'tchannel.server.listen-failed',
     message: 'tchannel: {origMessage}',
@@ -397,7 +403,7 @@ TChannelConnectionBase.prototype.close = function close(callback) {
         peerRemoteAddr: self.remoteAddr,
         peerRemoteName: self.remoteName
     });
-    self.resetAll(new Error('shutdown from quit')); // TODO typed error
+    self.resetAll(SocketClosedError({reason: 'local close'}));
     process.nextTick(callback);
 };
 
@@ -675,7 +681,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
         self.onSocketErr(err);
     });
     self.socket.on('close', function onSocketClose() {
-        self.resetAll(new Error('socket closed')); // TODO typed error
+        self.resetAll(SocketClosedError({reason: 'remote clossed'}));
         if (self.remoteName === '0.0.0.0:0') {
             self.channel.peers.delete(self.remoteAddr);
         }
@@ -754,7 +760,7 @@ TChannelConnection.prototype.close = function close(callback) {
         peerRemoteName: self.remoteName,
         fromAddress: self.socket.address()
     });
-    self.resetAll(new Error('shutdown from quit')); // TODO typed error
+    self.resetAll(SocketClosedError({reason: 'local close'}));
     self.socket.destroy();
 };
 
