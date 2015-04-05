@@ -79,6 +79,7 @@ ArgsRW.prototype.writeInto = function writeInto(body, buffer, offset) {
     var self = this;
     var res;
 
+    body.csum.update(body.args, body.csum.val);
     res = Checksum.RW.writeInto(body.csum, buffer, offset);
     if (res.err) return res;
     offset = res.offset;
@@ -89,7 +90,7 @@ ArgsRW.prototype.writeInto = function writeInto(body, buffer, offset) {
         offset = res.offset;
     }
 
-    return WriteResult.just(offset);
+    return res;
 };
 
 ArgsRW.prototype.readFrom = function readFrom(body, buffer, offset) {

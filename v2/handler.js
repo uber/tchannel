@@ -329,10 +329,10 @@ TChannelV2Handler.prototype._sendCallBodies = function _sendCallBodies(id, body,
     var bodies = body.splitArgs(args, v2.Frame.MaxBodySize);
     for (var i = 0; i < bodies.length; i++) {
         body = bodies[i];
-        body.updateChecksum(checksum && checksum.val || 0);
-        checksum = body.csum;
+        if (checksum) body.csum = checksum;
         var frame = new v2.Frame(id, body);
         self.pushFrame(frame);
+        checksum = body.csum;
     }
     return checksum;
 };
