@@ -392,7 +392,6 @@ inherits(TChannelConnectionBase, EventEmitter);
 
 TChannelConnectionBase.prototype.close = function close(callback) {
     var self = this;
-    self.clearTimeoutTimer();
     self.logger.debug('destroy channel for', {
         direction: self.direction,
         peerRemoteAddr: self.remoteAddr,
@@ -749,7 +748,6 @@ inherits(TChannelConnection, TChannelConnectionBase);
 TChannelConnection.prototype.close = function close(callback) {
     var self = this;
     self.socket.once('close', callback);
-    self.clearTimeoutTimer();
     self.logger.debug('destroy channel for', {
         direction: self.direction,
         peerRemoteAddr: self.remoteAddr,
