@@ -278,7 +278,7 @@ TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame
     var reqBody = v2.CallRequest(
         flags, req.ttl, req.tracing, req.service, req.headers,
         req.checksum.type);
-    req.checksum = self._sendCallBodies(req.id, reqBody, args, reqBody.csum);
+    req.checksum = self._sendCallBodies(req.id, reqBody, args, null);
 };
 
 TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFrame(res, flags, args) {
@@ -287,7 +287,7 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
     var resBody = v2.CallResponse(
         flags, code, res.tracing, res.headers,
         res.checksum.type);
-    res.checksum = self._sendCallBodies(res.id, resBody, args, resBody.csum);
+    res.checksum = self._sendCallBodies(res.id, resBody, args, null);
 };
 
 TChannelV2Handler.prototype.sendCallRequestContFrame = function sendCallRequestContFrame(req, flags, args) {
@@ -307,7 +307,7 @@ TChannelV2Handler.prototype._sendCallBodies = function _sendCallBodies(id, body,
     var bodies = body.splitArgs(args, v2.Frame.MaxBodySize);
     for (var i = 0; i < bodies.length; i++) {
         body = bodies[i];
-        body.updateChecksum(checksum.val);
+        body.updateChecksum(checksum && checksum.val || 0);
         checksum = body.csum;
         var frame = v2.Frame(id, body);
         self.push(frame);
