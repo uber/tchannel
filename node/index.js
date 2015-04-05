@@ -511,6 +511,9 @@ TChannelConnectionBase.prototype.onReqTimeout = function onReqTimeout(op) {
 // stumbles across this object in a core dump.
 TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
     var self = this;
+
+    self.clearTimeoutTimer();
+
     if (self.closing) return;
     self.closing = true;
 
@@ -526,8 +529,6 @@ TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
         inPending: self.inPending,
         outPending: self.outPending
     });
-
-    self.clearTimeoutTimer();
 
     self.emit('error', err);
 
