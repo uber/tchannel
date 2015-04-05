@@ -49,6 +49,9 @@ Checksum.objOrType = function objOrType(arg) {
     if (arg instanceof Checksum) {
         return arg;
     }
+    if (arg === undefined || arg === null) {
+        return Checksum(Checksum.Types.None);
+    }
     if (typeof arg !== 'number') {
         throw new Error('expected a Checksum object or a valid checksum type');
     }
