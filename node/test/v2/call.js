@@ -38,7 +38,6 @@ var testReq = Call.Request(
     Checksum.Types.Farm32,
     [Buffer('on'), Buffer('to'), Buffer('te')]
 );
-testReq.updateChecksum();
 
 var testReqBytes = [
     0x00,                   // flags:1
@@ -85,7 +84,6 @@ var testRes = Call.Response(
     Checksum.Types.Farm32,
     [Buffer('ON'), Buffer('TO'), Buffer('TE')]
 );
-testRes.updateChecksum();
 
 var testResBytes = [
     0x00,                   // flags:1

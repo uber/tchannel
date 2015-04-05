@@ -29,7 +29,6 @@ var testReqCont = Cont.RequestCont(
     0, Checksum.Types.Farm32,
     [Buffer('on'), Buffer('to'), Buffer('te')]
 );
-testReqCont.updateChecksum();
 
 var testReqContBytes = [
     0x00,                   // flags:1
@@ -61,7 +60,6 @@ var testResCont = Cont.ResponseCont(
     0, Checksum.Types.Farm32,
     [Buffer('ON'), Buffer('TO'), Buffer('TE')]
 );
-testResCont.updateChecksum();
 
 var testResContBytes = [
     0x00,                   // flags:1
