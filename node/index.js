@@ -748,17 +748,16 @@ inherits(TChannelConnection, TChannelConnectionBase);
 
 TChannelConnection.prototype.close = function close(callback) {
     var self = this;
-    var sock = self.socket;
-    sock.once('close', callback);
+    self.socket.once('close', callback);
     self.clearTimeoutTimer();
     self.logger.debug('destroy channel for', {
         direction: self.direction,
         peerRemoteAddr: self.remoteAddr,
         peerRemoteName: self.remoteName,
-        fromAddress: sock.address()
+        fromAddress: self.socket.address()
     });
     self.resetAll(new Error('shutdown from quit')); // TODO typed error
-    sock.destroy();
+    self.socket.destroy();
 };
 
 TChannelConnection.prototype.onReaderError = function onReaderError(err) {
