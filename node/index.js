@@ -680,7 +680,6 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
         if (self.remoteName === '0.0.0.0:0') {
             self.channel.peers.delete(self.remoteAddr);
         }
-        self.clearTimeoutTimer(); // TODO probably not needed, both resetAll and close call it
     });
 
     self.reader.on('data', function onReaderFrame(frame) {
