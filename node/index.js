@@ -398,11 +398,6 @@ inherits(TChannelConnectionBase, EventEmitter);
 
 TChannelConnectionBase.prototype.close = function close(callback) {
     var self = this;
-    self.logger.debug('destroy channel for', {
-        direction: self.direction,
-        peerRemoteAddr: self.remoteAddr,
-        peerRemoteName: self.remoteName
-    });
     self.resetAll(SocketClosedError({reason: 'local close'}));
     process.nextTick(callback);
 };
@@ -761,12 +756,6 @@ inherits(TChannelConnection, TChannelConnectionBase);
 TChannelConnection.prototype.close = function close(callback) {
     var self = this;
     self.socket.once('close', callback);
-    self.logger.debug('destroy channel for', {
-        direction: self.direction,
-        peerRemoteAddr: self.remoteAddr,
-        peerRemoteName: self.remoteName,
-        fromAddress: self.socket.address()
-    });
     self.resetAll(SocketClosedError({reason: 'local close'}));
     self.socket.destroy();
 };
