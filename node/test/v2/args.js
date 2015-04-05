@@ -25,25 +25,40 @@ var bufrw = require('bufrw');
 var testRW = require('bufrw/test_rw');
 var ArgsRW = require('../../v2/args.js');
 
-test('ArgsRW: read/write payload', testRW.cases(ArgsRW(bufrw.buf2), [
+function TestBody(args) {
+    if (!(this instanceof TestBody)) {
+        return new TestBody(args);
+    }
+    var self = this;
+    self.args = args || [];
+}
 
-    [[], []],
+TestBody.RW = bufrw.Struct(TestBody, [
+    {call: ArgsRW(bufrw.buf2)}
+]);
+
+test('ArgsRW: read/write payload', testRW.cases(TestBody.RW, [
 
     [
-        [Buffer('on')], [
+        TestBody([]), [
+        ]
+    ],
+
+    [
+        TestBody([Buffer('on')]), [
             0x00, 0x02, 0x6f, 0x6e  // arg1~2
         ]
     ],
 
     [
-        [Buffer('on'), Buffer('to')], [
+        TestBody([Buffer('on'), Buffer('to')]), [
             0x00, 0x02, 0x6f, 0x6e, // arg1~2
             0x00, 0x02, 0x74, 0x6f  // arg2~2
         ]
     ],
 
     [
-        [Buffer('on'), Buffer('to'), Buffer('te')], [
+        TestBody([Buffer('on'), Buffer('to'), Buffer('te')]), [
             0x00, 0x02, 0x6f, 0x6e, // arg1~2
             0x00, 0x02, 0x74, 0x6f, // arg2~2
             0x00, 0x02, 0x74, 0x65  // arg3~2

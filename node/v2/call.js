@@ -70,7 +70,7 @@ CallRequest.RW = bufrw.Struct(CallRequest, [
     {name: 'service', rw: bufrw.str1},     // service~1
     {name: 'headers', rw: header.header1}, // nh:1 (hk~1 hv~1){nh}
     {name: 'csum', rw: Checksum.RW},       // csumtype:1 (csum:4){0,1}
-    {name: 'args', rw: argsrw}             // (arg~2)*
+    {call: argsrw}                         // (arg~2)*
 ]);
 
 CallRequest.prototype.splitArgs = function splitArgs(args, maxSize) {
@@ -147,7 +147,7 @@ CallResponse.RW = bufrw.Struct(CallResponse, [
     {name: 'tracing', rw: Tracing.RW},     // tracing:24 traceflags:1
     {name: 'headers', rw: header.header1}, // nh:1 (hk~1 hv~1){nh}
     {name: 'csum', rw: Checksum.RW},       // csumtype:1 (csum:4){0},1}
-    {name: 'args', rw: argsrw}             // (arg~2)*
+    {call: argsrw}                         // (arg~2)*
 ]);
 
 CallResponse.prototype.splitArgs = CallRequest.prototype.splitArgs;
