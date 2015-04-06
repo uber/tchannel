@@ -292,13 +292,13 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
 
 TChannelV2Handler.prototype.sendCallRequestContFrame = function sendCallRequestContFrame(req, flags, args) {
     var self = this;
-    var reqBody = v2.CallRequestCont(flags, req.checksum.type);
+    var reqBody = new v2.CallRequestCont(flags, req.checksum.type, args);
     req.checksum = self._sendCallBodies(req.id, reqBody, args, req.checksum);
 };
 
 TChannelV2Handler.prototype.sendCallResponseContFrame = function sendCallResponseContFrame(res, flags, args) {
     var self = this;
-    var resBody = v2.CallResponseCont(flags, res.checksum.type);
+    var resBody = new v2.CallResponseCont(flags, res.checksum.type, args);
     res.checksum = self._sendCallBodies(res.id, resBody, args, res.checksum);
 };
 
