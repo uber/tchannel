@@ -1272,18 +1272,23 @@ TChannelSelfConnection.prototype.buildOutgoingRequest = function buildOutgoingRe
     };
     var outreq = new reqres.OutgoingRequest(id, options);
     var inreq = new reqres.IncomingRequest(id, options);
-    inreq.once('error', onError);
-    inreq.once('response', onResponse);
+    var called = false;
+    inreq.on('error', onError);
+    inreq.on('response', onResponse);
     self.handleCallRequest(inreq);
     return outreq;
 
     function onError(err) {
+        if (called) return;
+        called = true;
         self.popOutOp(id);
         inreq.removeListener('response', onResponse);
         outreq.emit('error', err);
     }
 
     function onResponse(res) {
+        if (called) return;
+        called = true;
         self.popOutOp(id);
         inreq.removeListener('error', onError);
         outreq.emit('response', res);
