@@ -24,16 +24,22 @@ var bufrw = require('bufrw');
 
 module.exports = Tracing;
 
+var emptySpanId = Buffer(8);
+var emptyParentId = Buffer(8);
+var emptyTraceId = Buffer(8);
+emptySpanId.fill(0);
+emptyParentId.fill(0);
+emptyTraceId.fill(0);
+
 function Tracing(spanid, parentid, traceid, flags) {
     if (!(this instanceof Tracing)) {
         return new Tracing(spanid, parentid, traceid, flags);
     }
     var self = this;
-
-    self.spanid = spanid;
-    self.parentid = parentid;
-    self.traceid = traceid;
-    self.flags = flags;
+    self.spanid = spanid || emptySpanId;
+    self.parentid = parentid || emptyParentId;
+    self.traceid = traceid || emptyTraceId;
+    self.flags = flags || 0;
 }
 
 Tracing.RW = bufrw.Struct(Tracing, [
@@ -43,11 +49,4 @@ Tracing.RW = bufrw.Struct(Tracing, [
     {name: 'flags', rw: bufrw.UInt8}
 ]);
 
-var emptySpanId = Buffer(8);
-var emptyParentId = Buffer(8);
-var emptyTraceId = Buffer(8);
-emptySpanId.fill(0);
-emptyParentId.fill(0);
-emptyTraceId.fill(0);
-
-Tracing.emptyTracing = Tracing(emptySpanId, emptyParentId, emptyTraceId, 0);
+Tracing.emptyTracing = Tracing();
