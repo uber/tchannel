@@ -64,6 +64,11 @@ function TChannelV2Handler(options) {
 
 util.inherits(TChannelV2Handler, EventEmitter);
 
+TChannelV2Handler.prototype.write = function write() {
+    var self = this;
+    self.emit('error', new Error('write not implemented'));
+};
+
 TChannelV2Handler.prototype.pushFrame = function pushFrame(frame) {
     var self = this;
     var tup = bufrw.toBufferTuple(v2.Frame.RW, frame);
@@ -72,7 +77,7 @@ TChannelV2Handler.prototype.pushFrame = function pushFrame(frame) {
     if (err) {
         self.emit('error', err);
     } else {
-        self.emit('buffer', buffer);
+        self.write(buffer);
     }
 };
 
