@@ -47,6 +47,12 @@ var EndpointHandler = require('./endpoint-handler.js');
 var DEFAULT_OUTGOING_REQ_TIMEOUT = 2000;
 var dumpEnabled = /\btchannel_dump\b/.test(process.env.NODE_DEBUG || '');
 
+var SocketClosedError = TypedError({
+    type: 'tchannel.socket-closed',
+    message: 'socket closed, {reason}',
+    reason: null
+});
+
 var TChannelListenError = WrappedError({
     type: 'tchannel.server.listen-failed',
     message: 'tchannel: {origMessage}',
@@ -173,9 +179,6 @@ TChannel.prototype.getServer = function getServer() {
             hostPort: self.hostPort || null
         });
         self.emit('error', err);
-    });
-    self.serverSocket.on('close', function onServerSocketClose() {
-        self.logger.warn('server socket close');
     });
     return self.serverSocket;
 };
@@ -392,13 +395,7 @@ inherits(TChannelConnectionBase, EventEmitter);
 
 TChannelConnectionBase.prototype.close = function close(callback) {
     var self = this;
-    self.clearTimeoutTimer();
-    self.logger.debug('destroy channel for', {
-        direction: self.direction,
-        peerRemoteAddr: self.remoteAddr,
-        peerRemoteName: self.remoteName
-    });
-    self.resetAll(new Error('shutdown from quit')); // TODO typed error
+    self.resetAll(SocketClosedError({reason: 'local close'}));
     process.nextTick(callback);
 };
 
@@ -511,13 +508,21 @@ TChannelConnectionBase.prototype.onReqTimeout = function onReqTimeout(op) {
 // stumbles across this object in a core dump.
 TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
     var self = this;
+
+    self.clearTimeoutTimer();
+
     if (self.closing) return;
     self.closing = true;
 
     var inOpKeys = Object.keys(self.inOps);
     var outOpKeys = Object.keys(self.outOps);
 
-    self.logger[err ? 'warn' : 'info']('resetting connection', {
+    if (!err) {
+        err = new Error('unknown connection reset'); // TODO typed error
+    }
+
+    var isError = err.type !== 'tchannel.socket-closed';
+    self.logger[isError ? 'warn' : 'info']('resetting connection', {
         error: err,
         remoteName: self.remoteName,
         localName: self.channel.hostPort,
@@ -527,9 +532,9 @@ TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
         outPending: self.outPending
     });
 
-    self.clearTimeoutTimer();
-
-    self.emit('error', err);
+    if (isError) {
+        self.emit('error', err);
+    }
 
     // requests that we've received we can delete, but these reqs may have started their
     //   own outgoing work, which is hard to cancel. By setting this.closing, we make sure
@@ -550,8 +555,6 @@ TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
 
     self.inPending = 0;
     self.outPending = 0;
-
-    self.emit('socketClose', self, err);
 };
 
 TChannelConnectionBase.prototype.popOutOp = function popOutOp(id) {
@@ -642,12 +645,78 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
         hostPort: self.channel.hostPort
     }, self.options));
 
-    // TODO: refactor op boundary to pass full req/res around
-    self.handler.on('call.incoming.request', function onCallRequest(req) {
-        self.handleCallRequest(req);
-    });
+    self.setupSocket();
+    self.setupHandler();
+    self.start();
+}
+inherits(TChannelConnection, TChannelConnectionBase);
 
-    self.handler.on('call.incoming.response', function onCallResponse(res) {
+TChannelConnection.prototype.setupSocket = function setupSocket() {
+    var self = this;
+
+    self.socket.setNoDelay(true);
+    self.socket.on('close', onSocketClose);
+    self.socket.on('error', onSocketError);
+
+    function onSocketClose() {
+        self.resetAll(SocketClosedError({reason: 'remote clossed'}));
+        if (self.remoteName === '0.0.0.0:0') {
+            self.channel.peers.delete(self.remoteAddr);
+        }
+    }
+
+    function onSocketError(err) {
+        self.onSocketErr(err);
+    }
+};
+
+TChannelConnection.prototype.setupHandler = function setupHandler() {
+    var self = this;
+
+    self.reader.on('data', onReaderFrame);
+    self.reader.on('error', onReaderError);
+
+    self.handler.on('error', onHandlerError);
+    self.handler.on('call.incoming.request', onCallRequest);
+    self.handler.on('call.incoming.response', onCallResponse);
+    self.handler.on('call.incoming.error', onCallError);
+    self.on('timedOut', onTimedOut);
+
+    var stream = self.socket;
+    if (dumpEnabled) {
+        stream = stream.pipe(Spy(process.stdout, {
+            prefix: '>>> ' + self.remoteAddr + ' '
+        }));
+    }
+    stream = stream
+        .pipe(self.reader)
+        .pipe(self.handler)
+        .pipe(self.writer)
+        ;
+    if (dumpEnabled) {
+        stream = stream.pipe(Spy(process.stdout, {
+            prefix: '<<< ' + self.remoteAddr + ' '
+        }));
+    }
+    stream = stream
+        .pipe(self.socket)
+        ;
+
+    function onReaderFrame() {
+        if (!self.closing) {
+            self.lastTimeoutTime = 0;
+        }
+    }
+
+    function onReaderError(err) {
+        self.onReaderError(err);
+    }
+
+    function onCallRequest(req) {
+        self.handleCallRequest(req);
+    }
+
+    function onCallResponse(res) {
         var op = self.popOutOp(res.id);
         if (!op) {
             self.logger.info('response received for unknown or lost operation', {
@@ -658,109 +727,62 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
             return;
         }
         op.req.emit('response', res);
-    });
+    }
 
-    self.handler.on('call.incoming.error', function onCallError(err) {
+    function onCallError(err) {
         var op = self.popOutOp(err.originalId); // TODO bork bork
         if (!op) {
             self.logger.info('error received for unknown or lost operation', err);
             return;
         }
-
         op.req.emit('error', err);
         // TODO: should terminate corresponding inc res
-    });
+    }
 
-    self.socket.setNoDelay(true);
-
-    self.socket.on('error', function onSocketError(err) {
-        self.onSocketErr(err);
-    });
-    self.socket.on('close', function onSocketClose() {
-        self.onSocketErr(new Error('socket closed')); // TODO typed error
-        if (self.remoteName === '0.0.0.0:0') {
-            self.channel.peers.delete(self.remoteAddr);
-        }
-        self.clearTimeoutTimer(); // TODO probably not needed, both resetAll and close call it
-    });
-
-    self.reader.on('data', function onReaderFrame(frame) {
-        self.onFrame(frame);
-    });
-    self.reader.on('error', function onReaderError(err) {
-        self.onReaderError(err);
-    });
-
-    self.handler.on('error', function onHandlerError(err) {
+    function onHandlerError(err) {
         self.resetAll(err);
         // resetAll() does not close the socket
         self.socket.destroy();
-    });
-
-    if (direction === 'out') {
-        self.handler.sendInitRequest();
-        self.handler.once('init.response', function onOutIdentified(init) {
-            self.remoteName = init.hostPort;
-            self.emit('identified', {
-                hostPort: init.hostPort,
-                processName: init.processName
-            });
-        });
-    } else {
-        self.handler.once('init.request', function onInIdentified(init) {
-            self.remoteName = init.hostPort;
-            self.channel.peers.add(self.remoteName).addConnection(self);
-            self.emit('identified', {
-                hostPort: init.hostPort,
-                processName: init.processName
-            });
-        });
     }
 
-    var stream = self.socket;
-
-    if (dumpEnabled) {
-        stream = stream.pipe(Spy(process.stdout, {
-            prefix: '>>> ' + self.remoteAddr + ' '
-        }));
-    }
-
-    stream = stream
-        .pipe(self.reader)
-        .pipe(self.handler)
-        .pipe(self.writer)
-        ;
-
-    if (dumpEnabled) {
-        stream = stream.pipe(Spy(process.stdout, {
-            prefix: '<<< ' + self.remoteAddr + ' '
-        }));
-    }
-
-    stream = stream
-        .pipe(self.socket)
-        ;
-
-    self.on('timedOut', function onTimedOut() {
+    function onTimedOut() {
         self.logger.warn(self.channel.hostPort + ' destroying socket from timeouts');
         self.socket.destroy();
-    });
-}
-inherits(TChannelConnection, TChannelConnectionBase);
+    }
+};
+
+TChannelConnection.prototype.start = function start() {
+    var self = this;
+    if (self.direction === 'out') {
+        self.handler.sendInitRequest();
+        self.handler.once('init.response', onOutIdentified);
+    } else {
+        self.handler.once('init.request', onInIdentified);
+    }
+
+    function onOutIdentified(init) {
+        self.remoteName = init.hostPort;
+        self.emit('identified', {
+            hostPort: init.hostPort,
+            processName: init.processName
+        });
+    }
+
+    function onInIdentified(init) {
+        self.remoteName = init.hostPort;
+        self.channel.peers.add(self.remoteName).addConnection(self);
+        self.emit('identified', {
+            hostPort: init.hostPort,
+            processName: init.processName
+        });
+    }
+};
 
 TChannelConnection.prototype.close = function close(callback) {
     var self = this;
-    var sock = self.socket;
-    sock.once('close', callback);
-    self.clearTimeoutTimer();
-    self.logger.debug('destroy channel for', {
-        direction: self.direction,
-        peerRemoteAddr: self.remoteAddr,
-        peerRemoteName: self.remoteName,
-        fromAddress: sock.address()
-    });
-    self.resetAll(new Error('shutdown from quit')); // TODO typed error
-    sock.destroy();
+    self.socket.once('close', callback);
+    self.resetAll(SocketClosedError({reason: 'local close'}));
+    self.socket.destroy();
 };
 
 TChannelConnection.prototype.onReaderError = function onReaderError(err) {
@@ -782,13 +804,6 @@ TChannelConnection.prototype.onSocketErr = function onSocketErr(err) {
     var self = this;
     if (!self.closing) {
         self.resetAll(err);
-    }
-};
-
-TChannelConnection.prototype.onFrame = function onFrame(/* frame */) {
-    var self = this;
-    if (!self.closing) {
-        self.lastTimeoutTime = 0;
     }
 };
 
