@@ -24,7 +24,7 @@ var TypedError = require('error/typed');
 var inherits = require('util').inherits;
 var bufrw = require('bufrw');
 var Checksum = require('./checksum');
-var v2 = require('./index');
+var Flags = require('./call_flags');
 
 var LengthResult = bufrw.LengthResult;
 var WriteResult = bufrw.WriteResult;
@@ -143,12 +143,12 @@ ArgsRW.prototype.writeFragmentInto = function writeFragmentInto(body, buffer, of
             var j = remain - overhead;
             body.args[i] = arg.slice(0, j);
             body.cont = new body.constructor.Cont(
-                body.flags & v2.CallFlags.Fragment,
+                body.flags & Flags.Fragment,
                 body.csum, // share on purpose
                 body.args.splice(i + 1)
             );
             body.cont.args.unshift(arg.slice(j));
-            body.flags |= v2.CallFlags.Fragment;
+            body.flags |= Flags.Fragment;
             arg = body.args[i];
         }
         res = self.argrw.writeInto(arg, buffer, offset);
