@@ -36,7 +36,7 @@ test('ErrorResponse.RW: read/write payload', testRW.cases(ErrorResponse.RW, [
 
     // simple example payload
     [
-        ErrorResponse(
+        new ErrorResponse(
             ErrorResponse.Codes.ProtocolError,
             testTracing,
             'too bad.'

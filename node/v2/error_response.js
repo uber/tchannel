@@ -40,9 +40,6 @@ var InvalidErrorCodeError = TypedError({
 
 // code:1 tracing:25 message~2
 function ErrorResponse(code, tracing, message) {
-    if (!(this instanceof ErrorResponse)) {
-        return new ErrorResponse(code, tracing, message);
-    }
     var self = this;
     self.code = code || 0;
     self.tracing = tracing || Tracing.emptyTracing;
