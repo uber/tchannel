@@ -156,9 +156,6 @@ TChannelIncomingResponse.prototype.finish = function finish() {
 
 function TChannelOutgoingRequest(id, options) {
     options = options || {};
-    if (!options.sendFrame) {
-        throw new Error('missing sendFrame');
-    }
     var self = this;
     EventEmitter.call(self);
     self.state = States.Initial;
@@ -169,7 +166,6 @@ function TChannelOutgoingRequest(id, options) {
     self.headers = options.headers || {};
     self.checksumType = options.checksumType || 0;
     self.checksum = options.checksum || null;
-    self.sendFrame = options.sendFrame;
     if (options.streamed) {
         self.streamed = true;
         self._argstream = OutArgStream();
@@ -219,7 +215,7 @@ TChannelOutgoingRequest.prototype.sendCallRequestFrame = function sendCallReques
     var self = this;
     switch (self.state) {
         case States.Initial:
-            self.sendFrame.callRequest(args, isLast);
+            self._sendCallRequestFrame(args, isLast);
             if (isLast) self.state = States.Done;
             else self.state = States.Streaming;
             break;
@@ -236,7 +232,7 @@ TChannelOutgoingRequest.prototype.sendCallRequestContFrame = function sendCallRe
         case States.Initial:
             throw new Error('first request frame not sent'); // TODO: typed error
         case States.Streaming:
-            self.sendFrame.callRequestCont(args, isLast);
+            self._sendCallRequestContFrame(args, isLast);
             if (isLast) self.state = States.Done;
             break;
         case States.Done:
@@ -252,11 +248,10 @@ TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callbac
         self.arg2.end(arg2);
         self.arg3.end(arg3);
     } else {
-        self.sendCallRequestFrame([
-            arg1 ? Buffer(arg1) : emptyBuffer,
-            arg2 ? Buffer(arg2) : emptyBuffer,
-            arg3 ? Buffer(arg3) : emptyBuffer
-        ], true);
+        if (!Buffer.isBuffer(arg1)) arg1 = arg1 ? new Buffer(arg1) : emptyBuffer;
+        if (!Buffer.isBuffer(arg2)) arg2 = arg2 ? new Buffer(arg2) : emptyBuffer;
+        if (!Buffer.isBuffer(arg3)) arg3 = arg3 ? new Buffer(arg3) : emptyBuffer;
+        self.sendCallRequestFrame([arg1, arg2, arg3], true);
         self.emit('finish');
     }
     return self;
@@ -320,9 +315,6 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
 
 function TChannelOutgoingResponse(id, options) {
     options = options || {};
-    if (!options.sendFrame) {
-        throw new Error('missing sendFrame');
-    }
     var self = this;
     EventEmitter.call(self);
     self.state = States.Initial;
@@ -333,7 +325,6 @@ function TChannelOutgoingResponse(id, options) {
     self.checksumType = options.checksumType || 0;
     self.checksum = options.checksum || null;
     self.ok = self.code === 0;
-    self.sendFrame = options.sendFrame;
     if (options.streamed) {
         self.streamed = true;
         self._argstream = OutArgStream();
@@ -381,7 +372,7 @@ TChannelOutgoingResponse.prototype.sendCallResponseFrame = function sendCallResp
     var self = this;
     switch (self.state) {
         case States.Initial:
-            self.sendFrame.callResponse(args, isLast);
+            self._sendCallResponseFrame(args, isLast);
             if (isLast) self.state = States.Done;
             else self.state = States.Streaming;
             break;
@@ -399,7 +390,7 @@ TChannelOutgoingResponse.prototype.sendCallResponseContFrame = function sendCall
         case States.Initial:
             throw new Error('first response frame not sent'); // TODO: typed error
         case States.Streaming:
-            self.sendFrame.callResponseCont(args, isLast);
+            self._sendCallResponseContFrame(args, isLast);
             if (isLast) self.state = States.Done;
             break;
         case States.Done:
@@ -421,7 +412,7 @@ TChannelOutgoingResponse.prototype.sendError = function sendError(codeString, me
             self.arg2.end();
             self.arg3.end();
         }
-        self.sendFrame.error(codeString, message);
+        self._sendErrorFrame(codeString, message);
     }
 };
 

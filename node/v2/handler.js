@@ -23,15 +23,62 @@
 var TypedError = require('error/typed');
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
+var inherits = util.inherits;
 
 var reqres = require('../reqres');
-var TChannelOutgoingRequest = reqres.OutgoingRequest;
-var TChannelOutgoingResponse = reqres.OutgoingResponse;
-var TChannelIncomingRequest = reqres.IncomingRequest;
-var TChannelIncomingResponse = reqres.IncomingResponse;
 var v2 = require('./index');
 
 module.exports = TChannelV2Handler;
+
+function V2OutgoingRequest(handler, id, options) {
+    var self = this;
+    reqres.OutgoingRequest.call(self, id, options);
+    self.handler = handler;
+}
+inherits(V2OutgoingRequest, reqres.OutgoingRequest);
+
+V2OutgoingRequest.prototype._sendCallRequestFrame = function _sendCallRequestFrame(args, isLast) {
+    var self = this;
+    var flags = 0;
+    if (!isLast) flags |= v2.CallFlags.Fragment;
+    self.handler.sendCallRequestFrame(self, flags, args);
+};
+
+V2OutgoingRequest.prototype._sendCallRequestContFrame = function sendCallRequestContFrame(args, isLast) {
+    var self = this;
+    var flags = 0;
+    if (!isLast) flags |= v2.CallFlags.Fragment;
+    self.handler.sendCallRequestContFrame(self, flags, args);
+};
+
+function V2OutgoingResponse(handler, id, options) {
+    var self = this;
+    reqres.OutgoingResponse.call(self, id, options);
+    self.handler = handler;
+}
+inherits(V2OutgoingResponse, reqres.OutgoingResponse);
+
+V2OutgoingResponse.prototype._sendCallResponseFrame = function _sendCallResponseFrame(args, isLast) {
+    var self = this;
+    var flags = 0;
+    if (!isLast) flags |= v2.CallFlags.Fragment;
+    self.handler.sendCallResponseFrame(self, flags, args);
+};
+
+V2OutgoingResponse.prototype._sendCallResponseContFrame = function _sendCallResponseContFrame(args, isLast) {
+    var self = this;
+    var flags = 0;
+    if (!isLast) flags |= v2.CallFlags.Fragment;
+    self.handler.sendCallResponseContFrame(self, flags, args);
+};
+
+V2OutgoingResponse.prototype._sendErrorFrame = function _sendErrorFrame(codeString, message) {
+    var self = this;
+    self.handler.sendErrorFrame(self, codeString, message);
+};
+
+var V2IncomingRequest = reqres.IncomingRequest;
+var V2IncomingResponse = reqres.IncomingResponse;
 
 var TChannelUnhandledFrameTypeError = TypedError({
     type: 'tchannel.unhandled-frame-type',
@@ -338,7 +385,7 @@ TChannelV2Handler.prototype._sendCallBodies = function _sendCallBodies(id, body,
     return checksum;
 };
 
-TChannelV2Handler.prototype.sendErrorFrame = function sendErrorFrame(req, codeString, message) {
+TChannelV2Handler.prototype.sendErrorFrame = function sendErrorFrame(r, codeString, message) {
     var self = this;
 
     var code = v2.ErrorResponse.Codes[codeString];
@@ -349,8 +396,8 @@ TChannelV2Handler.prototype.sendErrorFrame = function sendErrorFrame(req, codeSt
         });
     }
 
-    var errBody = new v2.ErrorResponse(code, req.tracing, message);
-    var errFrame = new v2.Frame(req.id, errBody);
+    var errBody = new v2.ErrorResponse(code, r.tracing, message);
+    var errFrame = new v2.Frame(r.id, errBody);
     self.pushFrame(errFrame);
 };
 
@@ -361,24 +408,7 @@ TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest
         options.checksumType = v2.Checksum.Types.CRC32;
     }
     options.checksum = new v2.Checksum(options.checksumType);
-    options.sendFrame = {
-        callRequest: sendCallRequestFrame,
-        callRequestCont: sendCallRequestContFrame
-    };
-    var req = new TChannelOutgoingRequest(id, options);
-    return req;
-
-    function sendCallRequestFrame(args, isLast) {
-        var flags = 0;
-        if (!isLast) flags |= v2.CallFlags.Fragment;
-        self.sendCallRequestFrame(req, flags, args);
-    }
-
-    function sendCallRequestContFrame(args, isLast) {
-        var flags = 0;
-        if (!isLast) flags |= v2.CallFlags.Fragment;
-        self.sendCallRequestContFrame(req, flags, args);
-    }
+    return new V2OutgoingRequest(self, id, options);
 };
 
 TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingResponse(req, options) {
@@ -387,33 +417,11 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
     options.tracing = req.tracing;
     options.checksumType = req.checksum.type;
     options.checksum = new v2.Checksum(req.checksum.type);
-    options.sendFrame = {
-        callResponse: sendCallResponseFrame,
-        callResponseCont: sendCallResponseContFrame,
-        error: sendErrorFrame
-    };
-    var res = new TChannelOutgoingResponse(req.id, options);
-    return res;
-
-    function sendCallResponseFrame(args, isLast) {
-        var flags = 0;
-        if (!isLast) flags |= v2.CallFlags.Fragment;
-        self.sendCallResponseFrame(res, flags, args);
-    }
-
-    function sendCallResponseContFrame(args, isLast) {
-        var flags = 0;
-        if (!isLast) flags |= v2.CallFlags.Fragment;
-        self.sendCallResponseContFrame(res, flags, args);
-    }
-
-    function sendErrorFrame(codeString, message) {
-        self.sendErrorFrame(req, codeString, message);
-    }
+    return new V2OutgoingResponse(self, req.id, options);
 };
 
 TChannelV2Handler.prototype.buildIncomingRequest = function buildIncomingRequest(reqFrame) {
-    return new TChannelIncomingRequest(reqFrame.id, {
+    return new V2IncomingRequest(reqFrame.id, {
         ttl: reqFrame.body.ttl,
         tracing: reqFrame.body.tracing,
         service: reqFrame.body.service,
@@ -424,7 +432,7 @@ TChannelV2Handler.prototype.buildIncomingRequest = function buildIncomingRequest
 };
 
 TChannelV2Handler.prototype.buildIncomingResponse = function buildIncomingResponse(resFrame) {
-    return new TChannelIncomingResponse(resFrame.id, {
+    return new V2IncomingResponse(resFrame.id, {
         code: resFrame.body.code,
         checksum: new v2.Checksum(resFrame.body.csum.type),
         streamed: resFrame.body.flags & v2.CallFlags.Fragment
