@@ -37,9 +37,6 @@ module.exports = Checksum;
 
 // csumtype:1 (csum:4){0,1}
 function Checksum(type, val) {
-    if (!(this instanceof Checksum)) {
-        return new Checksum(type, val);
-    }
     var self = this;
     self.type = type;
     self.val = val || 0;
@@ -50,7 +47,7 @@ Checksum.objOrType = function objOrType(arg) {
         return arg;
     }
     if (arg === undefined || arg === null) {
-        return Checksum(Checksum.Types.None);
+        return new Checksum(Checksum.Types.None);
     }
     if (typeof arg !== 'number') {
         throw new Error('expected a Checksum object or a valid checksum type');
@@ -59,7 +56,7 @@ Checksum.objOrType = function objOrType(arg) {
         case 0x00:
         case 0x01:
         case 0x02:
-            return Checksum(arg);
+            return new Checksum(arg);
         default:
             throw new Error('invalid checsum type');
     }
