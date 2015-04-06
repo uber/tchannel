@@ -66,6 +66,13 @@ var TChannelReadProtocolError = WrappedError({
     localName: null
 });
 
+var TChannelWriteProtocolError = WrappedError({
+    type: 'tchannel.protocol.write-failed',
+    message: 'tchannel write failure: {origMessage}',
+    remoteName: null,
+    localName: null
+});
+
 var NoHandlerError = TypedError({
     type: 'tchannel.no-handler',
     message: 'no handler defined'
@@ -691,6 +698,7 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
 
     self.mach.emit = handleReadFrame;
 
+    self.handler.on('write.error', onWriteError);
     self.handler.on('error', onHandlerError);
     self.handler.on('call.incoming.request', onCallRequest);
     self.handler.on('call.incoming.response', onCallResponse);
@@ -716,6 +724,14 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     // stream = stream
     //     .pipe(self.socket)
     //     ;
+
+    function onWriteError(err) {
+        self.resetAll(TChannelWriteProtocolError(err, {
+            remoteName: self.remoteName,
+            localName: self.channel.hostPort
+        }));
+        self.socket.destroy();
+    }
 
     function onHandlerError(err) {
         self.resetAll(err);

@@ -84,7 +84,7 @@ TChannelV2Handler.prototype.pushFrame = function pushFrame(frame) {
     if (err) {
         if (!Buffer.isBuffer(err.buffer)) err.buffer = writeBuffer;
         if (typeof err.offset !== 'number') err.offset = res.offset;
-        self.emit('error', err);
+        self.emit('write.error', err);
     } else {
         var buf = writeBuffer.slice(0, res.offset);
         self.writeCopy(buf);
