@@ -42,6 +42,7 @@ var v2 = require('./v2');
 var nullLogger = require('./null-logger.js');
 // var Spy = require('./v2/spy'); TODO
 var EndpointHandler = require('./endpoint-handler.js');
+var TChannelServiceNameHandler = require('./service-name-handler');
 
 var DEFAULT_OUTGOING_REQ_TIMEOUT = 2000;
 // var dumpEnabled = /\btchannel_dump\b/.test(process.env.NODE_DEBUG || ''); TODO
@@ -73,11 +74,6 @@ var TChannelWriteProtocolError = WrappedError({
     localName: null
 });
 
-var NoHandlerError = TypedError({
-    type: 'tchannel.no-handler',
-    message: 'no handler defined'
-});
-
 var InvalidHandlerForRegister = TypedError({
     type: 'tchannel.invalid-handler.for-registration',
     message: 'Found unexpected handler when calling `.register()`.\n' +
@@ -87,12 +83,11 @@ var InvalidHandlerForRegister = TypedError({
     handler: null
 });
 
-var noHandlerHandler = {
-    type: 'no-handler.handler',
-    handleRequest: function noHandlerHandler(req, buildRes) {
-        buildRes().sendError('UnexpectedError', NoHandlerError().message);
-    }
-};
+var TopLevelRegisterError = TypedError({
+    type: 'tchannel.top-level-register',
+    message: 'Cannot register endpoints points on top-level channel.\n' +
+        'Provide serviceName to constructor, or create a sub-channel.'
+});
 
 function TChannel(options) {
     if (!(this instanceof TChannel)) {
@@ -122,9 +117,24 @@ function TChannel(options) {
     // Filled in by listening event:
     self.hostPort = null;
 
+    // name of the service running over this channel
+    self.serviceName = '';
+    if (self.options.serviceName) {
+        self.serviceName = self.options.serviceName;
+        delete self.options.serviceName;
+    }
+
+    // populated by makeSubChannel
+    self.topChannel = null;
+    self.subChannels = self.serviceName ? null : {};
+
     // how to handle incoming requests
     if (!self.options.handler) {
-        self.handler = noHandlerHandler;
+        if (!self.serviceName) {
+            self.handler = TChannelServiceNameHandler(self);
+        } else {
+            self.handler = EndpointHandler(self.serviceName);
+        }
     } else {
         self.handler = self.options.handler;
         delete self.options.handler;
@@ -167,7 +177,18 @@ TChannel.prototype.getServer = function getServer() {
             var address = self.serverSocket.address();
             self.hostPort = self.host + ':' + address.port;
             self.listening = true;
+
+            if (self.subChannels) {
+                Object.keys(self.subChannels).forEach(function each(serviceName) {
+                    var chan = self.subChannels[serviceName];
+                    if (!chan.hostPort) {
+                        chan.hostPort = self.hostPort;
+                    }
+                });
+            }
+
             self.logger.info(self.hostPort + ' listening');
+
             self.emit('listening');
         }
     });
@@ -187,6 +208,48 @@ TChannel.prototype.getServer = function getServer() {
         self.emit('error', err);
     });
     return self.serverSocket;
+};
+
+TChannel.prototype.makeSubChannel = function makeSubChannel(options) {
+    var self = this;
+    if (!options) options = {};
+    if (self.serviceName) {
+        throw new Error('arbitrary-depth sub channels are unsupported'); // TODO typed error
+    }
+    if (!options.serviceName) {
+        throw new Error('must specify serviceName'); // TODO typed error
+    }
+    if (self.subChannels[options.serviceName]) {
+        throw new Error('sub channel already exists'); // TODO typed error
+    }
+    var opts = extend(self.options);
+    var keys = Object.keys(options);
+    for (var i = 0; i < keys.length; i++) {
+        switch (keys[i]) {
+            case 'peers':
+                break;
+            default:
+                opts[keys[i]] = options[keys[i]];
+        }
+    }
+    var chan = TChannel(opts);
+    chan.topChannel = self;
+    if (options.peers) {
+        for (i = 0; i < options.peers.length; i++) {
+            if (typeof options.peers[i] === 'string') {
+                chan.peers.addPeer(self.peers.get(options.peers[i]));
+            } else {
+                chan.peers.addPeer(options.peers[i]);
+            }
+        }
+    }
+    self.subChannels[chan.serviceName] = chan;
+
+    if (self.hostPort) {
+        chan.hostPort = self.hostPort;
+    }
+
+    return chan;
 };
 
 TChannel.prototype._hookupPeers = function _hookupPeers() {
@@ -255,15 +318,13 @@ TChannel.prototype.register = function register(name, handler) {
     var handlerType = self.handler && self.handler.type;
 
     switch (handlerType) {
-        case 'no-handler.handler':
-            // lazyily set up the legacy handler
-            self.handler = EndpointHandler();
-
-            break;
-
         case 'tchannel.endpoint-handler':
             // If its still the legacy handler then we are good.
+            self.handler.register(name, onReqRes);
             break;
+
+        case 'tchannel.service-name-handler':
+            throw TopLevelRegisterError();
 
         default:
             throw InvalidHandlerForRegister({
@@ -271,8 +332,6 @@ TChannel.prototype.register = function register(name, handler) {
                 handler: self.handler
             });
     }
-
-    self.handler.register(name, onReqRes);
 
     function onReqRes(req, res, arg2, arg3) {
         handler(arg2, arg3, req.remoteAddr, onResponse);
@@ -291,6 +350,8 @@ TChannel.prototype.address = function address() {
     var self = this;
     if (self.serverSocket) {
         return self.serverSocket.address() || null;
+    } else if (self.topChannel) {
+        return self.topChannel.address();
     } else {
         return null;
     }
@@ -320,7 +381,12 @@ TChannel.prototype.send = function send(options, arg1, arg2, arg3, callback) {
 /* jshint maxparams:4 */
 
 TChannel.prototype.request = function channelRequest(options) {
+    options = extend(options);
     var self = this;
+    if (!options.service && self.serviceName) {
+        options.service = self.serviceName;
+    }
+    // TODO: moar defaults
     if (self.destroyed) {
         throw new Error('cannot request() to destroyed tchannel'); // TODO typed error
     } else {
@@ -350,6 +416,15 @@ TChannel.prototype.close = function close(callback) {
         } else {
             self.serverSocket.once('listening', closeServerSocket);
         }
+    }
+
+    if (self.subChannels) {
+        var serviceNames = Object.keys(self.subChannels);
+        counter += serviceNames.length;
+        serviceNames.forEach(function each(serviceName) {
+            var svcchan = self.subChannels[serviceName];
+            svcchan.close(onClose);
+        });
     }
 
     self.peers.close(onClose);
@@ -901,8 +976,12 @@ TChannelPeers.prototype.add = function add(hostPort, options) {
         if (hostPort === self.channel.hostPort) {
             return self.selfPeer;
         }
-        peer = TChannelPeer(self.channel, hostPort, options);
-        self.emit('allocPeer', peer);
+        if (self.channel.topChannel) {
+            peer = self.channel.topChannel.peers.add(hostPort);
+        } else {
+            peer = TChannelPeer(self.channel, hostPort, options);
+            self.emit('allocPeer', peer);
+        }
         self._map[hostPort] = peer;
     }
     return peer;
@@ -959,6 +1038,12 @@ TChannelPeers.prototype.delete = function del(hostPort) {
     var self = this;
     var peer = self._map[hostPort];
     delete self._map[hostPort];
+    if (self.subChannels) {
+        var names = Object.keys(self.subChannels);
+        for (var i = 0; i < names.length; i++) {
+            self.subChannels[names[i]].delete(hostPort);
+        }
+    }
     return peer;
 };
 
@@ -981,8 +1066,6 @@ TChannelPeers.prototype.choosePeer = function choosePeer(options, op) {
     var hosts = null;
     if (options.host) {
         return self.add(options.host);
-    } else if (self.options.hosts) {
-        hosts = self.options.hosts;
     } else {
         hosts = Object.keys(self._map);
     }
@@ -1160,7 +1243,7 @@ TChannelPeer.prototype.makeOutSocket = function makeOutSocket() {
 
 TChannelPeer.prototype.makeOutConnection = function makeOutConnection(socket) {
     var self = this;
-    var chan = self.channel;
+    var chan = self.channel.topChannel || self.channel;
     var conn = new TChannelConnection(chan, socket, 'out', self.hostPort);
     self.emit('allocConnection', conn);
     return conn;
