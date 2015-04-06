@@ -21,8 +21,10 @@
 'use strict';
 
 var chalk = require('chalk');
+var EventEmitter = require('events').EventEmitter;
 var Logger = require('logtron');
 var replr = require('replr');
+var util = require('util');
 
 var tchan = require('../index');
 var endhand = require('../endpoint-handler');
@@ -89,19 +91,24 @@ function ReplSession(repler, options) {
     self.logger = options.logger;
 }
 
+util.inherits(ReplSession, EventEmitter);
+
 ReplSession.prototype.start = function start(stream) {
-    // function startReplSession() {
-    //     setImmediate(startReplSession);
-    // }
     var self = this;
-    self.repler.open(stream);
+    self.once('resize', function onResize(size) {
+        self.repler.open(stream, {
+            width: size.cols,
+            height: size.rows
+        });
+    });
 };
 
 ReplSession.prototype.control = function control(stream) {
     var self = this;
-    stream.on('data', function(obj) {
+    stream.on('data', function onControlData(obj) {
         if (obj.op === 'resize') {
             self.logger.info('resize to', obj);
+            self.emit('resize', obj);
         } else {
             self.logger.error('invalid control op', obj);
         }
