@@ -45,6 +45,45 @@ var InvalidCodeStringError = TypedError({
     codeString: null
 });
 
+var SlowBuffer = require('buffer').SlowBuffer;
+
+function BufferPool(size, alloc, maxSize) {
+    var self = this;
+    self.size = size;
+    self.alloc(alloc);
+    self.maxSize = maxSize;
+}
+
+BufferPool.prototype.alloc = function alloc(space) {
+    var self = this;
+    var n = Math.floor(space / self.size);
+    self.pool = new SlowBuffer(n * self.size);
+    self.used = new Uint8Array(new ArrayBuffer(n));
+};
+
+BufferPool.prototype.get = function get() {
+    var self = this;
+    for (var i = 0; i < self.used.length; i++) {
+        if (!self.used[i]) {
+            self.used[i] = 1;
+            return new Buffer(self.pool, self.size, i * self.size);
+        }
+    }
+    self.alloc(Math.min(self.maxSize, 2 * self.pool.length));
+    self.used[0] = 1;
+    return new Buffer(self.pool, self.size, 0);
+};
+
+BufferPool.prototype.release = function release(buffer) {
+    var self = this;
+    if (buffer.parent === self.pool) {
+        var i = Math.floor(buffer.offset / self.size);
+        self.used[i] = 0;
+    }
+};
+
+var ThePool = new BufferPool(v2.Frame.MaxSize, Math.pow(2, 18), Math.pow(2, 22));
+
 function TChannelV2Handler(options) {
     if (!(this instanceof TChannelV2Handler)) {
         return new TChannelV2Handler(options);
@@ -59,7 +98,6 @@ function TChannelV2Handler(options) {
     // TODO: GC these... maybe that's up to TChannel itself wrt ops
     self.streamingReq = Object.create(null);
     self.streamingRes = Object.create(null);
-    self.writeBuffer = new Buffer(v2.Frame.MaxSize);
 }
 
 util.inherits(TChannelV2Handler, EventEmitter);
@@ -76,9 +114,17 @@ TChannelV2Handler.prototype.writeCopy = function writeCopy(buffer) {
     self.write(copy);
 };
 
+TChannelV2Handler.prototype.writeThenReuse = function writeThenReuse(buffer) {
+    var self = this;
+    self.write(buffer, wrote);
+    function wrote() {
+        ThePool.release(buffer);
+    }
+};
+
 TChannelV2Handler.prototype.pushFrame = function pushFrame(frame) {
     var self = this;
-    var writeBuffer = self.writeBuffer;
+    var writeBuffer = ThePool.get();
     var res = v2.Frame.RW.writeInto(frame, writeBuffer, 0);
     var err = res.err;
     if (err) {
@@ -87,7 +133,7 @@ TChannelV2Handler.prototype.pushFrame = function pushFrame(frame) {
         self.emit('write.error', err);
     } else {
         var buf = writeBuffer.slice(0, res.offset);
-        self.writeCopy(buf);
+        self.writeThenReuse(buf);
     }
 };
 
