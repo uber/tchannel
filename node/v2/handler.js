@@ -254,7 +254,7 @@ TChannelV2Handler.prototype.sendInitRequest = function sendInitRequest() {
         process_name: processName
         /* jshint camelcase:true */
     });
-    var reqFrame = v2.Frame(id, body);
+    var reqFrame = new v2.Frame(id, body);
     self.push(reqFrame);
 };
 
@@ -269,7 +269,7 @@ TChannelV2Handler.prototype.sendInitResponse = function sendInitResponse(reqFram
         process_name: processName
         /* jshint camelcase:true */
     });
-    var resFrame = v2.Frame(id, body);
+    var resFrame = new v2.Frame(id, body);
     self.push(resFrame);
 };
 
@@ -309,7 +309,7 @@ TChannelV2Handler.prototype._sendCallBodies = function _sendCallBodies(id, body,
         body = bodies[i];
         body.updateChecksum(checksum && checksum.val || 0);
         checksum = body.csum;
-        var frame = v2.Frame(id, body);
+        var frame = new v2.Frame(id, body);
         self.push(frame);
     }
     return checksum;
@@ -327,7 +327,7 @@ TChannelV2Handler.prototype.sendErrorFrame = function sendErrorFrame(req, codeSt
     }
 
     var errBody = new v2.ErrorResponse(code, req.tracing, message);
-    var errFrame = v2.Frame(req.id, errBody);
+    var errFrame = new v2.Frame(req.id, errBody);
     self.push(errFrame);
 };
 

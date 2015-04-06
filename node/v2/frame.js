@@ -56,9 +56,6 @@ var InvalidFrameTypeError = TypedError({
 module.exports = Frame;
 
 function Frame(id, body) {
-    if (!(this instanceof Frame)) {
-        return new Frame(id, body);
-    }
     var self = this;
     self.size = 0;
     self.type = (body && body.type) || 0;
