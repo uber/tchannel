@@ -935,8 +935,7 @@ TChannelPeers.prototype.delete = function del(hostPort) {
 
 TChannelPeers.prototype.request = function peersRequest(options) {
     var self = this;
-    var peers = self.choosePeer(options, null, 1);
-    var peer = peers[0];
+    var peer = self.choosePeer(options, null);
 
     if (!peer) {
         // TODO: operational error?
@@ -946,20 +945,19 @@ TChannelPeers.prototype.request = function peersRequest(options) {
     return peer.request(options);
 };
 
-TChannelPeers.prototype.choosePeer = function choosePeer(options, op, n) {
-    if (n > 1) throw new Error('not implemented'); // TODO heap select n
+TChannelPeers.prototype.choosePeer = function choosePeer(options, op) {
     var self = this;
 
     if (!options) options = {};
     var hosts = null;
     if (options.host) {
-        hosts = [options.host];
+        return self.add(options.host);
     } else if (self.options.hosts) {
         hosts = self.options.hosts;
     } else {
         hosts = Object.keys(self._map);
     }
-    if (!hosts || !hosts.length) return [];
+    if (!hosts || !hosts.length) return null;
 
     var threshold = options.peerScoreThreshold;
     if (threshold === undefined) threshold = self.options.peerScoreThreshold;
@@ -983,7 +981,7 @@ TChannelPeers.prototype.choosePeer = function choosePeer(options, op, n) {
             selectedScore = score;
         }
     }
-    return [selectedPeer];
+    return selectedPeer;
 };
 
 
