@@ -25,11 +25,6 @@ var Checksum = require('./checksum');
 var ArgsRW = require('./args');
 var argsrw = ArgsRW(bufrw.buf2);
 
-var Flags;
-process.nextTick(function() {
-    Flags = require('./index').CallFlags;
-});
-
 // flags:1 csumtype:1 (csum:4){0,1} (arg~2)+
 function CallRequestCont(flags, csum, args) {
     var self = this;
@@ -37,60 +32,46 @@ function CallRequestCont(flags, csum, args) {
     self.flags = flags || 0;
     self.csum = Checksum.objOrType(csum);
     self.args = args || [];
+    self.cont = null;
+    self._flagsOffset = 0;
+}
+
+var flagsReadLen = {
+    byteLength: flagsLength,
+    writeInto: saveFlagsOffset,
+    readFrom: readFlagsFrom
+};
+
+var flagsRetWrite = {
+    writeInto: writeFlagsInto,
+};
+
+function saveFlagsOffset(body, buffer, offset) {
+    body._flagsOffset = offset;
+    return bufrw.WriteResult.just(offset + bufrw.UInt8.width);
+}
+
+function flagsLength() {
+    return bufrw.LengthResult.just(bufrw.UInt8.width);
+}
+
+function writeFlagsInto(body, buffer, offset) {
+    var res = bufrw.UInt8.writeInto(body.flags, buffer, body._flagsOffset);
+    if (!res.err) res.offset = offset;
+    return res;
+}
+
+function readFlagsFrom(body, buffer, offset) {
+    return bufrw.UInt8.readFrom(buffer, offset);
 }
 
 CallRequestCont.TypeCode = 0x13;
+CallRequestCont.Cont = CallRequestCont;
 CallRequestCont.RW = bufrw.Struct(CallRequestCont, [
-    {name: 'flags', rw: bufrw.UInt8}, // flags:1
-    {name: 'csum', rw: Checksum.RW},  // csumtype:1 (csum:4){0,1}
-    {name: 'args', rw: argsrw}        // (arg~2)+
+    {name: 'flags', call: flagsReadLen}, // flags:1 -- skipped at first
+    {call: argsrw},                      // (arg~2)+
+    {call: flagsRetWrite}                // -- rw flags last
 ]);
-
-CallRequestCont.prototype.splitArgs = function splitArgs(args, maxSize) {
-    var self = this;
-    self.args = [];
-    var lenRes = self.constructor.RW.byteLength(self);
-    if (lenRes.err) throw lenRes.err;
-    var maxBodySize = maxSize - lenRes.length;
-    var remain = maxBodySize;
-    var ret = [];
-    var isLast = !(self.flags & Flags.Fragment);
-    self.flags |= Flags.Fragment;
-    var argSize = 2;
-
-    while (args.length) {
-        var first = [];
-        var split = false;
-        for (var i = 0; i < args.length; i++) {
-            var arg = args[i];
-            var argLength = argSize + arg.length;
-            if (argLength <= remain) {
-                first.push(arg);
-                remain -= argLength;
-            } else {
-                first.push(arg.slice(0, remain - argSize));
-                args = [arg.slice(remain - argSize)].concat(args.slice(i+1));
-                split = true;
-                break;
-            }
-        }
-        self.args = first;
-        ret.push(self);
-        if (split) {
-            self = new self.constructor(self.flags | Flags.Fragment, self.csum.type);
-        } else {
-            break;
-        }
-    }
-    if (isLast) ret[ret.length - 1].flags &= ~ Flags.Fragment;
-
-    return ret;
-};
-
-CallRequestCont.prototype.updateChecksum = function updateChecksum(prior) {
-    var self = this;
-    return self.csum.update(self.args, prior);
-};
 
 CallRequestCont.prototype.verifyChecksum = function verifyChecksum(prior) {
     var self = this;
@@ -104,21 +85,17 @@ function CallResponseCont(flags, csum, args) {
     self.flags = flags || 0;
     self.csum = Checksum.objOrType(csum);
     self.args = args || [];
+    self.cont = null;
+    self._flagsOffset = 0;
 }
 
 CallResponseCont.TypeCode = 0x14;
+CallResponseCont.Cont = CallResponseCont;
 CallResponseCont.RW = bufrw.Struct(CallResponseCont, [
-    {name: 'flags', rw: bufrw.UInt8}, // flags:1
-    {name: 'csum', rw: Checksum.RW},  // csumtype:1 (csum:4){0},1}
-    {name: 'args', rw: argsrw}        // (arg~2)+
+    {name: 'flags', call: flagsReadLen}, // flags:1 -- skipped at first
+    {call: argsrw},                      // (arg~2)+
+    {call: flagsRetWrite}                // -- rw flags last
 ]);
-
-CallResponseCont.prototype.splitArgs = CallRequestCont.prototype.splitArgs;
-
-CallResponseCont.prototype.updateChecksum = function updateChecksum(prior) {
-    var self = this;
-    return self.csum.update(self.args, prior);
-};
 
 CallResponseCont.prototype.verifyChecksum = function verifyChecksum(prior) {
     var self = this;
