@@ -20,7 +20,6 @@
 
 'use strict';
 
-var bufrw = require('bufrw');
 var TypedError = require('error/typed');
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
@@ -60,6 +59,7 @@ function TChannelV2Handler(options) {
     // TODO: GC these... maybe that's up to TChannel itself wrt ops
     self.streamingReq = Object.create(null);
     self.streamingRes = Object.create(null);
+    self.writeBuffer = new Buffer(v2.Frame.MaxSize);
 }
 
 util.inherits(TChannelV2Handler, EventEmitter);
@@ -69,15 +69,25 @@ TChannelV2Handler.prototype.write = function write() {
     self.emit('error', new Error('write not implemented'));
 };
 
+TChannelV2Handler.prototype.writeCopy = function writeCopy(buffer) {
+    var self = this;
+    var copy = new Buffer(buffer.length);
+    buffer.copy(copy);
+    self.write(copy);
+};
+
 TChannelV2Handler.prototype.pushFrame = function pushFrame(frame) {
     var self = this;
-    var tup = bufrw.toBufferTuple(v2.Frame.RW, frame);
-    var err = tup[0];
-    var buffer = tup[1];
+    var writeBuffer = self.writeBuffer;
+    var res = v2.Frame.RW.writeInto(frame, writeBuffer, 0);
+    var err = res.err;
     if (err) {
+        if (!Buffer.isBuffer(err.buffer)) err.buffer = writeBuffer;
+        if (typeof err.offset !== 'number') err.offset = res.offset;
         self.emit('error', err);
     } else {
-        self.write(buffer);
+        var buf = writeBuffer.slice(0, res.offset);
+        self.writeCopy(buf);
     }
 };
 
