@@ -21,6 +21,7 @@
 'use strict';
 
 var bufrw = require('bufrw');
+var fix8 = bufrw.FixedWidth(8);
 
 module.exports = Tracing;
 
@@ -39,11 +40,62 @@ function Tracing(spanid, parentid, traceid, flags) {
     self.flags = flags || 0;
 }
 
-Tracing.RW = bufrw.Struct(Tracing, [
-    {name: 'spanid', rw: bufrw.FixedWidth(8)},
-    {name: 'parentid', rw: bufrw.FixedWidth(8)},
-    {name: 'traceid', rw: bufrw.FixedWidth(8)},
-    {name: 'flags', rw: bufrw.UInt8}
-]);
+Tracing.RW = bufrw.Base(tracingByteLength, readTracingFrom, writeTracingInto);
+
+function tracingByteLength() {
+    return bufrw.LengthResult.just(
+        8 + // spanid:8
+        8 + // parentid:8
+        8 + // traceid:8
+        1   // flags:1
+    );
+}
+
+function writeTracingInto(tracing, buffer, offset) {
+    var res;
+
+    res = fix8.writeInto(tracing.spanid, buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+
+    res = fix8.writeInto(tracing.parentid, buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+
+    res = fix8.writeInto(tracing.traceid, buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+
+    res = bufrw.UInt8.writeInto(tracing.flags, buffer, offset);
+
+    return res;
+}
+
+function readTracingFrom(buffer, offset) {
+    var tracing = new Tracing();
+    var res;
+
+    res = fix8.readFrom(buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+    tracing.spanid = res.value;
+
+    res = fix8.readFrom(buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+    tracing.parentid = res.value;
+
+    res = fix8.readFrom(buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+    tracing.traceid = res.value;
+
+    res = bufrw.UInt8.readFrom(buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+    tracing.flags = res.value;
+
+    return bufrw.ReadResult.just(offset, tracing);
+}
 
 Tracing.emptyTracing = new Tracing();
