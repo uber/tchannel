@@ -101,7 +101,7 @@ CallRequest.prototype.splitArgs = function splitArgs(args, maxSize) {
     if (split) {
         var isLast = !(self.flags & Flags.Fragment);
         self.flags |= Flags.Fragment;
-        var cont = self.constructor.Cont(self.flags, self.csum.type);
+        var cont = new self.constructor.Cont(self.flags, self.csum.type);
         ret = cont.splitArgs(args, maxSize);
         ret.unshift(self);
         if (isLast) ret[ret.length - 1].flags &= ~ Flags.Fragment;

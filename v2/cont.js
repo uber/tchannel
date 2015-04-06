@@ -32,9 +32,6 @@ process.nextTick(function() {
 
 // flags:1 csumtype:1 (csum:4){0,1} (arg~2)+
 function CallRequestCont(flags, csum, args) {
-    if (!(this instanceof CallRequestCont)) {
-        return new CallRequestCont(flags, csum, args);
-    }
     var self = this;
     self.type = CallRequestCont.TypeCode;
     self.flags = flags || 0;
@@ -102,9 +99,6 @@ CallRequestCont.prototype.verifyChecksum = function verifyChecksum(prior) {
 
 // flags:1 csumtype:1 (csum:4){0,1} (arg~2)+
 function CallResponseCont(flags, csum, args) {
-    if (!(this instanceof CallResponseCont)) {
-        return new CallResponseCont(flags, csum, args);
-    }
     var self = this;
     self.type = CallResponseCont.TypeCode;
     self.flags = flags || 0;
