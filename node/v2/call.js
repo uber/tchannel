@@ -47,9 +47,6 @@ module.exports.Response = CallResponse;
 
 // flags:1 ttl:4 tracing:24 traceflags:1 service~1 nh:1 (hk~1 hv~1){nh} csumtype:1 (csum:4){0,1} (arg~2)*
 function CallRequest(flags, ttl, tracing, service, headers, csum, args) {
-    if (!(this instanceof CallRequest)) {
-        return new CallRequest(flags, ttl, tracing, service, headers, csum, args);
-    }
     var self = this;
     self.type = CallRequest.TypeCode;
     self.flags = flags || 0;
@@ -125,9 +122,6 @@ CallRequest.prototype.verifyChecksum = function verifyChecksum() {
 
 // flags:1 code:1 tracing:24 traceflags:1 nh:1 (hk~1 hv~1){nh} csumtype:1 (csum:4){0,1} (arg~2)*
 function CallResponse(flags, code, tracing, headers, csum, args) {
-    if (!(this instanceof CallResponse)) {
-        return new CallResponse(flags, code, tracing, headers, csum, args);
-    }
     var self = this;
     self.type = CallResponse.TypeCode;
     self.flags = flags || 0;

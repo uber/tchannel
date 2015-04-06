@@ -275,7 +275,7 @@ TChannelV2Handler.prototype.sendInitResponse = function sendInitResponse(reqFram
 
 TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame(req, flags, args) {
     var self = this;
-    var reqBody = v2.CallRequest(
+    var reqBody = new v2.CallRequest(
         flags, req.ttl, req.tracing, req.service, req.headers,
         req.checksum.type);
     req.checksum = self._sendCallBodies(req.id, reqBody, args, null);
@@ -284,7 +284,7 @@ TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame
 TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFrame(res, flags, args) {
     var self = this;
     var code = res.ok ? v2.CallResponse.Codes.OK : v2.CallResponse.Codes.Error;
-    var resBody = v2.CallResponse(
+    var resBody = new v2.CallResponse(
         flags, code, res.tracing, res.headers,
         res.checksum.type);
     res.checksum = self._sendCallBodies(res.id, resBody, args, null);
