@@ -21,7 +21,7 @@
 'use strict';
 
 var TypedError = require('error/typed');
-var Duplex = require('readable-stream').Duplex;
+var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 
 var reqres = require('../reqres');
@@ -50,9 +50,7 @@ function TChannelV2Handler(options) {
         return new TChannelV2Handler(options);
     }
     var self = this;
-    Duplex.call(self, {
-        objectMode: true
-    });
+    EventEmitter.call(self);
     self.options = options || {};
     self.hostPort = self.options.hostPort;
     self.processName = self.options.processName;
@@ -61,9 +59,37 @@ function TChannelV2Handler(options) {
     // TODO: GC these... maybe that's up to TChannel itself wrt ops
     self.streamingReq = Object.create(null);
     self.streamingRes = Object.create(null);
+    self.writeBuffer = new Buffer(v2.Frame.MaxSize);
 }
 
-util.inherits(TChannelV2Handler, Duplex);
+util.inherits(TChannelV2Handler, EventEmitter);
+
+TChannelV2Handler.prototype.write = function write() {
+    var self = this;
+    self.emit('error', new Error('write not implemented'));
+};
+
+TChannelV2Handler.prototype.writeCopy = function writeCopy(buffer) {
+    var self = this;
+    var copy = new Buffer(buffer.length);
+    buffer.copy(copy);
+    self.write(copy);
+};
+
+TChannelV2Handler.prototype.pushFrame = function pushFrame(frame) {
+    var self = this;
+    var writeBuffer = self.writeBuffer;
+    var res = v2.Frame.RW.writeInto(frame, writeBuffer, 0);
+    var err = res.err;
+    if (err) {
+        if (!Buffer.isBuffer(err.buffer)) err.buffer = writeBuffer;
+        if (typeof err.offset !== 'number') err.offset = res.offset;
+        self.emit('write.error', err);
+    } else {
+        var buf = writeBuffer.slice(0, res.offset);
+        self.writeCopy(buf);
+    }
+};
 
 TChannelV2Handler.prototype.nextFrameId = function nextFrameId() {
     var self = this;
@@ -71,7 +97,7 @@ TChannelV2Handler.prototype.nextFrameId = function nextFrameId() {
     return self.lastSentFrameId;
 };
 
-TChannelV2Handler.prototype._write = function _write(frame, encoding, callback) {
+TChannelV2Handler.prototype.handleFrame = function handleFrame(frame, callback) {
     var self = this;
     switch (frame.body.type) {
         case v2.Types.InitRequest:
@@ -93,10 +119,6 @@ TChannelV2Handler.prototype._write = function _write(frame, encoding, callback) 
                 typeCode: frame.body.type
             }));
     }
-};
-
-TChannelV2Handler.prototype._read = function _read(/* n */) {
-    /* noop */
 };
 
 TChannelV2Handler.prototype.handleInitRequest = function handleInitRequest(reqFrame, callback) {
@@ -255,7 +277,7 @@ TChannelV2Handler.prototype.sendInitRequest = function sendInitRequest() {
         /* jshint camelcase:true */
     });
     var reqFrame = new v2.Frame(id, body);
-    self.push(reqFrame);
+    self.pushFrame(reqFrame);
 };
 
 TChannelV2Handler.prototype.sendInitResponse = function sendInitResponse(reqFrame) {
@@ -270,7 +292,7 @@ TChannelV2Handler.prototype.sendInitResponse = function sendInitResponse(reqFram
         /* jshint camelcase:true */
     });
     var resFrame = new v2.Frame(id, body);
-    self.push(resFrame);
+    self.pushFrame(resFrame);
 };
 
 TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame(req, flags, args) {
@@ -310,7 +332,7 @@ TChannelV2Handler.prototype._sendCallBodies = function _sendCallBodies(id, body,
         body.updateChecksum(checksum && checksum.val || 0);
         checksum = body.csum;
         var frame = new v2.Frame(id, body);
-        self.push(frame);
+        self.pushFrame(frame);
     }
     return checksum;
 };
@@ -328,7 +350,7 @@ TChannelV2Handler.prototype.sendErrorFrame = function sendErrorFrame(req, codeSt
 
     var errBody = new v2.ErrorResponse(code, req.tracing, message);
     var errFrame = new v2.Frame(req.id, errBody);
-    self.push(errFrame);
+    self.pushFrame(errFrame);
 };
 
 TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest(options) {
