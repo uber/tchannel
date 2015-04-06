@@ -153,6 +153,7 @@ function TChannel(options) {
 
     // lazily created by .getServer (usually from .listen)
     self.serverSocket = null;
+    self.serverConnections = Object.create(null);
 }
 inherits(TChannel, EventEmitter);
 
@@ -165,6 +166,16 @@ TChannel.prototype.getServer = function getServer() {
         if (!self.destroyed) {
             var remoteAddr = sock.remoteAddress + ':' + sock.remotePort;
             var conn = new TChannelConnection(self, sock, 'in', remoteAddr);
+
+            if (self.serverConnections[remoteAddr]) {
+                var oldConn = self.serverConnections[remoteAddr];
+                oldConn.resetAll(SocketClosedError({
+                    reason: 'duplicate remoteAddr incoming conn'
+                }));
+                self.serverConnections[remoteAddr] = null;
+            }
+
+            self.serverConnections[remoteAddr] = conn;
             self.emit('connection', conn);
             self.logger.debug('incoming server connection', {
                 hostPort: self.hostPort,
@@ -416,6 +427,13 @@ TChannel.prototype.close = function close(callback) {
         } else {
             self.serverSocket.once('listening', closeServerSocket);
         }
+    }
+
+    var incomingConns = Object.keys(self.serverConnections);
+    for (var i = 0; i < incomingConns.length; i++) {
+        ++counter;
+        var incomingConn = self.serverConnections[incomingConns[i]];
+        incomingConn.close(onClose);
     }
 
     if (self.subChannels) {
