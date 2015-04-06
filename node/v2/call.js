@@ -25,9 +25,16 @@ var ArgsRW = require('./args');
 var Checksum = require('./checksum');
 var header = require('./header');
 var Tracing = require('./tracing');
+var argsrw = ArgsRW(bufrw.buf2);
 
-var Flags = {
-    Fragment: 0x01
+var Flags;
+process.nextTick(function() {
+    Flags = require('./index').CallFlags;
+});
+
+var ResponseCodes = {
+    OK: 0x00,
+    Error: 0x01
 };
 
 module.exports.Request = CallRequest;
@@ -50,28 +57,20 @@ function CallRequest(flags, ttl, tracing, service, headers, csum, args) {
     self.tracing = tracing || Tracing.emptyTracing;
     self.service = service || '';
     self.headers = headers || {};
-    if (csum === undefined || csum === null) {
-        self.csum = Checksum(Checksum.Types.None);
-    } else {
-        self.csum = Checksum.objOrType(csum);
-    }
+    self.csum = Checksum.objOrType(csum);
     self.args = args || [];
 }
 
 CallRequest.Cont = require('./cont').RequestCont;
-
 CallRequest.TypeCode = 0x03;
-
-CallRequest.Flags = Flags;
-
 CallRequest.RW = bufrw.Struct(CallRequest, [
-    {name: 'flags', rw: bufrw.UInt8},            // flags:1
-    {name: 'ttl', rw: bufrw.UInt32BE},           // ttl:4
-    {name: 'tracing', rw: Tracing.RW},           // tracing:24 traceflags:1
-    {name: 'service', rw: bufrw.str1},           // service~1
-    {name: 'headers', rw: header.header1},       // nh:1 (hk~1 hv~1){nh}
-    {name: 'csum', rw: Checksum.RW},             // csumtype:1 (csum:4){0,1}
-    {name: 'args', rw: ArgsRW(bufrw.buf2)},      // (arg~2)*
+    {name: 'flags', rw: bufrw.UInt8},      // flags:1
+    {name: 'ttl', rw: bufrw.UInt32BE},     // ttl:4
+    {name: 'tracing', rw: Tracing.RW},     // tracing:24 traceflags:1
+    {name: 'service', rw: bufrw.str1},     // service~1
+    {name: 'headers', rw: header.header1}, // nh:1 (hk~1 hv~1){nh}
+    {name: 'csum', rw: Checksum.RW},       // csumtype:1 (csum:4){0,1}
+    {name: 'args', rw: argsrw}             // (arg~2)*
 ]);
 
 CallRequest.prototype.splitArgs = function splitArgs(args, maxSize) {
@@ -103,12 +102,12 @@ CallRequest.prototype.splitArgs = function splitArgs(args, maxSize) {
     var ret = [self];
 
     if (split) {
-        var isLast = !(self.flags & CallRequest.Flags.Fragment);
+        var isLast = !(self.flags & Flags.Fragment);
         self.flags |= Flags.Fragment;
         var cont = self.constructor.Cont(self.flags, self.csum.type);
         ret = cont.splitArgs(args, maxSize);
         ret.unshift(self);
-        if (isLast) ret[ret.length - 1].flags &= ~ CallRequest.Flags.Fragment;
+        if (isLast) ret[ret.length - 1].flags &= ~ Flags.Fragment;
     }
 
     return ret;
@@ -135,32 +134,20 @@ function CallResponse(flags, code, tracing, headers, csum, args) {
     self.code = code || CallResponse.Codes.OK;
     self.tracing = tracing || Tracing.emptyTracing;
     self.headers = headers || {};
-    if (csum === undefined || csum === null) {
-        self.csum = Checksum(Checksum.Types.None);
-    } else {
-        self.csum = Checksum.objOrType(csum);
-    }
+    self.csum = Checksum.objOrType(csum);
     self.args = args || [];
 }
 
 CallResponse.Cont = require('./cont').ResponseCont;
-
 CallResponse.TypeCode = 0x04;
-
-CallResponse.Flags = CallRequest.Flags;
-
-CallResponse.Codes = {
-    OK: 0x00,
-    Error: 0x01
-};
-
+CallResponse.Codes = ResponseCodes;
 CallResponse.RW = bufrw.Struct(CallResponse, [
-    {name: 'flags', rw: bufrw.UInt8},            // flags:1
-    {name: 'code', rw: bufrw.UInt8},             // code:1
-    {name: 'tracing', rw: Tracing.RW},           // tracing:24 traceflags:1
-    {name: 'headers', rw: header.header1},       // nh:1 (hk~1 hv~1){nh}
-    {name: 'csum', rw: Checksum.RW},             // csumtype:1 (csum:4){0},1}
-    {name: 'args', rw: ArgsRW(bufrw.buf2)},      // (arg~2)*
+    {name: 'flags', rw: bufrw.UInt8},      // flags:1
+    {name: 'code', rw: bufrw.UInt8},       // code:1
+    {name: 'tracing', rw: Tracing.RW},     // tracing:24 traceflags:1
+    {name: 'headers', rw: header.header1}, // nh:1 (hk~1 hv~1){nh}
+    {name: 'csum', rw: Checksum.RW},       // csumtype:1 (csum:4){0},1}
+    {name: 'args', rw: argsrw}             // (arg~2)*
 ]);
 
 CallResponse.prototype.splitArgs = CallRequest.prototype.splitArgs;

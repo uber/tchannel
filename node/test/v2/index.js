@@ -24,6 +24,7 @@ require('./frame.js');
 require('./init.js');
 require('./checksum.js');
 require('./header.js');
+require('./tracing.js');
 require('./call.js');
 require('./cont.js');
 require('./error_response.js');

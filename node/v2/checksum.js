@@ -49,6 +49,9 @@ Checksum.objOrType = function objOrType(arg) {
     if (arg instanceof Checksum) {
         return arg;
     }
+    if (arg === undefined || arg === null) {
+        return Checksum(Checksum.Types.None);
+    }
     if (typeof arg !== 'number') {
         throw new Error('expected a Checksum object or a valid checksum type');
     }
@@ -93,6 +96,7 @@ Checksum.prototype.compute = function compute(args, prior) {
             for (i = 0; i < args.length; i++) {
                 csum = crc32(args[i], csum);
             }
+            if (csum === undefined) csum = 0;
             break;
         case 0x02:
             for (i = 0; i < args.length; i++) {
