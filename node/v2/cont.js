@@ -51,7 +51,7 @@ CallRequestCont.RW = bufrw.Struct(CallRequestCont, [
 
 CallRequestCont.prototype.splitArgs = function splitArgs(args, maxSize) {
     var self = this;
-    // assert not self.args
+    self.args = [];
     var lenRes = self.constructor.RW.byteLength(self);
     if (lenRes.err) throw lenRes.err;
     var maxBodySize = maxSize - lenRes.length;
