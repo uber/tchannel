@@ -57,8 +57,17 @@ function HeaderRW(countrw, keyrw, valrw) {
 }
 inherits(HeaderRW, bufrw.Base);
 
+function isEmpty(obj) {
+    for (var prop in obj) return false;
+    return true;
+}
+
 HeaderRW.prototype.byteLength = function byteLength(headers) {
     var self = this;
+    if (isEmpty(headers)) {
+        return bufrw.LengthResult.just(1);
+    }
+
     var length = 0;
     var keys = Object.keys(headers);
     var res;
@@ -81,6 +90,10 @@ HeaderRW.prototype.byteLength = function byteLength(headers) {
 
 HeaderRW.prototype.writeInto = function writeInto(headers, buffer, offset) {
     var self = this;
+    if (isEmpty(headers)) {
+        return self.countrw.writeInto(0, buffer, offset);
+    }
+
     var keys = Object.keys(headers);
     var res;
 
