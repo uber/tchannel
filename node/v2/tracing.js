@@ -32,9 +32,6 @@ emptyParentId.fill(0);
 emptyTraceId.fill(0);
 
 function Tracing(spanid, parentid, traceid, flags) {
-    if (!(this instanceof Tracing)) {
-        return new Tracing(spanid, parentid, traceid, flags);
-    }
     var self = this;
     self.spanid = spanid || emptySpanId;
     self.parentid = parentid || emptyParentId;
@@ -49,4 +46,4 @@ Tracing.RW = bufrw.Struct(Tracing, [
     {name: 'flags', rw: bufrw.UInt8}
 ]);
 
-Tracing.emptyTracing = Tracing();
+Tracing.emptyTracing = new Tracing();
