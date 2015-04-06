@@ -949,13 +949,10 @@ TChannelPeers.prototype.request = function request(options) {
     var peer = peers[0];
 
     if (!peer) {
-        throw new Error('no peer available for request'); // TODO: typed error
-    }
-
-    if (!peer) {
         // TODO: operational error?
         throw new Error('no peer available for request'); // TODO: typed error
     }
+
     return peer.request(options);
 };
 
