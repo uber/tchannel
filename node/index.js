@@ -313,7 +313,7 @@ TChannel.prototype.send = function send(options, arg1, arg2, arg3, callback) {
 };
 /* jshint maxparams:4 */
 
-TChannel.prototype.request = function request(options) {
+TChannel.prototype.request = function channelRequest(options) {
     var self = this;
     if (self.destroyed) {
         throw new Error('cannot request() to destroyed tchannel'); // TODO typed error
@@ -572,7 +572,7 @@ TChannelConnectionBase.prototype.popOutOp = function popOutOp(id) {
 };
 
 // create a request
-TChannelConnectionBase.prototype.request = function request(options) {
+TChannelConnectionBase.prototype.request = function connBaseRequest(options) {
     var self = this;
     if (!options) options = {};
 
@@ -943,7 +943,7 @@ TChannelPeers.prototype.delete = function del(hostPort) {
     return peer;
 };
 
-TChannelPeers.prototype.request = function request(options) {
+TChannelPeers.prototype.request = function peersRequest(options) {
     var self = this;
     var peer = self.choosePeer(options, null);
 
@@ -1090,7 +1090,7 @@ TChannelPeer.prototype.connect = function connect() {
     return conn;
 };
 
-TChannelPeer.prototype.request = function request(options) {
+TChannelPeer.prototype.request = function peerRequest(options) {
     var self = this;
     return self.connect().request(options);
 };
