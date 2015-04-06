@@ -264,16 +264,19 @@ TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callbac
 
 TChannelOutgoingRequest.prototype.hookupStreamCallback = function hookupCallback(callback) {
     var self = this;
-    self.once('error', onError);
-    self.once('response', onResponse);
+    var called = false;
+    self.on('error', onError);
+    self.on('response', onResponse);
 
     function onError(err) {
-        self.removeListener('response', onResponse);
+        if (called) return;
+        called = true;
         callback(err, null, null);
     }
 
     function onResponse(res) {
-        self.removeListener('error', onError);
+        if (called) return;
+        called = true;
         callback(null, self, res);
     }
 
@@ -285,17 +288,20 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
     if (callback.canStream) {
         return self.hookupStreamCallback(callback);
     }
+    var called = false;
 
-    self.once('error', onError);
-    self.once('response', onResponse);
+    self.on('error', onError);
+    self.on('response', onResponse);
 
     function onError(err) {
-        self.removeListener('response', onResponse);
+        if (called) return;
+        called = true;
         callback(err, null, null);
     }
 
     function onResponse(res) {
-        self.removeListener('error', onError);
+        if (called) return;
+        called = true;
         if (!res.streamed) {
             callback(null, res, res.arg2, res.arg3);
             return;
