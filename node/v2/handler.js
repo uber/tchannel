@@ -78,15 +78,16 @@ TChannelV2Handler.prototype.writeCopy = function writeCopy(buffer) {
 
 TChannelV2Handler.prototype.pushFrame = function pushFrame(frame) {
     var self = this;
-    var res = v2.Frame.RW.writeInto(frame, self.writeBuffer, 0);
+    var writeBuffer = self.writeBuffer;
+    var res = v2.Frame.RW.writeInto(frame, writeBuffer, 0);
     var err = res.err;
     if (err) {
-        if (!Buffer.isBuffer(err.buffer)) err.buffer = self.writeBuffer;
+        if (!Buffer.isBuffer(err.buffer)) err.buffer = writeBuffer;
         if (typeof err.offset !== 'number') err.offset = res.offset;
         self.emit('error', err);
     } else {
-        var buf = self.writeBuffer.slice(0, res.offset);
-        self.writeCopy(buf);
+        var buf = writeBuffer.slice(0, res.offset);
+        writeCopy(buf);
     }
 };
 
