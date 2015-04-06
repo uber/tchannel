@@ -64,6 +64,18 @@ function TChannelV2Handler(options) {
 
 util.inherits(TChannelV2Handler, EventEmitter);
 
+TChannelV2Handler.prototype.write = function write() {
+    var self = this;
+    self.emit('error', new Error('write not implemented'));
+};
+
+TChannelV2Handler.prototype.writeCopy = function writeCopy(buffer) {
+    var self = this;
+    var copy = new Buffer(buffer.length);
+    buffer.copy(copy);
+    self.write(copy);
+};
+
 TChannelV2Handler.prototype.pushFrame = function pushFrame(frame) {
     var self = this;
     var res = v2.Frame.RW.writeInto(frame, self.writeBuffer, 0);
@@ -74,7 +86,7 @@ TChannelV2Handler.prototype.pushFrame = function pushFrame(frame) {
         self.emit('error', err);
     } else {
         var buf = self.writeBuffer.slice(0, res.offset);
-        self.emit('buffer.shared', buf);
+        self.writeCopy(buf);
     }
 };
 
