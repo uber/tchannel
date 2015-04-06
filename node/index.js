@@ -605,7 +605,7 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
             throw new Error('response already built and started'); // TODO: typed error
         }
         op.res = self.buildOutgoingResponse(req, options);
-        op.res.once('finish', opDone);
+        op.res.on('finish', opDone);
         return op.res;
     }
 
@@ -1170,8 +1170,8 @@ TChannelSelfConnection.prototype.buildOutgoingRequest = function buildOutgoingRe
     };
     var outreq = new reqres.OutgoingRequest(id, options);
     var inreq = new reqres.IncomingRequest(id, options);
-    inreq.once('error', onError);
-    inreq.once('response', onResponse);
+    inreq.on('error', onError);
+    inreq.on('response', onResponse);
     self.handleCallRequest(inreq);
     return outreq;
 
