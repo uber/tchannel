@@ -32,9 +32,6 @@ process.nextTick(function() {
 
 // flags:1 csumtype:1 (csum:4){0,1} (arg~2)+
 function CallRequestCont(flags, csum, args) {
-    if (!(this instanceof CallRequestCont)) {
-        return new CallRequestCont(flags, csum, args);
-    }
     var self = this;
     self.type = CallRequestCont.TypeCode;
     self.flags = flags || 0;
@@ -51,7 +48,7 @@ CallRequestCont.RW = bufrw.Struct(CallRequestCont, [
 
 CallRequestCont.prototype.splitArgs = function splitArgs(args, maxSize) {
     var self = this;
-    // assert not self.args
+    self.args = [];
     var lenRes = self.constructor.RW.byteLength(self);
     if (lenRes.err) throw lenRes.err;
     var maxBodySize = maxSize - lenRes.length;
@@ -102,9 +99,6 @@ CallRequestCont.prototype.verifyChecksum = function verifyChecksum(prior) {
 
 // flags:1 csumtype:1 (csum:4){0,1} (arg~2)+
 function CallResponseCont(flags, csum, args) {
-    if (!(this instanceof CallResponseCont)) {
-        return new CallResponseCont(flags, csum, args);
-    }
     var self = this;
     self.type = CallResponseCont.TypeCode;
     self.flags = flags || 0;

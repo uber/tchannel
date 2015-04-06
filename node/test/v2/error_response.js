@@ -25,7 +25,7 @@ var ErrorResponse = require('../../v2/error_response.js');
 var testRW = require('bufrw/test_rw');
 var Tracing = require('../../v2/tracing.js');
 
-var testTracing = Tracing(
+var testTracing = new Tracing(
     new Buffer([0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07]),
     new Buffer([0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f]),
     new Buffer([0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17]),
@@ -36,7 +36,7 @@ test('ErrorResponse.RW: read/write payload', testRW.cases(ErrorResponse.RW, [
 
     // simple example payload
     [
-        ErrorResponse(
+        new ErrorResponse(
             ErrorResponse.Codes.ProtocolError,
             testTracing,
             'too bad.'

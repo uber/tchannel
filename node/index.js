@@ -1165,8 +1165,8 @@ TChannelSelfConnection.prototype.buildOutgoingRequest = function buildOutgoingRe
         callRequest: passParts,
         callRequestCont: passParts
     };
-    var outreq = reqres.OutgoingRequest(id, options);
-    var inreq = reqres.IncomingRequest(id, options);
+    var outreq = new reqres.OutgoingRequest(id, options);
+    var inreq = new reqres.IncomingRequest(id, options);
     inreq.once('error', onError);
     inreq.once('response', onResponse);
     self.handleCallRequest(inreq);
@@ -1196,15 +1196,15 @@ TChannelSelfConnection.prototype.buildOutgoingResponse = function buildOutgoingR
     if (!options) options = {};
     options.tracing = req.tracing;
 
-    // options.checksum = v2.Checksum(None);
+    // options.checksum = new v2.Checksum(None);
 
     options.sendFrame = {
         callResponse: passParts,
         callResponseCont: passParts,
         error: passError
     };
-    var outres = reqres.OutgoingResponse(req.id, options);
-    var inres = reqres.IncomingResponse(req.id, options);
+    var outres = new reqres.OutgoingResponse(req.id, options);
+    var inres = new reqres.IncomingResponse(req.id, options);
     var first = true;
     return outres;
 

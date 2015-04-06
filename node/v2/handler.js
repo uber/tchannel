@@ -248,13 +248,13 @@ TChannelV2Handler.prototype.sendInitRequest = function sendInitRequest() {
     var id = self.nextFrameId(); // TODO: assert(id === 1)?
     var hostPort = self.hostPort || '0.0.0.0:0';
     var processName = self.processName;
-    var body = v2.InitRequest(v2.VERSION, {
+    var body = new v2.InitRequest(v2.VERSION, {
         /* jshint camelcase:false */
         host_port: hostPort,
         process_name: processName
         /* jshint camelcase:true */
     });
-    var reqFrame = v2.Frame(id, body);
+    var reqFrame = new v2.Frame(id, body);
     self.push(reqFrame);
 };
 
@@ -263,19 +263,19 @@ TChannelV2Handler.prototype.sendInitResponse = function sendInitResponse(reqFram
     var id = reqFrame.id;
     var hostPort = self.hostPort;
     var processName = self.processName;
-    var body = v2.InitResponse(v2.VERSION, {
+    var body = new v2.InitResponse(v2.VERSION, {
         /* jshint camelcase:false */
         host_port: hostPort,
         process_name: processName
         /* jshint camelcase:true */
     });
-    var resFrame = v2.Frame(id, body);
+    var resFrame = new v2.Frame(id, body);
     self.push(resFrame);
 };
 
 TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame(req, flags, args) {
     var self = this;
-    var reqBody = v2.CallRequest(
+    var reqBody = new v2.CallRequest(
         flags, req.ttl, req.tracing, req.service, req.headers,
         req.checksum.type);
     req.checksum = self._sendCallBodies(req.id, reqBody, args, null);
@@ -284,7 +284,7 @@ TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame
 TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFrame(res, flags, args) {
     var self = this;
     var code = res.ok ? v2.CallResponse.Codes.OK : v2.CallResponse.Codes.Error;
-    var resBody = v2.CallResponse(
+    var resBody = new v2.CallResponse(
         flags, code, res.tracing, res.headers,
         res.checksum.type);
     res.checksum = self._sendCallBodies(res.id, resBody, args, null);
@@ -292,13 +292,13 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
 
 TChannelV2Handler.prototype.sendCallRequestContFrame = function sendCallRequestContFrame(req, flags, args) {
     var self = this;
-    var reqBody = v2.CallRequestCont(flags, req.checksum.type);
+    var reqBody = new v2.CallRequestCont(flags, req.checksum.type, args);
     req.checksum = self._sendCallBodies(req.id, reqBody, args, req.checksum);
 };
 
 TChannelV2Handler.prototype.sendCallResponseContFrame = function sendCallResponseContFrame(res, flags, args) {
     var self = this;
-    var resBody = v2.CallResponseCont(flags, res.checksum.type);
+    var resBody = new v2.CallResponseCont(flags, res.checksum.type, args);
     res.checksum = self._sendCallBodies(res.id, resBody, args, res.checksum);
 };
 
@@ -309,7 +309,7 @@ TChannelV2Handler.prototype._sendCallBodies = function _sendCallBodies(id, body,
         body = bodies[i];
         body.updateChecksum(checksum && checksum.val || 0);
         checksum = body.csum;
-        var frame = v2.Frame(id, body);
+        var frame = new v2.Frame(id, body);
         self.push(frame);
     }
     return checksum;
@@ -326,8 +326,8 @@ TChannelV2Handler.prototype.sendErrorFrame = function sendErrorFrame(req, codeSt
         });
     }
 
-    var errBody = v2.ErrorResponse(code, req.tracing, message);
-    var errFrame = v2.Frame(req.id, errBody);
+    var errBody = new v2.ErrorResponse(code, req.tracing, message);
+    var errFrame = new v2.Frame(req.id, errBody);
     self.push(errFrame);
 };
 
@@ -337,12 +337,12 @@ TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest
     if (options.checksumType === undefined || options.checksumType === null) {
         options.checksumType = v2.Checksum.Types.CRC32;
     }
-    options.checksum = v2.Checksum(options.checksumType);
+    options.checksum = new v2.Checksum(options.checksumType);
     options.sendFrame = {
         callRequest: sendCallRequestFrame,
         callRequestCont: sendCallRequestContFrame
     };
-    var req = TChannelOutgoingRequest(id, options);
+    var req = new TChannelOutgoingRequest(id, options);
     return req;
 
     function sendCallRequestFrame(args, isLast) {
@@ -363,13 +363,13 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
     if (!options) options = {};
     options.tracing = req.tracing;
     options.checksumType = req.checksum.type;
-    options.checksum = v2.Checksum(req.checksum.type);
+    options.checksum = new v2.Checksum(req.checksum.type);
     options.sendFrame = {
         callResponse: sendCallResponseFrame,
         callResponseCont: sendCallResponseContFrame,
         error: sendErrorFrame
     };
-    var res = TChannelOutgoingResponse(req.id, options);
+    var res = new TChannelOutgoingResponse(req.id, options);
     return res;
 
     function sendCallResponseFrame(args, isLast) {
@@ -390,20 +390,20 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
 };
 
 TChannelV2Handler.prototype.buildIncomingRequest = function buildIncomingRequest(reqFrame) {
-    return TChannelIncomingRequest(reqFrame.id, {
+    return new TChannelIncomingRequest(reqFrame.id, {
         ttl: reqFrame.body.ttl,
         tracing: reqFrame.body.tracing,
         service: reqFrame.body.service,
         headers: reqFrame.body.headers,
-        checksum: v2.Checksum(reqFrame.body.csum.type),
+        checksum: new v2.Checksum(reqFrame.body.csum.type),
         streamed: reqFrame.body.flags & v2.CallFlags.Fragment
     });
 };
 
 TChannelV2Handler.prototype.buildIncomingResponse = function buildIncomingResponse(resFrame) {
-    return TChannelIncomingResponse(resFrame.id, {
+    return new TChannelIncomingResponse(resFrame.id, {
         code: resFrame.body.code,
-        checksum: v2.Checksum(resFrame.body.csum.type),
+        checksum: new v2.Checksum(resFrame.body.csum.type),
         streamed: resFrame.body.flags & v2.CallFlags.Fragment
     });
 };

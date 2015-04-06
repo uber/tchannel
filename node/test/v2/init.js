@@ -28,7 +28,7 @@ var testRW = require('bufrw/test_rw');
 
 test('Init.Request.RW: read/write payload', testRW.cases(Init.Request.RW, [
     [
-        Init.Request(2, {
+        new Init.Request(2, {
             host_port: '1.2.3.4:5',
             process_name: 'node',
             arbitrary: 'value'
@@ -58,7 +58,7 @@ test('Init.Request.RW: read/write payload', testRW.cases(Init.Request.RW, [
 
 test('Init.Request.RW: read/write payload', testRW.cases(Init.Response.RW, [
     [
-        Init.Response(2, {
+        new Init.Response(2, {
             host_port: '2.3.4.5:6',
             process_name: 'NODE',
             arbitrary: 'VALUE'

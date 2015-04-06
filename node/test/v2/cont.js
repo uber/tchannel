@@ -25,7 +25,7 @@ var testRW = require('bufrw/test_rw');
 var Cont = require('../../v2/cont.js');
 var Checksum = require('../../v2/checksum.js');
 
-var testReqCont = Cont.RequestCont(
+var testReqCont = new Cont.RequestCont(
     0, Checksum.Types.Farm32,
     [Buffer('on'), Buffer('to'), Buffer('te')]
 );
@@ -57,7 +57,7 @@ test('Cont.RequestCont.RW: read/write payload', testRW.cases(Cont.RequestCont.RW
     }
 ]));
 
-var testResCont = Cont.ResponseCont(
+var testResCont = new Cont.ResponseCont(
     0, Checksum.Types.Farm32,
     [Buffer('ON'), Buffer('TO'), Buffer('TE')]
 );
