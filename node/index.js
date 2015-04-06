@@ -1165,8 +1165,8 @@ TChannelSelfConnection.prototype.buildOutgoingRequest = function buildOutgoingRe
         callRequest: passParts,
         callRequestCont: passParts
     };
-    var outreq = reqres.OutgoingRequest(id, options);
-    var inreq = reqres.IncomingRequest(id, options);
+    var outreq = new reqres.OutgoingRequest(id, options);
+    var inreq = new reqres.IncomingRequest(id, options);
     inreq.once('error', onError);
     inreq.once('response', onResponse);
     self.handleCallRequest(inreq);
@@ -1203,8 +1203,8 @@ TChannelSelfConnection.prototype.buildOutgoingResponse = function buildOutgoingR
         callResponseCont: passParts,
         error: passError
     };
-    var outres = reqres.OutgoingResponse(req.id, options);
-    var inres = reqres.IncomingResponse(req.id, options);
+    var outres = new reqres.OutgoingResponse(req.id, options);
+    var inres = new reqres.IncomingResponse(req.id, options);
     var first = true;
     return outres;
 
