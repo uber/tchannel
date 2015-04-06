@@ -73,7 +73,8 @@ test('HeaderRW: read/write header1', testRW.cases(HeaderRW.header1, [
                 key: 'key',
                 priorValue: 'val',
                 value: 'VAL',
-                offset: 17
+                offset: 9,
+                endOffset: 17
             }
         }
     },
@@ -90,9 +91,8 @@ test('HeaderRW: read/write header1', testRW.cases(HeaderRW.header1, [
                 type: 'tchannel.null-key',
                 name: 'TchannelNullKeyError',
                 message: 'null key',
-                // TODO: offset should be 0x01, but pair already read by time
-                // error guard gets a chance
-                offset: 5
+                offset: 1,
+                endOffset: 2
             }
         }
     },
