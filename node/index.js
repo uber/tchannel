@@ -683,6 +683,7 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
     var id = req.id;
     self.inPending++;
     var op = self.inOps[id] = new TChannelServerOp(self, self.timers.now(), req);
+    var done = false;
     process.nextTick(runHandler);
 
     function runHandler() {
@@ -694,11 +695,13 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
             throw new Error('response already built and started'); // TODO: typed error
         }
         op.res = self.buildOutgoingResponse(req, options);
-        op.res.once('finish', opDone);
+        op.res.on('finish', opDone);
         return op.res;
     }
 
     function opDone() {
+        if (done) return;
+        done = true;
         if (self.inOps[id] !== op) {
             self.logger.warn('mismatched opDone callback', {
                 hostPort: self.channel.hostPort,
@@ -1269,18 +1272,23 @@ TChannelSelfConnection.prototype.buildOutgoingRequest = function buildOutgoingRe
     };
     var outreq = new reqres.OutgoingRequest(id, options);
     var inreq = new reqres.IncomingRequest(id, options);
-    inreq.once('error', onError);
-    inreq.once('response', onResponse);
+    var called = false;
+    inreq.on('error', onError);
+    inreq.on('response', onResponse);
     self.handleCallRequest(inreq);
     return outreq;
 
     function onError(err) {
+        if (called) return;
+        called = true;
         self.popOutOp(id);
         inreq.removeListener('response', onResponse);
         outreq.emit('error', err);
     }
 
     function onResponse(res) {
+        if (called) return;
+        called = true;
         self.popOutOp(id);
         inreq.removeListener('error', onError);
         outreq.emit('response', res);
