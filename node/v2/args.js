@@ -146,7 +146,7 @@ ArgsRW.prototype.writeFragmentInto = function writeFragmentInto(body, buffer, of
         if (need > remain) {
             var j = remain - overhead;
             body.args[i] = arg.slice(0, j);
-            body.cont = body.constructor.Cont(
+            body.cont = new body.constructor.Cont(
                 body.flags & Flags.Fragment,
                 body.csum, // share on purpose
                 body.args.splice(i + 1)

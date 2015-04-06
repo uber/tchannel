@@ -36,9 +36,6 @@ States.Done = 2;
 States.Error = 3;
 
 function TChannelIncomingRequest(id, options) {
-    if (!(this instanceof TChannelIncomingRequest)) {
-        return new TChannelIncomingRequest(id, options);
-    }
     options = options || {};
     var self = this;
     EventEmitter.call(self);
@@ -100,9 +97,6 @@ TChannelIncomingRequest.prototype.finish = function finish() {
 };
 
 function TChannelIncomingResponse(id, options) {
-    if (!(this instanceof TChannelIncomingResponse)) {
-        return new TChannelIncomingResponse(id, options);
-    }
     options = options || {};
     var self = this;
     EventEmitter.call(self);
@@ -161,9 +155,6 @@ TChannelIncomingResponse.prototype.finish = function finish() {
 };
 
 function TChannelOutgoingRequest(id, options) {
-    if (!(this instanceof TChannelOutgoingRequest)) {
-        return new TChannelOutgoingRequest(id, options);
-    }
     options = options || {};
     if (!options.sendFrame) {
         throw new Error('missing sendFrame');
@@ -322,9 +313,6 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
 };
 
 function TChannelOutgoingResponse(id, options) {
-    if (!(this instanceof TChannelOutgoingResponse)) {
-        return new TChannelOutgoingResponse(id, options);
-    }
     options = options || {};
     if (!options.sendFrame) {
         throw new Error('missing sendFrame');

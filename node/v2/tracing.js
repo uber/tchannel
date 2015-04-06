@@ -33,9 +33,6 @@ emptyParentId.fill(0);
 emptyTraceId.fill(0);
 
 function Tracing(spanid, parentid, traceid, flags) {
-    if (!(this instanceof Tracing)) {
-        return new Tracing(spanid, parentid, traceid, flags);
-    }
     var self = this;
     self.spanid = spanid || emptySpanId;
     self.parentid = parentid || emptyParentId;
@@ -75,7 +72,7 @@ function writeTracingInto(tracing, buffer, offset) {
 }
 
 function readTracingFrom(buffer, offset) {
-    var tracing = Tracing();
+    var tracing = new Tracing();
     var res;
 
     res = fix8.readFrom(buffer, offset);
@@ -101,4 +98,4 @@ function readTracingFrom(buffer, offset) {
     return bufrw.ReadResult.just(offset, tracing);
 }
 
-Tracing.emptyTracing = Tracing();
+Tracing.emptyTracing = new Tracing();

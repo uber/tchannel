@@ -27,7 +27,7 @@ var TestBody = require('./test_body.js');
 TestBody.testWith('Frame.RW: read/write payload', testRW.cases(Frame.RW, [
 
     [
-        Frame(0x01020304, TestBody(Buffer('doge'))), [
+        new Frame(0x01020304, TestBody(Buffer('doge'))), [
             0x00, 0x15,             // size:2:
             TestBody.TypeCode,      // type:1
             0x00,                   // reserved:1
@@ -40,7 +40,7 @@ TestBody.testWith('Frame.RW: read/write payload', testRW.cases(Frame.RW, [
     ],
 
     [
-        Frame(0x01020304, TestBody(Buffer('cat'))),[
+        new Frame(0x01020304, TestBody(Buffer('cat'))),[
             0x00, 0x14,             // size:2:
             TestBody.TypeCode,      // type:1
             0x00,                   // reserved:1

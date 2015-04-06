@@ -27,9 +27,6 @@ var argsrw = ArgsRW(bufrw.buf2);
 
 // flags:1 csumtype:1 (csum:4){0,1} (arg~2)+
 function CallRequestCont(flags, csum, args) {
-    if (!(this instanceof CallRequestCont)) {
-        return new CallRequestCont(flags, csum, args);
-    }
     var self = this;
     self.type = CallRequestCont.TypeCode;
     self.flags = flags || 0;
@@ -58,8 +55,8 @@ function callReqContLength(body) {
 }
 
 function readCallReqContFrom(buffer, offset) {
+    var body = new CallRequestCont();
     var res;
-    var body = CallRequestCont();
 
     // flags:1
     res = bufrw.UInt8.readFrom(buffer, offset);
@@ -100,9 +97,6 @@ CallRequestCont.prototype.verifyChecksum = function verifyChecksum(prior) {
 
 // flags:1 csumtype:1 (csum:4){0,1} (arg~2)+
 function CallResponseCont(flags, csum, args) {
-    if (!(this instanceof CallResponseCont)) {
-        return new CallResponseCont(flags, csum, args);
-    }
     var self = this;
     self.type = CallResponseCont.TypeCode;
     self.flags = flags || 0;
@@ -117,8 +111,8 @@ CallResponseCont.Cont = CallResponseCont;
 CallResponseCont.RW = bufrw.Base(callResContLength, readCallResContFrom, writeCallResContInto);
 
 function callResContLength(body) {
-    var res;
     var length = 0;
+    var res;
 
     // flags:1
     length += bufrw.UInt8.width;
@@ -131,8 +125,8 @@ function callResContLength(body) {
 }
 
 function readCallResContFrom(buffer, offset) {
+    var body = new CallResponseCont();
     var res;
-    var body = CallResponseCont();
 
     // flags:1
     res = bufrw.UInt8.readFrom(buffer, offset);

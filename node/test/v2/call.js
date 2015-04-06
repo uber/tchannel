@@ -26,14 +26,14 @@ var Call = require('../../v2/call.js');
 var Checksum = require('../../v2/checksum.js');
 var Tracing = require('../../v2/tracing.js');
 
-var testTracing = Tracing(
+var testTracing = new Tracing(
     new Buffer([0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07]),
     new Buffer([0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f]),
     new Buffer([0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17]),
     24
 );
 
-var testReq = Call.Request(
+var testReq = new Call.Request(
     0, 1024, testTracing, 'apache', {key: 'val'},
     Checksum.Types.Farm32,
     [Buffer('on'), Buffer('to'), Buffer('te')]
@@ -79,7 +79,7 @@ test('Call.Request.RW: read/write payload', testRW.cases(Call.Request.RW, [
     }
 ]));
 
-var testRes = Call.Response(
+var testRes = new Call.Response(
     0, Call.Response.Codes.OK, testTracing, {key: 'val'},
     Checksum.Types.Farm32,
     [Buffer('ON'), Buffer('TO'), Buffer('TE')]
