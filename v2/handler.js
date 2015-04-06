@@ -342,7 +342,7 @@ TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest
         callRequest: sendCallRequestFrame,
         callRequestCont: sendCallRequestContFrame
     };
-    var req = TChannelOutgoingRequest(id, options);
+    var req = new TChannelOutgoingRequest(id, options);
     return req;
 
     function sendCallRequestFrame(args, isLast) {
@@ -369,7 +369,7 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
         callResponseCont: sendCallResponseContFrame,
         error: sendErrorFrame
     };
-    var res = TChannelOutgoingResponse(req.id, options);
+    var res = new TChannelOutgoingResponse(req.id, options);
     return res;
 
     function sendCallResponseFrame(args, isLast) {
@@ -390,7 +390,7 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
 };
 
 TChannelV2Handler.prototype.buildIncomingRequest = function buildIncomingRequest(reqFrame) {
-    return TChannelIncomingRequest(reqFrame.id, {
+    return new TChannelIncomingRequest(reqFrame.id, {
         ttl: reqFrame.body.ttl,
         tracing: reqFrame.body.tracing,
         service: reqFrame.body.service,
@@ -401,7 +401,7 @@ TChannelV2Handler.prototype.buildIncomingRequest = function buildIncomingRequest
 };
 
 TChannelV2Handler.prototype.buildIncomingResponse = function buildIncomingResponse(resFrame) {
-    return TChannelIncomingResponse(resFrame.id, {
+    return new TChannelIncomingResponse(resFrame.id, {
         code: resFrame.body.code,
         checksum: v2.Checksum(resFrame.body.csum.type),
         streamed: resFrame.body.flags & v2.CallFlags.Fragment
