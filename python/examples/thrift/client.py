@@ -18,7 +18,23 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from __future__ import absolute_import
+from tornado import ioloop, gen
 
-from .tchannel import TChannel  # noqa
-from .dispatch import TornadoDispatcher  # noqa
+from tchannel.tornado import TChannel
+from tchannel.thrift import TChannelProtocolFactory, TChannelTornadoTransport
+
+from hello import HelloService
+
+
+@gen.coroutine
+def run():
+    transport = TChannelTornadoTransport(TChannel(), "localhost:4040", "hello")
+    client = HelloService.Client(
+        transport, TChannelProtocolFactory("HelloService")
+    )
+
+    response = yield client.hello("world")
+    print response
+
+
+ioloop.IOLoop.current().run_sync(run)

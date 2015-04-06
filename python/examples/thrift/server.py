@@ -18,7 +18,27 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from __future__ import absolute_import
+from tornado import ioloop
 
-from .tchannel import TChannel  # noqa
-from .dispatch import TornadoDispatcher  # noqa
+from tchannel import thrift
+from tchannel.tornado import TChannel, TornadoDispatcher
+
+from hello import HelloService
+
+
+class HelloServiceHandler(object):
+
+    def hello(self, name):
+        print "Hello, %s" % name
+        return "Hello, %s" % name
+
+
+def run():
+    dispatcher = TornadoDispatcher()
+    TChannel().host(4040, dispatcher).listen()
+    thrift.register(dispatcher, HelloService, HelloServiceHandler())
+    ioloop.IOLoop.current().start()
+
+
+if __name__ == '__main__':
+    run()
