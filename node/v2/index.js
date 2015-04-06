@@ -27,9 +27,7 @@ module.exports.Types = Types;
 
 var Frame = require('./frame');
 
-module.exports.CallFlags = {
-    Fragment: 0x01
-};
+module.exports.CallFlags = require('./call_flags');
 
 var init = require('./init');
 Types.InitRequest = init.Request.TypeCode;
