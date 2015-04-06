@@ -296,14 +296,14 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
 
     function onResponse(res) {
         self.removeListener('error', onError);
-        if (res.streamed) {
-            parallel({
-                arg2: res.arg2.onValueReady,
-                arg3: res.arg3.onValueReady
-            }, compatCall);
-        } else {
-            compatCall(null, res);
+        if (!res.streamed) {
+            callback(null, res, res.arg2, res.arg3);
+            return;
         }
+        parallel({
+            arg2: res.arg2.onValueReady,
+            arg3: res.arg3.onValueReady
+        }, compatCall);
         function compatCall(err, args) {
             callback(err, res, args.arg2, args.arg3);
         }
