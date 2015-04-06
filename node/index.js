@@ -685,9 +685,12 @@ TChannelConnection.prototype.setupSocket = function setupSocket() {
 TChannelConnection.prototype.setupHandler = function setupHandler() {
     var self = this;
 
+    self.handler.write = function write(buf, done) {
+        self.socket.write(buf, null, done);
+    };
+
     self.mach.emit = handleReadFrame;
 
-    self.handler.on('buffer', onHandlerBuffer);
     self.handler.on('error', onHandlerError);
     self.handler.on('call.incoming.request', onCallRequest);
     self.handler.on('call.incoming.response', onCallResponse);
@@ -713,10 +716,6 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     // stream = stream
     //     .pipe(self.socket)
     //     ;
-
-    function onHandlerBuffer(buf) {
-        self.socket.write(buf);
-    }
 
     function onHandlerError(err) {
         self.resetAll(err);
