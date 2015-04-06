@@ -38,9 +38,6 @@ var MissingInitHeaderError = TypedError({
 var RequiredHeaderFields = ['host_port', 'process_name'];
 
 function InitRequest(version, headers) {
-    if (!(this instanceof InitRequest)) {
-        return new InitRequest(version, headers);
-    }
     var self = this;
     self.type = InitRequest.TypeCode;
     self.version = version || 0;
@@ -59,9 +56,6 @@ InitRequest.RW = bufrw.Struct(InitRequest, [
 // TODO: MissingInitHeaderError check / guard
 
 function InitResponse(version, headers) {
-    if (!(this instanceof InitResponse)) {
-        return new InitResponse(version, headers);
-    }
     var self = this;
     self.type = InitResponse.TypeCode;
     self.version = version || 0;

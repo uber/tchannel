@@ -248,7 +248,7 @@ TChannelV2Handler.prototype.sendInitRequest = function sendInitRequest() {
     var id = self.nextFrameId(); // TODO: assert(id === 1)?
     var hostPort = self.hostPort || '0.0.0.0:0';
     var processName = self.processName;
-    var body = v2.InitRequest(v2.VERSION, {
+    var body = new v2.InitRequest(v2.VERSION, {
         /* jshint camelcase:false */
         host_port: hostPort,
         process_name: processName
@@ -263,7 +263,7 @@ TChannelV2Handler.prototype.sendInitResponse = function sendInitResponse(reqFram
     var id = reqFrame.id;
     var hostPort = self.hostPort;
     var processName = self.processName;
-    var body = v2.InitResponse(v2.VERSION, {
+    var body = new v2.InitResponse(v2.VERSION, {
         /* jshint camelcase:false */
         host_port: hostPort,
         process_name: processName
