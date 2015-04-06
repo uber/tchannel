@@ -27,6 +27,8 @@ var inherits = require('util').inherits;
 var DuplicateHeaderKeyError = TypedError({
     type: 'tchannel.duplicate-header-key',
     message: 'duplicate header key {key}',
+    offset: null,
+    endOffset: null,
     key: null,
     value: null,
     priorValue: null
@@ -34,7 +36,9 @@ var DuplicateHeaderKeyError = TypedError({
 
 var NullKeyError = TypedError({
     type: 'tchannel.null-key',
-    message: 'null key'
+    message: 'null key',
+    offset: null,
+    endOffset: null
 });
 
 // TODO: different struct pattern that doesn't realize a temporary list of
@@ -46,56 +50,101 @@ function HeaderRW(countrw, keyrw, valrw) {
         return new HeaderRW(countrw, keyrw, valrw);
     }
     var self = this;
+    self.countrw = countrw;
     self.keyrw = keyrw;
     self.valrw = valrw;
-    var keyvalrw = bufrw.Series([self.keyrw, self.valrw]);
-    bufrw.Repeat.call(self, countrw, keyvalrw);
+    bufrw.Base.call(self);
 }
-inherits(HeaderRW, bufrw.Repeat);
+inherits(HeaderRW, bufrw.Base);
 
 HeaderRW.prototype.byteLength = function byteLength(headers) {
-    // TODO: bit wasteful
     var self = this;
+    var length = 0;
     var keys = Object.keys(headers);
-    var keyvals = new Array(keys.length);
+    var res;
+
+    length += self.countrw.width;
+
     for (var i = 0; i < keys.length; i++) {
-        keyvals[i] = [keys[i], headers[keys[i]]];
+        var key = keys[i];
+        res = self.keyrw.byteLength(key);
+        if (res.err) return res;
+        length += res.length;
+
+        res = self.valrw.byteLength(headers[key]);
+        if (res.err) return res;
+        length += res.length;
     }
-    return bufrw.Repeat.prototype.byteLength.call(self, keyvals);
+
+    return bufrw.LengthResult.just(length);
 };
 
 HeaderRW.prototype.writeInto = function writeInto(headers, buffer, offset) {
     var self = this;
     var keys = Object.keys(headers);
-    var keyvals = new Array(keys.length);
+    var res;
+
+    res = self.countrw.writeInto(keys.length, buffer, offset);
+
     for (var i = 0; i < keys.length; i++) {
-        keyvals[i] = [keys[i], headers[keys[i]]];
+        if (res.err) return res;
+        offset = res.offset;
+
+        var key = keys[i];
+        res = self.keyrw.writeInto(key, buffer, offset);
+        if (res.err) return res;
+        offset = res.offset;
+
+        res = self.valrw.writeInto(headers[key], buffer, offset);
     }
-    return bufrw.Repeat.prototype.writeInto.call(self, keyvals, buffer, offset);
+
+    return res;
 };
 
 HeaderRW.prototype.readFrom = function readFrom(buffer, offset) {
     var self = this;
-    var res = bufrw.Repeat.prototype.readFrom.call(self, buffer, offset);
+    var headers = {};
+    var start = 0;
+    var n = 0;
+    var key = '';
+    var val = '';
+    var res;
+
+    res = self.countrw.readFrom(buffer, offset);
     if (res.err) return res;
     offset = res.offset;
-    var keyvals = res.value;
+    n = res.value;
 
-    var headers = {};
-    for (var i = 0; i < keyvals.length; i++) {
-        var keyval = keyvals[i];
-        var key = keyval[0];
-        var val = keyval[1];
+    for (var i = 0; i < n; i++) {
+        start = offset;
+
+        res = self.keyrw.readFrom(buffer, offset);
+        if (res.err) return res;
+        key = res.value;
+
         if (!key.length) {
-            return bufrw.ReadResult.error(NullKeyError(), offset, headers);
+            return bufrw.ReadResult.error(NullKeyError({
+                offset: offset,
+                endOffset: res.offset
+            }), offset, headers);
         }
+        offset = res.offset;
+
+        res = self.valrw.readFrom(buffer, offset);
+        if (res.err) return res;
+        val = res.value;
+
         if (headers[key] !== undefined) {
             return bufrw.ReadResult.error(DuplicateHeaderKeyError({
+                offset: start,
+                endOffset: res.offset,
                 key: key,
                 value: val,
                 priorValue: headers[key]
             }), offset, headers);
         }
+        offset = res.offset;
+
         headers[key] = val;
     }
 
