@@ -1196,7 +1196,7 @@ TChannelSelfConnection.prototype.buildOutgoingResponse = function buildOutgoingR
     if (!options) options = {};
     options.tracing = req.tracing;
 
-    // options.checksum = v2.Checksum(None);
+    // options.checksum = new v2.Checksum(None);
 
     options.sendFrame = {
         callResponse: passParts,

@@ -337,7 +337,7 @@ TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest
     if (options.checksumType === undefined || options.checksumType === null) {
         options.checksumType = v2.Checksum.Types.CRC32;
     }
-    options.checksum = v2.Checksum(options.checksumType);
+    options.checksum = new v2.Checksum(options.checksumType);
     options.sendFrame = {
         callRequest: sendCallRequestFrame,
         callRequestCont: sendCallRequestContFrame
@@ -363,7 +363,7 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
     if (!options) options = {};
     options.tracing = req.tracing;
     options.checksumType = req.checksum.type;
-    options.checksum = v2.Checksum(req.checksum.type);
+    options.checksum = new v2.Checksum(req.checksum.type);
     options.sendFrame = {
         callResponse: sendCallResponseFrame,
         callResponseCont: sendCallResponseContFrame,
@@ -395,7 +395,7 @@ TChannelV2Handler.prototype.buildIncomingRequest = function buildIncomingRequest
         tracing: reqFrame.body.tracing,
         service: reqFrame.body.service,
         headers: reqFrame.body.headers,
-        checksum: v2.Checksum(reqFrame.body.csum.type),
+        checksum: new v2.Checksum(reqFrame.body.csum.type),
         streamed: reqFrame.body.flags & v2.CallFlags.Fragment
     });
 };
@@ -403,7 +403,7 @@ TChannelV2Handler.prototype.buildIncomingRequest = function buildIncomingRequest
 TChannelV2Handler.prototype.buildIncomingResponse = function buildIncomingResponse(resFrame) {
     return new TChannelIncomingResponse(resFrame.id, {
         code: resFrame.body.code,
-        checksum: v2.Checksum(resFrame.body.csum.type),
+        checksum: new v2.Checksum(resFrame.body.csum.type),
         streamed: resFrame.body.flags & v2.CallFlags.Fragment
     });
 };

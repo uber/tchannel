@@ -46,13 +46,13 @@ var Farm32Bytes = [
 ];
 
 test('Checksum: read/write', testRW.cases(Checksum.RW, [
-    [Checksum(Checksum.Types.None), NoneBytes],
-    [Checksum(Checksum.Types.CRC32, CRC32Hash), CRC32Bytes],
-    [Checksum(Checksum.Types.Farm32, Farm32Hash), Farm32Bytes]
+    [new Checksum(Checksum.Types.None), NoneBytes],
+    [new Checksum(Checksum.Types.CRC32, CRC32Hash), CRC32Bytes],
+    [new Checksum(Checksum.Types.Farm32, Farm32Hash), Farm32Bytes]
 ]));
 
 test('verify none checksum', function t(assert) {
-    var csum = Checksum(Checksum.Types.None);
+    var csum = new Checksum(Checksum.Types.None);
     var good = csum.verify(parts);
     assert.equal(good, null, 'none expected to verify parts');
     var bad = csum.verify(uparts);
@@ -61,7 +61,7 @@ test('verify none checksum', function t(assert) {
 });
 
 test('verify crc32 checksum', function t(assert) {
-    var csum = Checksum(Checksum.Types.CRC32, CRC32Hash);
+    var csum = new Checksum(Checksum.Types.CRC32, CRC32Hash);
     var good = csum.verify(parts);
     assert.equal(good, null, 'crc32 expected to verify parts');
     var bad = csum.verify(uparts);
@@ -70,7 +70,7 @@ test('verify crc32 checksum', function t(assert) {
 });
 
 test('read and verify farm32 checksum', function t(assert) {
-    var csum = Checksum(Checksum.Types.Farm32, Farm32Hash);
+    var csum = new Checksum(Checksum.Types.Farm32, Farm32Hash);
     var good = csum.verify(parts);
     assert.equal(good, null, 'farm32 expected to verify parts');
     var bad = csum.verify(uparts);
