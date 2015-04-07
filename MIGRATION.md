@@ -20,10 +20,9 @@ After:
 
 ```
 var TChannel = require('tchannel');
-var EndpointHandler = require('tchannel/endpoint-handler');
 
 var chan = TChannel({
-    handler: EndpointHandler()
+    serviceName: 'my-app'
 });
 
 chan.handler.register('my-endpoint', function (req, res, arg2, arg3) {
