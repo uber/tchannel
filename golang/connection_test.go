@@ -59,7 +59,7 @@ func echo(ctx context.Context, call *InboundCall) {
 }
 
 func TestRoundTrip(t *testing.T) {
-	withTestChannel(t, func(ch *TChannel) {
+	withTestChannel(t, func(ch *Channel) {
 
 		ch.Register(HandlerFunc(echo), "Capture", "ping")
 
@@ -83,7 +83,7 @@ func TestRoundTrip(t *testing.T) {
 }
 
 func TestBadRequest(t *testing.T) {
-	withTestChannel(t, func(ch *TChannel) {
+	withTestChannel(t, func(ch *Channel) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 		defer cancel()
 
@@ -94,7 +94,7 @@ func TestBadRequest(t *testing.T) {
 }
 
 func TestServerBusy(t *testing.T) {
-	withTestChannel(t, func(ch *TChannel) {
+	withTestChannel(t, func(ch *Channel) {
 		ch.Register(HandlerFunc(serverBusy), "TestService", "busy")
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
@@ -107,7 +107,7 @@ func TestServerBusy(t *testing.T) {
 }
 
 func TestTimeout(t *testing.T) {
-	withTestChannel(t, func(ch *TChannel) {
+	withTestChannel(t, func(ch *Channel) {
 		ch.Register(HandlerFunc(timeout), "TestService", "timeout")
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
@@ -121,7 +121,7 @@ func TestTimeout(t *testing.T) {
 }
 
 func testFragmentation(t *testing.T) {
-	withTestChannel(t, func(ch *TChannel) {
+	withTestChannel(t, func(ch *Channel) {
 		ch.Register(HandlerFunc(echo), "TestService", "echo")
 
 		arg2 := make([]byte, MaxFramePayloadSize*2)
@@ -144,7 +144,7 @@ func testFragmentation(t *testing.T) {
 	})
 }
 
-func sendRecv(ctx context.Context, ch *TChannel, hostPort string, serviceName, operation string,
+func sendRecv(ctx context.Context, ch *Channel, hostPort string, serviceName, operation string,
 	arg2, arg3 []byte) ([]byte, []byte, error) {
 
 	var respArg2 BytesInput
@@ -158,7 +158,7 @@ func sendRecv(ctx context.Context, ch *TChannel, hostPort string, serviceName, o
 	return []byte(respArg2), []byte(respArg3), nil
 }
 
-func withTestChannel(t *testing.T, f func(ch *TChannel)) {
+func withTestChannel(t *testing.T, f func(ch *Channel)) {
 	opts := ChannelOptions{
 		Logger: SimpleLogger,
 	}

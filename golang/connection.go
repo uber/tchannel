@@ -84,7 +84,6 @@ type ConnectionOptions struct {
 
 // Connection represents a connection to a remote peer.
 type Connection struct {
-	ch             *TChannel
 	log            Logger
 	checksumType   ChecksumType
 	framePool      FramePool
@@ -128,21 +127,19 @@ const (
 )
 
 // Creates a new TChannelConnection around an outbound connection initiated to a peer
-func newOutboundConnection(ch *TChannel, conn net.Conn,
+func newOutboundConnection(conn net.Conn, handlers handlerMap, log Logger,
 	opts *ConnectionOptions) (*Connection, error) {
-	c := newConnection(ch, conn, connectionWaitingToSendInitReq, opts)
-	return c, nil
+	return newConnection(conn, connectionWaitingToSendInitReq, handlers, log, opts), nil
 }
 
 // Creates a new TChannelConnection based on an incoming connection from a peer
-func newInboundConnection(ch *TChannel, conn net.Conn,
+func newInboundConnection(conn net.Conn, handlers handlerMap, log Logger,
 	opts *ConnectionOptions) (*Connection, error) {
-	c := newConnection(ch, conn, connectionWaitingToRecvInitReq, opts)
-	return c, nil
+	return newConnection(conn, connectionWaitingToRecvInitReq, handlers, log, opts), nil
 }
 
 // Creates a new connection in a given initial state
-func newConnection(ch *TChannel, conn net.Conn, initialState connectionState,
+func newConnection(conn net.Conn, initialState connectionState, handlers handlerMap, log Logger,
 	opts *ConnectionOptions) *Connection {
 
 	if opts == nil {
@@ -165,8 +162,7 @@ func newConnection(ch *TChannel, conn net.Conn, initialState connectionState,
 	}
 
 	c := &Connection{
-		ch:            ch,
-		log:           ch.log,
+		log:           log,
 		conn:          conn,
 		framePool:     framePool,
 		state:         initialState,
@@ -175,15 +171,15 @@ func newConnection(ch *TChannel, conn net.Conn, initialState connectionState,
 		checksumType:  opts.ChecksumType,
 		inbound: messageExchangeSet{
 			name:      messageExchangeSetInbound,
-			log:       ch.log,
+			log:       log,
 			exchanges: make(map[uint32]*messageExchange),
 		},
 		outbound: messageExchangeSet{
 			name:      messageExchangeSetOutbound,
-			log:       ch.log,
+			log:       log,
 			exchanges: make(map[uint32]*messageExchange),
 		},
-		handlers: ch.handlers,
+		handlers: handlers,
 	}
 
 	go c.readFrames()
@@ -338,30 +334,30 @@ func (c *Connection) handleInitRes(frame *Frame) {
 	}
 }
 
-// Sends a standalone message (typically a control message)
+// sendMessage sends a standalone message (typically a control message)
 func (c *Connection) sendMessage(msg message) error {
-	f, err := marshalMessage(msg, c.framePool)
-	if err != nil {
-		return nil
+	frame := c.framePool.Get()
+	if err := frame.write(msg); err != nil {
+		c.framePool.Release(frame)
+		return err
 	}
 
 	select {
-	case c.sendCh <- f:
+	case c.sendCh <- frame:
 		return nil
 	default:
 		return ErrSendBufferFull
 	}
 }
 
-// Receives a standalone message (typically a control message)
+// recvMessage blocks waiting for a standalone response message (typically a control message)
 func (c *Connection) recvMessage(ctx context.Context, msg message, resCh <-chan *Frame) error {
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
 
 	case frame := <-resCh:
-		msgBuf := typed.NewReadBuffer(frame.SizedPayload())
-		err := msg.read(msgBuf)
+		err := frame.read(msg)
 		c.framePool.Release(frame)
 		return err
 	}
@@ -372,7 +368,7 @@ func (c *Connection) NextMessageID() uint32 {
 	return atomic.AddUint32(&c.nextMessageID, 1)
 }
 
-// Handles a connection error
+// connectionError handles a connection level error
 func (c *Connection) connectionError(err error) error {
 	doClose := false
 	c.withStateLock(func() error {
@@ -390,16 +386,7 @@ func (c *Connection) connectionError(err error) error {
 	return err
 }
 
-// Closes the network connection and all network-related channels
-func (c *Connection) closeNetwork() {
-	// NB(mmihic): The sender goroutine	will exit once the connection is closed; no need to close
-	// the send channel (and closing the send channel would be dangerous since other goroutine might be sending)
-	if err := c.conn.Close(); err != nil {
-		c.log.Warnf("could not close connection to peer %s: %v", c.remotePeerInfo, err)
-	}
-}
-
-// Performs an action with the connection state mutex locked
+// withStateLock performs an action with the connection state mutex locked
 func (c *Connection) withStateLock(f func() error) error {
 	c.stateMut.Lock()
 	defer c.stateMut.Unlock()
@@ -407,7 +394,7 @@ func (c *Connection) withStateLock(f func() error) error {
 	return f()
 }
 
-// Performs an action with the connection state mutex held in a read lock
+// withStateRLock an action with the connection state mutex held in a read lock
 func (c *Connection) withStateRLock(f func() error) error {
 	c.stateMut.RLock()
 	defer c.stateMut.RUnlock()
@@ -415,8 +402,8 @@ func (c *Connection) withStateRLock(f func() error) error {
 	return f()
 }
 
-// Main loop that reads frames from the network connection and dispatches to the appropriate handler.
-// Run within its own goroutine to prevent overlapping reads on the socket.  Most handlers simply
+// readFrames is the loop that reads frames from the network connection and dispatches to the appropriate
+// handler. Run within its own goroutine to prevent overlapping reads on the socket.  Most handlers simply
 // send the incoming frame to a channel; the init handlers are a notable exception, since we cannot
 // process new frames until the initialization is complete.
 func (c *Connection) readFrames() {
@@ -449,7 +436,7 @@ func (c *Connection) readFrames() {
 	}
 }
 
-// Main loop that pulls frames from the send channel and writes them to the connection.
+// writeFrames is the main loop that pulls frames from the send channel and writes them to the connection.
 // Run in its own goroutine to prevent overlapping writes on the network socket.
 func (c *Connection) writeFrames() {
 	for f := range c.sendCh {
@@ -460,19 +447,17 @@ func (c *Connection) writeFrames() {
 			return
 		}
 	}
+
+	// Close the network after we have sent the last frame
+	c.closeNetwork()
 }
 
-// Creates a new frame around a message
-func marshalMessage(msg message, pool FramePool) (*Frame, error) {
-	f := pool.Get()
-
-	wbuf := typed.NewWriteBuffer(f.Payload[:])
-	if err := msg.write(wbuf); err != nil {
-		return nil, err
+// closeNetwork closes the network connection and all network-related channels.  This should only be
+// done in response to a fatal connection or protocol error, or after all pending frames have been sent.
+func (c *Connection) closeNetwork() {
+	// NB(mmihic): The sender goroutine	will exit once the connection is closed; no need to close
+	// the send channel (and closing the send channel would be dangerous since other goroutine might be sending)
+	if err := c.conn.Close(); err != nil {
+		c.log.Warnf("could not close connection to peer %s: %v", c.remotePeerInfo, err)
 	}
-
-	f.Header.ID = msg.ID()
-	f.Header.messageType = msg.messageType()
-	f.Header.SetPayloadSize(uint16(wbuf.BytesWritten()))
-	return f, nil
 }

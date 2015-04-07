@@ -280,13 +280,12 @@ func (call *InboundCallResponse) SendSystemError(err error) error {
 	call.state = inboundCallResponseComplete
 
 	// Send the error frame
-	frame, err := marshalMessage(&errorMessage{
+	frame := call.conn.framePool.Get()
+	if err := frame.write(&errorMessage{
 		id:        call.id,
 		tracing:   call.span,
 		errorCode: GetSystemErrorCode(err),
-		message:   err.Error()}, call.conn.framePool)
-
-	if err != nil {
+		message:   err.Error()}); err != nil {
 		// Nothing we can do here
 		call.conn.log.Warnf("Could not create outbound frame to %s for %d: %v",
 			call.conn.remotePeerInfo, call.id, err)

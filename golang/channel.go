@@ -56,12 +56,12 @@ type ChannelOptions struct {
 	Logger Logger
 }
 
-// A TChannel is a bi-directional connection to the peering and routing network.  Applications
-// can use a TChannel to make service calls to remote peers via BeginCall, or to listen for incoming calls
+// A Channel is a bi-directional connection to the peering and routing network.  Applications
+// can use a Channel to make service calls to remote peers via BeginCall, or to listen for incoming calls
 // from peers.  Once the channel is created, applications should call the ListenAndHandle method to
 // listen for incoming peer connections.  Because channels are bi-directional, applications should call
 // ListenAndHandle even if they do not offer any services
-type TChannel struct {
+type Channel struct {
 	log               Logger
 	hostPort          string
 	processName       string
@@ -72,7 +72,7 @@ type TChannel struct {
 
 // NewChannel creates a new Channel that will bind to the given host and port.  If no port is provided,
 // the channel will start on an OS assigned port
-func NewChannel(hostPort string, opts *ChannelOptions) (*TChannel, error) {
+func NewChannel(hostPort string, opts *ChannelOptions) (*Channel, error) {
 	if opts == nil {
 		opts = &ChannelOptions{}
 	}
@@ -87,7 +87,7 @@ func NewChannel(hostPort string, opts *ChannelOptions) (*TChannel, error) {
 		processName = fmt.Sprintf("%s[%d]", filepath.Base(os.Args[0]), os.Getpid())
 	}
 
-	ch := &TChannel{
+	ch := &Channel{
 		connectionOptions: opts.DefaultConnectionOptions,
 		processName:       processName,
 		log:               logger,
@@ -115,19 +115,19 @@ func NewChannel(hostPort string, opts *ChannelOptions) (*TChannel, error) {
 }
 
 // HostPort returns the host and port on which the Channel is listening
-func (ch *TChannel) HostPort() string {
+func (ch *Channel) HostPort() string {
 	return ch.hostPort
 }
 
 // Register regsters a handler for a service+operation pair
-func (ch *TChannel) Register(h Handler, serviceName, operationName string) {
+func (ch *Channel) Register(h Handler, serviceName, operationName string) {
 	ch.handlers.register(h, serviceName, operationName)
 }
 
 // BeginCall starts a new call to a remote peer, returning an OutboundCall that can
 // be used to write the arguments of the call
 // TODO(mmihic): Support CallOptions such as format, request specific checksums, retries, etc
-func (ch *TChannel) BeginCall(ctx context.Context, hostPort,
+func (ch *Channel) BeginCall(ctx context.Context, hostPort,
 	serviceName, operationName string) (*OutboundCall, error) {
 	// TODO(mmihic): Keep-alive, manage pools, use existing inbound if possible, all that jazz
 	nconn, err := net.Dial("tcp", hostPort)
@@ -135,7 +135,7 @@ func (ch *TChannel) BeginCall(ctx context.Context, hostPort,
 		return nil, err
 	}
 
-	conn, err := newOutboundConnection(ch, nconn, &ch.connectionOptions)
+	conn, err := newOutboundConnection(nconn, ch.handlers, ch.log, &ch.connectionOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +157,7 @@ func (ch *TChannel) BeginCall(ctx context.Context, hostPort,
 }
 
 // RoundTrip calls a peer and waits for the response
-func (ch *TChannel) RoundTrip(ctx context.Context, hostPort, serviceName, operationName string,
+func (ch *Channel) RoundTrip(ctx context.Context, hostPort, serviceName, operationName string,
 	reqArg2, reqArg3 Output, resArg2, resArg3 Input) (bool, error) {
 
 	call, err := ch.BeginCall(ctx, hostPort, serviceName, operationName)
@@ -186,7 +186,7 @@ func (ch *TChannel) RoundTrip(ctx context.Context, hostPort, serviceName, operat
 
 // ListenAndHandle runs a listener to accept and manage new incoming connections.
 // Blocks until the channel is closed.
-func (ch *TChannel) ListenAndHandle() error {
+func (ch *Channel) ListenAndHandle() error {
 	acceptBackoff := 0 * time.Millisecond
 
 	for {
@@ -213,7 +213,7 @@ func (ch *TChannel) ListenAndHandle() error {
 
 		acceptBackoff = 0
 
-		_, err = newInboundConnection(ch, netConn, &ch.connectionOptions)
+		_, err = newInboundConnection(netConn, ch.handlers, ch.log, &ch.connectionOptions)
 		if err != nil {
 			// Server is getting overloaded - begin rejecting new connections
 			ch.log.Errorf("could not create new TChannelConnection for incoming conn: %v", err)
