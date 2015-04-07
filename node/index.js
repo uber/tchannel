@@ -186,27 +186,34 @@ TChannel.prototype.getServer = function getServer() {
 TChannel.prototype.onServerSocketConnection = function onServerSocketConnection(sock) {
     var self = this;
 
-    if (!self.destroyed) {
-        var remoteAddr = sock.remoteAddress + ':' + sock.remotePort;
-        var conn = new TChannelConnection(self, sock, 'in', remoteAddr);
-
-        if (self.serverConnections[remoteAddr]) {
-            var oldConn = self.serverConnections[remoteAddr];
-            oldConn.resetAll(SocketClosedError({
-                reason: 'duplicate remoteAddr incoming conn'
-            }));
-            delete self.serverConnections[remoteAddr];
-        }
-
-        sock.on('close', onSocketClose);
-
-        self.serverConnections[remoteAddr] = conn;
-        self.emit('connection', conn);
-        self.logger.debug('incoming server connection', {
-            hostPort: self.hostPort,
-            remoteAddr: conn.remoteAddr
+    if (self.destroyed) {
+        self.logger.error('got incoming socket whilst destroyed', {
+            remoteAddr: sock.remoteAddr,
+            remotePort: sock.remotePort,
+            hostPort: self.hostPort
         });
+        return;
     }
+
+    var remoteAddr = sock.remoteAddress + ':' + sock.remotePort;
+    var conn = new TChannelConnection(self, sock, 'in', remoteAddr);
+
+    if (self.serverConnections[remoteAddr]) {
+        var oldConn = self.serverConnections[remoteAddr];
+        oldConn.resetAll(SocketClosedError({
+            reason: 'duplicate remoteAddr incoming conn'
+        }));
+        delete self.serverConnections[remoteAddr];
+    }
+
+    sock.on('close', onSocketClose);
+
+    self.serverConnections[remoteAddr] = conn;
+    self.emit('connection', conn);
+    self.logger.debug('incoming server connection', {
+        hostPort: self.hostPort,
+        remoteAddr: conn.remoteAddr
+    });
 
     function onSocketClose() {
         delete self.serverConnections[remoteAddr];
@@ -216,24 +223,28 @@ TChannel.prototype.onServerSocketConnection = function onServerSocketConnection(
 TChannel.prototype.onServerSocketListening = function onServerSocketListening() {
     var self = this;
 
-    if (!self.destroyed) {
-        var address = self.serverSocket.address();
-        self.hostPort = self.host + ':' + address.port;
-        self.listening = true;
-
-        if (self.subChannels) {
-            Object.keys(self.subChannels).forEach(function each(serviceName) {
-                var chan = self.subChannels[serviceName];
-                if (!chan.hostPort) {
-                    chan.hostPort = self.hostPort;
-                }
-            });
-        }
-
-        self.logger.info(self.hostPort + ' listening');
-
-        self.emit('listening');
+    if (self.destroyed) {
+        self.logger.error('got serverSocket listen whilst destroyed', {
+            requestHostPort: self.host + ':' + self.requestedPort,
+            hostPort: self.host + ':' + self.serverSocket.address().port
+        });
+        return;
     }
+
+    var address = self.serverSocket.address();
+    self.hostPort = self.host + ':' + address.port;
+    self.listening = true;
+
+    if (self.subChannels) {
+        Object.keys(self.subChannels).forEach(function each(serviceName) {
+            var chan = self.subChannels[serviceName];
+            if (!chan.hostPort) {
+                chan.hostPort = self.hostPort;
+            }
+        });
+    }
+
+    self.emit('listening');
 };
 
 TChannel.prototype.onServerSocketError = function onServerSocketError(err) {
