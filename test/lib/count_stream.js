@@ -44,9 +44,3 @@ CountStream.prototype._next = function _read() {
 };
 
 module.exports = CountStream;
-
-if (module === require.main) {
-    var hex = require('hexer');
-    var s = CountStream({limit: Math.pow(2, 20)});
-    s.pipe(hex.Transform({cols: 32})).pipe(process.stdout);
-}
