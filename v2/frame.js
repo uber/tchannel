@@ -151,9 +151,8 @@ function writeFrameInto(frame, buffer, offset) {
     return res;
 }
 
-Frame.prototype.fromBuffer = function toBuffer(buffer) {
-    var self = this;
-    return bufrw.fromBuffer(Frame.RW, self, buffer);
+Frame.fromBuffer = function fromBuffer(buffer) {
+    return bufrw.fromBuffer(Frame.RW, buffer, 0);
 };
 
 Frame.prototype.byteLength = function byteLength() {
