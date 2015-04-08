@@ -1222,13 +1222,16 @@ function TChannelPeer(channel, hostPort, options) {
 
 inherits(TChannelPeer, EventEmitter);
 
-TChannelPeer.prototype.isConnected = function isConnected(direction) {
+TChannelPeer.prototype.isConnected = function isConnected(direction, identified) {
     var self = this;
+    if (identified === undefined) identified = true;
     for (var i = 0; i < self.connections.length; i++) {
         var conn = self.connections[i];
         if (direction && conn.direction !== direction) {
             continue;
-        } else if (conn.remoteName !== null) {
+        } else if (conn.closing) {
+            continue;
+        } else if (conn.remoteName !== null || !identified) {
             return true;
         }
     }
