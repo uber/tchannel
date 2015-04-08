@@ -151,6 +151,10 @@ function TChannel(options) {
     self.listening = false;
     self.destroyed = false;
 
+    if (self.options.trace) {
+        self.tracer = require('./trace/agent');
+    }
+
     // lazily created by .getServer (usually from .listen)
     self.serverSocket = null;
     self.serverConnections = null;
@@ -197,6 +201,10 @@ TChannel.prototype.onServerSocketConnection = function onServerSocketConnection(
 
     var remoteAddr = sock.remoteAddress + ':' + sock.remotePort;
     var conn = new TChannelConnection(self, sock, 'in', remoteAddr);
+
+    conn.on('span', function handleSpanFromConn(span) {
+        self.tracer.report(span);
+    });
 
     if (self.serverConnections[remoteAddr]) {
         var oldConn = self.serverConnections[remoteAddr];
@@ -457,6 +465,10 @@ TChannel.prototype.close = function close(callback) {
         throw new Error('double close'); // TODO typed error
     }
 
+    if (self.tracer) {
+        self.tracer.destroy();
+    }
+
     self.destroyed = true;
     self.logger.debug('quitting tchannel', {
         hostPort: self.hostPort
@@ -537,6 +549,7 @@ function TChannelConnectionBase(channel, direction, remoteAddr) {
     self.closing = false;
 
     self.startTimeoutTimer();
+    self.tracer = self.channel.tracer;
 }
 inherits(TChannelConnectionBase, EventEmitter);
 
@@ -736,6 +749,7 @@ TChannelConnectionBase.prototype.request = function connBaseRequest(options) {
 
     // TODO: better default, support for dynamic
     options.ttl = options.timeout || DEFAULT_OUTGOING_REQ_TIMEOUT;
+    options.tracer = self.tracer;
     var req = self.buildOutgoingRequest(options);
     var id = req.id;
     self.outOps[id] = new TChannelClientOp(req, self.timers.now());
@@ -756,12 +770,17 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
         self.channel.handler.handleRequest(req, buildResponse);
     }
 
+    function handleSpanFromRes(span) {
+        self.emit('span', span);
+    }
+
     function buildResponse(options) {
         if (op.res && op.res.state !== reqres.States.Initial) {
             throw new Error('response already built and started'); // TODO: typed error
         }
         op.res = self.buildOutgoingResponse(req, options);
         op.res.on('finish', opDone);
+        op.res.on('span', handleSpanFromRes);
         return op.res;
     }
 
@@ -789,7 +808,8 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     TChannelConnectionBase.call(self, channel, direction, remoteAddr);
     self.socket = socket;
     self.handler = new v2.Handler(extend({
-        hostPort: self.channel.hostPort
+        hostPort: self.channel.hostPort,
+        tracer: self.tracer
     }, self.options));
     self.mach = ReadMachine(bufrw.UInt16BE, v2.Frame.RW);
 
@@ -910,6 +930,13 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
             });
             return;
         }
+
+        if (self.tracer) {
+            // TODO: better annotations
+            op.req.span.annotate('cr');
+            self.tracer.report(op.req.span);
+        }
+
         op.req.emit('response', res);
     }
 
@@ -1336,6 +1363,7 @@ TChannelSelfConnection.prototype.buildOutgoingRequest = function buildOutgoingRe
         callRequest: passParts,
         callRequestCont: passParts
     };
+    options.tracer = self.tracer;
     var outreq = new reqres.OutgoingRequest(id, options);
     var inreq = new reqres.IncomingRequest(id, options);
     var called = false;

@@ -66,6 +66,23 @@ function TChannelIncomingRequest(id, options) {
         self.arg2 = emptyBuffer;
         self.arg3 = emptyBuffer;
     }
+
+    if (options.tracer) {
+        self.span = options.tracer.setupNewSpan({
+            spanid: self.tracing.spanid,
+            traceid: self.tracing.traceid,
+            parentid: self.tracing.parentid,
+            hostPort: options.hostPort,
+            serviceName: options.serviceName, 
+            name: undefined // fill this in later
+        });
+
+        // TODO: better annotations
+        self.span.annotate('sr');
+    } else {
+        self.span = null;
+    }
+
     self.on('finish', function onFinish() {
         self.state = States.Done;
     });
@@ -105,6 +122,7 @@ function TChannelIncomingResponse(id, options) {
     self.code = options.code || 0;
     self.checksum = options.checksum || null;
     self.ok = self.code === 0; // TODO: probably okay, but a bit jank
+    self.span = options.span;
     if (options.streamed) {
         self.streamed = true;
         self._argstream = InArgStream();
@@ -126,6 +144,9 @@ function TChannelIncomingResponse(id, options) {
     }
     self.on('finish', function onFinish() {
         self.state = States.Done;
+        if (self.span) {
+            self.emit('span');
+        }
     });
 }
 
@@ -192,6 +213,20 @@ function TChannelOutgoingRequest(id, options) {
         self.arg2 = null;
         self.arg3 = null;
     }
+
+    if (options.tracer) {
+        // new span with new ids
+        self.span = options.tracer.setupNewSpan({
+            spanid: null,
+            traceid: null,
+            parentid: null,
+            hostPort: options.hostPort,
+            serviceName: options.serviceName, 
+            name: '' // fill this in later
+        });
+    } else {
+        self.span = null;
+    }
 }
 
 inherits(TChannelOutgoingRequest, EventEmitter);
@@ -219,6 +254,9 @@ TChannelOutgoingRequest.prototype.sendCallRequestFrame = function sendCallReques
     var self = this;
     switch (self.state) {
         case States.Initial:
+            if (self.span) {
+                self.span.annotate('cs');
+            }
             self.sendFrame.callRequest(args, isLast);
             if (isLast) self.state = States.Done;
             else self.state = States.Streaming;
@@ -246,6 +284,10 @@ TChannelOutgoingRequest.prototype.sendCallRequestContFrame = function sendCallRe
 
 TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     var self = this;
+
+    if (self.span) {
+        self.span.name = String(arg1);
+    }
     if (callback) self.hookupCallback(callback);
     if (self.streamed) {
         self.arg1.end(arg1);
@@ -334,6 +376,7 @@ function TChannelOutgoingResponse(id, options) {
     self.checksum = options.checksum || null;
     self.ok = self.code === 0;
     self.sendFrame = options.sendFrame;
+    self.span = options.span || null;
     if (options.streamed) {
         self.streamed = true;
         self._argstream = OutArgStream();
@@ -356,6 +399,12 @@ function TChannelOutgoingResponse(id, options) {
         self.arg2 = null;
         self.arg3 = null;
     }
+
+    self.on('finish', function onOutgoingResFinish() {
+        if (self.span) {
+            self.emit('span', self.span);
+        }
+    });
 }
 
 inherits(TChannelOutgoingResponse, EventEmitter);
@@ -382,7 +431,12 @@ TChannelOutgoingResponse.prototype.sendCallResponseFrame = function sendCallResp
     switch (self.state) {
         case States.Initial:
             self.sendFrame.callResponse(args, isLast);
-            if (isLast) self.state = States.Done;
+            if (isLast) {
+                if (self.span) {
+                    self.span.annotate('ss');
+                }
+                self.state = States.Done;
+            }
             else self.state = States.Streaming;
             break;
         case States.Streaming:
@@ -400,7 +454,12 @@ TChannelOutgoingResponse.prototype.sendCallResponseContFrame = function sendCall
             throw new Error('first response frame not sent'); // TODO: typed error
         case States.Streaming:
             self.sendFrame.callResponseCont(args, isLast);
-            if (isLast) self.state = States.Done;
+            if (isLast) {
+                if (self.span) {
+                    self.span.annotate('ss');
+                }
+                self.state = States.Done;
+            }
             break;
         case States.Done:
         case States.Error:
@@ -413,6 +472,9 @@ TChannelOutgoingResponse.prototype.sendError = function sendError(codeString, me
     if (self.state === States.Done || self.state === States.Error) {
         throw new Error('response already done'); // TODO: typed error
     } else {
+        if (self.span) {
+            self.span.annotate('ss');
+        }
         self.state = States.Error;
         if (self.streamed) {
             // TODO: we could decide to flush any parts in a (first?) call res frame
