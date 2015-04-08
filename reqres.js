@@ -104,7 +104,9 @@ TChannelIncomingRequest.prototype.handleFrame = function handleFrame(parts) {
         self.arg2 = parts[1] || emptyBuffer;
         self.arg3 = parts[2] || emptyBuffer;
 
-        self.span.name = String(self.arg1);
+        if (self.span) {
+            self.span.name = String(self.arg1);
+        }
     }
 };
 
