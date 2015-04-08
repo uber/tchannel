@@ -60,6 +60,7 @@ function TChannelV2Handler(options) {
     self.streamingReq = Object.create(null);
     self.streamingRes = Object.create(null);
     self.writeBuffer = new Buffer(v2.Frame.MaxSize);
+    self.tracer = options.tracer;
 }
 
 util.inherits(TChannelV2Handler, EventEmitter);
@@ -385,6 +386,7 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
     var self = this;
     if (!options) options = {};
     options.tracing = req.tracing;
+    options.span = req.span;
     options.checksumType = req.checksum.type;
     options.checksum = new v2.Checksum(req.checksum.type);
     options.sendFrame = {
@@ -413,13 +415,16 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
 };
 
 TChannelV2Handler.prototype.buildIncomingRequest = function buildIncomingRequest(reqFrame) {
+    var self = this;
     return new TChannelIncomingRequest(reqFrame.id, {
+        tracer: self.tracer,
         ttl: reqFrame.body.ttl,
         tracing: reqFrame.body.tracing,
         service: reqFrame.body.service,
         headers: reqFrame.body.headers,
         checksum: new v2.Checksum(reqFrame.body.csum.type),
-        streamed: reqFrame.body.flags & v2.CallFlags.Fragment
+        streamed: reqFrame.body.flags & v2.CallFlags.Fragment,
+        hostPort: self.hostPort // needed for tracing
     });
 };
 
