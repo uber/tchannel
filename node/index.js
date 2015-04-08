@@ -978,10 +978,17 @@ TChannelConnection.prototype.start = function start() {
     }
 
     function onInIdentified(init) {
-        self.remoteName = init.hostPort;
+        if (init.hostPort === '0.0.0.0:0') {
+            self.remoteName = '' + self.socket.remoteAddress + ':' + self.socket.remotePort;
+            if (self.remoteName === self.channel.hostPort) {
+                throw new Error('EPHEMERAL SELF?');
+            }
+        } else {
+            self.remoteName = init.hostPort;
+        }
         self.channel.peers.add(self.remoteName).addConnection(self);
         self.emit('identified', {
-            hostPort: init.hostPort,
+            hostPort: self.remoteName,
             processName: init.processName
         });
     }
