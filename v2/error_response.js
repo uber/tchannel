@@ -72,42 +72,49 @@ var CodeErrors = Object.create(null);
 CodeErrors[Codes.Timeout] = TypedError({
     type: 'tchannel.timeout',
     isErrorFrame: true,
+    codeName: 'Timeout',
     errorCode: Codes.Timeout,
     originalId: null
 });
 CodeErrors[Codes.Cancelled] = TypedError({
     type: 'tchannel.canceled',
     isErrorFrame: true,
+    codeName: 'Cancelled',
     errorCode: Codes.Cancelled,
     originalId: null
 });
 CodeErrors[Codes.Busy] = TypedError({
     type: 'tchannel.busy',
     isErrorFrame: true,
+    codeName: 'Busy',
     errorCode: Codes.Busy,
     originalId: null
 });
 CodeErrors[Codes.Declined] = TypedError({
     type: 'tchannel.declined',
     isErrorFrame: true,
+    codeName: 'Declined',
     errorCode: Codes.Declined,
     originalId: null
 });
 CodeErrors[Codes.UnexpectedError] = TypedError({
     type: 'tchannel.unexpected',
     isErrorFrame: true,
+    codeName: 'UnexpectedError',
     errorCode: Codes.UnexpectedError,
     originalId: null
 });
 CodeErrors[Codes.BadRequest] = TypedError({
     type: 'tchannel.bad-request',
     isErrorFrame: true,
+    codeName: 'BadRequest',
     errorCode: Codes.BadRequest,
     originalId: null
 });
 CodeErrors[Codes.ProtocolError] = TypedError({
     type: 'tchannel.protocol',
     isErrorFrame: true,
+    codeName: 'ProtocolError',
     errorCode: Codes.ProtocolError,
     originalId: null
 });
