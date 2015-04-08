@@ -39,7 +39,6 @@ def tornado_pair():
 
     try:
         yield server_conn, client_conn
-
     finally:
         server_stream.close()
         client_stream.close()

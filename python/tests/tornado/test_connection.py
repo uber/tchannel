@@ -24,6 +24,8 @@ import pytest
 import tornado.ioloop
 import tornado.testing
 
+from tchannel.messages import Types
+
 
 def dummy_headers():
     return {
@@ -37,27 +39,25 @@ class ConnectionTestCase(tornado.testing.AsyncTestCase):
     def make_server_client(self, tornado_pair):
         self.server, self.client = tornado_pair
 
-    def get_new_ioloop(self):
-        return tornado.ioloop.IOLoop.instance()
-
     @tornado.testing.gen_test
     def test_handshake(self):
         """Verify we handshake in an async manner."""
         headers = dummy_headers()
 
-        yield self.client.initiate_handshake(headers=headers)
-        yield self.server.await_handshake(headers=headers)
-        yield self.client.await_handshake_reply()
+        self.client.initiate_handshake(headers=headers)
+        yield self.server.expect_handshake(headers=headers)
 
         assert self.client.requested_version == self.server.requested_version
 
     @tornado.testing.gen_test
-    def test_handle_calls(self):
+    def test_pings(self):
         """Verify calls are sent to handler properly."""
-        def _handle(call, connection):
-            message = call.message
-            # Not a rigorous assertion, but makes sure the data is well-formed.
-            assert message.message_type
+        self.client.ping()
 
-        yield self.client.ping()
-        yield self.server.handle_calls(_handle)
+        ping = (yield self.server.await()).message
+        assert ping.message_type == Types.PING_REQ
+
+        self.server.pong()
+
+        pong = (yield self.client.await()).message
+        assert pong.message_type == Types.PING_RES

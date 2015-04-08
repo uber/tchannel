@@ -77,7 +77,7 @@ class BaseRequestHandler(RequestHandler):
         return getattr(self, handler_name)(message_id, message, connection)
 
     def handle_ping(self, message_id, ping, connection):
-        return connection.frame_and_write(PingResponseMessage(), message_id)
+        return connection.write(PingResponseMessage(), message_id)
 
     def handle_call(self, message_id, call, connection):
         """Handle an incoming call.
@@ -93,3 +93,14 @@ class BaseRequestHandler(RequestHandler):
             implementation-specific connection object.
         """
         raise NotImplementedError("Must be implemented.")
+
+
+class CallableRequestHandler(RequestHandler):
+    """An adapter from a function to a RequestHandler."""
+
+    def __init__(self, f):
+        assert f
+        self._f = f
+
+    def handle(self, context, connection):
+        return self._f(context, connection)

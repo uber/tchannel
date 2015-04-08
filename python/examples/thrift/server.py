@@ -35,7 +35,7 @@ class HelloServiceHandler(object):
 
 def run():
     dispatcher = TornadoDispatcher()
-    TChannel().host(4040, dispatcher).listen()
+    TChannel().host(dispatcher).listen(4040)
     thrift.register(dispatcher, HelloService, HelloServiceHandler())
     ioloop.IOLoop.current().start()
 

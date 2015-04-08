@@ -35,8 +35,8 @@ def main():  # pragma: no cover
 
     handler = get_example_handler()
 
-    server = client.host(args.port, handler)
-    server.listen()
+    server = client.host(handler)
+    server.listen(args.port)
     tornado.ioloop.IOLoop.instance().start()
 
 

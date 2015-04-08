@@ -49,8 +49,8 @@ def context(message):
 @pytest.fixture
 def conn():
     conn = InstanceDouble('tchannel.tornado.connection.TornadoConnection')
-    allow(conn).send_error
-    allow(conn).frame_and_write_stream
+    allow(conn).senderror
+    allow(conn).write
 
     return conn
 
@@ -62,7 +62,7 @@ def test_sync_handler(context, conn):
     def sync(request, response, opts):
         response.write("done")
 
-    expect(conn).frame_and_write_stream
+    expect(conn).write
 
     dispatcher.handle(context, conn)
 
@@ -77,6 +77,6 @@ def test_async_handler(context, conn):
         yield tornado.gen.sleep(0)
         response.write("done")
 
-    expect(conn).frame_and_write_stream
+    expect(conn).write
 
     yield dispatcher.handle(context, conn)
