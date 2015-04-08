@@ -766,6 +766,8 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
     var done = false;
     process.nextTick(runHandler);
 
+    req.span.endpoint.serviceName = self.channel.serviceName;
+
     function runHandler() {
         self.channel.handler.handleRequest(req, buildResponse);
     }

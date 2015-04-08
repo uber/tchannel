@@ -68,13 +68,14 @@ function TChannelIncomingRequest(id, options) {
     }
 
     if (options.tracer) {
+        console.log("incoming request, options.service: " + options.service);
         self.span = options.tracer.setupNewSpan({
             spanid: self.tracing.spanid,
             traceid: self.tracing.traceid,
             parentid: self.tracing.parentid,
             hostPort: options.hostPort,
-            serviceName: options.service, 
-            name: undefined // fill this in later
+            serviceName: '', // the service in options.service is not what we want
+            name: '' // fill this in later
         });
 
         // TODO: better annotations
