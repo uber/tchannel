@@ -91,7 +91,8 @@ test('basic tracing test', function (assert) {
     // makes the top level request so it is not traced
     var client = new TChannel({
         serviceName: 'NOT_A_SERVICE',
-        logger: logger
+        logger: logger,
+        trace: true
     });
 
     subservice.handler.register('/foobar', function (req, res) {
@@ -104,7 +105,7 @@ test('basic tracing test', function (assert) {
         console.log("top level sending to subservice");
         setTimeout(function () {
             serverClient
-                .request({host: '127.0.0.1:4042', service: 'subservice'})
+                .request({host: '127.0.0.1:4042', service: 'subservice', trace: true})
                 .send('/foobar', 'arg1', 'arg2', function (err, subRes) {
                     console.log("top level recv from subservice");
                     if (err) return res.sendOk('error', err);
@@ -123,7 +124,7 @@ test('basic tracing test', function (assert) {
 
         console.log("client making req");
         client
-            .request({host: '127.0.0.1:4040', service: 'server'})
+            .request({host: '127.0.0.1:4040', service: 'server', trace: true})
             .send('/top_level_endpoint', "arg 1", "arg 2", function (err, res) {
                 console.log("client recv from top level: " + res);
                 requestsDone.signal();

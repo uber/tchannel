@@ -108,7 +108,8 @@ Agent.prototype.setupNewSpan = function setupNewSpan(options) {
         name: options.name,
         id: options.spanid,
         parentid: options.parentid,
-        traceid: options.traceid
+        traceid: options.traceid,
+        flags: options.flags
     });
 
     var parentSpan = self.getCurrentSpan();
@@ -147,7 +148,9 @@ Agent.prototype.getCurrentSpan = function getCurrentSpan() {
 Agent.prototype.report = function report(span) {
     var self = this;
 
-    self.reporter(span);
+    if (span.flags === 1) {
+        self.reporter(span);
+    }
 };
 
 // Default reporter, just logs.
