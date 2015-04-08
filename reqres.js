@@ -73,12 +73,13 @@ function TChannelIncomingRequest(id, options) {
             traceid: self.tracing.traceid,
             parentid: self.tracing.parentid,
             hostPort: options.hostPort,
-            serviceName: options.serviceName, 
+            serviceName: options.service, 
             name: undefined // fill this in later
         });
 
         // TODO: better annotations
         self.span.annotate('sr');
+        options.tracer.setCurrentSpan(self.span);
     } else {
         self.span = null;
     }
@@ -101,6 +102,8 @@ TChannelIncomingRequest.prototype.handleFrame = function handleFrame(parts) {
         self.arg1 = parts[0] || emptyBuffer;
         self.arg2 = parts[1] || emptyBuffer;
         self.arg3 = parts[2] || emptyBuffer;
+
+        self.span.name = String(self.arg1);
     }
 };
 
@@ -220,10 +223,12 @@ function TChannelOutgoingRequest(id, options) {
             spanid: null,
             traceid: null,
             parentid: null,
-            hostPort: options.hostPort,
-            serviceName: options.serviceName, 
+            hostPort: options.host,
+            serviceName: options.service,
             name: '' // fill this in later
         });
+
+        self.tracing = self.span.getTracing();
     } else {
         self.span = null;
     }
