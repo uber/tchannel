@@ -58,6 +58,7 @@ function Span(options) {
     self.annotations = [];
     self.binaryAnnotations = [];
     self.serviceName = options.serviceName;
+    self.flags = options.flags;
 }
 
 Span.prototype.toString = function toString() {
@@ -116,7 +117,7 @@ Span.prototype.getTracing = function getTracing() {
         spanid: self.id,
         traceid: self.traceid,
         parentid: self.parentid,
-        flags: 0
+        flags: self.flags
     };
 };
 

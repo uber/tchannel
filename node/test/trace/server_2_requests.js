@@ -57,7 +57,8 @@ test('basic tracing test', function (assert) {
     });
 
     var client = new TChannel({
-        logger: logger
+        logger: logger,
+        trace: true
     });
 
     subservice.handler.register('/foobar', function (req, res) {
@@ -77,7 +78,7 @@ test('basic tracing test', function (assert) {
 
         setTimeout(function () {
             server
-                .request({host: '127.0.0.1:4042', service: 'subservice'})
+                .request({host: '127.0.0.1:4042', service: 'subservice', trace: true})
                 .send('/foobar', 'arg1', 'arg2', function (err, subRes) {
                     console.log("top level recv from subservice: " + subRes);
                     if (err) return res.sendOk('error', err);
@@ -88,7 +89,7 @@ test('basic tracing test', function (assert) {
 
         process.nextTick(function () {
             server
-                .request({host: '127.0.0.1:4042', service: 'subservice'})
+                .request({host: '127.0.0.1:4042', service: 'subservice', trace: true})
                 .send('/barbaz', 'arg1', 'arg2', function (err, subRes) {
                     console.log("top level recv from subservice: " + subRes);
                     if (err) return res.sendOk('error', err);
@@ -113,7 +114,7 @@ test('basic tracing test', function (assert) {
 
         console.log("client making req");
         client
-            .request({host: '127.0.0.1:4040'})
+            .request({host: '127.0.0.1:4040', trace: true})
             .send('/top_level_endpoint', "arg 1", "arg 2", function (err, res) {
                 console.log("client recv from top level: " + res);
                 requestsDone.signal();
