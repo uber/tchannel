@@ -23,7 +23,6 @@
     "crc": "^3.2.1",
     "error": "^5.1.1",
     "farmhash": "^0.2.0",
-    "hexer": "^1.2.0",
     "json-stringify-safe": "^5.0.0",
     "readable-stream": "1.0.33",
     "ready-signal": "^1.1.1",
