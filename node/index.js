@@ -515,7 +515,7 @@ TChannel.prototype.close = function close(callback) {
     function onClose() {
         if (--counter <= 0) {
             if (counter < 0) {
-                self.logger.error('closed more sockets than expected', {
+                self.logger.error('closed more channel sockets than expected', {
                     counter: counter
                 });
             }
@@ -1262,7 +1262,7 @@ TChannelPeer.prototype.close = function close(callback) {
     function onClose() {
         if (--counter <= 0) {
             if (counter < 0) {
-                self.logger.error('closed more sockets than expected', {
+                self.logger.error('closed more peer sockets than expected', {
                     counter: counter
                 });
             }
