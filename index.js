@@ -1252,12 +1252,13 @@ TChannelPeer.prototype.isConnected = function isConnected(direction, identified)
 TChannelPeer.prototype.close = function close(callback) {
     var self = this;
     var counter = self.connections.length;
-    if (!counter) {
-        callback();
+    if (counter) {
+        self.connections.forEach(function eachConn(conn) {
+            conn.close(onClose);
+        });
+    } else {
+        self.state.close(callback);
     }
-    self.connections.forEach(function eachConn(conn) {
-        conn.close(onClose);
-    });
     function onClose() {
         if (--counter <= 0) {
             if (counter < 0) {
