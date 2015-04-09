@@ -1066,7 +1066,7 @@ TChannelPeers.prototype.close = function close(callback) {
     function onClose() {
         if (--counter <= 0) {
             if (counter < 0) {
-                self.logger.error('closed more sockets than expected', {
+                self.logger.error('closed more peers than expected', {
                     counter: counter
                 });
             }
