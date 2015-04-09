@@ -8,8 +8,9 @@ messages and responses will be sent using `call res` messages,
 with values for `arg1`, `arg2` and `arg3` as defined in
 [Arguments][].
 
-For each `call req`, the service name (`service~1`) should be
-set to the TChannel service being called.
+For each `call req`, the service name (`service~1` a 1 byte 
+length-prefixed utf-8 service name string) should be set to 
+the TChannel service being called.
 
 For each `call res`, the response code (`code:1`) must be set
 to `0x00` if the reponse was successful and the response code
