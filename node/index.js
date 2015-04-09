@@ -300,7 +300,7 @@ TChannel.prototype.makeSubChannel = function makeSubChannel(options) {
     if (options.peers) {
         for (i = 0; i < options.peers.length; i++) {
             if (typeof options.peers[i] === 'string') {
-                chan.peers.addPeer(self.peers.get(options.peers[i]));
+                chan.peers.addPeer(self.peers.add(options.peers[i]));
             } else {
                 chan.peers.addPeer(options.peers[i]);
             }
@@ -515,7 +515,7 @@ TChannel.prototype.close = function close(callback) {
     function onClose() {
         if (--counter <= 0) {
             if (counter < 0) {
-                self.logger.error('closed more sockets than expected', {
+                self.logger.error('closed more channel sockets than expected', {
                     counter: counter
                 });
             }
@@ -978,10 +978,17 @@ TChannelConnection.prototype.start = function start() {
     }
 
     function onInIdentified(init) {
-        self.remoteName = init.hostPort;
+        if (init.hostPort === '0.0.0.0:0') {
+            self.remoteName = '' + self.socket.remoteAddress + ':' + self.socket.remotePort;
+            if (self.remoteName === self.channel.hostPort) {
+                throw new Error('EPHEMERAL SELF?');
+            }
+        } else {
+            self.remoteName = init.hostPort;
+        }
         self.channel.peers.add(self.remoteName).addConnection(self);
         self.emit('identified', {
-            hostPort: init.hostPort,
+            hostPort: self.remoteName,
             processName: init.processName
         });
     }
@@ -989,9 +996,13 @@ TChannelConnection.prototype.start = function start() {
 
 TChannelConnection.prototype.close = function close(callback) {
     var self = this;
-    self.socket.once('close', callback);
-    self.resetAll(SocketClosedError({reason: 'local close'}));
-    self.socket.destroy();
+    if (self.socket.destroyed) {
+        callback();
+    } else {
+        self.socket.once('close', callback);
+        self.resetAll(SocketClosedError({reason: 'local close'}));
+        self.socket.destroy();
+    }
 };
 
 TChannelConnection.prototype.onSocketErr = function onSocketErr(err) {
@@ -1055,7 +1066,7 @@ TChannelPeers.prototype.close = function close(callback) {
     function onClose() {
         if (--counter <= 0) {
             if (counter < 0) {
-                self.logger.error('closed more sockets than expected', {
+                self.logger.error('closed more peers than expected', {
                     counter: counter
                 });
             }
@@ -1095,7 +1106,9 @@ TChannelPeers.prototype.addPeer = function addPeer(peer) {
     if (self._map[peer.hostPort]) {
         throw new Error('peer already defined'); // TODO typed error
     }
-    self._map[peer.hostPort] = peer;
+    if (peer.hostPort !== self.channel.hostPort) {
+        self._map[peer.hostPort] = peer;
+    }
 };
 
 TChannelPeers.prototype.keys = function keys() {
@@ -1220,13 +1233,16 @@ function TChannelPeer(channel, hostPort, options) {
 
 inherits(TChannelPeer, EventEmitter);
 
-TChannelPeer.prototype.isConnected = function isConnected(direction) {
+TChannelPeer.prototype.isConnected = function isConnected(direction, identified) {
     var self = this;
+    if (identified === undefined) identified = true;
     for (var i = 0; i < self.connections.length; i++) {
         var conn = self.connections[i];
         if (direction && conn.direction !== direction) {
             continue;
-        } else if (conn.remoteName !== null) {
+        } else if (conn.closing) {
+            continue;
+        } else if (conn.remoteName !== null || !identified) {
             return true;
         }
     }
@@ -1236,16 +1252,17 @@ TChannelPeer.prototype.isConnected = function isConnected(direction) {
 TChannelPeer.prototype.close = function close(callback) {
     var self = this;
     var counter = self.connections.length;
-    if (!counter) {
-        callback();
+    if (counter) {
+        self.connections.forEach(function eachConn(conn) {
+            conn.close(onClose);
+        });
+    } else {
+        self.state.close(callback);
     }
-    self.connections.forEach(function eachConn(conn) {
-        conn.close(onClose);
-    });
     function onClose() {
         if (--counter <= 0) {
             if (counter < 0) {
-                self.logger.error('closed more sockets than expected', {
+                self.logger.error('closed more peer sockets than expected', {
                     counter: counter
                 });
             }
@@ -1271,20 +1288,28 @@ TChannelPeer.prototype.setState = function setState(StateType) {
     self.emit('stateChanged', oldState, state);
 };
 
-TChannelPeer.prototype.getOutConnection = function getOutConnection() {
+TChannelPeer.prototype.getInConnection = function getInConnection() {
     var self = this;
-    var conn;
-    for (var i = self.connections.length - 1; i >= 0; i--) {
-        conn = self.connections[i];
+    for (var i = 0; i < self.connections.length; i++) {
+        var conn = self.connections[i];
         if (!conn.closing) return conn;
     }
     return null;
 };
 
-TChannelPeer.prototype.connect = function connect() {
+TChannelPeer.prototype.getOutConnection = function getOutConnection() {
+    var self = this;
+    for (var i = self.connections.length - 1; i >= 0; i--) {
+        var conn = self.connections[i];
+        if (!conn.closing) return conn;
+    }
+    return null;
+};
+
+TChannelPeer.prototype.connect = function connect(outOnly) {
     var self = this;
     var conn = self.getOutConnection();
-    if (!conn) {
+    if (!conn || (outOnly && conn.direction !== 'out')) {
         var socket = self.makeOutSocket();
         conn = self.makeOutConnection(socket);
         self.addConnection(conn);
