@@ -19,17 +19,17 @@
     "url": "git@github.com:uber/tchannel"
   },
   "dependencies": {
+    "async-listener": "^0.5.2",
     "bufrw": "^0.9.13",
     "crc": "^3.2.1",
     "error": "^5.1.1",
     "farmhash": "^0.2.0",
     "json-stringify-safe": "^5.0.0",
+    "null-logtron": "^2.2.0",
     "readable-stream": "1.0.33",
     "ready-signal": "^1.1.1",
     "run-parallel": "^1.1.0",
-    "xtend": "^4.0.0",
-    "null-logtron": "^2.2.0",
-    "async-listener": "^0.5.2"
+    "xtend": "^4.0.0"
   },
   "devDependencies": {
     "ansi-color": "^0.2.1",
