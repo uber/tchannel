@@ -996,9 +996,13 @@ TChannelConnection.prototype.start = function start() {
 
 TChannelConnection.prototype.close = function close(callback) {
     var self = this;
-    self.socket.once('close', callback);
-    self.resetAll(SocketClosedError({reason: 'local close'}));
-    self.socket.destroy();
+    if (self.socket.destroyed) {
+        callback();
+    } else {
+        self.socket.once('close', callback);
+        self.resetAll(SocketClosedError({reason: 'local close'}));
+        self.socket.destroy();
+    }
 };
 
 TChannelConnection.prototype.onSocketErr = function onSocketErr(err) {
