@@ -1095,7 +1095,9 @@ TChannelPeers.prototype.addPeer = function addPeer(peer) {
     if (self._map[peer.hostPort]) {
         throw new Error('peer already defined'); // TODO typed error
     }
-    self._map[peer.hostPort] = peer;
+    if (peer.hostPort !== self.channel.hostPort) {
+        self._map[peer.hostPort] = peer;
+    }
 };
 
 TChannelPeers.prototype.keys = function keys() {
