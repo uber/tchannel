@@ -144,7 +144,6 @@ function TChannel(options) {
     // - manually api (.peers.add etc)
     // - incoming connections on any listening socket
     self.peers = TChannelPeers(self, self.options);
-    self._hookupPeers();
 
     // TChannel advances through the following states.
     self.listened = false;
@@ -218,10 +217,6 @@ TChannel.prototype.onServerSocketConnection = function onServerSocketConnection(
 
     self.serverConnections[remoteAddr] = conn;
     self.emit('connection', conn);
-    self.logger.debug('incoming server connection', {
-        hostPort: self.hostPort,
-        remoteAddr: conn.remoteAddr
-    });
 
     function onSocketClose() {
         delete self.serverConnections[remoteAddr];
@@ -313,40 +308,6 @@ TChannel.prototype.makeSubChannel = function makeSubChannel(options) {
     }
 
     return chan;
-};
-
-TChannel.prototype._hookupPeers = function _hookupPeers() {
-    var self = this;
-    self.peers.on('allocPeer', function(peer) {
-        self._hookupPeer(peer);
-    });
-};
-
-TChannel.prototype._hookupPeer = function _hookupPeer(peer) {
-    var self = this;
-
-    self.logger.debug('alloc peer', {
-        chanHostPort: self.hostPort,
-        peerHostPort: peer.hostPort,
-        initialState: peer.state.name
-    });
-
-    peer.on('stateChanged', function(oldState, newState) {
-        self.logger.debug('peer state changed', {
-            chanHostPort: self.hostPort,
-            peerHostPort: peer.hostPort,
-            oldState: oldState.name,
-            newState: newState.name
-        });
-    });
-
-    peer.on('allocConnection', function(conn) {
-        self.logger.debug('alloc peer connection', {
-            direction: conn.direction,
-            chanHostPort: self.hostPort,
-            peerHostPort: peer.hostPort
-        });
-    });
 };
 
 // Decoulping config and creation from the constructor.
@@ -470,9 +431,6 @@ TChannel.prototype.close = function close(callback) {
     }
 
     self.destroyed = true;
-    self.logger.debug('quitting tchannel', {
-        hostPort: self.hostPort
-    });
 
     var counter = 1;
 
@@ -1194,13 +1152,6 @@ TChannelPeers.prototype.choosePeer = function choosePeer(options, op) {
         var score = peer.state.shouldRequest(op, options);
         var want = score > threshold &&
                    (selectedPeer === null || score > selectedScore);
-        // TODO: provide visibility... event hook?
-        // self.logger.debug('choose peer score', {
-        //     host: hosts[i],
-        //     score: score,
-        //     threshold: threshold,
-        //     want: want
-        // });
         if (want) {
             selectedPeer = peer;
             selectedScore = score;
