@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "async-listener": "^0.5.2",
-    "bufrw": "^0.9.13",
+    "bufrw": "^0.9.16",
     "crc": "^3.2.1",
     "error": "^5.1.1",
     "farmhash": "^0.2.0",
