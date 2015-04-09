@@ -169,7 +169,7 @@ var tchannelJSON = TChannelJSON({
     logger: ...
 });
 
-var handler = tchannelJSON.createHandle(function foo(req, cb) {
+var handler = tchannelJSON.createHandle(function foo(req, opts, cb) {
     var head = req.head;
     var body = req.body;
 
@@ -191,7 +191,7 @@ var handler = tchannelJSON.createHandle(function foo(req, cb) {
 
     // for the error path
     cb(someErr);
-});
+}, opts);
 tchannel.handler.register('arg1', handler);
 ```
 
@@ -207,6 +207,8 @@ Proposed simplifications:
  - enforce that `arg3` for not ok is an error object.
  - `cb` interface forces a unified serialization code for writing
     error response of all kinds.
+ - threads through an `opts` object to support dependency
+    injection.
 
 The end user only has to concern himself with getting an incoming
 request and returning a response in the callback.
