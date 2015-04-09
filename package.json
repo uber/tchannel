@@ -28,7 +28,8 @@
     "readable-stream": "1.0.33",
     "ready-signal": "^1.1.1",
     "run-parallel": "^1.1.0",
-    "xtend": "^4.0.0"
+    "xtend": "^4.0.0",
+    "null-logtron": "^2.2.0"
   },
   "devDependencies": {
     "ansi-color": "^0.2.1",
