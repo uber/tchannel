@@ -169,12 +169,12 @@ var tchannelJSON = TChannelJSON({
     logger: ...
 });
 
-var handler = tchannelJSON.createHandle(function foo(req, opts, cb) {
+var handler = tchannelJSON.register(tchannel, 'arg1', opts, function foo(opts, req, cb) {
     var head = req.head;
     var body = req.body;
 
     // code()
-
+cb :: (err, body, opts?)
     // for the ok path
     cb(null, {
         ok: true,
@@ -191,7 +191,7 @@ var handler = tchannelJSON.createHandle(function foo(req, opts, cb) {
 
     // for the error path
     cb(someErr);
-}, opts);
+});
 tchannel.handler.register('arg1', handler);
 ```
 
