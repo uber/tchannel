@@ -1319,7 +1319,9 @@ TChannelPeer.prototype.connect = function connect(outOnly) {
 
 TChannelPeer.prototype.request = function peerRequest(options) {
     var self = this;
-    return self.connect().request(options);
+    var connection = self.connect();
+    options.host = options.host || connection.remoteAddr;
+    return connection.request(options);
 };
 
 TChannelPeer.prototype.addConnection = function addConnection(conn) {
@@ -1394,6 +1396,12 @@ TChannelSelfConnection.prototype.buildOutgoingRequest = function buildOutgoingRe
     };
     options.tracer = self.tracer;
     var outreq = new reqres.OutgoingRequest(id, options);
+
+    if (outreq.span) {
+        options.tracing = outreq.span.getTracing();
+    }
+    options.hostPort = self.channel.hostPort;
+
     var inreq = new reqres.IncomingRequest(id, options);
     var called = false;
     inreq.on('error', onError);
