@@ -1306,10 +1306,10 @@ TChannelPeer.prototype.getOutConnection = function getOutConnection() {
     return null;
 };
 
-TChannelPeer.prototype.connect = function connect() {
+TChannelPeer.prototype.connect = function connect(outOnly) {
     var self = this;
     var conn = self.getOutConnection();
-    if (!conn) {
+    if (!conn || (outOnly && conn.direction !== 'out')) {
         var socket = self.makeOutSocket();
         conn = self.makeOutConnection(socket);
         self.addConnection(conn);
