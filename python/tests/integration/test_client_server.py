@@ -25,8 +25,6 @@ import pytest
 import tchannel.messages as tmessage
 from tchannel import tcurl
 from tchannel.exceptions import ConnectionClosedException
-from tchannel.exceptions import TChannelApplicationException
-from tchannel.outgoing import OutgoingTChannel
 from tchannel.tornado import TChannel
 from tchannel.tornado.connection import TornadoConnection
 from tchannel.messages.error import ErrorCode
@@ -39,80 +37,6 @@ def call_response():
     return tmessage.CallResponseMessage(args=[b'hello', '', 'world'])
 
 
-def test_serial_ping_pong(tcp_server):
-    with tcp_server.client_connection() as conn:
-        resp = tmessage.PingResponseMessage()
-
-        for i in range(1000):
-            conn.ping()
-            assert resp == conn.await().message
-
-
-def test_outgoing_tchannel(tcp_server, call_response):
-    endpoint = b'tchanneltest'
-    call_response.args[0] = endpoint
-
-    port = tcp_server.port
-    host_port = 'localhost:' + str(port)
-
-    with OutgoingTChannel('test_outgoing_tchannel') as chan:
-        chan.request(host_port).handshake()
-        tcp_server.expect_call(endpoint).and_return(call_response)
-
-        response = chan.request(host_port).send(endpoint, None, None)
-
-        assert response.args[0] == call_response.args[0]
-        assert response.args[2] == call_response.args[2]
-
-
-def test_outgoing_tchannel_exception(tcp_server, call_response):
-    endpoint = b'tchanneltest'
-    call_response.args[0] = endpoint
-    call_response.code = 1
-
-    port = tcp_server.port
-    host_port = 'localhost:' + str(port)
-
-    with OutgoingTChannel('test_outgoing_tchannel_exception') as chan:
-        chan.request(host_port).handshake()
-        with pytest.raises(TChannelApplicationException):
-            tcp_server.expect_call(
-                endpoint
-            ).and_return(call_response)
-            chan.request(host_port).send(endpoint, None, None)
-
-
-def test_tcp_client_with_server_gone_away(tcp_server):
-
-    with tcp_server.client_connection() as conn:
-        tcp_server.stop()
-
-        with pytest.raises(ConnectionClosedException):
-            conn.ping()
-
-        assert conn.closed
-
-
-@pytest.mark.gen_test
-def test_tornado_client_with_server_gone_away(tcp_server):
-    "Establish a connection to the server and then kill the server."""
-
-    conn = yield TornadoConnection.outgoing(
-        'localhost:%s' % tcp_server.port,
-    )
-
-    assert not conn.closed
-
-    tcp_server.stop()
-
-    conn.ping()
-
-    with pytest.raises(ConnectionClosedException):
-        yield conn.awaiting_responses.values()
-
-    assert conn.closed
-
-
 @pytest.mark.gen_test
 def test_tornado_client_with_server_not_there(unused_port):
 
@@ -120,22 +44,6 @@ def test_tornado_client_with_server_not_there(unused_port):
         yield TornadoConnection.outgoing(
             'localhost:%d' % unused_port,
         )
-
-
-@pytest.mark.gen_test
-def test_tchannel_call_request(tcp_server, call_response):
-    endpoint = b'tchannelpeertest'
-    call_response.args[0] = endpoint
-
-    tcp_server.expect_call(endpoint).and_return(call_response)
-
-    tchannel = TChannel()
-
-    hostport = 'localhost:%d' % (tcp_server.port)
-
-    response = yield tchannel.request(hostport).send(endpoint, None, None)
-    assert response.args[0] == call_response.args[0]
-    assert response.args[2] == call_response.args[2]
 
 
 # TODO test case will fail due to StreamClosedError when

@@ -20,19 +20,11 @@
 
 from __future__ import absolute_import
 
-import threading
-try:
-    import SocketServer
-except ImportError:
-    import socketserver as SocketServer
-from contextlib import contextmanager
-
 import tornado
+import threading
 
-from tchannel.dispatch import RequestDispatcher
 from tchannel.tornado.dispatch import TornadoDispatcher
 import tchannel.tornado.tchannel as tornado_tchannel
-import tchannel.socket as socket_tchannel
 
 
 class Expectation(object):
@@ -88,53 +80,6 @@ class ServerManager(object):
     def stop(self):
         self.shutdown()
         self.thread.join()
-
-
-class TCPServerManager(ServerManager):
-    """Provides a dynamically configurable TChannel server."""
-
-    def __init__(self, port, timeout=None):
-        super(TCPServerManager, self).__init__(port, timeout)
-        self.dispatcher = RequestDispatcher()
-
-        manager = self
-
-        class Handler(SocketServer.BaseRequestHandler):
-            def setup(self):
-                self.request.settimeout(manager.timeout)
-                self.tchan_conn = socket_tchannel.SocketConnection(
-                    self.request,
-                )
-
-            def handle(self):
-                (host, port) = self.request.getsockname()
-                self.tchan_conn.await_handshake(headers={
-                    'host_port': '%s:%s' % (host, port),
-                    'process_name': 'tchannel_server-%s' % port
-                })
-                self.tchan_conn.handle_calls(manager.dispatcher)
-
-        self.server = SocketServer.TCPServer(("", port), Handler)
-
-    @contextmanager
-    def client_connection(self):
-        """Get an initiated Connection to this TChannel server."""
-        conn = None
-        try:
-            conn = socket_tchannel.SocketConnection.outgoing(
-                'localhost:%d' % self.port
-            )
-            yield conn
-        finally:
-            if conn is not None:
-                conn.close()
-
-    def serve(self):
-        self.ready = True
-        self.server.serve_forever()
-
-    def shutdown(self):
-        self.server.shutdown()
 
 
 class TChannelServerManager(ServerManager):
