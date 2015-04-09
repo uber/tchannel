@@ -318,6 +318,7 @@ allocCluster.test('self send() with error frame', 1, function t(cluster, assert)
         assert.deepEqual(err, {
             type: 'tchannel.canceled',
             isErrorFrame: true,
+            codeName: 'Cancelled',
             errorCode: 2,
             originalId: 0,
             name: 'TchannelCanceledError',
