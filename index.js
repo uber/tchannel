@@ -1273,11 +1273,19 @@ TChannelPeer.prototype.setState = function setState(StateType) {
     self.emit('stateChanged', oldState, state);
 };
 
+TChannelPeer.prototype.getInConnection = function getInConnection() {
+    var self = this;
+    for (var i = 0; i < self.connections.length; i++) {
+        var conn = self.connections[i];
+        if (!conn.closing) return conn;
+    }
+    return null;
+};
+
 TChannelPeer.prototype.getOutConnection = function getOutConnection() {
     var self = this;
-    var conn;
     for (var i = self.connections.length - 1; i >= 0; i--) {
-        conn = self.connections[i];
+        var conn = self.connections[i];
         if (!conn.closing) return conn;
     }
     return null;
