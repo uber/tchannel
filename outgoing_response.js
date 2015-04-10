@@ -41,6 +41,10 @@ function TChannelOutgoingResponse(id, options) {
     }
     var self = this;
     EventEmitter.call(self);
+    self.logger = options.logger;
+    self.random = options.random;
+    self.timers = options.timers;
+
     self.state = States.Initial;
     self.id = id || 0;
     self.code = options.code || 0;

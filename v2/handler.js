@@ -40,6 +40,10 @@ function TChannelV2Handler(options) {
     var self = this;
     EventEmitter.call(self);
     self.options = options || {};
+    self.logger = self.options.logger;
+    self.random = self.options.random;
+    self.timers = self.options.timers;
+    self.tracer = self.options.tracer;
     self.hostPort = self.options.hostPort;
     self.processName = self.options.processName;
     self.remoteHostPort = null; // filled in by identify message
@@ -48,7 +52,6 @@ function TChannelV2Handler(options) {
     self.streamingReq = Object.create(null);
     self.streamingRes = Object.create(null);
     self.writeBuffer = new Buffer(v2.Frame.MaxSize);
-    self.tracer = options.tracer;
 }
 
 util.inherits(TChannelV2Handler, EventEmitter);
@@ -406,6 +409,9 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
 TChannelV2Handler.prototype.buildIncomingRequest = function buildIncomingRequest(reqFrame) {
     var self = this;
     return new IncomingRequest(reqFrame.id, {
+        logger: self.logger,
+        random: self.random,
+        timers: self.timers,
         tracer: self.tracer,
         ttl: reqFrame.body.ttl,
         tracing: reqFrame.body.tracing,
@@ -418,7 +424,11 @@ TChannelV2Handler.prototype.buildIncomingRequest = function buildIncomingRequest
 };
 
 TChannelV2Handler.prototype.buildIncomingResponse = function buildIncomingResponse(resFrame) {
+    var self = this;
     return new IncomingResponse(resFrame.id, {
+        logger: self.logger,
+        random: self.random,
+        timers: self.timers,
         code: resFrame.body.code,
         checksum: new v2.Checksum(resFrame.body.csum.type),
         streamed: resFrame.body.flags & v2.CallFlags.Fragment
