@@ -113,6 +113,12 @@ module.exports.ResponseAlreadyStarted = TypedError({
     state: null
 });
 
+module.exports.ResponseAlreadyDone = TypedError({
+    type: 'tchannel.response-already-done',
+    message: 'cannot {attempted}, response already done',
+    attempted: null
+});
+
 module.exports.SocketClosedError = TypedError({
     type: 'tchannel.socket-closed',
     message: 'socket closed, {reason}',
