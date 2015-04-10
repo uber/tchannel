@@ -20,6 +20,14 @@
 
 'use strict';
 
-var TChannel = require('./channel');
+function TChannelServerOp(connection, start, req, res) {
+    var self = this;
+    self.req = req;
+    self.res = res || null;
+    self.connection = connection;
+    self.logger = connection.logger;
+    self.timedOut = false;
+    self.start = start;
+}
 
-module.exports = TChannel;
+module.exports = TChannelServerOp;

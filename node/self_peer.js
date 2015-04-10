@@ -20,6 +20,40 @@
 
 'use strict';
 
-var TChannel = require('./channel');
+var inherits = require('util').inherits;
 
-module.exports = TChannel;
+var TChannelPeer = require('./peer');
+var TChannelSelfConnection = require('./self_connection');
+
+function TChannelSelfPeer(channel) {
+    if (!(this instanceof TChannelSelfPeer)) {
+        return new TChannelSelfPeer(channel);
+    }
+    var self = this;
+    TChannelPeer.call(self, channel, channel.hostPort);
+}
+inherits(TChannelSelfPeer, TChannelPeer);
+
+TChannelSelfPeer.prototype.connect = function connect() {
+    var self = this;
+    while (self.connections[0] &&
+           self.connections[0].closing) {
+        self.connections[0].shift();
+    }
+    var conn = self.connections[0];
+    if (!conn) {
+        conn = TChannelSelfConnection(self.channel);
+        self.addConnection(conn);
+    }
+    return conn;
+};
+
+TChannelSelfPeer.prototype.makeOutSocket = function makeOutSocket() {
+    throw new Error('refusing to make self out socket');
+};
+
+TChannelSelfPeer.prototype.makeOutConnection = function makeOutConnection(/* socket */) {
+    throw new Error('refusing to make self out connection');
+};
+
+module.exports = TChannelSelfPeer;
