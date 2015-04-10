@@ -363,9 +363,15 @@ TChannel.prototype.send = function send(options, arg1, arg2, arg3, callback) {
 TChannel.prototype.request = function channelRequest(options) {
     options = extend(options);
     var self = this;
-    if (!options.service && self.serviceName) {
-        options.service = self.serviceName;
+
+    if (!options.service) {
+        if (options.serviceName) {
+            options.service = options.serviceName;
+        } else if (self.serviceName) {
+            options.service = self.serviceName;
+        }
     }
+
     // TODO: moar defaults
     if (self.destroyed) {
         throw new Error('cannot request() to destroyed tchannel'); // TODO typed error
