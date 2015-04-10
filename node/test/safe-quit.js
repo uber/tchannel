@@ -22,7 +22,7 @@
 
 var test = require('tape');
 
-var TChannel = require('../index.js');
+var TChannel = require('../channel.js');
 
 test('can call quit() safely async', function t(assert) {
     var channel = TChannel();

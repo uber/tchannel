@@ -25,7 +25,7 @@ var Buffer = require('buffer').Buffer;
 var extend = require('xtend');
 var allocCluster = require('./lib/alloc-cluster.js');
 var EndpointHandler = require('../endpoint-handler');
-var TChannel = require('../index.js');
+var TChannel = require('../channel.js');
 
 allocCluster.test('request().send() to a server', 2, function t(cluster, assert) {
     var one = cluster.channels[0];

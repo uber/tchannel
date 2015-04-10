@@ -21,7 +21,7 @@
 'use strict';
 
 var test = require('tape');
-var TChannel = require('../index.js');
+var TChannel = require('../channel.js');
 
 var serverOptions = {host: '127.0.0.1', port: 4040};
 var clientOptions = {host: '127.0.0.1', port: 4041};

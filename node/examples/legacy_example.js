@@ -23,7 +23,7 @@
 var console = require('console');
 var CountedReadySignal = require('ready-signal/counted');
 
-var TChannel = require('../index.js');
+var TChannel = require('../channel.js');
 
 var ready = CountedReadySignal(2);
 var server = new TChannel();
