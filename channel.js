@@ -373,7 +373,13 @@ TChannel.prototype.request = function channelRequest(options) {
     }
 
     if (!self.serviceName && !options.host) {
-        throw errors.TopLevelRequestError();
+        if (options.service &&
+            self.subChannels &&
+            self.subChannels[options.service]) {
+            return self.subChannels[options.service].request(options);
+        } else {
+            throw errors.TopLevelRequestError();
+        }
     }
 
     // TODO: moar defaults
