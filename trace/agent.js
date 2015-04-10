@@ -29,6 +29,7 @@ function Agent () {
         return new Agent();
     }
     var self = this;
+    self.refcnt = 0;
 
     if (!process.addAsyncListener) {
         require('async-listener');
@@ -58,7 +59,7 @@ function Agent () {
         }
     });
 
-    process.addAsyncListener(self.asyncListener);
+    self.listening = false;
 
     self.logger = DebugLogtron('tchannelTrace');
 
@@ -132,10 +133,27 @@ Agent.prototype.setupNewSpan = function setupNewSpan(options) {
     return span;
 };
 
-Agent.prototype.destroy = function destroy() {
+Agent.prototype.ref = function ref() {
     var self = this;
+    if (self.refcnt++ <= 0) {
+        if (self.refcnt <= 0) self.refcnt = 1; // TODO: notable?
+        if (!self.listening) {
+            process.addAsyncListener(self.asyncListener);
+            self.listening = true;
+        }
+    }
+    return self;
+};
 
-    process.removeAsyncListener(self.asyncListener);
+Agent.prototype.unref = function unref() {
+    var self = this;
+    if (--self.refcnt <= 0) {
+        if (self.refcnt < 0) self.refcnt = 0; // TODO: notable?
+        if (self.listening) {
+            process.removeAsyncListener(self.asyncListener);
+            self.listening = false;
+        }
+    }
 };
 
 Agent.prototype.setCurrentSpan = function setCurrentSpan(span) {
