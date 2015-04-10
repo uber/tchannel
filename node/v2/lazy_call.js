@@ -1,5 +1,5 @@
 // Copyright (c) 2015 Uber Technologies, Inc.
-
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -21,42 +21,61 @@
 'use strict';
 
 var bufrw = require('bufrw');
+var Result = require('bufrw/Result');
 var ArgsRW = require('./args');
-var Checksum = require('./checksum');
 var header = require('./header');
 var Tracing = require('./tracing');
 var argsrw = ArgsRW(bufrw.buf2);
 
-var ResponseCodes = {
-    OK: 0x00,
-    Error: 0x01
-};
-
-module.exports.Request = CallRequest;
-module.exports.Response = CallResponse;
-
-// TODO: validate transport header names?
-// TODO: Checksum-like class for tracing
+var ResponseCodes = require('./call').Response.Codes;
 
 /* jshint maxparams:10 */
 
 // flags:1 ttl:4 tracing:24 traceflags:1 service~1 nh:1 (hk~1 hv~1){nh} csumtype:1 (csum:4){0,1} (arg~2)*
-function CallRequest(flags, ttl, tracing, service, headers, csum, args) {
+function LazyCallRequest(flags, ttl, tracing, service, tail) {
     var self = this;
-    self.type = CallRequest.TypeCode;
+    self.type = LazyCallRequest.TypeCode;
     self.flags = flags || 0;
     self.ttl = ttl || 0;
     self.tracing = tracing || Tracing.emptyTracing;
     self.service = service || '';
-    self.headers = headers || {};
-    self.csum = Checksum.objOrType(csum);
-    self.args = args || [];
-    self.cont = null;
+    self.tail = tail || Buffer(0);
+    self.argsOffset = 0;
+    self.headers = null;
+    self.csum = null;
+    self.args = null;
 }
 
-CallRequest.Cont = require('./cont').RequestCont;
-CallRequest.TypeCode = 0x03;
-CallRequest.RW = bufrw.Base(callReqLength, readCallReqFrom, writeCallReqInto);
+LazyCallRequest.TypeCode = 0x03;
+LazyCallRequest.RW = bufrw.Base(callReqLength, readCallReqFrom, writeCallReqInto);
+
+LazyCallRequest.prototype.getHeaders = function getHeaders() {
+    var self = this;
+    if (self.headers === null) {
+        var res = header.header1.skipWithin(self.tail, 0);
+        if (res.err) return Result.error(res.err);
+        self.headers = res.value;
+    }
+    return Result.just(self.headers);
+};
+
+LazyCallRequest.prototype.getChecksum = function getChecksum() {
+    var self = this;
+    if (self.csum === null) {
+        var res = argsrw.readFrom(self, self.tail, self.argsOffset);
+        if (res.err) return Result.error(res.err);
+    }
+    return Result.just(self.csum);
+};
+
+LazyCallRequest.prototype.getArgs = function getArgs() {
+    var self = this;
+    if (self.args === null) {
+        var res = argsrw.readFrom(self, self.tail, self.argsOffset);
+        if (res.err) return Result.error(res.err);
+    }
+    return Result.just(self.args);
+};
 
 function callReqLength(body) {
     var res;
@@ -76,23 +95,17 @@ function callReqLength(body) {
     // service~1
     res = bufrw.str1.byteLength(body.service);
     if (res.err) return res;
-    length += res.length;
+    res.length += length;
 
-    // nh:1 (hk~1 hv~1){nh}
-    res = header.header1.byteLength(body.headers);
-    if (res.err) return res;
-    length += res.length;
-
-    // csumtype:1 (csum:4){0,1} (arg~2)*
-    res = argsrw.byteLength(body);
-    if (!res.err) res.length += length;
+    // nh:1 (hk~1 hv~1){nh} csumtype:1 (csum:4){0,1} (arg~2)*
+    res.length += body.tail.length;
 
     return res;
 }
 
 function readCallReqFrom(buffer, offset) {
     var res;
-    var body = new CallRequest();
+    var body = new LazyCallRequest();
 
     // flags:1
     res = bufrw.UInt8.readFrom(buffer, offset);
@@ -118,25 +131,20 @@ function readCallReqFrom(buffer, offset) {
     offset = res.offset;
     body.service = res.value;
 
-    // nh:1 (hk~1 hv~1){nh}
-    res = header.header1.readFrom(buffer, offset);
-    if (res.err) return res;
-    offset = res.offset;
-    body.headers = res.value;
-
-    // csumtype:1 (csum:4){0,1} (arg~2)*
-    res = argsrw.readFrom(body, buffer, offset);
+    // nh:1 (hk~1 hv~1){nh} csumtype:1 (csum:4){0,1} (arg~2)*
+    res = readLazyTail(body, buffer, offset);
     if (!res.err) res.value = body;
 
     return res;
 }
 
 function writeCallReqInto(body, buffer, offset) {
-    var start = offset;
     var res;
 
-    // flags:1 -- filled in later after argsrw
-    offset += bufrw.UInt8.width;
+    // flags:1
+    res = bufrw.UInt8.writeInto(body.flags, buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
 
     // ttl:4
     res = bufrw.UInt32BE.writeInto(body.ttl, buffer, offset);
@@ -153,45 +161,27 @@ function writeCallReqInto(body, buffer, offset) {
     if (res.err) return res;
     offset = res.offset;
 
-    // nh:1 (hk~1 hv~1){nh}
-    res = header.header1.writeInto(body.headers, buffer, offset);
-    if (res.err) return res;
-    offset = res.offset;
-
-    // csumtype:1 (csum:4){0,1} (arg~2)* -- (may mutate body.flags)
-    res = argsrw.writeInto(body, buffer, offset);
-    if (res.err) return res;
-    offset = res.offset;
-
-    // now we know the final flags, write them
-    res = bufrw.UInt8.writeInto(body.flags, buffer, start);
-    if (!res.err) res.offset = offset;
-
-    return res;
+    // nh:1 (hk~1 hv~1){nh} csumtype:1 (csum:4){0,1} (arg~2)*
+    return writeLazyTail(body, buffer, offset);
 }
-
-CallRequest.prototype.verifyChecksum = function verifyChecksum() {
-    var self = this;
-    return self.csum.verify(self.args);
-};
 
 // flags:1 code:1 tracing:24 traceflags:1 nh:1 (hk~1 hv~1){nh} csumtype:1 (csum:4){0,1} (arg~2)*
-function CallResponse(flags, code, tracing, headers, csum, args) {
+function LazyCallResponse(flags, code, tracing, tail) {
     var self = this;
-    self.type = CallResponse.TypeCode;
+    self.type = LazyCallResponse.TypeCode;
     self.flags = flags || 0;
-    self.code = code || CallResponse.Codes.OK;
+    self.code = code || LazyCallResponse.Codes.OK;
     self.tracing = tracing || Tracing.emptyTracing;
-    self.headers = headers || {};
-    self.csum = Checksum.objOrType(csum);
-    self.args = args || [];
-    self.cont = null;
+    self.tail = tail || Buffer(0);
+    self.argsOffset = 0;
+    self.headers = null;
+    self.csum = null;
+    self.args = null;
 }
 
-CallResponse.Cont = require('./cont').ResponseCont;
-CallResponse.TypeCode = 0x04;
-CallResponse.Codes = ResponseCodes;
-CallResponse.RW = bufrw.Base(callResLength, readCallResFrom, writeCallResInto);
+LazyCallResponse.TypeCode = 0x04;
+LazyCallResponse.Codes = ResponseCodes;
+LazyCallResponse.RW = bufrw.Base(callResLength, readCallResFrom, writeCallResInto);
 
 function callResLength(body) {
     var res;
@@ -205,23 +195,17 @@ function callResLength(body) {
     // tracing:24 traceflags:1
     res = Tracing.RW.byteLength(body.tracing);
     if (res.err) return res;
-    length += res.length;
+    res.length += length;
 
-    // nh:1 (hk~1 hv~1){nh}
-    res = header.header1.byteLength(body.headers);
-    if (res.err) return res;
-    length += res.length;
-
-    // csumtype:1 (csum:4){0,1} (arg~2)*
-    res = argsrw.byteLength(body);
-    if (!res.err) res.length += length;
+    // nh:1 (hk~1 hv~1){nh} csumtype:1 (csum:4){0,1} (arg~2)*
+    res.length += body.tail.length;
 
     return res;
 }
 
 function readCallResFrom(buffer, offset) {
     var res;
-    var body = new CallResponse();
+    var body = new LazyCallResponse();
 
     // flags:1
     res = bufrw.UInt8.readFrom(buffer, offset);
@@ -241,25 +225,20 @@ function readCallResFrom(buffer, offset) {
     offset = res.offset;
     body.tracing = res.value;
 
-    // nh:1 (hk~1 hv~1){nh}
-    res = header.header1.readFrom(buffer, offset);
-    if (res.err) return res;
-    offset = res.offset;
-    body.headers = res.value;
-
-    // csumtype:1 (csum:4){0,1} (arg~2)*
-    res = argsrw.readFrom(body, buffer, offset);
+    // nh:1 (hk~1 hv~1){nh} csumtype:1 (csum:4){0,1} (arg~2)*
+    res = readLazyTail(body, buffer, offset);
     if (!res.err) res.value = body;
 
     return res;
 }
 
 function writeCallResInto(body, buffer, offset) {
-    var start = offset;
     var res;
 
-    // flags:1 -- filled in later after argsrw
-    offset += bufrw.UInt8.width;
+    // flags:1
+    res = bufrw.UInt8.writeInto(body.flags, buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
 
     // code:1
     res = bufrw.UInt8.writeInto(body.code, buffer, offset);
@@ -271,24 +250,34 @@ function writeCallResInto(body, buffer, offset) {
     if (res.err) return res;
     offset = res.offset;
 
+    // nh:1 (hk~1 hv~1){nh} csumtype:1 (csum:4){0,1} (arg~2)*
+    return writeLazyTail(body, buffer, offset);
+}
+
+function readLazyTail(body, buffer, offset) {
+    var start = offset;
+    var res;
+
     // nh:1 (hk~1 hv~1){nh}
-    res = header.header1.writeInto(body.headers, buffer, offset);
+    res = header.header1.skipWithin(buffer, offset);
     if (res.err) return res;
     offset = res.offset;
 
-    // csumtype:1 (csum:4){0,1} (arg~2)* -- (may mutate body.flags)
-    res = argsrw.writeInto(body, buffer, offset);
+    // csumtype:1 (csum:4){0,1} (arg~2)*
+    body.argsOffset = offset;
+    res = argsrw.skipWithin(body, buffer, offset);
     if (res.err) return res;
-    offset = res.offset;
 
-    // now we know the final flags, write them
-    res = bufrw.UInt8.writeInto(body.flags, buffer, start);
-    if (!res.err) res.offset = offset;
+    body.tail = buffer.slice(start, offset);
 
     return res;
 }
 
-CallResponse.prototype.verifyChecksum = function verifyChecksum() {
-    var self = this;
-    return self.csum.verify(self.args);
-};
+function writeLazyTail(body, buffer, offset) {
+    var copied = body.tail.copy(buffer, offset);
+    if (copied < body.tail.length) {
+        return bufrw.WriteResult.shortError(body.tail.length, copied, offset);
+    }
+    offset += copied;
+    return bufrw.WriteResult.just(offset);
+}

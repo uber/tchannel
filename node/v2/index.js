@@ -45,6 +45,10 @@ Frame.Types[Types.CallResponse] = call.Response;
 module.exports.CallRequest = call.Request;
 module.exports.CallResponse = call.Response;
 
+var lazyCall = require('./lazy_call');
+call.Request.Lazy = lazyCall.Request.Lazy;
+call.Response.Lazy = lazyCall.Response.Lazy;
+
 var cont = require('./cont');
 Types.CallRequestCont = cont.RequestCont.TypeCode;
 Types.CallResponseCont = cont.ResponseCont.TypeCode;

@@ -120,6 +120,24 @@ ArgsRW.prototype.readFrom = function readFrom(body, buffer, offset) {
     return ReadResult.just(offset, body);
 };
 
+ArgsRW.prototype.skipWithin = function skipWithin(body, buffer, offset) {
+    var self = this;
+    var res;
+
+    // TODO
+    res = Checksum.RW.skipWithin(buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+
+    while (offset < buffer.length) {
+        res = self.argrw.skipWithin(buffer, offset);
+        if (res.err) return res;
+        offset = res.offset;
+    }
+
+    return ReadResult.just(offset, body);
+};
+
 ArgsRW.prototype.writeFragmentInto = function writeFragmentInto(body, buffer, offset) {
     var self = this;
     var res;

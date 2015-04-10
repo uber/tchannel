@@ -134,6 +134,29 @@ HeaderRW.prototype.readFrom = function readFrom(buffer, offset) {
     return bufrw.ReadResult.just(offset, headers);
 };
 
+HeaderRW.prototype.skipWithin = function skipWithin(buffer, offset) {
+    var self = this;
+    var n = 0;
+    var res;
+
+    res = self.countrw.readFrom(buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+    n = res.value;
+
+    for (var i = 0; i < n; i++) {
+        res = self.keyrw.skipWithin(buffer, offset);
+        if (res.err) return res;
+        offset = res.offset;
+
+        res = self.valrw.skipWithin(buffer, offset);
+        if (res.err) return res;
+        offset = res.offset;
+    }
+
+    return bufrw.ReadResult.just(offset, null);
+};
+
 module.exports = HeaderRW;
 
 // nh:1 (hk~1 hv~1){nh}
