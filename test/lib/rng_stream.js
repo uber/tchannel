@@ -23,6 +23,7 @@
 var bufrw = require('bufrw');
 var inherits = require('util').inherits;
 var IterStream = require('./iter_stream');
+var LCG = require('../lcg');
 
 function LCGStream(options) {
     if (!(this instanceof LCGStream)) {
@@ -30,19 +31,13 @@ function LCGStream(options) {
     }
     var self = this;
     IterStream.call(self, bufrw.UInt32BE, options);
-
-    // linear congruential generator w/ lol settings
-    self._last = options.seed || Math.floor(Math.pow(2, 32) * Math.random());
-    self._mod = Math.pow(2, 32);
-    self._mul = 214013;
-    self._add = 253101;
+    self.rng = LCG(options.seed);
 }
 inherits(LCGStream, IterStream);
 
 LCGStream.prototype._next = function _next() {
     var self = this;
-    self._last = (self._mul * self._last + self._add) % self._mod;
-    return self._last;
+    return self.rng.rand();
 };
 
 module.exports = LCGStream;
