@@ -39,6 +39,9 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     TChannelConnectionBase.call(self, channel, direction, remoteAddr);
     self.socket = socket;
     self.handler = new v2.Handler(extend({
+        logger: self.channel.logger,
+        random: self.channel.random,
+        timers: self.channel.timers,
         hostPort: self.channel.hostPort,
         tracer: self.tracer
     }, self.options));
@@ -241,11 +244,21 @@ TChannelConnection.prototype.onSocketErr = function onSocketErr(err) {
 
 TChannelConnection.prototype.buildOutgoingRequest = function buildOutgoingRequest(options) {
     var self = this;
+    options = extend({
+        logger: self.logger,
+        random: self.random,
+        timers: self.timers
+    }, options);
     return self.handler.buildOutgoingRequest(options);
 };
 
 TChannelConnection.prototype.buildOutgoingResponse = function buildOutgoingResponse(req, options) {
     var self = this;
+    options = extend({
+        logger: self.logger,
+        random: self.random,
+        timers: self.timers
+    }, options);
     return self.handler.buildOutgoingResponse(req, options);
 };
 
