@@ -120,9 +120,8 @@ TChannelConnectionBase.prototype.checkInOpsForTimeout = function checkInOpsForTi
             continue;
         }
 
-        var timeout = self.options.serverTimeoutDefault;
         var duration = now - op.start;
-        if (duration > timeout) {
+        if (duration > op.req.ttl) {
             delete ops[opKey];
             self.pending.in--;
         }
@@ -152,9 +151,8 @@ TChannelConnectionBase.prototype.checkOutOpsForTimeout = function checkOutOpsFor
                 });
             continue;
         }
-        var timeout = op.req.ttl || self.options.reqTimeoutDefault;
         var duration = now - op.start;
-        if (duration > timeout) {
+        if (duration > op.req.ttl) {
             delete ops[opKey];
             self.pending.out--;
             self.onReqTimeout(op);
