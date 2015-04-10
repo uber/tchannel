@@ -28,7 +28,6 @@ from .common import FlagsType
 class CallContinueMessage(BaseMessage):
     """Represent a continuation of a call request (across multiple frames)."""
     max_args_num = 3
-    MAX_PAYLOAD_SIZE = 0xFFEF
 
     __slots__ = (
         'flags',
@@ -92,7 +91,6 @@ class CallContinueMessage(BaseMessage):
         self.args = new_args
         if space_left >= 0 and len(fragment_msg.args) == 0:
             # don't need to fragment any more
-            self.flags = FlagsType.none
             return None
         else:
             self.flags = FlagsType.fragment

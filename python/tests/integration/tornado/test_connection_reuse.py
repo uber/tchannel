@@ -21,12 +21,13 @@
 from __future__ import absolute_import
 
 import socket
-
 import pytest
 
 from tchannel.tornado.dispatch import TornadoDispatcher
 from tchannel.tornado.tchannel import TChannel
 from tornado import gen
+from tchannel.tornado.stream import InMemStream
+from tchannel.tornado.util import get_arg
 
 
 @pytest.mark.gen_test
@@ -44,21 +45,29 @@ def test_reuse():
     server2.host(dispatch2).listen(port2)
 
     @dispatch2.route("hello")
+    @gen.coroutine
     def hello(request, response, opts):
-        response.write(arg3='hello to you too')
+        response.argstreams = [
+            InMemStream(),
+            InMemStream(),
+            InMemStream('hello to you too')
+        ]
 
     @gen.coroutine
     def loop1(n):
         futures = []
         for i in xrange(n):
             futures.append(server1.request('localhost:%d' % port2).send(
-                'hello', '', ''
+                InMemStream("hello"),
+                InMemStream(),
+                InMemStream()
             ))
         results = yield futures
         for resp in results:
-            assert resp.args[2] == 'hello to you too'
+            arg3 = yield get_arg(resp, 2)
+            assert arg3 == 'hello to you too'
 
-    yield loop1(1)
+    yield loop1(2)
 
     assert server1.out_peers.get("localhost:%d" % port2)
     assert server2.in_peers[0][0] == "localhost:%d" % port1
@@ -70,23 +79,32 @@ def test_reuse():
     # server1
 
     @dispatch1.route('reverse')
+    @gen.coroutine
     def reverse(request, response, opts):
-        assert request.body == 'foo'
-        response.write(arg3='bar')
+        arg3 = yield get_arg(request, 2)
+        assert arg3 == 'foo'
+        response.argstreams = [
+            InMemStream(),
+            InMemStream(),
+            InMemStream("bar")
+        ]
 
     @gen.coroutine
     def loop2(n):
         futures = []
         for i in xrange(n):
             futures.append(server2.request('localhost:%d' % port1).send(
-                'reverse', '', 'foo'
+                InMemStream('reverse'),
+                InMemStream(),
+                InMemStream('foo')
             ))
         results = yield futures
         for resp in results:
-            assert resp.args[2] == 'bar'
+            arg3 = yield get_arg(resp, 2)
+            assert arg3 == 'bar'
 
-    loop1_run = loop1(100)
-    yield loop2(100)
+    loop1_run = loop1(1)
+    yield loop2(1)
     yield loop1_run
 
     assert server1.out_peers.get("localhost:%d" % port2)

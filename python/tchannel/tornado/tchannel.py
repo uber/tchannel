@@ -30,23 +30,22 @@ import tornado.ioloop
 import tornado.tcpserver
 import tornado.iostream
 
-
 try:
     from tornado import queues
 except ImportError:
     import toro as queues
 
 from ..net import local_ip
-from .timeout import timeout
-from .connection import TornadoConnection
+from .dispatch import Request
+from .connection import StreamConnection
 from ..handler import CallableRequestHandler
-from ..messages import CallRequestMessage
 from ..exceptions import InvalidMessageException
 
 log = logging.getLogger('tchannel')
 
 
 class TChannel(object):
+
     """Manages inbound and outbound connections to various hosts.
 
     This class is a singleton. All instances of it are the same. If you need
@@ -73,12 +72,12 @@ class TChannel(object):
             sys.argv[0], os.getpid()
         )
 
-        # Map of hostport to TornadoConnection to that host.
+        # Map of hostport to StreamConnection to that host.
         self.out_peers = {}
         # TODO: This should be a list so that we can make multiple outgoing
         # connection to the same host.
 
-        # List of (hostport, TornadoConnection) for different hosts. This is
+        # List of (hostport, StreamConnection) for different hosts. This is
         # a list because we expect multiple connections from the same host.
         self.in_peers = []
 
@@ -117,7 +116,7 @@ class TChannel(object):
         :param hostport:
             Target host
         :return:
-            A Future that produces a TornadoConnection
+            A Future that produces a StreamConnection
         """
         if hostport in self.out_peers:
             return self.out_peers[hostport]
@@ -129,7 +128,7 @@ class TChannel(object):
             # TODO: should this be random instead?
         else:
             log.debug("Creating new connection to %s", hostport)
-            self.out_peers[hostport] = TornadoConnection.outgoing(
+            self.out_peers[hostport] = StreamConnection.outgoing(
                 hostport,
                 serve_hostport=self.hostport,
                 handler=CallableRequestHandler(self._handle_client_call),
@@ -148,6 +147,7 @@ class TChannel(object):
 
 
 class CallableTCPServer(tornado.tcpserver.TCPServer):
+
     def __init__(self, f):
         super(CallableTCPServer, self).__init__()
         assert f
@@ -173,7 +173,7 @@ class TChannelServerOperation(object):
     @tornado.gen.coroutine
     def _handle_stream(self, stream, address):
         log.debug("New incoming connection from %s:%d" % address)
-        conn = TornadoConnection(connection=stream)
+        conn = StreamConnection(connection=stream)
 
         # FIXME: This should the address at which we can be reached.
         yield conn.expect_handshake(headers={
@@ -208,23 +208,17 @@ class TChannelClientOperation(object):
     @tornado.gen.coroutine
     def send(self, arg_1, arg_2, arg_3):
         peer_connection = yield self.tchannel().get_peer(self.hostport)
-        self.message_id = message_id = peer_connection.next_message_id()
+        self.message_id = peer_connection.next_message_id()
 
-        def safebytes(arg):
-            if arg is None:
-                return None
-            if isinstance(arg, bytes):
-                return arg
-            return bytes(arg.encode('ascii'))
-
-        message = CallRequestMessage(
+        request = Request(
             service=self.service,
-            args=[safebytes(arg_1), arg_2, arg_3],
+            argstreams=[arg_1,
+                        arg_2,
+                        arg_3],
+            id=self.message_id,
         )
-
-        response_future = peer_connection.send(message, message_id)
-        with timeout(response_future):
-            response = yield response_future
+        response_future = peer_connection.send_request(request)
+        response = yield response_future
 
         log.debug("Got response %s", response)
 

@@ -40,7 +40,7 @@ class CallResponseContinueMessage(CallContinueMessage):
             __init__(flags, checksum, args)
 
     def fragment(self, space_left):
-        fragment_msg = CallResponseContinueMessage()
+        fragment_msg = CallResponseContinueMessage(flags=self.flags)
         return super(CallResponseContinueMessage, self).\
             fragment(space_left, fragment_msg)
 
