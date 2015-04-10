@@ -111,6 +111,7 @@ class TChannel(object):
     def _loop(self):
         while not self.closed:
             (context, connection) = yield self.outstanding_calls.get()
+            log.debug("Received request %s from %s", context, connection)
             self._handler.handle(context, connection)
 
     # TODO: Connection cleanup

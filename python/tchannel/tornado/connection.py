@@ -33,6 +33,7 @@ try:
 except ImportError:
     import toro as queues
 
+from .. import glossary
 from .. import frame
 from .. import messages
 from .. import exceptions
@@ -71,12 +72,10 @@ class TornadoConnection(object):
         Expect a handshake request from the remote host.
     """
 
-    # Message ID 0xffffffff is reserved
-    MAX_MESSAGE_ID = 0xfffffffe
     CALL_TYPES = frozenset([Types.CALL_REQ, Types.CALL_REQ_CONTINUE])
 
     def __init__(self, connection):
-        assert connection
+        assert connection, "connection is required"
 
         self.closed = False
         self.connection = connection
@@ -106,7 +105,7 @@ class TornadoConnection(object):
         connection.set_close_callback(self._on_close)
 
     def next_message_id(self):
-        self._id_sequence = (self._id_sequence + 1) % self.MAX_MESSAGE_ID
+        self._id_sequence = (self._id_sequence + 1) % glossary.MAX_MESSAGE_ID
         return self._id_sequence
 
     def _on_close(self):
