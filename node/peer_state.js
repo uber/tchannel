@@ -20,6 +20,21 @@
 
 'use strict';
 
-var TChannel = require('./channel');
+function TChannelPeerState(channel, peer) {
+    var self = this;
+    self.channel = channel;
+    self.peer = peer;
+}
 
-module.exports = TChannel;
+TChannelPeerState.prototype.close = function close(callback) {
+    callback();
+};
+
+TChannelPeerState.prototype.shouldRequest = function shouldRequest(/* op, options */) {
+    // TODO: op isn't quite right currently as a "TChannelClientOp", the
+    // intention is that the other (non-options) arg encapsulates all requests
+    // across retries and setries
+    return 0;
+};
+
+module.exports = TChannelPeerState;
