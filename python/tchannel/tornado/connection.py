@@ -209,8 +209,8 @@ class TornadoConnection(object):
             log.warn('Unconsumed message %s', context)
 
     # Basically, the only difference between send and write is that send
-    # sets up a Future to get the response. That's ideal for calls initiated
-    # for a client. Servers responding to requests will just use write.
+    # sets up a Future to get the response. That's ideal for peers making
+    # calls. Peers responding to calls must use write.
 
     def send(self, message, message_id=None):
         """Send the given message up the wire.

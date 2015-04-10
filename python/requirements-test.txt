@@ -26,5 +26,4 @@ thrift==0.9.2
 pyfarmhash
 
 # Mocks
-mock
 doubles
