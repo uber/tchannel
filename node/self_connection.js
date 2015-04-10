@@ -64,6 +64,7 @@ TChannelSelfConnection.prototype.buildOutgoingRequest = function buildOutgoingRe
     var called = false;
     inreq.on('error', onError);
     inreq.on('response', onResponse);
+    inreq.outreq = outreq; // TODO: make less hacky when have proper subclasses
     self.handleCallRequest(inreq);
     return outreq;
 
@@ -90,13 +91,15 @@ TChannelSelfConnection.prototype.buildOutgoingRequest = function buildOutgoingRe
     }
 };
 
-TChannelSelfConnection.prototype.buildOutgoingResponse = function buildOutgoingResponse(req, options) {
+TChannelSelfConnection.prototype.buildOutgoingResponse = function buildOutgoingResponse(inreq, options) {
     var self = this;
+    var outreq = inreq.outreq;
+
     if (!options) options = {};
     options.logger = self.logger;
     options.random = self.random;
     options.timers = self.timers;
-    options.tracing = req.tracing;
+    options.tracing = inreq.tracing;
 
     // options.checksum = new v2.Checksum(None);
 
@@ -105,8 +108,8 @@ TChannelSelfConnection.prototype.buildOutgoingResponse = function buildOutgoingR
         callResponseCont: passParts,
         error: passError
     };
-    var outres = new OutgoingResponse(req.id, options);
-    var inres = new IncomingResponse(req.id, options);
+    var outres = new OutgoingResponse(inreq.id, options);
+    var inres = new IncomingResponse(inreq.id, options);
     var first = true;
     return outres;
 
@@ -117,7 +120,7 @@ TChannelSelfConnection.prototype.buildOutgoingResponse = function buildOutgoingR
             inres.code = outres.code;
             inres.ok = outres.ok;
             first = false;
-            req.emit('response', inres);
+            inreq.emit('response', inres);
         }
         if (!self.closing) self.lastTimeoutTime = 0;
     }
@@ -125,11 +128,10 @@ TChannelSelfConnection.prototype.buildOutgoingResponse = function buildOutgoingR
     function passError(codeString, message) {
         var code = v2.ErrorResponse.Codes[codeString];
         var err = v2.ErrorResponse.CodeErrors[code]({
-            originalId: req.id,
+            originalId: inreq.id,
             message: message
         });
-        req.emit('error', err);
-        // TODO: should terminate corresponding inc res
+        outreq.emit('error', err);
         if (!self.closing) self.lastTimeoutTime = 0;
     }
 };
