@@ -261,8 +261,7 @@ TChannelConnectionBase.prototype.request = function connBaseRequest(options) {
     options.ttl = options.timeout || DEFAULT_OUTGOING_REQ_TIMEOUT;
     options.tracer = self.tracer;
     var req = self.buildOutgoingRequest(options);
-    var id = req.id;
-    self.outOps[id] = new TChannelClientOp(req, self.timers.now());
+    self.outOps[req.id] = new TChannelClientOp(req, self.timers.now());
     self.pending.out++;
     return req;
 };
@@ -270,9 +269,8 @@ TChannelConnectionBase.prototype.request = function connBaseRequest(options) {
 TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(req) {
     var self = this;
     req.remoteAddr = self.remoteName;
-    var id = req.id;
     self.pending.in++;
-    var op = self.inOps[id] = new TChannelServerOp(self, self.timers.now(), req);
+    var op = self.inOps[req.id] = new TChannelServerOp(self, self.timers.now(), req);
     var done = false;
     req.on('error', onReqError);
     process.nextTick(runHandler);
@@ -315,14 +313,14 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
     function opDone() {
         if (done) return;
         done = true;
-        if (self.inOps[id] !== op) {
+        if (self.inOps[req.id] !== op) {
             self.logger.warn('mismatched opDone callback', {
                 hostPort: self.channel.hostPort,
-                opId: id
+                opId: req.id
             });
             return;
         }
-        delete self.inOps[id];
+        delete self.inOps[req.id];
         self.pending.in--;
     }
 };
