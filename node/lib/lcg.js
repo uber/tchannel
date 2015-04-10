@@ -18,35 +18,32 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-module.exports = LCG;
+'use strict';
 
-function LCG () {
-    if (!(this instanceof LCG)) {
-        return new LCG();
-    }
+function LCG (seed) {
     var self = this;
-
-    self._rng = {
-        last: Math.floor(Math.pow(2, 32) * Math.random()),
-        m: Math.pow(2, 32),
-        a: 214013,
-        c: 253101
-    };
+    if (typeof seed === 'number') {
+        self.last = seed;
+    } else {
+        self.last = Math.floor(Math.pow(2, 32) * Math.random());
+    }
+    self.mod = Math.pow(2, 32);
+    self.mul = 214013;
+    self.add = 253101;
 }
 
 LCG.prototype.rand = function rand() {
     var self = this;
-
-    var next = (self._rng.a * self._rng.last + self._rng.c) % self._rng.m;
-    self._rng.last = next;
-    return next;
+    self.last = (self.mul * self.last + self.add) % self.mod;
+    return self.last;
 };
 
 LCG.prototype.rand64 = function rand64() {
     var self = this;
-
     var ret = new Buffer(8);
     ret.writeUInt32BE(self.rand(), 0);
     ret.writeUInt32BE(self.rand(), 4);
     return ret;
 };
+
+module.exports = LCG;
