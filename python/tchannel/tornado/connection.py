@@ -71,6 +71,8 @@ class TornadoConnection(object):
         Expect a handshake request from the remote host.
     """
 
+    # Message ID 0xffffffff is reserved
+    MAX_MESSAGE_ID = 0xfffffffe
     CALL_TYPES = frozenset([Types.CALL_REQ, Types.CALL_REQ_CONTINUE])
 
     def __init__(self, connection):
@@ -101,7 +103,7 @@ class TornadoConnection(object):
         connection.set_close_callback(self._on_close)
 
     def next_message_id(self):
-        self._id_sequence += 1
+        self._id_sequence = (self._id_sequence + 1) % self.MAX_MESSAGE_ID
         return self._id_sequence
 
     def _on_close(self):

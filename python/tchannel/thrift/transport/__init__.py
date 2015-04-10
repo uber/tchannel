@@ -21,7 +21,6 @@
 from __future__ import absolute_import
 
 from .base import TChannelTransportBase  # noqa
-from .socket import TChannelTransport  # noqa
 
 try:
     from .tornado import TChannelTornadoTransport  # noqa
