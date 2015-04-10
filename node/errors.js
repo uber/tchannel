@@ -145,3 +145,9 @@ module.exports.TopLevelRegisterError = TypedError({
     message: 'Cannot register endpoints points on top-level channel.\n' +
         'Provide serviceName to constructor, or create a sub-channel.'
 });
+
+module.exports.TopLevelRequestError = TypedError({
+    type: 'tchyannel.top-level-request',
+    message: 'Cannot make request() on top level tchannel without host.\n' +
+        'Must set a direct host or use a sub channel.'
+});

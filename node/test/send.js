@@ -195,14 +195,20 @@ allocCluster.test('request().send() to a pool of servers', 4, function t(cluster
         ])
     });
 
+    
+    var channel = client.makeSubChannel({
+        serviceName: 'lol'
+    });
+
     cluster.channels.forEach(function each(chan, i) {
         var chanNum = i + 1;
         chan.handler = EndpointHandler();
         chan.handler.register('foo', function foo(req, res, arg2, arg3) {
             res.sendOk(arg2, arg3 + ' served by ' + chanNum);
         });
-        client.peers.add(chan.hostPort);
+        channel.peers.add(chan.hostPort);
     });
+
 
     parallel([
 
@@ -235,7 +241,7 @@ allocCluster.test('request().send() to a pool of servers', 4, function t(cluster
     ].map(function eachTestCase(testCase) {
         return sendTest(extend({
             logger: cluster.logger,
-            channel: client
+            channel: channel
         }, testCase), assert);
     }), function onResults(err) {
         assert.ifError(err, 'no errors from sending');
