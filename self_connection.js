@@ -45,6 +45,9 @@ TChannelSelfConnection.prototype.buildOutgoingRequest = function buildOutgoingRe
     var self = this;
     var id = self.idCount++;
     if (!options) options = {};
+    options.logger = self.logger;
+    options.random = self.random;
+    options.timers = self.timers;
     options.sendFrame = {
         callRequest: passParts,
         callRequestCont: passParts
@@ -90,6 +93,9 @@ TChannelSelfConnection.prototype.buildOutgoingRequest = function buildOutgoingRe
 TChannelSelfConnection.prototype.buildOutgoingResponse = function buildOutgoingResponse(req, options) {
     var self = this;
     if (!options) options = {};
+    options.logger = self.logger;
+    options.random = self.random;
+    options.timers = self.timers;
     options.tracing = req.tracing;
 
     // options.checksum = new v2.Checksum(None);
