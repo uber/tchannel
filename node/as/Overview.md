@@ -21,7 +21,7 @@ tchannel
         Encoder.stringify(arg1),
         Encoder.stringify(arg2),
         Encoder.stringify(arg3),
-        function onResponse(err, resp) {
+        function onResponse(err, resp, arg2, arg3) {
             if (err) {
                 console.log('got error', {
                     error: err
@@ -31,15 +31,15 @@ tchannel
 
             if (!resp.ok) {
                 console.log('resp not ok', {
-                    arg2: Encoder.parse(resp.arg2),
-                    arg3: Encoder.parse(resp.arg3)
+                    arg2: Encoder.parse(arg2),
+                    arg3: Encoder.parse(arg3)
                 });
                 return;
             }
 
             console.log('resp ok', {
-                arg2: Encoder.parse(resp.arg2),
-                arg3: Encoder.parse(resp.arg3)
+                arg2: Encoder.parse(arg2),
+                arg3: Encoder.parse(arg3)
             });
         }
     );
