@@ -20,11 +20,9 @@
 
 'use strict';
 
-function TChannelClientOp(req, start) {
+function TChannelClientOp(req) {
     var self = this;
     self.req = req;
-    self.start = start;
-    self.timedOut = false;
 }
 
 module.exports = TChannelClientOp;
