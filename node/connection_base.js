@@ -163,7 +163,13 @@ TChannelConnectionBase.prototype.checkOutOpsForTimeout = function checkOutOpsFor
 TChannelConnectionBase.prototype.onReqTimeout = function onReqTimeout(op) {
     var self = this;
     op.timedOut = true;
-    op.req.emit('error', new Error('timed out')); // TODO typed error
+    op.req.emit('error', errors.TimeoutError({
+        id: op.req.id,
+        start: op.start,
+        elapsed: self.timers.now() - op.start,
+        timeout: op.req.ttl
+    }));
+
     // TODO: why don't we pop the op?
     self.lastTimeoutTime = self.timers.now();
 };
@@ -278,8 +284,12 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
 
     function onReqError(err) {
         if (!op.res) buildResponse();
-        var errName = err.name || err.constructor.name;
-        op.res.sendError('UnexpectedError', errName + ': ' + err.message);
+        if (err.type === 'tchannel.timeout-error') {
+            op.res.sendError('Timeout', err.message);
+        } else {
+            var errName = err.name || err.constructor.name;
+            op.res.sendError('UnexpectedError', errName + ': ' + err.message);
+        }
     }
 
     function runHandler() {
