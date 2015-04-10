@@ -372,6 +372,10 @@ TChannel.prototype.request = function channelRequest(options) {
         }
     }
 
+    if (!self.serviceName && !options.host) {
+        throw errors.TopLevelRequestError();
+    }
+
     // TODO: moar defaults
     if (self.destroyed) {
         throw new Error('cannot request() to destroyed tchannel'); // TODO typed error
