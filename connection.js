@@ -181,7 +181,6 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
             return;
         }
         op.req.emit('error', err);
-        // TODO: should terminate corresponding inc res
     }
 
     function onTimedOut() {

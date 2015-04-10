@@ -269,10 +269,17 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
     self.inPending++;
     var op = self.inOps[id] = new TChannelServerOp(self, self.timers.now(), req);
     var done = false;
+    req.on('error', onReqError);
     process.nextTick(runHandler);
 
     if (req.span) {
         req.span.endpoint.serviceName = self.channel.serviceName;
+    }
+
+    function onReqError(err) {
+        if (!op.res) buildResponse();
+        var errName = err.name || err.constructor.name;
+        op.res.sendError('UnexpectedError', errName + ': ' + err.message);
     }
 
     function runHandler() {
