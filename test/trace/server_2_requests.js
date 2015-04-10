@@ -22,7 +22,7 @@ var CountedReadySignal = require('ready-signal/counted');
 var DebugLogtron = require('debug-logtron');
 var test = require('tape');
 
-var TChannel = require('../../index.js');
+var TChannel = require('../../channel.js');
 var EndpointHandler = require('../../endpoint-handler.js');
 var TracingAgent = require('../../trace/agent');
 

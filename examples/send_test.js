@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-var TChannel = require('../index.js');
+var TChannel = require('../channel.js');
 var EndpointHandler = require('../endpoint-handler.js');
 var CountedReadySignal = require('ready-signal/counted');
 
