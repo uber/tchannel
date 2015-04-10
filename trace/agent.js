@@ -61,6 +61,11 @@ function Agent () {
     process.addAsyncListener(self.asyncListener);
 
     self.logger = DebugLogtron('tchannelTrace');
+
+    // If this is set to true in a call to Agent#configure, all incoming
+    // requests will have their traceflags forced to 1. It's intended to be
+    // set on the 'top level service'.
+    self.forceTrace = false;
 }
 
 Agent.prototype.getInstance = function () {
