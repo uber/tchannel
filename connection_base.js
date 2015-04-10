@@ -113,8 +113,8 @@ TChannelConnectionBase.prototype.checkInOpsForTimeout = function checkInOpsForTi
     var now = self.timers.now();
 
     for (var i = 0; i < opKeys.length; i++) {
-        var opKey = opKeys[i];
-        var op = ops[opKey];
+        var id = opKeys[i];
+        var op = ops[id];
 
         if (op === undefined) {
             continue;
@@ -122,7 +122,7 @@ TChannelConnectionBase.prototype.checkInOpsForTimeout = function checkInOpsForTi
 
         var duration = now - op.start;
         if (duration > op.req.ttl) {
-            delete ops[opKey];
+            delete ops[id];
             self.pending.in--;
         }
     }
@@ -133,10 +133,10 @@ TChannelConnectionBase.prototype.checkOutOpsForTimeout = function checkOutOpsFor
     var opKeys = Object.keys(ops);
     var now = self.timers.now();
     for (var i = 0; i < opKeys.length ; i++) {
-        var opKey = opKeys[i];
-        var op = ops[opKey];
+        var id = opKeys[i];
+        var op = ops[id];
         if (op.timedOut) {
-            delete ops[opKey];
+            delete ops[id];
             self.pending.out--;
             self.logger.warn('lingering timed-out outgoing operation');
             continue;
@@ -144,16 +144,15 @@ TChannelConnectionBase.prototype.checkOutOpsForTimeout = function checkOutOpsFor
         if (op === undefined) {
             // TODO: why not null and empty string too? I mean I guess false
             // and 0 might be a thing, but really why not just !op?
-            self.channel.logger
-                .warn('unexpected undefined operation', {
-                    key: opKey,
-                    op: op
-                });
+            self.logger.warn('unexpected undefined operation', {
+                id: id,
+                op: op
+            });
             continue;
         }
         var duration = now - op.start;
         if (duration > op.req.ttl) {
-            delete ops[opKey];
+            delete ops[id];
             self.pending.out--;
             self.onReqTimeout(op);
         }
