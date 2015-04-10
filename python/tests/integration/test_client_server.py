@@ -38,11 +38,11 @@ def call_response():
 
 
 @pytest.mark.gen_test
-def test_tornado_client_with_server_not_there(unused_port):
+def test_tornado_client_with_server_not_there(random_open_port):
 
     with pytest.raises(ConnectionClosedException):
         yield TornadoConnection.outgoing(
-            'localhost:%d' % unused_port,
+            'localhost:%d' % random_open_port,
         )
 
 

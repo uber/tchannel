@@ -61,7 +61,7 @@ class RequestDispatcher(BaseRequestHandler):
         endpoint = self.endpoints.get(request.endpoint, None)
 
         if endpoint is None:
-            return connection.send_error(
+            return connection.senderror(
                 ErrorCode.bad_request,
                 "Endpoint '%s' for service '%s' is not defined" % (
                     call.args[0], call.service
@@ -159,4 +159,4 @@ class Response(object):
                 args=[self.arg1, self.arg2, self.arg3]
             )
 
-        return self.connection.frame_and_write_stream(self.message, self.id)
+        return self.connection.write(self.message, self.id)

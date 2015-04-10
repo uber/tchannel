@@ -18,6 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+from ..glossary import MAX_PAYLOAD_SIZE
 from ..messages import Types, RW
 from ..exceptions import StreamingException
 from ..messages.common import FlagsType
@@ -29,11 +30,6 @@ class MessageFactory(object):
     """Provide the functionality to decompose and recompose
     streaming messages.
     """
-
-    # 64KB Max frame size
-    # 16B (size:2 | type:1 | reserved:1 | id:4 | reserved:8)
-    # 1 2 Bytes can represent 0~2**16-1
-    MAX_PAYLOAD_SIZE = 0xFFEF   # 64*1024 - 16 - 1
 
     def __init__(self):
         # key: message_id
@@ -103,7 +99,7 @@ class MessageFactory(object):
                                     Types.CALL_REQ]:
 
             rw = RW[message.message_type]
-            payload_space = (self.MAX_PAYLOAD_SIZE -
+            payload_space = (MAX_PAYLOAD_SIZE -
                              rw.length_no_args(message))
             # split a call/request message into an array
             # with a call/request message and {0~n} continue
@@ -113,7 +109,7 @@ class MessageFactory(object):
             while fragment_msg is not None:
                 message = fragment_msg
                 rw = RW[message.message_type]
-                payload_space = (self.MAX_PAYLOAD_SIZE -
+                payload_space = (MAX_PAYLOAD_SIZE -
                                  rw.length_no_args(message))
                 fragment_msg = message.fragment(payload_space)
                 yield message

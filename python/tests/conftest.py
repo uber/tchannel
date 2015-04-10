@@ -42,7 +42,11 @@ def connection():
 
 
 @pytest.fixture
-def unused_port():
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.bind(('', 0))
-    return sock.getsockname()[1]
+def random_open_port():
+    """Find and return a random open TCP port."""
+    sock = socket.socket(socket.AF_INET)
+    try:
+        sock.bind(('', 0))
+        return sock.getsockname()[1]
+    finally:
+        sock.close()

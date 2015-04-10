@@ -35,24 +35,28 @@ def peer():
 
 
 @pytest.mark.gen_test
-def test_add_peer_caching(peer):
+def test_get_peer_out_caching(peer):
     "Connections are long-lived and should not be recreated."""
     tchannel = TChannel()
-    tchannel.peers = {'foo': peer}
-    result = yield tchannel.add_peer('foo')
+    tchannel.out_peers = {'foo': peer}
+    result = yield tchannel.get_peer('foo')
     assert result == "some connection"
 
 
-def test_remove_peer(peer):
+@pytest.mark.gen_test
+def test_get_peer_in_caching(peer):
+    "Connections are long-lived and should not be recreated."""
     tchannel = TChannel()
-    tchannel.peers = {'foo': peer}
-    assert tchannel.remove_peer('foo') is peer
+    tchannel.out_peers = {'foo': peer}
+    tchannel.in_peers = [('foo', peer), ('foo', concurrent.Future())]
+    result = yield tchannel.get_peer('foo')
+    assert result == "some connection"
 
 
 @pytest.mark.gen_test
 def test_get_peer_with_caching(peer):
     tchannel = TChannel()
-    tchannel.peers = {'foo': peer}
+    tchannel.out_peers = {'foo': peer}
     result = yield tchannel.get_peer('foo')
     assert result == "some connection"
 

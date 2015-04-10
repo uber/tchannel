@@ -20,8 +20,8 @@
 
 from __future__ import absolute_import
 
-import tornado
 import threading
+import tornado.ioloop
 
 from tchannel.tornado.dispatch import TornadoDispatcher
 import tchannel.tornado.tchannel as tornado_tchannel
@@ -57,10 +57,10 @@ class ServerManager(object):
 
         expectation = Expectation()
 
-        @self.dispatcher.route(endpoint)
         def handle_expected_endpoint(request, response, opts):
             response.message = expectation.response
 
+        self.dispatcher.register(endpoint, handle_expected_endpoint)
         return expectation
 
     def __enter__(self):
@@ -77,9 +77,15 @@ class ServerManager(object):
         while not self.ready:
             pass
 
+    def serve(self):
+        raise NotImplementedError()
+
     def stop(self):
         self.shutdown()
         self.thread.join()
+
+    def shutdown(self):
+        raise NotImplementedError()
 
 
 class TChannelServerManager(ServerManager):
@@ -89,10 +95,11 @@ class TChannelServerManager(ServerManager):
 
         self.dispatcher = TornadoDispatcher()
         self.tchannel = tornado_tchannel.TChannel()
-        self.server = self.tchannel.host(port, self.dispatcher)
+        self.server = self.tchannel.host(self.dispatcher)
+        self.port = port
 
     def serve(self):
-        self.server.listen()
+        self.server.listen(self.port)
         self.ready = True
         tornado.ioloop.IOLoop.current().start()
 

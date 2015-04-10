@@ -18,27 +18,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from tornado import ioloop
+# Largest message ID supported by the system.
+#
+# Message ID 0xffffffff is reserved
+MAX_MESSAGE_ID = 0xfffffffe
 
-from tchannel import thrift
-from tchannel.tornado import TChannel, TornadoDispatcher
-
-from hello import HelloService
-
-
-class HelloServiceHandler(object):
-
-    def hello(self, name):
-        print "Hello, %s" % name
-        return "Hello, %s" % name
-
-
-def run():
-    dispatcher = TornadoDispatcher()
-    TChannel().host(dispatcher).listen(4040)
-    thrift.register(dispatcher, HelloService, HelloServiceHandler())
-    ioloop.IOLoop.current().start()
-
-
-if __name__ == '__main__':
-    run()
+# Largest payload supported by the system.
+#
+# 64KB Max frame size
+# 16B (size:2 | type:1 | reserved:1 | id:4 | reserved:8)
+# 1 2 Bytes can represent 0~2**16-1
+MAX_PAYLOAD_SIZE = 0xFFEF   # 64*1024 - 16 - 1

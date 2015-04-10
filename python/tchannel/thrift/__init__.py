@@ -23,7 +23,6 @@ from __future__ import absolute_import
 from .server import register  # noqa
 from .protocol import TChannelProtocol  # noqa
 from .protocol import TChannelProtocolFactory  # noqa
-from .transport import TChannelTransport  # noqa
 
 try:
     from .transport.tornado import TChannelTornadoTransport  # noqa

@@ -20,69 +20,188 @@
 
 from __future__ import absolute_import
 
+import sys
 import logging
 import threading
 import weakref
 
+import os
+import tornado.gen
 import tornado.ioloop
+import tornado.tcpserver
 import tornado.iostream
 
-from ..exceptions import InvalidMessageException
-from ..messages import CallRequestMessage
-from .connection import TornadoConnection
+
+try:
+    from tornado import queues
+except ImportError:
+    import toro as queues
+
 from .timeout import timeout
-from .server import TChannelServer
+from .connection import TornadoConnection
+from ..handler import CallableRequestHandler
+from ..messages import CallRequestMessage
+from ..exceptions import InvalidMessageException
 
 log = logging.getLogger('tchannel')
 
 
 class TChannel(object):
-    """Manages inbound and outbound connections to various hosts."""
+    """Manages inbound and outbound connections to various hosts.
+
+    This class is a singleton. All instances of it are the same. If you need
+    separate instances, use the ``ignore_singleton`` argument.
+    """
 
     # We don't want to duplicate outgoing connections, so all instances of this
     # class will be a singleton.
     _singleton = threading.local()
 
-    def __new__(cls):
-        if hasattr(cls._singleton, "instance"):
-            return cls._singleton.instance
-        return super(TChannel, cls).__new__(cls)
+    class __metaclass__(type):
 
-    def __init__(self):
-        self.peers = {}
+        def __call__(cls, *args, **kwargs):
+            # The constructor doesn't actually accept a ignore_singleton
+            # argument. We remove the argument from kwargs if it's present.
+            ignore_singleton = kwargs.pop('ignore_singleton', False)
+            if hasattr(cls._singleton, "instance") and not ignore_singleton:
+                return cls._singleton.instance
+            chan = type.__call__(cls, *args, **kwargs)
+            if not ignore_singleton:
+                cls._singleton.instance = chan
+            return chan
 
-        self._singleton.instance = self
+    def __init__(self, hostport=None, process_name=None):
+        """Build or re-use a TChannel.
 
-    def add_peer(self, hostport):
-        if hostport not in self.peers:
-            self.peers[hostport] = TornadoConnection.outgoing(hostport)
-        return self.peers[hostport]
+        :param hostport:
+            The hostport at which the service hosted behind this TChannel can
+            be reached.
+        :param ignore_singleton:
+            If given, this instance will not re-use the existing singleton.
+        """
+        self.closed = False
+        self._hostport = hostport
+        self.process_name = process_name or "%s[%s]" % (
+            sys.argv[0], os.getpid()
+        )
 
-    def remove_peer(self, hostport):
-        # TODO: Connection cleanup
-        return self.peers.pop(hostport)
+        # Map of hostport to TornadoConnection to that host.
+        self.out_peers = {}
+        # TODO: This should be a list so that we can make multiple outgoing
+        # connection to the same host.
+
+        # List of (hostport, TornadoConnection) for different hosts. This is
+        # a list because we expect multiple connections from the same host.
+        self.in_peers = []
+
+        # RequestHandler to handle calls.
+        self._handler = None
+
+        # Queue of (context, connection) for all outstanding calls. The
+        # context must contain complete actionable messages, not fragments.
+        self.outstanding_calls = queues.Queue()
+
+        self._loop()
+
+    def close(self):
+        self.closed = True
+        # TODO close all connections
+
+    @tornado.gen.coroutine
+    def _loop(self):
+        while not self.closed:
+            (context, connection) = yield self.outstanding_calls.get()
+            log.debug("Received request %s from %s", context, connection)
+            self._handler.handle(context, connection)
+
+    # TODO: Connection cleanup
 
     def get_peer(self, hostport):
-        return self.add_peer(hostport)
+        """Get a connection to the given host.
+
+        If a connection to or from that host already exists, use that;
+        otherwise create a new outgoing connection to it.
+
+        :param hostport:
+            Target host
+        :return:
+            A Future that produces a TornadoConnection
+        """
+        if hostport in self.out_peers:
+            return self.out_peers[hostport]
+
+        matches = [conn for (h, conn) in self.in_peers if h == hostport]
+        if matches:
+            log.debug("Re-using incoming connection from %s", hostport)
+            return tornado.gen.maybe_future(matches[0])
+            # TODO: should this be random instead?
+        else:
+            log.debug("Creating new connection to %s", hostport)
+            self.out_peers[hostport] = TornadoConnection.outgoing(
+                hostport,
+                serve_hostport=self._hostport,
+                handler=CallableRequestHandler(self._handle_client_call),
+            )
+            return self.out_peers[hostport]
 
     def request(self, hostport, service=None):
         return TChannelClientOperation(hostport, service, self)
 
-    def host(self, port, handler):
-        return TChannelServerOperation(port, handler)
+    def host(self, handler):
+        self._handler = handler
+        return TChannelServerOperation(self)
+
+    def _handle_client_call(self, context, connection):
+        self.outstanding_calls.put((context, connection))
+
+
+class CallableTCPServer(tornado.tcpserver.TCPServer):
+    def __init__(self, f):
+        super(CallableTCPServer, self).__init__()
+        assert f
+        self._f = f
+
+    def handle_stream(self, stream, address):
+        return self._f(stream, address)
 
 
 class TChannelServerOperation(object):
+    __slots__ = ('tchannel',)
 
-    def __init__(self, port, handler):
-        self.inbound_server = TChannelServer(handler)
-        self.port = port
+    def __init__(self, tchannel):
+        self.tchannel = weakref.ref(tchannel)
 
-    def listen(self):
-        self.inbound_server.listen(self.port)
+    def listen(self, port):
+        CallableTCPServer(self._handle_stream).listen(port)
+
+    @tornado.gen.coroutine
+    def _handle_stream(self, stream, address):
+        log.debug("New incoming connection from %s:%d" % address)
+        conn = TornadoConnection(connection=stream)
+
+        # FIXME: This should the address at which we can be reached.
+        yield conn.expect_handshake(headers={
+            'host_port': '%s:%s' % address,
+            'process_name': self.tchannel().process_name,
+        })
+
+        log.debug(
+            "Successfully completed handshake with %s (%s)",
+            conn.remote_host,
+            conn.remote_process_name,
+        )
+
+        self.tchannel().in_peers.append((conn.remote_host, conn))
+        # TODO cleanup on connection close?
+
+        yield conn.serve(handler=CallableRequestHandler(self._handle))
+
+    def _handle(self, context, connection):
+        self.tchannel().outstanding_calls.put((context, connection))
 
 
 class TChannelClientOperation(object):
+    __slots__ = ('hostport', 'message_id', 'service', 'tchannel')
 
     def __init__(self, hostport, service, tchannel):
         self.hostport = hostport
@@ -92,9 +211,6 @@ class TChannelClientOperation(object):
 
     @tornado.gen.coroutine
     def send(self, arg_1, arg_2, arg_3):
-        # message = CallRequestMessage.from_context for zipkin shit
-        # Make this return a message ID so we can match it up with the
-        # response.
         peer_connection = yield self.tchannel().get_peer(self.hostport)
         self.message_id = message_id = peer_connection.next_message_id()
 
@@ -107,30 +223,16 @@ class TChannelClientOperation(object):
 
         message = CallRequestMessage(
             service=self.service,
-            args=[safebytes(arg_1),
-                  arg_3,
-                  arg_3],
+            args=[safebytes(arg_1), arg_2, arg_3],
         )
 
-        log.debug("framing and writing message %s", message_id)
-
-        # TODO: return response future here?
-        yield peer_connection.frame_and_write_stream(
-            message,
-            message_id=message_id,
-        )
-
-        log.debug("awaiting response for message %s", message_id)
-
-        # Pull this out into its own loop, look up response message ids
-        # and dispatch them to handlers.
-        response_future = peer_connection.awaiting_responses[message_id]
+        response_future = peer_connection.send(message, message_id)
         with timeout(response_future):
             response = yield response_future
 
-        log.debug("got response for message %s", response.message_id)
+        log.debug("Got response %s", response)
 
         if not response:
             raise InvalidMessageException()
 
-        raise tornado.gen.Return(response.message)
+        raise tornado.gen.Return(response)

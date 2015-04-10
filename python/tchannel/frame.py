@@ -20,14 +20,11 @@
 
 from __future__ import absolute_import
 
-import logging
 from collections import namedtuple
 
 from . import rw
 from .io import BytesIO
 from .exceptions import ReadException
-
-log = logging.getLogger('tchannel')
 
 
 FrameHeader = namedtuple('FrameHeader', 'message_type message_id')
@@ -63,7 +60,6 @@ class FrameReadWriter(rw.ReadWriter):
         header_body, payload = body[:header_width], body[header_width:]
 
         header = self.header_rw.read(BytesIO(header_body))
-        log.debug('decode frame for message %s', header.message_id)
         return Frame(header, payload)
 
     def write(self, frame, stream):
@@ -72,7 +68,6 @@ class FrameReadWriter(rw.ReadWriter):
 
         self.size_rw.write(size, stream)
         self.header_rw.write(frame.header, stream)
-        log.debug("writing frame for message %s", frame.header.message_id)
         stream.write(frame.payload)
 
         return stream
