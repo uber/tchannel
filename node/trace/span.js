@@ -108,6 +108,7 @@ Span.prototype.propagateIdsFrom = function propagateIdsFrom(span) {
 
     self.parentid = span.id;
     self.traceid = span.traceid;
+    self.flags = span.flags;
 };
 
 Span.prototype.getTracing = function getTracing() {
