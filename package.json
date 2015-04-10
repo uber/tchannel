@@ -14,6 +14,7 @@
     "check-licence": "uber-licence --dry",
     "add-licence": "uber-licence"
   },
+  "main": "channel",
   "repository": {
     "type": "git",
     "url": "git@github.com:uber/tchannel"
