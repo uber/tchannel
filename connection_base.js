@@ -46,9 +46,11 @@ function TChannelConnectionBase(channel, direction, remoteAddr) {
 
     // TODO: factor out an operation collection abstraction
     self.inOps = Object.create(null);
-    self.inPending = 0;
     self.outOps = Object.create(null);
-    self.outPending = 0;
+    self.pending = {
+        in: 0,
+        out: 0
+    };
 
     self.lastTimeoutTime = 0;
     self.closing = false;
@@ -122,7 +124,7 @@ TChannelConnectionBase.prototype.checkInOpsForTimeout = function checkInOpsForTi
         var duration = now - op.start;
         if (duration > timeout) {
             delete ops[opKey];
-            self.inPending--;
+            self.pending.in--;
         }
     }
 };
@@ -136,7 +138,7 @@ TChannelConnectionBase.prototype.checkOutOpsForTimeout = function checkOutOpsFor
         var op = ops[opKey];
         if (op.timedOut) {
             delete ops[opKey];
-            self.outPending--;
+            self.pending.out--;
             self.logger.warn('lingering timed-out outgoing operation');
             continue;
         }
@@ -154,7 +156,7 @@ TChannelConnectionBase.prototype.checkOutOpsForTimeout = function checkOutOpsFor
         var duration = now - op.start;
         if (duration > timeout) {
             delete ops[opKey];
-            self.outPending--;
+            self.pending.out--;
             self.onReqTimeout(op);
         }
     }
@@ -199,8 +201,8 @@ TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
         localName: self.channel.hostPort,
         numInOps: inOpKeys.length,
         numOutOps: outOpKeys.length,
-        inPending: self.inPending,
-        outPending: self.outPending
+        inPending: self.pending.in,
+        outPending: self.pending.out
     });
 
     if (isError) {
@@ -224,8 +226,8 @@ TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
         op.req.emit('error', err);
     });
 
-    self.inPending = 0;
-    self.outPending = 0;
+    self.pending.in = 0;
+    self.pending.out = 0;
 };
 
 TChannelConnectionBase.prototype.popOutOp = function popOutOp(id) {
@@ -238,7 +240,7 @@ TChannelConnectionBase.prototype.popOutOp = function popOutOp(id) {
         return;
     }
     delete self.outOps[id];
-    self.outPending--;
+    self.pending.out--;
     return op;
 };
 
@@ -264,7 +266,7 @@ TChannelConnectionBase.prototype.request = function connBaseRequest(options) {
     var req = self.buildOutgoingRequest(options);
     var id = req.id;
     self.outOps[id] = new TChannelClientOp(req, self.timers.now());
-    self.outPending++;
+    self.pending.out++;
     return req;
 };
 
@@ -272,7 +274,7 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
     var self = this;
     req.remoteAddr = self.remoteName;
     var id = req.id;
-    self.inPending++;
+    self.pending.in++;
     var op = self.inOps[id] = new TChannelServerOp(self, self.timers.now(), req);
     var done = false;
     req.on('error', onReqError);
@@ -324,7 +326,7 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
             return;
         }
         delete self.inOps[id];
-        self.inPending--;
+        self.pending.in--;
     }
 };
 
