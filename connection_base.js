@@ -289,6 +289,7 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
         }
         op.res = self.buildOutgoingResponse(req, options);
         op.res.on('finish', opDone);
+        op.res.on('errored', opDone);
         op.res.on('span', handleSpanFromRes);
         return op.res;
     }
