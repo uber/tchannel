@@ -152,6 +152,15 @@ module.exports.TChannelWriteProtocolError = WrappedError({
     localName: null
 });
 
+module.exports.TimeoutError = TypedError({
+    type: 'tchannel.timeout-error',
+    message: 'timed out after {elapsed}ms (limit was {timeout}ms)',
+    id: null,
+    start: null,
+    elapsed: null,
+    timeout: null
+});
+
 module.exports.TopLevelRegisterError = TypedError({
     type: 'tchannel.top-level-register',
     message: 'Cannot register endpoints points on top-level channel.\n' +
