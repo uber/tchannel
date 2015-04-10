@@ -292,7 +292,9 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
 
     function buildResponse(options) {
         if (op.res && op.res.state !== OutgoingResponse.States.Initial) {
-            throw new Error('response already built and started'); // TODO: typed error
+            throw errors.ResponseAlreadyStarted({
+                state: op.res.state
+            });
         }
         op.res = self.buildOutgoingResponse(req, options);
         op.res.on('finish', opDone);

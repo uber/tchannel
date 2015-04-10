@@ -107,6 +107,12 @@ module.exports.NullKeyError = TypedError({
     endOffset: null
 });
 
+module.exports.ResponseAlreadyStarted = TypedError({
+    type: 'tchannel.response-already-started',
+    message: 'response already started (state {state})',
+    state: null
+});
+
 module.exports.SocketClosedError = TypedError({
     type: 'tchannel.socket-closed',
     message: 'socket closed, {reason}',
