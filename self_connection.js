@@ -20,7 +20,10 @@
 
 'use strict';
 
-var reqres = require('./reqres');
+var IncomingRequest = require('./incoming_request');
+var IncomingResponse = require('./incoming_response');
+var OutgoingRequest = require('./outgoing_request');
+var OutgoingResponse = require('./outgoing_response');
 
 var inherits = require('util').inherits;
 
@@ -47,14 +50,14 @@ TChannelSelfConnection.prototype.buildOutgoingRequest = function buildOutgoingRe
         callRequestCont: passParts
     };
     options.tracer = self.tracer;
-    var outreq = new reqres.OutgoingRequest(id, options);
+    var outreq = new OutgoingRequest(id, options);
 
     if (outreq.span) {
         options.tracing = outreq.span.getTracing();
     }
     options.hostPort = self.channel.hostPort;
 
-    var inreq = new reqres.IncomingRequest(id, options);
+    var inreq = new IncomingRequest(id, options);
     var called = false;
     inreq.on('error', onError);
     inreq.on('response', onResponse);
@@ -96,8 +99,8 @@ TChannelSelfConnection.prototype.buildOutgoingResponse = function buildOutgoingR
         callResponseCont: passParts,
         error: passError
     };
-    var outres = new reqres.OutgoingResponse(req.id, options);
-    var inres = new reqres.IncomingResponse(req.id, options);
+    var outres = new OutgoingResponse(req.id, options);
+    var inres = new IncomingResponse(req.id, options);
     var first = true;
     return outres;
 

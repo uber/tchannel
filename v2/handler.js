@@ -23,11 +23,11 @@
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 
-var reqres = require('../reqres');
-var TChannelOutgoingRequest = reqres.OutgoingRequest;
-var TChannelOutgoingResponse = reqres.OutgoingResponse;
-var TChannelIncomingRequest = reqres.IncomingRequest;
-var TChannelIncomingResponse = reqres.IncomingResponse;
+var OutgoingRequest = require('../outgoing_request');
+var OutgoingResponse = require('../outgoing_response');
+var IncomingRequest = require('../incoming_request');
+var IncomingResponse = require('../incoming_response');
+
 var v2 = require('./index');
 var errors = require('../errors');
 
@@ -153,7 +153,7 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
     var req = self.buildIncomingRequest(reqFrame);
     self._handleCallFrame(req, reqFrame, function(err) {
         if (err) return callback(err);
-        if (req.state === reqres.States.Streaming) {
+        if (req.state === IncomingRequest.States.Streaming) {
             self.streamingReq[req.id] = req;
         }
         self.emit('call.incoming.request', req);
@@ -169,7 +169,7 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
     var res = self.buildIncomingResponse(resFrame);
     self._handleCallFrame(res, resFrame, function(err) {
         if (err) return callback(err);
-        if (res.state === reqres.States.Streaming) {
+        if (res.state === IncomingResponse.States.Streaming) {
             self.streamingRes[res.id] = res;
         }
         self.emit('call.incoming.response', res);
@@ -223,7 +223,8 @@ TChannelV2Handler.prototype.handleError = function handleError(errFrame, callbac
 };
 
 TChannelV2Handler.prototype._handleCallFrame = function _handleCallFrame(r, frame, callback) {
-    if (r.state === reqres.States.Done) {
+    var states = r.constructor.States;
+    if (r.state === states.Done) {
         callback(new Error('got cont in done state')); // TODO typed error
         return;
     }
@@ -245,10 +246,10 @@ TChannelV2Handler.prototype._handleCallFrame = function _handleCallFrame(r, fram
     r.handleFrame(frame.body.args);
     if (isLast) {
         r.handleFrame(null);
-        r.state = reqres.States.Done;
-    } else if (r.state === reqres.States.Initial) {
-        r.state = reqres.States.Streaming;
-    } else if (r.state !== reqres.States.Streaming) {
+        r.state = states.Done;
+    } else if (r.state === states.Initial) {
+        r.state = states.Streaming;
+    } else if (r.state !== states.Streaming) {
         throw new Error('unknown frame handling state');
     }
     callback();
@@ -354,7 +355,7 @@ TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest
         callRequest: sendCallRequestFrame,
         callRequestCont: sendCallRequestContFrame
     };
-    var req = new TChannelOutgoingRequest(id, options);
+    var req = new OutgoingRequest(id, options);
     return req;
 
     function sendCallRequestFrame(args, isLast) {
@@ -382,7 +383,7 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
         callResponseCont: sendCallResponseContFrame,
         error: sendErrorFrame
     };
-    var res = new TChannelOutgoingResponse(req.id, options);
+    var res = new OutgoingResponse(req.id, options);
     return res;
 
     function sendCallResponseFrame(args, isLast) {
@@ -404,7 +405,7 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
 
 TChannelV2Handler.prototype.buildIncomingRequest = function buildIncomingRequest(reqFrame) {
     var self = this;
-    return new TChannelIncomingRequest(reqFrame.id, {
+    return new IncomingRequest(reqFrame.id, {
         tracer: self.tracer,
         ttl: reqFrame.body.ttl,
         tracing: reqFrame.body.tracing,
@@ -417,7 +418,7 @@ TChannelV2Handler.prototype.buildIncomingRequest = function buildIncomingRequest
 };
 
 TChannelV2Handler.prototype.buildIncomingResponse = function buildIncomingResponse(resFrame) {
-    return new TChannelIncomingResponse(resFrame.id, {
+    return new IncomingResponse(resFrame.id, {
         code: resFrame.body.code,
         checksum: new v2.Checksum(resFrame.body.csum.type),
         streamed: resFrame.body.flags & v2.CallFlags.Fragment

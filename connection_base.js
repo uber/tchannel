@@ -26,7 +26,7 @@ var globalTimers = {
     now: Date.now
 };
 var globalRandom = Math.random;
-var reqres = require('./reqres');
+var OutgoingResponse = require('./outgoing_response');
 
 var inherits = require('util').inherits;
 var EventEmitter = require('events').EventEmitter;
@@ -292,7 +292,7 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
     }
 
     function buildResponse(options) {
-        if (op.res && op.res.state !== reqres.States.Initial) {
+        if (op.res && op.res.state !== OutgoingResponse.States.Initial) {
             throw new Error('response already built and started'); // TODO: typed error
         }
         op.res = self.buildOutgoingResponse(req, options);
