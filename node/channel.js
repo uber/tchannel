@@ -107,7 +107,7 @@ function TChannel(options) {
     self.destroyed = false;
 
     if (self.options.trace) {
-        self.tracer = require('./trace/agent');
+        self.tracer = require('./trace/agent').ref();
     }
 
     // lazily created by .getServer (usually from .listen)
@@ -383,7 +383,7 @@ TChannel.prototype.close = function close(callback) {
     }
 
     if (self.tracer) {
-        self.tracer.destroy();
+        self.tracer.unref();
     }
 
     self.destroyed = true;
