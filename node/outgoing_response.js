@@ -24,6 +24,7 @@
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 
+var errors = require('./errors');
 var OutArgStream = require('./argstream').OutArgStream;
 
 var emptyBuffer = Buffer(0);
@@ -121,7 +122,9 @@ TChannelOutgoingResponse.prototype.sendCallResponseFrame = function sendCallResp
             throw new Error('first response frame already sent'); // TODO: typed error
         case States.Done:
         case States.Error:
-            throw new Error('response already done'); // TODO: typed error
+            throw errors.ResponseAlreadyDone({
+                attempted: 'send call res frame'
+            });
     }
 };
 
@@ -141,14 +144,18 @@ TChannelOutgoingResponse.prototype.sendCallResponseContFrame = function sendCall
             break;
         case States.Done:
         case States.Error:
-            throw new Error('response already done'); // TODO: typed error
+            throw errors.ResponseAlreadyDone({
+                attempted: 'send call res cont frame'
+            });
     }
 };
 
 TChannelOutgoingResponse.prototype.sendError = function sendError(codeString, message) {
     var self = this;
     if (self.state === States.Done || self.state === States.Error) {
-        throw new Error('response already done'); // TODO: typed error
+        throw errors.ResponseAlreadyDone({
+            attempted: 'send error frame: ' + codeString + ': ' + message
+        });
     } else {
         if (self.span) {
             self.span.annotate('ss');
@@ -162,6 +169,7 @@ TChannelOutgoingResponse.prototype.sendError = function sendError(codeString, me
             self.arg3.end();
         }
         self.sendFrame.error(codeString, message);
+        self.emit('errored', codeString, message);
     }
 };
 

@@ -269,10 +269,17 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
     self.inPending++;
     var op = self.inOps[id] = new TChannelServerOp(self, self.timers.now(), req);
     var done = false;
+    req.on('error', onReqError);
     process.nextTick(runHandler);
 
     if (req.span) {
         req.span.endpoint.serviceName = self.channel.serviceName;
+    }
+
+    function onReqError(err) {
+        if (!op.res) buildResponse();
+        var errName = err.name || err.constructor.name;
+        op.res.sendError('UnexpectedError', errName + ': ' + err.message);
     }
 
     function runHandler() {
@@ -285,10 +292,13 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
 
     function buildResponse(options) {
         if (op.res && op.res.state !== OutgoingResponse.States.Initial) {
-            throw new Error('response already built and started'); // TODO: typed error
+            throw errors.ResponseAlreadyStarted({
+                state: op.res.state
+            });
         }
         op.res = self.buildOutgoingResponse(req, options);
         op.res.on('finish', opDone);
+        op.res.on('errored', opDone);
         op.res.on('span', handleSpanFromRes);
         return op.res;
     }
