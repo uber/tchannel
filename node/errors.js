@@ -147,7 +147,7 @@ module.exports.TopLevelRegisterError = TypedError({
 });
 
 module.exports.TopLevelRequestError = TypedError({
-    type: 'tchyannel.top-level-request',
-    message: 'Cannot make request() on top level tchannel without host.\n' +
-        'Must set a direct host or use a sub channel.'
+    type: 'tchannel.top-level-request',
+    message: 'Cannot make request() on top level tchannel without service or host.\n' +
+        'Must provide either a known service, a direct host, or use a sub channel directly.'
 });
