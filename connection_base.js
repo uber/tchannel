@@ -20,19 +20,11 @@
 
 'use strict';
 
-var globalTimers = {
-    setTimeout: require('timers').setTimeout,
-    clearTimeout: require('timers').clearTimeout,
-    now: Date.now
-};
-var globalRandom = Math.random;
-var OutgoingResponse = require('./outgoing_response');
-
 var inherits = require('util').inherits;
 var EventEmitter = require('events').EventEmitter;
 
-var nullLogger = require('./null-logger.js');
 var errors = require('./errors');
+var OutgoingResponse = require('./outgoing_response');
 
 var DEFAULT_OUTGOING_REQ_TIMEOUT = 2000;
 
@@ -44,9 +36,9 @@ function TChannelConnectionBase(channel, direction, remoteAddr) {
     EventEmitter.call(self);
     self.channel = channel;
     self.options = self.channel.options;
-    self.logger = self.options.logger || nullLogger;
-    self.random = self.options.random || globalRandom;
-    self.timers = self.options.timers || globalTimers;
+    self.logger = channel.logger;
+    self.random = channel.random;
+    self.timers = channel.timers;
     self.direction = direction;
     self.remoteAddr = remoteAddr;
     self.timer = null;
