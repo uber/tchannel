@@ -23,6 +23,7 @@
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 
+var errors = require('./errors');
 var InArgStream = require('./argstream').InArgStream;
 
 var emptyBuffer = Buffer(0);
@@ -87,6 +88,9 @@ function TChannelIncomingRequest(id, options) {
         self.span = null;
     }
 
+    self.start = self.timers.now();
+    self.timedOut = false;
+
     self.on('finish', function onFinish() {
         self.state = States.Done;
     });
@@ -119,6 +123,28 @@ TChannelIncomingRequest.prototype.finish = function finish() {
     } else {
         self.state = States.Done;
     }
+};
+
+TChannelIncomingRequest.prototype.checkTimeout = function checkTimeout() {
+    var self = this;
+    if (!self.timedOut) {
+        var elapsed = self.timers.now() - self.start;
+        if (elapsed > self.ttl) {
+            self.timedOut = true;
+            // TODO: send an error frame response?
+            // TODO: emit error on self.res instead / in additon to?
+            // TODO: should cancel any pending handler
+            process.nextTick(function deferInReqTimeoutErrorEmit() {
+                self.emit('error', errors.TimeoutError({
+                    id: self.id,
+                    start: self.start,
+                    elapsed: elapsed,
+                    timeout: self.ttl
+                }));
+            });
+        }
+    }
+    return self.timedOut;
 };
 
 TChannelIncomingRequest.States = States;

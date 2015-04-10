@@ -125,7 +125,7 @@ TChannelConnectionBase.prototype.checkTimeout = function checkTimeout(ops, direc
             });
             delete ops[id];
             self.pending[direction]--;
-        } else if (self.checkOpTimeout(op)) {
+        } else if (op.req.checkTimeout()) {
             if (direction === 'out') {
                 self.lastTimeoutTime = self.timers.now();
             }
@@ -133,25 +133,6 @@ TChannelConnectionBase.prototype.checkTimeout = function checkTimeout(ops, direc
             self.pending[direction]--;
         }
     }
-};
-
-TChannelConnectionBase.prototype.checkOpTimeout = function checkOpTimeout(op) {
-    var self = this;
-    if (!op.timedOut) {
-        var duration = self.timers.now() - op.start;
-        if (duration > op.req.ttl) {
-            op.timedOut = true;
-            process.nextTick(function() {
-                op.req.emit('error', errors.TimeoutError({
-                    id: op.req.id,
-                    start: op.start,
-                    elapsed: duration,
-                    timeout: op.req.ttl
-                }));
-            });
-        }
-    }
-    return op.timedOut;
 };
 
 // this connection is completely broken, and is going away
@@ -242,7 +223,7 @@ TChannelConnectionBase.prototype.request = function connBaseRequest(options) {
     options.ttl = options.timeout || DEFAULT_OUTGOING_REQ_TIMEOUT;
     options.tracer = self.tracer;
     var req = self.buildOutgoingRequest(options);
-    self.outOps[req.id] = new TChannelClientOp(req, self.timers.now());
+    self.outOps[req.id] = new TChannelClientOp(req);
     self.pending.out++;
     return req;
 };
@@ -251,7 +232,7 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
     var self = this;
     req.remoteAddr = self.remoteName;
     self.pending.in++;
-    var op = self.inOps[req.id] = new TChannelServerOp(self, self.timers.now(), req);
+    var op = self.inOps[req.id] = new TChannelServerOp(self, req);
     var done = false;
     req.on('error', onReqError);
     process.nextTick(runHandler);
