@@ -171,6 +171,7 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
             self.tracer.report(op.req.span);
         }
 
+        op.req.res = res;
         op.req.emit('response', res);
     }
 
