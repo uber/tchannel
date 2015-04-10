@@ -20,7 +20,7 @@
 
 var NullLogtron = require('null-logtron');
 
-var LCG = require('./lcg');
+var LCG = require('../lib/lcg');
 
 var rng = new LCG();
 
