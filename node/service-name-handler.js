@@ -20,19 +20,7 @@
 
 'use strict';
 
-var TypedError = require('error/typed');
-
-var NoServiceHandlerError = TypedError({
-    type: 'tchannel.no-service-handler',
-    message: 'unknown service {service}',
-    service: null
-});
-
-var TopLevelRegisterError = TypedError({
-    type: 'tchannel.top-level-register',
-    message: 'Cannot register endpoints points on top-level channel.\n' +
-        'Provide serviceName to constructor, or create a sub-channel.'
-});
+var errors = require('./errors');
 
 function TChannelServiceNameHandler(channel) {
     if (!(this instanceof TChannelServiceNameHandler)) {
@@ -58,12 +46,12 @@ TChannelServiceNameHandler.prototype.handleRequest = function handleRequest(req,
 };
 
 TChannelServiceNameHandler.prototype.handleDefault = function handleDefault(req, buildRes) {
-    var err = NoServiceHandlerError({service: req.service});
+    var err = errors.NoServiceHandlerError({service: req.service});
     buildRes().sendError('BadRequest', err.message);
 };
 
 TChannelServiceNameHandler.prototype.register = function register() {
-    throw TopLevelRegisterError();
+    throw errors.TopLevelRegisterError();
 };
 
 module.exports = TChannelServiceNameHandler;

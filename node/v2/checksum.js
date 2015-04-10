@@ -23,15 +23,7 @@
 var farm32 = require('farmhash').fingerprint32;
 var crc32 = require('crc').crc32;
 var bufrw = require('bufrw');
-var TypedError = require('error/typed');
-
-var ChecksumError = TypedError({
-    type: 'tchannel.checksum',
-    message: 'invalid checksum (type {checksumType}) expected: {expectedValue} actual: {actualValue}',
-    checksumType: null,
-    expectedValue: null,
-    actualValue: null
-});
+var errors = require('../errors');
 
 module.exports = Checksum;
 
@@ -120,7 +112,7 @@ Checksum.prototype.verify = function verify(args, prior) {
     if (val === self.val) {
         return null;
     } else {
-        return ChecksumError({
+        return errors.ChecksumError({
             checksumType: self.type,
             expectedValue: self.val,
             actualValue: val
