@@ -222,7 +222,7 @@ class TChannelClientOperation(object):
 
         message = CallRequestMessage(
             service=self.service,
-            args=[safebytes(arg_1), arg_3, arg_3],
+            args=[safebytes(arg_1), arg_2, arg_3],
         )
 
         response_future = peer_connection.send(message, message_id)

@@ -88,7 +88,10 @@ class TornadoConnection(object):
         # Tracks message IDs for this connection.
         self._id_sequence = 0
 
-        self._message_factory = MessageFactory()
+        # We need to use two separate message factories to avoid message ID
+        # collision while assembling fragmented messages.
+        self._request_message_factory = MessageFactory()
+        self._response_message_factory = MessageFactory()
 
         # Queue of unprocessed incoming calls.
         self._messages = queues.Queue()
@@ -190,9 +193,18 @@ class TornadoConnection(object):
                 self._messages.put(context)
                 continue
             elif context.message_id in self._outstanding:
+                message = self._response_message_factory.build(
+                    context.message_id, context.message
+                )
+
+                if message is None:
+                    # Message fragment is incomplete. It'll probably be filled
+                    # by a future request.
+                    continue
+
                 future = self._outstanding.pop(context.message_id)
                 if future.running():
-                    future.set_result(context.message)
+                    future.set_result(message)
                     continue
             log.warn('Unconsumed message %s', context)
 
@@ -237,7 +249,7 @@ class TornadoConnection(object):
         """
         assert not self.closed
         message_id = message_id or self.next_message_id()
-        fragments = self._message_factory.fragment(message)
+        fragments = self._request_message_factory.fragment(message)
         for fragment in fragments:
             yield self._write(fragment, message_id)
 
@@ -397,7 +409,7 @@ class TornadoConnection(object):
 
         while not self.closed:
             context = yield self.await()
-            message = self._message_factory.build(
+            message = self._request_message_factory.build(
                 context.message_id, context.message
             )
 
