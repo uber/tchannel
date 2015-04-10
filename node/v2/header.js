@@ -20,26 +20,9 @@
 
 'use strict';
 
-var TypedError = require('error/typed');
 var bufrw = require('bufrw');
 var inherits = require('util').inherits;
-
-var DuplicateHeaderKeyError = TypedError({
-    type: 'tchannel.duplicate-header-key',
-    message: 'duplicate header key {key}',
-    offset: null,
-    endOffset: null,
-    key: null,
-    value: null,
-    priorValue: null
-});
-
-var NullKeyError = TypedError({
-    type: 'tchannel.null-key',
-    message: 'null key',
-    offset: null,
-    endOffset: null
-});
+var errors = require('../errors');
 
 // TODO: different struct pattern that doesn't realize a temporary list of
 // [key, val] tuples may be better. At the very least, such structure would
@@ -123,7 +106,7 @@ HeaderRW.prototype.readFrom = function readFrom(buffer, offset) {
         key = res.value;
 
         if (!key.length) {
-            return bufrw.ReadResult.error(NullKeyError({
+            return bufrw.ReadResult.error(errors.NullKeyError({
                 offset: offset,
                 endOffset: res.offset
             }), offset, headers);
@@ -135,7 +118,7 @@ HeaderRW.prototype.readFrom = function readFrom(buffer, offset) {
         val = res.value;
 
         if (headers[key] !== undefined) {
-            return bufrw.ReadResult.error(DuplicateHeaderKeyError({
+            return bufrw.ReadResult.error(errors.DuplicateHeaderKeyError({
                 offset: start,
                 endOffset: res.offset,
                 key: key,

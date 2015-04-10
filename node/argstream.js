@@ -40,21 +40,7 @@ var inherits = require('util').inherits;
 var EventEmitter = require('events').EventEmitter;
 var PassThrough = require('readable-stream').PassThrough;
 var Ready = require('ready-signal');
-var TypedError = require('error/typed');
-
-var ArgChunkOutOfOrderError = TypedError({
-    type: 'arg-chunk-out-of-order',
-    message: 'out of order arg chunk, current: {current} got: {got}',
-    current: null,
-    got: null
-});
-
-var ArgChunkGapError = TypedError({
-    type: 'arg-chunk-gap',
-    message: 'arg chunk gap, current: {current} got: {got}',
-    current: null,
-    got: null
-});
+var errors = require('./errors');
 
 function ArgStream() {
     var self = this;
@@ -173,13 +159,13 @@ inherits(OutArgStream, ArgStream);
 OutArgStream.prototype._handleFrameChunk = function _handleFrameChunk(n, chunk) {
     var self = this;
     if (n < self.currentArgN) {
-        self.emit('error', ArgChunkOutOfOrderError({
+        self.emit('error', errors.ArgChunkOutOfOrderError({
             current: self.currentArgN,
             got: n
         }));
     } else if (n > self.currentArgN) {
         if (n - self.currentArgN > 1) {
-            self.emit('error', ArgChunkGapError({
+            self.emit('error', errors.ArgChunkGapError({
                 current: self.currentArgN,
                 got: n
             }));

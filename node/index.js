@@ -1,5 +1,5 @@
 // Copyright (c) 2015 Uber Technologies, Inc.
-
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -28,8 +28,6 @@ var globalTimers = {
 var globalRandom = Math.random;
 var net = require('net');
 var format = require('util').format;
-var TypedError = require('error/typed');
-var WrappedError = require('error/wrapped');
 var extend = require('xtend');
 var bufrw = require('bufrw');
 var ReadMachine = require('bufrw/stream/read_machine');
@@ -43,51 +41,10 @@ var nullLogger = require('./null-logger.js');
 // var Spy = require('./v2/spy'); TODO
 var EndpointHandler = require('./endpoint-handler.js');
 var TChannelServiceNameHandler = require('./service-name-handler');
+var errors = require('./errors');
 
 var DEFAULT_OUTGOING_REQ_TIMEOUT = 2000;
 // var dumpEnabled = /\btchannel_dump\b/.test(process.env.NODE_DEBUG || ''); TODO
-
-var SocketClosedError = TypedError({
-    type: 'tchannel.socket-closed',
-    message: 'socket closed, {reason}',
-    reason: null
-});
-
-var TChannelListenError = WrappedError({
-    type: 'tchannel.server.listen-failed',
-    message: 'tchannel: {origMessage}',
-    requestedPort: null,
-    host: null
-});
-
-var TChannelReadProtocolError = WrappedError({
-    type: 'tchannel.protocol.read-failed',
-    message: 'tchannel read failure: {origMessage}',
-    remoteName: null,
-    localName: null
-});
-
-var TChannelWriteProtocolError = WrappedError({
-    type: 'tchannel.protocol.write-failed',
-    message: 'tchannel write failure: {origMessage}',
-    remoteName: null,
-    localName: null
-});
-
-var InvalidHandlerForRegister = TypedError({
-    type: 'tchannel.invalid-handler.for-registration',
-    message: 'Found unexpected handler when calling `.register()`.\n' +
-        'You cannot set a custom handler when using `.register()`.\n' +
-        '`.register()` is deprecated; use a proper handler.',
-    handlerType: null,
-    handler: null
-});
-
-var TopLevelRegisterError = TypedError({
-    type: 'tchannel.top-level-register',
-    message: 'Cannot register endpoints points on top-level channel.\n' +
-        'Provide serviceName to constructor, or create a sub-channel.'
-});
 
 function TChannel(options) {
     if (!(this instanceof TChannel)) {
@@ -207,7 +164,7 @@ TChannel.prototype.onServerSocketConnection = function onServerSocketConnection(
 
     if (self.serverConnections[remoteAddr]) {
         var oldConn = self.serverConnections[remoteAddr];
-        oldConn.resetAll(SocketClosedError({
+        oldConn.resetAll(errors.SocketClosedError({
             reason: 'duplicate remoteAddr incoming conn'
         }));
         delete self.serverConnections[remoteAddr];
@@ -254,7 +211,7 @@ TChannel.prototype.onServerSocketError = function onServerSocketError(err) {
     var self = this;
 
     if (err.code === 'EADDRINUSE') {
-        err = TChannelListenError(err, {
+        err = errors.TChannelListenError(err, {
             requestedPort: self.requestedPort,
             host: self.host
         });
@@ -348,10 +305,10 @@ TChannel.prototype.register = function register(name, handler) {
             break;
 
         case 'tchannel.service-name-handler':
-            throw TopLevelRegisterError();
+            throw errors.TopLevelRegisterError();
 
         default:
-            throw InvalidHandlerForRegister({
+            throw errors.InvalidHandlerForRegister({
                 handlerType: handlerType,
                 handler: self.handler
             });
@@ -513,7 +470,7 @@ inherits(TChannelConnectionBase, EventEmitter);
 
 TChannelConnectionBase.prototype.close = function close(callback) {
     var self = this;
-    self.resetAll(SocketClosedError({reason: 'local close'}));
+    self.resetAll(errors.SocketClosedError({reason: 'local close'}));
     callback();
 };
 
@@ -795,7 +752,7 @@ TChannelConnection.prototype.setupSocket = function setupSocket() {
 
     function chunkHandled(err) {
         if (err) {
-            self.resetAll(TChannelReadProtocolError(err, {
+            self.resetAll(errors.TChannelReadProtocolError(err, {
                 remoteName: self.remoteName,
                 localName: self.channel.hostPort
             }));
@@ -804,7 +761,7 @@ TChannelConnection.prototype.setupSocket = function setupSocket() {
     }
 
     function onSocketClose() {
-        self.resetAll(SocketClosedError({reason: 'remote clossed'}));
+        self.resetAll(errors.SocketClosedError({reason: 'remote clossed'}));
         if (self.remoteName === '0.0.0.0:0') {
             self.channel.peers.delete(self.remoteAddr);
         }
@@ -852,7 +809,7 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     //     ;
 
     function onWriteError(err) {
-        self.resetAll(TChannelWriteProtocolError(err, {
+        self.resetAll(errors.TChannelWriteProtocolError(err, {
             remoteName: self.remoteName,
             localName: self.channel.hostPort
         }));
@@ -958,7 +915,7 @@ TChannelConnection.prototype.close = function close(callback) {
         callback();
     } else {
         self.socket.once('close', callback);
-        self.resetAll(SocketClosedError({reason: 'local close'}));
+        self.resetAll(errors.SocketClosedError({reason: 'local close'}));
         self.socket.destroy();
     }
 };

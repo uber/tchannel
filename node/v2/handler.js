@@ -20,7 +20,6 @@
 
 'use strict';
 
-var TypedError = require('error/typed');
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 
@@ -30,20 +29,9 @@ var TChannelOutgoingResponse = reqres.OutgoingResponse;
 var TChannelIncomingRequest = reqres.IncomingRequest;
 var TChannelIncomingResponse = reqres.IncomingResponse;
 var v2 = require('./index');
+var errors = require('../errors');
 
 module.exports = TChannelV2Handler;
-
-var TChannelUnhandledFrameTypeError = TypedError({
-    type: 'tchannel.unhandled-frame-type',
-    message: 'unhandled frame type {typeCode}',
-    typeCode: null
-});
-
-var InvalidCodeStringError = TypedError({
-    type: 'tchannel.invalid-code-string',
-    message: 'Invalid Error frame code: {codeString}',
-    codeString: null
-});
 
 function TChannelV2Handler(options) {
     if (!(this instanceof TChannelV2Handler)) {
@@ -116,7 +104,7 @@ TChannelV2Handler.prototype.handleFrame = function handleFrame(frame, callback) 
         case v2.Types.ErrorResponse:
             return self.handleError(frame, callback);
         default:
-            return callback(TChannelUnhandledFrameTypeError({
+            return callback(errors.TChannelUnhandledFrameTypeError({
                 typeCode: frame.body.type
             }));
     }
@@ -345,7 +333,7 @@ TChannelV2Handler.prototype.sendErrorFrame = function sendErrorFrame(req, codeSt
     var code = v2.ErrorResponse.Codes[codeString];
     if (code === undefined) {
         // TODO: could/should map to UnexpectedError
-        throw InvalidCodeStringError({
+        throw errors.InvalidCodeStringError({
             codeString: codeString
         });
     }

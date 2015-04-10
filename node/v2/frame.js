@@ -21,13 +21,7 @@
 'use strict';
 
 var bufrw = require('bufrw');
-var TypedError = require('error/typed');
-
-var InvalidFrameTypeError = TypedError({
-    type: 'tchannel.invalid-frame-type',
-    message: 'invalid frame type {typeNumber}',
-    typeNumber: null
-});
+var errors = require('../errors');
 
 /* jshint maxparams:5 */
 
@@ -89,7 +83,7 @@ function readFrameFrom(buffer, offset) {
 
     var BodyType = Frame.Types[frame.type];
     if (!BodyType) {
-        return bufrw.ReadResult.error(InvalidFrameTypeError({
+        return bufrw.ReadResult.error(errors.InvalidFrameTypeError({
             typeNumber: frame.type
         }), offset);
     }
