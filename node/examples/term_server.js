@@ -103,7 +103,7 @@ TermServer.prototype.control = function control(req, buildRes) {
 module.exports = TermServer;
 
 function main() {
-    var tchan = require('../index');
+    var tchan = require('../channel');
     var Logger = require('logtron');
     var endhand = require('../endpoint-handler');
 

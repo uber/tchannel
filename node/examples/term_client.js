@@ -127,7 +127,7 @@ module.exports = TermClient;
 
 function main() {
     var cmd = process.argv.slice(2);
-    var tchan = require('../index');
+    var tchan = require('../channel');
     var chan = tchan();
     var client = TermClient(chan, {
         request: {

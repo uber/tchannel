@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-var TChannel = require('../index');
+var TChannel = require('../channel');
 var EndpointHandler = require('../endpoint-handler');
 var server = new TChannel({
     handler: EndpointHandler()

@@ -26,7 +26,7 @@ var Logger = require('logtron');
 var replr = require('replr');
 var util = require('util');
 
-var tchan = require('../index');
+var tchan = require('../channel');
 var endhand = require('../endpoint-handler');
 var TermServer = require('./term_server');
 
