@@ -20,20 +20,14 @@
 
 'use strict';
 
-var TypedError = require('error/typed');
 var bufrw = require('bufrw');
 var WriteResult = bufrw.WriteResult;
 var ReadResult = bufrw.ReadResult;
 var header = require('./header');
+var errors = require('../errors');
 
 module.exports.Request = InitRequest;
 module.exports.Response = InitResponse;
-
-var MissingInitHeaderError = TypedError({
-    type: 'tchannel.missing-init-header',
-    message: 'missing init frame header {field}',
-    field: null
-});
 
 var RequiredHeaderFields = ['host_port', 'process_name'];
 
@@ -88,7 +82,7 @@ function requiredFieldGuard(headers) {
     for (var i = 0; i < RequiredHeaderFields.length; i++) {
         var field = RequiredHeaderFields[i];
         if (headers[field] === undefined) {
-            return MissingInitHeaderError({field: field});
+            return errors.MissingInitHeaderError({field: field});
         }
     }
     return null;

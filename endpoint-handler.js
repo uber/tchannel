@@ -23,13 +23,8 @@
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 var parallel = require('run-parallel');
-var TypedError = require('error/typed');
 var util = require('util');
-
-var InvalidHandlerError = TypedError({
-    type: 'invalid-handler',
-    message: 'invalid handler function'
-});
+var errors = require('./errors');
 
 function TChannelEndpointHandler(serviceName) {
     if (!(this instanceof TChannelEndpointHandler)) {
@@ -46,7 +41,7 @@ inherits(TChannelEndpointHandler, EventEmitter);
 TChannelEndpointHandler.prototype.register = function register(name, handler) {
     var self = this;
     if (typeof handler !== 'function') {
-        throw InvalidHandlerError();
+        throw errors.InvalidHandlerError();
     }
     self.endpoints[name] = handler;
     return handler;

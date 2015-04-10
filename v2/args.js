@@ -20,22 +20,15 @@
 
 'use strict';
 
-var TypedError = require('error/typed');
 var inherits = require('util').inherits;
 var bufrw = require('bufrw');
 var Checksum = require('./checksum');
 var Flags = require('./call_flags');
+var errors = require('../errors');
 
 var LengthResult = bufrw.LengthResult;
 var WriteResult = bufrw.WriteResult;
 var ReadResult = bufrw.ReadResult;
-
-var InvalidArgumentError = TypedError({
-    type: 'invalid-argument',
-    message: 'invalid argument, expected array or null',
-    argType: null,
-    argConstructor: null
-});
 
 function ArgsRW(argrw) {
     if (!(this instanceof ArgsRW)) {
@@ -61,7 +54,7 @@ ArgsRW.prototype.byteLength = function byteLength(body) {
     }
 
     if (!Array.isArray(body.args)) {
-        return LengthResult.error(InvalidArgumentError({
+        return LengthResult.error(errors.InvalidArgumentError({
             argType: typeof body.args,
             argConstructor: body.args.constructor.name
         }));
