@@ -232,7 +232,7 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
     var self = this;
     req.remoteAddr = self.remoteName;
     self.pending.in++;
-    var op = self.inOps[req.id] = new TChannelServerOp(self, req);
+    var op = self.inOps[req.id] = new TChannelServerOp(req);
     var done = false;
     req.on('error', onReqError);
     process.nextTick(runHandler);

@@ -20,12 +20,10 @@
 
 'use strict';
 
-function TChannelServerOp(connection, req, res) {
+function TChannelServerOp(req, res) {
     var self = this;
     self.req = req;
     self.res = res || null;
-    self.connection = connection;
-    self.logger = connection.logger;
 }
 
 module.exports = TChannelServerOp;
