@@ -264,7 +264,7 @@ TChannelConnectionBase.prototype.request = function connBaseRequest(options) {
     var req = self.buildOutgoingRequest(options);
     var id = req.id;
     self.outOps[id] = new TChannelClientOp(req, self.timers.now());
-    self.pendingCount++;
+    self.outPending++;
     return req;
 };
 
