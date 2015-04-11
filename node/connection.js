@@ -155,7 +155,7 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     }
 
     function onCallResponse(res) {
-        var req = self.popOutOp(res.id);
+        var req = self.popOutReq(res.id);
         if (!req) {
             self.logger.info('response received for unknown or lost operation', {
                 responseId: res.id,
@@ -176,7 +176,7 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     }
 
     function onCallError(err) {
-        var req = self.popOutOp(err.originalId); // TODO bork bork
+        var req = self.popOutReq(err.originalId);
         if (!req) {
             self.logger.info('error received for unknown or lost operation', err);
             return;
