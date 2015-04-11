@@ -190,7 +190,7 @@ TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
     self.pending.out = 0;
 };
 
-TChannelConnectionBase.prototype.popOutOp = function popOutOp(id) {
+TChannelConnectionBase.prototype.popOutReq = function popOutReq(id) {
     var self = this;
     var req = self.requests.out[id];
     if (!req) {

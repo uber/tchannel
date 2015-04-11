@@ -71,7 +71,7 @@ TChannelSelfConnection.prototype.buildOutgoingRequest = function buildOutgoingRe
     function onError(err) {
         if (called) return;
         called = true;
-        self.popOutOp(id);
+        self.popOutReq(id);
         inreq.removeListener('response', onResponse);
         outreq.emit('error', err);
     }
@@ -79,7 +79,7 @@ TChannelSelfConnection.prototype.buildOutgoingRequest = function buildOutgoingRe
     function onResponse(res) {
         if (called) return;
         called = true;
-        self.popOutOp(id);
+        self.popOutReq(id);
         inreq.removeListener('error', onError);
         outreq.emit('response', res);
     }
