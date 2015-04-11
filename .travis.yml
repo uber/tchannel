@@ -21,6 +21,13 @@ env:
   - SUBDIR=python TOX_ENV=cover
   - SUBDIR=python TOX_ENV=flake8
 
+before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install libboost-dev libboost-test-dev libboost-program-options-dev libevent-dev automake libtool flex bison pkg-config g++ libssl-dev
+  - wget http://www.us.apache.org/dist/thrift/0.9.2/thrift-0.9.2.tar.gz
+  - tar xfz thrift-0.9.2.tar.gz
+  - cd thrift-0.9.2 && ./configure && sudo make install
+
 install:
   - make -C $SUBDIR install
 
