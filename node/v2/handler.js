@@ -31,6 +31,8 @@ var IncomingResponse = require('../incoming_response');
 var v2 = require('./index');
 var errors = require('../errors');
 
+var SERVER_TIMEOUT_DEFAULT = 1000;
+
 module.exports = TChannelV2Handler;
 
 function TChannelV2Handler(options) {
@@ -413,7 +415,7 @@ TChannelV2Handler.prototype.buildIncomingRequest = function buildIncomingRequest
         random: self.random,
         timers: self.timers,
         tracer: self.tracer,
-        ttl: reqFrame.body.ttl,
+        ttl: reqFrame.body.ttl || SERVER_TIMEOUT_DEFAULT,
         tracing: reqFrame.body.tracing,
         service: reqFrame.body.service,
         headers: reqFrame.body.headers,

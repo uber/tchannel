@@ -46,9 +46,11 @@ function TChannelConnectionBase(channel, direction, remoteAddr) {
 
     // TODO: factor out an operation collection abstraction
     self.inOps = Object.create(null);
-    self.inPending = 0;
     self.outOps = Object.create(null);
-    self.outPending = 0;
+    self.pending = {
+        in: 0,
+        out: 0
+    };
 
     self.lastTimeoutTime = 0;
     self.closing = false;
@@ -111,18 +113,17 @@ TChannelConnectionBase.prototype.checkInOpsForTimeout = function checkInOpsForTi
     var now = self.timers.now();
 
     for (var i = 0; i < opKeys.length; i++) {
-        var opKey = opKeys[i];
-        var op = ops[opKey];
+        var id = opKeys[i];
+        var op = ops[id];
 
         if (op === undefined) {
             continue;
         }
 
-        var timeout = self.options.serverTimeoutDefault;
         var duration = now - op.start;
-        if (duration > timeout) {
-            delete ops[opKey];
-            self.inPending--;
+        if (duration > op.req.ttl) {
+            delete ops[id];
+            self.pending.in--;
         }
     }
 };
@@ -132,29 +133,27 @@ TChannelConnectionBase.prototype.checkOutOpsForTimeout = function checkOutOpsFor
     var opKeys = Object.keys(ops);
     var now = self.timers.now();
     for (var i = 0; i < opKeys.length ; i++) {
-        var opKey = opKeys[i];
-        var op = ops[opKey];
+        var id = opKeys[i];
+        var op = ops[id];
         if (op.timedOut) {
-            delete ops[opKey];
-            self.outPending--;
+            delete ops[id];
+            self.pending.out--;
             self.logger.warn('lingering timed-out outgoing operation');
             continue;
         }
         if (op === undefined) {
             // TODO: why not null and empty string too? I mean I guess false
             // and 0 might be a thing, but really why not just !op?
-            self.channel.logger
-                .warn('unexpected undefined operation', {
-                    key: opKey,
-                    op: op
-                });
+            self.logger.warn('unexpected undefined operation', {
+                id: id,
+                op: op
+            });
             continue;
         }
-        var timeout = op.req.ttl || self.options.reqTimeoutDefault;
         var duration = now - op.start;
-        if (duration > timeout) {
-            delete ops[opKey];
-            self.outPending--;
+        if (duration > op.req.ttl) {
+            delete ops[id];
+            self.pending.out--;
             self.onReqTimeout(op);
         }
     }
@@ -199,8 +198,8 @@ TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
         localName: self.channel.hostPort,
         numInOps: inOpKeys.length,
         numOutOps: outOpKeys.length,
-        inPending: self.inPending,
-        outPending: self.outPending
+        inPending: self.pending.in,
+        outPending: self.pending.out
     });
 
     if (isError) {
@@ -224,8 +223,8 @@ TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
         op.req.emit('error', err);
     });
 
-    self.inPending = 0;
-    self.outPending = 0;
+    self.pending.in = 0;
+    self.pending.out = 0;
 };
 
 TChannelConnectionBase.prototype.popOutOp = function popOutOp(id) {
@@ -238,7 +237,7 @@ TChannelConnectionBase.prototype.popOutOp = function popOutOp(id) {
         return;
     }
     delete self.outOps[id];
-    self.outPending--;
+    self.pending.out--;
     return op;
 };
 
@@ -262,18 +261,16 @@ TChannelConnectionBase.prototype.request = function connBaseRequest(options) {
     options.ttl = options.timeout || DEFAULT_OUTGOING_REQ_TIMEOUT;
     options.tracer = self.tracer;
     var req = self.buildOutgoingRequest(options);
-    var id = req.id;
-    self.outOps[id] = new TChannelClientOp(req, self.timers.now());
-    self.pendingCount++;
+    self.outOps[req.id] = new TChannelClientOp(req, self.timers.now());
+    self.pending.out++;
     return req;
 };
 
 TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(req) {
     var self = this;
     req.remoteAddr = self.remoteName;
-    var id = req.id;
-    self.inPending++;
-    var op = self.inOps[id] = new TChannelServerOp(self, self.timers.now(), req);
+    self.pending.in++;
+    var op = self.inOps[req.id] = new TChannelServerOp(self, self.timers.now(), req);
     var done = false;
     req.on('error', onReqError);
     process.nextTick(runHandler);
@@ -316,15 +313,15 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
     function opDone() {
         if (done) return;
         done = true;
-        if (self.inOps[id] !== op) {
+        if (self.inOps[req.id] !== op) {
             self.logger.warn('mismatched opDone callback', {
                 hostPort: self.channel.hostPort,
-                opId: id
+                opId: req.id
             });
             return;
         }
-        delete self.inOps[id];
-        self.inPending--;
+        delete self.inOps[req.id];
+        self.pending.in--;
     }
 };
 

@@ -41,6 +41,8 @@ var errors = require('./errors');
 var TChannelConnection = require('./connection');
 var TChannelPeers = require('./peers');
 
+var REQ_TIMEOUT_DEFAULT = 5000;
+
 // TODO restore spying
 // var Spy = require('./v2/spy');
 // var dumpEnabled = /\btchannel_dump\b/.test(process.env.NODE_DEBUG || '');
@@ -54,8 +56,6 @@ function TChannel(options) {
     EventEmitter.call(self);
 
     self.options = extend({
-        reqTimeoutDefault: 5000,
-        serverTimeoutDefault: 5000,
         timeoutCheckInterval: 1000,
         timeoutFuzz: 100,
         // TODO: maybe we should always add pid to user-supplied?
@@ -380,6 +380,10 @@ TChannel.prototype.request = function channelRequest(options) {
         } else {
             throw errors.TopLevelRequestError();
         }
+    }
+
+    if (!options.timeout) {
+        options.timeout = REQ_TIMEOUT_DEFAULT;
     }
 
     // TODO: moar defaults
