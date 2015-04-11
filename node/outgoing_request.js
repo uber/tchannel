@@ -24,6 +24,7 @@ var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 var parallel = require('run-parallel');
 
+var errors = require('./errors');
 var OutArgStream = require('./argstream').OutArgStream;
 
 var emptyBuffer = Buffer(0);
@@ -93,6 +94,9 @@ function TChannelOutgoingRequest(id, options) {
     } else {
         self.span = null;
     }
+
+    self.start = self.timers.now();
+    self.timedOut = false;
 }
 
 inherits(TChannelOutgoingRequest, EventEmitter);
@@ -224,6 +228,25 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
     }
 
     return self;
+};
+
+TChannelOutgoingRequest.prototype.checkTimeout = function checkTimeout() {
+    var self = this;
+    if (!self.timedOut) {
+        var elapsed = self.timers.now() - self.start;
+        if (elapsed > self.ttl) {
+            self.timedOut = true;
+            process.nextTick(function deferOutReqTimeoutErrorEmit() {
+                self.emit('error', errors.TimeoutError({
+                    id: self.id,
+                    start: self.start,
+                    elapsed: elapsed,
+                    timeout: self.ttl
+                }));
+            });
+        }
+    }
+    return self.timedOut;
 };
 
 TChannelOutgoingRequest.States = States;

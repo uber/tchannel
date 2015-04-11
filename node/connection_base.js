@@ -101,76 +101,38 @@ TChannelConnectionBase.prototype.onTimeoutCheck = function onTimeoutCheck() {
     if (self.lastTimeoutTime) {
         self.emit('timedOut');
     } else {
-        self.checkOutOpsForTimeout(self.outOps);
-        self.checkInOpsForTimeout(self.inOps);
+        self.checkTimeout(self.outOps, 'out');
+        self.checkTimeout(self.inOps, 'in');
         self.startTimeoutTimer();
     }
 };
 
-TChannelConnectionBase.prototype.checkInOpsForTimeout = function checkInOpsForTimeout(ops) {
+TChannelConnectionBase.prototype.checkTimeout = function checkTimeout(ops, direction) {
     var self = this;
     var opKeys = Object.keys(ops);
-    var now = self.timers.now();
-
     for (var i = 0; i < opKeys.length; i++) {
         var id = opKeys[i];
         var op = ops[id];
-
         if (op === undefined) {
-            continue;
-        }
-
-        var duration = now - op.start;
-        if (duration > op.req.ttl) {
-            delete ops[id];
-            self.pending.in--;
-        }
-    }
-};
-
-TChannelConnectionBase.prototype.checkOutOpsForTimeout = function checkOutOpsForTimeout(ops) {
-    var self = this;
-    var opKeys = Object.keys(ops);
-    var now = self.timers.now();
-    for (var i = 0; i < opKeys.length ; i++) {
-        var id = opKeys[i];
-        var op = ops[id];
-        if (op.timedOut) {
-            delete ops[id];
-            self.pending.out--;
-            self.logger.warn('lingering timed-out outgoing operation');
-            continue;
-        }
-        if (op === undefined) {
-            // TODO: why not null and empty string too? I mean I guess false
-            // and 0 might be a thing, but really why not just !op?
             self.logger.warn('unexpected undefined operation', {
-                id: id,
-                op: op
+                direction: direction,
+                id: id
             });
-            continue;
-        }
-        var duration = now - op.start;
-        if (duration > op.req.ttl) {
+        } else if (op.timedOut) {
+            self.logger.warn('lingering timed-out operation', {
+                direction: direction,
+                id: id
+            });
             delete ops[id];
-            self.pending.out--;
-            self.onReqTimeout(op);
+            self.pending[direction]--;
+        } else if (op.req.checkTimeout()) {
+            if (direction === 'out') {
+                self.lastTimeoutTime = self.timers.now();
+            }
+            delete ops[id];
+            self.pending[direction]--;
         }
     }
-};
-
-TChannelConnectionBase.prototype.onReqTimeout = function onReqTimeout(op) {
-    var self = this;
-    op.timedOut = true;
-    op.req.emit('error', errors.TimeoutError({
-        id: op.req.id,
-        start: op.start,
-        elapsed: self.timers.now() - op.start,
-        timeout: op.req.ttl
-    }));
-
-    // TODO: why don't we pop the op?
-    self.lastTimeoutTime = self.timers.now();
 };
 
 // this connection is completely broken, and is going away
@@ -261,7 +223,7 @@ TChannelConnectionBase.prototype.request = function connBaseRequest(options) {
     options.ttl = options.timeout || DEFAULT_OUTGOING_REQ_TIMEOUT;
     options.tracer = self.tracer;
     var req = self.buildOutgoingRequest(options);
-    self.outOps[req.id] = new TChannelClientOp(req, self.timers.now());
+    self.outOps[req.id] = new TChannelClientOp(req);
     self.pending.out++;
     return req;
 };
@@ -270,7 +232,7 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
     var self = this;
     req.remoteAddr = self.remoteName;
     self.pending.in++;
-    var op = self.inOps[req.id] = new TChannelServerOp(self, self.timers.now(), req);
+    var op = self.inOps[req.id] = new TChannelServerOp(self, req);
     var done = false;
     req.on('error', onReqError);
     process.nextTick(runHandler);
