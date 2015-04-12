@@ -66,6 +66,10 @@ function Agent () {
     // requests will have their traceflags forced to 1. It's intended to be
     // set on the 'top level service'.
     self.forceTrace = false;
+
+    // This is the 'incoming service name'; it's the service name we set on
+    // spans when we get incoming requests
+    self.service = '';
 }
 
 Agent.prototype.getInstance = function () {
@@ -109,7 +113,7 @@ Agent.prototype.setupNewSpan = function setupNewSpan(options) {
 
     var span = new Span({
         logger: self.logger,
-        endpoint: new Span.Endpoint(host, port, options.serviceName),
+        endpoint: new Span.Endpoint(host, port, options.service),
         name: options.name,
         id: options.spanid,
         parentid: options.parentid,
