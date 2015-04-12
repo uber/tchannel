@@ -367,6 +367,13 @@ TChannel.prototype.request = function channelRequest(options) {
     if (!options.service && self.serviceName) {
         options.service = self.serviceName;
     }
+    if (self.tracer) {
+        // Default outgoing requests to having trace enabled if this channel is
+        // in tracing mode
+        if (options.trace !== false) {
+            options.trace = true;
+        }
+    }
     // TODO: moar defaults
     if (self.destroyed) {
         throw new Error('cannot request() to destroyed tchannel'); // TODO typed error
