@@ -364,6 +364,13 @@ TChannel.prototype.request = function channelRequest(options) {
     options = extend(options);
     var self = this;
 
+    if (self.tracer) {
+        // When tracer is enabled, default outgoing requests to enable tracing
+        if (options.trace !== false) {
+            options.trace = true;
+        }
+    }
+
     if (!options.service) {
         if (options.serviceName) {
             options.service = options.serviceName;
