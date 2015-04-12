@@ -85,7 +85,7 @@ function readFrameFrom(buffer, offset) {
     if (!BodyType) {
         return bufrw.ReadResult.error(errors.InvalidFrameTypeError({
             typeNumber: frame.type
-        }), offset);
+        }), offset - 1);
     }
 
     offset += 1;
