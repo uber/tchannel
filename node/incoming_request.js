@@ -77,7 +77,12 @@ function TChannelIncomingRequest(id, options) {
             parentid: self.tracing.parentid,
             flags: options.tracer.forceTrace? 1 : self.tracing.flags,
             hostPort: options.hostPort,
-            service: options.tracer.service,
+
+            // If a service hasn't been specified on the tracer, use the 
+            // service on the incoming request. This is to handle the
+            // pathological case of the service router, which has a different
+            // service name than the one specified in the incoming request.
+            service: options.tracer.service || self.service,
             name: '' // fill this in later
         });
 
