@@ -77,7 +77,7 @@ function TChannelIncomingRequest(id, options) {
             parentid: self.tracing.parentid,
             flags: options.tracer.forceTrace? 1 : self.tracing.flags,
             hostPort: options.hostPort,
-            serviceName: '', // the service in options.service is not what we want
+            service: options.tracer.service,
             name: '' // fill this in later
         });
 
