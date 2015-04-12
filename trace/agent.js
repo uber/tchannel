@@ -70,7 +70,7 @@ function Agent () {
 
     // 'our' service name that is used as the service name on spans for
     // incoming reuqests
-    self.service = '';
+    self.service = null;
 }
 
 Agent.prototype.getInstance = function () {
