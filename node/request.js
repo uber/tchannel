@@ -20,6 +20,8 @@
 
 'use strict';
 
+var DEFAULT_RETRY_LIMIT = 5;
+
 function TChannelRequest(channel, options) {
     options = options || {};
     var self = this;
@@ -30,6 +32,7 @@ function TChannelRequest(channel, options) {
     self.options = options;
     self.outReqs = [];
     self.timeout = self.options.timeout;
+    self.limit = self.options.retryLimit || DEFAULT_RETRY_LIMIT;
     self.start = 0;
     self.end = 0;
     self.elapsed = 0;
@@ -93,6 +96,10 @@ TChannelRequest.prototype.onReqDone = function onReqDone(err, res, arg2, arg3) {
 
 TChannelRequest.prototype.shouldRetry = function shouldRetry(err, res, arg2, arg3) {
     var self = this;
+
+    if (self.outReqs.length >= self.retryLimit) {
+        return false;
+    }
 
     if (err) {
         switch (err.type) {
