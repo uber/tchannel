@@ -18,6 +18,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-require('./basic_server');
-require('./server_2_requests');
+var fork = require('child_process').fork;
 
+function forktest (file) {
+    return function (done) {
+        var proc = fork(__dirname + '/' + file);
+        proc.on('exit', done);
+    };
+}
+
+function runSeries(items) {
+    if (items.length === 0) return;
+    items[items.length - 1](function () {
+        runSeries(items.slice(0, -1));
+    });
+}
+
+runSeries([
+    forktest('basic_server'),
+    forktest('server_2_requests'),
+    forktest('cross_instance'),
+    forktest('manual_propagate'),
+    forktest('server_2_requests_manual')
+]);
