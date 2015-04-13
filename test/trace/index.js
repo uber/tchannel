@@ -19,19 +19,13 @@
 // THE SOFTWARE.
 
 var fork = require('child_process').fork;
+var runSeries = require('run-series');
 
 function forktest (file) {
     return function (done) {
         var proc = fork(__dirname + '/' + file);
         proc.on('exit', done);
     };
-}
-
-function runSeries(items) {
-    if (items.length === 0) return;
-    items[items.length - 1](function () {
-        runSeries(items.slice(0, -1));
-    });
 }
 
 runSeries([
