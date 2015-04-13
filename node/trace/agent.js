@@ -47,12 +47,11 @@ function Agent () {
 
     self.listening = false;
     self.asyncListener = null;
+
+    self.autoTracePropagate = true;
 }
 
-// By default auto trace propagation is false. When enabled it will install an
-// async listener and traces will be automatically propagated from incoming
-// reqs to outgoing reqs.
-Agent.prototype.enableAutoTracePropagate = 
+Agent.prototype.setupAutoTracePropagate = 
 function enableAutoTracePropagate () {
     var self = this;
 
@@ -159,11 +158,15 @@ Agent.prototype.setupNewSpan = function setupNewSpan(options) {
     return span;
 };
 
-Agent.prototype.ref = function ref() {
+Agent.prototype.ref = function ref(options) {
     var self = this;
+    self.configure(options);
     if (self.refcnt++ <= 0) {
         if (self.refcnt <= 0) self.refcnt = 1; // TODO: notable?
-        if (!self.listening && self.asyncListener) {
+        if (!self.listening && self.autoTracePropagate) {
+            if (!self.asyncListener) {
+                self.setupAutoTracePropagate();
+            }
             process.addAsyncListener(self.asyncListener);
             self.listening = true;
         }
@@ -175,7 +178,7 @@ Agent.prototype.unref = function unref() {
     var self = this;
     if (--self.refcnt <= 0) {
         if (self.refcnt < 0) self.refcnt = 0; // TODO: notable?
-        if (self.listening && self.asyncListener) {
+        if (self.listening) {
             process.removeAsyncListener(self.asyncListener);
             self.listening = false;
         }
