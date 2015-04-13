@@ -82,9 +82,7 @@ function enableAutoTracePropagate () {
         }
     });
 
-    process.addAsyncListener(self.asyncListener);
-
-    self.listening = true;
+    self.listening = false;
 };
 
 Agent.prototype.getInstance = function () {
