@@ -82,7 +82,7 @@ function TChannelIncomingRequest(id, options) {
             // service on the incoming request. This is to handle the
             // case of the service router, which has a different service name 
             // than the one specified in the incoming request.
-            serviceName: options.tracer.serviceName || self.serviceName,
+            serviceName: options.tracer.serviceName || self.service,
             name: '' // fill this in later
         });
 

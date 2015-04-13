@@ -83,6 +83,8 @@ function TChannelOutgoingRequest(id, options) {
     if (options.tracer) {
         // new span with new ids
         self.span = options.tracer.setupNewSpan({
+            outgoing: true,
+            parentSpan: options.parentSpan,
             spanid: null,
             traceid: null,
             parentid: null,
