@@ -120,8 +120,8 @@ test('HeaderRW: read/write header1', testRW.cases(HeaderRW.header1, [
                 0x03, 0x64, 0x6f, 0x67  // hv~1 "dog"
             ],
             error: {
-                name: 'ShortReadError',
-                type: 'short-read',
+                name: 'BufrwShortReadError',
+                type: 'bufrw.short-read',
                 message: 'short read, 8 byte left over after consuming 9',
                 offset: 9,
                 remaining: 8
@@ -140,8 +140,8 @@ test('HeaderRW: read/write header1', testRW.cases(HeaderRW.header1, [
                 0x03, 0x64, 0x6f, 0x67  // hv~1 "dog"
             ],
             error: {
-                name: 'ShortBufferError',
-                type: 'short-buffer',
+                name: 'BufrwShortBufferError',
+                type: 'bufrw.short-buffer',
                 message: 'expected at least 1 bytes, only have 0 @17',
                 offset: 17,
                 actual: 0,
