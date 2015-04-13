@@ -124,8 +124,20 @@ var FrameRW = bufrw.Struct([
 // TODO: an init protocol for de-conflicting random ids
 // id 1 / 2 reserved for such
 
+// A raw binary ping/pong message for MTU discovery
+// id:4 buf~2
+var PingOverhead = 4 + 1 + 4 + 2 + 4;
+var PingType = 3;
+var PongType = 4;
+var pingRW = bufrw.Struct({
+    id: bufrw.UInt32BE,
+    buf: bufrw.buf2
+});
+BodyCases[PingType] = pingRW;
+BodyCases[PongType] = pingRW;
+
 // A normal string message body
-var MessType = 3;
+var MessType = 5;
 BodyCases[MessType] = bufrw.Struct({
     msg: bufrw.str2
 });
@@ -153,9 +165,39 @@ socket.bind(port, bound);
 
 var ready = false;
 var myId = Math.random() * Math.pow(2, 32);
+var pings = new Oper({
+    timeout: 100,
+    max: 0xffffffff
+}, function sendPing(buf, callback) {
+    var self = this;
+    var ping = self.add(callback);
+    ping.sentBuf = buf;
+    send(PingType, {
+        id: ping.id,
+        buf: buf
+    });
+});
 
 function handleFrame(remoteAddr, frame) {
     switch (frame.type) {
+
+    case PingType:
+        if (frame.node === myId) return;
+
+        send(frame.node, PongType, {
+            id: frame.body.id,
+            buf: frame.body.buf
+        });
+
+        break;
+
+    case PongType:
+        if (frame.node === myId) {
+            pings.finish(frame.body.id, null, frame.body.buf);
+            return;
+        }
+
+        break;
 
     case MessType:
         if (frame.node === myId) {
