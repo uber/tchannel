@@ -361,12 +361,13 @@ TChannel.prototype.send = function send(options, arg1, arg2, arg3, callback) {
 /* jshint maxparams:4 */
 
 TChannel.prototype.request = function channelRequest(options) {
-    options = extend(options);
     var self = this;
 
     if (self.destroyed) {
         throw new Error('cannot request() to destroyed tchannel'); // TODO typed error
     }
+
+    options = extend(options);
 
     if (self.tracer) {
         // When tracer is enabled, default outgoing requests to enable tracing
