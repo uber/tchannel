@@ -80,9 +80,9 @@ function TChannelIncomingRequest(id, options) {
 
             // If a service hasn't been specified on the tracer, use the 
             // service on the incoming request. This is to handle the
-            // pathological case of the service router, which has a different
-            // service name than the one specified in the incoming request.
-            service: options.tracer.service || self.service,
+            // case of the service router, which has a different service name 
+            // than the one specified in the incoming request.
+            serviceName: options.tracer.serviceName || self.serviceName,
             name: '' // fill this in later
         });
 

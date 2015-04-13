@@ -70,7 +70,7 @@ function Agent () {
 
     // 'our' service name that is used as the service name on spans for
     // incoming reuqests
-    self.service = null;
+    self.serviceName = null;
 }
 
 Agent.prototype.getInstance = function () {
@@ -114,7 +114,7 @@ Agent.prototype.setupNewSpan = function setupNewSpan(options) {
 
     var span = new Span({
         logger: self.logger,
-        endpoint: new Span.Endpoint(host, port, options.service),
+        endpoint: new Span.Endpoint(host, port, options.serviceName),
         name: options.name,
         id: options.spanid,
         parentid: options.parentid,
