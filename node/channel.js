@@ -62,6 +62,10 @@ function TChannel(options) {
         processName: format('%s[%s]', process.title, process.pid)
     }, options);
 
+    self.options.requestDefaults = extend({
+        timeout: REQ_TIMEOUT_DEFAULT
+    }, self.options.requestDefaults);
+
     self.logger = self.options.logger || nullLogger;
     self.random = self.options.random || globalRandom;
     self.timers = self.options.timers || globalTimers;
@@ -77,6 +81,7 @@ function TChannel(options) {
     self.serviceName = '';
     if (self.options.serviceName) {
         self.serviceName = self.options.serviceName;
+        self.options.requestDefaults.serviceName = self.serviceName;
         delete self.options.serviceName;
     }
 
@@ -108,6 +113,9 @@ function TChannel(options) {
 
     if (self.options.trace) {
         self.tracer = require('./trace/agent').ref();
+        if (self.options.requestDefaults !== false) {
+            self.options.requestDefaults.trace = true;
+        }
     }
 
     // lazily created by .getServer (usually from .listen)
@@ -361,22 +369,16 @@ TChannel.prototype.send = function send(options, arg1, arg2, arg3, callback) {
 /* jshint maxparams:4 */
 
 TChannel.prototype.request = function channelRequest(options) {
-    options = extend(options);
     var self = this;
 
-    if (self.tracer) {
-        // When tracer is enabled, default outgoing requests to enable tracing
-        if (options.trace !== false) {
-            options.trace = true;
-        }
+    if (self.destroyed) {
+        throw new Error('cannot request() to destroyed tchannel'); // TODO typed error
     }
 
-    if (!options.service) {
-        if (options.serviceName) {
-            options.service = options.serviceName;
-        } else if (self.serviceName) {
-            options.service = self.serviceName;
-        }
+    options = extend(self.options.requestDefaults, options);
+
+    if (!options.service && options.serviceName) {
+        options.service = options.serviceName;
     }
 
     if (!self.serviceName && !options.host) {
@@ -389,16 +391,7 @@ TChannel.prototype.request = function channelRequest(options) {
         }
     }
 
-    if (!options.timeout) {
-        options.timeout = REQ_TIMEOUT_DEFAULT;
-    }
-
-    // TODO: moar defaults
-    if (self.destroyed) {
-        throw new Error('cannot request() to destroyed tchannel'); // TODO typed error
-    } else {
-        return self.peers.request(options);
-    }
+    return self.peers.request(options);
 };
 
 TChannel.prototype.quit = // to provide backward compatibility.
