@@ -299,7 +299,6 @@ TChannel.prototype.listen = function listen(port, host, callback) {
     self.getServer().listen(port, host, callback);
 };
 
-// TODO: deprecated, callers should use .handler directly
 TChannel.prototype.register = function register(name, handler) {
     var self = this;
 
@@ -307,8 +306,7 @@ TChannel.prototype.register = function register(name, handler) {
 
     switch (handlerType) {
         case 'tchannel.endpoint-handler':
-            // If its still the legacy handler then we are good.
-            self.handler.register(name, onReqRes);
+            self.handler.register(name, handler);
             break;
 
         case 'tchannel.service-name-handler':
@@ -319,18 +317,6 @@ TChannel.prototype.register = function register(name, handler) {
                 handlerType: handlerType,
                 handler: self.handler
             });
-    }
-
-    function onReqRes(req, res, arg2, arg3) {
-        handler(arg2, arg3, req.remoteAddr, onResponse);
-
-        function onResponse(err, res1, res2) {
-            if (err) {
-                res.sendNotOk(res1, err.message);
-            } else {
-                res.sendOk(res1, res2);
-            }
-        }
     }
 };
 
@@ -352,19 +338,7 @@ TChannel.prototype.send = function send(options, arg1, arg2, arg3, callback) {
 
     return self
         .request(options)
-        .send(arg1, arg2, arg3, onResponse);
-
-    function onResponse(err, res, arg2, arg3) {
-        if (err) {
-            return callback(err);
-        }
-
-        if (!res.ok) {
-            return callback(new Error(String(arg3)));
-        }
-
-        return callback(null, arg2, arg3);
-    }
+        .send(arg1, arg2, arg3, callback);
 };
 /* jshint maxparams:4 */
 
