@@ -126,7 +126,6 @@ var FrameRW = bufrw.Struct([
 
 // A raw binary ping/pong message for MTU discovery
 // id:4 buf~2
-var PingOverhead = 4 + 1 + 4 + 2 + 4;
 var PingType = 3;
 var PongType = 4;
 var pingRW = bufrw.Struct({
@@ -135,6 +134,16 @@ var pingRW = bufrw.Struct({
 });
 BodyCases[PingType] = pingRW;
 BodyCases[PongType] = pingRW;
+
+var PingOverhead = bufrw.byteLength(FrameRW, {
+    node: 0,
+    type: PingType,
+    body: {
+        id: 0,
+        buf: new Buffer(0)
+    },
+    checksum: 0
+});
 
 // A normal string message body
 var MessType = 5;
