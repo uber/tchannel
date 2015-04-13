@@ -155,8 +155,8 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     }
 
     function onCallResponse(res) {
-        var op = self.popOutOp(res.id);
-        if (!op) {
+        var req = self.popOutReq(res.id);
+        if (!req) {
             self.logger.info('response received for unknown or lost operation', {
                 responseId: res.id,
                 remoteAddr: self.remoteAddr,
@@ -167,20 +167,21 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
 
         if (self.tracer) {
             // TODO: better annotations
-            op.req.span.annotate('cr');
-            self.tracer.report(op.req.span);
+            req.span.annotate('cr');
+            self.tracer.report(req.span);
         }
 
-        op.req.emit('response', res);
+        req.res = res;
+        req.emit('response', res);
     }
 
     function onCallError(err) {
-        var op = self.popOutOp(err.originalId); // TODO bork bork
-        if (!op) {
+        var req = self.popOutReq(err.originalId);
+        if (!req) {
             self.logger.info('error received for unknown or lost operation', err);
             return;
         }
-        op.req.emit('error', err);
+        req.emit('error', err);
     }
 
     function onTimedOut() {

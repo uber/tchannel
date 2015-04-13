@@ -159,7 +159,7 @@ TChannelPeers.prototype.request = function peersRequest(options) {
     return peer.request(options);
 };
 
-TChannelPeers.prototype.choosePeer = function choosePeer(options, op) {
+TChannelPeers.prototype.choosePeer = function choosePeer(options, req) {
     var self = this;
 
     if (!options) options = {};
@@ -178,7 +178,7 @@ TChannelPeers.prototype.choosePeer = function choosePeer(options, op) {
     var selectedPeer = null, selectedScore = 0;
     for (var i = 0; i < hosts.length; i++) {
         var peer = self.add(hosts[i]);
-        var score = peer.state.shouldRequest(op, options);
+        var score = peer.state.shouldRequest(req, options);
         var want = score > threshold &&
                    (selectedPeer === null || score > selectedScore);
         if (want) {
