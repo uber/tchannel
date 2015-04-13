@@ -81,6 +81,7 @@ function TChannel(options) {
     self.serviceName = '';
     if (self.options.serviceName) {
         self.serviceName = self.options.serviceName;
+        self.options.requestDefaults.serviceName = self.serviceName;
         delete self.options.serviceName;
     }
 
@@ -380,12 +381,8 @@ TChannel.prototype.request = function channelRequest(options) {
         }
     }
 
-    if (!options.service) {
-        if (options.serviceName) {
-            options.service = options.serviceName;
-        } else if (self.serviceName) {
-            options.service = self.serviceName;
-        }
+    if (!options.service && options.serviceName) {
+        options.service = options.serviceName;
     }
 
     if (!self.serviceName && !options.host) {
