@@ -61,12 +61,8 @@ TChannelRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     self.arg2 = arg2;
     self.arg3 = arg3;
     self._callback = callback;
-    var outReq = self.makeOutRequest();
     self.start = self.channel.timers.now();
-    outReq.send(arg1, arg2, arg3, outReqDone);
-    function outReqDone(err, res, arg2, arg3) {
-        self.onReqDone(err, res, arg2, arg3);
-    }
+    self.resend();
 };
 
 TChannelRequest.prototype.resend = function resend() {
