@@ -99,9 +99,11 @@ function allocCluster(opts) {
                             'channel[%s] peer[%s] conn[%s] should .%s',
                             i, j, k, prop);
                         switch (prop) {
-                        case 'inOps':
-                        case 'outOps':
-                            assert.equal(Object.keys(conn[prop]).length, connExpect[prop], desc);
+                        case 'inReqs':
+                            assert.equal(Object.keys(conn.requests.in).length, connExpect.inReqs, desc);
+                            break;
+                        case 'outReqs':
+                            assert.equal(Object.keys(conn.requests.out).length, connExpect.outReqs, desc);
                             break;
                         default:
                             assert.equal(conn[prop], connExpect[prop], desc);

@@ -54,6 +54,7 @@ function TChannelOutgoingRequest(id, options) {
     self.headers = options.headers || {};
     self.checksumType = options.checksumType || 0;
     self.checksum = options.checksum || null;
+
     self.sendFrame = options.sendFrame;
     if (options.streamed) {
         self.streamed = true;
@@ -95,6 +96,7 @@ function TChannelOutgoingRequest(id, options) {
         self.span = null;
     }
 
+    self.res = null;
     self.start = self.timers.now();
     self.timedOut = false;
 }

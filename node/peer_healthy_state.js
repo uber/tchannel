@@ -36,7 +36,7 @@ inherits(TChannelPeerHealthyState, TChannelPeerState);
 
 TChannelPeerHealthyState.prototype.name = 'healthy';
 
-TChannelPeerHealthyState.prototype.shouldRequest = function shouldRequest(/* op, options */) {
+TChannelPeerHealthyState.prototype.shouldRequest = function shouldRequest(/* req, options */) {
     // return Math.random();
     var self = this;
     return 0.2 + self.channel.random() * 0.8;
