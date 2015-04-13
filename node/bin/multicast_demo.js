@@ -252,6 +252,13 @@ function probeMTU(ctx) {
     };
 
     var length = nextProbeMTULength(ctx);
+    if (length > 0xffff) {
+        if (!ctx.bad || ctx.bad.length > 0x10000) {
+            ctx.bad = {length: 0x10000};
+        }
+        length = nextProbeMTULength(ctx);
+    }
+
     if (!length) {
         mtuProbed(ctx);
         return;
