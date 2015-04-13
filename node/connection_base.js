@@ -238,10 +238,6 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
     req.on('error', onReqError);
     process.nextTick(runHandler);
 
-    if (req.span) {
-        req.span.endpoint.serviceName = self.channel.serviceName;
-    }
-
     function onReqError(err) {
         if (!req.res) buildResponse();
         if (err.type === 'tchannel.timeout') {
