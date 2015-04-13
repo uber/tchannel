@@ -208,6 +208,7 @@ TChannelConnectionBase.prototype.popOutReq = function popOutReq(id) {
 TChannelConnectionBase.prototype.request = function connBaseRequest(options) {
     var self = this;
     if (!options) options = {};
+    options.remoteAddr = self.remoteAddr;
 
     // TODO: use this to protect against >4Mi outstanding messages edge case
     // (e.g. zombie operation bug, incredible throughput, or simply very long

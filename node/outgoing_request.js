@@ -46,6 +46,7 @@ function TChannelOutgoingRequest(id, options) {
     self.random = options.random;
     self.timers = options.timers;
 
+    self.remoteAddr = options.remoteAddr;
     self.state = States.Initial;
     self.id = id || 0;
     self.ttl = options.ttl || 0;
@@ -86,8 +87,8 @@ function TChannelOutgoingRequest(id, options) {
             traceid: null,
             parentid: null,
             flags: options.trace? 1 : 0,
-            hostPort: options.host,
-            serviceName: options.serviceName,
+            hostPort: self.remoteAddr,
+            serviceName: self.service,
             name: '' // fill this in later
         });
 
