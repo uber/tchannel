@@ -46,6 +46,7 @@ function TChannelOutgoingRequest(id, options) {
     self.random = options.random;
     self.timers = options.timers;
 
+    self.remoteAddr = options.remoteAddr;
     self.state = States.Initial;
     self.id = id || 0;
     self.ttl = options.ttl || 0;
