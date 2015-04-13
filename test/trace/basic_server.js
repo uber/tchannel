@@ -42,8 +42,6 @@ test('basic tracing test', function (assert) {
         }
     });
 
-    TracingAgent.getInstance().enableAutoTracePropagate();
-
     var subservice = new TChannel({
         handler: EndpointHandler(),
         serviceName: 'subservice',

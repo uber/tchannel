@@ -46,19 +46,22 @@ test('basic tracing test', function (assert) {
         serviceName: 'subservice',
         handler: EndpointHandler(),
         trace: true,
-        logger: logger
+        logger: logger,
+        autoTracePropagate: false
     });
 
     var server = new TChannel({
         serviceName: 'server',
         handler: EndpointHandler(),
         trace: true,
-        logger: logger
+        logger: logger,
+        autoTracePropagate: false
     });
 
     var client = new TChannel({
         logger: logger,
-        trace: true
+        trace: true,
+        autoTracePropagate: false
     });
 
     subservice.handler.register('/foobar', function (req, res) {
