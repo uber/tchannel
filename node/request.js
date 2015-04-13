@@ -20,6 +20,8 @@
 
 'use strict';
 
+var errors = require('./errors');
+
 var DEFAULT_RETRY_LIMIT = 5;
 
 function TChannelRequest(channel, options) {
@@ -44,15 +46,16 @@ function TChannelRequest(channel, options) {
     self.arg2 = null;
     self.arg3 = null;
     self._callback = null;
+    self._lastErr = null;
+    self._lastArg2 = null;
+    self._lastArg3 = null;
 }
 
 TChannelRequest.prototype.type = 'tchannel.request';
 
-TChannelRequest.prototype.makeOutRequest = function makeOutRequest() {
+TChannelRequest.prototype.choosePeer = function choosePeer() {
     var self = this;
-    var outReq = self.channel.peers.request(self, self.options);
-    self.outReqs.push(outReq);
-    return outReq;
+    return self.channel.peers.choosePeer(self, self.options);
 };
 
 TChannelRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
@@ -67,7 +70,20 @@ TChannelRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
 
 TChannelRequest.prototype.resend = function resend() {
     var self = this;
-    var outReq = self.makeOutRequest();
+
+    var peer = self.choosePeer();
+    if (!peer) {
+        if (self.outReqs.length) {
+            self._callback(self._lastErr, self._lastArg2, self._lastArg3);
+        } else {
+            self._callback(errors.NoPeerAvailable(), null, null);
+        }
+        return;
+    }
+
+    var outReq = peer.request(self.options);
+    self.outReqs.push(outReq);
+
     outReq.send(self.arg1, self.arg2, self.arg3, outReqRedone);
     function outReqRedone(err, res, arg2, arg3) {
         self.onReqDone(err, res, arg2, arg3);
@@ -80,6 +96,9 @@ TChannelRequest.prototype.onReqDone = function onReqDone(err, res, arg2, arg3) {
     self.elapsed = now - self.start;
     if (self.elapsed < self.timeout &&
         self.shouldRetry(err, res, arg2, arg3)) {
+        self._lastErr = err;
+        self._lastArg2 = arg2;
+        self._lastArg3 = arg3;
         process.nextTick(deferResend);
     } else {
         self.end = now;
