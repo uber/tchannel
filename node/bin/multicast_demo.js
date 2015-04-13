@@ -178,6 +178,7 @@ var pings = new Oper({
     });
 });
 
+var reprobeTimer = null;
 var probingMTU = false;
 var knownGoodMTU = 0;
 
@@ -192,12 +193,22 @@ function handleFrame(remoteAddr, frame) {
             buf: frame.body.buf
         });
 
+        if (reprobeTimer) {
+            clearTimeout(reprobeTimer);
+            reprobeTimer = null;
+        }
+
         break;
 
     case PongType:
         if (frame.node === myId) {
             pings.finish(frame.body.id, null, frame.body.buf);
             return;
+        }
+
+        if (reprobeTimer) {
+            clearTimeout(reprobeTimer);
+            reprobeTimer = null;
         }
 
         break;
@@ -210,6 +221,14 @@ function handleFrame(remoteAddr, frame) {
         }
         break;
 
+    }
+
+    if (!probingMTU && !knownGoodMTU && !reprobeTimer) {
+        reprobeTimer = setTimeout(function() {
+            clearTimeout(reprobeTimer);
+            reprobeTimer = null;
+            if (!probingMTU && !knownGoodMTU) probeMTU();
+        }, 1000);
     }
 }
 
