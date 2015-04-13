@@ -94,6 +94,11 @@ module.exports.MissingInitHeaderError = TypedError({
     field: null
 });
 
+module.exports.NoPeerAvailable = TypedError({
+    type: 'tchannel.no-peer-available',
+    message: 'no peer available for request'
+});
+
 module.exports.NoServiceHandlerError = TypedError({
     type: 'tchannel.no-service-handler',
     message: 'unknown service {service}',

@@ -23,6 +23,7 @@
 var inherits = require('util').inherits;
 var EventEmitter = require('events').EventEmitter;
 
+var errors = require('./errors');
 var TChannelPeer = require('./peer');
 var TChannelSelfPeer = require('./self_peer');
 
@@ -153,7 +154,7 @@ TChannelPeers.prototype.request = function peersRequest(options) {
 
     if (!peer) {
         // TODO: operational error?
-        throw new Error('no peer available for request'); // TODO: typed error
+        throw errors.NoPeerAvailable();
     }
 
     return peer.request(options);
