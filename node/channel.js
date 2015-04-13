@@ -364,6 +364,10 @@ TChannel.prototype.request = function channelRequest(options) {
     options = extend(options);
     var self = this;
 
+    if (self.destroyed) {
+        throw new Error('cannot request() to destroyed tchannel'); // TODO typed error
+    }
+
     if (self.tracer) {
         // When tracer is enabled, default outgoing requests to enable tracing
         if (options.trace !== false) {
@@ -394,11 +398,8 @@ TChannel.prototype.request = function channelRequest(options) {
     }
 
     // TODO: moar defaults
-    if (self.destroyed) {
-        throw new Error('cannot request() to destroyed tchannel'); // TODO typed error
-    } else {
-        return self.peers.request(options);
-    }
+
+    return self.peers.request(options);
 };
 
 TChannel.prototype.quit = // to provide backward compatibility.
