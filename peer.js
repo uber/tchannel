@@ -136,9 +136,7 @@ TChannelPeer.prototype.connect = function connect(outOnly) {
 
 TChannelPeer.prototype.request = function peerRequest(options) {
     var self = this;
-    var connection = self.connect();
-    options.host = options.host || connection.remoteAddr;
-    return connection.request(options);
+    return self.connect().request(options);
 };
 
 TChannelPeer.prototype.addConnection = function addConnection(conn) {
