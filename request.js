@@ -28,6 +28,7 @@ function TChannelRequest(channel, options) {
     }
     self.channel = channel;
     self.options = options;
+    self.outReqs = [];
     self.start = 0;
     self.end = 0;
 
@@ -45,6 +46,7 @@ TChannelRequest.prototype.type = 'tchannel.request';
 TChannelRequest.prototype.makeOutRequest = function makeOutRequest() {
     var self = this;
     var outReq = self.channel.peers.request(self.options);
+    self.outReqs.push(outReq);
     return outReq;
 };
 
