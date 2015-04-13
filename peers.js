@@ -148,9 +148,9 @@ TChannelPeers.prototype.delete = function del(hostPort) {
     return peer;
 };
 
-TChannelPeers.prototype.request = function peersRequest(options) {
+TChannelPeers.prototype.request = function peersRequest(req, options) {
     var self = this;
-    var peer = self.choosePeer(options, null);
+    var peer = self.choosePeer(req, options);
 
     if (!peer) {
         // TODO: operational error?
@@ -160,7 +160,7 @@ TChannelPeers.prototype.request = function peersRequest(options) {
     return peer.request(options);
 };
 
-TChannelPeers.prototype.choosePeer = function choosePeer(options, req) {
+TChannelPeers.prototype.choosePeer = function choosePeer(req, options) {
     var self = this;
 
     if (!options) options = {};

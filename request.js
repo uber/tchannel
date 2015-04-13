@@ -50,7 +50,7 @@ TChannelRequest.prototype.type = 'tchannel.request';
 
 TChannelRequest.prototype.makeOutRequest = function makeOutRequest() {
     var self = this;
-    var outReq = self.channel.peers.request(self.options);
+    var outReq = self.channel.peers.request(self, self.options);
     self.outReqs.push(outReq);
     return outReq;
 };

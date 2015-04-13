@@ -358,7 +358,7 @@ TChannel.prototype.request = function channelRequest(options) {
     }
 
     if (options.streamed) {
-        return self.peers.request(options);
+        return self.peers.request(null, options);
     } else {
         return new TChannelRequest(self, options);
     }
