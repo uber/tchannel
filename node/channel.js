@@ -62,6 +62,10 @@ function TChannel(options) {
         processName: format('%s[%s]', process.title, process.pid)
     }, options);
 
+    self.options.requestDefaults = extend({
+        timeout: REQ_TIMEOUT_DEFAULT
+    }, self.options.requestDefaults);
+
     self.logger = self.options.logger || nullLogger;
     self.random = self.options.random || globalRandom;
     self.timers = self.options.timers || globalTimers;
@@ -367,7 +371,7 @@ TChannel.prototype.request = function channelRequest(options) {
         throw new Error('cannot request() to destroyed tchannel'); // TODO typed error
     }
 
-    options = extend(options);
+    options = extend(self.options.requestDefaults, options);
 
     if (self.tracer) {
         // When tracer is enabled, default outgoing requests to enable tracing
@@ -393,12 +397,6 @@ TChannel.prototype.request = function channelRequest(options) {
             throw errors.TopLevelRequestError();
         }
     }
-
-    if (!options.timeout) {
-        options.timeout = REQ_TIMEOUT_DEFAULT;
-    }
-
-    // TODO: moar defaults
 
     return self.peers.request(options);
 };
