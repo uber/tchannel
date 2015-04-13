@@ -60,15 +60,15 @@ function register(channel, name, opts, handle) {
 
         handle(opts, inHead, inBody, handleThriftResponse);
 
-        function handleThriftResponse(error, response) {
-            if (error) {
-                return res.sendError('UnexpectedError', error.message);
+        function handleThriftResponse(err, thriftRes) {
+            if (err) {
+                return res.sendError('UnexpectedError', err.message);
             }
 
             // TODO {head,body} or {arg2,arg3}?
 
-            var ok = response.ok;
-            var outBody = response.body;
+            var ok = thriftRes.ok;
+            var outBody = thriftRes.body;
 
             if (typeof ok !== 'boolean') {
                 throw new Error('Expected true or false boolean on response object');
@@ -94,7 +94,7 @@ function register(channel, name, opts, handle) {
             var outBodyBuffer = resultType.toBuffer(outResult).toValue();
 
             // TODO process outHeadBuffer
-            // var outHead = response.head;
+            // var outHead = res.head;
             var outHeadBuffer = null;
 
             if (ok) {
@@ -148,9 +148,7 @@ function send(request, endpoint, outHead, outBody, callback) {
         // var inHeadBuffer = arg2;
         var inHead = null;
 
-        var response = new Response(res.ok, inHead, inBody);
-
-        callback(null, response);
+        callback(null, new Response(res.ok, inHead, inBody));
     }
 
 };

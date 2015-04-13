@@ -28,10 +28,10 @@ var TChannelAsThrift = require('../as/thrift.js');
 var thriftify = require('thriftify');
 
 function NoEchoError(value) {
-    var error = new Error('No echo');
-    error.nameAsThrift = 'noEcho';
-    error.value = value;
-    return error;
+    var err = new Error('No echo');
+    err.nameAsThrift = 'noEcho';
+    err.value = value;
+    return err;
 }
 
 function echo(opts, head, body, cb) {
@@ -59,18 +59,18 @@ tape('send and receive thrift an ok service call', function (assert) {
             host: server.hostPort
         }), 'Chamber::echo', null, {value: 10}, handleResponse);
 
-        function handleResponse(error, response) {
-            if (error) return done(error);
-            assert.ok(response.ok);
-            assert.equals(response.body, 10);
+        function handleResponse(err, res) {
+            if (err) return done(err);
+            assert.ok(res.ok);
+            assert.equals(res.body, 10);
             done();
         }
 
     });
 
-    function done(error) {
-        if (error) {
-            assert.ifError(error);
+    function done(err) {
+        if (err) {
+            assert.ifErr(err);
         }
         server.close();
         assert.end();
@@ -94,18 +94,18 @@ tape('send and receive thrift a not ok service call', function (assert) {
             host: server.hostPort
         }), 'Chamber::echo', null, {value: 10}, handleResponse);
 
-        function handleResponse(error, response) {
-            if (error) return done(error);
-            assert.ok(!response.ok);
-            assert.equals(response.body.value, 10);
+        function handleResponse(err, res) {
+            if (err) return done(err);
+            assert.ok(!res.ok);
+            assert.equals(res.body.value, 10);
             done();
         }
 
     });
 
-    function done(error) {
-        if (error) {
-            assert.ifError(error);
+    function done(err) {
+        if (err) {
+            assert.ifErr(err);
         }
         server.close();
         assert.end();
