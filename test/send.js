@@ -162,13 +162,13 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
             channels: [{
                 peers: [{
                     connections: [
-                        {direction: 'in', inOps: 0, outOps: 0}
+                        {direction: 'in', inReqs: 0, outReqs: 0}
                     ]
                 }]
             }, {
                 peers: [{
                     connections: [
-                        {direction: 'out', inOps: 0, outOps: 0}
+                        {direction: 'out', inReqs: 0, outReqs: 0}
                     ]
                 }]
             }]
@@ -250,7 +250,7 @@ allocCluster.test('request().send() to a pool of servers', 4, function t(cluster
                 return {
                     peers: [{
                         connections: [
-                            {direction: 'in', inOps: 0, outOps: 0}
+                            {direction: 'in', inReqs: 0, outReqs: 0}
                         ]
                     }]
                 };
