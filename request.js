@@ -93,6 +93,29 @@ TChannelRequest.prototype.onReqDone = function onReqDone(err, res, arg2, arg3) {
 
 TChannelRequest.prototype.shouldRetry = function shouldRetry(err, res, arg2, arg3) {
     var self = this;
+
+    if (err) {
+        switch (err.type) {
+            case 'tchannel.bad-request':
+            case 'tchannel.canceled':
+                return false;
+
+            case 'tchannel.socket':
+            case 'tchannel.timeout':
+            case 'tchannel.busy':
+            case 'tchannel.declined':
+            case 'tchannel.unexpected':
+            case 'tchannel.protocol':
+                return true;
+
+            default:
+                self.channel.logger.error('unknown error type in request retry', {
+                    error: err
+                });
+                return true;
+        }
+    }
+
     return false;
 };
 
