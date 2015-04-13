@@ -179,15 +179,12 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
 
 allocCluster.test('request().send() to a pool of servers', 4, function t(cluster, assert) {
     var client = TChannel({
+        timeoutFuzz: 0,
         random: randSeq([
             1.0, 0.1, 0.1, 0.1, // .request, chan 1 wins
-            0.0,                // timeout fuzz
             0.1, 1.0, 0.1, 0.1, // .request, chan 2 wins
-            0.0,                // timeout fuzz
             0.1, 0.1, 1.0, 0.1, // .request, chan 3 wins
-            0.0,                // timeout fuzz
             0.1, 0.1, 0.1, 1.0, // .request, chan 4 wins
-            0.0,                // timeout fuzz
             1.0, 0.1, 0.1, 0.1, // .request, chan 1 wins
             0.1, 1.0, 0.1, 0.1, // .request, chan 2 wins
             0.1, 0.1, 1.0, 0.1, // .request, chan 3 wins
@@ -195,7 +192,6 @@ allocCluster.test('request().send() to a pool of servers', 4, function t(cluster
         ])
     });
 
-    
     var channel = client.makeSubChannel({
         serviceName: 'lol'
     });

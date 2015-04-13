@@ -71,7 +71,10 @@ TChannelConnectionBase.prototype.getTimeoutDelay = function getTimeoutDelay() {
     var self = this;
     var base = self.options.timeoutCheckInterval;
     var fuzz = self.options.timeoutFuzz;
-    return base + Math.round(Math.floor(self.random() * fuzz) - (fuzz / 2));
+    if (fuzz) {
+        fuzz = Math.round(Math.floor(self.random() * fuzz) - (fuzz / 2));
+    }
+    return base + fuzz;
 };
 
 TChannelConnectionBase.prototype.startTimeoutTimer = function startTimeoutTimer() {
