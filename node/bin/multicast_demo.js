@@ -178,6 +178,9 @@ var pings = new Oper({
     });
 });
 
+var probingMTU = false;
+var knownGoodMTU = 0;
+
 function handleFrame(remoteAddr, frame) {
     switch (frame.type) {
 
@@ -220,6 +223,99 @@ function onMessage(buf, rinfo) {
     });
 }
 
+function probeMTU(ctx) {
+    ctx = ctx || {
+        start: Date.now(),
+        end: 0,
+        trace: [],
+        good: null,
+        bad: null
+    };
+
+    var length = nextProbeMTULength(ctx);
+    if (!length) {
+        mtuProbed(ctx);
+        return;
+    }
+
+    if (!probingMTU) {
+        probingMTU = true;
+        console.log('-- probing mtu');
+    }
+    var buf = new Buffer(length);
+    for (var i = 0; i < length; i++) buf[i] = i % 0xff;
+    pings.send(buf, pingDone);
+
+    function pingDone(err, ping, gotBuf) {
+        ping.length = length + PingOverhead;
+        ping.err = err;
+        ping.gotBuf = gotBuf;
+        var ok = !err;
+        for (var i = 0; ok && i < ping.sentBuf.length; i++) {
+            ok = ping.sentBuf[i] === ping.gotBuf[i];
+        }
+        ping.ok = ok;
+        ctx.trace.push(ping);
+        if (ping.ok) {
+            if (!ctx.good || ctx.good.length < ping.length) ctx.good = ping;
+        } else {
+            if (!ctx.bad || ctx.bad.length > ping.length) ctx.bad = ping;
+        }
+        process.nextTick(function deferNextProbe() {
+            probeMTU(ctx);
+        });
+    }
+}
+
+function nextProbeMTULength(ctx) {
+    if (ctx.good && ctx.bad) {
+        return narrow();
+    } else {
+        return explore();
+    }
+
+    function explore() {
+        if (ctx.good) {
+            return 2 * (ctx.good.length - PingOverhead);
+        } else if (!ctx.bad) {
+            return 1;
+        } else {
+            var length = Math.floor((ctx.bad.length - PingOverhead) / 2);
+            return length < 2 ? 0 : length;
+        }
+    }
+
+    function narrow() {
+        var a = ctx.good.length - PingOverhead;
+        var b = ctx.bad.length - PingOverhead;
+        var gap = b - a;
+        var length = Math.floor(a / 2 + b / 2);
+        if (gap < 2 || length < 2) {
+            return 0;
+        } else {
+            return length;
+        }
+    }
+}
+
+function mtuProbed(ctx) {
+    ctx.end = Date.now();
+    probingMTU = false;
+    if (!ctx.good && ctx.trace.length === 1 && ctx.bad.length <= PingOverhead + 1) {
+        console.log('-- mtu probe got no ping responses');
+        return;
+    }
+
+    if (ctx.good) {
+        knownGoodMTU = ctx.good.length;
+        console.log(
+            '-- found good mtu %s in %s steps over %sms',
+            knownGoodMTU, ctx.trace.length, ctx.end - ctx.start);
+    } else {
+        console.log('MTU probed:', ctx);
+    }
+}
+
 function onStdinData(line) {
     var msg = line.replace(/^\s+|\s+$/g, '');
     send(MessType, {msg: msg});
@@ -237,6 +333,7 @@ function bound() {
     var lines = process.stdin.pipe(split2());
     lines.on('data', onStdinData);
     lines.on('end', onStdinEnd);
+    probeMTU();
 }
 
 function send(node, type, body) {
