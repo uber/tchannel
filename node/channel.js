@@ -113,6 +113,9 @@ function TChannel(options) {
 
     if (self.options.trace) {
         self.tracer = require('./trace/agent').ref();
+        if (self.options.requestDefaults !== false) {
+            self.options.requestDefaults.trace = true;
+        }
     }
 
     // lazily created by .getServer (usually from .listen)
@@ -373,13 +376,6 @@ TChannel.prototype.request = function channelRequest(options) {
     }
 
     options = extend(self.options.requestDefaults, options);
-
-    if (self.tracer) {
-        // When tracer is enabled, default outgoing requests to enable tracing
-        if (options.trace !== false) {
-            options.trace = true;
-        }
-    }
 
     if (!options.service && options.serviceName) {
         options.service = options.serviceName;
