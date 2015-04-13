@@ -178,13 +178,16 @@ TChannelPeers.prototype.choosePeer = function choosePeer(req, options) {
 
     var selectedPeer = null, selectedScore = 0;
     for (var i = 0; i < hosts.length; i++) {
-        var peer = self.add(hosts[i]);
-        var score = peer.state.shouldRequest(req, options);
-        var want = score > threshold &&
-                   (selectedPeer === null || score > selectedScore);
-        if (want) {
-            selectedPeer = peer;
-            selectedScore = score;
+        var hostPort = hosts[i];
+        var peer = self.add(hostPort);
+        if (!req || !req.triedRemoteAddrs[hostPort]) {
+            var score = peer.state.shouldRequest(req, options);
+            var want = score > threshold &&
+                       (selectedPeer === null || score > selectedScore);
+            if (want) {
+                selectedPeer = peer;
+                selectedScore = score;
+            }
         }
     }
     return selectedPeer;
