@@ -29,8 +29,10 @@ function TChannelRequest(channel, options) {
     self.channel = channel;
     self.options = options;
     self.outReqs = [];
+    self.timeout = self.options.timeout;
     self.start = 0;
     self.end = 0;
+    self.elapsed = 0;
 
     self.headers = self.options.headers || {}; // so that as-foo can punch req.headers.X
     self.options.headers = self.headers; // for passing to peer.request(opts) later
@@ -64,11 +66,34 @@ TChannelRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     }
 };
 
+TChannelRequest.prototype.resend = function resend() {
+    var self = this;
+    var outReq = self.makeOutRequest();
+    outReq.send(self.arg1, self.arg2, self.arg3, outReqRedone);
+    function outReqRedone(err, res, arg2, arg3) {
+        self.onReqDone(err, res, arg2, arg3);
+    }
+};
+
 TChannelRequest.prototype.onReqDone = function onReqDone(err, res, arg2, arg3) {
     var self = this;
     var now = self.channel.timers.now();
-    self.end = now;
-    self._callback(err, res, arg2, arg3);
+    self.elapsed = now - self.start;
+    if (self.elapsed < self.timeout &&
+        self.shouldRetry(err, res, arg2, arg3)) {
+        process.nextTick(deferResend);
+    } else {
+        self.end = now;
+        self._callback(err, res, arg2, arg3);
+    }
+    function deferResend() {
+        self.resend();
+    }
+};
+
+TChannelRequest.prototype.shouldRetry = function shouldRetry(err, res, arg2, arg3) {
+    var self = this;
+    return false;
 };
 
 module.exports = TChannelRequest;
