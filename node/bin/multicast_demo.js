@@ -109,9 +109,10 @@ var ChecksumPrior = {
     }
 };
 
-// type:1 {body} checksum:4
+// node:4 type:1 {body} checksum:4
 var BodyCases = {};
 var FrameRW = bufrw.Struct([
+    {name: 'node', rw: bufrw.UInt32BE},
     {call: bufrw.Switch(bufrw.UInt8, BodyCases, {
         valKey: 'type',
         dataKey: 'body',
@@ -120,8 +121,11 @@ var FrameRW = bufrw.Struct([
     {name: 'checksum', call: ChecksumPrior}
 ]);
 
+// TODO: an init protocol for de-conflicting random ids
+// id 1 / 2 reserved for such
+
 // A normal string message body
-var MessType = 1;
+var MessType = 3;
 BodyCases[MessType] = bufrw.Struct({
     msg: bufrw.str2
 });
@@ -148,12 +152,17 @@ var socket = dgram.createSocket('udp4', onMessage);
 socket.bind(port, bound);
 
 var ready = false;
+var myId = Math.random() * Math.pow(2, 32);
 
 function handleFrame(remoteAddr, frame) {
     switch (frame.type) {
 
     case MessType:
-        console.log('%s:%s> %s', remoteAddr.address, remoteAddr.port, frame.body.msg);
+        if (frame.node === myId) {
+            return;
+        } else {
+            console.log('%s:%s> %s', remoteAddr.address, remoteAddr.port, frame.body.msg);
+        }
         break;
 
     }
@@ -188,11 +197,17 @@ function bound() {
     lines.on('end', onStdinEnd);
 }
 
-function send(type, body) {
+function send(node, type, body) {
     if (!ready) {
         throw new Error('cannot send, not ready');
     }
+    if (arguments.length === 2) {
+        body = type;
+        type = node;
+        node = myId;
+    }
     var frame = {
+        node: node,
         type: type,
         body: body,
         checksum: 0
