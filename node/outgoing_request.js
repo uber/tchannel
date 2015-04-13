@@ -87,7 +87,7 @@ function TChannelOutgoingRequest(id, options) {
             parentid: null,
             flags: options.trace? 1 : 0,
             hostPort: options.host,
-            serviceName: options.service,
+            serviceName: options.serviceName,
             name: '' // fill this in later
         });
 

@@ -67,6 +67,10 @@ function Agent () {
     // requests will have their traceflags forced to 1. It's intended to be
     // set on the 'top level service'.
     self.forceTrace = false;
+
+    // 'our' service name that is used as the service name on spans for
+    // incoming reuqests
+    self.serviceName = null;
 }
 
 Agent.prototype.getInstance = function () {
