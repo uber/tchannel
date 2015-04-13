@@ -140,7 +140,7 @@ Agent.prototype.setupNewSpan = function setupNewSpan(options) {
     } else {
         parentSpan = options.parentSpan;
         if (options.outgoing) {
-            self.logger.error("TChannel tracer: parent span not specified " +
+            self.logger.warn("TChannel tracer: parent span not specified " +
                 "for outgoing request!", options);
         }
     }
