@@ -87,7 +87,7 @@ TChannelPeers.prototype.add = function add(hostPort, options) {
 
 TChannelPeers.prototype.addPeer = function addPeer(peer) {
     var self = this;
-    if (!peer instanceof TChannelPeer) {
+    if (!(peer instanceof TChannelPeer)) {
         throw new Error('invalid peer'); // TODO typed error
     }
     if (self._map[peer.hostPort]) {
