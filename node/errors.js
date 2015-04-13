@@ -153,7 +153,7 @@ module.exports.TChannelWriteProtocolError = WrappedError({
 });
 
 module.exports.TimeoutError = TypedError({
-    type: 'tchannel.timeout-error',
+    type: 'tchannel.timeout',
     message: 'timed out after {elapsed}ms (limit was {timeout}ms)',
     id: null,
     start: null,

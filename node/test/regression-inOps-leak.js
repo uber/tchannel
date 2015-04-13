@@ -46,7 +46,7 @@ allocCluster.test('does not leak inOps', {
         .send('/timeout', 'h', 'b', onTimeout);
 
     function onTimeout(err) {
-        assert.equal(err && err.type, 'tchannel.timeout-error', 'expected timeout error');
+        assert.equal(err && err.type, 'tchannel.timeout', 'expected timeout error');
         one.peers.get(two.hostPort).connections[0].onTimeoutCheck();
         cluster.assertCleanState(assert, {
             channels: [{

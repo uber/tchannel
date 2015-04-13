@@ -243,7 +243,7 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
 
     function onReqError(err) {
         if (!op.res) buildResponse();
-        if (err.type === 'tchannel.timeout-error') {
+        if (err.type === 'tchannel.timeout') {
             op.res.sendError('Timeout', err.message);
         } else {
             var errName = err.name || err.constructor.name;
