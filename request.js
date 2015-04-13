@@ -116,6 +116,10 @@ TChannelRequest.prototype.shouldRetry = function shouldRetry(err, res, arg2, arg
         }
     }
 
+    if (!res.ok && self.options.shouldApplicationRetry) {
+        return self.options.shouldApplicationRetry(self, res, arg2, arg3);
+    }
+
     return false;
 };
 
