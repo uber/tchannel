@@ -21,7 +21,7 @@
 'use strict';
 
 function main() {
-    var tchan = require('../index');
+    var tchan = require('../channel');
     var replrClient = require('replr/bin/replr');
     var TermClient = require('./term_client');
 

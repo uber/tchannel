@@ -31,7 +31,7 @@ var multiplicity = parseInt(argv.multiplicity, 10) || 2;
 var numClients = parseInt(argv.numClients, 10) || 5;
 var numRequests = parseInt(argv.numRequests, 10) || 20000;
 
-var TChannel = require("../index"),
+var TChannel = require("../channel"),
     metrics = require("metrics"),
     tests = [],
     clientOptions = {

@@ -20,7 +20,7 @@
 
 var test = require('tape');
 
-var TChannel = require('../index.js');
+var TChannel = require('../channel.js');
 
 test('listening on a used port', function t(assert) {
     var otherServer = TChannel();
