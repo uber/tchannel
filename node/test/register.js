@@ -25,7 +25,14 @@ var Buffer = require('buffer').Buffer;
 var allocCluster = require('./lib/alloc-cluster.js');
 var EndpointHandler = require('../endpoint-handler.js');
 
-allocCluster.test('register() with different results', 2, function t(cluster, assert) {
+allocCluster.test('register() with different results', {
+    numPeers: 2,
+    channelOptions: {
+        requestDefaults: {
+            timeout: 100
+        }
+    }
+}, function t(cluster, assert) {
     var one = cluster.channels[0];
     var two = cluster.channels[1];
     var hostOne = cluster.hosts[0];
