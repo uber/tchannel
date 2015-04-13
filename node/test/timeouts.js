@@ -71,13 +71,13 @@ allocCluster.test('requests will timeout', {
             channels: [{
                 peers: [{
                     connections: [
-                        {direction: 'in', inOps: 0, outOps: 0}
+                        {direction: 'in', inReqs: 0, outReqs: 0}
                     ]
                 }]
             }, {
                 peers: [{
                     connections: [
-                        {direction: 'out', inOps: 0, outOps: 0}
+                        {direction: 'out', inReqs: 0, outReqs: 0}
                     ]
                 }]
             }]
