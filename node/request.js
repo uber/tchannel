@@ -32,6 +32,7 @@ function TChannelRequest(channel, options) {
     }
     self.channel = channel;
     self.options = options;
+    self.triedRemoteAddrs = {};
     self.outReqs = [];
     self.timeout = self.options.timeout;
     self.limit = self.options.retryLimit || DEFAULT_RETRY_LIMIT;
@@ -84,6 +85,7 @@ TChannelRequest.prototype.resend = function resend() {
     var outReq = peer.request(self.options);
     self.outReqs.push(outReq);
 
+    self.triedRemoteAddrs[outReq.remoteAddr] = (self.triedRemoteAddrs[outReq.remoteAddr] || 0) + 1;
     outReq.send(self.arg1, self.arg2, self.arg3, outReqRedone);
     function outReqRedone(err, res, arg2, arg3) {
         self.onReqDone(err, res, arg2, arg3);
