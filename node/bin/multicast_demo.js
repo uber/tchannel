@@ -1,5 +1,85 @@
 #!/usr/bin/env node
 
+// -- structure to track outstanding "operations"
+
+function Oper(opts, send) {
+    var self = this;
+    self.id = 0;
+    self.ops = {};
+    self.max = opts.max;
+    self.timeout = opts.timeout;
+    self.nextTime = Infinity;
+    self.timer = null;
+    self.send = send;
+}
+
+Oper.prototype.finish = function finish(id, err, result) {
+    var self = this;
+    var op = self.ops[id];
+    if (op) {
+        op.finish = Date.now();
+        delete self.ops[id];
+        op.callback(err, op, result);
+        // TODO: only reset timer if needed
+        self.onTimeout();
+    }
+};
+
+Oper.prototype.add = function add(callback) {
+    var self = this;
+    var id = self.nextId();
+    if (self.ops[id]) {
+        callback(new Error('duplicate operation'));
+        return;
+    }
+    var now = Date.now();
+    var op = self.ops[id] = {
+        id: id,
+        start: now,
+        finish: 0,
+        deadline: now + self.timeout,
+        callback: callback
+    };
+    self.updateTimer(op.deadline);
+    return op;
+};
+
+Oper.prototype.nextId = function nextId() {
+    var self = this;
+    self.id = (self.id + 1) % self.max;
+    return self.id;
+};
+
+Oper.prototype.updateTimer = function updateTimer(nextTime) {
+    var self = this;
+    if (nextTime < self.nextTime) {
+        self.nextTime = nextTime;
+        var timeout = Math.max(0, self.nextTime - Date.now());
+        clearTimeout(self.timer);
+        self.timer = setTimeout(onTimeout, timeout);
+    }
+    function onTimeout() {
+        self.onTimeout();
+    }
+};
+
+Oper.prototype.onTimeout = function onTimeout() {
+    var self = this;
+    var ids = Object.keys(self.ops);
+    var nextTime = self.nextTime = Infinity;
+    for (var i = 0; i < ids.length; i++) {
+        var id = ids[i];
+        var op = self.ops[id];
+        if (op.deadline < Date.now()) {
+            delete self.ops[id];
+            op.callback(new Error('timed out'), op, null);
+        } else {
+            nextTime = Math.min(nextTime, op.deadline);
+        }
+    }
+    self.updateTimer(nextTime);
+};
+
 // -- frame read/write definitions
 
 var CRC32C = require("sse4_crc32").calculate;
