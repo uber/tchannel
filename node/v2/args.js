@@ -91,11 +91,12 @@ ArgsRW.prototype.writeInto = function writeInto(body, buffer, offset) {
         for (var i = 0; i < body.args.length; i++) {
             res = self.argrw.writeInto(body.args[i], buffer, offset);
             if (res.err) return res;
+            var buf = buffer.slice(offset + self.overhead, res.offset);
+            body.csum.update1(buf, body.csum.val);
             offset = res.offset;
         }
     }
 
-    body.csum.update(body.args, body.csum.val);
     res = Checksum.RW.writeInto(body.csum, buffer, start);
     if (!res.err) res.offset = offset;
 
@@ -149,6 +150,8 @@ ArgsRW.prototype.writeFragmentInto = function writeFragmentInto(body, buffer, of
         }
         res = self.argrw.writeInto(arg, buffer, offset);
         if (res.err) return res;
+        var buf = buffer.slice(offset + self.overhead, res.offset);
+        body.csum.update1(buf, body.csum.val);
         offset = res.offset;
         remain = buffer.length - offset;
     } while (remain >= self.overhead && ++i < body.args.length);
