@@ -19,7 +19,13 @@
 // THE SOFTWARE.
 
 var async = require('async');
+var metrics = require("metrics");
 var parseArgs = require('minimist');
+
+var TChannel = require("../channel");
+
+// TODO: disentangle the global closure of numClients and numRequestss and move
+// these after the harness class declaration
 var argv = parseArgs(process.argv.slice(2), {
     alias: {
         m: 'multiplicity',
@@ -43,9 +49,7 @@ argv.pipeline = argv.pipeline
         return parseInt(part, 10);
     });
 
-var TChannel = require("../channel"),
-    metrics = require("metrics"),
-    tests = [];
+// -- test harness
 
 function Test(args) {
     this.args = args;
@@ -188,6 +192,10 @@ Test.prototype.printStats = function () {
     var obj = this.getStats();
     process.stdout.write(JSON.stringify(obj) + "\n");
 };
+
+// -- define tests
+
+var tests = [];
 
 var smallStr = "1234";
 var largeStr = new Array(4097).join("-");
