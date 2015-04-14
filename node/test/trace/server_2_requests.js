@@ -24,7 +24,6 @@ var test = require('tape');
 
 var TChannel = require('../../channel.js');
 var EndpointHandler = require('../../endpoint-handler.js');
-var TracingAgent = require('../../trace/agent');
 
 var logger = DebugLogtron('example');
 
@@ -35,17 +34,16 @@ test('basic tracing test', function (assert) {
 
     var spans = [];
 
-    TracingAgent.getInstance().configure({
-        reporter: function (span) {
-            spans.push(span);
-            console.log(span.toString());
-        }
-    });
+    function traceReporter(span) {
+        spans.push(span);
+        console.log(span.toString());
+    }
 
     var subservice = new TChannel({
         serviceName: 'subservice',
         handler: EndpointHandler(),
         trace: true,
+        traceReporter: traceReporter,
         logger: logger
     });
 
@@ -53,11 +51,13 @@ test('basic tracing test', function (assert) {
         serviceName: 'server',
         handler: EndpointHandler(),
         trace: true,
+        traceReporter: traceReporter,
         logger: logger
     });
 
     var client = new TChannel({
         logger: logger,
+        traceReporter: traceReporter,
         trace: true
     });
 
@@ -78,8 +78,12 @@ test('basic tracing test', function (assert) {
 
         setTimeout(function () {
             server
-                .request({host: '127.0.0.1:4042', serviceName: 'subservice', trace: true})
-                .send('/foobar', 'arg1', 'arg2', function (err, subRes) {
+                .request({
+                    host: '127.0.0.1:4042', 
+                    serviceName: 'subservice', 
+                    parentSpan: req.span,
+                    trace: true
+                }).send('/foobar', 'arg1', 'arg2', function (err, subRes) {
                     console.log("top level recv from subservice: " + subRes);
                     if (err) return res.sendOk('error', err);
 
@@ -89,8 +93,12 @@ test('basic tracing test', function (assert) {
 
         process.nextTick(function () {
             server
-                .request({host: '127.0.0.1:4042', serviceName: 'subservice', trace: true})
-                .send('/barbaz', 'arg1', 'arg2', function (err, subRes) {
+                .request({
+                    host: '127.0.0.1:4042', 
+                    serviceName: 'subservice', 
+                    parentSpan: req.span,
+                    trace: true
+                }).send('/barbaz', 'arg1', 'arg2', function (err, subRes) {
                     console.log("top level recv from subservice: " + subRes);
                     if (err) return res.sendOk('error', err);
 
