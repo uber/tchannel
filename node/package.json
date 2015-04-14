@@ -30,6 +30,7 @@
     "readable-stream": "1.0.33",
     "ready-signal": "^1.1.1",
     "run-parallel": "^1.1.0",
+    "sse4_crc32": "^3.1.0",
     "xtend": "^4.0.0"
   },
   "devDependencies": {

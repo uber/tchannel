@@ -22,6 +22,7 @@
 
 var farm32 = require('farmhash').fingerprint32;
 var crc32 = require('crc').crc32;
+var crc32c = require('sse4_crc32').calculate;
 var bufrw = require('bufrw');
 var errors = require('../errors');
 
@@ -48,6 +49,7 @@ Checksum.objOrType = function objOrType(arg) {
         case 0x00:
         case 0x01:
         case 0x02:
+        case 0x03:
             return new Checksum(arg);
         default:
             throw new Error('invalid checsum type');
@@ -58,6 +60,7 @@ Checksum.Types = Object.create(null);
 Checksum.Types.None = 0x00;
 Checksum.Types.CRC32 = 0x01;
 Checksum.Types.Farm32 = 0x02;
+Checksum.Types.CRC32C = 0x03;
 
 // csumtype:1 (csum:4){0,1}
 
@@ -65,6 +68,7 @@ var rwCases = Object.create(null);
 rwCases[Checksum.Types.None] = bufrw.Null;
 rwCases[Checksum.Types.CRC32] = bufrw.UInt32BE;
 rwCases[Checksum.Types.Farm32] = bufrw.UInt32BE;
+rwCases[Checksum.Types.CRC32C] = bufrw.UInt32BE;
 
 Checksum.RW = bufrw.Switch(bufrw.UInt8, rwCases, {
     cons: Checksum,
@@ -90,6 +94,11 @@ Checksum.prototype.compute = function compute(args, prior) {
         case 0x02:
             for (i = 0; i < args.length; i++) {
                 csum = farm32(args[i], csum);
+            }
+            break;
+        case 0x03:
+            for (i = 0; i < args.length; i++) {
+                csum = crc32c(args[i], csum);
             }
             break;
         default:
