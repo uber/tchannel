@@ -44,6 +44,7 @@ function TChannelRequest(channel, options) {
     self.end = 0;
     self.elapsed = 0;
 
+    self.service = options.service || '';
     self.headers = self.options.headers || {}; // so that as-foo can punch req.headers.X
     self.options.headers = self.headers; // for passing to peer.request(opts) later
 
