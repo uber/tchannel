@@ -686,14 +686,19 @@ This behavior changes slightly when messages are fragmented. See the
 `type:1` | scheme                 | value length
 ---------|------------------------|-------------
 `0x00`   | none                   | 0 bytes
-`0x01`   | crc32                  | 4 bytes
+`0x01`   | crc-32 (adler-32)      | 4 bytes
 `0x02`   | farmhash Fingerprint32 | 4 bytes
+`0x03`   | crc-32C                | 4 bytes
 
-CRC32 is intended as a checksum, and many implementations exist, including
-SSE4.2 instructions on supported platforms.
+CRC32 is intended as a checksum as defined by Adler for zlib (technically this
+isn't a CRC according to wikipedia, although it seems to be frequently confused
+with one).
 
 Farmhash is a hash function with excellent distribution. It is surprisingly
 faster than CRC32 on modern CPUs, depending on how it is compiled.
+
+CRC32-C is the Castagnoli variant which is implemented directly by Intel CPUS
+(SSE4.2) and used by other systems (e.g. btrfs, ext4, SCTP).
 
 ## Fragmentation
 
