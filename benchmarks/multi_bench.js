@@ -197,18 +197,25 @@ Test.prototype.printStats = function () {
 
 var tests = [];
 
+argv.pipeline.forEach(function each(pipeline) {
+    tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: pipeline}));
+});
+
 var smallStr = "1234";
-var largeStr = new Array(4097).join("-");
 var smallStrSet = JSON.stringify(['foo_rand000000000000', smallStr]);
 var smallBufSet = new Buffer(smallStrSet);
+
+argv.pipeline.forEach(function each(pipeline) {
+    tests.push(new Test({descr: "SET small str", command: "set", args: smallStrSet, pipeline: pipeline}));
+    tests.push(new Test({descr: "SET small buf", command: "set", args: smallBufSet, pipeline: pipeline}));
+    tests.push(new Test({descr: "GET small str", command: "get", args: "foo_rand000000000000", pipeline: pipeline}));
+});
+
+var largeStr = new Array(4097).join("-");
 var largeStrSet = JSON.stringify(['foo_rand000000000001', largeStr]);
 var largeBufSet = new Buffer(largeStrSet);
 
 argv.pipeline.forEach(function each(pipeline) {
-    tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: pipeline}));
-    tests.push(new Test({descr: "SET small str", command: "set", args: smallStrSet, pipeline: pipeline}));
-    tests.push(new Test({descr: "SET small buf", command: "set", args: smallBufSet, pipeline: pipeline}));
-    tests.push(new Test({descr: "GET small str", command: "get", args: "foo_rand000000000000", pipeline: pipeline}));
     tests.push(new Test({descr: "SET large str", command: "set", args: largeStrSet, pipeline: pipeline}));
     tests.push(new Test({descr: "SET large buf", command: "set", args: largeBufSet, pipeline: pipeline}));
     tests.push(new Test({descr: "GET large str", command: "get", args: 'foo_rand000000000001', pipeline: pipeline}));
