@@ -8,7 +8,6 @@
     "test": "npm run lint -s && node test/index.js",
     "benchmark": "echo '!!! DEPRECATED: Better to just run `node benchmark` directly' >&2; node benchmarks",
     "take-benchmark": "node benchmarks/index.js -o benchmarks/$(git rev-parse --short HEAD).json -- -m 5",
-    "compare_to_master": "benchmarks/compare_to.sh -m 5 master",
     "cover": "istanbul cover --print detail --report html -- test/index.js",
     "view-cover": "opn coverage/index.html",
     "check-licence": "uber-licence --dry",
