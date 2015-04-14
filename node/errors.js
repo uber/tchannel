@@ -68,6 +68,13 @@ module.exports.InvalidCodeStringError = TypedError({
     codeString: null
 });
 
+module.exports.InvalidErrorCodeError = TypedError({
+    type: 'tchannel.invalid-error-code',
+    message: 'invalid tchannel error code {errorCode}',
+    errorCode: null,
+    originalId: null
+});
+
 module.exports.InvalidFrameTypeError = TypedError({
     type: 'tchannel.invalid-frame-type',
     message: 'invalid frame type {typeNumber}',
@@ -122,6 +129,14 @@ module.exports.ResponseAlreadyDone = TypedError({
     type: 'tchannel.response-already-done',
     message: 'cannot {attempted}, response already done',
     attempted: null
+});
+
+module.exports.SocketError = WrappedError({
+    type: 'tchannel.socket',
+    message: 'tchannel socket error ({code} from {syscall}): {origMessage}',
+    hostPort: null,
+    direction: null,
+    remoteAddr: null
 });
 
 module.exports.SocketClosedError = TypedError({

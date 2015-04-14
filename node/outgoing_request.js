@@ -100,6 +100,7 @@ function TChannelOutgoingRequest(id, options) {
         self.span = null;
     }
 
+    self.err = null;
     self.res = null;
     self.start = self.timers.now();
     self.timedOut = false;
@@ -189,12 +190,14 @@ TChannelOutgoingRequest.prototype.hookupStreamCallback = function hookupCallback
     function onError(err) {
         if (called) return;
         called = true;
+        self.err = err;
         callback(err, null, null);
     }
 
     function onResponse(res) {
         if (called) return;
         called = true;
+        self.res = res;
         callback(null, self, res);
     }
 
@@ -214,12 +217,14 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
     function onError(err) {
         if (called) return;
         called = true;
+        self.err = err;
         callback(err, null, null);
     }
 
     function onResponse(res) {
         if (called) return;
         called = true;
+        self.res = res;
         if (!res.streamed) {
             callback(null, res, res.arg2, res.arg3);
             return;
