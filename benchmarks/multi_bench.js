@@ -31,7 +31,7 @@ var argv = parseArgs(process.argv.slice(2), {
         multiplicity: 2,
         numClients: 5,
         numRequests: 20000,
-        pipeline: '1,50,200,20000'
+        pipeline: '10,100,1000'
     }
 });
 var multiplicity = parseInt(argv.multiplicity, 10);
