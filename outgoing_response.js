@@ -27,8 +27,6 @@ var inherits = require('util').inherits;
 var errors = require('./errors');
 var OutArgStream = require('./argstream').OutArgStream;
 
-var emptyBuffer = Buffer(0);
-
 var States = Object.create(null);
 States.Initial = 0;
 States.Streaming = 1;
@@ -205,11 +203,7 @@ TChannelOutgoingResponse.prototype.send = function send(res1, res2) {
         self.arg2.end(res1);
         self.arg3.end(res2);
     } else {
-        self.sendCallResponseFrame([
-            self.arg1 || emptyBuffer,
-            res1 ? Buffer(res1) : emptyBuffer,
-            res2 ? Buffer(res2) : emptyBuffer
-        ], true);
+        self.sendCallResponseFrame([self.arg1, res1, res2], true);
         self.emit('finish');
     }
 };
