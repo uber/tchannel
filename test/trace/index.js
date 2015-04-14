@@ -18,20 +18,5 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-var fork = require('child_process').fork;
-var runSeries = require('run-series');
-
-function forktest (file) {
-    return function (done) {
-        var proc = fork(__dirname + '/' + file);
-        proc.on('exit', done);
-    };
-}
-
-runSeries([
-    forktest('basic_server'),
-    forktest('server_2_requests'),
-    forktest('cross_instance'),
-    forktest('manual_propagate'),
-    forktest('server_2_requests_manual')
-]);
+require('./basic_server');
+require('./server_2_requests');

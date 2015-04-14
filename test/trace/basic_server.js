@@ -22,7 +22,6 @@ var CountedReadySignal = require('ready-signal/counted');
 var DebugLogtron = require('debug-logtron');
 var test = require('tape');
 
-var TracingAgent = require('../../trace/agent');
 var TChannel = require('../../channel.js');
 var EndpointHandler = require('../../endpoint-handler.js');
 
@@ -35,17 +34,16 @@ test('basic tracing test', function (assert) {
 
     var spans = [];
 
-    TracingAgent.getInstance().configure({
-        reporter: function (span) {
-            spans.push(span);
-            console.log(span.toString());
-        }
-    });
+    function traceReporter(span) {
+        spans.push(span);
+        console.log(span.toString());
+    }
 
     var subservice = new TChannel({
         handler: EndpointHandler(),
         serviceName: 'subservice',
         logger: logger,
+        traceReporter: traceReporter,
         trace: true
     });
 
@@ -53,11 +51,13 @@ test('basic tracing test', function (assert) {
         serviceName: 'server',
         handler: EndpointHandler(),
         logger: logger,
+        traceReporter: traceReporter,
         trace: true
     });
 
     var client = new TChannel({
         logger: logger,
+        traceReporter: traceReporter,
         trace: true
     });
 
@@ -71,8 +71,12 @@ test('basic tracing test', function (assert) {
         console.log("top level sending to subservice");
         setTimeout(function () {
             server
-                .request({host: '127.0.0.1:4042', serviceName: 'subservice', trace: true})
-                .send('/foobar', 'arg1', 'arg2', function (err, subRes) {
+                .request({
+                    host: '127.0.0.1:4042', 
+                    serviceName: 'subservice', 
+                    parentSpan: req.span,
+                    trace: true
+                }).send('/foobar', 'arg1', 'arg2', function (err, subRes) {
                     console.log("top level recv from subservice");
                     if (err) return res.sendOk('error', err);
                     res.sendOk('result', 'success: ' + subRes);
