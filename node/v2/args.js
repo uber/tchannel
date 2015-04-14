@@ -37,6 +37,10 @@ function ArgsRW(argrw) {
     var self = this;
     bufrw.Base.call(self);
     self.argrw = argrw || bufrw.buf2;
+    self.overhead = self.argrw.sizerw.width;
+    if (!self.overhead) {
+        throw new Error('unable to determine argrw overhead');
+    }
 }
 inherits(ArgsRW, bufrw.Base);
 
@@ -124,16 +128,15 @@ ArgsRW.prototype.writeFragmentInto = function writeFragmentInto(body, buffer, of
     var self = this;
     var res;
     var i = 0;
-    var overhead = self.argrw.sizerw.width;
     var remain = buffer.length - offset;
 
     do {
         var arg = body.args[i] || Buffer(0);
-        var min = overhead + arg.length ? 1 : 0;
+        var min = self.overhead + arg.length ? 1 : 0;
         if (remain < min) break;
-        var need = overhead + arg.length;
+        var need = self.overhead + arg.length;
         if (need > remain) {
-            var j = remain - overhead;
+            var j = remain - self.overhead;
             body.args[i] = arg.slice(0, j);
             body.cont = new body.constructor.Cont(
                 body.flags & Flags.Fragment,
@@ -148,7 +151,7 @@ ArgsRW.prototype.writeFragmentInto = function writeFragmentInto(body, buffer, of
         if (res.err) return res;
         offset = res.offset;
         remain = buffer.length - offset;
-    } while (remain >= overhead && ++i < body.args.length);
+    } while (remain >= self.overhead && ++i < body.args.length);
 
     return res || WriteResult.just(offset);
 };
