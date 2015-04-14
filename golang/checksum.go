@@ -41,6 +41,9 @@ const (
 
 	// ChecksumTypeFarmhash indicates the message checksum is calculated using Farmhash
 	ChecksumTypeFarmhash ChecksumType = 2
+
+	// ChecksumTypeCrc32C indicates the message checksum is calculated using crc32c
+	ChecksumTypeCrc32C ChecksumType = 3
 )
 
 // ChecksumSize returns the size in bytes of the checksum calculation
@@ -48,7 +51,7 @@ func (t ChecksumType) ChecksumSize() int {
 	switch t {
 	case ChecksumTypeNone:
 		return 0
-	case ChecksumTypeCrc32:
+	case ChecksumTypeCrc32, ChecksumTypeCrc32C:
 		return crc32.Size
 	case ChecksumTypeFarmhash:
 		return 4
@@ -63,6 +66,8 @@ func (t ChecksumType) New() Checksum {
 	case ChecksumTypeNone:
 		return nullChecksum{}
 	case ChecksumTypeCrc32:
+		return &crc32Checksum{crc32: crc32.NewIEEE()}
+	case ChecksumTypeCrc32C:
 		return &crc32Checksum{crc32: crc32.New(crc32CastagnoliTable)}
 	case ChecksumTypeFarmhash:
 		// TODO(mmihic): Implement
