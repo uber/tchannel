@@ -331,17 +331,6 @@ TChannel.prototype.address = function address() {
     }
 };
 
-/* jshint maxparams:5 */
-// TODO: deprecated, callers should use .request directly
-TChannel.prototype.send = function send(options, arg1, arg2, arg3, callback) {
-    var self = this;
-
-    return self
-        .request(options)
-        .send(arg1, arg2, arg3, callback);
-};
-/* jshint maxparams:4 */
-
 TChannel.prototype.request = function channelRequest(options) {
     var self = this;
 
