@@ -56,8 +56,8 @@ function Test(args) {
     this.args = args;
 
     this.arg1 = new Buffer(args.command);
-    this.arg2 = args.args ? new Buffer(args.args) : null;
-    this.arg3 = null;
+    this.arg2 = args.arg2 || null;
+    this.arg3 = args.arg3 || null;
 
     this.callback = null;
     this.clients = [];
@@ -215,25 +215,18 @@ argv.sizes.forEach(function each(size) {
         throw new Error("can't have size " + sizeDesc);
     }
     var str = buf.toString('base64').slice(0, size); // chop off any "==" trailer
-    var strSet = JSON.stringify([key, str]);
-    var bufSet = new Buffer(strSet);
     argv.pipeline.forEach(function each(pipeline) {
         tests.push(new Test({
-            descr: "SET " + sizeDesc + " str",
+            descr: "SET " + sizeDesc,
             command: "set",
-            args: strSet,
+            arg2: key,
+            arg3: str,
             pipeline: pipeline
         }));
         tests.push(new Test({
-            descr: "SET " + sizeDesc + " buf",
-            command: "set",
-            args: bufSet,
-            pipeline: pipeline
-        }));
-        tests.push(new Test({
-            descr: "GET " + sizeDesc + " str",
+            descr: "GET " + sizeDesc,
             command: "get",
-            args: key,
+            arg2: key,
             pipeline: pipeline
         }));
     });

@@ -31,26 +31,20 @@ server.handler.register('ping', function onPing(req, res) {
     res.sendOk('pong', null);
 });
 
-function safeParse(str) {
-    try {
-        return JSON.parse(str);
-    } catch (e) {
-        return null;
-    }
-}
-
 server.handler.register('set', function onSet(req, res, arg2, arg3) {
-    var parts = safeParse(arg2.toString('utf8'));
-    keys[parts[0]] = parts[1];
+    var key = arg2.toString('utf8');
+    var val = arg3.toString('utf8');
+    keys[key] = val;
     res.sendOk('ok', 'really ok');
 });
 
 server.handler.register('get', function onGet(req, res, arg2, arg3){
-    var str = arg2.toString('utf8');
-    if (keys[str] !== undefined) {
-        res.sendOk(JSON.stringify(keys[str].length), JSON.stringify(keys[str]));
+    var key = arg2.toString('utf8');
+    if (keys[key] !== undefined) {
+        var val = keys[key];
+        res.sendOk(val.length.toString(10), val);
     } else {
-        res.sendNotOk(null, 'key not found: ' + str);
+        res.sendNotOk('key not found', key);
     }
 });
 
