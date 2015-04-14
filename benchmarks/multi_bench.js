@@ -43,11 +43,7 @@ var argv = parseArgs(process.argv.slice(2), {
 var multiplicity = parseInt(argv.multiplicity, 10);
 var numClients = parseInt(argv.numClients, 10);
 var numRequests = parseInt(argv.numRequests, 10);
-argv.pipeline = argv.pipeline
-    .split(/\s*,\s*/)
-    .map(function each(part) {
-        return parseInt(part, 10);
-    });
+argv.pipeline = parseIntList(argv.pipeline);
 
 // -- test harness
 
@@ -233,3 +229,14 @@ function next(i, j, done) {
 next(0, 0, function() {
     process.exit(0);
 });
+
+function parseIntList(str) {
+    if (typeof str === 'number') {
+        return [str];
+    }
+    return str
+        .split(/\s*,\s*/)
+        .map(function each(part) {
+            return parseInt(part, 10);
+        });
+}
