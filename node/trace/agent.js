@@ -30,12 +30,34 @@ function Agent () {
     }
     var self = this;
     self.refcnt = 0;
+    self.currentSpan = null;
+
+    self.autoTracePropagate = false;
+
+    self.logger = DebugLogtron('tchannelTrace');
+
+    // If this is set to true in a call to Agent#configure, all incoming
+    // requests will have their traceflags forced to 1. It's intended to be
+    // set on the 'top level service'.
+    self.forceTrace = false;
+
+    // 'our' service name that is used as the service name on spans for
+    // incoming reuqests
+    self.serviceName = null;
+
+    self.listening = false;
+    self.asyncListener = null;
+
+    self.autoTracePropagate = true;
+}
+
+Agent.prototype.setupAutoTracePropagate = 
+function enableAutoTracePropagate () {
+    var self = this;
 
     if (!process.addAsyncListener) {
         require('async-listener');
     }
-
-    self.currentSpan = null;
 
     self.asyncListener = process.createAsyncListener({
         create: function () {
@@ -60,18 +82,7 @@ function Agent () {
     });
 
     self.listening = false;
-
-    self.logger = DebugLogtron('tchannelTrace');
-
-    // If this is set to true in a call to Agent#configure, all incoming
-    // requests will have their traceflags forced to 1. It's intended to be
-    // set on the 'top level service'.
-    self.forceTrace = false;
-
-    // 'our' service name that is used as the service name on spans for
-    // incoming reuqests
-    self.serviceName = null;
-}
+};
 
 Agent.prototype.getInstance = function () {
     return this;
@@ -122,7 +133,17 @@ Agent.prototype.setupNewSpan = function setupNewSpan(options) {
         flags: options.flags
     });
 
-    var parentSpan = self.getCurrentSpan();
+    var parentSpan;
+    if (self.asyncListener) {
+        parentSpan = self.getCurrentSpan();
+    } else {
+        parentSpan = options.parentSpan;
+        if (options.outgoing && !parentSpan && !options.topLevelRequest) {
+            self.logger.warn("TChannel tracer: parent span not specified " +
+                "for outgoing request!", options);
+        }
+    }
+
     if (parentSpan && (!options.parentid && !options.traceid)) {
         // If there's a parentSpan and the parentid and traceid weren't
         // specified, we need to propagate the ids from the parent span.
@@ -137,11 +158,15 @@ Agent.prototype.setupNewSpan = function setupNewSpan(options) {
     return span;
 };
 
-Agent.prototype.ref = function ref() {
+Agent.prototype.ref = function ref(options) {
     var self = this;
+    self.configure(options);
     if (self.refcnt++ <= 0) {
         if (self.refcnt <= 0) self.refcnt = 1; // TODO: notable?
-        if (!self.listening) {
+        if (!self.listening && self.autoTracePropagate) {
+            if (!self.asyncListener) {
+                self.setupAutoTracePropagate();
+            }
             process.addAsyncListener(self.asyncListener);
             self.listening = true;
         }

@@ -112,7 +112,9 @@ function TChannel(options) {
     self.destroyed = false;
 
     if (self.options.trace) {
-        self.tracer = require('./trace/agent').ref();
+        self.tracer = require('./trace/agent').ref({
+            autoTracePropagate: self.options.autoTracePropagate !== false
+        });
         if (self.options.requestDefaults !== false) {
             self.options.requestDefaults.trace = true;
         }
