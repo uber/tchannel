@@ -65,8 +65,16 @@ TChannelSelfConnection.prototype.buildOutgoingRequest = function buildOutgoingRe
     inreq.on('error', onError);
     inreq.on('response', onResponse);
     inreq.outreq = outreq; // TODO: make less hacky when have proper subclasses
-    self.handleCallRequest(inreq);
+
+    process.nextTick(handleRequest);
+
     return outreq;
+
+    function handleRequest() {
+        inreq.headers = outreq.headers;
+
+        self.handleCallRequest(inreq);
+    }
 
     function onError(err) {
         if (called) return;
