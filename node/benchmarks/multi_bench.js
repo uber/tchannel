@@ -28,12 +28,15 @@ var argv = parseArgs(process.argv.slice(2), {
         p: 'pipeline'
     },
     default: {
+        multiplicity: 2,
+        numClients: 5,
+        numRequests: 20000,
         pipeline: '1,50,200,20000'
     }
 });
-var multiplicity = parseInt(argv.multiplicity, 10) || 2;
-var numClients = parseInt(argv.numClients, 10) || 5;
-var numRequests = parseInt(argv.numRequests, 10) || 20000;
+var multiplicity = parseInt(argv.multiplicity, 10);
+var numClients = parseInt(argv.numClients, 10);
+var numRequests = parseInt(argv.numRequests, 10);
 argv.pipeline = argv.pipeline
     .split(/\s*,\s*/)
     .map(function each(part) {
