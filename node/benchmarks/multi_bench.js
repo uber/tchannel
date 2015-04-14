@@ -23,6 +23,8 @@ var metrics = require("metrics");
 var parseArgs = require('minimist');
 
 var TChannel = require("../channel");
+var base2 = require('../test/lib/base2');
+var LCGStream = require('../test/lib/rng_stream');
 
 // TODO: disentangle the global closure of numClients and numRequestss and move
 // these after the harness class declaration
@@ -31,19 +33,22 @@ var argv = parseArgs(process.argv.slice(2), {
         m: 'multiplicity',
         c: 'numClients',
         r: 'numRequests',
-        p: 'pipeline'
+        p: 'pipeline',
+        s: 'sizes'
     },
     default: {
         multiplicity: 2,
         numClients: 5,
         numRequests: 20000,
-        pipeline: '10,100,1000'
+        pipeline: '10,100,1000',
+        sizes: '4,4096'
     }
 });
 var multiplicity = parseInt(argv.multiplicity, 10);
 var numClients = parseInt(argv.numClients, 10);
 var numRequests = parseInt(argv.numRequests, 10);
 argv.pipeline = parseIntList(argv.pipeline);
+argv.sizes = parseIntList(argv.sizes);
 
 // -- test harness
 
@@ -197,24 +202,41 @@ argv.pipeline.forEach(function each(pipeline) {
     tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: pipeline}));
 });
 
-var smallStr = "1234";
-var smallStrSet = JSON.stringify(['foo_rand000000000000', smallStr]);
-var smallBufSet = new Buffer(smallStrSet);
-
-argv.pipeline.forEach(function each(pipeline) {
-    tests.push(new Test({descr: "SET small str", command: "set", args: smallStrSet, pipeline: pipeline}));
-    tests.push(new Test({descr: "SET small buf", command: "set", args: smallBufSet, pipeline: pipeline}));
-    tests.push(new Test({descr: "GET small str", command: "get", args: "foo_rand000000000000", pipeline: pipeline}));
+var randBytes = new LCGStream({
+    seed: 1234,
+    limit: Infinity
 });
 
-var largeStr = new Array(4097).join("-");
-var largeStrSet = JSON.stringify(['foo_rand000000000001', largeStr]);
-var largeBufSet = new Buffer(largeStrSet);
-
-argv.pipeline.forEach(function each(pipeline) {
-    tests.push(new Test({descr: "SET large str", command: "set", args: largeStrSet, pipeline: pipeline}));
-    tests.push(new Test({descr: "SET large buf", command: "set", args: largeBufSet, pipeline: pipeline}));
-    tests.push(new Test({descr: "GET large str", command: "get", args: 'foo_rand000000000001', pipeline: pipeline}));
+argv.sizes.forEach(function each(size) {
+    var sizeDesc = base2.pretty(size, 'B');
+    var key = 'foo_rand000000000000';
+    var buf = randBytes.read(Math.ceil(size / 4 * 3)); // 4 base64 encoded bytes per 3 raw bytes
+    if (!buf) {
+        throw new Error("can't have size " + sizeDesc);
+    }
+    var str = buf.toString('base64').slice(0, size); // chop off any "==" trailer
+    var strSet = JSON.stringify([key, str]);
+    var bufSet = new Buffer(strSet);
+    argv.pipeline.forEach(function each(pipeline) {
+        tests.push(new Test({
+            descr: "SET " + sizeDesc + " str",
+            command: "set",
+            args: strSet,
+            pipeline: pipeline
+        }));
+        tests.push(new Test({
+            descr: "SET " + sizeDesc + " buf",
+            command: "set",
+            args: bufSet,
+            pipeline: pipeline
+        }));
+        tests.push(new Test({
+            descr: "GET " + sizeDesc + " str",
+            command: "get",
+            args: key,
+            pipeline: pipeline
+        }));
+    });
 });
 
 function next(i, j, done) {
