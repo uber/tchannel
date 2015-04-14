@@ -20,7 +20,6 @@
 
 'use strict';
 
-var extend = require('xtend');
 var bufrw = require('bufrw');
 var ReadMachine = require('bufrw/stream/read_machine');
 var inherits = require('util').inherits;
@@ -38,13 +37,21 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     var self = this;
     TChannelConnectionBase.call(self, channel, direction, remoteAddr);
     self.socket = socket;
-    self.handler = new v2.Handler(extend({
+
+    var opts = {
         logger: self.channel.logger,
         random: self.channel.random,
         timers: self.channel.timers,
         hostPort: self.channel.hostPort,
         tracer: self.tracer
-    }, self.options));
+    };
+    // jshint forin:false
+    for (var prop in self.options) {
+        opts[prop] = self.options[prop];
+    }
+    // jshint forin:true
+    self.handler = new v2.Handler(opts);
+
     self.mach = ReadMachine(bufrw.UInt16BE, v2.Frame.RW);
 
     self.setupSocket();
@@ -248,22 +255,36 @@ TChannelConnection.prototype.onSocketError = function onSocketError(err) {
 
 TChannelConnection.prototype.buildOutgoingRequest = function buildOutgoingRequest(options) {
     var self = this;
-    options = extend({
+    var opts = {
         logger: self.logger,
         random: self.random,
         timers: self.timers
-    }, options);
-    return self.handler.buildOutgoingRequest(options);
+    };
+    if (options) {
+        // jshint forin:false
+        for (var prop in options) {
+            opts[prop] = options[prop];
+        }
+        // jshint forin:true
+    }
+    return self.handler.buildOutgoingRequest(opts);
 };
 
 TChannelConnection.prototype.buildOutgoingResponse = function buildOutgoingResponse(req, options) {
     var self = this;
-    options = extend({
+    var opts = {
         logger: self.logger,
         random: self.random,
         timers: self.timers
-    }, options);
-    return self.handler.buildOutgoingResponse(req, options);
+    };
+    if (options) {
+        // jshint forin:false
+        for (var prop in options) {
+            opts[prop] = options[prop];
+        }
+        // jshint forin:true
+    }
+    return self.handler.buildOutgoingResponse(req, opts);
 };
 
 module.exports = TChannelConnection;

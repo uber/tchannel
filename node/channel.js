@@ -344,27 +344,38 @@ TChannel.prototype.request = function channelRequest(options) {
         throw new Error('cannot request() to destroyed tchannel'); // TODO typed error
     }
 
-    options = extend(self.requestDefaults, options);
+    var prop;
+    var opts = {};
+    // jshint forin:false
+    for (prop in self.requestDefaults) {
+        opts[prop] = self.requestDefaults[prop];
+    }
+    if (options) {
+        for (prop in options) {
+            opts[prop] = options[prop];
+        }
+    }
+    // jshint forin:true
 
-    if (!options.service && options.serviceName) {
-        options.service = options.serviceName;
+    if (!opts.service && opts.serviceName) {
+        opts.service = opts.serviceName;
     }
 
-    if (!self.serviceName && !options.host) {
-        if (options.service &&
+    if (!self.serviceName && !opts.host) {
+        if (opts.service &&
             self.subChannels &&
-            self.subChannels[options.service]) {
-            return self.subChannels[options.service].request(options);
+            self.subChannels[opts.service]) {
+            return self.subChannels[opts.service].request(opts);
         } else {
             throw errors.TopLevelRequestError();
         }
     }
 
     var req = null;
-    if (options.streamed) {
-        req = self.peers.request(null, options);
+    if (opts.streamed) {
+        req = self.peers.request(null, opts);
     } else {
-        req = new TChannelRequest(self, options);
+        req = new TChannelRequest(self, opts);
     }
     self.emit('request', req);
     return req;
