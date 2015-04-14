@@ -23,7 +23,7 @@
 var bufrw = require('bufrw');
 var inherits = require('util').inherits;
 var IterStream = require('./iter_stream');
-var LCG = require('../lcg');
+var LCG = require('../../lib/lcg');
 
 function LCGStream(options) {
     if (!(this instanceof LCGStream)) {
@@ -31,7 +31,7 @@ function LCGStream(options) {
     }
     var self = this;
     IterStream.call(self, bufrw.UInt32BE, options);
-    self.rng = LCG(options.seed);
+    self.rng = new LCG(options.seed);
 }
 inherits(LCGStream, IterStream);
 

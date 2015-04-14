@@ -19,40 +19,45 @@
 // THE SOFTWARE.
 
 var async = require('async');
+var metrics = require("metrics");
 var parseArgs = require('minimist');
+
+var TChannel = require("../channel");
+var base2 = require('../test/lib/base2');
+var LCGStream = require('../test/lib/rng_stream');
+
+// TODO: disentangle the global closure of numClients and numRequestss and move
+// these after the harness class declaration
 var argv = parseArgs(process.argv.slice(2), {
     alias: {
         m: 'multiplicity',
         c: 'numClients',
         r: 'numRequests',
-        p: 'pipeline'
+        p: 'pipeline',
+        s: 'sizes'
     },
     default: {
-        multiplicity: 2,
+        multiplicity: 1,
         numClients: 5,
         numRequests: 20000,
-        pipeline: '10,100,1000'
+        pipeline: '10,100,1000,20000',
+        sizes: '4,4096'
     }
 });
 var multiplicity = parseInt(argv.multiplicity, 10);
 var numClients = parseInt(argv.numClients, 10);
 var numRequests = parseInt(argv.numRequests, 10);
-argv.pipeline = argv.pipeline
-    .split(/\s*,\s*/)
-    .map(function each(part) {
-        return parseInt(part, 10);
-    });
+argv.pipeline = parseIntList(argv.pipeline);
+argv.sizes = parseIntList(argv.sizes);
 
-var TChannel = require("../channel"),
-    metrics = require("metrics"),
-    tests = [];
+// -- test harness
 
 function Test(args) {
     this.args = args;
 
     this.arg1 = new Buffer(args.command);
-    this.arg2 = args.args ? new Buffer(args.args) : null;
-    this.arg3 = null;
+    this.arg2 = args.arg2 || null;
+    this.arg3 = args.arg3 || null;
 
     this.callback = null;
     this.clients = [];
@@ -189,21 +194,42 @@ Test.prototype.printStats = function () {
     process.stdout.write(JSON.stringify(obj) + "\n");
 };
 
-var smallStr = "1234";
-var largeStr = new Array(4097).join("-");
-var smallStrSet = JSON.stringify(['foo_rand000000000000', smallStr]);
-var smallBufSet = new Buffer(smallStrSet);
-var largeStrSet = JSON.stringify(['foo_rand000000000001', largeStr]);
-var largeBufSet = new Buffer(largeStrSet);
+// -- define tests
+
+var tests = [];
 
 argv.pipeline.forEach(function each(pipeline) {
     tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: pipeline}));
-    tests.push(new Test({descr: "SET small str", command: "set", args: smallStrSet, pipeline: pipeline}));
-    tests.push(new Test({descr: "SET small buf", command: "set", args: smallBufSet, pipeline: pipeline}));
-    tests.push(new Test({descr: "GET small str", command: "get", args: "foo_rand000000000000", pipeline: pipeline}));
-    tests.push(new Test({descr: "SET large str", command: "set", args: largeStrSet, pipeline: pipeline}));
-    tests.push(new Test({descr: "SET large buf", command: "set", args: largeBufSet, pipeline: pipeline}));
-    tests.push(new Test({descr: "GET large str", command: "get", args: 'foo_rand000000000001', pipeline: pipeline}));
+});
+
+var randBytes = new LCGStream({
+    seed: 1234,
+    limit: Infinity
+});
+
+argv.sizes.forEach(function each(size) {
+    var sizeDesc = base2.pretty(size, 'B');
+    var key = 'foo_rand000000000000';
+    var buf = randBytes.read(Math.ceil(size / 4 * 3)); // 4 base64 encoded bytes per 3 raw bytes
+    if (!buf) {
+        throw new Error("can't have size " + sizeDesc);
+    }
+    var str = buf.toString('base64').slice(0, size); // chop off any "==" trailer
+    argv.pipeline.forEach(function each(pipeline) {
+        tests.push(new Test({
+            descr: "SET " + sizeDesc,
+            command: "set",
+            arg2: key,
+            arg3: str,
+            pipeline: pipeline
+        }));
+        tests.push(new Test({
+            descr: "GET " + sizeDesc,
+            command: "get",
+            arg2: key,
+            pipeline: pipeline
+        }));
+    });
 });
 
 function next(i, j, done) {
@@ -218,3 +244,14 @@ function next(i, j, done) {
 next(0, 0, function() {
     process.exit(0);
 });
+
+function parseIntList(str) {
+    if (typeof str === 'number') {
+        return [str];
+    }
+    return str
+        .split(/\s*,\s*/)
+        .map(function each(part) {
+            return parseInt(part, 10);
+        });
+}
