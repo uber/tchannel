@@ -46,6 +46,8 @@ function TChannelOutgoingRequest(id, options) {
     self.random = options.random;
     self.timers = options.timers;
 
+    self.start = 0;
+    self.end = 0;
     self.remoteAddr = options.remoteAddr;
     self.state = States.Initial;
     self.id = id || 0;
@@ -114,6 +116,7 @@ TChannelOutgoingRequest.prototype.sendParts = function sendParts(parts, isLast) 
     var self = this;
     switch (self.state) {
         case States.Initial:
+            self.start = self.timers.now();
             self.sendCallRequestFrame(parts, isLast);
             break;
         case States.Streaming:
@@ -193,6 +196,7 @@ TChannelOutgoingRequest.prototype.hookupStreamCallback = function hookupCallback
         if (called) return;
         called = true;
         self.err = err;
+        if (!self.end) self.end = self.timers.now();
         callback(err, null, null);
     }
 
@@ -200,6 +204,7 @@ TChannelOutgoingRequest.prototype.hookupStreamCallback = function hookupCallback
         if (called) return;
         called = true;
         self.res = res;
+        if (!self.end) self.end = self.timers.now();
         callback(null, self, res);
     }
 
@@ -220,6 +225,7 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
         if (called) return;
         called = true;
         self.err = err;
+        if (!self.end) self.end = self.timers.now();
         callback(err, null, null);
     }
 
@@ -228,6 +234,7 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
         called = true;
         self.res = res;
         if (!res.streamed) {
+            if (!self.end) self.end = self.timers.now();
             callback(null, res, res.arg2, res.arg3);
             return;
         }
@@ -236,6 +243,7 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
             arg3: res.arg3.onValueReady
         }, compatCall);
         function compatCall(err, args) {
+            if (!self.end) self.end = self.timers.now();
             callback(err, res, args.arg2, args.arg3);
         }
     }
@@ -246,8 +254,10 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
 TChannelOutgoingRequest.prototype.checkTimeout = function checkTimeout() {
     var self = this;
     if (!self.timedOut) {
-        var elapsed = self.timers.now() - self.start;
+        var now = self.timers.now();
+        var elapsed = now - self.start;
         if (elapsed > self.ttl) {
+            self.end = now;
             self.timedOut = true;
             process.nextTick(function deferOutReqTimeoutErrorEmit() {
                 self.emit('error', errors.TimeoutError({
