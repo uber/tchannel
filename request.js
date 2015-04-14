@@ -20,16 +20,20 @@
 
 'use strict';
 
+var EventEmitter = require('events').EventEmitter;
+var inherits = require('util').inherits;
+
 var errors = require('./errors');
 
 var DEFAULT_RETRY_LIMIT = 5;
 
 function TChannelRequest(channel, options) {
     options = options || {};
-    var self = this;
     if (options.streamed) {
         throw new Error('streaming request federation not supported');
     }
+    var self = this;
+    EventEmitter.call(self);
     self.channel = channel;
     self.options = options;
     self.triedRemoteAddrs = {};
@@ -53,6 +57,8 @@ function TChannelRequest(channel, options) {
     self.err = null;
     self.res = null;
 }
+
+inherits(TChannelRequest, EventEmitter);
 
 TChannelRequest.prototype.type = 'tchannel.request';
 
@@ -79,9 +85,11 @@ TChannelRequest.prototype.resend = function resend() {
         self.end = self.channel.timers.now();
         if (self.outReqs.length) {
             self._callback(self.err, self._lastArg2, self._lastArg3);
+            self.emit('finished', self);
         } else {
             self.err = errors.NoPeerAvailable();
             self._callback(self.err, null, null);
+            self.emit('finished', self);
         }
         return;
     }
@@ -110,6 +118,7 @@ TChannelRequest.prototype.onReqDone = function onReqDone(err, res, arg2, arg3) {
     } else {
         self.end = now;
         self._callback(err, res, arg2, arg3);
+        self.emit('finished', self);
     }
     function deferResend() {
         self.resend();
