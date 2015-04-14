@@ -26,9 +26,44 @@ var Checksum = require('./checksum');
 var Flags = require('./call_flags');
 var errors = require('../errors');
 
+var Base = bufrw.Base;
 var LengthResult = bufrw.LengthResult;
 var WriteResult = bufrw.WriteResult;
 var ReadResult = bufrw.ReadResult;
+
+function ArgRW(sizerw) {
+    if (!(this instanceof ArgRW)) {
+        return new ArgRW(sizerw);
+    }
+    var self = this;
+    Base.call(self);
+    self.sizerw = sizerw;
+    self.strrw = bufrw.String(self.sizerw, 'utf8');
+    self.bufrw = bufrw.VariableBuffer(self.sizerw);
+}
+
+ArgRW.prototype.byteLength = function byteLength(arg) {
+    var self = this;
+    if (typeof arg === 'string') {
+        return self.strrw.byteLength(arg);
+    } else {
+        return self.bufrw.byteLength(arg);
+    }
+};
+
+ArgRW.prototype.writeInto = function writeInto(arg, buffer, offset) {
+    var self = this;
+    if (typeof arg === 'string') {
+        return self.strrw.writeInto(arg, buffer, offset);
+    } else {
+        return self.bufrw.writeInto(arg, buffer, offset);
+    }
+};
+
+ArgRW.prototype.readFrom = function readFrom(buffer, offset) {
+    var self = this;
+    return self.bufrw.readFrom(buffer, offset);
+};
 
 function ArgsRW(argrw) {
     if (!(this instanceof ArgsRW)) {
@@ -36,7 +71,7 @@ function ArgsRW(argrw) {
     }
     var self = this;
     bufrw.Base.call(self);
-    self.argrw = argrw || bufrw.buf2;
+    self.argrw = argrw || ArgRW(bufrw.UInt16BE);
     self.overhead = self.argrw.sizerw.width;
     if (!self.overhead) {
         throw new Error('unable to determine argrw overhead');
@@ -160,3 +195,4 @@ ArgsRW.prototype.writeFragmentInto = function writeFragmentInto(body, buffer, of
 };
 
 module.exports = ArgsRW;
+module.exports.ArgRW = ArgRW;
