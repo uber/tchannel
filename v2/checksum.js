@@ -123,6 +123,11 @@ Checksum.prototype._computeFarm32 = function _computeFarm32(arg, prior) {
     return farm32(arg, prior);
 };
 
+Checksum.prototype.update1 = function update1(arg, prior) {
+    var self = this;
+    self.val = self._compute(arg, prior);
+};
+
 Checksum.prototype.update = function update(args, prior) {
     var self = this;
     self.val = self.compute(args, prior);
