@@ -27,58 +27,9 @@ var assert = require('assert');
 var NullLogtron = require('null-logtron');
 var Result = require('bufrw/result');
 var cyclicStringify = require('json-stringify-safe');
-var WrappedError = require('error/wrapped');
-var TypedError = require('error/typed');
 var isError = require('is-error');
 
-var HeadParserError = WrappedError({
-    type: 'tchannel-handler.parse-error.head-failed',
-    message: 'Could not parse head (arg2) argument.\n' +
-        'Expected JSON encoded arg2 for endpoint {endpoint}.\n' +
-        'Got {headStr} instead of JSON.',
-    isSerializationError: true,
-    endpoint: null,
-    direction: null,
-    headStr: null
-});
-
-var BodyParserError = WrappedError({
-    type: 'tchannel-handler.parse-error.body-failed',
-    message: 'Could not parse body (arg3) argument.\n' +
-        'Expected JSON encoded arg3 for endpoint {endpoint}.\n' +
-        'Got {bodyStr} instead of JSON.',
-    isSerializationError: true,
-    endpoint: null,
-    direction: null,
-    bodyStr: null
-});
-
-var HeadStringifyError = WrappedError({
-    type: 'tchannel-handler.stringify-error.head-failed',
-    message: 'Could not stringify head (res1) argument.\n' +
-        'Expected JSON serializable res1 for endpoint {endpoint}.',
-    isSerializationError: true,
-    endpoint: null,
-    head: null,
-    direction: null
-});
-
-var BodyStringifyError = WrappedError({
-    type: 'tchannel-handler.stringify-error.body-failed',
-    message: 'Could not stringify body (res2) argument.\n' +
-        'Expected JSON serializable res2 for endpoint {endpoint}.',
-    isSerializationError: true,
-    endpoint: null,
-    body: null,
-    direction: null
-});
-
-// # ReconstructedError
-var ReconstructedError = TypedError({
-    type: 'tchannel.hydrated-error.default-type',
-    message: 'TChannel json hydrated error;' +
-        ' this message should be replaced with an upstream error message'
-});
+var errors = require('../errors.js');
 
 module.exports = TChannelJSON;
 
@@ -153,7 +104,7 @@ TChannelJSON.prototype.send = function send(
             response = new TChannelJSONResponse(resp.ok, v.head, v.body);
         } else {
             response = new TChannelJSONResponse(
-                resp.ok, v.head, ReconstructedError(v.body)
+                resp.ok, v.head, errors.ReconstructedError(v.body)
             );
         }
         callback(null, response);
@@ -241,7 +192,7 @@ TChannelJSON.prototype._stringify = function stringify(opts) {
 
     var headR = safeJSONStringify(opts.head);
     if (headR.err) {
-        var headStringifyErr = HeadStringifyError(headR.err, {
+        var headStringifyErr = errors.HeadStringifyError(headR.err, {
             endpoint: opts.endpoint,
             direction: opts.direction,
             head: cyclicStringify(opts.head)
@@ -257,7 +208,7 @@ TChannelJSON.prototype._stringify = function stringify(opts) {
 
     var bodyR = safeJSONStringify(opts.body);
     if (bodyR.err) {
-        var bodyStringifyErr = BodyStringifyError(bodyR.err, {
+        var bodyStringifyErr = errors.BodyStringifyError(bodyR.err, {
             endpoint: opts.endpoint,
             direction: opts.direction,
             body: cyclicStringify(opts.body)
@@ -282,7 +233,7 @@ TChannelJSON.prototype._parse = function parse(opts) {
 
     var headR = safeJSONParse(opts.head);
     if (headR.err) {
-        var headParseErr = HeadParserError(headR.err, {
+        var headParseErr = errors.HeadParserError(headR.err, {
             endpoint: opts.endpoint,
             direction: opts.direction,
             headStr: opts.head.slice(0, 10)
@@ -301,7 +252,7 @@ TChannelJSON.prototype._parse = function parse(opts) {
 
     var bodyR = safeJSONParse(opts.body);
     if (bodyR.err) {
-        var bodyParseErr = BodyParserError(bodyR.err, {
+        var bodyParseErr = errors.BodyParserError(bodyR.err, {
             endpoint: opts.endpoint,
             direction: opts.direction,
             bodyStr: opts.body.slice(0, 10)
