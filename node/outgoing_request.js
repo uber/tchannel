@@ -27,8 +27,6 @@ var parallel = require('run-parallel');
 var errors = require('./errors');
 var OutArgStream = require('./argstream').OutArgStream;
 
-var emptyBuffer = Buffer(0);
-
 var States = Object.create(null);
 States.Initial = 0;
 States.Streaming = 1;
@@ -191,11 +189,7 @@ TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callbac
         self.arg2.end(arg2);
         self.arg3.end(arg3);
     } else {
-        self.sendCallRequestFrame([
-            arg1 ? Buffer(arg1) : emptyBuffer,
-            arg2 ? Buffer(arg2) : emptyBuffer,
-            arg3 ? Buffer(arg3) : emptyBuffer
-        ], true);
+        self.sendCallRequestFrame([arg1, arg2, arg3], true);
         self.emit('finish');
     }
     return self;
