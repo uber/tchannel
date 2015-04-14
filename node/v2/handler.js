@@ -324,14 +324,19 @@ TChannelV2Handler.prototype._sendCallBodies = function _sendCallBodies(id, body,
     var self = this;
     var frame = new v2.Frame(id, body);
 
-    // jshint boss:true
-    do {
+    if (checksum) body.csum = checksum;
+    self.pushFrame(frame);
+    checksum = body.csum;
+
+    while (body.cont) {
+        body = body.cont;
         frame.type = body.type;
         frame.body = body;
-        if (checksum) body.csum = checksum;
+        body.csum = checksum;
         self.pushFrame(frame);
         checksum = body.csum;
-    } while (body = body.cont);
+    }
+
     return checksum;
 };
 
