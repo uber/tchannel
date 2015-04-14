@@ -20,8 +20,6 @@
 
 'use strict';
 
-require('../as/legacy/test/index.js');
-
 require('./argstream.js');
 require('./safe-quit.js');
 require('./timeouts.js');
