@@ -35,6 +35,7 @@ var EventEmitter = require('events').EventEmitter;
 
 var nullLogger = require('./null-logger.js');
 var EndpointHandler = require('./endpoint-handler.js');
+var TChannelRequest = require('./request');
 var TChannelServiceNameHandler = require('./service-name-handler');
 var errors = require('./errors');
 
@@ -356,7 +357,14 @@ TChannel.prototype.request = function channelRequest(options) {
         }
     }
 
-    return self.peers.request(options);
+    var req = null;
+    if (options.streamed) {
+        req = self.peers.request(null, options);
+    } else {
+        req = new TChannelRequest(self, options);
+    }
+    self.emit('request', req);
+    return req;
 };
 
 TChannel.prototype.quit = // to provide backward compatibility.

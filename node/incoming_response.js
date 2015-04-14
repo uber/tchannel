@@ -76,6 +76,8 @@ function TChannelIncomingResponse(id, options) {
 
 inherits(TChannelIncomingResponse, EventEmitter);
 
+TChannelIncomingResponse.prototype.type = 'tchannel.incoming-response';
+
 TChannelIncomingResponse.prototype.handleFrame = function handleFrame(parts) {
     var self = this;
     if (self.streamed) {

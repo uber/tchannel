@@ -148,9 +148,9 @@ TChannelPeers.prototype.delete = function del(hostPort) {
     return peer;
 };
 
-TChannelPeers.prototype.request = function peersRequest(options) {
+TChannelPeers.prototype.request = function peersRequest(req, options) {
     var self = this;
-    var peer = self.choosePeer(options, null);
+    var peer = self.choosePeer(req, options);
 
     if (!peer) {
         // TODO: operational error?
@@ -160,7 +160,7 @@ TChannelPeers.prototype.request = function peersRequest(options) {
     return peer.request(options);
 };
 
-TChannelPeers.prototype.choosePeer = function choosePeer(options, req) {
+TChannelPeers.prototype.choosePeer = function choosePeer(req, options) {
     var self = this;
 
     if (!options) options = {};
@@ -178,13 +178,16 @@ TChannelPeers.prototype.choosePeer = function choosePeer(options, req) {
 
     var selectedPeer = null, selectedScore = 0;
     for (var i = 0; i < hosts.length; i++) {
-        var peer = self.add(hosts[i]);
-        var score = peer.state.shouldRequest(req, options);
-        var want = score > threshold &&
-                   (selectedPeer === null || score > selectedScore);
-        if (want) {
-            selectedPeer = peer;
-            selectedScore = score;
+        var hostPort = hosts[i];
+        var peer = self.add(hostPort);
+        if (!req || !req.triedRemoteAddrs[hostPort]) {
+            var score = peer.state.shouldRequest(req, options);
+            var want = score > threshold &&
+                       (selectedPeer === null || score > selectedScore);
+            if (want) {
+                selectedPeer = peer;
+                selectedScore = score;
+            }
         }
     }
     return selectedPeer;
