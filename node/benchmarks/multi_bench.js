@@ -40,7 +40,7 @@ var argv = parseArgs(process.argv.slice(2), {
         multiplicity: 2,
         numClients: 5,
         numRequests: 20000,
-        pipeline: '10,100,1000',
+        pipeline: '10,100,1000,20000',
         sizes: '4,4096'
     }
 });
