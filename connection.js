@@ -237,7 +237,11 @@ TChannelConnection.prototype.close = function close(callback) {
 TChannelConnection.prototype.onSocketError = function onSocketError(err) {
     var self = this;
     if (!self.closing) {
-        self.resetAll(err);
+        self.resetAll(errors.SocketError(err, {
+            hostPort: self.channel.hostPort,
+            direction: self.direction,
+            remoteAddr: self.remoteAddr
+        }));
     }
 };
 
