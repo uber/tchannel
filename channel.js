@@ -357,11 +357,14 @@ TChannel.prototype.request = function channelRequest(options) {
         }
     }
 
+    var req = null;
     if (options.streamed) {
-        return self.peers.request(null, options);
+        req = self.peers.request(null, options);
     } else {
-        return new TChannelRequest(self, options);
+        req = new TChannelRequest(self, options);
     }
+    self.emit('request', req);
+    return req;
 };
 
 TChannel.prototype.quit = // to provide backward compatibility.
