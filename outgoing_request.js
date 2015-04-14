@@ -195,6 +195,7 @@ TChannelOutgoingRequest.prototype.hookupStreamCallback = function hookupCallback
     function onResponse(res) {
         if (called) return;
         called = true;
+        self.res = res;
         callback(null, self, res);
     }
 
@@ -220,6 +221,7 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
     function onResponse(res) {
         if (called) return;
         called = true;
+        self.res = res;
         if (!res.streamed) {
             callback(null, res, res.arg2, res.arg3);
             return;
