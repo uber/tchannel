@@ -31,12 +31,11 @@ var server = path.join(__dirname, 'bench_server.js');
 var bench = path.join(__dirname, 'multi_bench.js');
 
 var argv = parseArgs(process.argv.slice(2), {
+    '--': true,
     alias: {
-        m: 'multiplicity',
         o: 'output'
     }
 });
-var multiplicity = parseInt(argv.multiplicity) || 2;
 
 function run(script, args) {
     var name = script.replace(/\.js$/, '');
@@ -51,7 +50,7 @@ var serverProc = run(server);
 serverProc.stdout.pipe(process.stderr);
 serverProc.stderr.pipe(process.stderr);
 
-var benchProc = run(bench, ['--multiplicity', String(multiplicity)]);
+var benchProc = run(bench, argv['--']);
 benchProc.stderr.pipe(process.stderr);
 
 benchProc.stdout
