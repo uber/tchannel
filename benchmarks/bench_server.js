@@ -39,14 +39,14 @@ function safeParse(str) {
     }
 }
 
-server.handler.register('set', function onSet(req, res) {
-    var parts = safeParse(req.arg2.toString('utf8'));
+server.handler.register('set', function onSet(req, res, arg2, arg3) {
+    var parts = safeParse(arg2.toString('utf8'));
     keys[parts[0]] = parts[1];
     res.sendOk('ok', 'really ok');
 });
 
-server.handler.register('get', function onGet(req, res) {
-    var str = req.arg2.toString('utf8');
+server.handler.register('get', function onGet(req, res, arg2, arg3){
+    var str = arg2.toString('utf8');
     if (keys[str] !== undefined) {
         res.sendOk(JSON.stringify(keys[str].length), JSON.stringify(keys[str]));
     } else {
