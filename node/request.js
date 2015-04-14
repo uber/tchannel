@@ -76,6 +76,7 @@ TChannelRequest.prototype.resend = function resend() {
 
     var peer = self.choosePeer();
     if (!peer) {
+        self.end = self.channel.timers.now();
         if (self.outReqs.length) {
             self._callback(self.err, self._lastArg2, self._lastArg3);
         } else {
