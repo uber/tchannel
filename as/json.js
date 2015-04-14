@@ -117,8 +117,8 @@ TChannelJSON.prototype.send = function send(
         endpoint: endpoint,
         direction: 'out.request'
     });
-    if (stringifyResult.error) {
-        return callback(stringifyResult.error);
+    if (stringifyResult.err) {
+        return callback(stringifyResult.err);
     }
 
     req.headers.as = 'json';
@@ -142,8 +142,8 @@ TChannelJSON.prototype.send = function send(
             direction: 'in.response'
         });
 
-        if (parseResult.error) {
-            return callback(parseResult.error);
+        if (parseResult.err) {
+            return callback(parseResult.err);
         }
 
         var v = parseResult.value;
@@ -180,9 +180,9 @@ TChannelJSON.prototype.register = function register(
             direction: 'in.request'
         });
 
-        if (parseResult.error) {
-            var message2 = parseResult.error.type + ': ' +
-                parseResult.error.message;
+        if (parseResult.err) {
+            var message2 = parseResult.err.type + ': ' +
+                parseResult.err.message;
             return res.sendError('BadRequest', message2);
         }
 
@@ -222,7 +222,7 @@ TChannelJSON.prototype.register = function register(
                 direction: 'out.response'
             });
 
-            if (stringifyResult.error) {
+            if (stringifyResult.err) {
                 return res.sendError('UnexpectedError',
                     'Could not JSON stringify');
             }
@@ -240,8 +240,8 @@ TChannelJSON.prototype._stringify = function stringify(opts) {
     var self = this;
 
     var headR = safeJSONStringify(opts.head);
-    if (headR.error) {
-        var headStringifyErr = HeadStringifyError(headR.error, {
+    if (headR.err) {
+        var headStringifyErr = HeadStringifyError(headR.err, {
             endpoint: opts.endpoint,
             direction: opts.direction,
             head: cyclicStringify(opts.head)
@@ -256,8 +256,8 @@ TChannelJSON.prototype._stringify = function stringify(opts) {
     }
 
     var bodyR = safeJSONStringify(opts.body);
-    if (bodyR.error) {
-        var bodyStringifyErr = BodyStringifyError(bodyR.error, {
+    if (bodyR.err) {
+        var bodyStringifyErr = BodyStringifyError(bodyR.err, {
             endpoint: opts.endpoint,
             direction: opts.direction,
             body: cyclicStringify(opts.body)
@@ -281,8 +281,8 @@ TChannelJSON.prototype._parse = function parse(opts) {
     var self = this;
 
     var headR = safeJSONParse(opts.head);
-    if (headR.error) {
-        var headParseErr = HeadParserError(headR.error, {
+    if (headR.err) {
+        var headParseErr = HeadParserError(headR.err, {
             endpoint: opts.endpoint,
             direction: opts.direction,
             headStr: opts.head.slice(0, 10)
@@ -300,8 +300,8 @@ TChannelJSON.prototype._parse = function parse(opts) {
     }
 
     var bodyR = safeJSONParse(opts.body);
-    if (bodyR.error) {
-        var bodyParseErr = BodyParserError(bodyR.error, {
+    if (bodyR.err) {
+        var bodyParseErr = BodyParserError(bodyR.err, {
             endpoint: opts.endpoint,
             direction: opts.direction,
             bodyStr: opts.body.slice(0, 10)
