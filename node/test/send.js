@@ -261,13 +261,13 @@ allocCluster.test('request().send() to self', 1, function t(cluster, assert) {
 
     one.handler = EndpointHandler();
     one.handler.register('foo', function foo(req, res, arg2, arg3) {
-        assert.ok(Buffer.isBuffer(arg2), 'handler got an arg2 buffer');
-        assert.ok(Buffer.isBuffer(arg3), 'handler got an arg3 buffer');
+        assert.ok(typeof arg2 === 'string', 'handler got an arg2 string');
+        assert.ok(typeof arg3 === 'string', 'handler got an arg3 string');
         res.sendOk(arg2, arg3);
     });
     one.handler.register('bar', function bar(req, res, arg2, arg3) {
-        assert.ok(Buffer.isBuffer(arg2), 'handler got an arg2 buffer');
-        assert.ok(Buffer.isBuffer(arg3), 'handler got an arg3 buffer');
+        assert.ok(typeof arg2 === 'string', 'handler got an arg2 string');
+        assert.ok(typeof arg3 === 'string', 'handler got an arg3 string');
         res.sendNotOk(arg2, arg3);
     });
 
@@ -350,8 +350,8 @@ function sendTest(testCase, assert) {
             var body = arg3;
             assert.ifError(err, testCase.name + ': no result error');
             if (!err) {
-                assert.ok(Buffer.isBuffer(head), testCase.name + ': got head buffer');
-                assert.ok(Buffer.isBuffer(body), testCase.name + ': got body buffer');
+                assert.ok(typeof head === 'string' || Buffer.isBuffer(head), testCase.name + ': got head buffer or string');
+                assert.ok(typeof body === 'string' || Buffer.isBuffer(body), testCase.name + ': got body buffer or string');
                 assert.equal(head ? String(head) : head, testCase.resHead, testCase.name + ': expected head content');
                 assert.equal(body ? String(body) : body, testCase.resBody, testCase.name + ': expected body content');
             }
