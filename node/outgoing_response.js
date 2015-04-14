@@ -88,6 +88,8 @@ function TChannelOutgoingResponse(id, options) {
 
 inherits(TChannelOutgoingResponse, EventEmitter);
 
+TChannelOutgoingResponse.prototype.type = 'tchannel.outgoing-response';
+
 TChannelOutgoingResponse.prototype.sendParts = function sendParts(parts, isLast) {
     var self = this;
     switch (self.state) {

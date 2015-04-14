@@ -103,6 +103,8 @@ function TChannelIncomingRequest(id, options) {
 
 inherits(TChannelIncomingRequest, EventEmitter);
 
+TChannelIncomingRequest.prototype.type = 'tchannel.incoming-request';
+
 TChannelIncomingRequest.prototype.handleFrame = function handleFrame(parts) {
     var self = this;
     if (self.streamed) {
