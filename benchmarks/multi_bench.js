@@ -42,10 +42,7 @@ argv.pipeline = argv.pipeline
 
 var TChannel = require("../channel"),
     metrics = require("metrics"),
-    tests = [],
-    clientOptions = {
-        returnBuffers: false
-    };
+    tests = [];
 
 function Test(args) {
     this.args = args;
@@ -60,7 +57,9 @@ function Test(args) {
     this.commandsSent = 0;
     this.commandsCompleted = 0;
     this.maxPipeline = this.args.pipeline || numRequests;
-    this.clientOptions = args.clientOptions || clientOptions;
+    this.clientOptions = args.clientOptions || {
+        returnBuffers: false
+    };
 
     this.connectLatency = new metrics.Histogram();
     this.readyLatency = new metrics.Histogram();
