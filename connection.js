@@ -83,7 +83,7 @@ TChannelConnection.prototype.setupSocket = function setupSocket() {
     }
 
     function onSocketError(err) {
-        self.onSocketErr(err);
+        self.onSocketError(err);
     }
 };
 
@@ -234,7 +234,7 @@ TChannelConnection.prototype.close = function close(callback) {
     }
 };
 
-TChannelConnection.prototype.onSocketErr = function onSocketErr(err) {
+TChannelConnection.prototype.onSocketError = function onSocketError(err) {
     var self = this;
     if (!self.closing) {
         self.resetAll(err);
