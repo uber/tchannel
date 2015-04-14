@@ -47,9 +47,11 @@ function TChannelRequest(channel, options) {
     self.arg2 = null;
     self.arg3 = null;
     self._callback = null;
-    self._lastErr = null;
     self._lastArg2 = null;
     self._lastArg3 = null;
+
+    self.err = null;
+    self.res = null;
 }
 
 TChannelRequest.prototype.type = 'tchannel.request';
@@ -75,9 +77,10 @@ TChannelRequest.prototype.resend = function resend() {
     var peer = self.choosePeer();
     if (!peer) {
         if (self.outReqs.length) {
-            self._callback(self._lastErr, self._lastArg2, self._lastArg3);
+            self._callback(self.err, self._lastArg2, self._lastArg3);
         } else {
-            self._callback(errors.NoPeerAvailable(), null, null);
+            self.err = errors.NoPeerAvailable();
+            self._callback(self.err, null, null);
         }
         return;
     }
@@ -96,9 +99,10 @@ TChannelRequest.prototype.onReqDone = function onReqDone(err, res, arg2, arg3) {
     var self = this;
     var now = self.channel.timers.now();
     self.elapsed = now - self.start;
+    self.err = err;
+    self.res = res;
     if (self.elapsed < self.timeout &&
         self.shouldRetry(err, res, arg2, arg3)) {
-        self._lastErr = err;
         self._lastArg2 = arg2;
         self._lastArg3 = arg3;
         process.nextTick(deferResend);
