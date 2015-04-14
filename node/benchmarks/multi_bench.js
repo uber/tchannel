@@ -37,7 +37,7 @@ var argv = parseArgs(process.argv.slice(2), {
         s: 'sizes'
     },
     default: {
-        multiplicity: 2,
+        multiplicity: 1,
         numClients: 5,
         numRequests: 20000,
         pipeline: '10,100,1000,20000',
