@@ -354,7 +354,7 @@ TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest
     var self = this;
     var id = self.nextFrameId();
     if (options.checksumType === undefined || options.checksumType === null) {
-        options.checksumType = v2.Checksum.Types.CRC32;
+        options.checksumType = v2.Checksum.Types.CRC32C;
     }
     options.checksum = new v2.Checksum(options.checksumType);
     if (!options.headers) options.headers = {};
