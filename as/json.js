@@ -1,5 +1,7 @@
 'use strict';
 
+/* jshint maxparams:5 */
+
 var Buffer = require('buffer').Buffer;
 var assert = require('assert');
 var NullLogtron = require('null-logtron');
@@ -81,6 +83,7 @@ function TChannelJSON(options) {
 TChannelJSON.prototype.send = function send(
     req, endpoint, head, body, callback
 ) {
+
     var self = this;
 
     assert(typeof endpoint === 'string', 'endpoint must be a string');
@@ -98,7 +101,7 @@ TChannelJSON.prototype.send = function send(
         return callback(stringifyResult.error);
     }
 
-    req.headers['as'] = 'json';
+    req.headers.as = 'json';
 
     req.send(
         new Buffer(endpoint),
@@ -145,7 +148,7 @@ TChannelJSON.prototype.register = function register(
     tchannel.handler.register(arg1, endpointHandler);
 
     function endpointHandler(req, res, arg2, arg3) {
-        if (req.headers['as'] !== 'json') {
+        if (req.headers.as !== 'json') {
             var message = 'Expected call request as header to be json';
             return res.sendError('BadRequest', message);
         }
@@ -158,9 +161,9 @@ TChannelJSON.prototype.register = function register(
         });
 
         if (parseResult.error) {
-            var message = parseResult.error.type + ': ' +
+            var message2 = parseResult.error.type + ': ' +
                 parseResult.error.message;
-            return res.sendError('BadRequest', message);
+            return res.sendError('BadRequest', message2);
         }
 
         var v = parseResult.value;
