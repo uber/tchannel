@@ -26,14 +26,7 @@ var ReadResult = bufrw.ReadResult;
 var TypedError = require('error/typed');
 var Tracing = require('./tracing');
 
-module.exports = ErrorResponse;
-
-var InvalidErrorCodeError = TypedError({
-    type: 'tchannel.invalid-error-code',
-    message: 'invalid tchannel error code {errorCode}',
-    errorCode: null,
-    originalId: null
-});
+var errors = require('../errors');
 
 // TODO: enforce message ID of this frame is Frame.NullId when
 // errorBody.code.ProtocolError = ErrorResponse.Codes.ProtocolError
@@ -126,7 +119,7 @@ ErrorResponse.CodeErrors = CodeErrors;
 ErrorResponse.RW = bufrw.Struct(ErrorResponse, [
     {call: {writeInto: function writeGuard(body, buffer, offset) {
         if (CodeNames[body.code] === undefined) {
-            return WriteResult.error(InvalidErrorCodeError({
+            return WriteResult.error(errors.InvalidErrorCodeError({
                 errorCode: body.code,
                 tracing: body.tracing
             }), offset);
@@ -138,7 +131,7 @@ ErrorResponse.RW = bufrw.Struct(ErrorResponse, [
     {name: 'message', rw: bufrw.str2}, // message~2
     {call: {writeInto: function writeGuard(body, buffer, offset) {
         if (CodeNames[body.code] === undefined) {
-            return ReadResult.error(InvalidErrorCodeError({
+            return ReadResult.error(errors.InvalidErrorCodeError({
                 errorCode: body.code,
                 tracing: body.tracing,
             }), offset);
@@ -146,3 +139,5 @@ ErrorResponse.RW = bufrw.Struct(ErrorResponse, [
         return ReadResult.just(offset);
     }}},
 ]);
+
+module.exports = ErrorResponse;

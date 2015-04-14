@@ -68,6 +68,13 @@ module.exports.InvalidCodeStringError = TypedError({
     codeString: null
 });
 
+module.exports.InvalidErrorCodeError = TypedError({
+    type: 'tchannel.invalid-error-code',
+    message: 'invalid tchannel error code {errorCode}',
+    errorCode: null,
+    originalId: null
+});
+
 module.exports.InvalidFrameTypeError = TypedError({
     type: 'tchannel.invalid-frame-type',
     message: 'invalid frame type {typeNumber}',
