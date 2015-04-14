@@ -25,6 +25,10 @@ import (
 	"hash/crc32"
 )
 
+var (
+	crc32CastagnoliTable = crc32.MakeTable(crc32.Castagnoli)
+)
+
 // A ChecksumType is a checksum algorithm supported by TChannel for checksumming call bodies
 type ChecksumType byte
 
@@ -59,7 +63,7 @@ func (t ChecksumType) New() Checksum {
 	case ChecksumTypeNone:
 		return nullChecksum{}
 	case ChecksumTypeCrc32:
-		return &crc32Checksum{crc32: crc32.NewIEEE()}
+		return &crc32Checksum{crc32: crc32.New(crc32CastagnoliTable)}
 	case ChecksumTypeFarmhash:
 		// TODO(mmihic): Implement
 		return nil
