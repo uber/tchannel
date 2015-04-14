@@ -124,6 +124,14 @@ module.exports.ResponseAlreadyDone = TypedError({
     attempted: null
 });
 
+module.exports.SocketError = WrappedError({
+    type: 'tchannel.socket',
+    message: 'tchannel socket error ({code} from {syscall}): {origMessage}',
+    hostPort: null,
+    direction: null,
+    remoteAddr: null
+});
+
 module.exports.SocketClosedError = TypedError({
     type: 'tchannel.socket-closed',
     message: 'socket closed, {reason}',
