@@ -5,7 +5,7 @@ set -x
 args=
 while getopts m: OPT; do
     case $OPT in
-        m)
+        m|p)
         args+=" -$OPT $OPTARG"
         ;;
     esac
