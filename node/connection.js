@@ -169,6 +169,7 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
             // TODO: better annotations
             req.span.annotate('cr');
             self.tracer.report(req.span);
+            res.span = req.span;
         }
 
         req.emit('response', res);

@@ -46,7 +46,7 @@ function TChannelIncomingResponse(id, options) {
     self.code = options.code || 0;
     self.checksum = options.checksum || null;
     self.ok = self.code === 0; // TODO: probably okay, but a bit jank
-    self.span = options.span;
+    self.span = options.span || null;
     if (options.streamed) {
         self.streamed = true;
         self._argstream = InArgStream();
