@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+/* jshint maxparams:5 */
+
 'use strict';
 
 var path = require('path');
@@ -34,11 +36,12 @@ function NoEchoError(value) {
     return err;
 }
 
-function echo(opts, head, body, cb) {
+
+function echo(opts, req, head, body, cb) {
     return cb(null, {ok: true, body: body.value});
 }
 
-function noEcho(opts, head, body, cb) {
+function noEcho(opts, req, head, body, cb) {
     return cb(null, {ok: false, body: NoEchoError(body.value)});
 }
 
