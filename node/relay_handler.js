@@ -77,11 +77,6 @@ RelayHandler.prototype.handleRequest = function handleRequest(req, buildRes) {
         var logger = self.clients.logger;
 
         outres = buildRes();
-        if (err.isErrorFrame) {
-            outres.sendError(err.codeName, err.message);
-            return;
-        }
-
         var codeName = errors.classify(err);
         // TODO: would be great if tchannel could define these as network errors
         if (!codeName && (
