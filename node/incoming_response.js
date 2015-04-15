@@ -66,17 +66,20 @@ function TChannelIncomingResponse(id, options) {
         self.arg2 = emptyBuffer;
         self.arg3 = emptyBuffer;
     }
-    self.on('finish', function onFinish() {
-        self.state = States.Done;
-        if (self.span) {
-            self.emit('span');
-        }
-    });
+    self.on('finish', self.onFinish);
 }
 
 inherits(TChannelIncomingResponse, EventEmitter);
 
 TChannelIncomingResponse.prototype.type = 'tchannel.incoming-response';
+
+TChannelIncomingResponse.prototype.onFinish = function onFinish() {
+    var self = this;
+    self.state = States.Done;
+    if (self.span) {
+        self.emit('span');
+    }
+};
 
 TChannelIncomingResponse.prototype.handleFrame = function handleFrame(parts) {
     var self = this;
