@@ -35,6 +35,10 @@ function TChannelRequest(channel, options) {
     var self = this;
     EventEmitter.call(self);
     self.channel = channel;
+    self.logger = self.channel.logger;
+    self.random = self.channel.random;
+    self.timers = self.channel.timers;
+
     self.options = options;
     self.triedRemoteAddrs = {};
     self.outReqs = [];
@@ -74,7 +78,7 @@ TChannelRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     self.arg2 = arg2;
     self.arg3 = arg3;
     self._callback = callback;
-    self.start = self.channel.timers.now();
+    self.start = self.timers.now();
     self.resend();
 };
 
@@ -83,7 +87,7 @@ TChannelRequest.prototype.resend = function resend() {
 
     var peer = self.choosePeer();
     if (!peer) {
-        self.end = self.channel.timers.now();
+        self.end = self.timers.now();
         if (self.outReqs.length) {
             self._callback(self.err, self._lastArg2, self._lastArg3);
             self.emit('finished', self);
@@ -107,7 +111,7 @@ TChannelRequest.prototype.resend = function resend() {
 
 TChannelRequest.prototype.onReqDone = function onReqDone(err, res, arg2, arg3) {
     var self = this;
-    var now = self.channel.timers.now();
+    var now = self.timers.now();
     self.elapsed = now - self.start;
     self.err = err;
     self.res = res;
@@ -148,7 +152,7 @@ TChannelRequest.prototype.shouldRetry = function shouldRetry(err, res, arg2, arg
                 return true;
 
             default:
-                self.channel.logger.error('unknown error type in request retry', {
+                self.logger.error('unknown error type in request retry', {
                     error: err
                 });
                 return true;
