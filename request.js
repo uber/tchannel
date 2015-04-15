@@ -48,6 +48,7 @@ function TChannelRequest(channel, options) {
     self.start = 0;
     self.end = 0;
     self.elapsed = 0;
+    self.resendSanity = 0;
 
     self.service = options.service || '';
     self.headers = self.options.headers || {}; // so that as-foo can punch req.headers.X
@@ -122,6 +123,7 @@ TChannelRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
         self.hookupCallback(callback);
     }
     self.start = self.timers.now();
+    self.resendSanity = self.limit + 1;
     self.resend();
 };
 
@@ -152,7 +154,7 @@ TChannelRequest.prototype.resend = function resend() {
         var now = self.timers.now();
         self.elapsed = now - self.start;
         if (self.elapsed < self.timeout && self.shouldRetry(err)) {
-            process.nextTick(deferResend);
+            deferResend();
         } else {
             self.emit('error', err);
         }
@@ -164,7 +166,7 @@ TChannelRequest.prototype.resend = function resend() {
             self.elapsed = now - self.start;
             if (self.elapsed < self.timeout &&
                 self.shouldRetry(err, res, arg2, arg3)) {
-                process.nextTick(deferResend);
+                deferResend();
             } else if (err) {
                 self.emit('error', err);
             } else {
@@ -174,6 +176,14 @@ TChannelRequest.prototype.resend = function resend() {
     }
 
     function deferResend() {
+        if (--self.resendSanity <= 0) {
+            throw new Error('TChannelRequest out of resend sanity');
+        } else {
+            process.nextTick(doResend);
+        }
+    }
+
+    function doResend() {
         self.resend();
     }
 };
