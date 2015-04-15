@@ -78,13 +78,6 @@ RelayHandler.prototype.handleRequest = function handleRequest(req, buildRes) {
 
         outres = buildRes();
         var codeName = errors.classify(err);
-        // TODO: would be great if tchannel could define these as network errors
-        if (!codeName && (
-            err.type === 'tchannel.socket' ||
-            err.type === 'tchannel.socket-closed')) {
-            codeName = 'UnexpectedError';
-        }
-
         if (codeName) {
             outres.sendError(codeName, err.message);
         } else {
