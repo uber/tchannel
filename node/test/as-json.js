@@ -41,7 +41,7 @@ allocCluster.test('getting an ok response', {
     };
 
     var tchannelJSON = TChannelJSON();
-    tchannelJSON.register(server, opts, 'echo', echo);
+    tchannelJSON.register(server, 'echo', opts, echo);
 
     tchannelJSON.send(client.request({
         service: 'server',
@@ -100,7 +100,7 @@ allocCluster.test('getting a not ok response', {
     };
 
     var tchannelJSON = TChannelJSON();
-    tchannelJSON.register(server, opts, 'echo', echo);
+    tchannelJSON.register(server, 'echo', opts, echo);
 
     tchannelJSON.send(client.request({
         service: 'server',
@@ -157,7 +157,7 @@ allocCluster.test('getting an UnexpectedError frame', {
     };
 
     var tchannelJSON = TChannelJSON();
-    tchannelJSON.register(server, opts, 'echo', echo);
+    tchannelJSON.register(server, 'echo', opts, echo);
 
     tchannelJSON.send(client.request({
         service: 'server',
@@ -199,7 +199,7 @@ allocCluster.test('getting a BadRequest frame', {
     };
 
     var tchannelJSON = TChannelJSON();
-    tchannelJSON.register(server, opts, 'echo', echo);
+    tchannelJSON.register(server, 'echo', opts, echo);
 
     client.request({
         service: 'server',
