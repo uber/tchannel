@@ -104,12 +104,10 @@ function TChannelOutgoingRequest(id, options) {
 
     self.err = null;
     self.res = null;
-    self.start = self.timers.now();
     self.timedOut = false;
 
     self.on('error', self.onError);
     self.on('response', self.onResponse);
-
 }
 
 inherits(TChannelOutgoingRequest, EventEmitter);
@@ -118,11 +116,13 @@ TChannelOutgoingRequest.prototype.type = 'tchannel.outgoing-request';
 
 TChannelOutgoingRequest.prototype.onError = function onError(err) {
     var self = this;
+    if (!self.end) self.end = self.timers.now();
     self.err = err;
 };
 
 TChannelOutgoingRequest.prototype.onResponse = function onResponse(res) {
     var self = this;
+    if (!self.end) self.end = self.timers.now();
     self.res = res;
 };
 
@@ -210,14 +210,12 @@ TChannelOutgoingRequest.prototype.hookupStreamCallback = function hookupCallback
     function onError(err) {
         if (called) return;
         called = true;
-        if (!self.end) self.end = self.timers.now();
         callback(err, null, null);
     }
 
     function onResponse(res) {
         if (called) return;
         called = true;
-        if (!self.end) self.end = self.timers.now();
         callback(null, self, res);
     }
 
@@ -237,7 +235,6 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
     function onError(err) {
         if (called) return;
         called = true;
-        if (!self.end) self.end = self.timers.now();
         callback(err, null, null);
     }
 
@@ -245,7 +242,6 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
         if (called) return;
         called = true;
         if (!res.streamed) {
-            if (!self.end) self.end = self.timers.now();
             callback(null, res, res.arg2, res.arg3);
             return;
         }
@@ -254,7 +250,6 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
             arg3: res.arg3.onValueReady
         }, compatCall);
         function compatCall(err, args) {
-            if (!self.end) self.end = self.timers.now();
             callback(err, res, args.arg2, args.arg3);
         }
     }
