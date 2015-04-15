@@ -89,6 +89,7 @@ function TChannelIncomingRequest(id, options) {
 
     self.start = self.timers.now();
     self.timedOut = false;
+    self.res = null;
 
     self.on('finish', self.onFinish);
 }
