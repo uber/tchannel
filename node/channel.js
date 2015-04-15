@@ -42,6 +42,8 @@ var errors = require('./errors');
 var TChannelConnection = require('./connection');
 var TChannelPeers = require('./peers');
 
+var TracingAgent = require('./trace/agent');
+
 var REQ_TIMEOUT_DEFAULT = 5000;
 
 // TODO restore spying
@@ -113,9 +115,13 @@ function TChannel(options) {
     self.destroyed = false;
 
     if (self.options.trace) {
-        self.tracer = require('./trace/agent').ref({
-            autoTracePropagate: self.options.autoTracePropagate !== false
+        self.tracer = new TracingAgent({
+            logger: self.logger,
+            forceTrace: self.options.forceTrace,
+            serviceName: self.options.tracingServiceName,
+            reporter: self.options.traceReporter
         });
+
         if (self.options.requestDefaults !== false) {
             self.options.requestDefaults.trace = true;
         }
@@ -373,10 +379,6 @@ TChannel.prototype.close = function close(callback) {
 
     if (self.destroyed) {
         throw new Error('double close'); // TODO typed error
-    }
-
-    if (self.tracer) {
-        self.tracer.unref();
     }
 
     self.destroyed = true;

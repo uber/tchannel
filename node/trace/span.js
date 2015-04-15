@@ -18,8 +18,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-var NullLogtron = require('null-logtron');
-
 var LCG = require('../lib/lcg');
 
 var rng = new LCG();
@@ -36,8 +34,6 @@ function Span(options) {
     var self = this;
 
     // TODO: options validation
-
-    self.logger = options.logger || NullLogtron();
 
     if (options.id) {
         self.id = options.id;

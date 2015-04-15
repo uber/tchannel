@@ -75,20 +75,14 @@ function TChannelIncomingRequest(id, options) {
             spanid: self.tracing.spanid,
             traceid: self.tracing.traceid,
             parentid: self.tracing.parentid,
-            flags: options.tracer.forceTrace? 1 : self.tracing.flags,
+            flags: self.tracing.flags,
             hostPort: options.hostPort,
-
-            // If a service hasn't been specified on the tracer, use the 
-            // service on the incoming request. This is to handle the
-            // case of the service router, which has a different service name 
-            // than the one specified in the incoming request.
-            serviceName: options.tracer.serviceName || self.service,
+            serviceName: self.service,
             name: '' // fill this in later
         });
 
         // TODO: better annotations
         self.span.annotate('sr');
-        options.tracer.setCurrentSpan(self.span);
     } else {
         self.span = null;
     }

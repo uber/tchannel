@@ -22,79 +22,29 @@ var DebugLogtron = require('debug-logtron');
 
 var Span = require('./span');
 
-module.exports = new Agent();
+module.exports = Agent;
 
-function Agent () {
+function Agent (options) {
     if (!(this instanceof Agent)) {
-        return new Agent();
+        return new Agent(options);
     }
     var self = this;
-    self.refcnt = 0;
-    self.currentSpan = null;
 
-    self.autoTracePropagate = false;
+    options = options || {};
 
-    self.logger = DebugLogtron('tchannelTrace');
+    self.logger = options.logger || DebugLogtron('tchannelTrace');
 
     // If this is set to true in a call to Agent#configure, all incoming
     // requests will have their traceflags forced to 1. It's intended to be
     // set on the 'top level service'.
-    self.forceTrace = false;
+    self.forceTrace = options.forceTrace || false;
 
     // 'our' service name that is used as the service name on spans for
     // incoming reuqests
-    self.serviceName = null;
+    self.serviceName = options.serviceName || null;
 
-    self.listening = false;
-    self.asyncListener = null;
-
-    self.autoTracePropagate = true;
+    self.reporter = options.reporter || self.reporter;
 }
-
-Agent.prototype.setupAutoTracePropagate = 
-function enableAutoTracePropagate () {
-    var self = this;
-
-    if (!process.addAsyncListener) {
-        require('async-listener');
-    }
-
-    self.asyncListener = process.createAsyncListener({
-        create: function () {
-            // Return the storage that should be scoped to the async operation
-            // that was just created
-            return self.currentSpan;
-        },
-
-        before: function (context, storage) {
-            if (!self.currentSpan) {
-                self.currentSpan = storage;
-            }
-        },
-
-        after: function () {
-            self.currentSpan = null;
-        },
-
-        error: function () {
-            self.currentSpan = null;
-        }
-    });
-
-    self.listening = false;
-};
-
-Agent.prototype.getInstance = function () {
-    return this;
-};
-
-Agent.prototype.configure = function configure(options) {
-    var self = this;
-
-    Object.keys(options).forEach(function eachOptionKey(optionKey) {
-        self[optionKey] = options[optionKey];
-    });
-};
 
 function compareBufs(buf1, buf2) {
     if (!buf2) return false;
@@ -125,23 +75,26 @@ Agent.prototype.setupNewSpan = function setupNewSpan(options) {
 
     var span = new Span({
         logger: self.logger,
-        endpoint: new Span.Endpoint(host, port, options.serviceName),
+        endpoint: new Span.Endpoint(
+            host, 
+            port, 
+            // If a service hasn't been specified on the tracer, use the 
+            // service on the incoming request. This is to handle the
+            // case of the service router, which has a different service name 
+            // than the one specified in the incoming request.
+            self.serviceName || options.serviceName
+        ),
         name: options.name,
         id: options.spanid,
         parentid: options.parentid,
         traceid: options.traceid,
-        flags: options.flags
+        flags: self.forceTrace? 1 : options.flags
     });
 
-    var parentSpan;
-    if (self.asyncListener) {
-        parentSpan = self.getCurrentSpan();
-    } else {
-        parentSpan = options.parentSpan;
-        if (options.outgoing && !parentSpan && !options.topLevelRequest) {
-            self.logger.warn("TChannel tracer: parent span not specified " +
-                "for outgoing request!", options);
-        }
+    var parentSpan = options.parentSpan;
+    if (options.outgoing && !parentSpan && !options.topLevelRequest) {
+        self.logger.warn("TChannel tracer: parent span not specified " +
+            "for outgoing request!", options);
     }
 
     if (parentSpan && (!options.parentid && !options.traceid)) {
@@ -156,45 +109,6 @@ Agent.prototype.setupNewSpan = function setupNewSpan(options) {
     }
 
     return span;
-};
-
-Agent.prototype.ref = function ref(options) {
-    var self = this;
-    self.configure(options);
-    if (self.refcnt++ <= 0) {
-        if (self.refcnt <= 0) self.refcnt = 1; // TODO: notable?
-        if (!self.listening && self.autoTracePropagate) {
-            if (!self.asyncListener) {
-                self.setupAutoTracePropagate();
-            }
-            process.addAsyncListener(self.asyncListener);
-            self.listening = true;
-        }
-    }
-    return self;
-};
-
-Agent.prototype.unref = function unref() {
-    var self = this;
-    if (--self.refcnt <= 0) {
-        if (self.refcnt < 0) self.refcnt = 0; // TODO: notable?
-        if (self.listening) {
-            process.removeAsyncListener(self.asyncListener);
-            self.listening = false;
-        }
-    }
-};
-
-Agent.prototype.setCurrentSpan = function setCurrentSpan(span) {
-    var self = this;
-
-    self.currentSpan = span;
-};
-
-Agent.prototype.getCurrentSpan = function getCurrentSpan() {
-    var self = this;
-
-    return self.currentSpan;
 };
 
 Agent.prototype.report = function report(span) {
@@ -212,3 +126,4 @@ Agent.prototype.reporter = function (span) {
     // TODO: actual reporting
     self.logger.info('got span: ' + span.toString());
 };
+
