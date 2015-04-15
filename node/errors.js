@@ -243,7 +243,7 @@ module.exports.ReconstructedError = TypedError({
 });
 
 
-function classify(err) {
+module.exports.classify = function classify(err) {
     switch (err.type) {
         case 'tchannel.no-peer-available':
         case 'tchannel.no-service-handler':
@@ -277,4 +277,4 @@ function classify(err) {
         default:
             return null;
     }
-}
+};
