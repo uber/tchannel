@@ -274,9 +274,9 @@ module.exports.classify = function classify(err) {
         case 'tchannel.unhandled-frame-type':
             return 'ProtocolError';
 
-        // TODO: NetworkError would be nice to differentiate
-        // case 'tchannel.socket':
-        // case 'tchannel.socket-closed':
+        case 'tchannel.socket':
+        case 'tchannel.socket-closed':
+            return 'NetworkError';
 
         default:
             return null;
