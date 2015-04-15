@@ -83,6 +83,7 @@ class TChannel(object):
         self.closed = False
         if hostport:
             self._host, self._port = hostport.rsplit(':', 1)
+            self._port = int(self._port)
         else:
             self._host = local_ip()
             self._port = 0
