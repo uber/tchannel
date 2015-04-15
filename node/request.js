@@ -20,6 +20,7 @@
 
 'use strict';
 
+var parallel = require('run-parallel');
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 
@@ -35,6 +36,10 @@ function TChannelRequest(channel, options) {
     var self = this;
     EventEmitter.call(self);
     self.channel = channel;
+    self.logger = self.channel.logger;
+    self.random = self.channel.random;
+    self.timers = self.channel.timers;
+
     self.options = options;
     self.triedRemoteAddrs = {};
     self.outReqs = [];
@@ -51,7 +56,6 @@ function TChannelRequest(channel, options) {
     self.arg1 = null;
     self.arg2 = null;
     self.arg3 = null;
-    self._callback = null;
     self._lastArg2 = null;
     self._lastArg3 = null;
 
@@ -63,6 +67,39 @@ inherits(TChannelRequest, EventEmitter);
 
 TChannelRequest.prototype.type = 'tchannel.request';
 
+TChannelRequest.prototype.hookupStreamCallback = function hookupCallback(callback) {
+    throw new Error('not implemented');
+};
+
+TChannelRequest.prototype.hookupCallback = function hookupCallback(callback) {
+    var self = this;
+    if (callback.canStream) {
+        return self.hookupStreamCallback(callback);
+    }
+    var called = false;
+
+    self.on('error', onError);
+    self.on('response', onResponse);
+
+    function onError(err) {
+        if (called) return;
+        called = true;
+        self.err = err;
+        if (!self.end) self.end = self.timers.now();
+        callback(err, null, null);
+    }
+
+    function onResponse(res) {
+        if (called) return;
+        called = true;
+        self.res = res;
+        if (!self.end) self.end = self.timers.now();
+        withArg23(res, callback);
+    }
+
+    return self;
+};
+
 TChannelRequest.prototype.choosePeer = function choosePeer() {
     var self = this;
     return self.channel.peers.choosePeer(self, self.options);
@@ -73,8 +110,10 @@ TChannelRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     self.arg1 = arg1;
     self.arg2 = arg2;
     self.arg3 = arg3;
-    self._callback = callback;
-    self.start = self.channel.timers.now();
+    if (callback) {
+        self.hookupCallback(callback);
+    }
+    self.start = self.timers.now();
     self.resend();
 };
 
@@ -83,14 +122,17 @@ TChannelRequest.prototype.resend = function resend() {
 
     var peer = self.choosePeer();
     if (!peer) {
-        self.end = self.channel.timers.now();
         if (self.outReqs.length) {
-            self._callback(self.err, self._lastArg2, self._lastArg3);
-            self.emit('finished', self);
+            var lastReq = self.outReqs[self.outReqs.length - 1];
+            if (lastReq.err) self.emit('error', lastReq.err);
+            else if (lastReq.res) self.emit('response', lastReq.res);
+            else {
+                console.log(lastReq.constructor.name);
+                console.log(lastReq);
+                throw('missing res on last req');
+            }
         } else {
-            self.err = errors.NoPeerAvailable();
-            self._callback(self.err, null, null);
-            self.emit('finished', self);
+            self.emit('error', errors.NoPeerAvailable());
         }
         return;
     }
@@ -99,28 +141,33 @@ TChannelRequest.prototype.resend = function resend() {
     self.outReqs.push(outReq);
 
     self.triedRemoteAddrs[outReq.remoteAddr] = (self.triedRemoteAddrs[outReq.remoteAddr] || 0) + 1;
-    outReq.send(self.arg1, self.arg2, self.arg3, outReqRedone);
-    function outReqRedone(err, res, arg2, arg3) {
-        self.onReqDone(err, res, arg2, arg3);
-    }
-};
+    outReq.on('response', onResponse);
+    outReq.on('error', onError);
+    outReq.send(self.arg1, self.arg2, self.arg3);
 
-TChannelRequest.prototype.onReqDone = function onReqDone(err, res, arg2, arg3) {
-    var self = this;
-    var now = self.channel.timers.now();
-    self.elapsed = now - self.start;
-    self.err = err;
-    self.res = res;
-    if (self.elapsed < self.timeout &&
-        self.shouldRetry(err, res, arg2, arg3)) {
-        self._lastArg2 = arg2;
-        self._lastArg3 = arg3;
-        process.nextTick(deferResend);
-    } else {
-        self.end = now;
-        self._callback(err, res, arg2, arg3);
-        self.emit('finished', self);
+    function onError(err) {
+        var now = self.timers.now();
+        self.elapsed = now - self.start;
+        if (self.elapsed < self.timeout && self.shouldRetry(err)) {
+            process.nextTick(deferResend);
+        } else {
+            self.emit('error', err);
+        }
     }
+
+    function onResponse(res) {
+        withArg23(res, function onArg23(err, res, arg2, arg3) {
+            var now = self.timers.now();
+            self.elapsed = now - self.start;
+            if (self.elapsed < self.timeout &&
+                self.shouldRetry(err, res, arg2, arg3)) {
+                process.nextTick(deferResend);
+            } else {
+                self.emit('response', res);
+            }
+        });
+    }
+
     function deferResend() {
         self.resend();
     }
@@ -148,7 +195,7 @@ TChannelRequest.prototype.shouldRetry = function shouldRetry(err, res, arg2, arg
                 return true;
 
             default:
-                self.channel.logger.error('unknown error type in request retry', {
+                self.logger.error('unknown error type in request retry', {
                     error: err
                 });
                 return true;
@@ -163,3 +210,17 @@ TChannelRequest.prototype.shouldRetry = function shouldRetry(err, res, arg2, arg
 };
 
 module.exports = TChannelRequest;
+
+function withArg23(res, callback) {
+    if (!res.streamed) {
+        callback(null, res, res.arg2, res.arg3);
+        return;
+    }
+    parallel({
+        arg2: res.arg2.onValueReady,
+        arg3: res.arg3.onValueReady
+    }, compatCall);
+    function compatCall(err, args) {
+        callback(err, res, args.arg2, args.arg3);
+    }
+}

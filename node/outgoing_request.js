@@ -106,11 +106,25 @@ function TChannelOutgoingRequest(id, options) {
     self.res = null;
     self.start = self.timers.now();
     self.timedOut = false;
+
+    self.on('error', self.onError);
+    self.on('response', self.onResponse);
+
 }
 
 inherits(TChannelOutgoingRequest, EventEmitter);
 
 TChannelOutgoingRequest.prototype.type = 'tchannel.outgoing-request';
+
+TChannelOutgoingRequest.prototype.onError = function onError(err) {
+    var self = this;
+    self.err = err;
+};
+
+TChannelOutgoingRequest.prototype.onResponse = function onResponse(res) {
+    var self = this;
+    self.res = res;
+};
 
 TChannelOutgoingRequest.prototype.sendParts = function sendParts(parts, isLast) {
     var self = this;
@@ -189,13 +203,13 @@ TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callbac
 TChannelOutgoingRequest.prototype.hookupStreamCallback = function hookupCallback(callback) {
     var self = this;
     var called = false;
+
     self.on('error', onError);
     self.on('response', onResponse);
 
     function onError(err) {
         if (called) return;
         called = true;
-        self.err = err;
         if (!self.end) self.end = self.timers.now();
         callback(err, null, null);
     }
@@ -203,7 +217,6 @@ TChannelOutgoingRequest.prototype.hookupStreamCallback = function hookupCallback
     function onResponse(res) {
         if (called) return;
         called = true;
-        self.res = res;
         if (!self.end) self.end = self.timers.now();
         callback(null, self, res);
     }
@@ -224,7 +237,6 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
     function onError(err) {
         if (called) return;
         called = true;
-        self.err = err;
         if (!self.end) self.end = self.timers.now();
         callback(err, null, null);
     }
@@ -232,7 +244,6 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
     function onResponse(res) {
         if (called) return;
         called = true;
-        self.res = res;
         if (!res.streamed) {
             if (!self.end) self.end = self.timers.now();
             callback(null, res, res.arg2, res.arg3);
