@@ -187,7 +187,6 @@ class TornadoConnection(object):
         while not self.closed:
             context = yield self._recv()
             # TODO: There should probably be a try-catch on the yield.
-
             if context.message.message_type in self.CALL_TYPES:
                 self._messages.put(context)
                 continue

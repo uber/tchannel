@@ -24,6 +24,7 @@ thrift==0.9.2
 
 # checksum calculation
 pyfarmhash
+crcmod
 
 # Mocks
 doubles

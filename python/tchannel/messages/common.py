@@ -21,7 +21,7 @@
 from __future__ import absolute_import
 
 import zlib
-
+import crcmod.predefined
 from collections import namedtuple
 from enum import IntEnum
 
@@ -51,6 +51,7 @@ class ChecksumType(IntEnum):
     none = 0x00
     crc32 = 0x01
     farm32 = 0x02
+    crc32c = 0x03
 
     @staticmethod
     def standardize(checksum):
@@ -63,6 +64,7 @@ checksum_rw = rw.switch(
         ChecksumType.none: rw.none(),
         ChecksumType.crc32: rw.number(4),   # csum:4
         ChecksumType.farm32: rw.number(4),  # csum:4
+        ChecksumType.crc32c: rw.number(4),  # csum:4
     }
 )
 
@@ -85,6 +87,10 @@ def compute_checksum(checksum_type, args, csum=0):
     # TODO figure out farm32 cross platform issue
     elif checksum_type == ChecksumType.farm32:
         raise NotImplementedError()
+    elif checksum_type == ChecksumType.crc32c:
+        cfun = crcmod.predefined.mkCrcFun('crc-32c')
+        for arg in args:
+            csum = cfun(arg, csum)
     else:
         raise InvalidChecksumException()
 
