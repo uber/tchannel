@@ -38,7 +38,7 @@ TChannelSelfPeer.prototype.connect = function connect() {
     var self = this;
     while (self.connections[0] &&
            self.connections[0].closing) {
-        self.connections[0].shift();
+        self.connections.shift();
     }
     var conn = self.connections[0];
     if (!conn) {
