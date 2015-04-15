@@ -58,7 +58,7 @@ function register(channel, name, opts, handle) {
         // TODO process inHeadBuffer into inHead
         var inHead = null;
 
-        handle(opts, inHead, inBody, handleThriftResponse);
+        handle(opts, req, inHead, inBody, handleThriftResponse);
 
         function handleThriftResponse(err, thriftRes) {
             if (err) {
@@ -164,6 +164,7 @@ function Response(ok, head, body) {
 function onlyProperty(object) {
     for (var name in object) {
         if (object[name] !== null) {
+            object[name].nameAsThrift = name;
             return object[name];
         }
     }
