@@ -74,6 +74,9 @@ CHECKSUM_MSG_TYPES = [Types.CALL_REQ,
                       Types.CALL_RES,
                       Types.CALL_RES_CONTINUE]
 
+# generate crc32c func at import time
+crc32c = crcmod.predefined.mkCrcFun('crc-32c')
+
 
 def compute_checksum(checksum_type, args, csum=0):
     if csum is None:
@@ -88,9 +91,8 @@ def compute_checksum(checksum_type, args, csum=0):
     elif checksum_type == ChecksumType.farm32:
         raise NotImplementedError()
     elif checksum_type == ChecksumType.crc32c:
-        cfun = crcmod.predefined.mkCrcFun('crc-32c')
         for arg in args:
-            csum = cfun(arg, csum)
+            csum = crc32c(arg, csum)
     else:
         raise InvalidChecksumException()
 
