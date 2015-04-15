@@ -112,7 +112,7 @@ TChannelJSON.prototype.send = function send(
 };
 
 TChannelJSON.prototype.register = function register(
-    tchannel, opts, arg1, handlerFunc
+    tchannel, arg1, opts, handlerFunc
 ) {
     var self = this;
 
