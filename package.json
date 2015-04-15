@@ -19,7 +19,6 @@
     "url": "git@github.com:uber/tchannel"
   },
   "dependencies": {
-    "async-listener": "^0.5.2",
     "bufrw": "^0.9.19",
     "crc": "^3.2.1",
     "error": "^5.1.1",
