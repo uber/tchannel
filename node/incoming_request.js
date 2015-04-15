@@ -96,14 +96,17 @@ function TChannelIncomingRequest(id, options) {
     self.start = self.timers.now();
     self.timedOut = false;
 
-    self.on('finish', function onFinish() {
-        self.state = States.Done;
-    });
+    self.on('finish', self.onFinish);
 }
 
 inherits(TChannelIncomingRequest, EventEmitter);
 
 TChannelIncomingRequest.prototype.type = 'tchannel.incoming-request';
+
+TChannelIncomingRequest.prototype.onFinish = function onFinish() {
+    var self = this;
+    self.state = States.Done;
+};
 
 TChannelIncomingRequest.prototype.handleFrame = function handleFrame(parts) {
     var self = this;
