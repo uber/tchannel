@@ -241,3 +241,40 @@ module.exports.ReconstructedError = TypedError({
     message: 'TChannel json hydrated error;' +
         ' this message should be replaced with an upstream error message'
 });
+
+
+function classify(err) {
+    switch (err.type) {
+        case 'tchannel.no-peer-available':
+        case 'tchannel.no-service-handler':
+            return 'Declined';
+
+        case 'tchannel.timeout':
+            return 'Timeout';
+
+        case 'tchannel-handler.parse-error.body-failed':
+        case 'tchannel-handler.parse-error.head-failed':
+        case 'tchannel.checksum':
+        case 'tchannel.duplicate-header-key':
+            return 'BadRequest';
+
+        case 'tchannel.arg-chunk.gap':
+        case 'tchannel.arg-chunk.out-of-order':
+        case 'tchannel.invalid-code-string':
+        case 'tchannel.invalid-error-code':
+        case 'tchannel.invalid-frame-type':
+        case 'tchannel.missing-init-header':
+        case 'tchannel.null-key':
+        case 'tchannel.protocol.read-failed':
+        case 'tchannel.protocol.write-failed':
+        case 'tchannel.unhandled-frame-type':
+            return 'ProtocolError';
+
+        // TODO: NetworkError would be nice to differentiate
+        // case 'tchannel.socket':
+        // case 'tchannel.socket-closed':
+
+        default:
+            return null;
+    }
+}
