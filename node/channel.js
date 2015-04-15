@@ -283,7 +283,6 @@ TChannel.prototype.makeSubChannel = function makeSubChannel(options) {
     return chan;
 };
 
-// Decoulping config and creation from the constructor.
 TChannel.prototype.listen = function listen(port, host, callback) {
     var self = this;
     if (self.listened) {
