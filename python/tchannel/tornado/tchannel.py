@@ -37,6 +37,7 @@ try:
 except ImportError:
     import toro as queues
 
+from ..net import local_ip
 from .timeout import timeout
 from .connection import TornadoConnection
 from ..handler import CallableRequestHandler
@@ -80,7 +81,11 @@ class TChannel(object):
             If given, this instance will not re-use the existing singleton.
         """
         self.closed = False
-        self._hostport = hostport
+        if hostport:
+            self._host, self._port = hostport.rsplit(':', 1)
+        else:
+            self._host = local_ip()
+            self._port = 0
         self.process_name = process_name or "%s[%s]" % (
             sys.argv[0], os.getpid()
         )
@@ -106,6 +111,10 @@ class TChannel(object):
     def close(self):
         self.closed = True
         # TODO close all connections
+
+    @property
+    def hostport(self):
+        return "%s:%d" % (self._host, self._port)
 
     @tornado.gen.coroutine
     def _loop(self):
@@ -139,7 +148,7 @@ class TChannel(object):
             log.debug("Creating new connection to %s", hostport)
             self.out_peers[hostport] = TornadoConnection.outgoing(
                 hostport,
-                serve_hostport=self._hostport,
+                serve_hostport=self.hostport,
                 handler=CallableRequestHandler(self._handle_client_call),
             )
             return self.out_peers[hostport]
@@ -172,6 +181,10 @@ class TChannelServerOperation(object):
         self.tchannel = weakref.ref(tchannel)
 
     def listen(self, port):
+        # TODO We'll allow only one listen() in the future. All the necessary
+        # information is available in the hostport argument given to
+        # TChannel() so this argument shouldn't be necessary.
+        self.tchannel()._port = port
         CallableTCPServer(self._handle_stream).listen(port)
 
     @tornado.gen.coroutine
