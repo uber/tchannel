@@ -124,6 +124,7 @@ TChannelOutgoingRequest.prototype.onResponse = function onResponse(res) {
     var self = this;
     if (!self.end) self.end = self.timers.now();
     self.res = res;
+    self.res.span = self.span;
 };
 
 TChannelOutgoingRequest.prototype.sendParts = function sendParts(parts, isLast) {
