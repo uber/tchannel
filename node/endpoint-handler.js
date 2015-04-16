@@ -34,9 +34,10 @@ function TChannelEndpointHandler(serviceName) {
     EventEmitter.call(self);
     self.serviceName = serviceName;
     self.endpoints = Object.create(null);
-    self.type = 'tchannel.endpoint-handler';
 }
 inherits(TChannelEndpointHandler, EventEmitter);
+
+TChannelEndpointHandler.prototype.type = 'tchannel.endpoint-handler';
 
 TChannelEndpointHandler.prototype.register = function register(name, handler) {
     var self = this;
