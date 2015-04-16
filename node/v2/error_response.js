@@ -50,6 +50,7 @@ Codes.Busy = 0x03;
 Codes.Declined = 0x04;
 Codes.UnexpectedError = 0x05;
 Codes.BadRequest = 0x06;
+Codes.NetworkError = 0x07;
 Codes.ProtocolError = 0xff;
 
 var CodeNames = Object.create(null);
@@ -59,6 +60,7 @@ CodeNames[Codes.Busy] = 'busy';
 CodeNames[Codes.Declined] = 'declined';
 CodeNames[Codes.UnexpectedError] = 'unexpected error';
 CodeNames[Codes.BadRequest] = 'bad request';
+CodeNames[Codes.NetworkError] = 'network error';
 CodeNames[Codes.ProtocolError] = 'protocol error';
 
 var CodeErrors = Object.create(null);
@@ -102,6 +104,13 @@ CodeErrors[Codes.BadRequest] = TypedError({
     isErrorFrame: true,
     codeName: 'BadRequest',
     errorCode: Codes.BadRequest,
+    originalId: null
+});
+CodeErrors[Codes.NetworkError] = TypedError({
+    type: 'tchannel.network',
+    isErrorFrame: true,
+    codeName: 'NetworkError',
+    errorCode: Codes.NetworkError,
     originalId: null
 });
 CodeErrors[Codes.ProtocolError] = TypedError({
