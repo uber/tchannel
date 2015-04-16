@@ -200,6 +200,7 @@ TChannelConnection.prototype.handleAdvertisedServices = function handleAdvertise
     var self = this;
     var chan = self.channel.topChannel || self.channel;
     if (!chan.subChannels) return;
+    var changes = 0;
 
     // add / update
     var i, name, svcchan;
@@ -217,7 +218,15 @@ TChannelConnection.prototype.handleAdvertisedServices = function handleAdvertise
         }
         var info = services[name];
         var cost = info.cost;
-        svcchan.peers.add(self.remoteName);
+        if (!svcchan.peers.get(self.remoteName)) {
+            svcchan.logger.info('adding service peer', {
+                serviceName: name,
+                hostPort: self.remoteName,
+                cost: cost
+            });
+            svcchan.peers.add(self.remoteName);
+            ++changes;
+        }
         svcchan.handler.peerCosts[self.remoteName] = cost;
     }
 
@@ -227,10 +236,21 @@ TChannelConnection.prototype.handleAdvertisedServices = function handleAdvertise
         name = names[i];
         svcchan = chan.subChannels[name];
         if (svcchan.handler.type === 'tchannel.relay-handler' &&
+            svcchan.peers.get(self.remoteName) &&
             !services[name]) {
-            svcchan.peers.remove(self.remoteName);
+            svcchan.logger.info('deleting service peer', {
+                serviceName: name,
+                hostPort: self.remoteName
+            });
+            svcchan.peers.delete(self.remoteName);
             delete svcchan.handler.peerCosts[self.remoteName];
+            services[name] = null;
+            ++changes;
         }
+    }
+
+    if (changes) {
+        chan.emit('servicesUpdated', self.remoteName, services);
     }
 };
 
@@ -286,11 +306,14 @@ TChannelConnection.prototype.advertise = function advertise() {
                 break;
             case 'tchannel.relay-handler':
                 services[name] = {
-                    cost: svcchan.handler.getMinCost()
+                    cost: svcchan.handler.getMinCost() + 1
                 };
                 break;
         }
     }
+    self.logger.debug('advertising', {
+        services: services
+    });
     self.handler.sendAdvertise(services);
 };
 

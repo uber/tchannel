@@ -26,11 +26,11 @@ var bufrw = require('bufrw');
 
 function Advertise(services) {
     var self = this;
+    self.type = Advertise.TypeCode;
     self.services = services || {};
 }
 
 Advertise.TypeCode = 0x20;
-
 Advertise.RW = bufrw.Base(advertiseByteLength, readAdvertiseFrom, writeAdvertiseInto);
 
 function advertiseByteLength(ad) {

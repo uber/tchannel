@@ -28,7 +28,7 @@ var errors = require('./errors');
 
 function TChannelEndpointHandler(serviceName, advertise) {
     if (!(this instanceof TChannelEndpointHandler)) {
-        return new TChannelEndpointHandler(serviceName);
+        return new TChannelEndpointHandler(serviceName, advertise);
     }
     var self = this;
     EventEmitter.call(self);

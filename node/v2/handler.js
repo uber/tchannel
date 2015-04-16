@@ -212,7 +212,7 @@ TChannelV2Handler.prototype.handleCallResponseCont = function handleCallResponse
 
 TChannelV2Handler.prototype.handleAdvertise = function handleAdvertise(adFrame, callback) {
     var self = this;
-    var services = adFrame.services;
+    var services = adFrame.body.services;
     if (Object.keys(services).length) {
         self.emit('advertise', services);
     }
