@@ -45,6 +45,10 @@ RelayHandler.prototype.handleRequest = function handleRequest(req, buildRes) {
     var self = this;
     // TODO: frame-at-a-time rather than re-streaming?
 
+    self.channel.logger.info('forwarding request', {
+        serviceName: req.service,
+    });
+
     var outres = null;
     var outreq = self.channel.request({
         streamed: req.streamed,
