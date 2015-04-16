@@ -22,7 +22,6 @@ from __future__ import absolute_import
 
 import sys
 import logging
-import threading
 import weakref
 
 import os
@@ -53,23 +52,6 @@ class TChannel(object):
     This class is a singleton. All instances of it are the same. If you need
     separate instances, use the ``ignore_singleton`` argument.
     """
-
-    # We don't want to duplicate outgoing connections, so all instances of this
-    # class will be a singleton.
-    _singleton = threading.local()
-
-    class __metaclass__(type):
-
-        def __call__(cls, *args, **kwargs):
-            # The constructor doesn't actually accept a ignore_singleton
-            # argument. We remove the argument from kwargs if it's present.
-            ignore_singleton = kwargs.pop('ignore_singleton', False)
-            if hasattr(cls._singleton, "instance") and not ignore_singleton:
-                return cls._singleton.instance
-            chan = type.__call__(cls, *args, **kwargs)
-            if not ignore_singleton:
-                cls._singleton.instance = chan
-            return chan
 
     def __init__(self, hostport=None, process_name=None):
         """Build or re-use a TChannel.
