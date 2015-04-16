@@ -15,4 +15,23 @@ Network multiplexing and framing protocol for RPC
 - Can be used to transport multiple protocols between endpoints, eg. HTTP+JSON
   and Thrift.
 
+## Parts
+
+- [tchannel-node](https://github.com/uber/tchannel/tree/master/node) TChannel
+  peer library for Node.js
+- [tchannel-python](https://github.com/uber/tchannel/tree/master/python)
+  TChannel peer library for Python
+- [tchannel-golang](https://github.com/uber/tchannel/tree/master/golang)
+  TChannel peer library for Go
+- [tcap](https://github.com/uber/tcap/) TChannel packet capture tool, for
+  eavesdropping and inspecting TChannel traffic
+- [bufrw](https://github.com/uber/bufrw/) Node.js buffer structured reading and
+  writing library, used for TChannel and [Thrift][]
+- [thriftrw](https://github.com/uber/thriftrw) Node.js [Thrift][] buffer reader
+  and writer
+- [thriftify](https://github.com/uber/thriftify) Node.js [Thrift][] object
+  serializer and deserializer with run-time Thrift IDL compiler
+
+[Thrift]: https://thrift.apache.org/
+
 ## MIT Licenced
