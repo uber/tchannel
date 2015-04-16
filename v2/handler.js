@@ -356,10 +356,13 @@ TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest
         options.checksumType = v2.Checksum.Types.CRC32;
     }
     options.checksum = new v2.Checksum(options.checksumType);
+    if (!options.headers) options.headers = {};
+    options.headers.re = v2.encodeRetryFlags(options.retryFlags);
     options.sendFrame = {
         callRequest: sendCallRequestFrame,
         callRequestCont: sendCallRequestContFrame
     };
+
     var req = new OutgoingRequest(id, options);
     return req;
 
@@ -410,6 +413,7 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
 
 TChannelV2Handler.prototype.buildIncomingRequest = function buildIncomingRequest(reqFrame) {
     var self = this;
+    var retryFlags = v2.parseRetryFlags(reqFrame.body.headers.re);
     return new IncomingRequest(reqFrame.id, {
         logger: self.logger,
         random: self.random,
@@ -419,6 +423,7 @@ TChannelV2Handler.prototype.buildIncomingRequest = function buildIncomingRequest
         tracing: reqFrame.body.tracing,
         service: reqFrame.body.service,
         headers: reqFrame.body.headers,
+        retryFlags: retryFlags,
         checksum: new v2.Checksum(reqFrame.body.csum.type),
         streamed: reqFrame.body.flags & v2.CallFlags.Fragment,
         hostPort: self.hostPort // needed for tracing

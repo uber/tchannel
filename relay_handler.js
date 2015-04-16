@@ -40,8 +40,10 @@ RelayHandler.prototype.handleRequest = function handleRequest(req, buildRes) {
         streamed: req.streamed,
         ttl: req.ttl,
         service: req.service,
-        headers: req.headers
+        headers: req.headers,
+        retryFlags: req.retryFlags
     });
+
     outreq.on('response', onResponse);
     outreq.on('error', onError);
     if (outreq.streamed) {
