@@ -27,6 +27,7 @@ var inherits = require('util').inherits;
 
 var v2 = require('./v2');
 var errors = require('./errors');
+var RelayHandler = require('./relay_handler');
 
 var TChannelConnectionBase = require('./connection_base');
 
@@ -101,6 +102,7 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     self.handler.on('call.incoming.request', onCallRequest);
     self.handler.on('call.incoming.response', onCallResponse);
     self.handler.on('call.incoming.error', onCallError);
+    self.handler.on('advertise', onAdvertise);
     self.on('timedOut', onTimedOut);
 
     // TODO: restore dumping from old:
@@ -184,9 +186,51 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
         req.emit('error', err);
     }
 
+    function onAdvertise(services) {
+        self.handleAdvertisedServices(services);
+    }
+
     function onTimedOut() {
         self.logger.warn(self.channel.hostPort + ' destroying socket from timeouts');
         self.socket.destroy();
+    }
+};
+
+TChannelConnection.prototype.handleAdvertisedServices = function handleAdvertisedServices(services) {
+    var self = this;
+    var chan = self.channel.topChannel || self.channel;
+    if (!chan.subChannels) return;
+
+    // add / update
+    var i, name, svcchan;
+    var names = Object.keys(services);
+    for (i = 0; i < names.length; i++) {
+        name = names[i];
+        svcchan = chan.subChannels[name];
+        if (!svcchan) {
+            svcchan = chan.makeSubChannel({
+                serviceName: name
+            });
+            svcchan.handler = new RelayHandler(svcchan, name);
+        } else if (svcchan.handler.type !== 'tchannel.relay-handler') {
+            continue;
+        }
+        var info = services[name];
+        var cost = info.cost;
+        svcchan.peers.add(self.remoteName);
+        svcchan.handler.peerCosts[self.remoteName] = cost;
+    }
+
+    // delete
+    names = Object.keys(chan.subChannels);
+    for (i = 0; i < names.length; i++) {
+        name = names[i];
+        svcchan = chan.subChannels[name];
+        if (svcchan.handler.type === 'tchannel.relay-handler' &&
+            !services[name]) {
+            svcchan.peers.remove(self.remoteName);
+            delete svcchan.handler.peerCosts[self.remoteName];
+        }
     }
 };
 
@@ -205,6 +249,7 @@ TChannelConnection.prototype.start = function start() {
             hostPort: init.hostPort,
             processName: init.processName
         });
+        self.advertise();
     }
 
     function onInIdentified(init) {
@@ -222,6 +267,31 @@ TChannelConnection.prototype.start = function start() {
             processName: init.processName
         });
     }
+};
+
+TChannelConnection.prototype.advertise = function advertise() {
+    var self = this;
+    var chan = self.channel.topChannel || self.channel;
+    if (!chan.subChannels) return;
+    var names = Object.keys(chan.subChannels);
+    var services = {};
+    for (var i = 0; i < names.length; i++) {
+        var name = names[i];
+        var svcchan = chan.subChannels[name];
+        switch (svcchan.handler.type) {
+            case 'tchannel.endpoint-handler':
+                if (svcchan.handler.advertise) {
+                    services[name] = {cost: 0};
+                }
+                break;
+            case 'tchannel.relay-handler':
+                services[name] = {
+                    cost: svcchan.handler.getMinCost()
+                };
+                break;
+        }
+    }
+    self.handler.sendAdvertise(services);
 };
 
 TChannelConnection.prototype.close = function close(callback) {

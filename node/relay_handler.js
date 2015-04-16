@@ -26,9 +26,20 @@ function RelayHandler(channel, serviceName) {
     var self = this;
     self.serviceName = serviceName;
     self.channel = channel;
+    self.peerCosts = {};
 }
 
 RelayHandler.prototype.type = 'tchannel.relay-handler';
+
+RelayHandler.prototype.getMinCost = function getMinCost() {
+    var self = this;
+    var peerNames = Object.keys(self.peerCosts);
+    var cost = 0;
+    for (var i = 0; i < peerNames.length; i++) {
+        cost = Math.min(cost, self.peerCosts[peerNames[i]]);
+    }
+    return cost;
+};
 
 RelayHandler.prototype.handleRequest = function handleRequest(req, buildRes) {
     var self = this;

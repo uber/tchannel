@@ -26,7 +26,7 @@ var parallel = require('run-parallel');
 var util = require('util');
 var errors = require('./errors');
 
-function TChannelEndpointHandler(serviceName) {
+function TChannelEndpointHandler(serviceName, advertise) {
     if (!(this instanceof TChannelEndpointHandler)) {
         return new TChannelEndpointHandler(serviceName);
     }
@@ -34,6 +34,7 @@ function TChannelEndpointHandler(serviceName) {
     EventEmitter.call(self);
     self.serviceName = serviceName;
     self.endpoints = Object.create(null);
+    self.advertise = advertise ? true : false;
 }
 inherits(TChannelEndpointHandler, EventEmitter);
 
