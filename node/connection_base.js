@@ -157,18 +157,18 @@ TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
         err = new Error('unknown connection reset'); // TODO typed error
     }
 
-    var isError = err.type !== 'tchannel.socket-closed';
-    self.logger[isError ? 'warn' : 'info']('resetting connection', {
-        error: err,
-        remoteName: self.remoteName,
-        localName: self.channel.hostPort,
-        numInOps: inOpKeys.length,
-        numOutOps: outOpKeys.length,
-        inPending: self.pending.in,
-        outPending: self.pending.out
-    });
-
-    if (isError) {
+    // TODO: use error classification to STFU more
+    if (err.type !== 'tchannel.socket' &&
+        err.type !== 'tchannel.socket-closed') {
+        self.logger.warn('resetting connection', {
+            error: err,
+            remoteName: self.remoteName,
+            localName: self.channel.hostPort,
+            numInOps: inOpKeys.length,
+            numOutOps: outOpKeys.length,
+            inPending: self.pending.in,
+            outPending: self.pending.out
+        });
         self.emit('error', err);
     }
 

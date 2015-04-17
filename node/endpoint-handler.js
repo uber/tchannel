@@ -26,17 +26,19 @@ var parallel = require('run-parallel');
 var util = require('util');
 var errors = require('./errors');
 
-function TChannelEndpointHandler(serviceName) {
+function TChannelEndpointHandler(serviceName, advertise) {
     if (!(this instanceof TChannelEndpointHandler)) {
-        return new TChannelEndpointHandler(serviceName);
+        return new TChannelEndpointHandler(serviceName, advertise);
     }
     var self = this;
     EventEmitter.call(self);
     self.serviceName = serviceName;
     self.endpoints = Object.create(null);
-    self.type = 'tchannel.endpoint-handler';
+    self.advertise = advertise ? true : false;
 }
 inherits(TChannelEndpointHandler, EventEmitter);
+
+TChannelEndpointHandler.prototype.type = 'tchannel.endpoint-handler';
 
 TChannelEndpointHandler.prototype.register = function register(name, handler) {
     var self = this;

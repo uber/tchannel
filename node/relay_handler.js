@@ -22,18 +22,32 @@
 
 var errors = require('./errors');
 
-function RelayHandler(channel, serviceName, clients) {
+function RelayHandler(channel, serviceName) {
     var self = this;
     self.serviceName = serviceName;
     self.channel = channel;
-    self.clients = clients;
+    self.peerCosts = {};
 }
 
 RelayHandler.prototype.type = 'tchannel.relay-handler';
 
+RelayHandler.prototype.getMinCost = function getMinCost() {
+    var self = this;
+    var peerNames = Object.keys(self.peerCosts);
+    var cost = 0;
+    for (var i = 0; i < peerNames.length; i++) {
+        cost = Math.min(cost, self.peerCosts[peerNames[i]]);
+    }
+    return cost;
+};
+
 RelayHandler.prototype.handleRequest = function handleRequest(req, buildRes) {
     var self = this;
     // TODO: frame-at-a-time rather than re-streaming?
+
+    self.channel.logger.info('forwarding request', {
+        serviceName: req.service,
+    });
 
     var outres = null;
     var outreq = self.channel.request({
@@ -74,15 +88,13 @@ RelayHandler.prototype.handleRequest = function handleRequest(req, buildRes) {
         if (outres) {
             return;
         }
-        var logger = self.clients.logger;
-
         outres = buildRes();
         var codeName = errors.classify(err);
         if (codeName) {
             outres.sendError(codeName, err.message);
         } else {
             outres.sendError('UnexpectedError', err.message);
-            logger.error('unexpected error while forwarding', {
+            self.channel.logger.error('unexpected error while forwarding', {
                 error: err
                 // TODO context
             });

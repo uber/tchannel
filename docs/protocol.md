@@ -158,6 +158,7 @@ code   | name              | description
 `0x04` | call res          | RPC method response
 `0x13` | call req continue | RPC request continuation fragment
 `0x14` | call res continue | RPC response continuation fragment
+`0x20` | advertise         | Service advertisement
 `0xc0` | cancel            | Cancel an outstanding call req / forward req (no body)
 `0xc1` | claim             | Claim / cancel a redundant request
 `0xd0` | ping req          | Protocol level ping req (no body)
@@ -440,6 +441,16 @@ the service is "healthy." It only validates connectivity and basic protocol
 functionality.
 
 This message type has no body.
+
+## Payload: advertise (0x20)
+
+Schema:
+```
+num:2 ( name~2 cost:1 kind:1 {switch(kind)
+  case 0: // empty
+  case 1: remoteName~1
+){num}
+```
 
 ## Payload: error (0xFF)
 
@@ -778,3 +789,57 @@ type | id | payload | state after parsing
 0x03 | 1  | flags:1=0x1, ttl:4=0x2328, tracing:24=0x1,0x2,0x3, traceflags:1=0x1, service~1=0x5"svc A", nh:1=0x1, hk~1=0x1"k", hv~1=0xA"abcdefghij", csumtype:1=0x2 csum:4=0xBEEF arg1~2=0x2<2 bytes> | sending arg1
 0x13 | 1  | flags:1=0x1, csumtype:1=0x2 csum:4=0xDEAD arg1~2=0x2<2 bytes> arg2~2=0x2<2 bytes> | sending arg2
 0x13 | 1  | flags:1=0x0, csumtype:1=0x2 csum:4=0xF00F arg2~2=0x0<0 bytes> arg3~2=0x8<8 bytes> | complete
+
+## Introspection
+
+### Endpoint `v2/list\_channels`
+
+Schema:
+```
+req_arg2 :: {
+  serviceNamePrefix :: ?String
+}
+
+res_arg3 :: Map<String,channelInfo>
+channelInfo :: {
+  handlerType :: String,
+  numPeers :: Number,
+  minPeerCost :: Number
+}
+```
+
+### Endpoint `v2/peers`
+
+Schema:
+```
+req_arg2 :: {
+  serviceNames :: ?List<String>
+}
+
+res_arg3 :: Map<String,peerInfos>
+peerInfos :: List<peerInfo>
+peerInfo :: {
+  // TODO
+}
+```
+
+### Endpoint `v2/list\_connections`
+
+Schema:
+```
+req_arg2 :: {
+  serviceNames :: ?List<String>
+}
+
+res_arg3 :: Map<String,connectionInfos>
+// TODO: nest by peer or keep denormalized?
+connectionInfos :: List<connectionInfo>
+connectionInfo :: {
+  // TODO
+}
+```
+
+### IDEA: `v2/watch\_\*`
+
+For every `list\_foo` endpoint, we could provide `watch\_foo` that would
+provide streaming updates on the given collection being monitored.

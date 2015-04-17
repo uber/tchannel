@@ -106,6 +106,8 @@ TChannelV2Handler.prototype.handleFrame = function handleFrame(frame, callback) 
             return self.handleCallRequestCont(frame, callback);
         case v2.Types.CallResponseCont:
             return self.handleCallResponseCont(frame, callback);
+        case v2.Types.Advertise:
+            return self.handleAdvertise(frame, callback);
         case v2.Types.ErrorResponse:
             return self.handleError(frame, callback);
         default:
@@ -206,6 +208,15 @@ TChannelV2Handler.prototype.handleCallResponseCont = function handleCallResponse
         return callback(new Error('call response cont for unknown response')); // TODO typed error
     }
     self._handleCallFrame(res, resFrame, callback);
+};
+
+TChannelV2Handler.prototype.handleAdvertise = function handleAdvertise(adFrame, callback) {
+    var self = this;
+    var services = adFrame.body.services;
+    if (Object.keys(services).length) {
+        self.emit('advertise', services);
+    }
+    callback();
 };
 
 TChannelV2Handler.prototype.handleError = function handleError(errFrame, callback) {
@@ -331,6 +342,14 @@ TChannelV2Handler.prototype._sendCallBodies = function _sendCallBodies(id, body,
         checksum = body.csum;
     } while (body = body.cont);
     return checksum;
+};
+
+TChannelV2Handler.prototype.sendAdvertise = function sendAdvertise(services) {
+    var self = this;
+    var id = self.nextFrameId();
+    var adBody = new v2.Advertise(services);
+    var adFrame = new v2.Frame(id, adBody);
+    self.pushFrame(adFrame);
 };
 
 TChannelV2Handler.prototype.sendErrorFrame = function sendErrorFrame(req, codeString, message) {

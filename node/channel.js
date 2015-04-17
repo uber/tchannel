@@ -97,7 +97,7 @@ function TChannel(options) {
         if (!self.serviceName) {
             self.handler = TChannelServiceNameHandler(self);
         } else {
-            self.handler = EndpointHandler(self.serviceName);
+            self.handler = EndpointHandler(self.serviceName, options.advertise);
         }
     } else {
         self.handler = self.options.handler;
