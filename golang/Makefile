@@ -27,7 +27,6 @@ clean:
 	echo Cleaning build artifacts...
 	go clean
 	rm -rf $(BUILD)
-	rm -rf examples/thrift/gen-go
 	echo
 
 fmt format: 
@@ -37,7 +36,7 @@ fmt format:
 
 test_ci: test
 
-test: clean setup thriftc
+test: clean setup
 	echo Testing packages:
 	go test $(PKGS) $(TEST_ARG) -parallel=4
 
