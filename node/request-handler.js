@@ -26,7 +26,7 @@ module.exports = makeRequestHandler;
 
 function makeRequestHandler(handler) {
     if (typeof handler !== 'function') {
-        assert(typeof handler.handleRequest === 'function', 'handler must have handleRequest method')
+        assert(typeof handler.handleRequest === 'function', 'handler must have handleRequest method');
         return handler;
     } else {
         return new RequestHandler(handler);

@@ -28,7 +28,7 @@ var timers = MockTimers(Date.now());
 var breaker = new Breaker({
     timers: timers,
     period: 1000,
-    tripRate: .51,
+    tripRate: 0.51,
     probation: 3
 }, function handleRequest() {
     // unused

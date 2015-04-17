@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-'use strict' 
+'use strict';
 
 var assert = require('assert');
 var RequestHandler = require('./request-handler');
