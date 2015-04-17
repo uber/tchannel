@@ -59,7 +59,3 @@ def test_get_peer_with_caching(peer):
     tchannel.out_peers = {'foo': peer}
     result = yield tchannel.get_peer('foo')
     assert result == "some connection"
-
-
-def test_singleton():
-    assert TChannel() is TChannel()

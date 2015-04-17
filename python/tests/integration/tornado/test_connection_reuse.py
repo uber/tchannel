@@ -37,10 +37,10 @@ def test_reuse():
     dispatch1 = TornadoDispatcher()
     dispatch2 = TornadoDispatcher()
 
-    server1 = TChannel('localhost:%d' % port1, ignore_singleton=True)
+    server1 = TChannel('localhost:%d' % port1)
     server1.host(dispatch1).listen(port1)
 
-    server2 = TChannel('localhost:%d' % port2, ignore_singleton=True)
+    server2 = TChannel('localhost:%d' % port2)
     server2.host(dispatch2).listen(port2)
 
     @dispatch2.route("hello")
