@@ -131,7 +131,6 @@ TChannelOutgoingRequest.prototype.sendParts = function sendParts(parts, isLast) 
     var self = this;
     switch (self.state) {
         case States.Initial:
-            self.start = self.timers.now();
             self.sendCallRequestFrame(parts, isLast);
             break;
         case States.Streaming:
@@ -151,6 +150,7 @@ TChannelOutgoingRequest.prototype.sendCallRequestFrame = function sendCallReques
     var self = this;
     switch (self.state) {
         case States.Initial:
+            self.start = self.timers.now();
             if (self.span) {
                 self.span.annotate('cs');
             }
