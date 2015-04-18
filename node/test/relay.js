@@ -34,7 +34,7 @@ allocCluster.test('request retries', {
         serviceName: 'two',
         peers: [two.hostPort]
     });
-    oneToTwo.handler = new RelayHandler(oneToTwo, 'two', {logger: one.logger});
+    oneToTwo.handler = new RelayHandler(oneToTwo);
 
     var twoSvc = two.makeSubChannel({
         serviceName: 'two'
