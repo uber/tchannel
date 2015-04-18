@@ -46,6 +46,8 @@ function TChannelOutgoingResponse(id, options) {
     self.random = options.random;
     self.timers = options.timers;
 
+    self.start = 0;
+    self.end = 0;
     self.state = States.Initial;
     self.id = id || 0;
     self.code = options.code || 0;
@@ -79,14 +81,18 @@ function TChannelOutgoingResponse(id, options) {
         self.arg3 = null;
     }
 
-    self.on('finish', function onOutgoingResFinish() {
-        if (self.span) {
-            self.emit('span', self.span);
-        }
-    });
+    self.on('finish', self.onFinish);
 }
 
 inherits(TChannelOutgoingResponse, EventEmitter);
+
+TChannelOutgoingResponse.prototype.onFinish = function onFinish() {
+    var self = this;
+    if (!self.end) self.end = self.timers.now();
+    if (self.span) {
+        self.emit('span', self.span);
+    }
+};
 
 TChannelOutgoingResponse.prototype.type = 'tchannel.outgoing-response';
 
@@ -111,13 +117,12 @@ TChannelOutgoingResponse.prototype.sendCallResponseFrame = function sendCallResp
     var self = this;
     switch (self.state) {
         case States.Initial:
+            self.start = self.timers.now();
             self.sendFrame.callResponse(args, isLast);
-            if (isLast) {
-                if (self.span) {
-                    self.span.annotate('ss');
-                }
-                self.state = States.Done;
+            if (self.span) {
+                self.span.annotate('ss');
             }
+            if (isLast) self.state = States.Done;
             else self.state = States.Streaming;
             break;
         case States.Streaming:
@@ -137,12 +142,7 @@ TChannelOutgoingResponse.prototype.sendCallResponseContFrame = function sendCall
             throw new Error('first response frame not sent'); // TODO: typed error
         case States.Streaming:
             self.sendFrame.callResponseCont(args, isLast);
-            if (isLast) {
-                if (self.span) {
-                    self.span.annotate('ss');
-                }
-                self.state = States.Done;
-            }
+            if (isLast) self.state = States.Done;
             break;
         case States.Done:
         case States.Error:
