@@ -195,10 +195,16 @@ TChannelRequest.prototype.checkTimeout = function checkTimeout(err, res) {
         if (!self.err) {
             self.emit('error', err);
         }
-    } else {
+    } else if (res) {
         if (!self.err && !self.res) {
             self.emit('response', res);
         }
+    } else if (!self.err) {
+        self.emit('error', errors.TimeoutError({
+            start: self.start,
+            elapsed: self.elapsed,
+            timeout: self.timeout
+        }));
     }
     return true;
 };
