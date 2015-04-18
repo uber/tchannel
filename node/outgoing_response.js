@@ -79,14 +79,17 @@ function TChannelOutgoingResponse(id, options) {
         self.arg3 = null;
     }
 
-    self.on('finish', function onOutgoingResFinish() {
-        if (self.span) {
-            self.emit('span', self.span);
-        }
-    });
+    self.on('finish', self.onFinish);
 }
 
 inherits(TChannelOutgoingResponse, EventEmitter);
+
+TChannelOutgoingResponse.prototype.onFinish = function onFinish() {
+    var self = this;
+    if (self.span) {
+        self.emit('span', self.span);
+    }
+};
 
 TChannelOutgoingResponse.prototype.type = 'tchannel.outgoing-response';
 
