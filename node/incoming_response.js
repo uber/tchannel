@@ -66,6 +66,9 @@ function TChannelIncomingResponse(id, options) {
         self.arg2 = emptyBuffer;
         self.arg3 = emptyBuffer;
     }
+
+    self.start = self.timers.now();
+
     self.on('finish', self.onFinish);
 }
 
