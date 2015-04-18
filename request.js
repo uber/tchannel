@@ -152,7 +152,8 @@ TChannelRequest.prototype.resend = function resend() {
     outReq.send(self.arg1, self.arg2, self.arg3);
 
     function onError(err) {
-        if (!self.checkTimeout() && self.elapsed < self.timeout && self.shouldRetry(err)) {
+        if (self.checkTimeout(err)) return;
+        if (self.shouldRetry(err)) {
             deferResend();
         } else {
             self.emit('error', err);
@@ -161,8 +162,8 @@ TChannelRequest.prototype.resend = function resend() {
 
     function onResponse(res) {
         withArg23(res, function onArg23(err, res, arg2, arg3) {
-            if (!self.checkTimeout() &&
-                self.shouldRetry(err, res, arg2, arg3)) {
+            if (self.checkTimeout(err, res)) return;
+            if (self.shouldRetry(err, res, arg2, arg3)) {
                 deferResend();
             } else if (err) {
                 self.emit('error', err);
@@ -185,11 +186,16 @@ TChannelRequest.prototype.resend = function resend() {
     }
 };
 
-TChannelRequest.prototype.checkTimeout = function checkTimeout() {
+TChannelRequest.prototype.checkTimeout = function checkTimeout(err, res) {
     var self = this;
     var now = self.timers.now();
     self.elapsed = now - self.start;
     if (self.elapsed < self.timeout) return false;
+    if (err) {
+        self.emit('error', err);
+    } else {
+        self.emit('response', res);
+    }
     return true;
 };
 
