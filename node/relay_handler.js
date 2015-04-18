@@ -80,6 +80,14 @@ RelayRequest.prototype.createOutResponse = function createOutResponse(options) {
 RelayRequest.prototype.onResponse = function onResponse(res) {
     var self = this;
 
+    if (self.inres) {
+        self.channel.logger.warn('relay request got more than one response callback', {
+            // TODO: better context
+            remoteAddr: res.remoteAddr,
+            id: res.id
+        });
+        return;
+    }
     self.inres = res;
 
     if (!self.createOutResponse({
