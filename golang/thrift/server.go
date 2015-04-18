@@ -6,12 +6,13 @@ import "github.com/apache/thrift/lib/go/thrift"
 
 // Server is a thrift-over-tchannel server.
 type Server struct {
-	tchannel *tchannel.Channel
+	serviceName string
+	tchannel    *tchannel.Channel
 }
 
-func (s *Server) Register(serviceName string, processor thrift.TProcessor) {
+func (s *Server) Register(processorName string, processor thrift.TProcessor) {
 	// operation-level dispatching is done by the thrift processor
-	s.tchannel.Register(&ThriftService{processor}, serviceName, "")
+	s.tchannel.Register(&ThriftService{processor}, s.serviceName, processorName)
 }
 
 func (s *Server) ListenAndServe() error {
@@ -28,13 +29,13 @@ func (s *Server) HostPort() string {
 }
 
 // NewServer creates a GeofenceService that speaks thrift over tchannel.
-func NewServer(bindAddr string) (*Server, error) {
+func NewServer(bindAddr, serviceName string) (*Server, error) {
 	ch, err := tchannel.NewChannel(bindAddr, &tchannel.ChannelOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	return &Server{ch}, nil
+	return &Server{serviceName, ch}, nil
 }
 
 // ThriftService wraps the tchannel.Handler interface

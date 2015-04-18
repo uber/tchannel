@@ -6,8 +6,8 @@ import "github.com/uber/tchannel/golang/thrift"
 import gen "github.com/uber/tchannel/golang/examples/thrift/gen-go/test"
 import "errors"
 
-func createClient(serviceName string, server *thrift.Server, t *testing.T) *gen.TestClient {
-	protocol, err := thrift.NewTChannelOutboundProtocol(server.HostPort(), serviceName)
+func createClient(serviceName, processorName string, server *thrift.Server, t *testing.T) *gen.TestClient {
+	protocol, err := thrift.NewTChannelOutboundProtocol(server.HostPort(), serviceName, processorName)
 	if err != nil {
 		t.Fatal("Failed to create client")
 	}
@@ -15,11 +15,11 @@ func createClient(serviceName string, server *thrift.Server, t *testing.T) *gen.
 }
 
 func createGoodClient(server *thrift.Server, t *testing.T) *gen.TestClient {
-	return createClient("MyThriftService", server, t)
+	return createClient("MyThriftService", "MyThriftProcessor", server, t)
 }
 
 func createBadClient(server *thrift.Server, t *testing.T) *gen.TestClient {
-	return createClient("SomeRandomService", server, t)
+	return createClient("MyThriftService", "SomeRandomProcessor", server, t)
 }
 
 func TestEcho(t *testing.T) {
@@ -105,12 +105,12 @@ func TestBadClient(t *testing.T) {
 }
 
 func withTestServer(t *testing.T, f func(s *thrift.Server)) {
-	server, err := thrift.NewServer(":0")
+	server, err := thrift.NewServer(":0", "MyThriftService")
 	if err != nil {
 		t.Fatal("Failed to create server", err)
 	}
 
-	server.Register("MyThriftService", gen.NewTestProcessor(&TestHandler{}))
+	server.Register("MyThriftProcessor", gen.NewTestProcessor(&TestHandler{}))
 	go server.ListenAndServe()
 	func() {
 		defer server.Stop()

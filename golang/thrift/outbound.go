@@ -8,16 +8,17 @@ import "golang.org/x/net/context"
 import "time"
 
 // NewTChannelOutboundProtocol creates a TChannelOutboundProtocol
-func NewTChannelOutboundProtocol(remoteHostPort, remoteServiceName string) (*TChannelOutboundProtocol, error) {
+func NewTChannelOutboundProtocol(remoteHostPort, remoteServiceName, remoteProcessorName string) (*TChannelOutboundProtocol, error) {
 	tchannel, err := tchannel.NewChannel("0.0.0.0:0", nil)
 	if err != nil {
 		return nil, err
 	}
 
 	return &TChannelOutboundProtocol{
-		tchannel:          tchannel,
-		remoteHostPort:    remoteHostPort,
-		remoteServiceName: remoteServiceName,
+		tchannel:            tchannel,
+		remoteHostPort:      remoteHostPort,
+		remoteServiceName:   remoteServiceName,
+		remoteProcessorName: remoteProcessorName,
 	}, nil
 }
 
@@ -31,9 +32,10 @@ func NewTChannelOutboundProtocol(remoteHostPort, remoteServiceName string) (*TCh
 //
 type TChannelOutboundProtocol struct {
 	// state across calls
-	tchannel          *tchannel.Channel
-	remoteHostPort    string
-	remoteServiceName string
+	tchannel            *tchannel.Channel
+	remoteHostPort      string
+	remoteServiceName   string
+	remoteProcessorName string
 
 	// state per call
 	remoteOperationName string
@@ -46,10 +48,10 @@ type TChannelOutboundProtocol struct {
 
 func (p *TChannelOutboundProtocol) makeArg1() string {
 	// see https://github.com/uber/tchannel/blob/master/docs/thrift.md#arg1
-	//return fmt.Sprintf("%s::%s", p.remoteServiceName, p.remoteOperationName)
+	//return fmt.Sprintf("%s::%s", p.remoteProcessorName, p.remoteOperationName)
 
-	// ignore arg1, let the thrift processor do the operation level dispatching
-	return ""
+	// operation level dispatching handled by thrift
+	return p.remoteProcessorName
 }
 
 // WriteMessageBegin creates the write buffer and the TBinaryProtocol writer,
