@@ -44,8 +44,6 @@ var TChannelPeers = require('./peers');
 
 var TracingAgent = require('./trace/agent');
 
-var REQ_TIMEOUT_DEFAULT = 5000;
-
 // TODO restore spying
 // var Spy = require('./v2/spy');
 // var dumpEnabled = /\btchannel_dump\b/.test(process.env.NODE_DEBUG || '');
@@ -66,7 +64,7 @@ function TChannel(options) {
     }, options);
 
     self.options.requestDefaults = extend({
-        timeout: REQ_TIMEOUT_DEFAULT
+        timeout: TChannelRequest.defaultTimeout
     }, self.options.requestDefaults);
 
     self.logger = self.options.logger || nullLogger;
