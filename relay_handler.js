@@ -35,6 +35,15 @@ function RelayRequest(channel, inreq, buildRes) {
 RelayRequest.prototype.createOutRequest = function createOutRequest() {
     var self = this;
 
+    if (self.outreq) {
+        self.channel.logger.warn('relay request already started', {
+            // TODO: better context
+            remoteAddr: self.inreq.remoteAddr,
+            id: self.inreq.id
+        });
+        return;
+    }
+
     self.outreq = self.channel.request({
         streamed: self.inreq.streamed,
         ttl: self.inreq.ttl,
