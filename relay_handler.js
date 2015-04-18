@@ -20,10 +20,14 @@
 
 'use strict';
 
+var EventEmitter = require('events').EventEmitter;
+var inherits = require('util').inherits;
+
 var errors = require('./errors');
 
 function RelayRequest(channel, inreq, buildRes) {
     var self = this;
+    EventEmitter.call(self);
     self.channel = channel;
     self.inreq = inreq;
     self.inres = null;
@@ -31,6 +35,7 @@ function RelayRequest(channel, inreq, buildRes) {
     self.outreq = null;
     self.buildRes = buildRes;
 }
+inherits(RelayRequest, EventEmitter);
 
 RelayRequest.prototype.createOutRequest = function createOutRequest() {
     var self = this;
@@ -85,7 +90,12 @@ RelayRequest.prototype.createOutResponse = function createOutResponse(options) {
         return;
     }
     self.outres = self.buildRes(options);
+    self.outres.on('finish', emitFinish);
     return self.outres;
+
+    function emitFinish() {
+        self.emit('finish');
+    }
 };
 
 RelayRequest.prototype.onResponse = function onResponse(res) {
