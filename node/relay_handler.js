@@ -22,6 +22,92 @@
 
 var errors = require('./errors');
 
+function RelayRequest(channel, inreq, buildRes) {
+    var self = this;
+    self.channel = channel;
+    self.inreq = inreq;
+    self.inres = null;
+    self.outres = null;
+    self.outreq = null;
+    self.buildRes = buildRes;
+}
+
+RelayRequest.prototype.createOutRequest = function createOutRequest() {
+    var self = this;
+    self.outreq = self.channel.request({
+        streamed: self.inreq.streamed,
+        ttl: self.inreq.ttl,
+        service: self.inreq.service,
+        headers: self.inreq.headers
+    });
+    self.outreq.on('response', onResponse);
+    self.outreq.on('error', onError);
+
+    if (self.outreq.streamed) {
+        // TODO: frame-at-a-time rather than re-streaming?
+        self.inreq.arg1.pipe(self.outreq.arg1);
+        self.inreq.arg2.pipe(self.outreq.arg2);
+        self.inreq.arg3.pipe(self.outreq.arg3);
+    } else {
+        self.outreq.send(self.inreq.arg1, self.inreq.arg2, self.inreq.arg3);
+    }
+
+    return self.outreq;
+
+    function onResponse(res) {
+        self.onResponse(res);
+    }
+
+    function onError(err) {
+        self.onError(err);
+    }
+};
+
+RelayRequest.prototype.createOutResponse = function createOutResponse(options) {
+    var self = this;
+    if (self.outres) {
+        return;
+    }
+    self.outres = self.buildRes(options);
+    return self.outres;
+};
+
+RelayRequest.prototype.onResponse = function onResponse(res) {
+    var self = this;
+
+    self.inres = res;
+
+    if (!self.createOutResponse({
+        streamed: self.inres.streamed,
+        code: self.inres.code
+    })) return;
+
+    if (self.outres.streamed) {
+        self.outres.arg1.end();
+        self.inres.arg2.pipe(self.outres.arg2);
+        self.inres.arg3.pipe(self.outres.arg3);
+    } else {
+        self.outres.send(self.inres.arg2, self.inres.arg3);
+    }
+};
+
+RelayRequest.prototype.onError = function onError(err) {
+    var self = this;
+    if (!self.createOutResponse()) return;
+    var codeName = errors.classify(err);
+    if (codeName) {
+        self.outres.sendError(codeName, err.message);
+    } else {
+        self.outres.sendError('UnexpectedError', err.message);
+        self.channel.logger.error('unexpected error while forwarding', {
+            error: err
+            // TODO context
+        });
+    }
+
+    // TODO: stat in some cases, e.g. declined / peer not available
+};
+
 function RelayHandler(channel) {
     var self = this;
     self.channel = channel;
@@ -31,61 +117,8 @@ RelayHandler.prototype.type = 'tchannel.relay-handler';
 
 RelayHandler.prototype.handleRequest = function handleRequest(req, buildRes) {
     var self = this;
-    // TODO: frame-at-a-time rather than re-streaming?
-
-    var outres = null;
-    var outreq = self.channel.request({
-        streamed: req.streamed,
-        ttl: req.ttl,
-        service: req.service,
-        headers: req.headers
-    });
-    outreq.on('response', onResponse);
-    outreq.on('error', onError);
-    if (outreq.streamed) {
-        req.arg1.pipe(outreq.arg1);
-        req.arg2.pipe(outreq.arg2);
-        req.arg3.pipe(outreq.arg3);
-    } else {
-        outreq.send(req.arg1, req.arg2, req.arg3);
-    }
-    return outreq;
-
-    function onResponse(res) {
-        if (outres) {
-            return;
-        }
-        outres = buildRes({
-            streamed: res.streamed,
-            code: res.code
-        });
-        if (outres.streamed) {
-            outres.arg1.end();
-            res.arg2.pipe(outres.arg2);
-            res.arg3.pipe(outres.arg3);
-        } else {
-            outres.send(res.arg2, res.arg3);
-        }
-    }
-
-    function onError(err) {
-        if (outres) {
-            return;
-        }
-        outres = buildRes();
-        var codeName = errors.classify(err);
-        if (codeName) {
-            outres.sendError(codeName, err.message);
-        } else {
-            outres.sendError('UnexpectedError', err.message);
-            self.channel.logger.error('unexpected error while forwarding', {
-                error: err
-                // TODO context
-            });
-        }
-
-        // TODO: stat in some cases, e.g. declined / peer not available
-    }
+    var rereq = new RelayRequest(self.channel, req, buildRes);
+    rereq.createOutRequest();
 };
 
 module.exports = RelayHandler;
