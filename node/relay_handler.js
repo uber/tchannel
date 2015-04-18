@@ -68,6 +68,11 @@ RelayRequest.prototype.createOutRequest = function createOutRequest() {
 RelayRequest.prototype.createOutResponse = function createOutResponse(options) {
     var self = this;
     if (self.outres) {
+        self.channel.logger.warn('relay request already responded', {
+            // TODO: better context
+            remoteAddr: self.inreq.remoteAddr,
+            id: self.inreq.id
+        });
         return;
     }
     self.outres = self.buildRes(options);
