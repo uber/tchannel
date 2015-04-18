@@ -172,6 +172,7 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
         return callback(new Error('call response before init response')); // TODO typed error
     }
     var res = self.buildIncomingResponse(resFrame);
+    res.remoteAddr = self.remoteHostPort;
     self._handleCallFrame(res, resFrame, function(err) {
         if (err) return callback(err);
         if (res.state === IncomingResponse.States.Streaming) {
