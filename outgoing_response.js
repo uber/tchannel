@@ -112,12 +112,10 @@ TChannelOutgoingResponse.prototype.sendCallResponseFrame = function sendCallResp
     switch (self.state) {
         case States.Initial:
             self.sendFrame.callResponse(args, isLast);
-            if (isLast) {
-                if (self.span) {
-                    self.span.annotate('ss');
-                }
-                self.state = States.Done;
+            if (self.span) {
+                self.span.annotate('ss');
             }
+            if (isLast) self.state = States.Done;
             else self.state = States.Streaming;
             break;
         case States.Streaming:
@@ -137,12 +135,7 @@ TChannelOutgoingResponse.prototype.sendCallResponseContFrame = function sendCall
             throw new Error('first response frame not sent'); // TODO: typed error
         case States.Streaming:
             self.sendFrame.callResponseCont(args, isLast);
-            if (isLast) {
-                if (self.span) {
-                    self.span.annotate('ss');
-                }
-                self.state = States.Done;
-            }
+            if (isLast) self.state = States.Done;
             break;
         case States.Done:
         case States.Error:
