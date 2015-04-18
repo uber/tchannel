@@ -7,25 +7,33 @@ import gen "github.com/uber/tchannel/golang/examples/thrift/gen-go/test"
 import "errors"
 import "reflect"
 
-func createClient(serviceName, processorName string, server *thrift.Server, t *testing.T) *gen.TestClient {
-	protocol, err := thrift.NewTChannelOutboundProtocol(server.HostPort(), serviceName, processorName)
+func newFirstClient(server *thrift.Server, t *testing.T) *gen.FirstClient {
+	protocol, err := thrift.NewTChannelOutboundProtocol(server.HostPort(), "MyThriftService", "FirstProcessor")
 	if err != nil {
 		t.Fatal("Failed to create client")
 	}
-	return gen.NewTestClientProtocol(nil, protocol, protocol)
+	return gen.NewFirstClientProtocol(nil, protocol, protocol)
 }
 
-func createGoodClient(server *thrift.Server, t *testing.T) *gen.TestClient {
-	return createClient("MyThriftService", "MyThriftProcessor", server, t)
+func newSecondClient(server *thrift.Server, t *testing.T) *gen.SecondClient {
+	protocol, err := thrift.NewTChannelOutboundProtocol(server.HostPort(), "MyThriftService", "SecondProcessor")
+	if err != nil {
+		t.Fatal("Failed to create client")
+	}
+	return gen.NewSecondClientProtocol(nil, protocol, protocol)
 }
 
-func createBadClient(server *thrift.Server, t *testing.T) *gen.TestClient {
-	return createClient("MyThriftService", "SomeRandomProcessor", server, t)
+func newBadClient(server *thrift.Server, t *testing.T) *gen.FirstClient {
+	protocol, err := thrift.NewTChannelOutboundProtocol(server.HostPort(), "MyThriftService", "ThirdProcessor")
+	if err != nil {
+		t.Fatal("Failed to create client")
+	}
+	return gen.NewFirstClientProtocol(nil, protocol, protocol)
 }
 
 func TestEcho(t *testing.T) {
 	withTestServer(t, func(server *thrift.Server) {
-		client := createGoodClient(server, t)
+		client := newFirstClient(server, t)
 		for i := 0; i < 3; i++ {
 			msg := fmt.Sprintf("thrift over tchannel #%d", i)
 			if res, err := client.Echo(msg); err != nil {
@@ -39,7 +47,7 @@ func TestEcho(t *testing.T) {
 
 func TestHealthcheck(t *testing.T) {
 	withTestServer(t, func(server *thrift.Server) {
-		client := createGoodClient(server, t)
+		client := newFirstClient(server, t)
 		for i := 0; i < 3; i++ {
 			if res, err := client.Healthcheck(); err != nil {
 				t.Fatal("Healthcheck failed", err)
@@ -52,7 +60,7 @@ func TestHealthcheck(t *testing.T) {
 
 func TestAppError(t *testing.T) {
 	withTestServer(t, func(server *thrift.Server) {
-		client := createGoodClient(server, t)
+		client := newFirstClient(server, t)
 		for i := 0; i < 3; i++ {
 			if err := client.AppError(); err == nil {
 				t.Errorf("AppError should return error but did not")
@@ -63,23 +71,28 @@ func TestAppError(t *testing.T) {
 
 func TestAll(t *testing.T) {
 	withTestServer(t, func(server *thrift.Server) {
-		client := createGoodClient(server, t)
+		firstClient := newFirstClient(server, t)
+		secondClient := newSecondClient(server, t)
 		for i := 0; i < 3; i++ {
 			msg := fmt.Sprintf("thrift over tchannel #%d", i)
-			if res, err := client.Echo(msg); err != nil {
+			if res, err := firstClient.Echo(msg); err != nil {
 				t.Fatal("Echo failed", err)
 			} else if res != msg {
 				t.Errorf("Echo returned unexpected result: %v", res)
 			}
 
-			if res, err := client.Healthcheck(); err != nil {
+			if res, err := firstClient.Healthcheck(); err != nil {
 				t.Fatal("Healthcheck failed", err)
 			} else if !res.Healthy || res.Msg != "OK" {
 				t.Errorf("Healthcheck returned unexpected result: %v", res)
 			}
 
-			if err := client.AppError(); err == nil {
+			if err := firstClient.AppError(); err == nil {
 				t.Errorf("AppError should return error but did not")
+			}
+
+			if err := secondClient.Test(); err != nil {
+				t.Fatal("Test failed", err)
 			}
 		}
 	})
@@ -87,7 +100,7 @@ func TestAll(t *testing.T) {
 
 func TestBadClient(t *testing.T) {
 	withTestServer(t, func(server *thrift.Server) {
-		client := createBadClient(server, t)
+		client := newBadClient(server, t)
 		for i := 0; i < 3; i++ {
 			msg := fmt.Sprintf("thrift over tchannel #%d", i)
 			if _, err := client.Echo(msg); err == nil {
@@ -111,8 +124,10 @@ func withTestServer(t *testing.T, f func(s *thrift.Server)) {
 		t.Fatal("Failed to create server", err)
 	}
 
-	handler := TestHandler{}
-	server.Register("MyThriftProcessor", reflect.TypeOf(&handler), gen.NewTestProcessor(&handler))
+	firstHandler := FirstHandler{}
+	server.Register("FirstProcessor", reflect.TypeOf(&firstHandler), gen.NewFirstProcessor(&firstHandler))
+	secondHandler := SecondHandler{}
+	server.Register("SecondProcessor", reflect.TypeOf(&secondHandler), gen.NewSecondProcessor(&secondHandler))
 	go server.ListenAndServe()
 	func() {
 		defer server.Stop()
@@ -120,17 +135,24 @@ func withTestServer(t *testing.T, f func(s *thrift.Server)) {
 	}()
 }
 
-type TestHandler struct {
+type FirstHandler struct {
 }
 
-func (h *TestHandler) Healthcheck() (*gen.HealthCheckRes, error) {
+func (h *FirstHandler) Healthcheck() (*gen.HealthCheckRes, error) {
 	return &gen.HealthCheckRes{true, "OK"}, nil
 }
 
-func (h *TestHandler) Echo(msg string) (r string, err error) {
+func (h *FirstHandler) Echo(msg string) (r string, err error) {
 	return msg, nil
 }
 
-func (h *TestHandler) AppError() error {
+func (h *FirstHandler) AppError() error {
 	return errors.New("app error")
+}
+
+type SecondHandler struct {
+}
+
+func (h *SecondHandler) Test() error {
+	return nil
 }

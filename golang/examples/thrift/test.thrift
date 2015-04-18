@@ -3,8 +3,12 @@ struct HealthCheckRes {
   2: string msg,
 }
 
-service Test {
+service First {
     string Echo(1:string msg)
     HealthCheckRes Healthcheck()
     void AppError()
+}
+
+service Second {
+    void Test()
 }
