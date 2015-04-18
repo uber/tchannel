@@ -12,7 +12,7 @@ type Server struct {
 
 func (s *Server) Register(processorName string, processor thrift.TProcessor) {
 	// operation-level dispatching is done by the thrift processor
-	s.tchannel.Register(&ThriftService{processor}, s.serviceName, processorName)
+	s.tchannel.Register(&ThriftHandler{processor}, s.serviceName, processorName)
 }
 
 func (s *Server) ListenAndServe() error {
@@ -38,13 +38,13 @@ func NewServer(bindAddr, serviceName string) (*Server, error) {
 	return &Server{serviceName, ch}, nil
 }
 
-// ThriftService wraps the tchannel.Handler interface
+// ThriftHandler wraps the tchannel.Handler interface
 // around the thrift processor
-type ThriftService struct {
+type ThriftHandler struct {
 	processor thrift.TProcessor
 }
 
-func (s *ThriftService) Handle(ctx context.Context, call *tchannel.InboundCall) {
+func (s *ThriftHandler) Handle(ctx context.Context, call *tchannel.InboundCall) {
 	protocol := NewTChannelInboundProtocol(call)
 	s.processor.Process(protocol, protocol)
 }
