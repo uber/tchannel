@@ -131,6 +131,8 @@ TChannelRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
 TChannelRequest.prototype.resend = function resend() {
     var self = this;
 
+    if (self.checkTimeout()) return;
+
     var peer = self.choosePeer();
     if (!peer) {
         if (self.outReqs.length) {
@@ -142,6 +144,8 @@ TChannelRequest.prototype.resend = function resend() {
         }
         return;
     }
+
+    if (self.checkTimeout()) return;
 
     var outReq = peer.request(self.options);
     self.outReqs.push(outReq);
