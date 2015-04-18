@@ -46,6 +46,8 @@ function TChannelOutgoingResponse(id, options) {
     self.random = options.random;
     self.timers = options.timers;
 
+    self.start = 0;
+    self.end = 0;
     self.state = States.Initial;
     self.id = id || 0;
     self.code = options.code || 0;
@@ -86,6 +88,7 @@ inherits(TChannelOutgoingResponse, EventEmitter);
 
 TChannelOutgoingResponse.prototype.onFinish = function onFinish() {
     var self = this;
+    if (!self.end) self.end = self.timers.now();
     if (self.span) {
         self.emit('span', self.span);
     }
@@ -114,6 +117,7 @@ TChannelOutgoingResponse.prototype.sendCallResponseFrame = function sendCallResp
     var self = this;
     switch (self.state) {
         case States.Initial:
+            self.start = self.timers.now();
             self.sendFrame.callResponse(args, isLast);
             if (self.span) {
                 self.span.annotate('ss');
