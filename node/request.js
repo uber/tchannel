@@ -154,6 +154,7 @@ TChannelRequest.prototype.resend = function resend() {
         var key = keys[i];
         opts[key] = self.options[key];
     }
+    opts.timeout = self.timeout - self.elapsed;
     var outReq = peer.request(opts);
     self.outReqs.push(outReq);
 
