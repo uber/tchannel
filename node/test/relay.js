@@ -20,19 +20,43 @@
 
 'use strict';
 
-require('./argstream.js');
-require('./safe-quit.js');
-require('./timeouts.js');
-require('./send.js');
-require('./retry.js');
-require('./relay.js');
-require('./streaming.js');
-require('./streaming_bisect.js');
-require('./register.js');
-require('./identify.js');
-require('./tchannel.js');
-require('./regression-inOps-leak.js');
-require('./v2/index.js');
-require('./regression-listening-on-used-port.js');
-require('./as-thrift.js');
-require('./as-json.js');
+var allocCluster = require('./lib/alloc-cluster');
+var TChannel = require('../channel');
+var RelayHandler = require('../relay_handler');
+
+allocCluster.test('request retries', {
+    numPeers: 2
+}, function t(cluster, assert) {
+    var one = cluster.channels[0];
+    var two = cluster.channels[1];
+
+    var oneToTwo = one.makeSubChannel({
+        serviceName: 'two',
+        peers: [two.hostPort]
+    });
+    oneToTwo.handler = new RelayHandler(oneToTwo, 'two', {logger: one.logger});
+
+    var twoSvc = two.makeSubChannel({
+        serviceName: 'two'
+    });
+    twoSvc.register('echo', echo);
+
+    var client = TChannel({
+        logger: one.logger
+    });
+    var twoClient = client.makeSubChannel({
+        serviceName: 'two',
+        peers: [one.hostPort]
+    });
+
+    twoClient.request().send('echo', 'foo', 'bar', function done(err, res, arg2, arg3) {
+        assert.ifError(err, 'no unexpected error');
+        assert.equal(String(arg2), 'foo', 'expected arg2');
+        assert.equal(String(arg3), 'bar', 'expected arg3');
+        assert.end();
+    });
+});
+
+function echo(req, res, arg2, arg3) {
+    res.sendOk(arg2, arg3);
+}
