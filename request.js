@@ -27,6 +27,7 @@ var inherits = require('util').inherits;
 var errors = require('./errors');
 
 var DEFAULT_RETRY_LIMIT = 5;
+var DEFAULT_TIMEOUT = 100;
 
 function TChannelRequest(channel, options) {
     options = options || {};
@@ -43,7 +44,7 @@ function TChannelRequest(channel, options) {
     self.options = options;
     self.triedRemoteAddrs = {};
     self.outReqs = [];
-    self.timeout = self.options.timeout;
+    self.timeout = self.options.timeout || DEFAULT_TIMEOUT;
     self.limit = self.options.retryLimit || DEFAULT_RETRY_LIMIT;
     self.start = 0;
     self.end = 0;
