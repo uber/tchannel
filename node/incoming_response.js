@@ -42,6 +42,7 @@ function TChannelIncomingResponse(id, options) {
     self.timers = options.timers;
 
     self.state = States.Initial;
+    self.remoteAddr = null;
     self.id = id || 0;
     self.code = options.code || 0;
     self.checksum = options.checksum || null;
