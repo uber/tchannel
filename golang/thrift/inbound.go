@@ -1,6 +1,9 @@
 package thrift
 
 import "bytes"
+import "errors"
+import "fmt"
+import "strings"
 import "github.com/apache/thrift/lib/go/thrift"
 import tchannel "github.com/uber/tchannel/golang"
 
@@ -175,8 +178,17 @@ func (p *TChannelInboundProtocol) ReadMessageBegin() (name string, typeId thrift
 	p.readBuffer = NewMemoryBufferTransport2(buf)
 	p.reader = thrift.NewTBinaryProtocol(p.readBuffer, false, false)
 
+	// parse the thrift method from arg1
+	if arg1 := string(p.call.Operation()); strings.Index(arg1, "::") < 0 {
+		err = errors.New(fmt.Sprintf("Malformed arg1: %s", arg1))
+		return
+	} else {
+		name = strings.Split(arg1, "::")[1]
+	}
+
 	// read from the read buffer
-	return p.reader.ReadMessageBegin()
+	_, typeId, seqId, err = p.reader.ReadMessageBegin()
+	return
 }
 
 // ReadMessageEnd delegates to the TBinaryProtocol reader

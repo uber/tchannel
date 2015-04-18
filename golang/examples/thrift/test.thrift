@@ -4,7 +4,7 @@ struct HealthCheckRes {
 }
 
 service Test {
-    string echo(1:string msg)
-    HealthCheckRes healthcheck()
-    void appError()
+    string Echo(1:string msg)
+    HealthCheckRes Healthcheck()
+    void AppError()
 }

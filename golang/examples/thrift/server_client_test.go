@@ -5,6 +5,7 @@ import "fmt"
 import "github.com/uber/tchannel/golang/thrift"
 import gen "github.com/uber/tchannel/golang/examples/thrift/gen-go/test"
 import "errors"
+import "reflect"
 
 func createClient(serviceName, processorName string, server *thrift.Server, t *testing.T) *gen.TestClient {
 	protocol, err := thrift.NewTChannelOutboundProtocol(server.HostPort(), serviceName, processorName)
@@ -110,7 +111,8 @@ func withTestServer(t *testing.T, f func(s *thrift.Server)) {
 		t.Fatal("Failed to create server", err)
 	}
 
-	server.Register("MyThriftProcessor", gen.NewTestProcessor(&TestHandler{}))
+	handler := TestHandler{}
+	server.Register("MyThriftProcessor", reflect.TypeOf(&handler), gen.NewTestProcessor(&handler))
 	go server.ListenAndServe()
 	func() {
 		defer server.Stop()

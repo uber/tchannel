@@ -48,10 +48,7 @@ type TChannelOutboundProtocol struct {
 
 func (p *TChannelOutboundProtocol) makeArg1() string {
 	// see https://github.com/uber/tchannel/blob/master/docs/thrift.md#arg1
-	//return fmt.Sprintf("%s::%s", p.remoteProcessorName, p.remoteOperationName)
-
-	// operation level dispatching handled by thrift
-	return p.remoteProcessorName
+	return p.remoteProcessorName + "::" + p.remoteOperationName
 }
 
 // WriteMessageBegin creates the write buffer and the TBinaryProtocol writer,
@@ -60,7 +57,7 @@ func (p *TChannelOutboundProtocol) WriteMessageBegin(name string, typeId thrift.
 	p.remoteOperationName = name
 	p.writeBuffer = NewMemoryBufferTransport()
 	p.writer = thrift.NewTBinaryProtocol(p.writeBuffer, false, false)
-	return p.writer.WriteMessageBegin(name, typeId, seqId)
+	return p.writer.WriteMessageBegin("" /* name goes in arg1 */, typeId, seqId)
 }
 
 // WriteMessageEnd delegates to the TBinaryProtocol writer
