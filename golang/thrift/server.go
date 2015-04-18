@@ -28,7 +28,7 @@ func (s *Server) HostPort() string {
 	return s.tchannel.HostPort()
 }
 
-// NewServer creates a GeofenceService that speaks thrift over tchannel.
+// NewServer creates a service that speaks thrift over tchannel.
 func NewServer(bindAddr, serviceName string) (*Server, error) {
 	ch, err := tchannel.NewChannel(bindAddr, &tchannel.ChannelOptions{})
 	if err != nil {
