@@ -7,7 +7,7 @@
     "lint": "jshint .",
     "test": "npm run lint -s && node test/index.js",
     "benchmark": "echo '!!! DEPRECATED: Better to just run `node benchmark` directly' >&2; node benchmarks",
-    "take-benchmark": "node benchmarks/index.js -o benchmarks/$(git rev-parse --short HEAD).json -- -m 5 -p 1000,10000,20000 -s 4,$(( 2 ** 12 )),$(( 2 ** 14 ))",
+    "take-benchmark": "./benchmarks/take.sh",
     "cover": "istanbul cover --print detail --report html -- test/index.js",
     "view-cover": "opn coverage/index.html",
     "check-licence": "uber-licence --dry",
