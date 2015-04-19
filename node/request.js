@@ -148,7 +148,14 @@ TChannelRequest.prototype.resend = function resend() {
 
     if (self.checkTimeout()) return;
 
-    var outReq = peer.request(self.options);
+    var opts = {};
+    var keys = Object.keys(self.options);
+    for (var i = 0; i < keys.length; i++) {
+        var key = keys[i];
+        opts[key] = self.options[key];
+    }
+    opts.timeout = self.timeout - self.elapsed;
+    var outReq = peer.request(opts);
     self.outReqs.push(outReq);
 
     self.triedRemoteAddrs[outReq.remoteAddr] = (self.triedRemoteAddrs[outReq.remoteAddr] || 0) + 1;
