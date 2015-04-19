@@ -27,9 +27,10 @@ function TChannelServiceNameHandler(channel) {
         return new TChannelServiceNameHandler(channel);
     }
     var self = this;
-    self.type = 'tchannel.service-name-handler';
     self.channel = channel;
 }
+
+TChannelServiceNameHandler.prototype.type = 'tchannel.service-name-handler';
 
 TChannelServiceNameHandler.prototype.handleRequest = function handleRequest(req, buildRes) {
     var self = this;
