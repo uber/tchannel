@@ -33,6 +33,22 @@ function Checksum(type, val) {
     var self = this;
     self.type = type;
     self.val = val || 0;
+    switch (self.type) {
+        case 0x00:
+            self._compute = self._computeNone;
+            break;
+        case 0x01:
+            self._compute = self._computeCrc32;
+            break;
+        case 0x02:
+            self._compute = self._computeFarm32;
+            break;
+        case 0x03:
+            self._compute = self._computeCrc32;
+            break;
+        default:
+            throw new Error('invalid checksum type ' + self.type);
+    }
 }
 
 Checksum.objOrType = function objOrType(arg) {
@@ -79,32 +95,32 @@ Checksum.RW = bufrw.Switch(bufrw.UInt8, rwCases, {
 Checksum.prototype.compute = function compute(args, prior) {
     if (typeof prior !== 'number') prior = 0;
     var self = this;
-    var csum = prior;
-    var i;
-    switch (self.type) {
-        case 0x00:
-            break;
-        case 0x01:
-            if (csum === 0) csum = undefined;
-            for (i = 0; i < args.length; i++) {
-                csum = crc32(args[i], csum);
-            }
-            if (csum === undefined) csum = 0;
-            break;
-        case 0x02:
-            for (i = 0; i < args.length; i++) {
-                csum = farm32(args[i], csum);
-            }
-            break;
-        case 0x03:
-            for (i = 0; i < args.length; i++) {
-                csum = crc32c(args[i], csum);
-            }
-            break;
-        default:
-            throw new Error('invalid checksum type ' + self.type);
+    if (self.type === Checksum.Types.None) {
+        return 0;
+    } else {
+        var csum = prior;
+        for (var i = 0; i < args.length; i++) {
+            csum = self._compute(args[i], csum);
+        }
+        return csum;
     }
-    return csum;
+};
+
+Checksum.prototype._computeNone = function _computeNone() {
+    return 0;
+};
+
+Checksum.prototype._computeCrc32 = function _computeCrc32(arg, prior) {
+    if (prior === 0) prior = undefined;
+    return crc32(arg, prior);
+};
+
+Checksum.prototype._computeCrc32C = function _computeCrc32(arg, prior) {
+    return crc32c(arg, prior);
+};
+
+Checksum.prototype._computeFarm32 = function _computeFarm32(arg, prior) {
+    return farm32(arg, prior);
 };
 
 Checksum.prototype.update = function update(args, prior) {
