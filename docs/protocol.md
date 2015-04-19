@@ -158,6 +158,7 @@ code   | name              | description
 `0x04` | call res          | RPC method response
 `0x13` | call req continue | RPC request continuation fragment
 `0x14` | call res continue | RPC response continuation fragment
+`0x20` | advertise         | Service advertisement
 `0xc0` | cancel            | Cancel an outstanding call req / forward req (no body)
 `0xc1` | claim             | Claim / cancel a redundant request
 `0xd0` | ping req          | Protocol level ping req (no body)
@@ -440,6 +441,13 @@ the service is "healthy." It only validates connectivity and basic protocol
 functionality.
 
 This message type has no body.
+
+## Payload: advertise (0x20)
+
+Schema:
+```
+num:2 ( service~1 cost:1 ){num}
+```
 
 ## Payload: error (0xFF)
 
