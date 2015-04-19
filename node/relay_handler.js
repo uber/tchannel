@@ -22,11 +22,9 @@
 
 var errors = require('./errors');
 
-function RelayHandler(channel, serviceName, clients) {
+function RelayHandler(channel) {
     var self = this;
-    self.serviceName = serviceName;
     self.channel = channel;
-    self.clients = clients;
 }
 
 RelayHandler.prototype.type = 'tchannel.relay-handler';
@@ -74,15 +72,13 @@ RelayHandler.prototype.handleRequest = function handleRequest(req, buildRes) {
         if (outres) {
             return;
         }
-        var logger = self.clients.logger;
-
         outres = buildRes();
         var codeName = errors.classify(err);
         if (codeName) {
             outres.sendError(codeName, err.message);
         } else {
             outres.sendError('UnexpectedError', err.message);
-            logger.error('unexpected error while forwarding', {
+            self.channel.logger.error('unexpected error while forwarding', {
                 error: err
                 // TODO context
             });
