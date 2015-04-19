@@ -20,6 +20,7 @@
 
 'use strict';
 
+var series = require('run-series');
 var allocCluster = require('./lib/alloc-cluster');
 var TChannel = require('../channel');
 
@@ -217,6 +218,131 @@ allocCluster.test('request application retries', {
                 peers: []
             }, {
                 peers: []
+            }]
+        });
+        assert.end();
+    }
+});
+
+allocCluster.test('retryFlags work', {
+    numPeers: 2
+}, function t(cluster, assert) {
+    var random = randSeq([
+        1.0, 0.1, // .request, chan 1 wins
+        0.5,      // chan 1 timeout
+
+        1.0, 0.1, // .request, chan 1 wins
+        0.5,      // chan 1 timeout
+             1.0, // .request, chan 2 wins (1 is skipped)
+        0.0,      // success!
+
+        1.0, 0.1, // .request, chan 1 wins
+        0.9       // chan 1 busy
+
+    ]);
+
+    cluster.channels.forEach(function each(server, i) {
+        var n = i + 1;
+        var chan = server.makeSubChannel({
+            serviceName: 'tristan'
+        });
+        chan.register('foo', function foo(req, res, arg2, arg3) {
+            var rand = random();
+            if (rand >= 0.9) {
+                res.sendError('Busy', 'nop');
+            } else if (rand >= 0.5) {
+                res.sendError('Timeout', 'no luck');
+            } else {
+                var str = String(arg3);
+                str = str.toUpperCase();
+                res.sendOk('served by ' + n, str);
+            }
+        });
+    });
+
+    var client = TChannel({
+        timeoutFuzz: 0,
+        random: random
+    });
+    var chan = client.makeSubChannel({
+        serviceName: 'tristan',
+        peers: cluster.hosts
+    });
+
+    series([
+
+        function defaultToNotRetryingTimeout(next) {
+            var req = chan.request({
+                timeout: 100
+            });
+            req.send('foo', '', 'hi', function done(err, res, arg2, arg3) {
+                assert.equal(req.outReqs.length, 1, 'expected 1 tries');
+                assert.equal(err && err.type, 'tchannel.timeout', 'expected timeout error');
+                next();
+            });
+        },
+
+        function canRetryTimeout(next) {
+            var req = chan.request({
+                retryFlags: {
+                    never: false,
+                    onConnectionError: true,
+                    onTimeout: true
+                }
+            });
+            req.send('foo', '', 'hi', function done(err, res, arg2, arg3) {
+                if (err) return finish(err);
+
+                assert.equal(req.outReqs.length, 2, 'expected 2 tries');
+
+                assert.equal(
+                    req.outReqs[0].err &&
+                    req.outReqs[0].err.type,
+                    'tchannel.timeout',
+                    'expected first timeout error');
+
+                assert.ok(res.ok, 'expected to have not ok');
+                assert.ok(req.outReqs[1].res, 'expected to have 2nd response');
+                assert.equal(String(arg3), 'HI', 'got expected response');
+
+                next();
+            });
+        },
+
+        function canOptOutFully(next) {
+            var req = chan.request({
+                timeout: 100,
+                retryFlags: {
+                    never: true,
+                    onConnectionError: false,
+                    onTimeout: false
+                }
+            });
+            req.send('foo', '', 'hi', function done(err, res, arg2, arg3) {
+                assert.equal(req.outReqs.length, 1, 'expected 1 tries');
+                assert.equal(err && err.type, 'tchannel.busy', 'expected busy error');
+                next();
+            });
+        }
+
+    ], finish);
+
+    function finish(err) {
+        assert.ifError(err, 'no final error');
+
+        cluster.assertCleanState(assert, {
+            channels: [{
+                peers: [{
+                    connections: [
+                        {direction: 'in', inReqs: 0, outReqs: 0}
+                    ]
+                }]
+            }, {
+                peers: [{
+                    connections: [
+                        {direction: 'in', inReqs: 0, outReqs: 0}
+                    ]
+                }]
             }]
         });
         assert.end();

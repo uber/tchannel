@@ -62,4 +62,28 @@ module.exports.Checksum = require('./checksum');
 
 module.exports.Frame = Frame;
 
+module.exports.parseRetryFlags = function parseRetryFlags(val) {
+    val = val || 'c';
+    var never = val.indexOf('n') > -1;
+    var onConnectionError = !never && val.indexOf('c') > -1;
+    var onTimeout = !never && val.indexOf('t') > -1;
+    return {
+        never: never,
+        onConnectionError: onConnectionError,
+        onTimeout: onTimeout
+    };
+};
+
+module.exports.encodeRetryFlags = function encodeRetryFlags(retryFlags) {
+    if (!retryFlags) return '';
+    var re = '';
+    if (retryFlags.never) {
+        re += 'n';
+    } else {
+        if (retryFlags.onConnectionError) re += 'c';
+        if (retryFlags.onTimeout) re += 't';
+    }
+    return re;
+};
+
 module.exports.Handler = require('./handler');
