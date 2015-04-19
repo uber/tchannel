@@ -63,7 +63,7 @@ function TChannel(options) {
         processName: format('%s[%s]', process.title, process.pid)
     }, options);
 
-    self.options.requestDefaults = extend({
+    self.requestDefaults = extend({
         timeout: TChannelRequest.defaultTimeout
     }, self.options.requestDefaults);
 
@@ -82,7 +82,7 @@ function TChannel(options) {
     self.serviceName = '';
     if (self.options.serviceName) {
         self.serviceName = self.options.serviceName;
-        self.options.requestDefaults.serviceName = self.serviceName;
+        self.requestDefaults.serviceName = self.serviceName;
         delete self.options.serviceName;
     }
 
@@ -120,8 +120,8 @@ function TChannel(options) {
             reporter: self.options.traceReporter
         });
 
-        if (self.options.requestDefaults.trace !== false) {
-            self.options.requestDefaults.trace = true;
+        if (self.requestDefaults.trace !== false) {
+            self.requestDefaults.trace = true;
         }
     }
 
@@ -344,7 +344,7 @@ TChannel.prototype.request = function channelRequest(options) {
         throw new Error('cannot request() to destroyed tchannel'); // TODO typed error
     }
 
-    options = extend(self.options.requestDefaults, options);
+    options = extend(self.requestDefaults, options);
 
     if (!options.service && options.serviceName) {
         options.service = options.serviceName;
