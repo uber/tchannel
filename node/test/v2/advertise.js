@@ -1,5 +1,5 @@
 // Copyright (c) 2015 Uber Technologies, Inc.
-
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -20,13 +20,41 @@
 
 'use strict';
 
-require('./frame.js');
-require('./init.js');
-require('./checksum.js');
-require('./header.js');
-require('./tracing.js');
-require('./call.js');
-require('./cont.js');
-require('./advertise.js');
-require('./error_response.js');
-require('./args.js');
+var test = require('tape');
+var testRW = require('bufrw/test_rw');
+var Advertise = require('../../v2/advertise.js');
+
+test('Cont.RequestCont.RW: read/write payload', testRW.cases(Advertise.RW, [
+
+    // zero
+    [
+        new Advertise({}),
+        [ 0x00, 0x00 ]
+    ],
+
+    // one
+    [
+        new Advertise({
+            foo: {cost: 0}
+        }),
+        [ 0x00, 0x01,             // num:2
+          0x03, 0x66, 0x6f, 0x6f, // name~1
+          0x00                    // cost:1
+        ]
+    ],
+
+    // two
+    [
+        new Advertise({
+            foo: {cost: 0},
+            bar: {cost: 1}
+        }),
+        [ 0x00, 0x02,             // num:2
+          0x03, 0x66, 0x6f, 0x6f, // name~1
+          0x00,                   // cost:1
+          0x03, 0x62, 0x61, 0x72, // name~1
+          0x01                    // cost:1
+        ]
+    ]
+
+]));

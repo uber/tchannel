@@ -53,6 +53,11 @@ Frame.Types[Types.CallResponseCont] = cont.ResponseCont;
 module.exports.CallRequestCont = cont.RequestCont;
 module.exports.CallResponseCont = cont.ResponseCont;
 
+var Advertise = require('./advertise');
+Types.Advertise = Advertise.TypeCode;
+Frame.Types[Types.Advertise] = Advertise;
+module.exports.Advertise = Advertise;
+
 var ErrorResponse = require('./error_response');
 Types.ErrorResponse = ErrorResponse.TypeCode;
 Frame.Types[Types.ErrorResponse] = ErrorResponse;
