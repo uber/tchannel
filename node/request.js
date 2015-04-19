@@ -39,6 +39,15 @@ function TChannelRequest(channel, options) {
     self.timers = self.channel.timers;
 
     self.options = options;
+
+    if (!self.options.retryFlags) {
+        self.options.retryFlags = {
+            never: false,
+            onConnectionError: true,
+            onTimeout: false
+        };
+    }
+
     self.triedRemoteAddrs = {};
     self.outReqs = [];
     self.timeout = self.options.timeout || TChannelRequest.defaultTimeout;
@@ -228,19 +237,27 @@ TChannelRequest.prototype.shouldRetry = function shouldRetry(err, res, arg2, arg
         return false;
     }
 
+    if (self.options.retryFlags.never) {
+        return false;
+    }
+
     if (err) {
         switch (err.type) {
             case 'tchannel.bad-request':
             case 'tchannel.canceled':
                 return false;
 
-            case 'tchannel.socket':
-            case 'tchannel.timeout':
             case 'tchannel.busy':
             case 'tchannel.declined':
-            case 'tchannel.unexpected':
-            case 'tchannel.protocol':
                 return true;
+
+            case 'tchannel.timeout':
+                return !!self.options.retryFlags.onTimeout;
+
+            case 'tchannel.socket':
+            case 'tchannel.protocol':
+            case 'tchannel.unexpected':
+                return !!self.options.retryFlags.onConnectionError;
 
             default:
                 self.logger.error('unknown error type in request retry', {
