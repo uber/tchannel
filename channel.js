@@ -120,7 +120,7 @@ function TChannel(options) {
             reporter: self.options.traceReporter
         });
 
-        if (self.options.requestDefaults !== false) {
+        if (self.options.requestDefaults.trace !== false) {
             self.options.requestDefaults.trace = true;
         }
     }
