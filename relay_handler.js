@@ -20,10 +20,14 @@
 
 'use strict';
 
+var EventEmitter = require('events').EventEmitter;
+var inherits = require('util').inherits;
+
 var errors = require('./errors');
 
 function RelayRequest(channel, inreq, buildRes) {
     var self = this;
+    EventEmitter.call(self);
     self.channel = channel;
     self.inreq = inreq;
     self.inres = null;
@@ -31,6 +35,7 @@ function RelayRequest(channel, inreq, buildRes) {
     self.outreq = null;
     self.buildRes = buildRes;
 }
+inherits(RelayRequest, EventEmitter);
 
 RelayRequest.prototype.createOutRequest = function createOutRequest() {
     var self = this;
@@ -86,7 +91,12 @@ RelayRequest.prototype.createOutResponse = function createOutResponse(options) {
         return;
     }
     self.outres = self.buildRes(options);
+    self.outres.on('finish', emitFinish);
     return self.outres;
+
+    function emitFinish() {
+        self.emit('finish');
+    }
 };
 
 RelayRequest.prototype.onResponse = function onResponse(res) {
@@ -136,14 +146,32 @@ RelayRequest.prototype.onError = function onError(err) {
 function RelayHandler(channel) {
     var self = this;
     self.channel = channel;
+    self.reqs = {};
 }
 
 RelayHandler.prototype.type = 'tchannel.relay-handler';
 
 RelayHandler.prototype.handleRequest = function handleRequest(req, buildRes) {
     var self = this;
-    var rereq = new RelayRequest(self.channel, req, buildRes);
+    var rereq = self.reqs[req.id];
+    if (rereq) {
+        self.channel.logger.error('relay request already exists for incoming request', {
+            inReqId: req.id,
+            priorInResId: rereq.inres && rereq.inres.id,
+            priorOutResId: rereq.outres && rereq.outres.id,
+            priorOutReqId: rereq.outreq && rereq.outreq.id
+            // TODO more context, like outreq remote addr
+        });
+        buildRes().sendError('UnexpectedError', 'request id exists in relay handler');
+        return;
+    }
+    rereq = new RelayRequest(self.channel, req, buildRes);
+    self.reqs[req.id] = rereq;
+    rereq.on('finish', rereqFinished);
     rereq.createOutRequest();
+    function rereqFinished() {
+        delete self.reqs[req.id];
+    }
 };
 
 module.exports = RelayHandler;
