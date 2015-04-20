@@ -136,7 +136,10 @@ TChannelOutgoingRequest.prototype.sendParts = function sendParts(parts, isLast) 
         case States.Done:
             // TODO: could probably happen normally, like say if a
             // streaming request is canceled
-            self.emit('error', new Error('got frame in done state')); // TODO: typed error
+            self.emit('error', errors.RequestFrameState({
+                attempted: 'arg parts',
+                state: 'Done'
+            }));
             break;
         case States.Error:
             // TODO: log warn
@@ -157,10 +160,15 @@ TChannelOutgoingRequest.prototype.sendCallRequestFrame = function sendCallReques
             else self.state = States.Streaming;
             break;
         case States.Streaming:
-            self.emit('error', new Error('first request frame already sent')); // TODO: typed error
+            self.emit('error', errors.RequestFrameState({
+                attempted: 'call request',
+                state: 'Streaming'
+            }));
             break;
         case States.Done:
-            self.emit('error', new Error('request already done')); // TODO: typed error
+            self.emit('error', errors.RequestAlreadyDone({
+                attempted: 'call request'
+            }));
             break;
     }
 };
@@ -169,14 +177,19 @@ TChannelOutgoingRequest.prototype.sendCallRequestContFrame = function sendCallRe
     var self = this;
     switch (self.state) {
         case States.Initial:
-            self.emit('error', new Error('first request frame not sent')); // TODO: typed error
+            self.emit('error', errors.RequestFrameState({
+                attempted: 'call request continuation',
+                state: 'Initial'
+            }));
             break;
         case States.Streaming:
             self.sendFrame.callRequestCont(args, isLast);
             if (isLast) self.state = States.Done;
             break;
         case States.Done:
-            self.emit('error', new Error('request already done')); // TODO: typed error
+            self.emit('error', errors.RequestAlreadyDone({
+                attempted: 'call request continuation'
+            }));
             break;
     }
 };
