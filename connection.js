@@ -165,6 +165,9 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
         if (!req) {
             self.logger.info('response received for unknown or lost operation', {
                 responseId: res.id,
+                code: res.code,
+                arg1: Buffer.isBuffer(res.arg1) ?
+                    String(res.arg1) : "streamed-arg1",
                 remoteAddr: self.remoteAddr,
                 direction: self.direction,
             });
