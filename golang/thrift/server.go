@@ -11,11 +11,14 @@ type Server struct {
 	tchannel    *tchannel.Channel
 }
 
-func (s *Server) Register(processorName string, processorType reflect.Type, processor thrift.TProcessor) {
+// Register registers the given processor's methods as handlers with this server.
+// E.g., a processor 'myProcessor' with methods 'foo' and 'bar' will be registered
+// under the operations 'myProcessor::foo' and 'myProcessor::bar'.
+func (s *Server) Register(processorName string, processorInterface reflect.Type, processor thrift.TProcessor) {
 	// all methods of the processor is handled by the same handler
 	handler := &ThriftHandler{processor}
-	for i := 0; i < processorType.NumMethod(); i++ {
-		methodName := processorType.Method(i).Name
+	for i := 0; i < processorInterface.NumMethod(); i++ {
+		methodName := processorInterface.Method(i).Name
 		s.tchannel.Register(handler, s.serviceName, processorName+"::"+methodName)
 	}
 }
