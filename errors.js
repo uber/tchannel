@@ -125,6 +125,13 @@ module.exports.ResponseAlreadyDone = TypedError({
     attempted: null
 });
 
+module.exports.ResponseFrameState = TypedError({
+    type: 'tchannel.response-frame-state',
+    message: 'cannot send {attempted} in {state} response state',
+    attempted: null,
+    state: null
+});
+
 module.exports.SocketError = WrappedError({
     type: 'tchannel.socket',
     message: 'tchannel socket error ({code} from {syscall}): {origMessage}',
