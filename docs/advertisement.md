@@ -38,7 +38,7 @@ at what costs.
 
 Schema:
 ```
-tracing:25 num:2 ( service~1 cost:1 ){num}
+num:2 ( service~1 cost:1 ){num}
 ```
 
 An advertise message means that the remote connection has 
@@ -60,7 +60,7 @@ It is valid to `advertise` multiple times down the same connection
 
 Schema:
 ```
-tracing:25 num:2 ( service~1 hostport~1 cost:1 ){num}
+num:2 ( service~1 hostport~1 cost:1 ){num}
 ```
 
 The `hostport` field is a string defined as "host:port"
@@ -77,7 +77,7 @@ and know that it gets delivered with the cost.
 
 Schema:
 ```
-tracing:25 conncount:2
+conncount:2
 ```
 
 A `forward-advertise` message is a response to an `advertise`
