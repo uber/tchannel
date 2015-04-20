@@ -25,7 +25,7 @@ var ArgsRW = require('./args');
 var Checksum = require('./checksum');
 var header = require('./header');
 var Tracing = require('./tracing');
-var argsrw = ArgsRW(bufrw.buf2);
+var argsrw = ArgsRW();
 
 var ResponseCodes = {
     OK: 0x00,
