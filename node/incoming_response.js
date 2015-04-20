@@ -24,6 +24,7 @@ var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 
 var InArgStream = require('./argstream').InArgStream;
+var errors = require('./errors');
 
 var emptyBuffer = Buffer(0);
 
@@ -105,7 +106,9 @@ TChannelIncomingResponse.prototype.handleFrame = function handleFrame(parts) {
 TChannelIncomingResponse.prototype.finish = function finish() {
     var self = this;
     if (self.state === States.Done) {
-        self.emit('error', new Error('response already done')); // TODO: typed error
+        self.emit('error', errors.ResponseAlreadyDone({
+            attempted: 'finish'
+        }));
     } else {
         self.state = States.Done;
     }
