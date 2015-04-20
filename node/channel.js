@@ -20,6 +20,7 @@
 
 'use strict';
 
+var assert = require('assert');
 var globalTimers = {
     setTimeout: require('timers').setTimeout,
     clearTimeout: require('timers').clearTimeout,
@@ -242,15 +243,9 @@ TChannel.prototype.onServerSocketError = function onServerSocketError(err) {
 TChannel.prototype.makeSubChannel = function makeSubChannel(options) {
     var self = this;
     if (!options) options = {};
-    if (self.serviceName) {
-        throw new Error('arbitrary-depth sub channels are unsupported'); // TODO typed error
-    }
-    if (!options.serviceName) {
-        throw new Error('must specify serviceName'); // TODO typed error
-    }
-    if (self.subChannels[options.serviceName]) {
-        throw new Error('sub channel already exists'); // TODO typed error
-    }
+    assert(!self.serviceName, 'arbitrary-depth sub channels are unsupported');
+    assert(options.serviceName, 'must specify serviceName');
+    assert(!self.subChannels[options.serviceName], 'duplicate sub channel creation');
     var opts = extend(self.options);
     var keys = Object.keys(options);
     for (var i = 0; i < keys.length; i++) {
@@ -282,23 +277,15 @@ TChannel.prototype.makeSubChannel = function makeSubChannel(options) {
 };
 
 TChannel.prototype.listen = function listen(port, host, callback) {
+    // Note:
+    // - 0 is a valid port number, indicating that the system must assign an
+    //   available ephemeral port
+    // - 127.0.0.1 is a valid host, primarily for testing
     var self = this;
-    if (self.listened) {
-        throw new Error('TChannel can only listen once'); // TODO typed error
-    }
-    if (typeof host !== 'string') {
-        throw new Error('TChannel requires host argument'); // TODO typed error
-    }
-    if (typeof port !== 'number') {
-        // Note that 0 is a valid port number, indicating that the system must
-        // assign an available ephemeral port.
-        throw new Error('TChannel must listen with numeric port'); // TODO typed error
-    }
-    // Does not expressly forbid 127.0.0.1 or localhost since these are valid
-    // hosts for testing.
-    if (host === '0.0.0.0') {
-        throw new Error('TChannel must listen with externally visible host'); // TODO typed error
-    }
+    assert(!self.listened, 'TChannel can only listen once');
+    assert(typeof host === 'string', 'TChannel requires host argument');
+    assert(typeof port === 'number', 'TChannel must listen with numeric port');
+    assert(host !== '0.0.0.0', 'TChannel must listen with externally visible host');
     self.listened = true;
     self.requestedPort = port;
     self.host = host;
@@ -339,10 +326,7 @@ TChannel.prototype.address = function address() {
 
 TChannel.prototype.request = function channelRequest(options) {
     var self = this;
-
-    if (self.destroyed) {
-        throw new Error('cannot request() to destroyed tchannel'); // TODO typed error
-    }
+    assert(!self.destroyed, 'cannot request() to destroyed tchannel');
 
     var prop;
     var opts = {};
@@ -384,11 +368,7 @@ TChannel.prototype.request = function channelRequest(options) {
 TChannel.prototype.quit = // to provide backward compatibility.
 TChannel.prototype.close = function close(callback) {
     var self = this;
-
-    if (self.destroyed) {
-        throw new Error('double close'); // TODO typed error
-    }
-
+    assert(!self.destroyed, 'TChannel double close');
     self.destroyed = true;
 
     var counter = 1;

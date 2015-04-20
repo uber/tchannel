@@ -20,6 +20,7 @@
 
 'use strict';
 
+var assert = require('assert');
 var farm32 = require('farmhash').fingerprint32;
 var crc32 = require('crc').crc32;
 var crc32c = require('sse4_crc32').calculate;
@@ -47,7 +48,7 @@ function Checksum(type, val) {
             self._compute = self._computeCrc32C;
             break;
         default:
-            throw new Error('invalid checksum type ' + self.type);
+            assert(false, 'invalid checksum type ' + self.type);
     }
 }
 
@@ -58,9 +59,8 @@ Checksum.objOrType = function objOrType(arg) {
     if (arg === undefined || arg === null) {
         return new Checksum(Checksum.Types.None);
     }
-    if (typeof arg !== 'number') {
-        throw new Error('expected a Checksum object or a valid checksum type');
-    }
+    assert(typeof arg === 'number',
+           'expected a Checksum object or a valid checksum type');
     switch (arg) {
         case 0x00:
         case 0x01:
@@ -68,7 +68,7 @@ Checksum.objOrType = function objOrType(arg) {
         case 0x03:
             return new Checksum(arg);
         default:
-            throw new Error('invalid checsum type');
+            assert(false, 'expected a Checksum object or a valid checksum type');
     }
 };
 

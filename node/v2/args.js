@@ -20,6 +20,7 @@
 
 'use strict';
 
+var assert = require('assert');
 var inherits = require('util').inherits;
 var bufrw = require('bufrw');
 var Checksum = require('./checksum');
@@ -65,17 +66,18 @@ ArgRW.prototype.readFrom = function readFrom(buffer, offset) {
     return self.bufrw.readFrom(buffer, offset);
 };
 
+var arg2 = ArgRW(bufrw.UInt16BE);
+
 function ArgsRW(argrw) {
     if (!(this instanceof ArgsRW)) {
         return new ArgsRW(argrw);
     }
+    argrw = argrw || arg2;
+    assert(argrw.sizerw && argrw.sizerw.width, 'invalid argrw');
     var self = this;
     bufrw.Base.call(self);
-    self.argrw = argrw || ArgRW(bufrw.UInt16BE);
+    self.argrw = argrw;
     self.overhead = self.argrw.sizerw.width;
-    if (!self.overhead) {
-        throw new Error('unable to determine argrw overhead');
-    }
 }
 inherits(ArgsRW, bufrw.Base);
 

@@ -20,6 +20,7 @@
 
 'use strict';
 
+var assert = require('assert');
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 var parallel = require('run-parallel');
@@ -35,9 +36,7 @@ States.Error = 3;
 
 function TChannelOutgoingRequest(id, options) {
     options = options || {};
-    if (!options.sendFrame) {
-        throw new Error('missing sendFrame');
-    }
+    assert(options.sendFrame, 'required option sendFrame');
     var self = this;
     EventEmitter.call(self);
     self.logger = options.logger;
