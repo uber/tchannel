@@ -44,9 +44,10 @@ RelayRequest.prototype.createOutRequest = function createOutRequest() {
         return;
     }
 
+    var elapsed = self.channel.timers.now() - self.inreq.start;
     self.outreq = self.channel.request({
         streamed: self.inreq.streamed,
-        ttl: self.inreq.ttl,
+        ttl: self.inreq.ttl - elapsed,
         service: self.inreq.service,
         headers: self.inreq.headers,
         retryFlags: self.inreq.retryFlags
