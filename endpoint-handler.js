@@ -84,12 +84,12 @@ TChannelEndpointHandler.prototype.handleArg1 = function handleArg1(req, buildRes
             'no such endpoint service=%j endpoint=%j',
             req.service, name));
     } else if (handler.canStream) {
-        handler(req, buildResponse);
+        handler.call(self, req, buildResponse);
     } else if (req.streamed) {
         self.bufferArg23(req, buildResponse, handler);
     } else {
         res = buildResponse({streamed: false});
-        handler(req, res, req.arg2, req.arg3);
+        handler.call(self, req, res, req.arg2, req.arg3);
     }
 };
 
