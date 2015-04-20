@@ -102,7 +102,10 @@ TChannelOutgoingResponse.prototype.sendParts = function sendParts(parts, isLast)
             self.sendCallResponseContFrame(parts, isLast);
             break;
         case States.Done:
-            self.emit('error', new Error('got frame in done state')); // TODO: typed error
+            self.emit('error', errors.ResponseFrameState({
+                attempted: 'arg parts',
+                state: 'Done'
+            }));
             break;
         case States.Error:
             // TODO: log warn
@@ -123,12 +126,15 @@ TChannelOutgoingResponse.prototype.sendCallResponseFrame = function sendCallResp
             else self.state = States.Streaming;
             break;
         case States.Streaming:
-            self.emit('error', new Error('first response frame already sent')); // TODO: typed error
+            self.emit('error', errors.ResponseFrameState({
+                attempted: 'call response',
+                state: 'Streaming'
+            }));
             break;
         case States.Done:
         case States.Error:
             self.emit('error', errors.ResponseAlreadyDone({
-                attempted: 'send call res frame'
+                attempted: 'call response'
             }));
     }
 };
@@ -137,7 +143,10 @@ TChannelOutgoingResponse.prototype.sendCallResponseContFrame = function sendCall
     var self = this;
     switch (self.state) {
         case States.Initial:
-            self.emit('error', new Error('first response frame not sent')); // TODO: typed error
+            self.emit('error', errors.ResponseFrameState({
+                attempted: 'call response continuation',
+                state: 'Initial'
+            }));
             break;
         case States.Streaming:
             self.sendFrame.callResponseCont(args, isLast);
@@ -146,7 +155,7 @@ TChannelOutgoingResponse.prototype.sendCallResponseContFrame = function sendCall
         case States.Done:
         case States.Error:
             self.emit('error', errors.ResponseAlreadyDone({
-                attempted: 'send call res cont frame'
+                attempted: 'call response continuation'
             }));
     }
 };
@@ -177,7 +186,10 @@ TChannelOutgoingResponse.prototype.sendError = function sendError(codeString, me
 TChannelOutgoingResponse.prototype.setOk = function setOk(ok) {
     var self = this;
     if (self.state !== States.Initial) {
-        self.emit('error', new Error('response already started')); // TODO typed error
+        self.emit('error', errors.ResponseAlreadyStarted({
+            state: self.state
+        }));
+
     }
     self.ok = ok;
     self.code = ok ? 0 : 1; // TODO: too coupled to v2 specifics?
