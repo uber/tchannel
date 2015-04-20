@@ -194,8 +194,15 @@ TChannelOutgoingResponse.prototype.sendOk = function sendOk(res1, res2) {
 
 TChannelOutgoingResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
     var self = this;
-    self.setOk(false);
-    self.send(res1, res2);
+    if (self.state === States.Error) {
+        self.logger.error('cannot send application error, already sent error frame', {
+            res1: res1,
+            res2: res2
+        });
+    } else {
+        self.setOk(false);
+        self.send(res1, res2);
+    }
 };
 
 TChannelOutgoingResponse.prototype.send = function send(res1, res2) {
