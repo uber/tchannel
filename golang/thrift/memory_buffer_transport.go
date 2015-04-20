@@ -9,19 +9,18 @@ import (
 // this implementation can be initialized with a given byte buffer.
 type MemoryBufferTransport struct {
 	*bytes.Buffer
-	size int
 }
 
 // NewMemoryBufferTransport creates a MemoryBufferTransport from a newly
 // allocated byte buffer.
 func NewMemoryBufferTransport() *MemoryBufferTransport {
-	return &MemoryBufferTransport{Buffer: &bytes.Buffer{}, size: 0}
+	return &MemoryBufferTransport{Buffer: &bytes.Buffer{}}
 }
 
 // NewMemoryBufferTransport2 creates a MemoryBufferTransport from the
 // given byte buffer.
 func NewMemoryBufferTransport2(buf *bytes.Buffer) *MemoryBufferTransport {
-	return &MemoryBufferTransport{Buffer: buf, size: buf.Len()}
+	return &MemoryBufferTransport{Buffer: buf}
 }
 
 func (p *MemoryBufferTransport) IsOpen() bool {

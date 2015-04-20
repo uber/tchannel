@@ -168,8 +168,6 @@ func withTestChannel(t *testing.T, f func(ch *Channel)) {
 
 	go ch.ListenAndHandle()
 
-	func() {
-		defer ch.Stop()
-		f(ch)
-	}()
+	defer ch.Stop()
+	f(ch)
 }

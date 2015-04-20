@@ -6,9 +6,12 @@ import "github.com/uber/tchannel/golang/thrift"
 import gen "github.com/uber/tchannel/golang/examples/thrift/gen-go/test"
 import "errors"
 import "reflect"
+import "golang.org/x/net/context"
+import "time"
 
 func newFirstClient(server *thrift.Server, t *testing.T) *gen.FirstClient {
-	protocol, err := thrift.NewTChannelOutboundProtocol(server.HostPort(), "MyThriftService", "FirstProcessor")
+	protocol, err := thrift.NewTChannelOutboundProtocol(context.Background(),
+		server.HostPort(), "MyThriftService", "FirstProcessor", time.Second*time.Duration(1))
 	if err != nil {
 		t.Fatal("Failed to create client")
 	}
@@ -16,7 +19,8 @@ func newFirstClient(server *thrift.Server, t *testing.T) *gen.FirstClient {
 }
 
 func newSecondClient(server *thrift.Server, t *testing.T) *gen.SecondClient {
-	protocol, err := thrift.NewTChannelOutboundProtocol(server.HostPort(), "MyThriftService", "SecondProcessor")
+	protocol, err := thrift.NewTChannelOutboundProtocol(context.Background(),
+		server.HostPort(), "MyThriftService", "SecondProcessor", time.Second*time.Duration(1))
 	if err != nil {
 		t.Fatal("Failed to create client")
 	}
@@ -24,7 +28,8 @@ func newSecondClient(server *thrift.Server, t *testing.T) *gen.SecondClient {
 }
 
 func newBadClient(server *thrift.Server, t *testing.T) *gen.FirstClient {
-	protocol, err := thrift.NewTChannelOutboundProtocol(server.HostPort(), "MyThriftService", "ThirdProcessor")
+	protocol, err := thrift.NewTChannelOutboundProtocol(context.Background(),
+		server.HostPort(), "MyThriftService", "ThirdProcessor", time.Second*time.Duration(1))
 	if err != nil {
 		t.Fatal("Failed to create client")
 	}
@@ -129,10 +134,9 @@ func withTestServer(t *testing.T, f func(s *thrift.Server)) {
 	secondHandler := SecondHandler{}
 	server.Register("SecondProcessor", reflect.TypeOf(&secondHandler), gen.NewSecondProcessor(&secondHandler))
 	go server.ListenAndServe()
-	func() {
-		defer server.Stop()
-		f(server)
-	}()
+
+	defer server.Stop()
+	f(server)
 }
 
 type FirstHandler struct {

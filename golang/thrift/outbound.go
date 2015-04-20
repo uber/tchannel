@@ -8,17 +8,31 @@ import "golang.org/x/net/context"
 import "time"
 
 // NewTChannelOutboundProtocol creates a TChannelOutboundProtocol
-func NewTChannelOutboundProtocol(remoteHostPort, remoteServiceName, remoteProcessorName string) (*TChannelOutboundProtocol, error) {
+func NewTChannelOutboundProtocol(ctx context.Context,
+	remoteHostPort, remoteServiceName, remoteProcessorName string,
+	timeout time.Duration) (*TChannelOutboundProtocol, error) {
+
 	tchannel, err := tchannel.NewChannel("0.0.0.0:0", nil)
 	if err != nil {
 		return nil, err
 	}
 
+	return NewTChannelOutboundProtocol2(ctx, tchannel,
+		remoteHostPort, remoteServiceName, remoteProcessorName, timeout)
+}
+
+// NewTChannelOutboundProtocol2 creates a TChannelOutboundProtocol
+func NewTChannelOutboundProtocol2(ctx context.Context, tchannel *tchannel.Channel,
+	remoteHostPort, remoteServiceName, remoteProcessorName string,
+	timeout time.Duration) (*TChannelOutboundProtocol, error) {
+
 	return &TChannelOutboundProtocol{
+		ctx:                 ctx,
 		tchannel:            tchannel,
 		remoteHostPort:      remoteHostPort,
 		remoteServiceName:   remoteServiceName,
 		remoteProcessorName: remoteProcessorName,
+		timeout:             timeout,
 	}, nil
 }
 
@@ -30,12 +44,17 @@ func NewTChannelOutboundProtocol(remoteHostPort, remoteServiceName, remoteProces
 // Incoming and outgoing data is buffered in memory buffers and the actual
 // parsing of the data is delegated to thrift.TBinaryProtocol.
 //
+// Warning: A TChannelOutboundProtocol instance is not thread safe, i.e.,
+// it must not be used concurrently from multiple goroutines.
+//
 type TChannelOutboundProtocol struct {
 	// state across calls
+	ctx                 context.Context
 	tchannel            *tchannel.Channel
 	remoteHostPort      string
 	remoteServiceName   string
 	remoteProcessorName string
+	timeout             time.Duration
 
 	// state per call
 	remoteOperationName string
@@ -67,8 +86,7 @@ func (p *TChannelOutboundProtocol) WriteMessageEnd() error {
 
 // WriteStructBegin delegates to the TBinaryProtocol writer
 func (p *TChannelOutboundProtocol) WriteStructBegin(name string) error {
-	err := p.writer.WriteStructBegin(name)
-	return err
+	return p.writer.WriteStructBegin(name)
 }
 
 // WriteStructEnd delegates to the TBinaryProtocol writer
@@ -171,7 +189,7 @@ func (p *TChannelOutboundProtocol) Flush() error {
 	payload := p.writeBuffer.Bytes()
 
 	// begin the outbound call
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*time.Duration(1))
+	ctx, _ := context.WithTimeout(p.ctx, p.timeout)
 	call, err := p.tchannel.BeginCall(ctx, p.remoteHostPort, p.remoteServiceName, p.makeArg1())
 	if err != nil {
 		return err

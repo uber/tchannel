@@ -23,6 +23,9 @@ func NewTChannelInboundProtocol(call *tchannel.InboundCall) *TChannelInboundProt
 // Incoming and outgoing data is buffered in memory buffers and the
 // actual parsing of the data is delegated to thrift.TBinaryProtocol.
 //
+// Warning: A TChannelInboundProtocol instance is not thread safe, i.e.,
+// it must not be used concurrently from multiple goroutines.
+//
 type TChannelInboundProtocol struct {
 	call *tchannel.InboundCall
 
@@ -48,8 +51,7 @@ func (p *TChannelInboundProtocol) WriteMessageEnd() error {
 
 // WriteStructBegin delegates to the TBinaryProtocol writer
 func (p *TChannelInboundProtocol) WriteStructBegin(name string) error {
-	err := p.writer.WriteStructBegin(name)
-	return err
+	return p.writer.WriteStructBegin(name)
 }
 
 // WriteStructEnd delegates to the TBinaryProtocol writer
