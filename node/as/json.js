@@ -116,7 +116,7 @@ TChannelJSON.prototype.register = function register(
 ) {
     var self = this;
 
-    tchannel.handler.register(arg1, endpointHandler);
+    tchannel.register(arg1, endpointHandler);
 
     function endpointHandler(req, res, arg2, arg3) {
         if (req.headers.as !== 'json') {
