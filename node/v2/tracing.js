@@ -22,7 +22,6 @@
 
 var bufrw = require('bufrw');
 var fix8 = bufrw.FixedWidth(8);
-var fix24 = bufrw.FixedWidth(24);
 
 module.exports = Tracing;
 
@@ -35,10 +34,6 @@ emptyTraceId.fill(0);
 
 function Tracing(spanid, parentid, traceid, flags) {
     var self = this;
-    Object.defineProperty(self, 'buffer', {
-        value: null,
-        writable: true
-    });
     self.spanid = spanid || emptySpanId;
     self.parentid = parentid || emptyParentId;
     self.traceid = traceid || emptyTraceId;
@@ -59,20 +54,15 @@ function tracingByteLength() {
 function writeTracingInto(tracing, buffer, offset) {
     var res;
 
-    if (tracing.buffer) {
-        res = fix24.writeInto(tracing.buffer, buffer, offset);
-    } else {
-        res = fix8.writeInto(tracing.spanid, buffer, offset);
-        if (res.err) return res;
-        offset = res.offset;
+    res = fix8.writeInto(tracing.spanid, buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
 
-        res = fix8.writeInto(tracing.parentid, buffer, offset);
-        if (res.err) return res;
-        offset = res.offset;
+    res = fix8.writeInto(tracing.parentid, buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
 
-        res = fix8.writeInto(tracing.traceid, buffer, offset);
-    }
-
+    res = fix8.writeInto(tracing.traceid, buffer, offset);
     if (res.err) return res;
     offset = res.offset;
 
@@ -85,14 +75,20 @@ function readTracingFrom(buffer, offset) {
     var tracing = new Tracing();
     var res;
 
-    res = fix24.readFrom(buffer, offset);
+    res = fix8.readFrom(buffer, offset);
     if (res.err) return res;
     offset = res.offset;
+    tracing.spanid = res.value;
 
-    tracing.buffer = res.value;
-    tracing.spanid = tracing.buffer.slice(0, 8);
-    tracing.parentid = tracing.buffer.slice(8, 16);
-    tracing.traceid = tracing.buffer.slice(16, 24);
+    res = fix8.readFrom(buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+    tracing.parentid = res.value;
+
+    res = fix8.readFrom(buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+    tracing.traceid = res.value;
 
     res = bufrw.UInt8.readFrom(buffer, offset);
     if (res.err) return res;
