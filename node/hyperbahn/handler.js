@@ -138,12 +138,10 @@ function sendAdvertise(services, options, callback) {
         options = {};
     }
 
-    var channel = options.channel || self.channel;
+    options.service = 'hyperbahn';
 
-    self.tchannelJSON.send(channel.request({
-        timeout: options.timeout,
-        service: 'hyperbahn'
-    }), 'ad', null, {
+    var req = self.channel.request(options);
+    self.tchannelJSON.send(req, 'ad', null, {
         services: services
     }, callback);
 };
