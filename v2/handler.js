@@ -334,19 +334,18 @@ TChannelV2Handler.prototype._sendCallBodies = function _sendCallBodies(id, body,
     return checksum;
 };
 
-TChannelV2Handler.prototype.sendErrorFrame = function sendErrorFrame(req, codeString, message) {
+TChannelV2Handler.prototype.sendErrorFrame = function sendErrorFrame(r, codeString, message) {
     var self = this;
-
     var code = v2.ErrorResponse.Codes[codeString];
     if (code === undefined) {
-        // TODO: could/should map to UnexpectedError
-        throw errors.InvalidCodeStringError({
+        self.logger.error('invalid error frame code string', {
             codeString: codeString
         });
+        code = v2.ErrorResponse.Codes.UnexpectedError;
+        message = 'UNKNOWN CODE(' + codeString + '): ' + message;
     }
-
-    var errBody = new v2.ErrorResponse(code, req.tracing, message);
-    var errFrame = new v2.Frame(req.id, errBody);
+    var errBody = new v2.ErrorResponse(code, r.tracing, message);
+    var errFrame = new v2.Frame(r.id, errBody);
     self.pushFrame(errFrame);
 };
 
