@@ -134,7 +134,7 @@ TChannelOutgoingResponse.prototype.sendCallResponseFrame = function sendCallResp
         case States.Done:
         case States.Error:
             self.emit('error', errors.ResponseAlreadyDone({
-                attempted: 'send call res frame'
+                attempted: 'call response'
             }));
     }
 };
@@ -155,7 +155,7 @@ TChannelOutgoingResponse.prototype.sendCallResponseContFrame = function sendCall
         case States.Done:
         case States.Error:
             self.emit('error', errors.ResponseAlreadyDone({
-                attempted: 'send call res cont frame'
+                attempted: 'call response continuation'
             }));
     }
 };
