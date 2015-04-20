@@ -26,7 +26,6 @@ var assert = require('assert');
 var util = require('util');
 
 var TChannelJSON = require('../as/json');
-var EgressNodes = require('./egress-nodes');
 var TChannelEndpointHandler = require('../endpoint-handler');
 
 module.exports = HyperbahnHandler;
@@ -40,14 +39,12 @@ function HyperbahnHandler(options) {
     TChannelEndpointHandler.call(self, 'hyperbahn');
 
     assert(options && options.channel, 'channel required');
-    assert(options && options.ringpop, 'ringpop required');
     assert(options && options.egressNodes, 'egressNodes required');
 
     // TODO support blackList
 
     self.channel = options.channel;
     self.type = 'hyperbahn.advertisement-handler';
-    self.ringpop = options.ringpop;
     self.egressNodes = options.egressNodes;
 
     self.tchannelJSON = TChannelJSON({
@@ -175,7 +172,7 @@ function handleRelayAdvertise(self, req, arg2, arg3, cb) {
             .exitsFor(serviceObj.serviceName);
         var exitHosts = Object.keys(exitNodes);
 
-        var myHost = self.ringpop.whoami();
+        var myHost = self.channel.hostPort;
         if (exitHosts.indexOf(myHost) !== -1) {
             self.advertise(serviceObj);
         } else {
