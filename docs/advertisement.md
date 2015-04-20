@@ -81,7 +81,7 @@ conncount:2
 ```
 
 A `forward-advertise` message is a response to an `advertise`
-message. It means that the remote intents to forward messages
+message. It means that the remote intends to forward messages
 to you for the advertised services and will use a `conncount`
 number of connections to do so.
 
