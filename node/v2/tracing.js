@@ -21,6 +21,8 @@
 'use strict';
 
 var bufrw = require('bufrw');
+var fix8 = bufrw.FixedWidth(8);
+var fix24 = bufrw.FixedWidth(24);
 
 module.exports = Tracing;
 
@@ -33,17 +35,71 @@ emptyTraceId.fill(0);
 
 function Tracing(spanid, parentid, traceid, flags) {
     var self = this;
+    Object.defineProperty(self, 'buffer', {
+        value: null,
+        writable: true
+    });
     self.spanid = spanid || emptySpanId;
     self.parentid = parentid || emptyParentId;
     self.traceid = traceid || emptyTraceId;
     self.flags = flags || 0;
 }
 
-Tracing.RW = bufrw.Struct(Tracing, [
-    {name: 'spanid', rw: bufrw.FixedWidth(8)},
-    {name: 'parentid', rw: bufrw.FixedWidth(8)},
-    {name: 'traceid', rw: bufrw.FixedWidth(8)},
-    {name: 'flags', rw: bufrw.UInt8}
-]);
+Tracing.RW = bufrw.Base(tracingByteLength, readTracingFrom, writeTracingInto);
+
+function tracingByteLength() {
+    return bufrw.LengthResult.just(
+        8 + // spanid:8
+        8 + // parentid:8
+        8 + // traceid:8
+        1   // flags:1
+    );
+}
+
+function writeTracingInto(tracing, buffer, offset) {
+    var res;
+
+    if (tracing.buffer) {
+        res = fix24.writeInto(tracing.buffer, buffer, offset);
+    } else {
+        res = fix8.writeInto(tracing.spanid, buffer, offset);
+        if (res.err) return res;
+        offset = res.offset;
+
+        res = fix8.writeInto(tracing.parentid, buffer, offset);
+        if (res.err) return res;
+        offset = res.offset;
+
+        res = fix8.writeInto(tracing.traceid, buffer, offset);
+    }
+
+    if (res.err) return res;
+    offset = res.offset;
+
+    res = bufrw.UInt8.writeInto(tracing.flags, buffer, offset);
+
+    return res;
+}
+
+function readTracingFrom(buffer, offset) {
+    var tracing = new Tracing();
+    var res;
+
+    res = fix24.readFrom(buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+
+    tracing.buffer = res.value;
+    tracing.spanid = tracing.buffer.slice(0, 8);
+    tracing.parentid = tracing.buffer.slice(8, 16);
+    tracing.traceid = tracing.buffer.slice(16, 24);
+
+    res = bufrw.UInt8.readFrom(buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+    tracing.flags = res.value;
+
+    return bufrw.ReadResult.just(offset, tracing);
+}
 
 Tracing.emptyTracing = new Tracing();
