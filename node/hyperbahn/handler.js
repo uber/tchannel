@@ -104,7 +104,6 @@ function handleAdvertise(self, req, arg2, arg3, cb) {
     var exitNodeKeys = Object.keys(servicesByExitNode);
     var counter = 1 + exitNodeKeys.length;
     for (var k = 0; k < exitNodeKeys.length; k++) {
-
         var hostPort = exitNodeKeys[k];
         var exitNodeServices = servicesByExitNode[hostPort];
 
