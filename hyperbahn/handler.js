@@ -44,7 +44,6 @@ function HyperbahnHandler(options) {
     // TODO support blackList
 
     self.channel = options.channel;
-    self.type = 'hyperbahn.advertisement-handler';
     self.egressNodes = options.egressNodes;
 
     self.tchannelJSON = TChannelJSON({
@@ -58,6 +57,8 @@ function HyperbahnHandler(options) {
         self.handleRelayAdvertise);
 }
 util.inherits(HyperbahnHandler, TChannelEndpointHandler);
+
+HyperbahnHandler.prototype.type = 'hyperbahn.advertisement-handler';
 
 /*  req: {
         services: Array<{
