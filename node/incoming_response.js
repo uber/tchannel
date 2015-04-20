@@ -24,6 +24,7 @@ var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 
 var InArgStream = require('./argstream').InArgStream;
+var errors = require('./errors');
 
 var emptyBuffer = Buffer(0);
 
@@ -92,7 +93,10 @@ TChannelIncomingResponse.prototype.handleFrame = function handleFrame(parts) {
     } else {
         if (!parts) return;
         if (parts.length !== 3 ||
-                self.state !== States.Initial) throw new Error('not implemented');
+            self.state !== States.Initial) {
+            self.emit('error', new Error(
+                'un-streamed argument defragmentation is not implemented'));
+        }
         self.arg1 = parts[0] || emptyBuffer;
         self.arg2 = parts[1] || emptyBuffer;
         self.arg3 = parts[2] || emptyBuffer;
@@ -102,7 +106,9 @@ TChannelIncomingResponse.prototype.handleFrame = function handleFrame(parts) {
 TChannelIncomingResponse.prototype.finish = function finish() {
     var self = this;
     if (self.state === States.Done) {
-        throw new Error('response already done'); // TODO: typed error
+        self.emit('error', errors.ResponseAlreadyDone({
+            attempted: 'finish'
+        }));
     } else {
         self.state = States.Done;
     }

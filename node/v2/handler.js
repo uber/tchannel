@@ -229,6 +229,7 @@ TChannelV2Handler.prototype.handleError = function handleError(errFrame, callbac
 };
 
 TChannelV2Handler.prototype._handleCallFrame = function _handleCallFrame(r, frame, callback) {
+    var self = this;
     var states = r.constructor.States;
     if (r.state === states.Done) {
         callback(new Error('got cont in done state')); // TODO typed error
@@ -256,7 +257,7 @@ TChannelV2Handler.prototype._handleCallFrame = function _handleCallFrame(r, fram
     } else if (r.state === states.Initial) {
         r.state = states.Streaming;
     } else if (r.state !== states.Streaming) {
-        throw new Error('unknown frame handling state');
+        self.emit('error', new Error('unknown frame handling state'));
     }
     callback();
 };

@@ -195,7 +195,7 @@ TChannelRequest.prototype.resend = function resend() {
 
     function deferResend() {
         if (--self.resendSanity <= 0) {
-            throw new Error('TChannelRequest out of resend sanity');
+            self.emit('error', new Error('TChannelRequest out of resend sanity'));
         } else {
             process.nextTick(doResend);
         }

@@ -136,7 +136,8 @@ TChannelOutgoingRequest.prototype.sendParts = function sendParts(parts, isLast) 
         case States.Done:
             // TODO: could probably happen normally, like say if a
             // streaming request is canceled
-            throw new Error('got frame in done state'); // TODO: typed error
+            self.emit('error', new Error('got frame in done state')); // TODO: typed error
+            break;
         case States.Error:
             // TODO: log warn
             break;
@@ -156,9 +157,11 @@ TChannelOutgoingRequest.prototype.sendCallRequestFrame = function sendCallReques
             else self.state = States.Streaming;
             break;
         case States.Streaming:
-            throw new Error('first request frame already sent'); // TODO: typed error
+            self.emit('error', new Error('first request frame already sent')); // TODO: typed error
+            break;
         case States.Done:
-            throw new Error('request already done'); // TODO: typed error
+            self.emit('error', new Error('request already done')); // TODO: typed error
+            break;
     }
 };
 
@@ -166,13 +169,15 @@ TChannelOutgoingRequest.prototype.sendCallRequestContFrame = function sendCallRe
     var self = this;
     switch (self.state) {
         case States.Initial:
-            throw new Error('first request frame not sent'); // TODO: typed error
+            self.emit('error', new Error('first request frame not sent')); // TODO: typed error
+            break;
         case States.Streaming:
             self.sendFrame.callRequestCont(args, isLast);
             if (isLast) self.state = States.Done;
             break;
         case States.Done:
-            throw new Error('request already done'); // TODO: typed error
+            self.emit('error', new Error('request already done')); // TODO: typed error
+            break;
     }
 };
 

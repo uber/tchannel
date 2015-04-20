@@ -99,7 +99,7 @@ InArgStream.prototype.handleFrame = function handleFrame(parts) {
     }
 
     if (self.finished) {
-        throw new Error('arg stream finished'); // TODO typed error
+        self.emit('error', new Error('arg stream finished')); // TODO typed error
     }
 
     for (var i = 0; i < parts.length; i++) {
@@ -108,7 +108,7 @@ InArgStream.prototype.handleFrame = function handleFrame(parts) {
         if (parts[i].length) stream.write(parts[i]);
     }
     if (i < parts.length) {
-        throw new Error('frame parts exceeded stream arity'); // TODO clearer / typed error
+        self.emit('error', new Error('frame parts exceeded stream arity')); // TODO clearer / typed error
     }
 
     function advance() {

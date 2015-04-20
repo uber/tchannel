@@ -109,8 +109,10 @@ TChannelIncomingRequest.prototype.handleFrame = function handleFrame(parts) {
         self._argstream.handleFrame(parts);
     } else {
         if (!parts) return;
-        if (parts.length !== 3 ||
-                self.state !== States.Initial) throw new Error('not implemented');
+        if (parts.length !== 3 || self.state !== States.Initial) {
+            self.emit('error', new Error(
+                'un-streamed argument defragmentation is not implemented'));
+        }
         self.arg1 = parts[0] || emptyBuffer;
         self.arg2 = parts[1] || emptyBuffer;
         self.arg3 = parts[2] || emptyBuffer;
@@ -124,7 +126,7 @@ TChannelIncomingRequest.prototype.handleFrame = function handleFrame(parts) {
 TChannelIncomingRequest.prototype.finish = function finish() {
     var self = this;
     if (self.state === States.Done) {
-        throw new Error('request already done'); // TODO: typed error
+        self.emit('error', new Error('request already done')); // TODO: typed error
     } else {
         self.state = States.Done;
     }
