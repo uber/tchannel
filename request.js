@@ -255,6 +255,7 @@ TChannelRequest.prototype.shouldRetry = function shouldRetry(err, res, arg2, arg
                 return !!self.options.retryFlags.onTimeout;
 
             case 'tchannel.socket':
+            case 'tchannel.network':
             case 'tchannel.protocol':
             case 'tchannel.unexpected':
                 return !!self.options.retryFlags.onConnectionError;
