@@ -20,6 +20,7 @@
 
 'use strict';
 
+var assert = require('assert');
 var inherits = require('util').inherits;
 
 var TChannelPeer = require('./peer');
@@ -49,11 +50,11 @@ TChannelSelfPeer.prototype.connect = function connect() {
 };
 
 TChannelSelfPeer.prototype.makeOutSocket = function makeOutSocket() {
-    throw new Error('refusing to make self out socket');
+    assert(false, 'refusing to make self out socket');
 };
 
 TChannelSelfPeer.prototype.makeOutConnection = function makeOutConnection(/* socket */) {
-    throw new Error('refusing to make self out connection');
+    assert(false, 'refusing to make self out connection');
 };
 
 module.exports = TChannelSelfPeer;

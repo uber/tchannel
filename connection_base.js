@@ -216,9 +216,7 @@ TChannelConnectionBase.prototype.request = function connBaseRequest(options) {
     // TODO: use this to protect against >4Mi outstanding messages edge case
     // (e.g. zombie operation bug, incredible throughput, or simply very long
     // timeout
-    // if (self.requests.out[id]) {
-    //  throw new Error('duplicate frame id in flight'); // TODO typed error
-    // }
+    // assert(!self.requests.out[id], 'duplicate frame id in flight');
     // TODO: provide some sort of channel default for "service"
     // TODO: generate tracing if empty?
     // TODO: refactor callers

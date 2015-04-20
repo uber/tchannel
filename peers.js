@@ -20,6 +20,7 @@
 
 'use strict';
 
+var assert = require('assert');
 var inherits = require('util').inherits;
 var EventEmitter = require('events').EventEmitter;
 
@@ -88,12 +89,8 @@ TChannelPeers.prototype.add = function add(hostPort, options) {
 
 TChannelPeers.prototype.addPeer = function addPeer(peer) {
     var self = this;
-    if (!(peer instanceof TChannelPeer)) {
-        throw new Error('invalid peer'); // TODO typed error
-    }
-    if (self._map[peer.hostPort]) {
-        throw new Error('peer already defined'); // TODO typed error
-    }
+    assert(peer instanceof TChannelPeer, 'invalid peer');
+    assert(!self._map[peer.hostPort], 'peer already defined');
     if (peer.hostPort !== self.channel.hostPort) {
         self._map[peer.hostPort] = peer;
     }
@@ -151,12 +148,7 @@ TChannelPeers.prototype.delete = function del(hostPort) {
 TChannelPeers.prototype.request = function peersRequest(req, options) {
     var self = this;
     var peer = self.choosePeer(req, options);
-
-    if (!peer) {
-        // TODO: operational error?
-        throw errors.NoPeerAvailable();
-    }
-
+    if (!peer) throw errors.NoPeerAvailable(); // TODO: operational error?
     return peer.request(options);
 };
 

@@ -20,6 +20,7 @@
 
 'use strict';
 
+var assert = require('assert');
 var bufrw = require('bufrw');
 var ReadMachine = require('bufrw/stream/read_machine');
 var inherits = require('util').inherits;
@@ -30,9 +31,7 @@ var errors = require('./errors');
 var TChannelConnectionBase = require('./connection_base');
 
 function TChannelConnection(channel, socket, direction, remoteAddr) {
-    if (remoteAddr === channel.hostPort) {
-        throw new Error('refusing to create self connection'); // TODO typed error
-    }
+    assert(remoteAddr !== channel.hostPort, 'refusing to create self connection');
 
     var self = this;
     TChannelConnectionBase.call(self, channel, direction, remoteAddr);
@@ -217,9 +216,8 @@ TChannelConnection.prototype.start = function start() {
     function onInIdentified(init) {
         if (init.hostPort === '0.0.0.0:0') {
             self.remoteName = '' + self.socket.remoteAddress + ':' + self.socket.remotePort;
-            if (self.remoteName === self.channel.hostPort) {
-                throw new Error('EPHEMERAL SELF?');
-            }
+            assert(self.remoteName !== self.channel.hostPort,
+                  'should not be able to receive ephemeral connection from self');
         } else {
             self.remoteName = init.hostPort;
         }

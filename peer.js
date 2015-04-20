@@ -20,6 +20,7 @@
 
 'use strict';
 
+var assert = require('assert');
 var inherits = require('util').inherits;
 var EventEmitter = require('events').EventEmitter;
 var net = require('net');
@@ -171,14 +172,11 @@ TChannelPeer.prototype.removeConnection = function removeConnection(conn) {
 TChannelPeer.prototype.makeOutSocket = function makeOutSocket() {
     var self = this;
     var parts = self.hostPort.split(':');
-    if (parts.length !== 2) {
-        throw new Error('invalid destination'); // TODO typed error
-    }
+    assert(parts.length === 2, 'invalid destination');
     var host = parts[0];
     var port = parts[1];
-    if (host === '0.0.0.0' || port === '0') {
-        throw new Error('cannot make out connection to ephemeral peer'); // TODO typed error
-    }
+    assert(host !== '0.0.0.0', 'cannot connect to ephemeral peer');
+    assert(port !== '0', 'cannot connect to dynamic port');
     var socket = net.createConnection({host: host, port: port});
     return socket;
 };
