@@ -25,8 +25,7 @@ func (s *Server) ListenAndServe() error {
 }
 
 func (s *Server) Stop() error {
-	// TODO
-	return nil
+	return s.tchannel.Stop()
 }
 
 func (s *Server) HostPort() string {
