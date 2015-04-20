@@ -44,7 +44,7 @@ function Checksum(type, val) {
             self._compute = self._computeFarm32;
             break;
         case 0x03:
-            self._compute = self._computeCrc32;
+            self._compute = self._computeCrc32C;
             break;
         default:
             throw new Error('invalid checksum type ' + self.type);
