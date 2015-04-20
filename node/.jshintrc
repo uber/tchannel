@@ -19,7 +19,7 @@
     "node": true,
     "noempty": true,
     "maxdepth": 4,
-    "maxparams": 4,
+    "maxparams": 5,
     "newcap": false,
     "globalstrict": true
 }
