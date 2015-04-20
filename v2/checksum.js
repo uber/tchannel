@@ -115,7 +115,7 @@ Checksum.prototype._computeCrc32 = function _computeCrc32(arg, prior) {
     return crc32(arg, prior);
 };
 
-Checksum.prototype._computeCrc32C = function _computeCrc32(arg, prior) {
+Checksum.prototype._computeCrc32C = function _computeCrc32C(arg, prior) {
     return crc32c(arg, prior);
 };
 
