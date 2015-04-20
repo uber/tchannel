@@ -36,6 +36,7 @@ class ErrorCode(enum.IntEnum):
     declined = 0x04
     unexpected = 0x05
     bad_request = 0x06
+    network_error = 0x07
     fatal = 0xff
 
 error_code_rw = rw.number(1)
@@ -58,6 +59,7 @@ class ErrorMessage(BaseMessage):
         ErrorCode.declined: 'declined',
         ErrorCode.unexpected: 'unexpected',
         ErrorCode.bad_request: 'bad request',
+        ErrorCode.network_error: 'network error',
         ErrorCode.fatal: 'fatal protocol error'
     }
 
