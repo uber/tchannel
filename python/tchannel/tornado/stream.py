@@ -76,9 +76,9 @@ class InMemStream(Stream):
     def write(self, chunk):
         if self._state == StreamState.completed:
             raise StreamingException("Stream has been closed.")
-
-        self._stream.append(chunk)
-        self._condition.notify()
+        if chunk:
+            self._stream.append(chunk)
+            self._condition.notify()
 
     @tornado.gen.coroutine
     def close(self):
