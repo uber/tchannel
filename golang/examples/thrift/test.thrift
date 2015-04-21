@@ -7,6 +7,7 @@ service First {
     string Echo(1:string msg)
     HealthCheckRes Healthcheck()
     void AppError()
+    oneway void OneWay()
 }
 
 service Second {

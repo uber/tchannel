@@ -94,6 +94,17 @@ func TestAppError(t *testing.T) {
 	})
 }
 
+func TestOneWay(t *testing.T) {
+	withTestServer(t, func(server *thrift.Server) {
+		client := newFirstClient(server, t)
+		for i := 0; i < 3; i++ {
+			if err := client.OneWay(); err != nil {
+				t.Fatal("OneWay failed", err)
+			}
+		}
+	})
+}
+
 func TestAll(t *testing.T) {
 	withTestServer(t, func(server *thrift.Server) {
 		firstClient := newFirstClient(server, t)
@@ -114,6 +125,10 @@ func TestAll(t *testing.T) {
 
 			if err := firstClient.AppError(); err == nil {
 				t.Errorf("AppError should return error but did not")
+			}
+
+			if err := firstClient.OneWay(); err != nil {
+				t.Fatal("OneWay failed", err)
 			}
 
 			if err := secondClient.Test(); err != nil {
@@ -172,6 +187,10 @@ func (h *FirstHandler) Echo(msg string) (r string, err error) {
 
 func (h *FirstHandler) AppError() error {
 	return errors.New("app error")
+}
+
+func (h *FirstHandler) OneWay() error {
+	return errors.New("OneWay error...won't be seen by client")
 }
 
 type SecondHandler struct {
