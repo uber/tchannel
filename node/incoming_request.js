@@ -116,19 +116,8 @@ TChannelIncomingRequest.prototype.handleFrame = function handleFrame(parts) {
         self.arg1 = parts[0] || emptyBuffer;
         self.arg2 = parts[1] || emptyBuffer;
         self.arg3 = parts[2] || emptyBuffer;
-
-        if (self.span) {
-            self.span.name = String(self.arg1);
-        }
-    }
-};
-
-TChannelIncomingRequest.prototype.finish = function finish() {
-    var self = this;
-    if (self.state === States.Done) {
-        self.emit('error', new Error('request already done')); // TODO: typed error
-    } else {
-        self.state = States.Done;
+        if (self.span) self.span.name = String(self.arg1);
+        self.emit('finish');
     }
 };
 
