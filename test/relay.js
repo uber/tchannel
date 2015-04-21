@@ -57,6 +57,54 @@ allocCluster.test('request retries', {
     });
 });
 
+allocCluster.test('relay an error frame', {
+    numPeers: 4
+}, function t(cluster, assert) {
+    var one = cluster.channels[0];
+    var two = cluster.channels[1];
+    var three = cluster.channels[2];
+    var four = cluster.channels[3];
+
+    var oneToTwo = one.makeSubChannel({
+        serviceName: 'two',
+        peers: [two.hostPort, three.hostPort]
+    });
+    oneToTwo.handler = new RelayHandler(oneToTwo);
+    var fourToTwo = four.makeSubChannel({
+        serviceName: 'two',
+        peers: [two.hostPort, three.hostPort]
+    });
+    fourToTwo.handler = new RelayHandler(fourToTwo);
+
+    var twoSvc2 = three.makeSubChannel({
+        serviceName: 'two'
+    });
+    twoSvc2.register('decline', declineError);
+
+    var twoSvc = two.makeSubChannel({
+        serviceName: 'two'
+    });
+    twoSvc.register('decline', declineError);
+
+    var client = TChannel({
+        logger: one.logger
+    });
+    var twoClient = client.makeSubChannel({
+        serviceName: 'two',
+        peers: [one.hostPort, four.hostPort]
+    });
+
+    twoClient.request().send('decline', 'foo', 'bar', function done(err, res, arg2, arg3) {
+        assert.equal(err.type, 'tchannel.declined', 'expected declined error');
+
+        assert.end();
+    });
+
+    function declineError(req, res, arg2, arg3) {
+        res.sendError('Declined', 'lul');
+    }
+});
+
 function echo(req, res, arg2, arg3) {
     res.sendOk(arg2, arg3);
 }
