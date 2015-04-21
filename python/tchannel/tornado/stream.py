@@ -11,6 +11,8 @@ try:
 except ImportError:  # pragma: no cover
     from toro import Condition
 
+from collections import deque
+
 
 class Stream(object):
 
@@ -53,17 +55,21 @@ class InMemStream(Stream):
         :param buf: the buffer for the in memory stream
         """
         super(InMemStream, self).__init__()
-        self._stream = buf or ""
+        self._stream = deque()
+        if buf:
+            self._stream.append(buf)
         self._condition = Condition()
         self.auto_close = auto_close
 
     @tornado.gen.coroutine
     def read(self):
-        if self._state != StreamState.completed and self._stream == "":
+        if self._state != StreamState.completed and len(self._stream) == 0:
             yield self._condition.wait()
 
-        chunk = self._stream
-        self._stream = ""
+        chunk = ""
+        while len(self._stream) > 0 and len(chunk) < common.MAX_PAYLOAD_SIZE:
+            chunk += self._stream.popleft()
+
         raise tornado.gen.Return(chunk)
 
     @tornado.gen.coroutine
@@ -71,7 +77,7 @@ class InMemStream(Stream):
         if self._state == StreamState.completed:
             raise StreamingException("Stream has been closed.")
 
-        self._stream += chunk
+        self._stream.append(chunk)
         self._condition.notify()
 
     @tornado.gen.coroutine
