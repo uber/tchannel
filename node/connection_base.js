@@ -157,7 +157,7 @@ TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
         err = new Error('unknown connection reset'); // TODO typed error
     }
 
-    var isError = err.type !== 'tchannel.socket-closed';
+    var isError = err.type.indexOf('tchannel.socket') !== 0;
     self.logger[isError ? 'warn' : 'info']('resetting connection', {
         error: err,
         remoteName: self.remoteName,
