@@ -99,6 +99,7 @@ TChannelIncomingResponse.prototype.handleFrame = function handleFrame(parts) {
         self.arg1 = parts[0] || emptyBuffer;
         self.arg2 = parts[1] || emptyBuffer;
         self.arg3 = parts[2] || emptyBuffer;
+        self.emit('finish');
     }
 };
 
