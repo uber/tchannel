@@ -177,15 +177,32 @@ class Request(object):
                 stream.close()
 
     def arg1(self):
+        """get value for arg1
+
+        :return: return the future object contains the value for arg1
+        """
         return get_arg(self, 0)
 
     def arg2(self):
+        """get value for arg2
+
+        :return: return the future object contains the value for arg2
+        """
         return get_arg(self, 1)
 
     def arg3(self):
+        """get value for arg3
+
+        :return: return the future object contains the value for arg3
+        """
         return get_arg(self, 2)
 
     def args(self):
+        """get value for arg1, arg2, and arg3
+
+        :return: return the future object contains the tuple
+        for arg1, arg2, arg3
+        """
         return get_args(self)
 
 
@@ -231,13 +248,30 @@ class Response(object):
                 stream.close()
 
     def arg1(self):
+        """get value for arg1
+
+        :return: return the future object contains the value for arg1
+        """
         return get_arg(self, 0)
 
     def arg2(self):
+        """get value for arg2
+
+        :return: return the future object contains the value for arg2
+        """
         return get_arg(self, 1)
 
     def arg3(self):
+        """get value for arg3
+
+        :return: return the future object contains the value for arg3
+        """
         return get_arg(self, 2)
 
     def args(self):
+        """get value for arg1, arg2, and arg3
+
+        :return: return the future object contains the tuple
+        for arg1, arg2, arg3
+        """
         return get_args(self)
