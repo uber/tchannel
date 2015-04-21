@@ -20,6 +20,7 @@
 
 'use strict';
 
+var assert = require('assert');
 var inherits = require('util').inherits;
 var EventEmitter = require('events').EventEmitter;
 
@@ -29,6 +30,8 @@ var OutgoingResponse = require('./outgoing_response');
 var DEFAULT_OUTGOING_REQ_TIMEOUT = 2000;
 
 function TChannelConnectionBase(channel, direction, remoteAddr) {
+    assert(!channel.destroyed, 'refuse to create connection for destroyed channel');
+
     var self = this;
     EventEmitter.call(self);
     self.channel = channel;
