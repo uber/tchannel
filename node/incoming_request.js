@@ -123,15 +123,6 @@ TChannelIncomingRequest.prototype.handleFrame = function handleFrame(parts) {
     }
 };
 
-TChannelIncomingRequest.prototype.finish = function finish() {
-    var self = this;
-    if (self.state === States.Done) {
-        self.emit('error', new Error('request already done')); // TODO: typed error
-    } else {
-        self.state = States.Done;
-    }
-};
-
 TChannelIncomingRequest.prototype.checkTimeout = function checkTimeout() {
     var self = this;
     if (!self.timedOut) {
