@@ -27,7 +27,7 @@ from tornado import gen, ioloop
 from ..handler import BaseRequestHandler
 from ..messages.error import ErrorCode
 from ..messages.common import StreamState, FlagsType
-from .util import get_arg, get_args
+from .util import get_arg
 
 
 Endpoint = collections.namedtuple('Endpoint', ['handler', 'opts'])
@@ -200,10 +200,10 @@ class Request(object):
     def args(self):
         """get value for arg1, arg2, and arg3
 
-        :return: return the future object contains the tuple
+        :return: return the future object contains the list
         for arg1, arg2, arg3
         """
-        return get_args(self)
+        return [self.arg1(), self.arg2(), self.arg3()]
 
 
 class Response(object):
@@ -271,7 +271,7 @@ class Response(object):
     def args(self):
         """get value for arg1, arg2, and arg3
 
-        :return: return the future object contains the tuple
+        :return: return the future object contains the list
         for arg1, arg2, arg3
         """
-        return get_args(self)
+        return [self.arg1(), self.arg2(), self.arg3()]
