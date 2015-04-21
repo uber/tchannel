@@ -52,7 +52,6 @@ function CallRequest(flags, ttl, tracing, service, headers, csum, args) {
     self.csum = Checksum.objOrType(csum);
     self.args = args || [];
     self.cont = null;
-    self._flagsOffset = 0;
 }
 
 CallRequest.Cont = require('./cont').RequestCont;
@@ -187,7 +186,6 @@ function CallResponse(flags, code, tracing, headers, csum, args) {
     self.csum = Checksum.objOrType(csum);
     self.args = args || [];
     self.cont = null;
-    self._flagsOffset = 0;
 }
 
 CallResponse.Cont = require('./cont').ResponseCont;

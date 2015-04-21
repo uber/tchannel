@@ -33,7 +33,6 @@ function CallRequestCont(flags, csum, args) {
     self.csum = Checksum.objOrType(csum);
     self.args = args || [];
     self.cont = null;
-    self._flagsOffset = 0;
 }
 
 CallRequestCont.TypeCode = 0x13;
@@ -103,7 +102,6 @@ function CallResponseCont(flags, csum, args) {
     self.csum = Checksum.objOrType(csum);
     self.args = args || [];
     self.cont = null;
-    self._flagsOffset = 0;
 }
 
 CallResponseCont.TypeCode = 0x14;
