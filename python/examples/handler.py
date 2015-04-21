@@ -31,8 +31,8 @@ from tchannel.tornado.util import print_arg
 
 @tornado.gen.coroutine
 def say_hi(request, response, opts):
-    arg2 = yield request.get_arg2()
-    arg3 = yield request.get_arg3()
+    arg2 = yield request.arg2()
+    arg3 = yield request.arg3()
     response.argstreams = [
         InMemStream(request.endpoint),
         InMemStream(arg2),

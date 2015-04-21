@@ -176,16 +176,16 @@ class Request(object):
             if stream.auto_close or force:
                 stream.close()
 
-    def get_arg1(self):
+    def arg1(self):
         return get_arg(self, 0)
 
-    def get_arg2(self):
+    def arg2(self):
         return get_arg(self, 1)
 
-    def get_arg3(self):
+    def arg3(self):
         return get_arg(self, 2)
 
-    def get_all_args(self):
+    def args(self):
         return get_args(self)
 
 
@@ -230,14 +230,14 @@ class Response(object):
             if stream.auto_close or force:
                 stream.close()
 
-    def get_arg1(self):
+    def arg1(self):
         return get_arg(self, 0)
 
-    def get_arg2(self):
+    def arg2(self):
         return get_arg(self, 1)
 
-    def get_arg3(self):
+    def arg3(self):
         return get_arg(self, 2)
 
-    def get_all_args(self):
+    def args(self):
         return get_args(self)

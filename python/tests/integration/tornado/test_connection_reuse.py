@@ -63,7 +63,7 @@ def test_reuse():
             ))
         results = yield futures
         for resp in results:
-            arg3 = yield resp.get_arg3()
+            arg3 = yield resp.arg3()
             assert arg3 == 'hello to you too'
 
     yield loop1(2)
@@ -80,7 +80,7 @@ def test_reuse():
     @dispatch1.route('reverse')
     @gen.coroutine
     def reverse(request, response, opts):
-        arg3 = yield request.get_arg3()
+        arg3 = yield request.arg3()
         assert arg3 == 'foo'
         response.argstreams = [
             InMemStream(),
@@ -99,7 +99,7 @@ def test_reuse():
             ))
         results = yield futures
         for resp in results:
-            arg3 = yield resp.get_arg3()
+            arg3 = yield resp.arg3()
             assert arg3 == 'bar'
 
     loop1_run = loop1(1)

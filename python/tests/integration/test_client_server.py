@@ -85,7 +85,7 @@ def test_tchannel_call_request_fragment(tchannel_server,
     response = yield tchannel.request(hostport).send(InMemStream(endpoint),
                                                      InMemStream(arg2),
                                                      InMemStream(arg3))
-    (rarg1, rarg2, rarg3) = yield response.get_all_args()
+    (rarg1, rarg2, rarg3) = yield response.args()
     assert rarg1 == endpoint
     assert rarg3 == arg3
 
@@ -111,7 +111,7 @@ def test_tcurl(server):
     assert len(responses) == 1
 
     for response in responses:
-        (rarg1, rarg2, rarg3) = yield response.get_all_args()
+        (rarg1, rarg2, rarg3) = yield response.args()
         assert rarg1 == endpoint
         assert rarg3 == "hello"
 
