@@ -32,6 +32,18 @@ from .types import Types
 PROTOCOL_VERSION = 0x02
 
 
+# 64KB Max frame size
+# 16B (size:2 | type:1 | reserved:1 | id:4 | reserved:8)
+# 1 2 Bytes can represent 0~2**16-1
+MAX_PAYLOAD_SIZE = 0xFFEF   # 64*1024 - 16 - 1
+
+
+class StreamState(IntEnum):
+    init = 0x00,
+    streaming = 0x01,
+    completed = 0x02
+
+
 class FlagsType(IntEnum):
     none = 0x00,
     fragment = 0x01

@@ -56,7 +56,8 @@ class BaseRequestHandler(RequestHandler):
 
     _HANDLER_NAMES = {
         Types.PING_REQ: 'ping',
-        Types.CALL_REQ: 'call'
+        Types.CALL_REQ: 'pre_call',
+        Types.CALL_REQ_CONTINUE: 'pre_call'
     }
 
     def __init__(self):
@@ -76,14 +77,33 @@ class BaseRequestHandler(RequestHandler):
         handler_name = "handle_" + self._HANDLER_NAMES[message.message_type]
         return getattr(self, handler_name)(message_id, message, connection)
 
+    def handle_pre_call(self, message_id, message, connection):
+        """Handle incoming request message including CallRequestMessage and
+        CallRequestContinueMessage
+
+        This method will build the User friendly request object based on the
+        incoming messages.
+
+        It passes all the messages into the message_factory to build the init
+        request object. Only when it get a CallRequestMessage and a completed
+        arg_1=argstream[0], the message_factory will return a request object.
+        Then it will trigger the async call_handle call.
+
+        :param message_id: message id
+        :param message: CallRequestMessage or CallRequestContinueMessage
+        :param connection: tornado connection
+        """
+        req = connection.request_message_factory.build(message_id, message)
+        # call handler only for the call request message not continue message
+        if req:
+            self.handle_call(req, connection)
+
     def handle_ping(self, message_id, ping, connection):
         return connection.write(PingResponseMessage(), message_id)
 
-    def handle_call(self, message_id, call, connection):
+    def handle_call(self, call, connection):
         """Handle an incoming call.
 
-        :param message_id:
-            Message ID of the request
         :param call:
             CallRequestMessage containing information about the call
         :param connection:

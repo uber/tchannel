@@ -23,7 +23,6 @@ from __future__ import absolute_import
 import tornado.ioloop
 
 from tchannel.tornado import TChannel
-
 from options import get_args
 from handler import get_example_handler
 

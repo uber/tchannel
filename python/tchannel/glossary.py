@@ -22,10 +22,3 @@
 #
 # Message ID 0xffffffff is reserved
 MAX_MESSAGE_ID = 0xfffffffe
-
-# Largest payload supported by the system.
-#
-# 64KB Max frame size
-# 16B (size:2 | type:1 | reserved:1 | id:4 | reserved:8)
-# 1 2 Bytes can represent 0~2**16-1
-MAX_PAYLOAD_SIZE = 0xFFEF   # 64*1024 - 16 - 1

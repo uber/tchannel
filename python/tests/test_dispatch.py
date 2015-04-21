@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from tchannel.dispatch import RequestDispatcher
+from tchannel.tornado.dispatch import RequestDispatcher
 
 
 def dummy_endpoint(request, response, opts):

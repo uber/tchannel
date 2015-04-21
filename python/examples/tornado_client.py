@@ -28,14 +28,14 @@ import tornado.iostream
 import tornado.ioloop
 
 from options import get_args
-from tchannel.tornado.connection import TornadoConnection
+from tchannel.tornado.connection import StreamConnection
 
 
 @tornado.gen.coroutine
 def main():
 
     args = get_args()
-    conn = yield TornadoConnection.outgoing('%s:%d' % (args.host, args.port))
+    conn = yield StreamConnection.outgoing('%s:%d' % (args.host, args.port))
 
     N = 10000
     before = time.time()

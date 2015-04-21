@@ -24,59 +24,46 @@ import pytest
 import tornado
 
 from tchannel.tornado.dispatch import TornadoDispatcher
-from tchannel.dispatch import RequestDispatcher
-from tchannel.messages import Types
+from tchannel.tornado.stream import InMemStream
 
 
 @pytest.fixture
-def message():
-    message = InstanceDouble('tchannel.messages.base.BaseMessage')
-    message.message_type = Types.CALL_REQ
-    message.service = ''
-    message.args = ['test', None, None]
-    return message
-
-
-@pytest.fixture
-def context(message):
-    context = InstanceDouble('tchannel.context.Context')
-    allow(context).message.and_return(message)
-    allow(context).message_id.with_args().and_return(1)
-
-    return context
+def req():
+    request = InstanceDouble('tchannel.tornado.dispatch.Request')
+    request.endpoint = ""
+    request.service = ""
+    request.argstreams = [
+            InMemStream("test"),
+            InMemStream(),
+            InMemStream()
+        ]
+    request.id = 0
+    request.argstreams[0].close()
+    return request
 
 
 @pytest.fixture
 def conn():
-    conn = InstanceDouble('tchannel.tornado.connection.TornadoConnection')
-    allow(conn).senderror
-    allow(conn).write
+    conn = InstanceDouble('tchannel.tornado.connection.StreamConnection')
+    allow(conn).send_error
+    allow(conn).post_response
 
     return conn
 
 
-def test_sync_handler(context, conn):
-    dispatcher = RequestDispatcher()
-
-    @dispatcher.route("test")
-    def sync(request, response, opts):
-        response.write("done")
-
-    expect(conn).write
-
-    dispatcher.handle(context, conn)
-
-
 @pytest.mark.gen_test
-def test_async_handler(context, conn):
+def test_async_handler(req, conn):
     dispatcher = TornadoDispatcher()
 
     @dispatcher.route("test")
     @tornado.gen.coroutine
     def async(request, response, opts):
-        yield tornado.gen.sleep(0)
-        response.write("done")
+        response.argstreams = [
+            InMemStream(),
+            InMemStream(),
+            InMemStream()
+        ]
 
-    expect(conn).write
+    expect(conn).post_response
 
-    yield dispatcher.handle(context, conn)
+    yield dispatcher.handle_call(req, conn)

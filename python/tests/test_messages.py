@@ -29,6 +29,7 @@ from tchannel.io import BytesIO
 from tchannel.messages import CallRequestMessage
 from tchannel.tornado.message_factory import MessageFactory
 from tests.util import big_arg
+from tchannel.tornado.util import get_all_args
 
 
 def make_short_bytes(value):
@@ -263,6 +264,10 @@ def test_message_fragment(arg2, arg3):
     fragments = message_factory.fragment(msg)
     recv_msg = None
     for fragment in fragments:
-        recv_msg = message_factory.build(0, fragment)
-
-    assert origin_msg.args == recv_msg.args
+        output = message_factory.build(0, fragment)
+        if output:
+            recv_msg = output
+    (arg1, arg2, arg3) = yield get_all_args(recv_msg)
+    assert arg1 == origin_msg.args[0]
+    assert arg2 == origin_msg.args[1]
+    assert arg3 == origin_msg.args[2]

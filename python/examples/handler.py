@@ -21,34 +21,54 @@
 from __future__ import absolute_import
 
 import random
-import time
 
 import tornado.gen
 
 from tchannel.tornado.dispatch import TornadoDispatcher
+from tchannel.tornado.stream import InMemStream
+from tchannel.tornado.util import print_arg, get_arg
 
 
+@tornado.gen.coroutine
 def say_hi(request, response, opts):
-    response.write(arg3="hi")
+    arg2 = yield get_arg(request, 1)
+    arg3 = yield get_arg(request, 2)
+    response.argstreams = [
+        InMemStream(request.endpoint),
+        InMemStream(arg2),
+        InMemStream(arg3)
+    ]
 
 
+@tornado.gen.coroutine
 def say_ok(request, response, opts):
-    response.write(arg3="ok")
+    yield print_arg(request, 1)
+    yield print_arg(request, 2)
+
+    response.argstreams = [
+        InMemStream(),
+        InMemStream(),
+        InMemStream("world")]
 
 
+@tornado.gen.coroutine
 def echo(request, response, opts):
-    response.write(arg3=request.message.args[2])
+    # stream args right back to request side
+    print "streaming"
+    response.argstreams = [
+        InMemStream(request.endpoint),
+        request.argstreams[1],
+        request.argstreams[2]
+    ]
 
 
 @tornado.gen.coroutine
 def slow(request, response, opts):
     yield tornado.gen.sleep(random.random())
-    response.write(arg3="done")
-
-
-def blocking(request, response, opts):
-    time.sleep(random.random())
-    response.write(arg3="yawn")
+    response.argstreams = [
+        InMemStream(),
+        InMemStream(),
+        InMemStream("done")]
 
 
 def get_example_handler():
@@ -58,10 +78,15 @@ def get_example_handler():
     dispatcher.register("ok", say_ok)
     dispatcher.register("echo", echo)
     dispatcher.register("slow", slow)
-    dispatcher.register("blocking", blocking)
 
     @dispatcher.route("bye")
     def say_bye(request, response, opts):
-        response.write("bye bye!")
+        yield print_arg(request, 1)
+        yield print_arg(request, 2)
+
+        response.argstreams = [
+            InMemStream(),
+            InMemStream(),
+            InMemStream("world")]
 
     return dispatcher

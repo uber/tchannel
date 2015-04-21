@@ -24,7 +24,7 @@ import socket
 import pytest
 import tornado.iostream
 
-from tchannel.tornado.connection import TornadoConnection
+from tchannel.tornado.connection import StreamConnection
 
 
 @pytest.yield_fixture
@@ -34,8 +34,8 @@ def tornado_pair():
     server_stream = tornado.iostream.IOStream(server)
     client_stream = tornado.iostream.IOStream(client)
 
-    server_conn = TornadoConnection(server_stream)
-    client_conn = TornadoConnection(client_stream)
+    server_conn = StreamConnection(server_stream)
+    client_conn = StreamConnection(client_stream)
 
     try:
         yield server_conn, client_conn

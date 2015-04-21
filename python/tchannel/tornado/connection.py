@@ -42,7 +42,7 @@ from ..context import Context
 from ..exceptions import ConnectionClosedException, InvalidErrorCodeException
 from ..messages.types import Types
 from ..messages.common import (
-    PROTOCOL_VERSION, generate_checksum,  verify_checksum
+    PROTOCOL_VERSION, generate_checksum, FlagsType, verify_checksum
 )
 from ..messages.error import ErrorMessage, ErrorCode
 from .message_factory import MessageFactory
@@ -72,7 +72,8 @@ class TornadoConnection(object):
         Expect a handshake request from the remote host.
     """
 
-    CALL_TYPES = frozenset([Types.CALL_REQ, Types.CALL_REQ_CONTINUE])
+    CALL_REQ_TYPES = frozenset([Types.CALL_REQ, Types.CALL_REQ_CONTINUE])
+    CALL_RES_TYPES = frozenset([Types.CALL_RES, Types.CALL_RES_CONTINUE])
 
     def __init__(self, connection):
         assert connection, "connection is required"
@@ -89,8 +90,8 @@ class TornadoConnection(object):
 
         # We need to use two separate message factories to avoid message ID
         # collision while assembling fragmented messages.
-        self._request_message_factory = MessageFactory()
-        self._response_message_factory = MessageFactory()
+        self.request_message_factory = MessageFactory()
+        self.response_message_factory = MessageFactory()
 
         # Queue of unprocessed incoming calls.
         self._messages = queues.Queue()
@@ -186,24 +187,29 @@ class TornadoConnection(object):
         self._loop_running = True
         while not self.closed:
             context = yield self._recv()
+
             # TODO: There should probably be a try-catch on the yield.
-            if context.message.message_type in self.CALL_TYPES:
+            if context.message.message_type in self.CALL_REQ_TYPES:
                 self._messages.put(context)
                 continue
+
             elif context.message_id in self._outstanding:
-                message = self._response_message_factory.build(
+                response = self.response_message_factory.build(
                     context.message_id, context.message
                 )
 
-                if message is None:
-                    # Message fragment is incomplete. It'll probably be filled
-                    # by a future request.
-                    continue
+                # keep continue message in the list
+                # pop all other type messages including error message
+                if (context.message.message_type in self.CALL_RES_TYPES and
+                        context.message.flags == FlagsType.fragment):
+                    # still streaming, keep it for record
+                    future = self._outstanding.get(context.message_id)
+                else:
+                    future = self._outstanding.pop(context.message_id)
+                if response and future.running():
+                    future.set_result(response)
+                continue
 
-                future = self._outstanding.pop(context.message_id)
-                if future.running():
-                    future.set_result(message)
-                    continue
             log.warn('Unconsumed message %s', context)
 
     # Basically, the only difference between send and write is that send
@@ -212,7 +218,6 @@ class TornadoConnection(object):
 
     def send(self, message, message_id=None):
         """Send the given message up the wire.
-
         Use this for messages which have a response message.
 
         :param message:
@@ -246,8 +251,7 @@ class TornadoConnection(object):
             Message to write.
         """
         assert not self.closed
-        message_id = message_id or self.next_message_id()
-        fragments = self._request_message_factory.fragment(message)
+        fragments = MessageFactory.fragment(message)
         for fragment in fragments:
             yield self._write(fragment, message_id)
 
@@ -407,17 +411,9 @@ class TornadoConnection(object):
 
         while not self.closed:
             context = yield self.await()
-            message = self._request_message_factory.build(
-                context.message_id, context.message
-            )
 
-            if message is None:
-                # Message fragment is incomplete. It'll probably be filled by
-                # a future request.
-                continue
-
-            if not verify_checksum(message):
-                self.senderror(
+            if not verify_checksum(context.message):
+                yield self.send_error(
                     ErrorCode.bad_request,
                     "Checksum does not match.",
                     context.message_id,
@@ -425,12 +421,13 @@ class TornadoConnection(object):
                 continue
 
             try:
-                handler.handle(Context(context.message_id, message), self)
+                handler.handle(Context(context.message_id,
+                                       context.message), self)
             except Exception:
                 # TODO Send error frame back
                 logging.exception("Failed to process %s", repr(context))
 
-    def senderror(self, code, message, message_id):
+    def send_error(self, code, message, message_id):
         """Convenience method for writing Error frames up the wire.
 
         :param code:
@@ -443,9 +440,9 @@ class TornadoConnection(object):
         if code not in ErrorMessage.ERROR_CODES.keys():
             raise InvalidErrorCodeException(code)
 
-        self._write(
+        return self._write(
             ErrorMessage(
-                code=ErrorCode.bad_request,
+                code=code,
                 message=message
             ),
             message_id
@@ -456,3 +453,105 @@ class TornadoConnection(object):
 
     def pong(self):
         return self._write(messages.PingResponseMessage())
+
+
+class StreamConnection(TornadoConnection):
+    """Streaming request/response into protocol messages and sent by tornado
+    connection
+
+    Here are public apis provided by StreamConnection:
+    "post_response(response)"
+        stream response object into wire
+
+    "post_request(request)"
+        stream request object into wire without waiting for a response
+
+    "send_request(request)"
+        stream request object into wire and wait for a response
+
+    """
+
+    @tornado.gen.coroutine
+    def _stream(self, context, message_factory):
+        """write request/response into frames
+
+        Transform request/response into protocol level message objects based on
+        types and argstreams.
+
+        Assumption: the chunk data read from stream can fit into memory.
+
+        If arg stream is at init or streaming state, build the message based on
+        current chunk. If arg stream is at completed state, put current chunk
+        into args[] array, and continue to read next arg stream in order to
+        compose a larger message instead of sending multi small messages.
+
+        Note: the message built at this stage is not guaranteed the size is
+        less then 64KB.
+
+        Possible messages created sequence:
+
+        Take request as an example::
+        CallRequestMessage(flags=fragment)
+            --> CallRequestContinueMessage(flags=fragment)
+            ....
+            --> CallRequestContinueMessage(flags=fragment)
+                --> CallRequestMessage(flags=none)
+
+        :param context: Request or Response object
+        """
+        args = []
+        for i, argstream in enumerate(context.argstreams):
+            chunk = yield argstream.read()
+            args.append(chunk)
+            chunk = yield argstream.read()
+            while chunk:
+                message = (message_factory.
+                           build_raw_message(context, args))
+                yield self.write(message, context.id)
+                args = [chunk]
+                chunk = yield argstream.read()
+
+        # last piece of request/response.
+        message = (message_factory.
+                   build_raw_message(context, args, is_completed=True))
+        yield self.write(message, context.id)
+
+    @tornado.gen.coroutine
+    def post_response(self, response):
+        try:
+            response.close_argstreams()
+            yield self._stream(response, self.response_message_factory)
+        finally:
+            response.close_argstreams(force=True)
+
+    @tornado.gen.coroutine
+    def post_request(self, request):
+        """send the given request and response is not required"""
+        try:
+            request.close_argstreams()
+            yield self._stream(request, self.request_message_factory)
+        finally:
+            request.close_argstreams(force=True)
+
+    def send_request(self, request):
+        """Send the given request and response is required.
+
+        Use this for messages which have a response message.
+
+        :param request:
+            request to send
+        :returns:
+            A Future containing the response for the request
+        """
+        assert not self.closed
+        assert self._loop_running, "Perform a handshake first."
+
+        request.id = request.id or self.next_message_id()
+        assert request.id not in self._outstanding, (
+            "Message ID '%d' already being used" % request.id
+        )
+
+        future = tornado.gen.Future()
+        self._outstanding[request.id] = future
+        self.post_request(request)
+        return future

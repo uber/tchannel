@@ -22,26 +22,33 @@ from __future__ import absolute_import
 
 import pytest
 
-import tchannel.messages as tmessage
 from tchannel import tcurl
 from tchannel.exceptions import ConnectionClosedException
 from tchannel.tornado import TChannel
-from tchannel.tornado.connection import TornadoConnection
+from tchannel.tornado.connection import StreamConnection
 from tchannel.messages.error import ErrorCode
 from tchannel.messages import Types
+from tchannel.tornado.stream import InMemStream
 from tests.util import big_arg
+from tchannel.tornado.dispatch import Response
+from tchannel.tornado.util import get_all_args
 
 
 @pytest.fixture
 def call_response():
-    return tmessage.CallResponseMessage(args=[b'hello', '', 'world'])
+    return Response(
+        argstreams=[
+            InMemStream(b'hello'),
+            InMemStream(''),
+            InMemStream('world')
+        ]
+    )
 
 
 @pytest.mark.gen_test
 def test_tornado_client_with_server_not_there(random_open_port):
-
     with pytest.raises(ConnectionClosedException):
-        yield TornadoConnection.outgoing(
+        yield StreamConnection.outgoing(
             'localhost:%d' % random_open_port,
         )
 
@@ -60,29 +67,41 @@ def test_tornado_client_with_server_not_there(random_open_port):
     ],
     ids=lambda arg: str(len(arg))
 )
-def test_tchannel_call_request_streaming(tchannel_server, call_response,
-                                         arg2, arg3):
+def test_tchannel_call_request_fragment(tchannel_server,
+                                        arg2, arg3):
     endpoint = b'tchannelpeertest'
-    call_response.args[0] = endpoint
 
-    tchannel_server.expect_call(endpoint).and_return(call_response)
+    tchannel_server.expect_call(endpoint).and_return(Response(
+        argstreams=[
+            InMemStream(endpoint),
+            InMemStream(arg2),
+            InMemStream(arg3)
+        ]
+    ))
 
     tchannel = TChannel()
 
     hostport = 'localhost:%d' % (tchannel_server.port)
 
-    response = yield tchannel.request(hostport).send(endpoint, arg2, arg3)
-
-    assert response.args[0] == call_response.args[0]
-    assert response.args[2] == call_response.args[2]
+    response = yield tchannel.request(hostport).send(InMemStream(endpoint),
+                                                     InMemStream(arg2),
+                                                     InMemStream(arg3))
+    (rarg1, rarg2, rarg3) = yield get_all_args(response)
+    assert rarg1 == endpoint
+    assert rarg3 == arg3
 
 
 @pytest.mark.gen_test
-def test_tcurl(server, call_response):
+def test_tcurl(server):
     endpoint = b'tcurltest'
-    call_response.args[0] = endpoint
 
-    server.expect_call(endpoint).and_return(call_response)
+    server.expect_call(endpoint).and_return(Response(
+        argstreams=[
+            InMemStream(endpoint),
+            InMemStream(),
+            InMemStream("hello")
+        ]
+    ))
 
     hostport = 'localhost:%d/%s' % (
         server.port, endpoint.decode('ascii')
@@ -93,8 +112,9 @@ def test_tcurl(server, call_response):
     assert len(responses) == 1
 
     for response in responses:
-        assert response.args[0] == call_response.args[0]
-        assert response.args[2] == call_response.args[2]
+        (rarg1, rarg2, rarg3) = yield get_all_args(response)
+        assert rarg1 == endpoint
+        assert rarg3 == "hello"
 
 
 @pytest.mark.gen_test
@@ -105,6 +125,8 @@ def test_endpoint_not_found(tchannel_server, call_response):
 
     hostport = 'localhost:%d' % (tchannel_server.port)
 
-    response = yield tchannel.request(hostport).send("", "", "")
+    response = yield tchannel.request(hostport).send(InMemStream(),
+                                                     InMemStream(),
+                                                     InMemStream())
     assert response.message_type == Types.ERROR
     assert response.code == ErrorCode.bad_request

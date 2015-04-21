@@ -20,7 +20,6 @@
 
 from __future__ import absolute_import
 
-import argparse
 import collections
 import contextlib
 import cProfile
@@ -30,7 +29,10 @@ import pstats
 import sys
 import time
 
+import argparse
 import tornado.ioloop
+from .tornado.stream import InMemStream
+from .tornado.util import print_arg
 from .tornado import TChannel
 from .tornado.dispatch import TornadoDispatcher
 
@@ -160,26 +162,26 @@ def parse_args(args=None):
     return args
 
 
+@tornado.gen.coroutine
 def handler1(request, response, opts):
-    response.write("handler1 says hi")
-
-
-def handler2(request, response, opts):
-    response.write("handler2 says ok")
+    yield print_arg(request, 1)
+    yield print_arg(request, 2)
+    response.argstreams = [
+        InMemStream(request.endpoint),
+        InMemStream(),
+        InMemStream("world")
+        ]
 
 
 def create_server(tchannel, in_port):
 
     handler = TornadoDispatcher()
     handler.register(
-        r"/hi", handler1
-    )
-    handler.register(
-        r"/ok", handler2
+        r"hi", handler1
     )
 
-    server = tchannel.host(in_port, handler)
-    server.listen()
+    server = tchannel.host(handler)
+    server.listen(in_port)
 
 
 def chunk(iterable, n):
@@ -205,28 +207,25 @@ def multi_tcurl(
 
     all_requests = getattr(itertools, 'izip', zip)(hostports, headers, bodies)
 
-    with timing(profile=profile) as info:
+    for requests in chunk(all_requests, batch_size):
+        futures = []
 
-        for requests in chunk(all_requests, batch_size):
-            futures = []
+        for hostport, header, body in requests:
+            futures.append(
+                tcurl(tchannel, hostport, header, body, service, quiet)
+            )
 
-            for hostport, header, body in requests:
-                futures.append(
-                    tcurl(tchannel, hostport, header, body, service, quiet)
-                )
+            if rps:
+                yield tornado.gen.sleep(1.0 / rps)
 
-                if rps:
-                    yield tornado.gen.sleep(1.0 / rps)
+        wait_iterator = tornado.gen.WaitIterator(*futures)
+        results = []
 
-            wait_iterator = tornado.gen.WaitIterator(*futures)
-            results = []
-
-            while not wait_iterator.done():
-                try:
-                    info['requests'] += 1
-                    results.append((yield wait_iterator.next()))
-                except Exception:
-                    info['failures'] += 1
+        while not wait_iterator.done():
+            try:
+                results.append((yield wait_iterator.next()))
+            except Exception:
+                raise
 
     raise tornado.gen.Return(results)
 
@@ -242,21 +241,15 @@ def tcurl(tchannel, hostport, headers, body, service, quiet=False):
         log.debug("> Arg3: %s" % body)
 
     request = tchannel.request(host, service)
-
     response = yield request.send(
-        endpoint,
-        headers,
-        body,
+        InMemStream(endpoint),
+        InMemStream(headers),
+        InMemStream(body)
     )
 
     if not quiet:
-        (arg1, arg2, arg3) = response.args
         log.debug("< Host: %s" % host)
-        log.debug("<  Msg: %s" % request.message_id)
-        log.debug("< arg1: %s" % arg1)
-        log.debug("< arg2: %s" % arg2)
-        log.debug("< arg3: %s" % arg3)
-
+        log.debug("<  Msg: %s" % response.id)
     raise tornado.gen.Return(response)
 
 

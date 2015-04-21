@@ -31,4 +31,9 @@ def get_args():
         "--host",
         dest="host", default="localhost"
     )
+    parser.add_argument(
+        "--file",
+        dest="filename"
+    )
+
     return parser.parse_args()
