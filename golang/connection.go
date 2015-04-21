@@ -386,7 +386,7 @@ func (c *Connection) connectionError(err error) error {
 		c.closeNetwork()
 	}
 
-	return err
+	return NewWrappedSystemError(ErrorCodeNetwork, err)
 }
 
 // withStateLock performs an action with the connection state mutex locked

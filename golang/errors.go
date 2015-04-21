@@ -20,6 +20,10 @@ package tchannel
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+import (
+	"fmt"
+)
+
 const (
 	// Message id for protocol level errors
 	invalidMessageID uint32 = 0xFFFFFFFF
@@ -57,8 +61,12 @@ const (
 	ErrorCodeUnexpected SystemErrorCode = 0x05
 
 	// ErrorCodeBadRequest indicates that the request was malformed, and could not be processed.
-	// Callers should not bother to retry the request, as there
+	// Callers should not bother to retry the request, as there is no chance it will be handled.
 	ErrorCodeBadRequest SystemErrorCode = 0x06
+
+	// ErrorCodeNetwork indicates a network level error, such as a connection reset.
+	// Callers can retry the request if the request is safe to retry
+	ErrorCodeNetwork SystemErrorCode = 0x07
 
 	// ErrorCodeProtocol indincates a fatal protocol error communicating with the peer.  The connection
 	// will be terminated.
@@ -80,8 +88,9 @@ var (
 // TODO(mmihic): Probably we want to hide this interface, and let application code
 // just deal with standard raw errors.
 type SystemError struct {
-	code SystemErrorCode
-	msg  string
+	code    SystemErrorCode
+	msg     string
+	wrapped error
 }
 
 // NewSystemError defines a new SystemError with a code and message
@@ -89,10 +98,18 @@ func NewSystemError(code SystemErrorCode, msg string) error {
 	return SystemError{code: code, msg: msg}
 }
 
+// NewWrappedSystemError defines a new SystemError wrapping an existing error
+func NewWrappedSystemError(code SystemErrorCode, wrapped error) error {
+	return SystemError{code: code, msg: fmt.Sprintf("sys err %x: %s", code, wrapped.Error()), wrapped: wrapped}
+}
+
 // Error returns the SystemError message, conforming to the error interface
 func (se SystemError) Error() string {
 	return se.msg
 }
+
+// Wrapped returns the wrapped error
+func (se SystemError) Wrapped() error { return se.wrapped }
 
 // Returns the SystemError code, for sending to a peer
 func (se SystemError) errorCode() SystemErrorCode {
