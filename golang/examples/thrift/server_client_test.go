@@ -8,10 +8,17 @@ import "errors"
 import "reflect"
 import "golang.org/x/net/context"
 import "time"
+import tchannel "github.com/uber/tchannel/golang"
 
 func newFirstClient(server *thrift.Server, t *testing.T) *gen.FirstClient {
-	protocol, err := thrift.NewTChannelOutboundProtocol(context.Background(),
-		server.HostPort(), "MyThriftService", "FirstProcessor", time.Second*time.Duration(1))
+	channel, err := tchannel.NewChannel(":0", nil)
+	if err != nil {
+		t.Fatal("Failed to create tchannel")
+	}
+	timeout := time.Second * time.Duration(1) // per-call timeout
+	protocol, err := thrift.NewTChannelOutboundProtocol(context.Background(), channel,
+		server.HostPort(), "MyThriftService", "FirstProcessor",
+		thrift.OutboundOptions{Timeout: &timeout})
 	if err != nil {
 		t.Fatal("Failed to create client")
 	}
@@ -19,8 +26,15 @@ func newFirstClient(server *thrift.Server, t *testing.T) *gen.FirstClient {
 }
 
 func newSecondClient(server *thrift.Server, t *testing.T) *gen.SecondClient {
-	protocol, err := thrift.NewTChannelOutboundProtocol(context.Background(),
-		server.HostPort(), "MyThriftService", "SecondProcessor", time.Second*time.Duration(1))
+	channel, err := tchannel.NewChannel(":0", nil)
+	if err != nil {
+		t.Fatal("Failed to create tchannel")
+	}
+	timeout := time.Second * time.Duration(2) // overall timeout
+	ctx, _ := context.WithTimeout(context.Background(), timeout)
+	protocol, err := thrift.NewTChannelOutboundProtocol(ctx, channel,
+		server.HostPort(), "MyThriftService", "SecondProcessor",
+		thrift.OutboundOptions{})
 	if err != nil {
 		t.Fatal("Failed to create client")
 	}
@@ -28,8 +42,14 @@ func newSecondClient(server *thrift.Server, t *testing.T) *gen.SecondClient {
 }
 
 func newBadClient(server *thrift.Server, t *testing.T) *gen.FirstClient {
-	protocol, err := thrift.NewTChannelOutboundProtocol(context.Background(),
-		server.HostPort(), "MyThriftService", "ThirdProcessor", time.Second*time.Duration(1))
+	channel, err := tchannel.NewChannel(":0", nil)
+	if err != nil {
+		t.Fatal("Failed to create tchannel")
+	}
+	timeout := time.Second * time.Duration(1)
+	protocol, err := thrift.NewTChannelOutboundProtocol(context.Background(), channel,
+		server.HostPort(), "MyThriftService", "ThirdProcessor",
+		thrift.OutboundOptions{Timeout: &timeout})
 	if err != nil {
 		t.Fatal("Failed to create client")
 	}

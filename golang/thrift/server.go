@@ -45,9 +45,9 @@ func NewServer(bindAddr, serviceName string) (*Server, error) {
 	return &Server{serviceName, ch}, nil
 }
 
-// NewServer2 creates a service that speaks thrift over tchannel.
-func NewServer2(bindAddr, serviceName string, ch *tchannel.Channel) (*Server, error) {
-	return &Server{serviceName, ch}, nil
+// NewServerWithChannel creates a service that speaks thrift over tchannel.
+func NewServerWithChannel(serviceName string, ch *tchannel.Channel) *Server {
+	return &Server{serviceName, ch}
 }
 
 // ThriftHandler wraps the tchannel.Handler interface

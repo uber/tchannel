@@ -8,23 +8,9 @@ import "golang.org/x/net/context"
 import "time"
 
 // NewTChannelOutboundProtocol creates a TChannelOutboundProtocol
-func NewTChannelOutboundProtocol(ctx context.Context,
+func NewTChannelOutboundProtocol(ctx context.Context, tchannel *tchannel.Channel,
 	remoteHostPort, remoteServiceName, remoteProcessorName string,
-	timeout time.Duration) (*TChannelOutboundProtocol, error) {
-
-	tchannel, err := tchannel.NewChannel("0.0.0.0:0", nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return NewTChannelOutboundProtocol2(ctx, tchannel,
-		remoteHostPort, remoteServiceName, remoteProcessorName, timeout)
-}
-
-// NewTChannelOutboundProtocol2 creates a TChannelOutboundProtocol
-func NewTChannelOutboundProtocol2(ctx context.Context, tchannel *tchannel.Channel,
-	remoteHostPort, remoteServiceName, remoteProcessorName string,
-	timeout time.Duration) (*TChannelOutboundProtocol, error) {
+	options OutboundOptions) (*TChannelOutboundProtocol, error) {
 
 	return &TChannelOutboundProtocol{
 		ctx:                 ctx,
@@ -32,8 +18,12 @@ func NewTChannelOutboundProtocol2(ctx context.Context, tchannel *tchannel.Channe
 		remoteHostPort:      remoteHostPort,
 		remoteServiceName:   remoteServiceName,
 		remoteProcessorName: remoteProcessorName,
-		timeout:             timeout,
+		options:             options,
 	}, nil
+}
+
+type OutboundOptions struct {
+	Timeout *time.Duration
 }
 
 //
@@ -54,7 +44,7 @@ type TChannelOutboundProtocol struct {
 	remoteHostPort      string
 	remoteServiceName   string
 	remoteProcessorName string
-	timeout             time.Duration
+	options             OutboundOptions
 
 	// state per call
 	remoteOperationName string
@@ -189,7 +179,10 @@ func (p *TChannelOutboundProtocol) Flush() error {
 	payload := p.writeBuffer.Bytes()
 
 	// begin the outbound call
-	ctx, _ := context.WithTimeout(p.ctx, p.timeout)
+	ctx := p.ctx
+	if p.options.Timeout != nil {
+		ctx, _ = context.WithTimeout(p.ctx, *p.options.Timeout)
+	}
 	call, err := p.tchannel.BeginCall(ctx, p.remoteHostPort, p.remoteServiceName, p.makeArg1())
 	if err != nil {
 		return err
