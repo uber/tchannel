@@ -27,6 +27,7 @@ from tornado import gen, ioloop
 from ..handler import BaseRequestHandler
 from ..messages.error import ErrorCode
 from ..messages.common import StreamState, FlagsType
+from .util import get_arg, get_args
 
 
 Endpoint = collections.namedtuple('Endpoint', ['handler', 'opts'])
@@ -175,6 +176,18 @@ class Request(object):
             if stream.auto_close or force:
                 stream.close()
 
+    def get_arg1(self):
+        return get_arg(self, 0)
+
+    def get_arg2(self):
+        return get_arg(self, 1)
+
+    def get_arg3(self):
+        return get_arg(self, 2)
+
+    def get_all_args(self):
+        return get_args(self)
+
 
 class Response(object):
     """An outgoing response.
@@ -216,3 +229,15 @@ class Response(object):
         for stream in self.argstreams:
             if stream.auto_close or force:
                 stream.close()
+
+    def get_arg1(self):
+        return get_arg(self, 0)
+
+    def get_arg2(self):
+        return get_arg(self, 1)
+
+    def get_arg3(self):
+        return get_arg(self, 2)
+
+    def get_all_args(self):
+        return get_args(self)

@@ -21,7 +21,7 @@ def get_arg(context, index):
 
 
 @tornado.gen.coroutine
-def get_all_args(context):
+def get_args(context):
     """get all three arg value in async way"""
     arg1 = yield get_arg(context, 0)
     arg2 = yield get_arg(context, 1)
