@@ -24,7 +24,7 @@ var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 
 var OutRequest = require('../out_request');
-var OutgoingResponse = require('../outgoing_response');
+var OutResponse = require('../out_response');
 var IncomingRequest = require('../incoming_request');
 var IncomingResponse = require('../incoming_response');
 
@@ -380,7 +380,7 @@ TChannelV2Handler.prototype.buildOutRequest = function buildOutRequest(options) 
     }
 };
 
-TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingResponse(req, options) {
+TChannelV2Handler.prototype.buildOutResponse = function buildOutResponse(req, options) {
     var self = this;
     if (!options) options = {};
     options.tracing = req.tracing;
@@ -392,7 +392,7 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
         callResponseCont: sendCallResponseContFrame,
         error: sendErrorFrame
     };
-    var res = new OutgoingResponse(req.id, options);
+    var res = new OutResponse(req.id, options);
     return res;
 
     function sendCallResponseFrame(args, isLast) {

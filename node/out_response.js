@@ -33,7 +33,7 @@ States.Streaming = 1;
 States.Done = 2;
 States.Error = 3;
 
-function TChannelOutgoingResponse(id, options) {
+function TChannelOutResponse(id, options) {
     options = options || {};
     assert(options.sendFrame, 'required option sendFrame');
     var self = this;
@@ -80,9 +80,9 @@ function TChannelOutgoingResponse(id, options) {
     self.on('finish', self.onFinish);
 }
 
-inherits(TChannelOutgoingResponse, EventEmitter);
+inherits(TChannelOutResponse, EventEmitter);
 
-TChannelOutgoingResponse.prototype.onFinish = function onFinish() {
+TChannelOutResponse.prototype.onFinish = function onFinish() {
     var self = this;
     if (!self.end) self.end = self.timers.now();
     if (self.span) {
@@ -90,9 +90,9 @@ TChannelOutgoingResponse.prototype.onFinish = function onFinish() {
     }
 };
 
-TChannelOutgoingResponse.prototype.type = 'tchannel.outgoing-response';
+TChannelOutResponse.prototype.type = 'tchannel.outgoing-response';
 
-TChannelOutgoingResponse.prototype.sendParts = function sendParts(parts, isLast) {
+TChannelOutResponse.prototype.sendParts = function sendParts(parts, isLast) {
     var self = this;
     switch (self.state) {
         case States.Initial:
@@ -113,7 +113,7 @@ TChannelOutgoingResponse.prototype.sendParts = function sendParts(parts, isLast)
     }
 };
 
-TChannelOutgoingResponse.prototype.sendCallResponseFrame = function sendCallResponseFrame(args, isLast) {
+TChannelOutResponse.prototype.sendCallResponseFrame = function sendCallResponseFrame(args, isLast) {
     var self = this;
     switch (self.state) {
         case States.Initial:
@@ -139,7 +139,7 @@ TChannelOutgoingResponse.prototype.sendCallResponseFrame = function sendCallResp
     }
 };
 
-TChannelOutgoingResponse.prototype.sendCallResponseContFrame = function sendCallResponseContFrame(args, isLast) {
+TChannelOutResponse.prototype.sendCallResponseContFrame = function sendCallResponseContFrame(args, isLast) {
     var self = this;
     switch (self.state) {
         case States.Initial:
@@ -160,7 +160,7 @@ TChannelOutgoingResponse.prototype.sendCallResponseContFrame = function sendCall
     }
 };
 
-TChannelOutgoingResponse.prototype.sendError = function sendError(codeString, message) {
+TChannelOutResponse.prototype.sendError = function sendError(codeString, message) {
     var self = this;
     if (self.state === States.Done || self.state === States.Error) {
         self.emit('error', errors.ResponseAlreadyDone({
@@ -184,7 +184,7 @@ TChannelOutgoingResponse.prototype.sendError = function sendError(codeString, me
     }
 };
 
-TChannelOutgoingResponse.prototype.setOk = function setOk(ok) {
+TChannelOutResponse.prototype.setOk = function setOk(ok) {
     var self = this;
     if (self.state !== States.Initial) {
         self.emit('error', errors.ResponseAlreadyStarted({
@@ -199,13 +199,13 @@ TChannelOutgoingResponse.prototype.setOk = function setOk(ok) {
     }
 };
 
-TChannelOutgoingResponse.prototype.sendOk = function sendOk(res1, res2) {
+TChannelOutResponse.prototype.sendOk = function sendOk(res1, res2) {
     var self = this;
     self.setOk(true);
     self.send(res1, res2);
 };
 
-TChannelOutgoingResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
+TChannelOutResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
     var self = this;
     if (self.state === States.Error) {
         self.logger.error('cannot send application error, already sent error frame', {
@@ -218,7 +218,7 @@ TChannelOutgoingResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
     }
 };
 
-TChannelOutgoingResponse.prototype.send = function send(res1, res2) {
+TChannelOutResponse.prototype.send = function send(res1, res2) {
     var self = this;
     if (self.streamed) {
         self.arg2.end(res1);
@@ -229,6 +229,6 @@ TChannelOutgoingResponse.prototype.send = function send(res1, res2) {
     }
 };
 
-TChannelOutgoingResponse.States = States;
+TChannelOutResponse.States = States;
 
-module.exports = TChannelOutgoingResponse;
+module.exports = TChannelOutResponse;

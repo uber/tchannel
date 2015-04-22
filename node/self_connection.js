@@ -23,7 +23,7 @@
 var IncomingRequest = require('./incoming_request');
 var IncomingResponse = require('./incoming_response');
 var OutRequest = require('./out_request');
-var OutgoingResponse = require('./outgoing_response');
+var OutResponse = require('./out_response');
 
 var inherits = require('util').inherits;
 
@@ -99,7 +99,7 @@ TChannelSelfConnection.prototype.buildOutRequest = function buildOutRequest(opti
     }
 };
 
-TChannelSelfConnection.prototype.buildOutgoingResponse = function buildOutgoingResponse(inreq, options) {
+TChannelSelfConnection.prototype.buildOutResponse = function buildOutResponse(inreq, options) {
     var self = this;
     var outreq = inreq.outreq;
 
@@ -116,7 +116,7 @@ TChannelSelfConnection.prototype.buildOutgoingResponse = function buildOutgoingR
         callResponseCont: passParts,
         error: passError
     };
-    var outres = new OutgoingResponse(inreq.id, options);
+    var outres = new OutResponse(inreq.id, options);
     var inres = new IncomingResponse(inreq.id, options);
     var first = true;
     return outres;

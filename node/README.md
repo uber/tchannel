@@ -232,7 +232,7 @@ type TChannelIncomingRequest : {
     arg3: Buffer
 }
 
-type TChannelOutgoingResponse : {
+type TChannelOutResponse : {
     id: Number,
     code: Number,
     ok: Boolean,
@@ -248,7 +248,7 @@ type TChannelOutgoingResponse : {
 type TChannelHandler : {
     handleRequest : (
         req: TChannelIncomingRequest,
-        res: TChannelOutgoingResponse
+        res: TChannelOutResponse
     ) => void
 }
 ```

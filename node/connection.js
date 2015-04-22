@@ -271,7 +271,7 @@ TChannelConnection.prototype.buildOutRequest = function buildOutRequest(options)
     return self.handler.buildOutRequest(opts);
 };
 
-TChannelConnection.prototype.buildOutgoingResponse = function buildOutgoingResponse(req, options) {
+TChannelConnection.prototype.buildOutResponse = function buildOutResponse(req, options) {
     var self = this;
     var opts = {
         logger: self.logger,
@@ -285,7 +285,7 @@ TChannelConnection.prototype.buildOutgoingResponse = function buildOutgoingRespo
         }
         // jshint forin:true
     }
-    return self.handler.buildOutgoingResponse(req, opts);
+    return self.handler.buildOutResponse(req, opts);
 };
 
 module.exports = TChannelConnection;
