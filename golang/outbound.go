@@ -384,7 +384,7 @@ func (c *Connection) handleError(frame *Frame) {
 		return
 	}
 
-	if errorMessage.errorCode == ErrorCodeProtocol {
+	if errorMessage.errCode == ErrCodeProtocol {
 		c.log.Warnf("Peer %s reported protocol error: %s", c.remotePeerInfo, errorMessage.message)
 		c.connectionError(errorMessage.AsSystemError())
 		return

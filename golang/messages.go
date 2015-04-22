@@ -373,10 +373,10 @@ func (c *callResContinue) write(w *typed.WriteBuffer) error { return nil }
 
 // An Error message, a system-level error response to a request or a protocol level error
 type errorMessage struct {
-	id        uint32
-	errorCode SystemErrorCode
-	tracing   Span
-	message   string
+	id      uint32
+	errCode SystemErrCode
+	tracing Span
+	message string
 }
 
 func (m *errorMessage) ID() uint32               { return m.id }
@@ -387,7 +387,7 @@ func (m *errorMessage) read(r *typed.ReadBuffer) error {
 		return err
 	}
 
-	m.errorCode = SystemErrorCode(errCode)
+	m.errCode = SystemErrCode(errCode)
 	if err := m.tracing.read(r); err != nil {
 		return err
 	}
@@ -405,7 +405,7 @@ func (m *errorMessage) read(r *typed.ReadBuffer) error {
 }
 
 func (m *errorMessage) write(w *typed.WriteBuffer) error {
-	if err := w.WriteByte(byte(m.errorCode)); err != nil {
+	if err := w.WriteByte(byte(m.errCode)); err != nil {
 		return err
 	}
 
@@ -426,5 +426,5 @@ func (m *errorMessage) write(w *typed.WriteBuffer) error {
 
 func (m errorMessage) AsSystemError() error {
 	// TODO(mmihic): Might be nice to return one of the well defined error types
-	return NewSystemError(m.errorCode, m.message)
+	return NewSystemError(m.errCode, m.message)
 }

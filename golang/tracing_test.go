@@ -77,7 +77,7 @@ func TestTracingPropagates(t *testing.T) {
 		srv2 := func(ctx context.Context, call *InboundCall) {
 			span := CurrentSpan(ctx)
 			if span == nil {
-				call.Response().SendSystemError(NewSystemError(ErrorCodeUnexpected, "tracing not found"))
+				call.Response().SendSystemError(NewSystemError(ErrCodeUnexpected, "tracing not found"))
 				return
 			}
 

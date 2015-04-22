@@ -9,7 +9,7 @@ import (
 
 var (
 	errDuplicateMex   = errors.New("multiple attempts to use the message id")
-	errMexChannelFull = NewSystemError(ErrorCodeBusy, "cannot send frame to message exchange channel")
+	errMexChannelFull = NewSystemError(ErrCodeBusy, "cannot send frame to message exchange channel")
 )
 
 const (

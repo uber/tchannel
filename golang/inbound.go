@@ -30,7 +30,7 @@ import (
 
 var (
 	// ErrHandlerNotFound is returned when no registered handler can be found for a given service and operation
-	ErrHandlerNotFound = NewSystemError(ErrorCodeBadRequest, "no handler for service and operation")
+	ErrHandlerNotFound = NewSystemError(ErrCodeBadRequest, "no handler for service and operation")
 
 	errCallStateMismatch           = errors.New("attempting to read / write outside of expected state")
 	errInboundRequestAlreadyActive = errors.New("inbound request is already active; possible duplicate client id")
@@ -282,10 +282,10 @@ func (call *InboundCallResponse) SendSystemError(err error) error {
 	// Send the error frame
 	frame := call.conn.framePool.Get()
 	if err := frame.write(&errorMessage{
-		id:        call.id,
-		tracing:   call.span,
-		errorCode: GetSystemErrorCode(err),
-		message:   err.Error()}); err != nil {
+		id:      call.id,
+		tracing: call.span,
+		errCode: GetSystemErrorCode(err),
+		message: err.Error()}); err != nil {
 		// Nothing we can do here
 		call.conn.log.Warnf("Could not create outbound frame to %s for %d: %v",
 			call.conn.remotePeerInfo, call.id, err)

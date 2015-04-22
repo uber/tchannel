@@ -90,7 +90,7 @@ func TestBadRequest(t *testing.T) {
 
 		_, _, err := sendRecv(ctx, ch, hostPort, "Nowhere", "Noone", []byte("Headers"), []byte("Body"))
 		require.NotNil(t, err)
-		assert.Equal(t, ErrorCodeBadRequest, GetSystemErrorCode(err))
+		assert.Equal(t, ErrCodeBadRequest, GetSystemErrorCode(err))
 	})
 }
 
@@ -103,7 +103,7 @@ func TestServerBusy(t *testing.T) {
 
 		_, _, err := sendRecv(ctx, ch, hostPort, "TestService", "busy", []byte("Arg2"), []byte("Arg3"))
 		require.NotNil(t, err)
-		assert.Equal(t, ErrorCodeBusy, GetSystemErrorCode(err))
+		assert.Equal(t, ErrCodeBusy, GetSystemErrorCode(err))
 	})
 }
 
