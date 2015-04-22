@@ -26,7 +26,7 @@ var EventEmitter = require('events').EventEmitter;
 var net = require('net');
 
 var TChannelConnection = require('./connection');
-var TChannelPeerHealthyState = require('./peer_healthy_state');
+var TChannelPeerHealthyState = require('./peer_states').TChannelPeerHealthyState;
 
 function TChannelPeer(channel, hostPort, options) {
     if (!(this instanceof TChannelPeer)) {
@@ -91,14 +91,14 @@ TChannelPeer.prototype.close = function close(callback) {
 
 TChannelPeer.prototype.setState = function setState(StateType) {
     var self = this;
-    var currentName = self.state && self.state.name;
-    if (currentName &&
-        StateType.prototype.name &&
-        StateType.prototype.name === currentName) {
+    var currentType = self.state && self.state.type;
+    if (currentType &&
+        StateType.prototype.type &&
+        StateType.prototype.type === currentType) {
         return;
     }
-    var state = StateType(self.channel, self);
-    if (state && state.name === currentName) {
+    var state = new StateType(self.channel, self);
+    if (state && state.type === currentType) {
         return;
     }
     var oldState = self.state;
@@ -137,7 +137,22 @@ TChannelPeer.prototype.connect = function connect(outOnly) {
 
 TChannelPeer.prototype.request = function peerRequest(options) {
     var self = this;
-    return self.connect().request(options);
+    var req = self.connect().request(options);
+
+    self.state.onRequest(req);
+
+    req.on('error', onError);
+    req.on('response', onResponse);
+
+    function onError(err) {
+        self.state.onRequestError(req);
+    }
+
+    function onResponse(res) {
+        self.state.onRequestResponse(req);
+    }
+
+    return req;
 };
 
 TChannelPeer.prototype.addConnection = function addConnection(conn) {

@@ -24,22 +24,19 @@ var inherits = require('util').inherits;
 
 var TChannelPeerState = require('./peer_state');
 
+module.exports.TChannelPeerHealthyState = TChannelPeerHealthyState;
+
+
 function TChannelPeerHealthyState(channel, peer) {
-    if (!(this instanceof TChannelPeerHealthyState)) {
-        return new TChannelPeerHealthyState(channel, peer);
-    }
     var self = this;
     TChannelPeerState.call(self, channel, peer);
 }
 
 inherits(TChannelPeerHealthyState, TChannelPeerState);
 
-TChannelPeerHealthyState.prototype.name = 'healthy';
+TChannelPeerHealthyState.prototype.type = 'tchannel.healthy';
 
 TChannelPeerHealthyState.prototype.shouldRequest = function shouldRequest(/* req, options */) {
-    // return Math.random();
     var self = this;
     return 0.2 + self.channel.random() * 0.8;
 };
-
-module.exports = TChannelPeerHealthyState;

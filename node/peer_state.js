@@ -26,6 +26,8 @@ function TChannelPeerState(channel, peer) {
     self.peer = peer;
 }
 
+TChannelPeerState.prototype.type = 'tchannel.base';
+
 TChannelPeerState.prototype.close = function close(callback) {
     callback();
 };
@@ -35,6 +37,17 @@ TChannelPeerState.prototype.shouldRequest = function shouldRequest(/* req, optio
     // the intention is that the other (non-options) arg encapsulates all
     // requests across retries and setries
     return 0;
+};
+
+// Request life cycle:
+
+TChannelPeerState.prototype.onRequest = function onRequest(/* req */) {
+};
+
+TChannelPeerState.prototype.onRequestResponse = function onRequestResponse(/* req */) {
+};
+
+TChannelPeerState.prototype.onRequestError = function onRequestError(/* req */) {
 };
 
 module.exports = TChannelPeerState;
