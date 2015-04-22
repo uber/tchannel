@@ -97,7 +97,7 @@ func ping(ctx context.Context, call *tchannel.InboundCall) {
 
 func main() {
     // Create a new TChannel for handling requests
-    server, err := tchannel.NewChannel("localhost:8050", nil)
+    server, err := tchannel.NewChannel(nil)
     if err != nil {
         panic(err)
     }
@@ -115,7 +115,7 @@ func main() {
     }
 
     // Listen for bi-directional messages
-    go client.ListenAndHandle()
+    go client.ListenAndServe("localhost:8050")
 
     // Make a call to ourselves, with a timeout of 10s
     ctx, cancel := context.WithTimeout(context.Background(), time.Second * 10)
