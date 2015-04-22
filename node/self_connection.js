@@ -24,6 +24,7 @@ var InRequest = require('./in_request');
 var InResponse = require('./in_response');
 var OutRequest = require('./out_request');
 var OutResponse = require('./out_response');
+var StreamingOutRequest = require('./streaming_out_request');
 
 var inherits = require('util').inherits;
 
@@ -53,7 +54,12 @@ TChannelSelfConnection.prototype.buildOutRequest = function buildOutRequest(opti
         callRequestCont: passParts
     };
     options.tracer = self.tracer;
-    var outreq = new OutRequest(id, options);
+    var outreq;
+    if (options.streamed) {
+        outreq = new StreamingOutRequest(id, options);
+    } else {
+        outreq = new OutRequest(id, options);
+    }
 
     if (outreq.span) {
         options.tracing = outreq.span.getTracing();
