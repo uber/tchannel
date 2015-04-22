@@ -26,13 +26,13 @@ import tornado.gen
 
 from tchannel.tornado.dispatch import TornadoDispatcher
 from tchannel.tornado.stream import InMemStream
-from tchannel.tornado.util import print_arg, get_arg
+from tchannel.tornado.util import print_arg
 
 
 @tornado.gen.coroutine
 def say_hi(request, response, opts):
-    arg2 = yield get_arg(request, 1)
-    arg3 = yield get_arg(request, 2)
+    arg2 = yield request.arg2()
+    arg3 = yield request.arg3()
     response.argstreams = [
         InMemStream(request.endpoint),
         InMemStream(arg2),

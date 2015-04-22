@@ -27,7 +27,6 @@ from tchannel.tornado.dispatch import TornadoDispatcher
 from tchannel.tornado.tchannel import TChannel
 from tornado import gen
 from tchannel.tornado.stream import InMemStream
-from tchannel.tornado.util import get_arg
 
 
 @pytest.mark.gen_test
@@ -64,7 +63,7 @@ def test_reuse():
             ))
         results = yield futures
         for resp in results:
-            arg3 = yield get_arg(resp, 2)
+            arg3 = yield resp.arg3()
             assert arg3 == 'hello to you too'
 
     yield loop1(2)
@@ -81,7 +80,7 @@ def test_reuse():
     @dispatch1.route('reverse')
     @gen.coroutine
     def reverse(request, response, opts):
-        arg3 = yield get_arg(request, 2)
+        arg3 = yield request.arg3()
         assert arg3 == 'foo'
         response.argstreams = [
             InMemStream(),
@@ -100,7 +99,7 @@ def test_reuse():
             ))
         results = yield futures
         for resp in results:
-            arg3 = yield get_arg(resp, 2)
+            arg3 = yield resp.arg3()
             assert arg3 == 'bar'
 
     loop1_run = loop1(1)

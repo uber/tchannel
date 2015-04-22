@@ -21,16 +21,6 @@ def get_arg(context, index):
 
 
 @tornado.gen.coroutine
-def get_all_args(context):
-    """get all three arg value in async way"""
-    arg1 = yield get_arg(context, 0)
-    arg2 = yield get_arg(context, 1)
-    arg3 = yield get_arg(context, 2)
-
-    raise tornado.gen.Return((arg1, arg2, arg3))
-
-
-@tornado.gen.coroutine
 def print_arg(request, index):
     assert index < len(request.argstreams)
     try:

@@ -27,6 +27,7 @@ from tornado import gen, ioloop
 from ..handler import BaseRequestHandler
 from ..messages.error import ErrorCode
 from ..messages.common import StreamState, FlagsType
+from .util import get_arg
 
 
 Endpoint = collections.namedtuple('Endpoint', ['handler', 'opts'])
@@ -175,6 +176,35 @@ class Request(object):
             if stream.auto_close or force:
                 stream.close()
 
+    def arg1(self):
+        """get value for arg1
+
+        :return: return the future object contains the value for arg1
+        """
+        return get_arg(self, 0)
+
+    def arg2(self):
+        """get value for arg2
+
+        :return: return the future object contains the value for arg2
+        """
+        return get_arg(self, 1)
+
+    def arg3(self):
+        """get value for arg3
+
+        :return: return the future object contains the value for arg3
+        """
+        return get_arg(self, 2)
+
+    def args(self):
+        """get value for arg1, arg2, and arg3
+
+        :return: return the future object contains the list
+        for arg1, arg2, arg3
+        """
+        return [self.arg1(), self.arg2(), self.arg3()]
+
 
 class Response(object):
     """An outgoing response.
@@ -216,3 +246,32 @@ class Response(object):
         for stream in self.argstreams:
             if stream.auto_close or force:
                 stream.close()
+
+    def arg1(self):
+        """get value for arg1
+
+        :return: return the future object contains the value for arg1
+        """
+        return get_arg(self, 0)
+
+    def arg2(self):
+        """get value for arg2
+
+        :return: return the future object contains the value for arg2
+        """
+        return get_arg(self, 1)
+
+    def arg3(self):
+        """get value for arg3
+
+        :return: return the future object contains the value for arg3
+        """
+        return get_arg(self, 2)
+
+    def args(self):
+        """get value for arg1, arg2, and arg3
+
+        :return: return the future object contains the list
+        for arg1, arg2, arg3
+        """
+        return [self.arg1(), self.arg2(), self.arg3()]
