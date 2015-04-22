@@ -26,7 +26,6 @@ var inherits = require('util').inherits;
 var parallel = require('run-parallel');
 
 var errors = require('./errors');
-var OutArgStream = require('./argstream').OutArgStream;
 
 var States = Object.create(null);
 States.Initial = 0;
@@ -56,28 +55,10 @@ function TChannelOutRequest(id, options) {
     self.checksum = options.checksum || null;
 
     self.sendFrame = options.sendFrame;
-    if (options.streamed) {
-        self.streamed = true;
-        self._argstream = OutArgStream();
-        self.arg1 = self._argstream.arg1;
-        self.arg2 = self._argstream.arg2;
-        self.arg3 = self._argstream.arg3;
-        self._argstream.on('error', function passError(err) {
-            self.emit('error', err);
-        });
-        self._argstream.on('frame', function onFrame(parts, isLast) {
-            self.sendParts(parts, isLast);
-        });
-        self._argstream.on('finish', function onFinish() {
-            self.emit('finish');
-        });
-    } else {
-        self.streamed = false;
-        self._argstream = null;
-        self.arg1 = null;
-        self.arg2 = null;
-        self.arg3 = null;
-    }
+    self.streamed = false;
+    self.arg1 = null;
+    self.arg2 = null;
+    self.arg3 = null;
 
     if (options.tracer) {
         // new span with new ids
@@ -201,14 +182,8 @@ TChannelOutRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
         self.span.name = String(arg1);
     }
     if (callback) self.hookupCallback(callback);
-    if (self.streamed) {
-        self.arg1.end(arg1);
-        self.arg2.end(arg2);
-        self.arg3.end(arg3);
-    } else {
-        self.sendCallRequestFrame([arg1, arg2, arg3], true);
-        self.emit('finish');
-    }
+    self.sendCallRequestFrame([arg1, arg2, arg3], true);
+    self.emit('finish');
     return self;
 };
 
