@@ -33,7 +33,7 @@ States.Streaming = 1;
 States.Done = 2;
 States.Error = 3;
 
-function TChannelIncomingResponse(id, options) {
+function TChannelInResponse(id, options) {
     options = options || {};
     var self = this;
     EventEmitter.call(self);
@@ -73,11 +73,11 @@ function TChannelIncomingResponse(id, options) {
     self.on('finish', self.onFinish);
 }
 
-inherits(TChannelIncomingResponse, EventEmitter);
+inherits(TChannelInResponse, EventEmitter);
 
-TChannelIncomingResponse.prototype.type = 'tchannel.incoming-response';
+TChannelInResponse.prototype.type = 'tchannel.incoming-response';
 
-TChannelIncomingResponse.prototype.onFinish = function onFinish() {
+TChannelInResponse.prototype.onFinish = function onFinish() {
     var self = this;
     self.state = States.Done;
     if (self.span) {
@@ -85,7 +85,7 @@ TChannelIncomingResponse.prototype.onFinish = function onFinish() {
     }
 };
 
-TChannelIncomingResponse.prototype.handleFrame = function handleFrame(parts) {
+TChannelInResponse.prototype.handleFrame = function handleFrame(parts) {
     var self = this;
     if (self.streamed) {
         self._argstream.handleFrame(parts);
@@ -103,6 +103,6 @@ TChannelIncomingResponse.prototype.handleFrame = function handleFrame(parts) {
     }
 };
 
-TChannelIncomingResponse.States = States;
+TChannelInResponse.States = States;
 
-module.exports = TChannelIncomingResponse;
+module.exports = TChannelInResponse;

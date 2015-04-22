@@ -16,7 +16,7 @@ type HostInfo : String
 type TChannelValue :
     Buffer | String | null | undefined
 
-type TChannelIncomingResponse : {
+type TChannelInResponse : {
     id: Number,
     ok: Boolean,
 
@@ -33,7 +33,7 @@ type TChannelOutRequest : {
         arg1: Buffer | String,
         arg2: TChannelValue,
         arg3: TChannelValue,
-        cb: Callback<Error, res: TChannelIncomingResponse>
+        cb: Callback<Error, res: TChannelInResponse>
     ) => void
 }
 
