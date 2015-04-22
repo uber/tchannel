@@ -28,9 +28,6 @@ module.exports.TChannelPeerHealthyState = TChannelPeerHealthyState;
 
 
 function TChannelPeerHealthyState(channel, peer) {
-    if (!(this instanceof TChannelPeerHealthyState)) {
-        return new TChannelPeerHealthyState(channel, peer);
-    }
     var self = this;
     TChannelPeerState.call(self, channel, peer);
 }
