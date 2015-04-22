@@ -16,9 +16,6 @@ from collections import deque
 
 class Stream(object):
 
-    def __init__(self):
-        self._state = StreamState.init
-
     def read(self):
         """Async read from internal stream buffer
 
@@ -54,16 +51,16 @@ class InMemStream(Stream):
 
         :param buf: the buffer for the in memory stream
         """
-        super(InMemStream, self).__init__()
         self._stream = deque()
         if buf:
             self._stream.append(buf)
+        self.state = StreamState.init
         self._condition = Condition()
         self.auto_close = auto_close
 
     @tornado.gen.coroutine
     def read(self):
-        if self._state != StreamState.completed and len(self._stream) == 0:
+        if self.state != StreamState.completed and len(self._stream) == 0:
             yield self._condition.wait()
 
         chunk = ""
@@ -74,7 +71,7 @@ class InMemStream(Stream):
 
     @tornado.gen.coroutine
     def write(self, chunk):
-        if self._state == StreamState.completed:
+        if self.state == StreamState.completed:
             raise StreamingException("Stream has been closed.")
         if chunk:
             self._stream.append(chunk)
@@ -82,7 +79,7 @@ class InMemStream(Stream):
 
     @tornado.gen.coroutine
     def close(self):
-        self._state = StreamState.completed
+        self.state = StreamState.completed
         self._condition.notify()
 
 
@@ -102,7 +99,6 @@ class PipeStream(Stream):
         :param wpipe: an integer file descriptor which supports write ops
         :param auto: flag to indicate to close the stream automatically or not
         """
-        super(PipeStream, self).__init__()
         assert rpipe is not None
         self._rpipe = rpipe
         self._wpipe = wpipe
@@ -112,10 +108,11 @@ class PipeStream(Stream):
         self._ws = (PipeIOStream(self._wpipe) if
                     self._wpipe is not None else None)
         self.auto_close = auto_close
+        self.state = StreamState.init
 
     @tornado.gen.coroutine
     def read(self):
-        if self._state == StreamState.completed or self._rpipe is None:
+        if self.state == StreamState.completed or self._rpipe is None:
             raise tornado.gen.Return("")
 
         chunk = ""
@@ -125,7 +122,7 @@ class PipeStream(Stream):
 
         except StreamClosedError:
             # reach the end of the pipe stream
-            self._state = StreamState.completed
+            self.state = StreamState.completed
         finally:
             raise tornado.gen.Return(chunk)
 
@@ -135,11 +132,11 @@ class PipeStream(Stream):
         try:
             yield self._ws.write(chunk)
         except StreamClosedError:
-            self._state = StreamState.completed
+            self.state = StreamState.completed
             raise StreamingException("Stream has been closed.")
 
     def close(self):
-        self._state = StreamState.completed
+        self.state = StreamState.completed
         if self._ws and self.auto_close:
             self._ws.close()
 

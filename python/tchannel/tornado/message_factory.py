@@ -128,6 +128,19 @@ class MessageFactory(object):
         else:
             raise StreamingException("context object type error")
 
+    def prepare_args(self, message):
+        args = [
+            InMemStream(auto_close=False),
+            InMemStream(auto_close=False),
+            InMemStream(auto_close=False),
+        ]
+        for i, arg in enumerate(message.args):
+            if i > 0:
+                args[i-1].close()
+            args[i].write(arg)
+
+        return args
+
     def build_request(self, message, message_id=None):
         """Build request object from protocol level message info
 
@@ -138,9 +151,8 @@ class MessageFactory(object):
         :param message_id: integer of message id
         :return: request object
         """
-        args = []
-        for arg in message.args:
-            args.append(InMemStream(arg, auto_close=False))
+
+        args = self.prepare_args(message)
 
         # TODO decide what to pass to Request from message
         req = Request(
@@ -166,9 +178,7 @@ class MessageFactory(object):
         :return: response object
         """
 
-        args = []
-        for arg in message.args:
-            args.append(InMemStream(arg, auto_close=False))
+        args = self.prepare_args(message)
 
         # TODO decide what to pass to Response from message
         res = Response(
@@ -211,7 +221,14 @@ class MessageFactory(object):
             if message.flags == common.FlagsType.fragment:
                 self.message_buffer[message_id] = context
 
-            self.close_argstream(context)
+            # find the incompleted stream
+            num = 0
+            for i, arg in enumerate(context.argstreams):
+                if arg.state != StreamState.completed:
+                    num = i
+                    break
+
+            self.close_argstream(context, num)
             return context
 
         elif message.message_type in [Types.CALL_REQ_CONTINUE,
@@ -222,19 +239,19 @@ class MessageFactory(object):
                 raise StreamingException(
                     "missing call message after receiving continue message")
 
-            dst = len(context.argstreams) - 1
+            # find the incompleted stream
+            dst = 0
+            for i, arg in enumerate(context.argstreams):
+                if arg.state != StreamState.completed:
+                    dst = i
+                    break
+
             src = 0
             while src < len(message.args):
-                if dst < len(context.argstreams):
-                    context.argstreams[dst].write(message.args[src])
-                else:
-                    # only build InMemStream internally
-                    new_stream = InMemStream(auto_close=False)
-                    new_stream.write(message.args[src])
-                    context.argstreams.append(new_stream)
-
+                context.argstreams[dst].write(message.args[src])
                 dst += 1
                 src += 1
+
             if message.flags != FlagsType.fragment:
                 # get last fragment. mark it as completed
                 assert (len(context.argstreams) ==
@@ -242,7 +259,7 @@ class MessageFactory(object):
                 self.message_buffer.pop(message_id, None)
                 context.flags = FlagsType.none
 
-            self.close_argstream(context)
+            self.close_argstream(context, dst - 1)
             return None
         else:
             # TODO build error response or request object
@@ -284,12 +301,11 @@ class MessageFactory(object):
             yield message
 
     @staticmethod
-    def close_argstream(request):
+    def close_argstream(request, num):
         # close the stream for completed args since we have received all
         # the chunks
         if request.flags == FlagsType.none:
-            num = len(request.argstreams)
-        else:
-            num = len(request.argstreams) - 1
+            num += 1
+
         for i in range(num):
             request.argstreams[i].close()

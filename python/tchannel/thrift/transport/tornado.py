@@ -22,6 +22,7 @@ from __future__ import absolute_import
 
 from tornado import gen
 from tchannel.io import BytesIO
+from tchannel.tornado.stream import InMemStream
 from .tornado_base import TChannelTornadoTransportBase
 
 
@@ -54,9 +55,9 @@ class TChannelTornadoTransport(TChannelTornadoTransportBase):
         response = yield self._tchannel.request(
             self._hostport, self._service_name
         ).send(
-            endpoint,
-            '',  # TODO: headers
-            payload,
+            InMemStream(endpoint),
+            InMemStream(),  # TODO: headers
+            InMemStream(payload),
         )
 
         self._flush_internal(endpoint, response, seqid)
