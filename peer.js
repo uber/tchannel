@@ -91,14 +91,14 @@ TChannelPeer.prototype.close = function close(callback) {
 
 TChannelPeer.prototype.setState = function setState(StateType) {
     var self = this;
-    var currentName = self.state && self.state.name;
-    if (currentName &&
-        StateType.prototype.name &&
-        StateType.prototype.name === currentName) {
+    var currentType = self.state && self.state.type;
+    if (currentType &&
+        StateType.prototype.type &&
+        StateType.prototype.type === currentType) {
         return;
     }
     var state = new StateType(self.channel, self);
-    if (state && state.name === currentName) {
+    if (state && state.type === currentType) {
         return;
     }
     var oldState = self.state;

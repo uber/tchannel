@@ -26,6 +26,8 @@ function TChannelPeerState(channel, peer) {
     self.peer = peer;
 }
 
+TChannelPeerState.prototype.type = 'tchannel.base';
+
 TChannelPeerState.prototype.close = function close(callback) {
     callback();
 };
