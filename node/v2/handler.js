@@ -23,10 +23,10 @@
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 
-var OutgoingRequest = require('../outgoing_request');
-var OutgoingResponse = require('../outgoing_response');
-var IncomingRequest = require('../incoming_request');
-var IncomingResponse = require('../incoming_response');
+var OutRequest = require('../out_request');
+var OutResponse = require('../out_response');
+var InRequest = require('../in_request');
+var InResponse = require('../in_response');
 
 var v2 = require('./index');
 var errors = require('../errors');
@@ -155,10 +155,10 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
     if (self.remoteHostPort === null) {
         return callback(new Error('call request before init request')); // TODO typed error
     }
-    var req = self.buildIncomingRequest(reqFrame);
+    var req = self.buildInRequest(reqFrame);
     self._handleCallFrame(req, reqFrame, function(err) {
         if (err) return callback(err);
-        if (req.state === IncomingRequest.States.Streaming) {
+        if (req.state === InRequest.States.Streaming) {
             self.streamingReq[req.id] = req;
         }
         self.emit('call.incoming.request', req);
@@ -171,11 +171,11 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
     if (self.remoteHostPort === null) {
         return callback(new Error('call response before init response')); // TODO typed error
     }
-    var res = self.buildIncomingResponse(resFrame);
+    var res = self.buildInResponse(resFrame);
     res.remoteAddr = self.remoteHostPort;
     self._handleCallFrame(res, resFrame, function(err) {
         if (err) return callback(err);
-        if (res.state === IncomingResponse.States.Streaming) {
+        if (res.state === InResponse.States.Streaming) {
             self.streamingRes[res.id] = res;
         }
         self.emit('call.incoming.response', res);
@@ -350,7 +350,7 @@ TChannelV2Handler.prototype.sendErrorFrame = function sendErrorFrame(r, codeStri
     self.pushFrame(errFrame);
 };
 
-TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest(options) {
+TChannelV2Handler.prototype.buildOutRequest = function buildOutRequest(options) {
     var self = this;
     var id = self.nextFrameId();
     if (options.checksumType === undefined || options.checksumType === null) {
@@ -364,7 +364,7 @@ TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest
         callRequestCont: sendCallRequestContFrame
     };
 
-    var req = new OutgoingRequest(id, options);
+    var req = new OutRequest(id, options);
     return req;
 
     function sendCallRequestFrame(args, isLast) {
@@ -380,7 +380,7 @@ TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest
     }
 };
 
-TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingResponse(req, options) {
+TChannelV2Handler.prototype.buildOutResponse = function buildOutResponse(req, options) {
     var self = this;
     if (!options) options = {};
     options.tracing = req.tracing;
@@ -392,7 +392,7 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
         callResponseCont: sendCallResponseContFrame,
         error: sendErrorFrame
     };
-    var res = new OutgoingResponse(req.id, options);
+    var res = new OutResponse(req.id, options);
     return res;
 
     function sendCallResponseFrame(args, isLast) {
@@ -412,10 +412,10 @@ TChannelV2Handler.prototype.buildOutgoingResponse = function buildOutgoingRespon
     }
 };
 
-TChannelV2Handler.prototype.buildIncomingRequest = function buildIncomingRequest(reqFrame) {
+TChannelV2Handler.prototype.buildInRequest = function buildInRequest(reqFrame) {
     var self = this;
     var retryFlags = v2.parseRetryFlags(reqFrame.body.headers.re);
-    return new IncomingRequest(reqFrame.id, {
+    return new InRequest(reqFrame.id, {
         logger: self.logger,
         random: self.random,
         timers: self.timers,
@@ -431,9 +431,9 @@ TChannelV2Handler.prototype.buildIncomingRequest = function buildIncomingRequest
     });
 };
 
-TChannelV2Handler.prototype.buildIncomingResponse = function buildIncomingResponse(resFrame) {
+TChannelV2Handler.prototype.buildInResponse = function buildInResponse(resFrame) {
     var self = this;
-    return new IncomingResponse(resFrame.id, {
+    return new InResponse(resFrame.id, {
         logger: self.logger,
         random: self.random,
         timers: self.timers,

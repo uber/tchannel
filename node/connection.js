@@ -254,7 +254,7 @@ TChannelConnection.prototype.onSocketError = function onSocketError(err) {
     }
 };
 
-TChannelConnection.prototype.buildOutgoingRequest = function buildOutgoingRequest(options) {
+TChannelConnection.prototype.buildOutRequest = function buildOutRequest(options) {
     var self = this;
     var opts = {
         logger: self.logger,
@@ -268,10 +268,10 @@ TChannelConnection.prototype.buildOutgoingRequest = function buildOutgoingReques
         }
         // jshint forin:true
     }
-    return self.handler.buildOutgoingRequest(opts);
+    return self.handler.buildOutRequest(opts);
 };
 
-TChannelConnection.prototype.buildOutgoingResponse = function buildOutgoingResponse(req, options) {
+TChannelConnection.prototype.buildOutResponse = function buildOutResponse(req, options) {
     var self = this;
     var opts = {
         logger: self.logger,
@@ -285,7 +285,7 @@ TChannelConnection.prototype.buildOutgoingResponse = function buildOutgoingRespo
         }
         // jshint forin:true
     }
-    return self.handler.buildOutgoingResponse(req, opts);
+    return self.handler.buildOutResponse(req, opts);
 };
 
 module.exports = TChannelConnection;

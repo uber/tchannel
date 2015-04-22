@@ -25,7 +25,7 @@ var inherits = require('util').inherits;
 var EventEmitter = require('events').EventEmitter;
 
 var errors = require('./errors');
-var OutgoingResponse = require('./outgoing_response');
+var OutResponse = require('./out_response');
 
 var DEFAULT_OUTGOING_REQ_TIMEOUT = 2000;
 
@@ -228,7 +228,7 @@ TChannelConnectionBase.prototype.request = function connBaseRequest(options) {
     // TODO: better default, support for dynamic
     options.ttl = options.timeout || DEFAULT_OUTGOING_REQ_TIMEOUT;
     options.tracer = self.tracer;
-    var req = self.buildOutgoingRequest(options);
+    var req = self.buildOutRequest(options);
     self.requests.out[req.id] = req;
     self.pending.out++;
     return req;
@@ -262,12 +262,12 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
     }
 
     function buildResponse(options) {
-        if (req.res && req.res.state !== OutgoingResponse.States.Initial) {
+        if (req.res && req.res.state !== OutResponse.States.Initial) {
             self.emit('error', errors.ResponseAlreadyStarted({
                 state: req.res.state
             }));
         }
-        req.res = self.buildOutgoingResponse(req, options);
+        req.res = self.buildOutResponse(req, options);
         req.res.on('finish', opDone);
         req.res.on('errored', opDone);
         req.res.on('span', handleSpanFromRes);

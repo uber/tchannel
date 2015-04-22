@@ -20,10 +20,10 @@
 
 'use strict';
 
-var IncomingRequest = require('./incoming_request');
-var IncomingResponse = require('./incoming_response');
-var OutgoingRequest = require('./outgoing_request');
-var OutgoingResponse = require('./outgoing_response');
+var InRequest = require('./in_request');
+var InResponse = require('./in_response');
+var OutRequest = require('./out_request');
+var OutResponse = require('./out_response');
 
 var inherits = require('util').inherits;
 
@@ -41,7 +41,7 @@ function TChannelSelfConnection(channel) {
 }
 inherits(TChannelSelfConnection, TChannelConnectionBase);
 
-TChannelSelfConnection.prototype.buildOutgoingRequest = function buildOutgoingRequest(options) {
+TChannelSelfConnection.prototype.buildOutRequest = function buildOutRequest(options) {
     var self = this;
     var id = self.idCount++;
     if (!options) options = {};
@@ -53,14 +53,14 @@ TChannelSelfConnection.prototype.buildOutgoingRequest = function buildOutgoingRe
         callRequestCont: passParts
     };
     options.tracer = self.tracer;
-    var outreq = new OutgoingRequest(id, options);
+    var outreq = new OutRequest(id, options);
 
     if (outreq.span) {
         options.tracing = outreq.span.getTracing();
     }
     options.hostPort = self.channel.hostPort;
 
-    var inreq = new IncomingRequest(id, options);
+    var inreq = new InRequest(id, options);
     var called = false;
     inreq.on('error', onError);
     inreq.on('response', onResponse);
@@ -99,7 +99,7 @@ TChannelSelfConnection.prototype.buildOutgoingRequest = function buildOutgoingRe
     }
 };
 
-TChannelSelfConnection.prototype.buildOutgoingResponse = function buildOutgoingResponse(inreq, options) {
+TChannelSelfConnection.prototype.buildOutResponse = function buildOutResponse(inreq, options) {
     var self = this;
     var outreq = inreq.outreq;
 
@@ -116,8 +116,8 @@ TChannelSelfConnection.prototype.buildOutgoingResponse = function buildOutgoingR
         callResponseCont: passParts,
         error: passError
     };
-    var outres = new OutgoingResponse(inreq.id, options);
-    var inres = new IncomingResponse(inreq.id, options);
+    var outres = new OutResponse(inreq.id, options);
+    var inres = new InResponse(inreq.id, options);
     var first = true;
     return outres;
 

@@ -16,7 +16,7 @@ type HostInfo : String
 type TChannelValue :
     Buffer | String | null | undefined
 
-type TChannelIncomingResponse : {
+type TChannelInResponse : {
     id: Number,
     ok: Boolean,
 
@@ -25,7 +25,7 @@ type TChannelIncomingResponse : {
     arg3: Buffer
 }
 
-type TChannelOutgoingRequest : {
+type TChannelOutRequest : {
     id: Number,
     service: String,
 
@@ -33,11 +33,11 @@ type TChannelOutgoingRequest : {
         arg1: Buffer | String,
         arg2: TChannelValue,
         arg3: TChannelValue,
-        cb: Callback<Error, res: TChannelIncomingResponse>
+        cb: Callback<Error, res: TChannelInResponse>
     ) => void
 }
 
-type TChannelIncomingRequest : {
+type TChannelInRequest : {
     id: Number,
     service: String,
 
@@ -46,7 +46,7 @@ type TChannelIncomingRequest : {
     arg3: Buffer
 }
 
-type TChannelOutgoingResponse : {
+type TChannelOutResponse : {
     id: Number,
     code: Number,
     ok: Boolean,
@@ -61,8 +61,8 @@ type TChannelOutgoingResponse : {
 
 type TChannelHandler : {
     handleRequest : (
-        req: TChannelIncomingRequest,
-        res: TChannelOutgoingResponse
+        req: TChannelInRequest,
+        res: TChannelOutResponse
     ) => void
 }
 
@@ -74,7 +74,7 @@ type TChannel : {
             host: HostInfo,
             timeout?: Number
         }
-    ) => TChannelOutgoingRequest,
+    ) => TChannelOutRequest,
 
     listen: (
         port:Number,
@@ -103,8 +103,8 @@ tchannel/endpoint-handler : (serviceName: String) =>
         register: (
             name: String,
             handler: (
-                req: TChannelIncomingRequest,
-                res: TChannelOutgoingResponse
+                req: TChannelInRequest,
+                res: TChannelOutResponse
             ) => void
         )
     }

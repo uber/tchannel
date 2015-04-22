@@ -223,7 +223,7 @@ This is used to avoid race conditions in the network.
 #### `options.handler`
 
 ```jsig
-type TChannelIncomingRequest : {
+type TChannelInRequest : {
     id: Number,
     service: String,
 
@@ -232,7 +232,7 @@ type TChannelIncomingRequest : {
     arg3: Buffer
 }
 
-type TChannelOutgoingResponse : {
+type TChannelOutResponse : {
     id: Number,
     code: Number,
     ok: Boolean,
@@ -247,8 +247,8 @@ type TChannelOutgoingResponse : {
 
 type TChannelHandler : {
     handleRequest : (
-        req: TChannelIncomingRequest,
-        res: TChannelOutgoingResponse
+        req: TChannelInRequest,
+        res: TChannelOutResponse
     ) => void
 }
 ```
@@ -368,7 +368,7 @@ The callback will either get called with `cb(err)` or with
 
 ### TChannel client Errors. Errors from `.request().send()`
 
-When making an `OutgoingRequest` there are multiple edge cases
+When making an `OutRequest` there are multiple edge cases
 that can go happen. There are multiple operational errors that
 can occur.
 
