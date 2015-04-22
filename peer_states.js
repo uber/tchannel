@@ -34,7 +34,7 @@ function TChannelPeerHealthyState(channel, peer) {
 
 inherits(TChannelPeerHealthyState, TChannelPeerState);
 
-TChannelPeerHealthyState.prototype.type = 'healthy';
+TChannelPeerHealthyState.prototype.type = 'tchannel.healthy';
 
 TChannelPeerHealthyState.prototype.shouldRequest = function shouldRequest(/* req, options */) {
     var self = this;
