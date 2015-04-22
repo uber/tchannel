@@ -30,6 +30,7 @@ var StreamingOutResponse = require('../streaming_out_response');
 var InRequest = require('../in_request');
 var InResponse = require('../in_response');
 var StreamingInRequest = require('../streaming_in_request');
+var StreamingInResponse = require('../streaming_in_response');
 
 var v2 = require('./index');
 var errors = require('../errors');
@@ -451,12 +452,17 @@ TChannelV2Handler.prototype.buildInRequest = function buildInRequest(reqFrame) {
 
 TChannelV2Handler.prototype.buildInResponse = function buildInResponse(resFrame) {
     var self = this;
-    return new InResponse(resFrame.id, {
+    var opts = {
         logger: self.logger,
         random: self.random,
         timers: self.timers,
         code: resFrame.body.code,
         checksum: new v2.Checksum(resFrame.body.csum.type),
         streamed: resFrame.body.flags & v2.CallFlags.Fragment
-    });
+    };
+    if (opts.streamed) {
+        return new StreamingInResponse(resFrame.id, opts);
+    } else {
+        return new InResponse(resFrame.id, opts);
+    }
 };

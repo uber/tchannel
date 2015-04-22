@@ -23,7 +23,7 @@
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 
-var emptyBuffer = Buffer(0);
+var InArgStream = require('./argstream').InArgStream;
 
 var States = Object.create(null);
 States.Initial = 0;
@@ -31,7 +31,7 @@ States.Streaming = 1;
 States.Done = 2;
 States.Error = 3;
 
-function TChannelInResponse(id, options) {
+function StreamingInResponse(id, options) {
     options = options || {};
     var self = this;
     EventEmitter.call(self);
@@ -47,22 +47,28 @@ function TChannelInResponse(id, options) {
     self.ok = self.code === 0; // TODO: probably okay, but a bit jank
     self.span = options.span || null;
 
-    self.streamed = false;
-    self._argstream = null;
-    self.arg1 = emptyBuffer;
-    self.arg2 = emptyBuffer;
-    self.arg3 = emptyBuffer;
+    self.streamed = true;
+    self._argstream = InArgStream();
+    self.arg1 = self._argstream.arg1;
+    self.arg2 = self._argstream.arg2;
+    self.arg3 = self._argstream.arg3;
+    self._argstream.on('error', function passError(err) {
+        self.emit('error', err);
+    });
+    self._argstream.on('finish', function onFinish() {
+        self.emit('finish');
+    });
 
     self.start = self.timers.now();
 
     self.on('finish', self.onFinish);
 }
 
-inherits(TChannelInResponse, EventEmitter);
+inherits(StreamingInResponse, EventEmitter);
 
-TChannelInResponse.prototype.type = 'tchannel.incoming-response';
+StreamingInResponse.prototype.type = 'tchannel.incoming-response';
 
-TChannelInResponse.prototype.onFinish = function onFinish() {
+StreamingInResponse.prototype.onFinish = function onFinish() {
     var self = this;
     self.state = States.Done;
     if (self.span) {
@@ -70,20 +76,11 @@ TChannelInResponse.prototype.onFinish = function onFinish() {
     }
 };
 
-TChannelInResponse.prototype.handleFrame = function handleFrame(parts) {
+StreamingInResponse.prototype.handleFrame = function handleFrame(parts) {
     var self = this;
-    if (!parts) return;
-    if (parts.length !== 3 ||
-        self.state !== States.Initial) {
-        self.emit('error', new Error(
-            'un-streamed argument defragmentation is not implemented'));
-    }
-    self.arg1 = parts[0] || emptyBuffer;
-    self.arg2 = parts[1] || emptyBuffer;
-    self.arg3 = parts[2] || emptyBuffer;
-    self.emit('finish');
+    self._argstream.handleFrame(parts);
 };
 
-TChannelInResponse.States = States;
+StreamingInResponse.States = States;
 
-module.exports = TChannelInResponse;
+module.exports = StreamingInResponse;
