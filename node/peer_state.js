@@ -37,4 +37,15 @@ TChannelPeerState.prototype.shouldRequest = function shouldRequest(/* req, optio
     return 0;
 };
 
+// Request life cycle:
+
+TChannelPeerState.prototype.onRequest = function onRequest(/* req */) {
+};
+
+TChannelPeerState.prototype.onRequestResponse = function onRequestResponse(/* req */) {
+};
+
+TChannelPeerState.prototype.onRequestError = function onRequestError(/* req */) {
+};
+
 module.exports = TChannelPeerState;
