@@ -52,7 +52,7 @@
     "run-series": "^1.0.2",
     "safe-json-parse": "^4.0.0",
     "split2": "^0.2.1",
-    "tape": "^3.0.3",
+    "tape": "^4.0.0",
     "through2": "^0.6.3",
     "time-mock": "^0.1.2",
     "thriftify": "^1.0.0-alpha12",
