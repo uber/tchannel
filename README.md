@@ -223,7 +223,7 @@ This is used to avoid race conditions in the network.
 #### `options.handler`
 
 ```jsig
-type TChannelIncomingRequest : {
+type TChannelInRequest : {
     id: Number,
     service: String,
 
@@ -247,7 +247,7 @@ type TChannelOutResponse : {
 
 type TChannelHandler : {
     handleRequest : (
-        req: TChannelIncomingRequest,
+        req: TChannelInRequest,
         res: TChannelOutResponse
     ) => void
 }

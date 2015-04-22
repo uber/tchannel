@@ -20,7 +20,7 @@
 
 'use strict';
 
-var IncomingRequest = require('./incoming_request');
+var InRequest = require('./in_request');
 var IncomingResponse = require('./incoming_response');
 var OutRequest = require('./out_request');
 var OutResponse = require('./out_response');
@@ -60,7 +60,7 @@ TChannelSelfConnection.prototype.buildOutRequest = function buildOutRequest(opti
     }
     options.hostPort = self.channel.hostPort;
 
-    var inreq = new IncomingRequest(id, options);
+    var inreq = new InRequest(id, options);
     var called = false;
     inreq.on('error', onError);
     inreq.on('response', onResponse);
