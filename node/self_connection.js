@@ -25,6 +25,7 @@ var InResponse = require('./in_response');
 var OutRequest = require('./out_request');
 var OutResponse = require('./out_response');
 var StreamingOutRequest = require('./streaming_out_request');
+var StreamingOutResponse = require('./streaming_out_response');
 
 var inherits = require('util').inherits;
 
@@ -122,7 +123,12 @@ TChannelSelfConnection.prototype.buildOutResponse = function buildOutResponse(in
         callResponseCont: passParts,
         error: passError
     };
-    var outres = new OutResponse(inreq.id, options);
+    var outres;
+    if (options.streamed) {
+        outres = new StreamingOutResponse(inreq.id, options);
+    } else {
+        outres = new OutResponse(inreq.id, options);
+    }
     var inres = new InResponse(inreq.id, options);
     var first = true;
     return outres;
