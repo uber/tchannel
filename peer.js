@@ -137,7 +137,22 @@ TChannelPeer.prototype.connect = function connect(outOnly) {
 
 TChannelPeer.prototype.request = function peerRequest(options) {
     var self = this;
-    return self.connect().request(options);
+    var req = self.connect().request(options);
+
+    self.state.onRequest(req);
+
+    req.on('error', onError);
+    req.on('response', onResponse);
+
+    function onError(err) {
+        self.state.onRequestError(req);
+    }
+
+    function onResponse(res) {
+        self.state.onRequestResponse(req);
+    }
+
+    return req;
 };
 
 TChannelPeer.prototype.addConnection = function addConnection(conn) {
