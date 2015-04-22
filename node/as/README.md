@@ -69,7 +69,7 @@ type JSONResponse : {
 
 type TChannelJSONHandler<T> : (
     opts: T,
-    req: TChannelIncomingRequest,
+    req: TChannelInRequest,
     head: JSONSerializable,
     body: JSONSerializable,
     callback: Callback<Error, JSONResponse>

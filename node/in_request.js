@@ -34,7 +34,7 @@ States.Streaming = 1;
 States.Done = 2;
 States.Error = 3;
 
-function TChannelIncomingRequest(id, options) {
+function TChannelInRequest(id, options) {
     options = options || {};
     var self = this;
     EventEmitter.call(self);
@@ -94,16 +94,16 @@ function TChannelIncomingRequest(id, options) {
     self.on('finish', self.onFinish);
 }
 
-inherits(TChannelIncomingRequest, EventEmitter);
+inherits(TChannelInRequest, EventEmitter);
 
-TChannelIncomingRequest.prototype.type = 'tchannel.incoming-request';
+TChannelInRequest.prototype.type = 'tchannel.incoming-request';
 
-TChannelIncomingRequest.prototype.onFinish = function onFinish() {
+TChannelInRequest.prototype.onFinish = function onFinish() {
     var self = this;
     self.state = States.Done;
 };
 
-TChannelIncomingRequest.prototype.handleFrame = function handleFrame(parts) {
+TChannelInRequest.prototype.handleFrame = function handleFrame(parts) {
     var self = this;
     if (self.streamed) {
         self._argstream.handleFrame(parts);
@@ -121,7 +121,7 @@ TChannelIncomingRequest.prototype.handleFrame = function handleFrame(parts) {
     }
 };
 
-TChannelIncomingRequest.prototype.checkTimeout = function checkTimeout() {
+TChannelInRequest.prototype.checkTimeout = function checkTimeout() {
     var self = this;
     if (!self.timedOut) {
         var elapsed = self.timers.now() - self.start;
@@ -143,6 +143,6 @@ TChannelIncomingRequest.prototype.checkTimeout = function checkTimeout() {
     return self.timedOut;
 };
 
-TChannelIncomingRequest.States = States;
+TChannelInRequest.States = States;
 
-module.exports = TChannelIncomingRequest;
+module.exports = TChannelInRequest;

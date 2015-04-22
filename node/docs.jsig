@@ -37,7 +37,7 @@ type TChannelOutRequest : {
     ) => void
 }
 
-type TChannelIncomingRequest : {
+type TChannelInRequest : {
     id: Number,
     service: String,
 
@@ -61,7 +61,7 @@ type TChannelOutResponse : {
 
 type TChannelHandler : {
     handleRequest : (
-        req: TChannelIncomingRequest,
+        req: TChannelInRequest,
         res: TChannelOutResponse
     ) => void
 }
@@ -103,7 +103,7 @@ tchannel/endpoint-handler : (serviceName: String) =>
         register: (
             name: String,
             handler: (
-                req: TChannelIncomingRequest,
+                req: TChannelInRequest,
                 res: TChannelOutResponse
             ) => void
         )
