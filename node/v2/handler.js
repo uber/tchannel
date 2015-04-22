@@ -26,6 +26,7 @@ var util = require('util');
 var OutRequest = require('../out_request');
 var OutResponse = require('../out_response');
 var StreamingOutRequest = require('../streaming_out_request');
+var StreamingOutResponse = require('../streaming_out_response');
 var InRequest = require('../in_request');
 var InResponse = require('../in_response');
 
@@ -398,7 +399,12 @@ TChannelV2Handler.prototype.buildOutResponse = function buildOutResponse(req, op
         callResponseCont: sendCallResponseContFrame,
         error: sendErrorFrame
     };
-    var res = new OutResponse(req.id, options);
+    var res;
+    if (options.streamed) {
+        res = new StreamingOutResponse(req.id, options);
+    } else {
+        res = new OutResponse(req.id, options);
+    }
     return res;
 
     function sendCallResponseFrame(args, isLast) {
