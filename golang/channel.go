@@ -21,12 +21,23 @@ package tchannel
 // THE SOFTWARE.
 
 import (
+	"errors"
 	"fmt"
-	"golang.org/x/net/context"
 	"net"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
+
+	"golang.org/x/net/context"
+)
+
+var (
+	errAlreadyListening = errors.New("channel already listening")
+)
+
+const (
+	clientOnlyHostPort = "0.0.0.0:0"
 )
 
 // A Handler is an object hat can be registered with a Channel
@@ -58,21 +69,22 @@ type ChannelOptions struct {
 
 // A Channel is a bi-directional connection to the peering and routing network.  Applications
 // can use a Channel to make service calls to remote peers via BeginCall, or to listen for incoming calls
-// from peers.  Once the channel is created, applications should call the ListenAndHandle method to
-// listen for incoming peer connections.  Because channels are bi-directional, applications should call
-// ListenAndHandle even if they do not offer any services
+// from peers.  Applications that want to receive requests should call one of Serve or ListenAndServe
 type Channel struct {
 	log               Logger
 	hostPort          string
 	processName       string
 	connectionOptions ConnectionOptions
 	handlers          handlerMap
-	l                 net.Listener
+
+	mut sync.RWMutex // protects the listener
+	l   net.Listener // May be nil if this is a client only channel
 }
 
-// NewChannel creates a new Channel that will bind to the given host and port.  If no port is provided,
-// the channel will start on an OS assigned port
-func NewChannel(hostPort string, opts *ChannelOptions) (*Channel, error) {
+// NewChannel creates a new Channel.  The new channel can be used to send outbound requests
+// to peers, but will not listen or handling incoming requests until one of ListenAndServe
+// or Serve is called
+func NewChannel(opts *ChannelOptions) (*Channel, error) {
 	if opts == nil {
 		opts = &ChannelOptions{}
 	}
@@ -90,33 +102,68 @@ func NewChannel(hostPort string, opts *ChannelOptions) (*Channel, error) {
 	ch := &Channel{
 		connectionOptions: opts.DefaultConnectionOptions,
 		processName:       processName,
+		hostPort:          clientOnlyHostPort,
 		log:               logger,
+	}
+
+	ch.connectionOptions.PeerInfo.HostPort = ch.hostPort
+	ch.connectionOptions.PeerInfo.ProcessName = ch.processName
+	ch.connectionOptions.ChecksumType = ChecksumTypeCrc32
+	return ch, nil
+}
+
+// Serve serves incoming requests using the provided listener
+func (ch *Channel) Serve(l net.Listener) error {
+	ch.mut.Lock()
+
+	if ch.l != nil {
+		ch.mut.Unlock()
+		return errAlreadyListening
+	}
+
+	ch.l = l
+	ch.connectionOptions.PeerInfo.HostPort = ch.hostPort
+	ch.hostPort = ch.l.Addr().String()
+	ch.mut.Unlock()
+
+	return ch.serve()
+}
+
+// ListenAndServe listens on the given address and serves incoming requests.  The port
+// may be 0, in which case the channel will use an OS assigned port
+func (ch *Channel) ListenAndServe(hostPort string) error {
+	if err := ch.listen(hostPort); err != nil {
+		return err
+	}
+
+	return ch.serve()
+}
+
+// listen listens on the given address but does not begin serving request.
+func (ch *Channel) listen(hostPort string) error {
+	ch.mut.Lock()
+	defer ch.mut.Unlock()
+
+	if ch.l != nil {
+		return errAlreadyListening
 	}
 
 	addr, err := net.ResolveTCPAddr("tcp", hostPort)
 	if err != nil {
 		ch.log.Errorf("Could not resolve network %s: %v", hostPort, err)
-		return nil, err
+		return err
 	}
 
-	l, err := net.ListenTCP("tcp", addr)
+	ch.l, err = net.ListenTCP("tcp", addr)
 	if err != nil {
 		ch.log.Errorf("Could not listen on %s: %v", hostPort, err)
-		return nil, err
+		return err
 	}
 
-	ch.l = l
-	ch.hostPort = l.Addr().String()
 	ch.connectionOptions.PeerInfo.HostPort = ch.hostPort
-	ch.connectionOptions.PeerInfo.ProcessName = ch.processName
-	ch.connectionOptions.ChecksumType = ChecksumTypeCrc32
+	ch.hostPort = ch.l.Addr().String()
 	ch.log.Infof("%s listening on %s", ch.processName, ch.hostPort)
-	return ch, nil
-}
-
-// HostPort returns the host and port on which the Channel is listening
-func (ch *Channel) HostPort() string {
-	return ch.hostPort
+	return nil
 }
 
 // Register regsters a handler for a service+operation pair
@@ -184,9 +231,9 @@ func (ch *Channel) RoundTrip(ctx context.Context, hostPort, serviceName, operati
 	return call.Response().ApplicationError(), nil
 }
 
-// ListenAndHandle runs a listener to accept and manage new incoming connections.
-// Blocks until the channel is closed.
-func (ch *Channel) ListenAndHandle() error {
+// serve runs the listener to accept and manage new incoming connections, blocking
+// until the channel is closed.
+func (ch *Channel) serve() error {
 	acceptBackoff := 0 * time.Millisecond
 
 	for {
