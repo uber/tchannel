@@ -33,7 +33,7 @@ TChannelPeerState.prototype.close = function close(callback) {
 };
 
 TChannelPeerState.prototype.shouldRequest = function shouldRequest(/* req, options */) {
-    // TODO: req isn't quite right currently as a "TChannelOutgoingRequest",
+    // TODO: req isn't quite right currently as a "TChannelOutRequest",
     // the intention is that the other (non-options) arg encapsulates all
     // requests across retries and setries
     return 0;

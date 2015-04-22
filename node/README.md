@@ -368,7 +368,7 @@ The callback will either get called with `cb(err)` or with
 
 ### TChannel client Errors. Errors from `.request().send()`
 
-When making an `OutgoingRequest` there are multiple edge cases
+When making an `OutRequest` there are multiple edge cases
 that can go happen. There are multiple operational errors that
 can occur.
 
