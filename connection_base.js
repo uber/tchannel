@@ -228,7 +228,7 @@ TChannelConnectionBase.prototype.request = function connBaseRequest(options) {
     // TODO: better default, support for dynamic
     options.ttl = options.timeout || DEFAULT_OUTGOING_REQ_TIMEOUT;
     options.tracer = self.tracer;
-    var req = self.buildOutgoingRequest(options);
+    var req = self.buildOutRequest(options);
     self.requests.out[req.id] = req;
     self.pending.out++;
     return req;

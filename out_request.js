@@ -34,7 +34,7 @@ States.Streaming = 1;
 States.Done = 2;
 States.Error = 3;
 
-function TChannelOutgoingRequest(id, options) {
+function TChannelOutRequest(id, options) {
     options = options || {};
     assert(options.sendFrame, 'required option sendFrame');
     var self = this;
@@ -107,24 +107,24 @@ function TChannelOutgoingRequest(id, options) {
     self.on('response', self.onResponse);
 }
 
-inherits(TChannelOutgoingRequest, EventEmitter);
+inherits(TChannelOutRequest, EventEmitter);
 
-TChannelOutgoingRequest.prototype.type = 'tchannel.outgoing-request';
+TChannelOutRequest.prototype.type = 'tchannel.outgoing-request';
 
-TChannelOutgoingRequest.prototype.onError = function onError(err) {
+TChannelOutRequest.prototype.onError = function onError(err) {
     var self = this;
     if (!self.end) self.end = self.timers.now();
     self.err = err;
 };
 
-TChannelOutgoingRequest.prototype.onResponse = function onResponse(res) {
+TChannelOutRequest.prototype.onResponse = function onResponse(res) {
     var self = this;
     if (!self.end) self.end = self.timers.now();
     self.res = res;
     self.res.span = self.span;
 };
 
-TChannelOutgoingRequest.prototype.sendParts = function sendParts(parts, isLast) {
+TChannelOutRequest.prototype.sendParts = function sendParts(parts, isLast) {
     var self = this;
     switch (self.state) {
         case States.Initial:
@@ -147,7 +147,7 @@ TChannelOutgoingRequest.prototype.sendParts = function sendParts(parts, isLast) 
     }
 };
 
-TChannelOutgoingRequest.prototype.sendCallRequestFrame = function sendCallRequestFrame(args, isLast) {
+TChannelOutRequest.prototype.sendCallRequestFrame = function sendCallRequestFrame(args, isLast) {
     var self = this;
     switch (self.state) {
         case States.Initial:
@@ -173,7 +173,7 @@ TChannelOutgoingRequest.prototype.sendCallRequestFrame = function sendCallReques
     }
 };
 
-TChannelOutgoingRequest.prototype.sendCallRequestContFrame = function sendCallRequestContFrame(args, isLast) {
+TChannelOutRequest.prototype.sendCallRequestContFrame = function sendCallRequestContFrame(args, isLast) {
     var self = this;
     switch (self.state) {
         case States.Initial:
@@ -194,7 +194,7 @@ TChannelOutgoingRequest.prototype.sendCallRequestContFrame = function sendCallRe
     }
 };
 
-TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
+TChannelOutRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     var self = this;
 
     if (self.span) {
@@ -212,7 +212,7 @@ TChannelOutgoingRequest.prototype.send = function send(arg1, arg2, arg3, callbac
     return self;
 };
 
-TChannelOutgoingRequest.prototype.hookupStreamCallback = function hookupCallback(callback) {
+TChannelOutRequest.prototype.hookupStreamCallback = function hookupCallback(callback) {
     var self = this;
     var called = false;
 
@@ -234,7 +234,7 @@ TChannelOutgoingRequest.prototype.hookupStreamCallback = function hookupCallback
     return self;
 };
 
-TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callback) {
+TChannelOutRequest.prototype.hookupCallback = function hookupCallback(callback) {
     var self = this;
     if (callback.canStream) {
         return self.hookupStreamCallback(callback);
@@ -269,7 +269,7 @@ TChannelOutgoingRequest.prototype.hookupCallback = function hookupCallback(callb
     return self;
 };
 
-TChannelOutgoingRequest.prototype.checkTimeout = function checkTimeout() {
+TChannelOutRequest.prototype.checkTimeout = function checkTimeout() {
     var self = this;
     if (!self.timedOut) {
         var now = self.timers.now();
@@ -290,6 +290,6 @@ TChannelOutgoingRequest.prototype.checkTimeout = function checkTimeout() {
     return self.timedOut;
 };
 
-TChannelOutgoingRequest.States = States;
+TChannelOutRequest.States = States;
 
-module.exports = TChannelOutgoingRequest;
+module.exports = TChannelOutRequest;

@@ -23,7 +23,7 @@
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 
-var OutgoingRequest = require('../outgoing_request');
+var OutRequest = require('../out_request');
 var OutgoingResponse = require('../outgoing_response');
 var IncomingRequest = require('../incoming_request');
 var IncomingResponse = require('../incoming_response');
@@ -350,7 +350,7 @@ TChannelV2Handler.prototype.sendErrorFrame = function sendErrorFrame(r, codeStri
     self.pushFrame(errFrame);
 };
 
-TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest(options) {
+TChannelV2Handler.prototype.buildOutRequest = function buildOutRequest(options) {
     var self = this;
     var id = self.nextFrameId();
     if (options.checksumType === undefined || options.checksumType === null) {
@@ -364,7 +364,7 @@ TChannelV2Handler.prototype.buildOutgoingRequest = function buildOutgoingRequest
         callRequestCont: sendCallRequestContFrame
     };
 
-    var req = new OutgoingRequest(id, options);
+    var req = new OutRequest(id, options);
     return req;
 
     function sendCallRequestFrame(args, isLast) {
