@@ -22,6 +22,7 @@
 
 var InRequest = require('./in_request');
 var InResponse = require('./in_response');
+var StreamingInRequest = require('./streaming_in_request');
 var OutRequest = require('./out_request');
 var OutResponse = require('./out_response');
 var StreamingOutRequest = require('./streaming_out_request');
@@ -67,7 +68,13 @@ TChannelSelfConnection.prototype.buildOutRequest = function buildOutRequest(opti
     }
     options.hostPort = self.channel.hostPort;
 
-    var inreq = new InRequest(id, options);
+    var inreq;
+    if (options.streamed) {
+        inreq = new StreamingInRequest(id, options);
+    } else {
+        inreq = new InRequest(id, options);
+    }
+
     var called = false;
     inreq.on('error', onError);
     inreq.on('response', onResponse);
