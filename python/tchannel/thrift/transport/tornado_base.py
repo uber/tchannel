@@ -24,6 +24,9 @@ from thrift import Thrift
 from thrift.protocol import TBinaryProtocol
 from thrift.transport import TTransport
 from tornado import ioloop
+import tornado
+import tornado.gen
+from tchannel.tornado.dispatch import Response
 
 try:
     from tornado.queues import Queue  # Included in Tornado 4.2
@@ -74,18 +77,20 @@ class TChannelTornadoTransportBase(TChannelTransportBase):
             "recv_call() not supported for Tornado. Use readFrame()."
         )
 
+    @tornado.gen.coroutine
     def _flush_internal(self, endpoint, response, seqid):
         buff = TTransport.TMemoryBuffer()
 
         # This is so dirty, /I can't even.../
         binary = TBinaryProtocol.TBinaryProtocol(buff)
-        if response.message_type == Types.CALL_RES:
+        if isinstance(response, Response):
             binary.writeMessageBegin(
                 endpoint,
                 Thrift.TMessageType.REPLY,
                 seqid,
             )
-            buff.write(response.args[2])
+            arg3 = yield response.arg3()
+            buff.write(arg3)
             binary.writeMessageEnd()
         elif response.message_type == Types.ERROR:
             binary.writeMessageBegin(

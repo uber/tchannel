@@ -24,16 +24,16 @@ import pytest
 
 from thrift import Thrift
 
-from tchannel import messages
 from tchannel.tornado.tchannel import TChannel
 from tchannel.thrift.transport import TChannelTornadoTransport
 from tchannel.thrift.protocol import TChannelProtocolFactory
+from tchannel.tornado.dispatch import Response
+from tchannel.tornado.stream import InMemStream
 
 from .util import get_service_module
 
 
 @pytest.yield_fixture
-@pytest.mark.xfail
 def service(tmpdir):
     with get_service_module(tmpdir, True) as m:
         yield m
@@ -49,16 +49,15 @@ def mk_client(service, port):
 
 
 @pytest.mark.gen_test
-@pytest.mark.xfail
 def test_call(tchannel_server, service):
     tchannel_server.expect_call('Service::putItem').and_return(
-        messages.CallResponseMessage(
-            args=[
-                '',  # endpoint
-                '',  # headers
+        Response(
+            argstreams=[
+                InMemStream(),  # endpoint
+                InMemStream(),  # headers
                 # For void responses, TBinaryProtocol puts a single 0 byte in
                 # the response.
-                '\x00',
+                InMemStream('\x00')
             ]
         )
     )
@@ -71,37 +70,34 @@ def test_call(tchannel_server, service):
 
 
 @pytest.mark.gen_test
-@pytest.mark.xfail
 def test_protocol_error(tchannel_server, service):
-    tchannel_server.expect_call('Service::getItem').and_return(
-        messages.ErrorMessage(
-            code=messages.ErrorCode.bad_request,
-            message="stahp pls",
-        ),
-    )
+    tchannel_server.expect_call('wrong_endpoint')
 
     client = mk_client(service, tchannel_server.port)
     with pytest.raises(Thrift.TApplicationException) as excinfo:
         yield client.getItem("foo")
-    assert 'stahp' in str(excinfo.value)
+
+    print excinfo
+    assert (str(excinfo.value) == ("Endpoint 'Service::getItem' for" +
+            " service 'service' is not defined"))
 
 
 @pytest.mark.gen_test
-@pytest.mark.xfail
 def test_thrift_exception(tchannel_server, service):
     tchannel_server.expect_call('Service::getItem').and_return(
-        messages.CallResponseMessage(
+        Response(
             code=1,
-            args=[
-                '',
-                '',
+            argstreams=[
+                InMemStream(),  # endpoint
+                InMemStream(),  # headers
                 # struct = (fieldType:1 fieldId:2 <fieldValue>)* `0`
                 # string = str~4
                 # 0x0c = fieldType for structs
                 # 0x0b = fieldType for strings
-                '\x0c\x00\x01\x0b\x00\x01\x00\x00\x00\x05stahp\x00\x00'
-            ],
-        ),
+                InMemStream(
+                    '\x0c\x00\x01\x0b\x00\x01\x00\x00\x00\x05stahp\x00\x00')
+            ]
+        )
     )
 
     client = mk_client(service, tchannel_server.port)

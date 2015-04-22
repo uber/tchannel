@@ -24,6 +24,7 @@ import inspect
 
 from thrift.transport import TTransport
 from thrift.protocol import TBinaryProtocol
+from tchannel.tornado.stream import InMemStream
 
 
 def register(dispatcher, service_module, handler, service_name=None):
@@ -110,6 +111,10 @@ def build_handler(service_module, method_name, handler):
         output_buf = TTransport.TMemoryBuffer()
         result.write(TBinaryProtocol.TBinaryProtocolAccelerated(output_buf))
 
-        response.write(arg3=output_buf.getvalue())
+        response.argstreams = [
+            InMemStream(),
+            InMemStream(),
+            InMemStream(output_buf.getvalue())
+        ]
 
     return thrift_handler
