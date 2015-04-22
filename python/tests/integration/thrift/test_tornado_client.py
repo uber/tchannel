@@ -57,7 +57,7 @@ def test_call(tchannel_server, service):
                 InMemStream(),  # headers
                 # For void responses, TBinaryProtocol puts a single 0 byte in
                 # the response.
-                InMemStream('\x00')
+                InMemStream('\x00'),
             ]
         )
     )
@@ -70,14 +70,16 @@ def test_call(tchannel_server, service):
 
 
 @pytest.mark.gen_test
+@pytest.mark.xfail
 def test_protocol_error(tchannel_server, service):
+    # FIXME when we have solution to deal with exception on the tchannel,
+    # throw exception in the server handler and then return error message.
     tchannel_server.expect_call('wrong_endpoint')
 
     client = mk_client(service, tchannel_server.port)
     with pytest.raises(Thrift.TApplicationException) as excinfo:
         yield client.getItem("foo")
 
-    print excinfo
     assert (str(excinfo.value) == ("Endpoint 'Service::getItem' for" +
             " service 'service' is not defined"))
 
@@ -95,7 +97,8 @@ def test_thrift_exception(tchannel_server, service):
                 # 0x0c = fieldType for structs
                 # 0x0b = fieldType for strings
                 InMemStream(
-                    '\x0c\x00\x01\x0b\x00\x01\x00\x00\x00\x05stahp\x00\x00')
+                    '\x0c\x00\x01\x0b\x00\x01\x00\x00\x00\x05stahp\x00\x00'
+                ),
             ]
         )
     )
