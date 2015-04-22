@@ -26,7 +26,7 @@ var util = require('util');
 var OutRequest = require('../out_request');
 var OutResponse = require('../out_response');
 var InRequest = require('../in_request');
-var IncomingResponse = require('../incoming_response');
+var InResponse = require('../in_response');
 
 var v2 = require('./index');
 var errors = require('../errors');
@@ -171,11 +171,11 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
     if (self.remoteHostPort === null) {
         return callback(new Error('call response before init response')); // TODO typed error
     }
-    var res = self.buildIncomingResponse(resFrame);
+    var res = self.buildInResponse(resFrame);
     res.remoteAddr = self.remoteHostPort;
     self._handleCallFrame(res, resFrame, function(err) {
         if (err) return callback(err);
-        if (res.state === IncomingResponse.States.Streaming) {
+        if (res.state === InResponse.States.Streaming) {
             self.streamingRes[res.id] = res;
         }
         self.emit('call.incoming.response', res);
@@ -431,9 +431,9 @@ TChannelV2Handler.prototype.buildInRequest = function buildInRequest(reqFrame) {
     });
 };
 
-TChannelV2Handler.prototype.buildIncomingResponse = function buildIncomingResponse(resFrame) {
+TChannelV2Handler.prototype.buildInResponse = function buildInResponse(resFrame) {
     var self = this;
-    return new IncomingResponse(resFrame.id, {
+    return new InResponse(resFrame.id, {
         logger: self.logger,
         random: self.random,
         timers: self.timers,

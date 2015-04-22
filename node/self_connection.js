@@ -21,7 +21,7 @@
 'use strict';
 
 var InRequest = require('./in_request');
-var IncomingResponse = require('./incoming_response');
+var InResponse = require('./in_response');
 var OutRequest = require('./out_request');
 var OutResponse = require('./out_response');
 
@@ -117,7 +117,7 @@ TChannelSelfConnection.prototype.buildOutResponse = function buildOutResponse(in
         error: passError
     };
     var outres = new OutResponse(inreq.id, options);
-    var inres = new IncomingResponse(inreq.id, options);
+    var inres = new InResponse(inreq.id, options);
     var first = true;
     return outres;
 
