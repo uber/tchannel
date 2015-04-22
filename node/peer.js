@@ -97,7 +97,7 @@ TChannelPeer.prototype.setState = function setState(StateType) {
         StateType.prototype.name === currentName) {
         return;
     }
-    var state = StateType(self.channel, self);
+    var state = new StateType(self.channel, self);
     if (state && state.name === currentName) {
         return;
     }
