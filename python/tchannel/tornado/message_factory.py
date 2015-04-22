@@ -128,6 +128,19 @@ class MessageFactory(object):
         else:
             raise StreamingException("context object type error")
 
+    def prepare_args(self, message):
+        args = [
+            InMemStream(auto_close=False),
+            InMemStream(auto_close=False),
+            InMemStream(auto_close=False),
+        ]
+        for i, arg in enumerate(message.args):
+            if i > 0:
+                args[i-1].close()
+            args[i].write(arg)
+
+        return args
+
     def build_request(self, message, message_id=None):
         """Build request object from protocol level message info
 
@@ -138,15 +151,8 @@ class MessageFactory(object):
         :param message_id: integer of message id
         :return: request object
         """
-        args = [
-            InMemStream(auto_close=False),
-            InMemStream(auto_close=False),
-            InMemStream(auto_close=False),
-        ]
-        for i, arg in enumerate(message.args):
-            if i > 0:
-                args[i-1].close()
-            args[i].write(arg)
+
+        args = self.prepare_args(message)
 
         # TODO decide what to pass to Request from message
         req = Request(
@@ -172,15 +178,7 @@ class MessageFactory(object):
         :return: response object
         """
 
-        args = [
-            InMemStream(auto_close=False),
-            InMemStream(auto_close=False),
-            InMemStream(auto_close=False),
-        ]
-        for i, arg in enumerate(message.args):
-            if i > 0:
-                args[i-1].close()
-            args[i].write(arg)
+        args = self.prepare_args(message)
 
         # TODO decide what to pass to Response from message
         res = Response(

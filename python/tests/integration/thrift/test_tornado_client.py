@@ -29,6 +29,7 @@ from tchannel.thrift.transport import TChannelTornadoTransport
 from tchannel.thrift.protocol import TChannelProtocolFactory
 from tchannel.tornado.dispatch import Response
 from tchannel.tornado.stream import InMemStream
+from tchannel import messages
 
 from .util import get_service_module
 
@@ -74,14 +75,18 @@ def test_call(tchannel_server, service):
 def test_protocol_error(tchannel_server, service):
     # FIXME when we have solution to deal with exception on the tchannel,
     # throw exception in the server handler and then return error message.
-    tchannel_server.expect_call('wrong_endpoint')
+    tchannel_server.expect_call('Service::getItem').and_return(
+        messages.ErrorMessage(
+            code=messages.ErrorCode.bad_request,
+            message="stahp pls",
+        ),
+    )
 
     client = mk_client(service, tchannel_server.port)
     with pytest.raises(Thrift.TApplicationException) as excinfo:
         yield client.getItem("foo")
 
-    assert (str(excinfo.value) == ("Endpoint 'Service::getItem' for" +
-            " service 'service' is not defined"))
+    assert 'stahp' in str(excinfo.value)
 
 
 @pytest.mark.gen_test
