@@ -256,19 +256,10 @@ TChannelConnection.prototype.onSocketError = function onSocketError(err) {
 
 TChannelConnection.prototype.buildOutRequest = function buildOutRequest(options) {
     var self = this;
-    var opts = {
-        logger: self.logger,
-        random: self.random,
-        timers: self.timers
-    };
-    if (options) {
-        // jshint forin:false
-        for (var prop in options) {
-            opts[prop] = options[prop];
-        }
-        // jshint forin:true
-    }
-    return self.handler.buildOutRequest(opts);
+    options.logger = self.logger;
+    options.random = self.random;
+    options.timers = self.timers;
+    return self.handler.buildOutRequest(options);
 };
 
 TChannelConnection.prototype.buildOutResponse = function buildOutResponse(req, options) {
