@@ -25,9 +25,13 @@ var util = require('util');
 
 var OutRequest = require('../out_request');
 var OutResponse = require('../out_response');
+var StreamingOutRequest = require('../streaming_out_request');
+var StreamingOutResponse = require('../streaming_out_response');
 var InRequest = require('../in_request');
 var InResponse = require('../in_response');
 var States = require('../reqres_states');
+var StreamingInRequest = require('../streaming_in_request');
+var StreamingInResponse = require('../streaming_in_response');
 
 var v2 = require('./index');
 var errors = require('../errors');
@@ -367,7 +371,12 @@ TChannelV2Handler.prototype.buildOutRequest = function buildOutRequest(options) 
         callRequestCont: sendCallRequestContFrame
     };
 
-    var req = new OutRequest(id, options);
+    var req;
+    if (options.streamed) {
+        req = new StreamingOutRequest(id, options);
+    } else {
+        req = new OutRequest(id, options);
+    }
     return req;
 
     function sendCallRequestFrame(args, isLast) {
@@ -395,7 +404,12 @@ TChannelV2Handler.prototype.buildOutResponse = function buildOutResponse(req, op
         callResponseCont: sendCallResponseContFrame,
         error: sendErrorFrame
     };
-    var res = new OutResponse(req.id, options);
+    var res;
+    if (options.streamed) {
+        res = new StreamingOutResponse(req.id, options);
+    } else {
+        res = new OutResponse(req.id, options);
+    }
     return res;
 
     function sendCallResponseFrame(args, isLast) {
@@ -418,7 +432,7 @@ TChannelV2Handler.prototype.buildOutResponse = function buildOutResponse(req, op
 TChannelV2Handler.prototype.buildInRequest = function buildInRequest(reqFrame) {
     var self = this;
     var retryFlags = v2.parseRetryFlags(reqFrame.body.headers.re);
-    return new InRequest(reqFrame.id, {
+    var opts = {
         logger: self.logger,
         random: self.random,
         timers: self.timers,
@@ -431,17 +445,27 @@ TChannelV2Handler.prototype.buildInRequest = function buildInRequest(reqFrame) {
         checksum: new v2.Checksum(reqFrame.body.csum.type),
         streamed: reqFrame.body.flags & v2.CallFlags.Fragment,
         hostPort: self.hostPort // needed for tracing
-    });
+    };
+    if (opts.streamed) {
+        return new StreamingInRequest(reqFrame.id, opts);
+    } else {
+        return new InRequest(reqFrame.id, opts);
+    }
 };
 
 TChannelV2Handler.prototype.buildInResponse = function buildInResponse(resFrame) {
     var self = this;
-    return new InResponse(resFrame.id, {
+    var opts = {
         logger: self.logger,
         random: self.random,
         timers: self.timers,
         code: resFrame.body.code,
         checksum: new v2.Checksum(resFrame.body.csum.type),
         streamed: resFrame.body.flags & v2.CallFlags.Fragment
-    });
+    };
+    if (opts.streamed) {
+        return new StreamingInResponse(resFrame.id, opts);
+    } else {
+        return new InResponse(resFrame.id, opts);
+    }
 };

@@ -22,8 +22,12 @@
 
 var InRequest = require('./in_request');
 var InResponse = require('./in_response');
+var StreamingInRequest = require('./streaming_in_request');
+var StreamingInResponse = require('./streaming_in_response');
 var OutRequest = require('./out_request');
 var OutResponse = require('./out_response');
+var StreamingOutRequest = require('./streaming_out_request');
+var StreamingOutResponse = require('./streaming_out_response');
 
 var inherits = require('util').inherits;
 
@@ -53,14 +57,25 @@ TChannelSelfConnection.prototype.buildOutRequest = function buildOutRequest(opti
         callRequestCont: passParts
     };
     options.tracer = self.tracer;
-    var outreq = new OutRequest(id, options);
+    var outreq;
+    if (options.streamed) {
+        outreq = new StreamingOutRequest(id, options);
+    } else {
+        outreq = new OutRequest(id, options);
+    }
 
     if (outreq.span) {
         options.tracing = outreq.span.getTracing();
     }
     options.hostPort = self.channel.hostPort;
 
-    var inreq = new InRequest(id, options);
+    var inreq;
+    if (options.streamed) {
+        inreq = new StreamingInRequest(id, options);
+    } else {
+        inreq = new InRequest(id, options);
+    }
+
     var called = false;
     inreq.on('error', onError);
     inreq.on('response', onResponse);
@@ -116,8 +131,18 @@ TChannelSelfConnection.prototype.buildOutResponse = function buildOutResponse(in
         callResponseCont: passParts,
         error: passError
     };
-    var outres = new OutResponse(inreq.id, options);
-    var inres = new InResponse(inreq.id, options);
+    var outres;
+    if (options.streamed) {
+        outres = new StreamingOutResponse(inreq.id, options);
+    } else {
+        outres = new OutResponse(inreq.id, options);
+    }
+    var inres;
+    if (options.streamed) {
+        inres = new StreamingInResponse(inreq.id, options);
+    } else {
+        inres = new InResponse(inreq.id, options);
+    }
     var first = true;
     return outres;
 

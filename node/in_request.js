@@ -24,10 +24,9 @@ var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 
 var errors = require('./errors');
-var InArgStream = require('./argstream').InArgStream;
+var States = require('./reqres_states');
 
 var emptyBuffer = Buffer(0);
-var States = require('./reqres_states');
 
 function TChannelInRequest(id, options) {
     options = options || {};
@@ -45,25 +44,10 @@ function TChannelInRequest(id, options) {
     self.remoteAddr = null;
     self.headers = options.headers || {};
     self.checksum = options.checksum || null;
-    if (options.streamed) {
-        self.streamed = true;
-        self._argstream = InArgStream();
-        self.arg1 = self._argstream.arg1;
-        self.arg2 = self._argstream.arg2;
-        self.arg3 = self._argstream.arg3;
-        self._argstream.on('error', function passError(err) {
-            self.emit('error', err);
-        });
-        self._argstream.on('finish', function onFinish() {
-            self.emit('finish');
-        });
-    } else {
-        self.streamed = false;
-        self._argstream = null;
-        self.arg1 = emptyBuffer;
-        self.arg2 = emptyBuffer;
-        self.arg3 = emptyBuffer;
-    }
+    self.streamed = false;
+    self.arg1 = emptyBuffer;
+    self.arg2 = emptyBuffer;
+    self.arg3 = emptyBuffer;
 
     if (options.tracer) {
         self.span = options.tracer.setupNewSpan({
@@ -100,20 +84,16 @@ TChannelInRequest.prototype.onFinish = function onFinish() {
 
 TChannelInRequest.prototype.handleFrame = function handleFrame(parts) {
     var self = this;
-    if (self.streamed) {
-        self._argstream.handleFrame(parts);
-    } else {
-        if (!parts) return;
-        if (parts.length !== 3 || self.state !== States.Initial) {
-            self.emit('error', new Error(
-                'un-streamed argument defragmentation is not implemented'));
-        }
-        self.arg1 = parts[0] || emptyBuffer;
-        self.arg2 = parts[1] || emptyBuffer;
-        self.arg3 = parts[2] || emptyBuffer;
-        if (self.span) self.span.name = String(self.arg1);
-        self.emit('finish');
+    if (!parts) return;
+    if (parts.length !== 3 || self.state !== States.Initial) {
+        self.emit('error', new Error(
+            'un-streamed argument defragmentation is not implemented'));
     }
+    self.arg1 = parts[0] || emptyBuffer;
+    self.arg2 = parts[1] || emptyBuffer;
+    self.arg3 = parts[2] || emptyBuffer;
+    if (self.span) self.span.name = String(self.arg1);
+    self.emit('finish');
 };
 
 TChannelInRequest.prototype.checkTimeout = function checkTimeout() {
