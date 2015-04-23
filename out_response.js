@@ -25,7 +25,6 @@ var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 
 var errors = require('./errors');
-var OutArgStream = require('./argstream').OutArgStream;
 var States = require('./reqres_states');
 
 function TChannelOutResponse(id, options) {
@@ -49,33 +48,18 @@ function TChannelOutResponse(id, options) {
     self.ok = self.code === 0;
     self.sendFrame = options.sendFrame;
     self.span = options.span || null;
-    if (options.streamed) {
-        self.streamed = true;
-        self._argstream = OutArgStream();
-        self.arg1 = self._argstream.arg1;
-        self.arg2 = self._argstream.arg2;
-        self.arg3 = self._argstream.arg3;
-        self._argstream.on('error', function passError(err) {
-            self.emit('error', err);
-        });
-        self._argstream.on('frame', function onFrame(parts, isLast) {
-            self.sendParts(parts, isLast);
-        });
-        self._argstream.on('finish', function onFinish() {
-            self.emit('finish');
-        });
-    } else {
-        self.streamed = false;
-        self._argstream = null;
-        self.arg1 = null;
-        self.arg2 = null;
-        self.arg3 = null;
-    }
+    self.streamed = false;
+    self._argstream = null;
+    self.arg1 = null;
+    self.arg2 = null;
+    self.arg3 = null;
 
     self.on('finish', self.onFinish);
 }
 
 inherits(TChannelOutResponse, EventEmitter);
+
+TChannelOutResponse.prototype.type = 'tchannel.outgoing-response';
 
 TChannelOutResponse.prototype.onFinish = function onFinish() {
     var self = this;
@@ -84,8 +68,6 @@ TChannelOutResponse.prototype.onFinish = function onFinish() {
         self.emit('span', self.span);
     }
 };
-
-TChannelOutResponse.prototype.type = 'tchannel.outgoing-response';
 
 TChannelOutResponse.prototype.sendParts = function sendParts(parts, isLast) {
     var self = this;
@@ -166,13 +148,6 @@ TChannelOutResponse.prototype.sendError = function sendError(codeString, message
             self.span.annotate('ss');
         }
         self.state = States.Error;
-        if (self.streamed) {
-            // TODO: we could decide to flush any parts in a (first?) call res frame
-            self._argstream.finished = true;
-            self.arg1.end();
-            self.arg2.end();
-            self.arg3.end();
-        }
         self.sendFrame.error(codeString, message);
         self.emit('finish');
     }
@@ -184,13 +159,9 @@ TChannelOutResponse.prototype.setOk = function setOk(ok) {
         self.emit('error', errors.ResponseAlreadyStarted({
             state: self.state
         }));
-
     }
     self.ok = ok;
     self.code = ok ? 0 : 1; // TODO: too coupled to v2 specifics?
-    if (self.streamed) {
-        self.arg1.end();
-    }
 };
 
 TChannelOutResponse.prototype.sendOk = function sendOk(res1, res2) {
@@ -214,13 +185,8 @@ TChannelOutResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
 
 TChannelOutResponse.prototype.send = function send(res1, res2) {
     var self = this;
-    if (self.streamed) {
-        self.arg2.end(res1);
-        self.arg3.end(res2);
-    } else {
-        self.sendCallResponseFrame([self.arg1, res1, res2], true);
-        self.emit('finish');
-    }
+    self.sendCallResponseFrame([self.arg1, res1, res2], true);
+    self.emit('finish');
 };
 
 module.exports = TChannelOutResponse;
