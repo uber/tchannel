@@ -25,7 +25,7 @@ var inherits = require('util').inherits;
 var EventEmitter = require('events').EventEmitter;
 
 var errors = require('./errors');
-var OutResponse = require('./out_response');
+var States = require('./reqres_states');
 
 var DEFAULT_OUTGOING_REQ_TIMEOUT = 2000;
 
@@ -268,7 +268,7 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
     }
 
     function buildResponse(options) {
-        if (req.res && req.res.state !== OutResponse.States.Initial) {
+        if (req.res && req.res.state !== States.Initial) {
             self.emit('error', errors.ResponseAlreadyStarted({
                 state: req.res.state
             }));

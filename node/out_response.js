@@ -26,12 +26,7 @@ var inherits = require('util').inherits;
 
 var errors = require('./errors');
 var OutArgStream = require('./argstream').OutArgStream;
-
-var States = Object.create(null);
-States.Initial = 0;
-States.Streaming = 1;
-States.Done = 2;
-States.Error = 3;
+var States = require('./reqres_states');
 
 function TChannelOutResponse(id, options) {
     options = options || {};
@@ -227,7 +222,5 @@ TChannelOutResponse.prototype.send = function send(res1, res2) {
         self.emit('finish');
     }
 };
-
-TChannelOutResponse.States = States;
 
 module.exports = TChannelOutResponse;

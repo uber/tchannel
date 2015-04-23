@@ -24,14 +24,9 @@ var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 
 var InArgStream = require('./argstream').InArgStream;
+var States = require('./reqres_states');
 
 var emptyBuffer = Buffer(0);
-
-var States = Object.create(null);
-States.Initial = 0;
-States.Streaming = 1;
-States.Done = 2;
-States.Error = 3;
 
 function TChannelInResponse(id, options) {
     options = options || {};
@@ -102,7 +97,5 @@ TChannelInResponse.prototype.handleFrame = function handleFrame(parts) {
         self.emit('finish');
     }
 };
-
-TChannelInResponse.States = States;
 
 module.exports = TChannelInResponse;
