@@ -35,6 +35,8 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 
     var self = this;
     TChannelConnectionBase.call(self, channel, direction, remoteAddr);
+    self.identifiedEvent = self.defineEvent('identified');
+
     self.socket = socket;
 
     var opts = {
@@ -102,11 +104,11 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
 
     self.mach.emit = handleReadFrame;
 
-    self.handler.on('write.error', onWriteError);
+    self.handler.on('writeError', onWriteError);
     self.handler.on('error', onHandlerError);
-    self.handler.on('call.incoming.request', onCallRequest);
-    self.handler.on('call.incoming.response', onCallResponse);
-    self.handler.on('call.incoming.error', onCallError);
+    self.handler.on('callIncomingRequest', onCallRequest);
+    self.handler.on('callIncomingResponse', onCallResponse);
+    self.handler.on('callIncomingError', onCallError);
     self.on('timedOut', onTimedOut);
 
     // TODO: restore dumping from old:
@@ -230,9 +232,9 @@ TChannelConnection.prototype.start = function start() {
     var self = this;
     if (self.direction === 'out') {
         self.handler.sendInitRequest();
-        self.handler.once('init.response', onOutIdentified);
+        self.handler.once('initResponse', onOutIdentified);
     } else {
-        self.handler.once('init.request', onInIdentified);
+        self.handler.once('initRequest', onInIdentified);
     }
 
     function onOutIdentified(init) {

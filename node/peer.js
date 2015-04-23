@@ -22,7 +22,7 @@
 
 var assert = require('assert');
 var inherits = require('util').inherits;
-var EventEmitter = require('events').EventEmitter;
+var EventEmitter = require('./lib/event_emitter');
 var net = require('net');
 
 var TChannelConnection = require('./connection');
@@ -34,6 +34,9 @@ function TChannelPeer(channel, hostPort, options) {
     }
     var self = this;
     EventEmitter.call(self);
+    self.stateChangedEvent = self.defineEvent('stateChanged');
+    self.allocConnectionEvent = self.defineEvent('allocConnection');
+
     self.channel = channel;
     self.logger = self.channel.logger;
     self.options = options || {};
@@ -103,7 +106,7 @@ TChannelPeer.prototype.setState = function setState(StateType) {
     }
     var oldState = self.state;
     self.state = state;
-    self.emit('stateChanged', oldState, state);
+    self.emit('stateChanged', [oldState, state]);
 };
 
 TChannelPeer.prototype.getInConnection = function getInConnection() {

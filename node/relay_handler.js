@@ -20,7 +20,7 @@
 
 'use strict';
 
-var EventEmitter = require('events').EventEmitter;
+var EventEmitter = require('./lib/event_emitter');
 var inherits = require('util').inherits;
 
 var errors = require('./errors');
@@ -28,6 +28,8 @@ var errors = require('./errors');
 function RelayRequest(channel, inreq, buildRes) {
     var self = this;
     EventEmitter.call(self);
+    self.finishEvent = self.defineEvent('finish');
+
     self.channel = channel;
     self.inreq = inreq;
     self.inres = null;

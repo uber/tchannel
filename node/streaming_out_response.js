@@ -44,7 +44,9 @@ function StreamingOutResponse(id, options) {
         self.emit('error', err);
     }
 
-    function onFrame(parts, isLast) {
+    function onFrame(tup) {
+        var parts = tup[0];
+        var isLast = tup[1];
         self.sendParts(parts, isLast);
     }
 
