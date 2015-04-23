@@ -46,8 +46,8 @@ function TChannelConnectionBase(channel, direction, remoteAddr) {
 
     // TODO: factor out an operation collection abstraction
     self.requests = {
-        in: Object.create(null),
-        out: Object.create(null)
+        in: {},
+        out: {}
     };
     self.pending = {
         in: 0,
@@ -229,6 +229,12 @@ TChannelConnectionBase.prototype.request = function connBaseRequest(options) {
     options.ttl = options.timeout || DEFAULT_OUTGOING_REQ_TIMEOUT;
     options.tracer = self.tracer;
     var req = self.buildOutRequest(options);
+
+    return self._addOutReq(req);
+};
+
+TChannelConnectionBase.prototype._addOutReq = function _addOutReq(req) {
+    var self = this;
     self.requests.out[req.id] = req;
     self.pending.out++;
     return req;
@@ -269,7 +275,6 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
         }
         req.res = self.buildOutResponse(req, options);
         req.res.on('finish', opDone);
-        req.res.on('errored', opDone);
         req.res.on('span', handleSpanFromRes);
         return req.res;
     }
