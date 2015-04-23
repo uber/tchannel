@@ -179,7 +179,6 @@ TChannelOutResponse.prototype.sendError = function sendError(codeString, message
             self.arg3.end();
         }
         self.sendFrame.error(codeString, message);
-        self.emit('errored', codeString, message);
         self.emit('finish');
     }
 };

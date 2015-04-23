@@ -269,7 +269,6 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
         }
         req.res = self.buildOutResponse(req, options);
         req.res.on('finish', opDone);
-        req.res.on('errored', opDone);
         req.res.on('span', handleSpanFromRes);
         return req.res;
     }
