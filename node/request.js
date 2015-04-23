@@ -22,7 +22,7 @@
 
 var assert = require('assert');
 var parallel = require('run-parallel');
-var EventEmitter = require('events').EventEmitter;
+var EventEmitter = require('./lib/event_emitter');
 var inherits = require('util').inherits;
 
 var errors = require('./errors');
@@ -32,6 +32,9 @@ function TChannelRequest(channel, options) {
     assert(!options.streamed, "streaming request federation not implemented");
     var self = this;
     EventEmitter.call(self);
+    self.errorEvent = self.defineEvent('error');
+    self.responseEvent = self.defineEvent('response');
+
     self.channel = channel;
     self.logger = self.channel.logger;
     self.random = self.channel.random;

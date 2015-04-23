@@ -20,7 +20,7 @@
 
 'use strict';
 
-var EventEmitter = require('events').EventEmitter;
+var EventEmitter = require('./lib/event_emitter');
 var inherits = require('util').inherits;
 var parallel = require('run-parallel');
 
@@ -31,6 +31,10 @@ function TChannelOutRequest(id, options) {
     options = options || {};
     var self = this;
     EventEmitter.call(self);
+    self.errorEvent = self.defineEvent('error');
+    self.responseEvent = self.defineEvent('response');
+    self.finishEvent = self.defineEvent('finish');
+
     self.logger = options.logger;
     self.random = options.random;
     self.timers = options.timers;

@@ -57,6 +57,7 @@ function makeInreq(id, options) {
     } else {
         self.inreq = new InRequest(id, options);
     }
+    self.inreq.responseEvent = self.inreq.defineEvent('response');
     self.inreq.on('error', onError);
     self.inreq.on('response', onResponse);
     self.inreq.outreq = self; // TODO: make less hacky when have proper subclasses

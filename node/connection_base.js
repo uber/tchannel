@@ -22,7 +22,7 @@
 
 var assert = require('assert');
 var inherits = require('util').inherits;
-var EventEmitter = require('events').EventEmitter;
+var EventEmitter = require('./lib/event_emitter');
 
 var errors = require('./errors');
 var States = require('./reqres_states');
@@ -34,6 +34,10 @@ function TChannelConnectionBase(channel, direction, remoteAddr) {
 
     var self = this;
     EventEmitter.call(self);
+    self.errorEvent = self.defineEvent('error');
+    self.timedOutEvent = self.defineEvent('timedOut');
+    self.spanEvent = self.defineEvent('span');
+
     self.channel = channel;
     self.options = self.channel.options;
     self.logger = channel.logger;

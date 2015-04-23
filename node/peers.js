@@ -22,7 +22,7 @@
 
 var assert = require('assert');
 var inherits = require('util').inherits;
-var EventEmitter = require('events').EventEmitter;
+var EventEmitter = require('./lib/event_emitter');
 
 var errors = require('./errors');
 var TChannelPeer = require('./peer');
@@ -34,6 +34,8 @@ function TChannelPeers(channel, options) {
     }
     var self = this;
     EventEmitter.call(self);
+    self.allocPeerEvent = self.defineEvent('allocPeer');
+
     self.channel = channel;
     self.logger = self.channel.logger;
     self.options = options || {};

@@ -32,7 +32,7 @@ var format = require('util').format;
 var extend = require('xtend');
 
 var inherits = require('util').inherits;
-var EventEmitter = require('events').EventEmitter;
+var EventEmitter = require('./lib/event_emitter');
 
 var nullLogger = require('./null-logger.js');
 var EndpointHandler = require('./endpoint-handler.js');
@@ -56,6 +56,10 @@ function TChannel(options) {
 
     var self = this;
     EventEmitter.call(self);
+    self.errorEvent = self.defineEvent('error');
+    self.listeningEvent = self.defineEvent('listening');
+    self.connectionEvent = self.defineEvent('connection');
+    self.requestEvent = self.defineEvent('request');
 
     self.options = extend({
         timeoutCheckInterval: 1000,
