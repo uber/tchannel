@@ -26,9 +26,11 @@ from ..messages.call_response_continue import CallResponseContinueMessage
 from ..messages.call_response import CallResponseMessage
 from ..messages.call_continue import CallContinueMessage
 from ..messages import common
-from ..messages.common import StreamState, FlagsType
+from ..messages.common import StreamState, FlagsType, Tracing
 from .dispatch import Request, Response
 from .stream import InMemStream
+from ..zipkin.annotation import Endpoint
+from ..zipkin.trace import Trace
 
 
 class MessageFactory(object):
@@ -36,10 +38,12 @@ class MessageFactory(object):
     streaming messages.
     """
 
-    def __init__(self):
+    def __init__(self, remote_host=None, remote_host_port=None):
         # key: message_id
         # value: incomplete streaming messages
         self.message_buffer = {}
+        self.remote_host = remote_host
+        self.remote_host_port = remote_host_port
 
     def build_raw_request_message(self, request, args, is_completed=False):
         """build protocol level message based on request and args.
@@ -60,7 +64,10 @@ class MessageFactory(object):
             message = CallRequestMessage(
                 flags=request.flags,
                 # ttl=request.ttl,
-                # tracing=request.tracing,
+                tracing=Tracing(request.tracing.span_id,
+                                request.tracing.parent_span_id,
+                                request.tracing.trace_id,
+                                request.tracing.traceflags),
                 service=request.service,
                 # headers=request.headers,
                 # checksum=request.checksum
@@ -100,7 +107,10 @@ class MessageFactory(object):
             message = CallResponseMessage(
                 flags=response.flags,
                 # code=response.code,
-                # tracing=response.tracing,
+                tracing=Tracing(response.tracing.span_id,
+                                response.tracing.parent_span_id,
+                                response.tracing.trace_id,
+                                response.tracing.traceflags),
                 # headers=response.headers,
                 # checksum=response.checksum
                 args=args
@@ -154,11 +164,21 @@ class MessageFactory(object):
 
         args = self.prepare_args(message)
 
+        tracing = Trace(
+            trace_id=message.tracing.trace_id,
+            span_id=message.tracing.span_id,
+            parent_span_id=message.tracing.parent_id,
+            endpoint=Endpoint(self.remote_host,
+                              self.remote_host_port,
+                              message.service),
+            traceflags=message.tracing.traceflags
+        )
+
         # TODO decide what to pass to Request from message
         req = Request(
             flags=message.flags,
             # ttl=message.ttl,
-            # tracing=message.tracing,
+            tracing=tracing,
             service=message.service,
             # headers=messaget.headers,
             # checksum=message.checksum
@@ -184,7 +204,6 @@ class MessageFactory(object):
         res = Response(
             flags=message.flags,
             # code=message.code,
-            # tracing=message.tracing,
             # headers=messaget.headers,
             # checksum=message.checksum
             argstreams=args,

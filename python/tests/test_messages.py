@@ -256,10 +256,10 @@ def test_equality_check_against_none(init_request_with_headers):
     ],
     ids=lambda arg: str(len(arg))
 )
-def test_message_fragment(arg2, arg3):
+def test_message_fragment(arg2, arg3, connection):
     msg = CallRequestMessage(args=["", arg2, arg3])
     origin_msg = CallRequestMessage(args=["", arg2, arg3])
-    message_factory = MessageFactory()
+    message_factory = MessageFactory(connection)
     fragments = message_factory.fragment(msg)
     recv_msg = None
     for fragment in fragments:

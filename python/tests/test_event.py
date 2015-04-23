@@ -19,36 +19,28 @@
 # THE SOFTWARE.
 
 from __future__ import absolute_import
-
-import socket
-import pytest
-
-
-class _MockConnection(object):
-    def __init__(self):
-        self.buff = bytearray()
-        self.remote_host = "0.0.0.0"
-        self.remote_host_port = "0"
-
-    def write(self, payload, callback=None):
-        self.buff.extend(payload)
-
-    def getvalue(self):
-        return self.buff
+from mock import MagicMock
+from tchannel.event import EventEmitter, EventType
 
 
-@pytest.fixture
-def connection():
-    """Make a mock connection."""
-    return _MockConnection()
+def test_event_hook():
+    mock_hook = MagicMock()
+    mock_hook.send_request.return_value = None
+    mock_hook.receive_request.return_value = None
+    mock_hook.receive_response.return_value = None
+    mock_hook.send_response.return_Value = None
 
+    event_emitter = EventEmitter()
+    event_emitter.register_hook(mock_hook)
 
-@pytest.fixture
-def random_open_port():
-    """Find and return a random open TCP port."""
-    sock = socket.socket(socket.AF_INET)
-    try:
-        sock.bind(('', 0))
-        return sock.getsockname()[1]
-    finally:
-        sock.close()
+    event_emitter.fire(EventType.receive_response, None)
+    assert mock_hook.receive_response.called
+
+    event_emitter.fire(EventType.receive_request, None)
+    assert mock_hook.receive_request.called
+
+    event_emitter.fire(EventType.send_request, None)
+    assert mock_hook.send_request.called
+
+    event_emitter.fire(EventType.send_response, None)
+    assert mock_hook.send_response.called

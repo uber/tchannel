@@ -26,8 +26,9 @@ from tests.integration.server_manager import TChannelServerManager
 
 
 @pytest.yield_fixture
-def tchannel_server(random_open_port):
-    with TChannelServerManager(random_open_port) as manager:
+def tchannel_server(random_open_port, dispatcher=None):
+    with TChannelServerManager(random_open_port,
+                               dispatcher) as manager:
         yield manager
 
 

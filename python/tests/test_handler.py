@@ -24,7 +24,9 @@ from doubles import expect
 from doubles import InstanceDouble
 import pytest
 import tornado
+import tornado.gen
 
+from tchannel.zipkin.trace import Trace
 from tchannel.tornado.dispatch import TornadoDispatcher
 from tchannel.tornado.stream import InMemStream
 
@@ -39,6 +41,7 @@ def req():
             InMemStream(),
             InMemStream()
         ]
+    request.tracing = Trace()
     request.id = 0
     request.argstreams[0].close()
     return request
@@ -49,6 +52,7 @@ def conn():
     conn = InstanceDouble('tchannel.tornado.connection.StreamConnection')
     allow(conn).send_error
     allow(conn).post_response
+    conn.tchannel = None
 
     return conn
 

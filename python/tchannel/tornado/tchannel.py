@@ -34,6 +34,7 @@ from ..net import local_ip
 from .peer import PeerGroup
 from .connection import StreamConnection
 from ..handler import CallableRequestHandler
+from ..event import EventEmitter
 
 
 log = logging.getLogger('tchannel')
@@ -46,13 +47,14 @@ class State(IntEnum):
 
 
 class TChannel(object):
+
     """Manages inbound and outbound connections to various hosts.
 
     This class is a singleton. All instances of it are the same. If you need
     separate instances, use the ``ignore_singleton`` argument.
     """
 
-    def __init__(self, hostport=None, process_name=None):
+    def __init__(self, hostport=None, process_name=None, hooks=None):
         """Build or re-use a TChannel.
 
         :param hostport:
@@ -77,6 +79,16 @@ class TChannel(object):
 
         # RequestHandler to handle incoming calls.
         self._handler = None
+
+        # register event hooks
+        self.event_emitter = EventEmitter()
+        if hooks:
+            for hook in hooks:
+                self.event_emitter.register_hook(hook)
+
+    def add_hook(self, hook):
+        if hook:
+            self.event_emitter.register_hook(hook)
 
     @property
     def closed(self):
@@ -151,7 +163,8 @@ class TChannelServer(tornado.tcpserver.TCPServer):
     @tornado.gen.coroutine
     def handle_stream(self, stream, address):
         log.debug("New incoming connection from %s:%d" % address)
-        conn = StreamConnection(connection=stream)
+
+        conn = StreamConnection(connection=stream, tchannel=self.tchannel)
 
         yield conn.expect_handshake(headers={
             'host_port': self.tchannel.hostport,
@@ -159,12 +172,16 @@ class TChannelServer(tornado.tcpserver.TCPServer):
         })
 
         log.debug(
-            "Successfully completed handshake with %s (%s)",
+            "Successfully completed handshake with %s:%s (%s)",
             conn.remote_host,
-            conn.remote_process_name,
-        )
+            conn.remote_host_port,
+            conn.remote_process_name)
 
-        self.tchannel.peers.get(conn.remote_host).register_incoming(conn)
+        self.tchannel.peers.get(
+            "%s:%s" % (conn.remote_host,
+                       conn.remote_host_port)
+        ).register_incoming(conn)
+
         yield conn.serve(handler=CallableRequestHandler(self._handle))
 
     def _handle(self, context, connection):
