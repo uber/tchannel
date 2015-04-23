@@ -558,6 +558,7 @@ name  | req | res | description
 `as`  | Y   | Y   | the Arg Scheme
 `cas` | Y   | N   | Claim At Start
 `caf` | Y   | N   | Claim At Finish
+`cn`  | Y   | N   | Caller Name
 `re`  | Y   | N   | Retry Flags
 `se`  | Y   | N   | Speculative Execution
 `fd`  | Y   | Y   | Failure Domain
@@ -589,6 +590,10 @@ Send a claim message when work is started.
 Value is string "host:port".
 
 Send claim message to `host:port` when response is being sent.
+
+### Transport Header `cn` -- Caller Name
+
+Value is name of the service making the call.
 
 ### Transport Header `re` -- Retry Flags
 
