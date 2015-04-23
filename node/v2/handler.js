@@ -156,14 +156,15 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
         return callback(new Error('call request before init request')); // TODO typed error
     }
     var req = self.buildInRequest(reqFrame);
-    self._handleCallFrame(req, reqFrame, function(err) {
+    self._handleCallFrame(req, reqFrame, callRequestFrameHandled);
+    function callRequestFrameHandled(err) {
         if (err) return callback(err);
         if (req.state === InRequest.States.Streaming) {
             self.streamingReq[req.id] = req;
         }
         self.emit('call.incoming.request', req);
         callback();
-    });
+    }
 };
 
 TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(resFrame, callback) {
@@ -173,14 +174,16 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
     }
     var res = self.buildInResponse(resFrame);
     res.remoteAddr = self.remoteHostPort;
-    self._handleCallFrame(res, resFrame, function(err) {
+    self._handleCallFrame(res, resFrame, callResponseFrameHandled);
+
+    function callResponseFrameHandled(err) {
         if (err) return callback(err);
         if (res.state === InResponse.States.Streaming) {
             self.streamingRes[res.id] = res;
         }
         self.emit('call.incoming.response', res);
         callback();
-    });
+    }
 };
 
 TChannelV2Handler.prototype.handleCallRequestCont = function handleCallRequestCont(reqFrame, callback) {
