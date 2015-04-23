@@ -27,12 +27,7 @@ var parallel = require('run-parallel');
 
 var errors = require('./errors');
 var OutArgStream = require('./argstream').OutArgStream;
-
-var States = Object.create(null);
-States.Initial = 0;
-States.Streaming = 1;
-States.Done = 2;
-States.Error = 3;
+var States = require('./reqres_states');
 
 function TChannelOutRequest(id, options) {
     options = options || {};
@@ -289,7 +284,5 @@ TChannelOutRequest.prototype.checkTimeout = function checkTimeout() {
     }
     return self.timedOut;
 };
-
-TChannelOutRequest.States = States;
 
 module.exports = TChannelOutRequest;
