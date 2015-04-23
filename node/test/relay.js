@@ -24,7 +24,7 @@ var allocCluster = require('./lib/alloc-cluster');
 var TChannel = require('../channel');
 var RelayHandler = require('../relay_handler');
 
-allocCluster.test('request retries', {
+allocCluster.test('send relay requests', {
     numPeers: 2
 }, function t(cluster, assert) {
     var one = cluster.channels[0];
@@ -49,7 +49,9 @@ allocCluster.test('request retries', {
         peers: [one.hostPort]
     });
 
-    twoClient.request().send('echo', 'foo', 'bar', function done(err, res, arg2, arg3) {
+    twoClient.request({
+        service: 'two'
+    }).send('echo', 'foo', 'bar', function done(err, res, arg2, arg3) {
         assert.ifError(err, 'no unexpected error');
         assert.equal(String(arg2), 'foo', 'expected arg2');
         assert.equal(String(arg3), 'bar', 'expected arg3');
@@ -94,7 +96,9 @@ allocCluster.test('relay an error frame', {
         peers: [one.hostPort, four.hostPort]
     });
 
-    twoClient.request().send('decline', 'foo', 'bar', function done(err, res, arg2, arg3) {
+    twoClient.request({
+        service: 'two'
+    }).send('decline', 'foo', 'bar', function done(err, res, arg2, arg3) {
         assert.equal(err.type, 'tchannel.declined', 'expected declined error');
 
         assert.end();
