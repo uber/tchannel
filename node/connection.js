@@ -104,12 +104,12 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
 
     self.mach.emit = handleReadFrame;
 
-    self.handler.on('writeError', onWriteError);
-    self.handler.on('error', onHandlerError);
-    self.handler.on('callIncomingRequest', onCallRequest);
-    self.handler.on('callIncomingResponse', onCallResponse);
-    self.handler.on('callIncomingError', onCallError);
-    self.on('timedOut', onTimedOut);
+    self.handler.writeErrorEvent.on(onWriteError);
+    self.handler.errorEvent.on(onHandlerError);
+    self.handler.callIncomingRequestEvent.on(onCallRequest);
+    self.handler.callIncomingResponseEvent.on(onCallResponse);
+    self.handler.callIncomingErrorEvent.on(onCallError);
+    self.timedOutEvent.on(self.onTimedOut);
 
     // TODO: restore dumping from old:
     // var stream = self.socket;
@@ -154,10 +154,12 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     function onCallError(err) {
         self.onCallError(err);
     }
+};
 
-    function onTimedOut() {
-        self.onTimedOut();
-    }
+TChannelConnection.prototype.onTimedOut = function onTimedOut() {
+    var self = this;
+    self.logger.warn(self.channel.hostPort + ' destroying socket from timeouts');
+    self.socket.destroy();
 };
 
 TChannelConnection.prototype.onWriteError = function onWriteError(err) {
@@ -209,7 +211,7 @@ TChannelConnection.prototype.onCallResponse = function onCallResponse(res) {
         res.span = req.span;
     }
 
-    req.emit('response', res);
+    req.responseEvent.emit(req, res);
 };
 
 TChannelConnection.prototype.onCallError = function onCallError(err) {
@@ -219,7 +221,7 @@ TChannelConnection.prototype.onCallError = function onCallError(err) {
         self.logger.info('error received for unknown or lost operation', err);
         return;
     }
-    req.emit('error', err);
+    req.errorEvent.emit(req, err);
 };
 
 TChannelConnection.prototype.onTimedOut = function onTimedOut() {
@@ -232,9 +234,9 @@ TChannelConnection.prototype.start = function start() {
     var self = this;
     if (self.direction === 'out') {
         self.handler.sendInitRequest();
-        self.handler.once('initResponse', onOutIdentified);
+        self.handler.initResponseEvent.once(onOutIdentified);
     } else {
-        self.handler.once('initRequest', onInIdentified);
+        self.handler.initRequestEvent.once(onInIdentified);
     }
 
     function onOutIdentified(init) {
@@ -249,7 +251,7 @@ TChannelConnection.prototype.start = function start() {
 TChannelConnection.prototype.onOutIdentified = function onOutIdentified(init) {
     var self = this;
     self.remoteName = init.hostPort;
-    self.emit('identified', {
+    self.identifiedEvent.emit(self, {
         hostPort: init.hostPort,
         processName: init.processName
     });
@@ -264,8 +266,9 @@ TChannelConnection.prototype.onInIdentified = function onInIdentified(init) {
     } else {
         self.remoteName = init.hostPort;
     }
+
     self.channel.peers.add(self.remoteName).addConnection(self);
-    self.emit('identified', {
+    self.identifiedEvent.emit(self, {
         hostPort: self.remoteName,
         processName: init.processName
     });

@@ -59,8 +59,8 @@ RelayRequest.prototype.createOutRequest = function createOutRequest() {
         headers: self.inreq.headers,
         retryFlags: self.inreq.retryFlags
     });
-    self.outreq.on('response', onResponse);
-    self.outreq.on('error', onError);
+    self.outreq.responseEvent.on(onResponse);
+    self.outreq.errorEvent.on(onError);
 
     if (self.outreq.streamed) {
         // TODO: frame-at-a-time rather than re-streaming?
@@ -93,11 +93,11 @@ RelayRequest.prototype.createOutResponse = function createOutResponse(options) {
         return;
     }
     self.outres = self.buildRes(options);
-    self.outres.on('finish', emitFinish);
+    self.outres.finishEvent.on(emitFinish);
     return self.outres;
 
     function emitFinish() {
-        self.emit('finish');
+        self.finishEvent.emit(self);
     }
 };
 
@@ -169,7 +169,7 @@ RelayHandler.prototype.handleRequest = function handleRequest(req, buildRes) {
     }
     rereq = new RelayRequest(self.channel, req, buildRes);
     self.reqs[req.id] = rereq;
-    rereq.on('finish', rereqFinished);
+    rereq.finishEvent.on(rereqFinished);
     rereq.createOutRequest();
     function rereqFinished() {
         delete self.reqs[req.id];

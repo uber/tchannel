@@ -69,8 +69,9 @@ function TChannelRequest(channel, options) {
 
     self.err = null;
     self.res = null;
-    self.on('error', self.onError);
-    self.on('response', self.onResponse);
+
+    self.errorEvent.on(self.onError);
+    self.responseEvent.on(self.onResponse);
 }
 
 inherits(TChannelRequest, EventEmitter);
@@ -104,8 +105,8 @@ TChannelRequest.prototype.hookupCallback = function hookupCallback(callback) {
     }
     var called = false;
 
-    self.on('error', onError);
-    self.on('response', onResponse);
+    self.errorEvent.on(onError);
+    self.responseEvent.on(onResponse);
 
     function onError(err) {
         if (called) return;
@@ -149,10 +150,13 @@ TChannelRequest.prototype.resend = function resend() {
     if (!peer) {
         if (self.outReqs.length) {
             var lastReq = self.outReqs[self.outReqs.length - 1];
-            if (lastReq.err) self.emit('error', lastReq.err);
-            else self.emit('response', lastReq.res);
+            if (lastReq.err) {
+                self.errorEvent.emit(self, lastReq.err);
+            } else {
+                self.responseEvent.emit(self, lastReq.res);
+            }
         } else {
-            self.emit('error', errors.NoPeerAvailable());
+            self.errorEvent.emit(self, errors.NoPeerAvailable());
         }
         return;
     }
@@ -170,8 +174,8 @@ TChannelRequest.prototype.resend = function resend() {
     self.outReqs.push(outReq);
 
     self.triedRemoteAddrs[outReq.remoteAddr] = (self.triedRemoteAddrs[outReq.remoteAddr] || 0) + 1;
-    outReq.on('response', onResponse);
-    outReq.on('error', onError);
+    outReq.responseEvent.on(onResponse);
+    outReq.errorEvent.on(onError);
     outReq.send(self.arg1, self.arg2, self.arg3);
 
     function onError(err) {
@@ -192,7 +196,7 @@ TChannelRequest.prototype.onSubreqError = function onSubreqError(err) {
     if (self.shouldRetry(err)) {
         self.deferResend();
     } else {
-        self.emit('error', err);
+        self.errorEvent.emit(self, err);
     }
 };
 
@@ -202,16 +206,16 @@ TChannelRequest.prototype.onSubreqResponse = function onSubreqResponse(err, res,
     if (self.shouldRetry(err, res, arg2, arg3)) {
         self.deferResend();
     } else if (err) {
-        self.emit('error', err);
+        self.errorEvent.emit(self, err);
     } else {
-        self.emit('response', res);
+        self.responseEvent.emit(self, res);
     }
 };
 
 TChannelRequest.prototype.deferResend = function deferResend() {
     var self = this;
     if (--self.resendSanity <= 0) {
-        self.emit('error', new Error('TChannelRequest out of resend sanity'));
+        self.errorEvent.emit(self, new Error('TChannelRequest out of resend sanity'));
     } else {
         process.nextTick(doResend);
     }
@@ -227,14 +231,14 @@ TChannelRequest.prototype.checkTimeout = function checkTimeout(err, res) {
     if (self.elapsed < self.timeout) return false;
     if (err) {
         if (!self.err) {
-            self.emit('error', err);
+            self.errorEvent.emit(self, err);
         }
     } else if (res) {
         if (!self.err && !self.res) {
-            self.emit('response', res);
+            self.responseEvent.emit(self, res);
         }
     } else if (!self.err) {
-        self.emit('error', errors.TimeoutError({
+        self.errorEvent.emit(self, errors.TimeoutError({
             start: self.start,
             elapsed: self.elapsed,
             timeout: self.timeout

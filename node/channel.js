@@ -176,7 +176,7 @@ TChannel.prototype.onServerSocketConnection = function onServerSocketConnection(
     var remoteAddr = sock.remoteAddress + ':' + sock.remotePort;
     var conn = new TChannelConnection(self, sock, 'in', remoteAddr);
 
-    conn.on('span', function handleSpanFromConn(span) {
+    conn.spanEvent.on(function handleSpanFromConn(span) {
         self.tracer.report(span);
     });
 
@@ -191,7 +191,7 @@ TChannel.prototype.onServerSocketConnection = function onServerSocketConnection(
     sock.on('close', onSocketClose);
 
     self.serverConnections[remoteAddr] = conn;
-    self.emit('connection', conn);
+    self.connectionEvent.emit(self, conn);
 
     function onSocketClose() {
         delete self.serverConnections[remoteAddr];
@@ -222,7 +222,7 @@ TChannel.prototype.onServerSocketListening = function onServerSocketListening() 
         });
     }
 
-    self.emit('listening');
+    self.listeningEvent.emit(self);
 };
 
 TChannel.prototype.onServerSocketError = function onServerSocketError(err) {
@@ -240,7 +240,7 @@ TChannel.prototype.onServerSocketError = function onServerSocketError(err) {
         host: self.host,
         hostPort: self.hostPort || null
     });
-    self.emit('error', err);
+    self.errorEvent.emit(self, err);
 };
 
 TChannel.prototype.makeSubChannel = function makeSubChannel(options) {
@@ -366,7 +366,7 @@ TChannel.prototype.request = function channelRequest(options) {
     } else {
         req = new TChannelRequest(self, opts);
     }
-    self.emit('request', req);
+    self.requestEvent.emit(self, req);
     return req;
 };
 

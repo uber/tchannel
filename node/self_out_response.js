@@ -71,7 +71,7 @@ function passResponse(args, isLast ) {
         self.inres.code = self.code;
         self.inres.ok = self.ok;
         self.first = false;
-        self.inreq.emit('response', self.inres);
+        self.inreq.responseEvent.emit(self, self.inres);
     }
     if (!self.closing) self.conn.lastTimeoutTime = 0;
 };
@@ -85,7 +85,7 @@ function passError(codeString, message) {
         originalId: self.id,
         message: message
     });
-    self.inreq.outreq.emit('error', err);
+    self.inreq.outreq.errorEvent.emit(self, err);
     if (!self.closing) self.conn.lastTimeoutTime = 0;
 };
 

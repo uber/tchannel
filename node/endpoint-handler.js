@@ -79,7 +79,7 @@ TChannelEndpointHandler.prototype.handleArg1 = function handleArg1(req, buildRes
     var name = String(arg1);
     var handler = self.endpoints[name];
     var res;
-    self.emit('handleEndpoint', {
+    self.handleEndpointEvent.emit(self, {
         name: name,
         handler: handler
     });

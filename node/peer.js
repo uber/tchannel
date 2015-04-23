@@ -106,7 +106,7 @@ TChannelPeer.prototype.setState = function setState(StateType) {
     }
     var oldState = self.state;
     self.state = state;
-    self.emit('stateChanged', [oldState, state]);
+    self.stateChangedEvent.emit(self, [oldState, state]);
 };
 
 TChannelPeer.prototype.getInConnection = function getInConnection() {
@@ -144,8 +144,8 @@ TChannelPeer.prototype.request = function peerRequest(options) {
 
     self.state.onRequest(req);
 
-    req.on('error', onError);
-    req.on('response', onResponse);
+    req.errorEvent.on(onError);
+    req.responseEvent.on(onResponse);
 
     function onError(err) {
         self.state.onRequestError(req);
@@ -167,7 +167,7 @@ TChannelPeer.prototype.addConnection = function addConnection(conn) {
     } else {
         self.connections.unshift(conn);
     }
-    conn.once('error', onConnectionError);
+    conn.errorEvent.once(onConnectionError);
     return conn;
 
     function onConnectionError(/* err */) {
@@ -203,7 +203,7 @@ TChannelPeer.prototype.makeOutConnection = function makeOutConnection(socket) {
     var self = this;
     var chan = self.channel.topChannel || self.channel;
     var conn = new TChannelConnection(chan, socket, 'out', self.hostPort);
-    self.emit('allocConnection', conn);
+    self.allocConnectionEvent.emit(self, conn);
     return conn;
 };
 
