@@ -104,12 +104,12 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
 
     self.mach.emit = handleReadFrame;
 
-    self.handler.on('writeError', onWriteError);
-    self.handler.on('error', onHandlerError);
-    self.handler.on('callIncomingRequest', onCallRequest);
-    self.handler.on('callIncomingResponse', onCallResponse);
-    self.handler.on('callIncomingError', onCallError);
-    self.on('timedOut', onTimedOut);
+    self.handler.writeErrorEvent.on(onWriteError);
+    self.handler.errorEvent.on(onHandlerError);
+    self.handler.callIncomingRequestEvent.on(onCallRequest);
+    self.handler.callIncomingResponseEvent.on(onCallResponse);
+    self.handler.callIncomingErrorEvent.on(onCallError);
+    self.timedOutEvent.on(self.onTimedOut);
 
     // TODO: restore dumping from old:
     // var stream = self.socket;
@@ -183,7 +183,7 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
             res.span = req.span;
         }
 
-        req.emit('response', res);
+        req.responseEvent.emit(req, res);
     }
 
     function onCallError(err) {
@@ -192,13 +192,15 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
             self.logger.info('error received for unknown or lost operation', err);
             return;
         }
-        req.emit('error', err);
+        req.errorEvent.emit(req, err);
     }
 
-    function onTimedOut() {
-        self.logger.warn(self.channel.hostPort + ' destroying socket from timeouts');
-        self.socket.destroy();
-    }
+};
+
+TChannelConnection.prototype.onTimedOut = function onTimedOut() {
+    var self = this;
+    self.logger.warn(self.channel.hostPort + ' destroying socket from timeouts');
+    self.socket.destroy();
 };
 
 TChannelConnection.prototype.start = function start() {
@@ -212,7 +214,7 @@ TChannelConnection.prototype.start = function start() {
 
     function onOutIdentified(init) {
         self.remoteName = init.hostPort;
-        self.emit('identified', {
+        self.identifiedEvent.emit(self, {
             hostPort: init.hostPort,
             processName: init.processName
         });
@@ -227,7 +229,7 @@ TChannelConnection.prototype.start = function start() {
             self.remoteName = init.hostPort;
         }
         self.channel.peers.add(self.remoteName).addConnection(self);
-        self.emit('identified', {
+        self.identifiedEvent.emit(self, {
             hostPort: self.remoteName,
             processName: init.processName
         });

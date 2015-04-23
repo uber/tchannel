@@ -82,7 +82,7 @@ TChannelPeers.prototype.add = function add(hostPort, options) {
             peer = self.channel.topChannel.peers.add(hostPort);
         } else {
             peer = TChannelPeer(self.channel, hostPort, options);
-            self.emit('allocPeer', peer);
+            self.allocPeerEvent.emit(self, peer);
         }
         self._map[hostPort] = peer;
     }
