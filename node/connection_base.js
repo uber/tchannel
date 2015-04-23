@@ -229,6 +229,12 @@ TChannelConnectionBase.prototype.request = function connBaseRequest(options) {
     options.ttl = options.timeout || DEFAULT_OUTGOING_REQ_TIMEOUT;
     options.tracer = self.tracer;
     var req = self.buildOutRequest(options);
+
+    return self._addOutReq(req);
+};
+
+TChannelConnectionBase.prototype._addOutReq = function _addOutReq(req) {
+    var self = this;
     self.requests.out[req.id] = req;
     self.pending.out++;
     return req;
