@@ -27,12 +27,7 @@ var errors = require('./errors');
 var InArgStream = require('./argstream').InArgStream;
 
 var emptyBuffer = Buffer(0);
-
-var States = Object.create(null);
-States.Initial = 0;
-States.Streaming = 1;
-States.Done = 2;
-States.Error = 3;
+var States = require('./reqres_states');
 
 function TChannelInRequest(id, options) {
     options = options || {};
@@ -142,7 +137,5 @@ TChannelInRequest.prototype.checkTimeout = function checkTimeout() {
     }
     return self.timedOut;
 };
-
-TChannelInRequest.States = States;
 
 module.exports = TChannelInRequest;

@@ -27,6 +27,7 @@ var OutRequest = require('../out_request');
 var OutResponse = require('../out_response');
 var InRequest = require('../in_request');
 var InResponse = require('../in_response');
+var States = require('../reqres_states');
 
 var v2 = require('./index');
 var errors = require('../errors');
@@ -159,7 +160,7 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
     self._handleCallFrame(req, reqFrame, callRequestFrameHandled);
     function callRequestFrameHandled(err) {
         if (err) return callback(err);
-        if (req.state === InRequest.States.Streaming) {
+        if (req.state === States.Streaming) {
             self.streamingReq[req.id] = req;
         }
         self.emit('call.incoming.request', req);
@@ -178,7 +179,7 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
 
     function callResponseFrameHandled(err) {
         if (err) return callback(err);
-        if (res.state === InResponse.States.Streaming) {
+        if (res.state === States.Streaming) {
             self.streamingRes[res.id] = res;
         }
         self.emit('call.incoming.response', res);
@@ -233,8 +234,7 @@ TChannelV2Handler.prototype.handleError = function handleError(errFrame, callbac
 
 TChannelV2Handler.prototype._handleCallFrame = function _handleCallFrame(r, frame, callback) {
     var self = this;
-    var states = r.constructor.States;
-    if (r.state === states.Done) {
+    if (r.state === States.Done) {
         callback(new Error('got cont in done state')); // TODO typed error
         return;
     }
@@ -256,10 +256,10 @@ TChannelV2Handler.prototype._handleCallFrame = function _handleCallFrame(r, fram
     r.handleFrame(frame.body.args);
     if (isLast) {
         r.handleFrame(null);
-        r.state = states.Done;
-    } else if (r.state === states.Initial) {
-        r.state = states.Streaming;
-    } else if (r.state !== states.Streaming) {
+        r.state = States.Done;
+    } else if (r.state === States.Initial) {
+        r.state = States.Streaming;
+    } else if (r.state !== States.Streaming) {
         self.emit('error', new Error('unknown frame handling state'));
     }
     callback();
