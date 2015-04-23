@@ -20,6 +20,7 @@
 
 'use strict';
 
+require('./event_emitter.js');
 require('./argstream.js');
 require('./safe-quit.js');
 require('./timeouts.js');
