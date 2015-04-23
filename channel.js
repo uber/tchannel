@@ -83,7 +83,6 @@ function TChannel(options) {
     self.serviceName = '';
     if (self.options.serviceName) {
         self.serviceName = self.options.serviceName;
-        self.requestDefaults.serviceName = self.serviceName;
         delete self.options.serviceName;
     }
 
