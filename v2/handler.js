@@ -24,9 +24,9 @@ var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 
 var OutRequest = require('./out_request').OutRequest;
-var OutResponse = require('../out_response');
+var OutResponse = require('./out_response').OutResponse;
 var StreamingOutRequest = require('./out_request').StreamingOutRequest;
-var StreamingOutResponse = require('../streaming_out_response');
+var StreamingOutResponse = require('./out_response').StreamingOutResponse;
 var InRequest = require('../in_request');
 var InResponse = require('../in_response');
 var States = require('../reqres_states');
@@ -380,33 +380,10 @@ TChannelV2Handler.prototype.buildOutResponse = function buildOutResponse(req, op
     options.span = req.span;
     options.checksumType = req.checksum.type;
     options.checksum = new v2.Checksum(req.checksum.type);
-    options.sendFrame = {
-        callResponse: sendCallResponseFrame,
-        callResponseCont: sendCallResponseContFrame,
-        error: sendErrorFrame
-    };
-    var res;
     if (options.streamed) {
-        res = new StreamingOutResponse(req.id, options);
+        return new StreamingOutResponse(self, req.id, options);
     } else {
-        res = new OutResponse(req.id, options);
-    }
-    return res;
-
-    function sendCallResponseFrame(args, isLast) {
-        var flags = 0;
-        if (!isLast) flags |= v2.CallFlags.Fragment;
-        self.sendCallResponseFrame(res, flags, args);
-    }
-
-    function sendCallResponseContFrame(args, isLast) {
-        var flags = 0;
-        if (!isLast) flags |= v2.CallFlags.Fragment;
-        self.sendCallResponseContFrame(res, flags, args);
-    }
-
-    function sendErrorFrame(codeString, message) {
-        self.sendErrorFrame(req, codeString, message);
+        return new OutResponse(self, req.id, options);
     }
 };
 

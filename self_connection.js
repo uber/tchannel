@@ -20,16 +20,12 @@
 
 'use strict';
 
-var InResponse = require('./in_response');
-var StreamingInResponse = require('./streaming_in_response');
 var OutRequest = require('./self_out_request').OutRequest;
-var OutResponse = require('./out_response');
+var OutResponse = require('./self_out_response').OutResponse;
 var StreamingOutRequest = require('./self_out_request').StreamingOutRequest;
-var StreamingOutResponse = require('./streaming_out_response');
+var StreamingOutResponse = require('./self_out_response').StreamingOutResponse;
 
 var inherits = require('util').inherits;
-
-var v2 = require('./v2');
 
 var TChannelConnectionBase = require('./connection_base');
 
@@ -68,56 +64,15 @@ TChannelSelfConnection.prototype.buildOutRequest = function buildOutRequest(opti
 
 TChannelSelfConnection.prototype.buildOutResponse = function buildOutResponse(inreq, options) {
     var self = this;
-    var outreq = inreq.outreq;
-
     if (!options) options = {};
     options.logger = self.logger;
     options.random = self.random;
     options.timers = self.timers;
     options.tracing = inreq.tracing;
-
-    // options.checksum = new v2.Checksum(None);
-
-    options.sendFrame = {
-        callResponse: passParts,
-        callResponseCont: passParts,
-        error: passError
-    };
-    var outres;
     if (options.streamed) {
-        outres = new StreamingOutResponse(inreq.id, options);
+        return new StreamingOutResponse(self, inreq, inreq.id, options);
     } else {
-        outres = new OutResponse(inreq.id, options);
-    }
-    var inres;
-    if (options.streamed) {
-        inres = new StreamingInResponse(inreq.id, options);
-    } else {
-        inres = new InResponse(inreq.id, options);
-    }
-    var first = true;
-    return outres;
-
-    function passParts(args, isLast) {
-        inres.handleFrame(args);
-        if (isLast) inres.handleFrame(null);
-        if (first) {
-            inres.code = outres.code;
-            inres.ok = outres.ok;
-            first = false;
-            inreq.emit('response', inres);
-        }
-        if (!self.closing) self.lastTimeoutTime = 0;
-    }
-
-    function passError(codeString, message) {
-        var code = v2.ErrorResponse.Codes[codeString];
-        var err = v2.ErrorResponse.CodeErrors[code]({
-            originalId: inreq.id,
-            message: message
-        });
-        outreq.emit('error', err);
-        if (!self.closing) self.lastTimeoutTime = 0;
+        return new OutResponse(self, inreq, inreq.id, options);
     }
 };
 
