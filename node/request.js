@@ -144,6 +144,8 @@ TChannelRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     self.resend();
 };
 
+var TChannelOptions = require('./opts');
+
 TChannelRequest.prototype.resend = function resend() {
     var self = this;
 
@@ -166,12 +168,7 @@ TChannelRequest.prototype.resend = function resend() {
 
     if (self.checkTimeout()) return;
 
-    var opts = {};
-    var keys = Object.keys(self.options);
-    for (var i = 0; i < keys.length; i++) {
-        var key = keys[i];
-        opts[key] = self.options[key];
-    }
+    var opts = new TChannelOptions(self.options);
     opts.timeout = self.timeout - self.elapsed;
     var outReq = peer.request(opts);
     self.outReqs.push(outReq);

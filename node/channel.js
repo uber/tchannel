@@ -45,6 +45,8 @@ var TChannelPeers = require('./peers');
 
 var TracingAgent = require('./trace/agent');
 
+var TChannelOptions = require('./opts');
+
 // TODO restore spying
 // var Spy = require('./v2/spy');
 // var dumpEnabled = /\btchannel_dump\b/.test(process.env.NODE_DEBUG || '');
@@ -332,18 +334,7 @@ TChannel.prototype.request = function channelRequest(options) {
     var self = this;
     assert(!self.destroyed, 'cannot request() to destroyed tchannel');
 
-    var prop;
-    var opts = {};
-    // jshint forin:false
-    for (prop in self.requestDefaults) {
-        opts[prop] = self.requestDefaults[prop];
-    }
-    if (options) {
-        for (prop in options) {
-            opts[prop] = options[prop];
-        }
-    }
-    // jshint forin:true
+    var opts = new TChannelOptions(self.requestDefaults, options);
 
     if (!opts.service && opts.serviceName) {
         opts.service = opts.serviceName;
