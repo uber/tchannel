@@ -52,6 +52,8 @@ function StreamingOutRequest(id, options) {
 
 inherits(StreamingOutRequest, TChannelOutRequest);
 
+StreamingOutRequest.prototype.type = 'tchannel.outgoing-request.streaming';
+
 StreamingOutRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     var self = this;
     if (self.span) {

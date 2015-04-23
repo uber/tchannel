@@ -55,6 +55,8 @@ function StreamingOutResponse(id, options) {
 
 inherits(StreamingOutResponse, OutResponse);
 
+StreamingOutResponse.prototype.type = 'tchannel.outgoing-response.streaming';
+
 StreamingOutResponse.prototype.sendError = function sendError(codeString, message) {
     var self = this;
     if (self.state === States.Done || self.state === States.Error) {

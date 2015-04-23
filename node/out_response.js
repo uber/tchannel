@@ -59,6 +59,8 @@ function TChannelOutResponse(id, options) {
 
 inherits(TChannelOutResponse, EventEmitter);
 
+TChannelOutResponse.prototype.type = 'tchannel.outgoing-response';
+
 TChannelOutResponse.prototype.onFinish = function onFinish() {
     var self = this;
     if (!self.end) self.end = self.timers.now();
@@ -66,8 +68,6 @@ TChannelOutResponse.prototype.onFinish = function onFinish() {
         self.emit('span', self.span);
     }
 };
-
-TChannelOutResponse.prototype.type = 'tchannel.outgoing-response';
 
 TChannelOutResponse.prototype.sendParts = function sendParts(parts, isLast) {
     var self = this;

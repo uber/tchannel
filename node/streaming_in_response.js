@@ -49,6 +49,8 @@ function StreamingInResponse(id, options) {
 
 inherits(StreamingInResponse, InResponse);
 
+StreamingInResponse.prototype.type = 'tchannel.incoming-response.streaming';
+
 StreamingInResponse.prototype.handleFrame = function handleFrame(parts) {
     var self = this;
     self._argstream.handleFrame(parts);
