@@ -22,40 +22,22 @@ from __future__ import absolute_import
 
 import pytest
 
-from tornado import concurrent
-
 from tchannel.tornado import TChannel
+from tchannel.tornado.peer import Peer
 
 
 @pytest.fixture
-def peer():
-    future = concurrent.Future()
-    future.set_result("some connection")
-    return future
+def tchannel():
+    return TChannel()
+
+
+@pytest.fixture
+def peer(tchannel):
+    return Peer(tchannel, "localhost:4040")
 
 
 @pytest.mark.gen_test
-def test_get_peer_out_caching(peer):
+def test_peer_caching(tchannel, peer):
     "Connections are long-lived and should not be recreated."""
-    tchannel = TChannel()
-    tchannel.out_peers = {'foo': peer}
-    result = yield tchannel.get_peer('foo')
-    assert result == "some connection"
-
-
-@pytest.mark.gen_test
-def test_get_peer_in_caching(peer):
-    "Connections are long-lived and should not be recreated."""
-    tchannel = TChannel()
-    tchannel.out_peers = {'foo': peer}
-    tchannel.in_peers = [('foo', peer), ('foo', concurrent.Future())]
-    result = yield tchannel.get_peer('foo')
-    assert result == "some connection"
-
-
-@pytest.mark.gen_test
-def test_get_peer_with_caching(peer):
-    tchannel = TChannel()
-    tchannel.out_peers = {'foo': peer}
-    result = yield tchannel.get_peer('foo')
-    assert result == "some connection"
+    tchannel.peers.add(peer)
+    assert tchannel.peers.get("localhost:4040") is peer

@@ -6,6 +6,7 @@ exclude_lines =
   pragma: no cover
   raise NotImplementedError
   def __repr__
+  def __str__
 
 [xml]
 output = coverage.xml

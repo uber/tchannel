@@ -22,30 +22,30 @@ from __future__ import absolute_import
 
 import sys
 import logging
-import weakref
 
+from enum import IntEnum
 import os
 import tornado.gen
 import tornado.ioloop
 import tornado.tcpserver
 import tornado.iostream
-
-try:
-    from tornado import queues
-except ImportError:
-    import toro as queues
+from tornado.netutil import bind_sockets
 
 from ..net import local_ip
-from .dispatch import Request
+from .peer import PeerManager
 from .connection import StreamConnection
 from ..handler import CallableRequestHandler
-from ..exceptions import InvalidMessageException
 
 log = logging.getLogger('tchannel')
 
 
-class TChannel(object):
+class State(IntEnum):
+    ready = 0
+    closing = 1
+    closed = 2
 
+
+class TChannel(object):
     """Manages inbound and outbound connections to various hosts.
 
     This class is a singleton. All instances of it are the same. If you need
@@ -61,124 +61,88 @@ class TChannel(object):
         :param ignore_singleton:
             If given, this instance will not re-use the existing singleton.
         """
-        self.closed = False
+        self._state = State.ready
+        self.peers = PeerManager(self)
+
         if hostport:
-            self._host, self._port = hostport.rsplit(':', 1)
-            self._port = int(self._port)
+            self.host, port = hostport.rsplit(':', 1)
+            self.port = int(port)
         else:
-            self._host = local_ip()
-            self._port = 0
+            self.host = local_ip()
+            self.port = 0
+
         self.process_name = process_name or "%s[%s]" % (
             sys.argv[0], os.getpid()
         )
 
-        # Map of hostport to StreamConnection to that host.
-        self.out_peers = {}
-        # TODO: This should be a list so that we can make multiple outgoing
-        # connection to the same host.
-
-        # List of (hostport, StreamConnection) for different hosts. This is
-        # a list because we expect multiple connections from the same host.
-        self.in_peers = []
-
-        # RequestHandler to handle calls.
+        # RequestHandler to handle incoming calls.
         self._handler = None
 
-        # Queue of (context, connection) for all outstanding calls. The
-        # context must contain complete actionable messages, not fragments.
-        self.outstanding_calls = queues.Queue()
+    @property
+    def closed(self):
+        return self._state == State.closed
 
-        self._loop()
-
+    @tornado.gen.coroutine
     def close(self):
-        self.closed = True
-        # TODO close all connections
+        if self._state in [State.closed, State.closing]:
+            raise tornado.gen.Return(None)
+
+        self._state = State.closing
+        try:
+            yield self.peers.reset()
+        finally:
+            self._state = State.closed
 
     @property
     def hostport(self):
-        return "%s:%d" % (self._host, self._port)
+        return "%s:%d" % (self.host, self.port)
+
+    def request(self, hostport=None, service=None, **kwargs):
+        return self.peers.request(hostport=hostport, service=service, **kwargs)
+
+    def listen(self, handler):
+        assert (
+            not self._handler or self._handler is handler
+        ), "TChannel already has a handler set."
+
+        self._handler = handler
+        server = TChannelServer(self)
+
+        sockets = bind_sockets(self.port)
+        assert sockets, "No sockets bound for port %d" % self.port
+
+        # If port was 0, the OS probably assigned something better.
+        self.port = sockets[0].getsockname()[1]
+
+        server.add_sockets(sockets)
 
     @tornado.gen.coroutine
-    def _loop(self):
-        while not self.closed:
-            (context, connection) = yield self.outstanding_calls.get()
-            log.debug("Received request %s from %s", context, connection)
-            self._handler.handle(context, connection)
-
-    # TODO: Connection cleanup
-
-    def get_peer(self, hostport):
-        """Get a connection to the given host.
-
-        If a connection to or from that host already exists, use that;
-        otherwise create a new outgoing connection to it.
-
-        :param hostport:
-            Target host
-        :return:
-            A Future that produces a StreamConnection
-        """
-        if hostport in self.out_peers:
-            return self.out_peers[hostport]
-
-        matches = [conn for (h, conn) in self.in_peers if h == hostport]
-        if matches:
-            log.debug("Re-using incoming connection from %s", hostport)
-            return tornado.gen.maybe_future(matches[0])
-            # TODO: should this be random instead?
-        else:
-            log.debug("Creating new connection to %s", hostport)
-            self.out_peers[hostport] = StreamConnection.outgoing(
-                hostport,
-                serve_hostport=self.hostport,
-                handler=CallableRequestHandler(self._handle_client_call),
+    def receive_call(self, context, connection):
+        if not self._handler:
+            log.warn(
+                "Received %s but a handler has not been defined.", context
             )
-            return self.out_peers[hostport]
-
-    def request(self, hostport, service=None):
-        return TChannelClientOperation(hostport, service, self)
-
-    def host(self, handler):
-        self._handler = handler
-        return TChannelServerOperation(self)
-
-    def _handle_client_call(self, context, connection):
-        self.outstanding_calls.put((context, connection))
+            return
+        self._handler.handle(context, connection)
 
 
-class CallableTCPServer(tornado.tcpserver.TCPServer):
-
-    def __init__(self, f):
-        super(CallableTCPServer, self).__init__()
-        assert f
-        self._f = f
-
-    def handle_stream(self, stream, address):
-        return self._f(stream, address)
-
-
-class TChannelServerOperation(object):
+class TChannelServer(tornado.tcpserver.TCPServer):
     __slots__ = ('tchannel',)
 
     def __init__(self, tchannel):
-        self.tchannel = weakref.ref(tchannel)
-
-    def listen(self, port):
-        # TODO We'll allow only one listen() in the future. All the necessary
-        # information is available in the hostport argument given to
-        # TChannel() so this argument shouldn't be necessary.
-        self.tchannel()._port = port
-        CallableTCPServer(self._handle_stream).listen(port)
+        super(TChannelServer, self).__init__()
+        self.tchannel = tchannel
 
     @tornado.gen.coroutine
-    def _handle_stream(self, stream, address):
+    def handle_stream(self, stream, address):
         log.debug("New incoming connection from %s:%d" % address)
+        # TODO peer how do
         conn = StreamConnection(connection=stream)
 
         # FIXME: This should the address at which we can be reached.
         yield conn.expect_handshake(headers={
             'host_port': '%s:%s' % address,
-            'process_name': self.tchannel().process_name,
+            'process_name': self.tchannel.process_name,
         })
 
         log.debug(
@@ -187,42 +151,8 @@ class TChannelServerOperation(object):
             conn.remote_process_name,
         )
 
-        self.tchannel().in_peers.append((conn.remote_host, conn))
-        # TODO cleanup on connection close?
-
+        self.tchannel.peers.get(conn.remote_host).register_incoming(conn)
         yield conn.serve(handler=CallableRequestHandler(self._handle))
 
     def _handle(self, context, connection):
-        self.tchannel().outstanding_calls.put((context, connection))
-
-
-class TChannelClientOperation(object):
-    __slots__ = ('hostport', 'message_id', 'service', 'tchannel')
-
-    def __init__(self, hostport, service, tchannel):
-        self.hostport = hostport
-        self.message_id = None
-        self.service = service or ''
-        self.tchannel = weakref.ref(tchannel)
-
-    @tornado.gen.coroutine
-    def send(self, arg_1, arg_2, arg_3):
-        peer_connection = yield self.tchannel().get_peer(self.hostport)
-        self.message_id = peer_connection.next_message_id()
-
-        request = Request(
-            service=self.service,
-            argstreams=[arg_1,
-                        arg_2,
-                        arg_3],
-            id=self.message_id,
-        )
-        response_future = peer_connection.send_request(request)
-        response = yield response_future
-
-        log.debug("Got response %s", response)
-
-        if not response:
-            raise InvalidMessageException()
-
-        raise tornado.gen.Return(response)
+        self.tchannel.receive_call(context, connection)
