@@ -55,7 +55,6 @@ function TChannelRequest(channel, options) {
     self.end = 0;
     self.elapsed = 0;
     self.resendSanity = 0;
-
     self.service = options.service || '';
     self.headers = self.options.headers || {}; // so that as-foo can punch req.headers.X
     self.options.headers = self.headers; // for passing to peer.request(opts) later
@@ -64,8 +63,10 @@ function TChannelRequest(channel, options) {
     self.arg2 = null;
     self.arg3 = null;
 
+    self._callback = null;
     self.err = null;
     self.res = null;
+
     self.on('error', self.onError);
     self.on('response', self.onResponse);
 }
@@ -82,40 +83,43 @@ TChannelRequest.prototype.onError = function onError(err) {
     var self = this;
     if (!self.end) self.end = self.timers.now();
     self.err = err;
+
+    if (self._callback) {
+        self._callback(err, null, null, null);
+        self._callback = null;
+    }
 };
 
 TChannelRequest.prototype.onResponse = function onResponse(res) {
     var self = this;
     if (!self.end) self.end = self.timers.now();
     self.res = res;
-};
 
-TChannelRequest.prototype.hookupStreamCallback = function hookupCallback(callback) {
-    throw new Error('not implemented');
+    if (self._callback) {
+        if (!res.streamed) {
+            self._callback(null, res, res.arg2, res.arg3);
+            self._callback = null;
+        } else {
+            parallel({
+                arg2: res.arg2.onValueReady,
+                arg3: res.arg3.onValueReady
+            }, compatCall);
+        }
+    }
+
+    function compatCall(err, args) {
+        self._callback(err, res, args.arg2, args.arg3);
+        self._callback = null;
+    }
 };
 
 TChannelRequest.prototype.hookupCallback = function hookupCallback(callback) {
     var self = this;
     if (callback.canStream) {
-        return self.hookupStreamCallback(callback);
+        throw new Error('not implemented');
+    } else {
+        self._callback = callback;
     }
-    var called = false;
-
-    self.on('error', onError);
-    self.on('response', onResponse);
-
-    function onError(err) {
-        if (called) return;
-        called = true;
-        callback(err, null, null, null);
-    }
-
-    function onResponse(res) {
-        if (called) return;
-        called = true;
-        withArg23(res, callback);
-    }
-
     return self;
 };
 
