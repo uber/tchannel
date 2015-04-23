@@ -20,13 +20,11 @@
 
 'use strict';
 
-var InRequest = require('./in_request');
 var InResponse = require('./in_response');
-var StreamingInRequest = require('./streaming_in_request');
 var StreamingInResponse = require('./streaming_in_response');
-var OutRequest = require('./out_request');
+var OutRequest = require('./self_out_request').OutRequest;
 var OutResponse = require('./out_response');
-var StreamingOutRequest = require('./streaming_out_request');
+var StreamingOutRequest = require('./self_out_request').StreamingOutRequest;
 var StreamingOutResponse = require('./streaming_out_response');
 
 var inherits = require('util').inherits;
@@ -52,65 +50,19 @@ TChannelSelfConnection.prototype.buildOutRequest = function buildOutRequest(opti
     options.logger = self.logger;
     options.random = self.random;
     options.timers = self.timers;
-    options.sendFrame = {
-        callRequest: passParts,
-        callRequestCont: passParts
-    };
     options.tracer = self.tracer;
+    options.hostPort = self.channel.hostPort;
     var outreq;
     if (options.streamed) {
-        outreq = new StreamingOutRequest(id, options);
+        outreq = new StreamingOutRequest(self, id, options);
     } else {
-        outreq = new OutRequest(id, options);
+        outreq = new OutRequest(self, id, options);
     }
-
-    if (outreq.span) {
-        options.tracing = outreq.span.getTracing();
-    }
-    options.hostPort = self.channel.hostPort;
-
-    var inreq;
-    if (options.streamed) {
-        inreq = new StreamingInRequest(id, options);
-    } else {
-        inreq = new InRequest(id, options);
-    }
-
-    var called = false;
-    inreq.on('error', onError);
-    inreq.on('response', onResponse);
-    inreq.outreq = outreq; // TODO: make less hacky when have proper subclasses
-
     process.nextTick(handleRequest);
-
     return outreq;
 
     function handleRequest() {
-        inreq.headers = outreq.headers;
-
-        self.handleCallRequest(inreq);
-    }
-
-    function onError(err) {
-        if (called) return;
-        called = true;
-        self.popOutReq(id);
-        inreq.removeListener('response', onResponse);
-        outreq.emit('error', err);
-    }
-
-    function onResponse(res) {
-        if (called) return;
-        called = true;
-        self.popOutReq(id);
-        inreq.removeListener('error', onError);
-        outreq.emit('response', res);
-    }
-
-    function passParts(args, isLast ) {
-        inreq.handleFrame(args);
-        if (isLast) inreq.handleFrame(null);
-        if (!self.closing) self.lastTimeoutTime = 0;
+        self.handleCallRequest(outreq.inreq);
     }
 };
 
