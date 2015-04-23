@@ -48,6 +48,8 @@ function StreamingInRequest(id, options) {
 
 inherits(StreamingInRequest, InRequest);
 
+StreamingInRequest.prototype.type = 'tchannel.incoming-request.streaming';
+
 StreamingInRequest.prototype.handleFrame = function handleFrame(parts) {
     var self = this;
     self._argstream.handleFrame(parts);
