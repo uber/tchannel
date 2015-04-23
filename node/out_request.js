@@ -72,6 +72,7 @@ function TChannelOutRequest(id, options) {
         self.span = null;
     }
 
+    self._callback = null;
     self.err = null;
     self.res = null;
     self.timedOut = false;
@@ -104,6 +105,11 @@ TChannelOutRequest.prototype.onError = function onError(err) {
     var self = this;
     if (!self.end) self.end = self.timers.now();
     self.err = err;
+
+    if (self._callback) {
+        self._callback(err, null, null);
+        self._callback = null;
+    }
 };
 
 TChannelOutRequest.prototype.onResponse = function onResponse(res) {
@@ -111,6 +117,26 @@ TChannelOutRequest.prototype.onResponse = function onResponse(res) {
     if (!self.end) self.end = self.timers.now();
     self.res = res;
     self.res.span = self.span;
+
+    if (self._callback) {
+        if (self._callback.canStream) {
+            self._callback(null, self, res);
+            self._callback = null;
+        } else if (!res.streamed) {
+            self._callback(null, res, res.arg2, res.arg3);
+            self._callback = null;
+        } else {
+            parallel({
+                arg2: res.arg2.onValueReady,
+                arg3: res.arg3.onValueReady
+            }, compatCall);
+        }
+    }
+
+    function compatCall(err, args) {
+        self._callback(err, res, args.arg2, args.arg3);
+        self._callback = null;
+    }
 };
 
 TChannelOutRequest.prototype.sendParts = function sendParts(parts, isLast) {
@@ -195,60 +221,9 @@ TChannelOutRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     return self;
 };
 
-TChannelOutRequest.prototype.hookupStreamCallback = function hookupCallback(callback) {
-    var self = this;
-    var called = false;
-
-    self.on('error', onError);
-    self.on('response', onResponse);
-
-    function onError(err) {
-        if (called) return;
-        called = true;
-        callback(err, null, null);
-    }
-
-    function onResponse(res) {
-        if (called) return;
-        called = true;
-        callback(null, self, res);
-    }
-
-    return self;
-};
-
 TChannelOutRequest.prototype.hookupCallback = function hookupCallback(callback) {
     var self = this;
-    if (callback.canStream) {
-        return self.hookupStreamCallback(callback);
-    }
-    var called = false;
-
-    self.on('error', onError);
-    self.on('response', onResponse);
-
-    function onError(err) {
-        if (called) return;
-        called = true;
-        callback(err, null, null);
-    }
-
-    function onResponse(res) {
-        if (called) return;
-        called = true;
-        if (!res.streamed) {
-            callback(null, res, res.arg2, res.arg3);
-            return;
-        }
-        parallel({
-            arg2: res.arg2.onValueReady,
-            arg3: res.arg3.onValueReady
-        }, compatCall);
-        function compatCall(err, args) {
-            callback(err, res, args.arg2, args.arg3);
-        }
-    }
-
+    self._callback = callback;
     return self;
 };
 
