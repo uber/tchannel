@@ -46,8 +46,8 @@ function TChannelConnectionBase(channel, direction, remoteAddr) {
 
     // TODO: factor out an operation collection abstraction
     self.requests = {
-        in: Object.create(null),
-        out: Object.create(null)
+        in: {},
+        out: {}
     };
     self.pending = {
         in: 0,
