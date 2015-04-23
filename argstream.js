@@ -37,7 +37,7 @@
  */
 
 var inherits = require('util').inherits;
-var EventEmitter = require('events').EventEmitter;
+var EventEmitter = require('./lib/event_emitter');
 var PassThrough = require('readable-stream').PassThrough;
 var Ready = require('ready-signal');
 var errors = require('./errors');
@@ -45,6 +45,10 @@ var errors = require('./errors');
 function ArgStream() {
     var self = this;
     EventEmitter.call(self);
+    self.errorEvent = self.defineEvent('error');
+    self.frameEvent = self.defineEvent('frame');
+    self.finishEvent = self.defineEvent('finish');
+
     self.arg1 = StreamArg();
     self.arg2 = StreamArg();
     self.arg3 = StreamArg();
@@ -212,7 +216,7 @@ OutArgStream.prototype._flushParts = function _flushParts(isLast) {
     isLast = Boolean(isLast);
     var frame = self.frame;
     self.frame = [Buffer(0)];
-    if (frame.length) self.emit('frame', frame, isLast);
+    if (frame.length) self.emit('frame', [frame, isLast]);
 };
 
 function StreamArg(options) {

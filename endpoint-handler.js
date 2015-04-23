@@ -20,7 +20,7 @@
 
 'use strict';
 
-var EventEmitter = require('events').EventEmitter;
+var EventEmitter = require('./lib/event_emitter');
 var inherits = require('util').inherits;
 var parallel = require('run-parallel');
 var util = require('util');
@@ -32,6 +32,8 @@ function TChannelEndpointHandler(serviceName) {
     }
     var self = this;
     EventEmitter.call(self);
+    self.handleEndpointEvent = self.defineEvent('handleEndpoint');
+
     self.serviceName = serviceName;
     self.endpoints = Object.create(null);
 }
@@ -77,7 +79,10 @@ TChannelEndpointHandler.prototype.handleArg1 = function handleArg1(req, buildRes
     var name = String(arg1);
     var handler = self.endpoints[name];
     var res;
-    self.emit('handle.endpoint', name, handler);
+    self.emit('handleEndpoint', {
+        name: name,
+        handler: handler
+    });
     if (!handler) {
         res = buildResponse({streamed: false});
         res.sendError('BadRequest', util.format(
