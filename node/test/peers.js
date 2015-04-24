@@ -24,8 +24,6 @@ var parallel = require('run-parallel');
 
 var allocCluster = require('./lib/alloc-cluster');
 
-// clear()
-
 allocCluster.test('add a peer and request', {
     numPeers: 2
 }, function t(cluster, assert) {
@@ -156,7 +154,7 @@ allocCluster.test('clearing peers and requests', {
 
     function onResponse2(err, res) {
         assert.ok(err, 'expect request error');
-        assert.equal(err.type, 'tchannel.no-peer-available',
+        assert.equal(err && err.type, 'tchannel.no-peer-available',
             'expected no peer available');
 
         assert.end();
@@ -211,8 +209,76 @@ allocCluster.test('delete peer() on top channel', {
 
     function onResponses2(err) {
         assert.ok(err, 'expect an error');
-        assert.equal(err.type, 'tchannel.no-peer-available',
-            'expeced no peers available');
+        assert.equal(err && err.type, 'tchannel.no-peer-available',
+            'expected no peers available');
+
+        assert.equal(bob1.peers.keys().length, 0,
+            'bob1 has no peers');
+        assert.equal(bob2.peers.keys().length, 0,
+            'bob2 has no peers');
+
+        assert.end();
+    }
+
+    function thunkSend(channel, reqOpts, arg1, arg2, arg3) {
+        /*eslint max-params: [2, 5]*/
+        return function thunk(cb) {
+            channel.request(reqOpts)
+                .send(arg1, arg2, arg3, cb);
+        };
+    }
+});
+
+allocCluster.test('peers.clear() on top channel', {
+    numPeers: 3
+}, function t(cluster, assert) {
+    var steve = cluster.channels[0];
+    var bob = cluster.channels[1];
+
+    setupEcho(steve, 'steve1');
+    setupEcho(steve, 'steve2');
+    var bob1 = bob.makeSubChannel({
+        serviceName: 'steve1'
+    });
+    var bob2 = bob.makeSubChannel({
+        serviceName: 'steve2'
+    });
+
+    bob1.peers.add(steve.hostPort);
+    bob2.peers.add(steve.hostPort);
+
+    parallel([
+        thunkSend(bob1, {
+            service: 'steve1'
+        }, 'echo', 'a', 'b'),
+        thunkSend(bob2, {
+            service: 'steve2'
+        }, 'echo', 'a', 'b')
+    ], onResponses);
+
+    function onResponses(err, results) {
+        assert.ifError(err, 'should not error');
+
+        results.forEach(function checkRes(resp) {
+            assert.ok(resp.ok, 'response should be ok');
+        });
+
+        bob.peers.clear();
+
+        parallel([
+            thunkSend(bob1, {
+                service: 'steve1'
+            }, 'echo', 'a', 'b'),
+            thunkSend(bob2, {
+                service: 'steve2'
+            }, 'echo', 'a', 'b')
+        ], onResponses2);
+    }
+
+    function onResponses2(err) {
+        assert.ok(err, 'expect an error');
+        assert.equal(err && err.type, 'tchannel.no-peer-available',
+            'expected no peers available');
 
         assert.equal(bob1.peers.keys().length, 0,
             'bob1 has no peers');
