@@ -42,9 +42,6 @@ function TChannelJSON(options) {
 
     self.logger = options && options.logger || NullLogtron();
 
-    var strictMode = options && options.strictMode;
-    self.strictMode = typeof strictMode === 'boolean' ? strictMode : true;
-
     var logParseFailures = options && options.logParseFailures;
     self.logParseFailures = typeof logParseFailures === 'boolean' ?
         logParseFailures : true;
@@ -157,7 +154,7 @@ TChannelJSON.prototype.register = function register(
                 'expected respObject to have a body');
 
             // Assert that body is an error
-            if (!respObject.ok && self.strictMode === true) {
+            if (!respObject.ok) {
                 if (!isTypedError(respObject.body)) {
                     throw new Error('expected body to be a typed error');
                 }
