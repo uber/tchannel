@@ -136,10 +136,11 @@ TChannelPeers.prototype.delete = function del(hostPort) {
     var self = this;
     var peer = self._map[hostPort];
     delete self._map[hostPort];
-    if (self.subChannels) {
-        var names = Object.keys(self.subChannels);
+    if (self.channel.subChannels) {
+        var names = Object.keys(self.channel.subChannels);
         for (var i = 0; i < names.length; i++) {
-            self.subChannels[names[i]].delete(hostPort);
+            var subChannel = self.channel.subChannels[names[i]];
+            subChannel.peers.delete(hostPort);
         }
     }
     return peer;

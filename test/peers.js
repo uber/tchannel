@@ -191,8 +191,13 @@ allocCluster.test('delete peer() on top channel', {
 
     function onResponses2(err) {
         assert.ok(err, 'expect an error');
+        assert.equal(err.type, 'tchannel.no-peer-available',
+            'expeced no peers available');
 
-        console.log('error', err);
+        assert.equal(bob1.peers.keys().length, 0,
+            'bob1 has no peers');
+        assert.equal(bob2.peers.keys().length, 0,
+            'bob2 has no peers');
 
         assert.end();
     }
