@@ -28,6 +28,9 @@ function TChannelAsThrift(opts) {
     var self = this;
     assert(opts && opts.spec, 'TChannelAsThrift expected spec');
     self.spec = opts.spec;
+
+    var bossMode = opts && opts.bossMode;
+    self.bossMode = typeof bossMode === 'boolean' ? bossMode : false;
 }
 
 TChannelAsThrift.prototype.register =
@@ -78,11 +81,16 @@ function register(channel, name, opts, handle) {
 
             var outRes = resultType.toBuffer(outResult);
 
-            var outBodyBuffer = outRes.toValue();
-            if (thriftRes.ok) {
-                return res.sendOk(null, outBodyBuffer);
+            if (outRes.err && self.bossMode) {
+                return res.sendError('UnexpectedError', outRes.err.message);
             } else {
-                return res.sendNotOk(null, outBodyBuffer);
+                var outHeadBuffer = null;
+                var outBodyBuffer = outRes.toValue();
+                if (thriftRes.ok) {
+                    return res.sendOk(outHeadBuffer, outBodyBuffer);
+                } else {
+                    return res.sendNotOk(outHeadBuffer, outBodyBuffer);
+                }
             }
         }
     }
