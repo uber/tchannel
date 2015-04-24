@@ -134,6 +134,7 @@ module.exports.InvalidHandlerForRegister = TypedError({
 module.exports.InvalidJSONBody = TypedError({
     type: 'tchannel-handler.json.invalid-body',
     message: 'Invalid error body, expected a typed-error',
+    isSerializationError: true,
     head: null,
     body: null
 });
