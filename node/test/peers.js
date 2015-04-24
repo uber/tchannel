@@ -24,8 +24,6 @@ var parallel = require('run-parallel');
 
 var allocCluster = require('./lib/alloc-cluster');
 
-// clear()
-
 allocCluster.test('add a peer and request', {
     numPeers: 2
 }, function t(cluster, assert) {
@@ -156,7 +154,7 @@ allocCluster.test('clearing peers and requests', {
 
     function onResponse2(err, res) {
         assert.ok(err, 'expect request error');
-        assert.equal(err.type, 'tchannel.no-peer-available',
+        assert.equal(err && err.type, 'tchannel.no-peer-available',
             'expected no peer available');
 
         assert.end();
@@ -211,8 +209,8 @@ allocCluster.test('delete peer() on top channel', {
 
     function onResponses2(err) {
         assert.ok(err, 'expect an error');
-        assert.equal(err.type, 'tchannel.no-peer-available',
-            'expeced no peers available');
+        assert.equal(err && err.type, 'tchannel.no-peer-available',
+            'expected no peers available');
 
         assert.equal(bob1.peers.keys().length, 0,
             'bob1 has no peers');
