@@ -65,7 +65,10 @@ allocCluster.test('request retries', {
     });
     var chan = client.makeSubChannel({
         serviceName: 'tristan',
-        peers: cluster.hosts
+        peers: cluster.hosts,
+        requestDefaults: {
+            serviceName: 'tristan'
+        }
     });
 
     var req = chan.request({
@@ -167,7 +170,10 @@ allocCluster.test('request application retries', {
     });
     var chan = client.makeSubChannel({
         serviceName: 'tristan',
-        peers: cluster.hosts
+        peers: cluster.hosts,
+        requestDefaults: {
+            serviceName: 'tristan'
+        }
     });
 
     var req = chan.request({
@@ -266,7 +272,10 @@ allocCluster.test('retryFlags work', {
     });
     var chan = client.makeSubChannel({
         serviceName: 'tristan',
-        peers: cluster.hosts
+        peers: cluster.hosts,
+        requestDefaults: {
+            serviceName: 'tristan'
+        }
     });
 
     series([
