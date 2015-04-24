@@ -125,6 +125,13 @@ TChannelPeers.prototype.clear = function clear() {
     var self = this;
     var keys = self.keys();
     var vals = new Array(keys.length);
+    if (self.channel.subChannels) {
+        var names = Object.keys(self.channel.subChannels);
+        for (var i = 0; i < names.length; i++) {
+            var subChannel = self.channel.subChannels[names[i]];
+            subChannel.peers._map = Object.create(null);
+        }
+    }
     self._map = Object.create(null);
     return vals;
 };
