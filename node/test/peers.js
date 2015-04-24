@@ -1,5 +1,7 @@
 'use strict';
 
+var parallel = require('run-parallel');
+
 var allocCluster = require('./lib/alloc-cluster');
 
 // clear()
@@ -138,6 +140,69 @@ allocCluster.test('clearing peers and requests', {
             'expected no peer available');
 
         assert.end();
+    }
+});
+
+allocCluster.test('delete peer() on top channel', {
+    numPeers: 3
+}, function t(cluster, assert) {
+    var steve = cluster.channels[0];
+    var bob = cluster.channels[1];
+
+    setupEcho(steve, 'steve1');
+    setupEcho(steve, 'steve2');
+    var bob1 = bob.makeSubChannel({
+        serviceName: 'steve1'
+    });
+    var bob2 = bob.makeSubChannel({
+        serviceName: 'steve2'
+    });
+
+    bob1.peers.add(steve.hostPort);
+    bob2.peers.add(steve.hostPort);
+
+    parallel([
+        thunkSend(bob1, {
+            service: 'steve1'
+        }, 'echo', 'a', 'b'),
+        thunkSend(bob2, {
+            service: 'steve2'
+        }, 'echo', 'a', 'b')
+    ], onResponses);
+
+    function onResponses(err, results) {
+        assert.ifError(err, 'should not error');
+
+        results.forEach(function checkRes(resp) {
+            assert.ok(resp.ok, 'response should be ok');
+        });
+
+        bob.peers.delete(steve.hostPort);
+
+        parallel([
+            thunkSend(bob1, {
+                service: 'steve1'
+            }, 'echo', 'a', 'b'),
+            thunkSend(bob2, {
+                service: 'steve2'
+            }, 'echo', 'a', 'b')
+        ], onResponses2);
+    }
+
+    function onResponses2(err) {
+        assert.ok(err, 'expect an error');
+
+        console.log('error', err);
+
+        assert.end();
+    }
+
+    function thunkSend(channel, reqOpts, arg1, arg2, arg3) {
+        /*eslint max-params: [2, 5]*/
+        return function thunk(cb) {
+            channel.request(reqOpts)
+                .send(arg1, arg2, arg3, cb);
+        };
     }
 });
 
