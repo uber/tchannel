@@ -32,7 +32,7 @@ import tornado.iostream
 from tornado.netutil import bind_sockets
 
 from ..net import local_ip
-from .peer import PeerManager
+from .peer import PeerGroup
 from .connection import StreamConnection
 from ..handler import CallableRequestHandler
 
@@ -62,7 +62,7 @@ class TChannel(object):
             If given, this instance will not re-use the existing singleton.
         """
         self._state = State.ready
-        self.peers = PeerManager(self)
+        self.peers = PeerGroup(self)
 
         if hostport:
             self.host, port = hostport.rsplit(':', 1)
@@ -89,7 +89,7 @@ class TChannel(object):
 
         self._state = State.closing
         try:
-            yield self.peers.reset()
+            yield self.peers.clear()
         finally:
             self._state = State.closed
 

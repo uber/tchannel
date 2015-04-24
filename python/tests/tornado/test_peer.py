@@ -60,24 +60,24 @@ def mocked_stream():
 
 
 def test_basic_peer_management_operations():
-    manager = tpeer.PeerManager(mock.MagicMock())
+    peer_group = tpeer.PeerGroup(mock.MagicMock())
 
-    assert not manager.hosts
-    assert not manager.peers
-    assert not manager.lookup('localhost:4040')
+    assert not peer_group.hosts
+    assert not peer_group.peers
+    assert not peer_group.lookup('localhost:4040')
 
-    p = manager.get('localhost:4040')
+    p = peer_group.get('localhost:4040')
 
     assert p
-    assert manager.lookup('localhost:4040') is p
-    assert manager.get('localhost:4040') is p
+    assert peer_group.lookup('localhost:4040') is p
+    assert peer_group.get('localhost:4040') is p
 
-    assert manager.remove('localhost:4040') is p
-    assert not manager.lookup('localhost:4040')
+    assert peer_group.remove('localhost:4040') is p
+    assert not peer_group.lookup('localhost:4040')
 
-    manager.add(p)
-    assert manager.hosts == ['localhost:4040']
-    assert manager.peers == [p]
+    peer_group.add(p)
+    assert peer_group.hosts == ['localhost:4040']
+    assert peer_group.peers == [p]
 
 
 @pytest.mark.parametrize('s, expected', [
@@ -95,25 +95,25 @@ def test_maybe_stream(s, expected):
 
 
 @pytest.mark.gen_test
-def test_peer_manager_reset_multiple():
+def test_peer_group_clear_multiple():
     # Multiple concurrent reset attempts should not conflict with each other.
 
-    manager = tpeer.PeerManager(mock.MagicMock())
+    peer_group = tpeer.PeerGroup(mock.MagicMock())
     for i in xrange(10):
-        manager.get('localhost:404%d' % i)
+        peer_group.get('localhost:404%d' % i)
 
     # A peer that will intentionally take a while to close.
     dirty_peer = mock.MagicMock()
     dirty_peer.close.side_effect = lambda: gen.sleep(0.1)
-    manager.add(dirty_peer)
+    peer_group.add(dirty_peer)
 
-    yield [manager.reset() for i in xrange(10)]
+    yield [peer_group.clear() for i in xrange(10)]
 
     # Dirty peer must have been closed only once.
     dirty_peer.close.assert_called_once_with()
 
     for i in xrange(10):
-        assert not manager.lookup('localhost:404%d' % i)
+        assert not peer_group.lookup('localhost:404%d' % i)
 
 
 @pytest.mark.gen_test

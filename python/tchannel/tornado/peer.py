@@ -43,14 +43,18 @@ from ..handler import CallableRequestHandler
 log = logging.getLogger('tchannel')
 
 
-class PeerManager(object):
-    """PeerManager is responsible for managing peer connections."""
+class PeerGroup(object):
+    """A PeerGroup represents a collection of Peers.
+
+    Requests routed through a PeerGroup can be sent to either a specific peer
+    or a peer chosen at random.
+    """
 
     def __init__(self, tchannel, score_threshold=None):
-        """Initializes a new PeerManager.
+        """Initializes a new PeerGroup.
 
         :param tchannel:
-            The TChannel for which this manager will manage peers.
+            TChannel used for communication by this PeerGroup
         :param score_threshold:
             If specified, this requires that chosen peers have a score higher
             than this value when performing requests.
@@ -68,21 +72,21 @@ class PeerManager(object):
         self._reset_condition = Condition()
 
     def __str__(self):
-        return "<PeerManager peers=%s>" % str(self._peers)
+        return "<PeerGroup peers=%s>" % str(self._peers)
 
     @gen.coroutine
-    def reset(self):
-        """Reset this PeerManager.
+    def clear(self):
+        """Reset this PeerGroup.
 
-        This closes all managed peers and connections and clears this
-        manager. The manager may be used again after being reset.
+        This closes all connections to all known peers and forgets about
+        these peers.
 
         :returns:
             A Future that resolves with a value of None when the operation
             has finished
         """
         if self._resetting:
-            # If someone else is already resetting the PeerManager, just block
+            # If someone else is already resetting the PeerGroup, just block
             # on them to be finished.
             yield self._reset_condition.wait()
             raise gen.Return(None)
@@ -125,9 +129,9 @@ class PeerManager(object):
         return self._peers.pop(hostport, None)
 
     def add(self, peer):
-        """Add an existing Peer to this manager.
+        """Add an existing Peer to this group.
 
-        A peer for the given host-port must not exist in the manager.
+        A peer for the given host-port must not already exist in the group.
         """
         assert peer, "peer is required"
         assert peer.hostport not in self._peers, (
@@ -138,18 +142,25 @@ class PeerManager(object):
 
     @property
     def hosts(self):
-        """Get all host-ports managed by this PeerManager."""
+        """Get all host-ports managed by this PeerGroup."""
         return self._peers.keys()
 
     @property
     def peers(self):
-        """Get all Peers managed by this PeerManager."""
+        """Get all Peers managed by this PeerGroup."""
         return self._peers.values()
 
     def request(self, **kwargs):
-        """Initiate a new request through this PeerManager.
+        """Initiate a new request through this PeerGroup.
 
-        Accepts all arguments accepted by ``choose``.
+        :param hostport:
+            If specified, requests will be sent to the specific host.
+            Otherwise, a known peer will be picked at random.
+        :param service:
+            Name of the service being called. Defaults to an empty string.
+        :param service_threshold:
+            If ``hostport`` was not specified, this specifies the score
+            threshold at or below which peers will be ignored.
         """
         return self.choose(
             hostport=kwargs.pop('hostport', None),
@@ -163,11 +174,11 @@ class PeerManager(object):
 
         :param hostport:
             Specifies that the returned Peer must be for the given host-port.
-            Without this, all peers managed by this PeerManager are
+            Without this, all peers managed by this PeerGroup are
             candidates. If this is present, ``score_threshold`` is ignored.
         :param score_threshold:
             If specified, Peers with a score equal to or below this will be
-            ignored. Defaults to the value specified when the PeerManager was
+            ignored. Defaults to the value specified when the PeerGroup was
             initialized.
         :returns:
             A Peer that matches all the requested criteria or None if no such
@@ -337,7 +348,7 @@ class Peer(object):
 
     @gen.coroutine
     def close(self):
-        # TODO: Debounce like PeerManager?
+        # TODO: Debounce like PeerGroup?
         yield [connection.close() for connection in self.connections]
 
 
