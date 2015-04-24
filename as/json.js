@@ -158,10 +158,7 @@ TChannelJSON.prototype.register = function register(
 
             // Assert that body is an error
             if (!respObject.ok && self.strictMode === true) {
-                if (
-                    !isError(respObject.body) ||
-                    typeof respObject.body.type !== 'string'
-                ) {
+                if (!isTypedError(respObject.body)) {
                     throw new Error('expected body to be a typed error');
                 }
             }
@@ -281,6 +278,11 @@ function TChannelJSONResponse(ok, head, body) {
     self.ok = ok;
     self.head = head;
     self.body = body;
+}
+
+function isTypedError(obj) {
+    return isError(obj) &&
+           typeof obj.type === 'string';
 }
 
 function safeJSONStringify(obj) {
