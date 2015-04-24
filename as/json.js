@@ -42,6 +42,9 @@ function TChannelJSON(options) {
 
     self.logger = options && options.logger || NullLogtron();
 
+    var bossMode = options && options.bossMode;
+    self.bossMode = typeof bossMode === 'boolean' ? bossMode : false;
+
     var logParseFailures = options && options.logParseFailures;
     self.logParseFailures = typeof logParseFailures === 'boolean' ?
         logParseFailures : true;
@@ -148,15 +151,23 @@ TChannelJSON.prototype.register = function register(
                 return res.sendError('UnexpectedError', 'Unexpected Error');
             }
 
-            assert(typeof respObject.ok === 'boolean',
-                'expected respObject to have an `ok` boolean');
-            assert(respObject.body !== undefined,
-                'expected respObject to have a body');
-
-            // Assert that body is an error
-            if (!respObject.ok) {
-                assert(isTypedError(respObject.body),
-                    'not-ok body should be a typed error');
+            if (!self.bossMode) {
+                assert(typeof respObject.ok === 'boolean',
+                    'expected respObject to have an `ok` boolean');
+                assert(respObject.body !== undefined,
+                    'expected respObject to have a body');
+                // Assert that body is an error
+                if (!respObject.ok) {
+                    assert(isTypedError(respObject.body),
+                        'not-ok body should be a typed error');
+                }
+            } else if (typeof respObject.ok !== 'boolean' ||
+                       respObject.body === undefined ||
+                       !(respObject.ok || isTypedError(respObject.body))) {
+                respObject.body = errors.InvalidJSONBody({
+                    head: respObject.head,
+                    body: respObject.body
+                });
             }
 
             var stringifyResult = self._stringify({

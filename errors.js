@@ -131,6 +131,13 @@ module.exports.InvalidHandlerForRegister = TypedError({
     handler: null
 });
 
+module.exports.InvalidJSONBody = TypedError({
+    type: 'tchannel-handler.json.invalid-body',
+    message: 'Invalid error body, expected a typed-error',
+    head: null,
+    body: null
+});
+
 module.exports.MissingInitHeaderError = TypedError({
     type: 'tchannel.missing-init-header',
     message: 'missing init frame header {field}',
