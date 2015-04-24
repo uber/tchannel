@@ -46,12 +46,13 @@ allocCluster.test('send relay requests', {
     });
     var twoClient = client.makeSubChannel({
         serviceName: 'two',
-        peers: [one.hostPort]
+        peers: [one.hostPort],
+        requestDefaults: {
+            serviceName: 'two'
+        }
     });
 
-    twoClient.request({
-        service: 'two'
-    }).send('echo', 'foo', 'bar', function done(err, res, arg2, arg3) {
+    twoClient.request().send('echo', 'foo', 'bar', function done(err, res, arg2, arg3) {
         assert.ifError(err, 'no unexpected error');
         assert.equal(String(arg2), 'foo', 'expected arg2');
         assert.equal(String(arg3), 'bar', 'expected arg3');
@@ -93,12 +94,13 @@ allocCluster.test('relay an error frame', {
     });
     var twoClient = client.makeSubChannel({
         serviceName: 'two',
-        peers: [one.hostPort, four.hostPort]
+        peers: [one.hostPort, four.hostPort],
+        requestDefaults: {
+            serviceName: 'two'
+        }
     });
 
-    twoClient.request({
-        service: 'two'
-    }).send('decline', 'foo', 'bar', function done(err, res, arg2, arg3) {
+    twoClient.request().send('decline', 'foo', 'bar', function done(err, res, arg2, arg3) {
         assert.equal(err.type, 'tchannel.declined', 'expected declined error');
 
         assert.end();
