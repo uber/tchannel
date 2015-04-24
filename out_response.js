@@ -58,6 +58,30 @@ inherits(TChannelOutResponse, EventEmitter);
 
 TChannelOutResponse.prototype.type = 'tchannel.outgoing-response';
 
+TChannelOutResponse.prototype._sendCallResponse = function _sendCallResponse(args, isLast) {
+    var self = this;
+    throw errors.UnimplementedMethod({
+        className: self.constructor.name,
+        methodName: '_sendCallResponse'
+    });
+};
+
+TChannelOutResponse.prototype._sendCallResponseCont = function _sendCallResponseCont(args, isLast) {
+    var self = this;
+    throw errors.UnimplementedMethod({
+        className: self.constructor.name,
+        methodName: '_sendCallResponseCont'
+    });
+};
+
+TChannelOutResponse.prototype._sendError = function _sendError(codeString, message) {
+    var self = this;
+    throw errors.UnimplementedMethod({
+        className: self.constructor.name,
+        methodName: '_sendError'
+    });
+};
+
 TChannelOutResponse.prototype.onFinish = function onFinish() {
     var self = this;
     if (!self.end) self.end = self.timers.now();
