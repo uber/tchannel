@@ -37,6 +37,27 @@ module.exports.ArgChunkOutOfOrderError = TypedError({
     got: null
 });
 
+module.exports.BodyParserError = WrappedError({
+    type: 'tchannel-handler.parse-error.body-failed',
+    message: 'Could not parse body (arg3) argument.\n' +
+        'Expected JSON encoded arg3 for endpoint {endpoint}.\n' +
+        'Got {bodyStr} instead of JSON.',
+    isSerializationError: true,
+    endpoint: null,
+    direction: null,
+    bodyStr: null
+});
+
+module.exports.BodyStringifyError = WrappedError({
+    type: 'tchannel-handler.stringify-error.body-failed',
+    message: 'Could not stringify body (res2) argument.\n' +
+        'Expected JSON serializable res2 for endpoint {endpoint}.',
+    isSerializationError: true,
+    endpoint: null,
+    body: null,
+    direction: null
+});
+
 module.exports.ChecksumError = TypedError({
     type: 'tchannel.checksum',
     message: 'invalid checksum (type {checksumType}) expected: {expectedValue} actual: {actualValue}',
@@ -53,6 +74,27 @@ module.exports.DuplicateHeaderKeyError = TypedError({
     key: null,
     value: null,
     priorValue: null
+});
+
+module.exports.HeadParserError = WrappedError({
+    type: 'tchannel-handler.parse-error.head-failed',
+    message: 'Could not parse head (arg2) argument.\n' +
+        'Expected JSON encoded arg2 for endpoint {endpoint}.\n' +
+        'Got {headStr} instead of JSON.',
+    isSerializationError: true,
+    endpoint: null,
+    direction: null,
+    headStr: null
+});
+
+module.exports.HeadStringifyError = WrappedError({
+    type: 'tchannel-handler.stringify-error.head-failed',
+    message: 'Could not stringify head (res1) argument.\n' +
+        'Expected JSON serializable res1 for endpoint {endpoint}.',
+    isSerializationError: true,
+    endpoint: null,
+    head: null,
+    direction: null
 });
 
 module.exports.InvalidArgumentError = TypedError({
@@ -111,6 +153,12 @@ module.exports.NullKeyError = TypedError({
     message: 'null key',
     offset: null,
     endOffset: null
+});
+
+module.exports.ReconstructedError = TypedError({
+    type: 'tchannel.hydrated-error.default-type',
+    message: 'TChannel json hydrated error;' +
+        ' this message should be replaced with an upstream error message'
 });
 
 module.exports.ResponseAlreadyStarted = TypedError({
@@ -205,55 +253,6 @@ module.exports.TopLevelRequestError = TypedError({
     type: 'tchannel.top-level-request',
     message: 'Cannot make request() on top level tchannel without service or host.\n' +
         'Must provide either a known service, a direct host, or use a sub channel directly.'
-});
-
-module.exports.HeadParserError = WrappedError({
-    type: 'tchannel-handler.parse-error.head-failed',
-    message: 'Could not parse head (arg2) argument.\n' +
-        'Expected JSON encoded arg2 for endpoint {endpoint}.\n' +
-        'Got {headStr} instead of JSON.',
-    isSerializationError: true,
-    endpoint: null,
-    direction: null,
-    headStr: null
-});
-
-module.exports.BodyParserError = WrappedError({
-    type: 'tchannel-handler.parse-error.body-failed',
-    message: 'Could not parse body (arg3) argument.\n' +
-        'Expected JSON encoded arg3 for endpoint {endpoint}.\n' +
-        'Got {bodyStr} instead of JSON.',
-    isSerializationError: true,
-    endpoint: null,
-    direction: null,
-    bodyStr: null
-});
-
-module.exports.HeadStringifyError = WrappedError({
-    type: 'tchannel-handler.stringify-error.head-failed',
-    message: 'Could not stringify head (res1) argument.\n' +
-        'Expected JSON serializable res1 for endpoint {endpoint}.',
-    isSerializationError: true,
-    endpoint: null,
-    head: null,
-    direction: null
-});
-
-module.exports.BodyStringifyError = WrappedError({
-    type: 'tchannel-handler.stringify-error.body-failed',
-    message: 'Could not stringify body (res2) argument.\n' +
-        'Expected JSON serializable res2 for endpoint {endpoint}.',
-    isSerializationError: true,
-    endpoint: null,
-    body: null,
-    direction: null
-});
-
-// # ReconstructedError
-module.exports.ReconstructedError = TypedError({
-    type: 'tchannel.hydrated-error.default-type',
-    message: 'TChannel json hydrated error;' +
-        ' this message should be replaced with an upstream error message'
 });
 
 
