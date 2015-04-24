@@ -47,12 +47,12 @@ type TChannelOutboundProtocol struct {
 	options             OutboundOptions
 
 	// state per call
-	remoteOperationName string
-	call                *tchannel.OutboundCall
-	writer              *thrift.TBinaryProtocol
-	writeBuffer         *MemoryBufferTransport
-	reader              *thrift.TBinaryProtocol
-	readBuffer          *MemoryBufferTransport
+	remoteOperationName      string
+	call                     *tchannel.OutboundCall
+	DelegatingOutputProtocol // thrift writer
+	writeBuffer              *MemoryBufferTransport
+	DelegatingInputProtocol  // thrift reader
+	readBuffer               *MemoryBufferTransport
 }
 
 func (p *TChannelOutboundProtocol) makeArg1() string {
@@ -65,115 +65,15 @@ func (p *TChannelOutboundProtocol) makeArg1() string {
 func (p *TChannelOutboundProtocol) WriteMessageBegin(name string, typeId thrift.TMessageType, seqId int32) error {
 	p.remoteOperationName = name
 	p.writeBuffer = NewMemoryBufferTransport()
-	p.writer = thrift.NewTBinaryProtocol(p.writeBuffer, false, false)
-	return p.writer.WriteMessageBegin("" /* name goes in arg1 */, typeId, seqId)
-}
-
-// WriteMessageEnd delegates to the TBinaryProtocol writer
-func (p *TChannelOutboundProtocol) WriteMessageEnd() error {
-	return p.writer.WriteMessageEnd()
-}
-
-// WriteStructBegin delegates to the TBinaryProtocol writer
-func (p *TChannelOutboundProtocol) WriteStructBegin(name string) error {
-	return p.writer.WriteStructBegin(name)
-}
-
-// WriteStructEnd delegates to the TBinaryProtocol writer
-func (p *TChannelOutboundProtocol) WriteStructEnd() error {
-	return p.writer.WriteStructEnd()
-}
-
-// WriteFieldBegin delegates to the TBinaryProtocol writer
-func (p *TChannelOutboundProtocol) WriteFieldBegin(name string, typeId thrift.TType, id int16) error {
-	return p.writer.WriteFieldBegin(name, typeId, id)
-}
-
-// WriteFieldEnd delegates to the TBinaryProtocol writer
-func (p *TChannelOutboundProtocol) WriteFieldEnd() error {
-	return p.writer.WriteFieldEnd()
-}
-
-// WriteFieldStop delegates to the TBinaryProtocol writer
-func (p *TChannelOutboundProtocol) WriteFieldStop() error {
-	return p.writer.WriteFieldStop()
-}
-
-// WriteMapBegin delegates to the TBinaryProtocol writer
-func (p *TChannelOutboundProtocol) WriteMapBegin(keyType thrift.TType, valueType thrift.TType, size int) error {
-	return p.writer.WriteMapBegin(keyType, valueType, size)
-}
-
-// WriteMapEnd delegates to the TBinaryProtocol writer
-func (p *TChannelOutboundProtocol) WriteMapEnd() error {
-	return p.writer.WriteMapEnd()
-}
-
-// WriteListBegin delegates to the TBinaryProtocol writer
-func (p *TChannelOutboundProtocol) WriteListBegin(elemType thrift.TType, size int) error {
-	return p.writer.WriteListBegin(elemType, size)
-}
-
-// WriteListEnd delegates to the TBinaryProtocol writer
-func (p *TChannelOutboundProtocol) WriteListEnd() error {
-	return p.writer.WriteListEnd()
-}
-
-// WriteSetBegin delegates to the TBinaryProtocol writer
-func (p *TChannelOutboundProtocol) WriteSetBegin(elemType thrift.TType, size int) error {
-	return p.writer.WriteSetBegin(elemType, size)
-}
-
-// WriteSetEnd delegates to the TBinaryProtocol writer
-func (p *TChannelOutboundProtocol) WriteSetEnd() error {
-	return p.writer.WriteSetEnd()
-}
-
-// WriteBool delegates to the TBinaryProtocol writer
-func (p *TChannelOutboundProtocol) WriteBool(value bool) error {
-	return p.writer.WriteBool(value)
-}
-
-// WriteByte delegates to the TBinaryProtocol writer
-func (p *TChannelOutboundProtocol) WriteByte(value byte) error {
-	return p.writer.WriteByte(value)
-}
-
-// WriteI16 delegates to the TBinaryProtocol writer
-func (p *TChannelOutboundProtocol) WriteI16(value int16) error {
-	return p.writer.WriteI16(value)
-}
-
-// WriteI32 delegates to the TBinaryProtocol writer
-func (p *TChannelOutboundProtocol) WriteI32(value int32) error {
-	return p.writer.WriteI32(value)
-}
-
-// WriteI64 delegates to the TBinaryProtocol writer
-func (p *TChannelOutboundProtocol) WriteI64(value int64) error {
-	return p.writer.WriteI64(value)
-}
-
-// WriteDouble delegates to the TBinaryProtocol writer
-func (p *TChannelOutboundProtocol) WriteDouble(value float64) error {
-	return p.writer.WriteDouble(value)
-}
-
-// WriteString delegates to the TBinaryProtocol writer
-func (p *TChannelOutboundProtocol) WriteString(value string) error {
-	return p.writer.WriteString(value)
-}
-
-// WriteBinary delegates to the TBinaryProtocol writer
-func (p *TChannelOutboundProtocol) WriteBinary(value []byte) error {
-	return p.writer.WriteBinary(value)
+	p.DelegatingOutputProtocol = DelegatingOutputProtocol{thrift.NewTBinaryProtocol(p.writeBuffer, false, false)}
+	return p.DelegatingOutputProtocol.WriteMessageBegin("" /* name goes in arg1 */, typeId, seqId)
 }
 
 // Flush takes the written content from the write buffer and writes
 // it as arg3 to the underlying tchannel.
 func (p *TChannelOutboundProtocol) Flush() error {
 	// flush to write buffer
-	if err := p.writer.Flush(); err != nil {
+	if err := p.DelegatingOutputProtocol.Flush(); err != nil {
 		return err
 	}
 	payload := p.writeBuffer.Bytes()
@@ -222,113 +122,8 @@ func (p *TChannelOutboundProtocol) ReadMessageBegin() (name string, typeId thrif
 
 	buf := bytes.NewBuffer([]byte(respArg3))
 	p.readBuffer = NewMemoryBufferTransport2(buf)
-	p.reader = thrift.NewTBinaryProtocol(p.readBuffer, false, false)
+	p.DelegatingInputProtocol = DelegatingInputProtocol{thrift.NewTBinaryProtocol(p.readBuffer, false, false)}
 
 	// read from the read buffer
-	return p.reader.ReadMessageBegin()
-}
-
-// ReadMessageEnd delegates to the TBinaryProtocol reader
-func (p *TChannelOutboundProtocol) ReadMessageEnd() error {
-	return p.reader.ReadMessageEnd()
-}
-
-// ReadStructBegin delegates to the TBinaryProtocol reader
-func (p *TChannelOutboundProtocol) ReadStructBegin() (name string, err error) {
-	return p.reader.ReadStructBegin()
-}
-
-// ReadStructEnd delegates to the TBinaryProtocol reader
-func (p *TChannelOutboundProtocol) ReadStructEnd() error {
-	return p.reader.ReadStructEnd()
-}
-
-// ReadFieldBegin delegates to the TBinaryProtocol reader
-func (p *TChannelOutboundProtocol) ReadFieldBegin() (name string, typeId thrift.TType, id int16, err error) {
-	return p.reader.ReadFieldBegin()
-}
-
-// ReadFieldEnd delegates to the TBinaryProtocol reader
-func (p *TChannelOutboundProtocol) ReadFieldEnd() error {
-	return p.reader.ReadFieldEnd()
-}
-
-// ReadMapBegin delegates to the TBinaryProtocol reader
-func (p *TChannelOutboundProtocol) ReadMapBegin() (keyType thrift.TType, valueType thrift.TType, size int, err error) {
-	return p.reader.ReadMapBegin()
-}
-
-// ReadMapEnd delegates to the TBinaryProtocol reader
-func (p *TChannelOutboundProtocol) ReadMapEnd() error {
-	return p.reader.ReadMapEnd()
-}
-
-// ReadListBegin delegates to the TBinaryProtocol reader
-func (p *TChannelOutboundProtocol) ReadListBegin() (elemType thrift.TType, size int, err error) {
-	return p.reader.ReadListBegin()
-}
-
-// ReadListEnd delegates to the TBinaryProtocol reader
-func (p *TChannelOutboundProtocol) ReadListEnd() error {
-	return p.reader.ReadListEnd()
-}
-
-// ReadSetBegin delegates to the TBinaryProtocol reader
-func (p *TChannelOutboundProtocol) ReadSetBegin() (elemType thrift.TType, size int, err error) {
-	return p.reader.ReadSetBegin()
-}
-
-// ReadSetEnd delegates to the TBinaryProtocol reader
-func (p *TChannelOutboundProtocol) ReadSetEnd() error {
-	return p.reader.ReadSetEnd()
-}
-
-// ReadBool delegates to the TBinaryProtocol reader
-func (p *TChannelOutboundProtocol) ReadBool() (value bool, err error) {
-	return p.reader.ReadBool()
-}
-
-// ReadByte delegates to the TBinaryProtocol reader
-func (p *TChannelOutboundProtocol) ReadByte() (value byte, err error) {
-	return p.reader.ReadByte()
-}
-
-// ReadI16 delegates to the TBinaryProtocol reader
-func (p *TChannelOutboundProtocol) ReadI16() (value int16, err error) {
-	return p.reader.ReadI16()
-}
-
-// ReadI32 delegates to the TBinaryProtocol reader
-func (p *TChannelOutboundProtocol) ReadI32() (value int32, err error) {
-	return p.reader.ReadI32()
-}
-
-// ReadI64 delegates to the TBinaryProtocol reader
-func (p *TChannelOutboundProtocol) ReadI64() (value int64, err error) {
-	return p.reader.ReadI64()
-}
-
-// ReadDouble delegates to the TBinaryProtocol reader
-func (p *TChannelOutboundProtocol) ReadDouble() (value float64, err error) {
-	return p.reader.ReadDouble()
-}
-
-// ReadString delegates to the TBinaryProtocol reader
-func (p *TChannelOutboundProtocol) ReadString() (value string, err error) {
-	return p.reader.ReadString()
-}
-
-// ReadBinary delegates to the TBinaryProtocol reader
-func (p *TChannelOutboundProtocol) ReadBinary() (value []byte, err error) {
-	return p.reader.ReadBinary()
-}
-
-// Skip delegates to the TBinaryProtocol reader
-func (p *TChannelOutboundProtocol) Skip(fieldType thrift.TType) (err error) {
-	return p.reader.Skip(fieldType)
-}
-
-// Transport returns nil
-func (p *TChannelOutboundProtocol) Transport() thrift.TTransport {
-	return nil
+	return p.DelegatingInputProtocol.ReadMessageBegin()
 }
