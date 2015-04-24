@@ -155,9 +155,8 @@ TChannelJSON.prototype.register = function register(
 
             // Assert that body is an error
             if (!respObject.ok) {
-                if (!isTypedError(respObject.body)) {
-                    throw new Error('expected body to be a typed error');
-                }
+                assert(isTypedError(respObject.body),
+                    'not-ok body should be a typed error');
             }
 
             var stringifyResult = self._stringify({
