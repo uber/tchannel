@@ -125,24 +125,28 @@ TChannelPeers.prototype.clear = function clear() {
     var self = this;
     var keys = self.keys();
     var vals = new Array(keys.length);
-    for (var i = 0; i < keys.length; i++) {
-        vals[i] = self._map[keys[i]];
-        delete self._map[keys[i]];
+    if (self.channel.subChannels) {
+        var names = Object.keys(self.channel.subChannels);
+        for (var i = 0; i < names.length; i++) {
+            var subChannel = self.channel.subChannels[names[i]];
+            subChannel.peers._map = Object.create(null);
+        }
     }
+    self._map = Object.create(null);
     return vals;
 };
 
 TChannelPeers.prototype.delete = function del(hostPort) {
     var self = this;
     var peer = self._map[hostPort];
-    delete self._map[hostPort];
     if (self.channel.subChannels) {
         var names = Object.keys(self.channel.subChannels);
         for (var i = 0; i < names.length; i++) {
             var subChannel = self.channel.subChannels[names[i]];
-            subChannel.peers.delete(hostPort);
+            delete subChannel.peers._map[hostPort];
         }
     }
+    delete self._map[hostPort];
     return peer;
 };
 
