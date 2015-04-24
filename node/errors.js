@@ -255,6 +255,13 @@ module.exports.TopLevelRequestError = TypedError({
         'Must provide either a known service, a direct host, or use a sub channel directly.'
 });
 
+module.exports.UnimplementedMethod = TypedError({
+    message: 'Unimplemented {className}#{methodName}',
+    type: 'tchannel.unimplemented-method',
+    className: null,
+    methodName: null
+});
+
 
 module.exports.classify = function classify(err) {
     if (err.isErrorFrame) {
