@@ -42,8 +42,8 @@ function TChannelJSON(options) {
 
     self.logger = options && options.logger || NullLogtron();
 
-    var strictMode = options && options.strictMode;
-    self.strictMode = typeof strictMode === 'boolean' ? strictMode : true;
+    var bossMode = options && options.bossMode;
+    self.bossMode = typeof bossMode === 'boolean' ? bossMode : false;
 
     var logParseFailures = options && options.logParseFailures;
     self.logParseFailures = typeof logParseFailures === 'boolean' ?
@@ -151,19 +151,23 @@ TChannelJSON.prototype.register = function register(
                 return res.sendError('UnexpectedError', 'Unexpected Error');
             }
 
-            assert(typeof respObject.ok === 'boolean',
-                'expected respObject to have an `ok` boolean');
-            assert(respObject.body !== undefined,
-                'expected respObject to have a body');
-
-            // Assert that body is an error
-            if (!respObject.ok && self.strictMode === true) {
-                if (
-                    !isError(respObject.body) ||
-                    typeof respObject.body.type !== 'string'
-                ) {
-                    throw new Error('expected body to be a typed error');
+            if (!self.bossMode) {
+                assert(typeof respObject.ok === 'boolean',
+                    'expected respObject to have an `ok` boolean');
+                assert(respObject.body !== undefined,
+                    'expected respObject to have a body');
+                // Assert that body is an error
+                if (!respObject.ok) {
+                    assert(isTypedError(respObject.body),
+                        'not-ok body should be a typed error');
                 }
+            } else if (typeof respObject.ok !== 'boolean' ||
+                       respObject.body === undefined ||
+                       !(respObject.ok || isTypedError(respObject.body))) {
+                respObject.body = errors.InvalidJSONBody({
+                    head: respObject.head,
+                    body: respObject.body
+                });
             }
 
             var stringifyResult = self._stringify({
@@ -281,6 +285,11 @@ function TChannelJSONResponse(ok, head, body) {
     self.ok = ok;
     self.head = head;
     self.body = body;
+}
+
+function isTypedError(obj) {
+    return isError(obj) &&
+           typeof obj.type === 'string';
 }
 
 function safeJSONStringify(obj) {
