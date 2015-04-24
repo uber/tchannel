@@ -98,11 +98,14 @@ function send(request, endpoint, outHead, outBody, callback) {
     var argsType = self.spec.getType(endpoint + '_args');
     var resultType = self.spec.getType(endpoint + '_result');
 
-    // This will throw locally if the body is malformed.
-    var outBodyBuffer = argsType.toBuffer(outBody).toValue();
+    var outRes = argsType.toBuffer(outBody);
+    if (outRes.err) {
+        callback(outRes.err, null);
+        return;
+    }
 
-    // TODO outHeadBuffer from outHead
     var outHeadBuffer = null;
+    var outBodyBuffer = outRes.value;
 
     // Punch as=thrift into the transport headers
     request.headers.as = "thrift";
