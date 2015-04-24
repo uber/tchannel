@@ -65,11 +65,11 @@ class TChannel(object):
         self.peers = PeerGroup(self)
 
         if hostport:
-            self.host, port = hostport.rsplit(':', 1)
-            self.port = int(port)
+            self._host, port = hostport.rsplit(':', 1)
+            self._port = int(port)
         else:
-            self.host = local_ip()
-            self.port = 0
+            self._host = local_ip()
+            self._port = 0
 
         self.process_name = process_name or "%s[%s]" % (
             sys.argv[0], os.getpid()
@@ -95,24 +95,39 @@ class TChannel(object):
 
     @property
     def hostport(self):
-        return "%s:%d" % (self.host, self.port)
+        return "%s:%d" % (self._host, self._port)
 
     def request(self, hostport=None, service=None, **kwargs):
         return self.peers.request(hostport=hostport, service=service, **kwargs)
 
-    def listen(self, handler):
-        assert (
-            not self._handler or self._handler is handler
-        ), "TChannel already has a handler set."
+    def host(self, handler):
+        """Specify the RequestHandler to handle incoming requests.
 
+        Requests may be received via both, incoming and outgoing connections.
+
+        :param handler:
+            RequestHandler to handle incoming requests.
+        :return:
+            This TChannel instance to allow chaining requests to `host` and
+            `listen`
+        """
         self._handler = handler
+        return self
+
+    def listen(self):
+        """Start listening for incoming connections.
+
+        A request handler must have already been specified with
+        ``TChannel.host``.
+        """
+        assert self._handler, "Call .host with a RequestHandler first"
         server = TChannelServer(self)
 
-        sockets = bind_sockets(self.port)
-        assert sockets, "No sockets bound for port %d" % self.port
+        sockets = bind_sockets(self._port)
+        assert sockets, "No sockets bound for port %d" % self._port
 
         # If port was 0, the OS probably assigned something better.
-        self.port = sockets[0].getsockname()[1]
+        self._port = sockets[0].getsockname()[1]
 
         server.add_sockets(sockets)
 

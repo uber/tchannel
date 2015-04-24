@@ -98,7 +98,7 @@ class TChannelServerManager(ServerManager):
         self.port = port
 
     def serve(self):
-        self.tchannel.listen(self.dispatcher)
+        self.tchannel.host(self.dispatcher).listen()
         self.ready = True
         tornado.ioloop.IOLoop.current().start()
 

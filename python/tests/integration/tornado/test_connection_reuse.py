@@ -38,10 +38,10 @@ def test_reuse():
     hostport2 = 'localhost:%d' % unused_port()
 
     server1 = TChannel(hostport1)
-    server1.listen(dispatch1)
+    server1.host(dispatch1).listen()
 
     server2 = TChannel(hostport2)
-    server2.listen(dispatch2)
+    server2.host(dispatch2).listen()
 
     @dispatch2.route('hello')
     @gen.coroutine
