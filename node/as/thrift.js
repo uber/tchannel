@@ -65,17 +65,12 @@ function register(channel, name, opts, handle) {
                 return res.sendError('UnexpectedError', err.message);
             }
 
-            // TODO {head,body} or {arg2,arg3}?
-
-            var ok = thriftRes.ok;
-            var outBody = thriftRes.body;
-
-            if (typeof ok !== 'boolean') {
-                throw new Error('Expected true or false boolean on response object');
-            }
+            assert(typeof thriftRes.ok === 'boolean',
+                'expected response.ok to be a boolean');
 
             var outResult = {};
-            if (ok) {
+            var outBody = thriftRes.body;
+            if (thriftRes.ok) {
                 outResult.success = outBody;
             } else if (!outBody) {
                 throw new Error('Error body required in the not ok response case'); // TODO TypedError
@@ -97,7 +92,7 @@ function register(channel, name, opts, handle) {
             // var outHead = res.head;
             var outHeadBuffer = null;
 
-            if (ok) {
+            if (thriftRes.ok) {
                 return res.sendOk(outHeadBuffer, outBodyBuffer);
             } else {
                 return res.sendNotOk(outHeadBuffer, outBodyBuffer);
