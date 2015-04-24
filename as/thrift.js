@@ -70,32 +70,19 @@ function register(channel, name, opts, handle) {
 
             var outResult = {};
             var outBody = thriftRes.body;
-            if (thriftRes.ok) {
-                outResult.success = outBody;
-            } else if (!outBody) {
-                throw new Error('Error body required in the not ok response case'); // TODO TypedError
-            } else if (typeof outBody.nameAsThrift !== 'string') {
-                throw new Error('Can\'t serialize error response that lacks nameAsThrift'); // TODO TypedError
-            } else if (!resultType.fieldsByName[outBody.nameAsThrift]) {
-                throw new Error('Can\'t serialize error response with unrecognized nameAsThrift: ' + outBody.nameAsThrift); // TODO TypedError
-            } else {
+            if (!thriftRes.ok) {
                 outResult[outBody.nameAsThrift] = outBody;
+            } else {
+                outResult.success = outBody;
             }
 
-            // outBody must be a Thrift result, e.g., {success: value}, or
-            // {oops: {}}.
+            var outRes = resultType.toBuffer(outResult);
 
-            // This will throw locally if the response body is malformed.
-            var outBodyBuffer = resultType.toBuffer(outResult).toValue();
-
-            // TODO process outHeadBuffer
-            // var outHead = res.head;
-            var outHeadBuffer = null;
-
+            var outBodyBuffer = outRes.toValue();
             if (thriftRes.ok) {
-                return res.sendOk(outHeadBuffer, outBodyBuffer);
+                return res.sendOk(null, outBodyBuffer);
             } else {
-                return res.sendNotOk(outHeadBuffer, outBodyBuffer);
+                return res.sendNotOk(null, outBodyBuffer);
             }
         }
     }
