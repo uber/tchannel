@@ -24,7 +24,7 @@ var allocCluster = require('./lib/alloc-cluster');
 var TChannel = require('../channel');
 var RelayHandler = require('../relay_handler');
 
-allocCluster.test('request retries', {
+allocCluster.test('send relay requests', {
     numPeers: 2
 }, function t(cluster, assert) {
     var one = cluster.channels[0];
@@ -46,7 +46,10 @@ allocCluster.test('request retries', {
     });
     var twoClient = client.makeSubChannel({
         serviceName: 'two',
-        peers: [one.hostPort]
+        peers: [one.hostPort],
+        requestDefaults: {
+            serviceName: 'two'
+        }
     });
 
     twoClient.request().send('echo', 'foo', 'bar', function done(err, res, arg2, arg3) {
@@ -91,7 +94,10 @@ allocCluster.test('relay an error frame', {
     });
     var twoClient = client.makeSubChannel({
         serviceName: 'two',
-        peers: [one.hostPort, four.hostPort]
+        peers: [one.hostPort, four.hostPort],
+        requestDefaults: {
+            serviceName: 'two'
+        }
     });
 
     twoClient.request().send('decline', 'foo', 'bar', function done(err, res, arg2, arg3) {
