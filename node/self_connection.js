@@ -20,18 +20,12 @@
 
 'use strict';
 
-var InRequest = require('./in_request');
-var InResponse = require('./in_response');
-var StreamingInRequest = require('./streaming_in_request');
-var StreamingInResponse = require('./streaming_in_response');
-var OutRequest = require('./out_request');
-var OutResponse = require('./out_response');
-var StreamingOutRequest = require('./streaming_out_request');
-var StreamingOutResponse = require('./streaming_out_response');
+var OutRequest = require('./self_out_request').OutRequest;
+var OutResponse = require('./self_out_response').OutResponse;
+var StreamingOutRequest = require('./self_out_request').StreamingOutRequest;
+var StreamingOutResponse = require('./self_out_response').StreamingOutResponse;
 
 var inherits = require('util').inherits;
-
-var v2 = require('./v2');
 
 var TChannelConnectionBase = require('./connection_base');
 
@@ -52,120 +46,33 @@ TChannelSelfConnection.prototype.buildOutRequest = function buildOutRequest(opti
     options.logger = self.logger;
     options.random = self.random;
     options.timers = self.timers;
-    options.sendFrame = {
-        callRequest: passParts,
-        callRequestCont: passParts
-    };
     options.tracer = self.tracer;
+    options.hostPort = self.channel.hostPort;
     var outreq;
     if (options.streamed) {
-        outreq = new StreamingOutRequest(id, options);
+        outreq = new StreamingOutRequest(self, id, options);
     } else {
-        outreq = new OutRequest(id, options);
+        outreq = new OutRequest(self, id, options);
     }
-
-    if (outreq.span) {
-        options.tracing = outreq.span.getTracing();
-    }
-    options.hostPort = self.channel.hostPort;
-
-    var inreq;
-    if (options.streamed) {
-        inreq = new StreamingInRequest(id, options);
-    } else {
-        inreq = new InRequest(id, options);
-    }
-
-    var called = false;
-    inreq.on('error', onError);
-    inreq.on('response', onResponse);
-    inreq.outreq = outreq; // TODO: make less hacky when have proper subclasses
-
     process.nextTick(handleRequest);
-
     return outreq;
 
     function handleRequest() {
-        inreq.headers = outreq.headers;
-
-        self.handleCallRequest(inreq);
-    }
-
-    function onError(err) {
-        if (called) return;
-        called = true;
-        self.popOutReq(id);
-        inreq.removeListener('response', onResponse);
-        outreq.emit('error', err);
-    }
-
-    function onResponse(res) {
-        if (called) return;
-        called = true;
-        self.popOutReq(id);
-        inreq.removeListener('error', onError);
-        outreq.emit('response', res);
-    }
-
-    function passParts(args, isLast ) {
-        inreq.handleFrame(args);
-        if (isLast) inreq.handleFrame(null);
-        if (!self.closing) self.lastTimeoutTime = 0;
+        self.handleCallRequest(outreq.inreq);
     }
 };
 
 TChannelSelfConnection.prototype.buildOutResponse = function buildOutResponse(inreq, options) {
     var self = this;
-    var outreq = inreq.outreq;
-
     if (!options) options = {};
     options.logger = self.logger;
     options.random = self.random;
     options.timers = self.timers;
     options.tracing = inreq.tracing;
-
-    // options.checksum = new v2.Checksum(None);
-
-    options.sendFrame = {
-        callResponse: passParts,
-        callResponseCont: passParts,
-        error: passError
-    };
-    var outres;
     if (options.streamed) {
-        outres = new StreamingOutResponse(inreq.id, options);
+        return new StreamingOutResponse(self, inreq, inreq.id, options);
     } else {
-        outres = new OutResponse(inreq.id, options);
-    }
-    var inres;
-    if (options.streamed) {
-        inres = new StreamingInResponse(inreq.id, options);
-    } else {
-        inres = new InResponse(inreq.id, options);
-    }
-    var first = true;
-    return outres;
-
-    function passParts(args, isLast) {
-        inres.handleFrame(args);
-        if (isLast) inres.handleFrame(null);
-        if (first) {
-            inres.code = outres.code;
-            inres.ok = outres.ok;
-            first = false;
-            inreq.emit('response', inres);
-        }
-        if (!self.closing) self.lastTimeoutTime = 0;
-    }
-
-    function passError(codeString, message) {
-        var code = v2.ErrorResponse.Codes[codeString];
-        var err = v2.ErrorResponse.CodeErrors[code]({
-            originalId: inreq.id,
-            message: message
-        });
-        outreq.emit('error', err);
-        if (!self.closing) self.lastTimeoutTime = 0;
+        return new OutResponse(self, inreq, inreq.id, options);
     }
 };
 

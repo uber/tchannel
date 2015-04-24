@@ -20,7 +20,6 @@
 
 'use strict';
 
-var assert = require('assert');
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 
@@ -29,7 +28,6 @@ var States = require('./reqres_states');
 
 function TChannelOutResponse(id, options) {
     options = options || {};
-    assert(options.sendFrame, 'required option sendFrame');
     var self = this;
     EventEmitter.call(self);
     self.logger = options.logger;
@@ -46,7 +44,6 @@ function TChannelOutResponse(id, options) {
     self.checksumType = options.checksumType || 0;
     self.checksum = options.checksum || null;
     self.ok = self.code === 0;
-    self.sendFrame = options.sendFrame;
     self.span = options.span || null;
     self.streamed = false;
     self._argstream = null;
@@ -60,6 +57,30 @@ function TChannelOutResponse(id, options) {
 inherits(TChannelOutResponse, EventEmitter);
 
 TChannelOutResponse.prototype.type = 'tchannel.outgoing-response';
+
+TChannelOutResponse.prototype._sendCallResponse = function _sendCallResponse(args, isLast) {
+    var self = this;
+    throw errors.UnimplementedMethod({
+        className: self.constructor.name,
+        methodName: '_sendCallResponse'
+    });
+};
+
+TChannelOutResponse.prototype._sendCallResponseCont = function _sendCallResponseCont(args, isLast) {
+    var self = this;
+    throw errors.UnimplementedMethod({
+        className: self.constructor.name,
+        methodName: '_sendCallResponseCont'
+    });
+};
+
+TChannelOutResponse.prototype._sendError = function _sendError(codeString, message) {
+    var self = this;
+    throw errors.UnimplementedMethod({
+        className: self.constructor.name,
+        methodName: '_sendError'
+    });
+};
 
 TChannelOutResponse.prototype.onFinish = function onFinish() {
     var self = this;
@@ -95,7 +116,7 @@ TChannelOutResponse.prototype.sendCallResponseFrame = function sendCallResponseF
     switch (self.state) {
         case States.Initial:
             self.start = self.timers.now();
-            self.sendFrame.callResponse(args, isLast);
+            self._sendCallResponse(args, isLast);
             if (self.span) {
                 self.span.annotate('ss');
             }
@@ -126,7 +147,7 @@ TChannelOutResponse.prototype.sendCallResponseContFrame = function sendCallRespo
             }));
             break;
         case States.Streaming:
-            self.sendFrame.callResponseCont(args, isLast);
+            self._sendCallResponseCont(args, isLast);
             if (isLast) self.state = States.Done;
             break;
         case States.Done:
@@ -148,7 +169,7 @@ TChannelOutResponse.prototype.sendError = function sendError(codeString, message
             self.span.annotate('ss');
         }
         self.state = States.Error;
-        self.sendFrame.error(codeString, message);
+        self._sendError(codeString, message);
         self.emit('finish');
     }
 };

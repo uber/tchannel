@@ -20,7 +20,6 @@
 
 'use strict';
 
-var assert = require('assert');
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 var parallel = require('run-parallel');
@@ -30,7 +29,6 @@ var States = require('./reqres_states');
 
 function TChannelOutRequest(id, options) {
     options = options || {};
-    assert(options.sendFrame, 'required option sendFrame');
     var self = this;
     EventEmitter.call(self);
     self.logger = options.logger;
@@ -49,7 +47,6 @@ function TChannelOutRequest(id, options) {
     self.checksumType = options.checksumType || 0;
     self.checksum = options.checksum || null;
 
-    self.sendFrame = options.sendFrame;
     self.streamed = false;
     self.arg1 = null;
     self.arg2 = null;
@@ -86,6 +83,22 @@ function TChannelOutRequest(id, options) {
 inherits(TChannelOutRequest, EventEmitter);
 
 TChannelOutRequest.prototype.type = 'tchannel.outgoing-request';
+
+TChannelOutRequest.prototype._sendCallRequest = function _sendCallRequest(args, isLast) {
+    var self = this;
+    throw errors.UnimplementedMethod({
+        className: self.constructor.name,
+        methodName: '_sendCallRequest'
+    });
+};
+
+TChannelOutRequest.prototype._sendCallRequestCont = function _sendCallRequestCont(args, isLast) {
+    var self = this;
+    throw errors.UnimplementedMethod({
+        className: self.constructor.name,
+        methodName: '_sendCallRequestCont'
+    });
+};
 
 TChannelOutRequest.prototype.onError = function onError(err) {
     var self = this;
@@ -131,7 +144,7 @@ TChannelOutRequest.prototype.sendCallRequestFrame = function sendCallRequestFram
             if (self.span) {
                 self.span.annotate('cs');
             }
-            self.sendFrame.callRequest(args, isLast);
+            self._sendCallRequest(args, isLast);
             if (isLast) self.state = States.Done;
             else self.state = States.Streaming;
             break;
@@ -159,7 +172,7 @@ TChannelOutRequest.prototype.sendCallRequestContFrame = function sendCallRequest
             }));
             break;
         case States.Streaming:
-            self.sendFrame.callRequestCont(args, isLast);
+            self._sendCallRequestCont(args, isLast);
             if (isLast) self.state = States.Done;
             break;
         case States.Done:
