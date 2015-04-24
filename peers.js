@@ -125,10 +125,7 @@ TChannelPeers.prototype.clear = function clear() {
     var self = this;
     var keys = self.keys();
     var vals = new Array(keys.length);
-    for (var i = 0; i < keys.length; i++) {
-        vals[i] = self._map[keys[i]];
-        delete self._map[keys[i]];
-    }
+    self._map = Object.create(null);
     return vals;
 };
 
