@@ -198,15 +198,9 @@ function inprocClusterTest(state, assert) {
 
         var reqHeadStream = CountStream({limit: hSize});
         var reqBodyStream = CountStream({limit: bSize});
-        var req = cluster.client.request({
+        cluster.client.request({
             streamed: true
-        });
-        req.hookupStreamCallback(onResult);
-        req.arg1.end('foo');
-        reqHeadStream.pipe(req.arg2);
-        req.arg2.once('finish', function onArg2Finished() {
-            reqBodyStream.pipe(req.arg3);
-        });
+        }).sendStreams('foo', reqHeadStream, reqBodyStream, onResult);
     }
 
     function onResult(err, req, res) {
