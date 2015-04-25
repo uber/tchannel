@@ -270,7 +270,12 @@ TestStreamSearch.prototype.test = function test(state, assert) {
             op: 'foo',
             headStream: CountStream({limit: hSize}),
             bodyStream: CountStream({limit: bSize})
-        }, assert, function streamingTestDone() {
+        }, assert, finish);
+    }
+
+    function finish(err) {
+        assert.ifError(err, name + ': no final error');
+        if (!err) {
             cluster.assertCleanState(assert, {
                 channels: [{
                     peers: [{
@@ -286,13 +291,13 @@ TestStreamSearch.prototype.test = function test(state, assert) {
                     }]
                 }]
             });
-            if (!assert._ok) {
-                cluster.destroy(assert.end);
-            } else {
-                self.clusterPool.release(cluster);
-                assert.end();
-            }
-        });
+        }
+        if (!assert._ok) {
+            cluster.destroy(assert.end);
+        } else {
+            self.clusterPool.release(cluster);
+            assert.end();
+        }
     }
 };
 
@@ -359,12 +364,9 @@ function streamingTest(testCase, assert, callback) {
     req.hookupCallback(onResult);
 
     function onResult(err, req, res) {
-        assert.ifError(err, testCase.name + ': no result error');
         if (err) {
-            callback();
-            return;
-        }
-        if (res.streamed) {
+            callback(err);
+        } else if (res.streamed) {
             async.series([
                 verifyStream('arg2', res.arg2, resHeadStream),
                 verifyStream('arg3', res.arg3, resBodyStream),
