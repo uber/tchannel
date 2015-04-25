@@ -239,8 +239,10 @@ TestStreamSearch.prototype.init = function init() {
 
 TestStreamSearch.prototype.test = function test(state, assert) {
     var self = this;
-    var options = state.test;
-    var name = describe(options);
+    var name = describe(state.test);
+    var hSize = state.test.hSize;
+    var bSize = state.test.bSize;
+    var timeout = state.test.timeout || 100;
     var cluster = null;
 
     self.clusterPool.get(gotCluster);
@@ -259,14 +261,14 @@ TestStreamSearch.prototype.test = function test(state, assert) {
         }
 
         var client = cluster.channels[1];
-        assert.timeoutAfter(options.timeout || 100);
+        assert.timeoutAfter(timeout || 100);
         streamingTest({
             name: name,
             channel: client,
             opts: {host: cluster.hosts[0]},
             op: 'foo',
-            headStream: CountStream({limit: options.hSize}),
-            bodyStream: CountStream({limit: options.bSize})
+            headStream: CountStream({limit: hSize}),
+            bodyStream: CountStream({limit: bSize})
         }, assert, function streamingTestDone() {
             cluster.assertCleanState(assert, {
                 channels: [{
