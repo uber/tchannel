@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-var DebugLogtron = require('debug-logtron');
+var NullLogtron = require('null-logtron');
 
 var Span = require('./span');
 
@@ -32,7 +32,7 @@ function Agent (options) {
 
     options = options || {};
 
-    self.logger = options.logger || DebugLogtron('tchannelTrace');
+    self.logger = options.logger || NullLogtron();
 
     // If this is set to true in a call to Agent#configure, all incoming
     // requests will have their traceflags forced to 1. It's intended to be
