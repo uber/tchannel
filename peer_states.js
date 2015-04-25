@@ -88,6 +88,11 @@ inherits(TChannelPeerHealthyState, TChannelPeerState);
 
 TChannelPeerHealthyState.prototype.type = 'tchannel.healthy';
 
+TChannelPeerHealthyState.prototype.toString = function healthyToString() {
+    var self = this;
+    return '[HealthyPeer ' + self.okCount + 'ok ' + self.notOkCount + 'err]';
+};
+
 TChannelPeerHealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
     var self = this;
     var now = self.timers.now();
@@ -142,6 +147,11 @@ function TChannelPeerUnhealthyState(channel, peer) {
 inherits(TChannelPeerUnhealthyState, TChannelPeerState);
 
 TChannelPeerUnhealthyState.prototype.type = 'tchannel.unhealthy';
+
+TChannelPeerUnhealthyState.prototype.toString = function healthyToString() {
+    var self = this;
+    return '[UnhealthyPeer ' + self.successCount + 'ok]';
+};
 
 TChannelPeerUnhealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
     var self = this;
