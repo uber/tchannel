@@ -69,4 +69,30 @@ StreamingOutRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     return self;
 };
 
+StreamingOutRequest.prototype.sendStreams = function send(arg1, arg2, arg3, callback) {
+    var self = this;
+    if (callback) self.hookupStreamCallback(callback);
+    var streams = [self.arg1, self.arg2, self.arg3];
+    var args = [arg1, arg2, arg3];
+    next(0);
+    function next(i) {
+        if (i >= streams.length) return;
+        var stream = streams[i];
+        var arg = args[i];
+        if (arg === null || arg === undefined ) {
+            stream.end();
+            next(i + 1);
+        } else if (typeof arg === 'string' || Buffer.isBuffer(arg)) {
+            stream.end(arg);
+            next(i + 1);
+        } else {
+            arg.pipe(stream);
+            stream.once('finish', onStreamFinished);
+        }
+        function onStreamFinished() {
+            next(i + 1);
+        }
+    }
+};
+
 module.exports = StreamingOutRequest;
