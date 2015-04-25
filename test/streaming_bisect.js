@@ -55,7 +55,6 @@
  */
 
 var async = require('async');
-var PassThrough = require('readable-stream').PassThrough;
 var test = require('tape');
 var util = require('util');
 var allocCluster = require('./lib/alloc-cluster.js');
@@ -263,14 +262,71 @@ TestStreamSearch.prototype.test = function test(state, assert) {
                 i + 1, cluster.hosts[i]));
         }
 
-        streamingTest({
-            name: name,
-            channel: client,
-            opts: {host: cluster.hosts[0]},
-            op: 'foo',
-            headStream: CountStream({limit: hSize}),
-            bodyStream: CountStream({limit: bSize})
-        }, assert, finish);
+        var reqHeadStream = CountStream({limit: hSize});
+        var reqBodyStream = CountStream({limit: bSize});
+        var req = client.request({
+            host: cluster.hosts[0],
+            streamed: true
+        });
+        req.hookupStreamCallback(onResult);
+        req.arg1.end('foo');
+        reqHeadStream.pipe(req.arg2);
+        req.arg2.once('finish', function onArg2Finished() {
+            reqBodyStream.pipe(req.arg3);
+        });
+    }
+
+    function onResult(err, req, res) {
+        var resHeadStream = CountStream({limit: hSize});
+        var resBodyStream = CountStream({limit: bSize});
+        if (err) {
+            finish(err);
+        } else if (res.streamed) {
+            async.series([
+                verifyStream('arg2', res.arg2, resHeadStream),
+                verifyStream('arg3', res.arg3, resBodyStream),
+            ], finish);
+        } else {
+            verifyStreamChunk('arg2', 0, res.arg2, resHeadStream);
+            verifyDrained('arg2', resHeadStream);
+            verifyStreamChunk('arg3', 0, res.arg3, resBodyStream);
+            verifyDrained('arg3', resBodyStream);
+            finish();
+        }
+    }
+
+    function verifyStreamChunk(name, offset, gotChunk, expected) {
+        var expectedChunk = expected.read(gotChunk.length) || Buffer(0);
+        assert.deepEqual(gotChunk, expectedChunk, util.format(
+            '%s: expected chunk %s bytes @%s',
+            name,
+            prettyBytes(gotChunk.length),
+            '0x' + offset.toString(16))
+        );
+        return offset + gotChunk.length;
+    }
+
+    function verifyDrained(name, expected) {
+        var remain = expected.read();
+        assert.equal(remain, null, name + ': got all expected data (bytes)');
+        assert.equal(remain && remain.length || 0, 0, name + ': got all expected data (length)');
+    }
+
+    function verifyStream(name, got, expected) {
+        return function verifyStreamThunk(callback) {
+            var offset = 0;
+            got.on('data', onData);
+            got.on('error', streamDone);
+            got.on('end', streamDone);
+            function onData(gotChunk) {
+                offset = verifyStreamChunk(name, offset, gotChunk, expected);
+            }
+            function streamDone(err) {
+                assert.ifError(err, name + ': no error');
+                if (!err) verifyDrained(name, expected);
+                callback();
+            }
+        };
     }
 
     function finish(err) {
@@ -328,94 +384,6 @@ TestStreamSearch.prototype.isolate = function isolate(spec, _emit) {
         return a + Math.floor(b / 2 - a / 2);
     }
 };
-
-function streamingTest(testCase, assert, callback) {
-    if (!callback) callback = assert.end;
-
-    var reqHeadStream;
-    if (typeof testCase.headStream === 'function') {
-        reqHeadStream = testCase.headStream();
-    } else {
-        reqHeadStream = testCase.headStream;
-    }
-
-    var reqBodyStream;
-    if (typeof testCase.bodyStream === 'function') {
-        reqBodyStream = testCase.bodyStream();
-    } else {
-        reqBodyStream = testCase.bodyStream;
-    }
-
-    var resHeadStream = PassThrough();
-    var resBodyStream = PassThrough();
-
-    var req = testCase.channel.request(extend({
-        streamed: true
-    }, testCase.opts));
-    req.arg1.end(testCase.op);
-    reqHeadStream.pipe(resHeadStream);
-    reqHeadStream.pipe(req.arg2);
-    req.arg2.once('finish', function onArg2Finished() {
-        reqBodyStream.pipe(resBodyStream);
-        reqBodyStream.pipe(req.arg3);
-    });
-
-    onResult.canStream = true;
-    req.hookupCallback(onResult);
-
-    function onResult(err, req, res) {
-        if (err) {
-            callback(err);
-        } else if (res.streamed) {
-            async.series([
-                verifyStream('arg2', res.arg2, resHeadStream),
-                verifyStream('arg3', res.arg3, resBodyStream),
-            ], callback);
-        } else {
-            verifyStreamChunk('arg2', 0, res.arg2, resHeadStream);
-            verifyDrained('arg2', resHeadStream);
-            verifyStreamChunk('arg3', 0, res.arg3, resBodyStream);
-            verifyDrained('arg3', resBodyStream);
-            callback();
-        }
-    }
-
-    function verifyStreamChunk(name, offset, gotChunk, expected) {
-        var expectedChunk = expected.read(gotChunk.length) || Buffer(0);
-        assert.deepEqual(gotChunk, expectedChunk, util.format(
-            '%s: expected chunk %s bytes @%s',
-            name,
-            prettyBytes(gotChunk.length),
-            '0x' + offset.toString(16))
-        );
-        return offset + gotChunk.length;
-    }
-
-    function verifyDrained(name, expected) {
-        var remain = expected.read();
-        assert.equal(remain, null, name + ': got all expected data (bytes)');
-        assert.equal(remain && remain.length || 0, 0, name + ': got all expected data (length)');
-    }
-
-    function verifyStream(name, got, expected) {
-        return function verifyStreamThunk(streamDone) {
-            var offset = 0;
-            got.on('data', onData);
-            got.on('error', finish);
-            got.on('end', finish);
-
-            function onData(gotChunk) {
-                offset = verifyStreamChunk(name, offset, gotChunk, expected);
-            }
-
-            function finish(err) {
-                assert.ifError(err, name + ': no error');
-                if (!err) verifyDrained(name, expected);
-                streamDone();
-            }
-        };
-    }
-}
 
 function describe(params) {
     return util.format('head %s body %s',
