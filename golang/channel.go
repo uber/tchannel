@@ -224,3 +224,8 @@ func (ch *Channel) ListenAndHandle() error {
 		// TODO(mmihic): Register connection so we can close them when the channel is closed
 	}
 }
+
+// Stop shuts down this channel
+func (ch *Channel) Stop() error {
+	return ch.l.Close()
+}

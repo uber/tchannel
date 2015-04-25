@@ -42,6 +42,7 @@ type Headers map[string]string
 func TestTracingPropagates(t *testing.T) {
 	ch, err := NewChannel(":0", nil)
 	require.Nil(t, err)
+	defer ch.Stop()
 
 	srv1 := func(ctx context.Context, call *InboundCall) {
 		headers := Headers{}

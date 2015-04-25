@@ -1,7 +1,7 @@
 GODEPS := $(shell pwd)/Godeps/_workspace
 OLDGOPATH := $(GOPATH)
 PATH := $(GODEPS)/bin:$(PATH)
-PKGS := . ./typed ./examples/server ./examples/client
+PKGS := . ./typed ./examples/server ./examples/client ./examples/thrift
 BUILD := ./build
 SRCS := $(foreach pkg,$(PKGS),$(wildcard $(pkg)/*.go))
 export GOPATH = $(GODEPS):$(OLDGOPATH)
@@ -27,6 +27,7 @@ clean:
 	echo Cleaning build artifacts...
 	go clean
 	rm -rf $(BUILD)
+	rm -rf examples/thrift/gen-go
 	echo
 
 fmt format: 
@@ -36,7 +37,7 @@ fmt format:
 
 test_ci: test
 
-test: clean setup
+test: clean setup thriftc
 	echo Testing packages:
 	go test $(PKGS) $(TEST_ARG) -parallel=4
 
@@ -60,6 +61,9 @@ examples: clean setup
 	mkdir -p $(BUILD)/examples
 	go build -o $(BUILD)/examples/server ./examples/server
 	go build -o $(BUILD)/examples/client ./examples/client
+
+thriftc:
+	cd examples/thrift && thrift -r --gen go:thrift_import=github.com/apache/thrift/lib/go/thrift test.thrift
 
 .PHONY: all help clean fmt format test vet 
 .SILENT: all help clean fmt format test vet

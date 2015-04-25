@@ -66,6 +66,7 @@ func main() {
 		log.Errorf("Could not create client channel: %v", err)
 		os.Exit(-1)
 	}
+	defer ch.Stop()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(*timeout))
 	defer cancel()
