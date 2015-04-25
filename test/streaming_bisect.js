@@ -218,7 +218,9 @@ TestStreamSearch.prototype.describeState = function describeState(state) {
 
 TestStreamSearch.prototype.describeNoFailure = function describeNoFailure(assert) {
     var self = this;
-    assert.pass('found no failure under ' + prettyBytes(self.options.sizeLimit));
+    assert.pass(
+        'found no failure under ' +
+        base2.pretty(self.options.sizeLimit, 'B'));
 };
 
 TestStreamSearch.prototype.init = function init() {
@@ -300,7 +302,7 @@ TestStreamSearch.prototype.test = function test(state, assert) {
         assert.deepEqual(gotChunk, expectedChunk, util.format(
             '%s: expected chunk %s bytes @%s',
             name,
-            prettyBytes(gotChunk.length),
+            base2.pretty(gotChunk.length, 'B'),
             '0x' + offset.toString(16))
         );
         return offset + gotChunk.length;
@@ -387,8 +389,8 @@ TestStreamSearch.prototype.isolate = function isolate(spec, _emit) {
 
 function describe(params) {
     return util.format('head %s body %s',
-        prettyBytes(params.hSize),
-        prettyBytes(params.bSize));
+        base2.pretty(params.hSize, 'B'),
+        base2.pretty(params.bSize, 'B'));
 }
 
 function echoHandler() {
@@ -421,8 +423,4 @@ function echoHandler() {
 function die() {
     console.error.apply(console, arguments);
     process.exit(1);
-}
-
-function prettyBytes(n) {
-    return base2.pretty(n, 'B');
 }
