@@ -28,6 +28,9 @@ function TChannelAsThrift(opts) {
     var self = this;
     assert(opts && opts.spec, 'TChannelAsThrift expected spec');
     self.spec = opts.spec;
+
+    var bossMode = opts && opts.bossMode;
+    self.bossMode = typeof bossMode === 'boolean' ? bossMode : false;
 }
 
 TChannelAsThrift.prototype.register =
@@ -65,42 +68,29 @@ function register(channel, name, opts, handle) {
                 return res.sendError('UnexpectedError', err.message);
             }
 
-            // TODO {head,body} or {arg2,arg3}?
-
-            var ok = thriftRes.ok;
-            var outBody = thriftRes.body;
-
-            if (typeof ok !== 'boolean') {
-                throw new Error('Expected true or false boolean on response object');
-            }
+            assert(typeof thriftRes.ok === 'boolean',
+                'expected response.ok to be a boolean');
 
             var outResult = {};
-            if (ok) {
-                outResult.success = outBody;
-            } else if (!outBody) {
-                throw new Error('Error body required in the not ok response case'); // TODO TypedError
-            } else if (typeof outBody.nameAsThrift !== 'string') {
-                throw new Error('Can\'t serialize error response that lacks nameAsThrift'); // TODO TypedError
-            } else if (!resultType.fieldsByName[outBody.nameAsThrift]) {
-                throw new Error('Can\'t serialize error response with unrecognized nameAsThrift: ' + outBody.nameAsThrift); // TODO TypedError
-            } else {
+            var outBody = thriftRes.body;
+            if (!thriftRes.ok) {
                 outResult[outBody.nameAsThrift] = outBody;
+            } else {
+                outResult.success = outBody;
             }
 
-            // outBody must be a Thrift result, e.g., {success: value}, or
-            // {oops: {}}.
+            var outRes = resultType.toBuffer(outResult);
 
-            // This will throw locally if the response body is malformed.
-            var outBodyBuffer = resultType.toBuffer(outResult).toValue();
-
-            // TODO process outHeadBuffer
-            // var outHead = res.head;
-            var outHeadBuffer = null;
-
-            if (ok) {
-                return res.sendOk(outHeadBuffer, outBodyBuffer);
+            if (outRes.err && self.bossMode) {
+                return res.sendError('UnexpectedError', outRes.err.message);
             } else {
-                return res.sendNotOk(outHeadBuffer, outBodyBuffer);
+                var outHeadBuffer = null;
+                var outBodyBuffer = outRes.toValue();
+                if (thriftRes.ok) {
+                    return res.sendOk(outHeadBuffer, outBodyBuffer);
+                } else {
+                    return res.sendNotOk(outHeadBuffer, outBodyBuffer);
+                }
             }
         }
     }
@@ -116,11 +106,14 @@ function send(request, endpoint, outHead, outBody, callback) {
     var argsType = self.spec.getType(endpoint + '_args');
     var resultType = self.spec.getType(endpoint + '_result');
 
-    // This will throw locally if the body is malformed.
-    var outBodyBuffer = argsType.toBuffer(outBody).toValue();
+    var outRes = argsType.toBuffer(outBody);
+    if (outRes.err) {
+        callback(outRes.err, null);
+        return;
+    }
 
-    // TODO outHeadBuffer from outHead
     var outHeadBuffer = null;
+    var outBodyBuffer = outRes.value;
 
     // Punch as=thrift into the transport headers
     request.headers.as = "thrift";
