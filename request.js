@@ -172,25 +172,36 @@ TChannelRequest.prototype.resend = function resend() {
     outReq.send(self.arg1, self.arg2, self.arg3);
 
     function onError(err) {
-        if (self.checkTimeout(err)) return;
-        if (self.shouldRetry(err)) {
-            self.deferResend();
-        } else {
-            self.emit('error', err);
-        }
+        self.onSubreqError(err);
     }
 
     function onResponse(res) {
+        // TODO: skip buffering if res.ok
         withArg23(res, function onArg23(err, res, arg2, arg3) {
-            if (self.checkTimeout(err, res)) return;
-            if (self.shouldRetry(err, res, arg2, arg3)) {
-                self.deferResend();
-            } else if (err) {
-                self.emit('error', err);
-            } else {
-                self.emit('response', res);
-            }
+            self.onSubreqResponse(err, res, arg2, arg3);
         });
+    }
+};
+
+TChannelRequest.prototype.onSubreqError = function onSubreqError(err) {
+    var self = this;
+    if (self.checkTimeout(err)) return;
+    if (self.shouldRetry(err)) {
+        self.deferResend();
+    } else {
+        self.emit('error', err);
+    }
+};
+
+TChannelRequest.prototype.onSubreqResponse = function onSubreqResponse(err, res, arg2, arg3) {
+    var self = this;
+    if (self.checkTimeout(err, res)) return;
+    if (self.shouldRetry(err, res, arg2, arg3)) {
+        self.deferResend();
+    } else if (err) {
+        self.emit('error', err);
+    } else {
+        self.emit('response', res);
     }
 };
 
