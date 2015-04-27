@@ -98,11 +98,7 @@ test('argstream', function t(assert) {
         s.once('finish', function onFinish() {
             assert.equal(gotI, expect.length, 'got all expected frames');
         });
-        writeFrames(frames, s, finish);
-        function finish(err) {
-            assert.ifError(err, 'no unexpected error');
-            assert.end();
-        }
+        writeFrames(frames, s, assert.end);
     }));
 
     assert.test('unit test InArgStream', {skip: !verbose}, argSearchTest(function t(state, assert) {
