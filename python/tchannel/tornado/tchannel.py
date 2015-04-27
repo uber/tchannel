@@ -30,11 +30,11 @@ import tornado.ioloop
 import tornado.tcpserver
 import tornado.iostream
 from tornado.netutil import bind_sockets
-
 from ..net import local_ip
 from .peer import PeerGroup
 from .connection import StreamConnection
 from ..handler import CallableRequestHandler
+
 
 log = logging.getLogger('tchannel')
 
@@ -58,8 +58,8 @@ class TChannel(object):
         :param hostport:
             The hostport at which the service hosted behind this TChannel can
             be reached.
-        :param ignore_singleton:
-            If given, this instance will not re-use the existing singleton.
+        :param process_name:
+            Name of this process. This is used for logging only.
         """
         self._state = State.ready
         self.peers = PeerGroup(self)
