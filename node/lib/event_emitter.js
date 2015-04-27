@@ -46,12 +46,17 @@ function addListener(type, listener) {
 EventEmitter.prototype.removeListener =
 function removeListener(type, listener) {
     var evt = this[type + 'Event'];
-    if (evt.listeners.length) {
+    if (evt.listener && evt.listener.listener === listener) {
+        evt.listener = null;
+    } else if (evt.listeners.length) {
         var listeners = [];
         for (var i = 0; i < evt.listeners.length; i++ ) {
             if (evt.listeners[i].listener !== listener) {
                 listeners.push(evt.listeners[i]);
             }
+        }
+        if (listeners.length === 1) {
+            evt.listener = listeners.pop();
         }
         evt.listeners = listeners;
     }
@@ -71,12 +76,15 @@ function emit(type, arg) {
 function DefinedEvent(type, defaultListener) {
     this.type = type;
     this.defaultListener = defaultListener;
+    this.listener = null;
     this.listeners = [];
 }
 
 DefinedEvent.prototype.emit =
 function emit(that, arg) {
-    if (this.listeners.length) {
+    if (this.listener) {
+        this.listener(arg, that);
+    } else if (this.listeners.length) {
         var listeners = this.listeners;
         for (var i = 0; i < listeners.length; i++ ) {
             listeners[i](arg, that);
@@ -89,17 +97,31 @@ function emit(that, arg) {
 DefinedEvent.prototype.on =
 DefinedEvent.prototype.addListener =
 function addListener(listener) {
-    this.listeners.push(listener);
+    if (this.listeners.length) {
+        this.listeners.push(listener);
+    } else if (this.listener) {
+        this.listeners.push(this.listener, listener);
+        this.listener = null;
+    } else {
+        this.listener = listener;
+    }
 };
 
 DefinedEvent.prototype.removeListener =
 function removeListener(listener) {
-    if (this.listeners.length) {
+    if (this.listener) {
+        if (this.listener === listener) {
+            this.listener = null;
+        }
+    } else if (this.listeners.length) {
         var listeners = [];
         for (var i = 0; i < this.listeners.length; i++ ) {
             if (this.listeners[i] !== listener) {
                 listeners.push(this.listeners[i]);
             }
+        }
+        if (listeners.length === 1) {
+            this.listener = listeners.pop();
         }
         this.listeners = listeners;
     }
@@ -107,6 +129,7 @@ function removeListener(listener) {
 
 DefinedEvent.prototype.removeAllListeners =
 function removeAllListeners() {
+    this.listener = null;
     this.listeners = [];
 };
 
