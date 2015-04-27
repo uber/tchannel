@@ -82,14 +82,12 @@ TChannelRequest.defaultTimeout = 5000;
 
 TChannelRequest.prototype.type = 'tchannel.request';
 
-TChannelRequest.prototype.onError = function onError(err) {
-    var self = this;
+TChannelRequest.prototype.onError = function onError(err, self) {
     if (!self.end) self.end = self.timers.now();
     self.err = err;
 };
 
-TChannelRequest.prototype.onResponse = function onResponse(res) {
-    var self = this;
+TChannelRequest.prototype.onResponse = function onResponse(res, self) {
     if (!self.end) self.end = self.timers.now();
     self.res = res;
 };

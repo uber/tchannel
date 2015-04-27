@@ -104,14 +104,12 @@ TChannelOutRequest.prototype._sendCallRequestCont = function _sendCallRequestCon
     });
 };
 
-TChannelOutRequest.prototype.onError = function onError(err) {
-    var self = this;
+TChannelOutRequest.prototype.onError = function onError(err, self) {
     if (!self.end) self.end = self.timers.now();
     self.err = err;
 };
 
-TChannelOutRequest.prototype.onResponse = function onResponse(res) {
-    var self = this;
+TChannelOutRequest.prototype.onResponse = function onResponse(res, self) {
     if (!self.end) self.end = self.timers.now();
     self.res = res;
     self.res.span = self.span;

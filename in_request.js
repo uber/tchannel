@@ -80,8 +80,7 @@ inherits(TChannelInRequest, EventEmitter);
 
 TChannelInRequest.prototype.type = 'tchannel.incoming-request';
 
-TChannelInRequest.prototype.onFinish = function onFinish() {
-    var self = this;
+TChannelInRequest.prototype.onFinish = function onFinish(_arg, self) {
     self.state = States.Done;
 };
 
