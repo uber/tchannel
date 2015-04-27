@@ -238,6 +238,9 @@ func (c *Connection) sendInit(ctx context.Context) error {
 	}
 
 	c.remotePeerInfo.HostPort = res.initParams[InitParamHostPort]
+	if c.remotePeerInfo.HostPort == ephemeralHostPort || c.remotePeerInfo.HostPort == "" {
+		c.remotePeerInfo.HostPort = c.conn.RemoteAddr().String()
+	}
 	c.remotePeerInfo.ProcessName = res.initParams[InitParamProcessName]
 
 	c.withStateLock(func() error {

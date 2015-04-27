@@ -59,7 +59,7 @@ func main() {
 		os.Exit(-1)
 	}
 
-	ch, err := tchannel.NewChannel("0.0.0.0:0", &tchannel.ChannelOptions{
+	ch, err := tchannel.NewChannel(&tchannel.ChannelOptions{
 		Logger: log,
 	})
 	if err != nil {

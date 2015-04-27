@@ -80,16 +80,16 @@ func appError(ctx context.Context, call *tchannel.InboundCall) {
 	echo(ctx, call)
 }
 
-var bindAddr = getopt.StringLong("bind", 'b', "0.0.0.0:10500", "host and port on which to bind")
+var bindAddr = getopt.StringLong("bind", 'b', "127.0.0.1:10500", "host and port on which to bind")
 
 func main() {
 	getopt.Parse()
 
-	ch, err := tchannel.NewChannel(*bindAddr, &tchannel.ChannelOptions{
+	ch, err := tchannel.NewChannel(&tchannel.ChannelOptions{
 		Logger: log,
 	})
 	if err != nil {
-		log.Errorf("could not create channel on %s: %v", *bindAddr, err)
+		log.Errorf("could not create channel %v", err)
 		os.Exit(-1)
 	}
 
@@ -99,13 +99,8 @@ func main() {
 	ch.Register(tchannel.HandlerFunc(appError), "TestService", "appError")
 	ch.Register(tchannel.HandlerFunc(timeout), "TestService", "timeout")
 
-	if err := ch.ListenAndHandle(); err != nil {
-		panic(err)
-	}
-}
-
-func panicOnError(err error) {
-	if err != nil {
-		panic(err)
+	if err := ch.ListenAndServe(*bindAddr); err != nil {
+		log.Errorf("Could not listen on %s: %v", *bindAddr, err)
+		os.Exit(-1)
 	}
 }

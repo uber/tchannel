@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
+	"net"
 	"testing"
 	"time"
 )
@@ -59,14 +60,14 @@ func echo(ctx context.Context, call *InboundCall) {
 }
 
 func TestRoundTrip(t *testing.T) {
-	withTestChannel(t, func(ch *Channel) {
+	withTestChannel(t, func(ch *Channel, hostPort string) {
 
 		ch.Register(HandlerFunc(echo), "Capture", "ping")
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 		defer cancel()
 
-		call, err := ch.BeginCall(ctx, ch.HostPort(), "Capture", "ping")
+		call, err := ch.BeginCall(ctx, hostPort, "Capture", "ping")
 		require.Nil(t, err)
 
 		require.Nil(t, call.WriteArg2(BytesOutput("Hello Header")))
@@ -83,37 +84,37 @@ func TestRoundTrip(t *testing.T) {
 }
 
 func TestBadRequest(t *testing.T) {
-	withTestChannel(t, func(ch *Channel) {
+	withTestChannel(t, func(ch *Channel, hostPort string) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 		defer cancel()
 
-		_, _, err := sendRecv(ctx, ch, ch.HostPort(), "Nowhere", "Noone", []byte("Headers"), []byte("Body"))
+		_, _, err := sendRecv(ctx, ch, hostPort, "Nowhere", "Noone", []byte("Headers"), []byte("Body"))
 		require.NotNil(t, err)
 		assert.Equal(t, ErrorCodeBadRequest, GetSystemErrorCode(err))
 	})
 }
 
 func TestServerBusy(t *testing.T) {
-	withTestChannel(t, func(ch *Channel) {
+	withTestChannel(t, func(ch *Channel, hostPort string) {
 		ch.Register(HandlerFunc(serverBusy), "TestService", "busy")
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 		defer cancel()
 
-		_, _, err := sendRecv(ctx, ch, ch.HostPort(), "TestService", "busy", []byte("Arg2"), []byte("Arg3"))
+		_, _, err := sendRecv(ctx, ch, hostPort, "TestService", "busy", []byte("Arg2"), []byte("Arg3"))
 		require.NotNil(t, err)
 		assert.Equal(t, ErrorCodeBusy, GetSystemErrorCode(err))
 	})
 }
 
 func TestTimeout(t *testing.T) {
-	withTestChannel(t, func(ch *Channel) {
+	withTestChannel(t, func(ch *Channel, hostPort string) {
 		ch.Register(HandlerFunc(timeout), "TestService", "timeout")
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 		defer cancel()
 
-		_, _, err := sendRecv(ctx, ch, ch.HostPort(), "TestService", "timeout", []byte("Arg2"), []byte("Arg3"))
+		_, _, err := sendRecv(ctx, ch, hostPort, "TestService", "timeout", []byte("Arg2"), []byte("Arg3"))
 
 		// TODO(mmihic): Maybe translate this into ErrTimeout (or vice versa)?
 		assert.Equal(t, context.DeadlineExceeded, err)
@@ -121,7 +122,7 @@ func TestTimeout(t *testing.T) {
 }
 
 func testFragmentation(t *testing.T) {
-	withTestChannel(t, func(ch *Channel) {
+	withTestChannel(t, func(ch *Channel, hostPort string) {
 		ch.Register(HandlerFunc(echo), "TestService", "echo")
 
 		arg2 := make([]byte, MaxFramePayloadSize*2)
@@ -137,7 +138,7 @@ func testFragmentation(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 		defer cancel()
 
-		respArg2, respArg3, err := sendRecv(ctx, ch, ch.HostPort(), "TestService", "echo", arg2, arg3)
+		respArg2, respArg3, err := sendRecv(ctx, ch, hostPort, "TestService", "echo", arg2, arg3)
 		require.Nil(t, err)
 		assert.Equal(t, arg2, respArg2)
 		assert.Equal(t, arg3, respArg3)
@@ -158,15 +159,18 @@ func sendRecv(ctx context.Context, ch *Channel, hostPort string, serviceName, op
 	return []byte(respArg2), []byte(respArg3), nil
 }
 
-func withTestChannel(t *testing.T, f func(ch *Channel)) {
+func withTestChannel(t *testing.T, f func(ch *Channel, hostPort string)) {
 	opts := ChannelOptions{
 		Logger: SimpleLogger,
 	}
 
-	ch, err := NewChannel(":0", &opts)
+	ch, err := NewChannel(&opts)
 	require.Nil(t, err)
 
-	go ch.ListenAndHandle()
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	require.Nil(t, err)
 
-	f(ch)
+	go ch.Serve(l)
+
+	f(ch, l.Addr().String())
 }

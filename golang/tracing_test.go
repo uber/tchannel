@@ -40,83 +40,80 @@ type TracingResponse struct {
 type Headers map[string]string
 
 func TestTracingPropagates(t *testing.T) {
-	ch, err := NewChannel(":0", nil)
-	require.Nil(t, err)
+	withTestChannel(t, func(ch *Channel, hostPort string) {
+		srv1 := func(ctx context.Context, call *InboundCall) {
+			headers := Headers{}
 
-	srv1 := func(ctx context.Context, call *InboundCall) {
-		headers := Headers{}
+			var request TracingRequest
+			if err := call.ReadArg2(NewJSONInput(&headers)); err != nil {
+				return
+			}
 
+			if err := call.ReadArg3(NewJSONInput(&request)); err != nil {
+				return
+			}
+
+			span := CurrentSpan(ctx)
+
+			var childRequest TracingRequest
+			var childResponse TracingResponse
+			if _, err := ch.RoundTrip(ctx, hostPort, "TestService", "call2",
+				NewJSONOutput(headers), NewJSONOutput(childRequest),
+				NewJSONInput(&headers), NewJSONInput(&childResponse)); err != nil {
+				call.Response().SendSystemError(err)
+				return
+			}
+
+			response := TracingResponse{
+				TraceID: span.TraceID(),
+				SpanID:  span.SpanID(),
+				Child:   &childResponse,
+			}
+
+			call.Response().WriteArg2(NewJSONOutput(headers))
+			call.Response().WriteArg3(NewJSONOutput(response))
+		}
+
+		srv2 := func(ctx context.Context, call *InboundCall) {
+			span := CurrentSpan(ctx)
+			if span == nil {
+				call.Response().SendSystemError(NewSystemError(ErrorCodeUnexpected, "tracing not found"))
+				return
+			}
+
+			call.Response().WriteArg2(NewJSONOutput(Headers{}))
+			call.Response().WriteArg3(NewJSONOutput(TracingResponse{
+				SpanID:   span.SpanID(),
+				TraceID:  span.TraceID(),
+				ParentID: span.ParentID(),
+			}))
+		}
+
+		ch.Register(HandlerFunc(srv1), "TestService", "call1")
+		ch.Register(HandlerFunc(srv2), "TestService", "call2")
+
+		ctx, cancel := context.WithTimeout(NewRootContext(context.Background()), 5*time.Second)
+		defer cancel()
+
+		headers := map[string]string{}
 		var request TracingRequest
-		if err := call.ReadArg2(NewJSONInput(&headers)); err != nil {
-			return
+		var response TracingResponse
+
+		if _, err := ch.RoundTrip(ctx, hostPort, "TestService", "call1",
+			NewJSONOutput(headers), NewJSONOutput(&request),
+			NewJSONInput(&headers), NewJSONInput(&response)); err != nil {
+			require.Nil(t, err)
 		}
 
-		if err := call.ReadArg3(NewJSONInput(&request)); err != nil {
-			return
-		}
+		clientSpan := CurrentSpan(ctx)
+		require.NotNil(t, clientSpan)
 
-		span := CurrentSpan(ctx)
+		assert.Equal(t, clientSpan.TraceID(), response.TraceID)
+		assert.Equal(t, clientSpan.SpanID(), response.ParentID)
 
-		var childRequest TracingRequest
-		var childResponse TracingResponse
-		if _, err := ch.RoundTrip(ctx, ch.HostPort(), "TestService", "call2",
-			NewJSONOutput(headers), NewJSONOutput(childRequest),
-			NewJSONInput(&headers), NewJSONInput(&childResponse)); err != nil {
-			call.Response().SendSystemError(err)
-			return
-		}
-
-		response := TracingResponse{
-			TraceID: span.TraceID(),
-			SpanID:  span.SpanID(),
-			Child:   &childResponse,
-		}
-
-		call.Response().WriteArg2(NewJSONOutput(headers))
-		call.Response().WriteArg3(NewJSONOutput(response))
-	}
-
-	srv2 := func(ctx context.Context, call *InboundCall) {
-		span := CurrentSpan(ctx)
-		if span == nil {
-			call.Response().SendSystemError(NewSystemError(ErrorCodeUnexpected, "tracing not found"))
-			return
-		}
-
-		call.Response().WriteArg2(NewJSONOutput(Headers{}))
-		call.Response().WriteArg3(NewJSONOutput(TracingResponse{
-			SpanID:   span.SpanID(),
-			TraceID:  span.TraceID(),
-			ParentID: span.ParentID(),
-		}))
-	}
-
-	ch.Register(HandlerFunc(srv1), "TestService", "call1")
-	ch.Register(HandlerFunc(srv2), "TestService", "call2")
-
-	go ch.ListenAndHandle()
-
-	ctx, cancel := context.WithTimeout(NewRootContext(context.Background()), 5*time.Second)
-	defer cancel()
-
-	headers := map[string]string{}
-	var request TracingRequest
-	var response TracingResponse
-
-	if _, err := ch.RoundTrip(ctx, ch.HostPort(), "TestService", "call1",
-		NewJSONOutput(headers), NewJSONOutput(&request),
-		NewJSONInput(&headers), NewJSONInput(&response)); err != nil {
-		require.Nil(t, err)
-	}
-
-	clientSpan := CurrentSpan(ctx)
-	require.NotNil(t, clientSpan)
-
-	assert.Equal(t, clientSpan.TraceID(), response.TraceID)
-	assert.Equal(t, clientSpan.SpanID(), response.ParentID)
-
-	nestedResponse := response.Child
-	require.NotNil(t, nestedResponse)
-	assert.Equal(t, clientSpan.TraceID(), nestedResponse.TraceID)
-	assert.Equal(t, response.SpanID, nestedResponse.ParentID)
+		nestedResponse := response.Child
+		require.NotNil(t, nestedResponse)
+		assert.Equal(t, clientSpan.TraceID(), nestedResponse.TraceID)
+		assert.Equal(t, response.SpanID, nestedResponse.ParentID)
+	})
 }
