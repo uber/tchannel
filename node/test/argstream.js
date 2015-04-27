@@ -95,7 +95,7 @@ test('argstream', function t(assert) {
                 }), 'expected frame ' + gotI);
             }
         });
-        s.once('finish', function() {
+        s.once('finish', function onFinish() {
             assert.equal(gotI, expect.length, 'got all expected frames');
         });
         hookupEnd(s, finish);
