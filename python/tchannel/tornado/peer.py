@@ -235,7 +235,7 @@ class Peer(object):
         :param state:
             State of the Peer. If given, this must be an instance of PeerState.
         """
-        state = state or PeerHealthyState()
+        state = state or PeerHealthyState(self)
 
         assert hostport, "hostport is required"
         assert isinstance(state, PeerState), "state must be a PeerState"
@@ -370,11 +370,24 @@ class PeerHealthyState(PeerState):
     allows random selection between multiple matches.
     """
 
-    __slots__ = ()
+    __slots__ = ('peer',)
+
+    def __init__(self, peer):
+        self.peer = peer
 
     def score(self):
-        # Return something in the [0.2, 1.0] range.
-        return 0.2 + random() * 0.8
+        # Connected peers have a score in the range [0.2, 1.0) and all other
+        # peers have a score in the range [0.0, 0.2). So, we will always
+        # prefer peers that are already connected over peers that require new
+        #  connections.
+        if self.peer.connected:
+            return 0.2 + random() * 0.8
+            # TODO this can be split between incoming and outgoing connections.
+            # We probably want to prefer outgoing connections over incoming
+            # connections.
+        else:
+            return 0.1 + random() * 0.1
+
         # TODO: It may be reasonable to allow the Peer or TChannel to control
         # randomness.
 
