@@ -167,7 +167,7 @@ TChannelPeer.prototype.addConnection = function addConnection(conn) {
     } else {
         self.connections.unshift(conn);
     }
-    conn.errorEvent.once(onConnectionError);
+    conn.errorEvent.on(onConnectionError);
     return conn;
 
     function onConnectionError(/* err */) {

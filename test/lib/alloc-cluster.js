@@ -119,7 +119,7 @@ function allocCluster(opts) {
         var port = opts.listen && opts.listen[i] || 0;
         chan.listen(port, host);
         cluster.channels[i] = chan;
-        chan.once('listening', chanReady);
+        chan.on('listening', chanReady);
 
         function chanReady() {
             var port = chan.address().port;

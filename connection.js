@@ -234,9 +234,9 @@ TChannelConnection.prototype.start = function start() {
     var self = this;
     if (self.direction === 'out') {
         self.handler.sendInitRequest();
-        self.handler.initResponseEvent.once(onOutIdentified);
+        self.handler.initResponseEvent.on(onOutIdentified);
     } else {
-        self.handler.initRequestEvent.once(onInIdentified);
+        self.handler.initRequestEvent.on(onInIdentified);
     }
 
     function onOutIdentified(init) {
