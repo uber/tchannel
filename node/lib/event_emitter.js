@@ -36,12 +36,25 @@ function defineEvent(type, defaultListener) {
 EventEmitter.prototype.on =
 EventEmitter.prototype.addListener =
 function addListener(type, listener) {
-    this[type + 'Event'].addListener(listener);
+    this[type + 'Event'].addListener(listenerCompatShim);
+    listenerCompatShim.listener = listener;
+    function listenerCompatShim(arg, self) {
+        listener.call(self, arg);
+    }
 };
 
 EventEmitter.prototype.removeListener =
 function removeListener(type, listener) {
-    this[type + 'Event'].removeListener(listener);
+    var evt = this[type + 'Event'];
+    if (evt.listeners.length) {
+        var listeners = [];
+        for (var i = 0; i < evt.listeners.length; i++ ) {
+            if (evt.listeners[i].listener !== listener) {
+                listeners.push(evt.listeners[i]);
+            }
+        }
+        evt.listeners = listeners;
+    }
 };
 
 EventEmitter.prototype.removeAllListeners =
@@ -66,10 +79,10 @@ function emit(that, arg) {
     if (this.listeners.length) {
         var listeners = this.listeners;
         for (var i = 0; i < listeners.length; i++ ) {
-            listeners[i].call(that, arg);
+            listeners[i](arg, that);
         }
     } else if (this.defaultListener) {
-        this.defaultListener.call(that, arg);
+        this.defaultListener(arg, that);
     }
 };
 

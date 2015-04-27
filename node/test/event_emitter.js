@@ -68,3 +68,34 @@ test('default error behavior', function t(assert) {
     }, /ERR/);
     assert.end();
 });
+
+test('multiple on works', function t(assert) {
+    var f = new Foo();
+    var fooCalled = null;
+
+    fooCalled = [];
+    f.on('foo', one);
+    f.on('foo', two);
+    f.emit('foo', 'abc');
+    assert.deepEqual(fooCalled, [
+        [1, 'abc'],
+        [2, 'abc']
+    ], 'expected arg');
+
+    fooCalled = [];
+    f.removeListener('foo', one);
+    f.emit('foo', 'abc');
+    assert.deepEqual(fooCalled, [
+        [2, 'abc']
+    ], 'expected arg');
+
+    assert.end();
+
+    function one(arg) {
+        fooCalled.push([1, arg]);
+    }
+
+    function two(arg) {
+        fooCalled.push([2, arg]);
+    }
+});

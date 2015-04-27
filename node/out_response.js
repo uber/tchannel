@@ -86,8 +86,7 @@ TChannelOutResponse.prototype._sendError = function _sendError(codeString, messa
     });
 };
 
-TChannelOutResponse.prototype.onFinish = function onFinish() {
-    var self = this;
+TChannelOutResponse.prototype.onFinish = function onFinish(_arg, self) {
     if (!self.end) self.end = self.timers.now();
     if (self.span) {
         self.spanEvent.emit(self, self.span);
