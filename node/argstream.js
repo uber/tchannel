@@ -80,7 +80,7 @@ function InArgStream() {
     self.arg2.on('finish', argFinished);
     self.arg3.on('finish', argFinished);
     function argFinished() {
-        if (++self._numFinished === 3) {
+        if (++self._numFinished >= 3 && !self.finished) {
             self.finished = true;
             self.emit('finish');
         }
