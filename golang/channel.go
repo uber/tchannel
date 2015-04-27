@@ -37,7 +37,7 @@ var (
 )
 
 const (
-	clientOnlyHostPort = "0.0.0.0:0"
+	ephemeralHostPort = "0.0.0.0:0"
 )
 
 // A Handler is an object hat can be registered with a Channel
@@ -102,7 +102,7 @@ func NewChannel(opts *ChannelOptions) (*Channel, error) {
 	ch := &Channel{
 		connectionOptions: opts.DefaultConnectionOptions,
 		processName:       processName,
-		hostPort:          clientOnlyHostPort,
+		hostPort:          ephemeralHostPort,
 		log:               logger,
 	}
 
