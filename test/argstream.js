@@ -98,7 +98,6 @@ test('argstream', function t(assert) {
         s.once('finish', function onFinish() {
             assert.equal(gotI, expect.length, 'got all expected frames');
         });
-        hookupEnd(s, finish);
         writeFrames(frames, s, finish);
         function finish(err) {
             assert.ifError(err, 'no unexpected error');
@@ -132,7 +131,6 @@ test('argstream', function t(assert) {
         o.on('frame', function onFrame(parts) {
             i.handleFrame(parts);
         });
-        hookupEnd(o, finish);
         writeFrames(frames, o, finish);
         function finish(err) {
             assert.ifError(err, 'no end error');
@@ -214,6 +212,7 @@ function realFrames(frames) {
 }
 
 function writeFrames(frames, s, callback) {
+    hookupEnd(s, callback);
     var writingArg = 1;
     eachFrame(0);
     function eachFrame(i) {
