@@ -56,8 +56,9 @@ class PeerGroup(object):
         :param tchannel:
             TChannel used for communication by this PeerGroup
         :param score_threshold:
-            If specified, this requires that chosen peers have a score higher
-            than this value when performing requests.
+            A value in the ``[0, 1]`` range. If specifiede, this requires that
+            chosen peers havea score higher than this value when performing
+            requests.
         """
         self.tchannel = tchannel
 
