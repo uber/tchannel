@@ -174,7 +174,7 @@ TChannelRequest.prototype.resend = function resend() {
     function onError(err) {
         if (self.checkTimeout(err)) return;
         if (self.shouldRetry(err)) {
-            deferResend();
+            self.deferResend();
         } else {
             self.emit('error', err);
         }
@@ -184,7 +184,7 @@ TChannelRequest.prototype.resend = function resend() {
         withArg23(res, function onArg23(err, res, arg2, arg3) {
             if (self.checkTimeout(err, res)) return;
             if (self.shouldRetry(err, res, arg2, arg3)) {
-                deferResend();
+                self.deferResend();
             } else if (err) {
                 self.emit('error', err);
             } else {
@@ -192,15 +192,15 @@ TChannelRequest.prototype.resend = function resend() {
             }
         });
     }
+};
 
-    function deferResend() {
-        if (--self.resendSanity <= 0) {
-            self.emit('error', new Error('TChannelRequest out of resend sanity'));
-        } else {
-            process.nextTick(doResend);
-        }
+TChannelRequest.prototype.deferResend = function deferResend() {
+    var self = this;
+    if (--self.resendSanity <= 0) {
+        self.emit('error', new Error('TChannelRequest out of resend sanity'));
+    } else {
+        process.nextTick(doResend);
     }
-
     function doResend() {
         self.resend();
     }
