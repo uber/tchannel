@@ -39,11 +39,6 @@ function addListener(type, listener) {
     this[type + 'Event'].addListener(listener);
 };
 
-EventEmitter.prototype.once =
-function once(type, listener) {
-    this[type + 'Event'].once(listener);
-};
-
 EventEmitter.prototype.removeListener =
 function removeListener(type, listener) {
     this[type + 'Event'].removeListener(listener);
@@ -82,17 +77,6 @@ DefinedEvent.prototype.on =
 DefinedEvent.prototype.addListener =
 function addListener(listener) {
     this.listeners.push(listener);
-};
-
-DefinedEvent.prototype.once =
-function once(listener) {
-    var self = this;
-    self.on(onceWrapper);
-    function onceWrapper(arg) {
-        self.removeListener(onceWrapper);
-        // jshint validthis:true
-        listener.call(this, arg);
-    }
 };
 
 DefinedEvent.prototype.removeListener =

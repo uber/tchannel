@@ -26,7 +26,7 @@ test('listening on a used port', function t(assert) {
     var otherServer = TChannel();
     var server = TChannel();
 
-    otherServer.once('listening', onPortAllocated);
+    otherServer.on('listening', onPortAllocated);
     otherServer.listen(0, 'localhost');
 
     function onPortAllocated() {

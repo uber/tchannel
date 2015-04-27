@@ -61,55 +61,10 @@ test('classic on works', function t(assert) {
     assert.end();
 });
 
-test('classic once works', function t(assert) {
-    var fooCalled = [];
-    var f = new Foo();
-
-    f.once('foo', function(arg) {
-        assert.deepEqual(this, f, 'expected context');
-        fooCalled.push(arg);
-    });
-
-    f.emit('foo', 'abc');
-    f.emit('foo', '123');
-    assert.deepEqual(fooCalled.length, 1, 'expected only one');
-    assert.deepEqual(fooCalled[0], 'abc', 'expected arg');
-
-    assert.end();
-});
-
 test('default error behavior', function t(assert) {
     var f = new Foo();
     assert.throws(function() {
         f.emit('error', new Error('ERR'));
     }, /ERR/);
-    assert.end();
-});
-
-test('once works in combination', function t(assert) {
-    var f = new Foo();
-
-    var fooCalled = [];
-    f.once('foo', function(arg) {
-        fooCalled.push(arg);
-    });
-    f.on('foo', function(arg) {
-        fooCalled.push(arg);
-    });
-    f.emit('foo', 'abc');
-    f.emit('foo', '123');
-    assert.deepEqual(fooCalled, ['abc', 'abc', '123'], 'expected arg');
-
-    var barCalled = [];
-    f.on('bar', function(arg) {
-        barCalled.push(arg);
-    });
-    f.once('bar', function(arg) {
-        barCalled.push(arg);
-    });
-    f.emit('bar', 'abc');
-    f.emit('bar', '123');
-    assert.deepEqual(barCalled, ['abc', 'abc', '123'], 'expected arg');
-
     assert.end();
 });
