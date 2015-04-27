@@ -31,19 +31,19 @@ from tchannel.tornado.stream import InMemStream
 
 @pytest.mark.gen_test
 def test_reuse():
-    port1 = unused_port()
-    port2 = unused_port()
-
     dispatch1 = TornadoDispatcher()
     dispatch2 = TornadoDispatcher()
 
-    server1 = TChannel('localhost:%d' % port1)
-    server1.host(dispatch1).listen(port1)
+    hostport1 = 'localhost:%d' % unused_port()
+    hostport2 = 'localhost:%d' % unused_port()
 
-    server2 = TChannel('localhost:%d' % port2)
-    server2.host(dispatch2).listen(port2)
+    server1 = TChannel(hostport1)
+    server1.host(dispatch1).listen()
 
-    @dispatch2.route("hello")
+    server2 = TChannel(hostport2)
+    server2.host(dispatch2).listen()
+
+    @dispatch2.route('hello')
     @gen.coroutine
     def hello(request, response, opts):
         response.argstreams = [
@@ -54,24 +54,30 @@ def test_reuse():
 
     @gen.coroutine
     def loop1(n):
-        futures = []
-        for i in xrange(n):
-            futures.append(server1.request('localhost:%d' % port2).send(
-                InMemStream("hello"),
+        results = yield [
+            server1.request(hostport2).send(
+                InMemStream('hello'),
                 InMemStream(),
                 InMemStream()
-            ))
-        results = yield futures
+            ) for i in xrange(n)
+        ]
         for resp in results:
             arg3 = yield resp.arg3()
             assert arg3 == 'hello to you too'
 
     yield loop1(2)
 
-    assert server1.out_peers.get("localhost:%d" % port2)
-    assert server2.in_peers[0][0] == "localhost:%d" % port1
-    assert not server1.in_peers
-    assert not server2.out_peers
+    # Peer representing 2 for 1's point-of-view
+    peer_1_2 = server1.peers.lookup(hostport2)
+
+    # Peer representing 1 from 2's point-of-view
+    peer_2_1 = server2.peers.lookup(hostport1)
+
+    assert len(peer_1_2.outgoing_connections) == 1
+    assert len(peer_2_1.incoming_connections) == 1
+
+    assert not peer_1_2.incoming_connections
+    assert not peer_2_1.outgoing_connections
 
     # At this point, since server2 already has an open incoming connection
     # from server1, we should re-use that for requests made from server2 to
@@ -85,19 +91,18 @@ def test_reuse():
         response.argstreams = [
             InMemStream(),
             InMemStream(),
-            InMemStream("bar")
+            InMemStream('bar')
         ]
 
     @gen.coroutine
     def loop2(n):
-        futures = []
-        for i in xrange(n):
-            futures.append(server2.request('localhost:%d' % port1).send(
+        results = yield [
+           server2.request(hostport1).send(
                 InMemStream('reverse'),
                 InMemStream(),
                 InMemStream('foo')
-            ))
-        results = yield futures
+           ) for i in xrange(n)
+        ]
         for resp in results:
             arg3 = yield resp.arg3()
             assert arg3 == 'bar'
@@ -106,10 +111,11 @@ def test_reuse():
     yield loop2(1)
     yield loop1_run
 
-    assert server1.out_peers.get("localhost:%d" % port2)
-    assert server2.in_peers[0][0] == "localhost:%d" % port1
-    assert not server1.in_peers
-    assert not server2.out_peers
+    assert len(peer_1_2.outgoing_connections) == 1
+    assert len(peer_2_1.incoming_connections) == 1
+
+    assert not peer_1_2.incoming_connections
+    assert not peer_2_1.outgoing_connections
 
 
 def unused_port():

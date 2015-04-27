@@ -94,12 +94,11 @@ class TChannelServerManager(ServerManager):
         super(TChannelServerManager, self).__init__(port, timeout)
 
         self.dispatcher = TornadoDispatcher()
-        self.tchannel = tornado_tchannel.TChannel()
-        self.server = self.tchannel.host(self.dispatcher)
+        self.tchannel = tornado_tchannel.TChannel("localhost:%d" % self.port)
         self.port = port
 
     def serve(self):
-        self.server.listen(self.port)
+        self.tchannel.host(self.dispatcher).listen()
         self.ready = True
         tornado.ioloop.IOLoop.current().start()
 

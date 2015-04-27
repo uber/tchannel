@@ -180,8 +180,7 @@ def create_server(tchannel, in_port):
         r"hi", handler1
     )
 
-    server = tchannel.host(handler)
-    server.listen(in_port)
+    tchannel.host(handler).listen()
 
 
 def chunk(iterable, n):

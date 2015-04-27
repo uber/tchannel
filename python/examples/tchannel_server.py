@@ -30,12 +30,11 @@ from handler import get_example_handler
 def main():  # pragma: no cover
     args = get_args()
 
-    client = TChannel()
+    client = TChannel('localhost:%d' % args.port)
 
     handler = get_example_handler()
 
-    server = client.host(handler)
-    server.listen(args.port)
+    client.host(handler).listen()
     tornado.ioloop.IOLoop.instance().start()
 
 

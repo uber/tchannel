@@ -27,4 +27,5 @@ pyfarmhash
 crcmod
 
 # Mocks
+mock
 doubles
