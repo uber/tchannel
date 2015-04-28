@@ -21,6 +21,12 @@ env:
   - SUBDIR=python TOX_ENV=cover
   - SUBDIR=python TOX_ENV=flake8
 
+before_install:
+  - nvm install 0.10
+  - nvm use 0.10
+  - node --version
+  - npm --version
+
 install:
   - make -C $SUBDIR install
 
