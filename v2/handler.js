@@ -163,13 +163,18 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
     var req = self.buildInRequest(reqFrame);
     self._handleCallFrame(req, reqFrame, callRequestFrameHandled);
     function callRequestFrameHandled(err) {
-        if (err) return callback(err);
-        if (req.state === States.Streaming) {
-            self.streamingReq[req.id] = req;
-        }
-        self.emit('call.incoming.request', req);
-        callback();
+        self.callRequestFrameHandled(req, err, callback);
     }
+};
+
+TChannelV2Handler.prototype.callRequestFrameHandled = function callRequestFrameHandled(req, err, callback) {
+    var self = this;
+    if (err) return callback(err);
+    if (req.state === States.Streaming) {
+        self.streamingReq[req.id] = req;
+    }
+    self.emit('call.incoming.request', req);
+    callback();
 };
 
 TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(resFrame, callback) {
@@ -180,15 +185,19 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
     var res = self.buildInResponse(resFrame);
     res.remoteAddr = self.remoteHostPort;
     self._handleCallFrame(res, resFrame, callResponseFrameHandled);
-
     function callResponseFrameHandled(err) {
-        if (err) return callback(err);
-        if (res.state === States.Streaming) {
-            self.streamingRes[res.id] = res;
-        }
-        self.emit('call.incoming.response', res);
-        callback();
+        self.callResponseFrameHandled(res, err, callback);
     }
+};
+
+TChannelV2Handler.prototype.callResponseFrameHandled = function callResponseFrameHandled(res, err, callback) {
+    var self = this;
+    if (err) return callback(err);
+    if (res.state === States.Streaming) {
+        self.streamingRes[res.id] = res;
+    }
+    self.emit('call.incoming.response', res);
+    callback();
 };
 
 TChannelV2Handler.prototype.handleCallRequestCont = function handleCallRequestCont(reqFrame, callback) {
