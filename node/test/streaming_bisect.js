@@ -118,6 +118,7 @@ test('bisection test', function t(assert) {
     async.series([
 
         {
+            reuseClusterPool: true,
             withHeaderOnly: true,
             withBodyOnly: true,
             withBoth: true,
@@ -126,6 +127,7 @@ test('bisection test', function t(assert) {
         },
 
         {
+            reuseClusterPool: true,
             withHeaderOnly: true,
             withBodyOnly: true,
             withBoth: true,
@@ -133,6 +135,7 @@ test('bisection test', function t(assert) {
         },
 
         {
+            reuseClusterPool: true,
             withHeaderOnly: true,
             withBodyOnly: true,
             withBoth: true,
@@ -144,6 +147,7 @@ test('bisection test', function t(assert) {
             // timeout failures (even with setting maxTries > 1); however none
             // of these failures are ever reproducible...
             // basis: [2, 3, 5, 7, 11, 13],
+            reuseClusterPool: true,
             withHeaderOnly: true,
             withBodyOnly: true,
             withBoth: false,
@@ -162,7 +166,7 @@ test('bisection test', function t(assert) {
         };
     }), function done(err) {
         if (err && err !== firstStop) assert.ifError(err, 'no final error');
-        assert.end();
+        search.clusterPool.destroy(assert.end);
     });
 });
 
@@ -172,8 +176,28 @@ function TestStreamSearch(options) {
     }
     var self = this;
     TestIsolateSearch.call(self, options);
+    self.clusterPool = new allocCluster.Pool(function setupCluster(callback) {
+        self.setupCluster(callback);
+    });
+    if (!self.options.reuseClusterPool) {
+        self.on('done', function onSearchTestDone() {
+            self.clusterPool.destroy();
+        });
+    }
 }
 util.inherits(TestStreamSearch, TestIsolateSearch);
+
+TestStreamSearch.prototype.setupCluster = function setupCluster(callback) {
+    var cluster = allocCluster({
+        numPeers: 2
+    });
+    var one = cluster.channels[0];
+    one.handler = echoHandler();
+    cluster.ready(clusterReady);
+    function clusterReady() {
+        callback(null, cluster);
+    }
+};
 
 TestStreamSearch.prototype.willFailLike = function willFailLike(a, b) {
     if (like(a, b)) return true;
@@ -214,26 +238,31 @@ TestStreamSearch.prototype.init = function init() {
 };
 
 TestStreamSearch.prototype.test = function test(state, assert) {
+    var self = this;
     var options = state.test;
     var name = describe(options);
-    var cluster = allocCluster({
-        numPeers: 2
-    });
-    cluster.ready(function clusterReady() {
+    var cluster = null;
+
+    self.clusterPool.get(gotCluster);
+
+    function gotCluster(err, clus) {
+        if (err) {
+            assert.end(err);
+            return;
+        }
+        cluster = clus;
+
         for (var i = 0; i < cluster.hosts.length; i++) {
             assert.comment(util.format(
                 'cluster host %s: %s',
                 i + 1, cluster.hosts[i]));
         }
 
-        var one = cluster.channels[0];
-        var two = cluster.channels[1];
-        one.handler = echoHandler();
+        var client = cluster.channels[1];
         assert.timeoutAfter(options.timeout || 100);
-        assert.once('end', cluster.destroy);
         streamingTest({
             name: name,
-            channel: two,
+            channel: client,
             opts: {host: cluster.hosts[0]},
             op: 'foo',
             headStream: CountStream({limit: options.hSize}),
@@ -254,9 +283,14 @@ TestStreamSearch.prototype.test = function test(state, assert) {
                     }]
                 }]
             });
-            cluster.destroy(assert.end);
+            if (!assert._ok) {
+                cluster.destroy(assert.end);
+            } else {
+                self.clusterPool.release(cluster);
+                assert.end();
+            }
         });
-    });
+    }
 };
 
 TestStreamSearch.prototype.explore = function explore(spec, _emit) {
