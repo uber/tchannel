@@ -230,7 +230,6 @@ TestStreamSearch.prototype.test = function test(state, assert) {
         var two = cluster.channels[1];
         one.handler = echoHandler();
         assert.timeoutAfter(options.timeout || 100);
-        assert.once('end', cluster.destroy);
         streamingTest({
             name: name,
             channel: two,
