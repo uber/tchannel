@@ -208,7 +208,6 @@ allocCluster.test('request().send() to a pool of servers', 4, function t(cluster
         channel.peers.add(chan.hostPort);
         var peer = channel.peers.get(chan.hostPort);
         var conn = peer.connect(chan.hostPort);
-        console.log(chan.hostPort);
         conn.on('identified', ready.signal);
     });
 
