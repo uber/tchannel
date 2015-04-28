@@ -175,6 +175,18 @@ function TestStreamSearch(options) {
 }
 util.inherits(TestStreamSearch, TestIsolateSearch);
 
+TestStreamSearch.prototype.setupCluster = function setupCluster(callback) {
+    var cluster = allocCluster({
+        numPeers: 2
+    });
+    var one = cluster.channels[0];
+    one.handler = echoHandler();
+    cluster.ready(clusterReady);
+    function clusterReady() {
+        callback(null, cluster);
+    }
+};
+
 TestStreamSearch.prototype.willFailLike = function willFailLike(a, b) {
     if (like(a, b)) return true;
     for (var i = 0; i < b.trace.length; i++) {
@@ -214,25 +226,30 @@ TestStreamSearch.prototype.init = function init() {
 };
 
 TestStreamSearch.prototype.test = function test(state, assert) {
+    var self = this;
     var options = state.test;
     var name = describe(options);
-    var cluster = allocCluster({
-        numPeers: 2
-    });
-    cluster.ready(function clusterReady() {
+    var cluster = null;
+
+    self.setupCluster(gotCluster);
+    function gotCluster(err, clus) {
+        if (err) {
+            assert.end(err);
+            return;
+        }
+        cluster = clus;
+
         for (var i = 0; i < cluster.hosts.length; i++) {
             assert.comment(util.format(
                 'cluster host %s: %s',
                 i + 1, cluster.hosts[i]));
         }
 
-        var one = cluster.channels[0];
-        var two = cluster.channels[1];
-        one.handler = echoHandler();
+        var client = cluster.channels[1];
         assert.timeoutAfter(options.timeout || 100);
         streamingTest({
             name: name,
-            channel: two,
+            channel: client,
             opts: {host: cluster.hosts[0]},
             op: 'foo',
             headStream: CountStream({limit: options.hSize}),
@@ -255,7 +272,7 @@ TestStreamSearch.prototype.test = function test(state, assert) {
             });
             cluster.destroy(assert.end);
         });
-    });
+    }
 };
 
 TestStreamSearch.prototype.explore = function explore(spec, _emit) {
