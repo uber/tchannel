@@ -236,11 +236,7 @@ TChannelConnection.prototype.start = function start() {
     }
 
     function onOutIdentified(init) {
-        self.remoteName = init.hostPort;
-        self.emit('identified', {
-            hostPort: init.hostPort,
-            processName: init.processName
-        });
+        self.onOutIdentified(init);
     }
 
     function onInIdentified(init) {
@@ -257,6 +253,15 @@ TChannelConnection.prototype.start = function start() {
             processName: init.processName
         });
     }
+};
+
+TChannelConnection.prototype.onOutIdentified = function onOutIdentified(init) {
+    var self = this;
+    self.remoteName = init.hostPort;
+    self.emit('identified', {
+        hostPort: init.hostPort,
+        processName: init.processName
+    });
 };
 
 TChannelConnection.prototype.close = function close(callback) {
