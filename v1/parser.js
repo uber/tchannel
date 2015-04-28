@@ -211,4 +211,5 @@ TChannelParser.prototype.emitAndReset = function () {
     this.emit('frame', this.newFrame);
     this.newFrame = new TChannelFrame();
     this.state = states.readType;
+    this.chunk = null;
 };
