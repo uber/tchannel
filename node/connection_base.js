@@ -245,12 +245,11 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
     req.remoteAddr = self.remoteName;
     self.pending.in++;
     self.requests.in[req.id] = req;
-    var done = false;
     req.on('error', onReqError);
     process.nextTick(runHandler);
 
     function onReqError(err) {
-        if (!req.res) buildResponse();
+        if (!req.res) self.buildResponse(req);
         if (err.type === 'tchannel.timeout') {
             req.res.sendError('Timeout', err.message);
         } else {
@@ -263,20 +262,26 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
         self.channel.handler.handleRequest(req, buildResponse);
     }
 
+    function buildResponse(options) {
+        return self.buildResponse(req, options);
+    }
+};
+
+TChannelConnectionBase.prototype.buildResponse = function buildResponse(req, options) {
+    var self = this;
+    var done = false;
+    if (req.res && req.res.state !== States.Initial) {
+        self.emit('error', errors.ResponseAlreadyStarted({
+            state: req.res.state
+        }));
+    }
+    req.res = self.buildOutResponse(req, options);
+    req.res.on('finish', opDone);
+    req.res.on('span', handleSpanFromRes);
+    return req.res;
+
     function handleSpanFromRes(span) {
         self.emit('span', span);
-    }
-
-    function buildResponse(options) {
-        if (req.res && req.res.state !== States.Initial) {
-            self.emit('error', errors.ResponseAlreadyStarted({
-                state: req.res.state
-            }));
-        }
-        req.res = self.buildOutResponse(req, options);
-        req.res.on('finish', opDone);
-        req.res.on('span', handleSpanFromRes);
-        return req.res;
     }
 
     function opDone() {
