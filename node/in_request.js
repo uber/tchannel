@@ -20,7 +20,7 @@
 
 'use strict';
 
-var EventEmitter = require('events').EventEmitter;
+var EventEmitter = require('./lib/event_emitter');
 var inherits = require('util').inherits;
 
 var errors = require('./errors');
@@ -32,6 +32,9 @@ function TChannelInRequest(id, options) {
     options = options || {};
     var self = this;
     EventEmitter.call(self);
+    self.errorEvent = self.defineEvent('error');
+    self.finishEvent = self.defineEvent('finish');
+
     self.logger = options.logger;
     self.random = options.random;
     self.timers = options.timers;
@@ -70,15 +73,14 @@ function TChannelInRequest(id, options) {
     self.timedOut = false;
     self.res = null;
 
-    self.on('finish', self.onFinish);
+    self.finishEvent.on(self.onFinish);
 }
 
 inherits(TChannelInRequest, EventEmitter);
 
 TChannelInRequest.prototype.type = 'tchannel.incoming-request';
 
-TChannelInRequest.prototype.onFinish = function onFinish() {
-    var self = this;
+TChannelInRequest.prototype.onFinish = function onFinish(_arg, self) {
     self.state = States.Done;
 };
 
@@ -86,14 +88,14 @@ TChannelInRequest.prototype.handleFrame = function handleFrame(parts) {
     var self = this;
     if (!parts) return;
     if (parts.length !== 3 || self.state !== States.Initial) {
-        self.emit('error', new Error(
+        self.errorEvent.emit(self, new Error(
             'un-streamed argument defragmentation is not implemented'));
     }
     self.arg1 = parts[0] || emptyBuffer;
     self.arg2 = parts[1] || emptyBuffer;
     self.arg3 = parts[2] || emptyBuffer;
     if (self.span) self.span.name = String(self.arg1);
-    self.emit('finish');
+    self.finishEvent.emit(self);
 };
 
 TChannelInRequest.prototype.checkTimeout = function checkTimeout() {
@@ -106,7 +108,7 @@ TChannelInRequest.prototype.checkTimeout = function checkTimeout() {
             // TODO: emit error on self.res instead / in additon to?
             // TODO: should cancel any pending handler
             process.nextTick(function deferInReqTimeoutErrorEmit() {
-                self.emit('error', errors.TimeoutError({
+                self.errorEvent.emit(self, errors.TimeoutError({
                     id: self.id,
                     start: self.start,
                     elapsed: elapsed,

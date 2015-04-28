@@ -20,7 +20,7 @@
 
 'use strict';
 
-var EventEmitter = require('events').EventEmitter;
+var EventEmitter = require('./lib/event_emitter');
 var inherits = require('util').inherits;
 var parallel = require('run-parallel');
 
@@ -31,6 +31,10 @@ function TChannelOutRequest(id, options) {
     options = options || {};
     var self = this;
     EventEmitter.call(self);
+    self.errorEvent = self.defineEvent('error');
+    self.responseEvent = self.defineEvent('response');
+    self.finishEvent = self.defineEvent('finish');
+
     self.logger = options.logger;
     self.random = options.random;
     self.timers = options.timers;
@@ -76,8 +80,8 @@ function TChannelOutRequest(id, options) {
     self.res = null;
     self.timedOut = false;
 
-    self.on('error', self.onError);
-    self.on('response', self.onResponse);
+    self.errorEvent.on(self.onError);
+    self.responseEvent.on(self.onResponse);
 }
 
 inherits(TChannelOutRequest, EventEmitter);
@@ -100,14 +104,12 @@ TChannelOutRequest.prototype._sendCallRequestCont = function _sendCallRequestCon
     });
 };
 
-TChannelOutRequest.prototype.onError = function onError(err) {
-    var self = this;
+TChannelOutRequest.prototype.onError = function onError(err, self) {
     if (!self.end) self.end = self.timers.now();
     self.err = err;
 };
 
-TChannelOutRequest.prototype.onResponse = function onResponse(res) {
-    var self = this;
+TChannelOutRequest.prototype.onResponse = function onResponse(res, self) {
     if (!self.end) self.end = self.timers.now();
     self.res = res;
     self.res.span = self.span;
@@ -125,7 +127,7 @@ TChannelOutRequest.prototype.sendParts = function sendParts(parts, isLast) {
         case States.Done:
             // TODO: could probably happen normally, like say if a
             // streaming request is canceled
-            self.emit('error', errors.RequestFrameState({
+            self.errorEvent.emit(self, errors.RequestFrameState({
                 attempted: 'arg parts',
                 state: 'Done'
             }));
@@ -149,13 +151,13 @@ TChannelOutRequest.prototype.sendCallRequestFrame = function sendCallRequestFram
             else self.state = States.Streaming;
             break;
         case States.Streaming:
-            self.emit('error', errors.RequestFrameState({
+            self.errorEvent.emit(self, errors.RequestFrameState({
                 attempted: 'call request',
                 state: 'Streaming'
             }));
             break;
         case States.Done:
-            self.emit('error', errors.RequestAlreadyDone({
+            self.errorEvent.emit(self, errors.RequestAlreadyDone({
                 attempted: 'call request'
             }));
             break;
@@ -166,7 +168,7 @@ TChannelOutRequest.prototype.sendCallRequestContFrame = function sendCallRequest
     var self = this;
     switch (self.state) {
         case States.Initial:
-            self.emit('error', errors.RequestFrameState({
+            self.errorEvent.emit(self, errors.RequestFrameState({
                 attempted: 'call request continuation',
                 state: 'Initial'
             }));
@@ -176,7 +178,7 @@ TChannelOutRequest.prototype.sendCallRequestContFrame = function sendCallRequest
             if (isLast) self.state = States.Done;
             break;
         case States.Done:
-            self.emit('error', errors.RequestAlreadyDone({
+            self.errorEvent.emit(self, errors.RequestAlreadyDone({
                 attempted: 'call request continuation'
             }));
             break;
@@ -191,7 +193,7 @@ TChannelOutRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     }
     if (callback) self.hookupCallback(callback);
     self.sendCallRequestFrame([arg1, arg2, arg3], true);
-    self.emit('finish');
+    self.finishEvent.emit(self);
     return self;
 };
 
@@ -199,8 +201,8 @@ TChannelOutRequest.prototype.hookupStreamCallback = function hookupCallback(call
     var self = this;
     var called = false;
 
-    self.on('error', onError);
-    self.on('response', onResponse);
+    self.errorEvent.on(onError);
+    self.responseEvent.on(onResponse);
 
     function onError(err) {
         if (called) return;
@@ -224,8 +226,8 @@ TChannelOutRequest.prototype.hookupCallback = function hookupCallback(callback) 
     }
     var called = false;
 
-    self.on('error', onError);
-    self.on('response', onResponse);
+    self.errorEvent.on(onError);
+    self.responseEvent.on(onResponse);
 
     function onError(err) {
         if (called) return;
@@ -261,7 +263,7 @@ TChannelOutRequest.prototype.checkTimeout = function checkTimeout() {
             self.end = now;
             self.timedOut = true;
             process.nextTick(function deferOutReqTimeoutErrorEmit() {
-                self.emit('error', errors.TimeoutError({
+                self.errorEvent.emit(self, errors.TimeoutError({
                     id: self.id,
                     start: self.start,
                     elapsed: elapsed,

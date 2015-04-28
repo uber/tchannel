@@ -36,20 +36,22 @@ function StreamingOutResponse(id, options) {
     self.arg1 = self._argstream.arg1;
     self.arg2 = self._argstream.arg2;
     self.arg3 = self._argstream.arg3;
-    self._argstream.on('error', passError);
-    self._argstream.on('frame', onFrame);
-    self._argstream.on('finish', onFinish);
+    self._argstream.errorEvent.on(passError);
+    self._argstream.frameEvent.on(onFrame);
+    self._argstream.finishEvent.on(onFinish);
 
     function passError(err) {
-        self.emit('error', err);
+        self.errorEvent.emit(self, err);
     }
 
-    function onFrame(parts, isLast) {
+    function onFrame(tup) {
+        var parts = tup[0];
+        var isLast = tup[1];
         self.sendParts(parts, isLast);
     }
 
     function onFinish() {
-        self.emit('finish');
+        self.finishEvent.emit(self);
     }
 }
 
@@ -60,7 +62,7 @@ StreamingOutResponse.prototype.type = 'tchannel.outgoing-response.streaming';
 StreamingOutResponse.prototype.sendError = function sendError(codeString, message) {
     var self = this;
     if (self.state === States.Done || self.state === States.Error) {
-        self.emit('error', errors.ResponseAlreadyDone({
+        self.errorEvent.emit(self, errors.ResponseAlreadyDone({
             attempted: 'send error frame: ' + codeString + ': ' + message
         }));
     } else {
@@ -73,15 +75,14 @@ StreamingOutResponse.prototype.sendError = function sendError(codeString, messag
         self.arg2.end();
         self.arg3.end();
         self.sendFrame.error(codeString, message);
-        self.emit('errored', codeString, message);
-        self.emit('finish');
+        self.finishEvent.emit(self);
     }
 };
 
 StreamingOutResponse.prototype.setOk = function setOk(ok) {
     var self = this;
     if (self.state !== States.Initial) {
-        self.emit('error', errors.ResponseAlreadyStarted({
+        self.errorEvent.emit(self, errors.ResponseAlreadyStarted({
             state: self.state
         }));
     }

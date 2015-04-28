@@ -20,7 +20,7 @@
 
 'use strict';
 
-var EventEmitter = require('events').EventEmitter;
+var EventEmitter = require('./lib/event_emitter');
 var inherits = require('util').inherits;
 
 var States = require('./reqres_states');
@@ -31,6 +31,10 @@ function TChannelInResponse(id, options) {
     options = options || {};
     var self = this;
     EventEmitter.call(self);
+    self.errorEvent = self.defineEvent('error');
+    self.spanEvent = self.defineEvent('span');
+    self.finishEvent = self.defineEvent('finish');
+
     self.logger = options.logger;
     self.random = options.random;
     self.timers = options.timers;
@@ -51,18 +55,17 @@ function TChannelInResponse(id, options) {
 
     self.start = self.timers.now();
 
-    self.on('finish', self.onFinish);
+    self.finishEvent.on(self.onFinish);
 }
 
 inherits(TChannelInResponse, EventEmitter);
 
 TChannelInResponse.prototype.type = 'tchannel.incoming-response';
 
-TChannelInResponse.prototype.onFinish = function onFinish() {
-    var self = this;
+TChannelInResponse.prototype.onFinish = function onFinish(_arg, self) {
     self.state = States.Done;
     if (self.span) {
-        self.emit('span');
+        self.spanEvent.emit(self);
     }
 };
 
@@ -71,13 +74,13 @@ TChannelInResponse.prototype.handleFrame = function handleFrame(parts) {
     if (!parts) return;
     if (parts.length !== 3 ||
         self.state !== States.Initial) {
-        self.emit('error', new Error(
+        self.errorEvent.emit(self, new Error(
             'un-streamed argument defragmentation is not implemented'));
     }
     self.arg1 = parts[0] || emptyBuffer;
     self.arg2 = parts[1] || emptyBuffer;
     self.arg3 = parts[2] || emptyBuffer;
-    self.emit('finish');
+    self.finishEvent.emit(self);
 };
 
 module.exports = TChannelInResponse;

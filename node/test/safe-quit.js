@@ -28,7 +28,7 @@ test('can call quit() safely async', function t(assert) {
     var channel = TChannel();
     channel.listen(0, 'localhost');
 
-    channel.once('listening', function onListen() {
+    channel.on('listening', function onListen() {
         assert.doesNotThrow(function noThrow() {
             channel.quit();
         });
@@ -51,7 +51,7 @@ test('can call quit() safely async w/ callback', function t(assert) {
     var channel = TChannel();
     channel.listen(0, 'localhost');
 
-    channel.once('listening', function onListen() {
+    channel.on('listening', function onListen() {
         assert.doesNotThrow(function noThrow() {
             channel.quit(assert.end);
         });

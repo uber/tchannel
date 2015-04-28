@@ -22,7 +22,7 @@
 
 var assert = require('assert');
 var inherits = require('util').inherits;
-var EventEmitter = require('events').EventEmitter;
+var EventEmitter = require('./lib/event_emitter');
 var net = require('net');
 
 var TChannelConnection = require('./connection');
@@ -34,6 +34,9 @@ function TChannelPeer(channel, hostPort, options) {
     }
     var self = this;
     EventEmitter.call(self);
+    self.stateChangedEvent = self.defineEvent('stateChanged');
+    self.allocConnectionEvent = self.defineEvent('allocConnection');
+
     self.channel = channel;
     self.logger = self.channel.logger;
     self.options = options || {};
@@ -103,7 +106,7 @@ TChannelPeer.prototype.setState = function setState(StateType) {
     }
     var oldState = self.state;
     self.state = state;
-    self.emit('stateChanged', oldState, state);
+    self.stateChangedEvent.emit(self, [oldState, state]);
 };
 
 TChannelPeer.prototype.getInConnection = function getInConnection() {
@@ -141,8 +144,8 @@ TChannelPeer.prototype.request = function peerRequest(options) {
 
     self.state.onRequest(req);
 
-    req.on('error', onError);
-    req.on('response', onResponse);
+    req.errorEvent.on(onError);
+    req.responseEvent.on(onResponse);
 
     function onError(err) {
         self.state.onRequestError(req);
@@ -164,7 +167,7 @@ TChannelPeer.prototype.addConnection = function addConnection(conn) {
     } else {
         self.connections.unshift(conn);
     }
-    conn.once('error', onConnectionError);
+    conn.errorEvent.on(onConnectionError);
     return conn;
 
     function onConnectionError(/* err */) {
@@ -200,7 +203,7 @@ TChannelPeer.prototype.makeOutConnection = function makeOutConnection(socket) {
     var self = this;
     var chan = self.channel.topChannel || self.channel;
     var conn = new TChannelConnection(chan, socket, 'out', self.hostPort);
-    self.emit('allocConnection', conn);
+    self.allocConnectionEvent.emit(self, conn);
     return conn;
 };
 

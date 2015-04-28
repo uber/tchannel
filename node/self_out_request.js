@@ -57,8 +57,9 @@ function makeInreq(id, options) {
     } else {
         self.inreq = new InRequest(id, options);
     }
-    self.inreq.on('error', onError);
-    self.inreq.on('response', onResponse);
+    self.inreq.responseEvent = self.inreq.defineEvent('response');
+    self.inreq.errorEvent.on(onError);
+    self.inreq.responseEvent.on(onResponse);
     self.inreq.outreq = self; // TODO: make less hacky when have proper subclasses
     self.inreq.headers = self.headers;
 
@@ -66,14 +67,14 @@ function makeInreq(id, options) {
         if (called) return;
         called = true;
         self.conn.popOutReq(id);
-        self.emit('error', err);
+        self.errorEvent.emit(self, err);
     }
 
     function onResponse(res) {
         if (called) return;
         called = true;
         self.conn.popOutReq(id);
-        self.emit('response', res);
+        self.responseEvent.emit(self, res);
     }
 };
 

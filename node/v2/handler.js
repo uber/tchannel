@@ -20,7 +20,7 @@
 
 'use strict';
 
-var EventEmitter = require('events').EventEmitter;
+var EventEmitter = require('../lib/event_emitter');
 var util = require('util');
 
 var OutRequest = require('./out_request').OutRequest;
@@ -46,6 +46,14 @@ function TChannelV2Handler(options) {
     }
     var self = this;
     EventEmitter.call(self);
+    self.errorEvent = self.defineEvent('error');
+    self.callIncomingErrorEvent = self.defineEvent('callIncomingError');
+    self.callIncomingRequestEvent = self.defineEvent('callIncomingRequest');
+    self.callIncomingResponseEvent = self.defineEvent('callIncomingResponse');
+    self.initRequestEvent = self.defineEvent('initRequest');
+    self.initResponseEvent = self.defineEvent('initResponse');
+    self.writeErrorEvent = self.defineEvent('writeError'); // TODO: could use default throw behavior
+
     self.options = options || {};
     self.logger = self.options.logger;
     self.random = self.options.random;
@@ -65,7 +73,7 @@ util.inherits(TChannelV2Handler, EventEmitter);
 
 TChannelV2Handler.prototype.write = function write() {
     var self = this;
-    self.emit('error', new Error('write not implemented'));
+    self.errorEvent.emit(self, new Error('write not implemented'));
 };
 
 TChannelV2Handler.prototype.writeCopy = function writeCopy(buffer) {
@@ -83,7 +91,7 @@ TChannelV2Handler.prototype.pushFrame = function pushFrame(frame) {
     if (err) {
         if (!Buffer.isBuffer(err.buffer)) err.buffer = writeBuffer;
         if (typeof err.offset !== 'number') err.offset = res.offset;
-        self.emit('write.error', err);
+        self.writeErrorEvent.emit(self, err);
     } else {
         var buf = writeBuffer.slice(0, res.offset);
         self.writeCopy(buf);
@@ -133,7 +141,7 @@ TChannelV2Handler.prototype.handleInitRequest = function handleInitRequest(reqFr
     };
     /* jshint camelcase:true */
     self.remoteHostPort = init.hostPort;
-    self.emit('init.request', init);
+    self.initRequestEvent.emit(self, init);
     self.sendInitResponse(reqFrame);
     callback();
 };
@@ -151,7 +159,7 @@ TChannelV2Handler.prototype.handleInitResponse = function handleInitResponse(res
     };
     /* jshint camelcase:true */
     self.remoteHostPort = init.hostPort;
-    self.emit('init.response', init);
+    self.initResponseEvent.emit(self, init);
     callback();
 };
 
@@ -173,7 +181,7 @@ TChannelV2Handler.prototype.callRequestFrameHandled = function callRequestFrameH
     if (req.state === States.Streaming) {
         self.streamingReq[req.id] = req;
     }
-    self.emit('call.incoming.request', req);
+    self.callIncomingRequestEvent.emit(self, req);
     callback();
 };
 
@@ -196,7 +204,7 @@ TChannelV2Handler.prototype.callResponseFrameHandled = function callResponseFram
     if (res.state === States.Streaming) {
         self.streamingRes[res.id] = res;
     }
-    self.emit('call.incoming.response', res);
+    self.callIncomingResponseEvent.emit(self, res);
     callback();
 };
 
@@ -240,7 +248,7 @@ TChannelV2Handler.prototype.handleError = function handleError(errFrame, callbac
         // fatal error not associated with a prior frame
         callback(err);
     } else {
-        self.emit('call.incoming.error', err);
+        self.callIncomingErrorEvent.emit(self, err);
         callback();
     }
 };
@@ -273,7 +281,7 @@ TChannelV2Handler.prototype._handleCallFrame = function _handleCallFrame(r, fram
     } else if (r.state === States.Initial) {
         r.state = States.Streaming;
     } else if (r.state !== States.Streaming) {
-        self.emit('error', new Error('unknown frame handling state'));
+        self.errorEvent.emit(self, new Error('unknown frame handling state'));
     }
     callback();
 };

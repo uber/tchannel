@@ -37,7 +37,7 @@
  */
 
 var inherits = require('util').inherits;
-var EventEmitter = require('events').EventEmitter;
+var EventEmitter = require('./lib/event_emitter');
 var PassThrough = require('readable-stream').PassThrough;
 var Ready = require('ready-signal');
 var errors = require('./errors');
@@ -45,6 +45,10 @@ var errors = require('./errors');
 function ArgStream() {
     var self = this;
     EventEmitter.call(self);
+    self.errorEvent = self.defineEvent('error');
+    self.frameEvent = self.defineEvent('frame');
+    self.finishEvent = self.defineEvent('finish');
+
     self.arg1 = StreamArg();
     self.arg2 = StreamArg();
     self.arg3 = StreamArg();
@@ -53,7 +57,7 @@ function ArgStream() {
     self.arg2.on('error', passError);
     self.arg3.on('error', passError);
     function passError(err) {
-        self.emit('error', err);
+        self.errorEvent.emit(self, err);
     }
 
     self.arg2.on('start', function onArg2Start() {
@@ -82,7 +86,7 @@ function InArgStream() {
     function argFinished() {
         if (++self._numFinished >= 3 && !self.finished) {
             self.finished = true;
-            self.emit('finish');
+            self.finishEvent.emit(self);
         }
     }
 }
@@ -99,7 +103,7 @@ InArgStream.prototype.handleFrame = function handleFrame(parts) {
     }
 
     if (self.finished) {
-        self.emit('error', new Error('arg stream finished')); // TODO typed error
+        self.errorEvent.emit(self, new Error('arg stream finished')); // TODO typed error
     }
 
     for (var i = 0; i < parts.length; i++) {
@@ -108,7 +112,7 @@ InArgStream.prototype.handleFrame = function handleFrame(parts) {
         if (parts[i].length) stream.write(parts[i]);
     }
     if (i < parts.length) {
-        self.emit('error', new Error('frame parts exceeded stream arity')); // TODO clearer / typed error
+        self.errorEvent.emit(self, new Error('frame parts exceeded stream arity')); // TODO clearer / typed error
     }
 
     function advance() {
@@ -150,7 +154,7 @@ function OutArgStream() {
         self._handleFrameChunk(3, null);
         self._flushParts(true);
         self.finished = true;
-        self.emit('finish');
+        self.finishEvent.emit(self);
     });
 }
 
@@ -159,13 +163,13 @@ inherits(OutArgStream, ArgStream);
 OutArgStream.prototype._handleFrameChunk = function _handleFrameChunk(n, chunk) {
     var self = this;
     if (n < self.currentArgN) {
-        self.emit('error', errors.ArgChunkOutOfOrderError({
+        self.errorEvent.emit(self, errors.ArgChunkOutOfOrderError({
             current: self.currentArgN,
             got: n
         }));
     } else if (n > self.currentArgN) {
         if (n - self.currentArgN > 1) {
-            self.emit('error', errors.ArgChunkGapError({
+            self.errorEvent.emit(self, errors.ArgChunkGapError({
                 current: self.currentArgN,
                 got: n
             }));
@@ -212,7 +216,7 @@ OutArgStream.prototype._flushParts = function _flushParts(isLast) {
     isLast = Boolean(isLast);
     var frame = self.frame;
     self.frame = [Buffer(0)];
-    if (frame.length) self.emit('frame', frame, isLast);
+    if (frame.length) self.frameEvent.emit(self, [frame, isLast]);
 };
 
 function StreamArg(options) {

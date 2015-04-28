@@ -22,7 +22,7 @@
 
 var assert = require('assert');
 var inherits = require('util').inherits;
-var EventEmitter = require('events').EventEmitter;
+var EventEmitter = require('./lib/event_emitter');
 
 var errors = require('./errors');
 var States = require('./reqres_states');
@@ -34,6 +34,10 @@ function TChannelConnectionBase(channel, direction, remoteAddr) {
 
     var self = this;
     EventEmitter.call(self);
+    self.errorEvent = self.defineEvent('error');
+    self.timedOutEvent = self.defineEvent('timedOut');
+    self.spanEvent = self.defineEvent('span');
+
     self.channel = channel;
     self.options = self.channel.options;
     self.logger = channel.logger;
@@ -104,7 +108,7 @@ TChannelConnectionBase.prototype.onTimeoutCheck = function onTimeoutCheck() {
         return;
     }
     if (self.lastTimeoutTime) {
-        self.emit('timedOut');
+        self.timedOutEvent.emit(self);
     } else {
         self.checkTimeout(self.requests.out, 'out');
         self.checkTimeout(self.requests.in, 'in');
@@ -172,7 +176,7 @@ TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
     });
 
     if (isError) {
-        self.emit('error', err);
+        self.errorEvent.emit(self, err);
     }
 
     // requests that we've received we can delete, but these reqs may have started their
@@ -189,7 +193,7 @@ TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
         var req = self.requests.out[id];
         delete self.requests.out[id];
         // TODO: shared mutable object... use Object.create(err)?
-        req.emit('error', err);
+        req.errorEvent.emit(req, err);
     });
 
     self.pending.in = 0;
@@ -245,7 +249,7 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
     req.remoteAddr = self.remoteName;
     self.pending.in++;
     self.requests.in[req.id] = req;
-    req.on('error', onReqError);
+    req.errorEvent.on(onReqError);
     process.nextTick(runHandler);
 
     function onReqError(err) {
@@ -280,17 +284,17 @@ TChannelConnectionBase.prototype.buildResponse = function buildResponse(req, opt
     var self = this;
     var done = false;
     if (req.res && req.res.state !== States.Initial) {
-        self.emit('error', errors.ResponseAlreadyStarted({
+        self.errorEvent.emit(self, errors.ResponseAlreadyStarted({
             state: req.res.state
         }));
     }
     req.res = self.buildOutResponse(req, options);
-    req.res.on('finish', opDone);
-    req.res.on('span', handleSpanFromRes);
+    req.res.finishEvent.on(opDone);
+    req.res.spanEvent.on(handleSpanFromRes);
     return req.res;
 
     function handleSpanFromRes(span) {
-        self.emit('span', span);
+        self.spanEvent.emit(self, span);
     }
 
     function opDone() {

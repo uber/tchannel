@@ -85,7 +85,8 @@ test('argstream', function t(assert) {
         var expect = realFrames(frames);
         var gotI = 0;
         var s = new argstream.OutArgStream();
-        s.on('frame', function onFrame(parts) {
+        s.on('frame', function onFrame(tup) {
+            var parts = tup[0];
             var expected = expect[gotI++];
             if (!expected) {
                 assert.fail(util.format('unexpected frame %s: ', gotI, parts));
@@ -95,7 +96,7 @@ test('argstream', function t(assert) {
                 }), 'expected frame ' + gotI);
             }
         });
-        s.once('finish', function onFinish() {
+        s.on('finish', function onFinish() {
             assert.equal(gotI, expect.length, 'got all expected frames');
         });
         writeFrames(frames, s, assert.end);
@@ -124,7 +125,8 @@ test('argstream', function t(assert) {
         var args = state.args;
         var o = new argstream.OutArgStream();
         var i = new argstream.InArgStream();
-        o.on('frame', function onFrame(parts) {
+        o.on('frame', function onFrame(tup) {
+            var parts = tup[0];
             i.handleFrame(parts);
         });
         writeFrames(frames, o, finish);
