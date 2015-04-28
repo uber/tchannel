@@ -249,17 +249,22 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
     process.nextTick(runHandler);
 
     function onReqError(err) {
-        if (!req.res) self.buildResponse(req);
-        if (err.type === 'tchannel.timeout') {
-            req.res.sendError('Timeout', err.message);
-        } else {
-            var errName = err.name || err.constructor.name;
-            req.res.sendError('UnexpectedError', errName + ': ' + err.message);
-        }
+        self.onReqError(req, err);
     }
 
     function runHandler() {
         self.runHandler(req);
+    }
+};
+
+TChannelConnectionBase.prototype.onReqError = function onReqError(req, err) {
+    var self = this;
+    if (!req.res) self.buildResponse(req);
+    if (err.type === 'tchannel.timeout') {
+        req.res.sendError('Timeout', err.message);
+    } else {
+        var errName = err.name || err.constructor.name;
+        req.res.sendError('UnexpectedError', errName + ': ' + err.message);
     }
 };
 
