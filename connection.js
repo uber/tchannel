@@ -240,18 +240,7 @@ TChannelConnection.prototype.start = function start() {
     }
 
     function onInIdentified(init) {
-        if (init.hostPort === '0.0.0.0:0') {
-            self.remoteName = '' + self.socket.remoteAddress + ':' + self.socket.remotePort;
-            assert(self.remoteName !== self.channel.hostPort,
-                  'should not be able to receive ephemeral connection from self');
-        } else {
-            self.remoteName = init.hostPort;
-        }
-        self.channel.peers.add(self.remoteName).addConnection(self);
-        self.emit('identified', {
-            hostPort: self.remoteName,
-            processName: init.processName
-        });
+        self.onInIdentified(init);
     }
 };
 
@@ -260,6 +249,22 @@ TChannelConnection.prototype.onOutIdentified = function onOutIdentified(init) {
     self.remoteName = init.hostPort;
     self.emit('identified', {
         hostPort: init.hostPort,
+        processName: init.processName
+    });
+};
+
+TChannelConnection.prototype.onInIdentified = function onInIdentified(init) {
+    var self = this;
+    if (init.hostPort === '0.0.0.0:0') {
+        self.remoteName = '' + self.socket.remoteAddress + ':' + self.socket.remotePort;
+        assert(self.remoteName !== self.channel.hostPort,
+              'should not be able to receive ephemeral connection from self');
+    } else {
+        self.remoteName = init.hostPort;
+    }
+    self.channel.peers.add(self.remoteName).addConnection(self);
+    self.emit('identified', {
+        hostPort: self.remoteName,
         processName: init.processName
     });
 };
