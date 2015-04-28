@@ -146,27 +146,7 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     }
 
     function onCallResponse(res) {
-        var req = self.popOutReq(res.id);
-        if (!req) {
-            self.logger.info('response received for unknown or lost operation', {
-                responseId: res.id,
-                code: res.code,
-                arg1: Buffer.isBuffer(res.arg1) ?
-                    String(res.arg1) : "streamed-arg1",
-                remoteAddr: self.remoteAddr,
-                direction: self.direction,
-            });
-            return;
-        }
-
-        if (self.tracer) {
-            // TODO: better annotations
-            req.span.annotate('cr');
-            self.tracer.report(req.span);
-            res.span = req.span;
-        }
-
-        req.emit('response', res);
+        self.onCallResponse(res);
     }
 
     function onCallError(err) {
@@ -209,6 +189,31 @@ TChannelConnection.prototype.handleReadFrame = function handleReadFrame(frame) {
     function handledFrame(err) {
         if (err) self.onHandlerError(err);
     }
+};
+
+TChannelConnection.prototype.onCallResponse = function onCallResponse(res) {
+    var self = this;
+    var req = self.popOutReq(res.id);
+    if (!req) {
+        self.logger.info('response received for unknown or lost operation', {
+            responseId: res.id,
+            code: res.code,
+            arg1: Buffer.isBuffer(res.arg1) ?
+                String(res.arg1) : "streamed-arg1",
+            remoteAddr: self.remoteAddr,
+            direction: self.direction,
+        });
+        return;
+    }
+
+    if (self.tracer) {
+        // TODO: better annotations
+        req.span.annotate('cr');
+        self.tracer.report(req.span);
+        res.span = req.span;
+    }
+
+    req.emit('response', res);
 };
 
 TChannelConnection.prototype.start = function start() {
