@@ -138,14 +138,7 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     }
 
     function handleReadFrame(frame) {
-        if (!self.closing) {
-            self.lastTimeoutTime = 0;
-        }
-        self.handler.handleFrame(frame, handledFrame);
-    }
-
-    function handledFrame(err) {
-        if (err) self.onHandlerError(err);
+        self.handleReadFrame(frame);
     }
 
     function onCallRequest(req) {
@@ -205,6 +198,17 @@ TChannelConnection.prototype.onHandlerError = function onHandlerError(err) {
     self.resetAll(err);
     // resetAll() does not close the socket
     self.socket.destroy();
+};
+
+TChannelConnection.prototype.handleReadFrame = function handleReadFrame(frame) {
+    var self = this;
+    if (!self.closing) {
+        self.lastTimeoutTime = 0;
+    }
+    self.handler.handleFrame(frame, handledFrame);
+    function handledFrame(err) {
+        if (err) self.onHandlerError(err);
+    }
 };
 
 TChannelConnection.prototype.start = function start() {
