@@ -296,16 +296,21 @@ TChannelConnectionBase.prototype.buildResponse = function buildResponse(req, opt
     function opDone() {
         if (done) return;
         done = true;
-        if (self.requests.in[req.id] !== req) {
-            self.logger.warn('mismatched opDone callback', {
-                hostPort: self.channel.hostPort,
-                id: req.id
-            });
-            return;
-        }
-        delete self.requests.in[req.id];
-        self.pending.in--;
+        self.onReqDone(req);
     }
+};
+
+TChannelConnectionBase.prototype.onReqDone = function onReqDone(req) {
+    var self = this;
+    if (self.requests.in[req.id] !== req) {
+        self.logger.warn('mismatched onReqDone callback', {
+            hostPort: self.channel.hostPort,
+            id: req.id
+        });
+        return;
+    }
+    delete self.requests.in[req.id];
+    self.pending.in--;
 };
 
 module.exports = TChannelConnectionBase;
