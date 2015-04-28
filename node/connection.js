@@ -130,30 +130,15 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     //     ;
 
     function onWriteError(err) {
-        self.resetAll(errors.TChannelWriteProtocolError(err, {
-            remoteName: self.remoteName,
-            localName: self.channel.hostPort
-        }));
-        self.socket.destroy();
+        self.onWriteError(err);
     }
 
     function onHandlerError(err) {
-        self.resetAll(err);
-        // resetAll() does not close the socket
-        self.socket.destroy();
+        self.onHandlerError(err);
     }
 
     function handleReadFrame(frame) {
-        if (!self.closing) {
-            self.lastTimeoutTime = 0;
-        }
-        self.handler.handleFrame(frame, handledFrame);
-    }
-
-    function handledFrame(err) {
-        if (err) {
-            onHandlerError(err);
-        }
+        self.handleReadFrame(frame);
     }
 
     function onCallRequest(req) {
@@ -161,42 +146,84 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     }
 
     function onCallResponse(res) {
-        var req = self.popOutReq(res.id);
-        if (!req) {
-            self.logger.info('response received for unknown or lost operation', {
-                responseId: res.id,
-                code: res.code,
-                arg1: Buffer.isBuffer(res.arg1) ?
-                    String(res.arg1) : "streamed-arg1",
-                remoteAddr: self.remoteAddr,
-                direction: self.direction,
-            });
-            return;
-        }
-
-        if (self.tracer) {
-            // TODO: better annotations
-            req.span.annotate('cr');
-            self.tracer.report(req.span);
-            res.span = req.span;
-        }
-
-        req.emit('response', res);
+        self.onCallResponse(res);
     }
 
     function onCallError(err) {
-        var req = self.popOutReq(err.originalId);
-        if (!req) {
-            self.logger.info('error received for unknown or lost operation', err);
-            return;
-        }
-        req.emit('error', err);
+        self.onCallError(err);
     }
 
     function onTimedOut() {
-        self.logger.warn(self.channel.hostPort + ' destroying socket from timeouts');
-        self.socket.destroy();
+        self.onTimedOut();
     }
+};
+
+TChannelConnection.prototype.onWriteError = function onWriteError(err) {
+    var self = this;
+    self.resetAll(errors.TChannelWriteProtocolError(err, {
+        remoteName: self.remoteName,
+        localName: self.channel.hostPort
+    }));
+    self.socket.destroy();
+};
+
+TChannelConnection.prototype.onHandlerError = function onHandlerError(err) {
+    var self = this;
+    self.resetAll(err);
+    // resetAll() does not close the socket
+    self.socket.destroy();
+};
+
+TChannelConnection.prototype.handleReadFrame = function handleReadFrame(frame) {
+    var self = this;
+    if (!self.closing) {
+        self.lastTimeoutTime = 0;
+    }
+    self.handler.handleFrame(frame, handledFrame);
+    function handledFrame(err) {
+        if (err) self.onHandlerError(err);
+    }
+};
+
+TChannelConnection.prototype.onCallResponse = function onCallResponse(res) {
+    var self = this;
+    var req = self.popOutReq(res.id);
+    if (!req) {
+        self.logger.info('response received for unknown or lost operation', {
+            responseId: res.id,
+            code: res.code,
+            arg1: Buffer.isBuffer(res.arg1) ?
+                String(res.arg1) : "streamed-arg1",
+            remoteAddr: self.remoteAddr,
+            direction: self.direction,
+        });
+        return;
+    }
+
+    if (self.tracer) {
+        // TODO: better annotations
+        req.span.annotate('cr');
+        self.tracer.report(req.span);
+        res.span = req.span;
+    }
+
+    req.emit('response', res);
+};
+
+TChannelConnection.prototype.onCallError = function onCallError(err) {
+    var self = this;
+    var req = self.popOutReq(err.originalId);
+    if (!req) {
+        self.logger.info('error received for unknown or lost operation', err);
+        return;
+    }
+    req.emit('error', err);
+};
+
+TChannelConnection.prototype.onTimedOut = function onTimedOut() {
+    var self = this;
+    self.logger.warn(self.channel.hostPort + ' destroying socket from timeouts');
+    self.socket.destroy();
 };
 
 TChannelConnection.prototype.start = function start() {
@@ -209,27 +236,37 @@ TChannelConnection.prototype.start = function start() {
     }
 
     function onOutIdentified(init) {
-        self.remoteName = init.hostPort;
-        self.emit('identified', {
-            hostPort: init.hostPort,
-            processName: init.processName
-        });
+        self.onOutIdentified(init);
     }
 
     function onInIdentified(init) {
-        if (init.hostPort === '0.0.0.0:0') {
-            self.remoteName = '' + self.socket.remoteAddress + ':' + self.socket.remotePort;
-            assert(self.remoteName !== self.channel.hostPort,
-                  'should not be able to receive ephemeral connection from self');
-        } else {
-            self.remoteName = init.hostPort;
-        }
-        self.channel.peers.add(self.remoteName).addConnection(self);
-        self.emit('identified', {
-            hostPort: self.remoteName,
-            processName: init.processName
-        });
+        self.onInIdentified(init);
     }
+};
+
+TChannelConnection.prototype.onOutIdentified = function onOutIdentified(init) {
+    var self = this;
+    self.remoteName = init.hostPort;
+    self.emit('identified', {
+        hostPort: init.hostPort,
+        processName: init.processName
+    });
+};
+
+TChannelConnection.prototype.onInIdentified = function onInIdentified(init) {
+    var self = this;
+    if (init.hostPort === '0.0.0.0:0') {
+        self.remoteName = '' + self.socket.remoteAddress + ':' + self.socket.remotePort;
+        assert(self.remoteName !== self.channel.hostPort,
+              'should not be able to receive ephemeral connection from self');
+    } else {
+        self.remoteName = init.hostPort;
+    }
+    self.channel.peers.add(self.remoteName).addConnection(self);
+    self.emit('identified', {
+        hostPort: self.remoteName,
+        processName: init.processName
+    });
 };
 
 TChannelConnection.prototype.close = function close(callback) {
