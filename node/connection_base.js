@@ -259,9 +259,13 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
     }
 
     function runHandler() {
-        self.channel.handler.handleRequest(req, buildResponse);
+        self.runHandler(req);
     }
+};
 
+TChannelConnectionBase.prototype.runHandler = function runHandler(req) {
+    var self = this;
+    self.channel.handler.handleRequest(req, buildResponse);
     function buildResponse(options) {
         return self.buildResponse(req, options);
     }
