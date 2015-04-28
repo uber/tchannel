@@ -20,6 +20,7 @@
 
 'use strict';
 
+var async = require('async');
 var extend = require('xtend');
 var CountedReadySignal = require('ready-signal/counted');
 var test = require('tape');
@@ -156,3 +157,34 @@ allocCluster.test = function testCluster(desc, opts, t) {
         });
     });
 };
+
+function ClusterPool(setup) {
+    var self = this;
+    self.free = [];
+    self.setup = setup;
+}
+
+ClusterPool.prototype.get = function getCluster(callback) {
+    var self = this;
+    if (self.free.length) {
+        callback(null, self.free.shift());
+    } else {
+        self.setup(callback);
+    }
+};
+
+ClusterPool.prototype.release = function release(cluster) {
+    var self = this;
+    self.free.push(cluster);
+};
+
+ClusterPool.prototype.destroy = function destroy(callback) {
+    var self = this;
+    var free = self.free;
+    self.free = [];
+    async.each(free, function destroyEach(cluster, next) {
+        cluster.destroy(next);
+    }, callback);
+};
+
+allocCluster.Pool = ClusterPool;
