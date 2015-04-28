@@ -245,6 +245,7 @@ TestStreamSearch.prototype.test = function test(state, assert) {
     var timeout = state.test.timeout || 100;
     var cluster = null;
 
+    assert.timeoutAfter(timeout || 100);
     self.clusterPool.get(gotCluster);
 
     function gotCluster(err, clus) {
@@ -254,14 +255,14 @@ TestStreamSearch.prototype.test = function test(state, assert) {
         }
         cluster = clus;
 
+        var client = cluster.channels[1];
+
         for (var i = 0; i < cluster.hosts.length; i++) {
             assert.comment(util.format(
                 'cluster host %s: %s',
                 i + 1, cluster.hosts[i]));
         }
 
-        var client = cluster.channels[1];
-        assert.timeoutAfter(timeout || 100);
         streamingTest({
             name: name,
             channel: client,
