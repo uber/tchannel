@@ -118,6 +118,7 @@ test('bisection test', function t(assert) {
     async.series([
 
         {
+            reuseClusterPool: true,
             withHeaderOnly: true,
             withBodyOnly: true,
             withBoth: true,
@@ -126,6 +127,7 @@ test('bisection test', function t(assert) {
         },
 
         {
+            reuseClusterPool: true,
             withHeaderOnly: true,
             withBodyOnly: true,
             withBoth: true,
@@ -133,6 +135,7 @@ test('bisection test', function t(assert) {
         },
 
         {
+            reuseClusterPool: true,
             withHeaderOnly: true,
             withBodyOnly: true,
             withBoth: true,
@@ -144,6 +147,7 @@ test('bisection test', function t(assert) {
             // timeout failures (even with setting maxTries > 1); however none
             // of these failures are ever reproducible...
             // basis: [2, 3, 5, 7, 11, 13],
+            reuseClusterPool: true,
             withHeaderOnly: true,
             withBodyOnly: true,
             withBoth: false,
@@ -162,7 +166,7 @@ test('bisection test', function t(assert) {
         };
     }), function done(err) {
         if (err && err !== firstStop) assert.ifError(err, 'no final error');
-        assert.end();
+        search.clusterPool.destroy(assert.end);
     });
 });
 
@@ -175,9 +179,11 @@ function TestStreamSearch(options) {
     self.clusterPool = new allocCluster.Pool(function setupCluster(callback) {
         self.setupCluster(callback);
     });
-    self.on('done', function onSearchTestDone() {
-        self.clusterPool.destroy();
-    });
+    if (!self.options.reuseClusterPool) {
+        self.on('done', function onSearchTestDone() {
+            self.clusterPool.destroy();
+        });
+    }
 }
 util.inherits(TestStreamSearch, TestIsolateSearch);
 
