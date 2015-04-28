@@ -307,10 +307,10 @@ TChannelConnectionBase.prototype.onReqDone = function onReqDone(req) {
             hostPort: self.channel.hostPort,
             id: req.id
         });
-        return;
+    } else {
+        delete self.requests.in[req.id];
+        self.pending.in--;
     }
-    delete self.requests.in[req.id];
-    self.pending.in--;
 };
 
 module.exports = TChannelConnectionBase;
