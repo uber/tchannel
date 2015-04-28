@@ -154,8 +154,7 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     }
 
     function onTimedOut() {
-        self.logger.warn(self.channel.hostPort + ' destroying socket from timeouts');
-        self.socket.destroy();
+        self.onTimedOut();
     }
 };
 
@@ -219,6 +218,12 @@ TChannelConnection.prototype.onCallError = function onCallError(err) {
         return;
     }
     req.emit('error', err);
+};
+
+TChannelConnection.prototype.onTimedOut = function onTimedOut() {
+    var self = this;
+    self.logger.warn(self.channel.hostPort + ' destroying socket from timeouts');
+    self.socket.destroy();
 };
 
 TChannelConnection.prototype.start = function start() {
