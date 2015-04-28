@@ -151,12 +151,10 @@ class TChannelServer(tornado.tcpserver.TCPServer):
     @tornado.gen.coroutine
     def handle_stream(self, stream, address):
         log.debug("New incoming connection from %s:%d" % address)
-        # TODO peer how do
         conn = StreamConnection(connection=stream)
 
-        # FIXME: This should the address at which we can be reached.
         yield conn.expect_handshake(headers={
-            'host_port': '%s:%s' % address,
+            'host_port': self.tchannel.hostport,
             'process_name': self.tchannel.process_name,
         })
 
