@@ -130,11 +130,7 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     //     ;
 
     function onWriteError(err) {
-        self.resetAll(errors.TChannelWriteProtocolError(err, {
-            remoteName: self.remoteName,
-            localName: self.channel.hostPort
-        }));
-        self.socket.destroy();
+        self.onWriteError(err);
     }
 
     function onHandlerError(err) {
@@ -197,6 +193,15 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
         self.logger.warn(self.channel.hostPort + ' destroying socket from timeouts');
         self.socket.destroy();
     }
+};
+
+TChannelConnection.prototype.onWriteError = function onWriteError(err) {
+    var self = this;
+    self.resetAll(errors.TChannelWriteProtocolError(err, {
+        remoteName: self.remoteName,
+        localName: self.channel.hostPort
+    }));
+    self.socket.destroy();
 };
 
 TChannelConnection.prototype.start = function start() {
