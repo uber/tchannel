@@ -172,6 +172,12 @@ function TestStreamSearch(options) {
     }
     var self = this;
     TestIsolateSearch.call(self, options);
+    self.clusterPool = new allocCluster.Pool(function setupCluster(callback) {
+        self.setupCluster(callback);
+    });
+    self.on('done', function onSearchTestDone() {
+        self.clusterPool.destroy();
+    });
 }
 util.inherits(TestStreamSearch, TestIsolateSearch);
 
@@ -231,7 +237,8 @@ TestStreamSearch.prototype.test = function test(state, assert) {
     var name = describe(options);
     var cluster = null;
 
-    self.setupCluster(gotCluster);
+    self.clusterPool.get(gotCluster);
+
     function gotCluster(err, clus) {
         if (err) {
             assert.end(err);
@@ -270,7 +277,12 @@ TestStreamSearch.prototype.test = function test(state, assert) {
                     }]
                 }]
             });
-            cluster.destroy(assert.end);
+            if (!assert._ok) {
+                cluster.destroy(assert.end);
+            } else {
+                self.clusterPool.release(cluster);
+                assert.end();
+            }
         });
     }
 };
