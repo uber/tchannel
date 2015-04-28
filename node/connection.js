@@ -134,9 +134,7 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     }
 
     function onHandlerError(err) {
-        self.resetAll(err);
-        // resetAll() does not close the socket
-        self.socket.destroy();
+        self.onHandlerError(err);
     }
 
     function handleReadFrame(frame) {
@@ -147,9 +145,7 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     }
 
     function handledFrame(err) {
-        if (err) {
-            onHandlerError(err);
-        }
+        if (err) self.onHandlerError(err);
     }
 
     function onCallRequest(req) {
@@ -201,6 +197,13 @@ TChannelConnection.prototype.onWriteError = function onWriteError(err) {
         remoteName: self.remoteName,
         localName: self.channel.hostPort
     }));
+    self.socket.destroy();
+};
+
+TChannelConnection.prototype.onHandlerError = function onHandlerError(err) {
+    var self = this;
+    self.resetAll(err);
+    // resetAll() does not close the socket
     self.socket.destroy();
 };
 
