@@ -287,13 +287,7 @@ TChannelRequest.prototype.shouldRetryError = function shouldRetryError(err) {
 
 TChannelRequest.prototype.maybeAppRetry = function maybeAppRetry(res) {
     var self = this;
-    res.withArg23(function onArg23(err, arg2, arg3) {
-        if (err) {
-            decided(err, null);
-        } else {
-            decided(null, self.options.shouldApplicationRetry(self, res, arg2, arg3));
-        }
-    });
+    self.options.shouldApplicationRetry(self, res, decided);
     function decided(err, should) {
         self.maybeAppRetryDecided(err, res, should);
     }
