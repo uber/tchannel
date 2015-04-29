@@ -107,6 +107,7 @@ test('bisection test', function t(assert) {
     }
 
     var search = TestStreamSearch({
+        reuseClusterPool: true,
         stopOnFirstFailure: argv.first,
         traceDetails: argv.trace,
         sizeLimit: sizeLimit || 128 * base2.Ki,
@@ -119,7 +120,6 @@ test('bisection test', function t(assert) {
     async.series([
 
         {
-            reuseClusterPool: true,
             withHeaderOnly: true,
             withBodyOnly: true,
             withBoth: true,
@@ -128,7 +128,6 @@ test('bisection test', function t(assert) {
         },
 
         {
-            reuseClusterPool: true,
             withHeaderOnly: true,
             withBodyOnly: true,
             withBoth: true,
@@ -136,7 +135,6 @@ test('bisection test', function t(assert) {
         },
 
         {
-            reuseClusterPool: true,
             withHeaderOnly: true,
             withBodyOnly: true,
             withBoth: true,
@@ -148,7 +146,6 @@ test('bisection test', function t(assert) {
             // timeout failures (even with setting maxTries > 1); however none
             // of these failures are ever reproducible...
             // basis: [2, 3, 5, 7, 11, 13],
-            reuseClusterPool: true,
             withHeaderOnly: true,
             withBodyOnly: true,
             withBoth: false,
