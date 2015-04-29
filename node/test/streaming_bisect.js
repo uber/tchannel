@@ -223,6 +223,7 @@ function streamingEchoTest(cluster, state, assert, callback) {
     assert.timeoutAfter(timeout || 100);
 
     cluster.client.request({
+        serviceName: 'test_as_raw',
         streamed: true
     }).sendStreams('streaming_echo', reqHeadStream, reqBodyStream, onResult);
 
