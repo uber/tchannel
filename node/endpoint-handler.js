@@ -22,7 +22,6 @@
 
 var EventEmitter = require('./lib/event_emitter');
 var inherits = require('util').inherits;
-var parallel = require('run-parallel');
 var util = require('util');
 var errors = require('./errors');
 
@@ -99,11 +98,7 @@ TChannelEndpointHandler.prototype.handleArg1 = function handleArg1(req, buildRes
 };
 
 TChannelEndpointHandler.prototype.bufferArg23 = function bufferArg23(req, buildResponse, handler) {
-    parallel({
-        arg2: req.arg2.onValueReady,
-        arg3: req.arg3.onValueReady
-    }, argsDone);
-    function argsDone(err, args) {
+    req.withArg23(function gotArg23(err, arg2, arg3) {
         var res = buildResponse({streamed: false});
         if (err) {
             // TODO: log error
@@ -111,9 +106,9 @@ TChannelEndpointHandler.prototype.bufferArg23 = function bufferArg23(req, buildR
                 'error accumulating arg2/arg3: %s: %s',
                 err.constructor.name, err.message));
         } else {
-            handler(req, res, args.arg2, args.arg3);
+            handler(req, res, arg2, arg3);
         }
-    }
+    });
 };
 
 module.exports = TChannelEndpointHandler;
