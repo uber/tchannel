@@ -199,6 +199,7 @@ TChannelRequest.prototype.onSubreqError = function onSubreqError(err) {
 
 TChannelRequest.prototype.onSubreqResponse = function onSubreqResponse(res) {
     var self = this;
+    if (self.checkTimeout(null, res)) return;
     res.withArg23(function onArg23(err, arg2, arg3) {
         if (self.checkTimeout(err, res)) return;
         if (self.shouldRetry(err, res, arg2, arg3)) {
