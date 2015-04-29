@@ -20,15 +20,23 @@
 
 'use strict';
 
-require('./frame.js');
-require('./init.js');
-require('./checksum.js');
-require('./header.js');
-require('./tracing.js');
-require('./call.js');
-require('./cancel.js');
-require('./cont.js');
-require('./claim.js');
-require('./ping.js');
-require('./error_response.js');
-require('./args.js');
+var bufrw = require('bufrw');
+
+module.exports.Request = PingRequest;
+module.exports.Response = PingResponse;
+
+function PingRequest() {
+    var self = this;
+    self.type = PingRequest.TypeCode;
+}
+
+PingRequest.TypeCode = 0xD0;
+PingRequest.RW = bufrw.Struct(PingRequest, []);
+
+function PingResponse() {
+    var self = this;
+    self.type = PingResponse.TypeCode;
+}
+
+PingResponse.TypeCode = 0xD1;
+PingResponse.RW = bufrw.Struct(PingResponse, []);

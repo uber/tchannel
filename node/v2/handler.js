@@ -50,8 +50,12 @@ function TChannelV2Handler(options) {
     self.callIncomingErrorEvent = self.defineEvent('callIncomingError');
     self.callIncomingRequestEvent = self.defineEvent('callIncomingRequest');
     self.callIncomingResponseEvent = self.defineEvent('callIncomingResponse');
+    self.cancelEvent = self.defineEvent('cancel');
     self.initRequestEvent = self.defineEvent('initRequest');
     self.initResponseEvent = self.defineEvent('initResponse');
+    self.claimEvent = self.defineEvent('claim');
+    self.pingIncomingRequestEvent = self.defineEvent('pingIncomingRequest');
+    self.pingIncomingResponseEvent = self.defineEvent('pingIncomingResponse');
     self.writeErrorEvent = self.defineEvent('writeError'); // TODO: could use default throw behavior
 
     self.options = options || {};
@@ -115,10 +119,18 @@ TChannelV2Handler.prototype.handleFrame = function handleFrame(frame, callback) 
             return self.handleCallRequest(frame, callback);
         case v2.Types.CallResponse:
             return self.handleCallResponse(frame, callback);
+        case v2.Types.Cancel:
+            return self.handleCancel(frame, callback);
         case v2.Types.CallRequestCont:
             return self.handleCallRequestCont(frame, callback);
         case v2.Types.CallResponseCont:
             return self.handleCallResponseCont(frame, callback);
+        case v2.Types.Claim:
+            return self.handleClaim(frame, callback);
+        case v2.Types.PingRequest:
+            return self.handlePingRequest(frame, callback);
+        case v2.Types.PingResponse:
+            return self.handlePingResponse(frame, callback);
         case v2.Types.ErrorResponse:
             return self.handleError(frame, callback);
         default:
@@ -208,6 +220,12 @@ TChannelV2Handler.prototype.callResponseFrameHandled = function callResponseFram
     callback();
 };
 
+TChannelV2Handler.prototype.handleCancel = function handleCancel(frame, callback) {
+    var self = this;
+    self.cancelEvent.emit(self, frame);
+    callback();
+};
+
 TChannelV2Handler.prototype.handleCallRequestCont = function handleCallRequestCont(reqFrame, callback) {
     var self = this;
     if (self.remoteHostPort === null) {
@@ -232,6 +250,24 @@ TChannelV2Handler.prototype.handleCallResponseCont = function handleCallResponse
         return callback(new Error('call response cont for unknown response')); // TODO typed error
     }
     self._handleCallFrame(res, resFrame, callback);
+};
+
+TChannelV2Handler.prototype.handleClaim = function handleClaim(frame, callback) {
+    var self = this;
+    self.claimEvent.emit(self, frame);
+    callback();
+};
+
+TChannelHandler.prototype.handlePingRequest = function handlePingRequest(pingFrame, callback) {
+    var self = this;
+    self.pingIncomingRequestEvent.emit(self, pingFrame);
+    callback();
+};
+
+TChannelHandler.prototype.handlePingResponse = function handlePingResponse(pingFrame, callback) {
+    var self = this;
+    self.pingIncomingResponseEvent.emit(self, pingFrame);
+    callback();
 };
 
 TChannelV2Handler.prototype.handleError = function handleError(errFrame, callback) {

@@ -20,15 +20,33 @@
 
 'use strict';
 
-require('./frame.js');
-require('./init.js');
-require('./checksum.js');
-require('./header.js');
-require('./tracing.js');
-require('./call.js');
-require('./cancel.js');
-require('./cont.js');
-require('./claim.js');
-require('./ping.js');
-require('./error_response.js');
-require('./args.js');
+var test = require('tape');
+var Claim = require('../../v2/claim.js');
+var testRW = require('bufrw/test_rw');
+var Tracing = require('../../v2/tracing.js');
+
+var testTracing = new Tracing(
+    new Buffer([0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07]),
+    new Buffer([0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f]),
+    new Buffer([0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17]),
+    24
+);
+
+test('Claim.RW: read/write payload', testRW.cases(Claim.RW, [
+
+    // simple example payload
+    [
+        new Claim(
+            testTracing
+        ), [
+            0x00, 0x01, 0x02, 0x03,            // tracing:24
+            0x04, 0x05, 0x06, 0x07,            // ...
+            0x08, 0x09, 0x0a, 0x0b,            // ...
+            0x0c, 0x0d, 0x0e, 0x0f,            // ...
+            0x10, 0x11, 0x12, 0x13,            // ...
+            0x14, 0x15, 0x16, 0x17,            // ...
+            0x18                               // traceflags:1
+        ]
+    ]
+
+]));

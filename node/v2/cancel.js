@@ -20,15 +20,22 @@
 
 'use strict';
 
-require('./frame.js');
-require('./init.js');
-require('./checksum.js');
-require('./header.js');
-require('./tracing.js');
-require('./call.js');
-require('./cancel.js');
-require('./cont.js');
-require('./claim.js');
-require('./ping.js');
-require('./error_response.js');
-require('./args.js');
+var bufrw = require('bufrw');
+var Tracing = require('./tracing');
+
+// tracing:25 why~2
+function Cancel(tracing, why) {
+    var self = this;
+    self.type = Cancel.TypeCode;
+    self.tracing = tracing || Tracing.emptyTracing;
+    self.why = why || '';
+}
+
+Cancel.TypeCode = 0xC0;
+
+Cancel.RW = bufrw.Struct(Cancel, [
+    {name: 'tracing', rw: Tracing.RW},  // tracing:25
+    {name: 'why', rw: bufrw.str2} // why~2
+]);
+
+module.exports = Cancel;

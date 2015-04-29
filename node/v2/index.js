@@ -45,6 +45,11 @@ Frame.Types[Types.CallResponse] = call.Response;
 module.exports.CallRequest = call.Request;
 module.exports.CallResponse = call.Response;
 
+var Cancel = require('./cancel');
+Types.Cancel = Cancel.TypeCode;
+Frame.Types[Types.Cancel] = Cancel;
+module.exports.Cancel = Cancel;
+
 var cont = require('./cont');
 Types.CallRequestCont = cont.RequestCont.TypeCode;
 Types.CallResponseCont = cont.ResponseCont.TypeCode;
@@ -52,6 +57,19 @@ Frame.Types[Types.CallRequestCont] = cont.RequestCont;
 Frame.Types[Types.CallResponseCont] = cont.ResponseCont;
 module.exports.CallRequestCont = cont.RequestCont;
 module.exports.CallResponseCont = cont.ResponseCont;
+
+var Claim = require('./claim');
+Types.Claim = Claim.TypeCode;
+Frame.Types[Types.Claim] = Claim;
+module.exports.Claim = Claim;
+
+var ping = require('./ping');
+Types.PingRequest = ping.Request.TypeCode;
+Types.PingResponse = ping.Response.TypeCode;
+Frame.Types[Types.PingRequest] = ping.Request;
+Frame.Types[Types.PingResponse] = ping.Response;
+module.exports.PingRequest = ping.Request;
+module.exports.PingResponse = ping.Response;
 
 var ErrorResponse = require('./error_response');
 Types.ErrorResponse = ErrorResponse.TypeCode;
