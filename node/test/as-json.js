@@ -44,7 +44,7 @@ allocCluster.test('getting an ok response', {
     tchannelJSON.register(server, 'echo', opts, echo);
 
     tchannelJSON.send(client.request({
-        service: 'server',
+        serviceName: 'server',
         timeout: 1500,
         host: server.hostPort
     }), 'echo', {
@@ -67,7 +67,7 @@ allocCluster.test('getting an ok response', {
                 body: {
                     some: 'body'
                 },
-                service: 'server'
+                serviceName: 'server'
             }
         });
         assert.end();
@@ -81,7 +81,7 @@ allocCluster.test('getting an ok response', {
                 opts: opts,
                 head: head,
                 body: body,
-                service: req.service
+                serviceName: req.serviceName
             }
         });
     }
@@ -103,7 +103,7 @@ allocCluster.test('getting a not ok response', {
     tchannelJSON.register(server, 'echo', opts, echo);
 
     tchannelJSON.send(client.request({
-        service: 'server',
+        serviceName: 'server',
         timeout: 1500,
         host: server.hostPort
     }), 'echo', {
@@ -160,7 +160,7 @@ allocCluster.test('getting an UnexpectedError frame', {
     tchannelJSON.register(server, 'echo', opts, echo);
 
     tchannelJSON.send(client.request({
-        service: 'server',
+        serviceName: 'server',
         timeout: 1500,
         host: server.hostPort
     }), 'echo', {
@@ -202,7 +202,7 @@ allocCluster.test('getting a BadRequest frame', {
     tchannelJSON.register(server, 'echo', opts, echo);
 
     client.request({
-        service: 'server',
+        serviceName: 'server',
         timeout: 1500,
         headers: {
             as: 'json'

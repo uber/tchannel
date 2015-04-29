@@ -87,7 +87,7 @@ TChannelEndpointHandler.prototype.handleArg1 = function handleArg1(req, buildRes
         res = buildResponse({streamed: false});
         res.sendError('BadRequest', util.format(
             'no such endpoint service=%j endpoint=%j',
-            req.service, name));
+            req.serviceName, name));
     } else if (handler.canStream) {
         handler.call(self, req, buildResponse);
     } else if (req.streamed) {
