@@ -148,7 +148,7 @@ TChannelPeer.prototype.request = function peerRequest(options) {
     req.responseEvent.on(onResponse);
 
     function onError(err) {
-        self.state.onRequestError(req);
+        self.state.onRequestError(err);
     }
 
     function onResponse(res) {

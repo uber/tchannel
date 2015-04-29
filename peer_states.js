@@ -122,9 +122,9 @@ TChannelPeerHealthyState.prototype.onRequestResponse = function onRequestRespons
     self.okCount++;
 };
 
-TChannelPeerHealthyState.prototype.onRequestError = function onRequestError(req) {
+TChannelPeerHealthyState.prototype.onRequestError = function onRequestError(err) {
     var self = this;
-    var codeString = errors.classify(req.err);
+    var codeString = errors.classify(err);
     if (symptoms[codeString]) {
         self.notOkCount++;
     }
@@ -189,9 +189,9 @@ TChannelPeerUnhealthyState.prototype.onRequestResponse = function onRequestRespo
     }
 };
 
-TChannelPeerUnhealthyState.prototype.onRequestError = function onRequestError(req) {
+TChannelPeerUnhealthyState.prototype.onRequestError = function onRequestError(err) {
     var self = this;
-    var codeString = errors.classify(req.err);
+    var codeString = errors.classify(err);
     if (symptoms[codeString]) {
         self.successCount = 0;
     }

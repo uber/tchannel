@@ -251,8 +251,8 @@ function testSetup(desc, testFunc) {
         };
 
         var conn = peer.connect();
-        conn.once('error', assert.end);
-        conn.once('identified', function gotId() {
+        conn.on('error', assert.end);
+        conn.on('identified', function gotId() {
             testFunc(cluster, assert);
         });
     });
