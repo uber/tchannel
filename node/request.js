@@ -183,9 +183,7 @@ TChannelRequest.prototype.resend = function resend() {
 
     function onResponse(res) {
         // TODO: skip buffering if res.ok
-        res.withArg23(function onArg23(err, arg2, arg3) {
-            self.onSubreqResponse(err, res, arg2, arg3);
-        });
+        self.onSubreqResponse(res);
     }
 };
 
@@ -199,16 +197,18 @@ TChannelRequest.prototype.onSubreqError = function onSubreqError(err) {
     }
 };
 
-TChannelRequest.prototype.onSubreqResponse = function onSubreqResponse(err, res, arg2, arg3) {
+TChannelRequest.prototype.onSubreqResponse = function onSubreqResponse(res) {
     var self = this;
-    if (self.checkTimeout(err, res)) return;
-    if (self.shouldRetry(err, res, arg2, arg3)) {
-        self.deferResend();
-    } else if (err) {
-        self.errorEvent.emit(self, err);
-    } else {
-        self.responseEvent.emit(self, res);
-    }
+    res.withArg23(function onArg23(err, arg2, arg3) {
+        if (self.checkTimeout(err, res)) return;
+        if (self.shouldRetry(err, res, arg2, arg3)) {
+            self.deferResend();
+        } else if (err) {
+            self.errorEvent.emit(self, err);
+        } else {
+            self.responseEvent.emit(self, res);
+        }
+    });
 };
 
 TChannelRequest.prototype.deferResend = function deferResend() {
