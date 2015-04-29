@@ -75,7 +75,7 @@ StreamingOutResponse.prototype.sendError = function sendError(codeString, messag
         self.arg1.end();
         self.arg2.end();
         self.arg3.end();
-        self.sendFrame.error(codeString, message);
+        self._sendError(codeString, message);
         self.finishEvent.emit(self);
     }
 };
