@@ -287,21 +287,19 @@ TChannelRequest.prototype.shouldRetryError = function shouldRetryError(err) {
 
 TChannelRequest.prototype.maybeAppRetry = function maybeAppRetry(res) {
     var self = this;
-    self.options.shouldApplicationRetry(self, res, decided);
-    function decided(err, should) {
-        self.maybeAppRetryDecided(err, res, should);
-    }
-};
+    self.options.shouldApplicationRetry(self, res, retry, done);
 
-TChannelRequest.prototype.maybeAppRetryDecided = function maybeAppRetryDecided(err, res, should) {
-    var self = this;
-    if (self.checkTimeout(err, res)) return;
-    if (err) {
-        self.errorEvent.emit(self, err);
-    } else if (should) {
+    function retry() {
+        if (self.checkTimeout(null, res)) return;
         self.deferResend();
-    } else {
-        self.responseEvent.emit(self, res);
+    }
+
+    function done(err) {
+        if (err) {
+            self.errorEvent.emit(self, err);
+        } else {
+            self.responseEvent.emit(self, res);
+        }
     }
 };
 
