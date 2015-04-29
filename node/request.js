@@ -201,7 +201,7 @@ TChannelRequest.prototype.onSubreqResponse = function onSubreqResponse(res) {
     if (self.checkTimeout(null, res)) return;
     if (res.ok) {
         self.responseEvent.emit(self, res);
-    } else {
+    } else if (self.options.shouldApplicationRetry) {
         self.maybeAppRetry(res, function decided(err, should) {
             if (err) {
                 self.errorEvent.emit(self, err);
@@ -211,6 +211,8 @@ TChannelRequest.prototype.onSubreqResponse = function onSubreqResponse(res) {
                 self.responseEvent.emit(self, res);
             }
         });
+    } else {
+        self.responseEvent.emit(self, res);
     }
 };
 
@@ -298,10 +300,8 @@ TChannelRequest.prototype.maybeAppRetry = function maybeAppRetry(res, callback) 
         if (self.checkTimeout(err, res)) return;
         if (err) {
             callback(err, null);
-        } else if (self.options.shouldApplicationRetry) {
-            callback(null, self.options.shouldApplicationRetry(self, res, arg2, arg3));
         } else {
-            callback(null, false);
+            callback(null, self.options.shouldApplicationRetry(self, res, arg2, arg3));
         }
     });
 };
