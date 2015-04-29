@@ -258,13 +258,13 @@ TChannelV2Handler.prototype.handleClaim = function handleClaim(frame, callback) 
     callback();
 };
 
-TChannelHandler.prototype.handlePingRequest = function handlePingRequest(pingFrame, callback) {
+TChannelV2Handler.prototype.handlePingRequest = function handlePingRequest(pingFrame, callback) {
     var self = this;
     self.pingIncomingRequestEvent.emit(self, pingFrame);
     callback();
 };
 
-TChannelHandler.prototype.handlePingResponse = function handlePingResponse(pingFrame, callback) {
+TChannelV2Handler.prototype.handlePingResponse = function handlePingResponse(pingFrame, callback) {
     var self = this;
     self.pingIncomingResponseEvent.emit(self, pingFrame);
     callback();
