@@ -23,6 +23,7 @@
 var inherits = require('util').inherits;
 
 var OutArgStream = require('./argstream').OutArgStream;
+var pipelineStreams = require('./lib/pipeline_streams');
 var TChannelOutRequest = require('./out_request');
 
 function StreamingOutRequest(id, options) {
@@ -67,6 +68,14 @@ StreamingOutRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     self.arg2.end(arg2);
     self.arg3.end(arg3);
     return self;
+};
+
+StreamingOutRequest.prototype.sendStreams = function sendStreams(arg1, arg2, arg3, callback) {
+    var self = this;
+    if (callback) self.hookupStreamCallback(callback);
+    pipelineStreams(
+        [arg1, arg2, arg3],
+        [self.arg1, self.arg2, self.arg3]);
 };
 
 module.exports = StreamingOutRequest;
