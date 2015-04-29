@@ -21,7 +21,6 @@
 'use strict';
 
 var assert = require('assert');
-var parallel = require('run-parallel');
 var EventEmitter = require('./lib/event_emitter');
 var inherits = require('util').inherits;
 
@@ -115,7 +114,9 @@ TChannelRequest.prototype.hookupCallback = function hookupCallback(callback) {
     function onResponse(res) {
         if (called) return;
         called = true;
-        withArg23(res, callback);
+        res.withArg23(function gotArg23(err, arg2, arg3) {
+            callback(err, res, arg2, arg3);
+        });
     }
 
     return self;
@@ -182,7 +183,7 @@ TChannelRequest.prototype.resend = function resend() {
 
     function onResponse(res) {
         // TODO: skip buffering if res.ok
-        withArg23(res, function onArg23(err, res, arg2, arg3) {
+        res.withArg23(function onArg23(err, arg2, arg3) {
             self.onSubreqResponse(err, res, arg2, arg3);
         });
     }
@@ -292,17 +293,3 @@ TChannelRequest.prototype.shouldRetry = function shouldRetry(err, res, arg2, arg
 };
 
 module.exports = TChannelRequest;
-
-function withArg23(res, callback) {
-    if (!res.streamed) {
-        callback(null, res, res.arg2, res.arg3);
-        return;
-    }
-    parallel({
-        arg2: res.arg2.onValueReady,
-        arg3: res.arg3.onValueReady
-    }, compatCall);
-    function compatCall(err, args) {
-        callback(err, res, args.arg2, args.arg3);
-    }
-}
