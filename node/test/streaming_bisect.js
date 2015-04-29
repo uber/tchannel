@@ -63,6 +63,7 @@ var CountStream = require('./lib/count_stream');
 var TestIsolateSearch = require('./lib/test_isolate_search');
 var base2 = require('./lib/base2');
 var extend = require('xtend');
+var StreamCheck = require('./lib/stream_check');
 
 var argv = {
     first: false,
@@ -279,56 +280,22 @@ TestStreamSearch.prototype.test = function test(state, assert) {
     }
 
     function onResult(err, req, res) {
-        var resHeadStream = CountStream({limit: hSize});
-        var resBodyStream = CountStream({limit: bSize});
+        var arg2Check = new StreamCheck('arg2', assert, CountStream({limit: hSize}));
+        var arg3Check = new StreamCheck('arg3', assert, CountStream({limit: bSize}));
         if (err) {
             finish(err);
         } else if (res.streamed) {
             async.series([
-                verifyStream('arg2', res.arg2, resHeadStream),
-                verifyStream('arg3', res.arg3, resBodyStream),
+                arg2Check.verifyStream(res.arg2),
+                arg3Check.verifyStream(res.arg3),
             ], finish);
         } else {
-            verifyStreamChunk('arg2', 0, res.arg2, resHeadStream);
-            verifyDrained('arg2', resHeadStream);
-            verifyStreamChunk('arg3', 0, res.arg3, resBodyStream);
-            verifyDrained('arg3', resBodyStream);
+            arg2Check.verifyChunk(0, res.arg2);
+            arg2Check.verifyDrained();
+            arg3Check.verifyChunk(0, res.arg3);
+            arg3Check.verifyDrained();
             finish();
         }
-    }
-
-    function verifyStreamChunk(name, offset, gotChunk, expected) {
-        var expectedChunk = expected.read(gotChunk.length) || Buffer(0);
-        assert.deepEqual(gotChunk, expectedChunk, util.format(
-            '%s: expected chunk %s bytes @%s',
-            name,
-            base2.pretty(gotChunk.length, 'B'),
-            '0x' + offset.toString(16))
-        );
-        return offset + gotChunk.length;
-    }
-
-    function verifyDrained(name, expected) {
-        var remain = expected.read();
-        assert.equal(remain, null, name + ': got all expected data (bytes)');
-        assert.equal(remain && remain.length || 0, 0, name + ': got all expected data (length)');
-    }
-
-    function verifyStream(name, got, expected) {
-        return function verifyStreamThunk(callback) {
-            var offset = 0;
-            got.on('data', onData);
-            got.on('error', streamDone);
-            got.on('end', streamDone);
-            function onData(gotChunk) {
-                offset = verifyStreamChunk(name, offset, gotChunk, expected);
-            }
-            function streamDone(err) {
-                assert.ifError(err, name + ': no error');
-                if (!err) verifyDrained(name, expected);
-                callback();
-            }
-        };
     }
 
     function finish(err) {
