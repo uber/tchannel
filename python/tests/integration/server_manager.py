@@ -57,7 +57,7 @@ class ServerManager(object):
 
         expectation = Expectation()
 
-        def handle_expected_endpoint(request, response, opts):
+        def handle_expected_endpoint(request, response, proxy):
             response.argstreams = expectation.response.argstreams
 
         self.dispatcher.register(endpoint, handle_expected_endpoint)
@@ -90,10 +90,10 @@ class ServerManager(object):
 
 class TChannelServerManager(ServerManager):
 
-    def __init__(self, port, timeout=None):
+    def __init__(self, port, timeout=None, dispatcher=None):
         super(TChannelServerManager, self).__init__(port, timeout)
 
-        self.dispatcher = TornadoDispatcher()
+        self.dispatcher = dispatcher or TornadoDispatcher()
         self.tchannel = tornado_tchannel.TChannel("localhost:%d" % self.port)
         self.port = port
 

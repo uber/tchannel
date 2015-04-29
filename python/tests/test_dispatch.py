@@ -21,7 +21,7 @@
 from tchannel.tornado.dispatch import RequestDispatcher
 
 
-def dummy_endpoint(request, response, opts):
+def dummy_endpoint(request, response, proxy):
     pass
 
 
@@ -34,11 +34,11 @@ def test_dispatch():
     )
 
     @dispatcher.route(r"/")
-    def dummy_endpoint1(request, response, opts):
+    def dummy_endpoint1(request, response, proxy):
         pass
 
     endpoint = dispatcher.endpoints.get("/hello")
-    assert endpoint.handler == dummy_endpoint
+    assert endpoint == dummy_endpoint
 
     endpoint = dispatcher.endpoints.get("/")
-    assert endpoint.handler == dummy_endpoint1
+    assert endpoint == dummy_endpoint1

@@ -30,7 +30,7 @@ from tchannel.tornado.util import print_arg
 
 
 @tornado.gen.coroutine
-def say_hi(request, response, opts):
+def say_hi(request, response, proxy):
     arg2 = yield request.arg2()
     arg3 = yield request.arg3()
     response.argstreams = [
@@ -41,7 +41,7 @@ def say_hi(request, response, opts):
 
 
 @tornado.gen.coroutine
-def say_ok(request, response, opts):
+def say_ok(request, response, proxy):
     yield print_arg(request, 1)
     yield print_arg(request, 2)
 
@@ -52,9 +52,10 @@ def say_ok(request, response, opts):
 
 
 @tornado.gen.coroutine
-def echo(request, response, opts):
+def echo(request, response, proxy):
+    print "echo"
+    yield tornado.gen.sleep(1)
     # stream args right back to request side
-    print "streaming"
     response.argstreams = [
         InMemStream(request.endpoint),
         request.argstreams[1],
@@ -63,7 +64,7 @@ def echo(request, response, opts):
 
 
 @tornado.gen.coroutine
-def slow(request, response, opts):
+def slow(request, response, proxy):
     yield tornado.gen.sleep(random.random())
     response.argstreams = [
         InMemStream(),
@@ -80,7 +81,7 @@ def get_example_handler():
     dispatcher.register("slow", slow)
 
     @dispatcher.route("bye")
-    def say_bye(request, response, opts):
+    def say_bye(request, response, proxy):
         yield print_arg(request, 1)
         yield print_arg(request, 2)
 

@@ -27,7 +27,6 @@ from collections import deque
 
 from tornado import gen
 
-
 try:
     # included in Tornado 4.2
     from tornado.locks import Condition
@@ -35,10 +34,11 @@ except ImportError:  # pragma: no cover
     from toro import Condition
 
 from .dispatch import Request
-from .stream import InMemStream, Stream
+from .stream import InMemStream, Stream, read_full
 from .connection import StreamConnection
 from ..handler import CallableRequestHandler
-
+from ..zipkin.trace import Trace
+from ..zipkin.annotation import Endpoint
 
 log = logging.getLogger('tchannel')
 
@@ -286,7 +286,8 @@ class Peer(object):
             hostport=self.hostport,
             process_name=self.tchannel.process_name,
             serve_hostport=self.tchannel.hostport,
-            handler=CallableRequestHandler(self.tchannel.receive_call)
+            handler=CallableRequestHandler(self.tchannel.receive_call),
+            tchannel=self.tchannel,
         )
 
         def on_connect(_):
@@ -395,7 +396,7 @@ class PeerHealthyState(PeerState):
 class PeerClientOperation(object):
     """Encapsulates client operations that can be performed against a peer."""
 
-    def __init__(self, peer, service):
+    def __init__(self, peer, service, **kwargs):
         """Initialize a new PeerClientOperation.
 
         :param peer:
@@ -409,12 +410,13 @@ class PeerClientOperation(object):
 
         self.peer = peer
         self.service = service
+        self.parent_tracing = kwargs.get('parent_tracing', None)
         # service name is not stored in peer because the same peer may be
         # used to call multiple services if it's being used for request
         # forwarding
 
     @gen.coroutine
-    def send(self, arg1, arg2, arg3):
+    def send(self, arg1, arg2, arg3, traceflag=False):
         """Make a request to the Peer.
 
         :param arg1:
@@ -434,14 +436,34 @@ class PeerClientOperation(object):
             maybe_stream(arg1), maybe_stream(arg2), maybe_stream(arg3)
         )
 
+        # hack to get endpoint from arg_1 for trace name
+        arg1.close()
+        endpoint = yield read_full(arg1)
+
+        if self.parent_tracing:
+            parent_span_id = self.parent_tracing.span_id
+            trace_id = self.parent_tracing.trace_id
+        else:
+            parent_span_id = None
+            trace_id = None
+
         connection = yield self.peer.connect()
         message_id = connection.next_message_id()
 
         response = yield connection.send_request(
             Request(
                 service=self.service,
-                argstreams=[arg1, arg2, arg3],
+                argstreams=[InMemStream(endpoint), arg2, arg3],
                 id=message_id,
+                tracing=Trace(
+                    name=endpoint,
+                    trace_id=trace_id,
+                    parent_span_id=parent_span_id,
+                    endpoint=Endpoint(self.peer.host,
+                                      self.peer.port,
+                                      self.service),
+                    traceflags=traceflag,
+                )
             )
         )
 

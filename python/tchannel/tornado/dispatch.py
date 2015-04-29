@@ -20,7 +20,6 @@
 
 from __future__ import absolute_import
 
-import collections
 import tornado
 import tornado.gen
 from tornado import gen, ioloop
@@ -28,9 +27,8 @@ from ..handler import BaseRequestHandler
 from ..messages.error import ErrorCode
 from ..messages.common import StreamState, FlagsType
 from .util import get_arg
-
-
-Endpoint = collections.namedtuple('Endpoint', ['handler', 'opts'])
+from ..event import EventType
+from ..zipkin.trace import Trace
 
 
 class RequestDispatcher(BaseRequestHandler):
@@ -54,11 +52,11 @@ class RequestDispatcher(BaseRequestHandler):
         self.endpoints = {}
 
     @tornado.gen.coroutine
-    def _call_endpoint(self, endpoint, request, response):
+    def _call_endpoint(self, endpoint, request, response, proxy):
         try:
             yield tornado.gen.maybe_future(
-                endpoint.handler(request, response, endpoint.opts))
-        except:
+                endpoint(request, response, proxy))
+        except Exception:
             # TODO send application error
             pass
         finally:
@@ -78,33 +76,44 @@ class RequestDispatcher(BaseRequestHandler):
             request.endpoint += chunk
             chunk = yield request.argstreams[0].read()
 
+        # event: receive_request
+        if connection.tchannel:
+            request.tracing.name = request.endpoint
+            connection.tchannel.event_emitter.fire(
+                EventType.receive_request, request)
+
         endpoint = self.endpoints.get(request.endpoint, None)
         if endpoint is None:
             connection.send_error(
                 ErrorCode.bad_request,
                 "Endpoint '%s' for service '%s' is not defined" % (
-                    request.endpoint, request.service
-                ),
+                    request.endpoint, request.service),
                 request.id,
             )
         else:
-            response = Response(id=request.id, connection=connection)
-            yield self._call_endpoint(endpoint, request, response)
+            response = Response(id=request.id,
+                                tracing=request.tracing,
+                                connection=connection)
 
-    def route(self, rule, **opts):
+            yield self._call_endpoint(endpoint, request, response,
+                                      TChannelProxy(
+                                          connection.tchannel,
+                                          request.tracing))
+
+    def route(self, rule):
         def decorator(handler):
-            self.register(rule, handler, **opts)
+            self.register(rule, handler)
             return handler
 
         return decorator
 
-    def register(self, rule, handler, **opts):
+    def register(self, rule, handler):
         """Register a new endpoint with the given name.
 
         .. code-block:: python
 
-            def handler(request, response, opts):
-                print opts  # => {'foo': 'bar'}
+            def handler(request, response, proxy):
+                proxy.request(serviceName).send(...) # send outgoing request
                 # ...
 
             handler.register('is_healthy', handler, foo='bar')
@@ -114,21 +123,19 @@ class RequestDispatcher(BaseRequestHandler):
             ``arg1`` to dispatch to this handler.
         :param handler:
             A function that gets called with ``Request``, ``Response``, and
-            the ``opts`` dictionary.
-        :param opts:
-            Parameters to pass to the ``handler`` as a dictionary.
+            the ``proxy''.
         """
         assert rule, "rule must not be None"
         assert handler, "handler must not be None"
-        self.endpoints[rule] = Endpoint(handler=handler, opts=opts)
+        self.endpoints[rule] = handler
 
 
 class TornadoDispatcher(RequestDispatcher):
     """Dispatches requests to different endpoints based on ``arg1``"""
 
-    def _call_endpoint(self, endpoint, request, response):
+    def _call_endpoint(self, endpoint, request, response, proxy):
         future = gen.maybe_future(
-            endpoint.handler(request, response, endpoint.opts)
+            endpoint(request, response, proxy)
         )
         future.add_done_callback(lambda _: response.finish())
 
@@ -160,6 +167,7 @@ class Request(object):
         self.flags = flags
         self.ttl = ttl
         self.service = service
+        self.tracing = tracing or Trace()
         # argstreams is a list of InMemStream/PipeStream objects
         self.argstreams = argstreams
         self.id = id
@@ -275,3 +283,43 @@ class Response(object):
         for arg1, arg2, arg3
         """
         return [self.arg1(), self.arg2(), self.arg3()]
+
+
+class TChannelProxy(object):
+    """TChannel Proxy with additional runtime info
+
+    TChannelProxy contains parent_tracing information which is created by
+    received request.
+
+    TChannelProxy will be used as one parameter for the request handler.
+
+    Example::
+
+        def handler(request, response, proxy):
+
+    """
+    __slots__ = ('_tchannel', 'parent_tracing')
+
+    def __init__(self, tchannel, parent_tracing=None):
+        self._tchannel = tchannel
+        self.parent_tracing = parent_tracing
+
+    @property
+    def closed(self):
+        return self._tchannel.closed
+
+    @property
+    def hostport(self):
+        return self._tchannel.hostport
+
+    def host(self, handler):
+        return self._tchannel.host(handler)
+
+    def listen(self):
+        return self._tchannel.listen()
+
+    def request(self, hostport=None, service=None, **kwargs):
+        kwargs['parent_tracing'] = self.parent_tracing
+        return self._tchannel.request(hostport,
+                                      service,
+                                      **kwargs)

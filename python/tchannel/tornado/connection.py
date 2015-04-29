@@ -24,6 +24,7 @@ import logging
 import os
 import socket
 import sys
+from tchannel.event import EventType
 
 import tornado.gen
 import tornado.iostream
@@ -75,13 +76,24 @@ class TornadoConnection(object):
     CALL_REQ_TYPES = frozenset([Types.CALL_REQ, Types.CALL_REQ_CONTINUE])
     CALL_RES_TYPES = frozenset([Types.CALL_RES, Types.CALL_RES_CONTINUE])
 
-    def __init__(self, connection):
+    def __init__(self, connection, tchannel=None):
         assert connection, "connection is required"
 
         self.closed = False
         self.connection = connection
 
-        self.remote_host = None
+        sockname = connection.socket.getsockname()
+        if len(sockname) == 2:
+            (self.remote_host,
+             self.remote_host_port) = sockname
+        elif len(sockname) == 1:
+            self.remote_host = sockname[0]
+            self.remote_host_port = 0
+        else:
+            self.remote_host = "0.0.0.0"
+            self.remote_host_port = 0
+
+        self.remote_host_port = int(self.remote_host_port)
         self.remote_process_name = None
         self.requested_version = PROTOCOL_VERSION
 
@@ -90,8 +102,10 @@ class TornadoConnection(object):
 
         # We need to use two separate message factories to avoid message ID
         # collision while assembling fragmented messages.
-        self.request_message_factory = MessageFactory()
-        self.response_message_factory = MessageFactory()
+        self.request_message_factory = MessageFactory(self.remote_host,
+                                                      self.remote_host_port)
+        self.response_message_factory = MessageFactory(self.remote_host,
+                                                       self.remote_host_port)
 
         # Queue of unprocessed incoming calls.
         self._messages = queues.Queue()
@@ -102,6 +116,8 @@ class TornadoConnection(object):
         # Whether _loop is running. The loop doesn't run until after the
         # handshake has been performed.
         self._loop_running = False
+
+        self.tchannel = tchannel
 
         connection.set_close_callback(self._on_close)
 
@@ -344,14 +360,16 @@ class TornadoConnection(object):
                 'Missing required header: process_name'
             )
 
-        self.remote_host = message.host_port
+        (self.remote_host,
+            self.remote_host_port) = message.host_port.rsplit(':', 1)
+        self.remote_host_port = int(self.remote_host_port)
         self.remote_process_name = message.process_name
         self.requested_version = message.version
 
     @classmethod
     @tornado.gen.coroutine
     def outgoing(cls, hostport, process_name=None, serve_hostport=None,
-                 handler=None):
+                 handler=None, tchannel=None):
         """Initiate a new connection to the given host.
 
         :param hostport:
@@ -384,7 +402,7 @@ class TornadoConnection(object):
                 "Couldn't connect to %s" % hostport, e
             )
 
-        connection = cls(stream)
+        connection = cls(stream, tchannel)
         log.debug("Performing handshake with %s", hostport)
         yield connection.initiate_handshake(headers={
             'host_port': serve_hostport,
@@ -521,12 +539,22 @@ class StreamConnection(TornadoConnection):
         try:
             response.close_argstreams()
             yield self._stream(response, self.response_message_factory)
+
+            # event: send_response
+            if self.tchannel:
+                self.tchannel.event_emitter.fire(
+                    EventType.send_response, response)
         finally:
             response.close_argstreams(force=True)
 
     @tornado.gen.coroutine
     def post_request(self, request):
         """send the given request and response is not required"""
+
+        # event: send_request
+        if self.tchannel:
+            self.tchannel.event_emitter.fire(EventType.send_request, request)
+
         try:
             request.close_argstreams()
             yield self._stream(request, self.request_message_factory)
@@ -554,4 +582,21 @@ class StreamConnection(TornadoConnection):
         future = tornado.gen.Future()
         self._outstanding[request.id] = future
         self.post_request(request)
-        return future
+
+        # the actual future that caller will yield
+        res_future = tornado.gen.Future()
+
+        def adapt_tracing(f):
+            # fetch the request tracing for response
+            f.result().tracing = request.tracing
+            res_future.set_result(f.result())
+            # event: receive_response
+            if self.tchannel:
+                self.tchannel.event_emitter.fire(
+                    EventType.receive_response, f.result())
+
+        tornado.ioloop.IOLoop.current().add_future(
+            future,
+            adapt_tracing)
+
+        return res_future
