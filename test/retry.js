@@ -178,8 +178,25 @@ allocCluster.test('request application retries', {
 
     var req = chan.request({
         timeout: 100,
-        shouldApplicationRetry: function shouldApplicationRetry(req, res, arg2, arg3) {
-            return String(arg2) === 'meh';
+        shouldApplicationRetry: function shouldApplicationRetry(req, res, retry, done) {
+            if (res.streamed) {
+                res.arg2.onValueReady(function arg2ready(err, arg2) {
+                    if (err) {
+                        done(err);
+                    } else {
+                        decideArg2(arg2);
+                    }
+                });
+            } else {
+                decideArg2(res.arg2);
+            }
+            function decideArg2(arg2) {
+                if (String(arg2) === 'meh') {
+                    retry();
+                } else {
+                    done();
+                }
+            }
         }
     });
     req.send('foo', '', 'hi', function done(err, res, arg2, arg3) {
