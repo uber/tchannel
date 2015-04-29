@@ -202,9 +202,7 @@ TChannelRequest.prototype.onSubreqResponse = function onSubreqResponse(res) {
     if (res.ok) {
         self.responseEvent.emit(self, res);
     } else if (self.options.shouldApplicationRetry) {
-        self.maybeAppRetry(res, function decided(err, should) {
-            self.maybeAppRetryDecided(err, res, should);
-        });
+        self.maybeAppRetry(res);
     } else {
         self.responseEvent.emit(self, res);
     }
@@ -287,15 +285,18 @@ TChannelRequest.prototype.shouldRetryError = function shouldRetryError(err) {
     return false;
 };
 
-TChannelRequest.prototype.maybeAppRetry = function maybeAppRetry(res, callback) {
+TChannelRequest.prototype.maybeAppRetry = function maybeAppRetry(res) {
     var self = this;
     res.withArg23(function onArg23(err, arg2, arg3) {
         if (err) {
-            callback(err, null);
+            decided(err, null);
         } else {
-            callback(null, self.options.shouldApplicationRetry(self, res, arg2, arg3));
+            decided(null, self.options.shouldApplicationRetry(self, res, arg2, arg3));
         }
     });
+    function decided(err, should) {
+        self.maybeAppRetryDecided(err, res, should);
+    }
 };
 
 TChannelRequest.prototype.maybeAppRetryDecided = function maybeAppRetryDecided(err, res, should) {
