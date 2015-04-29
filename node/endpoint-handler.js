@@ -50,6 +50,7 @@ TChannelEndpointHandler.prototype.register = function register(name, options, ha
     if (typeof handler !== 'function') {
         throw errors.InvalidHandlerError();
     }
+    if (options.streamed) handler.canStream = true;
     self.endpoints[name] = handler;
     return handler;
 };
