@@ -57,12 +57,10 @@
 var async = require('async');
 var test = require('tape');
 var util = require('util');
-var allocCluster = require('./lib/alloc-cluster.js');
-var EndpointHandler = require('../endpoint-handler');
 var CountStream = require('./lib/count_stream');
-var TestIsolateSearch = require('./lib/test_isolate_search');
+var TestStreamSearch = require('./lib/stream_search');
 var base2 = require('./lib/base2');
-var extend = require('xtend');
+var StreamCheck = require('./lib/stream_check');
 
 var argv = {
     first: false,
@@ -90,7 +88,10 @@ if (argv.repro) {
         bSize: bSize,
         timeout: argv.timeout
     };
-    test.only('repro ' + describe(state), function t(assert) {
+    test.only(util.format('repro head %s body %s',
+        base2.pretty(state.hSize, 'B'),
+        base2.pretty(state.bSize, 'B')
+    ), function t(assert) {
         var search = TestStreamSearch();
         var spec = search.makeSpec(state);
         search.test(spec, assert);
@@ -109,7 +110,8 @@ test('bisection test', function t(assert) {
         stopOnFirstFailure: argv.first,
         traceDetails: argv.trace,
         sizeLimit: sizeLimit || 128 * base2.Ki,
-        timeout: argv.timeout
+        timeout: argv.timeout,
+        test: inprocClusterTest
     }).instrument(argv.instrument);
 
     var firstStop = {};
@@ -169,78 +171,10 @@ test('bisection test', function t(assert) {
     });
 });
 
-function TestStreamSearch(options) {
-    if (!(this instanceof TestStreamSearch)) {
-        return new TestStreamSearch(options);
-    }
+function inprocClusterTest(state, assert) {
+    // jshint validthis:true
     var self = this;
-    TestIsolateSearch.call(self, options);
-    self.clusterPool = new allocCluster.Pool(function setupCluster(callback) {
-        self.setupCluster(callback);
-    });
-    if (!self.options.reuseClusterPool) {
-        self.on('done', function onSearchTestDone() {
-            self.clusterPool.destroy();
-        });
-    }
-}
-util.inherits(TestStreamSearch, TestIsolateSearch);
-
-TestStreamSearch.prototype.setupCluster = function setupCluster(callback) {
-    var cluster = allocCluster({
-        numPeers: 2
-    });
-    var one = cluster.channels[0];
-    one.handler = echoHandler();
-    cluster.ready(clusterReady);
-    function clusterReady() {
-        callback(null, cluster);
-    }
-};
-
-TestStreamSearch.prototype.willFailLike = function willFailLike(a, b) {
-    if (like(a, b)) return true;
-    for (var i = 0; i < b.trace.length; i++) {
-        var res = b.trace[i];
-        if (res.fail && like(a, res.state)) return true;
-    }
-    return false;
-    function like(a, b) {
-        if (a.test.hSize !== b.test.hSize) return false;
-        if (a.test.bSize < b.test.bSize) return false;
-        return true;
-    }
-};
-
-TestStreamSearch.prototype.describeState = function describeState(state) {
-    return describe(state.test);
-};
-
-TestStreamSearch.prototype.describeNoFailure = function describeNoFailure(assert) {
-    var self = this;
-    assert.pass(
-        'found no failure under ' +
-        base2.pretty(self.options.sizeLimit, 'B'));
-};
-
-TestStreamSearch.prototype.init = function init() {
-    var self = this;
-    self.expand(function(_emit) {
-        var base = {hSize: 0, bSize: 0, timeout: self.options.timeout};
-        self.options.basis.forEach(function each(n) {
-            if (self.options.withHeaderOnly) emit({hSize: n});
-            if (self.options.withBodyOnly) emit({bSize: n});
-            if (self.options.withBoth) emit({hSize: n, bSize: n});
-        });
-        function emit(overlay) {
-            _emit(self.makeSpec(extend(base, overlay)));
-        }
-    });
-};
-
-TestStreamSearch.prototype.test = function test(state, assert) {
-    var self = this;
-    var name = describe(state.test);
+    var name = self.describeState(state);
     var hSize = state.test.hSize;
     var bSize = state.test.bSize;
     var timeout = state.test.timeout || 100;
@@ -279,56 +213,22 @@ TestStreamSearch.prototype.test = function test(state, assert) {
     }
 
     function onResult(err, req, res) {
-        var resHeadStream = CountStream({limit: hSize});
-        var resBodyStream = CountStream({limit: bSize});
+        var arg2Check = new StreamCheck('arg2', assert, CountStream({limit: hSize}));
+        var arg3Check = new StreamCheck('arg3', assert, CountStream({limit: bSize}));
         if (err) {
             finish(err);
         } else if (res.streamed) {
             async.series([
-                verifyStream('arg2', res.arg2, resHeadStream),
-                verifyStream('arg3', res.arg3, resBodyStream),
+                arg2Check.verifyStream(res.arg2),
+                arg3Check.verifyStream(res.arg3),
             ], finish);
         } else {
-            verifyStreamChunk('arg2', 0, res.arg2, resHeadStream);
-            verifyDrained('arg2', resHeadStream);
-            verifyStreamChunk('arg3', 0, res.arg3, resBodyStream);
-            verifyDrained('arg3', resBodyStream);
+            arg2Check.verifyChunk(0, res.arg2);
+            arg2Check.verifyDrained();
+            arg3Check.verifyChunk(0, res.arg3);
+            arg3Check.verifyDrained();
             finish();
         }
-    }
-
-    function verifyStreamChunk(name, offset, gotChunk, expected) {
-        var expectedChunk = expected.read(gotChunk.length) || Buffer(0);
-        assert.deepEqual(gotChunk, expectedChunk, util.format(
-            '%s: expected chunk %s bytes @%s',
-            name,
-            base2.pretty(gotChunk.length, 'B'),
-            '0x' + offset.toString(16))
-        );
-        return offset + gotChunk.length;
-    }
-
-    function verifyDrained(name, expected) {
-        var remain = expected.read();
-        assert.equal(remain, null, name + ': got all expected data (bytes)');
-        assert.equal(remain && remain.length || 0, 0, name + ': got all expected data (length)');
-    }
-
-    function verifyStream(name, got, expected) {
-        return function verifyStreamThunk(callback) {
-            var offset = 0;
-            got.on('data', onData);
-            got.on('error', streamDone);
-            got.on('end', streamDone);
-            function onData(gotChunk) {
-                offset = verifyStreamChunk(name, offset, gotChunk, expected);
-            }
-            function streamDone(err) {
-                assert.ifError(err, name + ': no error');
-                if (!err) verifyDrained(name, expected);
-                callback();
-            }
-        };
     }
 
     function finish(err) {
@@ -357,67 +257,6 @@ TestStreamSearch.prototype.test = function test(state, assert) {
             assert.end();
         }
     }
-};
-
-TestStreamSearch.prototype.explore = function explore(spec, _emit) {
-    var self = this;
-    var good = spec.good.test;
-    (self.options.mul || self.options.basis).forEach(function each(n) {
-        if (n < 2) return;
-        var hSize = n * good.hSize;
-        var bSize = n * good.bSize;
-        if (hSize <= self.options.sizeLimit) emit({hSize: hSize});
-        if (bSize <= self.options.sizeLimit) emit({bSize: bSize});
-    });
-    function emit(overlay) {
-        _emit(spec.makeTest(extend(good, overlay)));
-    }
-};
-
-TestStreamSearch.prototype.isolate = function isolate(spec, _emit) {
-    var good = spec.good && spec.good.test || {hSize: 0, bSize: 0};
-    var bad = spec.bad.test;
-    if (bad.hSize - good.hSize > 1) emit({hSize: mid(good.hSize, bad.hSize)});
-    if (good.bSize < bad.bSize) emit({bSize: mid(good.bSize, bad.bSize)});
-    function emit(overlay) {
-        _emit(spec.makeTest(extend(good, overlay)));
-    }
-    function mid(a, b) {
-        return a + Math.floor(b / 2 - a / 2);
-    }
-};
-
-function describe(params) {
-    return util.format('head %s body %s',
-        base2.pretty(params.hSize, 'B'),
-        base2.pretty(params.bSize, 'B'));
-}
-
-function echoHandler() {
-    var handler = EndpointHandler();
-    function foo(req, buildRes) {
-        var res = buildRes({streamed: req.streamed});
-        if (req.streamed) {
-            res.setOk(true);
-            req.arg2.on('data', function onArg2Data(chunk) {
-                res.arg2.write(chunk);
-            });
-            req.arg2.on('end', function onArg2End() {
-                res.arg2.end();
-            });
-            req.arg3.on('data', function onArg3Data(chunk) {
-                res.arg3.write(chunk);
-            });
-            req.arg3.on('end', function onArg3End() {
-                res.arg3.end();
-            });
-        } else {
-            res.sendOk(req.arg2, req.arg3);
-        }
-    }
-    foo.canStream = true;
-    handler.register('foo', foo);
-    return handler;
 }
 
 function die() {
