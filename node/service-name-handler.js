@@ -34,11 +34,11 @@ TChannelServiceNameHandler.prototype.type = 'tchannel.service-name-handler';
 
 TChannelServiceNameHandler.prototype.handleRequest = function handleRequest(req, buildRes) {
     var self = this;
-    if (!req.service) {
+    if (!req.serviceName) {
         buildRes().sendError('BadRequest', 'no service name given');
         return;
     }
-    var chan = self.channel.subChannels[req.service];
+    var chan = self.channel.subChannels[req.serviceName];
     if (chan) {
         chan.handler.handleRequest(req, buildRes);
     } else {
@@ -47,7 +47,7 @@ TChannelServiceNameHandler.prototype.handleRequest = function handleRequest(req,
 };
 
 TChannelServiceNameHandler.prototype.handleDefault = function handleDefault(req, buildRes) {
-    var err = errors.NoServiceHandlerError({service: req.service});
+    var err = errors.NoServiceHandlerError({serviceName: req.serviceName});
     buildRes().sendError('BadRequest', err.message);
 };
 

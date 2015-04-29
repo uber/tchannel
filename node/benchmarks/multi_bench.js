@@ -160,7 +160,7 @@ Test.prototype.sendNext = function () {
         .request({
             host: '127.0.0.1:4040',
             timeout: 10000,
-            service: 'benchmark',
+            serviceName: 'benchmark',
             headers: {
                 benchHeader1: 'bench value one',
                 benchHeader2: 'bench value two',

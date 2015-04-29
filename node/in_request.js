@@ -43,7 +43,7 @@ function TChannelInRequest(id, options) {
     self.id = id || 0;
     self.ttl = options.ttl || 0;
     self.tracing = options.tracing || null;
-    self.service = options.service || '';
+    self.serviceName = options.serviceName || '';
     self.remoteAddr = null;
     self.headers = options.headers || {};
     self.checksum = options.checksum || null;
@@ -59,7 +59,7 @@ function TChannelInRequest(id, options) {
             parentid: self.tracing.parentid,
             flags: self.tracing.flags,
             hostPort: options.hostPort,
-            serviceName: self.service,
+            serviceName: self.serviceName,
             name: '' // fill this in later
         });
 

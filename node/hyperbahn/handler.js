@@ -79,10 +79,10 @@ function handleAdvertise(self, req, arg2, arg3, cb) {
     var servicesByExitNode = {};
 
     for (var i = 0; i < services.length; i++) {
-        var serviceObj = services[i];
-        serviceObj.hostPort = req.remoteAddr;
+        var service = services[i];
+        service.hostPort = req.remoteAddr;
 
-        var serviceName = serviceObj.serviceName;
+        var serviceName = service.serviceName;
         if (serviceName === '') {
             continue;
         }
@@ -98,7 +98,7 @@ function handleAdvertise(self, req, arg2, arg3, cb) {
                 relayReq = servicesByExitNode[exitNode] = [];
             }
 
-            relayReq.push(serviceObj);
+            relayReq.push(service);
         }
     }
 
@@ -139,7 +139,7 @@ function sendAdvertise(services, options, callback) {
         options = {};
     }
 
-    options.service = 'hyperbahn';
+    options.serviceName = 'hyperbahn';
 
     var req = self.channel.request(options);
     self.tchannelJSON.send(req, 'ad', null, {
@@ -164,20 +164,20 @@ function handleRelayAdvertise(self, req, arg2, arg3, cb) {
     var logger = self.channel.logger;
 
     for (var i = 0; i < services.length; i++) {
-        var serviceObj = services[i];
+        var service = services[i];
 
         var exitNodes = self.egressNodes
-            .exitsFor(serviceObj.serviceName);
+            .exitsFor(service.serviceName);
         var exitHosts = Object.keys(exitNodes);
 
         var myHost = self.channel.hostPort;
         if (exitHosts.indexOf(myHost) !== -1) {
-            self.advertise(serviceObj);
+            self.advertise(service);
         } else {
             logger.warn('Non-exit node got relay handle advertise', {
                 myHost: myHost,
                 exitHosts: exitHosts,
-                serviceObj: serviceObj
+                service: service
             });
         }
     }
@@ -195,7 +195,7 @@ function sendRelayAdvertise(hostPort, services, callback) {
 
     self.tchannelJSON.send(self.channel.request({
         host: hostPort,
-        service: 'hyperbahn'
+        serviceName: 'hyperbahn'
     }), 'relay-ad', null, {
         services: services
     }, onRelayAdvertise);
@@ -218,6 +218,6 @@ function sendRelayAdvertise(hostPort, services, callback) {
 };
 
 HyperbahnHandler.prototype.advertise =
-function advertise(serviceObj) {
+function advertise(service) {
     throw new Error('not implemented');
 };
