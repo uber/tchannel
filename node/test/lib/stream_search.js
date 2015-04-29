@@ -23,10 +23,10 @@
 var extend = require('xtend');
 var util = require('util');
 
-var EndpointHandler = require('../../endpoint-handler');
 var TestIsolateSearch = require('./test_isolate_search');
 var allocCluster = require('./alloc-cluster.js');
 var base2 = require('./base2');
+var setupRawTestService = require('./raw_service');
 
 function TestStreamSearch(options) {
     if (!(this instanceof TestStreamSearch)) {
@@ -52,7 +52,7 @@ TestStreamSearch.prototype.setupCluster = function setupCluster(callback) {
         numPeers: 2
     });
     var one = cluster.channels[0];
-    one.handler = echoHandler();
+    setupRawTestService(one);
     cluster.client = cluster.channels[1].makeSubChannel({
         serviceName: 'test_client'
     });
@@ -135,32 +135,5 @@ TestStreamSearch.prototype.isolate = function isolate(spec, _emit) {
         return a + Math.floor(b / 2 - a / 2);
     }
 };
-
-function echoHandler() {
-    var handler = EndpointHandler();
-    function foo(req, buildRes) {
-        var res = buildRes({streamed: req.streamed});
-        if (req.streamed) {
-            res.setOk(true);
-            req.arg2.on('data', function onArg2Data(chunk) {
-                res.arg2.write(chunk);
-            });
-            req.arg2.on('end', function onArg2End() {
-                res.arg2.end();
-            });
-            req.arg3.on('data', function onArg3Data(chunk) {
-                res.arg3.write(chunk);
-            });
-            req.arg3.on('end', function onArg3End() {
-                res.arg3.end();
-            });
-        } else {
-            res.sendOk(req.arg2, req.arg3);
-        }
-    }
-    foo.canStream = true;
-    handler.register('foo', foo);
-    return handler;
-}
 
 module.exports = TestStreamSearch;

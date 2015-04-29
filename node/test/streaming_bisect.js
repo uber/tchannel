@@ -224,7 +224,7 @@ function streamingEchoTest(cluster, state, assert, callback) {
 
     cluster.client.request({
         streamed: true
-    }).sendStreams('foo', reqHeadStream, reqBodyStream, onResult);
+    }).sendStreams('streaming_echo', reqHeadStream, reqBodyStream, onResult);
 
     function onResult(err, req, res) {
         var arg2Check = new StreamCheck('arg2', assert, CountStream({limit: hSize}));
