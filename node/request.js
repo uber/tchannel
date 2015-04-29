@@ -182,7 +182,6 @@ TChannelRequest.prototype.resend = function resend() {
     }
 
     function onResponse(res) {
-        // TODO: skip buffering if res.ok
         self.onSubreqResponse(res);
     }
 };
@@ -200,15 +199,19 @@ TChannelRequest.prototype.onSubreqError = function onSubreqError(err) {
 TChannelRequest.prototype.onSubreqResponse = function onSubreqResponse(res) {
     var self = this;
     if (self.checkTimeout(null, res)) return;
-    self.shouldRetry(null, res, function decided(err, should) {
-        if (err) {
-            self.errorEvent.emit(self, err);
-        } else if (should) {
-            self.deferResend();
-        } else {
-            self.responseEvent.emit(self, res);
-        }
-    });
+    if (res.ok) {
+        self.responseEvent.emit(self, res);
+    } else {
+        self.shouldRetry(null, res, function decided(err, should) {
+            if (err) {
+                self.errorEvent.emit(self, err);
+            } else if (should) {
+                self.deferResend();
+            } else {
+                self.responseEvent.emit(self, res);
+            }
+        });
+    }
 };
 
 TChannelRequest.prototype.deferResend = function deferResend() {
@@ -300,7 +303,7 @@ TChannelRequest.prototype.shouldRetry = function shouldRetry(err, res, callback)
         if (self.checkTimeout(err, res)) return;
         if (err) {
             callback(err, null);
-        } else if (!res.ok && self.options.shouldApplicationRetry) {
+        } else if (self.options.shouldApplicationRetry) {
             callback(null, self.options.shouldApplicationRetry(self, res, arg2, arg3));
         } else {
             callback(null, false);
