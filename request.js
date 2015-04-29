@@ -35,6 +35,7 @@ function TChannelRequest(channel, options) {
     self.responseEvent = self.defineEvent('response');
 
     self.channel = channel;
+    self.services = self.channel.services;
     self.logger = self.channel.logger;
     self.random = self.channel.random;
     self.timers = self.channel.timers;
@@ -137,11 +138,14 @@ TChannelRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     }
     self.start = self.timers.now();
     self.resendSanity = self.limit + 1;
+
     self.resend();
 };
 
 TChannelRequest.prototype.resend = function resend() {
     var self = this;
+
+    if (self.checkPending()) return;
 
     if (self.checkTimeout()) return;
 
@@ -177,8 +181,11 @@ TChannelRequest.prototype.resend = function resend() {
     outReq.errorEvent.on(onError);
     outReq.send(self.arg1, self.arg2, self.arg3);
 
+    self.services.onRequest(self);
+
     function onError(err) {
         self.onSubreqError(err);
+        self.services.onRequestError(self);
     }
 
     function onResponse(res) {
@@ -218,6 +225,16 @@ TChannelRequest.prototype.deferResend = function deferResend() {
     function doResend() {
         self.resend();
     }
+};
+
+TChannelRequest.prototype.checkPending = function checkPending() {
+    var self = this;
+    var err = self.services.errorIfExceedsMaxPending(self);
+    if (err) {
+        self.errorEvent.emit(self, err);
+        return true;
+    }
+    return false;
 };
 
 TChannelRequest.prototype.checkTimeout = function checkTimeout(err, res) {

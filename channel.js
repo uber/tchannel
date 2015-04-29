@@ -42,6 +42,7 @@ var errors = require('./errors');
 
 var TChannelConnection = require('./connection');
 var TChannelPeers = require('./peers');
+var TChannelServices = require('./services');
 
 var TracingAgent = require('./trace/agent');
 
@@ -110,6 +111,15 @@ function TChannel(options) {
     // - manually api (.peers.add etc)
     // - incoming connections on any listening socket
     self.peers = TChannelPeers(self, self.options);
+
+    // For tracking the number of pending requests to any service
+    self.services = new TChannelServices();
+    if (self.options.maxPending !== undefined) {
+        self.services.maxPending = self.options.maxPending;
+    }
+    if (self.options.maxPendingForService !== undefined) {
+        self.services.maxPendingForService = self.options.maxPendingForService;
+    }
 
     // TChannel advances through the following states.
     self.listened = false;

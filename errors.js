@@ -139,6 +139,19 @@ module.exports.InvalidJSONBody = TypedError({
     body: null
 });
 
+module.exports.MaxPendingError = TypedError({
+    type: 'tchannel.max-pending',
+    message: 'maximum pending requests exceeded (limit was {pending})',
+    pending: null
+});
+
+module.exports.MaxPendingForServiceError = TypedError({
+    type: 'tchannel.max-pending-for-service',
+    message: 'maximum pending requests exceeded for service (limit was {pending} for service {serviceName})',
+    pending: null,
+    serviceName: null
+});
+
 module.exports.MissingInitHeaderError = TypedError({
     type: 'tchannel.missing-init-header',
     message: 'missing init frame header {field}',
@@ -279,6 +292,8 @@ module.exports.classify = function classify(err) {
     switch (err.type) {
         case 'tchannel.no-peer-available':
         case 'tchannel.no-service-handler':
+        case 'tchannel.max-pending':
+        case 'tchannel.max-pending-for-service':
             return 'Declined';
 
         case 'tchannel.timeout':
