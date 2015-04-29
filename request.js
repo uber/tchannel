@@ -58,6 +58,7 @@ function TChannelRequest(channel, options) {
     self.end = 0;
     self.elapsed = 0;
     self.resendSanity = 0;
+    self.trackPending = self.options.trackPending || false;
 
     self.serviceName = options.serviceName || '';
     self.headers = self.options.headers || {}; // so that as-foo can punch req.headers.X
@@ -145,7 +146,7 @@ TChannelRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
 TChannelRequest.prototype.resend = function resend() {
     var self = this;
 
-    if (self.checkPending()) return;
+    if (self.trackPending && self.checkPending()) return;
 
     if (self.checkTimeout()) return;
 
