@@ -29,7 +29,11 @@ testWithOptions({
     numPeers: 2,
     channelOptions: {
         maxPending: 1,
-        timers: MockTimers(Date.now())
+        timers: MockTimers(Date.now()),
+        random: lucky,
+        requestDefaults: {
+            trackPending: true
+        }
     }
 }, [
     'tchannel.timeout',
@@ -41,7 +45,10 @@ testWithOptions({
     channelOptions: {
         maxPendingForService: 1,
         timers: MockTimers(1.5e12), // approximately soon
-        random: lucky
+        random: lucky,
+        requestDefaults: {
+            trackPending: true
+        }
     }
 }, [
     'tchannel.timeout',
