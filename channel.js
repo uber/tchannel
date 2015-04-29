@@ -344,15 +344,11 @@ TChannel.prototype.request = function channelRequest(options) {
     }
     // jshint forin:true
 
-    if (!opts.service && opts.serviceName) {
-        opts.service = opts.serviceName;
-    }
-
     if (!self.serviceName && !opts.host) {
-        if (opts.service &&
+        if (opts.serviceName &&
             self.subChannels &&
-            self.subChannels[opts.service]) {
-            return self.subChannels[opts.service].request(opts);
+            self.subChannels[opts.serviceName]) {
+            return self.subChannels[opts.serviceName].request(opts);
         } else {
             throw errors.TopLevelRequestError();
         }

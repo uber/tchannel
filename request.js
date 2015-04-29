@@ -59,7 +59,7 @@ function TChannelRequest(channel, options) {
     self.elapsed = 0;
     self.resendSanity = 0;
 
-    self.service = options.service || '';
+    self.serviceName = options.serviceName || '';
     self.headers = self.options.headers || {}; // so that as-foo can punch req.headers.X
     self.options.headers = self.headers; // for passing to peer.request(opts) later
 
