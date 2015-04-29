@@ -24,6 +24,7 @@
 var inherits = require('util').inherits;
 
 var OutArgStream = require('./argstream').OutArgStream;
+var pipelineStreams = require('./lib/pipeline_streams');
 var OutResponse = require('./out_response');
 var errors = require('./errors');
 var States = require('./reqres_states');
@@ -95,6 +96,13 @@ StreamingOutResponse.prototype.send = function send(res1, res2) {
     var self = this;
     self.arg2.end(res1);
     self.arg3.end(res2);
+};
+
+StreamingOutResponse.prototype.sendStreams = function sendStreams(res1, res2) {
+    var self = this;
+    pipelineStreams(
+        [res1, res2],
+        [self.arg2, self.arg3]);
 };
 
 module.exports = StreamingOutResponse;
