@@ -58,8 +58,8 @@ TChannelJSON.prototype.send = function send(
     var self = this;
 
     assert(typeof endpoint === 'string', 'endpoint must be a string');
-    assert(typeof req.service === 'string' && req.service !== '',
-        'req.service must be a string');
+    assert(typeof req.serviceName === 'string' && req.serviceName !== '',
+        'req.serviceName must be a string');
     assert(body !== undefined, 'must send a body');
 
     var stringifyResult = self._stringify({

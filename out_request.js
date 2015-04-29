@@ -46,7 +46,7 @@ function TChannelOutRequest(id, options) {
     self.id = id || 0;
     self.ttl = options.ttl || 0;
     self.tracing = options.tracing || null;
-    self.service = options.service || '';
+    self.serviceName = options.serviceName || '';
     self.headers = options.headers || {};
     self.checksumType = options.checksumType || 0;
     self.checksum = options.checksum || null;
@@ -67,7 +67,7 @@ function TChannelOutRequest(id, options) {
             parentid: null,
             flags: options.trace? 1 : 0,
             hostPort: self.remoteAddr,
-            serviceName: self.service,
+            serviceName: self.serviceName,
             name: '' // fill this in later
         });
 

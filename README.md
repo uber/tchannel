@@ -225,7 +225,7 @@ This is used to avoid race conditions in the network.
 ```jsig
 type TChannelInRequest : {
     id: Number,
-    service: String,
+    serviceName: String,
 
     arg1: Buffer,
     arg2: Buffer,
@@ -266,7 +266,7 @@ The incoming req has
  - `arg1` as a `Buffer`.
  - `arg2` as a `Buffer`.
  - `arg3` as a `Buffer`.
- - `service` as a `String`
+ - `serviceName` as a `String`
 
 The outgoing response has a `sendOk()` and `sendNotOk()` method.
 

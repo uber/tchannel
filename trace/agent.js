@@ -24,7 +24,7 @@ var Span = require('./span');
 
 module.exports = Agent;
 
-function Agent (options) {
+function Agent(options) {
     if (!(this instanceof Agent)) {
         return new Agent(options);
     }

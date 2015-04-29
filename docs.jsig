@@ -27,7 +27,7 @@ type TChannelInResponse : {
 
 type TChannelOutRequest : {
     id: Number,
-    service: String,
+    serviceName: String,
 
     send: (
         arg1: Buffer | String,
@@ -39,7 +39,7 @@ type TChannelOutRequest : {
 
 type TChannelInRequest : {
     id: Number,
-    service: String,
+    serviceName: String,
 
     arg1: Buffer,
     arg2: Buffer,

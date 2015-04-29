@@ -152,8 +152,8 @@ module.exports.NoPeerAvailable = TypedError({
 
 module.exports.NoServiceHandlerError = TypedError({
     type: 'tchannel.no-service-handler',
-    message: 'unknown service {service}',
-    service: null
+    message: 'unknown service {serviceName}',
+    serviceName: null
 });
 
 module.exports.NullKeyError = TypedError({

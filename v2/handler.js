@@ -319,7 +319,7 @@ TChannelV2Handler.prototype.sendInitResponse = function sendInitResponse(reqFram
 TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame(req, flags, args) {
     var self = this;
     var reqBody = new v2.CallRequest(
-        flags, req.ttl, req.tracing, req.service, req.headers,
+        flags, req.ttl, req.tracing, req.serviceName, req.headers,
         req.checksum.type, args);
     req.checksum = self._sendCallBodies(req.id, reqBody, null);
 };
@@ -414,7 +414,7 @@ TChannelV2Handler.prototype.buildInRequest = function buildInRequest(reqFrame) {
         tracer: self.tracer,
         ttl: reqFrame.body.ttl || SERVER_TIMEOUT_DEFAULT,
         tracing: reqFrame.body.tracing,
-        service: reqFrame.body.service,
+        serviceName: reqFrame.body.service,
         headers: reqFrame.body.headers,
         retryFlags: retryFlags,
         checksum: new v2.Checksum(reqFrame.body.csum.type),
