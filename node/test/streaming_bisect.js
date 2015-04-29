@@ -190,12 +190,6 @@ function inprocClusterTest(state, assert) {
         }
         cluster = clus;
 
-        for (var i = 0; i < cluster.hosts.length; i++) {
-            assert.comment(util.format(
-                'cluster host %s: %s',
-                i + 1, cluster.hosts[i]));
-        }
-
         var reqHeadStream = CountStream({limit: hSize});
         var reqBodyStream = CountStream({limit: bSize});
         cluster.client.request({
