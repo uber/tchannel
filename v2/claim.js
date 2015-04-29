@@ -20,15 +20,20 @@
 
 'use strict';
 
-require('./frame.js');
-require('./init.js');
-require('./checksum.js');
-require('./header.js');
-require('./tracing.js');
-require('./call.js');
-require('./cancel.js');
-require('./cont.js');
-require('./claim.js');
-require('./ping.js');
-require('./error_response.js');
-require('./args.js');
+var bufrw = require('bufrw');
+var Tracing = require('./tracing');
+
+// tracing:25
+function Claim(tracing) {
+    var self = this;
+    self.type = Claim.TypeCode;
+    self.tracing = tracing || Tracing.emptyTracing;
+}
+
+Claim.TypeCode = 0xC1;
+
+Claim.RW = bufrw.Struct(Claim, [
+    {name: 'tracing', rw: Tracing.RW}  // tracing:25
+]);
+
+module.exports = Claim;
