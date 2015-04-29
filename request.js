@@ -289,9 +289,7 @@ TChannelRequest.prototype.shouldRetryError = function shouldRetryError(err) {
 
 TChannelRequest.prototype.maybeAppRetry = function maybeAppRetry(res, callback) {
     var self = this;
-
     res.withArg23(function onArg23(err, arg2, arg3) {
-        if (self.checkTimeout(err, res)) return;
         if (err) {
             callback(err, null);
         } else {
@@ -302,6 +300,7 @@ TChannelRequest.prototype.maybeAppRetry = function maybeAppRetry(res, callback) 
 
 TChannelRequest.prototype.maybeAppRetryDecided = function maybeAppRetryDecided(err, res, should) {
     var self = this;
+    if (self.checkTimeout(err, res)) return;
     if (err) {
         self.errorEvent.emit(self, err);
     } else if (should) {
