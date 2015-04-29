@@ -360,14 +360,15 @@ class TornadoConnection(object):
             Process name of the entity making the connection.
         :param serve_hostport:
             String in the form ``$host:$port`` specifying an address at which
-            the caller can be reached. If omitted, ``0.0.0.0:0`` is used.
+            the caller can be reached. If omitted, ``0.0.0.0:0`` is used,
+            specifying that the caller is ephemeral.
         :param handler:
             If given, any calls received from this connection will be sent to
             this RequestHandler.
         """
         host, port = hostport.rsplit(":", 1)
         process_name = process_name or "%s[%s]" % (sys.argv[0], os.getpid())
-        serve_hostport = serve_hostport or "0.0.0.0:0"
+        serve_hostport = serve_hostport or glossary.EPHEMERAL_HOSTPORT
 
         # TODO: change this to tornado.tcpclient.TCPClient to do async DNS
         # lookups.
