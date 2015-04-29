@@ -31,6 +31,7 @@ require('./streaming.js');
 require('./streaming_bisect.js');
 require('./register.js');
 require('./identify.js');
+require('./max_pending.js');
 require('./tchannel.js');
 require('./regression-inOps-leak.js');
 require('./v2/index.js');
