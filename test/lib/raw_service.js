@@ -21,6 +21,11 @@
 'use strict';
 
 function setupRawTestService(chan) {
+    if (!chan.serviceName) {
+        chan = chan.makeSubChannel({
+            serviceName: 'test_as_raw'
+        });
+    }
     chan.register('echo', echo);
     chan.register('streaming_echo', {
         streamed: true
