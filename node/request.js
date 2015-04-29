@@ -200,12 +200,11 @@ TChannelRequest.prototype.onSubreqError = function onSubreqError(err) {
 TChannelRequest.prototype.onSubreqResponse = function onSubreqResponse(res) {
     var self = this;
     if (self.checkTimeout(null, res)) return;
-    res.withArg23(function onArg23(err, arg2, arg3) {
-        if (self.checkTimeout(err, res)) return;
-        if (self.shouldRetry(err, res, arg2, arg3)) {
-            self.deferResend();
-        } else if (err) {
+    self.shouldRetry(null, res, function decided(err, should) {
+        if (err) {
             self.errorEvent.emit(self, err);
+        } else if (should) {
+            self.deferResend();
         } else {
             self.responseEvent.emit(self, res);
         }
@@ -289,18 +288,24 @@ TChannelRequest.prototype.shouldRetryError = function shouldRetryError(err) {
     return false;
 };
 
-TChannelRequest.prototype.shouldRetry = function shouldRetry(err, res, arg2, arg3) {
+TChannelRequest.prototype.shouldRetry = function shouldRetry(err, res, callback) {
     var self = this;
 
     if (self.shouldRetryError(err)) {
-        return true;
+        callback(null, true);
+        return;
     }
 
-    if (!res.ok && self.options.shouldApplicationRetry) {
-        return self.options.shouldApplicationRetry(self, res, arg2, arg3);
-    }
-
-    return false;
+    res.withArg23(function onArg23(err, arg2, arg3) {
+        if (self.checkTimeout(err, res)) return;
+        if (err) {
+            callback(err, null);
+        } else if (!res.ok && self.options.shouldApplicationRetry) {
+            callback(null, self.options.shouldApplicationRetry(self, res, arg2, arg3));
+        } else {
+            callback(null, false);
+        }
+    });
 };
 
 module.exports = TChannelRequest;
