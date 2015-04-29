@@ -55,7 +55,6 @@
  */
 
 var async = require('async');
-var PassThrough = require('readable-stream').PassThrough;
 var test = require('tape');
 var util = require('util');
 var allocCluster = require('./lib/alloc-cluster.js');
@@ -219,7 +218,9 @@ TestStreamSearch.prototype.describeState = function describeState(state) {
 
 TestStreamSearch.prototype.describeNoFailure = function describeNoFailure(assert) {
     var self = this;
-    assert.pass('found no failure under ' + prettyBytes(self.options.sizeLimit));
+    assert.pass(
+        'found no failure under ' +
+        base2.pretty(self.options.sizeLimit, 'B'));
 };
 
 TestStreamSearch.prototype.init = function init() {
@@ -239,10 +240,13 @@ TestStreamSearch.prototype.init = function init() {
 
 TestStreamSearch.prototype.test = function test(state, assert) {
     var self = this;
-    var options = state.test;
-    var name = describe(options);
+    var name = describe(state.test);
+    var hSize = state.test.hSize;
+    var bSize = state.test.bSize;
+    var timeout = state.test.timeout || 100;
     var cluster = null;
 
+    assert.timeoutAfter(timeout || 100);
     self.clusterPool.get(gotCluster);
 
     function gotCluster(err, clus) {
@@ -252,22 +256,84 @@ TestStreamSearch.prototype.test = function test(state, assert) {
         }
         cluster = clus;
 
+        var client = cluster.channels[1];
+
         for (var i = 0; i < cluster.hosts.length; i++) {
             assert.comment(util.format(
                 'cluster host %s: %s',
                 i + 1, cluster.hosts[i]));
         }
 
-        var client = cluster.channels[1];
-        assert.timeoutAfter(options.timeout || 100);
-        streamingTest({
-            name: name,
-            channel: client,
-            opts: {host: cluster.hosts[0]},
-            op: 'foo',
-            headStream: CountStream({limit: options.hSize}),
-            bodyStream: CountStream({limit: options.bSize})
-        }, assert, function streamingTestDone() {
+        var reqHeadStream = CountStream({limit: hSize});
+        var reqBodyStream = CountStream({limit: bSize});
+        var req = client.request({
+            host: cluster.hosts[0],
+            streamed: true
+        });
+        req.hookupStreamCallback(onResult);
+        req.arg1.end('foo');
+        reqHeadStream.pipe(req.arg2);
+        req.arg2.once('finish', function onArg2Finished() {
+            reqBodyStream.pipe(req.arg3);
+        });
+    }
+
+    function onResult(err, req, res) {
+        var resHeadStream = CountStream({limit: hSize});
+        var resBodyStream = CountStream({limit: bSize});
+        if (err) {
+            finish(err);
+        } else if (res.streamed) {
+            async.series([
+                verifyStream('arg2', res.arg2, resHeadStream),
+                verifyStream('arg3', res.arg3, resBodyStream),
+            ], finish);
+        } else {
+            verifyStreamChunk('arg2', 0, res.arg2, resHeadStream);
+            verifyDrained('arg2', resHeadStream);
+            verifyStreamChunk('arg3', 0, res.arg3, resBodyStream);
+            verifyDrained('arg3', resBodyStream);
+            finish();
+        }
+    }
+
+    function verifyStreamChunk(name, offset, gotChunk, expected) {
+        var expectedChunk = expected.read(gotChunk.length) || Buffer(0);
+        assert.deepEqual(gotChunk, expectedChunk, util.format(
+            '%s: expected chunk %s bytes @%s',
+            name,
+            base2.pretty(gotChunk.length, 'B'),
+            '0x' + offset.toString(16))
+        );
+        return offset + gotChunk.length;
+    }
+
+    function verifyDrained(name, expected) {
+        var remain = expected.read();
+        assert.equal(remain, null, name + ': got all expected data (bytes)');
+        assert.equal(remain && remain.length || 0, 0, name + ': got all expected data (length)');
+    }
+
+    function verifyStream(name, got, expected) {
+        return function verifyStreamThunk(callback) {
+            var offset = 0;
+            got.on('data', onData);
+            got.on('error', streamDone);
+            got.on('end', streamDone);
+            function onData(gotChunk) {
+                offset = verifyStreamChunk(name, offset, gotChunk, expected);
+            }
+            function streamDone(err) {
+                assert.ifError(err, name + ': no error');
+                if (!err) verifyDrained(name, expected);
+                callback();
+            }
+        };
+    }
+
+    function finish(err) {
+        assert.ifError(err, name + ': no final error');
+        if (!err) {
             cluster.assertCleanState(assert, {
                 channels: [{
                     peers: [{
@@ -283,13 +349,13 @@ TestStreamSearch.prototype.test = function test(state, assert) {
                     }]
                 }]
             });
-            if (!assert._ok) {
-                cluster.destroy(assert.end);
-            } else {
-                self.clusterPool.release(cluster);
-                assert.end();
-            }
-        });
+        }
+        if (!assert._ok) {
+            cluster.destroy(assert.end);
+        } else {
+            self.clusterPool.release(cluster);
+            assert.end();
+        }
     }
 };
 
@@ -321,101 +387,10 @@ TestStreamSearch.prototype.isolate = function isolate(spec, _emit) {
     }
 };
 
-function streamingTest(testCase, assert, callback) {
-    if (!callback) callback = assert.end;
-
-    var reqHeadStream;
-    if (typeof testCase.headStream === 'function') {
-        reqHeadStream = testCase.headStream();
-    } else {
-        reqHeadStream = testCase.headStream;
-    }
-
-    var reqBodyStream;
-    if (typeof testCase.bodyStream === 'function') {
-        reqBodyStream = testCase.bodyStream();
-    } else {
-        reqBodyStream = testCase.bodyStream;
-    }
-
-    var resHeadStream = PassThrough();
-    var resBodyStream = PassThrough();
-
-    var req = testCase.channel.request(extend({
-        streamed: true
-    }, testCase.opts));
-    req.arg1.end(testCase.op);
-    reqHeadStream.pipe(resHeadStream);
-    reqHeadStream.pipe(req.arg2);
-    req.arg2.once('finish', function onArg2Finished() {
-        reqBodyStream.pipe(resBodyStream);
-        reqBodyStream.pipe(req.arg3);
-    });
-
-    onResult.canStream = true;
-    req.hookupCallback(onResult);
-
-    function onResult(err, req, res) {
-        assert.ifError(err, testCase.name + ': no result error');
-        if (err) {
-            callback();
-            return;
-        }
-        if (res.streamed) {
-            async.series([
-                verifyStream('arg2', res.arg2, resHeadStream),
-                verifyStream('arg3', res.arg3, resBodyStream),
-            ], callback);
-        } else {
-            verifyStreamChunk('arg2', 0, res.arg2, resHeadStream);
-            verifyDrained('arg2', resHeadStream);
-            verifyStreamChunk('arg3', 0, res.arg3, resBodyStream);
-            verifyDrained('arg3', resBodyStream);
-            callback();
-        }
-    }
-
-    function verifyStreamChunk(name, offset, gotChunk, expected) {
-        var expectedChunk = expected.read(gotChunk.length) || Buffer(0);
-        assert.deepEqual(gotChunk, expectedChunk, util.format(
-            '%s: expected chunk %s bytes @%s',
-            name,
-            prettyBytes(gotChunk.length),
-            '0x' + offset.toString(16))
-        );
-        return offset + gotChunk.length;
-    }
-
-    function verifyDrained(name, expected) {
-        var remain = expected.read();
-        assert.equal(remain, null, name + ': got all expected data (bytes)');
-        assert.equal(remain && remain.length || 0, 0, name + ': got all expected data (length)');
-    }
-
-    function verifyStream(name, got, expected) {
-        return function verifyStreamThunk(streamDone) {
-            var offset = 0;
-            got.on('data', onData);
-            got.on('error', finish);
-            got.on('end', finish);
-
-            function onData(gotChunk) {
-                offset = verifyStreamChunk(name, offset, gotChunk, expected);
-            }
-
-            function finish(err) {
-                assert.ifError(err, name + ': no error');
-                if (!err) verifyDrained(name, expected);
-                streamDone();
-            }
-        };
-    }
-}
-
 function describe(params) {
     return util.format('head %s body %s',
-        prettyBytes(params.hSize),
-        prettyBytes(params.bSize));
+        base2.pretty(params.hSize, 'B'),
+        base2.pretty(params.bSize, 'B'));
 }
 
 function echoHandler() {
@@ -448,8 +423,4 @@ function echoHandler() {
 function die() {
     console.error.apply(console, arguments);
     process.exit(1);
-}
-
-function prettyBytes(n) {
-    return base2.pretty(n, 'B');
 }
