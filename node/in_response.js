@@ -83,4 +83,9 @@ TChannelInResponse.prototype.handleFrame = function handleFrame(parts) {
     self.finishEvent.emit(self);
 };
 
+TChannelInResponse.prototype.withArg23 = function withArg23(callback) {
+    var self = this;
+    callback(null, self.arg2, self.arg3);
+};
+
 module.exports = TChannelInResponse;
