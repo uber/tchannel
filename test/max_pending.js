@@ -25,7 +25,7 @@ var Result = require('bufrw/result');
 var MockTimers = require('time-mock');
 var allocCluster = require('./lib/alloc-cluster');
 
-testWithOptions({
+testBattle('cap maximum pending requests', {
     numPeers: 2,
     channelOptions: {
         maxPending: 1,
@@ -40,7 +40,7 @@ testWithOptions({
     'tchannel.max-pending'
 ]);
 
-testWithOptions({
+testBattle('cap maximum pending requests per service', {
     numPeers: 2,
     channelOptions: {
         maxPendingForService: 1,
@@ -55,8 +55,36 @@ testWithOptions({
     'tchannel.max-pending-for-service'
 ]);
 
-function testWithOptions(options, expectedErrorTypes) {
-    allocCluster.test('exercise maximum pending requests', options, function t(cluster, assert) {
+testBattle('channel-scoped max pending supercedes per-service', {
+    numPeers: 2,
+    channelOptions: {
+        maxPending: 1,
+        maxPendingForService: 1,
+        timers: MockTimers(1.5e12), // approximately soon
+        random: lucky,
+        requestDefaults: {
+            trackPending: true
+        }
+    }
+}, [
+    'tchannel.timeout',
+    'tchannel.max-pending'
+]);
+
+testBattle('do not opt-in for pending request tracking', {
+    numPeers: 2,
+    channelOptions: {
+        maxPending: 1,
+        timers: MockTimers(Date.now()),
+        random: lucky
+    }
+}, [
+    'tchannel.timeout',
+    'tchannel.timeout'
+]);
+
+function testBattle(name, options, expectedErrorTypes) {
+    allocCluster.test(name, options, function t(cluster, assert) {
         var tweedleDee = cluster.channels[0];
         var tweedleDum = cluster.channels[1];
         var timers = tweedleDee.timers;
