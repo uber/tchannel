@@ -35,12 +35,18 @@ function setupRawTestService(chan) {
 function echo(req, buildRes, arg2, arg3) {
     var res = buildRes();
     res.headers.as = 'raw';
-    res.sendOk(req.arg2, req.arg3);
+    if (req.headers.as !== 'raw') {
+        res.sendError('BadRequest', 'expected as=raw transport header');
+    } else {
+        res.sendOk(req.arg2, req.arg3);
+    }
 }
 
 function streamingEcho(req, buildRes) {
     if (!req.streamed) {
         echo(req, buildRes, req.arg2, req.arg3);
+    } else if (req.headers.as !== 'raw') {
+        buildRes().sendError('BadRequest', 'expected as=raw transport header');
     } else {
         var res = buildRes({streamed: true});
         res.headers.as = 'raw';

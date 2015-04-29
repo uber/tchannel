@@ -224,6 +224,9 @@ function streamingEchoTest(cluster, state, assert, callback) {
 
     cluster.client.request({
         serviceName: 'test_as_raw',
+        headers: {
+            as: 'raw'
+        },
         streamed: true
     }).sendStreams('streaming_echo', reqHeadStream, reqBodyStream, onResult);
 
