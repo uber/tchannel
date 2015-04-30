@@ -199,7 +199,6 @@ function inprocClusterTest(state, assert) {
         var reqHeadStream = CountStream({limit: hSize});
         var reqBodyStream = CountStream({limit: bSize});
         var req = cluster.client.request({
-            host: cluster.hosts[0],
             streamed: true
         });
         req.hookupStreamCallback(onResult);
