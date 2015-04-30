@@ -30,7 +30,7 @@ function Claim(tracing) {
     self.tracing = tracing || Tracing.emptyTracing;
 }
 
-Claim.TypeCode = 0xC1;
+Claim.TypeCode = 0xc1;
 
 Claim.RW = bufrw.Struct(Claim, [
     {name: 'tracing', rw: Tracing.RW}  // tracing:25
