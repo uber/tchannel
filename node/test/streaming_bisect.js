@@ -175,12 +175,7 @@ function inprocClusterTest(state, assert) {
     // jshint validthis:true
     var self = this;
     var name = self.describeState(state);
-    var hSize = state.test.hSize;
-    var bSize = state.test.bSize;
-    var timeout = state.test.timeout || 100;
     var cluster = null;
-
-    assert.timeoutAfter(timeout || 100);
     self.clusterPool.get(gotCluster);
 
     function gotCluster(err, clus) {
@@ -189,31 +184,7 @@ function inprocClusterTest(state, assert) {
             return;
         }
         cluster = clus;
-
-        var reqHeadStream = CountStream({limit: hSize});
-        var reqBodyStream = CountStream({limit: bSize});
-        cluster.client.request({
-            streamed: true
-        }).sendStreams('foo', reqHeadStream, reqBodyStream, onResult);
-    }
-
-    function onResult(err, req, res) {
-        var arg2Check = new StreamCheck('arg2', assert, CountStream({limit: hSize}));
-        var arg3Check = new StreamCheck('arg3', assert, CountStream({limit: bSize}));
-        if (err) {
-            finish(err);
-        } else if (res.streamed) {
-            async.series([
-                arg2Check.verifyStream(res.arg2),
-                arg3Check.verifyStream(res.arg3),
-            ], finish);
-        } else {
-            arg2Check.verifyChunk(0, res.arg2);
-            arg2Check.verifyDrained();
-            arg3Check.verifyChunk(0, res.arg3);
-            arg3Check.verifyDrained();
-            finish();
-        }
+        streamingEchoTest(cluster, state, assert, finish);
     }
 
     function finish(err) {
@@ -240,6 +211,40 @@ function inprocClusterTest(state, assert) {
         } else {
             self.clusterPool.release(cluster);
             assert.end();
+        }
+    }
+}
+
+function streamingEchoTest(cluster, state, assert, callback) {
+    var hSize = state.test.hSize;
+    var bSize = state.test.bSize;
+    var timeout = state.test.timeout || 100;
+
+    var reqHeadStream = CountStream({limit: hSize});
+    var reqBodyStream = CountStream({limit: bSize});
+
+    assert.timeoutAfter(timeout || 100);
+
+    cluster.client.request({
+        streamed: true
+    }).sendStreams('foo', reqHeadStream, reqBodyStream, onResult);
+
+    function onResult(err, req, res) {
+        var arg2Check = new StreamCheck('arg2', assert, CountStream({limit: hSize}));
+        var arg3Check = new StreamCheck('arg3', assert, CountStream({limit: bSize}));
+        if (err) {
+            callback(err);
+        } else if (res.streamed) {
+            async.series([
+                arg2Check.verifyStream(res.arg2),
+                arg3Check.verifyStream(res.arg3),
+            ], callback);
+        } else {
+            arg2Check.verifyChunk(0, res.arg2);
+            arg2Check.verifyDrained();
+            arg3Check.verifyChunk(0, res.arg3);
+            arg3Check.verifyDrained();
+            callback();
         }
     }
 }
