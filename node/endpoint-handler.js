@@ -24,6 +24,7 @@ var EventEmitter = require('./lib/event_emitter');
 var inherits = require('util').inherits;
 var util = require('util');
 var errors = require('./errors');
+var coerceRequestHandler = require('./request-handler');
 
 function TChannelEndpointHandler(serviceName) {
     if (!(this instanceof TChannelEndpointHandler)) {
@@ -50,7 +51,7 @@ TChannelEndpointHandler.prototype.register = function register(name, options, ha
         throw errors.InvalidHandlerError();
     }
     if (options.streamed) handler.canStream = true;
-    self.endpoints[name] = handler;
+    self.endpoints[name] = coerceRequestHandler(handler, self, options);
     return handler;
 };
 
@@ -93,16 +94,18 @@ TChannelEndpointHandler.prototype.handleArg1 = function handleArg1(req, buildRes
             'no such endpoint service=%j endpoint=%j',
             req.serviceName, name));
     } else if (handler.canStream) {
-        handler.call(self, req, buildResponse);
+        handler.handleRequest(req, buildResponse);
     } else if (req.streamed) {
-        self.bufferArg23(req, buildResponse, handler);
+        // And implicitly, !handler.canStream, meaning fragmented but
+        // reaccumulated:
+        self.withArg23(req, buildResponse, handler);
     } else {
         res = buildResponse({streamed: false});
-        handler.call(self, req, res, req.arg2, req.arg3);
+        handler.handleRequest(req, res, req.arg2, req.arg3);
     }
 };
 
-TChannelEndpointHandler.prototype.bufferArg23 = function bufferArg23(req, buildResponse, handler) {
+TChannelEndpointHandler.prototype.withArg23 = function withArg23(req, buildResponse, handler) {
     req.withArg23(function gotArg23(err, arg2, arg3) {
         var res = buildResponse({streamed: false});
         if (err) {
@@ -111,7 +114,7 @@ TChannelEndpointHandler.prototype.bufferArg23 = function bufferArg23(req, buildR
                 'error accumulating arg2/arg3: %s: %s',
                 err.constructor.name, err.message));
         } else {
-            handler(req, res, arg2, arg3);
+            handler.handleRequest(req, res, arg2, arg3);
         }
     });
 };
