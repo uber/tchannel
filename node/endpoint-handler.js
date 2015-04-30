@@ -41,11 +41,16 @@ inherits(TChannelEndpointHandler, EventEmitter);
 
 TChannelEndpointHandler.prototype.type = 'tchannel.endpoint-handler';
 
-TChannelEndpointHandler.prototype.register = function register(name, handler) {
+TChannelEndpointHandler.prototype.register = function register(name, options, handler) {
     var self = this;
+    if (typeof options === 'function') {
+        handler = options;
+        options = {};
+    }
     if (typeof handler !== 'function') {
         throw errors.InvalidHandlerError();
     }
+    if (options.streamed) handler.canStream = true;
     self.endpoints[name] = handler;
     return handler;
 };

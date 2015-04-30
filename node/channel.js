@@ -295,14 +295,14 @@ TChannel.prototype.listen = function listen(port, host, callback) {
     self.getServer().listen(port, host, callback);
 };
 
-TChannel.prototype.register = function register(name, handler) {
+TChannel.prototype.register = function register(name, options, handler) {
     var self = this;
 
     var handlerType = self.handler && self.handler.type;
 
     switch (handlerType) {
         case 'tchannel.endpoint-handler':
-            self.handler.register(name, handler);
+            self.handler.register(name, options, handler);
             break;
 
         case 'tchannel.service-name-handler':
