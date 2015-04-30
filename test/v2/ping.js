@@ -20,15 +20,26 @@
 
 'use strict';
 
-require('./frame.js');
-require('./init.js');
-require('./checksum.js');
-require('./header.js');
-require('./tracing.js');
-require('./call.js');
-require('./cancel.js');
-require('./cont.js');
-require('./claim.js');
-require('./ping.js');
-require('./error_response.js');
-require('./args.js');
+var test = require('tape');
+var Ping = require('../../v2/ping.js');
+var testRW = require('bufrw/test_rw');
+
+test('Ping.Request.RW: read/write payload',
+     testRW.cases(Ping.Request.RW, [
+
+    [
+        new Ping.Request(),
+        []
+    ]
+
+]));
+
+test('Ping.Reponse.RW: read/write payload',
+     testRW.cases(Ping.Response.RW, [
+
+    [
+        new Ping.Response(),
+        []
+    ]
+
+]));
