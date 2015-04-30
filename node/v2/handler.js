@@ -220,6 +220,7 @@ TChannelV2Handler.prototype.callResponseFrameHandled = function callResponseFram
     callback();
 };
 
+// TODO  we should implement clearing of self.streaming{Req,Res}
 TChannelV2Handler.prototype.handleCancel = function handleCancel(frame, callback) {
     var self = this;
     self.cancelEvent.emit(self, frame);

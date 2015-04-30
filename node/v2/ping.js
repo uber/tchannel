@@ -30,7 +30,7 @@ function PingRequest() {
     self.type = PingRequest.TypeCode;
 }
 
-PingRequest.TypeCode = 0xD0;
+PingRequest.TypeCode = 0xd0;
 PingRequest.RW = bufrw.Struct(PingRequest, []);
 
 function PingResponse() {
@@ -38,5 +38,5 @@ function PingResponse() {
     self.type = PingResponse.TypeCode;
 }
 
-PingResponse.TypeCode = 0xD1;
+PingResponse.TypeCode = 0xd1;
 PingResponse.RW = bufrw.Struct(PingResponse, []);

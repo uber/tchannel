@@ -31,7 +31,7 @@ function Cancel(tracing, why) {
     self.why = why || '';
 }
 
-Cancel.TypeCode = 0xC0;
+Cancel.TypeCode = 0xc0;
 
 Cancel.RW = bufrw.Struct(Cancel, [
     {name: 'tracing', rw: Tracing.RW},  // tracing:25
