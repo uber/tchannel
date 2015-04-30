@@ -111,6 +111,6 @@ def build_handler(service_module, method_name, handler):
         output_buf = TTransport.TMemoryBuffer()
         result.write(TBinaryProtocol.TBinaryProtocolAccelerated(output_buf))
 
-        response.set_body(InMemStream(output_buf.getvalue()))
+        response.set_body_s(InMemStream(output_buf.getvalue()))
 
     return thrift_handler

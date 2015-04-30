@@ -178,14 +178,14 @@ class Request(object):
     def get_header(self):
         """Get the header value from the request.
 
-        :return: the value of header
+        :return: a future contains the value of header
         """
         return get_arg(self, 1)
 
     def get_body(self):
         """Get the body value from the request.
 
-        :return: the value of body
+        :return: a future contains the value of body
         """
         return get_arg(self, 2)
 
@@ -255,18 +255,18 @@ class Response(object):
     def get_header(self):
         """Get the header value from the request.
 
-        :return: the value of header
+        :return: a future contains the value of header
         """
         return get_arg(self, 1)
 
     def get_body(self):
         """Get the body value from the request.
 
-        :return: the value of body
+        :return: a future contains the value of body
         """
         return get_arg(self, 2)
 
-    def set_body(self, stream):
+    def set_body_s(self, stream):
         """Set customized body stream.
 
         Note: the body stream can only be changed before the stream
@@ -284,7 +284,7 @@ class Response(object):
             raise TChannelException(
                 "Unable to change the body since the streaming has started")
 
-    def set_header(self, stream):
+    def set_header_s(self, stream):
         """Set customized header stream.
 
         Note: the header stream can only be changed before the stream
@@ -303,7 +303,6 @@ class Response(object):
             raise TChannelException(
                 "Unable to change the header since the streaming has started")
 
-    @tornado.gen.coroutine
     def write_header(self, chunk):
         """Write to header.
 
@@ -322,9 +321,8 @@ class Response(object):
                 self.argstreams[0].auto_close):
             self.argstreams[0].close()
 
-        yield self.argstreams[1].write(chunk)
+        return self.argstreams[1].write(chunk)
 
-    @tornado.gen.coroutine
     def write_body(self, chunk):
         """Write to header.
 
@@ -347,7 +345,7 @@ class Response(object):
                 self.argstreams[1].auto_close):
             self.argstreams[1].close()
 
-        yield self.argstreams[2].write(chunk)
+        return self.argstreams[2].write(chunk)
 
     def flush(self):
         """Flush the response buffer.

@@ -37,7 +37,7 @@ from tchannel.tornado.stream import InMemStream
 
 @tornado.gen.coroutine
 def handler2(request, response, proxy):
-    response.set_body(InMemStream("from handler2"))
+    response.set_body_s(InMemStream("from handler2"))
 
 
 @tornado.gen.coroutine

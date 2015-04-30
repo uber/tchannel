@@ -39,7 +39,7 @@ def say_ok(request, response, proxy):
     yield print_arg(request, 1)
     yield print_arg(request, 2)
 
-    response.set_body(InMemStream("world"))
+    response.set_body_s(InMemStream("world"))
 
 
 @tornado.gen.coroutine
@@ -47,8 +47,8 @@ def echo(request, response, proxy):
     print "echo"
     yield tornado.gen.sleep(1)
     # stream args right back to request side
-    response.set_header(request.get_header_s())
-    response.set_body(request.get_body_s())
+    response.set_header_s(request.get_header_s())
+    response.set_body_s(request.get_body_s())
 
 
 @tornado.gen.coroutine
@@ -71,6 +71,6 @@ def get_example_handler():
         yield print_arg(request, 1)
         yield print_arg(request, 2)
 
-        response.set_body(InMemStream("world"))
+        response.set_body_s(InMemStream("world"))
 
     return dispatcher
