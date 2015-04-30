@@ -58,7 +58,8 @@ class ServerManager(object):
         expectation = Expectation()
 
         def handle_expected_endpoint(request, response, proxy):
-            response.argstreams = expectation.response.argstreams
+            response.set_header_s(expectation.response.get_header_s())
+            response.set_body_s(expectation.response.get_body_s())
 
         self.dispatcher.register(endpoint, handle_expected_endpoint)
         return expectation

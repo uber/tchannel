@@ -266,7 +266,7 @@ def test_message_fragment(arg2, arg3, connection):
         output = message_factory.build(0, fragment)
         if output:
             recv_msg = output
-    [arg1, arg2, arg3] = yield recv_msg.args()
-    assert arg1 == origin_msg.args[0]
-    assert arg2 == origin_msg.args[1]
-    assert arg3 == origin_msg.args[2]
+    header = yield recv_msg.get_header()
+    body = yield recv_msg.get_body()
+    assert header == origin_msg.args[1]
+    assert body == origin_msg.args[2]

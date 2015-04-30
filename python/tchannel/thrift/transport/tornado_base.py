@@ -89,8 +89,8 @@ class TChannelTornadoTransportBase(TChannelTransportBase):
                 Thrift.TMessageType.REPLY,
                 seqid,
             )
-            arg3 = yield response.arg3()
-            buff.write(arg3)
+            body = yield response.get_body()
+            buff.write(body)
             binary.writeMessageEnd()
         elif response.message_type == Types.ERROR:
             binary.writeMessageBegin(

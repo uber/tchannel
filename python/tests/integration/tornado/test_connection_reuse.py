@@ -46,11 +46,7 @@ def test_reuse():
     @dispatch2.route('hello')
     @gen.coroutine
     def hello(request, response, opts):
-        response.argstreams = [
-            InMemStream(),
-            InMemStream(),
-            InMemStream('hello to you too')
-        ]
+        yield response.write_body('hello to you too')
 
     @gen.coroutine
     def loop1(n):
@@ -62,8 +58,8 @@ def test_reuse():
             ) for i in xrange(n)
         ]
         for resp in results:
-            arg3 = yield resp.arg3()
-            assert arg3 == 'hello to you too'
+            body = yield resp.get_body()
+            assert body == 'hello to you too'
 
     yield loop1(2)
 
@@ -86,13 +82,9 @@ def test_reuse():
     @dispatch1.route('reverse')
     @gen.coroutine
     def reverse(request, response, opts):
-        arg3 = yield request.arg3()
-        assert arg3 == 'foo'
-        response.argstreams = [
-            InMemStream(),
-            InMemStream(),
-            InMemStream('bar')
-        ]
+        body = yield request.get_body()
+        assert body == 'foo'
+        yield response.write_body('bar')
 
     @gen.coroutine
     def loop2(n):
@@ -104,8 +96,8 @@ def test_reuse():
            ) for i in xrange(n)
         ]
         for resp in results:
-            arg3 = yield resp.arg3()
-            assert arg3 == 'bar'
+            body = yield resp.get_body()
+            assert body == 'bar'
 
     loop1_run = loop1(1)
     yield loop2(1)

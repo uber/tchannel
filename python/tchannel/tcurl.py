@@ -163,14 +163,10 @@ def parse_args(args=None):
 
 
 @tornado.gen.coroutine
-def handler1(request, response, opts):
+def handler1(request, response, proxy):
     yield print_arg(request, 1)
     yield print_arg(request, 2)
-    response.argstreams = [
-        InMemStream(request.endpoint),
-        InMemStream(),
-        InMemStream("world")
-        ]
+    yield response.write_body('world')
 
 
 def create_server(tchannel, in_port):
