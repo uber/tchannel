@@ -190,8 +190,6 @@ function inprocClusterTest(state, assert) {
         }
         cluster = clus;
 
-        var client = cluster.channels[1];
-
         for (var i = 0; i < cluster.hosts.length; i++) {
             assert.comment(util.format(
                 'cluster host %s: %s',
@@ -200,7 +198,7 @@ function inprocClusterTest(state, assert) {
 
         var reqHeadStream = CountStream({limit: hSize});
         var reqBodyStream = CountStream({limit: bSize});
-        var req = client.request({
+        var req = cluster.client.request({
             host: cluster.hosts[0],
             streamed: true
         });

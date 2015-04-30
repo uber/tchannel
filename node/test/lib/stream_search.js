@@ -53,8 +53,12 @@ TestStreamSearch.prototype.setupCluster = function setupCluster(callback) {
     });
     var one = cluster.channels[0];
     one.handler = echoHandler();
+    cluster.client = cluster.channels[1].makeSubChannel({
+        serviceName: 'test_client'
+    });
     cluster.ready(clusterReady);
     function clusterReady() {
+        cluster.client.peers.add(cluster.hosts[0]);
         callback(null, cluster);
     }
 };
