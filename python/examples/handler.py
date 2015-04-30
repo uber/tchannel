@@ -31,13 +31,7 @@ from tchannel.tornado.util import print_arg
 
 @tornado.gen.coroutine
 def say_hi(request, response, proxy):
-    arg2 = yield request.arg2()
-    arg3 = yield request.arg3()
-    response.argstreams = [
-        InMemStream(request.endpoint),
-        InMemStream(arg2),
-        InMemStream(arg3)
-    ]
+    yield response.write_body("hi")
 
 
 @tornado.gen.coroutine
@@ -45,10 +39,7 @@ def say_ok(request, response, proxy):
     yield print_arg(request, 1)
     yield print_arg(request, 2)
 
-    response.argstreams = [
-        InMemStream(),
-        InMemStream(),
-        InMemStream("world")]
+    response.set_body(InMemStream("world"))
 
 
 @tornado.gen.coroutine
@@ -56,20 +47,15 @@ def echo(request, response, proxy):
     print "echo"
     yield tornado.gen.sleep(1)
     # stream args right back to request side
-    response.argstreams = [
-        InMemStream(request.endpoint),
-        request.argstreams[1],
-        request.argstreams[2]
-    ]
+    response.set_header(request.get_header_s())
+    response.set_body(request.get_body_s())
 
 
 @tornado.gen.coroutine
 def slow(request, response, proxy):
     yield tornado.gen.sleep(random.random())
-    response.argstreams = [
-        InMemStream(),
-        InMemStream(),
-        InMemStream("done")]
+    yield response.write_body("done")
+    response.flush()
 
 
 def get_example_handler():
@@ -85,9 +71,6 @@ def get_example_handler():
         yield print_arg(request, 1)
         yield print_arg(request, 2)
 
-        response.argstreams = [
-            InMemStream(),
-            InMemStream(),
-            InMemStream("world")]
+        response.set_body(InMemStream("world"))
 
     return dispatcher

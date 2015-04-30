@@ -37,28 +37,22 @@ from tchannel.tornado.stream import InMemStream
 
 @tornado.gen.coroutine
 def handler2(request, response, proxy):
-    response.argstreams = [
-        InMemStream(request.endpoint),
-        InMemStream(),
-        InMemStream("from handler2")
-    ]
+    response.set_body(InMemStream("from handler2"))
 
 
 @tornado.gen.coroutine
 def handler1(request, response, proxy):
-    (arg1, arg2, arg3) = yield request.args()
-    res = yield proxy.request(arg2).send(
+    header = yield request.get_header()
+    res = yield proxy.request(header).send(
         "endpoint2",
         "",
         "",
         traceflag=True
     )
-    (arg1, arg2, arg3) = yield res.args()
-    response.argstreams = [
-        InMemStream(request.endpoint),
-        InMemStream("from handler1"),
-        InMemStream(arg3)
-    ]
+    body = yield res.get_body()
+    yield response.write_header("from handler1")
+    yield response.write_body(body)
+    response.flush()
 
 
 @pytest.fixture
@@ -99,9 +93,10 @@ def test_zipkin_trace(trace_server):
                                                      InMemStream(hostport),
                                                      InMemStream(),
                                                      traceflag=True)
-    (arg1, arg2, arg3) = yield response.args()
-    assert arg2 == "from handler1"
-    assert arg3 == "from handler2"
+    header = yield response.get_header()
+    body = yield response.get_body()
+    assert header == "from handler1"
+    assert body == "from handler2"
     traces = []
     for trace in trace_buf.getvalue().split("\n"):
         if trace:

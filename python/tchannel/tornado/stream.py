@@ -152,6 +152,8 @@ class PipeStream(Stream):
     def read(self):
         if self.state == StreamState.completed or self._rpipe is None:
             raise tornado.gen.Return("")
+        elif self.state == StreamState.init:
+            self.state = StreamState.streaming
 
         chunk = ""
         try:
@@ -169,6 +171,7 @@ class PipeStream(Stream):
         assert self._wpipe is not None
         try:
             yield self._ws.write(chunk)
+            self.state = StreamState.streaming
         except StreamClosedError:
             self.state = StreamState.completed
             raise StreamingException("Stream has been closed.")

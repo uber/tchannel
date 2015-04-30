@@ -19,6 +19,7 @@
 # THE SOFTWARE.
 
 from __future__ import absolute_import
+from tchannel.exceptions import TChannelException
 
 import tornado
 import tornado.gen
@@ -29,6 +30,7 @@ from ..messages.common import StreamState, FlagsType
 from .util import get_arg
 from ..event import EventType
 from ..zipkin.trace import Trace
+from .stream import InMemStream
 
 
 class RequestDispatcher(BaseRequestHandler):
@@ -50,17 +52,6 @@ class RequestDispatcher(BaseRequestHandler):
     def __init__(self):
         super(RequestDispatcher, self).__init__()
         self.endpoints = {}
-
-    @tornado.gen.coroutine
-    def _call_endpoint(self, endpoint, request, response, proxy):
-        try:
-            yield tornado.gen.maybe_future(
-                endpoint(request, response, proxy))
-        except Exception:
-            # TODO send application error
-            pass
-        finally:
-            response.finish()
 
     @tornado.gen.coroutine
     def handle_call(self, request, connection):
@@ -88,13 +79,13 @@ class RequestDispatcher(BaseRequestHandler):
                 ErrorCode.bad_request,
                 "Endpoint '%s' for service '%s' is not defined" % (
                     request.endpoint, request.service),
-                request.id,
-            )
+                request.id)
         else:
             response = Response(id=request.id,
                                 tracing=request.tracing,
                                 connection=connection)
 
+            connection.post_response(response)
             yield self._call_endpoint(endpoint, request, response,
                                       TChannelProxy(
                                           connection.tchannel,
@@ -134,10 +125,8 @@ class TornadoDispatcher(RequestDispatcher):
     """Dispatches requests to different endpoints based on ``arg1``"""
 
     def _call_endpoint(self, endpoint, request, response, proxy):
-        future = gen.maybe_future(
-            endpoint(request, response, proxy)
-        )
-        future.add_done_callback(lambda _: response.finish())
+        future = gen.maybe_future(endpoint(request, response, proxy))
+        future.add_done_callback(lambda _: response.flush())
 
         # This is just to make sure that the Future gets consumed.
         ioloop.IOLoop.current().add_future(future, lambda f: f.exception())
@@ -174,6 +163,8 @@ class Request(object):
         self.headers = headers or {}
         self.state = StreamState.init
         self.endpoint = ""
+        self.header = None
+        self.body = None
 
     @property
     def arg_scheme(self):
@@ -184,34 +175,33 @@ class Request(object):
             if stream.auto_close or force:
                 stream.close()
 
-    def arg1(self):
-        """get value for arg1
+    def get_header(self):
+        """Get the header value from the request.
 
-        :return: return the future object contains the value for arg1
-        """
-        return get_arg(self, 0)
-
-    def arg2(self):
-        """get value for arg2
-
-        :return: return the future object contains the value for arg2
+        :return: the value of header
         """
         return get_arg(self, 1)
 
-    def arg3(self):
-        """get value for arg3
+    def get_body(self):
+        """Get the body value from the request.
 
-        :return: return the future object contains the value for arg3
+        :return: the value of body
         """
         return get_arg(self, 2)
 
-    def args(self):
-        """get value for arg1, arg2, and arg3
+    def get_header_s(self):
+        """Get the raw stream of header.
 
-        :return: return the future object contains the list
-        for arg1, arg2, arg3
+        :return: the argstream of header
         """
-        return [self.arg1(), self.arg2(), self.arg3()]
+        return self.argstreams[1]
+
+    def get_body_s(self):
+        """Get the raw stream of body.
+
+        :return: the argstream of body
+        """
+        return self.argstreams[2]
 
 
 class Response(object):
@@ -239,50 +229,138 @@ class Response(object):
         self.tracing = tracing
         self.checksum = checksum
         # argstreams is a list of InMemStream/PipeStream objects
-        self.argstreams = argstreams
+        self.argstreams = argstreams or [InMemStream(),
+                                         InMemStream(),
+                                         InMemStream()]
         self.headers = headers
         self.id = id
         self.connection = connection
         self.state = StreamState.init
+        self.flushed = False
 
-    def finish(self):
-        """Finish writing the response."""
-        # TODO verify the argstream contains valid objects and size
-        self.connection.post_response(self)
+    def get_header_s(self):
+        """Get the raw stream of header.
+
+        :return: the argstream of header
+        """
+        return self.argstreams[1]
+
+    def get_body_s(self):
+        """Get the raw stream of body.
+
+        :return: the argstream of body
+        """
+        return self.argstreams[2]
+
+    def get_header(self):
+        """Get the header value from the request.
+
+        :return: the value of header
+        """
+        return get_arg(self, 1)
+
+    def get_body(self):
+        """Get the body value from the request.
+
+        :return: the value of body
+        """
+        return get_arg(self, 2)
+
+    def set_body(self, stream):
+        """Set customized body stream.
+
+        Note: the body stream can only be changed before the stream
+        is consumed.
+
+        :param stream: InMemStream/PipeStream for body
+
+        :except TChannelException:
+            Raise TChannelException if the stream is being sent when you try
+            to change the stream.
+        """
+        if self.argstreams[2].state == StreamState.init:
+            self.argstreams[2] = stream
+        else:
+            raise TChannelException(
+                "Unable to change the body since the streaming has started")
+
+    def set_header(self, stream):
+        """Set customized header stream.
+
+        Note: the header stream can only be changed before the stream
+        is consumed.
+
+        :param stream: InMemStream/PipeStream for header
+
+        :except TChannelException:
+            Raise TChannelException if the stream is being sent when you try
+            to change the stream.
+        """
+
+        if self.argstreams[1].state == StreamState.init:
+            self.argstreams[1] = stream
+        else:
+            raise TChannelException(
+                "Unable to change the header since the streaming has started")
+
+    @tornado.gen.coroutine
+    def write_header(self, chunk):
+        """Write to header.
+
+        Note: the header stream is only available to write before write body.
+
+        :param chunk: content to write to header
+
+        :except TChannelException:
+            Raise TChannelException if the response's flush() has been called
+        """
+
+        if self.flushed:
+            raise TChannelException("write operation invalid after flush call")
+
+        if (self.argstreams[0].state != StreamState.completed and
+                self.argstreams[0].auto_close):
+            self.argstreams[0].close()
+
+        yield self.argstreams[1].write(chunk)
+
+    @tornado.gen.coroutine
+    def write_body(self, chunk):
+        """Write to header.
+
+        Note: whenever write_body is called, the header stream will be closed.
+        write_header method is unavailable.
+
+        :param chunk: content to write to body
+
+        :except TChannelException:
+            Raise TChannelException if the response's flush() has been called
+        """
+
+        if self.flushed:
+            raise TChannelException("write operation invalid after flush call")
+
+        if (self.argstreams[0].state != StreamState.completed and
+                self.argstreams[0].auto_close):
+            self.argstreams[0].close()
+        if (self.argstreams[1].state != StreamState.completed and
+                self.argstreams[1].auto_close):
+            self.argstreams[1].close()
+
+        yield self.argstreams[2].write(chunk)
+
+    def flush(self):
+        """Flush the response buffer.
+
+        No more write or set operations is allowed after flush call.
+        """
+        self.flushed = True
+        self.close_argstreams()
 
     def close_argstreams(self, force=False):
         for stream in self.argstreams:
             if stream.auto_close or force:
                 stream.close()
-
-    def arg1(self):
-        """get value for arg1
-
-        :return: return the future object contains the value for arg1
-        """
-        return get_arg(self, 0)
-
-    def arg2(self):
-        """get value for arg2
-
-        :return: return the future object contains the value for arg2
-        """
-        return get_arg(self, 1)
-
-    def arg3(self):
-        """get value for arg3
-
-        :return: return the future object contains the value for arg3
-        """
-        return get_arg(self, 2)
-
-    def args(self):
-        """get value for arg1, arg2, and arg3
-
-        :return: return the future object contains the list
-        for arg1, arg2, arg3
-        """
-        return [self.arg1(), self.arg2(), self.arg3()]
 
 
 class TChannelProxy(object):

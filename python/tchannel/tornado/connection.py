@@ -537,7 +537,6 @@ class StreamConnection(TornadoConnection):
     @tornado.gen.coroutine
     def post_response(self, response):
         try:
-            response.close_argstreams()
             yield self._stream(response, self.response_message_factory)
 
             # event: send_response

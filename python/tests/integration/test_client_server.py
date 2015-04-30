@@ -72,8 +72,8 @@ def test_tchannel_call_request_fragment(tchannel_server,
 
     tchannel_server.expect_call(endpoint).and_return(Response(
         argstreams=[
+            InMemStream(),
             InMemStream(endpoint),
-            InMemStream(arg2),
             InMemStream(arg3)
         ]
     ))
@@ -85,9 +85,10 @@ def test_tchannel_call_request_fragment(tchannel_server,
     response = yield tchannel.request(hostport).send(InMemStream(endpoint),
                                                      InMemStream(arg2),
                                                      InMemStream(arg3))
-    (rarg1, rarg2, rarg3) = yield response.args()
-    assert rarg1 == endpoint
-    assert rarg3 == arg3
+    header = yield response.get_header()
+    body = yield response.get_body()
+    assert header == endpoint
+    assert body == arg3
 
 
 @pytest.mark.gen_test
@@ -96,8 +97,8 @@ def test_tcurl(server):
 
     server.expect_call(endpoint).and_return(Response(
         argstreams=[
-            InMemStream(endpoint),
             InMemStream(),
+            InMemStream(endpoint),
             InMemStream("hello")
         ]
     ))
@@ -111,9 +112,10 @@ def test_tcurl(server):
     assert len(responses) == 1
 
     for response in responses:
-        (rarg1, rarg2, rarg3) = yield response.args()
-        assert rarg1 == endpoint
-        assert rarg3 == "hello"
+        header = yield response.get_header()
+        body = yield response.get_body()
+        assert header == endpoint
+        assert body == "hello"
 
 
 @pytest.mark.gen_test
