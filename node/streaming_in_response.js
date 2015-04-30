@@ -20,6 +20,7 @@
 
 'use strict';
 
+var parallel = require('run-parallel');
 var InResponse = require('./in_response');
 var inherits = require('util').inherits;
 
@@ -54,6 +55,17 @@ StreamingInResponse.prototype.type = 'tchannel.incoming-response.streaming';
 StreamingInResponse.prototype.handleFrame = function handleFrame(parts) {
     var self = this;
     self._argstream.handleFrame(parts);
+};
+
+StreamingInResponse.prototype.withArg23 = function withArg23(callback) {
+    var self = this;
+    parallel({
+        arg2: self.arg2.onValueReady,
+        arg3: self.arg3.onValueReady
+    }, compatCall);
+    function compatCall(err, args) {
+        callback(err, args.arg2, args.arg3);
+    }
 };
 
 module.exports = StreamingInResponse;
