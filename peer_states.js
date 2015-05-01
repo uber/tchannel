@@ -59,14 +59,15 @@ function healthyScore(state/* , req, options */) {
     //   [0.4, 1.0)  identified outgoing connections
     var inconn = state.peer.getInConnection();
     var outconn = state.peer.getOutConnection();
+    var random = state.peer.outPendingWeightedRandom();
     if (!inconn && !outconn) {
-        return 0.1 + state.random() * 0.1;
+        return 0.1 + random * 0.1;
     } else if (!outconn || outconn.direction !== 'out') {
-        return 0.2 + state.random() * 0.1;
+        return 0.2 + random * 0.1;
     } else if (outconn.remoteName === null) {
-        return 0.3 + state.random() * 0.1;
+        return 0.3 + random * 0.1;
     } else {
-        return 0.4 + state.random() * 0.6;
+        return 0.4 + random * 0.6;
     }
 }
 
@@ -74,6 +75,7 @@ function healthyScore(state/* , req, options */) {
 
 function TChannelPeerHealthyState(channel, peer) {
     var self = this;
+    TChannelPeerState.call(self, channel, peer);
     self.timers = channel.timers;
     self.random = channel.random;
     self.period = peer.options.period || 1000; // ms
@@ -81,7 +83,6 @@ function TChannelPeerHealthyState(channel, peer) {
     self.maxErrorRate = peer.options.maxErrorRate || 0.5;
     self.okCount = 0;
     self.notOkCount = 0;
-    TChannelPeerState.call(self, channel, peer);
 }
 
 inherits(TChannelPeerHealthyState, TChannelPeerState);
@@ -134,6 +135,7 @@ TChannelPeerHealthyState.prototype.onRequestError = function onRequestError(err)
 
 function TChannelPeerUnhealthyState(channel, peer) {
     var self = this;
+    TChannelPeerState.call(self, channel, peer);
     self.timers = channel.timers;
     self.random = channel.random;
     self.minResponseCount = peer.options.probation || 5;
@@ -141,7 +143,6 @@ function TChannelPeerUnhealthyState(channel, peer) {
     self.start = self.timers.now();
     self.successCount = 0;
     self.triedThisPeriod = true;
-    TChannelPeerState.call(self, channel, peer);
 }
 
 inherits(TChannelPeerUnhealthyState, TChannelPeerState);
