@@ -182,30 +182,27 @@ TChannelRequest.prototype.resend = function resend() {
     }
 
     function onResponse(res) {
-        // TODO: skip buffering if res.ok
-        res.withArg23(function onArg23(err, arg2, arg3) {
-            self.onSubreqResponse(err, res, arg2, arg3);
-        });
+        self.onSubreqResponse(res);
     }
 };
 
 TChannelRequest.prototype.onSubreqError = function onSubreqError(err) {
     var self = this;
     if (self.checkTimeout(err)) return;
-    if (self.shouldRetry(err)) {
+    if (self.shouldRetryError(err)) {
         self.deferResend();
     } else {
         self.errorEvent.emit(self, err);
     }
 };
 
-TChannelRequest.prototype.onSubreqResponse = function onSubreqResponse(err, res, arg2, arg3) {
+TChannelRequest.prototype.onSubreqResponse = function onSubreqResponse(res) {
     var self = this;
-    if (self.checkTimeout(err, res)) return;
-    if (self.shouldRetry(err, res, arg2, arg3)) {
-        self.deferResend();
-    } else if (err) {
-        self.errorEvent.emit(self, err);
+    if (self.checkTimeout(null, res)) return;
+    if (res.ok) {
+        self.responseEvent.emit(self, res);
+    } else if (self.options.shouldApplicationRetry) {
+        self.maybeAppRetry(res);
     } else {
         self.responseEvent.emit(self, res);
     }
@@ -246,7 +243,7 @@ TChannelRequest.prototype.checkTimeout = function checkTimeout(err, res) {
     return true;
 };
 
-TChannelRequest.prototype.shouldRetry = function shouldRetry(err, res, arg2, arg3) {
+TChannelRequest.prototype.shouldRetryError = function shouldRetryError(err) {
     var self = this;
 
     if (self.outReqs.length >= self.limit) {
@@ -285,11 +282,25 @@ TChannelRequest.prototype.shouldRetry = function shouldRetry(err, res, arg2, arg
         }
     }
 
-    if (!res.ok && self.options.shouldApplicationRetry) {
-        return self.options.shouldApplicationRetry(self, res, arg2, arg3);
+    return false;
+};
+
+TChannelRequest.prototype.maybeAppRetry = function maybeAppRetry(res) {
+    var self = this;
+    self.options.shouldApplicationRetry(self, res, retry, done);
+
+    function retry() {
+        if (self.checkTimeout(null, res)) return;
+        self.deferResend();
     }
 
-    return false;
+    function done(err) {
+        if (err) {
+            self.errorEvent.emit(self, err);
+        } else {
+            self.responseEvent.emit(self, res);
+        }
+    }
 };
 
 module.exports = TChannelRequest;
