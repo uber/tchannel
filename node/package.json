@@ -46,7 +46,6 @@
     "logtron": "^8.1.0",
     "metrics": "^0.1.8",
     "minimist": "^1.1.0",
-    "null-logtron": "^2.2.0",
     "once": "^1.3.1",
     "opn": "^1.0.1",
     "replr": "^1.0.4",
