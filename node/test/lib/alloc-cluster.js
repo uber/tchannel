@@ -28,7 +28,6 @@ var util = require('util');
 var TChannel = require('../../channel.js');
 var parallel = require('run-parallel');
 var debugLogtron = require('debug-logtron');
-var LEVELS = require('debug-logtron/levels');
 
 module.exports = allocCluster;
 
@@ -36,21 +35,9 @@ function allocCluster(opts) {
     opts = opts || {};
 
     var host = 'localhost';
-    var logger = debugLogtron('tchannel');
-
-    // TODO: debugLogtron should do this by default imo
-    var orig = logger._log;
-    logger._log = function _log(level, msg, meta, cb) {
-        if (level >= LEVELS.warn) {
-            var mess = msg;
-            if (meta && meta.error) {
-                mess += ' - ' + meta.error.message;
-            }
-            var levelName = LEVELS.LEVELS_BY_VALUE[level];
-            console.error('%s: %s ~', levelName, mess, meta);
-        }
-        orig.call(logger, level, msg, meta, cb);
-    };
+    var logger = debugLogtron('tchannel', {
+        enabled: true
+    });
 
     var cluster = {
         logger: logger,
