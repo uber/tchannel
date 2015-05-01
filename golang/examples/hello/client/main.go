@@ -21,27 +21,28 @@ package main
 // THE SOFTWARE.
 
 import (
-	"code.google.com/p/getopt"
 	"github.com/uber/tchannel/golang"
 	"golang.org/x/net/context"
+	"flag"
 	"os"
 	"time"
 )
 
 var log = tchannel.SimpleLogger
 
-var peerAddr = getopt.StringLong("peer", 'p', "", "Host and port of remote peer")
-var serviceName = getopt.StringLong("service", 's', "", "Name of service to invoke")
-var operationName = getopt.StringLong("operation", 'o', "", "Name of operation to invoke")
-var arg2 = getopt.StringLong("arg2", '2', "", "Input for arg2.  Curl-style, use @foo.txt to read from foo.txt")
-var arg3 = getopt.StringLong("arg3", '3', "", "Input for arg3.  Curl-style, use @foo.txt to read from foo.txt")
-var timeout = getopt.IntLong("timeout", 't', 30, "Timeout (in seconds)")
+var peerAddr = flag.String("peer", "localhost:10500", "Host and port of remote peer")
+var serviceName = flag.String("service", "TestService", "Name of service to invoke")
+var operationName = flag.String("operation", "echo", "Name of operation to invoke")
+var arg2 = flag.String("arg2", "hello", "Input for arg2.  Curl-style, use @foo.txt to read from foo.txt")
+var arg3 = flag.String("arg3", "world", "Input for arg3.  Curl-style, use @foo.txt to read from foo.txt")
+var timeout = flag.Int("timeout", 30, "Timeout (in seconds)")
 
 func asArgument(arg string) tchannel.Output {
 	if arg[0] == '@' {
 		f, err := os.Open(arg[1:])
 		if err != nil {
-			panic(err)
+			log.Errorf(err.Error())
+			os.Exit(-1)
 		}
 
 		return tchannel.NewStreamingOutput(f)
@@ -52,18 +53,13 @@ func asArgument(arg string) tchannel.Output {
 }
 
 func main() {
-	getopt.Parse()
-	if *peerAddr == "" || *serviceName == "" || *operationName == "" ||
-		*arg2 == "" || *arg3 == "" {
-		getopt.Usage()
-		os.Exit(-1)
-	}
+	flag.Parse()
 
 	ch, err := tchannel.NewChannel(&tchannel.ChannelOptions{
 		Logger: log,
 	})
 	if err != nil {
-		log.Errorf("Could not create client channel: %v", err)
+		log.Errorf("Could not create client channel: %v\n", err)
 		os.Exit(-1)
 	}
 
@@ -72,22 +68,24 @@ func main() {
 
 	call, err := ch.BeginCall(ctx, *peerAddr, *serviceName, *operationName)
 	if err != nil {
-		log.Errorf("Could not begin call to %s.%s@%s: %v", *serviceName, *operationName, *peerAddr, err)
+		log.Errorf("Could not begin call to %v.%v@%v: %v", *serviceName, *operationName, *peerAddr, err)
+		log.Errorf("Is the server running?")
+
 		os.Exit(-1)
 	}
 
-	if err := call.WriteArg2(asArgument(*arg2)); err != nil {
+	if err = call.WriteArg2(asArgument(*arg2)); err != nil {
 		log.Errorf("Could not write arg2: %v", err)
 		os.Exit(-1)
 	}
 
-	if err := call.WriteArg3(asArgument(*arg3)); err != nil {
+	if err = call.WriteArg3(asArgument(*arg3)); err != nil {
 		log.Errorf("Could not write arg3: %v", err)
 		os.Exit(-1)
 	}
 
 	var respArg2 tchannel.BytesInput
-	if err := call.Response().ReadArg2(&respArg2); err != nil {
+	if err = call.Response().ReadArg2(&respArg2); err != nil {
 		log.Errorf("Could not read arg2: %v", err)
 		os.Exit(-1)
 	}
@@ -99,7 +97,7 @@ func main() {
 	log.Infof("resp-arg2: %s", respArg2)
 
 	var respArg3 tchannel.BytesInput
-	if err := call.Response().ReadArg3(&respArg3); err != nil {
+	if err = call.Response().ReadArg3(&respArg3); err != nil {
 		log.Errorf("Could not read arg3: %v", err)
 		os.Exit(-1)
 	}

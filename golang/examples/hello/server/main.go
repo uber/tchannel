@@ -21,9 +21,9 @@ package main
 // THE SOFTWARE.
 
 import (
-	"code.google.com/p/getopt"
 	"github.com/uber/tchannel/golang"
 	"golang.org/x/net/context"
+	"flag"
 	"os"
 	"time"
 )
@@ -80,10 +80,10 @@ func appError(ctx context.Context, call *tchannel.InboundCall) {
 	echo(ctx, call)
 }
 
-var bindAddr = getopt.StringLong("bind", 'b', "127.0.0.1:10500", "host and port on which to bind")
+var bindAddr = flag.String("bind", "127.0.0.1:10500", "host and port on which to bind")
 
 func main() {
-	getopt.Parse()
+	flag.Parse()
 
 	ch, err := tchannel.NewChannel(&tchannel.ChannelOptions{
 		Logger: log,
@@ -100,7 +100,7 @@ func main() {
 	ch.Register(tchannel.HandlerFunc(timeout), "TestService", "timeout")
 
 	if err := ch.ListenAndServe(*bindAddr); err != nil {
-		log.Errorf("Could not listen on %s: %v", *bindAddr, err)
+		// log.Errorf("Could not listen on %s: %v HERE!!!", *bindAddr, err)
 		os.Exit(-1)
 	}
 }

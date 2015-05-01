@@ -1,7 +1,7 @@
 GODEPS := $(shell pwd)/Godeps/_workspace
 OLDGOPATH := $(GOPATH)
 PATH := $(GODEPS)/bin:$(PATH)
-PKGS := . ./typed ./examples/server ./examples/client
+PKGS := . ./typed ./examples/hello/server ./examples/hello/client ./examples/ping
 BUILD := ./build
 SRCS := $(foreach pkg,$(PKGS),$(wildcard $(pkg)/*.go))
 export GOPATH = $(GODEPS):$(OLDGOPATH)
@@ -57,9 +57,10 @@ vet:
 
 examples: clean setup
 	echo Building examples...
-	mkdir -p $(BUILD)/examples
-	go build -o $(BUILD)/examples/server ./examples/server
-	go build -o $(BUILD)/examples/client ./examples/client
+	mkdir -p $(BUILD)/examples/hello $(BUILD)/examples/ping
+	go build -o $(BUILD)/examples/hello/server ./examples/hello/server
+	go build -o $(BUILD)/examples/hello/client ./examples/hello/client
+	go build -o $(BUILD)/examples/ping/pong    ./examples/ping/main.go
 
 .PHONY: all help clean fmt format test vet 
 .SILENT: all help clean fmt format test vet
