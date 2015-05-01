@@ -19,18 +19,14 @@
 # THE SOFTWARE.
 
 from __future__ import absolute_import
-from tchannel.exceptions import TChannelException
 
 import tornado
 import tornado.gen
 from tornado import gen, ioloop
 from ..handler import BaseRequestHandler
 from ..messages.error import ErrorCode
-from ..messages.common import StreamState, FlagsType
-from .util import get_arg
 from ..event import EventType
-from ..zipkin.trace import Trace
-from .stream import InMemStream
+from .data import Response
 
 
 class RequestDispatcher(BaseRequestHandler):
@@ -91,14 +87,16 @@ class RequestDispatcher(BaseRequestHandler):
                                           connection.tchannel,
                                           request.tracing))
 
-    def route(self, rule):
+    def route(self, rule, helper=None):
+        """See ``register`` for documentation."""
+
         def decorator(handler):
-            self.register(rule, handler)
+            self.register(rule, handler, helper)
             return handler
 
         return decorator
 
-    def register(self, rule, handler):
+    def register(self, rule, handler, helper=None):
         """Register a new endpoint with the given name.
 
         .. code-block:: python
@@ -114,11 +112,21 @@ class RequestDispatcher(BaseRequestHandler):
             ``arg1`` to dispatch to this handler.
         :param handler:
             A function that gets called with ``Request``, ``Response``, and
-            the ``proxy''.
+            the ``proxy``.
+        :param helper:
+            Helper injects customized serializer and deserializer into
+            request/response object.
+
+            helper==None means it registers as raw handle. It deals with raw
+            buffer in the request/response.
         """
         assert rule, "rule must not be None"
         assert handler, "handler must not be None"
-        self.endpoints[rule] = handler
+        if helper:
+            helper.register(rule, handler)
+            self.endpoints[rule] = helper.handle_call
+        else:
+            self.endpoints[rule] = handler
 
 
 class TornadoDispatcher(RequestDispatcher):
@@ -132,233 +140,6 @@ class TornadoDispatcher(RequestDispatcher):
         ioloop.IOLoop.current().add_future(future, lambda f: f.exception())
 
         return future
-
-
-class Request(object):
-    """Represents an incoming request to an endpoint.
-
-    Request class is used to represent the CallRequestMessage at User's level.
-    This is going to hide the protocol level message information.
-    """
-
-    # TODO decide which elements inside "message" object to expose to user.
-    def __init__(
-        self,
-        id=None,
-        flags=FlagsType.none,
-        ttl=10,
-        tracing=None,
-        service=None,
-        headers=None,
-        checksum=None,
-        argstreams=None
-    ):
-        self.flags = flags
-        self.ttl = ttl
-        self.service = service
-        self.tracing = tracing or Trace()
-        # argstreams is a list of InMemStream/PipeStream objects
-        self.argstreams = argstreams
-        self.id = id
-        self.headers = headers or {}
-        self.state = StreamState.init
-        self.endpoint = ""
-        self.header = None
-        self.body = None
-
-    @property
-    def arg_scheme(self):
-        return self.headers.get('as', None)
-
-    def close_argstreams(self, force=False):
-        for stream in self.argstreams:
-            if stream.auto_close or force:
-                stream.close()
-
-    def get_header(self):
-        """Get the header value from the request.
-
-        :return: a future contains the value of header
-        """
-        return get_arg(self, 1)
-
-    def get_body(self):
-        """Get the body value from the request.
-
-        :return: a future contains the value of body
-        """
-        return get_arg(self, 2)
-
-    def get_header_s(self):
-        """Get the raw stream of header.
-
-        :return: the argstream of header
-        """
-        return self.argstreams[1]
-
-    def get_body_s(self):
-        """Get the raw stream of body.
-
-        :return: the argstream of body
-        """
-        return self.argstreams[2]
-
-
-class Response(object):
-    """An outgoing response.
-
-    Response class is used to represent the CallResponseMessage at User's
-    level. This is going to hide the protocol level message information.
-    """
-
-    # TODO decide which elements inside "message" object to expose to user.
-    def __init__(
-        self,
-        connection=None,
-        flags=FlagsType.none,
-        code=0,
-        tracing=None,
-        headers=None,
-        checksum=None,
-        argstreams=None,
-        id=None
-    ):
-
-        self.flags = flags
-        self.code = code
-        self.tracing = tracing
-        self.checksum = checksum
-        # argstreams is a list of InMemStream/PipeStream objects
-        self.argstreams = argstreams or [InMemStream(),
-                                         InMemStream(),
-                                         InMemStream()]
-        self.headers = headers
-        self.id = id
-        self.connection = connection
-        self.state = StreamState.init
-        self.flushed = False
-
-    def get_header_s(self):
-        """Get the raw stream of header.
-
-        :return: the argstream of header
-        """
-        return self.argstreams[1]
-
-    def get_body_s(self):
-        """Get the raw stream of body.
-
-        :return: the argstream of body
-        """
-        return self.argstreams[2]
-
-    def get_header(self):
-        """Get the header value from the request.
-
-        :return: a future contains the value of header
-        """
-        return get_arg(self, 1)
-
-    def get_body(self):
-        """Get the body value from the request.
-
-        :return: a future contains the value of body
-        """
-        return get_arg(self, 2)
-
-    def set_body_s(self, stream):
-        """Set customized body stream.
-
-        Note: the body stream can only be changed before the stream
-        is consumed.
-
-        :param stream: InMemStream/PipeStream for body
-
-        :except TChannelException:
-            Raise TChannelException if the stream is being sent when you try
-            to change the stream.
-        """
-        if self.argstreams[2].state == StreamState.init:
-            self.argstreams[2] = stream
-        else:
-            raise TChannelException(
-                "Unable to change the body since the streaming has started")
-
-    def set_header_s(self, stream):
-        """Set customized header stream.
-
-        Note: the header stream can only be changed before the stream
-        is consumed.
-
-        :param stream: InMemStream/PipeStream for header
-
-        :except TChannelException:
-            Raise TChannelException if the stream is being sent when you try
-            to change the stream.
-        """
-
-        if self.argstreams[1].state == StreamState.init:
-            self.argstreams[1] = stream
-        else:
-            raise TChannelException(
-                "Unable to change the header since the streaming has started")
-
-    def write_header(self, chunk):
-        """Write to header.
-
-        Note: the header stream is only available to write before write body.
-
-        :param chunk: content to write to header
-
-        :except TChannelException:
-            Raise TChannelException if the response's flush() has been called
-        """
-
-        if self.flushed:
-            raise TChannelException("write operation invalid after flush call")
-
-        if (self.argstreams[0].state != StreamState.completed and
-                self.argstreams[0].auto_close):
-            self.argstreams[0].close()
-
-        return self.argstreams[1].write(chunk)
-
-    def write_body(self, chunk):
-        """Write to header.
-
-        Note: whenever write_body is called, the header stream will be closed.
-        write_header method is unavailable.
-
-        :param chunk: content to write to body
-
-        :except TChannelException:
-            Raise TChannelException if the response's flush() has been called
-        """
-
-        if self.flushed:
-            raise TChannelException("write operation invalid after flush call")
-
-        if (self.argstreams[0].state != StreamState.completed and
-                self.argstreams[0].auto_close):
-            self.argstreams[0].close()
-        if (self.argstreams[1].state != StreamState.completed and
-                self.argstreams[1].auto_close):
-            self.argstreams[1].close()
-
-        return self.argstreams[2].write(chunk)
-
-    def flush(self):
-        """Flush the response buffer.
-
-        No more write or set operations is allowed after flush call.
-        """
-        self.flushed = True
-        self.close_argstreams()
-
-    def close_argstreams(self, force=False):
-        for stream in self.argstreams:
-            if stream.auto_close or force:
-                stream.close()
 
 
 class TChannelProxy(object):

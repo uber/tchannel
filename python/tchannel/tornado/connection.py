@@ -24,7 +24,6 @@ import logging
 import os
 import socket
 import sys
-from tchannel.event import EventType
 
 import tornado.gen
 import tornado.iostream
@@ -34,20 +33,23 @@ try:
 except ImportError:
     import toro as queues
 
+from .message_factory import MessageFactory
 from .. import glossary
 from .. import frame
 from .. import messages
 from .. import exceptions
 from ..io import BytesIO
 from ..context import Context
-from ..exceptions import ConnectionClosedException, InvalidErrorCodeException
+from ..exceptions import ConnectionClosedException
+from ..exceptions import InvalidErrorCodeException
 from ..messages.types import Types
-from ..messages.common import (
-    PROTOCOL_VERSION, generate_checksum, FlagsType, verify_checksum
-)
-from ..messages.error import ErrorMessage, ErrorCode
-from .message_factory import MessageFactory
-
+from ..messages.common import PROTOCOL_VERSION
+from ..messages.common import generate_checksum
+from ..messages.common import FlagsType
+from ..messages.common import verify_checksum
+from ..messages.error import ErrorCode
+from ..messages.error import ErrorMessage
+from ..event import EventType
 
 log = logging.getLogger('tchannel')
 

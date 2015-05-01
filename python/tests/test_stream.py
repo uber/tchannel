@@ -23,7 +23,7 @@ from __future__ import absolute_import
 import pytest
 import os
 from tchannel.exceptions import StreamingException, TChannelException
-from tchannel.tornado.dispatch import Response
+from tchannel.tornado.data import Response
 from tchannel.tornado.stream import InMemStream, PipeStream
 
 
@@ -51,8 +51,8 @@ def test_InMemStream():
 def test_PipeStream():
     r, w = os.pipe()
     stream = PipeStream(r, w, auto_close=True)
-    stream.write("1")
-    stream.write("2")
+    yield stream.write("1")
+    yield stream.write("2")
     buf = yield stream.read()
     assert buf == "12"
 

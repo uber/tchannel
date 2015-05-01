@@ -33,7 +33,7 @@ from tchannel.tornado.stream import InMemStream
 
 @pytest.fixture
 def req():
-    request = InstanceDouble('tchannel.tornado.dispatch.Request')
+    request = InstanceDouble('tchannel.tornado.data.Request')
     request.endpoint = ""
     request.service = ""
     request.argstreams = [

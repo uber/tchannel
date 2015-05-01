@@ -26,7 +26,7 @@ from thrift.transport import TTransport
 from tornado import ioloop
 import tornado
 import tornado.gen
-from tchannel.tornado.dispatch import Response
+from tchannel.tornado.data import Response
 
 try:
     from tornado.queues import Queue  # Included in Tornado 4.2

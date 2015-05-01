@@ -30,7 +30,7 @@ from tchannel.messages.error import ErrorCode
 from tchannel.messages import Types
 from tchannel.tornado.stream import InMemStream
 from tests.util import big_arg
-from tchannel.tornado.dispatch import Response
+from tchannel.tornado.data import Response
 
 
 @pytest.fixture
