@@ -85,8 +85,12 @@ function passError(codeString, message) {
         originalId: self.id,
         message: message
     });
-    self.inreq.outreq.errorEvent.emit(self, err);
     if (!self.closing) self.conn.lastTimeoutTime = 0;
+    process.nextTick(emitError);
+
+    function emitError() {
+        self.inreq.outreq.errorEvent.emit(self, err);
+    }
 };
 
 module.exports.OutResponse = SelfOutResponse;
