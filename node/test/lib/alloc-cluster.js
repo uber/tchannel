@@ -44,7 +44,8 @@ function allocCluster(opts) {
         channels: new Array(opts.numPeers),
         destroy: destroy,
         ready: CountedReadySignal(opts.numPeers),
-        assertCleanState: assertCleanState
+        assertCleanState: assertCleanState,
+        timers: opts.timers
     };
     var channelOptions = extend({
         logger: logger
@@ -133,6 +134,9 @@ allocCluster.test = function testCluster(desc, opts, t) {
     if (typeof opts === 'function') {
         t = opts;
         opts = {};
+    }
+    if (opts.timers && opts.channelOptions) {
+        opts.channelOptions.timers = opts.timers;
     }
     test(desc, function t2(assert) {
         opts.assert = assert;
