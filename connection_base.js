@@ -21,6 +21,7 @@
 'use strict';
 
 var assert = require('assert');
+var extend = require('xtend');
 var inherits = require('util').inherits;
 var EventEmitter = require('./lib/event_emitter');
 
@@ -164,8 +165,7 @@ TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
         err = new Error('unknown connection reset'); // TODO typed error
     }
 
-    var isError = err.type.indexOf('tchannel.socket') !== 0;
-    self.logger[isError ? 'warn' : 'info']('resetting connection', {
+    var logInfo = {
         error: err,
         remoteName: self.remoteName,
         localName: self.channel.hostPort,
@@ -173,10 +173,15 @@ TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
         numOutOps: outOpKeys.length,
         inPending: self.pending.in,
         outPending: self.pending.out
-    });
+    };
 
-    if (isError) {
+    if (err.type.indexOf('tchannel.socket') < 0) {
+        self.logger.warn('resetting connection', logInfo);
         self.errorEvent.emit(self, err);
+    } else if (err.type !== 'tchannel.socket-closed') {
+        logInfo.error = extend(err);
+        logInfo.error.message = err.message;
+        self.logger.info('resetting connection', logInfo);
     }
 
     // requests that we've received we can delete, but these reqs may have started their
