@@ -33,6 +33,7 @@ try:
 except ImportError:  # pragma: no cover
     from toro import Condition
 
+from .. import glossary
 from .dispatch import Request
 from .stream import InMemStream, Stream, read_full
 from .connection import StreamConnection
@@ -338,7 +339,7 @@ class Peer(object):
     @property
     def is_ephemeral(self):
         """Whether this Peer is ephemeral."""
-        return self.host == '0.0.0.0' and self.port == 0
+        return self.hostport == glossary.EPHEMERAL_HOSTPORT
 
     @property
     def connected(self):

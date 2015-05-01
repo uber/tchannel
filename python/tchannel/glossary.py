@@ -22,3 +22,7 @@
 #
 # Message ID 0xffffffff is reserved
 MAX_MESSAGE_ID = 0xfffffffe
+
+# Hostport used by TChannel peers that are ephemeral and don't expect incoming
+# connections.
+EPHEMERAL_HOSTPORT = '0.0.0.0:0'
