@@ -100,7 +100,7 @@ func main() {
 	ch.Register(tchannel.HandlerFunc(timeout), "TestService", "timeout")
 
 	if err := ch.ListenAndServe(*bindAddr); err != nil {
-		// log.Errorf("Could not listen on %s: %v HERE!!!", *bindAddr, err)
+		log.Errorf("Could not listen on %s: %v HERE!!!", *bindAddr, err)
 		os.Exit(-1)
 	}
 }

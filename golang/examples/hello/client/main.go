@@ -74,18 +74,18 @@ func main() {
 		os.Exit(-1)
 	}
 
-	if err = call.WriteArg2(asArgument(*arg2)); err != nil {
+	if err := call.WriteArg2(asArgument(*arg2)); err != nil {
 		log.Errorf("Could not write arg2: %v", err)
 		os.Exit(-1)
 	}
 
-	if err = call.WriteArg3(asArgument(*arg3)); err != nil {
+	if err := call.WriteArg3(asArgument(*arg3)); err != nil {
 		log.Errorf("Could not write arg3: %v", err)
 		os.Exit(-1)
 	}
 
 	var respArg2 tchannel.BytesInput
-	if err = call.Response().ReadArg2(&respArg2); err != nil {
+	if err := call.Response().ReadArg2(&respArg2); err != nil {
 		log.Errorf("Could not read arg2: %v", err)
 		os.Exit(-1)
 	}
@@ -97,7 +97,7 @@ func main() {
 	log.Infof("resp-arg2: %s", respArg2)
 
 	var respArg3 tchannel.BytesInput
-	if err = call.Response().ReadArg3(&respArg3); err != nil {
+	if err := call.Response().ReadArg3(&respArg3); err != nil {
 		log.Errorf("Could not read arg3: %v", err)
 		os.Exit(-1)
 	}
