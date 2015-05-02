@@ -314,6 +314,7 @@ TChannelConnectionBase.prototype.onReqDone = function onReqDone(req) {
     if (self.requests.in[req.id] !== req) {
         self.logger.warn('mismatched onReqDone callback', {
             hostPort: self.channel.hostPort,
+            hasInReq: self.requests.in[req.id] !== undefined,
             id: req.id
         });
     } else {
