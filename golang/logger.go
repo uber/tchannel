@@ -1,8 +1,7 @@
 package tchannel
 
 import (
-	"fmt"
-	"time"
+	log "github.com/Sirupsen/logrus"
 )
 
 // Copyright (c) 2015 Uber Technologies, Inc.
@@ -28,43 +27,38 @@ import (
 // Logger provides an abstract interface for logging from TChannel.  Applications
 // can use whatever logging library they prefer as long as they implement this
 // interface
-type Logger interface {
-	// Errorf logs a message at error priority
-	Errorf(msg string, args ...interface{})
-
-	// Warnf logs a message at warning priority
-	Warnf(msg string, args ...interface{})
-
-	// Infof logs a message at info priority
-	Infof(msg string, args ...interface{})
-
-	// Debugf logs a message at debug priority
-	Debugf(msg string, args ...interface{})
+type Logger struct {
+	log.Logger
 }
 
-// NullLogger is a logger that emits nowhere
-var NullLogger = nullLogger{}
-
-type nullLogger struct{}
-
-func (l nullLogger) Errorf(msg string, args ...interface{}) {}
-func (l nullLogger) Warnf(msg string, args ...interface{})  {}
-func (l nullLogger) Infof(msg string, args ...interface{})  {}
-func (l nullLogger) Debugf(msg string, args ...interface{}) {}
-
-// SimpleLogger prints logging information to the console
-var SimpleLogger = simpleLogger{}
-
-type simpleLogger struct{}
-
-const (
-	simpleLoggerStamp = "2006-01-02 15:04:05"
+var (
+	std = &Logger{*log.StandardLogger()}
 )
 
-func (l simpleLogger) Errorf(msg string, args ...interface{}) { l.printfn("E", msg, args...) }
-func (l simpleLogger) Warnf(msg string, args ...interface{})  { l.printfn("W", msg, args...) }
-func (l simpleLogger) Infof(msg string, args ...interface{})  { l.printfn("I", msg, args...) }
-func (l simpleLogger) Debugf(msg string, args ...interface{}) { l.printfn("D", msg, args...) }
-func (l simpleLogger) printfn(prefix, msg string, args ...interface{}) {
-	fmt.Printf("%s [%s] %s\n", time.Now().Format(simpleLoggerStamp), prefix, fmt.Sprintf(msg, args...))
+func StandardLogger() *Logger {
+	return std
+}
+
+func SimpleLogger() *Logger {
+	return std
+}
+
+func NullLogger() *Logger {
+	std.Formatter = new(NullFormatter) // Don't send logs to stdout
+	return std
+}
+
+type NullFormatter struct{}
+
+// Don't spend time formatting logs
+func (*NullFormatter) Format(e *log.Entry) ([]byte, error) {
+	return []byte{}, nil
+}
+
+// TODO
+// Revert to simplistic logs
+type SimpleFormatter struct{}
+
+func (f *SimpleFormatter) Format(e *log.Entry) ([]byte, error) {
+	return []byte{}, nil
 }

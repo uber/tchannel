@@ -161,7 +161,7 @@ func sendRecv(ctx context.Context, ch *Channel, hostPort string, serviceName, op
 
 func withTestChannel(t *testing.T, f func(ch *Channel, hostPort string)) {
 	opts := ChannelOptions{
-		Logger: SimpleLogger,
+		Logger: *SimpleLogger(),
 	}
 
 	ch, err := NewChannel(&opts)
