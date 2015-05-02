@@ -90,8 +90,8 @@ func NewChannel(opts *ChannelOptions) (*Channel, error) {
 	}
 
 	logger := opts.Logger
-	if logger == nil {
-		logger = NullLogger
+	if &logger == nil {
+		logger = *NullLogger()
 	}
 
 	processName := opts.ProcessName
