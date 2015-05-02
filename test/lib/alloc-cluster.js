@@ -36,7 +36,8 @@ function allocCluster(opts) {
 
     var host = 'localhost';
     var logger = debugLogtron('tchannel', {
-        enabled: true
+        enabled: true,
+        assert: opts.assert
     });
 
     var cluster = {
@@ -136,6 +137,7 @@ allocCluster.test = function testCluster(desc, opts, t) {
         opts = {};
     }
     test(desc, function t2(assert) {
+        opts.assert = assert;
         allocCluster(opts).ready(function clusterReady(cluster) {
             assert.once('end', function testEnded() {
                 cluster.destroy();
@@ -156,6 +158,7 @@ allocCluster.test.only = function testClusterOnly(desc, opts, t) {
         opts = {};
     }
     test.only(desc, function t2(assert) {
+        opts.assert = assert;
         allocCluster(opts).ready(function clusterReady(cluster) {
             assert.once('end', function testEnded() {
                 cluster.destroy();
