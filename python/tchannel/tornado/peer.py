@@ -33,7 +33,7 @@ try:
 except ImportError:  # pragma: no cover
     from toro import Condition
 
-from .dispatch import Request
+from .data import Request
 from .stream import InMemStream, Stream, read_full
 from .connection import StreamConnection
 from ..handler import CallableRequestHandler
@@ -416,7 +416,7 @@ class PeerClientOperation(object):
         # forwarding
 
     @gen.coroutine
-    def send(self, arg1, arg2, arg3, traceflag=False):
+    def send(self, arg1, arg2, arg3, traceflag=False, headers=None):
         """Make a request to the Peer.
 
         :param arg1:
@@ -428,6 +428,10 @@ class PeerClientOperation(object):
         :param arg3:
             String or Stream containing the contents of arg3. If None, an empty
             stream is used.
+        :param traceflag:
+            Flag is for tracing.
+        :param headers:
+            Headers will be put int he message as protocol header.
         :return:
             Future that contains the response from the peer. If None, an empty
             stream is used.
@@ -449,12 +453,12 @@ class PeerClientOperation(object):
 
         connection = yield self.peer.connect()
         message_id = connection.next_message_id()
-
         response = yield connection.send_request(
             Request(
                 service=self.service,
                 argstreams=[InMemStream(endpoint), arg2, arg3],
                 id=message_id,
+                headers=headers,
                 tracing=Trace(
                     name=endpoint,
                     trace_id=trace_id,

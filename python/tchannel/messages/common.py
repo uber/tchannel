@@ -41,7 +41,8 @@ MAX_PAYLOAD_SIZE = 0xFFEF   # 64*1024 - 16 - 1
 class StreamState(IntEnum):
     init = 0x00,
     streaming = 0x01,
-    completed = 0x02
+    completed = 0x02,
+    none = 0x03
 
 
 class FlagsType(IntEnum):

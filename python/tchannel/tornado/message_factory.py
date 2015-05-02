@@ -27,7 +27,7 @@ from ..messages.call_response import CallResponseMessage
 from ..messages.call_continue import CallContinueMessage
 from ..messages import common
 from ..messages.common import StreamState, FlagsType, Tracing
-from .dispatch import Request, Response
+from .data import Request, Response
 from .stream import InMemStream
 from ..zipkin.annotation import Endpoint
 from ..zipkin.trace import Trace
@@ -69,7 +69,7 @@ class MessageFactory(object):
                                 request.tracing.trace_id,
                                 request.tracing.traceflags),
                 service=request.service,
-                # headers=request.headers,
+                headers=request.headers,
                 # checksum=request.checksum
                 args=args
             )
@@ -111,7 +111,7 @@ class MessageFactory(object):
                                 response.tracing.parent_span_id,
                                 response.tracing.trace_id,
                                 response.tracing.traceflags),
-                # headers=response.headers,
+                headers=response.headers,
                 # checksum=response.checksum
                 args=args
             )
@@ -180,7 +180,7 @@ class MessageFactory(object):
             # ttl=message.ttl,
             tracing=tracing,
             service=message.service,
-            # headers=messaget.headers,
+            headers=message.headers,
             # checksum=message.checksum
             argstreams=args,
             id=message_id
@@ -204,7 +204,7 @@ class MessageFactory(object):
         res = Response(
             flags=message.flags,
             # code=message.code,
-            # headers=messaget.headers,
+            headers=message.headers,
             # checksum=message.checksum
             argstreams=args,
             id=message_id
