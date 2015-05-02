@@ -223,8 +223,12 @@ function streamingEchoTest(cluster, state, assert, callback) {
     assert.timeoutAfter(timeout || 100);
 
     cluster.client.request({
+        serviceName: 'test_as_raw',
+        headers: {
+            as: 'raw'
+        },
         streamed: true
-    }).sendStreams('foo', reqHeadStream, reqBodyStream, onResult);
+    }).sendStreams('streaming_echo', reqHeadStream, reqBodyStream, onResult);
 
     function onResult(err, req, res) {
         var arg2Check = new StreamCheck('arg2', assert, CountStream({limit: hSize}));
