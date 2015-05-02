@@ -36,8 +36,7 @@ function allocCluster(opts) {
 
     var host = 'localhost';
     var logger = debugLogtron('tchannel', {
-        enabled: true,
-        assert: opts.assert
+        enabled: true
     });
 
     var cluster = {
