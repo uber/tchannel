@@ -63,17 +63,17 @@ class JsonArgScheme(ArgScheme):
         return self._type
 
     def deserialize_header(self, obj):
-        assert obj
+        if not obj:
+            return None
         return json.loads(obj)
 
     def serialize_header(self, obj):
-        assert obj
         return json.dumps(obj)
 
     def deserialize_body(self, obj):
-        assert obj
+        if not obj:
+            return None
         return json.loads(obj)
 
     def serialize_body(self, obj):
-        assert obj
         return json.dumps(obj)
