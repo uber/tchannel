@@ -82,7 +82,7 @@ TestSearch.prototype.harness = function harness(isMain) {
             self.test(spec, assert);
             self.destroy(assert.end);
         });
-    } else {
+    } else if (self.options.first) {
         tape(self.options.title + ' test', function t(assert) {
             var stop = {};
             series(self.options.testSettings.map(function eachOptions(options) {
@@ -98,6 +98,16 @@ TestSearch.prototype.harness = function harness(isMain) {
             }), function done(err) {
                 if (err && err !== stop) assert.ifError(err, 'no final error');
                 self.destroy(assert.end);
+            });
+        });
+    } else {
+        self.options.testSettings.forEach(function eachOptions(options) {
+            tape(self.options.title + ': ' + JSON.stringify(options), function t(assert) {
+                self.run(assert, options, done);
+                function done(err) {
+                    if (err) assert.ifError(err, 'no final error');
+                    self.destroy(assert.end);
+                }
             });
         });
     }
