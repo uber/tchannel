@@ -162,8 +162,7 @@ function echoHandler() {
         });
 
     }
-    foo.canStream = true;
-    handler.register('foo', foo);
+    handler.register('foo', {streamed: true}, foo);
     return handler;
 }
 
