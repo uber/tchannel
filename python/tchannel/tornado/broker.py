@@ -60,12 +60,12 @@ class ArgSchemeBroker(object):
     def send(self, client, endpoint, header, body, traceflag=False):
         try:
             if not isinstance(header, Stream):
-                raw_header = self.arg_scheme.serialize(header)
+                raw_header = self.arg_scheme.serialize_header(header)
             else:
                 raw_header = header
 
             if not isinstance(body, Stream):
-                raw_body = self.arg_scheme.serialize(body)
+                raw_body = self.arg_scheme.serialize_body(body)
             else:
                 raw_body = body
 
