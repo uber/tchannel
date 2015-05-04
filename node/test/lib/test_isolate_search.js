@@ -33,10 +33,20 @@ function TestIsolateSearch(options) {
         first: false,
         trace: false,
     }, options));
+    self.argvSpec.boolean.first = true;
+    self.argvSpec.boolean.trace = true;
     if (self.options.explore) self.explore = self.options.explore;
     if (self.options.isolate) self.isolate = self.options.isolate;
 }
 util.inherits(TestIsolateSearch, TestSearch);
+
+TestIsolateSearch.prototype.setupHarness = function setupHarness() {
+    var self = this;
+    if (self.options.instrument !== undefined) {
+        self.instrument(self.options.instrument);
+    }
+    TestSearch.prototype.setupHarness.call(self);
+};
 
 TestIsolateSearch.prototype.handleTestResult = function handleTestResult(result) {
     var self = this;

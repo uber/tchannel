@@ -55,69 +55,92 @@
  */
 
 var async = require('async');
-var test = require('tape');
+var extend = require('xtend');
 var util = require('util');
+
+var clusterSearch = require('./lib/cluster_search');
 var CountStream = require('./lib/count_stream');
-var TestStreamSearch = require('./lib/stream_search');
-var base2 = require('./lib/base2');
 var StreamCheck = require('./lib/stream_check');
+var base2 = require('./lib/base2');
+var setupRawTestService = require('./lib/raw_service');
 
-var argv = {
-    first: false,
-    trace: false,
-    instrument: 0
-};
+/*
+ * This is the test function that gets run one or more (very many more) times.
+ *
+ * Arguments:
+ * - cluster -- an initialized "cluster" object, that has initialized channels,
+ *   see test/lib/cluster_search.js for details
+ * - state -- parameters to test, shape: {
+ *     hSize   :: Integer, // how many bytes to send in arg2 (the "head")
+ *     bSize   :: Integer, // how many bytes to send in arg3 (the "body")
+ *     timeout :: Integer, // ms time limit for this test
+ *   }
+ * - assert -- a test assert object for just this round
+ * - callback -- call this when done, NOT assert.end
+ */
+function streamingEchoTest(cluster, state, assert, callback) {
+    var hSize = state.test.hSize;
+    var bSize = state.test.bSize;
+    var timeout = state.test.timeout || 100;
 
-if (require.main === module) {
-    argv = require('minimist')(process.argv.slice(2), {
-        boolean: {
-            first: true,
-            trace: true,
+    var reqHeadStream = CountStream({limit: hSize});
+    var reqBodyStream = CountStream({limit: bSize});
+
+    assert.timeoutAfter(timeout || 100);
+
+    cluster.testRawClient.request({
+        serviceName: 'test_as_raw',
+        headers: {
+            as: 'raw'
         },
-        default: argv
-    });
-}
+        streamed: true
+    }).sendStreams('streaming_echo', reqHeadStream, reqBodyStream, onResult);
 
-if (argv.repro) {
-    var hSize = base2.parse(argv.head);
-    var bSize = base2.parse(argv.body);
-    if (isNaN(hSize)) die('invalid hSize');
-    if (isNaN(bSize)) die('invalid hSize');
-    var state = {
-        hSize: hSize,
-        bSize: bSize,
-        timeout: argv.timeout
-    };
-    test.only(util.format('repro head %s body %s',
-        base2.pretty(state.hSize, 'B'),
-        base2.pretty(state.bSize, 'B')
-    ), function t(assert) {
-        var search = TestStreamSearch();
-        var spec = search.makeSpec(state);
-        search.test(spec, assert);
-    });
-}
-
-test('bisection test', function t(assert) {
-    var sizeLimit = null;
-
-    if (argv.sizeLimit) {
-        sizeLimit = base2.parse(argv.sizeLimit);
-        if (isNaN(sizeLimit)) die('invalid sizeLimit');
+    function onResult(err, req, res) {
+        var arg2Check = new StreamCheck('arg2', assert, CountStream({limit: hSize}));
+        var arg3Check = new StreamCheck('arg3', assert, CountStream({limit: bSize}));
+        if (err) {
+            callback(err);
+        } else if (res.streamed) {
+            async.series([
+                arg2Check.verifyStream(res.arg2),
+                arg3Check.verifyStream(res.arg3),
+            ], callback);
+        } else {
+            arg2Check.verifyChunk(0, res.arg2);
+            arg2Check.verifyDrained();
+            arg3Check.verifyChunk(0, res.arg3);
+            arg3Check.verifyDrained();
+            callback();
+        }
     }
+}
 
-    var search = TestStreamSearch({
-        reuseClusterPool: true,
-        stopOnFirstFailure: argv.first,
-        traceDetails: argv.trace,
-        sizeLimit: sizeLimit || 128 * base2.Ki,
-        timeout: argv.timeout,
-        test: inprocClusterTest
-    }).instrument(argv.instrument);
+/*
+ * The basic idea (outside of repro mode) is:
+ * - for each setting
+ *   - init(setting)
+ *   - while we have a state to explore
+ *     - new sub-assert
+ *     - get or create a cluster
+ *       - clusterTest(cluster, state, assert, callback)
+ *       - if the test didn't fail and left the cluster in a clean state,
+ *         mark it for re-use
+ *       - explore or isolate based on the outcome
+ */
 
-    var firstStop = {};
+var search = clusterSearch.ClusterIsolateSearch({
+    title: 'streaming bisection',
 
-    async.series([
+    reuseChannels: true,
+
+    sizeLimit: 128 * base2.Ki,
+
+    // The settings to run with when not in repro mode
+    //
+    // Each entry in this array will result in a search.run(settings), so each
+    // of these are a set of initial parameters.
+    testSettings: [
 
         {
             withHeaderOnly: true,
@@ -152,103 +175,140 @@ test('bisection test', function t(assert) {
             basis: [2, 3]
         }
 
-    ].map(function eachOptions(options) {
-        return function runThunk(next) {
-            search.run(assert, options, function(err, run) {
-                if (!err && argv.first && run.fail) {
-                    next(firstStop);
-                } else {
-                    next(err);
+    ],
+
+    // parses the particular repro state from argv-extended options
+    reproState: function reproState(options) {
+        var hSize = base2.parse(options.head);
+        var bSize = base2.parse(options.body);
+        if (isNaN(hSize)) die('invalid hSize');
+        if (isNaN(bSize)) die('invalid hSize');
+        return {
+            test: {
+                hSize: hSize,
+                bSize: bSize,
+                timeout: options.timeout
+            }
+        };
+    },
+
+    // the actual test function to run
+    clusterTest: streamingEchoTest,
+
+    // options for creating an in-process "cluster"
+    // see clusterSearch.inprocClusterCreator for details
+    inprocOptions: {
+        init: function setupInprocCluster(cluster, callback) {
+            cluster.channels.forEach(function each(channel) {
+                if (channel !== cluster.client) {
+                    setupRawTestService(channel);
                 }
             });
-        };
-    }), function done(err) {
-        if (err && err !== firstStop) assert.ifError(err, 'no final error');
-        search.clusterPool.destroy(assert.end);
-    });
-});
-
-function inprocClusterTest(state, assert) {
-    // jshint validthis:true
-    var self = this;
-    var name = self.describeState(state);
-    var cluster = null;
-    self.clusterPool.get(gotCluster);
-
-    function gotCluster(err, clus) {
-        if (err) {
-            assert.end(err);
-            return;
+            callback(null);
         }
-        cluster = clus;
-        streamingEchoTest(cluster, state, assert, finish);
-    }
+    },
 
-    function finish(err) {
-        assert.ifError(err, name + ': no final error');
-        if (!err) {
-            cluster.assertCleanState(assert, {
-                channels: [{
-                    peers: [{
-                        connections: [
-                            {direction: 'in', inReqs: 0, outReqs: 0}
-                        ]
-                    }]
-                }, {
-                    peers: [{
-                        connections: [
-                            {direction: 'out', inReqs: 0, outReqs: 0}
-                        ]
-                    }]
-                }]
+    // creates a client for the test service
+    setupClient: function setupClient(cluster, callback) {
+        cluster.testRawClient = cluster.client.makeSubChannel({
+            peers: cluster.client.peers.values(),
+            serviceName: 'test_as_raw',
+            requestDefaults: {
+                serviceName: 'test_as_raw',
+            }
+        });
+        callback(null);
+    },
+
+    // pretty printer
+    describeState: function describeState(state) {
+        return util.format('head %s body %s',
+            base2.pretty(state.test.hSize, 'B'),
+            base2.pretty(state.test.bSize, 'B'));
+    },
+
+    // TODO: predecessor had seemingly unused
+    // function describeNoFailure(assert) {
+    //     var self = this;
+    //     var limit = base2.pretty(self.options.sizeLimit, 'B');
+    //     assert.pass('found no failure under ' + limit);
+    // }
+
+    // called after (any) argv harnessing before running any searches
+    setupHarness: function setupHarness() {
+        var self = this;
+        if (typeof self.options.sizeLimit === 'string') {
+            self.options.sizeLimit = base2.parse(self.options.sizeLimit);
+            if (isNaN(self.options.sizeLimit)) die('invalid sizeLimit');
+        }
+    },
+
+    // initialize the search space by calling self.expand
+    init: function initSearchState() {
+        var self = this;
+
+        // noop, shouldn't even get called in repro mode
+        if (self.options.repro) return;
+
+        self.expand(function(_emit) {
+            var base = {hSize: 0, bSize: 0, timeout: self.options.timeout};
+            self.options.basis.forEach(function each(n) {
+                if (self.options.withHeaderOnly) emit({hSize: n});
+                if (self.options.withBodyOnly) emit({bSize: n});
+                if (self.options.withBoth) emit({hSize: n, bSize: n});
             });
+            function emit(overlay) {
+                _emit(self.makeSpec(extend(base, overlay)));
+            }
+        });
+    },
+
+    // called under self.expand after each passed test to expand the search space
+    explore: function explore(spec, _emit) {
+        var self = this;
+        var good = spec.good.test;
+        (self.options.mul || self.options.basis).forEach(function each(n) {
+            if (n < 2) return;
+            var hSize = n * good.hSize;
+            var bSize = n * good.bSize;
+            if (hSize <= self.options.sizeLimit) emit({hSize: hSize});
+            if (bSize <= self.options.sizeLimit) emit({bSize: bSize});
+        });
+        function emit(overlay) {
+            _emit(spec.makeTest(extend(good, overlay)));
         }
-        if (!assert._ok) {
-            cluster.destroy(assert.end);
-        } else {
-            self.clusterPool.release(cluster);
-            assert.end();
+    },
+
+    // called under self.expand after failed test to expand the search space
+    isolate: function isolate(spec, _emit) {
+        var good = spec.good && spec.good.test || {hSize: 0, bSize: 0};
+        var bad = spec.bad.test;
+        if (bad.hSize - good.hSize > 1) emit({hSize: mid(good.hSize, bad.hSize)});
+        if (good.bSize < bad.bSize) emit({bSize: mid(good.bSize, bad.bSize)});
+        function emit(overlay) {
+            _emit(spec.makeTest(extend(good, overlay)));
+        }
+        function mid(a, b) {
+            return a + Math.floor(b / 2 - a / 2);
+        }
+    },
+
+    // used to prune the search space, implements an equivalence relation on states
+    willFailLike: function willFailLike(a, b) {
+        if (like(a, b)) return true;
+        for (var i = 0; i < b.trace.length; i++) {
+            var res = b.trace[i];
+            if (res.fail && like(a, res.state)) return true;
+        }
+        return false;
+        function like(a, b) {
+            if (a.test.hSize !== b.test.hSize) return false;
+            if (a.test.bSize < b.test.bSize) return false;
+            return true;
         }
     }
-}
-
-function streamingEchoTest(cluster, state, assert, callback) {
-    var hSize = state.test.hSize;
-    var bSize = state.test.bSize;
-    var timeout = state.test.timeout || 100;
-
-    var reqHeadStream = CountStream({limit: hSize});
-    var reqBodyStream = CountStream({limit: bSize});
-
-    assert.timeoutAfter(timeout || 100);
-
-    cluster.client.request({
-        serviceName: 'test_as_raw',
-        headers: {
-            as: 'raw'
-        },
-        streamed: true
-    }).sendStreams('streaming_echo', reqHeadStream, reqBodyStream, onResult);
-
-    function onResult(err, req, res) {
-        var arg2Check = new StreamCheck('arg2', assert, CountStream({limit: hSize}));
-        var arg3Check = new StreamCheck('arg3', assert, CountStream({limit: bSize}));
-        if (err) {
-            callback(err);
-        } else if (res.streamed) {
-            async.series([
-                arg2Check.verifyStream(res.arg2),
-                arg3Check.verifyStream(res.arg3),
-            ], callback);
-        } else {
-            arg2Check.verifyChunk(0, res.arg2);
-            arg2Check.verifyDrained();
-            arg3Check.verifyChunk(0, res.arg3);
-            arg3Check.verifyDrained();
-            callback();
-        }
-    }
-}
+});
+search.harness(require.main === module);
 
 function die() {
     console.error.apply(console, arguments);
