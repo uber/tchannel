@@ -93,15 +93,8 @@ TChannelEndpointHandler.prototype.handleArg1 = function handleArg1(req, buildRes
         res.sendError('BadRequest', util.format(
             'no such endpoint service=%j endpoint=%j',
             req.serviceName, name));
-    } else if (handler.canStream) {
-        handler.handleRequest(req, buildResponse);
-    } else if (req.streamed) {
-        // And implicitly, !handler.canStream, meaning fragmented but
-        // reaccumulated:
-        self.withArg23(req, buildResponse, handler);
     } else {
-        res = buildResponse({streamed: false});
-        handler.handleRequest(req, res, req.arg2, req.arg3);
+        handler.handleRequest(req, buildResponse);
     }
 };
 
