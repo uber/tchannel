@@ -104,9 +104,9 @@ function allocCluster(opts) {
     function createChannel(i) {
         var chan = TChannel(extend(channelOptions));
         var port = opts.listen && opts.listen[i] || 0;
+        chan.on('listening', chanReady);
         chan.listen(port, host);
         cluster.channels[i] = chan;
-        chan.on('listening', chanReady);
 
         function chanReady() {
             var port = chan.address().port;
