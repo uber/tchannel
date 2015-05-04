@@ -311,6 +311,10 @@ TestSearch.prototype.run = function run(assert, options, callback) {
     }
 };
 
+TestSearch.prototype.destroy = function destroy(callback) {
+    callback(null);
+};
+
 function hrtimeDiff(a, b) {
     return [b[0] - a[0], (1e9 + b[1] - a[1]) % 1e9];
 }
