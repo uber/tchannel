@@ -39,7 +39,7 @@ allocCluster.test('requests are balanced evenly across peers', {
         });
     });
 
-    clique(cluster.tiberii, onCliqued);
+    cluster.connectChannels(cluster.tiberii, onCliqued);
 
     function onCliqued(err, value) {
         if (err) return assert.end(err);
@@ -96,27 +96,6 @@ function setupServiceCluster(cluster) {
             }, 500);
         });
     });
-}
-
-function clique(channels, callback) {
-    return parallel(channels.map(function (channel) {
-        return function connectChannelToHosts(callback) {
-            return parallel(channels.map(function (peerChannel) {
-                return function connectChannelToHost(callback) {
-                    if (channel.hostPort === peerChannel.hostPort) {
-                        return callback();
-                    }
-                    var peer = channel.peers.add(peerChannel.hostPort);
-                    var connection = peer.connect();
-                    connection.identifiedEvent.on(onIdentified);
-                    // TODO impl connect on self connect
-                    function onIdentified() {
-                        callback();
-                    }
-                };
-            }), callback);
-        };
-    }), callback);
 }
 
 function winning() {
