@@ -30,7 +30,7 @@ module.exports = coerceRequestHandler;
 function coerceRequestHandler(handler, thisp, options) {
     if (typeof handler === 'function') {
         if (options.streamed) {
-            return new StreamRequestCallbackHandler(handler, thisp);
+            return new StreamedRequestCallbackHandler(handler, thisp);
         } else {
             return new RequestCallbackHandler(handler, thisp);
         }
@@ -40,28 +40,39 @@ function coerceRequestHandler(handler, thisp, options) {
     }
 }
 
+// The non-streamed request handler is only for the cases where neither the
+// request or response can have streams. In this case, a req.stream indicates
+// that the request is fragmented across multiple frames.
 function RequestCallbackHandler(callback, thisp) {
     var self = this;
     self.callback = callback;
     self.thisp = thisp || self;
 }
 
-RequestCallbackHandler.prototype.canStream = false;
-
-RequestCallbackHandler.prototype.handleRequest = function handleRequest(req, buildResponse, arg2, arg3) {
+RequestCallbackHandler.prototype.handleRequest = function handleRequest(req, buildResponse) {
     var self = this;
-    return self.callback.call(self.thisp, req, buildResponse, arg2, arg3);
+    var res;
+    if (req.streamed) {
+        req.withArg23(function onArg23(err, arg2, arg3) {
+            return self.callback.call(self.thisp, req, buildResponse, arg2, arg3);
+        });
+    } else {
+        res = buildResponse({streamed: false});
+        self.callback.call(self.thisp, req, res, req.arg2, req.arg3);
+    }
 };
 
-function StreamRequestCallbackHandler(callback, thisp) {
+// The streamed request handler is for cases where the handler function elects
+// to deal with whether req.streamed and whether res.streamed.
+// req.streamed may indicated either a streaming request or a fragmented
+// request and the handler must distinguish the cases.
+function StreamedRequestCallbackHandler(callback, thisp) {
     var self = this;
     self.callback = callback;
     self.thisp = thisp || self;
 }
 
-StreamRequestCallbackHandler.prototype.canStream = true;
-
-StreamRequestCallbackHandler.prototype.handleRequest = function handleRequest(req, buildResponse) {
+StreamedRequestCallbackHandler.prototype.handleRequest = function handleRequest(req, buildResponse) {
     var self = this;
     return self.callback.call(self.thisp, req, buildResponse);
 };
