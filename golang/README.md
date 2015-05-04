@@ -26,111 +26,31 @@ export PATH="${PATH}":"${GOPATH}"/bin
 TChannel uses godep to manage dependencies.  To get started:
 
 ```bash
-mkdir -p $GOPATH/src/github.com/uber
-cd $GOPATH/src/github.com/uber && git clone git@github.com/uber/tchannel.git
+go get github.com/uber/tchannel/golang
 go get github.com/tools/godep
 cd $GOPATH/src/github.com/uber/tchannel/golang
 godep restore
 make
 ```
 
-To try out.
+#### HelloWorld
 
 ```bash
-cd build/examples
+cd build/examples/hello
 ./server
 ```
 
 Note host:port then run client.
 
 ```bash
-cd build/examples
-./client -o echo -2 hi -3 hi -p localhost:10500 -s TestService
+cd build/examples/hello
+./client
 ```
 
-## Example
 
-```go
-import (
-    "encoding/json"
-    "time"
-    "github.com/uber/tchannel/golang"
-    "code.google.com/p/go.net/context"
-    "fmt"
-)
-
-type Headers map[string]string
-
-type Ping struct {
-    Message string `json:"message"`
-}
-
-type Pong struct {
-    Message string `json:"message"`
-}
-
-func ping(ctx context.Context, call *tchannel.InboundCall) {
-    var headers Header
-
-    if err := call.ReadArg2(tchannel.NewJSONInput(&headers)); err != nil {
-        fmt.Printf("Could not read headers from client: %v", err)
-        return
-    }
-
-    var ping Ping
-    if err := call.ReadArg3(tchannel.NewJSONInput(&ping)); err != nil {
-        fmt.Printf("Could not read body from client: %v", err)
-        return
-    }
-
-    if err := call.Response().WriteArg2(tchannel.NewJSONOutput(headers)); err != nil {
-        fmt.Printf("Could not echo response headers to client: %v", err)
-        return
-    }
-
-    pong := Pong{Message: fmt.Sprintf("ping %s", ping.Message)}
-    if err := call.Response().WriteArg3(tchannel.NewJSONOutput(pong)); err != nil {
-        fmt.Printf("Could not write response body to client: %v", err)
-        return
-    }
-}
-
-func main() {
-    // Create a new TChannel for handling requests
-    server, err := tchannel.NewChannel(nil)
-    if err != nil {
-        panic(err)
-    }
-
-    // Register a handler for the ping message on the PingService
-    server.Register(tchannel.HandleFunc(ping), "PingService", "ping")
-
-    // Listen for incoming requests
-    go server.ListenAndHandle()
-
-    // Create a new TChannel for sending requests.
-    client, err := tchannel.NewChannel("localhost:8051", nil)
-    if err != nil {
-        panic(err)
-    }
-
-    // Listen for bi-directional messages
-    go client.ListenAndServe("localhost:8050")
-
-    // Make a call to ourselves, with a timeout of 10s
-    ctx, cancel := context.WithTimeout(context.Background(), time.Second * 10)
-    defer cancel()
-
-    var responseHeaders Headers
-    var pong Pong
-    if err := client.RoundTrip("localhost:8050", "PingService", "ping",
-        tchannel.NewJSONOutput(Headers{}),  tchannel.NewJSONOutput(Ping{Message: "Hello world"}),
-        tchannel.NewJSONInput(&responseHeaders), tchannel.NewJSONInput(&pong)); err != nil {
-        panic(err)
-    }
-
-    fmt.Printf("Received pong: %s\n", pong.Message)
-}
+#### PingPong
+```bash
+./build/examples/ping/pong
 ```
 
 This examples creates a client and server channel.  The server channel registers a PingService
@@ -139,6 +59,7 @@ same Headers along with a Pong body.  The client sends a ping request to the ser
 
 Note that every instance is bidirectional, so the same channel can be used for both sending
 and receiving requests to peers.  New connections are initiated on demand.
+
 
 ## Overview
 
@@ -179,8 +100,9 @@ change in the future.
 
 ## Further examples
 
- - [server](examples/server/main.go)
- - [client](examples/client/main.go)
+ - [server](examples/hello/server/main.go)
+ - [client](examples/hello/client/main.go)
+ - [ping](examples/ping/main.go)
 
 ## Tests
 
