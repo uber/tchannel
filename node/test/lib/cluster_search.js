@@ -87,6 +87,11 @@ function initClusterSearch(self) {
     self.clusterPool = new ResourcePool(setupCluster);
     if (self.options.createCluster) {
         self.createCluster = self.options.createCluster;
+    } else if (self.options.host) {
+        var clientOptions = extend(self.options.clientOptions, {
+            host: self.options.host
+        });
+        self.createCluster = clusterClientCreator(clientOptions);
     } else {
         var inprocOptions = extend(self.options.inprocOptions);
         self.createCluster = inprocClusterCreator(inprocOptions);
@@ -280,6 +285,59 @@ function inprocClusterCreator(options) {
     }
 }
 
+function clusterClientCreator(options) {
+    var TChannel = require('../../channel');
+    var format = require('util').format;
+
+    if (!options) options = {};
+    if (options.host) options.hosts = [options.host];
+    if (!options.hosts) throw new Error('no host(s) specified');
+
+    return createClusterClient;
+
+    function createClusterClient(callback) {
+        var cluster = {
+            hosts: options.hosts,
+            channels: [],
+            destroy: destroyClusterClient,
+            cleanup: cleanupClusterClient
+        };
+        cluster.client = TChannel(extend(options.clientOptions));
+        cluster.channels.push(cluster.client);
+
+        if (options.clientListen) {
+            cluster.client.on('listening', onListening);
+            cluster.client.listen(options.clientListen.port,
+                                  options.clientListen.host);
+        } else {
+            callback(null, cluster);
+        }
+
+        // TODO: could re-use assertion logic with allocCluster, allowing user
+        // to specify expected clean client state
+        function cleanupClusterClient(assert, callback) {
+            var peers = cluster.client.peers.values();
+            peers.forEach(function eachPeer(peer, i) {
+                peer.connections.forEach(function eachConn(conn, j) {
+                    assert.equal(Object.keys(conn.requests.in).length, 0, format(
+                        'client peer[%s] conn[%s] should have no inReqs', i, j));
+                    assert.equal(Object.keys(conn.requests.out).length, 0, format(
+                        'client peer[%s] conn[%s] should have no outReqs', i, j));
+                });
+            });
+            callback(null);
+        }
+
+        function destroyClusterClient(callback) {
+            cluster.client.close(callback);
+        }
+
+        function onListening() {
+            callback(null, cluster);
+        }
+    }
+}
+
 // TODO: leftover from predecessor code, may be useful
 // function closeClusterConnections(cluster, callback) {
 //     var toClose = cluster.channels.length;
@@ -296,3 +354,4 @@ function inprocClusterCreator(options) {
 module.exports.ClusterSearch = ClusterSearch;
 module.exports.ClusterIsolateSearch = ClusterIsolateSearch;
 module.exports.inprocClusterCreator = inprocClusterCreator;
+module.exports.clusterClientCreator = clusterClientCreator;
