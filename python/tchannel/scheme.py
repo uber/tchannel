@@ -24,13 +24,34 @@ import json
 
 
 class ArgScheme(object):
+    """ArgScheme defines interface on how to serialize/deserialize
+    header and body.
+
+    Customized ArgScheme subclass must implement all methods::
+
+        def type()
+
+        def serialize_header(obj)
+
+        def deserialize_header(obj)
+
+        def serialize_body(obj)
+
+        def deserialize_body(obj)
+    """
     def type(self):
         raise NotImplementedError()
 
-    def serialize(self, obj):
+    def serialize_header(self, obj):
         raise NotImplementedError()
 
-    def deserialize(self, obj):
+    def deserialize_header(self, obj):
+        raise NotImplementedError()
+
+    def serialize_body(self, obj):
+        raise NotImplementedError()
+
+    def deserialize_body(self, obj):
         raise NotImplementedError()
 
 
@@ -41,10 +62,18 @@ class JsonArgScheme(ArgScheme):
     def type(self):
         return self._type
 
-    def deserialize(self, obj):
+    def deserialize_header(self, obj):
         assert obj
         return json.loads(obj)
 
-    def serialize(self, obj):
+    def serialize_header(self, obj):
+        assert obj
+        return json.dumps(obj)
+
+    def deserialize_body(self, obj):
+        assert obj
+        return json.loads(obj)
+
+    def serialize_body(self, obj):
         assert obj
         return json.dumps(obj)

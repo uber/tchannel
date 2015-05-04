@@ -85,7 +85,7 @@ class Request(object):
         if not self.scheme:
             raise tornado.gen.Return(raw_header)
         else:
-            header = self.scheme.deserialize(raw_header)
+            header = self.scheme.deserialize_header(raw_header)
             raise tornado.gen.Return(header)
 
     @tornado.gen.coroutine
@@ -99,7 +99,7 @@ class Request(object):
         if not self.scheme:
             raise tornado.gen.Return(raw_body)
         else:
-            body = self.scheme.deserialize(raw_body)
+            body = self.scheme.deserialize_body(raw_body)
             raise tornado.gen.Return(body)
 
     def get_header_s(self):
@@ -178,7 +178,7 @@ class Response(object):
         if not self.scheme:
             raise tornado.gen.Return(raw_header)
         else:
-            header = self.scheme.deserialize(raw_header)
+            header = self.scheme.deserialize_header(raw_header)
             raise tornado.gen.Return(header)
 
     @tornado.gen.coroutine
@@ -192,7 +192,7 @@ class Response(object):
         if not self.scheme:
             raise tornado.gen.Return(raw_body)
         else:
-            body = self.scheme.deserialize(raw_body)
+            body = self.scheme.deserialize_body(raw_body)
             raise tornado.gen.Return(body)
 
     def set_body_s(self, stream):
@@ -244,7 +244,7 @@ class Response(object):
         """
 
         if self.scheme:
-            header = self.scheme.serialize(chunk)
+            header = self.scheme.serialize_header(chunk)
         else:
             header = chunk
 
@@ -270,7 +270,7 @@ class Response(object):
         """
 
         if self.scheme:
-            body = self.scheme.serialize(chunk)
+            body = self.scheme.serialize_body(chunk)
         else:
             body = chunk
 
