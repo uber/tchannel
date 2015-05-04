@@ -36,6 +36,7 @@ function TestSearch(options) {
     if (self.options.test) self.test = self.options.test;
     if (self.options.next) self.next = self.options.next;
     if (self.options.describeState) self.describeState = self.options.describeState;
+    if (self.options.willFailLike) self.willFailLike = self.options.willFailLike;
     if (!self.options.maxTries) self.options.maxTries = 1;
     self.searching = false;
     self.ran = null;
