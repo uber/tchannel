@@ -22,8 +22,8 @@
 
 var extend = require('xtend');
 var EventEmitter = require('events').EventEmitter;
-var util = require('util');
 var tape = require('tape');
+var util = require('util');
 
 function TestSearch(options) {
     if (!(this instanceof TestSearch)) {
