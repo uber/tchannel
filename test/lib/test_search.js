@@ -21,9 +21,7 @@
 'use strict';
 
 var extend = require('xtend');
-var extendInto = require('xtend/mutable');
 var EventEmitter = require('events').EventEmitter;
-var minimist = require('minimist');
 var series = require('run-series');
 var tape = require('tape');
 var util = require('util');
@@ -48,33 +46,11 @@ function TestSearch(options) {
     self.pass = 0;
     self.fail = 0;
     self.failed = null;
-
-    self.argvSpec = {
-        boolean: {},
-        string: {},
-        alias: {},
-        default: {}
-    };
 }
 util.inherits(TestSearch, EventEmitter);
 
-TestSearch.prototype.setupHarness = function setupHarness() {
+TestSearch.prototype.runTestHarness = function runTestHarness() {
     var self = this;
-    if (self.options.setupHarness) {
-        self.options.setupHarness.call(self);
-    }
-};
-
-TestSearch.prototype.harness = function harness(isMain) {
-    var self = this;
-
-    if (isMain) {
-        var argv = minimist(process.argv.slice(2), self.argvSpec);
-        extendInto(self.options, argv);
-    }
-
-    self.setupHarness();
-
     if (self.options.repro) {
         var state = self.options.reproState.call(self, self.options);
         tape(self.options.title + ' repro ' + self.describeState(state), function t(assert) {
