@@ -60,19 +60,17 @@ TestSearch.prototype.runTestHarness = function runTestHarness() {
         });
     } else if (self.options.first) {
         tape(self.options.title + ' test', function t(assert) {
-            var stop = {};
+            var finished = false;
             series(self.options.testSettings.map(function eachOptions(options) {
                 return function runThunk(next) {
+                    if (finished) return next();
                     self.run(assert, options, function(err, run) {
-                        if (err && self.options.first && run.fail) {
-                            next(stop);
-                        } else {
-                            next(err);
-                        }
+                        if (err || run.fail) finished = true;
+                        next(err);
                     });
                 };
             }), function done(err) {
-                if (err && err !== stop) assert.ifError(err, 'no final error');
+                assert.ifError(err, 'no final error');
                 self.destroy(assert.end);
             });
         });
