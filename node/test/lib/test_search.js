@@ -21,9 +21,12 @@
 'use strict';
 
 var extend = require('xtend');
+var extendInto = require('xtend/mutable');
 var EventEmitter = require('events').EventEmitter;
-var util = require('util');
+var minimist = require('minimist');
+var series = require('run-series');
 var tape = require('tape');
+var util = require('util');
 
 function TestSearch(options) {
     if (!(this instanceof TestSearch)) {
@@ -36,6 +39,7 @@ function TestSearch(options) {
     if (self.options.test) self.test = self.options.test;
     if (self.options.next) self.next = self.options.next;
     if (self.options.describeState) self.describeState = self.options.describeState;
+    if (self.options.willFailLike) self.willFailLike = self.options.willFailLike;
     if (!self.options.maxTries) self.options.maxTries = 1;
     self.searching = false;
     self.ran = null;
@@ -44,8 +48,70 @@ function TestSearch(options) {
     self.pass = 0;
     self.fail = 0;
     self.failed = null;
+
+    self.argvSpec = {
+        boolean: {},
+        string: {},
+        alias: {},
+        default: {}
+    };
 }
 util.inherits(TestSearch, EventEmitter);
+
+TestSearch.prototype.setupHarness = function setupHarness() {
+    var self = this;
+    if (self.options.setupHarness) {
+        self.options.setupHarness.call(self);
+    }
+};
+
+TestSearch.prototype.harness = function harness(isMain) {
+    var self = this;
+
+    if (isMain) {
+        var argv = minimist(process.argv.slice(2), self.argvSpec);
+        extendInto(self.options, argv);
+    }
+
+    self.setupHarness();
+
+    if (self.options.repro) {
+        var state = self.options.reproState.call(self, self.options);
+        tape(self.options.title + ' repro ' + self.describeState(state), function t(assert) {
+            var spec = self.makeSpec(state);
+            self.test(spec, assert);
+            self.destroy(assert.end);
+        });
+    } else if (self.options.first) {
+        tape(self.options.title + ' test', function t(assert) {
+            var stop = {};
+            series(self.options.testSettings.map(function eachOptions(options) {
+                return function runThunk(next) {
+                    self.run(assert, options, function(err, run) {
+                        if (err && self.options.first && run.fail) {
+                            next(stop);
+                        } else {
+                            next(err);
+                        }
+                    });
+                };
+            }), function done(err) {
+                if (err && err !== stop) assert.ifError(err, 'no final error');
+                self.destroy(assert.end);
+            });
+        });
+    } else {
+        self.options.testSettings.forEach(function eachOptions(options) {
+            tape(self.options.title + ': ' + JSON.stringify(options), function t(assert) {
+                self.run(assert, options, done);
+                function done(err) {
+                    if (err) assert.ifError(err, 'no final error');
+                    self.destroy(assert.end);
+                }
+            });
+        });
+    }
+};
 
 TestSearch.prototype.log = function log() {
     var self = this;
@@ -308,6 +374,10 @@ TestSearch.prototype.run = function run(assert, options, callback) {
     function onLog(mess) {
         assert.comment(mess);
     }
+};
+
+TestSearch.prototype.destroy = function destroy(callback) {
+    callback(null);
 };
 
 function hrtimeDiff(a, b) {

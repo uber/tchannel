@@ -20,7 +20,6 @@
 
 'use strict';
 
-var async = require('async');
 var extend = require('xtend');
 var CountedReadySignal = require('ready-signal/counted');
 var test = require('tape');
@@ -105,9 +104,9 @@ function allocCluster(opts) {
     function createChannel(i) {
         var chan = TChannel(extend(channelOptions));
         var port = opts.listen && opts.listen[i] || 0;
+        chan.on('listening', chanReady);
         chan.listen(port, host);
         cluster.channels[i] = chan;
-        chan.on('listening', chanReady);
 
         function chanReady() {
             var port = chan.address().port;
@@ -167,33 +166,4 @@ allocCluster.test.only = function testClusterOnly(desc, opts, t) {
     });
 };
 
-function ClusterPool(setup) {
-    var self = this;
-    self.free = [];
-    self.setup = setup;
-}
-
-ClusterPool.prototype.get = function getCluster(callback) {
-    var self = this;
-    if (self.free.length) {
-        callback(null, self.free.shift());
-    } else {
-        self.setup(callback);
-    }
-};
-
-ClusterPool.prototype.release = function release(cluster) {
-    var self = this;
-    self.free.push(cluster);
-};
-
-ClusterPool.prototype.destroy = function destroy(callback) {
-    var self = this;
-    var free = self.free;
-    self.free = [];
-    async.each(free, function destroyEach(cluster, next) {
-        cluster.destroy(next);
-    }, callback);
-};
-
-allocCluster.Pool = ClusterPool;
+allocCluster.Pool = require('./resource_pool');
