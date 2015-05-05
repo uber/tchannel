@@ -23,16 +23,18 @@
 var bufrw = require('bufrw');
 var Tracing = require('./tracing');
 
-// tracing:25
-function Claim(tracing) {
+// ttl:4 tracing:25
+function Claim(ttl, tracing) {
     var self = this;
     self.type = Claim.TypeCode;
+    self.ttl = ttl || 0;
     self.tracing = tracing || Tracing.emptyTracing;
 }
 
 Claim.TypeCode = 0xc1;
 
 Claim.RW = bufrw.Struct(Claim, [
+    {name: 'ttl', rw: bufrw.UInt32BE}, // ttl:4
     {name: 'tracing', rw: Tracing.RW}  // tracing:25
 ]);
 
