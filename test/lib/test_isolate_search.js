@@ -30,13 +30,23 @@ function TestIsolateSearch(options) {
     }
     var self = this;
     TestSearch.call(self, extend({
-        stopOnFirstFailure: false,
-        traceDetails: false,
+        first: false,
+        trace: false,
     }, options));
+    self.argvSpec.boolean.first = true;
+    self.argvSpec.boolean.trace = true;
     if (self.options.explore) self.explore = self.options.explore;
     if (self.options.isolate) self.isolate = self.options.isolate;
 }
 util.inherits(TestIsolateSearch, TestSearch);
+
+TestIsolateSearch.prototype.setupHarness = function setupHarness() {
+    var self = this;
+    if (self.options.instrument !== undefined) {
+        self.instrument(self.options.instrument);
+    }
+    TestSearch.prototype.setupHarness.call(self);
+};
 
 TestIsolateSearch.prototype.handleTestResult = function handleTestResult(result) {
     var self = this;
@@ -117,7 +127,7 @@ TestIsolateSearch.prototype.reportResult = function reportResult(res, assert) {
         }
     }
 
-    if (self.options.traceDetails) {
+    if (self.options.trace) {
         for (i = spec.trace.length-1; i >= 0; i--) {
             emitStep(spec.trace.length - i, spec.trace[i]);
         }
@@ -130,11 +140,11 @@ TestIsolateSearch.prototype.reportResult = function reportResult(res, assert) {
         }
     }
 
-    if (!res.passed || !self.options.stopOnFirstFailure) {
+    if (!res.passed || !self.options.first) {
         emitStep(spec.trace.length - res.report, spec.trace[res.report]);
     }
 
-    if (!res.passed && self.options.stopOnFirstFailure) self.stop();
+    if (!res.passed && self.options.first) self.stop();
 
     function emitStep(n, step) {
         if (step.fail) {
@@ -153,7 +163,7 @@ TestIsolateSearch.prototype.reportResult = function reportResult(res, assert) {
 
 TestIsolateSearch.prototype.report = function report(assert) {
     var self = this;
-    if (self.fail && !self.options.stopOnFirstFailure) {
+    if (self.fail && !self.options.first) {
         self.log('Isolated %s failures', self.failed.length);
         self.failed.forEach(function eachFail(res) {
             self.log('- %s', self.describeState(res));
@@ -161,7 +171,7 @@ TestIsolateSearch.prototype.report = function report(assert) {
             // console.log(results[0]);
             // console.log(results[results.length-1]);
         });
-    } else if (!self.fail && self.options.stopOnFirstFailure) {
+    } else if (!self.fail && self.options.first) {
         assert.pass('no failures');
     }
 };
