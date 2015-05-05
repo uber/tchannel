@@ -44,6 +44,7 @@ function TChannelPeer(channel, hostPort, options) {
     self.isEphemeral = self.hostPort === '0.0.0.0:0';
     self.state = null; // TODO
     self.connections = [];
+    self.random = self.channel.random;
     if (self.options.initialState) {
         self.setState(self.options.initialState);
         delete self.options.initialState;
@@ -205,6 +206,34 @@ TChannelPeer.prototype.makeOutConnection = function makeOutConnection(socket) {
     var conn = new TChannelConnection(chan, socket, 'out', self.hostPort);
     self.allocConnectionEvent.emit(self, conn);
     return conn;
+};
+
+TChannelPeer.prototype.outPendingWeightedRandom = function outPendingWeightedRandom() {
+    // A weighted random variable:
+    //   random() ** (1 / weight)
+    // Such that the probability distribution is uniform for weights of 0, but
+    // an increasing bias with increasing weight.
+    // However, although weight should start at 0 and increase probability,
+    // the number of pending requests starts at 0 and should decrease
+    // probability as it increases.
+    // For 0 pending requests, we produce a uniform probability distribution by
+    // raising a uniform random variable to the power of 1 (pending + 1).
+    // As the number of pending requests increase, the magnitude of the power
+    // increases and the probability distribution develops a bias toward zero.
+    // TODO review weighted reservoir sampling:
+    // http://arxiv.org/pdf/1012.0256.pdf
+    var self = this;
+    var pending = self.countOutPending();
+    return Math.pow(self.random(), 1 + pending);
+};
+
+TChannelPeer.prototype.countOutPending = function countOutPending() {
+    var self = this;
+    var pending = 0;
+    for (var index = 0; index < self.connections.length; index++) {
+        pending += self.connections[index].pending.out;
+    }
+    return pending;
 };
 
 module.exports = TChannelPeer;

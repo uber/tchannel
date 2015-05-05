@@ -44,7 +44,10 @@ function allocCluster(opts) {
         channels: new Array(opts.numPeers),
         destroy: destroy,
         ready: CountedReadySignal(opts.numPeers),
-        assertCleanState: assertCleanState
+        assertCleanState: assertCleanState,
+        connectChannels: connectChannels,
+        connectChannelToChannels: connectChannelToChannels,
+        timers: opts.timers
     };
     var channelOptions = extend({
         logger: logger
@@ -134,6 +137,9 @@ allocCluster.test = function testCluster(desc, opts, t) {
         t = opts;
         opts = {};
     }
+    if (opts.timers && opts.channelOptions) {
+        opts.channelOptions.timers = opts.timers;
+    }
     test(desc, function t2(assert) {
         opts.assert = assert;
         allocCluster(opts).ready(function clusterReady(cluster) {
@@ -165,5 +171,30 @@ allocCluster.test.only = function testClusterOnly(desc, opts, t) {
         });
     });
 };
+
+function connectChannels(channels, callback) {
+    return parallel(channels.map(function (channel) {
+        return function connectChannelToHosts(callback) {
+            return connectChannelToChannels(channel, channels, callback);
+        };
+    }), callback);
+}
+
+function connectChannelToChannels(channel, channels, callback) {
+    return parallel(channels.map(function (peerChannel) {
+        return function connectChannelToHost(callback) {
+            if (channel.hostPort === peerChannel.hostPort) {
+                return callback();
+            }
+            var peer = channel.peers.add(peerChannel.hostPort);
+            var connection = peer.connect();
+            connection.identifiedEvent.on(onIdentified);
+            // TODO impl connect on self connect
+            function onIdentified() {
+                callback();
+            }
+        };
+    }), callback);
+}
 
 allocCluster.Pool = require('./resource_pool');
