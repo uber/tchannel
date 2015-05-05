@@ -24,52 +24,43 @@
 
 var tape = require('tape');
 var TChannel = require('../channel.js');
-var EndpointHandler = require('../endpoint-handler.js');
+var Ping = require('../v2/ping.js');
 
-tape('ping with a server response', function (assert) {
+tape('ping with a remote connection', function (assert) {
 
     var client = new TChannel();
-    var server = new TChannel({
-        handler: new EndpointHandler()
-    });
+    var server = new TChannel();
 
     server.listen(0, '127.0.0.1', function onListen() {
 
-        client.request({host: server.hostPort}).ping(handleResponse);
-        function handleResponse(err, res) {
-            if (err) {
-                return done(err);
-            }
-            assert.equals(res.body.type, 209);
-            done();
-        }
+        var peer = client.peers.choosePeer(null, {host: server.hostPort});
+        var conn = peer.connect();
+        conn.pingResponseEvent.on(function onResponse(res) {
+            assert.equals(res.type, Ping.Response.TypeCode,
+                'validate ping response');
+            server.close();
+            assert.end();
+        });
 
+        conn.ping();
     });
-
-    function done(err) {
-        if (err) {
-            assert.ifErr(err);
-        }
-        server.close();
-        assert.end();
-    }
 });
 
-tape('ping without a server response', function (assert) {
+tape('ping with a self connection', function (assert) {
 
-    var client = new TChannel();
-    var server = new TChannel({
-        handler: new EndpointHandler()
+    var server = new TChannel();
+
+    server.listen(0, '127.0.0.1', function onListen() {
+
+        var peer = server.peers.choosePeer(null, {host: server.hostPort});
+        var conn = peer.connect();
+        conn.pingResponseEvent.on(function onRequest(res) {
+            assert.equals(res.type, Ping.Response.TypeCode,
+                'validate ping response');
+            server.close();
+            assert.end();
+        });
+
+        conn.ping();
     });
-
-    client.request({host: '127.0.0.1:4040'}).ping(handleResponse);
-    function handleResponse(err, res) {
-            assert.notEquals(err, null);
-            done();
-        }
-
-    function done() {
-        server.close();
-        assert.end();
-    }
 });
