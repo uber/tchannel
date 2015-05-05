@@ -70,5 +70,12 @@ function _sendCallRequestCont(args, isLast) {
     self.handler.sendCallRequestContFrame(self, flags, args);
 };
 
+V2OutRequest.prototype._sendPingRequest =
+V2StreamingOutRequest.prototype._sendPingRequest =
+function _sendPingRequest() {
+    var self = this;
+    self.handler.sendPingRequestFrame(self);
+};
+
 module.exports.OutRequest = V2OutRequest;
 module.exports.StreamingOutRequest = V2StreamingOutRequest;
