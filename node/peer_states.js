@@ -90,7 +90,7 @@ TChannelPeerHealthyState.prototype.type = 'tchannel.healthy';
 
 TChannelPeerHealthyState.prototype.toString = function healthyToString() {
     var self = this;
-    return '[HealthyPeer ' + self.okCount + 'ok ' + self.notOkCount + 'err]';
+    return '[HealthyPeer ' + self.okCount + ' ok ' + self.notOkCount + ' err]';
 };
 
 TChannelPeerHealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
