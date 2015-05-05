@@ -21,6 +21,7 @@
 'use strict';
 
 var inherits = require('util').inherits;
+var format = require('util').format;
 
 var errors = require('./errors');
 var TChannelPeerState = require('./peer_state');
@@ -90,7 +91,7 @@ TChannelPeerHealthyState.prototype.type = 'tchannel.healthy';
 
 TChannelPeerHealthyState.prototype.toString = function healthyToString() {
     var self = this;
-    return '[HealthyPeer ' + self.okCount + ' ok ' + self.notOkCount + ' err]';
+    return format('[HealthyPeer %s ok %s err]', self.okCount, self.notOkCount);
 };
 
 TChannelPeerHealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
@@ -150,7 +151,7 @@ TChannelPeerUnhealthyState.prototype.type = 'tchannel.unhealthy';
 
 TChannelPeerUnhealthyState.prototype.toString = function healthyToString() {
     var self = this;
-    return '[UnhealthyPeer ' + self.successCount + 'ok]';
+    return format('[UnhealthyPeer %s ok]', self.successCount);
 };
 
 TChannelPeerUnhealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
