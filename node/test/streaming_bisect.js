@@ -56,6 +56,7 @@
 
 var async = require('async');
 var extend = require('xtend');
+var minimist = require('minimist');
 var util = require('util');
 
 var clusterSearch = require('./lib/cluster_search');
@@ -129,7 +130,23 @@ function streamingEchoTest(cluster, state, assert, callback) {
  *       - explore or isolate based on the outcome
  */
 
-var search = clusterSearch.ClusterIsolateSearch({
+
+var argv = {};
+
+if (require.main === module) {
+    argv = minimist(process.argv.slice(2), {
+        boolean: {
+            first: true,
+            trace: true
+        }
+    });
+    if (typeof argv.sizeLimit === 'string') {
+        argv.sizeLimit = base2.parse(argv.sizeLimit);
+        if (isNaN(argv.sizeLimit)) die('invalid sizeLimit');
+    }
+}
+
+var search = clusterSearch.ClusterIsolateSearch(extend({
     title: 'streaming bisection',
 
     reuseChannels: true,
@@ -234,15 +251,6 @@ var search = clusterSearch.ClusterIsolateSearch({
     //     assert.pass('found no failure under ' + limit);
     // }
 
-    // called after (any) argv harnessing before running any searches
-    setupHarness: function setupHarness() {
-        var self = this;
-        if (typeof self.options.sizeLimit === 'string') {
-            self.options.sizeLimit = base2.parse(self.options.sizeLimit);
-            if (isNaN(self.options.sizeLimit)) die('invalid sizeLimit');
-        }
-    },
-
     // initialize the search space by calling self.expand
     init: function initSearchState() {
         var self = this;
@@ -307,8 +315,8 @@ var search = clusterSearch.ClusterIsolateSearch({
             return true;
         }
     }
-});
-search.harness(require.main === module);
+}, argv));
+search.runTestHarness();
 
 function die() {
     console.error.apply(console, arguments);
