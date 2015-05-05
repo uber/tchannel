@@ -8,6 +8,10 @@ pytest := PYTHONDONTWRITEBYTECODE=1 py.test --tb short \
 html_report := --cov-report html
 test_args := --cov-report term-missing
 
+TEST_HOST=127.0.0.1
+TEST_PORT=0
+TEST_LOG_FILE=test-server.log
+
 .DEFAULT_GOAL := test-lint
 
 .PHONY: install test test_ci test-lint testhtml clean lint
@@ -29,6 +33,10 @@ ifdef TOX_ENV
 else
 	make env_install
 endif
+
+test_server:
+	# TODO: use ${TEST_LOG_FILE}
+	./env/bin/python test_server.py --host ${TEST_HOST} --port ${TEST_PORT}
 
 test: clean
 	$(pytest) $(test_args)
