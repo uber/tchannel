@@ -28,7 +28,7 @@ from hello import HelloService
 
 class HelloServiceHandler(object):
 
-    def hello(self, name):
+    def hello(self, name, proxy):
         print "Hello, %s" % name
         return "Hello, %s" % name
 
