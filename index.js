@@ -81,10 +81,10 @@ function TChannel(options) {
 		}
 	});
 	this.serverSocket.on('error', function (err) {
-		self.logger.error(self.name + ' server socket error: ' + inspect(err));
+		self.logger.debug(self.name + ' server socket error: ' + inspect(err));
 	});
 	this.serverSocket.on('close', function () {
-		self.logger.warn('server socket close');
+		self.logger.debug('server socket close');
 	});
 	this.serverSocket.on('connection', function (sock) {
 		if (!self.destroyed) {
@@ -179,7 +179,7 @@ TChannel.prototype.addPeer = function (name, connection) {
 
 	var existingPeer = this.getPeer(name);
 	if (existingPeer !== null && existingPeer !== connection) { // TODO: how about === undefined?
-		this.logger.warn('allocated a connection twice', {
+		this.logger.debug('allocated a connection twice', {
 			name: name,
 			direction: connection.direction
 			// TODO: more log context
@@ -360,7 +360,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
 	if (direction === 'out') {
 		this.send({}, 'TChannel identify', this.channel.name, null, function onOutIdentify(err, res1/*, res2 */) {
 			if (err) {
-				self.channel.logger.error('identification error', {
+				self.channel.logger.debug('identification error', {
 					remoteAddr: remoteAddr,
 					error: err
 				});
@@ -414,7 +414,7 @@ TChannelConnection.prototype.onTimeoutCheck = function () {
 	}
 
 	if (this.lastTimeoutTime) {
-		this.logger.warn(this.channel.name + ' destroying socket from timeouts');
+		this.logger.debug(this.channel.name + ' destroying socket from timeouts');
 		this.socket.destroy();
 		return;
 	}
