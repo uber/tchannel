@@ -12,6 +12,13 @@ test_args := --cov-report term-missing
 
 .PHONY: install test test_ci test-lint testhtml clean lint
 
+env/bin/activate:
+	virtualenv env
+
+env_install: env/bin/activate
+	./env/bin/pip install -r requirements-test.txt --download-cache $(HOME)/.cache/pip
+	./env/bin/python setup.py develop
+
 install:
 	pip install -r requirements-test.txt --download-cache $(HOME)/.cache/pip
 	python setup.py develop
