@@ -110,14 +110,6 @@ TChannelOutRequest.prototype._sendCallRequestCont = function _sendCallRequestCon
     });
 };
 
-TChannelOutRequest.prototype._sendPingRequest = function _sendPingRequest() {
-    var self = this;
-    throw errors.UnimplementedMethod({
-        className: self.constructor.name,
-        methodName: '_sendPingRequest'
-    });
-};
-
 TChannelOutRequest.prototype.onError = function onError(err, self) {
     if (!self.end) self.end = self.timers.now();
     self.err = err;
@@ -298,12 +290,6 @@ TChannelOutRequest.prototype.sendCallRequestContFrame = function sendCallRequest
     }
 };
 
-TChannelOutRequest.prototype.sendPingRequestFrame = function sendPingRequestFrame() {
-    var self = this;
-    self.start = self.timers.now();
-    self._sendPingRequest();
-};
-
 TChannelOutRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     var self = this;
 
@@ -329,16 +315,6 @@ TChannelOutRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     self.arg3 = arg3;
 
     self.sendCallRequestFrame([arg1, arg2, arg3], true);
-    self.finishEvent.emit(self);
-    return self;
-};
-
-TChannelOutRequest.prototype.ping = function ping(callback) {
-    var self = this;
-    if (callback) {
-        self.hookupCallback(callback);
-    }
-    self.sendPingRequestFrame();
     self.finishEvent.emit(self);
     return self;
 };

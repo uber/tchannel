@@ -40,6 +40,7 @@ function TChannelConnectionBase(channel, direction, remoteAddr) {
     self.errorEvent = self.defineEvent('error');
     self.timedOutEvent = self.defineEvent('timedOut');
     self.spanEvent = self.defineEvent('span');
+    self.pingResponseEvent = self.defineEvent('pingResonse');
 
     self.closing = false;
     self.closeError = null;
@@ -201,6 +202,12 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
     function runHandler() {
         self.runHandler(req);
     }
+};
+
+TChannelConnectionBase.prototype.handlePingResponse =
+function handlePingResponse(res) {
+    var self = this;
+    self.pingResponseEvent.emit(self, res);
 };
 
 TChannelConnectionBase.prototype.onReqError = function onReqError(req, err) {
