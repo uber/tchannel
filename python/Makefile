@@ -19,9 +19,16 @@ env_install: env/bin/activate
 	./env/bin/pip install -r requirements-test.txt --download-cache $(HOME)/.cache/pip
 	./env/bin/python setup.py develop
 
-install:
+tox_install:
 	pip install -r requirements-test.txt --download-cache $(HOME)/.cache/pip
 	python setup.py develop
+
+install:
+ifdef TOX_ENV
+	make tox_install
+else
+	make env_install
+endif
 
 test: clean
 	$(pytest) $(test_args)
