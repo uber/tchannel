@@ -1,5 +1,5 @@
 // Copyright (c) 2015 Uber Technologies, Inc.
-//
+
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -18,35 +18,40 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-'use strict';
+var TChannel = require('../channel.js');
+var EndpointHandler = require('../endpoint-handler.js');
+var CountedReadySignal = require('ready-signal/counted');
 
-require('./errors');
-require('./event_emitter.js');
-require('./argstream.js');
-require('./safe-quit.js');
-require('./timeouts.js');
-require('./send.js');
-require('./retry.js');
-require('./relay.js');
-require('./streaming.js');
-require('./streaming_bisect.js');
-require('./register.js');
-require('./identify.js');
-require('./max_pending.js');
-require('./tchannel.js');
-require('./regression-inOps-leak.js');
-require('./v2/index.js');
-require('./regression-listening-on-used-port.js');
-require('./as-thrift.js');
-require('./as-json.js');
-require('./as-http.js');
-require('./peers.js');
-require('./peer_states.js');
-require('./trace/');
-require('./request-stats.js');
-require('./streaming-resp-err.js');
-require('./double-response.js');
-require('./request-with-statsd.js');
-require('./response-stats.js');
-require('./response-with-statsd.js');
-require('./ping.js');
+var server = new TChannel({
+    handler: EndpointHandler()
+});
+var client = new TChannel();
+
+var ready = CountedReadySignal(2);
+var listening = ready(function (err) {
+    if (err) {
+        throw err;
+    }
+
+    var start = Date.now();
+    var opts = {host: '127.0.0.1:4040'};
+    console.log('Pinging ' + opts.host + ' ...');
+
+    client
+        .request(opts)
+        .ping(function onPingRes(perr, res) {
+            if (perr) {
+                console.log('failed after ' +
+                    (Date.now() - start) + 'ms');
+            } else {
+                console.log('responded after ' +
+                    (Date.now() - start) + 'ms');
+            }
+
+            server.close();
+            client.close();
+        });
+});
+
+server.listen(4040, '127.0.0.1', ready.signal);
+client.listen(4041, '127.0.0.1', ready.signal);

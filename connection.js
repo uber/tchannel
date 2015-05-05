@@ -115,6 +115,8 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     self.handler.errorEvent.on(onHandlerError);
     self.handler.callIncomingRequestEvent.on(onCallRequest);
     self.handler.callIncomingResponseEvent.on(onCallResponse);
+    self.handler.pingIncomingRequestEvent.on(onPingRequest);
+    self.handler.pingIncomingResponseEvent.on(onPingResponse);
     self.handler.callIncomingErrorEvent.on(onCallError);
     self.timedOutEvent.on(onTimedOut);
 
@@ -160,6 +162,14 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
 
     function onCallResponse(res) {
         self.onCallResponse(res);
+    }
+
+    function onPingRequest(req) {
+        self.onPingRequest(req);
+    }
+
+    function onPingResponse(req) {
+        self.onPingResponse(req);
     }
 
     function onCallError(err) {
@@ -245,6 +255,26 @@ TChannelConnection.prototype.onCallResponse = function onCallResponse(res) {
             info: 'got call response for unknown id'
         });
     }
+};
+
+TChannelConnection.prototype.onPingRequest = function onPingRequest(req) {
+    var self = this;
+    req.remoteAddr = self.remoteName;
+};
+
+TChannelConnection.prototype.onPingResponse = function onPingResponse(res) {
+    var self = this;
+    var req = self.popOutReq(res.id);
+    if (!req) {
+        self.logger.info('ping response received for unknown or lost operation', {
+            responseId: res.id,
+            remoteAddr: self.remoteAddr,
+            direction: self.direction,
+        });
+        return; 
+    }
+
+    req.responseEvent.emit(req, res);
 };
 
 TChannelConnection.prototype.onCallError = function onCallError(err) {

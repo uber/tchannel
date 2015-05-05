@@ -111,6 +111,7 @@ TChannelV2Handler.prototype.nextFrameId = function nextFrameId() {
 
 TChannelV2Handler.prototype.handleFrame = function handleFrame(frame, callback) {
     var self = this;
+
     switch (frame.body.type) {
         case v2.Types.InitRequest:
             return self.handleInitRequest(frame, callback);
@@ -278,6 +279,7 @@ TChannelV2Handler.prototype.handleClaim = function handleClaim(frame, callback) 
 TChannelV2Handler.prototype.handlePingRequest = function handlePingRequest(pingFrame, callback) {
     var self = this;
     self.pingIncomingRequestEvent.emit(self, pingFrame);
+    self.sendPingReponseFrame(pingFrame);
     callback();
 };
 
@@ -426,6 +428,21 @@ TChannelV2Handler.prototype._sendCallBodies = function _sendCallBodies(id, body,
         checksum = body.csum;
     } while (body = body.cont);
     return checksum;
+};
+
+TChannelV2Handler.prototype.sendPingRequestFrame = function sendPingRequestFrame(req) {
+    var self = this;
+    var id = req.id;
+    var body = new v2.PingRequest();
+    var reqFrame = new v2.Frame(id, body);
+    self.pushFrame(reqFrame);
+};
+
+TChannelV2Handler.prototype.sendPingReponseFrame = function sendPingReponseFrame(res) {
+    var self = this;
+    var body = new v2.PingResponse();
+    var resFrame = new v2.Frame(res.id, body);
+    self.pushFrame(resFrame);
 };
 
 TChannelV2Handler.prototype.sendErrorFrame = function sendErrorFrame(r, codeString, message) {
