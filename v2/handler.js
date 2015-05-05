@@ -111,7 +111,6 @@ TChannelV2Handler.prototype.nextFrameId = function nextFrameId() {
 
 TChannelV2Handler.prototype.handleFrame = function handleFrame(frame, callback) {
     var self = this;
-
     switch (frame.body.type) {
         case v2.Types.InitRequest:
             return self.handleInitRequest(frame, callback);
