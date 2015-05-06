@@ -96,7 +96,7 @@ class RequestDispatcher(BaseRequestHandler):
 
         return decorator
 
-    def register(self, rule, handler, helper=None):
+    def register(self, rule, handler, broker=None):
         """Register a new endpoint with the given name.
 
         .. code-block:: python
@@ -113,18 +113,18 @@ class RequestDispatcher(BaseRequestHandler):
         :param handler:
             A function that gets called with ``Request``, ``Response``, and
             the ``proxy``.
-        :param helper:
-            Helper injects customized serializer and deserializer into
+        :param broker:
+            Broker injects customized serializer and deserializer into
             request/response object.
 
-            helper==None means it registers as raw handle. It deals with raw
-            buffer in the request/response.
+            broker==None means it registers as raw handle. It deals with
+            raw buffer in the request/response.
         """
         assert rule, "rule must not be None"
         assert handler, "handler must not be None"
-        if helper:
-            helper.register(rule, handler)
-            self.endpoints[rule] = helper.handle_call
+        if broker:
+            broker.register(rule, handler)
+            self.endpoints[rule] = broker.handle_call
         else:
             self.endpoints[rule] = handler
 

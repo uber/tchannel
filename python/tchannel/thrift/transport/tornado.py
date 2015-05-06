@@ -20,9 +20,13 @@
 
 from __future__ import absolute_import
 
+
 from tornado import gen
 from tchannel.io import BytesIO
 from tchannel.tornado.stream import InMemStream
+from tchannel.scheme import ThriftArgScheme
+from tchannel.tornado.broker import ArgSchemeBroker
+
 from .tornado_base import TChannelTornadoTransportBase
 
 
@@ -52,9 +56,9 @@ class TChannelTornadoTransport(TChannelTornadoTransportBase):
         self._wbuf = BytesIO()  # avoid buffer leaking between requests
 
         endpoint, seqid = self._endpoint, self._seqid
-        response = yield self._tchannel.request(
-            self._hostport, self._service_name
-        ).send(
+        client = self._tchannel.request(self._hostport, self._service_name)
+        response = yield ArgSchemeBroker(ThriftArgScheme()).send(
+            client,
             InMemStream(endpoint),
             InMemStream(),  # TODO: headers
             InMemStream(payload),

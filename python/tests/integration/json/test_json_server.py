@@ -97,7 +97,7 @@ def json_server(random_open_port, handlers):
 
 
 @pytest.mark.gen_test
-def test_json_trace(json_server, sample_json):
+def test_json_server(json_server, sample_json):
     endpoint = "json_echo"
     tchannel = TChannel()
     hostport = 'localhost:%d' % json_server.port

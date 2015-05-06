@@ -21,10 +21,13 @@
 from __future__ import absolute_import
 
 import inspect
+import tornado
 
 from thrift.transport import TTransport
 from thrift.protocol import TBinaryProtocol
-from tchannel.tornado.stream import InMemStream
+from ..scheme import ThriftArgScheme
+from ..tornado.stream import InMemStream
+from ..tornado.broker import ArgSchemeBroker
 
 
 def register(dispatcher, service_module, handler, service_name=None):
@@ -74,7 +77,9 @@ def register(dispatcher, service_module, handler, service_name=None):
     for method in methods:
         endpoint = "%s::%s" % (service_name, method)
         dispatcher.register(
-            endpoint, build_handler(service_module, method, handler)
+            endpoint,
+            build_handler(service_module, method, handler),
+            ArgSchemeBroker(ThriftArgScheme())
         )
 
 
@@ -82,23 +87,28 @@ def build_handler(service_module, method_name, handler):
     args_type = getattr(service_module, method_name + '_args')
     result_type = getattr(service_module, method_name + '_result')
 
-    def thrift_handler(request, response, connection):
+    @tornado.gen.coroutine
+    def thrift_handler(request, response, proxy):
         # TODO: Fix arg scheme passing
         # assert request.arg_scheme == 'thrift', (
         #     "Invalid arg scheme %s" % request.arg_scheme
         # )
 
+        body = yield request.get_body()
         args = args_type()
         args.read(
             TBinaryProtocol.TBinaryProtocolAccelerated(
-                TTransport.TMemoryBuffer(request.body)
+                TTransport.TMemoryBuffer(body)
             )
         )
 
         result = result_type()
         try:
+            thrift_args = [
+                getattr(args, spec[2]) for spec in args.thrift_spec[1:]]
+            thrift_args.append(proxy)
             result.success = getattr(handler, method_name)(
-                *[getattr(args, spec[2]) for spec in args.thrift_spec[1:]]
+                *thrift_args
             )
         except Exception as exc:
             for spec in result.thrift_spec[1:]:
