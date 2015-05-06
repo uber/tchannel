@@ -1,0 +1,17 @@
+instrumentation:
+    include-all-sources: true
+    excludes:
+        - benchmarks/*
+        - examples/*
+        - v1/*
+check:
+    global:
+        statements: 80
+        lines: 80
+        branches: 60
+        functions: 80
+    each:
+        statements: 0
+        lines: 0
+        branches: 0
+        functions: 0
