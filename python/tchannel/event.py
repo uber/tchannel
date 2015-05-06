@@ -41,10 +41,17 @@ class EventType(IntEnum):
     receive_response: after client receive response
 
     """
-    send_request = 0x00,
-    send_response = 0x01,
-    receive_request = 0x02,
-    receive_response = 0x03
+    before_send_request = 0x00
+    after_send_request = 0x01
+
+    before_send_response = 0x10
+    after_send_response = 0x11
+
+    before_receive_request = 0x20
+    after_receive_request = 0x21
+
+    before_receive_response = 0x30
+    after_receive_response = 0x31
 
 
 class EventHook(object):
@@ -56,41 +63,40 @@ class EventHook(object):
     Example::
 
         TraceHook(EventHook):
-            def send_request(self, context):
+            def before_send_request(self, request):
                 ....
 
     """
-
-    def send_request(self, context):
-        """Event hook for sending request
-
-        :param context:
-            request object to send
-        """
+    def before_send_request(self, request):
+        """Called before any part of a ``CALL_REQ`` message is sent."""
         pass
 
-    def send_response(self, context):
-        """Event hook for sending response
-
-        :param context:
-            response object sent
-        """
+    def after_send_request(self, request):
+        """Not implemented."""
         pass
 
-    def receive_request(self, context):
-        """Event hook for receiving request
-
-        :param context:
-            request object received
-        """
+    def before_send_response(self, response):
+        """Not implemented."""
         pass
 
-    def receive_response(self, context):
-        """Event hook for receiving response
+    def after_send_response(self, response):
+        """Called after all of a ``CALL_RESP`` message is sent."""
+        pass
 
-        :param context:
-            response object received
-        """
+    def before_receive_request(self, request):
+        """Called after a ``CALL_REQ`` message's arg1 (endpoint) is read."""
+        pass
+
+    def after_receive_request(self, request):
+        """Not implemented."""
+        pass
+
+    def before_receive_response(self, response):
+        """Not implemented."""
+        pass
+
+    def after_receive_response(self, response):
+        """Called after a ``CALL_RESP`` message is read."""
         pass
 
 

@@ -28,22 +28,10 @@ from tchannel.event import EventType
 
 def test_event_hook():
     mock_hook = MagicMock()
-    mock_hook.send_request.return_value = None
-    mock_hook.receive_request.return_value = None
-    mock_hook.receive_response.return_value = None
-    mock_hook.send_response.return_Value = None
 
     event_emitter = EventEmitter()
     event_emitter.register_hook(mock_hook)
 
-    event_emitter.fire(EventType.receive_response, None)
-    assert mock_hook.receive_response.called
-
-    event_emitter.fire(EventType.receive_request, None)
-    assert mock_hook.receive_request.called
-
-    event_emitter.fire(EventType.send_request, None)
-    assert mock_hook.send_request.called
-
-    event_emitter.fire(EventType.send_response, None)
-    assert mock_hook.send_response.called
+    for event_type in EventType:
+        event_emitter.fire(event_type, None)
+        assert getattr(mock_hook, event_type.name).called is True
