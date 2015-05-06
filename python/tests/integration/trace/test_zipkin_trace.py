@@ -19,20 +19,24 @@
 # THE SOFTWARE.
 
 import json
+
 import pytest
+import tornado
+import tornado.gen
+
+from tchannel.tornado import TChannel
+from tchannel.tornado import TornadoDispatcher
+from tchannel.tornado.stream import InMemStream
+from tchannel.zipkin.zipkin_trace import ZipkinTraceHook
+from tests.integration.server_manager import TChannelServerManager
+
 try:
     from cStringIO import StringIO
 except:
     from StringIO import StringIO
 
-from tchannel.zipkin.zipkin_trace import ZipkinTraceHook
-from tests.integration.server_manager import TChannelServerManager
 
-import tornado
-import tornado.gen
 
-from tchannel.tornado import TornadoDispatcher, TChannel
-from tchannel.tornado.stream import InMemStream
 
 
 @tornado.gen.coroutine

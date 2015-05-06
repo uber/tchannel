@@ -21,12 +21,13 @@
 from __future__ import absolute_import
 
 import struct
+
 import pytest
 
 from tchannel import messages
-from tchannel.messages.common import PROTOCOL_VERSION
 from tchannel.io import BytesIO
 from tchannel.messages import CallRequestMessage
+from tchannel.messages.common import PROTOCOL_VERSION
 from tchannel.tornado.message_factory import MessageFactory
 from tests.util import big_arg
 

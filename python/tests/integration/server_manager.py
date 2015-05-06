@@ -21,10 +21,11 @@
 from __future__ import absolute_import
 
 import threading
+
 import tornado.ioloop
 
-from tchannel.tornado.dispatch import TornadoDispatcher
 import tchannel.tornado.tchannel as tornado_tchannel
+from tchannel.tornado.dispatch import TornadoDispatcher
 
 
 class Expectation(object):

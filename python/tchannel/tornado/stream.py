@@ -18,20 +18,23 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+from collections import deque
+
 import tornado
 import tornado.gen
 import tornado.ioloop
-from tornado.iostream import PipeIOStream, StreamClosedError
+from tornado.iostream import PipeIOStream
+from tornado.iostream import StreamClosedError
+
 from ..exceptions import StreamingException
-from ..messages.common import StreamState
 from ..messages import common
+from ..messages.common import StreamState
 
 try:
     from tornado.locks import Condition
 except ImportError:  # pragma: no cover
     from toro import Condition
 
-from collections import deque
 
 
 @tornado.gen.coroutine

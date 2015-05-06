@@ -23,14 +23,13 @@
 
 from __future__ import absolute_import
 
-
 import mock
 import pytest
-
 from tornado import gen
 
-from tchannel.tornado.stream import read_full, InMemStream
 from tchannel.tornado import peer as tpeer
+from tchannel.tornado.stream import InMemStream
+from tchannel.tornado.stream import read_full
 
 
 def closed_stream(body):

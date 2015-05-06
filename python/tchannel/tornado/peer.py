@@ -21,11 +21,20 @@
 from __future__ import absolute_import
 
 import logging
+from collections import deque
 from itertools import chain
 from random import random
-from collections import deque
 
 from tornado import gen
+
+from ..handler import CallableRequestHandler
+from ..zipkin.annotation import Endpoint
+from ..zipkin.trace import Trace
+from .connection import StreamConnection
+from .data import Request
+from .stream import InMemStream
+from .stream import Stream
+from .stream import read_full
 
 try:
     # included in Tornado 4.2
@@ -33,12 +42,6 @@ try:
 except ImportError:  # pragma: no cover
     from toro import Condition
 
-from .data import Request
-from .stream import InMemStream, Stream, read_full
-from .connection import StreamConnection
-from ..handler import CallableRequestHandler
-from ..zipkin.trace import Trace
-from ..zipkin.annotation import Endpoint
 
 log = logging.getLogger('tchannel')
 

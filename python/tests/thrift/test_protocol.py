@@ -20,14 +20,16 @@
 
 from __future__ import absolute_import
 
-from tchannel.thrift import protocol as tproto
-from tchannel.thrift import transport as ttrans
-
+from doubles import allow
+from doubles import expect
+from hypothesis import assume
+from hypothesis import given
+from hypothesis import specifiers
 from thrift import Thrift
 from thrift.transport.TTransport import TMemoryBuffer
 
-from doubles import allow, expect
-from hypothesis import given, assume, specifiers
+from tchannel.thrift import protocol as tproto
+from tchannel.thrift import transport as ttrans
 
 # A strategy for generating Thrift message types (a value between 1 and 4).
 TMessageType = specifiers.sampled_from([

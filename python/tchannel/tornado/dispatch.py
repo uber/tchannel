@@ -22,10 +22,12 @@ from __future__ import absolute_import
 
 import tornado
 import tornado.gen
-from tornado import gen, ioloop
+from tornado import gen
+from tornado import ioloop
+
+from ..event import EventType
 from ..handler import BaseRequestHandler
 from ..messages.error import ErrorCode
-from ..event import EventType
 from .data import Response
 
 

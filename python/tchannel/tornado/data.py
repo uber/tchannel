@@ -23,12 +23,12 @@ from __future__ import absolute_import
 import tornado
 import tornado.gen
 
-from .stream import InMemStream
-from .util import get_arg
 from ..exceptions import TChannelException
 from ..messages.common import FlagsType
 from ..messages.common import StreamState
 from ..zipkin.trace import Trace
+from .stream import InMemStream
+from .util import get_arg
 
 
 class Request(object):

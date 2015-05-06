@@ -24,13 +24,13 @@ import pytest
 
 from tchannel import tcurl
 from tchannel.exceptions import ConnectionClosedException
+from tchannel.messages import Types
+from tchannel.messages.error import ErrorCode
 from tchannel.tornado import TChannel
 from tchannel.tornado.connection import StreamConnection
-from tchannel.messages.error import ErrorCode
-from tchannel.messages import Types
+from tchannel.tornado.data import Response
 from tchannel.tornado.stream import InMemStream
 from tests.util import big_arg
-from tchannel.tornado.data import Response
 
 
 @pytest.fixture

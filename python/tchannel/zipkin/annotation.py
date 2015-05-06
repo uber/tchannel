@@ -19,11 +19,12 @@
 # THE SOFTWARE.
 
 from __future__ import absolute_import
+
 import collections
 import math
 import time
-from tchannel.zipkin.thrift import constants
 
+from tchannel.zipkin.thrift import constants
 
 Endpoint = collections.namedtuple(
     'Endpoint',

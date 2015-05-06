@@ -22,10 +22,10 @@ from __future__ import absolute_import
 
 import enum
 
+from . import common
 from .. import rw
 from .base import BaseMessage
 from .types import Types
-from . import common
 
 
 @enum.unique

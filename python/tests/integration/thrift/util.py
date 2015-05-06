@@ -20,8 +20,8 @@
 
 from __future__ import absolute_import
 
-from textwrap import dedent
 from contextlib import contextmanager
+from textwrap import dedent
 
 import pytest
 

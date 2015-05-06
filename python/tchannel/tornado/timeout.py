@@ -20,13 +20,12 @@
 
 from __future__ import absolute_import
 
-import contextlib2
+import tornado
 import tornado.ioloop
 
+import contextlib2
+
 from ..exceptions import TimeoutException
-
-
-import tornado
 
 
 @contextlib2.contextmanager

@@ -26,8 +26,9 @@
 #  options string: py:tornado,dynamic,utf8strings
 #
 
-from thrift.Thrift import TType, TMessageType, TException, TApplicationException
-
-from thrift.protocol.TBase import TBase, TExceptionBase
-
-
+from thrift.protocol.TBase import TBase
+from thrift.protocol.TBase import TExceptionBase
+from thrift.Thrift import TApplicationException
+from thrift.Thrift import TException
+from thrift.Thrift import TMessageType
+from thrift.Thrift import TType

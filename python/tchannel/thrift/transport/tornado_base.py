@@ -20,21 +20,23 @@
 
 from __future__ import absolute_import
 
+import tornado
+import tornado.gen
 from thrift import Thrift
 from thrift.protocol import TBinaryProtocol
 from thrift.transport import TTransport
 from tornado import ioloop
-import tornado
-import tornado.gen
+
+from tchannel.messages.common import Types
 from tchannel.tornado.data import Response
+
+from .base import TChannelTransportBase
 
 try:
     from tornado.queues import Queue  # Included in Tornado 4.2
 except ImportError:
     from toro import Queue
 
-from tchannel.messages.common import Types
-from .base import TChannelTransportBase
 
 
 class TChannelTornadoTransportBase(TChannelTransportBase):

@@ -20,22 +20,23 @@
 
 from __future__ import absolute_import
 
-import sys
 import logging
-
-from enum import IntEnum
 import os
+import sys
+
 import tornado.gen
 import tornado.ioloop
-import tornado.tcpserver
 import tornado.iostream
+import tornado.tcpserver
 from tornado.netutil import bind_sockets
-from ..net import local_ip
-from .peer import PeerGroup
-from .connection import StreamConnection
-from ..handler import CallableRequestHandler
-from ..event import EventEmitter
 
+from enum import IntEnum
+
+from ..event import EventEmitter
+from ..handler import CallableRequestHandler
+from ..net import local_ip
+from .connection import StreamConnection
+from .peer import PeerGroup
 
 log = logging.getLogger('tchannel')
 

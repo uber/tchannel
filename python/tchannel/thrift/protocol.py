@@ -23,7 +23,9 @@ from __future__ import absolute_import
 from collections import namedtuple
 
 from thrift import Thrift
-from thrift.protocol import TProtocol, TBinaryProtocol, fastbinary
+from thrift.protocol import TBinaryProtocol
+from thrift.protocol import TProtocol
+from thrift.protocol import fastbinary
 
 from .transport import TChannelTransportBase
 

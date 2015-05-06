@@ -20,10 +20,10 @@
 
 from __future__ import absolute_import
 
+from . import common
+from .. import rw
 from .call_continue import CallContinueMessage
 from .types import Types
-from .. import rw
-from . import common
 
 
 class CallResponseContinueMessage(CallContinueMessage):

@@ -19,9 +19,10 @@
 # THE SOFTWARE.
 from __future__ import absolute_import
 
-from .messages import Types, ErrorCode
-from .messages import PingResponseMessage
 from .exceptions import InvalidChecksumException
+from .messages import ErrorCode
+from .messages import PingResponseMessage
+from .messages import Types
 
 
 class RequestHandler(object):

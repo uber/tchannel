@@ -26,10 +26,14 @@
 #  options string: py:tornado
 #
 
-from thrift.Thrift import TType, TMessageType, TException, TApplicationException
-
+from thrift.protocol import TBinaryProtocol
+from thrift.protocol import TProtocol
+from thrift.Thrift import TApplicationException
+from thrift.Thrift import TException
+from thrift.Thrift import TMessageType
+from thrift.Thrift import TType
 from thrift.transport import TTransport
-from thrift.protocol import TBinaryProtocol, TProtocol
+
 try:
   from thrift.protocol import fastbinary
 except:

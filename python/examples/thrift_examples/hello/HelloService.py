@@ -26,14 +26,19 @@
 #  options string: py:tornado,dynamic,utf8strings
 #
 
-from thrift.Thrift import TType, TMessageType, TException, TApplicationException
-from ttypes import *
+from thrift.protocol.TBase import TBase
+from thrift.protocol.TBase import TExceptionBase
+from thrift.Thrift import TApplicationException
+from thrift.Thrift import TException
+from thrift.Thrift import TMessageType
 from thrift.Thrift import TProcessor
-from thrift.protocol.TBase import TBase, TExceptionBase
-
-from tornado import gen
-from tornado import concurrent
+from thrift.Thrift import TType
 from thrift.transport import TTransport
+from tornado import concurrent
+from tornado import gen
+
+from ttypes import *
+
 
 class Iface(object):
   def hello(self, name):

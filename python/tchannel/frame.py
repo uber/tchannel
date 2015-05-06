@@ -23,9 +23,8 @@ from __future__ import absolute_import
 from collections import namedtuple
 
 from . import rw
-from .io import BytesIO
 from .exceptions import ReadException
-
+from .io import BytesIO
 
 FrameHeader = namedtuple('FrameHeader', 'message_type message_id')
 Frame = namedtuple('Frame', 'header payload')

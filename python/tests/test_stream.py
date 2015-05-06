@@ -20,11 +20,15 @@
 
 from __future__ import absolute_import
 
-import pytest
 import os
-from tchannel.exceptions import StreamingException, TChannelException
+
+import pytest
+
+from tchannel.exceptions import StreamingException
+from tchannel.exceptions import TChannelException
 from tchannel.tornado.data import Response
-from tchannel.tornado.stream import InMemStream, PipeStream
+from tchannel.tornado.stream import InMemStream
+from tchannel.tornado.stream import PipeStream
 
 
 @pytest.mark.gen_test

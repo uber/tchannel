@@ -32,18 +32,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import absolute_import
+
+import base64
+import socket
+import struct
+
+from thrift.protocol import TBinaryProtocol
+from thrift.transport import TTransport
+
 from tchannel.zipkin.thrift import ttypes
 
 try:
     import ujson as json
 except ImportError:  # pragma: nocover
     import json
-import base64
-import struct
-import socket
 
-from thrift.protocol import TBinaryProtocol
-from thrift.transport import TTransport
 
 
 def hex_str(n):

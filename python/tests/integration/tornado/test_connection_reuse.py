@@ -21,12 +21,13 @@
 from __future__ import absolute_import
 
 import socket
+
 import pytest
+from tornado import gen
 
 from tchannel.tornado.dispatch import TornadoDispatcher
-from tchannel.tornado.tchannel import TChannel
-from tornado import gen
 from tchannel.tornado.stream import InMemStream
+from tchannel.tornado.tchannel import TChannel
 
 
 @pytest.mark.gen_test

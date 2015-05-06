@@ -20,6 +20,7 @@
 
 from __future__ import absolute_import
 
+import argparse
 import collections
 import contextlib
 import cProfile
@@ -29,13 +30,12 @@ import pstats
 import sys
 import time
 
-import argparse
 import tornado.ioloop
-from .tornado.stream import InMemStream
-from .tornado.util import print_arg
+
 from .tornado import TChannel
 from .tornado.dispatch import TornadoDispatcher
-
+from .tornado.stream import InMemStream
+from .tornado.util import print_arg
 
 log = logging.getLogger('tchannel')
 

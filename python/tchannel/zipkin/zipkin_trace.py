@@ -19,9 +19,11 @@
 # THE SOFTWARE.
 
 from __future__ import absolute_import
+
 from tchannel.event import EventHook
 from tchannel.zipkin import annotation
-from tchannel.zipkin.tracers import DebugTracer, TChannelZipkinTracer
+from tchannel.zipkin.tracers import DebugTracer
+from tchannel.zipkin.tracers import TChannelZipkinTracer
 
 
 class ZipkinTraceHook(EventHook):

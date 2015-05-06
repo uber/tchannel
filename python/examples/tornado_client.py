@@ -24,8 +24,8 @@ from __future__ import absolute_import
 
 import time
 
-import tornado.iostream
 import tornado.ioloop
+import tornado.iostream
 
 from options import get_args
 from tchannel.tornado.connection import StreamConnection

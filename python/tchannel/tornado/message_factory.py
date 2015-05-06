@@ -18,26 +18,27 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from .data import Request, Response
-from .stream import InMemStream
 from ..exceptions import InvalidChecksumException
 from ..exceptions import StreamingException
 from ..messages import RW
 from ..messages import Types
+from ..messages import common
 from ..messages.call_continue import CallContinueMessage
 from ..messages.call_request import CallRequestMessage
 from ..messages.call_request_continue import CallRequestContinueMessage
 from ..messages.call_response import CallResponseMessage
 from ..messages.call_response_continue import CallResponseContinueMessage
-from ..messages import common
 from ..messages.common import CHECKSUM_MSG_TYPES
 from ..messages.common import FlagsType
-from ..messages.common import generate_checksum
 from ..messages.common import StreamState
 from ..messages.common import Tracing
+from ..messages.common import generate_checksum
 from ..messages.common import verify_checksum
 from ..zipkin.annotation import Endpoint
 from ..zipkin.trace import Trace
+from .data import Request
+from .data import Response
+from .stream import InMemStream
 
 
 class MessageFactory(object):

@@ -21,14 +21,13 @@
 from __future__ import absolute_import
 
 import pytest
-
 import tornado
 import tornado.gen
 
+from tchannel.scheme import JsonArgScheme
 from tchannel.tornado import TChannel
 from tchannel.tornado import TornadoDispatcher
 from tchannel.tornado.broker import ArgSchemeBroker
-from tchannel.scheme import JsonArgScheme
 from tests.integration.server_manager import TChannelServerManager
 
 
