@@ -26,7 +26,6 @@ var Buffer = require('buffer').Buffer;
 var assert = require('assert');
 var Result = require('bufrw/result');
 var cyclicStringify = require('json-stringify-safe');
-var isError = require('is-error');
 
 var errors = require('../errors.js');
 
@@ -327,4 +326,8 @@ function safeJSONParse(str) {
     // jscs:enable
 
     return new Result(null, json);
+}
+
+function isError(err) {
+    return Object.prototype.toString.call(err) === '[object Error]';
 }
