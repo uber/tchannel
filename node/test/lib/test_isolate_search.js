@@ -33,8 +33,6 @@ function TestIsolateSearch(options) {
         first: false,
         trace: false,
     }, options));
-    self.argvSpec.boolean.first = true;
-    self.argvSpec.boolean.trace = true;
     if (self.options.explore) self.explore = self.options.explore;
     if (self.options.isolate) self.isolate = self.options.isolate;
 }
