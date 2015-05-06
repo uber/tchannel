@@ -7,6 +7,7 @@ exclude_lines =
   raise NotImplementedError
   def __repr__
   def __str__
+omit = tchannel/zipkin/thrift/*
 
 [xml]
 output = coverage.xml
