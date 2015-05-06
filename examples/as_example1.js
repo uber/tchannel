@@ -18,20 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-var NullLogtron = require('null-logtron');
 var TChannelJSON = require('../as/json');
 var TChannel = require('../');
 
 var server = TChannel({
-    serviceName: 'server',
-    logger: NullLogtron()
+    serviceName: 'server'
 });
-var client = TChannel({
-    logger: NullLogtron()
-});
-var tchannelJSON = TChannelJSON({
-    logger: NullLogtron()
-});
+var client = TChannel();
+var tchannelJSON = TChannelJSON();
 
 var context = {};
 
