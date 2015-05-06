@@ -24,7 +24,7 @@
 
 var Buffer = require('buffer').Buffer;
 var assert = require('assert');
-var Result = require('bufrw/result');
+var Result = require('rezult');
 var cyclicStringify = require('json-stringify-safe');
 
 var errors = require('../errors.js');

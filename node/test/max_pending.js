@@ -21,7 +21,7 @@
 'use strict';
 
 var parallel = require('run-parallel');
-var Result = require('bufrw/result');
+var Result = require('rezult');
 var MockTimers = require('time-mock');
 var allocCluster = require('./lib/alloc-cluster');
 
