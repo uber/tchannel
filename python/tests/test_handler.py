@@ -36,6 +36,7 @@ def req():
     request = InstanceDouble('tchannel.tornado.data.Request')
     request.endpoint = ""
     request.service = ""
+    request.checksum = None
     request.argstreams = [
             InMemStream("test"),
             InMemStream(),

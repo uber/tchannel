@@ -260,7 +260,7 @@ def test_message_fragment(arg2, arg3, connection):
     msg = CallRequestMessage(args=["", arg2, arg3])
     origin_msg = CallRequestMessage(args=["", arg2, arg3])
     message_factory = MessageFactory(connection)
-    fragments = message_factory.fragment(msg)
+    fragments = message_factory.fragment(msg, 1)
     recv_msg = None
     for fragment in fragments:
         output = message_factory.build(0, fragment)
