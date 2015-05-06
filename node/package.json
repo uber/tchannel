@@ -21,7 +21,7 @@
   "dependencies": {
     "bufrw": "^0.9.19",
     "crc": "^3.2.1",
-    "error": "^6.1.0",
+    "error": "^6.2.0",
     "farmhash": "^0.2.0",
     "is-error": "2.0.0",
     "json-stringify-safe": "5.0.0",
