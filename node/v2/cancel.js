@@ -23,10 +23,11 @@
 var bufrw = require('bufrw');
 var Tracing = require('./tracing');
 
-// tracing:25 why~2
-function Cancel(tracing, why) {
+// ttl:4 tracing:25 why~2
+function Cancel(ttl, tracing, why) {
     var self = this;
     self.type = Cancel.TypeCode;
+    self.ttl = ttl || 0;
     self.tracing = tracing || Tracing.emptyTracing;
     self.why = why || '';
 }
@@ -34,8 +35,9 @@ function Cancel(tracing, why) {
 Cancel.TypeCode = 0xc0;
 
 Cancel.RW = bufrw.Struct(Cancel, [
-    {name: 'tracing', rw: Tracing.RW},  // tracing:25
-    {name: 'why', rw: bufrw.str2} // why~2
+    {name: 'ttl', rw: bufrw.UInt32BE}, // ttl:4
+    {name: 'tracing', rw: Tracing.RW}, // tracing:25
+    {name: 'why', rw: bufrw.str2}      // why~2
 ]);
 
 module.exports = Cancel;

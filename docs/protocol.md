@@ -348,7 +348,7 @@ safe to other "not ok" codes.
 
 Schema:
 ```
-tracing:25 why~2
+ttl:4 tracing:25 why~2
 ```
 
 This message forces the original response to a "call req" with an error
@@ -397,7 +397,7 @@ below.
 
 Schema:
 ```
-tracing:25
+ttl:4 tracing:25
 ```
 
 This message is used to claim or cancel a redundant request. When a request is
