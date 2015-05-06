@@ -78,6 +78,7 @@ class RequestDispatcher(BaseRequestHandler):
                 request.id)
         else:
             response = Response(id=request.id,
+                                checksum=request.checksum,
                                 tracing=request.tracing,
                                 connection=connection)
 

@@ -112,30 +112,39 @@ def compute_checksum(checksum_type, args, csum=0):
     return csum
 
 
-def generate_checksum(message):
+def generate_checksum(message, pre_csum=0):
     """Generate checksum for messages with
         CALL_REQ, CALL_REQ_CONTINUE,
-        CALL_RES,CALL_RES_CONTINUE types
+        CALL_RES,CALL_RES_CONTINUE types.
 
     :param message: outgoing message
+    :param pre_csum: accumulated checksum value
     """
     if message.message_type in CHECKSUM_MSG_TYPES:
         csum = compute_checksum(
             message.checksum[0],
-            message.args)
+            message.args,
+            pre_csum,
+        )
 
         message.checksum = (message.checksum[0], csum)
 
 
-def verify_checksum(message):
-    """
+def verify_checksum(message, pre_csum=0):
+    """Verify checksum for incoming message.
+
+    :param message: incoming message
+    :param pre_csum: accumulated checksum value
+
     :return return True if message checksum type is None
     or checksum is correct
     """
     if message.message_type in CHECKSUM_MSG_TYPES:
         csum = compute_checksum(
             message.checksum[0],
-            message.args)
+            message.args,
+            pre_csum,
+        )
 
         if csum == message.checksum[1]:
             return True

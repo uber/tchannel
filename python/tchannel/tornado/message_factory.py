@@ -18,17 +18,24 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from ..exceptions import StreamingException
-from ..messages import Types, RW
-from ..messages.call_request import CallRequestMessage
-from ..messages.call_request_continue import CallRequestContinueMessage
-from ..messages.call_response_continue import CallResponseContinueMessage
-from ..messages.call_response import CallResponseMessage
-from ..messages.call_continue import CallContinueMessage
-from ..messages import common
-from ..messages.common import StreamState, FlagsType, Tracing
 from .data import Request, Response
 from .stream import InMemStream
+from ..exceptions import InvalidChecksumException
+from ..exceptions import StreamingException
+from ..messages import RW
+from ..messages import Types
+from ..messages.call_continue import CallContinueMessage
+from ..messages.call_request import CallRequestMessage
+from ..messages.call_request_continue import CallRequestContinueMessage
+from ..messages.call_response import CallResponseMessage
+from ..messages.call_response_continue import CallResponseContinueMessage
+from ..messages import common
+from ..messages.common import CHECKSUM_MSG_TYPES
+from ..messages.common import FlagsType
+from ..messages.common import generate_checksum
+from ..messages.common import StreamState
+from ..messages.common import Tracing
+from ..messages.common import verify_checksum
 from ..zipkin.annotation import Endpoint
 from ..zipkin.trace import Trace
 
@@ -44,6 +51,9 @@ class MessageFactory(object):
         self.message_buffer = {}
         self.remote_host = remote_host
         self.remote_host_port = remote_host_port
+
+        self.in_checksum = {}
+        self.out_checksum = {}
 
     def build_raw_request_message(self, request, args, is_completed=False):
         """build protocol level message based on request and args.
@@ -70,7 +80,7 @@ class MessageFactory(object):
                                 request.tracing.traceflags),
                 service=request.service,
                 headers=request.headers,
-                # checksum=request.checksum
+                checksum=request.checksum,
                 args=args
             )
             request.state = (StreamState.completed if is_completed
@@ -78,7 +88,7 @@ class MessageFactory(object):
         elif request.state == StreamState.streaming:
             message = CallRequestContinueMessage(
                 flags=request.flags,
-                # checksum=request.checksum
+                checksum=request.checksum,
                 args=args
             )
             request.state = (StreamState.completed if is_completed
@@ -112,7 +122,7 @@ class MessageFactory(object):
                                 response.tracing.trace_id,
                                 response.tracing.traceflags),
                 headers=response.headers,
-                # checksum=response.checksum
+                checksum=response.checksum,
                 args=args
             )
             response.state = (StreamState.completed if is_completed
@@ -120,7 +130,7 @@ class MessageFactory(object):
         elif response.state == StreamState.streaming:
             message = CallResponseContinueMessage(
                 flags=response.flags,
-                # checksum=response.checksum
+                checksum=response.checksum,
                 args=args
             )
             response.state = (StreamState.completed if is_completed
@@ -146,7 +156,7 @@ class MessageFactory(object):
         ]
         for i, arg in enumerate(message.args):
             if i > 0:
-                args[i-1].close()
+                args[i - 1].close()
             args[i].write(arg)
 
         return args
@@ -181,7 +191,7 @@ class MessageFactory(object):
             tracing=tracing,
             service=message.service,
             headers=message.headers,
-            # checksum=message.checksum
+            checksum=message.checksum,
             argstreams=args,
             id=message_id
         )
@@ -205,7 +215,7 @@ class MessageFactory(object):
             flags=message.flags,
             # code=message.code,
             headers=message.headers,
-            # checksum=message.checksum
+            checksum=message.checksum,
             argstreams=args,
             id=message_id
         )
@@ -234,6 +244,7 @@ class MessageFactory(object):
         context = None
         if message.message_type in [Types.CALL_REQ,
                                     Types.CALL_RES]:
+            self.verify_message(message, message_id)
 
             context = self.build_context(message, message_id)
             # streaming message
@@ -252,6 +263,8 @@ class MessageFactory(object):
 
         elif message.message_type in [Types.CALL_REQ_CONTINUE,
                                       Types.CALL_RES_CONTINUE]:
+            self.verify_message(message, message_id)
+
             context = self.message_buffer.get(message_id)
             if context is None:
                 # missing call msg before continue msg
@@ -284,8 +297,7 @@ class MessageFactory(object):
             # TODO build error response or request object
             return message
 
-    @staticmethod
-    def fragment(message):
+    def fragment(self, message, message_id):
         """Fragment message based on max payload size
 
         note: if the message doesn't need to fragment,
@@ -300,7 +312,6 @@ class MessageFactory(object):
                                     Types.CALL_REQ,
                                     Types.CALL_REQ_CONTINUE,
                                     Types.CALL_RES_CONTINUE]:
-
             rw = RW[message.message_type]
             payload_space = (common.MAX_PAYLOAD_SIZE -
                              rw.length_no_args(message))
@@ -308,6 +319,8 @@ class MessageFactory(object):
             # with a call/request message and {0~n} continue
             # message
             fragment_msg = message.fragment(payload_space)
+            self.generate_checksum(message, message_id)
+
             yield message
             while fragment_msg is not None:
                 message = fragment_msg
@@ -315,9 +328,39 @@ class MessageFactory(object):
                 payload_space = (common.MAX_PAYLOAD_SIZE -
                                  rw.length_no_args(message))
                 fragment_msg = message.fragment(payload_space)
+                self.generate_checksum(message, message_id)
                 yield message
         else:
             yield message
+
+    def generate_checksum(self, message, message_id):
+        if message.message_type not in CHECKSUM_MSG_TYPES:
+            return
+        generate_checksum(
+            message,
+            self.out_checksum.get(message_id, 0),
+        )
+
+        self.out_checksum[message_id] = message.checksum[1]
+        if message.flags == FlagsType.none:
+            self.out_checksum.pop(message_id)
+
+    def verify_message(self, message, message_id):
+        """Verify the checksum of the message."""
+        if verify_checksum(
+                message,
+                self.in_checksum.get(message_id, 0),
+        ):
+            self.in_checksum[message_id] = message.checksum[1]
+
+            if message.flags == FlagsType.none:
+                self.in_checksum.pop(message_id)
+        else:
+            try:
+                self.in_checksum.pop(message_id)
+            except KeyError:
+                pass
+            raise InvalidChecksumException("Checksum does not match!")
 
     @staticmethod
     def close_argstream(request, num):

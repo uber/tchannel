@@ -19,8 +19,9 @@
 # THE SOFTWARE.
 from __future__ import absolute_import
 
-from .messages import Types
+from .messages import Types, ErrorCode
 from .messages import PingResponseMessage
+from .exceptions import InvalidChecksumException
 
 
 class RequestHandler(object):
@@ -92,8 +93,20 @@ class BaseRequestHandler(RequestHandler):
         :param message_id: message id
         :param message: CallRequestMessage or CallRequestContinueMessage
         :param connection: tornado connection
+
+        :except InvalidChecksumException:
+            Raise InvalidChecksumException when the checksum in the message
+            is wrong.
         """
-        req = connection.request_message_factory.build(message_id, message)
+        try:
+            req = connection.request_message_factory.build(message_id, message)
+        except InvalidChecksumException as e:
+            connection.send_error(
+                ErrorCode.bad_request,
+                e.message,
+                message_id,
+            )
+
         # call handler only for the call request message not continue message
         if req:
             self.handle_call(req, connection)
