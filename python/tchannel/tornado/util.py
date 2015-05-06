@@ -22,6 +22,7 @@ from __future__ import absolute_import
 
 import tornado
 import tornado.gen
+
 from ..exceptions import TChannelException
 
 

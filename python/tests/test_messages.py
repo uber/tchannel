@@ -21,12 +21,13 @@
 from __future__ import absolute_import
 
 import struct
+
 import pytest
 
 from tchannel import messages
-from tchannel.messages.common import PROTOCOL_VERSION
 from tchannel.io import BytesIO
 from tchannel.messages import CallRequestMessage
+from tchannel.messages.common import PROTOCOL_VERSION
 from tchannel.tornado.message_factory import MessageFactory
 from tests.util import big_arg
 
@@ -246,21 +247,21 @@ def test_equality_check_against_none(init_request_with_headers):
 # increase the LARGE_AMOUNT to even bigger
 @pytest.mark.gen_test
 @pytest.mark.parametrize('arg2, arg3', [
-        ("", big_arg()),
-        (big_arg(), ""),
-        ("test", big_arg()),
-        (big_arg(),  "test"),
-        (big_arg(), big_arg()),
-        ("", ""),
-        ("test", "test"),
-    ],
+    ("", big_arg()),
+    (big_arg(), ""),
+    ("test", big_arg()),
+    (big_arg(),  "test"),
+    (big_arg(), big_arg()),
+    ("", ""),
+    ("test", "test"),
+],
     ids=lambda arg: str(len(arg))
 )
 def test_message_fragment(arg2, arg3, connection):
     msg = CallRequestMessage(args=["", arg2, arg3])
     origin_msg = CallRequestMessage(args=["", arg2, arg3])
     message_factory = MessageFactory(connection)
-    fragments = message_factory.fragment(msg)
+    fragments = message_factory.fragment(msg, 1)
     recv_msg = None
     for fragment in fragments:
         output = message_factory.build(0, fragment)

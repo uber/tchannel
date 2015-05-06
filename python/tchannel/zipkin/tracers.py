@@ -32,15 +32,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
 import logging
-
+import sys
 from collections import defaultdict
 
-from .thrift import constants
-from formatters import json_formatter, base64_thrift_formatter
-from ..tornado.stream import InMemStream
+from formatters import base64_thrift_formatter
+from formatters import json_formatter
 
+from ..tornado.stream import InMemStream
+from .thrift import constants
 
 zipkin_log = logging.getLogger('zipkin')
 

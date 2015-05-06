@@ -18,12 +18,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from tornado import ioloop, gen
-
-from tchannel.tornado import TChannel
-from tchannel.thrift import TChannelProtocolFactory, TChannelTornadoTransport
+from tornado import gen
+from tornado import ioloop
 
 from hello import HelloService
+from tchannel.thrift import TChannelProtocolFactory
+from tchannel.thrift import TChannelTornadoTransport
+from tchannel.tornado import TChannel
 
 
 @gen.coroutine

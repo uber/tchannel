@@ -20,9 +20,9 @@
 
 from __future__ import absolute_import
 
-from .types import Types
-from .init_request import InitRequestMessage
 from .. import rw
+from .init_request import InitRequestMessage
+from .types import Types
 
 
 class InitResponseMessage(InitRequestMessage):

@@ -24,13 +24,13 @@ import pytest
 
 from tchannel import tcurl
 from tchannel.exceptions import ConnectionClosedException
+from tchannel.messages import Types
+from tchannel.messages.error import ErrorCode
 from tchannel.tornado import TChannel
 from tchannel.tornado.connection import StreamConnection
-from tchannel.messages.error import ErrorCode
-from tchannel.messages import Types
+from tchannel.tornado.data import Response
 from tchannel.tornado.stream import InMemStream
 from tests.util import big_arg
-from tchannel.tornado.data import Response
 
 
 @pytest.fixture
@@ -56,14 +56,14 @@ def test_tornado_client_with_server_not_there(random_open_port):
 # increase the LARGE_AMOUNT to even bigger
 @pytest.mark.gen_test
 @pytest.mark.parametrize('arg2, arg3', [
-        ("", big_arg()),
-        (big_arg(), ""),
-        ("test", big_arg()),
-        (big_arg(),  "test"),
-        (big_arg(), big_arg()),
-        ("", ""),
-        ("test", "test"),
-    ],
+    ("", big_arg()),
+    (big_arg(), ""),
+    ("test", big_arg()),
+    (big_arg(),  "test"),
+    (big_arg(), big_arg()),
+    ("", ""),
+    ("test", "test"),
+],
     ids=lambda arg: str(len(arg))
 )
 def test_tchannel_call_request_fragment(tchannel_server,

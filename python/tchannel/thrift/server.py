@@ -22,8 +22,9 @@ from __future__ import absolute_import
 
 import inspect
 
-from thrift.transport import TTransport
 from thrift.protocol import TBinaryProtocol
+from thrift.transport import TTransport
+
 from tchannel.tornado.stream import InMemStream
 
 

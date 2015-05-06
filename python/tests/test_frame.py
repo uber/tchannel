@@ -19,10 +19,11 @@
 # THE SOFTWARE.
 
 from __future__ import absolute_import
+
 import pytest
 
-from tchannel.frame import FrameHeader
 from tchannel.frame import Frame
+from tchannel.frame import FrameHeader
 from tchannel.frame import frame_rw
 from tchannel.io import BytesIO
 from tchannel.messages import PingRequestMessage

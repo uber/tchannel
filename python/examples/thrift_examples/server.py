@@ -20,10 +20,10 @@
 
 from tornado import ioloop
 
-from tchannel import thrift
-from tchannel.tornado import TChannel, TornadoDispatcher
-
 from hello import HelloService
+from tchannel import thrift
+from tchannel.tornado import TChannel
+from tchannel.tornado import TornadoDispatcher
 
 
 class HelloServiceHandler(object):

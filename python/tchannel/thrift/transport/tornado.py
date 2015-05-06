@@ -21,8 +21,10 @@
 from __future__ import absolute_import
 
 from tornado import gen
+
 from tchannel.io import BytesIO
 from tchannel.tornado.stream import InMemStream
+
 from .tornado_base import TChannelTornadoTransportBase
 
 

@@ -19,12 +19,15 @@
 # THE SOFTWARE.
 
 from __future__ import absolute_import
+
 import pytest
 
 from tchannel import messages
-from tchannel.messages import CallRequestMessage, ChecksumType
 from tchannel.io import BytesIO
-from tchannel.messages.common import generate_checksum, verify_checksum
+from tchannel.messages import CallRequestMessage
+from tchannel.messages import ChecksumType
+from tchannel.messages.common import generate_checksum
+from tchannel.messages.common import verify_checksum
 
 
 @pytest.mark.parametrize('checksum_type, seed', [

@@ -20,10 +20,10 @@
 
 from __future__ import absolute_import
 
+from .. import rw
 from .base import BaseMessage
 from .common import PROTOCOL_VERSION
 from .types import Types
-from .. import rw
 
 
 class InitRequestMessage(BaseMessage):

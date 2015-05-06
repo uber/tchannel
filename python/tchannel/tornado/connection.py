@@ -28,28 +28,26 @@ import sys
 import tornado.gen
 import tornado.iostream
 
+from .. import exceptions
+from .. import frame
+from .. import glossary
+from .. import messages
+from ..context import Context
+from ..event import EventType
+from ..exceptions import ConnectionClosedException
+from ..exceptions import InvalidErrorCodeException
+from ..io import BytesIO
+from ..messages.common import PROTOCOL_VERSION
+from ..messages.common import FlagsType
+from ..messages.error import ErrorMessage
+from ..messages.types import Types
+from .message_factory import MessageFactory
+
 try:
     import tornado.queues as queues  # included in 4.2
 except ImportError:
     import toro as queues
 
-from .message_factory import MessageFactory
-from .. import glossary
-from .. import frame
-from .. import messages
-from .. import exceptions
-from ..io import BytesIO
-from ..context import Context
-from ..exceptions import ConnectionClosedException
-from ..exceptions import InvalidErrorCodeException
-from ..messages.types import Types
-from ..messages.common import PROTOCOL_VERSION
-from ..messages.common import generate_checksum
-from ..messages.common import FlagsType
-from ..messages.common import verify_checksum
-from ..messages.error import ErrorCode
-from ..messages.error import ErrorMessage
-from ..event import EventType
 
 log = logging.getLogger('tchannel')
 
@@ -269,7 +267,15 @@ class TornadoConnection(object):
             Message to write.
         """
         assert not self.closed
-        fragments = MessageFactory.fragment(message)
+
+        message_id = message_id or self.next_message_id()
+
+        if message.message_type in self.CALL_REQ_TYPES:
+            message_factory = self.request_message_factory
+        else:
+            message_factory = self.response_message_factory
+
+        fragments = message_factory.fragment(message, message_id)
         for fragment in fragments:
             yield self._write(fragment, message_id)
 
@@ -278,7 +284,6 @@ class TornadoConnection(object):
 
         The message must be small enough to fit in a single frame.
         """
-        generate_checksum(message)
         message_id = message_id or self.next_message_id()
 
         payload = messages.RW[message.message_type].write(
@@ -431,14 +436,6 @@ class TornadoConnection(object):
 
         while not self.closed:
             context = yield self.await()
-
-            if not verify_checksum(context.message):
-                yield self.send_error(
-                    ErrorCode.bad_request,
-                    "Checksum does not match.",
-                    context.message_id,
-                )
-                continue
 
             try:
                 handler.handle(Context(context.message_id,

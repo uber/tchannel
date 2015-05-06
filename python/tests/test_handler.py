@@ -19,16 +19,16 @@
 # THE SOFTWARE.
 from __future__ import absolute_import
 
-from doubles import allow
-from doubles import expect
-from doubles import InstanceDouble
 import pytest
 import tornado
 import tornado.gen
+from doubles import InstanceDouble
+from doubles import allow
+from doubles import expect
 
-from tchannel.zipkin.trace import Trace
 from tchannel.tornado.dispatch import TornadoDispatcher
 from tchannel.tornado.stream import InMemStream
+from tchannel.zipkin.trace import Trace
 
 
 @pytest.fixture
@@ -36,11 +36,12 @@ def req():
     request = InstanceDouble('tchannel.tornado.data.Request')
     request.endpoint = ""
     request.service = ""
+    request.checksum = None
     request.argstreams = [
-            InMemStream("test"),
-            InMemStream(),
-            InMemStream()
-        ]
+        InMemStream("test"),
+        InMemStream(),
+        InMemStream()
+    ]
     request.tracing = Trace()
     request.id = 0
     request.argstreams[0].close()

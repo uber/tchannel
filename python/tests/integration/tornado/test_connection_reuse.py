@@ -21,12 +21,13 @@
 from __future__ import absolute_import
 
 import socket
+
 import pytest
+from tornado import gen
 
 from tchannel.tornado.dispatch import TornadoDispatcher
-from tchannel.tornado.tchannel import TChannel
-from tornado import gen
 from tchannel.tornado.stream import InMemStream
+from tchannel.tornado.tchannel import TChannel
 
 
 @pytest.mark.gen_test
@@ -89,11 +90,11 @@ def test_reuse():
     @gen.coroutine
     def loop2(n):
         results = yield [
-           server2.request(hostport1).send(
+            server2.request(hostport1).send(
                 InMemStream('reverse'),
                 InMemStream(),
                 InMemStream('foo')
-           ) for i in xrange(n)
+            ) for i in xrange(n)
         ]
         for resp in results:
             body = yield resp.get_body()

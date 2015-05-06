@@ -20,12 +20,14 @@
 
 import os
 import sys
+
 import tornado
 import tornado.ioloop
 
 from options import get_args
 from tchannel.tornado import TChannel
-from tchannel.tornado.stream import InMemStream, PipeStream
+from tchannel.tornado.stream import InMemStream
+from tchannel.tornado.stream import PipeStream
 from tchannel.tornado.util import print_arg
 
 

@@ -20,9 +20,10 @@
 
 from __future__ import absolute_import
 
-import socket
 import fcntl
+import socket
 import struct
+
 
 # TODO This module is unix-only. Figure out something for Windows.
 

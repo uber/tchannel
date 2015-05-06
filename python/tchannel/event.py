@@ -19,8 +19,10 @@
 # THE SOFTWARE.
 
 from __future__ import absolute_import
-from enum import IntEnum
+
 import logging
+
+from enum import IntEnum
 
 log = logging.getLogger('tchannel')
 

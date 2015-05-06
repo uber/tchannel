@@ -24,7 +24,6 @@ import struct
 
 from .exceptions import ReadException
 
-
 skip = '_'
 
 

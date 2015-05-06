@@ -21,15 +21,14 @@
 from __future__ import absolute_import
 
 import pytest
-
 from thrift import Thrift
 
-from tchannel.tornado.tchannel import TChannel
-from tchannel.thrift.transport import TChannelTornadoTransport
+from tchannel import messages
 from tchannel.thrift.protocol import TChannelProtocolFactory
+from tchannel.thrift.transport import TChannelTornadoTransport
 from tchannel.tornado.data import Response
 from tchannel.tornado.stream import InMemStream
-from tchannel import messages
+from tchannel.tornado.tchannel import TChannel
 
 from .util import get_service_module
 

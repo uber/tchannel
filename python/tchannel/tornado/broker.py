@@ -22,8 +22,9 @@ from __future__ import absolute_import
 
 import tornado
 
+from ..exceptions import ProtocolException
+from ..exceptions import TChannelException
 from .stream import Stream
-from ..exceptions import TChannelException, ProtocolException
 
 
 class ArgSchemeBroker(object):

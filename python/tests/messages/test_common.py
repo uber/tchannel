@@ -20,12 +20,15 @@
 
 from __future__ import absolute_import
 
-import pytest
 import random
 
+import pytest
+
 from tchannel.io import BytesIO
-from tchannel.messages.common import checksum_rw, ChecksumType
-from tchannel.messages.common import tracing_rw, Tracing
+from tchannel.messages.common import ChecksumType
+from tchannel.messages.common import Tracing
+from tchannel.messages.common import checksum_rw
+from tchannel.messages.common import tracing_rw
 
 
 @pytest.mark.parametrize('typ, value', [

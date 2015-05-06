@@ -25,14 +25,16 @@ from __future__ import absolute_import
 from collections import namedtuple
 
 import pytest
-from doubles import allow, expect, InstanceDouble
-from hypothesis import specifiers, given, assume
-
+from doubles import InstanceDouble
+from doubles import allow
+from doubles import expect
+from hypothesis import assume
+from hypothesis import given
+from hypothesis import specifiers
 
 from tchannel import rw
-from tchannel.io import BytesIO
 from tchannel.exceptions import ReadException
-
+from tchannel.io import BytesIO
 
 number_width = specifiers.sampled_from([1, 2, 4, 8])
 
