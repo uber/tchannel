@@ -90,11 +90,11 @@ def test_reuse():
     @gen.coroutine
     def loop2(n):
         results = yield [
-           server2.request(hostport1).send(
+            server2.request(hostport1).send(
                 InMemStream('reverse'),
                 InMemStream(),
                 InMemStream('foo')
-           ) for i in xrange(n)
+            ) for i in xrange(n)
         ]
         for resp in results:
             body = yield resp.get_body()

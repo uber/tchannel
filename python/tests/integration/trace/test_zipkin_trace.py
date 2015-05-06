@@ -36,9 +36,6 @@ except:
     from StringIO import StringIO
 
 
-
-
-
 @tornado.gen.coroutine
 def handler2(request, response, proxy):
     response.set_body_s(InMemStream("from handler2"))

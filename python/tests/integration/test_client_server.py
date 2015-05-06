@@ -56,14 +56,14 @@ def test_tornado_client_with_server_not_there(random_open_port):
 # increase the LARGE_AMOUNT to even bigger
 @pytest.mark.gen_test
 @pytest.mark.parametrize('arg2, arg3', [
-        ("", big_arg()),
-        (big_arg(), ""),
-        ("test", big_arg()),
-        (big_arg(),  "test"),
-        (big_arg(), big_arg()),
-        ("", ""),
-        ("test", "test"),
-    ],
+    ("", big_arg()),
+    (big_arg(), ""),
+    ("test", big_arg()),
+    (big_arg(),  "test"),
+    (big_arg(), big_arg()),
+    ("", ""),
+    ("test", "test"),
+],
     ids=lambda arg: str(len(arg))
 )
 def test_tchannel_call_request_fragment(tchannel_server,

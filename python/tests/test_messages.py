@@ -247,14 +247,14 @@ def test_equality_check_against_none(init_request_with_headers):
 # increase the LARGE_AMOUNT to even bigger
 @pytest.mark.gen_test
 @pytest.mark.parametrize('arg2, arg3', [
-        ("", big_arg()),
-        (big_arg(), ""),
-        ("test", big_arg()),
-        (big_arg(),  "test"),
-        (big_arg(), big_arg()),
-        ("", ""),
-        ("test", "test"),
-    ],
+    ("", big_arg()),
+    (big_arg(), ""),
+    ("test", big_arg()),
+    (big_arg(),  "test"),
+    (big_arg(), big_arg()),
+    ("", ""),
+    ("test", "test"),
+],
     ids=lambda arg: str(len(arg))
 )
 def test_message_fragment(arg2, arg3, connection):

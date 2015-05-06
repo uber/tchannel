@@ -38,7 +38,6 @@ except ImportError:
     from toro import Queue
 
 
-
 class TChannelTornadoTransportBase(TChannelTransportBase):
     """A Thrift Transport to send requests over an open TChannel connection.
 

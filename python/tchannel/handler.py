@@ -94,10 +94,6 @@ class BaseRequestHandler(RequestHandler):
         :param message_id: message id
         :param message: CallRequestMessage or CallRequestContinueMessage
         :param connection: tornado connection
-
-        :except InvalidChecksumException:
-            Raise InvalidChecksumException when the checksum in the message
-            is wrong.
         """
         try:
             req = connection.request_message_factory.build(message_id, message)

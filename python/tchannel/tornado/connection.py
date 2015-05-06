@@ -49,7 +49,6 @@ except ImportError:
     import toro as queues
 
 
-
 log = logging.getLogger('tchannel')
 
 

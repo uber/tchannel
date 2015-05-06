@@ -48,7 +48,6 @@ except ImportError:  # pragma: nocover
     import json
 
 
-
 def hex_str(n):
     return '%0.16x' % (n,)
 

@@ -36,7 +36,6 @@ except ImportError:  # pragma: no cover
     from toro import Condition
 
 
-
 @tornado.gen.coroutine
 def read_full(stream):
     """Read the full contents of the given stream into memory.

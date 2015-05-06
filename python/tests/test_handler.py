@@ -38,10 +38,10 @@ def req():
     request.service = ""
     request.checksum = None
     request.argstreams = [
-            InMemStream("test"),
-            InMemStream(),
-            InMemStream()
-        ]
+        InMemStream("test"),
+        InMemStream(),
+        InMemStream()
+    ]
     request.tracing = Trace()
     request.id = 0
     request.argstreams[0].close()
