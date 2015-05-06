@@ -357,10 +357,8 @@ class MessageFactory(object):
             if message.flags == FlagsType.none:
                 self.in_checksum.pop(message_id)
         else:
-            try:
+            if message_id in self.in_checksum:
                 self.in_checksum.pop(message_id)
-            except KeyError:
-                pass
             raise InvalidChecksumException("Checksum does not match!")
 
     @staticmethod
