@@ -24,7 +24,6 @@
 
 var Buffer = require('buffer').Buffer;
 var assert = require('assert');
-var NullLogtron = require('null-logtron');
 var Result = require('bufrw/result');
 var cyclicStringify = require('json-stringify-safe');
 var isError = require('is-error');
@@ -40,7 +39,7 @@ function TChannelJSON(options) {
 
     var self = this;
 
-    self.logger = options && options.logger || NullLogtron();
+    self.logger = options && options.logger || null;
 
     var bossMode = options && options.bossMode;
     self.bossMode = typeof bossMode === 'boolean' ? bossMode : false;
@@ -144,10 +143,12 @@ TChannelJSON.prototype.register = function register(
             if (err) {
                 assert(isError(err), 'Error argument must be an error');
 
-                self.logger.error('Got unexpected error in handler', {
-                    endpoint: arg1,
-                    err: err
-                });
+                if (self.logger) {
+                    self.logger.error('Got unexpected error in handler', {
+                        endpoint: arg1,
+                        err: err
+                    });
+                }
                 return res.sendError('UnexpectedError', 'Unexpected Error');
             }
 
@@ -202,11 +203,13 @@ TChannelJSON.prototype._stringify = function stringify(opts) {
             head: cyclicStringify(opts.head)
         });
 
-        self.logger.error('Got unexpected unserializable JSON for arg2', {
-            endpoint: opts.endpoint,
-            direction: opts.direction,
-            headErr: headStringifyErr
-        });
+        if (self.logger) {
+            self.logger.error('Got unexpected unserializable JSON for arg2', {
+                endpoint: opts.endpoint,
+                direction: opts.direction,
+                headErr: headStringifyErr
+            });
+        }
         return new Result(headStringifyErr);
     }
 
@@ -218,11 +221,13 @@ TChannelJSON.prototype._stringify = function stringify(opts) {
             body: cyclicStringify(opts.body)
         });
 
-        self.logger.error('Got unexpected unserializable JSON for arg3', {
-            endpoint: opts.endpoint,
-            direction: opts.direction,
-            bodyErr: bodyStringifyErr
-        });
+        if (self.logger) {
+            self.logger.error('Got unexpected unserializable JSON for arg3', {
+                endpoint: opts.endpoint,
+                direction: opts.direction,
+                bodyErr: bodyStringifyErr
+            });
+        }
         return new Result(bodyStringifyErr);
     }
 
@@ -243,7 +248,7 @@ TChannelJSON.prototype._parse = function parse(opts) {
             headStr: opts.head.slice(0, 10)
         });
 
-        if (self.logParseFailures) {
+        if (self.logParseFailures && self.logger) {
             self.logger.warn('Got unexpected invalid JSON for arg2', {
                 endpoint: opts.endpoint,
                 direction: opts.direction,
@@ -262,7 +267,7 @@ TChannelJSON.prototype._parse = function parse(opts) {
             bodyStr: opts.body.slice(0, 10)
         });
 
-        if (self.logParseFailures) {
+        if (self.logParseFailures && self.logger) {
             self.logger.warn('Got unexpected invalid JSON for arg3', {
                 endpoint: opts.endpoint,
                 direction: opts.direction,

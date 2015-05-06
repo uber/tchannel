@@ -18,8 +18,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-var NullLogtron = require('null-logtron');
-
 var Span = require('./span');
 
 module.exports = Agent;
@@ -32,7 +30,7 @@ function Agent(options) {
 
     options = options || {};
 
-    self.logger = options.logger || NullLogtron();
+    self.logger = options.logger;
 
     // If this is set to true in a call to Agent#configure, all incoming
     // requests will have their traceflags forced to 1. It's intended to be
@@ -93,8 +91,10 @@ Agent.prototype.setupNewSpan = function setupNewSpan(options) {
 
     var parentSpan = options.parentSpan;
     if (options.outgoing && !parentSpan && !options.topLevelRequest) {
-        self.logger.warn("TChannel tracer: parent span not specified " +
-            "for outgoing request!", options);
+        if (self.logger) {
+            self.logger.warn("TChannel tracer: parent span not specified " +
+                "for outgoing request!", options);
+        }
     }
 
     if (parentSpan && (!options.parentid && !options.traceid)) {
@@ -124,6 +124,8 @@ Agent.prototype.reporter = function (span) {
     var self = this;
 
     // TODO: actual reporting
-    self.logger.info('got span: ' + span.toString());
+    if (self.logger) {
+        self.logger.info('got span: ' + span.toString());
+    }
 };
 
