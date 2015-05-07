@@ -25,7 +25,7 @@ import threading
 import tornado.ioloop
 
 import tchannel.tornado.tchannel as tornado_tchannel
-from tchannel.tornado.dispatch import TornadoDispatcher
+from tchannel.tornado.dispatch import RequestDispatcher
 
 
 class Expectation(object):
@@ -95,7 +95,7 @@ class TChannelServerManager(ServerManager):
     def __init__(self, port, timeout=None, dispatcher=None):
         super(TChannelServerManager, self).__init__(port, timeout)
 
-        self.dispatcher = dispatcher or TornadoDispatcher()
+        self.dispatcher = dispatcher or RequestDispatcher()
         self.tchannel = tornado_tchannel.TChannel("localhost:%d" % self.port)
         self.port = port
 

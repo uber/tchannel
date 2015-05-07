@@ -25,15 +25,15 @@ import socket
 import pytest
 from tornado import gen
 
-from tchannel.tornado.dispatch import TornadoDispatcher
+from tchannel.tornado.dispatch import RequestDispatcher
 from tchannel.tornado.stream import InMemStream
 from tchannel.tornado.tchannel import TChannel
 
 
 @pytest.mark.gen_test
 def test_reuse():
-    dispatch1 = TornadoDispatcher()
-    dispatch2 = TornadoDispatcher()
+    dispatch1 = RequestDispatcher()
+    dispatch2 = RequestDispatcher()
 
     hostport1 = 'localhost:%d' % unused_port()
     hostport2 = 'localhost:%d' % unused_port()

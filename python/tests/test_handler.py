@@ -26,7 +26,7 @@ from doubles import InstanceDouble
 from doubles import allow
 from doubles import expect
 
-from tchannel.tornado.dispatch import TornadoDispatcher
+from tchannel.tornado.dispatch import RequestDispatcher
 from tchannel.tornado.stream import InMemStream
 from tchannel.zipkin.trace import Trace
 
@@ -61,7 +61,7 @@ def conn():
 
 @pytest.mark.gen_test
 def test_async_handler(req, conn):
-    dispatcher = TornadoDispatcher()
+    dispatcher = RequestDispatcher()
 
     @dispatcher.route("test")
     @tornado.gen.coroutine

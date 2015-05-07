@@ -25,7 +25,7 @@ import tornado
 import tornado.gen
 
 from tchannel.tornado import TChannel
-from tchannel.tornado import TornadoDispatcher
+from tchannel.tornado import RequestDispatcher
 from tchannel.tornado.stream import InMemStream
 from tchannel.zipkin.zipkin_trace import ZipkinTraceHook
 from tests.integration.server_manager import TChannelServerManager
@@ -58,7 +58,7 @@ def handler1(request, response, proxy):
 
 @pytest.fixture
 def handlers():
-    dispatcher = TornadoDispatcher()
+    dispatcher = RequestDispatcher()
 
     dispatcher.register("endpoint1", handler1)
     dispatcher.register("endpoint2", handler2)

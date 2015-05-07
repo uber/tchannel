@@ -21,4 +21,4 @@
 from __future__ import absolute_import
 
 from .tchannel import TChannel  # noqa
-from .dispatch import TornadoDispatcher  # noqa
+from .dispatch import RequestDispatcher  # noqa
