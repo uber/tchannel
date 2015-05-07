@@ -151,12 +151,10 @@ TChannelJSON.prototype.register = function register(
             if (err) {
                 assert(isError(err), 'Error argument must be an error');
 
-                if (self.logger) {
-                    self.logger.error('Got unexpected error in handler', {
-                        endpoint: arg1,
-                        err: err
-                    });
-                }
+                self.logger.error('Got unexpected error in handler', {
+                    endpoint: arg1,
+                    err: err
+                });
                 return res.sendError('UnexpectedError', 'Unexpected Error');
             }
 
@@ -211,13 +209,11 @@ TChannelJSON.prototype._stringify = function stringify(opts) {
             head: cyclicStringify(opts.head)
         });
 
-        if (self.logger) {
-            self.logger.error('Got unexpected unserializable JSON for arg2', {
-                endpoint: opts.endpoint,
-                direction: opts.direction,
-                headErr: headStringifyErr
-            });
-        }
+        self.logger.error('Got unexpected unserializable JSON for arg2', {
+            endpoint: opts.endpoint,
+            direction: opts.direction,
+            headErr: headStringifyErr
+        });
         return new Result(headStringifyErr);
     }
 
@@ -229,13 +225,11 @@ TChannelJSON.prototype._stringify = function stringify(opts) {
             body: cyclicStringify(opts.body)
         });
 
-        if (self.logger) {
-            self.logger.error('Got unexpected unserializable JSON for arg3', {
-                endpoint: opts.endpoint,
-                direction: opts.direction,
-                bodyErr: bodyStringifyErr
-            });
-        }
+        self.logger.error('Got unexpected unserializable JSON for arg3', {
+            endpoint: opts.endpoint,
+            direction: opts.direction,
+            bodyErr: bodyStringifyErr
+        });
         return new Result(bodyStringifyErr);
     }
 
@@ -256,7 +250,7 @@ TChannelJSON.prototype._parse = function parse(opts) {
             headStr: opts.head.slice(0, 10)
         });
 
-        if (self.logParseFailures && self.logger) {
+        if (self.logParseFailures) {
             self.logger.warn('Got unexpected invalid JSON for arg2', {
                 endpoint: opts.endpoint,
                 direction: opts.direction,
@@ -275,7 +269,7 @@ TChannelJSON.prototype._parse = function parse(opts) {
             bodyStr: opts.body.slice(0, 10)
         });
 
-        if (self.logParseFailures && self.logger) {
+        if (self.logParseFailures) {
             self.logger.warn('Got unexpected invalid JSON for arg3', {
                 endpoint: opts.endpoint,
                 direction: opts.direction,
