@@ -31,22 +31,15 @@ var allocCluster = require('./lib/alloc-cluster.js');
 allocCluster.test('getting an ok response', {
     numPeers: 2
 }, function t(cluster, assert) {
-    var server = cluster.channels[0].makeSubChannel({
-        serviceName: 'server'
-    });
     var client = cluster.channels[1];
 
-    var opts = {
-        isOptions: true
-    };
-
-    var tchannelJSON = TChannelJSON();
-    tchannelJSON.register(server, 'echo', opts, echo);
+    var tchannelJSON = makeTChannelJSONServer(cluster, {
+        okResponse: true
+    });
 
     tchannelJSON.send(client.request({
         serviceName: 'server',
-        timeout: 1500,
-        host: server.hostPort
+        timeout: 1500
     }), 'echo', {
         some: 'head'
     }, {
@@ -72,40 +65,20 @@ allocCluster.test('getting an ok response', {
         });
         assert.end();
     });
-
-    function echo(opts, req, head, body, cb) {
-        cb(null, {
-            ok: true,
-            head: null,
-            body: {
-                opts: opts,
-                head: head,
-                body: body,
-                serviceName: req.serviceName
-            }
-        });
-    }
 });
 
 allocCluster.test('getting a not ok response', {
     numPeers: 2
 }, function t(cluster, assert) {
-    var server = cluster.channels[0].makeSubChannel({
-        serviceName: 'server'
-    });
     var client = cluster.channels[1];
 
-    var opts = {
-        isOptions: true
-    };
-
-    var tchannelJSON = TChannelJSON();
-    tchannelJSON.register(server, 'echo', opts, echo);
+    var tchannelJSON = makeTChannelJSONServer(cluster, {
+        notOkResponse: true
+    });
 
     tchannelJSON.send(client.request({
         serviceName: 'server',
-        timeout: 1500,
-        host: server.hostPort
+        timeout: 1500
     }), 'echo', {
         some: 'head'
     }, {
@@ -127,28 +100,13 @@ allocCluster.test('getting a not ok response', {
         });
         assert.end();
     });
-
-    function echo(opts, req, head, body, cb) {
-        var MyError = TypedError({
-            message: 'my error',
-            type: 'my-error'
-        });
-
-        cb(null, {
-            ok: false,
-            head: null,
-            body: MyError({
-                someField: 'some field'
-            })
-        });
-    }
 });
 
 allocCluster.test('getting an UnexpectedError frame', {
     numPeers: 2
 }, function t(cluster, assert) {
-    var server = cluster.channels[0].makeSubChannel({
-        serviceName: 'server'
+    var tchannelJSON = makeTChannelJSONServer(cluster, {
+        networkFailureResponse: true
     });
     var client = cluster.channels[1];
 
@@ -161,22 +119,10 @@ allocCluster.test('getting an UnexpectedError frame', {
         }
     };
 
-    var opts = {
-        isOptions: true
-    };
-
-    var tchannelJSON = TChannelJSON();
-    tchannelJSON.register(server, 'echo', opts, echo);
-
     tchannelJSON.send(client.request({
         serviceName: 'server',
-        timeout: 1500,
-        host: server.hostPort
-    }), 'echo', {
-        some: 'head'
-    }, {
-        some: 'body'
-    }, function onResponse(err, resp) {
+        timeout: 1500
+    }), 'echo', null, null, function onResponse(err, resp) {
         assert.ok(err);
         assert.equal(err.isErrorFrame, true);
         assert.equal(err.codeName, 'UnexpectedError');
@@ -187,37 +133,22 @@ allocCluster.test('getting an UnexpectedError frame', {
 
         assert.end();
     });
-
-    function echo(opts, req, head, body, cb) {
-        var networkError = new Error('network failure');
-
-        cb(networkError);
-    }
 });
-
 
 allocCluster.test('getting a BadRequest frame', {
     numPeers: 2
 }, function t(cluster, assert) {
-    var server = cluster.channels[0].makeSubChannel({
-        serviceName: 'server'
+    makeTChannelJSONServer(cluster, {
+        networkFailureResponse: true
     });
     var client = cluster.channels[1];
-
-    var opts = {
-        isOptions: true
-    };
-
-    var tchannelJSON = TChannelJSON();
-    tchannelJSON.register(server, 'echo', opts, echo);
 
     client.request({
         serviceName: 'server',
         timeout: 1500,
         headers: {
             as: 'json'
-        },
-        host: server.hostPort
+        }
     }).send('echo', '123malformed json', null, onResponse);
 
     function onResponse(err, resp) {
@@ -236,10 +167,93 @@ allocCluster.test('getting a BadRequest frame', {
 
         assert.end();
     }
+});
 
-    function echo(opts, req, head, body, cb) {
+allocCluster.test('sending without as header', {
+    numPeers: 2
+}, function t(cluster, assert) {
+    makeTChannelJSONServer(cluster, {
+        networkFailureResponse: true
+    });
+    var client = cluster.channels[1];
+
+    client.request({
+        serviceName: 'server',
+        timeout: 1500
+    }).send('echo', '123malformed json', null, onResponse);
+
+    function onResponse(err, resp) {
+        assert.ok(err);
+
+        assert.equal(err.isErrorFrame, true);
+        assert.equal(err.codeName, 'BadRequest');
+        assert.equal(err.message,
+            'Expected call request as header to be json');
+
+        assert.equal(resp, null);
+
+        assert.end();
+    }
+});
+
+function makeTChannelJSONServer(cluster, opts) {
+    var server = cluster.channels[0].makeSubChannel({
+        serviceName: 'server'
+    });
+
+    // allocat subChannel in client pointing to server
+    cluster.channels[1].makeSubChannel({
+        serviceName: 'server',
+        peers: [
+            cluster.channels[0].hostPort
+        ]
+    });
+
+    var options = {
+        isOptions: true
+    };
+
+    var fn = opts.okResponse ? okHandler :
+        opts.notOkResponse ? notOkHandler :
+        opts.networkFailureResponse ? networkFailureHandler :
+            networkFailureHandler;
+
+    var tchannelJSON = TChannelJSON();
+    tchannelJSON.register(server, 'echo', options, fn);
+
+    return tchannelJSON;
+
+    function okHandler(opts, req, head, body, cb) {
+        cb(null, {
+            ok: true,
+            head: null,
+            body: {
+                opts: opts,
+                head: head,
+                body: body,
+                serviceName: req.serviceName
+            }
+        });
+    }
+
+    function notOkHandler(opts, req, head, body, cb) {
+        var MyError = TypedError({
+            message: 'my error',
+            type: 'my-error'
+        });
+
+        cb(null, {
+            ok: false,
+            head: null,
+            body: MyError({
+                someField: 'some field'
+            })
+        });
+    }
+
+    function networkFailureHandler(opts, req, head, body, cb) {
         var networkError = new Error('network failure');
 
         cb(networkError);
     }
-});
+}
