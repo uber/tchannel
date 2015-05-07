@@ -92,10 +92,8 @@ Agent.prototype.setupNewSpan = function setupNewSpan(options) {
 
     var parentSpan = options.parentSpan;
     if (options.outgoing && !parentSpan && !options.topLevelRequest) {
-        if (self.logger) {
-            self.logger.warn("TChannel tracer: parent span not specified " +
-                "for outgoing request!", options);
-        }
+        self.logger.warn("TChannel tracer: parent span not specified " +
+            "for outgoing request!", options);
     }
 
     if (parentSpan && (!options.parentid && !options.traceid)) {
@@ -125,8 +123,6 @@ Agent.prototype.reporter = function (span) {
     var self = this;
 
     // TODO: actual reporting
-    if (self.logger) {
-        self.logger.info('got span: ' + span.toString());
-    }
+    self.logger.info('got span: ' + span.toString());
 };
 
