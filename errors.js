@@ -37,6 +37,12 @@ module.exports.ArgChunkOutOfOrderError = TypedError({
     got: null
 });
 
+module.exports.Arg1OverLengthLimit = TypedError({
+    type: 'tchannel.arg1-over-length-limit',
+    message: 'arg 1 length {length} is larger than the limit 0x4000',
+    length: null
+});
+
 module.exports.BodyParserError = WrappedError({
     type: 'tchannel-handler.parse-error.body-failed',
     message: 'Could not parse body (arg3) argument.\n' +

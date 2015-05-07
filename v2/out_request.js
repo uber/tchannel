@@ -26,6 +26,8 @@ var OutRequest = require('../out_request');
 var StreamingOutRequest = require('../streaming_out_request');
 
 var CallFlags = require('./call_flags');
+var v2 = require('./index');
+var errors = require('../errors');
 
 function V2OutRequest(handler, id, options) {
     var self = this;
@@ -49,6 +51,11 @@ function _sendCallRequest(args, isLast) {
     var self = this;
     var flags = 0;
     if (!isLast) flags |= CallFlags.Fragment;
+    if (args && args[0] && args[0].length > v2.Frame.MaxArg1Size) {
+        self.errorEvent.emit(self, errors.Arg1OverLengthLimit({
+                length: '0x' + args[0].length.toString(16)
+        }));
+    }
     self.handler.sendCallRequestFrame(self, flags, args);
 };
 
