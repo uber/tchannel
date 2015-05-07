@@ -211,6 +211,7 @@ TChannelOutResponse.prototype.send = function send(res1, res2) {
     var self = this;
     self.sendCallResponseFrame([self.arg1, res1, res2], true);
     self.finishEvent.emit(self);
+    return self;
 };
 
 module.exports = TChannelOutResponse;
