@@ -39,6 +39,7 @@
     "debug-logtron": "3.2.0",
     "duplexer": "^0.1.1",
     "faucet": "0.0.1",
+    "hexer": "^1.4.5",
     "istanbul": "^0.3.13",
     "jshint": "^2.5.6",
     "ldjson-stream": "^1.2.1",
