@@ -74,7 +74,6 @@ Agent.prototype.setupNewSpan = function setupNewSpan(options) {
     }
 
     var span = new Span({
-        logger: self.logger,
         endpoint: new Span.Endpoint(
             host, 
             port, 
