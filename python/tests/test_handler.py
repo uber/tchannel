@@ -37,6 +37,7 @@ def req():
     request.endpoint = ""
     request.service = ""
     request.checksum = None
+    request.headers = {'as': 'raw'}
     request.argstreams = [
         InMemStream("test"),
         InMemStream(),

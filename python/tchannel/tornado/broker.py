@@ -24,15 +24,17 @@ import tornado
 
 from ..exceptions import ProtocolException
 from ..exceptions import TChannelException
+from ..scheme import RawArgScheme
+
 from .stream import Stream
 
 
 class ArgSchemeBroker(object):
     """Use serializer to broker request/response."""
 
-    def __init__(self, arg_scheme):
+    def __init__(self, arg_scheme=None):
         self.endpoint = {}
-        self.arg_scheme = arg_scheme
+        self.arg_scheme = arg_scheme or RawArgScheme()
 
     def register(self, rule, handler):
         """Register handler.
