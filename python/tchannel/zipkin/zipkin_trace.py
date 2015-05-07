@@ -39,21 +39,21 @@ class ZipkinTraceHook(EventHook):
             # to dst. By default it writes to stdout
             self.tracer = DebugTracer(dst)
 
-    def send_request(self, context):
+    def before_send_request(self, context):
         if not context.tracing.traceflags:
             return
 
         ann = annotation.client_send()
         context.tracing.annotations.append(ann)
 
-    def receive_request(self, context):
+    def before_receive_request(self, context):
         if not context.tracing.traceflags:
             return
 
         ann = annotation.server_recv()
         context.tracing.annotations.append(ann)
 
-    def send_response(self, context):
+    def after_send_response(self, context):
         if not context.tracing.traceflags:
             return
 
@@ -62,7 +62,7 @@ class ZipkinTraceHook(EventHook):
         context.tracing.annotations.append(ann)
         self.tracer.record([(context.tracing, context.tracing.annotations)])
 
-    def receive_response(self, context):
+    def after_receive_response(self, context):
         if not context.tracing.traceflags:
             return
 

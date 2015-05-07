@@ -480,7 +480,7 @@ class StreamConnection(TornadoConnection):
     "post_response(response)"
         stream response object into wire
 
-    "post_request(request)"
+    "stream_request(request)"
         stream request object into wire without waiting for a response
 
     "send_request(request)"
@@ -536,26 +536,33 @@ class StreamConnection(TornadoConnection):
     @tornado.gen.coroutine
     def post_response(self, response):
         try:
+            # TODO: before_send_response
             yield self._stream(response, self.response_message_factory)
 
             # event: send_response
             if self.tchannel:
                 self.tchannel.event_emitter.fire(
-                    EventType.send_response, response)
+                    EventType.after_send_response,
+                    response,
+                )
         finally:
             response.close_argstreams(force=True)
 
     @tornado.gen.coroutine
-    def post_request(self, request):
+    def stream_request(self, request):
         """send the given request and response is not required"""
 
         # event: send_request
         if self.tchannel:
-            self.tchannel.event_emitter.fire(EventType.send_request, request)
+            self.tchannel.event_emitter.fire(
+                EventType.before_send_request,
+                request,
+            )
 
         try:
             request.close_argstreams()
             yield self._stream(request, self.request_message_factory)
+            # TODO: add after_send_request callback
         finally:
             request.close_argstreams(force=True)
 
@@ -579,22 +586,26 @@ class StreamConnection(TornadoConnection):
 
         future = tornado.gen.Future()
         self._outstanding[request.id] = future
-        self.post_request(request)
+        self.stream_request(request)
 
         # the actual future that caller will yield
-        res_future = tornado.gen.Future()
+        response_future = tornado.gen.Future()
+        # TODO: fire before_receive_response
 
         def adapt_tracing(f):
             # fetch the request tracing for response
             f.result().tracing = request.tracing
-            res_future.set_result(f.result())
+            response_future.set_result(f.result())
             # event: receive_response
             if self.tchannel:
                 self.tchannel.event_emitter.fire(
-                    EventType.receive_response, f.result())
+                    EventType.after_receive_response,
+                    f.result(),
+                )
 
         tornado.ioloop.IOLoop.current().add_future(
             future,
-            adapt_tracing)
+            adapt_tracing,
+        )
 
-        return res_future
+        return response_future

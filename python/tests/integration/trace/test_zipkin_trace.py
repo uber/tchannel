@@ -75,8 +75,11 @@ def trace_server(random_open_port, handlers):
         port=random_open_port,
         dispatcher=handlers
     ) as manager:
-        manager.tchannel.add_hook(ZipkinTraceHook(
-            dst=trace_buf))
+        manager.tchannel.hooks.register(
+            ZipkinTraceHook(
+                dst=trace_buf,
+            ),
+        )
         yield manager
 
 
@@ -84,9 +87,8 @@ def trace_server(random_open_port, handlers):
 def test_zipkin_trace(trace_server):
     endpoint = b'endpoint1'
     zipkin_tracer = ZipkinTraceHook(dst=trace_buf)
-    tchannel = TChannel(
-        hooks=[zipkin_tracer]
-    )
+    tchannel = TChannel()
+    tchannel.hooks.register(zipkin_tracer)
 
     hostport = 'localhost:%d' % trace_server.port
 

@@ -69,7 +69,9 @@ class RequestDispatcher(BaseRequestHandler):
         if connection.tchannel:
             request.tracing.name = request.endpoint
             connection.tchannel.event_emitter.fire(
-                EventType.receive_request, request)
+                EventType.before_receive_request,
+                request,
+            )
 
         endpoint = self.endpoints.get(request.endpoint, None)
         if endpoint is None:
@@ -79,16 +81,24 @@ class RequestDispatcher(BaseRequestHandler):
                     request.endpoint, request.service),
                 request.id)
         else:
-            response = Response(id=request.id,
-                                checksum=request.checksum,
-                                tracing=request.tracing,
-                                connection=connection)
+            response = Response(
+                id=request.id,
+                checksum=request.checksum,
+                tracing=request.tracing,
+                connection=connection,
+            )
 
             connection.post_response(response)
-            yield self._call_endpoint(endpoint, request, response,
-                                      TChannelProxy(
-                                          connection.tchannel,
-                                          request.tracing))
+
+            yield self._call_endpoint(
+                endpoint,
+                request,
+                response,
+                TChannelProxy(
+                    connection.tchannel,
+                    request.tracing,
+                ),
+            )
 
     def route(self, rule, helper=None):
         """See ``register`` for documentation."""
