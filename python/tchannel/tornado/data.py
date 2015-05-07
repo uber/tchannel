@@ -20,12 +20,13 @@
 
 from __future__ import absolute_import
 
+from enum import IntEnum
+
 import tornado
 import tornado.gen
 
 from ..exceptions import TChannelException
 from ..messages.common import FlagsType
-from ..messages.common import StatusCode
 from ..messages.common import StreamState
 from ..zipkin.trace import Trace
 from .stream import InMemStream
@@ -118,6 +119,11 @@ class Request(object):
         return self.argstreams[2]
 
 
+class StatusCode(IntEnum):
+    ok = 0x00,
+    error = 0x01
+
+
 class Response(object):
     """An outgoing response.
 
@@ -164,7 +170,7 @@ class Response(object):
         if status not in StatusCode:
             raise TChannelException("Invalid status code!")
 
-        self.flags = status
+        self.flags = status.value
 
     def get_header_s(self):
         """Get the raw stream of header.
