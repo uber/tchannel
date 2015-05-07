@@ -26,7 +26,7 @@ var EventEmitter = require('./lib/event_emitter');
 var net = require('net');
 
 var TChannelConnection = require('./connection');
-var TChannelPeerHealthyState = require('./peer_states').TChannelPeerHealthyState;
+var states = require('./peer_states');
 
 function TChannelPeer(channel, hostPort, options) {
     if (!(this instanceof TChannelPeer)) {
@@ -45,11 +45,22 @@ function TChannelPeer(channel, hostPort, options) {
     self.state = null; // TODO
     self.connections = [];
     self.random = self.channel.random;
+
+    self.stateOptions = {
+        timers: self.channel.timers,
+        random: self.channel.random,
+        period: self.options.period,
+        maxErrorRate: self.options.maxErrorRate,
+        probation: self.options.probation,
+        stateMachine: self,
+        nextHandler: self
+    };
+
     if (self.options.initialState) {
         self.setState(self.options.initialState);
         delete self.options.initialState;
     } else {
-        self.setState(TChannelPeerHealthyState);
+        self.setState(states.HealthyState);
     }
 }
 
@@ -101,7 +112,7 @@ TChannelPeer.prototype.setState = function setState(StateType) {
         StateType.prototype.type === currentType) {
         return;
     }
-    var state = new StateType(self.channel, self);
+    var state = new StateType(self.stateOptions);
     if (state && state.type === currentType) {
         return;
     }
@@ -234,6 +245,29 @@ TChannelPeer.prototype.countOutPending = function countOutPending() {
         pending += self.connections[index].pending.out;
     }
     return pending;
+};
+
+// Consulted depending on the peer state
+TChannelPeer.prototype.shouldRequest = function shouldRequest() {
+    var self = this;
+    // space:
+    //   [0.1, 0.2)  unconnected peers
+    //   [0.2, 0.3)  incoming connections
+    //   [0.3, 0.4)  new outgoing connections
+    //   [0.4, 1.0)  identified outgoing connections
+    var inconn = self.getInConnection();
+    var outconn = self.getOutConnection();
+    var random = self.outPendingWeightedRandom();
+    if (!inconn && !outconn) {
+        return 0.1 + random * 0.1;
+    } else if (!outconn || outconn.direction !== 'out') {
+        self.connect();
+        return 0.2 + random * 0.1;
+    } else if (outconn.remoteName === null) {
+        return 0.3 + random * 0.1;
+    } else {
+        return 0.4 + random * 0.6;
+    }
 };
 
 module.exports = TChannelPeer;
