@@ -26,7 +26,7 @@ var EventEmitter = require('./lib/event_emitter');
 var net = require('net');
 
 var TChannelConnection = require('./connection');
-var states = require('./peer_states');
+var states = require('./states');
 
 function TChannelPeer(channel, hostPort, options) {
     if (!(this instanceof TChannelPeer)) {
