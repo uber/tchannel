@@ -103,7 +103,7 @@ class RequestDispatcher(BaseRequestHandler):
                     )
                 )
                 response.flush()
-            except Exception as e:
+            except Exception:
                 # refine the exception in the following patches
                 if response.flushed:
                     # this is bad if user called flush before exception happens
