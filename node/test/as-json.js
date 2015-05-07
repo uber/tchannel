@@ -157,7 +157,7 @@ allocCluster.test('getting a BadRequest frame', {
         assert.equal(err.isErrorFrame, true);
         assert.equal(err.codeName, 'BadRequest');
         assert.equal(err.message,
-            'tchannel-handler.parse-error.head-failed: Could not ' +
+            'tchannel-json-handler.parse-error.head-failed: Could not ' +
                 'parse head (arg2) argument.\n' +
                 'Expected JSON encoded arg2 for endpoint echo.\n' +
                 'Got 123malform instead of JSON.'
