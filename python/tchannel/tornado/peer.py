@@ -36,12 +36,12 @@ from .stream import InMemStream
 from .stream import Stream
 from .stream import read_full
 
+
 try:
     # included in Tornado 4.2
     from tornado.locks import Condition
 except ImportError:  # pragma: no cover
     from toro import Condition
-
 
 log = logging.getLogger('tchannel')
 
@@ -138,6 +138,11 @@ class PeerGroup(object):
         A peer for the given host-port must not already exist in the group.
         """
         assert peer, "peer is required"
+
+        if isinstance(peer, basestring):
+            # Assume strings are host-ports
+            peer = Peer(self.tchannel, peer)
+
         assert peer.hostport not in self._peers, (
             "%s already has a peer" % peer.hostport
         )
@@ -383,7 +388,7 @@ class PeerHealthyState(PeerState):
         # Connected peers have a score in the range [0.2, 1.0) and all other
         # peers have a score in the range [0.0, 0.2). So, we will always
         # prefer peers that are already connected over peers that require new
-        #  connections.
+        # connections.
         if self.peer.connected:
             return 0.2 + random() * 0.8
             # TODO this can be split between incoming and outgoing connections.
@@ -392,8 +397,8 @@ class PeerHealthyState(PeerState):
         else:
             return 0.1 + random() * 0.1
 
-        # TODO: It may be reasonable to allow the Peer or TChannel to control
-        # randomness.
+            # TODO: It may be reasonable to allow the Peer or TChannel to
+            # control randomness.
 
 
 class PeerClientOperation(object):

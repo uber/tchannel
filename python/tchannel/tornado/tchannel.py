@@ -21,8 +21,9 @@
 from __future__ import absolute_import
 
 import logging
-import os
 import sys
+import os
+from enum import IntEnum
 
 import tornado.gen
 import tornado.ioloop
@@ -30,14 +31,13 @@ import tornado.iostream
 import tornado.tcpserver
 from tornado.netutil import bind_sockets
 
-from enum import IntEnum
-
 from ..event import EventEmitter
 from ..event import EventRegistrar
 from ..handler import CallableRequestHandler
 from ..net import local_ip
 from .connection import StreamConnection
 from .peer import PeerGroup
+
 
 log = logging.getLogger('tchannel')
 
@@ -49,21 +49,23 @@ class State(IntEnum):
 
 
 class TChannel(object):
+    """Manages inbound and outbound connections to various hosts."""
 
-    """Manages inbound and outbound connections to various hosts.
-
-    This class is a singleton. All instances of it are the same. If you need
-    separate instances, use the ``ignore_singleton`` argument.
-    """
-
-    def __init__(self, hostport=None, process_name=None):
+    def __init__(self, hostport=None, process_name=None, known_peers=None):
         """Build or re-use a TChannel.
 
         :param hostport:
-            The hostport at which the service hosted behind this TChannel can
-            be reached.
+            The host-port at which the service behind this TChannel is
+            reachable. The port specified in the ``hostport`` is what the
+            server will listen on. If unspecified, the system will attempt to
+            determine the local network IP for this host and use an
+            OS-assigned port.
         :param process_name:
-            Name of this process. This is used for logging only.
+            Name of this process. This is used for logging only. If
+            unspecified, this will default to ``$processName[$processId]``.
+        :param known_peers:
+            A list of host-ports at which already known peers can be reached.
+            Defaults to an empty list.
         """
         self._state = State.ready
         self.peers = PeerGroup(self)
@@ -86,6 +88,10 @@ class TChannel(object):
         self.event_emitter = EventEmitter()
         self.hooks = EventRegistrar(self.event_emitter)
 
+        if known_peers:
+            for peer_hostport in known_peers:
+                self.peers.add(peer_hostport)
+
     @property
     def closed(self):
         return self._state == State.closed
@@ -106,6 +112,14 @@ class TChannel(object):
         return "%s:%d" % (self._host, self._port)
 
     def request(self, hostport=None, service=None, **kwargs):
+        """Initiate a new request through this TChannel.
+
+        :param hostport:
+            Host to which the request will be made. If unspecified,  a random
+            known peer will be picked.
+        :param service:
+            Service being called. Defaults to an empty string.
+        """
         return self.peers.request(hostport=hostport, service=service, **kwargs)
 
     def host(self, handler):
