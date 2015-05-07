@@ -134,11 +134,20 @@ class EventEmitter(object):
             except Exception as e:
                 log.error(e.message)
 
+
+class EventRegistrar(object):
+
+    def __init__(self, event_emitter):
+        self.event_emitter = event_emitter
+
+    def register(self, hook, event_type=None):
+        return self.event_emitter.register_hook(hook, event_type)
+
     def __getattr__(self, attr):
         if attr in EventType.__members__:
             event_type = EventType[attr]
             return functools.partial(
-                self.register_hook,
+                self.register,
                 event_type=event_type,
             )
         return super(EventEmitter, self).__getattr__(attr)

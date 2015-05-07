@@ -24,6 +24,7 @@ from mock import MagicMock
 
 from tchannel.event import EventEmitter
 from tchannel.event import EventType
+from tchannel.event import EventRegistrar
 
 
 def test_event_hook():
@@ -39,10 +40,11 @@ def test_event_hook():
 
 def test_decorator_registration():
     event_emitter = EventEmitter()
+    registrar = EventRegistrar(event_emitter)
 
     called = [False]
 
-    @event_emitter.before_send_request
+    @registrar.before_send_request
     def foo():
         called[0] = True
 

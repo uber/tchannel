@@ -33,6 +33,7 @@ from tornado.netutil import bind_sockets
 from enum import IntEnum
 
 from ..event import EventEmitter
+from ..event import EventRegistrar
 from ..handler import CallableRequestHandler
 from ..net import local_ip
 from .connection import StreamConnection
@@ -55,7 +56,7 @@ class TChannel(object):
     separate instances, use the ``ignore_singleton`` argument.
     """
 
-    def __init__(self, hostport=None, process_name=None, hooks=None):
+    def __init__(self, hostport=None, process_name=None):
         """Build or re-use a TChannel.
 
         :param hostport:
@@ -82,14 +83,8 @@ class TChannel(object):
         self._handler = None
 
         # register event hooks
-        self.hooks = EventEmitter()
-        if hooks:
-            for hook in hooks:
-                self.hooks.register_hook(hook)
-
-    def add_hook(self, hook):
-        if hook:
-            self.hooks.register_hook(hook)
+        self.event_emitter = EventEmitter()
+        self.hooks = EventRegistrar(self.event_emitter)
 
     @property
     def closed(self):
