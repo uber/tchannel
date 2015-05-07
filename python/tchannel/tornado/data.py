@@ -124,6 +124,11 @@ class Response(object):
     level. This is going to hide the protocol level message information.
     """
 
+    OK = 0x00
+    ERROR = 0x01
+
+    resp_status = [OK, ERROR]
+
     # TODO decide which elements inside "message" object to expose to user.
     def __init__(
             self,
@@ -138,7 +143,7 @@ class Response(object):
             scheme=None,
     ):
 
-        self.flags = flags
+        self.flags = flags or self.OK
         self.code = code
         self.tracing = tracing
         self.checksum = checksum
@@ -153,6 +158,17 @@ class Response(object):
         self.flushed = False
 
         self.scheme = scheme
+
+    @property
+    def status(self):
+        return self.flags
+
+    @status.setter
+    def status(self, status):
+        if status not in self.resp_status:
+            raise TChannelException("Not valid status!")
+
+        self.flags = status
 
     def get_header_s(self):
         """Get the raw stream of header.

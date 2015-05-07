@@ -23,7 +23,6 @@ from __future__ import absolute_import
 import tornado
 import tornado.gen
 from tornado import gen
-from tornado import ioloop
 
 from ..event import EventType
 from ..handler import BaseRequestHandler
@@ -92,15 +91,25 @@ class RequestDispatcher(BaseRequestHandler):
 
             connection.post_response(response)
 
-            yield self._call_endpoint(
-                endpoint,
-                request,
-                response,
-                TChannelProxy(
-                    connection.tchannel,
-                    request.tracing,
-                ),
-            )
+            try:
+                yield gen.maybe_future(
+                    endpoint(
+                        request,
+                        response,
+                        TChannelProxy(
+                            connection.tchannel,
+                            request.tracing,
+                        ),
+                    )
+                )
+                response.flush()
+            except Exception as e:
+                # refine the exception in the following patches
+                if response.flushed:
+                    # this is bad if user called flush before exception happens
+                    return
+                # TODO send internal error
+
 
     def route(self, rule, helper=None):
         """See ``register`` for documentation."""
@@ -142,19 +151,6 @@ class RequestDispatcher(BaseRequestHandler):
 
         broker.register(rule, handler)
         self.endpoints[rule] = broker.handle_call
-
-
-class TornadoDispatcher(RequestDispatcher):
-    """Dispatches requests to different endpoints based on ``arg1``"""
-
-    def _call_endpoint(self, endpoint, request, response, proxy):
-        future = gen.maybe_future(endpoint(request, response, proxy))
-        future.add_done_callback(lambda _: response.flush())
-
-        # This is just to make sure that the Future gets consumed.
-        ioloop.IOLoop.current().add_future(future, lambda f: f.exception())
-
-        return future
 
 
 class TChannelProxy(object):

@@ -44,7 +44,7 @@ def register(dispatcher, service_module, handler, service_name=None):
             def hello(self, name):
                 return "Hello, %s" % name
 
-        dispatcher = TornadoDispatcher()
+        dispatcher = RequestDispatcher()
         tchannel.thrift.register(dispatcher, HelloWorld, HelloWorldHandler())
 
     :param dispatcher:

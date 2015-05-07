@@ -26,7 +26,7 @@ import tornado.gen
 
 from tchannel.scheme import JsonArgScheme
 from tchannel.tornado import TChannel
-from tchannel.tornado import TornadoDispatcher
+from tchannel.tornado import RequestDispatcher
 from tchannel.tornado.broker import ArgSchemeBroker
 from tests.integration.server_manager import TChannelServerManager
 
@@ -72,7 +72,7 @@ def sample_json():
 
 @pytest.fixture
 def handlers():
-    dispatcher = TornadoDispatcher()
+    dispatcher = RequestDispatcher()
 
     @dispatcher.route("json_echo", ArgSchemeBroker(JsonArgScheme()))
     @tornado.gen.coroutine

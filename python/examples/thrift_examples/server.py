@@ -23,7 +23,7 @@ from tornado import ioloop
 from hello import HelloService
 from tchannel import thrift
 from tchannel.tornado import TChannel
-from tchannel.tornado import TornadoDispatcher
+from tchannel.tornado import RequestDispatcher
 
 
 class HelloServiceHandler(object):
@@ -34,7 +34,7 @@ class HelloServiceHandler(object):
 
 
 def run():
-    dispatcher = TornadoDispatcher()
+    dispatcher = RequestDispatcher()
     TChannel('localhost:4040').host(dispatcher).listen()
     thrift.register(dispatcher, HelloService, HelloServiceHandler())
     ioloop.IOLoop.current().start()

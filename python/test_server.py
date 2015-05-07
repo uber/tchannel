@@ -25,12 +25,11 @@ import tornado.gen
 import tornado.ioloop
 
 from tchannel.tornado import TChannel
-from tchannel.tornado.dispatch import TornadoDispatcher
+from tchannel.tornado.dispatch import RequestDispatcher
 
 
 @tornado.gen.coroutine
 def echo(request, response, proxy):
-    # TODO: response header as=raw
     response.set_header_s(request.get_header_s())
     response.set_body_s(request.get_body_s())
 
@@ -52,7 +51,7 @@ def main():  # pragma: no cover
     client = TChannel('%s:%d' % (args.host, args.port))
 
     # TODO: service=test_as_raw
-    handler = TornadoDispatcher()
+    handler = RequestDispatcher()
     client.host(handler)
 
     # TODO: do we need to implement these differently?
