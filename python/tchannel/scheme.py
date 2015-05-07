@@ -56,8 +56,7 @@ class ArgScheme(object):
 
 
 class JsonArgScheme(ArgScheme):
-    def __init__(self):
-        self._type = "json"
+    _type = 'json'
 
     def type(self):
         return self._type
@@ -77,3 +76,22 @@ class JsonArgScheme(ArgScheme):
 
     def serialize_body(self, obj):
         return json.dumps(obj)
+
+
+class RawArgScheme(ArgScheme):
+    _type = "raw"
+
+    def type(self):
+        return self._type
+
+    def deserialize_header(self, obj):
+        return obj
+
+    def serialize_header(self, obj):
+        return obj
+
+    def deserialize_body(self, obj):
+        return obj
+
+    def serialize_body(self, obj):
+        return obj

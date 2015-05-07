@@ -38,7 +38,8 @@ def test_dispatch():
         pass
 
     endpoint = dispatcher.endpoints.get("/hello")
-    assert endpoint == dummy_endpoint
-
+    assert endpoint == dispatcher.default_broker.handle_call
+    assert dispatcher.default_broker.endpoint.get('/hello') == dummy_endpoint
     endpoint = dispatcher.endpoints.get("/")
-    assert endpoint == dummy_endpoint1
+    assert endpoint == dispatcher.default_broker.handle_call
+    assert dispatcher.default_broker.endpoint.get('/') == dummy_endpoint1

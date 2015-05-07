@@ -454,6 +454,11 @@ class PeerClientOperation(object):
             parent_span_id = None
             trace_id = None
 
+        # set 'as' to 'raw if 'as' is empty
+        headers = headers or {}
+        if 'as' not in headers:
+            headers['as'] = 'raw'
+
         connection = yield self.peer.connect()
         message_id = connection.next_message_id()
         response = yield connection.send_request(
