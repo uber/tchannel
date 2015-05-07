@@ -68,7 +68,7 @@ class RequestDispatcher(BaseRequestHandler):
         # event: receive_request
         if connection.tchannel:
             request.tracing.name = request.endpoint
-            connection.tchannel.event_emitter.fire(
+            connection.tchannel.hooks.fire(
                 EventType.before_receive_request,
                 request,
             )

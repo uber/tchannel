@@ -35,3 +35,16 @@ def test_event_hook():
     for event_type in EventType:
         event_emitter.fire(event_type, None)
         assert getattr(mock_hook, event_type.name).called is True
+
+
+def test_decorator_registration():
+    event_emitter = EventEmitter()
+
+    called = [False]
+
+    @event_emitter.before_send_request
+    def foo():
+        called[0] = True
+
+    event_emitter.fire(EventType.before_send_request)
+    assert called[0] is True

@@ -541,7 +541,7 @@ class StreamConnection(TornadoConnection):
 
             # event: send_response
             if self.tchannel:
-                self.tchannel.event_emitter.fire(
+                self.tchannel.hooks.fire(
                     EventType.after_send_response,
                     response,
                 )
@@ -554,7 +554,7 @@ class StreamConnection(TornadoConnection):
 
         # event: send_request
         if self.tchannel:
-            self.tchannel.event_emitter.fire(
+            self.tchannel.hooks.fire(
                 EventType.before_send_request,
                 request,
             )
@@ -598,8 +598,9 @@ class StreamConnection(TornadoConnection):
             response_future.set_result(f.result())
             # event: receive_response
             if self.tchannel:
-                self.tchannel.event_emitter.fire(
-                    EventType.after_receive_response, f.result(),
+                self.tchannel.hooks.fire(
+                    EventType.after_receive_response,
+                    f.result(),
                 )
 
         tornado.ioloop.IOLoop.current().add_future(

@@ -20,13 +20,17 @@
 
 from __future__ import absolute_import
 
+import collections
 import logging
+import functools
 
 from enum import IntEnum
+from enum import unique
 
 log = logging.getLogger('tchannel')
 
 
+@unique
 class EventType(IntEnum):
     """Types to represent system events
 
@@ -102,16 +106,39 @@ class EventHook(object):
 
 class EventEmitter(object):
     def __init__(self):
-        self.hooks = []
+        self.hooks = collections.defaultdict(lambda: [])
 
-    def register_hook(self, hook):
-        self.hooks.append(hook)
+    def register_hook(self, hook, event_type=None):
+        """
+        If ``event_type`` is provided, then ``hook`` will be called whenever
+        that event is fired.
+
+        If no ``event_type`` is specifid, but ``hook`` implements any methods
+        with names matching an event hook, then those will be registered with
+        their corresponding events. This allows for more stateful, class-based
+        event handlers.
+        """
+        if event_type is not None:
+            assert event_type in EventType, "unrecognized event type"
+            return self.hooks[event_type].append(hook)
+
+        for event_type in EventType:
+            func = getattr(hook, event_type.name, None)
+            if callable(func):
+                self.register_hook(func, event_type)
 
     def fire(self, event, *args, **kwargs):
-        # TODO find proper hook name
-        event_hook_name = event.name
-        for hook in self.hooks:
+        for hook in self.hooks[event]:
             try:
-                getattr(hook, event_hook_name)(*args, **kwargs)
+                hook(*args, **kwargs)
             except Exception as e:
                 log.error(e.message)
+
+    def __getattr__(self, attr):
+        if attr in EventType.__members__:
+            event_type = EventType[attr]
+            return functools.partial(
+                self.register_hook,
+                event_type=event_type,
+            )
+        return super(EventEmitter, self).__getattr__(attr)

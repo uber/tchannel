@@ -82,14 +82,14 @@ class TChannel(object):
         self._handler = None
 
         # register event hooks
-        self.event_emitter = EventEmitter()
+        self.hooks = EventEmitter()
         if hooks:
             for hook in hooks:
-                self.event_emitter.register_hook(hook)
+                self.hooks.register_hook(hook)
 
     def add_hook(self, hook):
         if hook:
-            self.event_emitter.register_hook(hook)
+            self.hooks.register_hook(hook)
 
     @property
     def closed(self):
