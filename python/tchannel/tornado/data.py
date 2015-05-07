@@ -25,6 +25,7 @@ import tornado.gen
 
 from ..exceptions import TChannelException
 from ..messages.common import FlagsType
+from ..messages.common import StatusCode
 from ..messages.common import StreamState
 from ..zipkin.trace import Trace
 from .stream import InMemStream
@@ -124,11 +125,6 @@ class Response(object):
     level. This is going to hide the protocol level message information.
     """
 
-    OK = 0x00
-    ERROR = 0x01
-
-    resp_status = [OK, ERROR]
-
     # TODO decide which elements inside "message" object to expose to user.
     def __init__(
             self,
@@ -143,7 +139,7 @@ class Response(object):
             scheme=None,
     ):
 
-        self.flags = flags or self.OK
+        self.flags = flags or StatusCode.ok
         self.code = code
         self.tracing = tracing
         self.checksum = checksum
@@ -160,13 +156,13 @@ class Response(object):
         self.scheme = scheme
 
     @property
-    def status(self):
+    def status_code(self):
         return self.flags
 
-    @status.setter
-    def status(self, status):
-        if status not in self.resp_status:
-            raise TChannelException("Not valid status!")
+    @status_code.setter
+    def status_code(self, status):
+        if status not in StatusCode:
+            raise TChannelException("Invalid status code!")
 
         self.flags = status
 

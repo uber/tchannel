@@ -47,6 +47,11 @@ class StreamState(IntEnum):
     none = 0x03
 
 
+class StatusCode(IntEnum):
+    ok = 0x00,
+    error = 0x01
+
+
 class FlagsType(IntEnum):
     none = 0x00,
     fragment = 0x01

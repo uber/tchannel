@@ -109,7 +109,7 @@ class RequestDispatcher(BaseRequestHandler):
                     # this is bad if user called flush before exception happens
                     return
                 # TODO send internal error
-
+                raise e
 
     def route(self, rule, helper=None):
         """See ``register`` for documentation."""
