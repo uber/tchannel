@@ -25,7 +25,7 @@ function Stat(name, type, value, tags) {
     self.name = name;
     self.type = type;
     self.value = value;
-    self.tags = {};
+    self.tags = tags || {};
 }
 
 module.exports = Stat;
