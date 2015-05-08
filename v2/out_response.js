@@ -26,6 +26,8 @@ var OutResponse = require('../out_response');
 var StreamingOutResponse = require('../streaming_out_response');
 
 var CallFlags = require('./call_flags');
+var v2 = require('./index');
+var errors = require('../errors');
 
 function V2OutResponse(handler, id, options) {
     var self = this;
@@ -48,6 +50,13 @@ V2StreamingOutResponse.prototype._sendCallResponse =
 function _sendCallResponse(args, isLast) {
     var self = this;
     var flags = 0;
+    if (args && args[0] && args[0].length > v2.CallResponse.MaxArg1Size) {
+        self.errorEvent.emit(self, errors.Arg1OverLengthLimit({
+                length: '0x' + args[0].length.toString(16),
+                limit: '0x' + v2.CallResponse.MaxArg1Size.toString(16)
+        }));
+        return;
+    }
     if (!isLast) flags |= CallFlags.Fragment;
     self.handler.sendCallResponseFrame(self, flags, args);
 };
