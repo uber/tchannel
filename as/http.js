@@ -26,29 +26,6 @@ var http = require('http');
 var PassThrough = require('readable-stream').PassThrough;
 var extend = require('xtend');
 
-/*
- * arg1: empty
- *
- * arg2: binary
- * - requests
- *   - schema:
- *     method~1
- *     url~2
- *     numHeaders:2 (headerName~2 headerValue~2){numHeaders}
- * - responses
- *   - schema:
- *     statusCode:2
- *     message~2
- *     numHeaders:2 (headerName~2 headerValue~2){numHeaders}
- *   - notes:
- *     - statusCode is the HTTP status code
- *     - message is utf-8-encoded
- *     - the headers section is to be implemented as a multi-map, or list of
- *       pairs; a single-valued map is insufficient
- *
- * arg3: raw binary stream, all bytes after the double newline separator
- */
-
 var headerRW = bufrw.Repeat(bufrw.UInt16BE,
     bufrw.Series(bufrw.str2, bufrw.str2));
 
@@ -62,9 +39,9 @@ function HTTPReqArg2(method, url, headerPairs) {
 }
 
 HTTPReqArg2.RW = bufrw.Struct(HTTPReqArg2, {
-    method: bufrw.str1,
-    url: bufrw.str2,
-    headerPairs: headerRW
+    method: bufrw.str1,   // method~1
+    url: bufrw.str2,      // url~2
+    headerPairs: headerRW // numHeaders:2 (headerName~2 headerValue~2){numHeaders}
 });
 
 function HTTPResArg2(statusCode, message, headerPairs) {
@@ -75,9 +52,9 @@ function HTTPResArg2(statusCode, message, headerPairs) {
 }
 
 HTTPResArg2.RW = bufrw.Struct(HTTPResArg2, {
-    statusCode: bufrw.UInt16BE,
-    message: bufrw.str2,
-    headerPairs: headerRW
+    statusCode: bufrw.UInt16BE, // statusCode:2
+    message: bufrw.str2,        // message~2
+    headerPairs: headerRW       // numHeaders:2 (headerName~2 headerValue~2){numHeaders}
 });
 
 function TChannelHTTP(options) {
