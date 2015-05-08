@@ -455,6 +455,10 @@ TChannel.prototype.emitStat = function emitStat(stat) {
     }
 
     self.statEvent.emit(stat);
+
+    if (self.topChannel) {
+        self.topChannel.statEvent.emit(stat);
+    }
 };
 
 module.exports = TChannel;
