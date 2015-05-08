@@ -7,12 +7,12 @@ For JSON call requests the `as` (arg scheme) transport header must be set to
 sent using `call res` messages, with values for `arg1`, `arg2` and `arg3` as
 defined in [Arguments][].
 
-For each `call req`, the service name (`service~1` a 1 byte length-prefixed
-utf-8 service name string) should be set to the TChannel service being called.
+For each `call req`, the service name should be set to the TChannel service
+being called.
 
-For each `call res`, the response code (`code:1`) must be set to `0x00` if the
-reponse was successful and the response code must be set to `0x01` if the
-response was a failure.
+For each `call res`, the response code must be set to `0` if the reponse was
+successful and the response code must be set to `1` if the response was a
+failure.
 
 ## Arguments
 
