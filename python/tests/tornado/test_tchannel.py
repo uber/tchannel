@@ -41,3 +41,11 @@ def test_peer_caching(tchannel, peer):
     "Connections are long-lived and should not be recreated."""
     tchannel.peers.add(peer)
     assert tchannel.peers.get("localhost:4040") is peer
+
+
+def test_known_peers():
+    peers = ["localhost:%d" % port for port in range(4040, 4101)]
+    tchannel = TChannel(known_peers=peers)
+
+    for peer in peers:
+        assert tchannel.peers.lookup(peer)

@@ -24,7 +24,7 @@ import random
 
 import tornado.gen
 
-from tchannel.tornado.dispatch import TornadoDispatcher
+from tchannel.tornado.dispatch import RequestDispatcher
 from tchannel.tornado.stream import InMemStream
 from tchannel.tornado.util import print_arg
 
@@ -59,7 +59,7 @@ def slow(request, response, proxy):
 
 
 def get_example_handler():
-    dispatcher = TornadoDispatcher()
+    dispatcher = RequestDispatcher()
 
     dispatcher.register("hi", say_hi)
     dispatcher.register("ok", say_ok)

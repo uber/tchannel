@@ -24,7 +24,6 @@
 
 var Buffer = require('buffer').Buffer;
 var assert = require('assert');
-var NullLogtron = require('null-logtron');
 var Result = require('bufrw/result');
 var cyclicStringify = require('json-stringify-safe');
 
@@ -39,7 +38,8 @@ function TChannelJSON(options) {
 
     var self = this;
 
-    self.logger = options && options.logger || NullLogtron();
+    // lazily populated from tchannel
+    self.logger = null;
 
     var bossMode = options && options.bossMode;
     self.bossMode = typeof bossMode === 'boolean' ? bossMode : false;
@@ -55,6 +55,10 @@ TChannelJSON.prototype.send = function send(
 ) {
 
     var self = this;
+
+    if (!self.logger) {
+        self.logger = req.logger;
+    }
 
     assert(typeof endpoint === 'string', 'endpoint must be a string');
     assert(typeof req.serviceName === 'string' && req.serviceName !== '',
@@ -114,6 +118,10 @@ TChannelJSON.prototype.register = function register(
     tchannel, arg1, opts, handlerFunc
 ) {
     var self = this;
+
+    if (!self.logger) {
+        self.logger = tchannel.logger;
+    }
 
     tchannel.register(arg1, endpointHandler);
 

@@ -20,6 +20,8 @@
 
 from __future__ import absolute_import
 
+from enum import IntEnum
+
 import tornado
 import tornado.gen
 
@@ -117,6 +119,11 @@ class Request(object):
         return self.argstreams[2]
 
 
+class StatusCode(IntEnum):
+    ok = 0x00,
+    error = 0x01
+
+
 class Response(object):
     """An outgoing response.
 
@@ -138,7 +145,7 @@ class Response(object):
             scheme=None,
     ):
 
-        self.flags = flags
+        self.flags = flags or StatusCode.ok
         self.code = code
         self.tracing = tracing
         self.checksum = checksum
@@ -153,6 +160,17 @@ class Response(object):
         self.flushed = False
 
         self.scheme = scheme
+
+    @property
+    def status_code(self):
+        return self.flags
+
+    @status_code.setter
+    def status_code(self, status):
+        if status not in StatusCode:
+            raise TChannelException("Invalid status code!")
+
+        self.flags = status.value
 
     def get_header_s(self):
         """Get the raw stream of header.
