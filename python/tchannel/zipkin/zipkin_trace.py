@@ -39,34 +39,50 @@ class ZipkinTraceHook(EventHook):
             # to dst. By default it writes to stdout
             self.tracer = DebugTracer(dst)
 
-    def before_send_request(self, context):
-        if not context.tracing.traceflags:
+    def before_send_request(self, request):
+        if not request.tracing.traceflags:
             return
 
         ann = annotation.client_send()
-        context.tracing.annotations.append(ann)
+        request.tracing.annotations.append(ann)
 
-    def before_receive_request(self, context):
-        if not context.tracing.traceflags:
+    def before_receive_request(self, request):
+        if not request.tracing.traceflags:
             return
 
         ann = annotation.server_recv()
-        context.tracing.annotations.append(ann)
+        request.tracing.annotations.append(ann)
 
-    def after_send_response(self, context):
-        if not context.tracing.traceflags:
+    def after_send_response(self, response):
+        if not response.tracing.traceflags:
             return
 
         # send out a pair of annotations{server_recv, server_send} to zipkin
         ann = annotation.server_send()
-        context.tracing.annotations.append(ann)
-        self.tracer.record([(context.tracing, context.tracing.annotations)])
+        response.tracing.annotations.append(ann)
+        self.tracer.record([(response.tracing, response.tracing.annotations)])
 
-    def after_receive_response(self, context):
-        if not context.tracing.traceflags:
+    def after_receive_response(self, response):
+        if not response.tracing.traceflags:
             return
 
         # send out a pair of annotations{client_recv, client_send} to zipkin
         ann = annotation.client_recv()
-        context.tracing.annotations.append(ann)
-        self.tracer.record([(context.tracing, context.tracing.annotations)])
+        response.tracing.annotations.append(ann)
+        self.tracer.record([(response.tracing, response.tracing.annotations)])
+
+    def after_receive_error(self, error):
+        if not error.tracing.traceflags:
+            return
+
+        ann = annotation.client_recv()
+        error.tracing.annotations.append(ann)
+        self.tracer.record([(error.tracing, error.tracing.annotations)])
+
+    def after_send_error(self, error):
+        if not error.tracing.traceflags:
+            return
+
+        ann = annotation.server_send()
+        error.tracing.annotations.append(ann)
+        self.tracer.record([(error.tracing, error.tracing.annotations)])

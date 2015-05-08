@@ -124,7 +124,7 @@ def test_valid_ping_request():
     (messages.PingResponseMessage, messages.ping_res_rw, {}),
     (messages.ErrorMessage, messages.error_rw, {
         'code': 1,
-        'message': 'hi',
+        'description': 'hi',
     }),
     (messages.CallRequestMessage, messages.call_req_rw, {
         'flags': 0,
@@ -168,7 +168,7 @@ def test_parse_message(message_rw, byte_stream):
     """Verify all messages parse properly."""
     error = message_rw.read(BytesIO(byte_stream))
     assert error.code == 1
-    assert error.message == u'hi'
+    assert error.description == u'hi'
 
 
 def test_error_message_name():

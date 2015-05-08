@@ -20,12 +20,14 @@
 from __future__ import absolute_import
 
 import pytest
+
 import tornado
 import tornado.gen
 from doubles import InstanceDouble
 from doubles import allow
 from doubles import expect
 
+from tchannel.tornado import TChannel
 from tchannel.tornado.dispatch import RequestDispatcher
 from tchannel.tornado.stream import InMemStream
 from tchannel.zipkin.trace import Trace
@@ -54,7 +56,7 @@ def conn():
     conn = InstanceDouble('tchannel.tornado.connection.StreamConnection')
     allow(conn).send_error
     allow(conn).post_response
-    conn.tchannel = None
+    conn.tchannel = TChannel()
 
     return conn
 

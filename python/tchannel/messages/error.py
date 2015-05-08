@@ -49,7 +49,7 @@ class ErrorMessage(BaseMessage):
     __slots__ = (
         'code',
         'tracing',
-        'message',
+        'description',
     )
 
     ERROR_CODES = {
@@ -63,9 +63,9 @@ class ErrorMessage(BaseMessage):
         ErrorCode.fatal: 'fatal protocol error'
     }
 
-    def __init__(self, code=None, tracing=None, message=None):
+    def __init__(self, code=None, tracing=None, description=None):
         self.code = ErrorCode(code) if code else ErrorCode.unexpected
-        self.message = message or ''
+        self.description = description or ''
         self.tracing = tracing or common.Tracing(0, 0, 0, 0)
 
     def error_name(self):
@@ -77,5 +77,5 @@ error_rw = rw.instance(
     ErrorMessage,
     ('code', error_code_rw),                            # code:1
     ('tracing', common.tracing_rw),                     # tracing:24
-    ('message', rw.len_prefixed_string(rw.number(2)))   # message~2
+    ('description', rw.len_prefixed_string(rw.number(2)))   # message~2
 )

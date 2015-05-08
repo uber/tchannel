@@ -41,13 +41,13 @@ from ..messages.common import PROTOCOL_VERSION
 from ..messages.common import FlagsType
 from ..messages.error import ErrorMessage
 from ..messages.types import Types
+from .message_factory import build_protocol_exception
 from .message_factory import MessageFactory
 
 try:
     import tornado.queues as queues  # included in 4.2
 except ImportError:
     import toro as queues
-
 
 log = logging.getLogger('tchannel')
 
@@ -210,18 +210,29 @@ class TornadoConnection(object):
                 continue
 
             elif context.message_id in self._outstanding:
+
                 response = self.response_message_factory.build(
                     context.message_id, context.message
                 )
 
                 # keep continue message in the list
                 # pop all other type messages including error message
+
                 if (context.message.message_type in self.CALL_RES_TYPES and
                         context.message.flags == FlagsType.fragment):
                     # still streaming, keep it for record
                     future = self._outstanding.get(context.message_id)
                 else:
                     future = self._outstanding.pop(context.message_id)
+
+                if context.message.message_type == Types.ERROR:
+                    protocol_exception = build_protocol_exception(
+                        context.message,
+                        context.message_id,
+                    )
+                    future.set_exception(protocol_exception)
+                    continue
+
                 if response and future.running():
                     future.set_result(response)
                 continue
@@ -231,7 +242,6 @@ class TornadoConnection(object):
     # Basically, the only difference between send and write is that send
     # sets up a Future to get the response. That's ideal for peers making
     # calls. Peers responding to calls must use write.
-
     def send(self, message, message_id=None):
         """Send the given message up the wire.
         Use this for messages which have a response message.
@@ -368,7 +378,7 @@ class TornadoConnection(object):
             )
 
         (self.remote_host,
-            self.remote_host_port) = message.host_port.rsplit(':', 1)
+         self.remote_host_port) = message.host_port.rsplit(':', 1)
         self.remote_host_port = int(self.remote_host_port)
         self.remote_process_name = message.process_name
         self.requested_version = message.version
@@ -444,13 +454,13 @@ class TornadoConnection(object):
                 # TODO Send error frame back
                 logging.exception("Failed to process %s", repr(context))
 
-    def send_error(self, code, message, message_id):
+    def send_error(self, code, description, message_id):
         """Convenience method for writing Error frames up the wire.
 
         :param code:
             Error code
-        :param message:
-            Error message
+        :param description:
+            Error description
         :param message_id:
             Message in response to which this error is being sent
         """
@@ -460,7 +470,7 @@ class TornadoConnection(object):
         return self._write(
             ErrorMessage(
                 code=code,
-                message=message
+                description=description
             ),
             message_id
         )
@@ -540,11 +550,10 @@ class StreamConnection(TornadoConnection):
             yield self._stream(response, self.response_message_factory)
 
             # event: send_response
-            if self.tchannel:
-                self.tchannel.event_emitter.fire(
-                    EventType.after_send_response,
-                    response,
-                )
+            self.tchannel.event_emitter.fire(
+                EventType.after_send_response,
+                response,
+            )
         finally:
             response.close_argstreams(force=True)
 
@@ -553,11 +562,10 @@ class StreamConnection(TornadoConnection):
         """send the given request and response is not required"""
 
         # event: send_request
-        if self.tchannel:
-            self.tchannel.event_emitter.fire(
-                EventType.before_send_request,
-                request,
-            )
+        self.tchannel.event_emitter.fire(
+            EventType.before_send_request,
+            request,
+        )
 
         try:
             request.close_argstreams()
@@ -592,20 +600,28 @@ class StreamConnection(TornadoConnection):
         response_future = tornado.gen.Future()
         # TODO: fire before_receive_response
 
-        def adapt_tracing(f):
-            # fetch the request tracing for response
-            f.result().tracing = request.tracing
-            response_future.set_result(f.result())
-            # event: receive_response
-            if self.tchannel:
-                self.tchannel.event_emitter.fire(
-                    EventType.after_receive_response,
-                    f.result(),
-                )
-
         tornado.ioloop.IOLoop.current().add_future(
             future,
-            adapt_tracing,
+            lambda f: self.adapt_result(f, request, response_future),
         )
-
         return response_future
+
+    def adapt_result(self, f, request, response_future):
+        if f.exception():
+            protocol_exception = f.exception()
+            protocol_exception.tracing = request.tracing
+            response_future.set_exception(protocol_exception)
+            # event: after_receive_protocol_error
+            self.tchannel.event_emitter.fire(
+                EventType.after_receive_error,
+                protocol_exception,
+            )
+        else:
+            response = f.result()
+            response.tracing = request.tracing
+            response_future.set_result(response)
+            # event: after_receive_response
+            self.tchannel.event_emitter.fire(
+                EventType.after_receive_response,
+                response,
+            )

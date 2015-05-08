@@ -67,12 +67,11 @@ class RequestDispatcher(BaseRequestHandler):
             chunk = yield request.argstreams[0].read()
 
         # event: receive_request
-        if connection.tchannel:
-            request.tracing.name = request.endpoint
-            connection.tchannel.event_emitter.fire(
-                EventType.before_receive_request,
-                request,
-            )
+        request.tracing.name = request.endpoint
+        connection.tchannel.event_emitter.fire(
+            EventType.before_receive_request,
+            request,
+        )
 
         endpoint = self.endpoints.get(request.endpoint, None)
         if endpoint is None:

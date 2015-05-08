@@ -42,16 +42,16 @@ class Request(object):
 
     # TODO decide which elements inside "message" object to expose to user.
     def __init__(
-            self,
-            id=None,
-            flags=FlagsType.none,
-            ttl=10,
-            tracing=None,
-            service=None,
-            headers=None,
-            checksum=None,
-            argstreams=None,
-            scheme=None,
+        self,
+        id=None,
+        flags=FlagsType.none,
+        ttl=10,
+        tracing=None,
+        service=None,
+        headers=None,
+        checksum=None,
+        argstreams=None,
+        scheme=None,
     ):
         self.flags = flags
         self.ttl = ttl
@@ -133,16 +133,16 @@ class Response(object):
 
     # TODO decide which elements inside "message" object to expose to user.
     def __init__(
-            self,
-            connection=None,
-            id=None,
-            flags=FlagsType.none,
-            code=0,
-            tracing=None,
-            headers=None,
-            checksum=None,
-            argstreams=None,
-            scheme=None,
+        self,
+        connection=None,
+        id=None,
+        flags=FlagsType.none,
+        code=0,
+        tracing=None,
+        headers=None,
+        checksum=None,
+        argstreams=None,
+        scheme=None,
     ):
 
         self.flags = flags or StatusCode.ok
