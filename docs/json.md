@@ -10,7 +10,7 @@ defined in [Arguments][].
 For each `call req`, the service name should be set to the TChannel service
 being called.
 
-For each `call res`, the response code must be set to `0` if the reponse was
+For each `call res`, the response code must be set to `0` if the response was
 successful and the response code must be set to `1` if the response was a
 failure.
 
