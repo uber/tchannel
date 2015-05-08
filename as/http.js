@@ -40,7 +40,7 @@ function HTTPReqArg2(method, url, headerPairs) {
 
 HTTPReqArg2.RW = bufrw.Struct(HTTPReqArg2, {
     method: bufrw.str1,   // method~1
-    url: bufrw.str2,      // url~2
+    url: bufrw.strn,      // url~N
     headerPairs: headerRW // numHeaders:2 (headerName~2 headerValue~2){numHeaders}
 });
 
@@ -53,7 +53,7 @@ function HTTPResArg2(statusCode, message, headerPairs) {
 
 HTTPResArg2.RW = bufrw.Struct(HTTPResArg2, {
     statusCode: bufrw.UInt16BE, // statusCode:2
-    message: bufrw.str2,        // message~2
+    message: bufrw.strn,        // message~N
     headerPairs: headerRW       // numHeaders:2 (headerName~2 headerValue~2){numHeaders}
 });
 
