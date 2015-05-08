@@ -181,6 +181,14 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
         return callback(new Error('call request before init request')); // TODO typed error
     }
     var req = self.buildInRequest(reqFrame);
+    if (reqFrame.body.args && reqFrame.body.args[0] &&
+        reqFrame.body.args[0].length > v2.CallRequest.MaxArg1Size) {
+        req.res = self.buildOutResponse(req);
+        self.sendErrorFrame(req.res, 'BadRequest',
+            'arg1 exceeds the max size of 0x' +
+            v2.CallRequest.MaxArg1Size.toString(16));
+        return callback();
+    }
     self._handleCallFrame(req, reqFrame, callRequestFrameHandled);
     function callRequestFrameHandled(err) {
         self.callRequestFrameHandled(req, err, callback);
@@ -203,6 +211,13 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
         return callback(new Error('call response before init response')); // TODO typed error
     }
     var res = self.buildInResponse(resFrame);
+    if (resFrame.body.args && resFrame.body.args[0] &&
+        resFrame.body.args[0].length > v2.CallResponse.MaxArg1Size) {
+        return callback(errors.Arg1OverLengthLimit({
+                length: '0x' + resFrame.body.args[0].length.toString(16),
+                limit: '0x' + v2.CallResponse.MaxArg1Size.toString(16)
+        }));
+    }
     res.remoteAddr = self.remoteHostPort;
     self._handleCallFrame(res, resFrame, callResponseFrameHandled);
     function callResponseFrameHandled(err) {
