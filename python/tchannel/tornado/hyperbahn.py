@@ -21,34 +21,77 @@
 from __future__ import absolute_import
 
 import json
-import random
 import tornado.gen
 
-from .messages.error import ErrorCode
-from .tornado.tchannel import TChannel
+from ..messages.error import ErrorCode
+from .tchannel import TChannel
 
 
 DEFAULT_TTL = 60  # seconds
 
 
-class HyperbahnRegistrant(object):
-    """Register a service with a Hyperbahn routing mesh."""
+class HyperbahnClient(object):
+    """Client for talking with the Hyperbahn."""
 
-    def __init__(self, hyperbahn_client, service):
+    def __init__(
+        self,
+        service,
+        hyperbahn_routers,
+        tchannel=None
+    ):
         """
-        :param hyperbahn_client: ``HyperbahnClient`` to make ``register``
-            requests with.
+        :param hostport:
+            Address at which this service can be reached. For example,
+            "127.0.0.1:2499".
 
-        :param service: Name of service to register with Hyperbahn, eg "maps".
+        :param hyperbahn_routers: list of hyperbahn addresses, e.g.,
+            ``["127.0.0.1:21300", "127.0.0.1:21301"]``.
+
+        :param tchannel: ``TChannel`` instance to make Hyperbahn requests with.
         """
-        self.hyperbahn_client = hyperbahn_client
         self.service = service
+        self.tchannel = tchannel or TChannel()
+
+        for known_peer in hyperbahn_routers:
+            self.tchannel.peers.add(known_peer)
 
     @tornado.gen.coroutine
-    def register(self):
-        """Enable register heartbeat, adding service to the Hyperbahn."""
+    def request(
+        self,
+        service,
+        endpoint,
+        body=None,
+        headers=None,
+        protocol_headers=None,
+    ):
+        """Send a request to a service through Hyperbahn.
 
-        forward_request = dict(
+        Adds service name semantics and load balancing to regular TChannel
+        request via a Hyperbahn routing mesh.
+
+        :param service: name of service to make request to, eg "ncar".
+
+        :param endpoint: endpoint to make request to, eg "find".
+
+        :param body: body to send with request, eg JSON or Thrift.
+        """
+
+        request = self.tchannel.request(service=service)
+
+        response = yield request.send(
+            arg1=endpoint,
+            arg2=headers,
+            arg3=body,
+            headers=protocol_headers,
+        )
+
+        raise tornado.gen.Return(response)
+
+    @tornado.gen.coroutine
+    def register(self, ioloop=None):
+        """Register this service with the Hyperbahn routing mesh."""
+
+        request_params = dict(
             service="hyperbahn",
             endpoint="ad",  # advertise
             body=json.dumps({
@@ -65,7 +108,7 @@ class HyperbahnRegistrant(object):
         )
 
         # TODO: it would be nice to have message_type on the Response
-        response = yield self.hyperbahn_client.request(**forward_request)
+        response = yield self.request(**request_params)
 
         if response.code not in ErrorCode:
             # re-register every ``DEFAULT_TTL`` seconds
@@ -74,69 +117,6 @@ class HyperbahnRegistrant(object):
                 delay=DEFAULT_TTL,
                 callback=self.register,
             )
-            return
+            raise tornado.gen.Return(response)
 
         raise NotImplementedError(response)
-
-
-class HyperbahnClient(object):
-    """Client for talking with the Hyperbahn."""
-
-    def __init__(
-        self,
-        hyperbahn_routers,
-        tchannel=None
-    ):
-        """
-        :param hyperbahn_routers: list of hyperbahn addresses, e.g.,
-            ``["127.0.0.1:21300", "127.0.0.1:21301"]``.
-
-        :param tchannel: ``TChannel`` instance to make Hyperbahn requests with.
-        """
-        self.hyperbahn_routers = hyperbahn_routers
-
-        self.tchannel = tchannel or TChannel()
-
-    @tornado.gen.coroutine
-    def request(self, service, endpoint, body=None, headers=None, protocol_headers=None):
-        """Send a request to a service through Hyperbahn.
-
-        Adds service name semantics and load balancing to regular TChannel
-        request via a Hyperbahn routing mesh.
-
-        :param service: name of service to make request to, eg "ncar".
-
-        :param endpoint: endpoint to make request to, eg "find".
-
-        :param body: body to send with request, eg JSON or Thrift.
-        """
-        host = self._get_hyperbahn_router()
-
-        request = self.tchannel.request(
-            hostport=host,
-            service=service,
-        )
-
-        response = yield request.send(
-            arg1=endpoint,
-            arg2=headers,
-            arg3=body,
-            headers=protocol_headers,
-        )
-
-        raise tornado.gen.Return(response)
-
-    def _get_hyperbahn_router(self):
-        """Retrieve a random Hyperbahn host from ``self.hyperbahn_routers``."""
-        return random.choice(self.hyperbahn_routers)
-
-    def register(self, service):
-        """Enable register heartbeat, adding service to the Hyperbahn.
-
-        :param service: name of service to register with Hyperbahn, eg "maps"
-        """
-        registrant = HyperbahnRegistrant(
-            hyperbahn_client=self,
-            service=service,
-        )
-        return registrant.register()
