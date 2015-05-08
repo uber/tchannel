@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-var NullLogtron = require('null-logtron');
+'use strict';
 
 var Span = require('./span');
 
@@ -32,7 +32,7 @@ function Agent(options) {
 
     options = options || {};
 
-    self.logger = options.logger || NullLogtron();
+    self.logger = options.logger;
 
     // If this is set to true in a call to Agent#configure, all incoming
     // requests will have their traceflags forced to 1. It's intended to be
@@ -74,7 +74,6 @@ Agent.prototype.setupNewSpan = function setupNewSpan(options) {
     }
 
     var span = new Span({
-        logger: self.logger,
         endpoint: new Span.Endpoint(
             host, 
             port, 

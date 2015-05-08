@@ -6,20 +6,14 @@ to handle encoding and decoding for you
 ## JSON example
 
 ```js
-var NullLogtron = require('null-logtron');
 var TChannelJSON = require('tchannel/as/json');
 var TChannel = require('tchannel');
 
 var server = TChannel({
-    serviceName: 'server',
-    logger: NullLogtron()
+    serviceName: 'server'
 });
-var client = TChannel({
-    logger: NullLogtron()
-});
-var tchannelJSON = TChannelJSON({
-    logger: NullLogtron()
-});
+var client = TChannel();
+var tchannelJSON = TChannelJSON();
 
 var context = {};
 
