@@ -28,6 +28,8 @@ import tornado.ioloop
 import tornado.iostream
 
 from options import get_args
+
+from tchannel.tornado import TChannel
 from tchannel.tornado.connection import StreamConnection
 
 
@@ -36,7 +38,7 @@ def main():
 
     args = get_args()
     conn = yield StreamConnection.outgoing('%s:%d' % (args.host, args.port))
-
+    conn.tchannel = TChannel()
     N = 10000
     before = time.time()
     batch_size = 100

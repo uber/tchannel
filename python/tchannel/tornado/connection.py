@@ -42,7 +42,6 @@ from ..messages.common import PROTOCOL_VERSION
 from ..messages.common import FlagsType
 from ..messages.error import ErrorMessage
 from ..messages.types import Types
-from .data import ProtocolError
 from .message_factory import MessageFactory
 
 try:
@@ -211,12 +210,15 @@ class TornadoConnection(object):
                 continue
 
             elif context.message_id in self._outstanding:
+
                 response = self.response_message_factory.build(
                     context.message_id, context.message
                 )
 
                 # keep continue message in the list
                 # pop all other type messages including error message
+
+                result = {"type": context.message.message_type}
                 if (context.message.message_type in self.CALL_RES_TYPES and
                         context.message.flags == FlagsType.fragment):
                     # still streaming, keep it for record
@@ -224,18 +226,20 @@ class TornadoConnection(object):
                 else:
                     future = self._outstanding.pop(context.message_id)
 
-                    if context.message.message_type == Types.ERROR:
-                        protocol_error = (
-                            self.response_message_factory.build_protocol_error(
-                                context.message,
-                                context.message_id,
-                            ))
-
-                        future.set_result(protocol_error)
-                        continue
+                if context.message.message_type == Types.ERROR:
+                    protocol_error = (
+                        self.response_message_factory.build_protocol_error(
+                            context.message,
+                            context.message_id,
+                        )
+                    )
+                    result['value'] = protocol_error
+                    future.set_result(result)
+                    continue
 
                 if response and future.running():
-                    future.set_result(response)
+                    result['value'] = response
+                    future.set_result(result)
                 continue
 
             log.warn('Unconsumed message %s', context)
@@ -456,13 +460,13 @@ class TornadoConnection(object):
                 # TODO Send error frame back
                 logging.exception("Failed to process %s", repr(context))
 
-    def send_error(self, code, message, message_id):
+    def send_error(self, code, description, message_id):
         """Convenience method for writing Error frames up the wire.
 
         :param code:
             Error code
-        :param message:
-            Error message
+        :param description:
+            Error description
         :param message_id:
             Message in response to which this error is being sent
         """
@@ -472,7 +476,7 @@ class TornadoConnection(object):
         return self._write(
             ErrorMessage(
                 code=code,
-                message=message
+                description=description
             ),
             message_id
         )
@@ -552,11 +556,10 @@ class StreamConnection(TornadoConnection):
             yield self._stream(response, self.response_message_factory)
 
             # event: send_response
-            if self.tchannel:
-                self.tchannel.event_emitter.fire(
-                    EventType.after_send_response,
-                    response,
-                )
+            self.tchannel.event_emitter.fire(
+                EventType.after_send_response,
+                response,
+            )
         finally:
             response.close_argstreams(force=True)
 
@@ -565,11 +568,10 @@ class StreamConnection(TornadoConnection):
         """send the given request and response is not required"""
 
         # event: send_request
-        if self.tchannel:
-            self.tchannel.event_emitter.fire(
-                EventType.before_send_request,
-                request,
-            )
+        self.tchannel.event_emitter.fire(
+            EventType.before_send_request,
+            request,
+        )
 
         try:
             request.close_argstreams()
@@ -604,39 +606,39 @@ class StreamConnection(TornadoConnection):
         response_future = tornado.gen.Future()
         # TODO: fire before_receive_response
 
-        def adapt_tracing(f):
-            if not f.exception():
-                # fetch the request tracing for response
-                f.result().tracing = request.tracing
-
-                if isinstance(f.result(), ProtocolError):
-                    protocol_error = f.result()
-                    response_future.set_exception(
-                        TChannelException(protocol_error.message)
-                    )
-                    # event: after_receive_protocol_error
-                    if self.tchannel:
-                        self.tchannel.event_emitter.fire(
-                            EventType.after_receive_protocol_error,
-                            protocol_error,
-                        )
-                else:
-                    response = f.result()
-                    response_future.set_result(response)
-                    # event: after_receive_response
-                    if self.tchannel:
-                        self.tchannel.event_emitter.fire(
-                            EventType.after_receive_response,
-                            response,
-                        )
-            else:
-                # TODO unexpected exception
-                response_future.set_exception(
-                    f.exception()
-                )
-
         tornado.ioloop.IOLoop.current().add_future(
             future,
-            adapt_tracing,
+            lambda f: self.adapt_result(f, request, response_future),
         )
         return response_future
+
+    def adapt_result(self, f, request, response_future):
+        if f.exception():
+            # TODO unexpected exception
+            response_future.set_exception(
+                f.exception()
+            )
+            return
+
+        result = f.result()
+
+        if result['type'] == Types.ERROR:
+            protocol_error = result['value']
+            protocol_error.tracing = request.tracing
+            response_future.set_exception(
+                TChannelException(protocol_error.description)
+            )
+            # event: after_receive_protocol_error
+            self.tchannel.event_emitter.fire(
+                EventType.after_receive_protocol_error,
+                protocol_error,
+            )
+        elif result['type'] == Types.CALL_RES:
+            response = result['value']
+            response.tracing = request.tracing
+            response_future.set_result(response)
+            # event: after_receive_response
+            self.tchannel.event_emitter.fire(
+                EventType.after_receive_response,
+                response,
+            )

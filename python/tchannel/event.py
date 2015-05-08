@@ -96,11 +96,11 @@ class EventHook(object):
         pass
 
     def after_receive_protocol_error(self, error):
-        """Called after a ''error'' message is read."""
+        """Called after a ``error`` message is read."""
         pass
 
     def after_send_protocol_error(self, error):
-        """Called after a ''error'' message is sent."""
+        """Called after a ``error`` message is sent."""
         pass
 
 

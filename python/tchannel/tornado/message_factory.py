@@ -58,15 +58,16 @@ class MessageFactory(object):
         self.in_checksum = {}
         self.out_checksum = {}
 
-    def build_raw_error_message(self, err):
+    def build_raw_error_message(self, protocol_error):
         """build protocol level error message based on Error object"""
         message = ErrorMessage(
-            code=err.code,
-            tracing=err.Tracing(err.tracing.span_id,
-                                err.tracing.parent_span_id,
-                                err.tracing.trace_id,
-                                err.tracing.traceflags),
-            message=err.message,
+            code=protocol_error.code,
+            tracing=protocol_error.Tracing(
+                protocol_error.tracing.span_id,
+                protocol_error.tracing.parent_span_id,
+                protocol_error.tracing.trace_id,
+                protocol_error.tracing.traceflags),
+            description=protocol_error.description,
         )
 
         return message
@@ -76,7 +77,7 @@ class MessageFactory(object):
 
         error = ProtocolError(
             code=message.code,
-            message=message.message,
+            description=message.description,
             id=message_id,
         )
 

@@ -319,19 +319,16 @@ class Response(object):
 
 
 class ProtocolError(object):
-    """Object to represent protocol error message
-
-    Note: Internal use only.
-    """
+    """Object to represent protocol error message"""
 
     def __init__(
         self,
         code,
-        message,
+        description,
         id=None,
         tracing=None,
     ):
         self.code = code
         self.tracing = tracing
         self.id = id
-        self.message = message
+        self.description = description
