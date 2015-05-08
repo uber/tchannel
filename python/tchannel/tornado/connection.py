@@ -39,6 +39,7 @@ from ..exceptions import InvalidErrorCodeException
 from ..exceptions import TChannelException
 from ..io import BytesIO
 from ..messages.common import PROTOCOL_VERSION
+from ..messages.common import StreamState
 from ..messages.common import FlagsType
 from ..messages.error import ErrorMessage
 from ..messages.types import Types
@@ -538,21 +539,29 @@ class StreamConnection(TornadoConnection):
         :param context: Request or Response object
         """
         args = []
-        for i, argstream in enumerate(context.argstreams):
-            chunk = yield argstream.read()
-            args.append(chunk)
-            chunk = yield argstream.read()
-            while chunk:
-                message = (message_factory.
-                           build_raw_message(context, args))
-                yield self.write(message, context.id)
-                args = [chunk]
+        try:
+            for i, argstream in enumerate(context.argstreams):
                 chunk = yield argstream.read()
+                args.append(chunk)
+                chunk = yield argstream.read()
+                while chunk:
+                    message = (message_factory.
+                               build_raw_message(context, args))
+                    yield self.write(message, context.id)
+                    args = [chunk]
+                    chunk = yield argstream.read()
 
-        # last piece of request/response.
-        message = (message_factory.
-                   build_raw_message(context, args, is_completed=True))
-        yield self.write(message, context.id)
+            # last piece of request/response.
+            message = (message_factory.
+                       build_raw_message(context, args, is_completed=True))
+            yield self.write(message, context.id)
+            context.state = StreamState.completed
+        # Stop streamming immediately if exception occurs
+        except TChannelException:
+            # raise by tchannel intentionally
+            pass
+        except Exception:
+            raise
 
     @tornado.gen.coroutine
     def post_response(self, response):

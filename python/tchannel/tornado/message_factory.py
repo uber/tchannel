@@ -292,13 +292,16 @@ class MessageFactory(object):
 
         elif message.message_type in [Types.CALL_REQ_CONTINUE,
                                       Types.CALL_RES_CONTINUE]:
-            self.verify_message(message, message_id)
-
             context = self.message_buffer.get(message_id)
             if context is None:
                 # missing call msg before continue msg
                 raise StreamingException(
                     "missing call message after receiving continue message")
+            try:
+                self.verify_message(message, message_id)
+            except InvalidChecksumException as e:
+                context.set_exception(e)
+                raise
 
             # find the incompleted stream
             dst = 0
@@ -385,8 +388,7 @@ class MessageFactory(object):
             if message.flags == FlagsType.none:
                 self.in_checksum.pop(message_id)
         else:
-            if message_id in self.in_checksum:
-                self.in_checksum.pop(message_id)
+            self.in_checksum.pop(message_id, None)
             raise InvalidChecksumException("Checksum does not match!")
 
     @staticmethod

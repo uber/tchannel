@@ -126,7 +126,7 @@ class InMemStream(Stream):
     @tornado.gen.coroutine
     def set_exception(self, exception):
         self.exception = exception
-        self._condition.notify()
+        self.close()
 
     @tornado.gen.coroutine
     def close(self):
@@ -161,8 +161,13 @@ class PipeStream(Stream):
         self.auto_close = auto_close
         self.state = StreamState.init
 
+        self.exception = None
+
     @tornado.gen.coroutine
     def read(self):
+        if self.exception:
+            raise self.exception
+
         if self.state == StreamState.completed or self._rpipe is None:
             raise tornado.gen.Return("")
         elif self.state == StreamState.init:
@@ -177,6 +182,8 @@ class PipeStream(Stream):
             # reach the end of the pipe stream
             self.state = StreamState.completed
         finally:
+            if self.exception:
+                raise self.exception
             raise tornado.gen.Return(chunk)
 
     @tornado.gen.coroutine
@@ -188,6 +195,11 @@ class PipeStream(Stream):
         except StreamClosedError:
             self.state = StreamState.completed
             raise StreamingException("Stream has been closed.")
+
+    @tornado.gen.coroutine
+    def set_exception(self, exception):
+        self.exception = exception
+        self.close()
 
     def close(self):
         self.state = StreamState.completed
