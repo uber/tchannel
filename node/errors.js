@@ -266,7 +266,8 @@ module.exports.ThriftBodyParserError = WrappedError({
     type: 'tchannel-thrift-handler.parse-error.body-failed',
     message: 'Could not parse body (arg3) argument.\n' +
         'Expected Thrift encoded arg3 for endpoint {endpoint}.\n' +
-        'Got {bodyBuf} instead of Thrift.',
+        'Got {bodyBuf} instead of Thrift.\n' +
+        'Parsing error was: {causeMessage}.\n',
     isSerializationError: true,
     endpoint: null,
     direction: null,
@@ -289,7 +290,8 @@ module.exports.ThriftHeadParserError = WrappedError({
     type: 'tchannel-thrift-handler.parse-error.head-failed',
     message: 'Could not parse head (arg2) argument.\n' +
         'Expected Thrift encoded arg2 for endpoint {endpoint}.\n' +
-        'Got {headBuf} instead of Thrift.',
+        'Got {headBuf} instead of Thrift.\n' +
+        'Parsing error was: {causeMessage}.\n',
     isSerializationError: true,
     endpoint: null,
     ok: null,

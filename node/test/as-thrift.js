@@ -30,8 +30,11 @@ var thriftify = require('thriftify');
 var allocCluster = require('./lib/alloc-cluster.js');
 var TChannelAsThrift = require('../as/thrift.js');
 
-var spec = thriftify.readSpecSync(
+var globalSpec = thriftify.readSpecSync(
     path.join(__dirname, 'anechoic-chamber.thrift')
+);
+var badSpec = thriftify.readSpecSync(
+    path.join(__dirname, 'bad-anechoic-chamber.thrift')
 );
 
 allocCluster.test('send and receiving an ok', {
@@ -197,7 +200,9 @@ allocCluster.test('getting a BadRequest frame', {
             'tchannel-thrift-handler.parse-error.head-failed: Could not ' +
                 'parse head (arg2) argument.\n' +
                 'Expected Thrift encoded arg2 for endpoint Chamber::echo.\n' +
-                'Got junk heade instead of Thrift.'
+                'Got junk heade instead of Thrift.\n' +
+                'Parsing error was: ' +
+                'expected at least 28267 bytes, only have 7 @[2:4].\n'
         );
 
         assert.equal(resp, null);
@@ -233,6 +238,44 @@ allocCluster.test('sending without as header', {
     }
 });
 
+allocCluster.test('send without required fields', {
+    numPeers: 2
+}, function t(cluster, assert) {
+    var client = cluster.channels[1];
+
+    makeTChannelThriftServer(cluster, {
+        okResponse: true
+    });
+    var tchannelAsThrift = TChannelAsThrift({
+        spec: badSpec
+    });
+
+    tchannelAsThrift.send(client.request({
+        serviceName: 'server'
+    }), 'Chamber::echo', null, {
+        value: 'lol'
+    }, function onResponse(err, res) {
+        assert.ok(err);
+
+        assert.equal(err.type, 'tchannel.bad-request');
+        assert.equal(err.isErrorFrame, true);
+        assert.equal(err.codeName, 'BadRequest');
+        assert.equal(err.message,
+            'tchannel-thrift-handler.parse-error.body-failed: ' +
+                'Could not parse body (arg3) argument.\n' +
+                'Expected Thrift encoded arg3 for endpoint Chamber::echo.\n' +
+                'Got \u000b\u0000\u0000\u0000\u0000\u0000\u0003lol ' +
+                'instead of Thrift.\n' +
+                'Parsing error was: ' +
+                'AStruct::reify expects field 0 typeid 8; received 11.\n'
+        );
+
+        assert.equal(res, undefined);
+
+        assert.end();
+    });
+});
+
 function makeTChannelThriftServer(cluster, opts) {
     var server = cluster.channels[0].makeSubChannel({
         serviceName: 'server'
@@ -262,7 +305,7 @@ function makeTChannelThriftServer(cluster, opts) {
             networkFailureHandler;
 
     var tchannelAsThrift = new TChannelAsThrift({
-        spec: spec,
+        spec: opts.spec || globalSpec,
         logParseFailures: false
     });
     tchannelAsThrift.register(server, 'Chamber::echo', options, fn);

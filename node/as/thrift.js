@@ -35,7 +35,7 @@ var HeaderRW = bufrw.Repeat(
 module.exports = TChannelAsThrift;
 
 function TChannelAsThrift(opts) {
-    if (!this instanceof TChannelAsThrift) {
+    if (!(this instanceof TChannelAsThrift)) {
         return new TChannelAsThrift(opts);
     }
 
