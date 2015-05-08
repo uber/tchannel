@@ -46,8 +46,8 @@ class EventType(IntEnum):
     before_receive_response = 0x30
     after_receive_response = 0x31
 
-    after_receive_protocol_error = 0x40
-    after_send_protocol_error = 0x41
+    after_receive_error = 0x40
+    after_send_error = 0x41
 
 
 class EventHook(object):
@@ -95,11 +95,11 @@ class EventHook(object):
         """Called after a ``CALL_RESP`` message is read."""
         pass
 
-    def after_receive_protocol_error(self, error):
+    def after_receive_error(self, err):
         """Called after a ``error`` message is read."""
         pass
 
-    def after_send_protocol_error(self, error):
+    def after_send_error(self, err):
         """Called after a ``error`` message is sent."""
         pass
 

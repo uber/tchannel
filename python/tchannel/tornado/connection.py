@@ -36,13 +36,12 @@ from ..context import Context
 from ..event import EventType
 from ..exceptions import ConnectionClosedException
 from ..exceptions import InvalidErrorCodeException
-from ..exceptions import TChannelException
 from ..io import BytesIO
 from ..messages.common import PROTOCOL_VERSION
 from ..messages.common import FlagsType
 from ..messages.error import ErrorMessage
 from ..messages.types import Types
-from .message_factory import build_protocol_error
+from .message_factory import build_protocol_exception
 from .message_factory import MessageFactory
 
 try:
@@ -227,11 +226,11 @@ class TornadoConnection(object):
                     future = self._outstanding.pop(context.message_id)
 
                 if context.message.message_type == Types.ERROR:
-                    protocol_error = build_protocol_error(
+                    protocol_exception = build_protocol_exception(
                         context.message,
                         context.message_id,
                     )
-                    future.set_exception(protocol_error)
+                    future.set_exception(protocol_exception)
                     continue
 
                 if response and future.running():
@@ -609,15 +608,13 @@ class StreamConnection(TornadoConnection):
 
     def adapt_result(self, f, request, response_future):
         if f.exception():
-            protocol_error = f.exception()
-            protocol_error.tracing = request.tracing
-            response_future.set_exception(
-                TChannelException(protocol_error.description)
-            )
+            protocol_exception = f.exception()
+            protocol_exception.tracing = request.tracing
+            response_future.set_exception(protocol_exception)
             # event: after_receive_protocol_error
             self.tchannel.event_emitter.fire(
-                EventType.after_receive_protocol_error,
-                protocol_error,
+                EventType.after_receive_error,
+                protocol_exception,
             )
         else:
             response = f.result()

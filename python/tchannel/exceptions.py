@@ -28,7 +28,27 @@ class TChannelException(Exception):
 
 class ProtocolException(TChannelException):
     """Represent a protocol-level exception"""
-    pass
+    __slots__ = (
+        'code',
+        'description',
+        'id',
+        'tracing',
+    )
+
+    def __init__(
+        self,
+        code,
+        description,
+        id=None,
+        tracing=None,
+    ):
+        super(TChannelException, self).__init__(
+            'TChannel protocol error (%s)' % description
+        )
+        self.code = code
+        self.tracing = tracing
+        self.id = id
+        self.description = description
 
 
 class InvalidMessageException(ProtocolException):

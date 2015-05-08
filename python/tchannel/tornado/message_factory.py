@@ -37,31 +37,31 @@ from ..messages.common import verify_checksum
 from ..messages.error import ErrorMessage
 from ..zipkin.annotation import Endpoint
 from ..zipkin.trace import Trace
-from .data import ProtocolError
+from ..exceptions import ProtocolException
 from .data import Request
 from .data import Response
 from .stream import InMemStream
 
 
-def build_raw_error_message(protocol_error):
+def build_raw_error_message(protocol_exception):
     """build protocol level error message based on Error object"""
     message = ErrorMessage(
-        code=protocol_error.code,
+        code=protocol_exception.code,
         tracing=Tracing(
-            protocol_error.tracing.span_id,
-            protocol_error.tracing.parent_span_id,
-            protocol_error.tracing.trace_id,
-            protocol_error.tracing.traceflags),
-        description=protocol_error.description,
+            protocol_exception.tracing.span_id,
+            protocol_exception.tracing.parent_span_id,
+            protocol_exception.tracing.trace_id,
+            protocol_exception.tracing.traceflags),
+        description=protocol_exception.description,
     )
 
     return message
 
 
-def build_protocol_error(message, message_id=None):
+def build_protocol_exception(message, message_id=None):
     """build protocol level error message based on Error object"""
 
-    error = ProtocolError(
+    error = ProtocolException(
         code=message.code,
         description=message.description,
         id=message_id,
