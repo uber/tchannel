@@ -20,21 +20,49 @@
 
 'use strict';
 
+var hex = require('hexer');
+var util = require('util');
+
 module.exports = pipelineStreams;
 
-function pipelineStreams(sources, dests) {
+function pipelineStreams(sources, dests, options, callback) {
+    if (typeof options === 'function') {
+        callback = options;
+        options = {};
+    } else if (!options) {
+        options = {};
+    }
     next(0);
     function next(i) {
-        if (i >= dests.length) return;
+        if (i >= dests.length) {
+            if (callback) callback(null);
+            return;
+        }
         var src = sources[i];
         var dst = dests[i];
         if (src === null || src === undefined ) {
             dst.end();
+            if (options.debug) {
+                process.stdout.write(util.format('%s END ARG%s: EMPTY\n', options.debug, i + 1));
+            }
             next(i + 1);
         } else if (typeof src === 'string' || Buffer.isBuffer(src)) {
+            if (options.debug) {
+                process.stdout.write(
+                    util.format('%s END ARG%s:\n', options.debug, i + 1) +
+                    hex(src) + '\n');
+            }
             dst.end(src);
             next(i + 1);
         } else {
+            if (options.debug) {
+                var n = i + 1;
+                process.stdout.write(util.format('%s PIPE ARG%s:\n', options.debug, n));
+                src = src.pipe(hex.Spy(process.stdout));
+                src.on('end', function() {
+                    process.stdout.write(util.format('%s PIPE ARG%s END\n', options.debug, n));
+                });
+            }
             src.pipe(dst);
             dst.once('finish', onStreamFinished);
         }
