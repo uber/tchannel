@@ -36,6 +36,11 @@ class InvalidMessageException(ProtocolException):
     pass
 
 
+class InvalidEndpointException(ProtocolException):
+    """Represent an message containing invalid endpoint."""
+    pass
+
+
 class TimeoutException(TChannelException):
     pass
 

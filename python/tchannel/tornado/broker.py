@@ -22,7 +22,8 @@ from __future__ import absolute_import
 
 import tornado
 
-from ..exceptions import ProtocolException
+from ..exceptions import InvalidMessageException
+from ..exceptions import InvalidEndpointException
 from ..exceptions import TChannelException
 from ..scheme import RawArgScheme
 
@@ -46,16 +47,20 @@ class ArgSchemeBroker(object):
 
     def handle_call(self, req, resp, proxy):
         if not req.headers.get('as', None) == self.arg_scheme.type():
-            raise TChannelException("Invalid arg scheme in request header")
+            raise InvalidMessageException(
+                "Invalid arg scheme in request header"
+            )
 
         req.scheme = self.arg_scheme
         resp.scheme = self.arg_scheme
 
         handler = self.endpoint.get(req.endpoint, None)
         if handler is None:
-            raise ProtocolException(
+            raise InvalidEndpointException(
                 "Endpoint '%s' for service '%s' is not defined" % (
-                    req.endpoint, req.service))
+                    req.endpoint, req.service
+                )
+            )
 
         return handler(req, resp, proxy)
 

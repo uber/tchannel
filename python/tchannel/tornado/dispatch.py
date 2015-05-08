@@ -24,6 +24,8 @@ import tornado
 import tornado.gen
 from tornado import gen
 
+from ..exceptions import InvalidMessageException
+from ..exceptions import InvalidEndpointException
 from ..event import EventType
 from ..handler import BaseRequestHandler
 from ..messages.error import ErrorCode
@@ -102,13 +104,20 @@ class RequestDispatcher(BaseRequestHandler):
                     )
                 )
                 response.flush()
-            except Exception:
-                # refine the exception in the following patches
-                if response.flushed:
-                    # this is bad if user called flush before exception happens
-                    return
-                # TODO send internal error
-                raise
+            except (InvalidMessageException, InvalidEndpointException) as e:
+                response.set_exception(e)
+                connection.send_error(
+                    ErrorCode.bad_request,
+                    e.message,
+                    response.id,
+                )
+            except Exception as e:
+                response.set_exception(e)
+                connection.send_error(
+                    ErrorCode.unexpected,
+                    "An unexpected error has occurred from the handler",
+                    response.id,
+                )
 
     def route(self, rule, helper=None):
         """See ``register`` for documentation."""
