@@ -20,10 +20,18 @@
 
 exception NoEchoError {
     1: required i32 value
+    2: required string message
+}
+
+exception NoEchoTypedError {
+    1: required i32 value
+    2: required string message
+    3: required string type
 }
 
 service Chamber {
     i32 echo(0: i32 value) throws (
         1: NoEchoError noEcho
+        2: NoEchoTypedError noEchoTyped
     )
 }

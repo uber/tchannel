@@ -262,6 +262,52 @@ module.exports.TChannelWriteProtocolError = WrappedError({
     localName: null
 });
 
+module.exports.ThriftBodyParserError = WrappedError({
+    type: 'tchannel-thrift-handler.parse-error.body-failed',
+    message: 'Could not parse body (arg3) argument.\n' +
+        'Expected Thrift encoded arg3 for endpoint {endpoint}.\n' +
+        'Got {bodyBuf} instead of Thrift.',
+    isSerializationError: true,
+    endpoint: null,
+    direction: null,
+    ok: null,
+    bodyBuf: null
+});
+
+module.exports.ThriftBodyStringifyError = WrappedError({
+    type: 'tchannel-thrift-handler.stringify-error.body-failed',
+    message: 'Could not stringify body (res2) argument.\n' +
+        'Expected Thrift serializable res2 for endpoint {endpoint}.',
+    isSerializationError: true,
+    endpoint: null,
+    ok: null,
+    body: null,
+    direction: null
+});
+
+module.exports.ThriftHeadParserError = WrappedError({
+    type: 'tchannel-thrift-handler.parse-error.head-failed',
+    message: 'Could not parse head (arg2) argument.\n' +
+        'Expected Thrift encoded arg2 for endpoint {endpoint}.\n' +
+        'Got {headBuf} instead of Thrift.',
+    isSerializationError: true,
+    endpoint: null,
+    ok: null,
+    direction: null,
+    headBuf: null
+});
+
+module.exports.ThriftHeadStringifyError = WrappedError({
+    type: 'tchannel-thrift-handler.stringify-error.head-failed',
+    message: 'Could not stringify head (res1) argument.\n' +
+        'Expected Thrift serializable res1 for endpoint {endpoint}.',
+    isSerializationError: true,
+    endpoint: null,
+    ok: null,
+    head: null,
+    direction: null
+});
+
 module.exports.TimeoutError = TypedError({
     type: 'tchannel.timeout',
     message: 'timed out after {elapsed}ms (limit was {timeout}ms)',
