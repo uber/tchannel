@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 from __future__ import absolute_import
 
-from .exceptions import InvalidChecksumException
+from .exceptions import InvalidChecksumException, StreamingException
 from .messages import ErrorCode
 from .messages import PingResponseMessage
 from .messages import Types
@@ -97,10 +97,16 @@ class BaseRequestHandler(RequestHandler):
         """
         try:
             req = connection.request_message_factory.build(message_id, message)
-        except InvalidChecksumException as e:
+        except (InvalidChecksumException, StreamingException) as e:
             connection.send_error(
                 ErrorCode.bad_request,
                 e.message,
+                message_id,
+            )
+        except Exception:
+            connection.send_error(
+                ErrorCode.unexpected,
+                "An unexpected error has occurred!",
                 message_id,
             )
 

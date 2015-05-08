@@ -72,6 +72,11 @@ class Request(object):
     def arg_scheme(self):
         return self.headers.get('as', None)
 
+    def set_exception(self, exception):
+        for stream in self.argstreams:
+            stream.set_exception(exception)
+            stream.close()
+
     def close_argstreams(self, force=False):
         for stream in self.argstreams:
             if stream.auto_close or force:
@@ -171,6 +176,13 @@ class Response(object):
             raise TChannelException("Invalid status code!")
 
         self.flags = status.value
+
+    @property
+    def ok(self):
+        if self.flags == StatusCode.ok.value:
+            return True
+        else:
+            return False
 
     def get_header_s(self):
         """Get the raw stream of header.
@@ -311,6 +323,11 @@ class Response(object):
         """
         self.flushed = True
         self.close_argstreams()
+
+    def set_exception(self, exception):
+        for stream in self.argstreams:
+            stream.set_exception(exception)
+            stream.close()
 
     def close_argstreams(self, force=False):
         for stream in self.argstreams:
