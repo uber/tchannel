@@ -168,21 +168,18 @@ class Response(object):
 
     @property
     def status_code(self):
-        return self.flags
+        return self.code
 
     @status_code.setter
     def status_code(self, status):
         if status not in StatusCode:
             raise TChannelException("Invalid status code!")
 
-        self.flags = status.value
+        self.code = status.value
 
     @property
     def ok(self):
-        if self.flags == StatusCode.ok.value:
-            return True
-        else:
-            return False
+        return self.cdoe == StatusCode.ok.value
 
     def get_header_s(self):
         """Get the raw stream of header.
