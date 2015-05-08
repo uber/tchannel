@@ -56,6 +56,7 @@ function _sendCallRequest(args, isLast) {
                 length: '0x' + args[0].length.toString(16),
                 limit: '0x' + v2.CallRequest.MaxArg1Size.toString(16)
         }));
+        return;
     }
     self.handler.sendCallRequestFrame(self, flags, args);
 };
