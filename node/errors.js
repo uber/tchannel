@@ -235,6 +235,12 @@ module.exports.SocketClosedError = TypedError({
     reason: null
 });
 
+module.exports.TChannelInitProtocolError = TypedError({
+    type: 'tchannel.init.protocol-error',
+    message: 'tchannel: {reason}',
+    reason: null
+});
+
 module.exports.TChannelListenError = WrappedError({
     type: 'tchannel.server.listen-failed',
     message: 'tchannel: {origMessage}',
