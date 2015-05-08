@@ -24,6 +24,7 @@ var assert = require('assert');
 var EventEmitter = require('./lib/event_emitter');
 var inherits = require('util').inherits;
 
+var Stat = require('./stat');
 var errors = require('./errors');
 
 function TChannelRequest(channel, options) {
@@ -174,6 +175,17 @@ TChannelRequest.prototype.resend = function resend() {
     opts.timeout = self.timeout - self.elapsed;
     var outReq = peer.request(opts);
     self.outReqs.push(outReq);
+
+    if (self.outReqs.length === 1) {
+        self.channel.emitStat(new Stat.Counter(
+            'outbound.calls.sent', 1, {
+                'target-service': outReq.serviceName,
+                'service': outReq.headers.cn,
+                // TODO should always be buffer
+                'target-endpoint': String(outReq.arg1)
+            }
+        ));
+    }
 
     self.triedRemoteAddrs[outReq.remoteAddr] = (self.triedRemoteAddrs[outReq.remoteAddr] || 0) + 1;
     outReq.responseEvent.on(onResponse);
