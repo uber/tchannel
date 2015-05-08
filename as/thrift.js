@@ -65,8 +65,8 @@ function register(channel, name, opts, handle) {
 
     function handleThriftRequest(req, res, inHeadBuffer, inBodyBuffer) {
         if (req.headers.as !== 'thrift') {
-            var message = 'Expected call request as header to be thrift';
-            return res.sendError('BadRequest', message);
+            return res.sendError('BadRequest',
+                'Expected call request as header to be thrift');
         }
 
         // Process incoming thrift body
@@ -78,9 +78,8 @@ function register(channel, name, opts, handle) {
         });
 
         if (parseResult.err) {
-            var message2 = parseResult.err.type + ': ' +
-                parseResult.err.message;
-            return res.sendError('BadRequest', message2);
+            return res.sendError('BadRequest',
+                parseResult.err.type + ': ' + parseResult.err.message);
         }
 
         var v = parseResult.value;
@@ -205,9 +204,9 @@ TChannelAsThrift.prototype._parse = function parse(opts) {
     var returnName = opts.endpoint + '_result';
     var resultType = self.spec.getType(returnName);
 
-    var headR = bufrw.fromBufferResult(HeaderRW, opts.head);
-    if (headR.err) {
-        var headParseErr = errors.ThriftHeadParserError(headR.err, {
+    var headRes = bufrw.fromBufferResult(HeaderRW, opts.head);
+    if (headRes.err) {
+        var headParseErr = errors.ThriftHeadParserError(headRes.err, {
             endpoint: opts.endpoint,
             direction: opts.direction,
             ok: opts.ok,
@@ -226,21 +225,21 @@ TChannelAsThrift.prototype._parse = function parse(opts) {
         return new Result(headParseErr);
     }
 
-    var bodyR;
+    var bodyRes;
     if (opts.direction === 'in.request') {
-        bodyR = argsType.fromBuffer(opts.body);
+        bodyRes = argsType.fromBuffer(opts.body);
     } else if (opts.direction === 'in.response') {
-        bodyR = resultType.fromBuffer(opts.body);
+        bodyRes = resultType.fromBuffer(opts.body);
 
-        if (bodyR.value && opts.ok) {
-            bodyR.value = bodyR.value.success;
-        } else if (bodyR.value && !opts.ok) {
-            bodyR.value = onlyProperty(bodyR.value);
+        if (bodyRes.value && opts.ok) {
+            bodyRes.value = bodyRes.value.success;
+        } else if (bodyRes.value && !opts.ok) {
+            bodyRes.value = onlyProperty(bodyRes.value);
         }
     }
 
-    if (bodyR.err) {
-        var bodyParseErr = errors.ThriftBodyParserError(bodyR.err, {
+    if (bodyRes.err) {
+        var bodyParseErr = errors.ThriftBodyParserError(bodyRes.err, {
             endpoint: opts.endpoint,
             direction: opts.direction,
             ok: opts.ok,
@@ -260,14 +259,14 @@ TChannelAsThrift.prototype._parse = function parse(opts) {
     }
 
     var headers = {};
-    for (var i = 0; i < headR.value.length; i++) {
-        var pair = headR.value[i];
+    for (var i = 0; i < headRes.value.length; i++) {
+        var pair = headRes.value[i];
         headers[pair[0]] = pair[1];
     }
 
     return new Result(null, {
         head: headers,
-        body: bodyR.value
+        body: bodyRes.value
     });
 };
 
@@ -288,9 +287,9 @@ TChannelAsThrift.prototype._stringify = function stringify(opts) {
         headerPairs.push([headers[i], opts.head[headers[i]]]);
     }
 
-    var headR = bufrw.toBufferResult(HeaderRW, headerPairs);
-    if (headR.err) {
-        var headStringifyErr = errors.ThriftHeadStringifyError(headR.err, {
+    var headRes = bufrw.toBufferResult(HeaderRW, headerPairs);
+    if (headRes.err) {
+        var headStringifyErr = errors.ThriftHeadStringifyError(headRes.err, {
             endpoint: opts.endpoint,
             ok: opts.ok,
             direction: opts.direction,
@@ -306,9 +305,9 @@ TChannelAsThrift.prototype._stringify = function stringify(opts) {
         return new Result(headStringifyErr);
     }
 
-    var bodyR;
+    var bodyRes;
     if (opts.direction === 'out.request') {
-        bodyR = argsType.toBuffer(opts.body);
+        bodyRes = argsType.toBuffer(opts.body);
     } else if (opts.direction === 'out.response') {
         var thriftResult = {};
         if (!opts.ok) {
@@ -317,11 +316,11 @@ TChannelAsThrift.prototype._stringify = function stringify(opts) {
             thriftResult.success = opts.body;
         }
 
-        bodyR = resultType.toBuffer(thriftResult);
+        bodyRes = resultType.toBuffer(thriftResult);
     }
 
-    if (bodyR.err) {
-        var bodyStringifyErr = errors.ThriftBodyStringifyError(bodyR.err, {
+    if (bodyRes.err) {
+        var bodyStringifyErr = errors.ThriftBodyStringifyError(bodyRes.err, {
             endpoint: opts.endpoint,
             ok: opts.ok,
             direction: opts.direction,
@@ -338,8 +337,8 @@ TChannelAsThrift.prototype._stringify = function stringify(opts) {
     }
 
     return new Result(null, {
-        head: headR.value,
-        body: bodyR.value
+        head: headRes.value,
+        body: bodyRes.value
     });
 };
 
