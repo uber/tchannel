@@ -19,6 +19,7 @@
 # THE SOFTWARE.
 
 from ..exceptions import InvalidChecksumException
+from ..exceptions import TChannelException
 from ..exceptions import StreamingException
 from ..messages import RW
 from ..messages import Types
@@ -397,3 +398,23 @@ class MessageFactory(object):
 
         for i in range(num):
             request.argstreams[i].close()
+
+    def set_inbound_exception(self, protocol_error):
+        reqres = self.message_buffer.get(protocol_error.id)
+        if reqres is None:
+            # missing call msg before continue msg
+            raise StreamingException(
+                "missing call message after receiving continue message")
+
+        # find the incompleted stream
+        dst = 0
+        for i, arg in enumerate(reqres.argstreams):
+            if arg.state != StreamState.completed:
+                dst = i
+                break
+
+        reqres.argstreams[dst].set_exception(
+            TChannelException(protocol_error.description)
+        )
+
+        self.message_buffer.pop(protocol_error.id, None)

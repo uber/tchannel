@@ -98,10 +98,16 @@ class InMemStream(Stream):
         self._condition = Condition()
         self.auto_close = auto_close
 
+        self.exception = None
+
     @tornado.gen.coroutine
     def read(self):
-        if self.state != StreamState.completed and len(self._stream) == 0:
+        if (self.state != StreamState.completed and
+                len(self._stream) == 0 and not self.exception):
             yield self._condition.wait()
+
+        if self.exception:
+            raise self.exception
 
         chunk = ""
         while len(self._stream) > 0 and len(chunk) < common.MAX_PAYLOAD_SIZE:
@@ -116,6 +122,11 @@ class InMemStream(Stream):
         if chunk:
             self._stream.append(chunk)
             self._condition.notify()
+
+    @tornado.gen.coroutine
+    def set_exception(self, exception):
+        self.exception = exception
+        self._condition.notify()
 
     @tornado.gen.coroutine
     def close(self):

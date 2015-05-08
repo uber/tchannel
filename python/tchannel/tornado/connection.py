@@ -210,21 +210,7 @@ class TornadoConnection(object):
                 continue
 
             elif context.message_id in self._outstanding:
-
-                response = self.response_message_factory.build(
-                    context.message_id, context.message
-                )
-
-                # keep continue message in the list
-                # pop all other type messages including error message
-
                 result = {"type": context.message.message_type}
-                if (context.message.message_type in self.CALL_RES_TYPES and
-                        context.message.flags == FlagsType.fragment):
-                    # still streaming, keep it for record
-                    future = self._outstanding.get(context.message_id)
-                else:
-                    future = self._outstanding.pop(context.message_id)
 
                 if context.message.message_type == Types.ERROR:
                     protocol_error = (
@@ -233,9 +219,28 @@ class TornadoConnection(object):
                             context.message_id,
                         )
                     )
-                    result['value'] = protocol_error
-                    future.set_result(result)
+                    future = self._outstanding.pop(context.message_id)
+                    if future.running():
+                        result['value'] = protocol_error
+                        future.set_result(result)
+                    else:
+                        self.response_message_factory.set_inbound_exception(
+                            protocol_error
+                        )
                     continue
+
+                response = self.response_message_factory.build(
+                    context.message_id, context.message
+                )
+
+                # keep continue message in the list
+                # pop all other type messages including error message
+                if (context.message.message_type in self.CALL_RES_TYPES and
+                        context.message.flags == FlagsType.fragment):
+                    # still streaming, keep it for record
+                    future = self._outstanding.get(context.message_id)
+                else:
+                    future = self._outstanding.pop(context.message_id)
 
                 if response and future.running():
                     result['value'] = response
