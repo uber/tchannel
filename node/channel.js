@@ -69,6 +69,9 @@ function TChannel(options) {
         processName: format('%s[%s]', process.title, process.pid)
     }, options);
 
+    // must have 'app', 'host', 'cluster', 'version'
+    self.statTags = self.options.statTags || {};
+
     self.requestDefaults = extend({
         timeout: TChannelRequest.defaultTimeout
     }, self.options.requestDefaults);
@@ -436,6 +439,24 @@ TChannel.prototype.close = function close(callback) {
                 callback();
             }
         }
+    }
+};
+
+TChannel.prototype.emitStat = function emitStat(stat) {
+    var self = this;
+
+    var commonTags = self.statTags;
+    var commonKeys = Object.keys(self.statTags);
+
+    var localTags = stat.tags;
+    for (var i = 0; i < commonKeys.length; i++) {
+        localTags[commonKeys[i]] = commonTags[commonKeys[i]];
+    }
+
+    self.statEvent.emit(self, stat);
+
+    if (self.topChannel) {
+        self.topChannel.statEvent.emit(self, stat);
     }
 };
 
