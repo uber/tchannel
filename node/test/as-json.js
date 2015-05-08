@@ -217,7 +217,9 @@ function makeTChannelJSONServer(cluster, opts) {
         opts.networkFailureResponse ? networkFailureHandler :
             networkFailureHandler;
 
-    var tchannelJSON = TChannelJSON();
+    var tchannelJSON = TChannelJSON({
+        logParseFailures: false
+    });
     tchannelJSON.register(server, 'echo', options, fn);
 
     return tchannelJSON;
