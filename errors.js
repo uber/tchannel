@@ -44,27 +44,6 @@ module.exports.Arg1OverLengthLimit = TypedError({
     limit: null
 });
 
-module.exports.BodyParserError = WrappedError({
-    type: 'tchannel-handler.parse-error.body-failed',
-    message: 'Could not parse body (arg3) argument.\n' +
-        'Expected JSON encoded arg3 for endpoint {endpoint}.\n' +
-        'Got {bodyStr} instead of JSON.',
-    isSerializationError: true,
-    endpoint: null,
-    direction: null,
-    bodyStr: null
-});
-
-module.exports.BodyStringifyError = WrappedError({
-    type: 'tchannel-handler.stringify-error.body-failed',
-    message: 'Could not stringify body (res2) argument.\n' +
-        'Expected JSON serializable res2 for endpoint {endpoint}.',
-    isSerializationError: true,
-    endpoint: null,
-    body: null,
-    direction: null
-});
-
 module.exports.ChecksumError = TypedError({
     type: 'tchannel.checksum',
     message: 'invalid checksum (type {checksumType}) expected: {expectedValue} actual: {actualValue}',
@@ -81,27 +60,6 @@ module.exports.DuplicateHeaderKeyError = TypedError({
     key: null,
     value: null,
     priorValue: null
-});
-
-module.exports.HeadParserError = WrappedError({
-    type: 'tchannel-handler.parse-error.head-failed',
-    message: 'Could not parse head (arg2) argument.\n' +
-        'Expected JSON encoded arg2 for endpoint {endpoint}.\n' +
-        'Got {headStr} instead of JSON.',
-    isSerializationError: true,
-    endpoint: null,
-    direction: null,
-    headStr: null
-});
-
-module.exports.HeadStringifyError = WrappedError({
-    type: 'tchannel-handler.stringify-error.head-failed',
-    message: 'Could not stringify head (res1) argument.\n' +
-        'Expected JSON serializable res1 for endpoint {endpoint}.',
-    isSerializationError: true,
-    endpoint: null,
-    head: null,
-    direction: null
 });
 
 module.exports.InvalidArgumentError = TypedError({
@@ -144,6 +102,48 @@ module.exports.InvalidJSONBody = TypedError({
     isSerializationError: true,
     head: null,
     body: null
+});
+
+module.exports.JSONBodyParserError = WrappedError({
+    type: 'tchannel-json-handler.parse-error.body-failed',
+    message: 'Could not parse body (arg3) argument.\n' +
+        'Expected JSON encoded arg3 for endpoint {endpoint}.\n' +
+        'Got {bodyStr} instead of JSON.',
+    isSerializationError: true,
+    endpoint: null,
+    direction: null,
+    bodyStr: null
+});
+
+module.exports.JSONBodyStringifyError = WrappedError({
+    type: 'tchannel-json-handler.stringify-error.body-failed',
+    message: 'Could not stringify body (res2) argument.\n' +
+        'Expected JSON serializable res2 for endpoint {endpoint}.',
+    isSerializationError: true,
+    endpoint: null,
+    body: null,
+    direction: null
+});
+
+module.exports.JSONHeadParserError = WrappedError({
+    type: 'tchannel-json-handler.parse-error.head-failed',
+    message: 'Could not parse head (arg2) argument.\n' +
+        'Expected JSON encoded arg2 for endpoint {endpoint}.\n' +
+        'Got {headStr} instead of JSON.',
+    isSerializationError: true,
+    endpoint: null,
+    direction: null,
+    headStr: null
+});
+
+module.exports.JSONHeadStringifyError = WrappedError({
+    type: 'tchannel-json-handler.stringify-error.head-failed',
+    message: 'Could not stringify head (res1) argument.\n' +
+        'Expected JSON serializable res1 for endpoint {endpoint}.',
+    isSerializationError: true,
+    endpoint: null,
+    head: null,
+    direction: null
 });
 
 module.exports.MaxPendingError = TypedError({
@@ -260,6 +260,54 @@ module.exports.TChannelWriteProtocolError = WrappedError({
     message: 'tchannel write failure: {origMessage}',
     remoteName: null,
     localName: null
+});
+
+module.exports.ThriftBodyParserError = WrappedError({
+    type: 'tchannel-thrift-handler.parse-error.body-failed',
+    message: 'Could not parse body (arg3) argument.\n' +
+        'Expected Thrift encoded arg3 for endpoint {endpoint}.\n' +
+        'Got {bodyBuf} instead of Thrift.\n' +
+        'Parsing error was: {causeMessage}.\n',
+    isSerializationError: true,
+    endpoint: null,
+    direction: null,
+    ok: null,
+    bodyBuf: null
+});
+
+module.exports.ThriftBodyStringifyError = WrappedError({
+    type: 'tchannel-thrift-handler.stringify-error.body-failed',
+    message: 'Could not stringify body (res2) argument.\n' +
+        'Expected Thrift serializable res2 for endpoint {endpoint}.',
+    isSerializationError: true,
+    endpoint: null,
+    ok: null,
+    body: null,
+    direction: null
+});
+
+module.exports.ThriftHeadParserError = WrappedError({
+    type: 'tchannel-thrift-handler.parse-error.head-failed',
+    message: 'Could not parse head (arg2) argument.\n' +
+        'Expected Thrift encoded arg2 for endpoint {endpoint}.\n' +
+        'Got {headBuf} instead of Thrift.\n' +
+        'Parsing error was: {causeMessage}.\n',
+    isSerializationError: true,
+    endpoint: null,
+    ok: null,
+    direction: null,
+    headBuf: null
+});
+
+module.exports.ThriftHeadStringifyError = WrappedError({
+    type: 'tchannel-thrift-handler.stringify-error.head-failed',
+    message: 'Could not stringify head (res1) argument.\n' +
+        'Expected Thrift serializable res1 for endpoint {endpoint}.',
+    isSerializationError: true,
+    endpoint: null,
+    ok: null,
+    head: null,
+    direction: null
 });
 
 module.exports.TimeoutError = TypedError({
