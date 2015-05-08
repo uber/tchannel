@@ -21,21 +21,25 @@ decisions must be made on the `service` field.
 Binary schema:
 ```
 method~1
-url~2
+url~N
 numHeaders:2 (headerName~2 headerValue~2){numHeaders}
 ```
+
+Notes:
+- the url field's length is encoded as a varint
 
 ### `arg2`: response meta data
 
 Binary schema:
 ```
 statusCode:2
-message~2
+message~N
 numHeaders:2 (headerName~2 headerValue~2){numHeaders}
 ```
 
 Notes:
 - statusCode is the HTTP status code
 - message is utf-8 encoded
+- the message field's length is encoded as a varint
 - the headers section is to be implemented as a multi-map, or list of
   pairs; a single-valued map is insufficient
