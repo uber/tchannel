@@ -76,6 +76,7 @@ StreamingOutRequest.prototype.sendStreams = function sendStreams(arg1, arg2, arg
     pipelineStreams(
         [arg1, arg2, arg3],
         [self.arg1, self.arg2, self.arg3]);
+    return self;
 };
 
 module.exports = StreamingOutRequest;
