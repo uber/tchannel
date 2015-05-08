@@ -42,9 +42,7 @@ class ProtocolException(TChannelException):
         id=None,
         tracing=None,
     ):
-        super(TChannelException, self).__init__(
-            'TChannel protocol error (%s)' % description
-        )
+        super(TChannelException, self).__init__(description)
         self.code = code
         self.tracing = tracing
         self.id = id
