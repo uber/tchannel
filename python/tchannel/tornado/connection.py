@@ -210,14 +210,12 @@ class TornadoConnection(object):
                 continue
 
             elif context.message_id in self._outstanding:
-
-                response = self.response_message_factory.build(
+                response = self.awaitresponse_message_factory.build(
                     context.message_id, context.message
                 )
 
                 # keep continue message in the list
                 # pop all other type messages including error message
-
                 if (context.message.message_type in self.CALL_RES_TYPES and
                         context.message.flags == FlagsType.fragment):
                     # still streaming, keep it for record
