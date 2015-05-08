@@ -61,6 +61,7 @@ function TChannel(options) {
     self.listeningEvent = self.defineEvent('listening');
     self.connectionEvent = self.defineEvent('connection');
     self.requestEvent = self.defineEvent('request');
+    self.statEvent = self.defineEvent('stat');
 
     self.options = extend({
         timeoutCheckInterval: 1000,
@@ -68,6 +69,9 @@ function TChannel(options) {
         // TODO: maybe we should always add pid to user-supplied?
         processName: format('%s[%s]', process.title, process.pid)
     }, options);
+
+    // must have 'app', 'host', 'cluster', 'version'
+    self.statTags = self.options.statTags || {};
 
     self.requestDefaults = extend({
         timeout: TChannelRequest.defaultTimeout
@@ -437,6 +441,20 @@ TChannel.prototype.close = function close(callback) {
             }
         }
     }
+};
+
+TChannel.prototype.emitStat = function emitStat(stat) {
+    var self = this;
+
+    var commonTags = self.statTags;
+    var commonKeys = Object.keys(self.statTags);
+
+    var localTags = stat.tags;
+    for (var i = 0; i < commonKeys.length; i++) {
+        localTags[commonKeys[i]] = commonTags[commonKeys[i]];
+    }
+
+    self.statEvent.emit(stat);
 };
 
 module.exports = TChannel;
