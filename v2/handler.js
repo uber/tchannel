@@ -284,6 +284,12 @@ TChannelV2Handler.prototype.handleError = function handleError(errFrame, callbac
     if (id === v2.Frame.NullId) {
         // fatal error not associated with a prior frame
         callback(err);
+    // TODO: unless we fix TChannelConnection#onCallResponse to keep streamed
+    // responses until termination, we need to check here for streaming and
+    // emit errors on the response directly:
+    //     } else if (self.streamingRes[id]) {
+    //         var res = self.streamingRes[id];
+    //         res.errorEvent.emit(res, err);
     } else {
         self.callIncomingErrorEvent.emit(self, err);
         callback();
