@@ -337,10 +337,8 @@ TChannel.prototype.address = function address() {
     }
 };
 
-TChannel.prototype.request = function channelRequest(options) {
+TChannel.prototype.requestOptions = function requestOptions(options) {
     var self = this;
-    assert(!self.destroyed, 'cannot request() to destroyed tchannel');
-
     var prop;
     var opts = {};
     // jshint forin:false
@@ -353,6 +351,13 @@ TChannel.prototype.request = function channelRequest(options) {
         }
     }
     // jshint forin:true
+    return opts;
+};
+
+TChannel.prototype.request = function channelRequest(options) {
+    var self = this;
+    assert(!self.destroyed, 'cannot request() to destroyed tchannel');
+    var opts = self.requestOptions(options);
 
     if (!self.serviceName && !opts.host) {
         if (opts.serviceName &&
