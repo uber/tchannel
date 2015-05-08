@@ -44,7 +44,6 @@ Frame.MaxSize = 0xffff;
 Frame.MaxBodySize = Frame.MaxSize - Frame.Overhead;
 Frame.MaxId = 0xfffffffe;
 Frame.NullId = 0xffffffff;
-Frame.MaxArg1Size = 0x4000;
 
 // size:2: type:1 reserved:1 id:4 reserved:8 ...
 Frame.RW = bufrw.Base(frameLength, readFrameFrom, writeFrameInto);

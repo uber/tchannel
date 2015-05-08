@@ -182,10 +182,11 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
     }
     var req = self.buildInRequest(reqFrame);
     if (reqFrame.body.args && reqFrame.body.args[0] &&
-        reqFrame.body.args[0].length > v2.Frame.MaxArg1Size) {
+        reqFrame.body.args[0].length > v2.CallRequest.MaxArg1Size) {
         req.res = self.buildOutResponse(req);
         self.sendErrorFrame(req.res, 'BadRequest',
-            'arg1 exceeds the max size of 0x4000');
+            'arg1 exceeds the max size of 0x' +
+            v2.CallRequest.MaxArg1Size.toString(16));
         return callback();
     }
     self._handleCallFrame(req, reqFrame, callRequestFrameHandled);

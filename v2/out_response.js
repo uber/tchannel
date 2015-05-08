@@ -50,9 +50,10 @@ V2StreamingOutResponse.prototype._sendCallResponse =
 function _sendCallResponse(args, isLast) {
     var self = this;
     var flags = 0;
-    if (args && args[0] && args[0].length > v2.Frame.MaxArg1Size) {
+    if (args && args[0] && args[0].length > v2.CallResponse.MaxArg1Size) {
         self.errorEvent.emit(self, errors.Arg1OverLengthLimit({
-                length: '0x' + args[0].length.toString(16)
+                length: '0x' + args[0].length.toString(16),
+                limit: '0x' + v2.CallResponse.MaxArg1Size.toString(16)
         }));
     }
     if (!isLast) flags |= CallFlags.Fragment;
