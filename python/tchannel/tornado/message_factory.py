@@ -43,6 +43,33 @@ from .data import Response
 from .stream import InMemStream
 
 
+def build_raw_error_message(protocol_error):
+    """build protocol level error message based on Error object"""
+    message = ErrorMessage(
+        code=protocol_error.code,
+        tracing=Tracing(
+            protocol_error.tracing.span_id,
+            protocol_error.tracing.parent_span_id,
+            protocol_error.tracing.trace_id,
+            protocol_error.tracing.traceflags),
+        description=protocol_error.description,
+    )
+
+    return message
+
+
+def build_protocol_error(message, message_id=None):
+    """build protocol level error message based on Error object"""
+
+    error = ProtocolError(
+        code=message.code,
+        description=message.description,
+        id=message_id,
+    )
+
+    return error
+
+
 class MessageFactory(object):
     """Provide the functionality to decompose and recompose
     streaming messages.
@@ -57,31 +84,6 @@ class MessageFactory(object):
 
         self.in_checksum = {}
         self.out_checksum = {}
-
-    def build_raw_error_message(self, protocol_error):
-        """build protocol level error message based on Error object"""
-        message = ErrorMessage(
-            code=protocol_error.code,
-            tracing=protocol_error.Tracing(
-                protocol_error.tracing.span_id,
-                protocol_error.tracing.parent_span_id,
-                protocol_error.tracing.trace_id,
-                protocol_error.tracing.traceflags),
-            description=protocol_error.description,
-        )
-
-        return message
-
-    def build_protocol_error(self, message, message_id=None):
-        """build protocol level error message based on Error object"""
-
-        error = ProtocolError(
-            code=message.code,
-            description=message.description,
-            id=message_id,
-        )
-
-        return error
 
     def build_raw_request_message(self, request, args, is_completed=False):
         """build protocol level message based on request and args.

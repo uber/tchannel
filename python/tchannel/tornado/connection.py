@@ -42,6 +42,7 @@ from ..messages.common import PROTOCOL_VERSION
 from ..messages.common import FlagsType
 from ..messages.error import ErrorMessage
 from ..messages.types import Types
+from .message_factory import build_protocol_error
 from .message_factory import MessageFactory
 
 try:
@@ -218,7 +219,6 @@ class TornadoConnection(object):
                 # keep continue message in the list
                 # pop all other type messages including error message
 
-                result = {"type": context.message.message_type}
                 if (context.message.message_type in self.CALL_RES_TYPES and
                         context.message.flags == FlagsType.fragment):
                     # still streaming, keep it for record
@@ -227,19 +227,15 @@ class TornadoConnection(object):
                     future = self._outstanding.pop(context.message_id)
 
                 if context.message.message_type == Types.ERROR:
-                    protocol_error = (
-                        self.response_message_factory.build_protocol_error(
-                            context.message,
-                            context.message_id,
-                        )
+                    protocol_error = build_protocol_error(
+                        context.message,
+                        context.message_id,
                     )
-                    result['value'] = protocol_error
-                    future.set_result(result)
+                    future.set_exception(protocol_error)
                     continue
 
                 if response and future.running():
-                    result['value'] = response
-                    future.set_result(result)
+                    future.set_result(response)
                 continue
 
             log.warn('Unconsumed message %s', context)
@@ -247,7 +243,6 @@ class TornadoConnection(object):
     # Basically, the only difference between send and write is that send
     # sets up a Future to get the response. That's ideal for peers making
     # calls. Peers responding to calls must use write.
-
     def send(self, message, message_id=None):
         """Send the given message up the wire.
         Use this for messages which have a response message.
@@ -614,16 +609,7 @@ class StreamConnection(TornadoConnection):
 
     def adapt_result(self, f, request, response_future):
         if f.exception():
-            # TODO unexpected exception
-            response_future.set_exception(
-                f.exception()
-            )
-            return
-
-        result = f.result()
-
-        if result['type'] == Types.ERROR:
-            protocol_error = result['value']
+            protocol_error = f.exception()
             protocol_error.tracing = request.tracing
             response_future.set_exception(
                 TChannelException(protocol_error.description)
@@ -633,8 +619,8 @@ class StreamConnection(TornadoConnection):
                 EventType.after_receive_protocol_error,
                 protocol_error,
             )
-        elif result['type'] == Types.CALL_RES:
-            response = result['value']
+        else:
+            response = f.result()
             response.tracing = request.tracing
             response_future.set_result(response)
             # event: after_receive_response

@@ -318,7 +318,7 @@ class Response(object):
                 stream.close()
 
 
-class ProtocolError(object):
+class ProtocolError(Exception):
     """Object to represent protocol error message"""
 
     def __init__(
