@@ -110,6 +110,25 @@ TChannelRequest.prototype.hookupCallback = function hookupCallback(callback) {
     function onError(err) {
         if (called) return;
         called = true;
+
+        if (err.isErrorFrame) {
+            self.channel.outboundCallsSystemErrorsStat.increment(1, {
+                'target-service': self.serviceName,
+                'service': self.headers.cn,
+                // TODO should always be buffer
+                'target-endpoint': String(self.arg1),
+                'type': err.codeName
+            });
+        } else {
+            self.channel.outboundCallsOperationalErrorsStat.increment(1, {
+                'target-service': self.serviceName,
+                'service': self.headers.cn,
+                // TODO should always be buffer
+                'target-endpoint': String(self.arg1),
+                'type': err.type || 'unknown'
+            });
+        }
+
         callback(err, null, null, null);
     }
 
