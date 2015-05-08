@@ -24,7 +24,7 @@ For both `call req` and `call res`
 
 ### `arg1`
 
-The method name must be a ascii string. It's recommended that you use
+The method name must be a UTF-8 string. It's recommended that you use
 alphanumeric characters and `_`.
 
 ### `arg3`
