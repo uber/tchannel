@@ -96,13 +96,32 @@ StreamingOutResponse.prototype.send = function send(res1, res2) {
     var self = this;
     self.arg2.end(res1);
     self.arg3.end(res2);
+    return self;
 };
 
-StreamingOutResponse.prototype.sendStreams = function sendStreams(res1, res2) {
+StreamingOutResponse.prototype.sendStreams = function sendStreams(res1, res2, callback) {
     var self = this;
+    var called = false;
+    self.errorEvent.on(onError);
     pipelineStreams(
         [res1, res2],
-        [self.arg2, self.arg3]);
+        [self.arg2, self.arg3],
+        finish);
+    return self;
+
+    function onError(err) {
+        if (!called) {
+            called = true;
+            if (callback) callback(err);
+        }
+    }
+
+    function finish() {
+        if (!called) {
+            called = true;
+            if (callback) callback(null);
+        }
+    }
 };
 
 module.exports = StreamingOutResponse;
