@@ -57,6 +57,7 @@ function CallRequest(flags, ttl, tracing, service, headers, csum, args) {
 CallRequest.Cont = require('./cont').RequestCont;
 CallRequest.TypeCode = 0x03;
 CallRequest.RW = bufrw.Base(callReqLength, readCallReqFrom, writeCallReqInto);
+CallRequest.MaxArg1Size = 0x4000;
 
 function callReqLength(body) {
     var res;
@@ -192,6 +193,7 @@ CallResponse.Cont = require('./cont').ResponseCont;
 CallResponse.TypeCode = 0x04;
 CallResponse.Codes = ResponseCodes;
 CallResponse.RW = bufrw.Base(callResLength, readCallResFrom, writeCallResInto);
+CallResponse.MaxArg1Size = 0x4000;
 
 function callResLength(body) {
     var res;

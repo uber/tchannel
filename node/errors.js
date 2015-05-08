@@ -39,8 +39,9 @@ module.exports.ArgChunkOutOfOrderError = TypedError({
 
 module.exports.Arg1OverLengthLimit = TypedError({
     type: 'tchannel.arg1-over-length-limit',
-    message: 'arg 1 length {length} is larger than the limit 0x4000',
-    length: null
+    message: 'arg 1 length {length} is larger than the limit {limit}',
+    length: null,
+    limit: null
 });
 
 module.exports.BodyParserError = WrappedError({
