@@ -141,6 +141,29 @@ TChannelRequest.prototype.hookupCallback = function hookupCallback(callback) {
         if (called) return;
         called = true;
         res.withArg23(function gotArg23(err, arg2, arg3) {
+            if (res.ok) {
+                self.channel.emitStat(new Stat.Counter(
+                    'outbound.calls.success', 1, {
+                        'target-service': self.serviceName,
+                        'service': self.headers.cn,
+                        // TODO should always be buffer
+                        'target-endpoint': String(self.arg1)
+                    }
+                ));
+            } else {
+                self.channel.emitStat(new Stat.Counter(
+                    'outbound.calls.app-errors', 1, {
+                        'target-service': self.serviceName,
+                        'service': self.headers.cn,
+                        // TODO should always be buffer
+                        'target-endpoint': String(self.arg1),
+                        // TODO define transport header
+                        // for application error type
+                        'application-error-type': 'unknown'
+                    }
+                ));
+            }
+
             callback(err, res, arg2, arg3);
         });
     }
