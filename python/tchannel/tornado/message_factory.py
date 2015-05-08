@@ -34,8 +34,10 @@ from ..messages.common import StreamState
 from ..messages.common import Tracing
 from ..messages.common import generate_checksum
 from ..messages.common import verify_checksum
+from ..messages.error import ErrorMessage
 from ..zipkin.annotation import Endpoint
 from ..zipkin.trace import Trace
+from .data import ProtocolError
 from .data import Request
 from .data import Response
 from .stream import InMemStream
@@ -55,6 +57,30 @@ class MessageFactory(object):
 
         self.in_checksum = {}
         self.out_checksum = {}
+
+    def build_raw_error_message(self, err):
+        """build protocol level error message based on Error object"""
+        message = ErrorMessage(
+            code=err.code,
+            tracing=err.Tracing(err.tracing.span_id,
+                                err.tracing.parent_span_id,
+                                err.tracing.trace_id,
+                                err.tracing.traceflags),
+            message=err.message,
+        )
+
+        return message
+
+    def build_protocol_error(self, message, message_id=None):
+        """build protocol level error message based on Error object"""
+
+        error = ProtocolError(
+            code=message.code,
+            message=message.message,
+            id=message_id,
+        )
+
+        return error
 
     def build_raw_request_message(self, request, args, is_completed=False):
         """build protocol level message based on request and args.

@@ -36,18 +36,19 @@ from ..context import Context
 from ..event import EventType
 from ..exceptions import ConnectionClosedException
 from ..exceptions import InvalidErrorCodeException
+from ..exceptions import TChannelException
 from ..io import BytesIO
 from ..messages.common import PROTOCOL_VERSION
 from ..messages.common import FlagsType
 from ..messages.error import ErrorMessage
 from ..messages.types import Types
+from .data import ProtocolError
 from .message_factory import MessageFactory
 
 try:
     import tornado.queues as queues  # included in 4.2
 except ImportError:
     import toro as queues
-
 
 log = logging.getLogger('tchannel')
 
@@ -222,6 +223,17 @@ class TornadoConnection(object):
                     future = self._outstanding.get(context.message_id)
                 else:
                     future = self._outstanding.pop(context.message_id)
+
+                    if context.message.message_type == Types.ERROR:
+                        protocol_error = (
+                            self.response_message_factory.build_protocol_error(
+                                context.message,
+                                context.message_id,
+                            ))
+
+                        future.set_result(protocol_error)
+                        continue
+
                 if response and future.running():
                     future.set_result(response)
                 continue
@@ -368,7 +380,7 @@ class TornadoConnection(object):
             )
 
         (self.remote_host,
-            self.remote_host_port) = message.host_port.rsplit(':', 1)
+         self.remote_host_port) = message.host_port.rsplit(':', 1)
         self.remote_host_port = int(self.remote_host_port)
         self.remote_process_name = message.process_name
         self.requested_version = message.version
@@ -593,19 +605,38 @@ class StreamConnection(TornadoConnection):
         # TODO: fire before_receive_response
 
         def adapt_tracing(f):
-            # fetch the request tracing for response
-            f.result().tracing = request.tracing
-            response_future.set_result(f.result())
-            # event: receive_response
-            if self.tchannel:
-                self.tchannel.event_emitter.fire(
-                    EventType.after_receive_response,
-                    f.result(),
+            if not f.exception():
+                # fetch the request tracing for response
+                f.result().tracing = request.tracing
+
+                if isinstance(f.result(), ProtocolError):
+                    protocol_error = f.result()
+                    response_future.set_exception(
+                        TChannelException(protocol_error.message)
+                    )
+                    # event: after_receive_protocol_error
+                    if self.tchannel:
+                        self.tchannel.event_emitter.fire(
+                            EventType.after_receive_protocol_error,
+                            protocol_error,
+                        )
+                else:
+                    response = f.result()
+                    response_future.set_result(response)
+                    # event: after_receive_response
+                    if self.tchannel:
+                        self.tchannel.event_emitter.fire(
+                            EventType.after_receive_response,
+                            response,
+                        )
+            else:
+                # TODO unexpected exception
+                response_future.set_exception(
+                    f.exception()
                 )
 
         tornado.ioloop.IOLoop.current().add_future(
             future,
             adapt_tracing,
         )
-
         return response_future

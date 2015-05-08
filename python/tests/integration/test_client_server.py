@@ -24,8 +24,7 @@ import pytest
 
 from tchannel import tcurl
 from tchannel.exceptions import ConnectionClosedException
-from tchannel.messages import Types
-from tchannel.messages.error import ErrorCode
+from tchannel.exceptions import TChannelException
 from tchannel.tornado import TChannel
 from tchannel.tornado.connection import StreamConnection
 from tchannel.tornado.data import Response
@@ -126,8 +125,7 @@ def test_endpoint_not_found(tchannel_server, call_response):
 
     hostport = 'localhost:%d' % (tchannel_server.port)
 
-    response = yield tchannel.request(hostport).send(InMemStream(),
-                                                     InMemStream(),
-                                                     InMemStream())
-    assert response.message_type == Types.ERROR
-    assert response.code == ErrorCode.bad_request
+    with pytest.raises(TChannelException):
+        yield tchannel.request(hostport).send(InMemStream(),
+                                              InMemStream(),
+                                              InMemStream())

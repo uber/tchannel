@@ -316,3 +316,22 @@ class Response(object):
         for stream in self.argstreams:
             if stream.auto_close or force:
                 stream.close()
+
+
+class ProtocolError(object):
+    """Object to represent protocol error message
+
+    Note: Internal use only.
+    """
+
+    def __init__(
+        self,
+        code,
+        message,
+        id=None,
+        tracing=None,
+    ):
+        self.code = code
+        self.tracing = tracing
+        self.id = id
+        self.message = message

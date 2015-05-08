@@ -32,19 +32,8 @@ log = logging.getLogger('tchannel')
 
 @unique
 class EventType(IntEnum):
-    """Types to represent system events
+    """Types to represent system events"""
 
-    Events:
-
-    send_request: before client sends request
-
-    send_response: after server sends response
-
-    receive_request: after server receive request
-
-    receive_response: after client receive response
-
-    """
     before_send_request = 0x00
     after_send_request = 0x01
 
@@ -56,6 +45,9 @@ class EventType(IntEnum):
 
     before_receive_response = 0x30
     after_receive_response = 0x31
+
+    after_receive_protocol_error = 0x40
+    after_send_protocol_error = 0x41
 
 
 class EventHook(object):
@@ -101,6 +93,14 @@ class EventHook(object):
 
     def after_receive_response(self, response):
         """Called after a ``CALL_RESP`` message is read."""
+        pass
+
+    def after_receive_protocol_error(self, error):
+        """Called after a ''error'' message is read."""
+        pass
+
+    def after_send_protocol_error(self, error):
+        """Called after a ''error'' message is sent."""
         pass
 
 
