@@ -21,77 +21,111 @@
 'use strict';
 
 var assert = require('assert');
+var bufrw = require('bufrw');
+var Result = require('bufrw/result');
+
+var errors = require('../errors.js');
+
+var HeaderRW = require('../v2/header.js').header2;
 
 module.exports = TChannelAsThrift;
 
 function TChannelAsThrift(opts) {
+    if (!(this instanceof TChannelAsThrift)) {
+        return new TChannelAsThrift(opts);
+    }
+
     var self = this;
+
     assert(opts && opts.spec, 'TChannelAsThrift expected spec');
     self.spec = opts.spec;
 
+    self.logger = null;
+
     var bossMode = opts && opts.bossMode;
     self.bossMode = typeof bossMode === 'boolean' ? bossMode : false;
+
+    var logParseFailures = opts && opts.logParseFailures;
+    self.logParseFailures = typeof logParseFailures === 'boolean' ?
+        logParseFailures : true;
 }
 
 TChannelAsThrift.prototype.register =
 function register(channel, name, opts, handle) {
     var self = this;
 
-    var argsName = name + '_args';
-    var argsType = self.spec.getType(argsName);
-
-    var returnName = name + '_result';
-    var resultType = self.spec.getType(returnName);
+    if (!self.logger) {
+        self.logger = channel.logger;
+    }
 
     channel.register(name, handleThriftRequest);
 
     function handleThriftRequest(req, res, inHeadBuffer, inBodyBuffer) {
-
         if (req.headers.as !== 'thrift') {
-            return res.sendError('BadRequest', 'Expected as=thrift TChannel request header');
+            return res.sendError('BadRequest',
+                'Expected call request as header to be thrift');
         }
 
         // Process incoming thrift body
-        var inBodyResult = argsType.fromBuffer(inBodyBuffer);
-        if (inBodyResult.err) {
-            return res.sendError('BadRequest', inBodyResult.err.message);
+        var parseResult = self._parse({
+            head: inHeadBuffer,
+            body: inBodyBuffer,
+            endpoint: name,
+            direction: 'in.request'
+        });
+
+        if (parseResult.err) {
+            return res.sendError('BadRequest',
+                parseResult.err.type + ': ' + parseResult.err.message);
         }
-        var inBody = inBodyResult.value;
 
-        // TODO process inHeadBuffer into inHead
-        var inHead = null;
-
-        handle(opts, req, inHead, inBody, handleThriftResponse);
+        var v = parseResult.value;
+        handle(opts, req, v.head, v.body, handleThriftResponse);
 
         function handleThriftResponse(err, thriftRes) {
             if (err) {
-                return res.sendError('UnexpectedError', err.message);
+                assert(isError(err), 'Error argument must be an error');
+
+                self.logger.error('Got unexpected error in handler', {
+                    endpoint: name,
+                    err: err
+                });
+
+                return res.sendError('UnexpectedError', 'Unexpected Error');
             }
 
-            assert(typeof thriftRes.ok === 'boolean',
-                'expected response.ok to be a boolean');
+            if (!self.bossMode) {
+                assert(typeof thriftRes.ok === 'boolean',
+                    'expected response.ok to be a boolean');
+                assert(thriftRes.body !== undefined,
+                    'expected response.body to exist');
 
-            var outResult = {};
-            var outBody = thriftRes.body;
-            if (!thriftRes.ok) {
-                outResult[outBody.nameAsThrift] = outBody;
-            } else {
-                outResult.success = outBody;
-            }
-
-            var outRes = resultType.toBuffer(outResult);
-
-            if (outRes.err && self.bossMode) {
-                return res.sendError('UnexpectedError', outRes.err.message);
-            } else {
-                var outHeadBuffer = null;
-                var outBodyBuffer = outRes.toValue();
-                if (thriftRes.ok) {
-                    return res.sendOk(outHeadBuffer, outBodyBuffer);
-                } else {
-                    return res.sendNotOk(outHeadBuffer, outBodyBuffer);
+                if (!thriftRes.ok) {
+                    assert(isError(thriftRes.body),
+                        'not-ok body should be an error');
+                    assert(thriftRes.body.nameAsThrift,
+                        'expected not-ok body to have nameAsThrift field');
                 }
             }
+
+            var stringifyResult = self._stringify({
+                head: thriftRes.head,
+                body: thriftRes.body,
+                ok: thriftRes.ok,
+                endpoint: name,
+                direction: 'out.response'
+            });
+
+            if (stringifyResult.err) {
+                return res.sendError('UnexpectedError',
+                    'Could not serialize thrift');
+            }
+
+            res.setOk(thriftRes.ok);
+            res.send(
+                stringifyResult.value.head,
+                stringifyResult.value.body
+            );
         }
     }
 };
@@ -102,51 +136,198 @@ function send(request, endpoint, outHead, outBody, callback) {
     var self = this;
 
     assert(typeof endpoint === 'string', 'send requires endpoint');
+    assert(typeof request.serviceName === 'string' &&
+        request.serviceName !== '',
+        'req.serviceName must be a string');
 
-    var argsType = self.spec.getType(endpoint + '_args');
-    var resultType = self.spec.getType(endpoint + '_result');
-
-    var outRes = argsType.toBuffer(outBody);
-    if (outRes.err) {
-        callback(outRes.err, null);
-        return;
+    var stringifyResult = self._stringify({
+        head: outHead,
+        body: outBody,
+        endpoint: endpoint,
+        direction: 'out.request'
+    });
+    if (stringifyResult.err) {
+        return callback(stringifyResult.err);
     }
 
-    var outHeadBuffer = null;
-    var outBodyBuffer = outRes.value;
-
     // Punch as=thrift into the transport headers
-    request.headers.as = "thrift";
+    request.headers.as = 'thrift';
 
-    request.send(endpoint, outHeadBuffer, outBodyBuffer, handleResponse);
+    request.send(
+        endpoint,
+        stringifyResult.value.head,
+        stringifyResult.value.body,
+        handleResponse
+    );
 
     function handleResponse(err, res, arg2, arg3) {
         if (err) {
             return callback(err);
         }
 
-        var inBodyResult = resultType.fromBuffer(arg3);
-        if (inBodyResult.err) {
-            return inBodyResult.toCallback(callback); // TODO WrappedError
+        var parseResult = self._parse({
+            head: arg2,
+            body: arg3,
+            ok: res.ok,
+            endpoint: endpoint,
+            direction: 'in.response'
+        });
+
+        if (parseResult.err) {
+            return callback(parseResult.err);
         }
 
-        var inBody;
+        var v = parseResult.value;
+        var resp;
+
         if (res.ok) {
-            inBody = inBodyResult.value.success;
+            resp = new TChannelThriftResponse(res.ok, v.head, v.body);
         } else {
-            inBody = onlyProperty(inBodyResult.value);
+            resp = new TChannelThriftResponse(
+                res.ok, v.head, errors.ReconstructedError(v.body)
+            );
         }
 
-        // TODO translate inHeadBuffer into inHead
-        // var inHeadBuffer = arg2;
-        var inHead = null;
-
-        callback(null, new Response(res.ok, inHead, inBody));
+        callback(null, resp);
     }
-
 };
 
-function Response(ok, head, body) {
+TChannelAsThrift.prototype._parse = function parse(opts) {
+    var self = this;
+
+    var argsName = opts.endpoint + '_args';
+    var argsType = self.spec.getType(argsName);
+
+    var returnName = opts.endpoint + '_result';
+    var resultType = self.spec.getType(returnName);
+
+    var headRes = bufrw.fromBufferResult(HeaderRW, opts.head);
+    if (headRes.err) {
+        var headParseErr = errors.ThriftHeadParserError(headRes.err, {
+            endpoint: opts.endpoint,
+            direction: opts.direction,
+            ok: opts.ok,
+            headBuf: opts.head.slice(0, 10)
+        });
+
+        if (self.logParseFailures) {
+            self.logger.warn('Got unexpected invalid thrift arg2', {
+                endpoint: opts.endpoint,
+                direction: opts.direction,
+                ok: opts.ok,
+                headErr: headParseErr
+            });
+        }
+
+        return new Result(headParseErr);
+    }
+
+    var bodyRes;
+    if (opts.direction === 'in.request') {
+        bodyRes = argsType.fromBuffer(opts.body);
+    } else if (opts.direction === 'in.response') {
+        bodyRes = resultType.fromBuffer(opts.body);
+
+        if (bodyRes.value && opts.ok) {
+            bodyRes.value = bodyRes.value.success;
+        } else if (bodyRes.value && !opts.ok) {
+            bodyRes.value = onlyProperty(bodyRes.value);
+        }
+    }
+
+    if (bodyRes.err) {
+        var bodyParseErr = errors.ThriftBodyParserError(bodyRes.err, {
+            endpoint: opts.endpoint,
+            direction: opts.direction,
+            ok: opts.ok,
+            bodyBuf: opts.body.slice(0, 10)
+        });
+
+        if (self.logParseFailures) {
+            self.logger.warn('Got unexpected invalid thrift for arg3', {
+                endpoint: opts.endpoint,
+                ok: opts.ok,
+                direction: opts.direction,
+                bodyErr: bodyParseErr
+            });
+        }
+
+        return new Result(bodyParseErr);
+    }
+
+    return new Result(null, {
+        head: headRes.value,
+        body: bodyRes.value
+    });
+};
+
+TChannelAsThrift.prototype._stringify = function stringify(opts) {
+    var self = this;
+
+    var argsName = opts.endpoint + '_args';
+    var argsType = self.spec.getType(argsName);
+
+    var returnName = opts.endpoint + '_result';
+    var resultType = self.spec.getType(returnName);
+
+    opts.head = opts.head || {};
+
+    var headRes = bufrw.toBufferResult(HeaderRW, opts.head);
+    if (headRes.err) {
+        var headStringifyErr = errors.ThriftHeadStringifyError(headRes.err, {
+            endpoint: opts.endpoint,
+            ok: opts.ok,
+            direction: opts.direction,
+            head: opts.head
+        });
+
+        self.logger.error('Got unexpected unserializable thrift for arg2', {
+            endpoint: opts.endpoint,
+            ok: opts.ok,
+            direction: opts.direction,
+            headErr: headStringifyErr
+        });
+        return new Result(headStringifyErr);
+    }
+
+    var bodyRes;
+    if (opts.direction === 'out.request') {
+        bodyRes = argsType.toBuffer(opts.body);
+    } else if (opts.direction === 'out.response') {
+        var thriftResult = {};
+        if (!opts.ok) {
+            thriftResult[opts.body.nameAsThrift] = opts.body;
+        } else {
+            thriftResult.success = opts.body;
+        }
+
+        bodyRes = resultType.toBuffer(thriftResult);
+    }
+
+    if (bodyRes.err) {
+        var bodyStringifyErr = errors.ThriftBodyStringifyError(bodyRes.err, {
+            endpoint: opts.endpoint,
+            ok: opts.ok,
+            direction: opts.direction,
+            body: opts.body
+        });
+
+        self.logger.error('Got unexpected unserializable thrift for arg3', {
+            endpoint: opts.endpoint,
+            direction: opts.direction,
+            ok: opts.ok,
+            bodyErr: bodyStringifyErr
+        });
+        return new Result(bodyStringifyErr);
+    }
+
+    return new Result(null, {
+        head: headRes.value,
+        body: bodyRes.value
+    });
+};
+
+function TChannelThriftResponse(ok, head, body) {
     var self = this;
     self.ok = ok;
     self.head = head;
@@ -161,4 +342,8 @@ function onlyProperty(object) {
             return object[name];
         }
     }
+}
+
+function isError(err) {
+    return Object.prototype.toString.call(err) === '[object Error]';
 }

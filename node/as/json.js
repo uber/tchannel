@@ -203,7 +203,7 @@ TChannelJSON.prototype._stringify = function stringify(opts) {
 
     var headR = safeJSONStringify(opts.head);
     if (headR.err) {
-        var headStringifyErr = errors.HeadStringifyError(headR.err, {
+        var headStringifyErr = errors.JSONHeadStringifyError(headR.err, {
             endpoint: opts.endpoint,
             direction: opts.direction,
             head: cyclicStringify(opts.head)
@@ -219,7 +219,7 @@ TChannelJSON.prototype._stringify = function stringify(opts) {
 
     var bodyR = safeJSONStringify(opts.body);
     if (bodyR.err) {
-        var bodyStringifyErr = errors.BodyStringifyError(bodyR.err, {
+        var bodyStringifyErr = errors.JSONBodyStringifyError(bodyR.err, {
             endpoint: opts.endpoint,
             direction: opts.direction,
             body: cyclicStringify(opts.body)
@@ -244,7 +244,7 @@ TChannelJSON.prototype._parse = function parse(opts) {
 
     var headR = safeJSONParse(opts.head);
     if (headR.err) {
-        var headParseErr = errors.HeadParserError(headR.err, {
+        var headParseErr = errors.JSONHeadParserError(headR.err, {
             endpoint: opts.endpoint,
             direction: opts.direction,
             headStr: opts.head.slice(0, 10)
@@ -263,7 +263,7 @@ TChannelJSON.prototype._parse = function parse(opts) {
 
     var bodyR = safeJSONParse(opts.body);
     if (bodyR.err) {
-        var bodyParseErr = errors.BodyParserError(bodyR.err, {
+        var bodyParseErr = errors.JSONBodyParserError(bodyR.err, {
             endpoint: opts.endpoint,
             direction: opts.direction,
             bodyStr: opts.body.slice(0, 10)
