@@ -19,98 +19,287 @@
 // THE SOFTWARE.
 
 /* jshint maxparams:5 */
+/*eslint max-params: [2, 5]*/
 
 'use strict';
 
 var path = require('path');
-var tape = require('tape');
-var TChannel = require('../channel.js');
-var EndpointHandler = require('../endpoint-handler.js');
-var TChannelAsThrift = require('../as/thrift.js');
+var TypedError = require('error/typed');
 var thriftify = require('thriftify');
 
-function NoEchoError(value) {
-    var err = new Error('No echo');
-    err.nameAsThrift = 'noEcho';
-    err.value = value;
-    return err;
-}
+var allocCluster = require('./lib/alloc-cluster.js');
+var TChannelAsThrift = require('../as/thrift.js');
 
+var spec = thriftify.readSpecSync(
+    path.join(__dirname, 'anechoic-chamber.thrift')
+);
 
-function echo(opts, req, head, body, cb) {
-    return cb(null, {ok: true, body: body.value});
-}
+allocCluster.test('send and receiving an ok', {
+    numPeers: 2
+}, function t(cluster, assert) {
+    var client = cluster.channels[1];
 
-function noEcho(opts, req, head, body, cb) {
-    return cb(null, {ok: false, body: NoEchoError(body.value)});
-}
-
-tape('send and receive thrift an ok service call', function (assert) {
-
-    var client = new TChannel();
-    var server = new TChannel({
-        handler: new EndpointHandler()
+    var tchannelAsThrift = makeTChannelThriftServer(cluster, {
+        okResponse: true
     });
 
-    var spec = thriftify.readSpecSync(path.join(__dirname, 'anechoic-chamber.thrift'));
-    var tchannelAsThrift = new TChannelAsThrift({spec: spec});
-    tchannelAsThrift.register(server.handler, 'Chamber::echo', null, echo);
+    tchannelAsThrift.send(client.request({
+        serviceName: 'server'
+    }), 'Chamber::echo', null, {
+        value: 10
+    }, function onResponse(err, res) {
+        assert.ifError(err);
 
-    server.listen(0, '127.0.0.1', function () {
+        assert.ok(res.ok);
+        assert.equal(res.body, 10);
+        assert.end();
+    });
+});
 
-        tchannelAsThrift.send(client.request({
-            host: server.hostPort
-        }), 'Chamber::echo', null, {value: 10}, handleResponse);
+allocCluster.test('send and receive a not ok', {
+    numPeers: 2
+}, function t(cluster, assert) {
+    var client = cluster.channels[1];
 
-        function handleResponse(err, res) {
-            if (err) return done(err);
-            assert.ok(res.ok);
-            assert.equals(res.body, 10);
-            done();
-        }
-
+    var tchannelAsThrift = makeTChannelThriftServer(cluster, {
+        notOkResponse: true
     });
 
-    function done(err) {
-        if (err) {
-            assert.ifErr(err);
+    tchannelAsThrift.send(client.request({
+        serviceName: 'server'
+    }), 'Chamber::echo', null, {
+        value: 10
+    }, function onResponse(err, res) {
+        assert.ifError(err);
+
+        assert.ok(!res.ok);
+        assert.equal(res.body.value, 10);
+        assert.equal(res.body.message, 'No echo');
+        assert.equal(res.body.nameAsThrift, 'noEcho');
+        assert.equal(res.body.type, 'tchannel.hydrated-error.default-type');
+
+        assert.end();
+    });
+});
+
+allocCluster.test('send and receive a typed not ok', {
+    numPeers: 2
+}, function t(cluster, assert) {
+    var client = cluster.channels[1];
+
+    var tchannelAsThrift = makeTChannelThriftServer(cluster, {
+        notOkTypedResponse: true
+    });
+
+    tchannelAsThrift.send(client.request({
+        serviceName: 'server'
+    }), 'Chamber::echo', null, {
+        value: 10
+    }, function onResponse(err, res) {
+        assert.ifError(err);
+
+        assert.ok(!res.ok);
+        assert.equal(res.body.value, 10);
+        assert.equal(res.body.message, 'No echo typed error');
+        assert.equal(res.body.nameAsThrift, 'noEchoTyped');
+        assert.equal(res.body.type, 'server.no-echo');
+
+        assert.end();
+    });
+});
+
+allocCluster.test('sending and receiving headers', {
+    numPeers: 2
+}, function t(cluster, assert) {
+    var client = cluster.channels[1];
+
+    var tchannelAsThrift = makeTChannelThriftServer(cluster, {
+        okResponse: true
+    });
+
+    tchannelAsThrift.send(client.request({
+        serviceName: 'server'
+    }), 'Chamber::echo', {
+        headerA: 'headerA',
+        headerB: 'headerB'
+    }, {
+        value: 10
+    }, function onResponse(err, res) {
+        assert.ifError(err);
+
+        assert.ok(res.ok);
+        assert.deepEqual(res.head, {
+            headerA: 'headerA',
+            headerB: 'headerB'
+        });
+        assert.equal(res.body, 10);
+        assert.end();
+    });
+});
+
+allocCluster.test('getting an UnexpectedError frame', {
+    numPeers: 2
+}, function t(cluster, assert) {
+    var client = cluster.channels[1];
+
+    var tchannelAsThrift = makeTChannelThriftServer(cluster, {
+        networkFailureResponse: true
+    });
+
+    var _error = client.logger.error;
+    var messages = [];
+    client.logger.error = function error(msg) {
+        messages.push(msg);
+        if (msg !== 'Got unexpected error in handler') {
+            _error.apply(this, arguments);
         }
-        server.close();
+    };
+
+    tchannelAsThrift.send(client.request({
+        serviceName: 'server'
+    }), 'Chamber::echo', null, {
+        value: 10
+    }, function onResponse(err, resp) {
+        assert.ok(err);
+        assert.equal(err.isErrorFrame, true);
+        assert.equal(err.codeName, 'UnexpectedError');
+        assert.equal(err.message, 'Unexpected Error');
+
+        assert.equal(resp, undefined);
+        assert.equal(messages.length, 1);
+
+        assert.end();
+    });
+});
+
+allocCluster.test('getting a BadRequest frame', {
+    numPeers: 2
+}, function t(cluster, assert) {
+    makeTChannelThriftServer(cluster, {
+        networkFailureResponse: true
+    });
+    var client = cluster.channels[1];
+
+    client.request({
+        serviceName: 'server',
+        timeout: 1500,
+        headers: {
+            as: 'thrift'
+        }
+    }).send('Chamber::echo', 'junk header', null, onResponse);
+
+    function onResponse(err, resp) {
+        assert.ok(err);
+
+        assert.equal(err.isErrorFrame, true);
+        assert.equal(err.codeName, 'BadRequest');
+        assert.equal(err.message,
+            'tchannel-thrift-handler.parse-error.head-failed: Could not ' +
+                'parse head (arg2) argument.\n' +
+                'Expected Thrift encoded arg2 for endpoint Chamber::echo.\n' +
+                'Got junk heade instead of Thrift.'
+        );
+
+        assert.equal(resp, null);
+
         assert.end();
     }
 });
 
-tape('send and receive thrift a not ok service call', function (assert) {
-
-    var client = new TChannel();
-    var server = new TChannel({
-        handler: new EndpointHandler()
+allocCluster.test('sending without as header', {
+    numPeers: 2
+}, function t(cluster, assert) {
+    makeTChannelThriftServer(cluster, {
+        networkFailureResponse: true
     });
+    var client = cluster.channels[1];
 
-    var spec = thriftify.readSpecSync(path.join(__dirname, 'anechoic-chamber.thrift'));
-    var tchannelAsThrift = new TChannelAsThrift({spec: spec});
-    tchannelAsThrift.register(server.handler, 'Chamber::echo', null, noEcho);
+    client.request({
+        serviceName: 'server',
+        timeout: 1500
+    }).send('Chamber::echo', null, null, onResponse);
 
-    server.listen(4040, '127.0.0.1', function () {
+    function onResponse(err, resp) {
+        assert.ok(err);
 
-        tchannelAsThrift.send(client.request({
-            host: server.hostPort
-        }), 'Chamber::echo', null, {value: 10}, handleResponse);
+        assert.equal(err.isErrorFrame, true);
+        assert.equal(err.codeName, 'BadRequest');
+        assert.equal(err.message,
+            'Expected call request as header to be thrift');
 
-        function handleResponse(err, res) {
-            if (err) return done(err);
-            assert.ok(!res.ok);
-            assert.equals(res.body.value, 10);
-            done();
-        }
+        assert.equal(resp, null);
 
-    });
-
-    function done(err) {
-        if (err) {
-            assert.ifErr(err);
-        }
-        server.close();
         assert.end();
     }
 });
+
+function makeTChannelThriftServer(cluster, opts) {
+    var server = cluster.channels[0].makeSubChannel({
+        serviceName: 'server'
+    });
+    var NoEchoTypedError = TypedError({
+        type: 'server.no-echo',
+        message: 'No echo typed error',
+        nameAsThrift: 'noEchoTyped',
+        value: null
+    });
+
+    cluster.channels[1].makeSubChannel({
+        serviceName: 'server',
+        peers: [
+            cluster.channels[0].hostPort
+        ]
+    });
+
+    var options = {
+        isOptions: true
+    };
+
+    var fn = opts.okResponse ? okHandler :
+        opts.notOkResponse ? notOkHandler :
+        opts.notOkTypedResponse ? notOkTypedHandler :
+        opts.networkFailureResponse ? networkFailureHandler :
+            networkFailureHandler;
+
+    var tchannelAsThrift = new TChannelAsThrift({
+        spec: spec,
+        logParseFailures: false
+    });
+    tchannelAsThrift.register(server, 'Chamber::echo', options, fn);
+
+    return tchannelAsThrift;
+
+    function okHandler(opts, req, head, body, cb) {
+        return cb(null, {
+            ok: true,
+            head: head,
+            body: body.value
+        });
+    }
+
+    function notOkHandler(opts, req, head, body, cb) {
+        return cb(null, {ok: false, body: NoEchoError(body.value)});
+    }
+
+    function notOkTypedHandler(opts, req, head, body, cb) {
+        cb(null, {
+            ok: false,
+            body: NoEchoTypedError({
+                value: body.value
+            })
+        });
+    }
+
+    function networkFailureHandler(opts, req, head, body, cb) {
+        var networkError = new Error('network failure');
+
+        cb(networkError);
+    }
+
+    function NoEchoError(value) {
+        var err = new Error('No echo');
+        err.nameAsThrift = 'noEcho';
+        err.value = value;
+        return err;
+    }
+}

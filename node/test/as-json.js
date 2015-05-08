@@ -25,7 +25,6 @@
 var TypedError = require('error/typed');
 
 var TChannelJSON = require('../as/json.js');
-
 var allocCluster = require('./lib/alloc-cluster.js');
 
 allocCluster.test('getting an ok response', {
