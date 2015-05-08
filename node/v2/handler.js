@@ -211,6 +211,13 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
         return callback(new Error('call response before init response')); // TODO typed error
     }
     var res = self.buildInResponse(resFrame);
+    if (resFrame.body.args && resFrame.body.args[0] &&
+        resFrame.body.args[0].length > v2.CallResponse.MaxArg1Size) {
+        return callback(errors.Arg1OverLengthLimit({
+                length: '0x' + resFrame.body.args[0].length.toString(16),
+                limit: '0x' + v2.CallResponse.MaxArg1Size.toString(16)
+        }));
+    }
     res.remoteAddr = self.remoteHostPort;
     self._handleCallFrame(res, resFrame, callResponseFrameHandled);
     function callResponseFrameHandled(err) {
