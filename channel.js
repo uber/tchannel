@@ -32,7 +32,7 @@ var format = require('util').format;
 var extend = require('xtend');
 
 var inherits = require('util').inherits;
-var EventEmitter = require('./lib/event_emitter');
+var StatEmitter = require('./lib/stat_emitter');
 
 var nullLogger = require('./null-logger.js');
 var EndpointHandler = require('./endpoint-handler.js');
@@ -56,7 +56,7 @@ function TChannel(options) {
     }
 
     var self = this;
-    EventEmitter.call(self);
+    StatEmitter.call(self);
     self.errorEvent = self.defineEvent('error');
     self.listeningEvent = self.defineEvent('listening');
     self.connectionEvent = self.defineEvent('connection');
@@ -143,7 +143,7 @@ function TChannel(options) {
     self.serverSocket = null;
     self.serverConnections = null;
 }
-inherits(TChannel, EventEmitter);
+inherits(TChannel, StatEmitter);
 
 TChannel.prototype.getServer = function getServer() {
     var self = this;
