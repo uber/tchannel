@@ -120,6 +120,11 @@ TChannelInRequest.prototype.checkTimeout = function checkTimeout() {
     return self.timedOut;
 };
 
+TChannelInRequest.prototype.withArg2 = function withArg23(callback) {
+    var self = this;
+    callback(null, self.arg2);
+};
+
 TChannelInRequest.prototype.withArg23 = function withArg23(callback) {
     var self = this;
     callback(null, self.arg2, self.arg3);
