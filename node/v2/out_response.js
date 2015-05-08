@@ -55,6 +55,7 @@ function _sendCallResponse(args, isLast) {
                 length: '0x' + args[0].length.toString(16),
                 limit: '0x' + v2.CallResponse.MaxArg1Size.toString(16)
         }));
+        return;
     }
     if (!isLast) flags |= CallFlags.Fragment;
     self.handler.sendCallResponseFrame(self, flags, args);
