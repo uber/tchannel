@@ -165,8 +165,6 @@ TChannelRequest.prototype.resend = function resend() {
         return;
     }
 
-    if (self.checkTimeout()) return;
-
     var opts = {};
     var keys = Object.keys(self.options);
     for (var i = 0; i < keys.length; i++) {
