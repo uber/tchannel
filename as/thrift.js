@@ -26,10 +26,7 @@ var Result = require('bufrw/result');
 
 var errors = require('../errors.js');
 
-var HeaderRW = bufrw.Repeat(
-    bufrw.UInt16BE,
-    bufrw.Series(bufrw.str2, bufrw.str2)
-);
+var HeaderRW = require('../v2/header.js').header2;
 
 module.exports = TChannelAsThrift;
 
@@ -258,14 +255,8 @@ TChannelAsThrift.prototype._parse = function parse(opts) {
         return new Result(bodyParseErr);
     }
 
-    var headers = {};
-    for (var i = 0; i < headRes.value.length; i++) {
-        var pair = headRes.value[i];
-        headers[pair[0]] = pair[1];
-    }
-
     return new Result(null, {
-        head: headers,
+        head: headRes.value,
         body: bodyRes.value
     });
 };
@@ -280,14 +271,8 @@ TChannelAsThrift.prototype._stringify = function stringify(opts) {
     var resultType = self.spec.getType(returnName);
 
     opts.head = opts.head || {};
-    var headers = Object.keys(opts.head);
 
-    var headerPairs = [];
-    for (var i = 0; i < headers.length; i++) {
-        headerPairs.push([headers[i], opts.head[headers[i]]]);
-    }
-
-    var headRes = bufrw.toBufferResult(HeaderRW, headerPairs);
+    var headRes = bufrw.toBufferResult(HeaderRW, opts.head);
     if (headRes.err) {
         var headStringifyErr = errors.ThriftHeadStringifyError(headRes.err, {
             endpoint: opts.endpoint,
