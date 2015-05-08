@@ -231,6 +231,16 @@ TChannelRequest.prototype.resend = function resend() {
                 'target-endpoint': String(outReq.arg1)
             }
         ));
+    } else {
+        self.channel.emitStat(new Stat.Counter(
+            'outbound.calls.retries', 1, {
+                'target-service': outReq.serviceName,
+                'service': outReq.headers.cn,
+                // TODO should always be buffer
+                'target-endpoint': String(outReq.arg1),
+                'retry-count': self.outReqs.length - 1
+            }
+        ));
     }
 
     self.triedRemoteAddrs[outReq.remoteAddr] = (self.triedRemoteAddrs[outReq.remoteAddr] || 0) + 1;
