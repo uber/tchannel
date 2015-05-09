@@ -129,6 +129,8 @@ TChannelRequest.prototype.hookupCallback = function hookupCallback(callback) {
             });
         }
 
+        emitLatency();
+
         callback(err, null, null, null);
     }
 
@@ -155,7 +157,19 @@ TChannelRequest.prototype.hookupCallback = function hookupCallback(callback) {
                 });
             }
 
+            emitLatency();
+
             callback(err, res, arg2, arg3);
+        });
+    }
+
+    function emitLatency() {
+        var latency = self.end - self.start;
+        self.channel.outboundCallsLatencyStat.add(latency, {
+            'target-service': self.serviceName,
+            'service': self.headers.cn,
+            // TODO should always be buffer
+            'target-endpoint': String(self.arg1)
         });
     }
 
