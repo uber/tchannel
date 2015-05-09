@@ -197,8 +197,10 @@ module.exports.ResponseAlreadyStarted = TypedError({
 
 module.exports.ResponseAlreadyDone = TypedError({
     type: 'tchannel.response-already-done',
-    message: 'cannot send {attempted}, response already done',
-    attempted: null
+    message: 'cannot send {attempted}, response already done ' +
+        'in state: {currentState}',
+    attempted: null,
+    currentState: null
 });
 
 module.exports.ResponseFrameState = TypedError({
