@@ -51,16 +51,18 @@ name).
 
 `arg3` must contain a Thrift struct encoded using `TBinaryProtocol`.
 
-For `call req` messages, it is a struct containing JUST the parameters of the
-method.
+For `call req` messages, it is the full encoded Thrift payload. This includes
+the method name, the Thrift message type, and sequence ID, and the parameters
+of the call.
 
-For `call res` messages,
+Similarly, for `call res` messages, it is the full encoded Thrift payload: the
+method name, message type, sequence ID, and the result.
 
--   In case of success, the response contains a struct with a single field with
-    identifier `0` that contains the return value of the method. For methods
-    with a `void` return type, the struct must be empty.
+-   In case of success, the result is a struct with a single field with
+    identifier `0` that contains the return value. For methods with a `void`
+    return type, the struct must be empty.
 
--   In case of failure, the response contains a struct with a single exception
+-   In case of failure, the result is a struct with a single exception
     field identifier with the exception struct as the value.
 
 For example,
@@ -82,33 +84,33 @@ For `getComments(1234, 10, 100)`, the `arg3` for `call req` will contain the
 binary-encoded version of the following struct:
 
 ```
-{
+["getComments", CALL, 0, {
     1: 1234,
     2: 10,
     3: 100
-}
+}]
 ```
 
 If the call succeeds, the `call res` body contains the following binary-encoded
 struct:
 
 ```
-{
+["getComments", REPLY, 0, {
     0: [
         { /* comment fields go here */ },
         { /* comment fields go here */ },
         // ...
     ]
-}
+}]
 ```
 
 If the call fails with an `EntityDoesNotExist` exception, the body contains the
 following binary-encoded struct:
 
 ```
-{
+["getComments", EXCEPTION, 0, {
     2: { /* EntityDoesNotExist fields go here */ }
-}
+}]
 ```
 
 Multiple Services
