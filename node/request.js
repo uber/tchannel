@@ -217,6 +217,8 @@ TChannelRequest.prototype.resend = function resend() {
         return;
     }
 
+    var perAttemptStart = self.timers.now();
+
     var opts = {};
     var keys = Object.keys(self.options);
     for (var i = 0; i < keys.length; i++) {
@@ -252,12 +254,29 @@ TChannelRequest.prototype.resend = function resend() {
     self.services.onRequest(self);
 
     function onError(err) {
+        emitPerAttemptLatency();
+
         self.onSubreqError(err);
         self.services.onRequestError(self);
     }
 
     function onResponse(res) {
+        emitPerAttemptLatency();
+
         self.onSubreqResponse(res);
+    }
+
+    function emitPerAttemptLatency() {
+        var latency = self.timers.now() - perAttemptStart;
+
+        self.channel.outboundCallsPerAttemptLatencyStat.add(latency, {
+            'target-service': self.serviceName,
+            'service': self.headers.cn,
+            // TODO should always be buffer
+            'target-endpoint': String(self.arg1),
+            'peer': peer.hostPort,
+            'retry-count': self.outReqs.length - 1
+        });
     }
 };
 
