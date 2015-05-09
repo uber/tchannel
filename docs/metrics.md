@@ -28,7 +28,7 @@ models.
 
 All metrics MUST include the following tags:
 
-  * *app* - the name/id of the application hosting the service or client.  TChannel
+  * ``app`` - the name/id of the application hosting the service or client.  TChannel
     metrics are arranged in a hierarchy - processes run one or more applications,
     applications host one or more services, services expose one or more endpoints,
     one application may be spread across multiple process.  The application name is
@@ -38,14 +38,15 @@ All metrics MUST include the following tags:
     functions they expose.
 
 All metrics MAY include the following tags:
-  * *host* - The name of the host on which the reporter is running.
-  * *cluster* - Identifier of the cluster in which the reporter is running.  
+  * ``host`` - The name of the host on which the reporter is running.
+  * ``cluster`` - Identifier of the cluster in which the reporter is running.  
     Differentiate nodes running in a canary vs full production vs private mode.
-  * *version* - the version of the running application.  The version reported in 
+  * ``version`` - the version of the running application.  The version reported in 
     metrics should correlate to version information included in zipkin annotations 
     emitted by the process, to support correlating metrics data with dependency call graphs.
 
 ## Call Metrics
+
 Call metrics track statistics about RPC calls made from or to the application.
 
 ### Outbound call metrics
@@ -55,14 +56,14 @@ peer.  Call is defined as a call visible to application code - speculative
 requests and retries are not included in outbound call metrics unless
 specifically mentioned below.
 
-All outbound call metrics MUST contain the service and target-service and
-SHOULD contain a  target-endpoint tag where reasonable.  The service tag is a
-string indicating the name of the service initiating the call (the “cn”
-transport header”); the target-service tag is a string containing the name of
-the service being called (the “service” field in the call request), and the
-target-endpoint tag is a string containing the id of the target endpoint being
-invoked (from arg1).  Implementations SHOULD only include the target endpoint
-if the value space for the endpoint is finite; certain “as” transport - such as
+All outbound call metrics MUST contain the ``service`` and ``target-service`` and
+SHOULD contain a ``target-endpoint`` tag where reasonable.  The ``service`` tag is a
+string indicating the name of the service initiating the call (the "cn
+transport header"); the ``target-service`` tag is a string containing the name of
+the service being called (the "service" field in the call request), and the
+``target-endpoint`` tag is a string containing the id of the target endpoint being
+invoked (from "arg1").  Implementations SHOULD only include the target endpoint
+if the value space for the endpoint is finite; certain "as" transport - such as
 HTTP-over-tchannel - contain UUIDs in their endpoints, making the value space
 effectively infinite.  These implementations SHOULD omit the target-endpoint
 tag or normalize the arg1 values to a finite set.
@@ -80,20 +81,20 @@ service to the target service/endpoint.
 ##### outbound.calls.system-errors
 The total number of Error frame responses reported to the application from
 calls initiated by this service to the target service/endpoint.  MUST include
-an additional type tag indicating the type of error received; valid values are
+an additional ``type`` tag indicating the type of error received; valid values are
 the error code names described in the TChannel protocol doc.
 
 ##### outbound.calls.app-errors
 
 The total number of CallResponse/NotOk responses received from calls initiated
 by this service to the the target service/endpoint.  MAY include an additional
-type tag indicating the type of application-level error received.
+``type`` tag indicating the type of application-level error received.
 Standardization of application-level error types is outside the scope of the
 core metrics.
 
 ##### outbound.calls.retries
 The total number of retries performed by the sending service.  SHOULD include a
-retry-count tag indicating the per-request retry count represented by the
+``retry-count`` tag indicating the per-request retry count represented by the
 metric (e.g. the count of calls resulting in 1 retry should have retry-count=1,
 the count of calls resulting in 2 retries should have retry-count=2, etc)
 
@@ -123,7 +124,7 @@ containing the host and port of the peer to whom the call attempt was sent.
 ### Inbound call metrics
 
 Inbound call metrics measure calls received from a peer process.  All inbound
-call metrics SHOULD contain the service, endpoint, and calling-service tags if
+call metrics SHOULD contain the ``service``, ``endpoint``, and ``calling-service`` tags if
 they are known at the point of emission.  The service and endpoint tags are
 string indicating the name of the service and endpoint receiving the call; the
 calling-service tag is a string indicating the name of the service that
@@ -139,13 +140,13 @@ The total number successful responses generated by this service/endpoint.
 
 ##### inbound.calls.system-errors
 The total number of Error responses generated from calls received by this
-service/endpoint.  MUST include an additional type tag indicating the type of
+service/endpoint.  MUST include an additional ``type`` tag indicating the type of
 error received, with values identical that described under
 outbound.calls.system-errors
 
 ##### inbound.calls.app-errors
 The total number of CallResponse/NotOk responses generated from calls received
-by this service.  MAY include an additional type tag indicating the type of
+by this service.  MAY include an additional ``type`` tag indicating the type of
 application-level error received.  
 
 ##### inbound.cancels.requested
@@ -179,11 +180,11 @@ time that the final response fragment is generated by application code.
 ### Connection Metrics
 
 Connection metrics measure statistics related to socket connections initiated
-or received by the process.  All connection metrics MUST contain the host-port
-and peer tags.  The host-port tag is a string containing the host and port of
-the reporting process.  It MAY be 0.0.0.0:0 for ephemeral clients.  The peer
-tag is a string containing the host and port of the peer to whom connection is
-maintained.   
+or received by the process.  All connection metrics MUST contain the
+``host-port`` and ``peer-host-port`` tags.  The ``host-port`` tag is a string
+containing the host and port of the reporting process.  It MAY be 0.0.0.0:0 for
+ephemeral clients.  The ``peer-host-port`` tag is a string containing the host
+and port of the peer to whom connection is maintained.   
 
 #### Gauges
 
@@ -212,7 +213,7 @@ include a peer tag.
 
 ##### connections.errors
 The total number of fatal connection-level errors that have occurred to
-connections initiated between this process and the peer.  MUST include a type
+connections initiated between this process and the peer.  MUST include a ``type``
 tag indicating the type of error.  Standard type tags include:
 
   * _network-error_ - the connection suffered a network level error (e.g. ECONNRESET)
@@ -223,7 +224,7 @@ tag indicating the type of error.  Standard type tags include:
 ##### connections.closed
 
 The total number of connections closed due to error or graceful shutdown (e.g.
-idle timeouts, application initiated shutdown).  MAY include a reason tag
+idle timeouts, application initiated shutdown).  MAY include a ``reason`` tag
 indicating the reason for the closure.  Standard reason tags include:
 
   * _idle-timeout_ - the connection was closed due to being idle beyond a timeout
