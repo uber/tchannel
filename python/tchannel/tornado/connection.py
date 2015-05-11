@@ -211,7 +211,7 @@ class TornadoConnection(object):
                 continue
 
             elif context.message_id in self._outstanding:
-                response = self.awaitresponse_message_factory.build(
+                response = self.response_message_factory.build(
                     context.message_id, context.message
                 )
 
@@ -527,7 +527,7 @@ class StreamConnection(TornadoConnection):
         """
         args = []
         try:
-            for i, argstream in enumerate(context.argstreams):
+            for argstream in context.argstreams:
                 chunk = yield argstream.read()
                 args.append(chunk)
                 chunk = yield argstream.read()

@@ -98,16 +98,16 @@ class InMemStream(Stream):
         self._condition = Condition()
         self.auto_close = auto_close
 
-        self.exception = None
+        self.err_future = tornado.gen.Future()
 
     @tornado.gen.coroutine
     def read(self):
         if (self.state != StreamState.completed and
-                len(self._stream) == 0 and not self.exception):
+                len(self._stream) == 0):
             yield self._condition.wait()
 
-        if self.exception:
-            raise self.exception
+        if self.err_future.done():
+            yield self.err_future
 
         chunk = ""
         while len(self._stream) > 0 and len(chunk) < common.MAX_PAYLOAD_SIZE:
@@ -125,8 +125,9 @@ class InMemStream(Stream):
 
     @tornado.gen.coroutine
     def set_exception(self, exception):
-        self.exception = exception
-        self.close()
+        if self.err_future.running():
+            self.err_future.set_exception(exception)
+            self.close()
 
     @tornado.gen.coroutine
     def close(self):
@@ -161,12 +162,12 @@ class PipeStream(Stream):
         self.auto_close = auto_close
         self.state = StreamState.init
 
-        self.exception = None
+        self.err_future = tornado.gen.Future()
 
     @tornado.gen.coroutine
     def read(self):
-        if self.exception:
-            raise self.exception
+        if self.err_future.done():
+            yield self.err_future
 
         if self.state == StreamState.completed or self._rpipe is None:
             raise tornado.gen.Return("")
@@ -182,8 +183,8 @@ class PipeStream(Stream):
             # reach the end of the pipe stream
             self.state = StreamState.completed
         finally:
-            if self.exception:
-                raise self.exception
+            if self.err_future.done():
+                yield self.err_future
             raise tornado.gen.Return(chunk)
 
     @tornado.gen.coroutine
@@ -198,8 +199,9 @@ class PipeStream(Stream):
 
     @tornado.gen.coroutine
     def set_exception(self, exception):
-        self.exception = exception
-        self.close()
+        if self.err_future.running():
+            self.err_future.set_exception(exception)
+            self.close()
 
     def close(self):
         self.state = StreamState.completed
