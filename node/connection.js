@@ -190,6 +190,9 @@ TChannelConnection.prototype.handleReadFrame = function handleReadFrame(frame) {
 
 TChannelConnection.prototype.onCallResponse = function onCallResponse(res) {
     var self = this;
+    // TODO: only pop req if res is done/error, otherwise it's streaming and we
+    // should need to register finish / error event handlers to .popOutReq only
+    // once the call is done
     var req = self.popOutReq(res.id);
     if (!req) {
         self.logger.info('response received for unknown or lost operation', {
