@@ -22,11 +22,10 @@ from __future__ import absolute_import
 
 import tornado
 
-from ..exceptions import InvalidMessageException
 from ..exceptions import InvalidEndpointException
+from ..exceptions import InvalidMessageException
 from ..exceptions import TChannelException
 from ..scheme import RawArgScheme
-
 from .stream import Stream
 
 

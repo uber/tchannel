@@ -24,9 +24,10 @@ import tornado
 import tornado.gen
 from tornado import gen
 
-from ..exceptions import InvalidMessageException
-from ..exceptions import InvalidEndpointException
 from ..event import EventType
+from ..exceptions import InvalidEndpointException
+from ..exceptions import InvalidMessageException
+from ..exceptions import TChannelException
 from ..handler import BaseRequestHandler
 from ..messages.error import ErrorCode
 from .broker import ArgSchemeBroker
@@ -106,13 +107,15 @@ class RequestDispatcher(BaseRequestHandler):
                 response.flush()
             except (InvalidMessageException, InvalidEndpointException) as e:
                 response.set_exception(e)
+                connection.request_message_factory.remove_buffer(response.id)
                 connection.send_error(
                     ErrorCode.bad_request,
                     e.message,
                     response.id,
                 )
             except Exception as e:
-                response.set_exception(e)
+                response.set_exception(TChannelException())
+                connection.request_message_factory.remove_buffer(response.id)
                 connection.send_error(
                     ErrorCode.unexpected,
                     "An unexpected error has occurred from the handler",

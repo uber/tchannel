@@ -98,6 +98,11 @@ class BaseRequestHandler(RequestHandler):
         """
         try:
             req = connection.request_message_factory.build(message_id, message)
+            # call handler only for the call request message
+            # not continue message
+            if req:
+                self.handle_call(req, connection)
+
         except (InvalidChecksumException, StreamingException) as e:
             connection.send_error(
                 ErrorCode.bad_request,
@@ -110,10 +115,6 @@ class BaseRequestHandler(RequestHandler):
                 "An unexpected error has occurred!",
                 message_id,
             )
-
-        # call handler only for the call request message not continue message
-        if req:
-            self.handle_call(req, connection)
 
     def handle_ping(self, message_id, ping, connection):
         return connection.write(PingResponseMessage(), message_id)

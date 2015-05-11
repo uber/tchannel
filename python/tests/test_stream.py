@@ -88,14 +88,15 @@ def test_error_during_stream(io_loop):
 
     @pytest.mark.gen_test
     def set_exception():
-        stream.set_exception(
-            TChannelException("test exception")
-        )
+        try:
+            1 / 0
+        except Exception as e:
+            stream.set_exception(e)
 
     io_loop.call_later(
         0.01,
         set_exception
     )
 
-    with pytest.raises(TChannelException):
+    with pytest.raises(ZeroDivisionError):
         yield stream.read()

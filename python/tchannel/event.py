@@ -21,8 +21,8 @@
 from __future__ import absolute_import
 
 import collections
-import logging
 import functools
+import logging
 
 from enum import IntEnum
 from enum import unique

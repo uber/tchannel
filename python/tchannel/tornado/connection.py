@@ -36,14 +36,15 @@ from ..context import Context
 from ..event import EventType
 from ..exceptions import ConnectionClosedException
 from ..exceptions import InvalidErrorCodeException
+from ..exceptions import TChannelException
 from ..io import BytesIO
 from ..messages.common import PROTOCOL_VERSION
-from ..messages.common import StreamState
 from ..messages.common import FlagsType
+from ..messages.common import StreamState
 from ..messages.error import ErrorMessage
 from ..messages.types import Types
-from .message_factory import build_protocol_exception
 from .message_factory import MessageFactory
+from .message_factory import build_protocol_exception
 
 try:
     import tornado.queues as queues  # included in 4.2
@@ -211,6 +212,15 @@ class TornadoConnection(object):
                 continue
 
             elif context.message_id in self._outstanding:
+                if context.message.message_type == Types.ERROR:
+                    protocol_exception = build_protocol_exception(
+                        context.message,
+                        context.message_id,
+                    )
+                    future = self._outstanding.pop(context.message_id)
+                    future.set_exception(protocol_exception)
+                    continue
+
                 response = self.response_message_factory.build(
                     context.message_id, context.message
                 )
@@ -223,14 +233,6 @@ class TornadoConnection(object):
                     future = self._outstanding.get(context.message_id)
                 else:
                     future = self._outstanding.pop(context.message_id)
-
-                if context.message.message_type == Types.ERROR:
-                    protocol_exception = build_protocol_exception(
-                        context.message,
-                        context.message_id,
-                    )
-                    future.set_exception(protocol_exception)
-                    continue
 
                 if response and future.running():
                     future.set_result(response)
@@ -252,7 +254,7 @@ class TornadoConnection(object):
         """
         assert not self.closed
         assert self._loop_running, "Perform a handshake first."
-        assert message.message_type in self.CALL_TYPES, (
+        assert message.message_type in self.CALL_REQ_TYPES, (
             "Message '%s' can't use send" % repr(message)
         )
 
@@ -543,7 +545,7 @@ class StreamConnection(TornadoConnection):
                        build_raw_message(context, args, is_completed=True))
             yield self.write(message, context.id)
             context.state = StreamState.completed
-        # Stop streamming immediately if exception occurs
+        # Stop streamming immediately if exception occurs on the handler side
         except TChannelException:
             # raise by tchannel intentionally
             pass

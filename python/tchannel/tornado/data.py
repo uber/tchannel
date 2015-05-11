@@ -20,10 +20,10 @@
 
 from __future__ import absolute_import
 
-from enum import IntEnum
-
 import tornado
 import tornado.gen
+
+from enum import IntEnum
 
 from ..exceptions import TChannelException
 from ..messages.common import FlagsType

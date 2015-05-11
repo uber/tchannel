@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 
 from ..exceptions import InvalidChecksumException
-from ..exceptions import TChannelException
+from ..exceptions import ProtocolException
 from ..exceptions import StreamingException
 from ..messages import RW
 from ..messages import Types
@@ -38,7 +38,6 @@ from ..messages.common import verify_checksum
 from ..messages.error import ErrorMessage
 from ..zipkin.annotation import Endpoint
 from ..zipkin.trace import Trace
-from ..exceptions import ProtocolException
 from .data import Request
 from .data import Response
 from .stream import InMemStream
@@ -299,11 +298,6 @@ class MessageFactory(object):
                 # missing call msg before continue msg
                 raise StreamingException(
                     "missing call message after receiving continue message")
-            try:
-                self.verify_message(message, message_id)
-            except InvalidChecksumException as e:
-                context.set_exception(e)
-                raise
 
             # find the incompleted stream
             dst = 0
@@ -311,6 +305,12 @@ class MessageFactory(object):
                 if arg.state != StreamState.completed:
                     dst = i
                     break
+
+            try:
+                self.verify_message(message, message_id)
+            except InvalidChecksumException as e:
+                context.argstreams[dst].set_exception(e)
+                raise
 
             src = 0
             while src < len(message.args):
@@ -403,6 +403,9 @@ class MessageFactory(object):
         for i in range(num):
             request.argstreams[i].close()
 
+    def remove_buffer(self, message_id):
+        self.message_buffer.pop(message_id, None)
+
     def set_inbound_exception(self, protocol_error):
         reqres = self.message_buffer.get(protocol_error.id)
         if reqres is None:
@@ -417,8 +420,6 @@ class MessageFactory(object):
                 dst = i
                 break
 
-        reqres.argstreams[dst].set_exception(
-            TChannelException(protocol_error.description)
-        )
+        reqres.argstreams[dst].set_exception(protocol_error)
 
         self.message_buffer.pop(protocol_error.id, None)
