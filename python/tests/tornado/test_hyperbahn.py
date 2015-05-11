@@ -18,7 +18,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import mock
 import pytest
 
 from tchannel.exceptions import ConnectionClosedException
@@ -26,17 +25,15 @@ from tchannel.tornado.hyperbahn import HyperbahnClient
 
 
 def test_new_client_establishes_peers():
-    tchannel = mock.MagicMock()
-    routers = [mock.sentinel.foo, mock.sentinel.bar]
+    routers = ['127.0.0.1:23000']
 
-    HyperbahnClient(
+    client = HyperbahnClient(
         service='baz',
-        hyperbahn_routers=routers,
-        tchannel=tchannel,
+        routers=routers,
     )
 
     for router in routers:
-        assert tchannel.peers.add.called_with(router)
+        assert client.tchannel.peers.lookup(router)
 
 
 @pytest.mark.gen_test

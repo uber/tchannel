@@ -36,7 +36,7 @@ class HyperbahnClient(object):
     def __init__(
         self,
         service,
-        hyperbahn_routers,
+        routers,
         tchannel=None
     ):
         """
@@ -44,7 +44,7 @@ class HyperbahnClient(object):
             Address at which this service can be reached. For example,
             "127.0.0.1:2499".
 
-        :param hyperbahn_routers: list of hyperbahn addresses, e.g.,
+        :param routers: list of hyperbahn addresses, e.g.,
             ``["127.0.0.1:21300", "127.0.0.1:21301"]``.
 
         :param tchannel: ``TChannel`` instance to make Hyperbahn requests with.
@@ -52,7 +52,7 @@ class HyperbahnClient(object):
         self.service = service
         self.tchannel = tchannel or TChannel()
 
-        for known_peer in hyperbahn_routers:
+        for known_peer in routers:
             self.tchannel.peers.add(known_peer)
 
     @tornado.gen.coroutine
