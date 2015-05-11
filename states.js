@@ -21,6 +21,7 @@
 'use strict';
 
 var format = require('util').format;
+var inherits = require('util').inherits;
 
 var errors = require('./errors');
 
@@ -50,6 +51,24 @@ var symptoms = {
     'FatalProtocolError': true
 };
 
+// ## abstract State
+
+function State() {
+}
+
+State.prototype.onRequest = function onRequest(/* req */) {
+};
+
+State.prototype.onRequestResponse = function onRequestResponse(/* req */) {
+};
+
+State.prototype.onRequestError = function onRequestError(err) {
+};
+
+State.prototype.close = function close(callback) {
+    callback(null);
+};
+
 // ## Healthy
 
 function HealthyState(options) {
@@ -64,6 +83,8 @@ function HealthyState(options) {
     self.okCount = 0;
     self.notOkCount = 0;
 }
+
+inherits(HealthyState, State);
 
 HealthyState.prototype.type = 'tchannel.healthy';
 
@@ -92,9 +113,6 @@ HealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
     return self.stateMachine.shouldRequest();
 };
 
-HealthyState.prototype.onRequest = function onRequest(/* req */) {
-};
-
 HealthyState.prototype.onRequestResponse = function onRequestResponse(/* req */) {
     var self = this;
     self.okCount++;
@@ -106,10 +124,6 @@ HealthyState.prototype.onRequestError = function onRequestError(err) {
     if (symptoms[codeString]) {
         self.notOkCount++;
     }
-};
-
-HealthyState.prototype.close = function close(callback) {
-    callback(null);
 };
 
 // ## Unhealthy
@@ -126,6 +140,8 @@ function UnhealthyState(options) {
     self.successCount = 0;
     self.triedThisPeriod = true;
 }
+
+inherits(UnhealthyState, State);
 
 UnhealthyState.prototype.type = 'tchannel.unhealthy';
 
@@ -173,6 +189,4 @@ UnhealthyState.prototype.onRequestError = function onRequestError(err) {
     }
 };
 
-UnhealthyState.prototype.close = function close(callback) {
-    callback(null);
 };
