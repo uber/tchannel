@@ -20,14 +20,12 @@
 
 'use strict';
 
-var inherits = require('util').inherits;
 var format = require('util').format;
 
 var errors = require('./errors');
-var TChannelPeerState = require('./peer_state');
 
-module.exports.TChannelPeerHealthyState = TChannelPeerHealthyState;
-module.exports.TChannelPeerUnhealthyState = TChannelPeerUnhealthyState;
+module.exports.HealthyState = HealthyState;
+module.exports.UnhealthyState = UnhealthyState;
 
 /*
  * Collectively, the health states receive additional options through the peer
@@ -52,50 +50,29 @@ var symptoms = {
     'FatalProtocolError': true
 };
 
-function healthyScore(state/* , req, options */) {
-    // space:
-    //   [0.1, 0.2)  unconnected peers
-    //   [0.2, 0.3)  incoming connections
-    //   [0.3, 0.4)  new outgoing connections
-    //   [0.4, 1.0)  identified outgoing connections
-    var inconn = state.peer.getInConnection();
-    var outconn = state.peer.getOutConnection();
-    var random = state.peer.outPendingWeightedRandom();
-    if (!inconn && !outconn) {
-        return 0.1 + random * 0.1;
-    } else if (!outconn || outconn.direction !== 'out') {
-        return 0.2 + random * 0.1;
-    } else if (outconn.remoteName === null) {
-        return 0.3 + random * 0.1;
-    } else {
-        return 0.4 + random * 0.6;
-    }
-}
-
 // ## Healthy
 
-function TChannelPeerHealthyState(channel, peer) {
+function HealthyState(options) {
     var self = this;
-    TChannelPeerState.call(self, channel, peer);
-    self.timers = channel.timers;
-    self.random = channel.random;
-    self.period = peer.options.period || 1000; // ms
+    self.stateMachine = options.stateMachine;
+    self.nextHandler = options.nextHandler;
+    self.timers = options.timers;
+    self.random = options.random;
+    self.period = options.period || 1000; // ms
     self.start = self.timers.now();
-    self.maxErrorRate = peer.options.maxErrorRate || 0.5;
+    self.maxErrorRate = options.maxErrorRate || 0.5;
     self.okCount = 0;
     self.notOkCount = 0;
 }
 
-inherits(TChannelPeerHealthyState, TChannelPeerState);
+HealthyState.prototype.type = 'tchannel.healthy';
 
-TChannelPeerHealthyState.prototype.type = 'tchannel.healthy';
-
-TChannelPeerHealthyState.prototype.toString = function healthyToString() {
+HealthyState.prototype.toString = function healthyToString() {
     var self = this;
-    return format('[HealthyPeer %s ok %s err]', self.okCount, self.notOkCount);
+    return format('[Healthy %s ok %s err]', self.okCount, self.notOkCount);
 };
 
-TChannelPeerHealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
+HealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
     var self = this;
     var now = self.timers.now();
     // At the conclusion of a period
@@ -104,7 +81,7 @@ TChannelPeerHealthyState.prototype.shouldRequest = function shouldRequest(req, o
         // Transition to unhealthy state if the success rate dips below the
         // acceptable threshold.
         if (self.notOkCount / totalCount > self.maxErrorRate) {
-            self.peer.setState(TChannelPeerUnhealthyState);
+            self.stateMachine.setState(UnhealthyState);
             return 0;
         }
         // Alternatley, start a new monitoring period.
@@ -112,19 +89,18 @@ TChannelPeerHealthyState.prototype.shouldRequest = function shouldRequest(req, o
         self.okCount = 0;
         self.notOkCount = 0;
     }
-    // TODO throttle
-    return healthyScore(self, req, options);
+    return self.stateMachine.shouldRequest();
 };
 
-TChannelPeerHealthyState.prototype.onRequest = function onRequest(/* req */) {
+HealthyState.prototype.onRequest = function onRequest(/* req */) {
 };
 
-TChannelPeerHealthyState.prototype.onRequestResponse = function onRequestResponse(/* req */) {
+HealthyState.prototype.onRequestResponse = function onRequestResponse(/* req */) {
     var self = this;
     self.okCount++;
 };
 
-TChannelPeerHealthyState.prototype.onRequestError = function onRequestError(err) {
+HealthyState.prototype.onRequestError = function onRequestError(err) {
     var self = this;
     var codeString = errors.classify(err);
     if (symptoms[codeString]) {
@@ -132,30 +108,33 @@ TChannelPeerHealthyState.prototype.onRequestError = function onRequestError(err)
     }
 };
 
+HealthyState.prototype.close = function close(callback) {
+    callback(null);
+};
+
 // ## Unhealthy
 
-function TChannelPeerUnhealthyState(channel, peer) {
+function UnhealthyState(options) {
     var self = this;
-    TChannelPeerState.call(self, channel, peer);
-    self.timers = channel.timers;
-    self.random = channel.random;
-    self.minResponseCount = peer.options.probation || 5;
-    self.period = peer.options.period || 1000;
+    self.stateMachine = options.stateMachine;
+    self.nextHandler = options.nextHandler;
+    self.timers = options.timers;
+    self.random = options.random;
+    self.minResponseCount = options.probation || 5;
+    self.period = options.period || 1000;
     self.start = self.timers.now();
     self.successCount = 0;
     self.triedThisPeriod = true;
 }
 
-inherits(TChannelPeerUnhealthyState, TChannelPeerState);
+UnhealthyState.prototype.type = 'tchannel.unhealthy';
 
-TChannelPeerUnhealthyState.prototype.type = 'tchannel.unhealthy';
-
-TChannelPeerUnhealthyState.prototype.toString = function healthyToString() {
+UnhealthyState.prototype.toString = function healthyToString() {
     var self = this;
-    return format('[UnhealthyPeer %s ok]', self.successCount);
+    return format('[Unhealthy %s ok]', self.successCount);
 };
 
-TChannelPeerUnhealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
+UnhealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
     var self = this;
 
     // Start a new period if the previous has concluded
@@ -170,31 +149,30 @@ TChannelPeerUnhealthyState.prototype.shouldRequest = function shouldRequest(req,
         return 0;
     }
 
-    var score = healthyScore(self, req, options);
-    if (score >= 0.1 && score < 0.3) { // TODO predicate
-        // TODO: add channel / peers level support for "want more connections?"
-        self.peer.connect();
-    }
-    return score;
+    return self.nextHandler.shouldRequest();
 };
 
-TChannelPeerUnhealthyState.prototype.onRequest = function onRequest(/* req */) {
+UnhealthyState.prototype.onRequest = function onRequest(/* req */) {
     var self = this;
     self.triedThisPeriod = true;
 };
 
-TChannelPeerUnhealthyState.prototype.onRequestResponse = function onRequestResponse(/* req */) {
+UnhealthyState.prototype.onRequestResponse = function onRequestResponse(/* req */) {
     var self = this;
     self.successCount++;
     if (self.successCount > self.minResponseCount) {
-        self.peer.setState(TChannelPeerHealthyState);
+        self.stateMachine.setState(HealthyState);
     }
 };
 
-TChannelPeerUnhealthyState.prototype.onRequestError = function onRequestError(err) {
+UnhealthyState.prototype.onRequestError = function onRequestError(err) {
     var self = this;
     var codeString = errors.classify(err);
     if (symptoms[codeString]) {
         self.successCount = 0;
     }
+};
+
+UnhealthyState.prototype.close = function close(callback) {
+    callback(null);
 };
