@@ -42,3 +42,4 @@ require('./as-http.js');
 require('./peers.js');
 require('./peer_states.js');
 require('./trace/');
+require('./request-stats.js');
