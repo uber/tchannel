@@ -27,6 +27,8 @@ var errors = require('./errors');
 
 module.exports.HealthyState = HealthyState;
 module.exports.UnhealthyState = UnhealthyState;
+module.exports.LockedHealthyState = LockedHealthyState;
+module.exports.LockedUnhealthyState = LockedUnhealthyState;
 
 /*
  * Collectively, the health states receive additional options through the peer
@@ -189,4 +191,40 @@ UnhealthyState.prototype.onRequestError = function onRequestError(err) {
     }
 };
 
+// ## LockedHealthyState
+
+function LockedHealthyState(options) {
+    var self = this;
+    self.nextHandler = options.nextHandler;
+}
+
+inherits(LockedHealthyState, State);
+
+LockedHealthyState.prototype.type = 'tchannel.healthy-locked';
+
+LockedHealthyState.prototype.toString = function lockedHealthyToString() {
+    return '[Healthy state (locked)]';
+};
+
+LockedHealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
+    return self.nextHandler.shouldRequest(req, options);
+};
+
+// ## LockedUnhealthyState
+
+function LockedUnhealthyState(options) {
+    var self = this;
+    self.nextHandler = options.nextHandler;
+}
+
+inherits(LockedUnhealthyState, State);
+
+LockedUnhealthyState.prototype.type = 'tchannel.unhealthy-locked';
+
+LockedUnhealthyState.prototype.toString = function lockedUnhealthyToString() {
+    return '[Unhealthy state (locked)]';
+};
+
+LockedUnhealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
+    return 0;
 };
