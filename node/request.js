@@ -24,6 +24,7 @@ var assert = require('assert');
 var EventEmitter = require('./lib/event_emitter');
 var inherits = require('util').inherits;
 
+var Stat = require('./stat');
 var errors = require('./errors');
 
 function TChannelRequest(channel, options) {
@@ -110,6 +111,31 @@ TChannelRequest.prototype.hookupCallback = function hookupCallback(callback) {
     function onError(err) {
         if (called) return;
         called = true;
+
+        if (err.isErrorFrame) {
+            self.channel.emitStat(new Stat.Counter(
+                'outbound.calls.systems-errors', 1, {
+                    'target-service': self.serviceName,
+                    'service': self.headers.cn,
+                    // TODO should always be buffer
+                    'target-endpoint': String(self.arg1),
+                    'error-type': err.codeName
+                }
+            ));
+        } else {
+            self.channel.emitStat(new Stat.Counter(
+                'outbound.calls.operational-errors', 1, {
+                    'target-service': self.serviceName,
+                    'service': self.headers.cn,
+                    // TODO should always be buffer
+                    'target-endpoint': String(self.arg1),
+                    'error-type': err.type || 'unknown'
+                }
+            ));
+        }
+
+        emitLatency();
+
         callback(err, null, null, null);
     }
 
@@ -117,8 +143,46 @@ TChannelRequest.prototype.hookupCallback = function hookupCallback(callback) {
         if (called) return;
         called = true;
         res.withArg23(function gotArg23(err, arg2, arg3) {
+            if (res.ok) {
+                self.channel.emitStat(new Stat.Counter(
+                    'outbound.calls.success', 1, {
+                        'target-service': self.serviceName,
+                        'service': self.headers.cn,
+                        // TODO should always be buffer
+                        'target-endpoint': String(self.arg1)
+                    }
+                ));
+            } else {
+                self.channel.emitStat(new Stat.Counter(
+                    'outbound.calls.app-errors', 1, {
+                        'target-service': self.serviceName,
+                        'service': self.headers.cn,
+                        // TODO should always be buffer
+                        'target-endpoint': String(self.arg1),
+                        // TODO define transport header
+                        // for application error type
+                        'application-error-type': 'unknown'
+                    }
+                ));
+            }
+
+            emitLatency();
+
             callback(err, res, arg2, arg3);
         });
+    }
+
+    function emitLatency() {
+        var latency = self.end - self.start;
+
+        self.channel.emitStat(new Stat.Timer(
+            'outbound.calls.latency', latency, {
+                'target-service': self.serviceName,
+                'service': self.headers.cn,
+                // TODO should always be buffer
+                'target-endpoint': String(self.arg1)
+            }
+        ));
     }
 
     return self;
@@ -165,7 +229,7 @@ TChannelRequest.prototype.resend = function resend() {
         return;
     }
 
-    if (self.checkTimeout()) return;
+    var perAttemptStart = Date.now();
 
     var opts = {};
     var keys = Object.keys(self.options);
@@ -177,6 +241,27 @@ TChannelRequest.prototype.resend = function resend() {
     var outReq = peer.request(opts);
     self.outReqs.push(outReq);
 
+    if (self.outReqs.length === 1) {
+        self.channel.emitStat(new Stat.Counter(
+            'outbound.calls.sent', 1, {
+                'target-service': outReq.serviceName,
+                'service': outReq.headers.cn,
+                // TODO should always be buffer
+                'target-endpoint': String(outReq.arg1)
+            }
+        ));
+    } else {
+        self.channel.emitStat(new Stat.Counter(
+            'outbound.calls.retries', 1, {
+                'target-service': outReq.serviceName,
+                'service': outReq.headers.cn,
+                // TODO should always be buffer
+                'target-endpoint': String(outReq.arg1),
+                'retry-count': self.outReqs.length - 1
+            }
+        ));
+    }
+
     self.triedRemoteAddrs[outReq.remoteAddr] = (self.triedRemoteAddrs[outReq.remoteAddr] || 0) + 1;
     outReq.responseEvent.on(onResponse);
     outReq.errorEvent.on(onError);
@@ -185,12 +270,31 @@ TChannelRequest.prototype.resend = function resend() {
     self.services.onRequest(self);
 
     function onError(err) {
+        emitPerAttemptLatency();
+
         self.onSubreqError(err);
         self.services.onRequestError(self);
     }
 
     function onResponse(res) {
+        emitPerAttemptLatency();
+
         self.onSubreqResponse(res);
+    }
+
+    function emitPerAttemptLatency() {
+        var latency = Date.now() - perAttemptStart;
+
+        self.channel.emitStat(new Stat.Timer(
+            'outbound.calls.per-attempt-latency', latency, {
+                'target-service': self.serviceName,
+                'service': self.headers.cn,
+                // TODO should always be buffer
+                'target-endpoint': String(self.arg1),
+                'peer': peer.hostPort,
+                'retry-count': self.outReqs.length - 1
+            }
+        ));
     }
 };
 

@@ -20,43 +20,27 @@
 
 'use strict';
 
-var Logger = require('logtron');
-var parseArgs = require('minimist');
-var util = require('util');
+var Stat = {
+    Counter: Counter,
+    Timer: Timer
+};
 
-var TChannel = require('../channel');
-var setupRawTestService = require('./lib/raw_service');
+module.exports = Stat;
 
-var argv = parseArgs(process.argv.slice(2), {
-    alias: {
-        h: 'host',
-        p: 'port'
-    },
-    default: {
-        host: '127.0.0.1',
-        port: 0,
-    }
-});
+function Counter(name, value, tags) {
+    var self = this;
 
-var chan = TChannel({
-    logger: Logger({
-        meta: {
-            team: 'testers',
-            project: 'tchannel'
-        },
-        backends: Logger.defaultBackends({
-            console: !argv.logFile,
-            logFile: argv.logFile
-        })
-    })
-});
-setupRawTestService(chan);
+    self.type = 'counter';
+    self.name = name;
+    self.value = value;
+    self.tags = tags;
+}
 
-// TODO: logger?
-chan.listen(argv.port, argv.host);
-chan.on('listening', function onListening() {
-    var addr = chan.address();
-    process.stdout.write(util.format(
-        'listening on %s:%s\n', addr.address, addr.port
-    ));
-});
+function Timer(name, value, tags) {
+    var self = this;
+
+    self.type = 'timer';
+    self.name = name;
+    self.value = value;
+    self.tags = tags;
+}
