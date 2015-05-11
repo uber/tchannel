@@ -61,6 +61,14 @@ function TChannel(options) {
     self.listeningEvent = self.defineEvent('listening');
     self.connectionEvent = self.defineEvent('connection');
     self.requestEvent = self.defineEvent('request');
+    self.outboundCallsSentStat = self.defineCounter('outbound.calls.sent');
+    self.outboundCallsSystemErrorsStat = self.defineCounter('outbound.calls.system-errors');
+    self.outboundCallsOperationalErrorsStat = self.defineCounter('outbound.calls.operational-errors');
+    self.outboundCallsSuccessStat = self.defineCounter('outbound.calls.success');
+    self.outboundCallsAppErrorsStat = self.defineCounter('outbound.app-errors.success');
+    self.outboundCallsRetriesStat = self.defineCounter('outbound.calls.retries');
+    self.outboundCallsLatencyStat = self.defineTiming('outbound.calls.latency');
+    self.outboundCallsPerAttemptLatencyStat = self.defineTiming('outbound.calls.per-attempt-latency');
 
     self.options = extend({
         timeoutCheckInterval: 1000,
