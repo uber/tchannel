@@ -68,6 +68,7 @@ function TChannelRequest(channel, options) {
     self.arg2 = null;
     self.arg3 = null;
 
+    self._callback = null;
     self.err = null;
     self.res = null;
 
@@ -86,41 +87,32 @@ TChannelRequest.prototype.type = 'tchannel.request';
 TChannelRequest.prototype.onError = function onError(err, self) {
     if (!self.end) self.end = self.timers.now();
     self.err = err;
+
+    if (self._callback) {
+        self._callback(err, null, null, null);
+        self._callback = null;
+    }
 };
 
 TChannelRequest.prototype.onResponse = function onResponse(res, self) {
     if (!self.end) self.end = self.timers.now();
     self.res = res;
-};
-
-TChannelRequest.prototype.hookupStreamCallback = function hookupCallback(callback) {
-    throw new Error('not implemented');
+    if (self._callback) {
+        res.withArg23(compatCall);
+    }
+    function compatCall(err, arg2, arg3) {
+        self._callback(err, res, arg2, arg3);
+        self._callback = null;
+    }
 };
 
 TChannelRequest.prototype.hookupCallback = function hookupCallback(callback) {
     var self = this;
     if (callback.canStream) {
-        return self.hookupStreamCallback(callback);
+        throw new Error('not implemented');
+    } else {
+        self._callback = callback;
     }
-    var called = false;
-
-    self.errorEvent.on(onError);
-    self.responseEvent.on(onResponse);
-
-    function onError(err) {
-        if (called) return;
-        called = true;
-        callback(err, null, null, null);
-    }
-
-    function onResponse(res) {
-        if (called) return;
-        called = true;
-        res.withArg23(function gotArg23(err, arg2, arg3) {
-            callback(err, res, arg2, arg3);
-        });
-    }
-
     return self;
 };
 
