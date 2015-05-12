@@ -22,9 +22,9 @@ from __future__ import absolute_import
 
 import logging
 
-from ..exceptions import InvalidChecksumException
-from ..exceptions import ProtocolException
-from ..exceptions import StreamingException
+from ..errors import InvalidChecksumError
+from ..errors import ProtocolException
+from ..errors import StreamingError
 from ..messages import RW
 from ..messages import Types
 from ..messages import common
@@ -130,7 +130,7 @@ class MessageFactory(object):
             request.state = (StreamState.completed if is_completed
                              else StreamState.streaming)
         else:
-            raise StreamingException("request state Error")
+            raise StreamingError("request state Error")
 
         return message
 
@@ -172,7 +172,7 @@ class MessageFactory(object):
             response.state = (StreamState.completed if is_completed
                               else StreamState.streaming)
         else:
-            raise StreamingException("response state Error")
+            raise StreamingError("response state Error")
 
         return message
 
@@ -182,7 +182,7 @@ class MessageFactory(object):
         elif isinstance(context, Response):
             return self.build_raw_response_message(context, args, is_completed)
         else:
-            raise StreamingException("context object type error")
+            raise StreamingError("context object type error")
 
     def prepare_args(self, message):
         args = [
@@ -263,8 +263,8 @@ class MessageFactory(object):
         elif context.message_type == Types.CALL_RES:
             return self.build_response(context, message_id)
         else:
-            raise StreamingException("invalid message type: %s" %
-                                     context.message_type)
+            raise StreamingError("invalid message type: %s" %
+                                 context.message_type)
 
     def build(self, message_id, message):
         """buffer all the streaming messages based on the
@@ -302,7 +302,7 @@ class MessageFactory(object):
             context = self.message_buffer.get(message_id)
             if context is None:
                 # missing call msg before continue msg
-                raise StreamingException(
+                raise StreamingError(
                     "missing call message after receiving continue message")
 
             # find the incompleted stream
@@ -314,7 +314,7 @@ class MessageFactory(object):
 
             try:
                 self.verify_message(message, message_id)
-            except InvalidChecksumException as e:
+            except InvalidChecksumError as e:
                 context.argstreams[dst].set_exception(e)
                 raise
 
@@ -409,7 +409,7 @@ class MessageFactory(object):
                 self.in_checksum.pop(message_id)
         else:
             self.in_checksum.pop(message_id, None)
-            raise InvalidChecksumException("Checksum does not match!")
+            raise InvalidChecksumError("Checksum does not match!")
 
     @staticmethod
     def close_argstream(request, num):
@@ -428,7 +428,7 @@ class MessageFactory(object):
         reqres = self.message_buffer.get(protocol_error.id)
         if reqres is None:
             # missing call msg before continue msg
-            raise StreamingException(
+            raise StreamingError(
                 "missing call message after receiving continue message")
 
         # find the incompleted stream

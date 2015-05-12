@@ -21,12 +21,12 @@
 from __future__ import absolute_import
 
 
-class TChannelException(Exception):
+class TChannelError(Exception):
     """Represent a TChannel-generated exception."""
     pass
 
 
-class ProtocolException(TChannelException):
+class ProtocolException(TChannelError):
     """Represent a protocol-level exception"""
     __slots__ = (
         'code',
@@ -42,62 +42,62 @@ class ProtocolException(TChannelException):
         id=None,
         tracing=None,
     ):
-        super(TChannelException, self).__init__(description)
+        super(TChannelError, self).__init__(description)
         self.code = code
         self.tracing = tracing
         self.id = id
         self.description = description
 
 
-class InvalidMessageException(TChannelException):
+class InvalidMessageError(TChannelError):
     """Represent an invalid message."""
     pass
 
 
-class InvalidEndpointException(TChannelException):
+class InvalidEndpointError(TChannelError):
     """Represent an message containing invalid endpoint."""
     pass
 
 
-class TimeoutException(TChannelException):
+class TimeoutError(TChannelError):
     pass
 
 
-class ConnectionClosedException(TChannelException):
+class ConnectionClosedError(TChannelError):
     pass
 
 
-class ReadException(TChannelException):
+class ReadError(TChannelError):
     """Raised when there is an error while reading input."""
     pass
 
 
-class InvalidChecksumException(TChannelException):
+class InvalidChecksumError(TChannelError):
     """Represent invalid checksum type in the message"""
     pass
 
 
-class StreamingException(TChannelException):
+class StreamingError(TChannelError):
     """Represent Streaming Message Exception"""
     pass
 
 
-class InvalidErrorCodeException(TChannelException):
+class InvalidErrorCodeError(TChannelError):
     """Represent Invalid Error Code exception"""
     def __init__(self, code):
-        super(InvalidErrorCodeException, self).__init__(
+        super(InvalidErrorCodeError, self).__init__(
             'Invalid Error Code (%s)' % (code))
         self.code = code
 
 
-class TChannelApplicationException(TChannelException):
+class TChannelApplicationError(TChannelError):
     """The remote application returned an exception.
 
     This is not a protocol error. This means a response was received with the
     ``code`` flag set to fail.
     """
     def __init__(self, code, args):
-        super(TChannelException, self).__init__(
+        super(TChannelError, self).__init__(
             'TChannel application error (%s)' % (args)
         )
 

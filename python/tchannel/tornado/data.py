@@ -25,7 +25,7 @@ import tornado.gen
 
 from enum import IntEnum
 
-from ..exceptions import TChannelException
+from ..errors import TChannelError
 from ..messages.common import FlagsType
 from ..messages.common import StreamState
 from ..zipkin.trace import Trace
@@ -173,7 +173,7 @@ class Response(object):
     @status_code.setter
     def status_code(self, status):
         if status not in StatusCode:
-            raise TChannelException("Invalid status code!")
+            raise TChannelError("Invalid status code!")
 
         self.code = status.value
 
@@ -230,14 +230,14 @@ class Response(object):
 
         :param stream: InMemStream/PipeStream for body
 
-        :except TChannelException:
-            Raise TChannelException if the stream is being sent when you try
+        :except TChannelError:
+            Raise TChannelError if the stream is being sent when you try
             to change the stream.
         """
         if self.argstreams[2].state == StreamState.init:
             self.argstreams[2] = stream
         else:
-            raise TChannelException(
+            raise TChannelError(
                 "Unable to change the body since the streaming has started")
 
     def set_header_s(self, stream):
@@ -248,15 +248,15 @@ class Response(object):
 
         :param stream: InMemStream/PipeStream for header
 
-        :except TChannelException:
-            Raise TChannelException if the stream is being sent when you try
+        :except TChannelError:
+            Raise TChannelError if the stream is being sent when you try
             to change the stream.
         """
 
         if self.argstreams[1].state == StreamState.init:
             self.argstreams[1] = stream
         else:
-            raise TChannelException(
+            raise TChannelError(
                 "Unable to change the header since the streaming has started")
 
     def write_header(self, chunk):
@@ -266,8 +266,8 @@ class Response(object):
 
         :param chunk: content to write to header
 
-        :except TChannelException:
-            Raise TChannelException if the response's flush() has been called
+        :except TChannelError:
+            Raise TChannelError if the response's flush() has been called
         """
 
         if self.scheme:
@@ -276,7 +276,7 @@ class Response(object):
             header = chunk
 
         if self.flushed:
-            raise TChannelException("write operation invalid after flush call")
+            raise TChannelError("write operation invalid after flush call")
 
         if (self.argstreams[0].state != StreamState.completed and
                 self.argstreams[0].auto_close):
@@ -292,8 +292,8 @@ class Response(object):
 
         :param chunk: content to write to body
 
-        :except TChannelException:
-            Raise TChannelException if the response's flush() has been called
+        :except TChannelError:
+            Raise TChannelError if the response's flush() has been called
         """
 
         if self.scheme:
@@ -302,7 +302,7 @@ class Response(object):
             body = chunk
 
         if self.flushed:
-            raise TChannelException("write operation invalid after flush call")
+            raise TChannelError("write operation invalid after flush call")
 
         if (self.argstreams[0].state != StreamState.completed and
                 self.argstreams[0].auto_close):

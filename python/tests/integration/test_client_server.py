@@ -23,8 +23,8 @@ from __future__ import absolute_import
 import pytest
 
 from tchannel import tcurl
-from tchannel.exceptions import ConnectionClosedException
-from tchannel.exceptions import TChannelException
+from tchannel.errors import ConnectionClosedError
+from tchannel.errors import TChannelError
 from tchannel.tornado import TChannel
 from tchannel.tornado.connection import StreamConnection
 from tchannel.tornado.data import Response
@@ -45,7 +45,7 @@ def call_response():
 
 @pytest.mark.gen_test
 def test_tornado_client_with_server_not_there(random_open_port):
-    with pytest.raises(ConnectionClosedException):
+    with pytest.raises(ConnectionClosedError):
         yield StreamConnection.outgoing(
             'localhost:%d' % random_open_port,
         )
@@ -125,7 +125,7 @@ def test_endpoint_not_found(tchannel_server, call_response):
 
     hostport = 'localhost:%d' % (tchannel_server.port)
 
-    with pytest.raises(TChannelException):
+    with pytest.raises(TChannelError):
         yield tchannel.request(hostport).send(InMemStream(),
                                               InMemStream(),
                                               InMemStream())

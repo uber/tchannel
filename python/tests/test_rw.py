@@ -33,7 +33,7 @@ from hypothesis import given
 from hypothesis import specifiers
 
 from tchannel import rw
-from tchannel.exceptions import ReadException
+from tchannel.errors import ReadError
 from tchannel.io import BytesIO
 
 number_width = specifiers.sampled_from([1, 2, 4, 8])
@@ -185,10 +185,10 @@ def test_dictionary(value, width, pairs, bs):
 
 def test_dictionary_read_error():
     some_rw = InstanceDouble('tchannel.rw.ReadWriter')
-    allow(some_rw).read.and_raise(ReadException('great sadness'))
+    allow(some_rw).read.and_raise(ReadError('great sadness'))
 
     dict_rw = rw.dictionary(('foo', some_rw))
-    with pytest.raises(ReadException):
+    with pytest.raises(ReadError):
         dict_rw.read(BytesIO())
 
 
@@ -227,9 +227,9 @@ def test_instance(obj, width, params, bs):
 def test_instance_exception():
     some_rw = InstanceDouble('tchannel.rw.ReadWriter')
     c_rw = rw.instance(ClassWithArgs, ('x', some_rw), ('y', rw.number(4)))
-    allow(some_rw).read.and_raise(ReadException("great sadness"))
+    allow(some_rw).read.and_raise(ReadError("great sadness"))
 
-    with pytest.raises(ReadException):
+    with pytest.raises(ReadError):
         c_rw.read(bio([1, 2, 3, 4]))
 
 
@@ -313,7 +313,7 @@ def test_switch(switch_rw, cases, width, value, bs):
     (rw.switch(rw.number(1), {0: rw.number(2)}), [0, 1]),
 ])
 def test_stream_too_short(t_rw, bs):
-    with pytest.raises(ReadException):
+    with pytest.raises(ReadError):
         t_rw.read(bio(bs))
 
 

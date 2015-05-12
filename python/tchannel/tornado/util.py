@@ -23,7 +23,7 @@ from __future__ import absolute_import
 import tornado
 import tornado.gen
 
-from ..exceptions import TChannelException
+from ..errors import TChannelError
 
 
 @tornado.gen.coroutine
@@ -38,7 +38,7 @@ def get_arg(context, index):
 
         raise tornado.gen.Return(arg)
     else:
-        raise TChannelException()
+        raise TChannelError()
 
 
 @tornado.gen.coroutine
