@@ -8,7 +8,7 @@
     "test": "npm run lint -s && npm run cover -s",
     "benchmark": "echo '!!! DEPRECATED: Better to just run `node benchmark` directly' >&2; node benchmarks",
     "take-benchmark": "./benchmarks/take.sh",
-    "cover": "istanbul cover --report html --print none test/index.js | faucet && istanbul report text && istanbul check-coverage",
+    "cover": "istanbul cover --report html --print none test/index.js -- --color | faucet && istanbul report text && istanbul check-coverage",
     "check-cover": "istanbul check-coverage",
     "view-cover": "opn coverage/index.html",
     "check-licence": "uber-licence --dry",
