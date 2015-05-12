@@ -24,8 +24,8 @@ import os
 
 import pytest
 
-from tchannel.exceptions import StreamingException
-from tchannel.exceptions import TChannelException
+from tchannel.errors import StreamingError
+from tchannel.errors import TChannelError
 from tchannel.tornado.data import Response
 from tchannel.tornado.stream import InMemStream
 from tchannel.tornado.stream import PipeStream
@@ -47,7 +47,7 @@ def test_InMemStream():
     assert len(stream._stream) == 0
 
     stream.close()
-    with pytest.raises(StreamingException):
+    with pytest.raises(StreamingError):
         yield stream.write("4")
 
 
@@ -65,7 +65,7 @@ def test_PipeStream():
     assert buf == "3"
 
     stream.close()
-    with pytest.raises(StreamingException):
+    with pytest.raises(StreamingError):
         yield stream.write("4")
 
 
@@ -74,11 +74,11 @@ def test_response_exception():
     resp = Response()
     yield resp.write_body("aaa")
 
-    with pytest.raises(StreamingException):
+    with pytest.raises(StreamingError):
         yield resp.write_header("aaa")
 
     resp.flush()
-    with pytest.raises(TChannelException):
+    with pytest.raises(TChannelError):
         yield resp.write_body("aaaa")
 
 

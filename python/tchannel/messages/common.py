@@ -28,7 +28,7 @@ import crcmod.predefined
 from enum import IntEnum
 
 from .. import rw
-from ..exceptions import InvalidChecksumException
+from ..errors import InvalidChecksumError
 from .types import Types
 
 PROTOCOL_VERSION = 0x02
@@ -109,7 +109,7 @@ def compute_checksum(checksum_type, args, csum=0):
         for arg in args:
             csum = crc32c(arg, csum)
     else:
-        raise InvalidChecksumException()
+        raise InvalidChecksumError()
 
     return csum
 

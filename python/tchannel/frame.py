@@ -23,7 +23,7 @@ from __future__ import absolute_import
 from collections import namedtuple
 
 from . import rw
-from .exceptions import ReadException
+from .errors import ReadError
 from .io import BytesIO
 
 FrameHeader = namedtuple('FrameHeader', 'message_type message_id')
@@ -48,7 +48,7 @@ class FrameReadWriter(rw.ReadWriter):
         if not size:
             try:
                 size = self.size_rw.read(stream)
-            except ReadException:
+            except ReadError:
                 return None
         if not size:
             return None

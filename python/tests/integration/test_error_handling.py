@@ -24,7 +24,7 @@ import pytest
 import tornado
 import tornado.gen
 
-from tchannel.exceptions import ProtocolException
+from tchannel.errors import ProtocolException
 from tchannel.messages.call_request import CallRequestMessage
 from tchannel.messages.call_request_continue import CallRequestContinueMessage
 from tchannel.messages.common import ChecksumType

@@ -25,7 +25,7 @@ import tornado.ioloop
 
 import contextlib2
 
-from ..exceptions import TimeoutException
+from ..errors import TimeoutError
 
 
 @contextlib2.contextmanager
@@ -36,7 +36,7 @@ def timeout(future, seconds=1, io_loop=None):
 
     def raise_timeout(*args, **kwargs):
         if future.running():
-            future.set_exception(TimeoutException())
+            future.set_exception(TimeoutError())
 
     io_loop.call_later(seconds, raise_timeout)
 

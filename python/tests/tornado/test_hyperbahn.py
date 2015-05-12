@@ -20,7 +20,7 @@
 
 import pytest
 
-from tchannel.exceptions import ConnectionClosedException
+from tchannel.errors import ConnectionClosedError
 from tchannel.tornado.hyperbahn import HyperbahnClient
 
 
@@ -41,7 +41,7 @@ def test_request():
     client = HyperbahnClient('foo', ['127.0.0.1:23000'])
 
     # Just want to make sure all the plumbing fits together.
-    with pytest.raises(ConnectionClosedException):
+    with pytest.raises(ConnectionClosedError):
         yield client.request(
             service='bar',
             endpoint='baz',
@@ -55,5 +55,5 @@ def test_request():
 def test_register():
     client = HyperbahnClient('foo', ['127.0.0.1:23000'])
 
-    with pytest.raises(ConnectionClosedException):
+    with pytest.raises(ConnectionClosedError):
         yield client.register()

@@ -28,15 +28,15 @@ import sys
 import tornado.gen
 import tornado.iostream
 
-from .. import exceptions
+from .. import errors
 from .. import frame
 from .. import glossary
 from .. import messages
 from ..context import Context
 from ..event import EventType
-from ..exceptions import ConnectionClosedException
-from ..exceptions import InvalidErrorCodeException
-from ..exceptions import TChannelException
+from ..errors import ConnectionClosedError
+from ..errors import InvalidErrorCodeError
+from ..errors import TChannelError
 from ..io import BytesIO
 from ..messages.common import PROTOCOL_VERSION
 from ..messages.common import FlagsType
@@ -132,7 +132,7 @@ class TornadoConnection(object):
 
         for message_id, future in self._outstanding.iteritems():
             future.set_exception(
-                ConnectionClosedException(
+                ConnectionClosedError(
                     "canceling outstanding request %d" % message_id
                 )
             )
@@ -344,7 +344,7 @@ class TornadoConnection(object):
         context = yield self._recv()
         init_res = context.message
         if init_res.message_type != Types.INIT_RES:
-            raise exceptions.InvalidMessageException(
+            raise errors.InvalidMessageError(
                 "Expected handshake response, got %s" % repr(init_res)
             )
         self._extract_handshake_headers(init_res)
@@ -366,7 +366,7 @@ class TornadoConnection(object):
         context = yield self._recv()
         init_req = context.message
         if init_req.message_type != Types.INIT_REQ:
-            raise exceptions.InvalidMessageException(
+            raise errors.InvalidMessageError(
                 "You need to shake my hand first. Got %s" % repr(init_req)
             )
         self._extract_handshake_headers(init_req)
@@ -382,12 +382,12 @@ class TornadoConnection(object):
 
     def _extract_handshake_headers(self, message):
         if not message.host_port:
-            raise exceptions.InvalidMessageException(
+            raise errors.InvalidMessageError(
                 'Missing required header: host_port'
             )
 
         if not message.process_name:
-            raise exceptions.InvalidMessageException(
+            raise errors.InvalidMessageError(
                 'Missing required header: process_name'
             )
 
@@ -429,7 +429,7 @@ class TornadoConnection(object):
             yield stream.connect((host, int(port)))
         except socket.error as e:
             log.exception("Couldn't connect to %s", hostport)
-            raise ConnectionClosedException(
+            raise ConnectionClosedError(
                 "Couldn't connect to %s" % hostport, e
             )
 
@@ -479,7 +479,7 @@ class TornadoConnection(object):
             Message in response to which this error is being sent
         """
         if code not in ErrorMessage.ERROR_CODES.keys():
-            raise InvalidErrorCodeException(code)
+            raise InvalidErrorCodeError(code)
 
         return self._write(
             ErrorMessage(
@@ -559,7 +559,7 @@ class StreamConnection(TornadoConnection):
             yield self.write(message, context.id)
             context.state = StreamState.completed
         # Stop streamming immediately if exception occurs on the handler side
-        except TChannelException as e:
+        except TChannelError as e:
             # raise by tchannel intentionally
             log.info("Stop Outgoing Streams because of error: %s", e.message)
             pass

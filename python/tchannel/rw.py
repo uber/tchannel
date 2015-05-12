@@ -22,7 +22,7 @@ from __future__ import absolute_import
 
 import struct
 
-from .exceptions import ReadException
+from .errors import ReadError
 
 skip = '_'
 
@@ -234,7 +234,7 @@ class ReadWriter(object):
         :param stream:
             file-like object providing a `read(int)` method
         :returns: the deserialized object
-        :raises ReadException:
+        :raises ReadError:
             for parse errors or if the input is too short
         """
         raise NotImplementedError()
@@ -270,13 +270,13 @@ class ReadWriter(object):
             stream to read from
         :param num:
             number of bytes to read
-        :raises ReadException:
+        :raises ReadError:
             if the stream did not yield the exact number of bytes expected
         """
         s = stream.read(num)
         slen = len(s)
         if slen != num:
-            raise ReadException(
+            raise ReadError(
                 "Expected %d bytes but got %d bytes." % (num, slen)
             )
         return s
@@ -386,7 +386,7 @@ class ArgsReaderWriter(ReadWriter):
         try:
             for _ in range(self.num):
                 args.append(self._rw.read(stream))
-        except ReadException:
+        except ReadError:
             pass
         return args
 
@@ -495,8 +495,8 @@ class NamedChainReadWriter(ReadWriter):
                 value = rw.read(stream)
                 if name != skip:
                     result[name] = value
-            except ReadException as e:
-                raise ReadException(
+            except ReadError as e:
+                raise ReadError(
                     "Failed to read %s: %s" % (name, e.message)
                 )
         return result
@@ -537,8 +537,8 @@ class InstanceReadWriter(ReadWriter):
                 value = rw.read(stream)
                 if attr != skip:
                     kwargs[attr] = value
-        except ReadException as e:
-            raise ReadException(
+        except ReadError as e:
+            raise ReadError(
                 "Failed to read %s: %s" % (self._cls, e.message)
             )
 

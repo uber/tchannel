@@ -23,7 +23,7 @@ from __future__ import absolute_import
 import pytest
 import tornado.gen
 
-from tchannel.exceptions import TimeoutException
+from tchannel.errors import TimeoutError
 from tchannel.tornado.timeout import timeout
 
 
@@ -39,6 +39,6 @@ def test_timeout(io_loop):
 
     slow_future = slow_method()
 
-    with pytest.raises(TimeoutException):
+    with pytest.raises(TimeoutError):
         with timeout(slow_future, sleep_time, io_loop):
             yield slow_future

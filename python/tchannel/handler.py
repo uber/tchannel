@@ -19,8 +19,8 @@
 # THE SOFTWARE.
 from __future__ import absolute_import
 
-from .exceptions import InvalidChecksumException
-from .exceptions import StreamingException
+from .errors import InvalidChecksumError
+from .errors import StreamingError
 from .messages import ErrorCode
 from .messages import PingResponseMessage
 from .messages import Types
@@ -104,7 +104,7 @@ class BaseRequestHandler(RequestHandler):
             if req:
                 self.handle_call(req, connection)
 
-        except (InvalidChecksumException, StreamingException) as e:
+        except (InvalidChecksumError, StreamingError) as e:
             connection.send_error(
                 ErrorCode.bad_request,
                 e.message,
