@@ -28,7 +28,7 @@ var allocCluster = require('./lib/alloc-cluster');
 testBattle('cap maximum pending requests', {
     numPeers: 2,
     channelOptions: {
-        maxPending: 1,
+        maxPending: 2,
         timers: MockTimers(Date.now()),
         random: lucky,
         requestDefaults: {
@@ -43,7 +43,7 @@ testBattle('cap maximum pending requests', {
 testBattle('cap maximum pending requests per service', {
     numPeers: 2,
     channelOptions: {
-        maxPendingForService: 1,
+        maxPendingForService: 2,
         timers: MockTimers(1.5e12), // approximately soon
         random: lucky,
         requestDefaults: {
@@ -58,8 +58,8 @@ testBattle('cap maximum pending requests per service', {
 testBattle('channel-scoped max pending supercedes per-service', {
     numPeers: 2,
     channelOptions: {
-        maxPending: 1,
-        maxPendingForService: 1,
+        maxPending: 2,
+        maxPendingForService: 2,
         timers: MockTimers(1.5e12), // approximately soon
         random: lucky,
         requestDefaults: {
