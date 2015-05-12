@@ -84,6 +84,13 @@ calls initiated by this service to the target service/endpoint.  MUST include
 an additional ``type`` tag indicating the type of error received; valid values are
 the error code names described in the TChannel protocol doc.
 
+##### outbound.calls.operational-errors
+The total number of errors that occured whilst sending outgoing calls initiated
+by this service to the target service/endpoint. These are not error frames but
+actual local socket level errors or timeout errors. SHOULD include an additional
+``type`` tag indicating the type of error received; standardizing operational
+error types is outside the scope of the core metrics.
+
 ##### outbound.calls.app-errors
 
 The total number of CallResponse/NotOk responses received from calls initiated
