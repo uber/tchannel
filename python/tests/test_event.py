@@ -23,8 +23,8 @@ from __future__ import absolute_import
 from mock import MagicMock
 
 from tchannel.event import EventEmitter
-from tchannel.event import EventType
 from tchannel.event import EventRegistrar
+from tchannel.event import EventType
 
 
 def test_event_hook():

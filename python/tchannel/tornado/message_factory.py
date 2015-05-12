@@ -18,7 +18,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+from __future__ import absolute_import
+
+import logging
+
 from ..exceptions import InvalidChecksumException
+from ..exceptions import ProtocolException
 from ..exceptions import StreamingException
 from ..messages import RW
 from ..messages import Types
@@ -37,10 +42,11 @@ from ..messages.common import verify_checksum
 from ..messages.error import ErrorMessage
 from ..zipkin.annotation import Endpoint
 from ..zipkin.trace import Trace
-from ..exceptions import ProtocolException
 from .data import Request
 from .data import Response
 from .stream import InMemStream
+
+log = logging.getLogger('tchannel')
 
 
 def build_raw_error_message(protocol_exception):
@@ -293,8 +299,6 @@ class MessageFactory(object):
 
         elif message.message_type in [Types.CALL_REQ_CONTINUE,
                                       Types.CALL_RES_CONTINUE]:
-            self.verify_message(message, message_id)
-
             context = self.message_buffer.get(message_id)
             if context is None:
                 # missing call msg before continue msg
@@ -307,6 +311,12 @@ class MessageFactory(object):
                 if arg.state != StreamState.completed:
                     dst = i
                     break
+
+            try:
+                self.verify_message(message, message_id)
+            except InvalidChecksumException as e:
+                context.argstreams[dst].set_exception(e)
+                raise
 
             src = 0
             while src < len(message.args):
@@ -323,8 +333,20 @@ class MessageFactory(object):
 
             self.close_argstream(context, dst - 1)
             return None
+        elif message.message_type == Types.ERROR:
+            context = self.message_buffer.pop(message_id, None)
+            if context is None:
+                log.warn('Unconsumed error %s', context)
+                return None
+            else:
+                protocol_exception = build_protocol_exception(
+                    message, message_id,
+                )
+                protocol_exception.tracing = context.tracing
+
+                context.set_exception(protocol_exception)
+                return protocol_exception
         else:
-            # TODO build error response or request object
             return message
 
     def fragment(self, message, message_id):
@@ -386,8 +408,7 @@ class MessageFactory(object):
             if message.flags == FlagsType.none:
                 self.in_checksum.pop(message_id)
         else:
-            if message_id in self.in_checksum:
-                self.in_checksum.pop(message_id)
+            self.in_checksum.pop(message_id, None)
             raise InvalidChecksumException("Checksum does not match!")
 
     @staticmethod
@@ -399,3 +420,24 @@ class MessageFactory(object):
 
         for i in range(num):
             request.argstreams[i].close()
+
+    def remove_buffer(self, message_id):
+        self.message_buffer.pop(message_id, None)
+
+    def set_inbound_exception(self, protocol_error):
+        reqres = self.message_buffer.get(protocol_error.id)
+        if reqres is None:
+            # missing call msg before continue msg
+            raise StreamingException(
+                "missing call message after receiving continue message")
+
+        # find the incompleted stream
+        dst = 0
+        for i, arg in enumerate(reqres.argstreams):
+            if arg.state != StreamState.completed:
+                dst = i
+                break
+
+        reqres.argstreams[dst].set_exception(protocol_error)
+
+        self.message_buffer.pop(protocol_error.id, None)

@@ -20,7 +20,6 @@
 from __future__ import absolute_import
 
 import pytest
-
 import tornado
 import tornado.gen
 from doubles import InstanceDouble

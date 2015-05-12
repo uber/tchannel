@@ -36,13 +36,15 @@ from ..context import Context
 from ..event import EventType
 from ..exceptions import ConnectionClosedException
 from ..exceptions import InvalidErrorCodeException
+from ..exceptions import TChannelException
 from ..io import BytesIO
 from ..messages.common import PROTOCOL_VERSION
 from ..messages.common import FlagsType
+from ..messages.common import StreamState
 from ..messages.error import ErrorMessage
 from ..messages.types import Types
-from .message_factory import build_protocol_exception
 from .message_factory import MessageFactory
+from .message_factory import build_protocol_exception
 
 try:
     import tornado.queues as queues  # included in 4.2
@@ -210,6 +212,27 @@ class TornadoConnection(object):
                 continue
 
             elif context.message_id in self._outstanding:
+                # set exception if receive error message
+                if context.message.message_type == Types.ERROR:
+                    future = self._outstanding.pop(context.message_id)
+                    if future.running():
+                        protocol_exception = build_protocol_exception(
+                            context.message,
+                            context.message_id,
+                        )
+                        future.set_exception(protocol_exception)
+                    else:
+                        protocol_exception = (
+                            self.response_message_factory.build(
+                                context.message_id, context.message
+                            )
+                        )
+                        if protocol_exception:
+                            self.event_emitter.fire(
+                                EventType.after_receive_error,
+                                protocol_exception,
+                            )
+                    continue
 
                 response = self.response_message_factory.build(
                     context.message_id, context.message
@@ -217,21 +240,12 @@ class TornadoConnection(object):
 
                 # keep continue message in the list
                 # pop all other type messages including error message
-
                 if (context.message.message_type in self.CALL_RES_TYPES and
                         context.message.flags == FlagsType.fragment):
                     # still streaming, keep it for record
                     future = self._outstanding.get(context.message_id)
                 else:
                     future = self._outstanding.pop(context.message_id)
-
-                if context.message.message_type == Types.ERROR:
-                    protocol_exception = build_protocol_exception(
-                        context.message,
-                        context.message_id,
-                    )
-                    future.set_exception(protocol_exception)
-                    continue
 
                 if response and future.running():
                     future.set_result(response)
@@ -253,7 +267,7 @@ class TornadoConnection(object):
         """
         assert not self.closed
         assert self._loop_running, "Perform a handshake first."
-        assert message.message_type in self.CALL_TYPES, (
+        assert message.message_type in self.CALL_REQ_TYPES, (
             "Message '%s' can't use send" % repr(message)
         )
 
@@ -527,21 +541,28 @@ class StreamConnection(TornadoConnection):
         :param context: Request or Response object
         """
         args = []
-        for i, argstream in enumerate(context.argstreams):
-            chunk = yield argstream.read()
-            args.append(chunk)
-            chunk = yield argstream.read()
-            while chunk:
-                message = (message_factory.
-                           build_raw_message(context, args))
-                yield self.write(message, context.id)
-                args = [chunk]
+        try:
+            for argstream in context.argstreams:
                 chunk = yield argstream.read()
+                args.append(chunk)
+                chunk = yield argstream.read()
+                while chunk:
+                    message = (message_factory.
+                               build_raw_message(context, args))
+                    yield self.write(message, context.id)
+                    args = [chunk]
+                    chunk = yield argstream.read()
 
-        # last piece of request/response.
-        message = (message_factory.
-                   build_raw_message(context, args, is_completed=True))
-        yield self.write(message, context.id)
+            # last piece of request/response.
+            message = (message_factory.
+                       build_raw_message(context, args, is_completed=True))
+            yield self.write(message, context.id)
+            context.state = StreamState.completed
+        # Stop streamming immediately if exception occurs on the handler side
+        except TChannelException as e:
+            # raise by tchannel intentionally
+            log.info("Stop Outgoing Streams because of error: %s", e.message)
+            pass
 
     @tornado.gen.coroutine
     def post_response(self, response):

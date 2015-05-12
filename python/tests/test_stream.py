@@ -80,3 +80,18 @@ def test_response_exception():
     resp.flush()
     with pytest.raises(TChannelException):
         yield resp.write_body("aaaa")
+
+
+@pytest.mark.gen_test
+def test_error_during_stream(io_loop):
+    stream = InMemStream()
+    try:
+        1 / 0
+    except Exception as e:
+        stream.set_exception(e)
+
+    with pytest.raises(ZeroDivisionError):
+        yield stream.read()
+
+    with pytest.raises(ZeroDivisionError):
+        yield stream.write("a")

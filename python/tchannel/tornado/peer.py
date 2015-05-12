@@ -36,7 +36,6 @@ from .stream import InMemStream
 from .stream import Stream
 from .stream import read_full
 
-
 try:
     # included in Tornado 4.2
     from tornado.locks import Condition

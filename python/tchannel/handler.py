@@ -20,6 +20,7 @@
 from __future__ import absolute_import
 
 from .exceptions import InvalidChecksumException
+from .exceptions import StreamingException
 from .messages import ErrorCode
 from .messages import PingResponseMessage
 from .messages import Types
@@ -97,16 +98,24 @@ class BaseRequestHandler(RequestHandler):
         """
         try:
             req = connection.request_message_factory.build(message_id, message)
-        except InvalidChecksumException as e:
+            # message_factory will create Request only when it receives
+            # CallRequestMessage. It will return None, if it receives
+            # CallRequestContinueMessage.
+            if req:
+                self.handle_call(req, connection)
+
+        except (InvalidChecksumException, StreamingException) as e:
             connection.send_error(
                 ErrorCode.bad_request,
                 e.message,
                 message_id,
             )
-
-        # call handler only for the call request message not continue message
-        if req:
-            self.handle_call(req, connection)
+        except Exception:
+            connection.send_error(
+                ErrorCode.unexpected,
+                "An unexpected error has occurred!",
+                message_id,
+            )
 
     def handle_ping(self, message_id, ping, connection):
         return connection.write(PingResponseMessage(), message_id)
