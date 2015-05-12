@@ -49,12 +49,12 @@ class ProtocolException(TChannelException):
         self.description = description
 
 
-class InvalidMessageException(ProtocolException):
+class InvalidMessageException(TChannelException):
     """Represent an invalid message."""
     pass
 
 
-class InvalidEndpointException(ProtocolException):
+class InvalidEndpointException(TChannelException):
     """Represent an message containing invalid endpoint."""
     pass
 
