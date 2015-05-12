@@ -21,6 +21,8 @@
 'use strict';
 
 var assert = require('assert');
+var inherits = require('util').inherits;
+var EventEmitter = require('../lib/event_emitter');
 
 module.exports = EgressNodes;
 
@@ -33,33 +35,42 @@ function EgressNodes(options) {
     assert(options && options.ringpop, 'ringpop required');
     assert(options && options.defaultKValue, 'defaultKValue required');
 
+    EventEmitter.call(self);
+
     self.ringpop = options.ringpop;
     self.defaultKValue = options.defaultKValue;
 
     self.kValueForServiceName = {};
+
+    // Surface the membership changed event (for use in particular by service
+    // proxies).
+    self.membershipChangedEvent = self.defineEvent('membershipChanged');
+    self.ringpop.on('membershipChanged', onMembershipChanged);
+    function onMembershipChanged() {
+        self.membershipChangedEvent.emit(self);
+    }
 }
 
-EgressNodes.prototype.kValueFor =
-function kValueFor(serviceName) {
+inherits(EgressNodes, EventEmitter);
+
+EgressNodes.prototype.kValueFor = function kValueFor(serviceName) {
     var self = this;
     return self.kValueForServiceName[serviceName] ||
         self.defaultKValue;
 };
 
-EgressNodes.prototype.setKValueFor =
-function setKValueFor(serviceName, k) {
+EgressNodes.prototype.setKValueFor = function setKValueFor(serviceName, k) {
     var self = this;
     self.kValueForServiceName[serviceName] = k;
 };
 
-EgressNodes.prototype.exitsFor =
-function exitsFor(serviceName) {
+EgressNodes.prototype.exitsFor = function exitsFor(serviceName) {
     var self = this;
     var k = self.kValueFor(serviceName);
     // Object<hostPort: String, Array<lookupKey: String>>
     var exitNodes = Object.create(null);
     for (var i = 0; i < k; i++) {
-        var shardKey = serviceName + '~' + String(i);
+        var shardKey = serviceName + '~' + i;
 
         // TODO ringpop will return itself if it cannot find
         // it which is probably the wrong semantics.
@@ -73,4 +84,18 @@ function exitsFor(serviceName) {
         exitNodes[node].push(shardKey);
     }
     return exitNodes;
+};
+
+EgressNodes.prototype.isExitFor = function isExitFor(serviceName) {
+    var self = this;
+    var k = self.kValueFor(serviceName);
+    var me = self.ringpop.whoami();
+    for (var i = 0; i < k; i++) {
+        var shardKey = serviceName + '~' + i;
+        var node = self.ringpop.lookup(shardKey);
+        if (me === node) {
+            return true;
+        }
+    }
+    return false;
 };
