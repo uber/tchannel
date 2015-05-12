@@ -235,12 +235,21 @@ TChannelConnection.prototype.onCallResponse = function onCallResponse(res) {
 
 TChannelConnection.prototype.onCallError = function onCallError(err) {
     var self = this;
-    var req = self.popOutReq(err.originalId);
-    if (!req) {
-        self.logger.info('error received for unknown or lost operation', err);
-        return;
+
+    var req = self.requests.out[err.originalId];
+
+    if (req && req.res) {
+        req.res.errorEvent.emit(req.res, err);
+    } else {
+        // Only popOutReq if there is no call response object yet
+        req = self.popOutReq(err.originalId);
+        if (!req) {
+            self.logger.info('error received for unknown or lost operation', err);
+            return;
+        }
+
+        req.errorEvent.emit(req, err);
     }
-    req.errorEvent.emit(req, err);
 };
 
 TChannelConnection.prototype.onTimedOut = function onTimedOut(_arg, self) {
