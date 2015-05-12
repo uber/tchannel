@@ -86,11 +86,14 @@ TChannelRequest.prototype.type = 'tchannel.request';
 TChannelRequest.prototype.onError = function onError(err, self) {
     if (!self.end) self.end = self.timers.now();
     self.err = err;
+    self.services.onRequestError(self);
+
 };
 
 TChannelRequest.prototype.onResponse = function onResponse(res, self) {
     if (!self.end) self.end = self.timers.now();
     self.res = res;
+    self.services.onRequestResponse(self);
 };
 
 TChannelRequest.prototype.hookupStreamCallback = function hookupCallback(callback) {
@@ -192,6 +195,7 @@ TChannelRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     self.start = self.timers.now();
     self.resendSanity = self.limit + 1;
 
+    self.services.onRequest(self);
     self.resend();
 };
 
@@ -229,7 +233,6 @@ TChannelRequest.prototype.resend = function resend() {
     }
     opts.timeout = self.timeout - self.elapsed;
 
-    self.services.onRequest(self);
     var conn = peer.connect();
     if (!peer.isConnected() && conn.handler) {
         conn.on('identified', onIdentified);
@@ -282,7 +285,6 @@ TChannelRequest.prototype.onIdentified = function onIdentified(peer, opts, perAt
         emitPerAttemptLatency();
 
         self.onSubreqError(err);
-        self.services.onRequestError(self);
     }
 
     function onResponse(res) {
