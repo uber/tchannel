@@ -207,6 +207,7 @@ LockedHealthyState.prototype.toString = function lockedHealthyToString() {
 };
 
 LockedHealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
+    var self = this;
     return self.nextHandler.shouldRequest(req, options);
 };
 

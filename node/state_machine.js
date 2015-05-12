@@ -24,4 +24,4 @@ StateMachine.prototype.setState = function setState(StateType) {
     var oldState = self.state;
     self.state = state;
     self.stateChangedEvent.emit(self, [oldState, state]);
-}
+};
