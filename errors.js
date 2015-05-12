@@ -237,10 +237,34 @@ module.exports.SocketClosedError = TypedError({
     reason: null
 });
 
-module.exports.TChannelInitProtocolError = TypedError({
-    type: 'tchannel.init.protocol-error',
-    message: 'tchannel: {reason}',
-    reason: null
+module.exports.TChannelDuplicateInitRequestError = TypedError({
+    type: 'tchannel.init.duplicate-init-request',
+    message: 'tchannel: duplicate init request'
+});
+
+module.exports.TChannelDuplicateInitResponseError = TypedError({
+    type: 'tchannel.init.duplicate-init-response',
+    message: 'tchannel: duplicate init response'
+});
+
+module.exports.TChannelCallReqBeforeInitReqError = TypedError({
+    type: 'tchannel.init.call-request-before-init-request',
+    message: 'call request before init request'
+});
+
+module.exports.TChannelCallResBeforeInitResError = TypedError({
+    type: 'tchannel.init.call-response-before-init-response',
+    message: 'call response before init response'
+});
+
+module.exports.TChannelCallReqContBeforeInitReqError = TypedError({
+    type: 'tchannel.init.call-request-cont-before-init-request',
+    message: 'call request cont before init request'
+});
+
+module.exports.TChannelCallResContBeforeInitResError = TypedError({
+    type: 'tchannel.init.call-response-cont-before-init-response',
+    message: 'call response cont before init response'
 });
 
 module.exports.TChannelListenError = WrappedError({
