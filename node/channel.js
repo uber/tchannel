@@ -32,7 +32,7 @@ var format = require('util').format;
 var extend = require('xtend');
 
 var inherits = require('util').inherits;
-var EventEmitter = require('./lib/event_emitter');
+var StatEmitter = require('./lib/stat_emitter');
 
 var nullLogger = require('./null-logger.js');
 var EndpointHandler = require('./endpoint-handler.js');
@@ -56,11 +56,19 @@ function TChannel(options) {
     }
 
     var self = this;
-    EventEmitter.call(self);
+    StatEmitter.call(self);
     self.errorEvent = self.defineEvent('error');
     self.listeningEvent = self.defineEvent('listening');
     self.connectionEvent = self.defineEvent('connection');
     self.requestEvent = self.defineEvent('request');
+    self.outboundCallsSentStat = self.defineCounter('outbound.calls.sent');
+    self.outboundCallsSystemErrorsStat = self.defineCounter('outbound.calls.system-errors');
+    self.outboundCallsOperationalErrorsStat = self.defineCounter('outbound.calls.operational-errors');
+    self.outboundCallsSuccessStat = self.defineCounter('outbound.calls.success');
+    self.outboundCallsAppErrorsStat = self.defineCounter('outbound.app-errors.success');
+    self.outboundCallsRetriesStat = self.defineCounter('outbound.calls.retries');
+    self.outboundCallsLatencyStat = self.defineTiming('outbound.calls.latency');
+    self.outboundCallsPerAttemptLatencyStat = self.defineTiming('outbound.calls.per-attempt-latency');
 
     self.options = extend({
         timeoutCheckInterval: 1000,
@@ -68,6 +76,9 @@ function TChannel(options) {
         // TODO: maybe we should always add pid to user-supplied?
         processName: format('%s[%s]', process.title, process.pid)
     }, options);
+
+    // must have 'app', 'host', 'cluster', 'version'
+    self.statTags = self.options.statTags || {};
 
     self.requestDefaults = extend({
         timeout: TChannelRequest.defaultTimeout
@@ -143,7 +154,7 @@ function TChannel(options) {
     self.serverSocket = null;
     self.serverConnections = null;
 }
-inherits(TChannel, EventEmitter);
+inherits(TChannel, StatEmitter);
 
 TChannel.prototype.getServer = function getServer() {
     var self = this;
@@ -436,6 +447,24 @@ TChannel.prototype.close = function close(callback) {
                 callback();
             }
         }
+    }
+};
+
+TChannel.prototype.emitStat = function emitStat(stat) {
+    var self = this;
+
+    var commonTags = self.statTags;
+    var commonKeys = Object.keys(self.statTags);
+
+    var localTags = stat.tags;
+    for (var i = 0; i < commonKeys.length; i++) {
+        localTags[commonKeys[i]] = commonTags[commonKeys[i]];
+    }
+
+    self.statEvent.emit(self, stat);
+
+    if (self.topChannel) {
+        self.topChannel.statEvent.emit(self, stat);
     }
 };
 
