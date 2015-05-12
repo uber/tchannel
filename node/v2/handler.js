@@ -143,8 +143,7 @@ TChannelV2Handler.prototype.handleFrame = function handleFrame(frame, callback) 
 TChannelV2Handler.prototype.handleInitRequest = function handleInitRequest(reqFrame, callback) {
     var self = this;
     if (self.remoteHostPort !== null) {
-        return callback(errors.TChannelInitProtocolError(
-            {reason: 'duplicate init request'}));
+        return callback(errors.TChannelDuplicateInitRequestError());
     }
     /* jshint camelcase:false */
     var headers = reqFrame.body.headers;
@@ -162,8 +161,7 @@ TChannelV2Handler.prototype.handleInitRequest = function handleInitRequest(reqFr
 TChannelV2Handler.prototype.handleInitResponse = function handleInitResponse(resFrame, callback) {
     var self = this;
     if (self.remoteHostPort !== null) {
-        return callback(errors.TChannelInitProtocolError(
-            {reason: 'duplicate init response'}));
+        return callback(errors.TChannelDuplicateInitResponseError());
     }
     /* jshint camelcase:false */
     var headers = resFrame.body.headers;
@@ -180,8 +178,7 @@ TChannelV2Handler.prototype.handleInitResponse = function handleInitResponse(res
 TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFrame, callback) {
     var self = this;
     if (self.remoteHostPort === null) {
-        return callback(errors.TChannelInitProtocolError(
-            {reason: 'call request before init request'}));
+        return callback(errors.TChannelCallReqBeforeInitReqError());
     }
     var req = self.buildInRequest(reqFrame);
     if (reqFrame.body.args && reqFrame.body.args[0] &&
@@ -211,8 +208,7 @@ TChannelV2Handler.prototype.callRequestFrameHandled = function callRequestFrameH
 TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(resFrame, callback) {
     var self = this;
     if (self.remoteHostPort === null) {
-        return callback(errors.TChannelInitProtocolError(
-            {reason: 'call response before init response'}));
+        return callback(errors.TChannelCallResBeforeInitResError());
     }
     var res = self.buildInResponse(resFrame);
     if (resFrame.body.args && resFrame.body.args[0] &&
@@ -249,8 +245,7 @@ TChannelV2Handler.prototype.handleCancel = function handleCancel(frame, callback
 TChannelV2Handler.prototype.handleCallRequestCont = function handleCallRequestCont(reqFrame, callback) {
     var self = this;
     if (self.remoteHostPort === null) {
-        return callback(errors.TChannelInitProtocolError(
-            {reason: 'call request cont before init request'}));
+        return callback(errors.TChannelCallReqContBeforeInitReqError());
     }
     var id = reqFrame.id;
     var req = self.streamingReq[id];
@@ -263,8 +258,7 @@ TChannelV2Handler.prototype.handleCallRequestCont = function handleCallRequestCo
 TChannelV2Handler.prototype.handleCallResponseCont = function handleCallResponseCont(resFrame, callback) {
     var self = this;
     if (self.remoteHostPort === null) {
-        return callback(errors.TChannelInitProtocolError(
-            {reason: 'call response cont before init response'}));
+        return callback(errors.TChannelCallResContBeforeInitResError());
     }
     var id = resFrame.id;
     var res = self.streamingRes[id];
