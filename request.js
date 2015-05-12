@@ -110,6 +110,27 @@ TChannelRequest.prototype.hookupCallback = function hookupCallback(callback) {
     function onError(err) {
         if (called) return;
         called = true;
+
+        if (err.isErrorFrame) {
+            self.channel.outboundCallsSystemErrorsStat.increment(1, {
+                'target-service': self.serviceName,
+                'service': self.headers.cn,
+                // TODO should always be buffer
+                'target-endpoint': String(self.arg1),
+                'type': err.codeName
+            });
+        } else {
+            self.channel.outboundCallsOperationalErrorsStat.increment(1, {
+                'target-service': self.serviceName,
+                'service': self.headers.cn,
+                // TODO should always be buffer
+                'target-endpoint': String(self.arg1),
+                'type': err.type || 'unknown'
+            });
+        }
+
+        emitLatency();
+
         callback(err, null, null, null);
     }
 
@@ -117,7 +138,38 @@ TChannelRequest.prototype.hookupCallback = function hookupCallback(callback) {
         if (called) return;
         called = true;
         res.withArg23(function gotArg23(err, arg2, arg3) {
+            if (res.ok) {
+                self.channel.outboundCallsSuccessStat.increment(1, {
+                    'target-service': self.serviceName,
+                    'service': self.headers.cn,
+                    // TODO should always be buffer
+                    'target-endpoint': String(self.arg1)
+                });
+            } else {
+                self.channel.outboundCallsAppErrorsStat.increment(1, {
+                    'target-service': self.serviceName,
+                    'service': self.headers.cn,
+                    // TODO should always be buffer
+                    'target-endpoint': String(self.arg1),
+                    // TODO define transport header
+                    // for application error type
+                    'type': 'unknown'
+                });
+            }
+
+            emitLatency();
+
             callback(err, res, arg2, arg3);
+        });
+    }
+
+    function emitLatency() {
+        var latency = self.end - self.start;
+        self.channel.outboundCallsLatencyStat.add(latency, {
+            'target-service': self.serviceName,
+            'service': self.headers.cn,
+            // TODO should always be buffer
+            'target-endpoint': String(self.arg1)
         });
     }
 
@@ -165,7 +217,7 @@ TChannelRequest.prototype.resend = function resend() {
         return;
     }
 
-    if (self.checkTimeout()) return;
+    var perAttemptStart = self.timers.now();
 
     var opts = {};
     var keys = Object.keys(self.options);
@@ -177,6 +229,23 @@ TChannelRequest.prototype.resend = function resend() {
     var outReq = peer.request(opts);
     self.outReqs.push(outReq);
 
+    if (self.outReqs.length === 1) {
+        self.channel.outboundCallsSentStat.increment(1, {
+            'target-service': outReq.serviceName,
+            'service': outReq.headers.cn,
+            // TODO should always be buffer
+            'target-endpoint': String(self.arg1)
+        });
+    } else {
+        self.channel.outboundCallsRetriesStat.increment(1, {
+            'target-service': outReq.serviceName,
+            'service': outReq.headers.cn,
+            // TODO should always be buffer
+            'target-endpoint': String(self.arg1),
+            'retry-count': self.outReqs.length - 1
+        });
+    }
+
     self.triedRemoteAddrs[outReq.remoteAddr] = (self.triedRemoteAddrs[outReq.remoteAddr] || 0) + 1;
     outReq.responseEvent.on(onResponse);
     outReq.errorEvent.on(onError);
@@ -185,12 +254,29 @@ TChannelRequest.prototype.resend = function resend() {
     self.services.onRequest(self);
 
     function onError(err) {
+        emitPerAttemptLatency();
+
         self.onSubreqError(err);
         self.services.onRequestError(self);
     }
 
     function onResponse(res) {
+        emitPerAttemptLatency();
+
         self.onSubreqResponse(res);
+    }
+
+    function emitPerAttemptLatency() {
+        var latency = self.timers.now() - perAttemptStart;
+
+        self.channel.outboundCallsPerAttemptLatencyStat.add(latency, {
+            'target-service': self.serviceName,
+            'service': self.headers.cn,
+            // TODO should always be buffer
+            'target-endpoint': String(self.arg1),
+            'peer': peer.hostPort,
+            'retry-count': self.outReqs.length - 1
+        });
     }
 };
 
