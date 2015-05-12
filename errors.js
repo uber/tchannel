@@ -23,6 +23,15 @@
 var TypedError = require('error/typed');
 var WrappedError = require('error/wrapped');
 
+// All exported errors must be in sorted order
+
+module.exports.Arg1OverLengthLimit = TypedError({
+    type: 'tchannel.arg1-over-length-limit',
+    message: 'arg 1 length {length} is larger than the limit {limit}',
+    length: null,
+    limit: null
+});
+
 module.exports.ArgChunkGapError = TypedError({
     type: 'tchannel.arg-chunk.gap',
     message: 'arg chunk gap, current: {current} got: {got}',
@@ -35,13 +44,6 @@ module.exports.ArgChunkOutOfOrderError = TypedError({
     message: 'out of order arg chunk, current: {current} got: {got}',
     current: null,
     got: null
-});
-
-module.exports.Arg1OverLengthLimit = TypedError({
-    type: 'tchannel.arg1-over-length-limit',
-    message: 'arg 1 length {length} is larger than the limit {limit}',
-    length: null,
-    limit: null
 });
 
 module.exports.ChecksumError = TypedError({
@@ -189,27 +191,6 @@ module.exports.ReconstructedError = TypedError({
         ' this message should be replaced with an upstream error message'
 });
 
-module.exports.ResponseAlreadyStarted = TypedError({
-    type: 'tchannel.response-already-started',
-    message: 'response already started (state {state})',
-    state: null
-});
-
-module.exports.ResponseAlreadyDone = TypedError({
-    type: 'tchannel.response-already-done',
-    message: 'cannot send {attempted}, response already done ' +
-        'in state: {currentState}',
-    attempted: null,
-    currentState: null
-});
-
-module.exports.ResponseFrameState = TypedError({
-    type: 'tchannel.response-frame-state',
-    message: 'cannot send {attempted} in {state} response state',
-    attempted: null,
-    state: null
-});
-
 module.exports.RequestAlreadyDone = TypedError({
     type: 'tchannel.request-already-done',
     message: 'cannot {attempted}, request already done',
@@ -223,18 +204,39 @@ module.exports.RequestFrameState = TypedError({
     state: null
 });
 
-module.exports.SocketError = WrappedError({
-    type: 'tchannel.socket',
-    message: 'tchannel socket error ({code} from {syscall}): {origMessage}',
-    hostPort: null,
-    direction: null,
-    remoteAddr: null
+module.exports.ResponseAlreadyDone = TypedError({
+    type: 'tchannel.response-already-done',
+    message: 'cannot send {attempted}, response already done ' +
+        'in state: {currentState}',
+    attempted: null,
+    currentState: null
+});
+
+module.exports.ResponseAlreadyStarted = TypedError({
+    type: 'tchannel.response-already-started',
+    message: 'response already started (state {state})',
+    state: null
+});
+
+module.exports.ResponseFrameState = TypedError({
+    type: 'tchannel.response-frame-state',
+    message: 'cannot send {attempted} in {state} response state',
+    attempted: null,
+    state: null
 });
 
 module.exports.SocketClosedError = TypedError({
     type: 'tchannel.socket-closed',
     message: 'socket closed, {reason}',
     reason: null
+});
+
+module.exports.SocketError = WrappedError({
+    type: 'tchannel.socket',
+    message: 'tchannel socket error ({code} from {syscall}): {origMessage}',
+    hostPort: null,
+    direction: null,
+    remoteAddr: null
 });
 
 module.exports.TChannelCallReqBeforeInitReqError = TypedError({
@@ -370,6 +372,7 @@ module.exports.UnimplementedMethod = TypedError({
     methodName: null
 });
 
+// utilities
 
 module.exports.classify = function classify(err) {
     if (err.isErrorFrame) {
