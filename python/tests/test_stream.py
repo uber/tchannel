@@ -92,3 +92,6 @@ def test_error_during_stream(io_loop):
 
     with pytest.raises(ZeroDivisionError):
         yield stream.read()
+
+    with pytest.raises(ZeroDivisionError):
+        yield stream.write("a")

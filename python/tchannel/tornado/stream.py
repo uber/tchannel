@@ -80,6 +80,13 @@ class Stream(object):
         """
         raise NotImplementedError()
 
+    def set_exception(self, exception):
+        """Set exception to interrupt all Stream operations
+
+        :param exception: exception to set
+        """
+        raise NotImplementedError()
+
     def close(self):
         raise NotImplementedError()
 
@@ -98,7 +105,7 @@ class InMemStream(Stream):
         self._condition = Condition()
         self.auto_close = auto_close
 
-        self.err_future = tornado.gen.Future()
+        self.exception = None
 
     @tornado.gen.coroutine
     def read(self):
@@ -106,8 +113,8 @@ class InMemStream(Stream):
                 len(self._stream) == 0):
             yield self._condition.wait()
 
-        if self.err_future.done():
-            yield self.err_future
+        if self.exception:
+            raise self.exception
 
         chunk = ""
         while len(self._stream) > 0 and len(chunk) < common.MAX_PAYLOAD_SIZE:
@@ -117,8 +124,8 @@ class InMemStream(Stream):
 
     @tornado.gen.coroutine
     def write(self, chunk):
-        if self.err_future.done():
-            yield self.err_future
+        if self.exception:
+            raise self.exception
 
         if self.state == StreamState.completed:
             raise StreamingException("Stream has been closed.")
@@ -126,11 +133,9 @@ class InMemStream(Stream):
             self._stream.append(chunk)
             self._condition.notify()
 
-    @tornado.gen.coroutine
     def set_exception(self, exception):
-        if self.err_future.running():
-            self.err_future.set_exception(exception)
-            self.close()
+        self.exception = exception
+        self.close()
 
     @tornado.gen.coroutine
     def close(self):
@@ -165,12 +170,12 @@ class PipeStream(Stream):
         self.auto_close = auto_close
         self.state = StreamState.init
 
-        self.err_future = tornado.gen.Future()
+        self.exception = None
 
     @tornado.gen.coroutine
     def read(self):
-        if self.err_future.done():
-            yield self.err_future
+        if self.exception:
+            raise self.exception
 
         if self.state == StreamState.completed or self._rpipe is None:
             raise tornado.gen.Return("")
@@ -186,15 +191,15 @@ class PipeStream(Stream):
             # reach the end of the pipe stream
             self.state = StreamState.completed
         finally:
-            if self.err_future.done():
-                yield self.err_future
+            if self.exception:
+                raise self.exception
             raise tornado.gen.Return(chunk)
 
     @tornado.gen.coroutine
     def write(self, chunk):
         assert self._wpipe is not None
-        if self.err_future.done():
-            yield self.err_future
+        if self.exception:
+            raise self.exception
 
         try:
             yield self._ws.write(chunk)
@@ -203,14 +208,12 @@ class PipeStream(Stream):
             self.state = StreamState.completed
             raise StreamingException("Stream has been closed.")
         finally:
-            if self.err_future.done():
-                yield self.err_future
+            if self.exception:
+                raise self.exception
 
-    @tornado.gen.coroutine
     def set_exception(self, exception):
-        if self.err_future.running():
-            self.err_future.set_exception(exception)
-            self.close()
+        self.exception = exception
+        self.close()
 
     def close(self):
         self.state = StreamState.completed
