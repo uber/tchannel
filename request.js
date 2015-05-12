@@ -70,9 +70,6 @@ function TChannelRequest(channel, options) {
 
     self.err = null;
     self.res = null;
-
-    self.errorEvent.on(self.onError);
-    self.responseEvent.on(self.onResponse);
 }
 
 inherits(TChannelRequest, EventEmitter);
@@ -83,14 +80,20 @@ TChannelRequest.defaultTimeout = 5000;
 
 TChannelRequest.prototype.type = 'tchannel.request';
 
-TChannelRequest.prototype.onError = function onError(err, self) {
+TChannelRequest.prototype.emitError = function emitError(err) {
+    var self = this;
     if (!self.end) self.end = self.timers.now();
     self.err = err;
+    self.services.onRequestError(self);
+    self.errorEvent.emit(self, err);
 };
 
-TChannelRequest.prototype.onResponse = function onResponse(res, self) {
+TChannelRequest.prototype.emitResponse = function emitResponse(res) {
+    var self = this;
     if (!self.end) self.end = self.timers.now();
     self.res = res;
+    self.services.onRequestResponse(self);
+    self.responseEvent.emit(self, res);
 };
 
 TChannelRequest.prototype.hookupStreamCallback = function hookupCallback(callback) {
@@ -192,11 +195,14 @@ TChannelRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     self.start = self.timers.now();
     self.resendSanity = self.limit + 1;
 
+    self.services.onRequest(self);
     self.resend();
 };
 
 TChannelRequest.prototype.resend = function resend() {
     var self = this;
+
+    if (self.channel.destroyed) return;
 
     if (self.trackPending && self.checkPending()) return;
 
@@ -207,18 +213,41 @@ TChannelRequest.prototype.resend = function resend() {
         if (self.outReqs.length) {
             var lastReq = self.outReqs[self.outReqs.length - 1];
             if (lastReq.err) {
-                self.errorEvent.emit(self, lastReq.err);
+                self.emitError(lastReq.err);
             } else {
-                self.responseEvent.emit(self, lastReq.res);
+                self.emitResponse(lastReq.res);
             }
         } else {
-            self.errorEvent.emit(self, errors.NoPeerAvailable());
+            self.emitError(errors.NoPeerAvailable());
         }
         return;
     }
 
     var perAttemptStart = self.timers.now();
 
+    var conn = peer.connect();
+    if (!peer.isConnected() && conn.handler) {
+        conn.on('identified', onIdentified);
+        var timer = self.timers.setTimeout(onIdentifyTimeout, self.timeout - self.elapsed);
+        return;
+    } else {
+        onIdentified();
+    }
+
+    function onIdentifyTimeout() {
+        self.checkTimeout();
+    }
+
+    function onIdentified() {
+        if (timer) {
+            self.timers.clearTimeout(timer);
+        }
+        self.onIdentified(peer, perAttemptStart);
+    }
+};
+
+TChannelRequest.prototype.onIdentified = function onIdentified(peer, perAttemptStart) {
+    var self = this;
     var opts = {};
     var keys = Object.keys(self.options);
     for (var i = 0; i < keys.length; i++) {
@@ -251,13 +280,10 @@ TChannelRequest.prototype.resend = function resend() {
     outReq.errorEvent.on(onError);
     outReq.send(self.arg1, self.arg2, self.arg3);
 
-    self.services.onRequest(self);
-
     function onError(err) {
         emitPerAttemptLatency();
 
         self.onSubreqError(err);
-        self.services.onRequestError(self);
     }
 
     function onResponse(res) {
@@ -286,7 +312,7 @@ TChannelRequest.prototype.onSubreqError = function onSubreqError(err) {
     if (self.shouldRetryError(err)) {
         self.deferResend();
     } else {
-        self.errorEvent.emit(self, err);
+        self.emitError(err);
     }
 };
 
@@ -294,18 +320,18 @@ TChannelRequest.prototype.onSubreqResponse = function onSubreqResponse(res) {
     var self = this;
     if (self.checkTimeout(null, res)) return;
     if (res.ok) {
-        self.responseEvent.emit(self, res);
+        self.emitResponse(res);
     } else if (self.options.shouldApplicationRetry) {
         self.maybeAppRetry(res);
     } else {
-        self.responseEvent.emit(self, res);
+        self.emitResponse(res);
     }
 };
 
 TChannelRequest.prototype.deferResend = function deferResend() {
     var self = this;
     if (--self.resendSanity <= 0) {
-        self.errorEvent.emit(self, new Error('TChannelRequest out of resend sanity'));
+        self.emitError(new Error('TChannelRequest out of resend sanity'));
     } else {
         process.nextTick(doResend);
     }
@@ -318,7 +344,7 @@ TChannelRequest.prototype.checkPending = function checkPending() {
     var self = this;
     var err = self.services.errorIfExceedsMaxPending(self);
     if (err) {
-        self.errorEvent.emit(self, err);
+        self.emitError(err);
         return true;
     }
     return false;
@@ -331,14 +357,14 @@ TChannelRequest.prototype.checkTimeout = function checkTimeout(err, res) {
     if (self.elapsed < self.timeout) return false;
     if (err) {
         if (!self.err) {
-            self.errorEvent.emit(self, err);
+            self.emitError(err);
         }
     } else if (res) {
         if (!self.err && !self.res) {
-            self.responseEvent.emit(self, res);
+            self.emitResponse(res);
         }
     } else if (!self.err) {
-        self.errorEvent.emit(self, errors.TimeoutError({
+        self.emitError(errors.TimeoutError({
             start: self.start,
             elapsed: self.elapsed,
             timeout: self.timeout
@@ -400,9 +426,9 @@ TChannelRequest.prototype.maybeAppRetry = function maybeAppRetry(res) {
 
     function done(err) {
         if (err) {
-            self.errorEvent.emit(self, err);
+            self.emitError(err);
         } else {
-            self.responseEvent.emit(self, res);
+            self.emitResponse(res);
         }
     }
 };
