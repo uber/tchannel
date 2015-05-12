@@ -225,18 +225,10 @@ TChannelRequest.prototype.resend = function resend() {
 
     var perAttemptStart = self.timers.now();
 
-    var opts = {};
-    var keys = Object.keys(self.options);
-    for (var i = 0; i < keys.length; i++) {
-        var key = keys[i];
-        opts[key] = self.options[key];
-    }
-    opts.timeout = self.timeout - self.elapsed;
-
     var conn = peer.connect();
     if (!peer.isConnected() && conn.handler) {
         conn.on('identified', onIdentified);
-        var timer = self.timers.setTimeout(onIdentifyTimeout, opts.timeout);
+        var timer = self.timers.setTimeout(onIdentifyTimeout, self.timeout - self.elapsed);
         return;
     } else {
         onIdentified();
@@ -250,12 +242,19 @@ TChannelRequest.prototype.resend = function resend() {
         if (timer) {
             self.timers.clearTimeout(timer);
         }
-        self.onIdentified(peer, opts, perAttemptStart);
+        self.onIdentified(peer, perAttemptStart);
     }
 };
 
-TChannelRequest.prototype.onIdentified = function onIdentified(peer, opts, perAttemptStart) {
+TChannelRequest.prototype.onIdentified = function onIdentified(peer, perAttemptStart) {
     var self = this;
+    var opts = {};
+    var keys = Object.keys(self.options);
+    for (var i = 0; i < keys.length; i++) {
+        var key = keys[i];
+        opts[key] = self.options[key];
+    }
+    opts.timeout = self.timeout - self.elapsed;
     var outReq = peer.request(opts);
     self.outReqs.push(outReq);
 
