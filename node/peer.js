@@ -67,6 +67,20 @@ function TChannelPeer(channel, hostPort, options) {
 
 inherits(TChannelPeer, EventEmitter);
 
+TChannelPeer.prototype.getInfo = function getInfo() {
+    var self = this;
+    return {
+        connected: {
+            in: self.isConnected('in', false),
+            out: self.isConnected('out', false)
+        },
+        identified: {
+            in: self.isConnected('in', true),
+            out: self.isConnected('out', true)
+        }
+    };
+};
+
 TChannelPeer.prototype.isConnected = function isConnected(direction, identified) {
     var self = this;
     if (identified === undefined) identified = true;
