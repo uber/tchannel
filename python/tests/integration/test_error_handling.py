@@ -87,7 +87,7 @@ def test_unexpected_error_from_handler(tchannel_server):
 
 
 @pytest.mark.gen_test
-def test_invalid_message_during_streaming1(tchannel_server):
+def test_invalid_message_during_streaming(tchannel_server):
     # test for invalid call request message
     hostport = 'localhost:%d' % tchannel_server.port
     tchannel = TChannel()
@@ -113,16 +113,19 @@ def test_invalid_message_during_streaming1(tchannel_server):
         ],
     )
 
-    with pytest.raises(ProtocolException) as e:
-        resp_future = connection.send(callrequest, 1)
-        for _ in xrange(10):
-            yield connection.write(callreqcontinue, 1)
+    resp_future = connection.send(callrequest, 1)
+    for _ in xrange(10):
+        yield connection.write(callreqcontinue, 1)
 
-        # by pass the default checksum calculation
-        # set a wrong checksum
-        callreqcontinue.checksum = (ChecksumType.crc32c, 1)
-        yield connection._write(callreqcontinue, 1)
-        yield resp_future
+    # bypass the default checksum calculation
+    # set a wrong checksum
+    callreqcontinue.checksum = (ChecksumType.crc32c, 1)
+    yield connection._write(callreqcontinue, 1)
+
+    with pytest.raises(ProtocolException) as e:
+        resp = yield resp_future
+        yield resp.get_header()
+        yield resp.get_body()
 
     assert e.value.message == u"Checksum does not match!"
 

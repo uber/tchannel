@@ -114,7 +114,7 @@ class RequestDispatcher(BaseRequestHandler):
                     response.id,
                 )
             except Exception as e:
-                response.set_exception(TChannelException())
+                response.set_exception(TChannelException(e.message))
                 connection.request_message_factory.remove_buffer(response.id)
                 connection.send_error(
                     ErrorCode.unexpected,

@@ -212,13 +212,19 @@ class TornadoConnection(object):
                 continue
 
             elif context.message_id in self._outstanding:
+                # set exception if receive error message
                 if context.message.message_type == Types.ERROR:
-                    protocol_exception = build_protocol_exception(
-                        context.message,
-                        context.message_id,
-                    )
                     future = self._outstanding.pop(context.message_id)
-                    future.set_exception(protocol_exception)
+                    if future.running():
+                        protocol_exception = build_protocol_exception(
+                            context.message,
+                            context.message_id,
+                        )
+                        future.set_exception(protocol_exception)
+                    else:
+                        self.response_message_factory.build(
+                            context.message_id, context.message
+                        )
                     continue
 
                 response = self.response_message_factory.build(
@@ -546,11 +552,10 @@ class StreamConnection(TornadoConnection):
             yield self.write(message, context.id)
             context.state = StreamState.completed
         # Stop streamming immediately if exception occurs on the handler side
-        except TChannelException:
+        except TChannelException as e:
             # raise by tchannel intentionally
+            log.info("Stop Outgoing Streams because of error: %s", e.message)
             pass
-        except Exception:
-            raise
 
     @tornado.gen.coroutine
     def post_response(self, response):

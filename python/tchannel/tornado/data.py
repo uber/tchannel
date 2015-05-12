@@ -179,7 +179,7 @@ class Response(object):
 
     @property
     def ok(self):
-        return self.cdoe == StatusCode.ok.value
+        return self.code == StatusCode.ok.value
 
     def get_header_s(self):
         """Get the raw stream of header.

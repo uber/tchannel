@@ -18,6 +18,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+from __future__ import absolute_import
+
+import logging
+
 from ..exceptions import InvalidChecksumException
 from ..exceptions import ProtocolException
 from ..exceptions import StreamingException
@@ -41,6 +45,8 @@ from ..zipkin.trace import Trace
 from .data import Request
 from .data import Response
 from .stream import InMemStream
+
+log = logging.getLogger('tchannel')
 
 
 def build_raw_error_message(protocol_exception):
@@ -327,8 +333,16 @@ class MessageFactory(object):
 
             self.close_argstream(context, dst - 1)
             return None
+        elif message.message_type == Types.ERROR:
+            context = self.message_buffer.pop(message_id, None)
+            if context is None:
+                log.warn('Unconsumed error %s', context)
+            else:
+                protocol_exception = build_protocol_exception(
+                    message, message_id,
+                )
+                context.set_exception(protocol_exception)
         else:
-            # TODO build error response or request object
             return message
 
     def fragment(self, message, message_id):

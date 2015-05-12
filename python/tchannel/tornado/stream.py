@@ -117,6 +117,9 @@ class InMemStream(Stream):
 
     @tornado.gen.coroutine
     def write(self, chunk):
+        if self.err_future.done():
+            yield self.err_future
+
         if self.state == StreamState.completed:
             raise StreamingException("Stream has been closed.")
         if chunk:
@@ -190,12 +193,18 @@ class PipeStream(Stream):
     @tornado.gen.coroutine
     def write(self, chunk):
         assert self._wpipe is not None
+        if self.err_future.done():
+            yield self.err_future
+
         try:
             yield self._ws.write(chunk)
             self.state = StreamState.streaming
         except StreamClosedError:
             self.state = StreamState.completed
             raise StreamingException("Stream has been closed.")
+        finally:
+            if self.err_future.done():
+                yield self.err_future
 
     @tornado.gen.coroutine
     def set_exception(self, exception):

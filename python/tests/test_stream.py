@@ -85,18 +85,10 @@ def test_response_exception():
 @pytest.mark.gen_test
 def test_error_during_stream(io_loop):
     stream = InMemStream()
-
-    @pytest.mark.gen_test
-    def set_exception():
-        try:
-            1 / 0
-        except Exception as e:
-            stream.set_exception(e)
-
-    io_loop.call_later(
-        0.01,
-        set_exception
-    )
+    try:
+        1 / 0
+    except Exception as e:
+        stream.set_exception(e)
 
     with pytest.raises(ZeroDivisionError):
         yield stream.read()

@@ -98,8 +98,9 @@ class BaseRequestHandler(RequestHandler):
         """
         try:
             req = connection.request_message_factory.build(message_id, message)
-            # call handler only for the call request message
-            # not continue message
+            # message_factory will create Request only when it receives
+            # CallRequestMessage. It will return None, if it receives
+            # CallRequestContinueMessage.
             if req:
                 self.handle_call(req, connection)
 
