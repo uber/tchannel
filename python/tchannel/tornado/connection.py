@@ -222,9 +222,16 @@ class TornadoConnection(object):
                         )
                         future.set_exception(protocol_exception)
                     else:
-                        self.response_message_factory.build(
-                            context.message_id, context.message
+                        protocol_exception = (
+                            self.response_message_factory.build(
+                                context.message_id, context.message
+                            )
                         )
+                        if protocol_exception:
+                            self.event_emitter.fire(
+                                EventType.after_receive_error,
+                                protocol_exception,
+                            )
                     continue
 
                 response = self.response_message_factory.build(

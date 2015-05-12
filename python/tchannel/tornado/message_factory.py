@@ -337,11 +337,15 @@ class MessageFactory(object):
             context = self.message_buffer.pop(message_id, None)
             if context is None:
                 log.warn('Unconsumed error %s', context)
+                return None
             else:
                 protocol_exception = build_protocol_exception(
                     message, message_id,
                 )
+                protocol_exception.tracing = context.tracing
+
                 context.set_exception(protocol_exception)
+                return protocol_exception
         else:
             return message
 
