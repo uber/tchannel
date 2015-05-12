@@ -127,6 +127,9 @@ Latency of an individual attempt (initial request or retry) at a call.
 Measured from the time the first request fragment write is initiated to the
 time the last response fragment read is received.  SHOULD include the peer tag
 containing the host and port of the peer to whom the call attempt was sent.
+SHOULD include a ``retry-count`` tag indicating the per-request retry count
+represented by the metric (e.g. the first outgoing attempt should have 
+``retry-count=0``, the second outgoing attempt should have ``retry-count=2`` etc)
 
 ### Inbound call metrics
 
