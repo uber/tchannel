@@ -232,46 +232,51 @@ TChannelRequest.prototype.resend = function resend() {
     self.services.onRequest(self);
     var conn = peer.connect();
     if (!peer.isConnected() && conn.handler) {
-        var timer = self.timers.setTimeout(function connectTimeOut() {
-            self.checkTimeout();
-        },
-        opts.timeout);
-        if (timer.unref) timer.unref();
-        conn.on('identified', function retry() {
-            self.timers.clearTimeout(timer);
-            onConnected();
-        });
+        conn.on('identified', onIdentified);
+        var timer = self.timers.setTimeout(onIdentifyTimeout, opts.timeout);
         return;
     } else {
-        onConnected();
+        onIdentified();
     }
 
-    function onConnected() {
-        var outReq = peer.request(opts);
-        self.outReqs.push(outReq);
+    function onIdentifyTimeout() {
+        self.checkTimeout();
+    }
 
-        if (self.outReqs.length === 1) {
-            self.channel.outboundCallsSentStat.increment(1, {
-                'target-service': outReq.serviceName,
-                'service': outReq.headers.cn,
-                // TODO should always be buffer
-                'target-endpoint': String(self.arg1)
-            });
-        } else {
-            self.channel.outboundCallsRetriesStat.increment(1, {
-                'target-service': outReq.serviceName,
-                'service': outReq.headers.cn,
-                // TODO should always be buffer
-                'target-endpoint': String(self.arg1),
-                'retry-count': self.outReqs.length - 1
-            });
+    function onIdentified() {
+        if (timer) {
+            self.timers.clearTimeout(timer);
         }
-
-        self.triedRemoteAddrs[outReq.remoteAddr] = (self.triedRemoteAddrs[outReq.remoteAddr] || 0) + 1;
-        outReq.responseEvent.on(onResponse);
-        outReq.errorEvent.on(onError);
-        outReq.send(self.arg1, self.arg2, self.arg3);
+        self.onIdentified(peer, opts, perAttemptStart);
     }
+};
+
+TChannelRequest.prototype.onIdentified = function onIdentified(peer, opts, perAttemptStart) {
+    var self = this;
+    var outReq = peer.request(opts);
+    self.outReqs.push(outReq);
+
+    if (self.outReqs.length === 1) {
+        self.channel.outboundCallsSentStat.increment(1, {
+            'target-service': outReq.serviceName,
+            'service': outReq.headers.cn,
+            // TODO should always be buffer
+            'target-endpoint': String(self.arg1)
+        });
+    } else {
+        self.channel.outboundCallsRetriesStat.increment(1, {
+            'target-service': outReq.serviceName,
+            'service': outReq.headers.cn,
+            // TODO should always be buffer
+            'target-endpoint': String(self.arg1),
+            'retry-count': self.outReqs.length - 1
+        });
+    }
+
+    self.triedRemoteAddrs[outReq.remoteAddr] = (self.triedRemoteAddrs[outReq.remoteAddr] || 0) + 1;
+    outReq.responseEvent.on(onResponse);
+    outReq.errorEvent.on(onError);
+    outReq.send(self.arg1, self.arg2, self.arg3);
 
     function onError(err) {
         emitPerAttemptLatency();
@@ -298,7 +303,7 @@ TChannelRequest.prototype.resend = function resend() {
             'retry-count': self.outReqs.length - 1
         });
     }
-};
+}
 
 TChannelRequest.prototype.onSubreqError = function onSubreqError(err) {
     var self = this;
