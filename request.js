@@ -303,7 +303,7 @@ TChannelRequest.prototype.onIdentified = function onIdentified(peer, opts, perAt
             'retry-count': self.outReqs.length - 1
         });
     }
-}
+};
 
 TChannelRequest.prototype.onSubreqError = function onSubreqError(err) {
     var self = this;
