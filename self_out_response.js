@@ -71,9 +71,13 @@ function passResponse(args, isLast ) {
         self.inres.code = self.code;
         self.inres.ok = self.ok;
         self.first = false;
-        self.inreq.responseEvent.emit(self, self.inres);
+        process.nextTick(emitResponse);
     }
     if (!self.closing) self.conn.lastTimeoutTime = 0;
+
+    function emitResponse() {
+        self.inreq.responseEvent.emit(self, self.inres);
+    }
 };
 
 SelfOutResponse.prototype._sendError =
