@@ -3,6 +3,7 @@ instrumentation:
     excludes:
         - benchmarks/*
         - examples/*
+        - scripts/*
         - v1/*
 check:
     global:
