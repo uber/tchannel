@@ -197,8 +197,11 @@ TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
     outOpKeys.forEach(function eachOutOp(id) {
         var req = self.requests.out[id];
         delete self.requests.out[id];
-        err = Object.create(err);
-        err.connectionClosing = true;
+        
+        err = errors.TChannelConnectionResetError(err, {
+            connection: self
+        });
+
         req.errorEvent.emit(req, err);
     });
 

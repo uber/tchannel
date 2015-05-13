@@ -374,10 +374,6 @@ TChannelRequest.prototype.checkTimeout = function checkTimeout(err, res) {
 TChannelRequest.prototype.shouldRetryError = function shouldRetryError(err) {
     var self = this;
 
-    if (err.connectionClosing) {
-        return false;
-    }
-
     if (self.outReqs.length >= self.limit) {
         return false;
     }
@@ -390,6 +386,7 @@ TChannelRequest.prototype.shouldRetryError = function shouldRetryError(err) {
         switch (err.type) {
             case 'tchannel.bad-request':
             case 'tchannel.canceled':
+            case 'tchannel.connection.reset':
                 return false;
 
             case 'tchannel.busy':
