@@ -21,7 +21,6 @@
 'use strict';
 
 var allocCluster = require('./lib/alloc-cluster.js');
-var EndpointHandler = require('../endpoint-handler');
 
 allocCluster.test('does not leak inOps', {
     numPeers: 2,
@@ -33,14 +32,19 @@ allocCluster.test('does not leak inOps', {
     var one = cluster.channels[0];
     var two = cluster.channels[1];
 
-    one.handler = EndpointHandler();
+    two.makeSubChannel({
+        serviceName: 'server',
+        peers: [one.hostPort]
+    });
 
-    one.handler.register('/timeout', timeout);
+    one.makeSubChannel({
+        serviceName: 'server'
+    }).register('/timeout', timeout);
 
     two.timeoutCheckInterval = 99999;
     two
         .request({
-            host: cluster.hosts[0],
+            serviceName: 'server',
             timeout: 100
         })
         .send('/timeout', 'h', 'b', onTimeout);

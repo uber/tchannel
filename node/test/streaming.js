@@ -95,35 +95,41 @@ allocCluster.test('streaming echo w/ streaming callback', 2, function t(cluster,
 
 function partsTest(testCase, assert) {
     return function runSendTest(callback) {
-        var req = testCase.channel.request(extend({
+        var options = extend({
             streamed: true
-        }, testCase.opts));
-        var resultReady = Ready();
-        req.hookupCallback(resultReady.signal);
-        req.arg1.end(testCase.op);
+        }, testCase.opts);
 
-        async.series({
-            sinkHead: sinkParts.bind(null, testCase.reqHead, req.arg2),
-            sinkBody: sinkParts.bind(null, testCase.reqBody, req.arg3),
-            result: resultReady
-        }, onResult);
+        var peer = testCase.channel.peers.choosePeer(null, options);
+        var conn = peer.connect();
+        var req = conn.request(options);
+        conn.on('identified', function onId() {
+            var resultReady = Ready();
+            req.hookupCallback(resultReady.signal);
+            req.arg1.end(testCase.op);
 
-        function sinkParts(parts, stream, callback) {
-            if (!parts) {
-                stream.end();
-                callback();
-            } else {
-                var i = 0;
-                async.eachSeries(parts, function eachPart(part, next) {
-                    if (++i < parts.length) {
-                        stream.write(part);
-                    } else {
-                        stream.end(part);
-                    }
-                    setImmediate(next);
-                }, callback);
+            async.series({
+                sinkHead: sinkParts.bind(null, testCase.reqHead, req.arg2),
+                sinkBody: sinkParts.bind(null, testCase.reqBody, req.arg3),
+                result: resultReady
+            }, onResult);
+
+            function sinkParts(parts, stream, callback) {
+                if (!parts) {
+                    stream.end();
+                    callback();
+                } else {
+                    var i = 0;
+                    async.eachSeries(parts, function eachPart(part, next) {
+                        if (++i < parts.length) {
+                            stream.write(part);
+                        } else {
+                            stream.end(part);
+                        }
+                        setImmediate(next);
+                    }, callback);
+                }
             }
-        }
+        });
 
         function onResult(err, result) {
             // var res = result.result[0];
