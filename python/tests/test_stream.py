@@ -26,7 +26,7 @@ import pytest
 
 from tchannel.errors import StreamingError
 from tchannel.errors import TChannelError
-from tchannel.tornado.data import Response
+from tchannel.tornado import Response
 from tchannel.tornado.stream import InMemStream
 from tchannel.tornado.stream import PipeStream
 

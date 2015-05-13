@@ -26,7 +26,7 @@ from thrift import Thrift
 from tchannel import messages
 from tchannel.thrift.protocol import TChannelProtocolFactory
 from tchannel.thrift.transport import TChannelTornadoTransport
-from tchannel.tornado.data import Response
+from tchannel.tornado import Response
 from tchannel.tornado.stream import InMemStream
 from tchannel.tornado.tchannel import TChannel
 

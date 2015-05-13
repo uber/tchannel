@@ -33,10 +33,10 @@ from .. import frame
 from .. import glossary
 from .. import messages
 from ..context import Context
-from ..event import EventType
 from ..errors import ConnectionClosedError
 from ..errors import InvalidErrorCodeError
 from ..errors import TChannelError
+from ..event import EventType
 from ..io import BytesIO
 from ..messages.common import PROTOCOL_VERSION
 from ..messages.common import FlagsType

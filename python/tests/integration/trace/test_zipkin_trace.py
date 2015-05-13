@@ -24,8 +24,8 @@ import pytest
 import tornado
 import tornado.gen
 
-from tchannel.tornado import TChannel
 from tchannel.tornado import RequestDispatcher
+from tchannel.tornado import TChannel
 from tchannel.tornado.stream import InMemStream
 from tchannel.zipkin.zipkin_trace import ZipkinTraceHook
 from tests.integration.server_manager import TChannelServerManager

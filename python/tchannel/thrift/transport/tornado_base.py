@@ -28,7 +28,7 @@ from thrift.transport import TTransport
 from tornado import ioloop
 
 from tchannel.messages.common import Types
-from tchannel.tornado.data import Response
+from tchannel.tornado import Response
 
 from .base import TChannelTransportBase
 
