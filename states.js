@@ -21,11 +21,14 @@
 'use strict';
 
 var format = require('util').format;
+var inherits = require('util').inherits;
 
 var errors = require('./errors');
 
 module.exports.HealthyState = HealthyState;
 module.exports.UnhealthyState = UnhealthyState;
+module.exports.LockedHealthyState = LockedHealthyState;
+module.exports.LockedUnhealthyState = LockedUnhealthyState;
 
 /*
  * Collectively, the health states receive additional options through the peer
@@ -50,7 +53,21 @@ var symptoms = {
     'FatalProtocolError': true
 };
 
-// ## Healthy
+function State() {
+}
+
+State.prototype.onRequest = function onRequest(/* req */) {
+};
+
+State.prototype.onRequestResponse = function onRequestResponse(/* req */) {
+};
+
+State.prototype.onRequestError = function onRequestError(err) {
+};
+
+State.prototype.close = function close(callback) {
+    callback(null);
+};
 
 function HealthyState(options) {
     var self = this;
@@ -64,6 +81,8 @@ function HealthyState(options) {
     self.okCount = 0;
     self.notOkCount = 0;
 }
+
+inherits(HealthyState, State);
 
 HealthyState.prototype.type = 'tchannel.healthy';
 
@@ -92,9 +111,6 @@ HealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
     return self.stateMachine.shouldRequest();
 };
 
-HealthyState.prototype.onRequest = function onRequest(/* req */) {
-};
-
 HealthyState.prototype.onRequestResponse = function onRequestResponse(/* req */) {
     var self = this;
     self.okCount++;
@@ -108,12 +124,6 @@ HealthyState.prototype.onRequestError = function onRequestError(err) {
     }
 };
 
-HealthyState.prototype.close = function close(callback) {
-    callback(null);
-};
-
-// ## Unhealthy
-
 function UnhealthyState(options) {
     var self = this;
     self.stateMachine = options.stateMachine;
@@ -126,6 +136,8 @@ function UnhealthyState(options) {
     self.successCount = 0;
     self.triedThisPeriod = true;
 }
+
+inherits(UnhealthyState, State);
 
 UnhealthyState.prototype.type = 'tchannel.unhealthy';
 
@@ -173,6 +185,37 @@ UnhealthyState.prototype.onRequestError = function onRequestError(err) {
     }
 };
 
-UnhealthyState.prototype.close = function close(callback) {
-    callback(null);
+function LockedHealthyState(options) {
+    var self = this;
+    self.nextHandler = options.nextHandler;
+}
+
+inherits(LockedHealthyState, State);
+
+LockedHealthyState.prototype.type = 'tchannel.healthy-locked';
+
+LockedHealthyState.prototype.toString = function lockedHealthyToString() {
+    return '[Healthy state (locked)]';
+};
+
+LockedHealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
+    var self = this;
+    return self.nextHandler.shouldRequest(req, options);
+};
+
+function LockedUnhealthyState(options) {
+    var self = this;
+    self.nextHandler = options.nextHandler;
+}
+
+inherits(LockedUnhealthyState, State);
+
+LockedUnhealthyState.prototype.type = 'tchannel.unhealthy-locked';
+
+LockedUnhealthyState.prototype.toString = function lockedUnhealthyToString() {
+    return '[Unhealthy state (locked)]';
+};
+
+LockedUnhealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
+    return 0;
 };

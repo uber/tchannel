@@ -23,10 +23,11 @@
 var assert = require('assert');
 var inherits = require('util').inherits;
 var EventEmitter = require('./lib/event_emitter');
+var StateMachine = require('./state_machine');
 var net = require('net');
 
 var TChannelConnection = require('./connection');
-var states = require('./peer_states');
+var states = require('./states');
 
 function TChannelPeer(channel, hostPort, options) {
     if (!(this instanceof TChannelPeer)) {
@@ -34,6 +35,7 @@ function TChannelPeer(channel, hostPort, options) {
     }
     var self = this;
     EventEmitter.call(self);
+    StateMachine.call(self);
     self.stateChangedEvent = self.defineEvent('stateChanged');
     self.allocConnectionEvent = self.defineEvent('allocConnection');
 
@@ -42,7 +44,6 @@ function TChannelPeer(channel, hostPort, options) {
     self.options = options || {};
     self.hostPort = hostPort;
     self.isEphemeral = self.hostPort === '0.0.0.0:0';
-    self.state = null; // TODO
     self.connections = [];
     self.random = self.channel.random;
 
@@ -104,22 +105,7 @@ TChannelPeer.prototype.close = function close(callback) {
     }
 };
 
-TChannelPeer.prototype.setState = function setState(StateType) {
-    var self = this;
-    var currentType = self.state && self.state.type;
-    if (currentType &&
-        StateType.prototype.type &&
-        StateType.prototype.type === currentType) {
-        return;
-    }
-    var state = new StateType(self.stateOptions);
-    if (state && state.type === currentType) {
-        return;
-    }
-    var oldState = self.state;
-    self.state = state;
-    self.stateChangedEvent.emit(self, [oldState, state]);
-};
+TChannelPeer.prototype.setState = StateMachine.prototype.setState;
 
 TChannelPeer.prototype.getInConnection = function getInConnection() {
     var self = this;
