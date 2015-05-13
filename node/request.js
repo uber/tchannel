@@ -202,8 +202,6 @@ TChannelRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
 TChannelRequest.prototype.resend = function resend() {
     var self = this;
 
-    if (self.channel.destroyed) return;
-
     if (self.trackPending && self.checkPending()) return;
 
     if (self.checkTimeout()) return;
@@ -388,6 +386,7 @@ TChannelRequest.prototype.shouldRetryError = function shouldRetryError(err) {
         switch (err.type) {
             case 'tchannel.bad-request':
             case 'tchannel.canceled':
+            case 'tchannel.connection.reset':
                 return false;
 
             case 'tchannel.busy':

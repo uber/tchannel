@@ -259,6 +259,11 @@ module.exports.TChannelCallResContBeforeInitResError = TypedError({
     message: 'call response cont before init response'
 });
 
+module.exports.TChannelConnectionResetError = WrappedError({
+    type: 'tchannel.connection.reset',
+    message: 'tchannel: {causeMessage}'
+});
+
 module.exports.TChannelDuplicateInitRequestError = TypedError({
     type: 'tchannel.init.duplicate-init-request',
     message: 'tchannel: duplicate init request'

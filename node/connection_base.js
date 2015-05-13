@@ -197,7 +197,7 @@ TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
     outOpKeys.forEach(function eachOutOp(id) {
         var req = self.requests.out[id];
         delete self.requests.out[id];
-        // TODO: shared mutable object... use Object.create(err)?
+        err = errors.TChannelConnectionResetError(err);
         req.errorEvent.emit(req, err);
     });
 
