@@ -24,8 +24,6 @@ var TimeMock = require('time-mock');
 var allocCluster = require('./lib/alloc-cluster.js');
 var timers = TimeMock(Date.now());
 
-var EndpointHandler = require('../endpoint-handler');
-
 allocCluster.test('requests will timeout', {
     numPeers: 2,
     channelOptions: {
@@ -34,16 +32,21 @@ allocCluster.test('requests will timeout', {
 }, function t(cluster, assert) {
     var one = cluster.channels[0];
     var two = cluster.channels[1];
-    var hostOne = cluster.hosts[0];
+    var sub = one.makeSubChannel({
+        serviceName: 'server'
+    });
 
-    one.handler = EndpointHandler();
+    sub.register('/normal-proxy', normalProxy);
+    sub.register('/timeout', timeout);
 
-    one.handler.register('/normal-proxy', normalProxy);
-    one.handler.register('/timeout', timeout);
+    two.makeSubChannel({
+        serviceName: 'server',
+        peers: [one.hostPort]
+    });
 
     two
         .request({
-            host: hostOne,
+            serviceName: 'server',
             timeout: 1000
         })
         .send('/normal-proxy', 'h', 'b', onResp);
@@ -56,7 +59,7 @@ allocCluster.test('requests will timeout', {
 
         two
             .request({
-                host: hostOne,
+                serviceName: 'server',
                 timeout: 1000
             })
             .send('/timeout', 'h', 'b', onTimeout);

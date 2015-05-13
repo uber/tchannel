@@ -31,11 +31,15 @@ var CountedReadySignal = require('ready-signal/counted');
 allocCluster.test('request().send() to a server', 2, function t(cluster, assert) {
     var one = cluster.channels[0];
     var two = cluster.channels[1];
-    var hostOne = cluster.hosts[0];
 
-    one.handler = EndpointHandler();
+    two.makeSubChannel({
+        serviceName: 'server',
+        peers: [one.hostPort]
+    });
 
-    one.handler.register('foo', function foo(req, res, arg2, arg3) {
+    one.makeSubChannel({
+        serviceName: 'server'
+    }).register('foo', function foo(req, res, arg2, arg3) {
         assert.ok(Buffer.isBuffer(arg2), 'handler got an arg2 buffer');
         assert.ok(Buffer.isBuffer(arg3), 'handler got an arg3 buffer');
         res.sendOk(arg2, arg3);
@@ -154,7 +158,9 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
     ].map(function eachTestCase(testCase) {
         testCase = extend({
             channel: two,
-            opts: {host: hostOne},
+            opts: {
+                serviceName: 'server'
+            }
         }, testCase);
         return sendTest(testCase, assert);
     }), function onResults(err) {

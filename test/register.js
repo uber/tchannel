@@ -23,7 +23,6 @@
 var parallel = require('run-parallel');
 var Buffer = require('buffer').Buffer;
 var allocCluster = require('./lib/alloc-cluster.js');
-var EndpointHandler = require('../endpoint-handler.js');
 
 allocCluster.test('register() with different results', {
     numPeers: 2,
@@ -35,88 +34,94 @@ allocCluster.test('register() with different results', {
 }, function t(cluster, assert) {
     var one = cluster.channels[0];
     var two = cluster.channels[1];
-    var hostOne = cluster.hosts[0];
 
-    one.handler = EndpointHandler();
+    two.makeSubChannel({
+        serviceName: 'server',
+        peers: [one.hostPort]
+    });
 
-    one.handler.register('/error', function error(req, res) {
+    var oneSub = one.makeSubChannel({
+        serviceName: 'server'
+    });
+
+    oneSub.register('/error', function error(req, res) {
         res.sendNotOk(null, 'abc');
     });
 
-    one.handler.register('/error-frame', function errorFrame(req, res) {
+    oneSub.register('/error-frame', function errorFrame(req, res) {
         res.sendError('Busy', 'some message');
     });
 
-    one.handler.register('/buffer-head', function buffer(req, res) {
+    oneSub.register('/buffer-head', function buffer(req, res) {
         res.sendOk(new Buffer('abc'), null);
     });
-    one.handler.register('/string-head', function string(req, res) {
+    oneSub.register('/string-head', function string(req, res) {
         res.sendOk('abc', null);
     });
-    one.handler.register('/object-head', function object(req, res) {
+    oneSub.register('/object-head', function object(req, res) {
         res.sendOk(JSON.stringify({ value: 'abc' }), null);
     });
-    one.handler.register('/null-head', function nullH(req, res) {
+    oneSub.register('/null-head', function nullH(req, res) {
         res.sendOk(null, null);
     });
-    one.handler.register('/undef-head', function undefH(req, res) {
+    oneSub.register('/undef-head', function undefH(req, res) {
         res.sendOk(undefined, null);
     });
 
-    one.handler.register('/buffer-body', function buffer(req, res) {
+    oneSub.register('/buffer-body', function buffer(req, res) {
         res.sendOk(null, new Buffer('abc'));
     });
-    one.handler.register('/string-body', function string(req, res) {
+    oneSub.register('/string-body', function string(req, res) {
         res.sendOk(null, 'abc');
     });
-    one.handler.register('/object-body', function object(req, res) {
+    oneSub.register('/object-body', function object(req, res) {
         res.sendOk(null, JSON.stringify({ value: 'abc' }));
     });
-    one.handler.register('/null-body', function nullB(req, res) {
+    oneSub.register('/null-body', function nullB(req, res) {
         res.sendOk(null, null);
     });
-    one.handler.register('/undef-body', function undefB(req, res) {
+    oneSub.register('/undef-body', function undefB(req, res) {
         res.sendOk(null, undefined);
     });
 
     parallel({
         'errorCall': sendCall.bind(null, two, {
-            host: hostOne
+            serviceName: 'server'
         }, '/error'),
         'errorFrameCall': sendCall.bind(null, two, {
-            host: hostOne
+            serviceName: 'server'
         }, '/error-frame'),
 
         'bufferHead': sendCall.bind(null, two, {
-            host: hostOne
+            serviceName: 'server'
         }, '/buffer-head'),
         'stringHead': sendCall.bind(null, two, {
-            host: hostOne
+            serviceName: 'server'
         }, '/string-head'),
         'objectHead': sendCall.bind(null, two, {
-            host: hostOne
+            serviceName: 'server'
         }, '/object-head'),
         'nullHead': sendCall.bind(null, two, {
-            host: hostOne
+            serviceName: 'server'
         }, '/null-head'),
         'undefHead': sendCall.bind(null, two, {
-            host: hostOne
+            serviceName: 'server'
         }, '/undef-head'),
 
         'bufferBody': sendCall.bind(null, two, {
-            host: hostOne
+            serviceName: 'server'
         }, '/buffer-body'),
         'stringBody': sendCall.bind(null, two, {
-            host: hostOne
+            serviceName: 'server'
         }, '/string-body'),
         'objectBody': sendCall.bind(null, two, {
-            host: hostOne
+            serviceName: 'server'
         }, '/object-body'),
         'nullBody': sendCall.bind(null, two, {
-            host: hostOne
+            serviceName: 'server'
         }, '/null-body'),
         'undefBody': sendCall.bind(null, two, {
-            host: hostOne
+            serviceName: 'server'
         }, '/undef-body')
     }, onResults);
 
