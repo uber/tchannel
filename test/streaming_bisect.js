@@ -234,7 +234,18 @@ var search = clusterSearch.ClusterIsolateSearch(extend({
                 serviceName: 'test_as_raw',
             }
         });
-        callback(null);
+        var options = cluster.testRawClient.requestOptions({
+            serviceName: 'test_as_raw',
+            headers: {
+                as: 'raw'
+            },
+            streamed: true
+        });
+        var peer = cluster.testRawClient.peers.choosePeer(null, options);
+        var conn = peer.connect();
+        conn.on('identified', function onId() {
+            callback(null);
+        });
     },
 
     // pretty printer
