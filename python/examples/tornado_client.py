@@ -28,7 +28,6 @@ import tornado.ioloop
 import tornado.iostream
 
 from options import get_args
-
 from tchannel.tornado import TChannel
 from tchannel.tornado.connection import StreamConnection
 

@@ -31,7 +31,7 @@ from ..handler import CallableRequestHandler
 from ..zipkin.annotation import Endpoint
 from ..zipkin.trace import Trace
 from .connection import StreamConnection
-from .data import Request
+from .request import Request
 from .stream import InMemStream
 from .stream import Stream
 from .stream import read_full

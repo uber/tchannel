@@ -34,7 +34,7 @@ from tchannel.zipkin.trace import Trace
 
 @pytest.fixture
 def req():
-    request = InstanceDouble('tchannel.tornado.data.Request')
+    request = InstanceDouble('tchannel.tornado.Request')
     request.endpoint = ""
     request.service = ""
     request.checksum = None

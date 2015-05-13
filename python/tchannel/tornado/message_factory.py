@@ -42,8 +42,8 @@ from ..messages.common import verify_checksum
 from ..messages.error import ErrorMessage
 from ..zipkin.annotation import Endpoint
 from ..zipkin.trace import Trace
-from .data import Request
-from .data import Response
+from .request import Request
+from .response import Response
 from .stream import InMemStream
 
 log = logging.getLogger('tchannel')

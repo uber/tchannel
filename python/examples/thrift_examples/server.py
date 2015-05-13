@@ -22,8 +22,8 @@ from tornado import ioloop
 
 from hello import HelloService
 from tchannel import thrift
-from tchannel.tornado import TChannel
 from tchannel.tornado import RequestDispatcher
+from tchannel.tornado import TChannel
 
 
 class HelloServiceHandler(object):

@@ -25,9 +25,9 @@ import pytest
 from tchannel import tcurl
 from tchannel.errors import ConnectionClosedError
 from tchannel.errors import TChannelError
+from tchannel.tornado import Response
 from tchannel.tornado import TChannel
 from tchannel.tornado.connection import StreamConnection
-from tchannel.tornado.data import Response
 from tchannel.tornado.stream import InMemStream
 from tests.util import big_arg
 

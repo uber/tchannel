@@ -24,14 +24,14 @@ import tornado
 import tornado.gen
 from tornado import gen
 
-from ..event import EventType
 from ..errors import InvalidEndpointError
 from ..errors import InvalidMessageError
 from ..errors import TChannelError
+from ..event import EventType
 from ..handler import BaseRequestHandler
 from ..messages.error import ErrorCode
 from .broker import ArgSchemeBroker
-from .data import Response
+from .response import Response
 
 
 class RequestDispatcher(BaseRequestHandler):
