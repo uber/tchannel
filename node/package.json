@@ -5,7 +5,7 @@
   "version": "2.0.0-beta18",
   "scripts": {
     "lint": "jshint .",
-    "test": "npm run lint -s && npm run cover -s",
+    "test": "npm run check-licence && npm run lint -s && npm run cover -s",
     "benchmark": "echo '!!! DEPRECATED: Better to just run `node benchmark` directly' >&2; node benchmarks",
     "take-benchmark": "./benchmarks/take.sh",
     "cover": "istanbul cover --report html --print none test/index.js -- --color | faucet && istanbul report text && istanbul check-coverage",
