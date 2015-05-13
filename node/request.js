@@ -202,8 +202,6 @@ TChannelRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
 TChannelRequest.prototype.resend = function resend() {
     var self = this;
 
-    if (self.channel.destroyed) return;
-
     if (self.trackPending && self.checkPending()) return;
 
     if (self.checkTimeout()) return;
@@ -375,6 +373,10 @@ TChannelRequest.prototype.checkTimeout = function checkTimeout(err, res) {
 
 TChannelRequest.prototype.shouldRetryError = function shouldRetryError(err) {
     var self = this;
+
+    if (err.connectionClosing) {
+        return false;
+    }
 
     if (self.outReqs.length >= self.limit) {
         return false;
