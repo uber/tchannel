@@ -53,8 +53,6 @@ var symptoms = {
     'FatalProtocolError': true
 };
 
-// ## abstract State
-
 function State() {
 }
 
@@ -70,8 +68,6 @@ State.prototype.onRequestError = function onRequestError(err) {
 State.prototype.close = function close(callback) {
     callback(null);
 };
-
-// ## Healthy
 
 function HealthyState(options) {
     var self = this;
@@ -127,8 +123,6 @@ HealthyState.prototype.onRequestError = function onRequestError(err) {
         self.notOkCount++;
     }
 };
-
-// ## Unhealthy
 
 function UnhealthyState(options) {
     var self = this;
@@ -191,8 +185,6 @@ UnhealthyState.prototype.onRequestError = function onRequestError(err) {
     }
 };
 
-// ## LockedHealthyState
-
 function LockedHealthyState(options) {
     var self = this;
     self.nextHandler = options.nextHandler;
@@ -210,8 +202,6 @@ LockedHealthyState.prototype.shouldRequest = function shouldRequest(req, options
     var self = this;
     return self.nextHandler.shouldRequest(req, options);
 };
-
-// ## LockedUnhealthyState
 
 function LockedUnhealthyState(options) {
     var self = this;
