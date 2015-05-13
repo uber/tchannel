@@ -198,9 +198,7 @@ TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
         var req = self.requests.out[id];
         delete self.requests.out[id];
         
-        err = errors.TChannelConnectionResetError(err, {
-            connection: self
-        });
+        err = errors.TChannelConnectionResetError(err);
 
         req.errorEvent.emit(req, err);
     });

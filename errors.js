@@ -261,8 +261,7 @@ module.exports.TChannelCallResContBeforeInitResError = TypedError({
 
 module.exports.TChannelConnectionResetError = WrappedError({
     type: 'tchannel.connection.reset',
-    message: 'tchannel: {origMessage}',
-    connection: null
+    message: 'tchannel: {origMessage}'
 });
 
 module.exports.TChannelDuplicateInitRequestError = TypedError({
