@@ -70,17 +70,22 @@ test('basic tracing test', function (assert) {
     server.handler.register('/top_level_endpoint', function (req, res) {
         logger.info("top level sending to subservice");
         setTimeout(function () {
-            server
-                .request({
-                    host: '127.0.0.1:4042', 
-                    serviceName: 'subservice', 
+            var options = server.requestOptions({
+                    host: '127.0.0.1:4042',
+                    serviceName: 'subservice',
                     parentSpan: req.span,
                     trace: true
-                }).send('/foobar', 'arg1', 'arg2', function (err, subRes) {
+                });
+            var peer = server.peers.choosePeer(null, options);
+            var conn = peer.connect();
+            conn.on('identified', onId);
+            function onId() {
+                conn.request(options).send('/foobar', 'arg1', 'arg2', function (err, subRes) {
                     logger.info("top level recv from subservice");
                     if (err) return res.sendOk('error', err);
                     res.sendOk('result', 'success: ' + subRes);
                 });
+            }
         }, 40);
     });
 
@@ -92,14 +97,17 @@ test('basic tracing test', function (assert) {
             throw err;
         }
 
-        logger.info("client making req");
-        client
-            .request({host: '127.0.0.1:4040', serviceName: 'server', trace: true})
-            .send('/top_level_endpoint', "arg 1", "arg 2", function (err, res) {
+        logger.info('client making req');
+        var options = client.requestOptions({host: '127.0.0.1:4040', serviceName: 'server', trace: true});
+        var peer = client.peers.choosePeer(null, options);
+        var conn = peer.connect();
+        conn.on('identified', onId);
+        function onId() {
+            conn.request(options).send('/top_level_endpoint', "arg 1", "arg 2", function (err, res) {
                 logger.info("client recv from top level: " + res);
                 requestsDone.signal();
             });
-
+        }
     });
 
     server.listen(4040, '127.0.0.1', ready.signal);
