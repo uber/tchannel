@@ -102,6 +102,7 @@ test('basic tracing test', function (assert) {
         if (err) {
             throw err;
         }
+        
         logger.info('client making req');
         var req = client.request({host: '127.0.0.1:4040', serviceName: 'server', trace: true});
         var peers = client.peers.values();
