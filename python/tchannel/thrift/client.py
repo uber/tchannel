@@ -24,58 +24,9 @@ import inspect
 from collections import namedtuple
 
 from tornado import gen
-from thrift.transport import TTransport
-from thrift.protocol import TBinaryProtocol
 from thrift import Thrift
 
-from .. import io
-from .. import rw
-from .. import scheme
-
-
-class ThriftArgScheme(scheme.ArgScheme):
-    """Represents the ``thrift`` arg scheme."""
-
-    # Used to serialize and deserialize headers.
-    _headers_rw = rw.headers(
-        rw.number(2),
-        rw.len_prefixed_string(rw.number(2)),
-        rw.len_prefixed_string(rw.number(2)),
-    )
-
-    def __init__(self, result_type):
-        """Initialize a new ThriftArgScheme.
-
-        :param result_type:
-            The class that represents the result type of this call. It must be
-            a Thrift-deserializable object.
-        """
-        self.result_type = result_type
-
-    def type(self):
-        return 'thrift'
-
-    def serialize_header(self, headers):
-        return self._headers_rw.write(headers, io.BytesIO()).getvalue()
-
-    def deserialize_header(self, s):
-        return self._headers_rw.read(io.BytesIO(s))
-
-    def serialize_body(self, args):
-        trans = TTransport.TMemoryBuffer()
-        proto = TBinaryProtocol.TBinaryProtocolAccelerated(trans)
-        args.write(proto)
-
-        return trans.getvalue()
-
-    def deserialize_body(self, s):
-        trans = TTransport.TMemoryBuffer(s)
-        proto = TBinaryProtocol.TBinaryProtocolAccelerated(trans)
-
-        result = self.result_type()
-        result.read(proto)
-        return result
-
+from .scheme import ThriftArgScheme
 
 # Generated clients will use this base class.
 _ClientBase = namedtuple('_ClientBase', 'tchannel hostport service')

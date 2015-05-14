@@ -22,10 +22,10 @@ from __future__ import absolute_import
 
 import inspect
 
-from thrift.protocol import TBinaryProtocol
-from thrift.transport import TTransport
+from tornado import gen
 
-from tchannel.tornado.stream import InMemStream
+from tchannel.tornado.broker import ArgSchemeBroker
+from .scheme import ThriftArgScheme
 
 
 def register(dispatcher, service_module, handler, service_name=None):
@@ -74,44 +74,38 @@ def register(dispatcher, service_module, handler, service_name=None):
 
     for method in methods:
         endpoint = "%s::%s" % (service_name, method)
+
+        args_type = getattr(service_module, method + '_args')
+        broker = ArgSchemeBroker(ThriftArgScheme(args_type))
+
         dispatcher.register(
-            endpoint, build_handler(service_module, method, handler)
+            endpoint,
+            build_handler(service_module, method, handler),
+            broker,
         )
 
 
 def build_handler(service_module, method_name, handler):
-    args_type = getattr(service_module, method_name + '_args')
     result_type = getattr(service_module, method_name + '_result')
+    handler_fn = getattr(handler, method_name)
 
+    @gen.coroutine
     def thrift_handler(request, response, connection):
-        # TODO: Fix arg scheme passing
-        # assert request.arg_scheme == 'thrift', (
-        #     "Invalid arg scheme %s" % request.arg_scheme
-        # )
+        call_args = yield request.get_body()
+        args = [
+            getattr(call_args, spec[2]) for spec in call_args.thrift_spec[1:]
+        ]
 
-        args = args_type()
-        args.read(
-            TBinaryProtocol.TBinaryProtocolAccelerated(
-                TTransport.TMemoryBuffer(request.body)
-            )
-        )
-
-        result = result_type()
+        call_result = result_type()
         try:
-            result.success = getattr(handler, method_name)(
-                *[getattr(args, spec[2]) for spec in args.thrift_spec[1:]]
-            )
+            call_result.success = yield gen.maybe_future(handler_fn(*args))
         except Exception as exc:
-            for spec in result.thrift_spec[1:]:
+            for spec in call_result.thrift_spec[1:]:
                 if isinstance(exc, spec[3][0]):
-                    setattr(result, spec[2], exc)
+                    setattr(call_result, spec[2], exc)
                     break
             else:
                 raise
-
-        output_buf = TTransport.TMemoryBuffer()
-        result.write(TBinaryProtocol.TBinaryProtocolAccelerated(output_buf))
-
-        response.set_body_s(InMemStream(output_buf.getvalue()))
+        response.write_body(call_result)
 
     return thrift_handler
