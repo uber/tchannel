@@ -24,11 +24,9 @@ import pytest
 from thrift import Thrift
 
 from tchannel import messages
-from tchannel.thrift.protocol import TChannelProtocolFactory
-from tchannel.thrift.transport import TChannelTornadoTransport
-from tchannel.tornado import Response
+from tchannel.thrift import client_for as thrift_client_for
+from tchannel.tornado import Response, TChannel
 from tchannel.tornado.stream import InMemStream
-from tchannel.tornado.tchannel import TChannel
 
 from .util import get_service_module
 
@@ -42,10 +40,7 @@ def service(tmpdir):
 def mk_client(service, port):
     tchannel = TChannel()
     hostport = "localhost:%d" % port
-    return service.Client(
-        TChannelTornadoTransport(tchannel, hostport, 'service'),
-        TChannelProtocolFactory('Service'),
-    )
+    return thrift_client_for("service", service)(tchannel, hostport)
 
 
 @pytest.mark.gen_test

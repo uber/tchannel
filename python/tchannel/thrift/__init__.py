@@ -21,10 +21,4 @@
 from __future__ import absolute_import
 
 from .server import register  # noqa
-from .protocol import TChannelProtocol  # noqa
-from .protocol import TChannelProtocolFactory  # noqa
-
-try:
-    from .transport.tornado import TChannelTornadoTransport  # noqa
-except ImportError:
-    pass
+from .client import client_for  # noqa
