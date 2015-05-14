@@ -93,11 +93,10 @@ test('basic tracing test', function (assert) {
 
         process.nextTick(function () {
             var servReq = server.request({
-                    host: '127.0.0.1:4042',
-                    serviceName: 'subservice',
-                    parentSpan: req.span,
-                    trace: true
-                });
+                host: '127.0.0.1:4042',
+                serviceName: 'subservice',
+                parentSpan: req.span,
+                trace: true});
             var peers = server.peers.values();
             var ready = new CountedReadySignal(peers.length);
             peers.forEach(function each(peer) {
