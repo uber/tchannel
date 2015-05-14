@@ -232,7 +232,7 @@ TChannelConnection.prototype.onCallResponse = function onCallResponse(res) {
 
         req = self.popOutReq(res.id);
         if (!req) {
-            self.logger.info('response received for unknown or lost operation', {
+            self.logger.info('full response received for unknown or lost operation', {
                 responseId: res.id,
                 code: res.code,
                 arg1: Buffer.isBuffer(res.arg1) ?
