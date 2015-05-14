@@ -189,14 +189,7 @@ function allocHTTPBridge(opts) {
     }
 
     function onEgressRequest(hreq, hres) {
-        var options = cluster.egressChan.requestOptions({
-            streamed: true
-        });
-        var peer = cluster.egressChan.peers.choosePeer(null, options);
-        var conn = peer.connect();
-        conn.on('identified', function onId() {
-            cluster.asHTTP.forwardToTChannel(cluster.egressChan, hreq, hres);
-        });
+        cluster.asHTTP.forwardToTChannel(cluster.egressChan, hreq, hres);
     }
 
     function destroy(callback) {

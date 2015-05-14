@@ -92,23 +92,29 @@ test('basic tracing test', function (assert) {
         }, 40);
 
         process.nextTick(function () {
-            var options = server.requestOptions({
+            var servReq = server.request({
                     host: '127.0.0.1:4042',
                     serviceName: 'subservice',
                     parentSpan: req.span,
                     trace: true
                 });
-            var peer = server.peers.choosePeer(null, options);
-            var conn = peer.connect();
-            conn.on('identified', onId);
-            function onId() {
-                conn.request(options).send('/barbaz', 'arg1', 'arg2', function (err, subRes) {
+            var peers = server.peers.values();
+            var ready = new CountedReadySignal(peers.length);
+            peers.forEach(function each(peer) {
+                if (peer.isConnected()) {
+                    ready.signal();
+                } else {
+                    peer.connect().on('identified', ready.signal);
+                }
+            });
+            ready(function send() {
+                servReq.send('/barbaz', 'arg1', 'arg2', function (err, subRes) {
                     logger.info("top level recv from subservice: " + subRes);
                     if (err) return res.sendOk('error', err);
 
                     serverRequestsDone.signal();
                 });
-            }
+            });
         });
 
         serverRequestsDone(function () {
@@ -126,16 +132,18 @@ test('basic tracing test', function (assert) {
         }
 
         logger.info('client making req');
-        var options = client.requestOptions({host: '127.0.0.1:4040', serviceName: 'server', trace: true});
-        var peer = client.peers.choosePeer(null, options);
-        var conn = peer.connect();
-        conn.on('identified', onId);
-        function onId() {
-            conn.request(options).send('/top_level_endpoint', "arg 1", "arg 2", function (err, res) {
-                logger.info("client recv from top level: " + res);
-                requestsDone.signal();
-            });
-        }
+        var req = client.request({host: '127.0.0.1:4040', serviceName: 'server', trace: true});
+        var peers = client.peers.values();
+        var ready = new CountedReadySignal(peers.length);
+        peers.forEach(function each(peer) {
+            peer.connect().on('identified', ready.signal);
+        });
+        ready(function send() {
+            req.send('/top_level_endpoint', "arg 1", "arg 2", function (err, res) {
+                    logger.info("client recv from top level: " + res);
+                    requestsDone.signal();
+                });
+        });
     });
 
     server.listen(4040, '127.0.0.1', ready.signal);
