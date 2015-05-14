@@ -28,6 +28,9 @@ var util = require('util');
 var TChannelJSON = require('../as/json');
 var TChannelEndpointHandler = require('../endpoint-handler');
 
+var MAX_RELAY_AD_ATTEMPTS = 2;
+var RELAY_AD_RETRY_TIME = 2 * 1000;
+
 module.exports = HyperbahnHandler;
 
 function HyperbahnHandler(options) {
@@ -193,27 +196,41 @@ HyperbahnHandler.prototype.sendRelayAdvertise =
 function sendRelayAdvertise(hostPort, services, callback) {
     var self = this;
 
-    self.tchannelJSON.send(self.channel.request({
-        host: hostPort,
-        serviceName: 'hyperbahn'
-    }), 'relay-ad', null, {
-        services: services
-    }, onRelayAdvertise);
+    var attempts = 0;
 
-    function onRelayAdvertise(err, response) {
-        if (response && response.ok) {
-            return callback(null, null);
+    tryRequest();
+
+    function tryRequest() {
+        attempts++;
+
+        self.tchannelJSON.send(self.channel.request({
+            host: hostPort,
+            serviceName: 'hyperbahn'
+        }), 'relay-ad', null, {
+            services: services
+        }, onResponse);
+
+        function onResponse(err, response) {
+            if (response && response.ok) {
+                return callback(null, null);
+            }
+
+            if (attempts <= MAX_RELAY_AD_ATTEMPTS && err &&
+                err.type === 'tchannel.socket'
+            ) {
+                setTimeout(tryRequest, RELAY_AD_RETRY_TIME);
+            } else {
+                var logger = self.channel.logger;
+                logger.error('Could not send relay advertise', {
+                    exitNode: hostPort,
+                    services: services,
+                    err: err,
+                    responseBody: response && response.body
+                });
+
+                callback(null, null);
+            }
         }
-
-        var logger = self.channel.logger;
-        logger.error('Could not send relay advertise', {
-            exitNode: hostPort,
-            services: services,
-            err: err,
-            responseBody: response && response.body
-        });
-
-        callback(null, null);
     }
 };
 
