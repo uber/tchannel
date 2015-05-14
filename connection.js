@@ -202,6 +202,18 @@ TChannelConnection.prototype.onCallResponse = function onCallResponse(res) {
         res.finishEvent.on(popOutReq);
     }
 
+    if (!req) {
+        self.logger.info('call response received for unknown or lost operation', {
+            responseId: res.id,
+            code: res.code,
+            arg1: Buffer.isBuffer(res.arg1) ?
+                String(res.arg1) : 'streamed-arg1',
+            remoteAddr: self.remoteAddr,
+            direction: self.direction
+        });
+        return;
+    }
+
     if (self.tracer) {
         // TODO: better annotations
         req.span.annotate('cr');
