@@ -224,19 +224,36 @@ TChannelRequest.prototype.resend = function resend() {
     var perAttemptStart = self.timers.now();
 
     var conn = peer.connect();
-    if (!peer.isConnected() && conn.handler) {
-        conn.on('identified', onIdentified);
-        var timer = self.timers.setTimeout(onIdentifyTimeout, self.timeout - self.elapsed);
-        return;
+
+    if (conn.closing) {
+        onConnectionClose(conn.closeError);
     } else {
-        onIdentified();
+        conn.closeEvent.on(onConnectionClose);
+
+        if (!peer.isConnected() && conn.handler) {
+            conn.identifiedEvent.on(onIdentified);
+            var timer = self.timers.setTimeout(onIdentifyTimeout, self.timeout - self.elapsed);
+            return;
+        } else {
+            onIdentified();
+        }
+    }
+
+    function onConnectionClose(err) {
+        conn.closeEvent.removeListener(onConnectionClose);
+        if (timer) {
+            self.timers.clearTimeout(timer);
+        }
+        self.emitError(err || errors.TChannelConnectionCloseError());
     }
 
     function onIdentifyTimeout() {
+        conn.closeEvent.removeListener(onConnectionClose);
         self.checkTimeout();
     }
 
     function onIdentified() {
+        conn.closeEvent.removeListener(onConnectionClose);
         if (timer) {
             self.timers.clearTimeout(timer);
         }

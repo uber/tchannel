@@ -259,6 +259,11 @@ module.exports.TChannelCallResContBeforeInitResError = TypedError({
     message: 'call response cont before init response'
 });
 
+module.exports.TChannelConnectionCloseError = TypedError({
+    type: 'tchannel.connection.close',
+    message: 'connection closed'
+});
+
 module.exports.TChannelConnectionResetError = WrappedError({
     type: 'tchannel.connection.reset',
     message: 'tchannel: {causeMessage}'

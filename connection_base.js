@@ -39,6 +39,10 @@ function TChannelConnectionBase(channel, direction, remoteAddr) {
     self.timedOutEvent = self.defineEvent('timedOut');
     self.spanEvent = self.defineEvent('span');
 
+    self.closing = false;
+    self.closeError = null;
+    self.closeEvent = self.defineEvent('close');
+
     self.channel = channel;
     self.options = self.channel.options;
     self.logger = channel.logger;
@@ -60,7 +64,6 @@ function TChannelConnectionBase(channel, direction, remoteAddr) {
     };
 
     self.lastTimeoutTime = 0;
-    self.closing = false;
 
     self.startTimeoutTimer();
     self.tracer = self.channel.tracer;
@@ -157,6 +160,8 @@ TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
 
     if (self.closing) return;
     self.closing = true;
+    self.closeError = err;
+    self.closeEvent.emit(self, err);
 
     var inOpKeys = Object.keys(self.requests.in);
     var outOpKeys = Object.keys(self.requests.out);
@@ -175,7 +180,7 @@ TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
         outPending: self.pending.out
     };
 
-    if (err.type.indexOf('tchannel.socket') < 0) {
+    if (err.type.lastIndexOf('tchannel.socket', 0) < 0) {
         self.logger.warn('resetting connection', logInfo);
         self.errorEvent.emit(self, err);
     } else if (err.type !== 'tchannel.socket-closed') {
