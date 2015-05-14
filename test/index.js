@@ -44,3 +44,4 @@ require('./peers.js');
 require('./peer_states.js');
 require('./trace/');
 require('./request-stats.js');
+require('./streaming-resp-err.js');

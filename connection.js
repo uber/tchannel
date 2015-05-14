@@ -27,6 +27,7 @@ var inherits = require('util').inherits;
 
 var v2 = require('./v2');
 var errors = require('./errors');
+var States = require('./reqres_states');
 
 var TChannelConnectionBase = require('./connection_base');
 
@@ -190,20 +191,15 @@ TChannelConnection.prototype.handleReadFrame = function handleReadFrame(frame) {
 
 TChannelConnection.prototype.onCallResponse = function onCallResponse(res) {
     var self = this;
-    // TODO: only pop req if res is done/error, otherwise it's streaming and we
-    // should need to register finish / error event handlers to .popOutReq only
-    // once the call is done
-    var req = self.popOutReq(res.id);
-    if (!req) {
-        self.logger.info('response received for unknown or lost operation', {
-            responseId: res.id,
-            code: res.code,
-            arg1: Buffer.isBuffer(res.arg1) ?
-                String(res.arg1) : "streamed-arg1",
-            remoteAddr: self.remoteAddr,
-            direction: self.direction,
-        });
-        return;
+
+    var req = self.requests.out[res.id];
+    var called = false;
+
+    if (res.state === States.Done || res.state === States.Error) {
+        popOutReq();
+    } else {
+        res.errorEvent.on(popOutReq);
+        res.finishEvent.on(popOutReq);
     }
 
     if (self.tracer) {
@@ -214,16 +210,46 @@ TChannelConnection.prototype.onCallResponse = function onCallResponse(res) {
     }
 
     req.responseEvent.emit(req, res);
+
+    function popOutReq() {
+        if (called) {
+            return;
+        }
+
+        called = true;
+
+        req = self.popOutReq(res.id);
+        if (!req) {
+            self.logger.info('response received for unknown or lost operation', {
+                responseId: res.id,
+                code: res.code,
+                arg1: Buffer.isBuffer(res.arg1) ?
+                    String(res.arg1) : 'streamed-arg1',
+                remoteAddr: self.remoteAddr,
+                direction: self.direction
+            });
+            return;
+        }
+    }
 };
 
 TChannelConnection.prototype.onCallError = function onCallError(err) {
     var self = this;
-    var req = self.popOutReq(err.originalId);
-    if (!req) {
-        self.logger.info('error received for unknown or lost operation', err);
-        return;
+
+    var req = self.requests.out[err.originalId];
+
+    if (req && req.res) {
+        req.res.errorEvent.emit(req.res, err);
+    } else {
+        // Only popOutReq if there is no call response object yet
+        req = self.popOutReq(err.originalId);
+        if (!req) {
+            self.logger.info('error received for unknown or lost operation', err);
+            return;
+        }
+
+        req.errorEvent.emit(req, err);
     }
-    req.errorEvent.emit(req, err);
 };
 
 TChannelConnection.prototype.start = function start() {
