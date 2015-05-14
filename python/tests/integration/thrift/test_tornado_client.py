@@ -21,6 +21,8 @@
 from __future__ import absolute_import
 
 import pytest
+from tchannel.scheme import ThriftArgScheme
+from tchannel.tornado.broker import ArgSchemeBroker
 from thrift import Thrift
 
 from tchannel import messages
@@ -50,7 +52,10 @@ def mk_client(service, port):
 
 @pytest.mark.gen_test
 def test_call(tchannel_server, service):
-    tchannel_server.expect_call('Service::putItem').and_return(
+    tchannel_server.expect_call(
+        'Service::putItem',
+        ArgSchemeBroker(ThriftArgScheme()),
+    ).and_return(
         Response(
             argstreams=[
                 InMemStream(),  # endpoint
@@ -74,7 +79,10 @@ def test_call(tchannel_server, service):
 def test_protocol_error(tchannel_server, service):
     # FIXME when we have solution to deal with exception on the tchannel,
     # throw exception in the server handler and then return error message.
-    tchannel_server.expect_call('Service::getItem').and_return(
+    tchannel_server.expect_call(
+        'Service::getItem',
+        ArgSchemeBroker(ThriftArgScheme()),
+    ).and_return(
         messages.ErrorMessage(
             code=messages.ErrorCode.bad_request,
             message="stahp pls",
@@ -90,7 +98,10 @@ def test_protocol_error(tchannel_server, service):
 
 @pytest.mark.gen_test
 def test_thrift_exception(tchannel_server, service):
-    tchannel_server.expect_call('Service::getItem').and_return(
+    tchannel_server.expect_call(
+        'Service::getItem',
+        ArgSchemeBroker(ThriftArgScheme()),
+    ).and_return(
         Response(
             code=1,
             argstreams=[

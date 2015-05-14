@@ -95,3 +95,22 @@ class RawArgScheme(ArgScheme):
 
     def serialize_body(self, obj):
         return obj
+
+
+class ThriftArgScheme(ArgScheme):
+    _type = "thrift"
+
+    def type(self):
+        return self._type
+
+    def deserialize_header(self, obj):
+        return obj
+
+    def serialize_header(self, obj):
+        return obj
+
+    def deserialize_body(self, obj):
+        return obj
+
+    def serialize_body(self, obj):
+        return obj
