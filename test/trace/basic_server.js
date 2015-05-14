@@ -71,11 +71,10 @@ test('basic tracing test', function (assert) {
         logger.info("top level sending to subservice");
         setTimeout(function () {
             var servReq = server.request({
-                        host: '127.0.0.1:4042',
-                        serviceName: 'subservice',
-                        parentSpan: req.span,
-                        trace: true
-                    });
+                host: '127.0.0.1:4042',
+                serviceName: 'subservice',
+                parentSpan: req.span,
+                trace: true});
             var peers = server.peers.values();
             var ready = new CountedReadySignal(peers.length);
             peers.forEach(function each(peer) {
@@ -86,11 +85,11 @@ test('basic tracing test', function (assert) {
                 }
             });
             ready(function send() {
-                servReq.send('/foobar', 'arg1', 'arg2', function (err, subRes) {
-                        logger.info('top level recv from subservice');
-                        if (err) return res.sendOk('error', err);
-                        res.sendOk('result', 'success: ' + subRes);
-                    });
+                servReq.send('/foobar', 'arg1', 'arg2', function response(err, subRes) {
+                    logger.info('top level recv from subservice');
+                    if (err) return res.sendOk('error', err);
+                    res.sendOk('result', 'success: ' + subRes);
+                });
             });
         }, 40);
     });
