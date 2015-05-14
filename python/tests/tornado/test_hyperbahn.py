@@ -21,39 +21,43 @@
 import pytest
 
 from tchannel.errors import ConnectionClosedError
-from tchannel.tornado.hyperbahn import HyperbahnClient
+from tchannel.tornado import hyperbahn, TChannel
 
 
 def test_new_client_establishes_peers():
-    routers = ['127.0.0.1:23000']
+    routers = ['127.0.0.1:2300' + str(i) for i in xrange(5)]
 
-    client = HyperbahnClient(
-        service='baz',
-        routers=routers,
+    # TChannel knows about one of the peers already.
+    channel = TChannel(known_peers=['127.0.0.1:23002'])
+
+    hyperbahn.advertise(
+        channel,
+        'baz',
+        routers,
     )
 
     for router in routers:
-        assert client.tchannel.peers.lookup(router)
+        assert channel.peers.lookup(router)
 
 
 @pytest.mark.gen_test
 def test_request():
-    client = HyperbahnClient('foo', ['127.0.0.1:23000'])
+    channel = TChannel()
+    hyperbahn.advertise(channel, 'foo', ['127.0.0.1:23000'])
 
     # Just want to make sure all the plumbing fits together.
     with pytest.raises(ConnectionClosedError):
-        yield client.request(
-            service='bar',
-            endpoint='baz',
-            body='boo',
-            headers='bam',
-            protocol_headers={'as': 'qux'},
+        yield channel.request(service='bar').send(
+            arg1='baz',
+            arg2='bam',
+            arg3='boo',
+            headers={'as': 'qux'},
         )
 
 
 @pytest.mark.gen_test
 def test_register():
-    client = HyperbahnClient('foo', ['127.0.0.1:23000'])
+    channel = TChannel()
 
     with pytest.raises(ConnectionClosedError):
-        yield client.register()
+        yield hyperbahn.advertise(channel, 'foo', ['127.0.0.1:23000'])
