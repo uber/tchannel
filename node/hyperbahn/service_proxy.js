@@ -118,7 +118,7 @@ function getServiceChannel(serviceName, create) {
     var self = this;
     var svcchan = self.channel.subChannels[serviceName];
     if (!svcchan && create) {
-        self.logger.warn('Creating new sub channel', {
+        self.logger.info('Creating new sub channel', {
             serviceName: serviceName
         });
 
@@ -212,7 +212,7 @@ function changeToExit(exitNodes, svcchan) {
         newMode: 'exit'
     });
 
-    self.logger.warn('Changing to exit node', {
+    self.logger.info('Changing to exit node', {
         oldMode: oldMode,
         newMode: 'exit',
         serviceName: svcchan.serviceName
@@ -240,7 +240,7 @@ function changeToForward(exitNodes, svcchan) {
         newMode: 'forward'
     });
 
-    self.logger.warn('Changing to forward node', {
+    self.logger.info('Changing to forward node', {
         oldMode: oldMode,
         newMode: 'forward',
         serviceName: svcchan.serviceName
