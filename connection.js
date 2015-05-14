@@ -256,7 +256,12 @@ TChannelConnection.prototype.onCallError = function onCallError(err) {
         // Only popOutReq if there is no call response object yet
         req = self.popOutReq(err.originalId);
         if (!req) {
-            self.logger.info('error received for unknown or lost operation', err);
+            self.logger.info('error received for unknown or lost operation', {
+                err: err,
+                id: err.originalId,
+                remoteAddr: self.remoteAddr,
+                direction: self.direction
+            });
             return;
         }
 
