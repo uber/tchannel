@@ -45,7 +45,7 @@ class ArgSchemeBroker(object):
         self.endpoint[rule] = handler
 
     def handle_call(self, req, resp, proxy):
-        if not req.headers.get('as', None) == self.arg_scheme.type():
+        if req.headers.get('as', None) != self.arg_scheme.type():
             raise InvalidMessageError(
                 "Invalid arg scheme in request header"
             )

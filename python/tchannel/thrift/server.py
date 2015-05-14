@@ -21,6 +21,8 @@
 from __future__ import absolute_import
 
 import inspect
+from tchannel.scheme import ThriftArgScheme
+from tchannel.tornado.broker import ArgSchemeBroker
 
 from thrift.protocol import TBinaryProtocol
 from thrift.transport import TTransport
@@ -75,7 +77,9 @@ def register(dispatcher, service_module, handler, service_name=None):
     for method in methods:
         endpoint = "%s::%s" % (service_name, method)
         dispatcher.register(
-            endpoint, build_handler(service_module, method, handler)
+            endpoint,
+            build_handler(service_module, method, handler),
+            ArgSchemeBroker(ThriftArgScheme()),
         )
 
 

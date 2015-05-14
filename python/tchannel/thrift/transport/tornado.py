@@ -60,6 +60,7 @@ class TChannelTornadoTransport(TChannelTornadoTransportBase):
             InMemStream(endpoint),
             InMemStream(),  # TODO: headers
             InMemStream(payload),
+            headers={'as': 'thrift'}
         )
 
         self._flush_internal(endpoint, response, seqid)

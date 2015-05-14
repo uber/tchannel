@@ -50,7 +50,7 @@ class ServerManager(object):
         self.ready = False
         self.dispatcher = None
 
-    def expect_call(self, endpoint):
+    def expect_call(self, endpoint, scheme=None):
         assert self.dispatcher, "dispatcher not configured"
 
         if not isinstance(endpoint, bytes):
@@ -62,7 +62,7 @@ class ServerManager(object):
             response.set_header_s(expectation.response.get_header_s())
             response.set_body_s(expectation.response.get_body_s())
 
-        self.dispatcher.register(endpoint, handle_expected_endpoint)
+        self.dispatcher.register(endpoint, handle_expected_endpoint, scheme)
         return expectation
 
     def __enter__(self):
