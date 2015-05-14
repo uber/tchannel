@@ -226,11 +226,6 @@ TChannelConnection.prototype.onCallError = function onCallError(err) {
     req.errorEvent.emit(req, err);
 };
 
-TChannelConnection.prototype.onTimedOut = function onTimedOut(_arg, self) {
-    self.logger.warn(self.channel.hostPort + ' destroying socket from timeouts');
-    self.socket.destroy();
-};
-
 TChannelConnection.prototype.start = function start() {
     var self = this;
     if (self.direction === 'out') {

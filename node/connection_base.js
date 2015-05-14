@@ -311,7 +311,8 @@ TChannelConnectionBase.prototype.buildResponse = function buildResponse(req, opt
 
 TChannelConnectionBase.prototype.onReqDone = function onReqDone(req) {
     var self = this;
-    if (self.requests.in[req.id] !== req) {
+    // incoming req that timed out are already cleaned up
+    if (self.requests.in[req.id] !== req && !req.timedOut) {
         self.logger.warn('mismatched onReqDone callback', {
             hostPort: self.channel.hostPort,
             hasInReq: self.requests.in[req.id] !== undefined,
