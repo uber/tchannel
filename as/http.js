@@ -169,7 +169,6 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
     var options = tchannel.requestOptions({
         streamed: true
     });
-
     var peer = tchannel.peers.choosePeer(null, options);
     if (!peer) {
         hres.writeHead(503, 'Service Unavailable: no tchannel peer');
