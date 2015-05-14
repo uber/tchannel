@@ -64,12 +64,26 @@ allocCluster.test('requests will timeout', {
             })
             .send('/timeout', 'h', 'b', onTimeout);
 
-        timers.advance(2500);
+        var twoConn = two.peers.get(one.hostPort).connections[0];
+
+        var adv = Math.max(1001, (
+            twoConn.options.timeoutCheckInterval +
+            (twoConn.options.timeoutFuzz / 2) + 1
+        ));
+
+        // timers module has weird semantics
+        // TODO: less magic
+        var newTime = timers.now() + adv;
+        timers.now = function now() {
+            return newTime;
+        };
+
+        timers.advance(adv);
     }
 
     function onTimeout(err) {
         assert.equal(err && err.type, 'tchannel.timeout', 'expected timeout error');
-        one.peers.get(two.hostPort).connections[0].onTimeoutCheck();
+        // one.peers.get(two.hostPort).connections[0].onTimeoutCheck();
         cluster.assertCleanState(assert, {
             channels: [{
                 peers: [{
