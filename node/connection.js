@@ -202,6 +202,18 @@ TChannelConnection.prototype.onCallResponse = function onCallResponse(res) {
         res.finishEvent.on(popOutReq);
     }
 
+    if (!req) {
+        self.logger.info('call response received for unknown or lost operation', {
+            responseId: res.id,
+            code: res.code,
+            arg1: Buffer.isBuffer(res.arg1) ?
+                String(res.arg1) : 'streamed-arg1',
+            remoteAddr: self.remoteAddr,
+            direction: self.direction
+        });
+        return;
+    }
+
     if (self.tracer) {
         // TODO: better annotations
         req.span.annotate('cr');
@@ -220,7 +232,7 @@ TChannelConnection.prototype.onCallResponse = function onCallResponse(res) {
 
         req = self.popOutReq(res.id);
         if (!req) {
-            self.logger.info('response received for unknown or lost operation', {
+            self.logger.info('full response received for unknown or lost operation', {
                 responseId: res.id,
                 code: res.code,
                 arg1: Buffer.isBuffer(res.arg1) ?
@@ -244,7 +256,12 @@ TChannelConnection.prototype.onCallError = function onCallError(err) {
         // Only popOutReq if there is no call response object yet
         req = self.popOutReq(err.originalId);
         if (!req) {
-            self.logger.info('error received for unknown or lost operation', err);
+            self.logger.info('error received for unknown or lost operation', {
+                err: err,
+                id: err.originalId,
+                remoteAddr: self.remoteAddr,
+                direction: self.direction
+            });
             return;
         }
 
