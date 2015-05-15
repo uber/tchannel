@@ -57,7 +57,9 @@ def get_service_module(root, tornado=False):
         }
 
         service Service {
-            oneway void putItemAsync(1: Item item);
+            // oneway void putItemAsync(1: Item item);
+            // TODO: oneway not yet supported
+
             void putItem(1: Item item, 2: bool failIfPresent)
                  throws (1: ItemAlreadyExists alreadyExists);
             Item getItem(1: string key)
