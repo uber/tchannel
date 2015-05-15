@@ -55,6 +55,7 @@
  */
 
 var async = require('async');
+var CountedReadySignal = require('ready-signal/counted');
 var extend = require('xtend');
 var minimist = require('minimist');
 var util = require('util');
@@ -234,7 +235,14 @@ var search = clusterSearch.ClusterIsolateSearch(extend({
                 serviceName: 'test_as_raw',
             }
         });
-        callback(null);
+        var peers = cluster.testRawClient.peers.values();
+        var ready = new CountedReadySignal(peers.length);
+        peers.forEach(function each(peer) {
+            peer.connect().on('identified', ready.signal);
+        });
+        ready(function onReady() {
+            callback(null);
+        });
     },
 
     // pretty printer
