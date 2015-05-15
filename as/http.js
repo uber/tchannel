@@ -177,7 +177,14 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
     } else {
         // TODO: observable
         var treq = peer.request(options);
-        self.sendRequest(treq, hreq, forwarded);
+        if (!peer.isConnected()) {
+            peer.connect().on('identified', function onIdentified() {
+                self.sendRequest(treq, hreq, forwarded);
+            });
+        } else {
+            self.sendRequest(treq, hreq, forwarded);
+        }
+
         return treq;
     }
 
