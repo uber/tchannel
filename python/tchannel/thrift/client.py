@@ -27,6 +27,7 @@ from tornado import gen
 from thrift import Thrift
 
 from .scheme import ThriftArgScheme
+from tchannel.tornado.broker import ArgSchemeBroker
 
 # Generated clients will use this base class.
 _ClientBase = namedtuple('_ClientBase', 'tchannel hostport service')
@@ -148,15 +149,14 @@ def generate_method(service_module, service_name, method_name):
         for name, value in params.items():
             setattr(call_args, name, value)
 
-        response = yield self.tchannel.request(
-            hostport=self.hostport, service=self.service
-        ).send(
+        response = yield ArgSchemeBroker(arg_scheme).send(
+            self.tchannel.request(
+                hostport=self.hostport, service=self.service
+            ),
             endpoint,
-            '',  # no headers for now
-            arg_scheme.serialize_body(call_args),
+            {},  # TODO: Figure out how to receive headers for the call
+            call_args,
         )
-        response.scheme = arg_scheme  # FIXME mutation like this is bad
-        # TODO Zipkin?
 
         call_result = yield response.get_body()
         if not result_spec:

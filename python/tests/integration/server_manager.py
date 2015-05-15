@@ -26,6 +26,7 @@ import tornado.ioloop
 
 import tchannel.tornado.tchannel as tornado_tchannel
 from tchannel.tornado.dispatch import RequestDispatcher
+from tchannel.tornado.broker import ArgSchemeBroker
 
 
 class Expectation(object):
@@ -50,7 +51,7 @@ class ServerManager(object):
         self.ready = False
         self.dispatcher = None
 
-    def expect_call(self, endpoint):
+    def expect_call(self, endpoint, scheme=None):
         assert self.dispatcher, "dispatcher not configured"
 
         if not isinstance(endpoint, bytes):
@@ -62,7 +63,9 @@ class ServerManager(object):
             response.set_header_s(expectation.response.get_header_s())
             response.set_body_s(expectation.response.get_body_s())
 
-        self.dispatcher.register(endpoint, handle_expected_endpoint)
+        self.dispatcher.register(
+            endpoint, handle_expected_endpoint, ArgSchemeBroker(scheme)
+        )
         return expectation
 
     def __enter__(self):

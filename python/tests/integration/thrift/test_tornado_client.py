@@ -25,6 +25,7 @@ from thrift import Thrift
 
 from tchannel import messages
 from tchannel.thrift import client_for as thrift_client_for
+from tchannel.thrift.scheme import ThriftArgScheme
 from tchannel.tornado import Response, TChannel
 from tchannel.tornado.stream import InMemStream
 
@@ -45,7 +46,10 @@ def mk_client(service, port):
 
 @pytest.mark.gen_test
 def test_call(tchannel_server, service):
-    tchannel_server.expect_call('Service::putItem').and_return(
+    tchannel_server.expect_call(
+        'Service::putItem',
+        ThriftArgScheme(service.putItem_result),
+    ).and_return(
         Response(
             argstreams=[
                 InMemStream(),  # endpoint
@@ -53,7 +57,7 @@ def test_call(tchannel_server, service):
                 # For void responses, TBinaryProtocol puts a single 0 byte in
                 # the response.
                 InMemStream('\x00'),
-            ]
+            ],
         )
     )
 
@@ -69,7 +73,10 @@ def test_call(tchannel_server, service):
 def test_protocol_error(tchannel_server, service):
     # FIXME when we have solution to deal with exception on the tchannel,
     # throw exception in the server handler and then return error message.
-    tchannel_server.expect_call('Service::getItem').and_return(
+    tchannel_server.expect_call(
+        'Service::getItem',
+        ThriftArgScheme(service.getItem_result),
+    ).and_return(
         messages.ErrorMessage(
             code=messages.ErrorCode.bad_request,
             message="stahp pls",
@@ -85,7 +92,10 @@ def test_protocol_error(tchannel_server, service):
 
 @pytest.mark.gen_test
 def test_thrift_exception(tchannel_server, service):
-    tchannel_server.expect_call('Service::getItem').and_return(
+    tchannel_server.expect_call(
+        'Service::getItem',
+        ThriftArgScheme(service.getItem_result),
+    ).and_return(
         Response(
             code=1,
             argstreams=[
