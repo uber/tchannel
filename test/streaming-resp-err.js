@@ -19,6 +19,7 @@
 // THE SOFTWARE.
 
 'use strict';
+var CountedReadySignal = require('ready-signal/counted');
 
 var setTimeout = require('timers').setTimeout;
 
@@ -42,12 +43,19 @@ allocCluster.test('end response with error frame', {
         streamed: true
     });
 
-    req.arg1.end('stream');
-    req.arg2.end();
-    req.arg3.end();
+    var peers = client.peers.values();
+    var ready = new CountedReadySignal(peers.length);
+    peers.forEach(function each(peer) {
+        peer.connect().on('identified', ready.signal);
+    });
+    ready(function send() {
+        req.arg1.end('stream');
+        req.arg2.end();
+        req.arg3.end();
 
-    req.on('response', onResponse);
-    req.on('error', onError);
+        req.on('response', onResponse);
+        req.on('error', onError);
+    });
 
     function onResponse(resp) {
         assert.ok(resp);
