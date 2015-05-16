@@ -65,6 +65,7 @@ function TChannelConnectionBase(channel, direction, remoteAddr) {
 
     self.lastTimeoutTime = 0;
 
+    self.startTime = self.timers.now();
     self.startTimeoutTimer();
     self.tracer = self.channel.tracer;
 }
@@ -113,6 +114,13 @@ TChannelConnectionBase.prototype.onTimeoutCheck = function onTimeoutCheck() {
     }
     if (self.lastTimeoutTime) {
         self.timedOutEvent.emit(self);
+    } else if (!self.remoteName &&
+        self.timers.now() - self.startTime > self.channel.requestDefaults.timeout) {
+        self.timedOutEvent.emit(self, errors.TimeoutError({
+            start: self.startTime,
+            elapsed: self.timers.now() - self.startTime,
+            timeout: self.channel.requestDefaults.timeout
+        }));
     } else {
         self.checkTimeout(self.requests.out, 'out');
         self.checkTimeout(self.requests.in, 'in');
