@@ -232,7 +232,7 @@ TChannelRequest.prototype.resend = function resend() {
 
         if (!peer.isConnected() && conn.handler) {
             conn.identifiedEvent.on(onIdentified);
-            var timer = self.timers.setTimeout(onIdentifyTimeout, self.timeout - self.elapsed);
+            conn.timedOutEvent.on(onIdentifyTimeout);
             return;
         } else {
             onIdentified();
@@ -241,22 +241,19 @@ TChannelRequest.prototype.resend = function resend() {
 
     function onConnectionClose(err) {
         conn.closeEvent.removeListener(onConnectionClose);
-        if (timer) {
-            self.timers.clearTimeout(timer);
-        }
+        conn.timedOutEvent.removeListener(onIdentifyTimeout);
         self.emitError(err || errors.TChannelConnectionCloseError());
     }
 
-    function onIdentifyTimeout() {
+    function onIdentifyTimeout(err) {
         conn.closeEvent.removeListener(onConnectionClose);
-        self.checkTimeout();
+        conn.timedOutEvent.removeListener(onIdentifyTimeout);
+        self.emitError(err);
     }
 
     function onIdentified() {
         conn.closeEvent.removeListener(onConnectionClose);
-        if (timer) {
-            self.timers.clearTimeout(timer);
-        }
+        conn.timedOutEvent.removeListener(onIdentifyTimeout);
         self.onIdentified(peer, perAttemptStart);
     }
 };
