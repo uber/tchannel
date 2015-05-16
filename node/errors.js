@@ -46,6 +46,26 @@ module.exports.ArgChunkOutOfOrderError = TypedError({
     got: null
 });
 
+module.exports.CallReqBeforeInitReqError = TypedError({
+    type: 'tchannel.init.call-request-before-init-request',
+    message: 'call request before init request'
+});
+
+module.exports.CallReqContBeforeInitReqError = TypedError({
+    type: 'tchannel.init.call-request-cont-before-init-request',
+    message: 'call request cont before init request'
+});
+
+module.exports.CallResBeforeInitResError = TypedError({
+    type: 'tchannel.init.call-response-before-init-response',
+    message: 'call response before init response'
+});
+
+module.exports.CallResContBeforeInitResError = TypedError({
+    type: 'tchannel.init.call-response-cont-before-init-response',
+    message: 'call response cont before init response'
+});
+
 module.exports.ChecksumError = TypedError({
     type: 'tchannel.checksum',
     message: 'invalid checksum (type {checksumType}) expected: {expectedValue} actual: {actualValue}',
@@ -62,6 +82,16 @@ module.exports.DuplicateHeaderKeyError = TypedError({
     key: null,
     value: null,
     priorValue: null
+});
+
+module.exports.DuplicateInitRequestError = TypedError({
+    type: 'tchannel.init.duplicate-init-request',
+    message: 'tchannel: duplicate init request'
+});
+
+module.exports.DuplicateInitResponseError = TypedError({
+    type: 'tchannel.init.duplicate-init-response',
+    message: 'tchannel: duplicate init response'
 });
 
 module.exports.InvalidArgumentError = TypedError({
@@ -225,6 +255,26 @@ module.exports.ResponseFrameState = TypedError({
     state: null
 });
 
+module.exports.SendCallReqBeforeIdentifiedError = TypedError({
+    type: 'tchannel.init.send-call-request-before-indentified',
+    message: 'cannot send call request before the connection is identified'
+});
+
+module.exports.SendCallReqContBeforeIdentifiedError = TypedError({
+    type: 'tchannel.init.send-call-request-cont-before-indentified',
+    message: 'cannot send call request cont before the connection is identified'
+});
+
+module.exports.SendCallResBeforeIdentifiedError = TypedError({
+    type: 'tchannel.init.send-call-response-before-indentified',
+    message: 'cannot send call response before the connection is identified'
+});
+
+module.exports.SendCallResContBeforeIdentifiedError = TypedError({
+    type: 'tchannel.init.send-call-response-cont-before-indentified',
+    message: 'cannot send call response cont before the connection is identified'
+});
+
 module.exports.SocketClosedError = TypedError({
     type: 'tchannel.socket-closed',
     message: 'socket closed, {reason}',
@@ -239,26 +289,6 @@ module.exports.SocketError = WrappedError({
     remoteAddr: null
 });
 
-module.exports.TChannelCallReqBeforeInitReqError = TypedError({
-    type: 'tchannel.init.call-request-before-init-request',
-    message: 'call request before init request'
-});
-
-module.exports.TChannelCallReqContBeforeInitReqError = TypedError({
-    type: 'tchannel.init.call-request-cont-before-init-request',
-    message: 'call request cont before init request'
-});
-
-module.exports.TChannelCallResBeforeInitResError = TypedError({
-    type: 'tchannel.init.call-response-before-init-response',
-    message: 'call response before init response'
-});
-
-module.exports.TChannelCallResContBeforeInitResError = TypedError({
-    type: 'tchannel.init.call-response-cont-before-init-response',
-    message: 'call response cont before init response'
-});
-
 module.exports.TChannelConnectionCloseError = TypedError({
     type: 'tchannel.connection.close',
     message: 'connection closed'
@@ -267,16 +297,6 @@ module.exports.TChannelConnectionCloseError = TypedError({
 module.exports.TChannelConnectionResetError = WrappedError({
     type: 'tchannel.connection.reset',
     message: 'tchannel: {causeMessage}'
-});
-
-module.exports.TChannelDuplicateInitRequestError = TypedError({
-    type: 'tchannel.init.duplicate-init-request',
-    message: 'tchannel: duplicate init request'
-});
-
-module.exports.TChannelDuplicateInitResponseError = TypedError({
-    type: 'tchannel.init.duplicate-init-response',
-    message: 'tchannel: duplicate init response'
 });
 
 module.exports.TChannelListenError = WrappedError({
