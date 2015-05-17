@@ -115,11 +115,11 @@ TChannelConnectionBase.prototype.onTimeoutCheck = function onTimeoutCheck() {
     if (self.lastTimeoutTime) {
         self.timedOutEvent.emit(self);
     } else if (!self.remoteName &&
-        self.timers.now() - self.startTime > self.channel.requestDefaults.timeout) {
+        self.timers.now() - self.startTime >= self.channel.initTimeout) {
         self.timedOutEvent.emit(self, errors.TimeoutError({
             start: self.startTime,
             elapsed: self.timers.now() - self.startTime,
-            timeout: self.channel.requestDefaults.timeout
+            timeout: self.channel.initTimeout
         }));
     } else {
         self.checkTimeout(self.requests.out, 'out');
