@@ -232,7 +232,6 @@ TChannelRequest.prototype.resend = function resend() {
 
         if (!peer.isConnected() && conn.handler) {
             conn.identifiedEvent.on(onIdentified);
-            conn.timedOutEvent.on(onIdentifyTimeout);
             return;
         } else {
             onIdentified();
@@ -241,19 +240,11 @@ TChannelRequest.prototype.resend = function resend() {
 
     function onConnectionClose(err) {
         conn.closeEvent.removeListener(onConnectionClose);
-        conn.timedOutEvent.removeListener(onIdentifyTimeout);
         self.emitError(err || errors.TChannelConnectionCloseError());
-    }
-
-    function onIdentifyTimeout(err) {
-        conn.closeEvent.removeListener(onConnectionClose);
-        conn.timedOutEvent.removeListener(onIdentifyTimeout);
-        self.emitError(err);
     }
 
     function onIdentified() {
         conn.closeEvent.removeListener(onConnectionClose);
-        conn.timedOutEvent.removeListener(onIdentifyTimeout);
         self.onIdentified(peer, perAttemptStart);
     }
 };
