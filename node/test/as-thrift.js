@@ -223,6 +223,9 @@ allocCluster.test('sending without as header', {
     client.request({
         serviceName: 'server',
         hasNoParent: true,
+        headers: {
+            as: 'lol'
+        },
         timeout: 1500
     }).send('Chamber::echo', null, null, onResponse);
 

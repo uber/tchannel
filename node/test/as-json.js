@@ -188,7 +188,10 @@ allocCluster.test('sending without as header', {
     client.request({
         serviceName: 'server',
         timeout: 1500,
-        hasNoParent: true
+        hasNoParent: true,
+        headers: {
+            as: 'lol'
+        },
     }).send('echo', '123malformed json', null, onResponse);
 
     function onResponse(err, resp) {

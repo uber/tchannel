@@ -67,6 +67,7 @@ test('basic tracing test', function (assert) {
 
     subChan.register('/foobar', function (req, res) {
         logger.debug("subserv sr");
+        res.headers.as = 'raw';
         res.sendOk('result', 'success');
     });
 
@@ -78,6 +79,9 @@ test('basic tracing test', function (assert) {
                 host: '127.0.0.1:4042',
                 serviceName: 'subservice',
                 parent: req,
+                headers: {
+                    as: 'raw'
+                },
                 trace: true});
             var peers = server.peers.values();
             var ready = new CountedReadySignal(peers.length);
@@ -91,6 +95,7 @@ test('basic tracing test', function (assert) {
             ready(function send() {
                 servReq.send('/foobar', 'arg1', 'arg2', function response(err, subRes) {
                     logger.debug('top level recv from subservice');
+                    res.headers.as = 'raw';
                     if (err) return res.sendOk('error', err);
                     res.sendOk('result', 'success: ' + subRes);
                 });
@@ -111,7 +116,10 @@ test('basic tracing test', function (assert) {
             host: '127.0.0.1:4040',
             serviceName: 'server',
             hasNoParent: true,
-            trace: true
+            trace: true,
+            headers: {
+                as: 'raw'
+            }
         });
         var peers = client.peers.values();
         var ready = new CountedReadySignal(peers.length);

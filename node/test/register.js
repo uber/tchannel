@@ -28,7 +28,10 @@ allocCluster.test('register() with different results', {
     numPeers: 2,
     channelOptions: {
         requestDefaults: {
-            timeout: 100
+            timeout: 100,
+            headers: {
+                as: 'raw'
+            }
         }
     }
 }, function t(cluster, assert) {
@@ -45,42 +48,54 @@ allocCluster.test('register() with different results', {
     });
 
     oneSub.register('/error', function error(req, res) {
+        res.headers.as = 'raw';
         res.sendNotOk(null, 'abc');
     });
 
     oneSub.register('/error-frame', function errorFrame(req, res) {
+        res.headers.as = 'raw';
         res.sendError('Busy', 'some message');
     });
 
     oneSub.register('/buffer-head', function buffer(req, res) {
+        res.headers.as = 'raw';
         res.sendOk(new Buffer('abc'), null);
     });
     oneSub.register('/string-head', function string(req, res) {
+        res.headers.as = 'raw';
         res.sendOk('abc', null);
     });
     oneSub.register('/object-head', function object(req, res) {
+        res.headers.as = 'raw';
         res.sendOk(JSON.stringify({ value: 'abc' }), null);
     });
     oneSub.register('/null-head', function nullH(req, res) {
+        res.headers.as = 'raw';
         res.sendOk(null, null);
     });
     oneSub.register('/undef-head', function undefH(req, res) {
+        res.headers.as = 'raw';
         res.sendOk(undefined, null);
     });
 
     oneSub.register('/buffer-body', function buffer(req, res) {
+        res.headers.as = 'raw';
         res.sendOk(null, new Buffer('abc'));
     });
     oneSub.register('/string-body', function string(req, res) {
+        res.headers.as = 'raw';
         res.sendOk(null, 'abc');
     });
     oneSub.register('/object-body', function object(req, res) {
+        res.headers.as = 'raw';
         res.sendOk(null, JSON.stringify({ value: 'abc' }));
     });
     oneSub.register('/null-body', function nullB(req, res) {
+        res.headers.as = 'raw';
         res.sendOk(null, null);
     });
     oneSub.register('/undef-body', function undefB(req, res) {
+        res.headers.as = 'raw';
         res.sendOk(null, undefined);
     });
 

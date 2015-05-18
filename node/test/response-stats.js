@@ -34,6 +34,7 @@ allocCluster.test('emits response stats with ok', {
     server.makeSubChannel({
         serviceName: 'server'
     }).register('echo', function echo(req, res, h, b) {
+        res.headers.as = 'raw';
         res.sendOk(h, b);
     });
     server.statTags = server.options.statTags = {
@@ -46,7 +47,12 @@ allocCluster.test('emits response stats with ok', {
 
     var clientChan = client.makeSubChannel({
         serviceName: 'server',
-        peers: [server.hostPort]
+        peers: [server.hostPort],
+        requestDefaults: {
+            headers: {
+                as: 'raw'
+            }
+        }
     });
 
     clientChan.request({
@@ -111,6 +117,7 @@ allocCluster.test('emits response stats with not ok', {
     server.makeSubChannel({
         serviceName: 'server'
     }).register('echo', function echo(req, res, h, b) {
+        res.headers.as = 'raw';
         res.sendNotOk('failure', 'busy');
     });
     server.statTags = server.options.statTags = {
@@ -123,7 +130,12 @@ allocCluster.test('emits response stats with not ok', {
 
     var clientChan = client.makeSubChannel({
         serviceName: 'server',
-        peers: [server.hostPort]
+        peers: [server.hostPort],
+        requestDefaults: {
+            headers: {
+                as: 'raw'
+            }
+        }
     });
 
     clientChan.request({
@@ -201,7 +213,12 @@ allocCluster.test('emits response stats with error', {
 
     var clientChan = client.makeSubChannel({
         serviceName: 'server',
-        peers: [server.hostPort]
+        peers: [server.hostPort],
+        requestDefaults: {
+            headers: {
+                as: 'raw'
+            }
+        }
     });
 
     clientChan.request({
