@@ -55,6 +55,7 @@ RelayRequest.prototype.createOutRequest = function createOutRequest() {
     self.outreq = self.channel.request({
         streamed: self.inreq.streamed,
         timeout: self.inreq.ttl - elapsed,
+        parentSpan: self.inreq.span,
         serviceName: self.inreq.serviceName,
         headers: self.inreq.headers,
         retryFlags: self.inreq.retryFlags
