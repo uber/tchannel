@@ -42,6 +42,7 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
     }).register('foo', function foo(req, res, arg2, arg3) {
         assert.ok(Buffer.isBuffer(arg2), 'handler got an arg2 buffer');
         assert.ok(Buffer.isBuffer(arg3), 'handler got an arg3 buffer');
+        res.headers.as = 'raw';
         res.sendOk(arg2, arg3);
     });
 
@@ -209,6 +210,7 @@ allocCluster.test('request().send() to a pool of servers', 4, function t(cluster
         var chanNum = i + 1;
         chan.handler = EndpointHandler();
         chan.handler.register('foo', function foo(req, res, arg2, arg3) {
+            res.headers.as = 'raw';
             res.sendOk(arg2, arg3 + ' served by ' + chanNum);
         });
         channel.peers.add(chan.hostPort);
@@ -281,11 +283,13 @@ allocCluster.test('request().send() to self', 1, function t(cluster, assert) {
     subOne.handler.register('foo', function foo(req, res, arg2, arg3) {
         assert.ok(typeof arg2 === 'string', 'handler got an arg2 string');
         assert.ok(typeof arg3 === 'string', 'handler got an arg3 string');
+        res.headers.as = 'raw';
         res.sendOk(arg2, arg3);
     });
     subOne.handler.register('bar', function bar(req, res, arg2, arg3) {
         assert.ok(typeof arg2 === 'string', 'handler got an arg2 string');
         assert.ok(typeof arg3 === 'string', 'handler got an arg3 string');
+        res.headers.as = 'raw';
         res.sendNotOk(arg2, arg3);
     });
 
@@ -333,7 +337,10 @@ allocCluster.test('self send() with error frame', 1, function t(cluster, assert)
 
     subOne.request({
         host: one.hostPort,
-        hasNoParent: true
+        hasNoParent: true,
+        headers: {
+            'as': 'raw'
+        }
     }).send('foo', '', '', onResponse);
 
     function onResponse(err) {
@@ -366,6 +373,9 @@ function sendTest(testCase, assert) {
     return function runSendTest(callback) {
         testCase.opts = testCase.opts || {};
         testCase.opts.hasNoParent = true;
+        testCase.opts.headers = {
+            'as': 'raw'
+        };
 
         testCase.channel
             .request(testCase.opts)

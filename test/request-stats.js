@@ -34,6 +34,7 @@ allocCluster.test('emits stats', {
     server.makeSubChannel({
         serviceName: 'server'
     }).register('echo', function echo(req, res, h, b) {
+        res.headers.as = 'raw';
         res.sendOk(h, b);
     });
 
@@ -43,7 +44,12 @@ allocCluster.test('emits stats', {
     };
     var clientChan = client.makeSubChannel({
         serviceName: 'server',
-        peers: [server.hostPort]
+        peers: [server.hostPort],
+        requestDefaults: {
+            headers: {
+                as: 'raw'
+            }
+        }
     });
 
     client.on('stat', function onStat(stat) {
@@ -54,7 +60,8 @@ allocCluster.test('emits stats', {
         serviceName: 'server',
         hasNoParent: true,
         headers: {
-            cn: 'client'
+            cn: 'client',
+            as: 'raw'
         }
     }).send('echo', 'a', 'b', onResponse);
 

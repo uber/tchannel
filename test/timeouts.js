@@ -48,6 +48,9 @@ allocCluster.test('requests will timeout', {
         .request({
             serviceName: 'server',
             hasNoParent: true,
+            headers: {
+                'as': 'raw'
+            },
             timeout: 1000
         })
         .send('/normal-proxy', 'h', 'b', onResp);
@@ -62,6 +65,9 @@ allocCluster.test('requests will timeout', {
             .request({
                 serviceName: 'server',
                 hasNoParent: true,
+                headers: {
+                    'as': 'raw'
+                },
                 timeout: 1000
             })
             .send('/timeout', 'h', 'b', onTimeout);
@@ -105,6 +111,7 @@ allocCluster.test('requests will timeout', {
     }
 
     function normalProxy(req, res, arg2, arg3) {
+        res.headers.as = 'raw';
         res.sendOk(arg2, arg3);
     }
     function timeout(/* head, body, hostInfo, cb */) {

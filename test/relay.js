@@ -48,7 +48,10 @@ allocCluster.test('send relay requests', {
         serviceName: 'two',
         peers: [one.hostPort],
         requestDefaults: {
-            serviceName: 'two'
+            serviceName: 'two',
+            headers: {
+                as: 'raw'
+            }
         }
     });
 
@@ -79,12 +82,18 @@ allocCluster.test('relay respects ttl', {
         serviceName: 'dest'
     });
     destChan.register('echoTTL', function echoTTL(req, res) {
+        res.headers.as = 'raw';
         res.sendOk(null, String(req.ttl));
     });
 
     var sourceChan = source.makeSubChannel({
         serviceName: 'dest',
-        peers: [relay.hostPort]
+        peers: [relay.hostPort],
+        requestDefaults: {
+            headers: {
+                as: 'raw'
+            }
+        }
     });
 
     sourceChan.request({
@@ -140,12 +149,18 @@ allocCluster.test('relay an error frame', {
         serviceName: 'two',
         peers: [one.hostPort, four.hostPort],
         requestDefaults: {
-            serviceName: 'two'
+            serviceName: 'two',
+            headers: {
+                as: 'raw'
+            }
         }
     });
 
     twoClient.request({
-        hasNoParent: true
+        hasNoParent: true,
+        headers: {
+            as: 'raw'
+        }
     }).send('decline', 'foo', 'bar', function done(err, res, arg2, arg3) {
         assert.equal(err.type, 'tchannel.declined', 'expected declined error');
 
@@ -158,5 +173,6 @@ allocCluster.test('relay an error frame', {
 });
 
 function echo(req, res, arg2, arg3) {
+    res.headers.as = 'raw';
     res.sendOk(arg2, arg3);
 }
