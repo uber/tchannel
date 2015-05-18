@@ -85,7 +85,7 @@ TChannelConnection.prototype.setupSocket = function setupSocket() {
     }
 
     function onSocketClose() {
-        self.resetAll(self.error || errors.SocketClosedError({reason: 'remote clossed'}));
+        self.resetAll(errors.SocketClosedError({reason: 'remote clossed'}));
         if (self.remoteName === '0.0.0.0:0') {
             self.channel.peers.delete(self.remoteAddr);
         }
@@ -159,7 +159,7 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
 
 TChannelConnection.prototype.onTimedOut = function onTimedOut(err, self) {
     self.logger.warn(self.channel.hostPort + ' destroying socket from timeouts');
-    self.error = err;
+    self.resetAll(err);
     self.socket.destroy();
 };
 
