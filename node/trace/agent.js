@@ -21,6 +21,7 @@
 'use strict';
 
 var Span = require('./span');
+var errors = require('../errors.js');
 
 module.exports = Agent;
 
@@ -92,8 +93,10 @@ Agent.prototype.setupNewSpan = function setupNewSpan(options) {
 
     var parentSpan = options.parentSpan;
     if (options.outgoing && !parentSpan && !options.topLevelRequest) {
-        self.logger.warn("TChannel tracer: parent span not specified " +
-            "for outgoing request!", options);
+        throw errors.ParentSpanRequired({
+            parentSpan: parentSpan,
+            topLevelRequest: options.topLevelRequest
+        });
     }
 
     if (parentSpan && (!options.parentid && !options.traceid)) {
