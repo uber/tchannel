@@ -32,7 +32,7 @@ allocCluster.test('does not leak inOps', {
     var one = cluster.channels[0];
     var two = cluster.channels[1];
 
-    two.makeSubChannel({
+    var subTwo = two.makeSubChannel({
         serviceName: 'server',
         peers: [one.hostPort]
     });
@@ -42,7 +42,7 @@ allocCluster.test('does not leak inOps', {
     }).register('/timeout', timeout);
 
     two.timeoutCheckInterval = 99999;
-    two
+    subTwo
         .request({
             serviceName: 'server',
             timeout: 100

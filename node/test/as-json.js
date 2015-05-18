@@ -30,11 +30,11 @@ var allocCluster = require('./lib/alloc-cluster.js');
 allocCluster.test('getting an ok response', {
     numPeers: 2
 }, function t(cluster, assert) {
-    var client = cluster.channels[1];
-
     var tchannelJSON = makeTChannelJSONServer(cluster, {
         okResponse: true
     });
+
+    var client = cluster.channels[1].subChannels.server;
 
     tchannelJSON.send(client.request({
         serviceName: 'server',
@@ -72,11 +72,11 @@ allocCluster.test('getting an ok response', {
 allocCluster.test('getting a not ok response', {
     numPeers: 2
 }, function t(cluster, assert) {
-    var client = cluster.channels[1];
-
     var tchannelJSON = makeTChannelJSONServer(cluster, {
         notOkResponse: true
     });
+
+    var client = cluster.channels[1].subChannels.server;
 
     tchannelJSON.send(client.request({
         serviceName: 'server',
@@ -114,7 +114,8 @@ allocCluster.test('getting an UnexpectedError frame', {
     var tchannelJSON = makeTChannelJSONServer(cluster, {
         networkFailureResponse: true
     });
-    var client = cluster.channels[1];
+
+    var client = cluster.channels[1].subChannels.server;
 
     client.logger.whitelist(
         'error',
@@ -143,7 +144,8 @@ allocCluster.test('getting a BadRequest frame', {
     makeTChannelJSONServer(cluster, {
         networkFailureResponse: true
     });
-    var client = cluster.channels[1];
+
+    var client = cluster.channels[1].subChannels.server;
 
     client.request({
         serviceName: 'server',
@@ -177,7 +179,8 @@ allocCluster.test('sending without as header', {
     makeTChannelJSONServer(cluster, {
         networkFailureResponse: true
     });
-    var client = cluster.channels[1];
+
+    var client = cluster.channels[1].subChannels.server;
 
     client.request({
         serviceName: 'server',

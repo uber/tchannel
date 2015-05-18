@@ -39,12 +39,12 @@ allocCluster.test('requests will timeout', {
     sub.register('/normal-proxy', normalProxy);
     sub.register('/timeout', timeout);
 
-    two.makeSubChannel({
+    var twoSub = two.makeSubChannel({
         serviceName: 'server',
         peers: [one.hostPort]
     });
 
-    two
+    twoSub
         .request({
             serviceName: 'server',
             timeout: 1000
@@ -57,7 +57,7 @@ allocCluster.test('requests will timeout', {
         assert.equal(String(arg2), 'h');
         assert.equal(String(arg3), 'b');
 
-        two
+        twoSub
             .request({
                 serviceName: 'server',
                 timeout: 1000

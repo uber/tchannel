@@ -404,14 +404,8 @@ TChannel.prototype.request = function channelRequest(options) {
     assert(!self.destroyed, 'cannot request() to destroyed tchannel');
     var opts = self.requestOptions(options);
 
-    if (!self.serviceName && !opts.host) {
-        if (opts.serviceName &&
-            self.subChannels &&
-            self.subChannels[opts.serviceName]) {
-            return self.subChannels[opts.serviceName].request(opts);
-        } else {
-            throw errors.TopLevelRequestError();
-        }
+    if (!self.topChannel) {
+        throw errors.TopLevelRequestError();
     }
 
     var req = null;

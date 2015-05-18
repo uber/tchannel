@@ -54,12 +54,12 @@ allocCluster.test('emits stats on call success', {
         version: '1.0'
     };
     client.channelStatsd = new TChannelStatsd(client, statsd);
-    client.makeSubChannel({
+    var clientChan = client.makeSubChannel({
         serviceName: 'reservoir',
         peers: [server.hostPort]
     });
 
-    client.request({
+    clientChan.request({
         serviceName: 'reservoir',
         headers: {
             cn: 'inPipe'
@@ -127,12 +127,12 @@ allocCluster.test('emits stats on call failure', {
         version: '1.0'
     };
     client.channelStatsd = new TChannelStatsd(client, statsd);
-    client.makeSubChannel({
+    var clientChan = client.makeSubChannel({
         serviceName: 'reservoir',
         peers: [server.hostPort]
     });
 
-    client.request({
+    clientChan.request({
         serviceName: 'reservoir',
         headers: {
             cn: 'inPipe'

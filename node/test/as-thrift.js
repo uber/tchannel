@@ -40,11 +40,11 @@ var badThriftText = fs.readFileSync(
 allocCluster.test('send and receiving an ok', {
     numPeers: 2
 }, function t(cluster, assert) {
-    var client = cluster.channels[1];
-
     var tchannelAsThrift = makeTChannelThriftServer(cluster, {
         okResponse: true
     });
+
+    var client = cluster.channels[1].subChannels.server;
 
     tchannelAsThrift.send(client.request({
         serviceName: 'server'
@@ -63,11 +63,11 @@ allocCluster.test('send and receiving an ok', {
 allocCluster.test('send and receive a not ok', {
     numPeers: 2
 }, function t(cluster, assert) {
-    var client = cluster.channels[1];
-
     var tchannelAsThrift = makeTChannelThriftServer(cluster, {
         notOkResponse: true
     });
+
+    var client = cluster.channels[1].subChannels.server;
 
     tchannelAsThrift.send(client.request({
         serviceName: 'server'
@@ -88,11 +88,11 @@ allocCluster.test('send and receive a not ok', {
 allocCluster.test('send and receive a typed not ok', {
     numPeers: 2
 }, function t(cluster, assert) {
-    var client = cluster.channels[1];
-
     var tchannelAsThrift = makeTChannelThriftServer(cluster, {
         notOkTypedResponse: true
     });
+
+    var client = cluster.channels[1].subChannels.server;
 
     tchannelAsThrift.send(client.request({
         serviceName: 'server'
@@ -113,11 +113,11 @@ allocCluster.test('send and receive a typed not ok', {
 allocCluster.test('sending and receiving headers', {
     numPeers: 2
 }, function t(cluster, assert) {
-    var client = cluster.channels[1];
-
     var tchannelAsThrift = makeTChannelThriftServer(cluster, {
         okResponse: true
     });
+
+    var client = cluster.channels[1].subChannels.server;
 
     tchannelAsThrift.send(client.request({
         serviceName: 'server'
@@ -142,11 +142,10 @@ allocCluster.test('sending and receiving headers', {
 allocCluster.test('getting an UnexpectedError frame', {
     numPeers: 2
 }, function t(cluster, assert) {
-    var client = cluster.channels[1];
-
     var tchannelAsThrift = makeTChannelThriftServer(cluster, {
         networkFailureResponse: true
     });
+    var client = cluster.channels[1].subChannels.server;
 
     client.logger.whitelist(
         'error',
@@ -176,7 +175,8 @@ allocCluster.test('getting a BadRequest frame', {
     makeTChannelThriftServer(cluster, {
         networkFailureResponse: true
     });
-    var client = cluster.channels[1];
+
+    var client = cluster.channels[1].subChannels.server;
 
     client.request({
         serviceName: 'server',
@@ -212,7 +212,8 @@ allocCluster.test('sending without as header', {
     makeTChannelThriftServer(cluster, {
         networkFailureResponse: true
     });
-    var client = cluster.channels[1];
+
+    var client = cluster.channels[1].subChannels.server;
 
     client.request({
         serviceName: 'server',
@@ -236,7 +237,6 @@ allocCluster.test('sending without as header', {
 allocCluster.test('send without required fields', {
     numPeers: 2
 }, function t(cluster, assert) {
-    var client = cluster.channels[1];
 
     makeTChannelThriftServer(cluster, {
         okResponse: true
@@ -244,6 +244,8 @@ allocCluster.test('send without required fields', {
     var tchannelAsThrift = TChannelAsThrift({
         source: badThriftText
     });
+
+    var client = cluster.channels[1].subChannels.server;
 
     tchannelAsThrift.send(client.request({
         serviceName: 'server'

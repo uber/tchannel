@@ -41,7 +41,7 @@ allocCluster.test('emits stats', {
         app: 'client',
         host: os.hostname()
     };
-    client.makeSubChannel({
+    var clientChan = client.makeSubChannel({
         serviceName: 'server',
         peers: [server.hostPort]
     });
@@ -50,7 +50,7 @@ allocCluster.test('emits stats', {
         stats.push(stat);
     });
 
-    client.request({
+    clientChan.request({
         serviceName: 'server',
         headers: {
             cn: 'client'
