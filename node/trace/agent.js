@@ -43,7 +43,7 @@ function Agent(options) {
     // incoming reuqests
     self.serviceName = options.serviceName || null;
 
-    self.reporter = options.reporter || self.reporter;
+    self.reporter = options.reporter || nullReporter;
 }
 
 function compareBufs(buf1, buf2) {
@@ -118,11 +118,5 @@ Agent.prototype.report = function report(span) {
     }
 };
 
-// Default reporter, just logs.
-Agent.prototype.reporter = function (span) {
-    var self = this;
-
-    // TODO: actual reporting
-    self.logger.info('got span: ' + span.toString());
-};
+function nullReporter() {}
 
