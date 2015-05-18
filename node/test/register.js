@@ -220,6 +220,8 @@ allocCluster.test('register() with different results', {
 });
 
 function sendCall(channel, opts, op, cb) {
+    opts.topLevelRequest = true;
+
     channel
         .request(opts)
         .send(op, null, null, onResult);

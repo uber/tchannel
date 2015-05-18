@@ -105,13 +105,13 @@ test('basic tracing test', function (assert) {
         if (err) {
             throw err;
         }
-        
+
         logger.debug('client making req');
         var req = clientChan.request({
             host: '127.0.0.1:4040',
             serviceName: 'server',
-            trace: true,
-            topLevelRequest: true
+            topLevelRequest: true,
+            trace: true
         });
         var peers = client.peers.values();
         var ready = new CountedReadySignal(peers.length);

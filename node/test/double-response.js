@@ -74,6 +74,7 @@ allocCluster.test('sending OK OK', {
     );
 
     cluster.asThrift.send(cluster.client.request({
+        topLevelRequest: true,
         serviceName: 'server'
     }), 'DoubleResponse::method', null, {
         value: 'foobar'
@@ -131,6 +132,7 @@ allocCluster.test('sending OK NOT_OK', {
     );
 
     cluster.asThrift.send(cluster.client.request({
+        topLevelRequest: true,
         serviceName: 'server'
     }), 'DoubleResponse::method', null, {
         value: 'foobar'
@@ -192,6 +194,7 @@ allocCluster.test('sending OK ERROR_FRAME', {
     );
 
     cluster.asThrift.send(cluster.client.request({
+        topLevelRequest: true,
         serviceName: 'server'
     }), 'DoubleResponse::method', null, {
         value: 'foobar'
@@ -246,6 +249,7 @@ allocCluster.test('sending NOT_OK OK', {
     );
 
     cluster.asThrift.send(cluster.client.request({
+        topLevelRequest: true,
         serviceName: 'server'
     }), 'DoubleResponse::method', null, {
         value: 'foobar'
@@ -303,6 +307,7 @@ allocCluster.test('sending NOT_OK NOT_OK', {
     );
 
     cluster.asThrift.send(cluster.client.request({
+        topLevelRequest: true,
         serviceName: 'server'
     }), 'DoubleResponse::method', null, {
         value: 'foobar'
@@ -364,6 +369,7 @@ allocCluster.test('sending NOT_OK ERROR_FRAME', {
     );
 
     cluster.asThrift.send(cluster.client.request({
+        topLevelRequest: true,
         serviceName: 'server'
     }), 'DoubleResponse::method', null, {
         value: 'foobar'
@@ -422,6 +428,7 @@ allocCluster.test('sending ERROR_FRAME OK', {
     );
 
     cluster.asThrift.send(cluster.client.request({
+        topLevelRequest: true,
         serviceName: 'server'
     }), 'DoubleResponse::method', null, {
         value: 'foobar'
@@ -492,6 +499,7 @@ allocCluster.test('sending ERROR_FRAME NOT_OK', {
     );
 
     cluster.asThrift.send(cluster.client.request({
+        topLevelRequest: true,
         serviceName: 'server'
     }), 'DoubleResponse::method', null, {
         value: 'foobar'
@@ -562,6 +570,7 @@ allocCluster.test('sending ERROR_FRAME ERROR_FRAME', {
     );
 
     cluster.asThrift.send(cluster.client.request({
+        topLevelRequest: true,
         serviceName: 'server'
     }), 'DoubleResponse::method', null, {
         value: 'foobar'
@@ -625,6 +634,7 @@ allocCluster.test('sending INTERNAL_TIMEOUT OK', {
     );
 
     cluster.asThrift.send(cluster.client.request({
+        topLevelRequest: true,
         serviceName: 'server',
         timeout: 100
     }), 'DoubleResponse::method', null, {
@@ -682,6 +692,7 @@ allocCluster.test('sending INTERNAL_TIMEOUT NOT_OK', {
     );
 
     cluster.asThrift.send(cluster.client.request({
+        topLevelRequest: true,
         serviceName: 'server',
         timeout: 100
     }), 'DoubleResponse::method', null, {
@@ -743,6 +754,7 @@ allocCluster.test('sending INTERNAL_TIMEOUT ERROR_FRAME', {
     );
 
     cluster.asThrift.send(cluster.client.request({
+        topLevelRequest: true,
         serviceName: 'server',
         timeout: 100
     }), 'DoubleResponse::method', null, {

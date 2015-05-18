@@ -239,7 +239,8 @@ function testSetup(desc, testFunc) {
         cluster.send = function send(op) {
             return function runSendTest(callback) {
                 client.request({
-                    serviceName: 'tiberius'
+                    serviceName: 'tiberius', 
+                    topLevelRequest: true
                 }).send(op, '', '', onResult);
                 function onResult(err, res, arg2, arg3) {
                     callback(null, {

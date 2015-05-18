@@ -96,7 +96,8 @@ allocCluster.test('streaming echo w/ streaming callback', 2, function t(cluster,
 function partsTest(testCase, assert) {
     return function runSendTest(callback) {
         var options = extend({
-            streamed: true
+            streamed: true,
+            topLevelRequest: true
         }, testCase.opts);
 
         var peer = testCase.channel.peers.choosePeer(null, options);

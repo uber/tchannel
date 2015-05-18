@@ -45,6 +45,7 @@ allocCluster.test('does not leak inOps', {
     subTwo
         .request({
             serviceName: 'server',
+            topLevelRequest: true,
             timeout: 100
         })
         .send('/timeout', 'h', 'b', onTimeout);
