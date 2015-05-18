@@ -166,7 +166,10 @@ function TChannel(options) {
     self.listening = false;
     self.destroyed = false;
 
-    if (self.options.trace) {
+    var trace = typeof self.options.trace === 'boolean' ?
+        self.options.trace : true;
+
+    if (trace) {
         self.tracer = new TracingAgent({
             logger: self.logger,
             forceTrace: self.options.forceTrace,
