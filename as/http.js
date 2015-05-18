@@ -167,7 +167,8 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
     // TODO: more http state machine integration
 
     var options = tchannel.requestOptions({
-        streamed: true
+        streamed: true,
+        topLevelRequest: true
     });
     var peer = tchannel.peers.choosePeer(null, options);
     if (!peer) {
