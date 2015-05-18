@@ -22,6 +22,7 @@
 
 var EventEmitter = require('../lib/event_emitter');
 var util = require('util');
+var assert = require('assert');
 
 var OutRequest = require('./out_request').OutRequest;
 var OutResponse = require('./out_response').OutResponse;
@@ -181,7 +182,20 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
     if (self.remoteHostPort === null) {
         return callback(errors.CallReqBeforeInitReqError());
     }
+
     var req = self.buildInRequest(reqFrame);
+
+    if (!reqFrame.body ||
+        !reqFrame.body.headers ||
+        !reqFrame.body.headers.as
+    ) {
+        var err = errors.AsHeaderRequired();
+        self.sendErrorFrame(
+            req.res, 'ProtocolError', err.message
+        );
+        return callback();
+    }
+
     if (reqFrame.body.args && reqFrame.body.args[0] &&
         reqFrame.body.args[0].length > v2.CallRequest.MaxArg1Size) {
         req.res = self.buildOutResponse(req);
@@ -379,6 +393,10 @@ TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame
     var reqBody = new v2.CallRequest(
         flags, req.ttl, req.tracing, req.serviceName, req.headers,
         req.checksum.type, args);
+
+    assert(req.headers && req.headers.as,
+        'Expected the "as" transport header to be set');
+
     req.checksum = self._sendCallBodies(req.id, reqBody, null);
 };
 
