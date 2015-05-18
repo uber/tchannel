@@ -112,13 +112,17 @@ TChannelConnectionBase.prototype.onTimeoutCheck = function onTimeoutCheck() {
     if (self.closing) {
         return;
     }
+
     if (self.lastTimeoutTime) {
         self.timedOutEvent.emit(self);
-    } else if (!self.remoteName &&
-        self.timers.now() - self.startTime >= self.channel.initTimeout) {
+        return;
+    }
+
+    var elapsed = self.timers.now() - self.startTime;
+    if (!self.remoteName && elapsed >= self.channel.initTimeout) {
         self.timedOutEvent.emit(self, errors.TimeoutError({
             start: self.startTime,
-            elapsed: self.timers.now() - self.startTime,
+            elapsed: elapsed,
             timeout: self.channel.initTimeout
         }));
     } else {
