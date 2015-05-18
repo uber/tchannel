@@ -35,7 +35,7 @@ allocCluster.test('register() with different results', {
     var one = cluster.channels[0];
     var two = cluster.channels[1];
 
-    two.makeSubChannel({
+    var twoSub = two.makeSubChannel({
         serviceName: 'server',
         peers: [one.hostPort]
     });
@@ -85,42 +85,42 @@ allocCluster.test('register() with different results', {
     });
 
     parallel({
-        'errorCall': sendCall.bind(null, two, {
+        'errorCall': sendCall.bind(null, twoSub, {
             serviceName: 'server'
         }, '/error'),
-        'errorFrameCall': sendCall.bind(null, two, {
+        'errorFrameCall': sendCall.bind(null, twoSub, {
             serviceName: 'server'
         }, '/error-frame'),
 
-        'bufferHead': sendCall.bind(null, two, {
+        'bufferHead': sendCall.bind(null, twoSub, {
             serviceName: 'server'
         }, '/buffer-head'),
-        'stringHead': sendCall.bind(null, two, {
+        'stringHead': sendCall.bind(null, twoSub, {
             serviceName: 'server'
         }, '/string-head'),
-        'objectHead': sendCall.bind(null, two, {
+        'objectHead': sendCall.bind(null, twoSub, {
             serviceName: 'server'
         }, '/object-head'),
-        'nullHead': sendCall.bind(null, two, {
+        'nullHead': sendCall.bind(null, twoSub, {
             serviceName: 'server'
         }, '/null-head'),
-        'undefHead': sendCall.bind(null, two, {
+        'undefHead': sendCall.bind(null, twoSub, {
             serviceName: 'server'
         }, '/undef-head'),
 
-        'bufferBody': sendCall.bind(null, two, {
+        'bufferBody': sendCall.bind(null, twoSub, {
             serviceName: 'server'
         }, '/buffer-body'),
-        'stringBody': sendCall.bind(null, two, {
+        'stringBody': sendCall.bind(null, twoSub, {
             serviceName: 'server'
         }, '/string-body'),
-        'objectBody': sendCall.bind(null, two, {
+        'objectBody': sendCall.bind(null, twoSub, {
             serviceName: 'server'
         }, '/object-body'),
-        'nullBody': sendCall.bind(null, two, {
+        'nullBody': sendCall.bind(null, twoSub, {
             serviceName: 'server'
         }, '/null-body'),
-        'undefBody': sendCall.bind(null, two, {
+        'undefBody': sendCall.bind(null, twoSub, {
             serviceName: 'server'
         }, '/undef-body')
     }, onResults);
