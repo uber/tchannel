@@ -23,7 +23,6 @@ var DebugLogtron = require('debug-logtron');
 var test = require('tape');
 
 var TChannel = require('../../channel.js');
-var EndpointHandler = require('../../endpoint-handler.js');
 
 var logger = DebugLogtron('tchannel');
 
