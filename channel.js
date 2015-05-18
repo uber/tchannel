@@ -389,11 +389,31 @@ TChannel.prototype.requestOptions = function requestOptions(options) {
     var opts = {};
     // jshint forin:false
     for (prop in self.requestDefaults) {
+        if (prop === 'headers') {
+            continue;
+        }
+
         opts[prop] = self.requestDefaults[prop];
     }
+    opts.headers = {};
+    if (self.requestDefaults.headers) {
+        for (prop in self.requestDefaults.headers) {
+            opts.headers[prop] = self.requestDefaults.headers[prop];
+        }
+    }
+
     if (options) {
         for (prop in options) {
+            if (prop === 'headers') {
+                continue;
+            }
             opts[prop] = options[prop];
+        }
+    }
+    if (options && options.headers) {
+        opts.headers = opts.headers;
+        for (prop in options.headers) {
+            opts.headers[prop] = options.headers[prop];
         }
     }
     // jshint forin:true
