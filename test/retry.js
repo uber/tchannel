@@ -72,6 +72,7 @@ allocCluster.test('request retries', {
     });
 
     var req = chan.request({
+        topLevelRequest: true,
         timeout: 100
     });
     req.send('foo', '', 'hi', function done(err, res, arg2, arg3) {
@@ -178,6 +179,7 @@ allocCluster.test('request application retries', {
 
     var req = chan.request({
         timeout: 100,
+        topLevelRequest: true,
         shouldApplicationRetry: function shouldApplicationRetry(req, res, retry, done) {
             if (res.streamed) {
                 res.arg2.onValueReady(function arg2ready(err, arg2) {
@@ -299,6 +301,7 @@ allocCluster.test('retryFlags work', {
 
         function defaultToNotRetryingTimeout(next) {
             var req = chan.request({
+                topLevelRequest: true,
                 timeout: 100
             });
             req.send('foo', '', 'hi', function done(err, res, arg2, arg3) {
@@ -310,6 +313,7 @@ allocCluster.test('retryFlags work', {
 
         function canRetryTimeout(next) {
             var req = chan.request({
+                topLevelRequest: true,
                 retryFlags: {
                     never: false,
                     onConnectionError: true,
@@ -337,6 +341,7 @@ allocCluster.test('retryFlags work', {
 
         function canOptOutFully(next) {
             var req = chan.request({
+                topLevelRequest: true,
                 timeout: 100,
                 retryFlags: {
                     never: true,
