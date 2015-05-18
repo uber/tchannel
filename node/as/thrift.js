@@ -23,6 +23,7 @@
 var assert = require('assert');
 var bufrw = require('bufrw');
 var Result = require('bufrw/result');
+var thriftify = require('thriftify');
 
 var errors = require('../errors.js');
 
@@ -37,8 +38,10 @@ function TChannelAsThrift(opts) {
 
     var self = this;
 
-    assert(opts && opts.spec, 'TChannelAsThrift expected spec');
-    self.spec = opts.spec;
+    assert(opts && typeof opts.source === 'string',
+        'must pass source as an argument');
+
+    self.spec = thriftify.parseSpec(opts.source);
 
     // Pulled off of things in `.register` and `.send` rather than passed in
     self.logger = null;
