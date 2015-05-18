@@ -21,7 +21,6 @@
 'use strict';
 
 var TypedError = require('error/typed');
-var thriftify = require('thriftify');
 
 var allocCluster = require('./lib/alloc-cluster.js');
 var TChannelAsThrift = require('../as/thrift.js');
@@ -787,7 +786,6 @@ allocCluster.test('sending INTERNAL_TIMEOUT ERROR_FRAME', {
 function allocThrift(cluster, options) {
     options = options || {};
 
-    var throftSpec = thriftify.parseSpec(throft);
     var server = cluster.channels[0].makeSubChannel({
         serviceName: 'server'
     });
@@ -807,7 +805,7 @@ function allocThrift(cluster, options) {
         messagesHandler : null;
 
     var tchannelAsThrift = TChannelAsThrift({
-        spec: throftSpec
+        source: throft
     });
     tchannelAsThrift.register(
         server, 'DoubleResponse::method', {}, handler
