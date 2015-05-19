@@ -27,6 +27,7 @@ var StateMachine = require('./state_machine');
 var net = require('net');
 
 var TChannelConnection = require('./connection');
+var errors = require('./errors');
 var states = require('./states');
 
 function TChannelPeer(channel, hostPort, options) {
@@ -134,6 +135,37 @@ TChannelPeer.prototype.connect = function connect(outOnly) {
         self.addConnection(conn);
     }
     return conn;
+};
+
+TChannelPeer.prototype.waitForIdentified =
+function waitForIdentified(callback) {
+    var self = this;
+
+    var conn = self.connect();
+
+    if (conn.closing) {
+        onConnectionClose(conn.closeError);
+    } else {
+        conn.closeEvent.on(onConnectionClose);
+
+        // conn.handler is a self peer detection
+        if (!self.isConnected() && conn.handler) {
+            conn.identifiedEvent.on(onIdentified);
+            return;
+        } else {
+            onIdentified();
+        }
+    }
+
+    function onConnectionClose(err) {
+        conn.closeEvent.removeListener(onConnectionClose);
+        callback(err || errors.TChannelConnectionCloseError());
+    }
+
+    function onIdentified() {
+        conn.closeEvent.removeListener(onConnectionClose);
+        callback(null);
+    }
 };
 
 TChannelPeer.prototype.request = function peerRequest(options) {
