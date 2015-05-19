@@ -152,6 +152,16 @@ TChannelPeers.prototype.delete = function del(hostPort) {
     return peer;
 };
 
+TChannelPeers.prototype.waitForIdentified =
+function waitForIdentified(options, callback) {
+    var self = this;
+
+    assert(typeof options.host === 'string', 'options.host is required');
+
+    var peer = self.add(options.host);
+    peer.waitForIdentified(callback);
+};
+
 TChannelPeers.prototype.request = function peersRequest(req, options) {
     var self = this;
     var peer = self.choosePeer(req, options);

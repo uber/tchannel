@@ -366,6 +366,13 @@ TChannel.prototype.requestOptions = function requestOptions(options) {
     return opts;
 };
 
+TChannel.prototype.waitForIdentified =
+function waitForIdentified(options, callback) {
+    var self = this;
+
+    self.peers.waitForIdentified(options, callback);
+};
+
 TChannel.prototype.request = function channelRequest(options) {
     var self = this;
     assert(!self.destroyed, 'cannot request() to destroyed tchannel');
