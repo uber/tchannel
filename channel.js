@@ -87,6 +87,7 @@ function TChannel(options) {
     self.logger = self.options.logger || nullLogger;
     self.random = self.options.random || globalRandom;
     self.timers = self.options.timers || globalTimers;
+    self.initTimeout = self.options.initTimeout || 2000;
 
     // Filled in by the listen call:
     self.host = null;
