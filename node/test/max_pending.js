@@ -111,7 +111,7 @@ function testBattle(name, options, expectedErrorTypes) {
 
         // TODO ascertain why this test stalls non-deterministically, and with
         // increasing probability, for values from 2000ms down to 1000ms.
-        timers.advance(2000);
+        timers.advance(2100);
 
         function challengeSender() {
             return function sendChallenge(cb) {
