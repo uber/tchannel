@@ -203,12 +203,23 @@ function sendRelayAdvertise(hostPort, services, callback) {
     function tryRequest() {
         attempts++;
 
-        self.tchannelJSON.send(self.channel.request({
-            host: hostPort,
-            serviceName: 'hyperbahn'
-        }), 'relay-ad', null, {
-            services: services
-        }, onResponse);
+        self.channel.waitForIdentified({
+            host: hostPort
+        }, onIdentified);
+
+        function onIdentified(err) {
+            if (err) {
+                return onResponse(err);
+            }
+
+            self.tchannelJSON.send(self.channel.request({
+                host: hostPort,
+                serviceName: 'hyperbahn',
+                timeout: 100
+            }), 'relay-ad', null, {
+                services: services
+            }, onResponse);
+        }
 
         function onResponse(err, response) {
             if (response && response.ok) {

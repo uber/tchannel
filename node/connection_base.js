@@ -192,7 +192,7 @@ TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
         outPending: self.pending.out
     };
 
-    if (err.type.lastIndexOf('tchannel.socket', 0) < 0) {
+    if (err.type && err.type.lastIndexOf('tchannel.socket', 0) < 0) {
         self.logger.warn('resetting connection', logInfo);
         self.errorEvent.emit(self, err);
     } else if (err.type !== 'tchannel.socket-closed') {

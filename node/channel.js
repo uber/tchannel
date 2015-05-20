@@ -71,7 +71,7 @@ function TChannel(options) {
     self.outboundCallsPerAttemptLatencyStat = self.defineTiming('outbound.calls.per-attempt-latency');
 
     self.options = extend({
-        timeoutCheckInterval: 1000,
+        timeoutCheckInterval: 100,
         timeoutFuzz: 100,
         // TODO: maybe we should always add pid to user-supplied?
         processName: format('%s[%s]', process.title, process.pid)
@@ -364,6 +364,13 @@ TChannel.prototype.requestOptions = function requestOptions(options) {
     }
     // jshint forin:true
     return opts;
+};
+
+TChannel.prototype.waitForIdentified =
+function waitForIdentified(options, callback) {
+    var self = this;
+
+    self.peers.waitForIdentified(options, callback);
 };
 
 TChannel.prototype.request = function channelRequest(options) {

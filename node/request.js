@@ -223,28 +223,13 @@ TChannelRequest.prototype.resend = function resend() {
 
     var perAttemptStart = self.timers.now();
 
-    var conn = peer.connect();
+    peer.waitForIdentified(onIdentified);
 
-    if (conn.closing) {
-        onConnectionClose(conn.closeError);
-    } else {
-        conn.closeEvent.on(onConnectionClose);
-
-        if (!peer.isConnected() && conn.handler) {
-            conn.identifiedEvent.on(onIdentified);
-            return;
-        } else {
-            onIdentified();
+    function onIdentified(err) {
+        if (err) {
+            return self.emitError(err);
         }
-    }
 
-    function onConnectionClose(err) {
-        conn.closeEvent.removeListener(onConnectionClose);
-        self.emitError(err || errors.TChannelConnectionCloseError());
-    }
-
-    function onIdentified() {
-        conn.closeEvent.removeListener(onConnectionClose);
         self.onIdentified(peer, perAttemptStart);
     }
 };
