@@ -113,14 +113,6 @@ TChannelConnectionBase.prototype.onTimeoutCheck = function onTimeoutCheck() {
         return;
     }
 
-    if (self.lastTimeoutTime) {
-        var err = errors.ConnectionStaleTimeoutError({
-            lastTimeoutTime: self.lastTimeoutTime
-        });
-        self.timedOutEvent.emit(self, err);
-        return;
-    }
-
     var elapsed = self.timers.now() - self.startTime;
     if (!self.remoteName && elapsed >= self.channel.initTimeout) {
         self.timedOutEvent.emit(self, errors.ConnectionTimeoutError({
@@ -155,10 +147,18 @@ TChannelConnectionBase.prototype.checkTimeout = function checkTimeout(ops, direc
             self.pending[direction]--;
         } else if (req.checkTimeout()) {
             if (direction === 'out') {
+                if (self.lastTimeoutTime) {
+                    var err = errors.ConnectionStaleTimeoutError({
+                        lastTimeoutTime: self.lastTimeoutTime
+                    });
+                    self.timedOutEvent.emit(self, err);
+                    return;
+                }
+
                 self.lastTimeoutTime = self.timers.now();
-            // } else {
-            //     req.res.sendError // XXX may need to build
             }
+            // else
+            //     req.res.sendError // XXX may need to build
             delete ops[id];
             self.pending[direction]--;
         }
