@@ -53,6 +53,7 @@ function TChannelPeer(channel, hostPort, options) {
         random: self.channel.random,
         period: self.options.period,
         maxErrorRate: self.options.maxErrorRate,
+        minimumRequests: self.options.minimumRequests,
         probation: self.options.probation,
         stateMachine: self,
         nextHandler: self
