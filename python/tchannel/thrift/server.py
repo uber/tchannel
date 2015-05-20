@@ -106,6 +106,8 @@ def build_handler(service_module, method_name, handler):
                     break
             else:
                 raise
+
+        response.write_header({})
         response.write_body(call_result)
 
     return thrift_handler
