@@ -81,8 +81,8 @@ function HealthyState(options) {
     self.okCount = 0;
     self.notOkCount = 0;
     self.totalReqs = 0;
-    self.minimumRequests = typeof options.minimumRequests === 'number' ?
-        options.minimumRequests : 5;
+    self.minRequests = typeof options.minRequests === 'number' ?
+        options.minRequests : 5;
 }
 
 inherits(HealthyState, State);
@@ -104,7 +104,7 @@ HealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
         // Transition to unhealthy state if the success rate dips below the
         // acceptable threshold.
         if (self.notOkCount / totalCount > self.maxErrorRate &&
-            self.totalReqs > self.minimumRequests
+            self.totalReqs > self.minRequests
         ) {
             self.stateMachine.setState(UnhealthyState);
             return 0;
