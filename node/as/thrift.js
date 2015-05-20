@@ -40,6 +40,7 @@ function TChannelAsThrift(opts) {
     assert(opts && opts.spec, 'TChannelAsThrift expected spec');
     self.spec = opts.spec;
 
+    // Pulled off of things in `.register` and `.send` rather than passed in
     self.logger = null;
 
     var bossMode = opts && opts.bossMode;
@@ -134,6 +135,8 @@ function register(channel, name, opts, handle) {
 TChannelAsThrift.prototype.send =
 function send(request, endpoint, outHead, outBody, callback) {
     var self = this;
+
+    self.logger = self.logger || request.logger;
 
     assert(typeof endpoint === 'string', 'send requires endpoint');
     assert(typeof request.serviceName === 'string' &&
