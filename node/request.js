@@ -352,7 +352,7 @@ TChannelRequest.prototype.checkTimeout = function checkTimeout(err, res) {
             self.emitResponse(res);
         }
     } else if (!self.err) {
-        self.emitError(errors.TimeoutError({
+        self.emitError(errors.RequestTimeoutError({
             start: self.start,
             elapsed: self.elapsed,
             timeout: self.timeout
@@ -384,6 +384,8 @@ TChannelRequest.prototype.shouldRetryError = function shouldRetryError(err) {
                 return true;
 
             case 'tchannel.timeout':
+            case 'tchannel.request.timeout':
+            case 'tchannel.connection.timeout':
                 return !!self.options.retryFlags.onTimeout;
 
             case 'tchannel.socket':

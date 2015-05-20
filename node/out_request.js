@@ -263,7 +263,7 @@ TChannelOutRequest.prototype.checkTimeout = function checkTimeout() {
             self.end = now;
             self.timedOut = true;
             process.nextTick(function deferOutReqTimeoutErrorEmit() {
-                self.errorEvent.emit(self, errors.TimeoutError({
+                self.errorEvent.emit(self, errors.RequestTimeoutError({
                     id: self.id,
                     start: self.start,
                     elapsed: elapsed,

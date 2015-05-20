@@ -110,7 +110,7 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     self.handler.callIncomingRequestEvent.on(onCallRequest);
     self.handler.callIncomingResponseEvent.on(onCallResponse);
     self.handler.callIncomingErrorEvent.on(onCallError);
-    self.timedOutEvent.on(self.onTimedOut);
+    self.timedOutEvent.on(onTimedOut);
 
     // TODO: restore dumping from old:
     // var stream = self.socket;
@@ -131,6 +131,10 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     // stream = stream
     //     .pipe(self.socket)
     //     ;
+
+    function onTimedOut(err) {
+        self.onTimedOut(err);
+    }
 
     function onWriteError(err) {
         self.onWriteError(err);
@@ -157,7 +161,9 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     }
 };
 
-TChannelConnection.prototype.onTimedOut = function onTimedOut(err, self) {
+TChannelConnection.prototype.onTimedOut = function onTimedOut(err) {
+    var self = this;
+
     self.logger.warn(self.channel.hostPort + ' destroying socket from timeouts');
     self.resetAll(err);
     self.socket.destroy();
