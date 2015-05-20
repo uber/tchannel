@@ -29,6 +29,7 @@ var errors = require('./errors');
 var States = require('./reqres_states');
 
 var DEFAULT_OUTGOING_REQ_TIMEOUT = 2000;
+var CONNECTION_BASE_IDENTIFIER = 0;
 
 function TChannelConnectionBase(channel, direction, remoteAddr) {
     assert(!channel.destroyed, 'refuse to create connection for destroyed channel');
@@ -64,6 +65,7 @@ function TChannelConnectionBase(channel, direction, remoteAddr) {
     };
 
     self.lastTimeoutTime = 0;
+    self.guid = ++CONNECTION_BASE_IDENTIFIER;
 
     self.startTime = self.timers.now();
     self.startTimeoutTimer();
