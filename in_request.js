@@ -51,6 +51,7 @@ function TChannelInRequest(id, options) {
     self.arg1 = emptyBuffer;
     self.arg2 = emptyBuffer;
     self.arg3 = emptyBuffer;
+    self.connection = options.connection;
 
     if (options.tracer) {
         self.span = options.tracer.setupNewSpan({
