@@ -65,6 +65,7 @@ function TChannelV2Handler(options) {
     self.tracer = self.options.tracer;
     self.hostPort = self.options.hostPort;
     self.processName = self.options.processName;
+    self.connection = self.options.connection;
     self.remoteHostPort = null; // filled in by identify message
     self.lastSentFrameId = 0;
     // TODO: GC these... maybe that's up to TChannel itself wrt ops
@@ -487,7 +488,8 @@ TChannelV2Handler.prototype.buildInRequest = function buildInRequest(reqFrame) {
         retryFlags: retryFlags,
         checksum: new v2.Checksum(reqFrame.body.csum.type),
         streamed: reqFrame.body.flags & v2.CallFlags.Fragment,
-        hostPort: self.hostPort // needed for tracing
+        hostPort: self.hostPort, // needed for tracing
+        connection: self.connection
     };
     if (opts.streamed) {
         return new StreamingInRequest(reqFrame.id, opts);
