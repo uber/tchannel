@@ -214,7 +214,8 @@ function sendRelayAdvertise(hostPort, services, callback) {
 
             self.tchannelJSON.send(self.channel.request({
                 host: hostPort,
-                serviceName: 'hyperbahn'
+                serviceName: 'hyperbahn',
+                timeout: 100
             }), 'relay-ad', null, {
                 services: services
             }, onResponse);
