@@ -45,7 +45,8 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
         random: self.channel.random,
         timers: self.channel.timers,
         hostPort: self.channel.hostPort,
-        tracer: self.tracer
+        tracer: self.tracer,
+        connection: self
     };
     // jshint forin:false
     for (var prop in self.options) {

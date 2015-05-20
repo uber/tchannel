@@ -155,7 +155,10 @@ RelayHandler.prototype.type = 'tchannel.relay-handler';
 
 RelayHandler.prototype.handleRequest = function handleRequest(req, buildRes) {
     var self = this;
-    var rereq = self.reqs[req.id];
+
+    var reqKey = getReqKey(req);
+    var rereq = self.reqs[reqKey];
+
     if (rereq) {
         self.channel.logger.error('relay request already exists for incoming request', {
             inReqId: req.id,
@@ -168,12 +171,16 @@ RelayHandler.prototype.handleRequest = function handleRequest(req, buildRes) {
         return;
     }
     rereq = new RelayRequest(self.channel, req, buildRes);
-    self.reqs[req.id] = rereq;
+    self.reqs[reqKey] = rereq;
     rereq.finishEvent.on(rereqFinished);
     rereq.createOutRequest();
     function rereqFinished() {
-        delete self.reqs[req.id];
+        delete self.reqs[reqKey];
     }
 };
+
+function getReqKey(req) {
+    return req.connection.guid + '~' + req.id;
+}
 
 module.exports = RelayHandler;
