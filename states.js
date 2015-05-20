@@ -80,6 +80,9 @@ function HealthyState(options) {
     self.maxErrorRate = options.maxErrorRate || 0.5;
     self.okCount = 0;
     self.notOkCount = 0;
+    self.totalReqs = 0;
+    self.minRequests = typeof options.minRequests === 'number' ?
+        options.minRequests : 5;
 }
 
 inherits(HealthyState, State);
@@ -97,9 +100,12 @@ HealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
     // At the conclusion of a period
     if (now - self.start >= self.period) {
         var totalCount = self.okCount + self.notOkCount;
+
         // Transition to unhealthy state if the success rate dips below the
         // acceptable threshold.
-        if (self.notOkCount / totalCount > self.maxErrorRate) {
+        if (self.notOkCount / totalCount > self.maxErrorRate &&
+            self.totalReqs > self.minRequests
+        ) {
             self.stateMachine.setState(UnhealthyState);
             return 0;
         }
@@ -114,10 +120,13 @@ HealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
 HealthyState.prototype.onRequestResponse = function onRequestResponse(/* req */) {
     var self = this;
     self.okCount++;
+    self.totalReqs++;
 };
 
 HealthyState.prototype.onRequestError = function onRequestError(err) {
     var self = this;
+
+    self.totalReqs++;
     var codeString = errors.classify(err);
     if (symptoms[codeString]) {
         self.notOkCount++;
