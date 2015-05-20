@@ -74,6 +74,23 @@ module.exports.ChecksumError = TypedError({
     actualValue: null
 });
 
+module.exports.ConnectionStaleTimeoutError = TypedError({
+    type: 'tchannel.connection-stale.timeout',
+    message: 'Connection got two timeouts in a row.\n' +
+        'Connection has been marked as stale and will be timed out',
+    lastTimeoutTime: null
+});
+
+module.exports.ConnectionTimeoutError = TypedError({
+    type: 'tchannel.connection.timeout',
+    message: 'connection timed out after {elapsed}ms ' +
+        '(limit was {timeout}ms)',
+    id: null,
+    start: null,
+    elapsed: null,
+    timeout: null
+});
+
 module.exports.DuplicateHeaderKeyError = TypedError({
     type: 'tchannel.duplicate-header-key',
     message: 'duplicate header key {key}',
@@ -234,6 +251,16 @@ module.exports.RequestFrameState = TypedError({
     state: null
 });
 
+module.exports.RequestTimeoutError = TypedError({
+    type: 'tchannel.request.timeout',
+    message: 'request timed out after {elapsed}ms ' +
+        '(limit was {timeout}ms)',
+    id: null,
+    start: null,
+    elapsed: null,
+    timeout: null
+});
+
 module.exports.ResponseAlreadyDone = TypedError({
     type: 'tchannel.response-already-done',
     message: 'cannot send {attempted}, response already done ' +
@@ -374,14 +401,6 @@ module.exports.ThriftHeadStringifyError = WrappedError({
     direction: null
 });
 
-module.exports.TimeoutError = TypedError({
-    type: 'tchannel.timeout',
-    message: 'timed out after {elapsed}ms (limit was {timeout}ms)',
-    id: null,
-    start: null,
-    elapsed: null,
-    timeout: null
-});
 
 module.exports.TopLevelRegisterError = TypedError({
     type: 'tchannel.top-level-register',
@@ -417,6 +436,9 @@ module.exports.classify = function classify(err) {
             return 'Declined';
 
         case 'tchannel.timeout':
+        case 'tchannel.request.timeout':
+        case 'tchannel.connection.timeout':
+        case 'tchannel.connection-stale.timeout':
             return 'Timeout';
 
         case 'tchannel-handler.parse-error.body-failed':
