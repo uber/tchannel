@@ -33,7 +33,6 @@ import time
 import tornado.ioloop
 
 from .tornado import TChannel
-from .tornado.dispatch import RequestDispatcher
 from .tornado.stream import InMemStream
 from .tornado.util import print_arg
 
@@ -170,13 +169,8 @@ def handler1(request, response, proxy):
 
 
 def create_server(tchannel, in_port):
-
-    handler = RequestDispatcher()
-    handler.register(
-        r"hi", handler1
-    )
-
-    tchannel.host(handler).listen()
+    tchannel.register('hi', handler=handler1)
+    tchannel.listen()
 
 
 def chunk(iterable, n):

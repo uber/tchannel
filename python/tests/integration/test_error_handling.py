@@ -29,7 +29,6 @@ from tchannel.messages.call_request import CallRequestMessage
 from tchannel.messages.call_request_continue import CallRequestContinueMessage
 from tchannel.messages.common import ChecksumType
 from tchannel.messages.common import FlagsType
-from tchannel.tornado import RequestDispatcher
 from tchannel.tornado import TChannel
 from tchannel.tornado.connection import StreamConnection
 from tests.integration.server_manager import TChannelServerManager
@@ -46,19 +45,15 @@ def handler2(request, response, proxy):
     response.set_body_s(request.get_body_s())
 
 
-@pytest.fixture
-def handlers():
-    dispatcher = RequestDispatcher()
-    dispatcher.register("endpoint1", handler1)
-    dispatcher.register("endpoint2", handler2)
-    return dispatcher
+def register(tchannel):
+    tchannel.register("endpoint1", "raw", handler1)
+    tchannel.register("endpoint2", "raw", handler2)
 
 
 @pytest.yield_fixture
-def tchannel_server(random_open_port, handlers):
-    with TChannelServerManager(
-            port=random_open_port,
-            dispatcher=handlers) as manager:
+def tchannel_server(random_open_port):
+    with TChannelServerManager(random_open_port) as manager:
+        register(manager.tchannel)
         yield manager
 
 

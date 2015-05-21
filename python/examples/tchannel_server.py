@@ -22,7 +22,7 @@ from __future__ import absolute_import
 
 import tornado.ioloop
 
-from handler import get_example_handler
+from handler import register_example_endpoints
 from options import get_args
 from tchannel.tornado import TChannel
 
@@ -31,10 +31,9 @@ def main():  # pragma: no cover
     args = get_args()
 
     client = TChannel('localhost:%d' % args.port)
+    register_example_endpoints(client)
+    client.listen()
 
-    handler = get_example_handler()
-
-    client.host(handler).listen()
     tornado.ioloop.IOLoop.instance().start()
 
 

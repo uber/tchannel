@@ -24,7 +24,6 @@ import pytest
 import tornado
 import tornado.gen
 
-from tchannel.tornado import RequestDispatcher
 from tchannel.tornado import TChannel
 from tchannel.tornado.stream import InMemStream
 from tchannel.zipkin.zipkin_trace import ZipkinTraceHook
@@ -57,24 +56,18 @@ def handler1(request, response, proxy):
 
 
 @pytest.fixture
-def handlers():
-    dispatcher = RequestDispatcher()
-
-    dispatcher.register("endpoint1", handler1)
-    dispatcher.register("endpoint2", handler2)
-
-    return dispatcher
+def register(tchannel):
+    tchannel.register("endpoint1", "raw", handler1)
+    tchannel.register("endpoint2", "raw", handler2)
 
 
 trace_buf = StringIO()
 
 
 @pytest.yield_fixture
-def trace_server(random_open_port, handlers):
-    with TChannelServerManager(
-        port=random_open_port,
-        dispatcher=handlers
-    ) as manager:
+def trace_server(random_open_port):
+    with TChannelServerManager(random_open_port) as manager:
+        register(manager.tchannel)
         manager.tchannel.hooks.register(
             ZipkinTraceHook(
                 dst=trace_buf,

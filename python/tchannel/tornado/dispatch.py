@@ -191,12 +191,6 @@ class TChannelProxy(object):
     def hostport(self):
         return self._tchannel.hostport
 
-    def host(self, handler):
-        return self._tchannel.host(handler)
-
-    def listen(self):
-        return self._tchannel.listen()
-
     def request(self, hostport=None, service=None, **kwargs):
         kwargs['parent_tracing'] = self.parent_tracing
         return self._tchannel.request(hostport,
