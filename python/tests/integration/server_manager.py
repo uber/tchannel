@@ -25,8 +25,8 @@ import threading
 import tornado.ioloop
 
 import tchannel.tornado.tchannel as tornado_tchannel
-from tchannel.tornado.dispatch import RequestDispatcher
 from tchannel.tornado.broker import ArgSchemeBroker
+from tchannel.tornado.dispatch import RequestDispatcher
 
 
 class Expectation(object):

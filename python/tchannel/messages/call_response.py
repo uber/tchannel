@@ -30,13 +30,10 @@ class CallResponseMessage(CallResponseContinueMessage):
     """Respond to an RPC call."""
     message_type = Types.CALL_RES
 
-    __slots__ = (
-        'flags',
+    __slots__ = CallResponseContinueMessage.__slots__ + (
         'code',
         'tracing',
         'headers',
-        'checksum',
-        'args'
     )
 
     def __init__(
@@ -47,9 +44,10 @@ class CallResponseMessage(CallResponseContinueMessage):
         headers=None,
         checksum=None,
         args=None,
+        id=0,
     ):
         args = args or ["", "", ""]
-        super(CallResponseMessage, self).__init__(flags, checksum, args)
+        super(CallResponseMessage, self).__init__(flags, checksum, args, id)
         self.code = code
         self.tracing = tracing or common.Tracing(0, 0, 0, 0)
         self.headers = dict(headers) if headers else {}

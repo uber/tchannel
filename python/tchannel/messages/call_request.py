@@ -22,6 +22,7 @@ from __future__ import absolute_import
 
 from . import common
 from .. import rw
+from ..glossary import DEFAULT_TTL
 from .call_request_continue import CallRequestContinueMessage
 from .types import Types
 
@@ -30,28 +31,26 @@ class CallRequestMessage(CallRequestContinueMessage):
     """Initiate an RPC call."""
     message_type = Types.CALL_REQ
 
-    __slots__ = (
-        'flags',
+    __slots__ = CallRequestContinueMessage.__slots__ + (
         'ttl',
         'tracing',
         'service',
         'headers',
-        'checksum',
-        'args'
     )
 
     def __init__(
         self,
         flags=0,
-        ttl=10,
+        ttl=DEFAULT_TTL,
         tracing=None,
         service=None,
         headers=None,
         checksum=None,
         args=None,
+        id=0
     ):
         args = args or ["", "", ""]
-        super(CallRequestMessage, self).__init__(flags, checksum, args)
+        super(CallRequestMessage, self).__init__(flags, checksum, args, id)
         self.ttl = ttl
         self.tracing = tracing or common.Tracing(0, 0, 0, 0)
         self.service = service or ''

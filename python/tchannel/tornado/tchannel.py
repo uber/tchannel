@@ -154,13 +154,13 @@ class TChannel(object):
         server.add_sockets(sockets)
 
     @tornado.gen.coroutine
-    def receive_call(self, context, connection):
+    def receive_call(self, message, connection):
         if not self._handler:
             log.warn(
-                "Received %s but a handler has not been defined.", context
+                "Received %s but a handler has not been defined.", str(message)
             )
             return
-        self._handler.handle(context, connection)
+        self._handler.handle(message, connection)
 
 
 class TChannelServer(tornado.tcpserver.TCPServer):
@@ -194,5 +194,5 @@ class TChannelServer(tornado.tcpserver.TCPServer):
 
         yield conn.serve(handler=CallableRequestHandler(self._handle))
 
-    def _handle(self, context, connection):
-        self.tchannel.receive_call(context, connection)
+    def _handle(self, message, connection):
+        self.tchannel.receive_call(message, connection)

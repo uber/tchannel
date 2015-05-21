@@ -26,7 +26,8 @@ from thrift import Thrift
 from tchannel import messages
 from tchannel.thrift import client_for as thrift_client_for
 from tchannel.thrift.scheme import ThriftArgScheme
-from tchannel.tornado import Response, TChannel
+from tchannel.tornado import Response
+from tchannel.tornado import TChannel
 from tchannel.tornado.stream import InMemStream
 
 from .util import get_service_module
