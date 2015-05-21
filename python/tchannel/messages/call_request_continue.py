@@ -35,8 +35,10 @@ class CallRequestContinueMessage(CallContinueMessage):
         flags=0,
         checksum=None,
         args=None,
+        id=0,
     ):
-        super(CallRequestContinueMessage, self).__init__(flags, checksum, args)
+        super(CallRequestContinueMessage, self).__init__(
+            flags, checksum, args, id)
 
     def fragment(self, space_left):
         fragment_msg = CallRequestContinueMessage(

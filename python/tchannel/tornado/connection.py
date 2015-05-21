@@ -32,7 +32,6 @@ from .. import errors
 from .. import frame
 from .. import glossary
 from .. import messages
-from ..context import Context
 from ..errors import ConnectionClosedError
 from ..errors import InvalidErrorCodeError
 from ..errors import TChannelError
@@ -160,8 +159,8 @@ class TornadoConnection(object):
             message off the wire.
         """
 
-        # This is the context we'll return for any inbound messages.
-        context_future = tornado.gen.Future()
+        # This is the message_future we'll return for any inbound messages.
+        message_future = tornado.gen.Future()
 
         def on_body(read_body_future, size):
             if read_body_future.exception():
@@ -171,7 +170,8 @@ class TornadoConnection(object):
             f = frame.frame_rw.read(BytesIO(body), size=size)
             message_rw = messages.RW[f.header.message_type]
             message = message_rw.read(BytesIO(f.payload))
-            context_future.set_result(Context(f.header.message_id, message))
+            message.id = f.header.message_id
+            message_future.set_result(message)
 
         def on_read_size(read_size_future):
             if read_size_future.exception():
@@ -194,7 +194,7 @@ class TornadoConnection(object):
         size_width = frame.frame_rw.size_rw.width()
         self.connection.read_bytes(size_width).add_done_callback(on_read_size)
 
-        return context_future
+        return message_future
 
     @tornado.gen.coroutine
     def _loop(self):
@@ -204,28 +204,22 @@ class TornadoConnection(object):
         # Must be started only after the handshake has been performed.
         self._loop_running = True
         while not self.closed:
-            context = yield self._recv()
-
+            message = yield self._recv()
             # TODO: There should probably be a try-catch on the yield.
-            if context.message.message_type in self.CALL_REQ_TYPES:
-                self._messages.put(context)
+            if message.message_type in self.CALL_REQ_TYPES:
+                self._messages.put(message)
                 continue
 
-            elif context.message_id in self._outstanding:
+            elif message.id in self._outstanding:
                 # set exception if receive error message
-                if context.message.message_type == Types.ERROR:
-                    future = self._outstanding.pop(context.message_id)
+                if message.message_type == Types.ERROR:
+                    future = self._outstanding.pop(message.id)
                     if future.running():
-                        protocol_exception = build_protocol_exception(
-                            context.message,
-                            context.message_id,
-                        )
+                        protocol_exception = build_protocol_exception(message)
                         future.set_exception(protocol_exception)
                     else:
                         protocol_exception = (
-                            self.response_message_factory.build(
-                                context.message_id, context.message
-                            )
+                            self.response_message_factory.build(message)
                         )
                         if protocol_exception:
                             self.event_emitter.fire(
@@ -234,29 +228,27 @@ class TornadoConnection(object):
                             )
                     continue
 
-                response = self.response_message_factory.build(
-                    context.message_id, context.message
-                )
+                response = self.response_message_factory.build(message)
 
                 # keep continue message in the list
                 # pop all other type messages including error message
-                if (context.message.message_type in self.CALL_RES_TYPES and
-                        context.message.flags == FlagsType.fragment):
+                if (message.message_type in self.CALL_RES_TYPES and
+                        message.flags == FlagsType.fragment):
                     # still streaming, keep it for record
-                    future = self._outstanding.get(context.message_id)
+                    future = self._outstanding.get(message.id)
                 else:
-                    future = self._outstanding.pop(context.message_id)
+                    future = self._outstanding.pop(message.id)
 
                 if response and future.running():
                     future.set_result(response)
                 continue
 
-            log.warn('Unconsumed message %s', context)
+            log.warn('Unconsumed message %s', message)
 
     # Basically, the only difference between send and write is that send
     # sets up a Future to get the response. That's ideal for peers making
     # calls. Peers responding to calls must use write.
-    def send(self, message, message_id=None):
+    def send(self, message):
         """Send the given message up the wire.
         Use this for messages which have a response message.
 
@@ -271,18 +263,18 @@ class TornadoConnection(object):
             "Message '%s' can't use send" % repr(message)
         )
 
-        message_id = message_id or self.next_message_id()
-        assert message_id not in self._outstanding, (
-            "Message ID '%d' already being used" % message_id
+        message.id = message.id or self.next_message_id()
+        assert message.id not in self._outstanding, (
+            "Message ID '%d' already being used" % message.id
         )
 
         future = tornado.gen.Future()
-        self._outstanding[message_id] = future
-        self.write(message, message_id)
+        self._outstanding[message.id] = future
+        self.write(message)
         return future
 
     @tornado.gen.coroutine
-    def write(self, message, message_id=None):
+    def write(self, message):
         """Writes the given message up the wire.
 
         Does not expect a response back for the message.
@@ -292,23 +284,23 @@ class TornadoConnection(object):
         """
         assert not self.closed
 
-        message_id = message_id or self.next_message_id()
+        message.id = message.id or self.next_message_id()
 
         if message.message_type in self.CALL_REQ_TYPES:
             message_factory = self.request_message_factory
         else:
             message_factory = self.response_message_factory
 
-        fragments = message_factory.fragment(message, message_id)
+        fragments = message_factory.fragment(message)
         for fragment in fragments:
-            yield self._write(fragment, message_id)
+            yield self._write(fragment)
 
-    def _write(self, message, message_id=None):
+    def _write(self, message):
         """Writes the given message up the wire.
 
         The message must be small enough to fit in a single frame.
         """
-        message_id = message_id or self.next_message_id()
+        message.id = message.id or self.next_message_id()
 
         payload = messages.RW[message.message_type].write(
             message, BytesIO()
@@ -317,7 +309,7 @@ class TornadoConnection(object):
         f = frame.Frame(
             header=frame.FrameHeader(
                 message_type=message.message_type,
-                message_id=message_id,
+                message_id=message.id,
             ),
             payload=payload
         )
@@ -341,8 +333,7 @@ class TornadoConnection(object):
             version=PROTOCOL_VERSION,
             headers=headers
         ))
-        context = yield self._recv()
-        init_res = context.message
+        init_res = yield self._recv()
         if init_res.message_type != Types.INIT_RES:
             raise errors.InvalidMessageError(
                 "Expected handshake response, got %s" % repr(init_res)
@@ -363,8 +354,7 @@ class TornadoConnection(object):
             A future that resolves (with a value of None) when the handshake
             is complete.
         """
-        context = yield self._recv()
-        init_req = context.message
+        init_req = yield self._recv()
         if init_req.message_type != Types.INIT_REQ:
             raise errors.InvalidMessageError(
                 "You need to shake my hand first. Got %s" % repr(init_req)
@@ -372,8 +362,8 @@ class TornadoConnection(object):
         self._extract_handshake_headers(init_req)
 
         self._write(
-            messages.InitResponseMessage(PROTOCOL_VERSION, headers),
-            context.message_id
+            messages.InitResponseMessage(
+                PROTOCOL_VERSION, headers, init_req.id),
         )
 
         # The receive loop is started only after the handshake has been
@@ -459,14 +449,13 @@ class TornadoConnection(object):
         assert self._loop_running, "Finish the handshake first"
 
         while not self.closed:
-            context = yield self.await()
+            message = yield self.await()
 
             try:
-                handler.handle(Context(context.message_id,
-                                       context.message), self)
+                handler.handle(message, self)
             except Exception:
                 # TODO Send error frame back
-                logging.exception("Failed to process %s", repr(context))
+                logging.exception("Failed to process %s", repr(message))
 
     def send_error(self, code, description, message_id):
         """Convenience method for writing Error frames up the wire.
@@ -484,9 +473,9 @@ class TornadoConnection(object):
         return self._write(
             ErrorMessage(
                 code=code,
-                description=description
+                description=description,
+                id=message_id,
             ),
-            message_id
         )
 
     def ping(self):
@@ -549,14 +538,14 @@ class StreamConnection(TornadoConnection):
                 while chunk:
                     message = (message_factory.
                                build_raw_message(context, args))
-                    yield self.write(message, context.id)
+                    yield self.write(message)
                     args = [chunk]
                     chunk = yield argstream.read()
 
             # last piece of request/response.
             message = (message_factory.
                        build_raw_message(context, args, is_completed=True))
-            yield self.write(message, context.id)
+            yield self.write(message)
             context.state = StreamState.completed
         # Stop streamming immediately if exception occurs on the handler side
         except TChannelError as e:

@@ -29,6 +29,7 @@ class InitResponseMessage(InitRequestMessage):
     """Respond to an initialization request message."""
     message_type = Types.INIT_RES
 
+
 init_res_rw = rw.instance(
     InitResponseMessage,
     ('version', rw.number(2)),  # version:2

@@ -22,6 +22,7 @@ from __future__ import absolute_import
 
 import pytest
 
+from tchannel import messages
 from tchannel.frame import Frame
 from tchannel.frame import FrameHeader
 from tchannel.frame import frame_rw
@@ -84,6 +85,8 @@ def test_decode_empty_buffer():
 def test_decode_with_message_length(dummy_frame):
     """Verify we can pre-flight a message size."""
     dummy_frame[2] = Types.PING_REQ
-    frame_rw.read(
+    f = frame_rw.read(
         BytesIO(dummy_frame[2:]), size=len(dummy_frame)
-    ) == PingRequestMessage()
+    )
+    message_rw = messages.RW[f.header.message_type]
+    message_rw.read(BytesIO(f.payload)) == PingRequestMessage()

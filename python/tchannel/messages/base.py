@@ -25,7 +25,10 @@ class BaseMessage(object):
     """Represent common functionality across all TChannel messages."""
     message_type = None
 
-    __slots__ = ()
+    __slots__ = ('id',)
+
+    def __init__(self, id=0):
+        self.id = id
 
     def __eq__(self, other):
         if other is None:

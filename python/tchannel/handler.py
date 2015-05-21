@@ -33,13 +33,13 @@ class RequestHandler(object):
     or Tornado-based.
     """
 
-    def handle(self, context, connection):
+    def handle(self, message, connection):
         """Handle an incoming request.
 
         The handshake has already been completed.
 
-        :param context:
-            Context containing the incoming message.
+        :param message:
+            the incoming message.
         :param connection:
             Reference to the connection object
         :returns:
@@ -66,21 +66,18 @@ class BaseRequestHandler(RequestHandler):
     def __init__(self):
         super(BaseRequestHandler, self).__init__()
 
-    def handle(self, context, connection):
+    def handle(self, message, connection):
         # TODO assert that the handshake was already completed
-        assert context, "context must not be None"
-
-        message_id = context.message_id
-        message = context.message
+        assert message, "message must not be None"
 
         if message.message_type not in self._HANDLER_NAMES:
             # TODO handle this more gracefully
-            raise NotImplementedError("Unexpected message: %s" % str(context))
+            raise NotImplementedError("Unexpected message: %s" % str(message))
 
         handler_name = "handle_" + self._HANDLER_NAMES[message.message_type]
-        return getattr(self, handler_name)(message_id, message, connection)
+        return getattr(self, handler_name)(message, connection)
 
-    def handle_pre_call(self, message_id, message, connection):
+    def handle_pre_call(self, message, connection):
         """Handle incoming request message including CallRequestMessage and
         CallRequestContinueMessage
 
@@ -92,12 +89,11 @@ class BaseRequestHandler(RequestHandler):
         arg_1=argstream[0], the message_factory will return a request object.
         Then it will trigger the async call_handle call.
 
-        :param message_id: message id
         :param message: CallRequestMessage or CallRequestContinueMessage
         :param connection: tornado connection
         """
         try:
-            req = connection.request_message_factory.build(message_id, message)
+            req = connection.request_message_factory.build(message)
             # message_factory will create Request only when it receives
             # CallRequestMessage. It will return None, if it receives
             # CallRequestContinueMessage.
@@ -108,17 +104,17 @@ class BaseRequestHandler(RequestHandler):
             connection.send_error(
                 ErrorCode.bad_request,
                 e.message,
-                message_id,
+                message.id,
             )
         except Exception:
             connection.send_error(
                 ErrorCode.unexpected,
-                "An unexpected error has occurred!",
-                message_id,
+                "An unexpected error has occurred.",
+                message.id,
             )
 
-    def handle_ping(self, message_id, ping, connection):
-        return connection.write(PingResponseMessage(), message_id)
+    def handle_ping(self, ping, connection):
+        return connection.write(PingResponseMessage(), ping.id)
 
     def handle_call(self, call, connection):
         """Handle an incoming call.
@@ -141,5 +137,5 @@ class CallableRequestHandler(RequestHandler):
         assert f
         self._f = f
 
-    def handle(self, context, connection):
-        return self._f(context, connection)
+    def handle(self, message, connection):
+        return self._f(message, connection)

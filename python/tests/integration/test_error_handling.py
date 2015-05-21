@@ -104,6 +104,7 @@ def test_invalid_message_during_streaming(tchannel_server):
             'a',
         ],
         headers={'as': 'raw'},
+        id=1,
     )
 
     callreqcontinue = CallRequestContinueMessage(
@@ -111,16 +112,17 @@ def test_invalid_message_during_streaming(tchannel_server):
         args=[
             'a',
         ],
+        id=1,
     )
 
-    resp_future = connection.send(callrequest, 1)
+    resp_future = connection.send(callrequest)
     for _ in xrange(10):
-        yield connection.write(callreqcontinue, 1)
+        yield connection.write(callreqcontinue)
 
     # bypass the default checksum calculation
     # set a wrong checksum
     callreqcontinue.checksum = (ChecksumType.crc32c, 1)
-    yield connection._write(callreqcontinue, 1)
+    yield connection._write(callreqcontinue)
 
     with pytest.raises(ProtocolException) as e:
         resp = yield resp_future
@@ -148,7 +150,7 @@ def test_continue_message_error(tchannel_server):
     )
 
     with pytest.raises(ProtocolException) as e:
-        yield connection.send(callreqcontinue, 1)
+        yield connection.send(callreqcontinue)
 
     assert (e.value.message ==
             u"missing call message after receiving continue message")

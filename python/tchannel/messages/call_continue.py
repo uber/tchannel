@@ -29,7 +29,7 @@ class CallContinueMessage(BaseMessage):
     """Represent a continuation of a call request (across multiple frames)."""
     max_args_num = 3
 
-    __slots__ = (
+    __slots__ = BaseMessage.__slots__ + (
         'flags',
         'checksum',
         'args',
@@ -40,7 +40,9 @@ class CallContinueMessage(BaseMessage):
         flags=0,
         checksum=None,
         args=None,
+        id=0,
     ):
+        super(CallContinueMessage, self).__init__(id)
         self.flags = flags
         if checksum is None:
             self.checksum = (common.ChecksumType.none, None)
@@ -94,4 +96,5 @@ class CallContinueMessage(BaseMessage):
             return None
         else:
             self.flags = FlagsType.fragment
+            fragment_msg.id = self.id
             return fragment_msg

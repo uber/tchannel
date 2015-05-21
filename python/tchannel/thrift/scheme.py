@@ -20,8 +20,8 @@
 
 from __future__ import absolute_import
 
-from thrift.transport import TTransport
 from thrift.protocol import TBinaryProtocol
+from thrift.transport import TTransport
 
 from .. import io
 from .. import rw

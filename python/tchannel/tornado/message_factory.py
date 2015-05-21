@@ -132,6 +132,7 @@ class MessageFactory(object):
         else:
             raise StreamingError("request state Error")
 
+        message.id = request.id
         return message
 
     def build_raw_response_message(self, response, args, is_completed=False):
@@ -174,13 +175,14 @@ class MessageFactory(object):
         else:
             raise StreamingError("response state Error")
 
+        message.id = response.id
         return message
 
-    def build_raw_message(self, context, args, is_completed=False):
-        if isinstance(context, Request):
-            return self.build_raw_request_message(context, args, is_completed)
-        elif isinstance(context, Response):
-            return self.build_raw_response_message(context, args, is_completed)
+    def build_raw_message(self, reqres, args, is_completed=False):
+        if isinstance(reqres, Request):
+            return self.build_raw_request_message(reqres, args, is_completed)
+        elif isinstance(reqres, Response):
+            return self.build_raw_response_message(reqres, args, is_completed)
         else:
             raise StreamingError("context object type error")
 
@@ -197,14 +199,13 @@ class MessageFactory(object):
 
         return args
 
-    def build_request(self, message, message_id=None):
+    def build_request(self, message):
         """Build request object from protocol level message info
 
         It is allowed to take incompleted CallRequestMessage. Therefore the
         created request may not contain whole three arguments.
 
         :param message: CallRequestMessage
-        :param message_id: integer of message id
         :return: request object
         """
 
@@ -229,18 +230,17 @@ class MessageFactory(object):
             headers=message.headers,
             checksum=message.checksum,
             argstreams=args,
-            id=message_id
+            id=message.id,
         )
         return req
 
-    def build_response(self, message, message_id=None):
+    def build_response(self, message):
         """Build response object from protocol level message info
 
         It is allowed to take incompleted CallResponseMessage. Therefore the
         created request may not contain whole three arguments.
 
         :param message: CallResponseMessage
-        :param message_id: integer of message id
         :return: response object
         """
 
@@ -253,39 +253,38 @@ class MessageFactory(object):
             headers=message.headers,
             checksum=message.checksum,
             argstreams=args,
-            id=message_id
+            id=message.id,
         )
         return res
 
-    def build_context(self, context, message_id=None):
-        if context.message_type == Types.CALL_REQ:
-            return self.build_request(context, message_id)
-        elif context.message_type == Types.CALL_RES:
-            return self.build_response(context, message_id)
+    def build_context(self, message):
+        if message.message_type == Types.CALL_REQ:
+            return self.build_request(message)
+        elif message.message_type == Types.CALL_RES:
+            return self.build_response(message)
         else:
             raise StreamingError("invalid message type: %s" %
-                                 context.message_type)
+                                 message.message_type)
 
-    def build(self, message_id, message):
+    def build(self, message):
         """buffer all the streaming messages based on the
         message id. Reconstruct all fragments together.
 
-        :param message_id:
-            id
         :param message:
             incoming message
         :return: next complete message or None if streaming
             is not done
         """
         context = None
+
         if message.message_type in [Types.CALL_REQ,
                                     Types.CALL_RES]:
-            self.verify_message(message, message_id)
+            self.verify_message(message)
 
-            context = self.build_context(message, message_id)
+            context = self.build_context(message)
             # streaming message
             if message.flags == common.FlagsType.fragment:
-                self.message_buffer[message_id] = context
+                self.message_buffer[message.id] = context
 
             # find the incompleted stream
             num = 0
@@ -299,7 +298,7 @@ class MessageFactory(object):
 
         elif message.message_type in [Types.CALL_REQ_CONTINUE,
                                       Types.CALL_RES_CONTINUE]:
-            context = self.message_buffer.get(message_id)
+            context = self.message_buffer.get(message.id)
             if context is None:
                 # missing call msg before continue msg
                 raise StreamingError(
@@ -313,7 +312,7 @@ class MessageFactory(object):
                     break
 
             try:
-                self.verify_message(message, message_id)
+                self.verify_message(message)
             except InvalidChecksumError as e:
                 context.argstreams[dst].set_exception(e)
                 raise
@@ -328,20 +327,18 @@ class MessageFactory(object):
                 # get last fragment. mark it as completed
                 assert (len(context.argstreams) ==
                         CallContinueMessage.max_args_num)
-                self.message_buffer.pop(message_id, None)
+                self.message_buffer.pop(message.id, None)
                 context.flags = FlagsType.none
 
             self.close_argstream(context, dst - 1)
             return None
         elif message.message_type == Types.ERROR:
-            context = self.message_buffer.pop(message_id, None)
+            context = self.message_buffer.pop(message.id, None)
             if context is None:
                 log.warn('Unconsumed error %s', context)
                 return None
             else:
-                protocol_exception = build_protocol_exception(
-                    message, message_id,
-                )
+                protocol_exception = build_protocol_exception(message)
                 protocol_exception.tracing = context.tracing
 
                 context.set_exception(protocol_exception)
@@ -349,7 +346,7 @@ class MessageFactory(object):
         else:
             return message
 
-    def fragment(self, message, message_id):
+    def fragment(self, message):
         """Fragment message based on max payload size
 
         note: if the message doesn't need to fragment,
@@ -371,7 +368,7 @@ class MessageFactory(object):
             # with a call/request message and {0~n} continue
             # message
             fragment_msg = message.fragment(payload_space)
-            self.generate_checksum(message, message_id)
+            self.generate_checksum(message)
 
             yield message
             while fragment_msg is not None:
@@ -380,35 +377,35 @@ class MessageFactory(object):
                 payload_space = (common.MAX_PAYLOAD_SIZE -
                                  rw.length_no_args(message))
                 fragment_msg = message.fragment(payload_space)
-                self.generate_checksum(message, message_id)
+                self.generate_checksum(message)
                 yield message
         else:
             yield message
 
-    def generate_checksum(self, message, message_id):
+    def generate_checksum(self, message):
         if message.message_type not in CHECKSUM_MSG_TYPES:
             return
         generate_checksum(
             message,
-            self.out_checksum.get(message_id, 0),
+            self.out_checksum.get(message.id, 0),
         )
 
-        self.out_checksum[message_id] = message.checksum[1]
+        self.out_checksum[message.id] = message.checksum[1]
         if message.flags == FlagsType.none:
-            self.out_checksum.pop(message_id)
+            self.out_checksum.pop(message.id)
 
-    def verify_message(self, message, message_id):
+    def verify_message(self, message):
         """Verify the checksum of the message."""
         if verify_checksum(
                 message,
-                self.in_checksum.get(message_id, 0),
+                self.in_checksum.get(message.id, 0),
         ):
-            self.in_checksum[message_id] = message.checksum[1]
+            self.in_checksum[message.id] = message.checksum[1]
 
             if message.flags == FlagsType.none:
-                self.in_checksum.pop(message_id)
+                self.in_checksum.pop(message.id)
         else:
-            self.in_checksum.pop(message_id, None)
+            self.in_checksum.pop(message.id, None)
             raise InvalidChecksumError("Checksum does not match!")
 
     @staticmethod
