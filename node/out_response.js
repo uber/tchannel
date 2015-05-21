@@ -135,7 +135,13 @@ TChannelOutResponse.prototype.sendCallResponseFrame = function sendCallResponseF
         case States.Done:
         case States.Error:
             self.errorEvent.emit(self, errors.ResponseAlreadyDone({
-                attempted: 'call response'
+                attempted: 'call response',
+                state: self.state,
+                method: 'sendCallResponseFrame',
+                bufArg2: args[1].slice(0, 50),
+                arg2: String(args[1]).slice(0, 50),
+                bufArg3: args[2].slice(0, 50),
+                arg3: String(args[2]).slice(0, 50)
             }));
     }
 };
