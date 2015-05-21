@@ -219,6 +219,7 @@ TChannelConnectionBase.prototype.buildResponse = function buildResponse(req, opt
         }));
     }
     req.res = self.buildOutResponse(req, options);
+    req.res.errorEvent.on(onError);
     req.res.finishEvent.on(opDone);
     req.res.spanEvent.on(handleSpanFromRes);
     return req.res;
@@ -232,6 +233,35 @@ TChannelConnectionBase.prototype.buildResponse = function buildResponse(req, opt
         done = true;
         self.onReqDone(req);
     }
+
+    function onError(err) {
+        self.onResponseError(err, req);
+    }
+};
+
+function isStringOrBuffer(x) {
+    return typeof x === 'string' || Buffer.isBuffer(x);
+}
+
+TChannelConnectionBase.prototype.onResponseError =
+function onResponseError(err, req) {
+    var self = this;
+
+    var arg2 = isStringOrBuffer(req.res.arg2) ?
+        req.res.arg2 : 'streaming';
+    var arg3 = isStringOrBuffer(req.res.arg3) ?
+        req.res.arg3 : 'streaming';
+
+    self.logger.error('outgoing response has an error', {
+        err: err,
+        arg1: String(req.arg1),
+        ok: req.res.ok,
+        type: req.res.type,
+        bufArg2: arg2.slice(0, 50),
+        arg2: String(arg2).slice(0, 50),
+        bufArg3: arg3.slice(0, 50),
+        arg3: String(arg3).slice(0, 50)
+    });
 };
 
 TChannelConnectionBase.prototype.onReqDone = function onReqDone(req) {
