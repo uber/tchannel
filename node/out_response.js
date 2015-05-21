@@ -162,7 +162,9 @@ TChannelOutResponse.prototype.sendCallResponseContFrame = function sendCallRespo
         case States.Done:
         case States.Error:
             self.errorEvent.emit(self, errors.ResponseAlreadyDone({
-                attempted: 'call response continuation'
+                attempted: 'call response continuation',
+                state: self.state,
+                method: 'sendCallResponseContFrame'
             }));
     }
 };
