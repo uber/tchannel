@@ -193,7 +193,9 @@ TChannelOutResponse.prototype.setOk = function setOk(ok) {
     var self = this;
     if (self.state !== States.Initial) {
         self.errorEvent.emit(self, errors.ResponseAlreadyStarted({
-            state: self.state
+            state: self.state,
+            method: 'setOk',
+            ok: ok
         }));
     }
     self.ok = ok;
