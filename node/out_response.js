@@ -223,6 +223,10 @@ TChannelOutResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
 
 TChannelOutResponse.prototype.send = function send(res1, res2) {
     var self = this;
+
+    self.arg2 = res1;
+    self.arg3 = res2;
+
     self.sendCallResponseFrame([self.arg1, res1, res2], true);
     self.finishEvent.emit(self);
     return self;
