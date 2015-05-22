@@ -199,6 +199,7 @@ TChannelJSON.prototype.register = function register(
                     'Could not JSON stringify');
             }
 
+            res.headers.as = 'json';
             res.setOk(respObject.ok);
             res.send(
                 stringifyResult.value.head,

@@ -122,6 +122,7 @@ function register(channel, name, opts, handle) {
                     'Could not serialize thrift');
             }
 
+            res.headers.as = 'thrift';
             res.setOk(thriftRes.ok);
             res.send(
                 stringifyResult.value.head,

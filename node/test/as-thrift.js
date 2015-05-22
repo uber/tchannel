@@ -54,6 +54,7 @@ allocCluster.test('send and receiving an ok', {
         assert.ifError(err);
 
         assert.ok(res.ok);
+        assert.equal(res.headers.as, 'thrift');
         assert.equal(res.body, 10);
         assert.end();
     });
