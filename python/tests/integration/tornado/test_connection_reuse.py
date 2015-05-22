@@ -25,26 +25,22 @@ import socket
 import pytest
 from tornado import gen
 
-from tchannel.tornado.dispatch import RequestDispatcher
 from tchannel.tornado.stream import InMemStream
 from tchannel.tornado.tchannel import TChannel
 
 
 @pytest.mark.gen_test
 def test_reuse():
-    dispatch1 = RequestDispatcher()
-    dispatch2 = RequestDispatcher()
-
     hostport1 = 'localhost:%d' % unused_port()
     hostport2 = 'localhost:%d' % unused_port()
 
     server1 = TChannel(hostport1)
-    server1.host(dispatch1).listen()
+    server1.listen()
 
     server2 = TChannel(hostport2)
-    server2.host(dispatch2).listen()
+    server2.listen()
 
-    @dispatch2.route('hello')
+    @server2.register('hello')
     @gen.coroutine
     def hello(request, response, opts):
         yield response.write_body('hello to you too')
@@ -80,7 +76,7 @@ def test_reuse():
     # from server1, we should re-use that for requests made from server2 to
     # server1
 
-    @dispatch1.route('reverse')
+    @server1.register('reverse')
     @gen.coroutine
     def reverse(request, response, opts):
         body = yield request.get_body()

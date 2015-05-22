@@ -24,7 +24,6 @@ import random
 
 import tornado.gen
 
-from tchannel.tornado.dispatch import RequestDispatcher
 from tchannel.tornado.stream import InMemStream
 from tchannel.tornado.util import print_arg
 
@@ -58,19 +57,15 @@ def slow(request, response, proxy):
     response.flush()
 
 
-def get_example_handler():
-    dispatcher = RequestDispatcher()
+def register_example_endpoints(tchannel):
+    tchannel.register(endpoint="hi", scheme="raw", handler=say_hi)
+    tchannel.register(endpoint="ok", scheme="raw", handler=say_ok)
+    tchannel.register(endpoint="echo", scheme="raw", handler=echo)
+    tchannel.register(endpoint="slow", scheme="raw", handler=slow)
 
-    dispatcher.register("hi", say_hi)
-    dispatcher.register("ok", say_ok)
-    dispatcher.register("echo", echo)
-    dispatcher.register("slow", slow)
-
-    @dispatcher.route("bye")
+    @tchannel.register("bye", scheme="raw")
     def say_bye(request, response, proxy):
-        yield print_arg(request, 1)
-        yield print_arg(request, 2)
+        print (yield request.get_header())
+        print (yield request.get_body())
 
-        response.set_body_s(InMemStream("world"))
-
-    return dispatcher
+        response.write_body("world")

@@ -22,18 +22,10 @@ from __future__ import absolute_import
 
 import pytest
 
-from tests.integration.server_manager import TChannelServerManager
+from tests.integration.test_server import TestServer
 
 
 @pytest.yield_fixture
-def tchannel_server(random_open_port, dispatcher=None):
-    with TChannelServerManager(random_open_port,
-                               dispatcher) as manager:
-        yield manager
-
-
-@pytest.yield_fixture(params=[TChannelServerManager])
-def server(request, random_open_port):
-    manager_class = request.param
-    with manager_class(random_open_port) as manager:
-        yield manager
+def tchannel_server(random_open_port):
+    with TestServer(random_open_port) as server:
+        yield server

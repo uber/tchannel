@@ -25,10 +25,9 @@ import tornado
 import tornado.gen
 
 from tchannel.scheme import JsonArgScheme
-from tchannel.tornado import RequestDispatcher
 from tchannel.tornado import TChannel
 from tchannel.tornado.broker import ArgSchemeBroker
-from tests.integration.server_manager import TChannelServerManager
+from tests.integration.test_server import TestServer
 
 
 @pytest.fixture
@@ -70,11 +69,9 @@ def sample_json():
     return body
 
 
-@pytest.fixture
-def handlers():
-    dispatcher = RequestDispatcher()
+def register(tchannel):
 
-    @dispatcher.route("json_echo", ArgSchemeBroker(JsonArgScheme()))
+    @tchannel.register("json_echo", "json")
     @tornado.gen.coroutine
     def json_echo(request, response, proxy):
         header = yield request.get_header()
@@ -83,16 +80,12 @@ def handlers():
         response.write_header(header)
         response.write_body(body)
 
-    return dispatcher
-
 
 @pytest.yield_fixture
-def json_server(random_open_port, handlers):
-    with TChannelServerManager(
-            port=random_open_port,
-            dispatcher=handlers
-    ) as manager:
-        yield manager
+def json_server(random_open_port):
+    with TestServer(random_open_port) as server:
+        register(server.tchannel)
+        yield server
 
 
 @pytest.mark.gen_test

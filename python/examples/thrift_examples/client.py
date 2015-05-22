@@ -22,18 +22,13 @@ from tornado import gen
 from tornado import ioloop
 
 from hello import HelloService
-from tchannel.thrift import TChannelProtocolFactory
-from tchannel.thrift import TChannelTornadoTransport
+from tchannel.thrift import client_for
 from tchannel.tornado import TChannel
 
 
 @gen.coroutine
 def run():
-    transport = TChannelTornadoTransport(TChannel(), "localhost:4040", "hello")
-    client = HelloService.Client(
-        transport, TChannelProtocolFactory("HelloService")
-    )
-
+    client = client_for('hello', HelloService)(TChannel(), 'localhost:4040')
     response = yield client.hello("world")
     print response
 
