@@ -44,6 +44,7 @@ function TChannelInResponse(id, options) {
     self.id = id || 0;
     self.code = options.code || 0;
     self.checksum = options.checksum || null;
+    self.headers = options.headers || {};
     self.ok = self.code === 0; // TODO: probably okay, but a bit jank
     self.span = options.span || null;
 

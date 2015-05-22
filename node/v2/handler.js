@@ -506,7 +506,8 @@ TChannelV2Handler.prototype.buildInResponse = function buildInResponse(resFrame)
         timers: self.timers,
         code: resFrame.body.code,
         checksum: new v2.Checksum(resFrame.body.csum.type),
-        streamed: resFrame.body.flags & v2.CallFlags.Fragment
+        streamed: resFrame.body.flags & v2.CallFlags.Fragment,
+        headers: resFrame.body.headers
     };
     if (opts.streamed) {
         return new StreamingInResponse(resFrame.id, opts);
