@@ -669,6 +669,120 @@ allocCluster.test('sending INTERNAL_TIMEOUT OK', {
     });
 });
 
+allocCluster.test('sending INTERNAL_TIMEOUT NOT_OK', {
+    numPeers: 2
+}, function t(cluster, assert) {
+    cluster = allocThrift(cluster, {
+        messages: ['timeout', 'not ok'],
+        timeout: 300
+    });
+
+    cluster.logger.whitelist(
+        'info',
+        'error for timed out outgoing response'
+    );
+
+    cluster.asThrift.send(cluster.client.request({
+        serviceName: 'server',
+        timeout: 100
+    }), 'DoubleResponse::method', null, {
+        value: 'foobar'
+    }, function onResponse(err, resp) {
+        assert.ok(err);
+        assert.ok(err.type === 'tchannel.request.timeout' ||
+            err.type === 'tchannel.timeout');
+
+        setTimeout(function afterTime() {
+            var lines = cluster.logger.items();
+
+            assert.equal(lines.length, 2);
+            var record1 = lines[0];
+            var record2 = lines[1];
+
+            var err1 = record1.fields.err;
+            var err2 = record2.fields.err;
+
+            assert.equal(record2.fields.state, 'Error');
+            assert.equal(record2.fields.msg,
+                'error for timed out outgoing response');
+            assert.equal(record1.fields.arg1, 'DoubleResponse::method');
+            assert.equal(record1.fields.ok, true);
+            assert.equal(record1.fields.codeString, 'Timeout');
+            assert.equal(err1.method, 'setOk');
+            assert.equal(err1.type, 'tchannel.response-already-started');
+            assert.equal(err1.ok, false);
+
+            assert.equal(record2.fields.state, 'Error');
+            assert.equal(record2.fields.msg,
+                'error for timed out outgoing response');
+            assert.equal(record2.fields.arg1, 'DoubleResponse::method');
+            assert.equal(record2.fields.codeString, 'Timeout');
+            assert.equal(err2.method, 'sendCallResponseFrame');
+            assert.equal(err2.type, 'tchannel.response-already-done');
+            assert.ok(err2.arg3.indexOf('foobar') >= 0);
+
+            assert.end();
+        }, 500);
+    });
+});
+
+allocCluster.test('sending INTERNAL_TIMEOUT ERROR_FRAME', {
+    numPeers: 2
+}, function t(cluster, assert) {
+    cluster = allocThrift(cluster, {
+        messages: ['timeout', 'error'],
+        timeout: 300
+    });
+
+    cluster.logger.whitelist(
+        'info',
+        'error for timed out outgoing response'
+    );
+    cluster.logger.whitelist(
+        'error',
+        'Got unexpected error in handler'
+    );
+
+    cluster.asThrift.send(cluster.client.request({
+        serviceName: 'server',
+        timeout: 100
+    }), 'DoubleResponse::method', null, {
+        value: 'foobar'
+    }, function onResponse(err, resp) {
+        assert.ok(err);
+        assert.ok(err.type === 'tchannel.request.timeout' ||
+            err.type === 'tchannel.timeout');
+
+        setTimeout(function afterTime() {
+            var lines = cluster.logger.items();
+
+            assert.equal(lines.length, 2);
+            var record1 = lines[0];
+            var record2 = lines[1];
+
+            var err1 = record1.fields.err;
+            var err2 = record2.fields.err;
+
+            assert.equal(record1.fields.msg,
+                'Got unexpected error in handler');
+            assert.equal(record1.fields.endpoint, 'DoubleResponse::method');
+            assert.equal(err1.message, 'Error: foobar');
+
+            assert.equal(record2.fields.state, 'Error');
+            assert.equal(record2.fields.msg,
+                'error for timed out outgoing response');
+            assert.equal(record2.fields.arg1, 'DoubleResponse::method');
+            assert.equal(record2.fields.ok, true);
+            assert.equal(record2.fields.codeString, 'Timeout');
+            assert.equal(err2.method, 'sendError');
+            assert.equal(err2.type, 'tchannel.response-already-done');
+            assert.equal(err2.codeString, 'UnexpectedError');
+            assert.equal(err2.errMessage, 'Unexpected Error');
+
+            assert.end();
+        }, 500);
+    });
+});
 
 function allocThrift(cluster, options) {
     options = options || {};
