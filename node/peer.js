@@ -261,7 +261,9 @@ TChannelPeer.prototype.countOutPending = function countOutPending() {
     var self = this;
     var pending = 0;
     for (var index = 0; index < self.connections.length; index++) {
-        pending += self.connections[index].pending.out;
+        var connPending = self.connections[index].ops.getPending();
+
+        pending += connPending.out;
     }
     return pending;
 };

@@ -200,7 +200,7 @@ TChannelConnection.prototype.handleReadFrame = function handleReadFrame(frame) {
 TChannelConnection.prototype.onCallResponse = function onCallResponse(res) {
     var self = this;
 
-    var req = self.requests.out[res.id];
+    var req = self.ops.getOutReq(res.id);
     var called = false;
 
     if (res.state === States.Done || res.state === States.Error) {
@@ -256,7 +256,7 @@ TChannelConnection.prototype.onCallResponse = function onCallResponse(res) {
 TChannelConnection.prototype.onCallError = function onCallError(err) {
     var self = this;
 
-    var req = self.requests.out[err.originalId];
+    var req = self.ops.getOutReq(err.originalId);
 
     if (req && req.res) {
         req.res.errorEvent.emit(req.res, err);
