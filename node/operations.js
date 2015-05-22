@@ -99,11 +99,17 @@ Operations.prototype.addInReq = function addInReq(req) {
     return req;
 };
 
-Operations.prototype.popOutReq = function popOutReq(id) {
+Operations.prototype.popOutReq = function popOutReq(id, context) {
     var self = this;
 
     var req = self.requests.out[id];
     if (!req) {
+        self.logger.info('popOutReq received for unknown or lost id', {
+            context: context,
+            remoteAddr: self.connection.remoteAddr,
+            direction: self.connection.direction
+        });
+
         // TODO else case. We should warn about an incoming response for an
         // operation we did not send out.  This could be because of a timeout
         // or could be because of a confused / corrupted server.
