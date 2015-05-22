@@ -22,8 +22,6 @@
 
 var errors = require('./errors.js');
 
-var CONN_STALE_PERIOD = 1500;
-
 module.exports = Operations;
 
 function Operations(opts) {
@@ -35,6 +33,7 @@ function Operations(opts) {
     self.timeoutCheckInterval = opts.timeoutCheckInterval;
     self.timeoutFuzz = opts.timeoutFuzz;
     self.initTimeout = opts.initTimeout;
+    self.connectionStalePeriod = opts.connectionStalePeriod;
 
     self.connection = opts.connection;
     self.startTime = self.timers.now();
