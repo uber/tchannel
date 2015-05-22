@@ -247,21 +247,32 @@ TChannelConnectionBase.prototype.onResponseError =
 function onResponseError(err, req) {
     var self = this;
 
-    var arg2 = isStringOrBuffer(req.res.arg2) ?
-        req.res.arg2 : 'streaming';
-    var arg3 = isStringOrBuffer(req.res.arg3) ?
-        req.res.arg3 : 'streaming';
-
-    self.logger.error('outgoing response has an error', {
+    var loggingOptions = {
         err: err,
         arg1: String(req.arg1),
         ok: req.res.ok,
         type: req.res.type,
-        bufArg2: arg2.slice(0, 50),
-        arg2: String(arg2).slice(0, 50),
-        bufArg3: arg3.slice(0, 50),
-        arg3: String(arg3).slice(0, 50)
-    });
+        state: req.res.state === States.Done ? 'Done' :
+            req.res.state === States.Error ? 'Error' :
+            'Unknown'
+    };
+
+    if (req.res.state === States.Done) {
+        var arg2 = isStringOrBuffer(req.res.arg2) ?
+            req.res.arg2 : 'streaming';
+        var arg3 = isStringOrBuffer(req.res.arg3) ?
+            req.res.arg3 : 'streaming';
+
+        loggingOptions.bufArg2 = arg2.slice(0, 50);
+        loggingOptions.arg2 = String(arg2).slice(0, 50);
+        loggingOptions.bufArg3 = arg3.slice(0, 50);
+        loggingOptions.arg3 = String(arg3).slice(0, 50);
+    } else if (req.res.state === States.Error) {
+        loggingOptions.codeString = req.res.codeString;
+        loggingOptions.errMessage = req.res.message;
+    }
+
+    self.logger.error('outgoing response has an error', loggingOptions);
 };
 
 TChannelConnectionBase.prototype.onReqDone = function onReqDone(req) {
