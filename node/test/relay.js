@@ -60,6 +60,47 @@ allocCluster.test('send relay requests', {
     });
 });
 
+allocCluster.test('relay respects ttl', {
+    numPeers: 3
+}, function t(cluster, assert) {
+    var relay = cluster.channels[0];
+    var source = cluster.channels[1];
+    var dest = cluster.channels[2];
+
+    var relayChan = relay.makeSubChannel({
+        serviceName: 'dest',
+        peers: [dest.hostPort]
+    });
+    relayChan.handler = new RelayHandler(relayChan);
+
+    var destChan = dest.makeSubChannel({
+        serviceName: 'dest'
+    });
+    destChan.register('echoTTL', function echoTTL(req, res) {
+        res.sendOk(null, String(req.ttl));
+    });
+
+    var sourceChan = source.makeSubChannel({
+        serviceName: 'dest',
+        peers: [relay.hostPort]
+    });
+
+    sourceChan.request({
+        serviceName: 'dest',
+        timeout: 250
+    }).send('echoTTL', null, null, onResponse);
+
+    function onResponse(err, res, arg2, arg3) {
+        assert.ifError(err);
+        assert.ok(res.ok);
+
+        var ttl = Number(String(arg3));
+        assert.ok(ttl >= 240 && ttl <= 250);
+
+        assert.end();
+    }
+});
+
 allocCluster.test('relay an error frame', {
     numPeers: 4
 }, function t(cluster, assert) {
