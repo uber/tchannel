@@ -621,8 +621,8 @@ allocCluster.test('sending INTERNAL_TIMEOUT OK', {
     });
 
     cluster.logger.whitelist(
-        'error',
-        'outgoing response has an error'
+        'info',
+        'error for timed out outgoing response'
     );
 
     cluster.asThrift.send(cluster.client.request({
@@ -647,7 +647,7 @@ allocCluster.test('sending INTERNAL_TIMEOUT OK', {
 
             assert.equal(record2.fields.state, 'Error');
             assert.equal(record2.fields.msg,
-                'outgoing response has an error');
+                'error for timed out outgoing response');
             assert.equal(record1.fields.arg1, 'DoubleResponse::method');
             assert.equal(record1.fields.ok, true);
             assert.equal(record1.fields.codeString, 'Timeout');
@@ -657,14 +657,12 @@ allocCluster.test('sending INTERNAL_TIMEOUT OK', {
 
             assert.equal(record2.fields.state, 'Error');
             assert.equal(record2.fields.msg,
-                'outgoing response has an error');
+                'error for timed out outgoing response');
             assert.equal(record2.fields.arg1, 'DoubleResponse::method');
             assert.equal(record2.fields.codeString, 'Timeout');
             assert.equal(err2.method, 'sendCallResponseFrame');
             assert.equal(err2.type, 'tchannel.response-already-done');
             assert.ok(err2.arg3.indexOf('foobar') >= 0);
-
-            // assert.ok(false);
 
             assert.end();
         }, 500);
