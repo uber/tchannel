@@ -58,12 +58,12 @@ def slow(request, response, proxy):
 
 
 def register_example_endpoints(tchannel):
-    tchannel.register("hi", "raw", say_hi)
-    tchannel.register("ok", "raw", say_ok)
-    tchannel.register("echo", "raw", echo)
-    tchannel.register("slow", "raw", slow)
+    tchannel.register(endpoint="hi", scheme="raw", handler=say_hi)
+    tchannel.register(endpoint="ok", scheme="raw", handler=say_ok)
+    tchannel.register(endpoint="echo", scheme="raw", handler=echo)
+    tchannel.register(endpoint="slow", scheme="raw", handler=slow)
 
-    @tchannel.register("bye", "raw")
+    @tchannel.register("bye", scheme="raw")
     def say_bye(request, response, proxy):
         print (yield request.get_header())
         print (yield request.get_body())
