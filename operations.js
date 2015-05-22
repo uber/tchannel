@@ -22,6 +22,8 @@
 
 var errors = require('./errors.js');
 
+var CONN_STALE_PERIOD = 1500;
+
 module.exports = Operations;
 
 function Operations(opts) {
@@ -221,13 +223,16 @@ function _checkTimeout(ops, direction) {
             self.pending[direction]--;
         } else if (req.checkTimeout()) {
             if (direction === 'out') {
-                if (self.lastTimeoutTime) {
+                var now = self.timers.now();
+                if (self.lastTimeoutTime &&
+                    now > self.lastTimeoutTime + CONN_STALE_PERIOD
+                ) {
                     var err = errors.ConnectionStaleTimeoutError({
                         lastTimeoutTime: self.lastTimeoutTime
                     });
                     self.connection.timedOutEvent
                         .emit(self, err);
-                } else {
+                } else if (!self.lastTimeoutTime) {
                     self.lastTimeoutTime = self.timers.now();
                 }
                 
