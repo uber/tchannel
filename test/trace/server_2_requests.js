@@ -25,7 +25,7 @@ var test = require('tape');
 var TChannel = require('../../channel.js');
 var EndpointHandler = require('../../endpoint-handler.js');
 
-var logger = DebugLogtron('example');
+var logger = DebugLogtron('tchannel');
 
 var fixture = require('./server_2_requests_fixture');
 var validators = require('../lib/simple_validators');
@@ -36,7 +36,7 @@ test('basic tracing test', function (assert) {
 
     function traceReporter(span) {
         spans.push(span);
-        logger.info(span.toString());
+        logger.debug(span.toString());
     }
 
     var subservice = new TChannel({
@@ -62,18 +62,18 @@ test('basic tracing test', function (assert) {
     });
 
     subservice.handler.register('/foobar', function (req, res) {
-        logger.info("subserv sr");
+        logger.debug("subserv sr");
         res.sendOk('result', 'success');
     });
 
     subservice.handler.register('/barbaz', function (req, res) {
-        logger.info("subserv 2 sr");
+        logger.debug("subserv 2 sr");
         res.sendOk('result', 'success');
     });
 
     // normal response
     server.handler.register('/top_level_endpoint', function (req, res) {
-        logger.info("top level sending to subservice");
+        logger.debug("top level sending to subservice");
         var serverRequestsDone = CountedReadySignal(2);
 
         setTimeout(function () {
@@ -84,7 +84,7 @@ test('basic tracing test', function (assert) {
                     parentSpan: req.span,
                     trace: true
                 }).send('/foobar', 'arg1', 'arg2', function (err, subRes) {
-                    logger.info("top level recv from subservice: " + subRes);
+                    logger.debug("top level recv from subservice: " + subRes);
                     if (err) return res.sendOk('error', err);
 
                     serverRequestsDone.signal();
@@ -108,7 +108,7 @@ test('basic tracing test', function (assert) {
             });
             ready(function send() {
                 servReq.send('/barbaz', 'arg1', 'arg2', function (err, subRes) {
-                    logger.info("top level recv from subservice: " + subRes);
+                    logger.debug("top level recv from subservice: " + subRes);
                     if (err) return res.sendOk('error', err);
 
                     serverRequestsDone.signal();
@@ -130,8 +130,13 @@ test('basic tracing test', function (assert) {
             throw err;
         }
 
-        logger.info('client making req');
-        var req = client.request({host: '127.0.0.1:4040', serviceName: 'server', trace: true});
+        logger.debug('client making req');
+        var req = client.request({
+            host: '127.0.0.1:4040',
+            serviceName: 'server',
+            trace: true,
+            topLevelRequest: true
+        });
         var peers = client.peers.values();
         var ready = new CountedReadySignal(peers.length);
         peers.forEach(function each(peer) {
@@ -139,7 +144,7 @@ test('basic tracing test', function (assert) {
         });
         ready(function send() {
             req.send('/top_level_endpoint', "arg 1", "arg 2", function (err, res) {
-                    logger.info("client recv from top level: " + res);
+                    logger.debug("client recv from top level: " + res);
                     requestsDone.signal();
                 });
         });

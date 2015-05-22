@@ -22,6 +22,8 @@
 
 var errors = require('./errors.js');
 
+var TOMBSTONE_TTL = 5000;
+
 module.exports = Operations;
 
 function Operations(opts) {
@@ -39,6 +41,9 @@ function Operations(opts) {
     self.timer = null;
     self.destroyed = false;
 
+    self.tombstones = {
+        out: []
+    };
     self.requests = {
         in: {},
         out: {}
@@ -48,6 +53,13 @@ function Operations(opts) {
         out: 0
     };
     self.lastTimeoutTime = 0;
+}
+
+function OperationTombstone(id, time) {
+    var self = this;
+
+    self.id = id;
+    self.time = time;
 }
 
 Operations.prototype.startTimeoutTimer =
@@ -99,18 +111,39 @@ Operations.prototype.addInReq = function addInReq(req) {
     return req;
 };
 
-Operations.prototype.popOutReq = function popOutReq(id) {
+Operations.prototype.popOutReq = function popOutReq(id, context) {
     var self = this;
 
     var req = self.requests.out[id];
     if (!req) {
-        // TODO else case. We should warn about an incoming response for an
-        // operation we did not send out.  This could be because of a timeout
-        // or could be because of a confused / corrupted server.
+        var tombstones = self.tombstones.out;
+        var isStale = false;
+
+        for (var i = 0; i < tombstones.length; i++) {
+            if (tombstones[i].id === id) {
+                isStale = true;
+                break;
+            }
+        }
+
+        // If this id has been timed out then just return
+        if (isStale) {
+            return null;
+        }
+
+        // This could be because of a confused / corrupted server.
+        self.logger.info('popOutReq received for unknown or lost id', {
+            context: context,
+            remoteAddr: self.connection.remoteAddr,
+            direction: self.connection.direction
+        });
         return null;
     }
 
     delete self.requests.out[id];
+    self.tombstones.out.push(new OperationTombstone(
+        req.id, self.timers.now()
+    ));
     self.pending.out--;
 
     return req;
@@ -146,6 +179,7 @@ Operations.prototype.clear = function clear() {
 
     self.pending.in = 0;
     self.pending.out = 0;
+    self.tombstones.out = [];
 };
 
 Operations.prototype.destroy = function destroy() {
@@ -197,6 +231,16 @@ function _onTimeoutCheck() {
 
     self._checkTimeout(self.requests.out, 'out');
     self._checkTimeout(self.requests.in, 'in');
+
+    var now = self.timers.now();
+    for (var i = 0; i < self.tombstones.out.length; i++) {
+        var tombstone = self.tombstones.out[i];
+        if (now >= tombstone.time + TOMBSTONE_TTL) {
+            self.tombstones.out.splice(i, 1);
+            i--;
+        }
+    }
+
     self.startTimeoutTimer();
 };
 
@@ -217,8 +261,12 @@ function _checkTimeout(ops, direction) {
                 direction: direction,
                 id: id
             });
-            delete ops[id];
-            self.pending[direction]--;
+
+            if (direction === 'in') {
+                self.popInReq(id);
+            } else if (direction === 'out') {
+                self.popOutReq(id);
+            }
         } else if (req.checkTimeout()) {
             if (direction === 'out') {
                 if (self.lastTimeoutTime) {
@@ -234,8 +282,11 @@ function _checkTimeout(ops, direction) {
             }
             // else
             //     req.res.sendError // XXX may need to build
-            delete ops[id];
-            self.pending[direction]--;
+            if (direction === 'in') {
+                self.popInReq(id);
+            } else if (direction === 'out') {
+                self.popOutReq(id);
+            }
         }
     }
 };

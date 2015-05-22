@@ -131,6 +131,10 @@ function allocCluster(opts) {
 }
 
 allocCluster.test = function testCluster(desc, opts, t) {
+    if (opts === undefined) {
+        return test(desc);
+    }
+
     if (typeof opts === 'number') {
         opts = {
             numPeers: opts
