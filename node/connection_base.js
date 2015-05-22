@@ -266,7 +266,18 @@ function onResponseError(err, req) {
         loggingOptions.errMessage = req.res.message;
     }
 
-    self.logger.error('outgoing response has an error', loggingOptions);
+    if ((err.type === 'tchannel.response-already-started' ||
+        err.type === 'tchannel.response-already-done') &&
+        req.timedOut
+    ) {
+        self.logger.info(
+            'error for timed out outgoing response', loggingOptions
+        );
+    } else {
+        self.logger.error(
+            'outgoing response has an error', loggingOptions
+        );
+    }
 };
 
 TChannelConnectionBase.prototype.onReqDone = function onReqDone(req) {
