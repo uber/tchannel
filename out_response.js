@@ -55,6 +55,9 @@ function TChannelOutResponse(id, options) {
     self.arg2 = null;
     self.arg3 = null;
 
+    self.codeString = null;
+    self.message = null;
+
     self.finishEvent.on(self.onFinish);
 }
 
@@ -184,6 +187,10 @@ TChannelOutResponse.prototype.sendError = function sendError(codeString, message
             self.span.annotate('ss');
         }
         self.state = States.Error;
+
+        self.codeString = codeString;
+        self.message = message;
+
         self._sendError(codeString, message);
         self.finishEvent.emit(self);
     }
