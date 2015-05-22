@@ -31,7 +31,8 @@ from tchannel.messages.common import ChecksumType
 from tchannel.messages.common import FlagsType
 from tchannel.tornado import TChannel
 from tchannel.tornado.connection import StreamConnection
-from tests.integration.server_manager import TChannelServerManager
+
+from .test_server import TestServer
 
 
 @tornado.gen.coroutine
@@ -52,9 +53,9 @@ def register(tchannel):
 
 @pytest.yield_fixture
 def tchannel_server(random_open_port):
-    with TChannelServerManager(random_open_port) as manager:
-        register(manager.tchannel)
-        yield manager
+    with TestServer(random_open_port) as server:
+        register(server.tchannel)
+        yield server
 
 
 @pytest.mark.gen_test

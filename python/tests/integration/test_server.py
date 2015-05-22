@@ -28,7 +28,7 @@ import tchannel.tornado.tchannel as tornado_tchannel
 
 
 class Expectation(object):
-    """Represents an expectation for the ServerManager."""
+    """Represents an expectation for the TestServer."""
 
     def __init__(self):
         self.execute = None
@@ -58,13 +58,14 @@ class Expectation(object):
         self.execute = execute
 
 
-class ServerManager(object):
+class TestServer(object):
     TIMEOUT = 0.15
 
     def __init__(self, port, timeout=None):
         self.port = port
-        self.timeout = timeout or self.TIMEOUT
+        self.tchannel = tornado_tchannel.TChannel("localhost:%d" % self.port)
 
+        self.timeout = timeout or self.TIMEOUT
         self.thread = None
         self.ready = False
 
@@ -97,27 +98,13 @@ class ServerManager(object):
             pass
 
     def serve(self):
-        raise NotImplementedError()
+        self.tchannel.listen()
+        self.ready = True
+        tornado.ioloop.IOLoop.current().start()
 
     def stop(self):
         self.shutdown()
         self.thread.join()
-
-    def shutdown(self):
-        raise NotImplementedError()
-
-
-class TChannelServerManager(ServerManager):
-
-    def __init__(self, port, timeout=None):
-        super(TChannelServerManager, self).__init__(port, timeout)
-        self.tchannel = tornado_tchannel.TChannel("localhost:%d" % self.port)
-        self.port = port
-
-    def serve(self):
-        self.tchannel.listen()
-        self.ready = True
-        tornado.ioloop.IOLoop.current().start()
 
     def shutdown(self):
         tornado.ioloop.IOLoop.current().stop()

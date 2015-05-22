@@ -27,7 +27,7 @@ import tornado.gen
 from tchannel.scheme import JsonArgScheme
 from tchannel.tornado import TChannel
 from tchannel.tornado.broker import ArgSchemeBroker
-from tests.integration.server_manager import TChannelServerManager
+from tests.integration.test_server import TestServer
 
 
 @pytest.fixture
@@ -83,9 +83,9 @@ def register(tchannel):
 
 @pytest.yield_fixture
 def json_server(random_open_port):
-    with TChannelServerManager(random_open_port) as manager:
-        register(manager.tchannel)
-        yield manager
+    with TestServer(random_open_port) as server:
+        register(server.tchannel)
+        yield server
 
 
 @pytest.mark.gen_test

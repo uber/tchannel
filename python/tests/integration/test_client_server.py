@@ -75,16 +75,16 @@ def test_tchannel_call_request_fragment(tchannel_server,
 
 
 @pytest.mark.gen_test
-def test_tcurl(server):
+def test_tcurl(tchannel_server):
     endpoint = b'tcurltest'
 
-    server.expect_call(endpoint).and_write(
+    tchannel_server.expect_call(endpoint).and_write(
         headers=endpoint,
         body="hello"
     )
 
     hostport = 'localhost:%d/%s' % (
-        server.port, endpoint.decode('ascii')
+        tchannel_server.port, endpoint.decode('ascii')
     )
     responses = yield tcurl.main(['--host', hostport, '-d', ''])
 
