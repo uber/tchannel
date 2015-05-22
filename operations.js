@@ -1,0 +1,221 @@
+'use strict';
+
+var errors = require('./errors.js');
+
+module.exports = Operations;
+
+function Operations(opts) {
+    var self = this;
+
+    self.timers = opts.timers;
+    self.logger = opts.logger;
+    self.random = opts.random;
+    self.timeoutCheckInterval = opts.timeoutCheckInterval;
+    self.timeoutFuzz = opts.timeoutFuzz;
+    self.initTimeout = opts.initTimeout;
+
+    self.connection = opts.connection;
+    self.startTime = self.timers.now();
+    self.timer = null;
+    self.destroyed = false;
+
+    self.requests = {
+        in: {},
+        out: {}
+    };
+    self.pending = {
+        in: 0,
+        out: 0
+    };
+    self.lastTimeoutTime = 0;
+}
+
+Operations.prototype.startTimeoutTimer =
+function startTimeoutTimer() {
+    var self = this;
+
+    self.timer = self.timers.setTimeout(
+        onChannelTimeout, self._getTimeoutDelay()
+    );
+
+    function onChannelTimeout() {
+        self._onTimeoutCheck();
+    }
+};
+
+Operations.prototype.getRequests = function getRequests() {
+    var self = this;
+
+    return self.requests;
+};
+
+Operations.prototype.getPending = function getPending() {
+    var self = this;
+
+    return self.pending;
+};
+
+Operations.prototype.getOutReq = function getOutReq(id) {
+    var self = this;
+
+    return self.requests.out[id];
+};
+
+Operations.prototype.addOutReq = function addOutReq(req) {
+    var self = this;
+
+    self.requests.out[req.id] = req;
+    self.pending.out++;
+
+    return req;
+};
+
+Operations.prototype.addInReq = function addInReq(req) {
+    var self = this;
+
+    self.requests.in[req.id] = req;
+    self.pending.in++;
+
+    return req;
+};
+
+Operations.prototype.popOutReq = function popOutReq(id) {
+    var self = this;
+
+    var req = self.requests.out[id];
+    if (!req) {
+        // TODO else case. We should warn about an incoming response for an
+        // operation we did not send out.  This could be because of a timeout
+        // or could be because of a confused / corrupted server.
+        return null;
+    }
+
+    delete self.requests.out[id];
+    self.pending.out--;
+
+    return req;
+};
+
+Operations.prototype.popInReq = function popInReq(id) {
+    var self = this;
+
+    var req = self.requests.in[id];
+    if (!req) {
+        // TODO warn ?
+        return null;
+    }
+
+    delete self.requests.in[id];
+    self.pending.in--;
+
+    return req;
+};
+
+Operations.prototype.removeReq = function removeReq(id) {
+    var self = this;
+
+    if (id in self.requests.in) {
+        delete self.requests.in[id];
+    } else if (id in self.requests.out) {
+        delete self.requests.out[id];
+    }
+};
+
+Operations.prototype.clear = function clear() {
+    var self = this;
+
+    self.pending.in = 0;
+    self.pending.out = 0;
+};
+
+Operations.prototype.destroy = function destroy() {
+    var self = this;
+
+    self.destroyed = true;
+
+    if (self.timer) {
+        self.timers.clearTimeout(self.timer);
+        self.timer = null;
+    }
+};
+
+// timeout check runs every timeoutCheckInterval +/- some random fuzz. Range is from
+//   base - fuzz/2 to base + fuzz/2
+Operations.prototype._getTimeoutDelay =
+function _getTimeoutDelay() {
+    var self = this;
+    var base = self.timeoutCheckInterval;
+    var fuzz = self.timeoutFuzz;
+    if (fuzz) {
+        fuzz = Math.round(Math.floor(self.random() * fuzz) - (fuzz / 2));
+    }
+    return base + fuzz;
+};
+
+// If the connection has some success and some timeouts, we should probably leave it up,
+// but if everything is timing out, then we should kill the connection.
+Operations.prototype._onTimeoutCheck =
+function _onTimeoutCheck() {
+    var self = this;
+    if (self.destroyed) {
+        return;
+    }
+
+    var isInitialized = self.connection.remoteName;
+    if (!isInitialized) {
+        var elapsed = self.timers.now() - self.startTime;
+        if (elapsed >= self.initTimeout) {
+            self.connection.timedOutEvent
+                .emit(self, errors.ConnectionTimeoutError({
+                    start: self.startTime,
+                    elapsed: elapsed,
+                    timeout: self.initTimeout
+                }));
+            return;
+        }
+    }
+
+    self._checkTimeout(self.requests.out, 'out');
+    self._checkTimeout(self.requests.in, 'in');
+    self.startTimeoutTimer();
+};
+
+Operations.prototype._checkTimeout =
+function _checkTimeout(ops, direction) {
+    var self = this;
+    var opKeys = Object.keys(ops);
+    for (var i = 0; i < opKeys.length; i++) {
+        var id = opKeys[i];
+        var req = ops[id];
+        if (req === undefined) {
+            self.logger.warn('unexpected undefined request', {
+                direction: direction,
+                id: id
+            });
+        } else if (req.timedOut) {
+            self.logger.warn('lingering timed-out request', {
+                direction: direction,
+                id: id
+            });
+            delete ops[id];
+            self.pending[direction]--;
+        } else if (req.checkTimeout()) {
+            if (direction === 'out') {
+                if (self.lastTimeoutTime) {
+                    var err = errors.ConnectionStaleTimeoutError({
+                        lastTimeoutTime: self.lastTimeoutTime
+                    });
+                    self.connection.timedOutEvent
+                        .emit(self, err);
+                } else {
+                    self.lastTimeoutTime = self.timers.now();
+                }
+                
+            }
+            // else
+            //     req.res.sendError // XXX may need to build
+            delete ops[id];
+            self.pending[direction]--;
+        }
+    }
+};
