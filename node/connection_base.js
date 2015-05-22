@@ -141,12 +141,6 @@ TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
     self.ops.clear();
 };
 
-TChannelConnectionBase.prototype.popOutReq = function popOutReq(id) {
-    var self = this;
-
-    return self.ops.popOutReq(id);
-};
-
 // create a request
 TChannelConnectionBase.prototype.request = function connBaseRequest(options) {
     var self = this;

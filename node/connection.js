@@ -230,7 +230,7 @@ TChannelConnection.prototype.onCallResponse = function onCallResponse(res) {
 
         called = true;
 
-        self.popOutReq(res.id, {
+        self.ops.popOutReq(res.id, {
             responseId: res.id,
             code: res.code,
             arg1: Buffer.isBuffer(res.arg1) ?
@@ -249,7 +249,7 @@ TChannelConnection.prototype.onCallError = function onCallError(err) {
         req.res.errorEvent.emit(req.res, err);
     } else {
         // Only popOutReq if there is no call response object yet
-        req = self.popOutReq(err.originalId, {
+        req = self.ops.popOutReq(err.originalId, {
             err: err,
             id: err.originalId,
             info: 'got error frame for unknown id'

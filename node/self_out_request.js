@@ -66,14 +66,14 @@ function makeInreq(id, options) {
     function onError(err) {
         if (called) return;
         called = true;
-        self.conn.popOutReq(id);
+        self.conn.ops.popOutReq(id);
         self.errorEvent.emit(self, err);
     }
 
     function onResponse(res) {
         if (called) return;
         called = true;
-        self.conn.popOutReq(id);
+        self.conn.ops.popOutReq(id);
         self.responseEvent.emit(self, res);
     }
 };
