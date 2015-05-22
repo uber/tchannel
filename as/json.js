@@ -101,18 +101,28 @@ TChannelJSON.prototype.send = function send(
         }
 
         var v = parseResult.value;
-        var response = null;
+        var response = new TChannelJSONResponse(resp, v);
 
-        if (resp.ok) {
-            response = new TChannelJSONResponse(resp.ok, v.head, v.body);
-        } else {
-            response = new TChannelJSONResponse(
-                resp.ok, v.head, errors.ReconstructedError(v.body)
-            );
-        }
         callback(null, response);
     }
 };
+
+
+function TChannelJSONResponse(response, parseResult) {
+    var self = this;
+
+    self.ok = response.ok;
+    self.head = parseResult.head;
+    self.body = null;
+
+    if (response.ok) {
+        self.body = parseResult.body;
+    } else {
+        self.body = errors.ReconstructedError(parseResult.body);
+    }
+
+    self.headers = response.headers;
+}
 
 TChannelJSON.prototype.register = function register(
     tchannel, arg1, opts, handlerFunc
@@ -285,14 +295,6 @@ TChannelJSON.prototype._parse = function parse(opts) {
         body: bodyR.value
     });
 };
-
-function TChannelJSONResponse(ok, head, body) {
-    var self = this;
-
-    self.ok = ok;
-    self.head = head;
-    self.body = body;
-}
 
 function isTypedError(obj) {
     return isError(obj) &&
