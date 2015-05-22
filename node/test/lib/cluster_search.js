@@ -319,9 +319,11 @@ function clusterClientCreator(options) {
             var peers = cluster.client.peers.values();
             peers.forEach(function eachPeer(peer, i) {
                 peer.connections.forEach(function eachConn(conn, j) {
-                    assert.equal(Object.keys(conn.requests.in).length, 0, format(
+                    var pending = conn.ops.getPending();
+
+                    assert.equal(pending.in, 0, format(
                         'client peer[%s] conn[%s] should have no inReqs', i, j));
-                    assert.equal(Object.keys(conn.requests.out).length, 0, format(
+                    assert.equal(pending.out, 0, format(
                         'client peer[%s] conn[%s] should have no outReqs', i, j));
                 });
             });
