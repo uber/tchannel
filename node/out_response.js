@@ -137,14 +137,17 @@ TChannelOutResponse.prototype.sendCallResponseFrame = function sendCallResponseF
             break;
         case States.Done:
         case States.Error:
+            var arg2 = args[1] || '';
+            var arg3 = args[2] || '';
+
             self.errorEvent.emit(self, errors.ResponseAlreadyDone({
                 attempted: 'call response',
                 state: self.state,
                 method: 'sendCallResponseFrame',
-                bufArg2: args[1].slice(0, 50),
-                arg2: String(args[1]).slice(0, 50),
-                bufArg3: args[2].slice(0, 50),
-                arg3: String(args[2]).slice(0, 50)
+                bufArg2: arg2.slice(0, 50),
+                arg2: String(arg2).slice(0, 50),
+                bufArg3: arg3.slice(0, 50),
+                arg3: String(arg3).slice(0, 50)
             }));
     }
 };
