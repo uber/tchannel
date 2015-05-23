@@ -46,6 +46,8 @@ var TChannelServices = require('./services');
 
 var TracingAgent = require('./trace/agent');
 
+var CONN_STALE_PERIOD = 1500;
+
 // TODO restore spying
 // var Spy = require('./v2/spy');
 // var dumpEnabled = /\btchannel_dump\b/.test(process.env.NODE_DEBUG || '');
@@ -73,6 +75,8 @@ function TChannel(options) {
     self.options = extend({
         timeoutCheckInterval: 100,
         timeoutFuzz: 100,
+        connectionStalePeriod: CONN_STALE_PERIOD,
+
         // TODO: maybe we should always add pid to user-supplied?
         processName: format('%s[%s]', process.title, process.pid)
     }, options);

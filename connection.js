@@ -165,7 +165,9 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
 TChannelConnection.prototype.onTimedOut = function onTimedOut(err) {
     var self = this;
 
-    self.logger.warn(self.channel.hostPort + ' destroying socket from timeouts');
+    self.logger.warn('destroying socket from timeouts', {
+        hostPort: self.channel.hostPort
+    });
     self.resetAll(err);
     self.socket.destroy();
 };
