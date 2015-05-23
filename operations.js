@@ -224,7 +224,7 @@ function _checkTimeout(ops, direction) {
             if (direction === 'out') {
                 var now = self.timers.now();
                 if (self.lastTimeoutTime &&
-                    now > self.lastTimeoutTime + CONN_STALE_PERIOD
+                    now > self.lastTimeoutTime + self.connectionStalePeriod
                 ) {
                     var err = errors.ConnectionStaleTimeoutError({
                         lastTimeoutTime: self.lastTimeoutTime
