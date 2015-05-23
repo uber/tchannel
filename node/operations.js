@@ -35,6 +35,7 @@ function Operations(opts) {
     self.timeoutCheckInterval = opts.timeoutCheckInterval;
     self.timeoutFuzz = opts.timeoutFuzz;
     self.initTimeout = opts.initTimeout;
+    self.connectionStalePeriod = opts.connectionStalePeriod;
 
     self.connection = opts.connection;
     self.startTime = self.timers.now();
@@ -269,13 +270,16 @@ function _checkTimeout(ops, direction) {
             }
         } else if (req.checkTimeout()) {
             if (direction === 'out') {
-                if (self.lastTimeoutTime) {
+                var now = self.timers.now();
+                if (self.lastTimeoutTime &&
+                    now > self.lastTimeoutTime + self.connectionStalePeriod
+                ) {
                     var err = errors.ConnectionStaleTimeoutError({
                         lastTimeoutTime: self.lastTimeoutTime
                     });
                     self.connection.timedOutEvent
                         .emit(self, err);
-                } else {
+                } else if (!self.lastTimeoutTime) {
                     self.lastTimeoutTime = self.timers.now();
                 }
                 

@@ -62,6 +62,7 @@ function TChannelConnectionBase(channel, direction, remoteAddr) {
         initTimeout: self.channel.initTimeout,
         timeoutCheckInterval: self.options.timeoutCheckInterval,
         timeoutFuzz: self.options.timeoutFuzz,
+        connectionStalePeriod: self.options.connectionStalePeriod,
         connection: self
     });
 
