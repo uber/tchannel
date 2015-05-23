@@ -191,7 +191,7 @@ TChannelConnection.prototype.onHandlerError = function onHandlerError(err) {
 TChannelConnection.prototype.handleReadFrame = function handleReadFrame(frame) {
     var self = this;
     if (!self.closing) {
-        self.lastTimeoutTime = 0;
+        self.ops.lastTimeoutTime = 0;
     }
     self.handler.handleFrame(frame, handledFrame);
     function handledFrame(err) {

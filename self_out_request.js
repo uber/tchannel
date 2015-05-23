@@ -86,7 +86,7 @@ function passRequestParts(args, isLast ) {
     var self = this;
     self.inreq.handleFrame(args);
     if (isLast) self.inreq.handleFrame(null);
-    if (!self.closing) self.lastTimeoutTime = 0;
+    if (!self.closing) self.conn.ops.lastTimeoutTime = 0;
 };
 
 module.exports.OutRequest = SelfOutRequest;
