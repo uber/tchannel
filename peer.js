@@ -199,10 +199,15 @@ TChannelPeer.prototype.addConnection = function addConnection(conn) {
         self.connections.unshift(conn);
     }
     conn.errorEvent.on(onConnectionError);
+    conn.closeEvent.on(onConnectionClose);
     return conn;
 
     function onConnectionError(/* err */) {
         // TODO: log?
+        self.removeConnection(conn);
+    }
+
+    function onConnectionClose() {
         self.removeConnection(conn);
     }
 };
