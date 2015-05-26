@@ -20,6 +20,7 @@
 
 from __future__ import absolute_import
 
+import copy
 
 import tornado
 import tornado.gen
@@ -28,6 +29,7 @@ from ..glossary import DEFAULT_TTL
 from ..messages.common import FlagsType
 from ..messages.common import StreamState
 from ..zipkin.trace import Trace
+from .stream import InMemStream
 from .util import get_arg
 
 
@@ -37,6 +39,8 @@ class Request(object):
     Request class is used to represent the CallRequestMessage at User's level.
     This is going to hide the protocol level message information.
     """
+    MAX_RETRY_TIMES = 5
+    TIMEOUT = 5  # 5 second
 
     # TODO decide which elements inside "message" object to expose to user.
     def __init__(
@@ -56,15 +60,36 @@ class Request(object):
         self.service = service
         self.tracing = tracing or Trace()
         # argstreams is a list of InMemStream/PipeStream objects
-        self.argstreams = argstreams
+        self.argstreams = argstreams or [InMemStream(),
+                                         InMemStream(),
+                                         InMemStream()]
         self.checksum = checksum
         self.id = id
         self.headers = headers or {}
         self.state = StreamState.init
         self.endpoint = ""
-        self.header = None
-        self.body = None
         self.scheme = scheme
+
+    def clone(self):
+        """deep clone request object"""
+        new_req = Request(
+            id=self.id,
+            flags=self.flags,
+            ttl=self.ttl,
+            tracing=self.tracing,
+            service=self.service,
+            checksum=self.checksum,
+            headers=copy.deepcopy(self.headers),
+            argstreams=[
+                self.argstreams[0].clone(),
+                self.argstreams[1].clone(),
+                self.argstreams[2].clone(),
+            ],
+            scheme=self.scheme,
+        )
+        new_req.state = self.state
+        new_req.endpoint = self.endpoint
+        return new_req
 
     @property
     def arg_scheme(self):

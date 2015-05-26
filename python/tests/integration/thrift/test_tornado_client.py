@@ -65,7 +65,7 @@ def test_protocol_error(tchannel_server, service):
     ).and_raise(ValueError("I was not defined in the IDL"))
 
     client = mk_client(service, tchannel_server.port)
-    with pytest.raises(errors.ProtocolException):
+    with pytest.raises(errors.ProtocolError):
         yield client.getItem("foo")
 
 

@@ -24,7 +24,7 @@ import pytest
 import tornado
 import tornado.gen
 
-from tchannel.errors import ProtocolException
+from tchannel.errors import ProtocolError
 from tchannel.messages.call_request import CallRequestMessage
 from tchannel.messages.call_request_continue import CallRequestContinueMessage
 from tchannel.messages.common import ChecksumType
@@ -78,7 +78,7 @@ def test_unexpected_error_from_handler(tchannel_server):
     )
     # set a wrong checksum
     callrequest.checksum = (ChecksumType.crc32c, 1)
-    with pytest.raises(ProtocolException):
+    with pytest.raises(ProtocolError):
         yield connection.send(callrequest)
 
 
@@ -120,7 +120,7 @@ def test_invalid_message_during_streaming(tchannel_server):
     callreqcontinue.checksum = (ChecksumType.crc32c, 1)
     yield connection._write(callreqcontinue)
 
-    with pytest.raises(ProtocolException) as e:
+    with pytest.raises(ProtocolError) as e:
         resp = yield resp_future
         yield resp.get_header()
         yield resp.get_body()
@@ -145,7 +145,7 @@ def test_continue_message_error(tchannel_server):
         ],
     )
 
-    with pytest.raises(ProtocolException) as e:
+    with pytest.raises(ProtocolError) as e:
         yield connection.send(callreqcontinue)
 
     assert (e.value.message ==

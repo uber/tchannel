@@ -23,7 +23,7 @@ from __future__ import absolute_import
 import logging
 
 from ..errors import InvalidChecksumError
-from ..errors import ProtocolException
+from ..errors import ProtocolError
 from ..errors import StreamingError
 from ..messages import RW
 from ..messages import Types
@@ -67,7 +67,7 @@ def build_raw_error_message(protocol_exception):
 def build_protocol_exception(message, message_id=None):
     """build protocol level error message based on Error object"""
 
-    error = ProtocolException(
+    error = ProtocolError(
         code=message.code,
         description=message.description,
         id=message_id,
