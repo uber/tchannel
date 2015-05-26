@@ -86,7 +86,12 @@ TChannelConnection.prototype.setupSocket = function setupSocket() {
     }
 
     function onSocketClose() {
-        self.resetAll(errors.SocketClosedError({reason: 'remote clossed'}));
+        self.resetAll(errors.SocketClosedError({
+            reason: 'remote closed',
+            remoteAddr: self.remoteAddr,
+            direction: self.direction,
+            remoteName: self.remoteName
+        }));
         if (self.remoteName === '0.0.0.0:0') {
             self.channel.peers.delete(self.remoteAddr);
         }
