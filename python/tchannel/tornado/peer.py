@@ -241,7 +241,6 @@ class Peer(object):
         'state',
         'host',
         'port',
-        'peer_group',
 
         '_out_conns',
         '_in_conns',
@@ -424,7 +423,10 @@ class PeerClientOperation(object):
     """Encapsulates client operations that can be performed against a peer."""
 
     def __init__(self, peer, service, arg_scheme=None,
-                 retry=None, parent_tracing=None, **kwargs):
+                 retry=None,
+                 parent_tracing=None,
+                 hostport=None,
+                 score_threshold=None):
         """Initialize a new PeerClientOperation.
 
         :param peer:
@@ -452,8 +454,8 @@ class PeerClientOperation(object):
 
         # keep all arguments for retry purpose.
         # not retry if hostport is set.
-        self._hostport = kwargs.get('hostport', None)
-        self._score_threshold = kwargs.get('score_threshold', None)
+        self._hostport = hostport
+        self._score_threshold = score_threshold
         # service name is not stored in peer because the same peer may be
         # used to call multiple services if it's being used for request
         # forwarding
