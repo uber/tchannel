@@ -30,6 +30,7 @@ var TChannelEndpointHandler = require('../endpoint-handler');
 
 var MAX_RELAY_AD_ATTEMPTS = 2;
 var RELAY_AD_RETRY_TIME = 2 * 1000;
+var RELAY_AD_TIMEOUT = 500;
 
 module.exports = HyperbahnHandler;
 
@@ -58,6 +59,9 @@ function HyperbahnHandler(options) {
         self.handleAdvertise);
     self.tchannelJSON.register(self, 'relay-ad', self,
         self.handleRelayAdvertise);
+
+    self.relayAdTimeout = options.relayAdTimeout ||
+        RELAY_AD_TIMEOUT;
 }
 util.inherits(HyperbahnHandler, TChannelEndpointHandler);
 
@@ -215,7 +219,7 @@ function sendRelayAdvertise(hostPort, services, callback) {
             self.tchannelJSON.send(self.channel.request({
                 host: hostPort,
                 serviceName: 'hyperbahn',
-                timeout: 100
+                timeout: self.relayAdTimeout
             }), 'relay-ad', null, {
                 services: services
             }, onResponse);
