@@ -136,13 +136,29 @@ RelayRequest.prototype.onError = function onError(err) {
         self.outres.sendError(codeName, err.message);
     } else {
         self.outres.sendError('UnexpectedError', err.message);
-        self.channel.logger.error('unexpected error while forwarding', {
-            error: err
-            // TODO context
-        });
+        self.logError(err);
     }
 
     // TODO: stat in some cases, e.g. declined / peer not available
+};
+
+RelayRequest.prototype.logError = function logError(err) {
+    var self = err;
+
+    var level = 'error';
+    if (err.type === 'tchannel.connection.reset' &&
+        (err.code === 'EPIPE' || err.code === 'ECONNRESET')
+    ) {
+        level = 'info';
+    }
+
+    self.channel.logger[level]('unexpected error while forwarding', {
+        error: err,
+        outRemoteAddr: self.outreq.remoteAddr,
+        inRemoteAddr: self.inreq.remoteAddr,
+        serviceName: self.outreq.serviceName,
+        outArg1: String(self.outreq.arg1)
+    });
 };
 
 function RelayHandler(channel) {
