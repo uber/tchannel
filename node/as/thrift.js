@@ -122,6 +122,7 @@ function register(channel, name, opts, handle) {
                     'Could not serialize thrift');
             }
 
+            res.headers.as = 'thrift';
             res.setOk(thriftRes.ok);
             res.send(
                 stringifyResult.value.head,
@@ -181,19 +182,26 @@ function send(request, endpoint, outHead, outBody, callback) {
         }
 
         var v = parseResult.value;
-        var resp;
-
-        if (res.ok) {
-            resp = new TChannelThriftResponse(res.ok, v.head, v.body);
-        } else {
-            resp = new TChannelThriftResponse(
-                res.ok, v.head, errors.ReconstructedError(v.body)
-            );
-        }
+        var resp = new TChannelThriftResponse(res, v);
 
         callback(null, resp);
     }
 };
+
+function TChannelThriftResponse(response, parseResult) {
+    var self = this;
+
+    self.ok = response.ok;
+    self.head = parseResult.head;
+    self.body = null;
+    self.headers = response.headers;
+
+    if (response.ok) {
+        self.body = parseResult.body;
+    } else {
+        self.body = errors.ReconstructedError(parseResult.body);
+    }
+}
 
 TChannelAsThrift.prototype._parse = function parse(opts) {
     var self = this;
@@ -329,13 +337,6 @@ TChannelAsThrift.prototype._stringify = function stringify(opts) {
         body: bodyRes.value
     });
 };
-
-function TChannelThriftResponse(ok, head, body) {
-    var self = this;
-    self.ok = ok;
-    self.head = head;
-    self.body = body;
-}
 
 // TODO proper Thriftify result union that reifies as the selected field.
 function onlyProperty(object) {
