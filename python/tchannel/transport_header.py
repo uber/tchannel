@@ -20,12 +20,16 @@
 
 
 class RetryType(object):
+    """ Retry Type in the protocol header
+    For details, look at protocol definition.
+        https://github.com/uber/tchannel/blob/master/docs/protocol.md
+    """
     NEVER = 'n'
     CONNECTION_ERROR = 'c'
     TIMEOUT = 't'
     CONNECTION_ERROR_AND_TIMEOUT = 'ct'
     TIMEOUT_AND_CONNECTION_ERROR = 'tc'
-    DEFAULT = 'c'
+    DEFAULT = CONNECTION_ERROR
 
 
 class ArgSchemeType(object):
@@ -33,7 +37,4 @@ class ArgSchemeType(object):
     JSON = 'json'
     HTTP = 'http'
     THRIFT = 'thrift'
-    DEFAULT = 'raw'
-
-
-transport_headers = ['as', 're']
+    DEFAULT = RAW

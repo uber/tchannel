@@ -39,8 +39,9 @@ class Request(object):
     Request class is used to represent the CallRequestMessage at User's level.
     This is going to hide the protocol level message information.
     """
-    MAX_RETRY_TIMES = 5
+    MAX_RETRY_TIMES = 3
     TIMEOUT = 5  # 5 second
+    RETRY_DELAY = 0.3  # 300 ms
 
     # TODO decide which elements inside "message" object to expose to user.
     def __init__(

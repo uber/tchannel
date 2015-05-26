@@ -44,7 +44,7 @@ def test_InMemStream():
     assert buf == "3"
 
     # check internal stream buffer.
-    assert len(stream.stream) == 0
+    assert len(stream._stream) == 0
 
     stream.close()
     with pytest.raises(StreamingError):

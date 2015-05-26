@@ -18,7 +18,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import copy
 from collections import deque
 
 import tornado
@@ -103,9 +102,9 @@ class InMemStream(Stream):
 
         :param buf: the buffer for the in memory stream
         """
-        self.stream = deque()
+        self._stream = deque()
         if buf:
-            self.stream.append(buf)
+            self._stream.append(buf)
         self.state = StreamState.init
         self._condition = Condition()
         self.auto_close = auto_close
@@ -116,21 +115,21 @@ class InMemStream(Stream):
         new_stream = self.__class__()
         new_stream.state = self.state
         new_stream.auto_close = self.auto_close
-        new_stream.stream = copy.deepcopy(self.stream)
+        new_stream._stream = deque(self._stream)
         return new_stream
 
     @tornado.gen.coroutine
     def read(self):
         if (self.state != StreamState.completed and
-                len(self.stream) == 0):
+                len(self._stream) == 0):
             yield self._condition.wait()
 
         if self.exception:
             raise self.exception
 
         chunk = ""
-        while len(self.stream) > 0 and len(chunk) < common.MAX_PAYLOAD_SIZE:
-            chunk += self.stream.popleft()
+        while len(self._stream) > 0 and len(chunk) < common.MAX_PAYLOAD_SIZE:
+            chunk += self._stream.popleft()
 
         raise tornado.gen.Return(chunk)
 
@@ -142,7 +141,7 @@ class InMemStream(Stream):
         if self.state == StreamState.completed:
             raise StreamingError("Stream has been closed.")
         if chunk:
-            self.stream.append(chunk)
+            self._stream.append(chunk)
             self._condition.notify()
 
     def set_exception(self, exception):

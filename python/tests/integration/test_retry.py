@@ -29,7 +29,7 @@ from tchannel.errors import ProtocolError
 from tchannel.errors import TChannelError
 from tchannel.errors import TimeoutError
 from tchannel.messages import ErrorCode
-from tchannel.theader import RetryType
+from tchannel.transport_header import RetryType
 from tchannel.tornado import Request
 from tchannel.tornado import TChannel
 from tchannel.tornado.peer import should_retry_on_error
@@ -42,7 +42,7 @@ def test_retry_timeout():
 
     @tornado.gen.coroutine
     def handler_error(request, response, proxy):
-        yield tornado.gen.sleep(3)
+        yield tornado.gen.sleep(2)
         response.connection.send_error(
             ErrorCode.busy,
             "retry",
@@ -53,7 +53,7 @@ def test_retry_timeout():
 
     tchannel = TChannel()
     tchannel_server = None
-    for i in range(5):
+    for i in range(3):
         tchannel_server = TChannel()
         tchannel_server.register(endpoint, 'raw', handler_error)
         tchannel_server.listen()
@@ -65,7 +65,7 @@ def test_retry_timeout():
             'tchannel.tornado.peer.should_retry_on_error',
             autospec=True)
     ) as mock_should_retry_on_error:
-        Request.TIMEOUT = 0.03
+
         mock_should_retry_on_error.return_value = True
         with pytest.raises(TimeoutError):
             yield tchannel.request(
@@ -77,7 +77,10 @@ def test_retry_timeout():
                 "test",
                 headers={
                     're': RetryType.CONNECTION_ERROR_AND_TIMEOUT
-                }
+                },
+                timeout_per_req=0.01,
+                retry_times=3,
+                retry_delay=0.01,
             )
 
 
@@ -98,7 +101,7 @@ def test_retry_on_error_fail():
 
     tchannel = TChannel()
     tchannel_server = None
-    for i in range(5):
+    for i in range(3):
         tchannel_server = TChannel()
         tchannel_server.register(endpoint, 'raw', handler_error)
         tchannel_server.listen()
@@ -119,7 +122,10 @@ def test_retry_on_error_fail():
                 "test",
                 headers={
                     're': RetryType.TIMEOUT_AND_CONNECTION_ERROR
-                }
+                },
+                timeout_per_req=0.01,
+                retry_times=3,
+                retry_delay=0.01,
             )
 
         assert mock_should_retry_on_error.called
@@ -148,8 +154,7 @@ def test_retry_on_error_success():
         response.set_exception(TChannelError("stop stream"))
 
     tchannel = TChannel()
-    tchannel_server = None
-    for i in range(4):
+    for i in range(2):
         tchannel_server = TChannel()
         tchannel_server.register(endpoint, 'raw', handler_error)
         tchannel_server.listen()
@@ -174,7 +179,10 @@ def test_retry_on_error_success():
             "test",
             headers={
                 're': RetryType.CONNECTION_ERROR_AND_TIMEOUT,
-            }
+            },
+            timeout_per_req=0.01,
+            retry_times=3,
+            retry_delay=0.01,
         )
 
         header = yield response.get_header()
