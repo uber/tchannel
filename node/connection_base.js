@@ -135,7 +135,14 @@ TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
     outOpKeys.forEach(function eachOutOp(id) {
         var req = requests.out[id];
         self.ops.removeReq(id);
-        err = errors.TChannelConnectionResetError(err);
+        err = errors.TChannelConnectionResetError(err, {
+            remoteAddr: self.remoteAddr,
+            direction: self.direction,
+            remoteName: self.remoteName,
+            reqRemoteAddr: req.remoteAddr,
+            serviceName: req.serviceName,
+            outArg1: String(req.arg1)
+        });
         req.errorEvent.emit(req, err);
     });
 
