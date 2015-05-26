@@ -145,7 +145,14 @@ RelayRequest.prototype.onError = function onError(err) {
 RelayRequest.prototype.logError = function logError(err) {
     var self = err;
 
-    self.channel.logger.error('unexpected error while forwarding', {
+    var level = 'error';
+    if (err.type === 'tchannel.connection.reset' &&
+        (err.code === 'EPIPE' || err.code === 'ECONNRESET')
+    ) {
+        level = 'info';
+    }
+
+    self.channel.logger[level]('unexpected error while forwarding', {
         error: err,
         outRemoteAddr: self.outreq.remoteAddr,
         inRemoteAddr: self.inreq.remoteAddr,
