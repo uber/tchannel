@@ -799,6 +799,7 @@ function allocThrift(cluster, options) {
     });
     var DoubleError = TypedError({
         type: 'double',
+        message: 'double',
         nameAsThrift: 'error'
     });
 
