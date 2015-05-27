@@ -24,7 +24,6 @@ import logging
 import os
 import socket
 import sys
-from Queue import Empty
 
 import tornado.gen
 import tornado.iostream
@@ -48,8 +47,10 @@ from .message_factory import build_protocol_exception
 
 try:
     import tornado.queues as queues  # included in 4.2
+    QueueEmpty = queues.QueueEmpty
 except ImportError:
     import toro as queues
+    from Queue import Empty as QueueEmpty
 
 log = logging.getLogger('tchannel')
 
@@ -142,7 +143,7 @@ class TornadoConnection(object):
             while True:
                 message = self._messages.get_nowait()
                 log.warn("Unconsumed message %s", message)
-        except Empty:
+        except QueueEmpty:
             pass
 
     def await(self):
