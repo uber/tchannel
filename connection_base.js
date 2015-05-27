@@ -76,7 +76,7 @@ inherits(TChannelConnectionBase, EventEmitter);
 TChannelConnectionBase.prototype.close = function close(callback) {
     var self = this;
 
-    self.resetAll(errors.SocketClosedError({reason: 'local close'}));
+    self.resetAll(errors.LocalSocketCloseError());
     callback();
 };
 
@@ -116,7 +116,10 @@ TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
     if (err.type && err.type.lastIndexOf('tchannel.socket', 0) < 0) {
         self.logger.warn('resetting connection', logInfo);
         self.errorEvent.emit(self, err);
-    } else if (err.type !== 'tchannel.socket-closed') {
+    } else if (
+        err.type !== 'tchannel.socket-closed' &&
+        err.type !== 'tchannel.socket-local-closed'
+    ) {
         logInfo.error = extend(err);
         logInfo.error.message = err.message;
         self.logger.info('resetting connection', logInfo);
@@ -135,14 +138,21 @@ TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
     outOpKeys.forEach(function eachOutOp(id) {
         var req = requests.out[id];
         self.ops.removeReq(id);
-        err = errors.TChannelConnectionResetError(err, {
+
+        var info = {
             remoteAddr: self.remoteAddr,
             direction: self.direction,
             remoteName: self.remoteName,
             reqRemoteAddr: req.remoteAddr,
             serviceName: req.serviceName,
             outArg1: String(req.arg1)
-        });
+        };
+        if (err.type === 'tchannel.socket-local-closed') {
+            err = errors.TChannelLocalResetError(err, info);
+        } else {
+            err = errors.TChannelConnectionResetError(err, info);
+        }
+
         req.errorEvent.emit(req, err);
     });
 
