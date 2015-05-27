@@ -204,8 +204,9 @@ def test_retry_on_error_success():
     (RetryType.CONNECTION_ERROR_AND_TIMEOUT, ErrorCode.bad_request, False),
     (RetryType.CONNECTION_ERROR, ErrorCode.fatal, True),
     (RetryType.TIMEOUT, ErrorCode.fatal, False),
-
-])
+],
+    ids=lambda arg: str(arg)
+)
 def test_should_retry_on_error(retry_flag, error_code, result):
     request = Request(
         headers={'re': retry_flag},
