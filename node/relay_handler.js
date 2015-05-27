@@ -143,7 +143,7 @@ RelayRequest.prototype.onError = function onError(err) {
 };
 
 RelayRequest.prototype.logError = function logError(err) {
-    var self = err;
+    var self = this;
 
     var level = 'error';
     if (err.type === 'tchannel.connection.reset' &&
