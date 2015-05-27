@@ -24,6 +24,7 @@ import logging
 import os
 import socket
 import sys
+from Queue import Empty
 
 import tornado.gen
 import tornado.iostream
@@ -141,7 +142,7 @@ class TornadoConnection(object):
             while True:
                 message = self._messages.get_nowait()
                 log.warn("Unconsumed message %s", message)
-        except queues.Empty:
+        except Empty:
             pass
 
     def await(self):
