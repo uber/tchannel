@@ -32,7 +32,6 @@ from tchannel.messages import ErrorCode
 from tchannel.transport_header import RetryType
 from tchannel.tornado import Request
 from tchannel.tornado import TChannel
-from tchannel.tornado.peer import should_retry_on_error
 from tchannel.tornado.stream import InMemStream
 
 
@@ -62,7 +61,7 @@ def test_retry_timeout():
     hostport = tchannel_server.hostport
     with (
         patch(
-            'tchannel.tornado.peer.should_retry_on_error',
+            'tchannel.tornado.Request.should_retry_on_error',
             autospec=True)
     ) as mock_should_retry_on_error:
 
@@ -109,7 +108,7 @@ def test_retry_on_error_fail():
 
     with (
         patch(
-            'tchannel.tornado.peer.should_retry_on_error',
+            'tchannel.tornado.Request.should_retry_on_error',
             autospec=True)
     ) as mock_should_retry_on_error:
         mock_should_retry_on_error.return_value = True
@@ -121,7 +120,7 @@ def test_retry_on_error_fail():
                 "test",
                 "test",
                 headers={
-                    're': RetryType.TIMEOUT_AND_CONNECTION_ERROR
+                    're': RetryType.CONNECTION_ERROR_AND_TIMEOUT
                 },
                 timeout_per_req=0.01,
                 retry_times=3,
@@ -167,7 +166,7 @@ def test_retry_on_error_success():
 
     with (
         patch(
-            'tchannel.tornado.peer.should_retry_on_error',
+            'tchannel.tornado.Request.should_retry_on_error',
             autospec=True)
     ) as mock_should_retry_on_error:
         mock_should_retry_on_error.return_value = True
@@ -196,21 +195,21 @@ def test_retry_on_error_success():
     (RetryType.CONNECTION_ERROR, ErrorCode.busy, True),
     (RetryType.CONNECTION_ERROR, ErrorCode.declined, True),
     (RetryType.CONNECTION_ERROR, ErrorCode.timeout, False),
-    (RetryType.TIMEOUT_AND_CONNECTION_ERROR, ErrorCode.timeout, True),
+    (RetryType.CONNECTION_ERROR_AND_TIMEOUT, ErrorCode.timeout, True),
     (RetryType.TIMEOUT, ErrorCode.unexpected, False),
     (RetryType.TIMEOUT, ErrorCode.network_error, False),
     (RetryType.CONNECTION_ERROR, ErrorCode.network_error, True),
     (RetryType.NEVER, ErrorCode.network_error, False),
     (RetryType.CONNECTION_ERROR_AND_TIMEOUT, ErrorCode.cancelled, False),
-    (RetryType.TIMEOUT_AND_CONNECTION_ERROR, ErrorCode.bad_request, False),
+    (RetryType.CONNECTION_ERROR_AND_TIMEOUT, ErrorCode.bad_request, False),
+    (RetryType.CONNECTION_ERROR, ErrorCode.fatal, True),
+    (RetryType.TIMEOUT, ErrorCode.fatal, False),
 
-],
-    ids=lambda arg: str(len(arg))
-)
+])
 def test_should_retry_on_error(retry_flag, error_code, result):
     request = Request(
         headers={'re': retry_flag},
     )
 
     error = ProtocolError(code=error_code, description="retry")
-    assert should_retry_on_error(request, error) == result
+    assert request.should_retry_on_error(error) == result

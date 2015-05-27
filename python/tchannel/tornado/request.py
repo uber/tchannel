@@ -22,12 +22,15 @@ from __future__ import absolute_import
 
 import copy
 
+
 import tornado
 import tornado.gen
 
+from ..messages import ErrorCode
 from ..glossary import DEFAULT_TTL
 from ..messages.common import FlagsType
 from ..messages.common import StreamState
+from ..transport_header import RetryType
 from ..zipkin.trace import Trace
 from .stream import InMemStream
 from .util import get_arg
@@ -40,7 +43,7 @@ class Request(object):
     This is going to hide the protocol level message information.
     """
     MAX_RETRY_TIMES = 3
-    TIMEOUT = 5  # 5 second
+    TIMEOUT = 1  # 1 second
     RETRY_DELAY = 0.3  # 300 ms
 
     # TODO decide which elements inside "message" object to expose to user.
@@ -146,3 +149,33 @@ class Request(object):
         :return: the argstream of body
         """
         return self.argstreams[2]
+
+    def is_streaming_request(self):
+        """check request is stream request or not"""
+        arg2 = self.argstreams[1]
+        arg3 = self.argstreams[2]
+        return not ((isinstance(arg2, InMemStream) and
+                    isinstance(arg3, InMemStream) and
+                    arg2.state == StreamState.completed and
+                    arg3.state == StreamState.completed))
+
+    def should_retry_on_error(self, error):
+        """rules for retry"""
+
+        retry_flag = self.headers.get('re', RetryType.DEFAULT)
+
+        if retry_flag == RetryType.NEVER:
+            return False
+
+        if error.code in [ErrorCode.bad_request, ErrorCode.cancelled]:
+            return False
+        elif error.code in [ErrorCode.busy, ErrorCode.declined]:
+            return True
+        elif error.code is ErrorCode.timeout:
+            return retry_flag is not RetryType.CONNECTION_ERROR
+        elif error.code in [ErrorCode.network_error,
+                            ErrorCode.fatal,
+                            ErrorCode.unexpected]:
+            return retry_flag is not RetryType.TIMEOUT
+        else:
+            return False

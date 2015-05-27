@@ -112,7 +112,7 @@ class InMemStream(Stream):
         self.exception = None
 
     def clone(self):
-        new_stream = self.__class__()
+        new_stream = InMemStream()
         new_stream.state = self.state
         new_stream.auto_close = self.auto_close
         new_stream._stream = deque(self._stream)

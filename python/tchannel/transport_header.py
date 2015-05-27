@@ -28,7 +28,6 @@ class RetryType(object):
     CONNECTION_ERROR = 'c'
     TIMEOUT = 't'
     CONNECTION_ERROR_AND_TIMEOUT = 'ct'
-    TIMEOUT_AND_CONNECTION_ERROR = 'tc'
     DEFAULT = CONNECTION_ERROR
 
 

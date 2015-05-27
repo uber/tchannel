@@ -31,8 +31,6 @@ from ..errors import NoAvailablePeerError
 from ..errors import ProtocolError
 from ..errors import TimeoutError
 from ..handler import CallableRequestHandler
-from ..messages import ErrorCode
-from ..messages.common import StreamState
 from ..transport_header import ArgSchemeType
 from ..transport_header import RetryType
 from ..zipkin.annotation import Endpoint
@@ -533,7 +531,7 @@ class PeerClientOperation(object):
         # black list to record all used peers, so they aren't chosen again.
         blacklist = set()
         # only retry on non-stream request
-        if is_streaming_request(original_request):
+        if original_request.is_streaming_request():
             connection = yield self.peer.connect()
             message_id = connection.next_message_id()
             original_request.id = message_id
@@ -542,7 +540,7 @@ class PeerClientOperation(object):
             req = original_request
             # mac number of times to retry 5.
             peer = self.peer
-            for i in range(retry_times):
+            for num_of_retry in range(retry_times):
                 try:
                     req = original_request.clone()
                     response = yield self._retry_send(
@@ -550,10 +548,10 @@ class PeerClientOperation(object):
                     break
                 except (ProtocolError, TimeoutError) as e:
                     req.set_exception(e)
-                    if not should_retry_on_error(req, e) or self._hostport:
+                    if not req.should_retry_on_error(e) or self._hostport:
                         raise
 
-                    if i != retry_times - 1:
+                    if num_of_retry != retry_times - 1:
                         # delay further retry
                         yield gen.sleep(retry_delay)
                     else:
@@ -582,37 +580,6 @@ class PeerClientOperation(object):
             response = yield response_future
 
         raise gen.Return(response)
-
-
-def should_retry_on_error(request, error):
-    """rules for retry"""
-
-    retry_flag = request.headers.get('re', RetryType.DEFAULT)
-
-    if retry_flag == RetryType.NEVER:
-        return False
-
-    if error.code in [ErrorCode.bad_request, ErrorCode.cancelled]:
-        return False
-    elif error.code in [ErrorCode.busy, ErrorCode.declined]:
-        return True
-    elif error.code is ErrorCode.timeout:
-        return retry_flag is not RetryType.CONNECTION_ERROR
-    elif error.code in [ErrorCode.network_error, ErrorCode.unexpected]:
-        return retry_flag is not RetryType.TIMEOUT
-    else:
-        log.error("unknown error type in request retry!")
-        return False
-
-
-def is_streaming_request(request):
-    """check request is stream request or not"""
-    arg2 = request.argstreams[1]
-    arg3 = request.argstreams[2]
-    return not ((isinstance(arg2, InMemStream) and
-                isinstance(arg3, InMemStream) and
-                arg2.state == StreamState.completed and
-                arg3.state == StreamState.completed))
 
 
 def maybe_stream(s):
