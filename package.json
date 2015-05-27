@@ -22,7 +22,7 @@
   "dependencies": {
     "bufrw": "^0.9.24",
     "crc": "^3.2.1",
-    "error": "^6.2.0",
+    "error": "6.2.0",
     "farmhash": "^0.2.0",
     "hexer": "^1.4.5",
     "json-stringify-safe": "^5.0.0",
