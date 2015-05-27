@@ -195,6 +195,11 @@ module.exports.JSONHeadStringifyError = WrappedError({
     direction: null
 });
 
+module.exports.LocalSocketCloseError = TypedError({
+    type: 'tchannel.socket-local-closed',
+    message: 'tchannel: Connection was manually closed.'
+});
+
 module.exports.MaxPendingError = TypedError({
     type: 'tchannel.max-pending',
     message: 'maximum pending requests exceeded (limit was {pending})',
@@ -331,6 +336,11 @@ module.exports.TChannelListenError = WrappedError({
     message: 'tchannel: {origMessage}',
     requestedPort: null,
     host: null
+});
+
+module.exports.TChannelLocalResetError = WrappedError({
+    type: 'tchannel.local.reset',
+    message: 'tchannel: {causeMessage}'
 });
 
 module.exports.TChannelReadProtocolError = WrappedError({

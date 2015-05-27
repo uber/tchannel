@@ -319,7 +319,7 @@ TChannelConnection.prototype.close = function close(callback) {
         callback();
     } else {
         self.socket.once('close', callback);
-        self.resetAll(errors.SocketClosedError({reason: 'local close'}));
+        self.resetAll(errors.LocalSocketCloseError());
         self.socket.destroy();
     }
 };
