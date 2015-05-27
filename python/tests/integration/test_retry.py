@@ -35,40 +35,50 @@ from tchannel.tornado import TChannel
 from tchannel.tornado.stream import InMemStream
 
 
-@pytest.mark.gen_test(timeout=10)
+@tornado.gen.coroutine
+def handler_error(request, response, proxy):
+    yield tornado.gen.sleep(0.01)
+    response.connection.send_error(
+        ErrorCode.busy,
+        "retry",
+        response.id,
+    )
+    # stop normal response streams
+    response.set_exception(TChannelError("stop stream"))
+
+
+@tornado.gen.coroutine
+def handler_success(request, response, proxy):
+    response.set_body_s(InMemStream("success"))
+
+
+def server(endpoint):
+    tchannel_server = TChannel()
+    tchannel_server.register(endpoint, 'raw', handler_error)
+    tchannel_server.listen()
+    return tchannel_server
+
+
+def chain(number_of_peers, endpoint):
+    tchannel = TChannel()
+    for i in range(number_of_peers):
+        tchannel.peers.get(server(endpoint).hostport)
+
+    return tchannel
+
+
+@pytest.mark.gen_test
 def test_retry_timeout():
     endpoint = b'tchannelretrytest'
-
-    @tornado.gen.coroutine
-    def handler_error(request, response, proxy):
-        yield tornado.gen.sleep(2)
-        response.connection.send_error(
-            ErrorCode.busy,
-            "retry",
-            response.id,
-        )
-        # stop normal response streams
-        response.set_exception(TChannelError("stop stream"))
-
-    tchannel = TChannel()
-    tchannel_server = None
-    for i in range(3):
-        tchannel_server = TChannel()
-        tchannel_server.register(endpoint, 'raw', handler_error)
-        tchannel_server.listen()
-        tchannel.peers.get(tchannel_server.hostport)
-
-    hostport = tchannel_server.hostport
+    tchannel = chain(3, endpoint)
     with (
         patch(
             'tchannel.tornado.Request.should_retry_on_error',
             autospec=True)
     ) as mock_should_retry_on_error:
-
         mock_should_retry_on_error.return_value = True
         with pytest.raises(TimeoutError):
             yield tchannel.request(
-                hostport,
                 score_threshold=0,
             ).send(
                 endpoint,
@@ -77,7 +87,7 @@ def test_retry_timeout():
                 headers={
                     're': RetryType.CONNECTION_ERROR_AND_TIMEOUT
                 },
-                timeout_per_req=0.01,
+                timeout_per_req=0.005,
                 retry_times=3,
                 retry_delay=0.01,
             )
@@ -86,25 +96,7 @@ def test_retry_timeout():
 @pytest.mark.gen_test
 def test_retry_on_error_fail():
     endpoint = b'tchannelretrytest'
-
-    @tornado.gen.coroutine
-    def handler_error(request, response, proxy):
-        response.connection.send_error(
-            ErrorCode.busy,
-            "retry",
-            response.id,
-        )
-
-        # stop normal response streams
-        response.set_exception(TChannelError("stop stream"))
-
-    tchannel = TChannel()
-    tchannel_server = None
-    for i in range(3):
-        tchannel_server = TChannel()
-        tchannel_server.register(endpoint, 'raw', handler_error)
-        tchannel_server.listen()
-        tchannel.peers.get(tchannel_server.hostport)
+    tchannel = chain(3, endpoint)
 
     with (
         patch(
@@ -122,7 +114,7 @@ def test_retry_on_error_fail():
                 headers={
                     're': RetryType.CONNECTION_ERROR_AND_TIMEOUT
                 },
-                timeout_per_req=0.01,
+                timeout_per_req=0.02,
                 retry_times=3,
                 retry_delay=0.01,
             )
@@ -136,28 +128,7 @@ def test_retry_on_error_fail():
 def test_retry_on_error_success():
 
     endpoint = b'tchannelretrytest'
-
-    @tornado.gen.coroutine
-    def handler_success(request, response, proxy):
-        response.set_body_s(InMemStream("success"))
-
-    @tornado.gen.coroutine
-    def handler_error(request, response, proxy):
-        response.connection.send_error(
-            ErrorCode.busy,
-            "retry",
-            response.id,
-        )
-
-        # stop normal response streams
-        response.set_exception(TChannelError("stop stream"))
-
-    tchannel = TChannel()
-    for i in range(2):
-        tchannel_server = TChannel()
-        tchannel_server.register(endpoint, 'raw', handler_error)
-        tchannel_server.listen()
-        tchannel.peers.get(tchannel_server.hostport)
+    tchannel = chain(2, endpoint)
 
     tchannel_success = TChannel()
     tchannel_success.register(endpoint, 'raw', handler_success)
