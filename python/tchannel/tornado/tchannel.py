@@ -198,6 +198,7 @@ class TChannel(object):
         # on the Thrift library. This function is usable only if the Thrift
         # library is installed.
         thrift.register(self._handler, service_module, handler, **kwargs)
+        return handler
 
     def register(self, endpoint, scheme=None, handler=None, **kwargs):
         """Register a handler with this TChannel.
