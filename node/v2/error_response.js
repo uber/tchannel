@@ -66,6 +66,7 @@ CodeNames[Codes.ProtocolError] = 'protocol error';
 var CodeErrors = Object.create(null);
 CodeErrors[Codes.Timeout] = TypedError({
     type: 'tchannel.timeout',
+    message: 'TChannel timeout',
     isErrorFrame: true,
     codeName: 'Timeout',
     errorCode: Codes.Timeout,
@@ -73,6 +74,7 @@ CodeErrors[Codes.Timeout] = TypedError({
 });
 CodeErrors[Codes.Cancelled] = TypedError({
     type: 'tchannel.canceled',
+    message: 'TChannel canceled',
     isErrorFrame: true,
     codeName: 'Cancelled',
     errorCode: Codes.Cancelled,
@@ -80,6 +82,7 @@ CodeErrors[Codes.Cancelled] = TypedError({
 });
 CodeErrors[Codes.Busy] = TypedError({
     type: 'tchannel.busy',
+    message: 'TChannel busy',
     isErrorFrame: true,
     codeName: 'Busy',
     errorCode: Codes.Busy,
@@ -87,6 +90,7 @@ CodeErrors[Codes.Busy] = TypedError({
 });
 CodeErrors[Codes.Declined] = TypedError({
     type: 'tchannel.declined',
+    message: 'TChannel declined',
     isErrorFrame: true,
     codeName: 'Declined',
     errorCode: Codes.Declined,
@@ -94,6 +98,7 @@ CodeErrors[Codes.Declined] = TypedError({
 });
 CodeErrors[Codes.UnexpectedError] = TypedError({
     type: 'tchannel.unexpected',
+    message: 'TChannel unexpected error',
     isErrorFrame: true,
     codeName: 'UnexpectedError',
     errorCode: Codes.UnexpectedError,
@@ -101,6 +106,7 @@ CodeErrors[Codes.UnexpectedError] = TypedError({
 });
 CodeErrors[Codes.BadRequest] = TypedError({
     type: 'tchannel.bad-request',
+    message: 'TChannel bad request',
     isErrorFrame: true,
     codeName: 'BadRequest',
     errorCode: Codes.BadRequest,
@@ -108,6 +114,7 @@ CodeErrors[Codes.BadRequest] = TypedError({
 });
 CodeErrors[Codes.NetworkError] = TypedError({
     type: 'tchannel.network',
+    message: 'TChannel network error',
     isErrorFrame: true,
     codeName: 'NetworkError',
     errorCode: Codes.NetworkError,
@@ -115,6 +122,7 @@ CodeErrors[Codes.NetworkError] = TypedError({
 });
 CodeErrors[Codes.ProtocolError] = TypedError({
     type: 'tchannel.protocol',
+    message: 'TChannel protocol error',
     isErrorFrame: true,
     codeName: 'ProtocolError',
     errorCode: Codes.ProtocolError,

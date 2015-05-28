@@ -99,6 +99,7 @@ allocCluster.test('getting a not ok response', {
             body: {
                 message: 'my error',
                 type: 'my-error',
+                fullType: 'my-error',
                 someField: 'some field',
                 name: 'MyErrorError'
             }
