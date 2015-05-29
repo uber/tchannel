@@ -453,10 +453,6 @@ module.exports.classify = function classify(err) {
         case 'tchannel.connection-stale.timeout':
             return 'Timeout';
 
-        case 'tchannel.init.call-request-before-init-request':
-        case 'tchannel.init.call-request-cont-before-init-request':
-        case 'tchannel.init.call-response-before-init-response':
-        case 'tchannel.init.call-response-cont-before-init-response':
         case 'tchannel-handler.json.invalid-body':
         case 'tchannel-json-handler.parse-error.body-failed':
         case 'tchannel-json-handler.stringify-error.body-failed':
@@ -475,6 +471,10 @@ module.exports.classify = function classify(err) {
         case 'tchannel.duplicate-header-key':
             return 'BadRequest';
 
+        case 'tchannel.init.call-request-before-init-request':
+        case 'tchannel.init.call-request-cont-before-init-request':
+        case 'tchannel.init.call-response-before-init-response':
+        case 'tchannel.init.call-response-cont-before-init-response':
         case 'tchannel.init.duplicate-init-request':
         case 'tchannel.init.duplicate-init-response':
         case 'tchannel.init.send-call-request-before-indentified':
