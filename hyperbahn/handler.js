@@ -25,6 +25,7 @@
 var assert = require('assert');
 var util = require('util');
 
+var Errors = require('../errors.js');
 var TChannelJSON = require('../as/json');
 var TChannelEndpointHandler = require('../endpoint-handler');
 
@@ -230,8 +231,10 @@ function sendRelayAdvertise(hostPort, services, callback) {
                 return callback(null, null);
             }
 
+            var codeName = Errors.classify(err);
+
             if (attempts <= MAX_RELAY_AD_ATTEMPTS && err &&
-                err.type === 'tchannel.socket'
+                codeName === 'NetworkError'
             ) {
                 setTimeout(tryRequest, RELAY_AD_RETRY_TIME);
             } else {
@@ -240,6 +243,7 @@ function sendRelayAdvertise(hostPort, services, callback) {
                     exitNode: hostPort,
                     services: services,
                     err: err,
+                    codeName: codeName,
                     responseBody: response && response.body
                 });
 
