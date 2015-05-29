@@ -411,7 +411,6 @@ module.exports.ThriftHeadStringifyError = WrappedError({
     direction: null
 });
 
-
 module.exports.TopLevelRegisterError = TypedError({
     type: 'tchannel.top-level-register',
     message: 'Cannot register endpoints points on top-level channel.\n' +
@@ -445,33 +444,70 @@ module.exports.classify = function classify(err) {
         case 'tchannel.max-pending-for-service':
             return 'Declined';
 
-        case 'tchannel.timeout':
+        case 'tchannel.socket-local-closed':
+        case 'tchannel.local.reset':
+            return 'Cancelled';
+
         case 'tchannel.request.timeout':
         case 'tchannel.connection.timeout':
         case 'tchannel.connection-stale.timeout':
             return 'Timeout';
 
-        case 'tchannel-handler.parse-error.body-failed':
-        case 'tchannel-handler.parse-error.head-failed':
+        case 'tchannel-handler.json.invalid-body':
+        case 'tchannel-json-handler.parse-error.body-failed':
+        case 'tchannel-json-handler.parse-error.head-failed':
+        case 'tchannel.request-frame-state':
+        case 'tchannel.request-already-done':
+        case 'tchannel-thrift-handler.parse-error.body-failed':
+        case 'tchannel-thrift-handler.parse-error.head-failed':
         case 'tchannel.checksum':
         case 'tchannel.duplicate-header-key':
+        case 'tchannel.null-key':
+        case 'tchannel.arg1-over-length-limit':
             return 'BadRequest';
 
+        case 'tchannel.init.call-request-before-init-request':
+        case 'tchannel.init.call-request-cont-before-init-request':
+        case 'tchannel.init.call-response-before-init-response':
+        case 'tchannel.init.call-response-cont-before-init-response':
+        case 'tchannel.init.duplicate-init-request':
+        case 'tchannel.init.duplicate-init-response':
+        case 'tchannel.init.send-call-request-before-indentified':
+        case 'tchannel.init.send-call-request-cont-before-indentified':
+        case 'tchannel.init.send-call-response-before-indentified':
+        case 'tchannel.init.send-call-response-cont-before-indentified':
         case 'tchannel.arg-chunk.gap':
         case 'tchannel.arg-chunk.out-of-order':
-        case 'tchannel.invalid-code-string':
         case 'tchannel.invalid-error-code':
         case 'tchannel.invalid-frame-type':
         case 'tchannel.missing-init-header':
-        case 'tchannel.null-key':
         case 'tchannel.protocol.read-failed':
         case 'tchannel.protocol.write-failed':
         case 'tchannel.unhandled-frame-type':
             return 'ProtocolError';
 
+        case 'tchannel.connection.close':
+        case 'tchannel.connection.reset':
         case 'tchannel.socket':
         case 'tchannel.socket-closed':
             return 'NetworkError';
+
+        case 'tchannel-json-handler.stringify-error.body-failed':
+        case 'tchannel-json-handler.stringify-error.head-failed':
+        case 'tchannel-thrift-handler.stringify-error.body-failed':
+        case 'tchannel-thrift-handler.stringify-error.head-failed':
+        case 'tchannel.response-already-done':
+        case 'tchannel.response-already-started':
+        case 'tchannel.response-frame-state':
+        case 'tchannel.invalid-argument':
+        case 'tchannel.invalid-handler':
+        case 'tchannel.invalid-handler.for-registration':
+        case 'tchannel.hydrated-error.default-type':
+        case 'tchannel.server.listen-failed':
+        case 'tchannel.top-level-register':
+        case 'tchannel.top-level-request':
+        case 'tchannel.unimplemented-method':
+            return 'UnexpectedError';
 
         default:
             return null;

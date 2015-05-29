@@ -118,8 +118,7 @@ Test.prototype.newClient = function (id, callback) {
                         self.readyLatency.update(Date.now() - newClient.createTime);
                         callback();
                     });
-            })
-            
+            });
     });
 };
 
