@@ -462,6 +462,7 @@ module.exports.classify = function classify(err) {
         case 'tchannel-thrift-handler.parse-error.head-failed':
         case 'tchannel.checksum':
         case 'tchannel.duplicate-header-key':
+        case 'tchannel.null-key':
             return 'BadRequest';
 
         case 'tchannel.init.call-request-before-init-request':
@@ -480,7 +481,6 @@ module.exports.classify = function classify(err) {
         case 'tchannel.invalid-error-code':
         case 'tchannel.invalid-frame-type':
         case 'tchannel.missing-init-header':
-        case 'tchannel.null-key':
         case 'tchannel.protocol.read-failed':
         case 'tchannel.protocol.write-failed':
         case 'tchannel.unhandled-frame-type':
