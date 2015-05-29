@@ -131,34 +131,38 @@ RelayRequest.prototype.onResponse = function onResponse(res) {
 RelayRequest.prototype.onError = function onError(err) {
     var self = this;
     if (!self.createOutResponse()) return;
-    var codeName = errors.classify(err);
-    if (codeName) {
-        self.outres.sendError(codeName, err.message);
-    } else {
-        self.outres.sendError('UnexpectedError', err.message);
-        self.logError(err);
-    }
+    var codeName = errors.classify(err) || 'UnexpectedError';
 
+    self.outres.sendError(codeName, err.message);
+    self.logError(err, codeName);
     // TODO: stat in some cases, e.g. declined / peer not available
 };
 
-RelayRequest.prototype.logError = function logError(err) {
+RelayRequest.prototype.logError = function logError(err, codeName) {
     var self = this;
 
     var level = 'error';
-    if (err.type === 'tchannel.connection.reset' &&
-        (err.code === 'EPIPE' || err.code === 'ECONNRESET')
-    ) {
-        level = 'info';
+    if (err.isErrorFrame) {
+        level = 'warn';
+    }
+    if (codeName === 'NetworkError') {
+        level = 'warn';
     }
 
-    self.channel.logger[level]('unexpected error while forwarding', {
+    var logger = self.channel.logger;
+    var logOptions = {
         error: err,
         outRemoteAddr: self.outreq.remoteAddr,
         inRemoteAddr: self.inreq.remoteAddr,
         serviceName: self.outreq.serviceName,
         outArg1: String(self.outreq.arg1)
-    });
+    };
+
+    if (level === 'error') {
+        logger.error('unexpected error while forwarding', logOptions);
+    } else if (level === 'warn') {
+        logger.warn('expected error while forwarding', logOptions);
+    }
 };
 
 function RelayHandler(channel) {
