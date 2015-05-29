@@ -373,26 +373,23 @@ TChannelRequest.prototype.shouldRetryError = function shouldRetryError(err) {
     }
 
     if (err) {
-        switch (err.type) {
-            case 'tchannel.bad-request':
-            case 'tchannel.canceled':
-            case 'tchannel.connection.reset':
+        var codeName = errors.classify(err);
+
+        switch (codeName) {
+            case 'BadRequest':
+            case 'Cancelled':
                 return false;
 
-            case 'tchannel.busy':
-            case 'tchannel.declined':
+            case 'Busy':
+            case 'Declined':
                 return true;
 
-            case 'tchannel.timeout':
-            case 'tchannel.request.timeout':
-            case 'tchannel.connection.timeout':
+            case 'Timeout':
                 return !!self.options.retryFlags.onTimeout;
 
-            case 'tchannel.socket':
-            case 'tchannel.socket-closed':
-            case 'tchannel.network':
-            case 'tchannel.protocol':
-            case 'tchannel.unexpected':
+            case 'NetworkError':
+            case 'ProtocolError':
+            case 'UnexpectedError':
                 return !!self.options.retryFlags.onConnectionError;
 
             default:
