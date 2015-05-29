@@ -455,16 +455,9 @@ module.exports.classify = function classify(err) {
 
         case 'tchannel-handler.json.invalid-body':
         case 'tchannel-json-handler.parse-error.body-failed':
-        case 'tchannel-json-handler.stringify-error.body-failed':
         case 'tchannel-json-handler.parse-error.head-failed':
-        case 'tchannel-json-handler.stringify-error.head-failed':
-        case 'tchannel-thrift-handler.stringify-error.body-failed':
-        case 'tchannel-thrift-handler.stringify-error.head-failed':
         case 'tchannel.request-frame-state':
         case 'tchannel.request-already-done':
-        case 'tchannel.response-already-done':
-        case 'tchannel.response-already-started':
-        case 'tchannel.response-frame-state':
         case 'tchannel-thrift-handler.parse-error.body-failed':
         case 'tchannel-thrift-handler.parse-error.head-failed':
         case 'tchannel.checksum':
@@ -499,6 +492,13 @@ module.exports.classify = function classify(err) {
         case 'tchannel.socket-closed':
             return 'NetworkError';
 
+        case 'tchannel-json-handler.stringify-error.body-failed':
+        case 'tchannel-json-handler.stringify-error.head-failed':
+        case 'tchannel-thrift-handler.stringify-error.body-failed':
+        case 'tchannel-thrift-handler.stringify-error.head-failed':
+        case 'tchannel.response-already-done':
+        case 'tchannel.response-already-started':
+        case 'tchannel.response-frame-state':
         case 'tchannel.invalid-argument':
         case 'tchannel.invalid-handler':
         case 'tchannel.invalid-handler.for-registration':
