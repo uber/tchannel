@@ -141,27 +141,55 @@ RelayRequest.prototype.onError = function onError(err) {
 RelayRequest.prototype.logError = function logError(err, codeName) {
     var self = this;
 
-    var level = 'error';
-    if (err.isErrorFrame) {
-        level = 'warn';
+    var level;
+    switch (codeName) {
+        case 'ProtocolError':
+        case 'UnexpectedError':
+            level = 'error';
+            break;
+
+        case 'NetworkError':
+        case 'Cancelled':
+        case 'Declined':
+        case 'Busy':
+            level = 'warn';
+            break;
+
+        case 'BadRequest':
+        case 'Timeout':
+            level = 'info';
+            break;
+
     }
-    if (codeName === 'NetworkError') {
+
+    if (level === 'error' && err.isErrorFrame) {
         level = 'warn';
     }
 
     var logger = self.channel.logger;
     var logOptions = {
         error: err,
+        isErrorFrame: err.isErrorFrame,
         outRemoteAddr: self.outreq.remoteAddr,
         inRemoteAddr: self.inreq.remoteAddr,
         serviceName: self.outreq.serviceName,
         outArg1: String(self.outreq.arg1)
     };
 
-    if (level === 'error') {
-        logger.error('unexpected error while forwarding', logOptions);
-    } else if (level === 'warn') {
-        logger.warn('expected error while forwarding', logOptions);
+    if (err.isErrorFrame) {
+        if (level === 'warn') {
+            logger.warn('forwarding error frame', logOptions);
+        } else if (level === 'info') {
+            logger.info('forwarding expected error frame', logOptions);
+        }
+    } else {
+        if (level === 'error') {
+            logger.error('unexpected error while forwarding', logOptions);
+        } else if (level === 'warn') {
+            logger.warn('error while forwarding', logOptions);
+        } else if (level === 'info') {
+            logger.info('expected error while forwarding', logOptions);
+        }
     }
 };
 
