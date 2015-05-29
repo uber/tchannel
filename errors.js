@@ -463,6 +463,7 @@ module.exports.classify = function classify(err) {
         case 'tchannel.checksum':
         case 'tchannel.duplicate-header-key':
         case 'tchannel.null-key':
+        case 'tchannel.arg1-over-length-limit':
             return 'BadRequest';
 
         case 'tchannel.init.call-request-before-init-request':
@@ -475,7 +476,6 @@ module.exports.classify = function classify(err) {
         case 'tchannel.init.send-call-request-cont-before-indentified':
         case 'tchannel.init.send-call-response-before-indentified':
         case 'tchannel.init.send-call-response-cont-before-indentified':
-        case 'tchannel.arg1-over-length-limit':
         case 'tchannel.arg-chunk.gap':
         case 'tchannel.arg-chunk.out-of-order':
         case 'tchannel.invalid-error-code':
