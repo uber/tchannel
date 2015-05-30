@@ -21,48 +21,45 @@ package tchannel
 // THE SOFTWARE.
 
 import (
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"golang.org/x/net/context"
 	"net"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"golang.org/x/net/context"
 )
 
-func serverBusy(ctx context.Context, call *InboundCall) {
+func testHandlerFunc(t *testing.T, f func(t *testing.T, ctx context.Context, call *InboundCall)) Handler {
+	return HandlerFunc(func(ctx context.Context, call *InboundCall) {
+		f(t, ctx, call)
+	})
+}
+
+func serverBusy(t *testing.T, ctx context.Context, call *InboundCall) {
 	call.Response().SendSystemError(ErrServerBusy)
 }
 
-func timeout(ctx context.Context, call *InboundCall) {
+func timeout(t *testing.T, ctx context.Context, call *InboundCall) {
 	deadline, _ := ctx.Deadline()
 	time.Sleep(deadline.Add(time.Second * 1).Sub(time.Now()))
-	echo(ctx, call)
+	echo(t, ctx, call)
 }
 
-func echo(ctx context.Context, call *InboundCall) {
+func echo(t *testing.T, ctx context.Context, call *InboundCall) {
 	var inArg2 BytesInput
-	if err := call.ReadArg2(&inArg2); err != nil {
-		return
-	}
-
 	var inArg3 BytesInput
-	if err := call.ReadArg3(&inArg3); err != nil {
-		return
-	}
 
-	if err := call.Response().WriteArg2(BytesOutput(inArg2)); err != nil {
-		return
-	}
-
-	if err := call.Response().WriteArg3(BytesOutput(inArg3)); err != nil {
-		return
-	}
+	require.NoError(t, call.ReadArg2(&inArg2))
+	require.NoError(t, call.ReadArg3(&inArg3))
+	require.NoError(t, call.Response().WriteArg2(BytesOutput(inArg2)))
+	require.NoError(t, call.Response().WriteArg3(BytesOutput(inArg3)))
 }
 
 func TestRoundTrip(t *testing.T) {
 	withTestChannel(t, func(ch *Channel, hostPort string) {
 
-		ch.Register(HandlerFunc(echo), "Capture", "ping")
+		ch.Register(testHandlerFunc(t, echo), "Capture", "ping")
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 		defer cancel()
@@ -96,7 +93,7 @@ func TestBadRequest(t *testing.T) {
 
 func TestServerBusy(t *testing.T) {
 	withTestChannel(t, func(ch *Channel, hostPort string) {
-		ch.Register(HandlerFunc(serverBusy), "TestService", "busy")
+		ch.Register(testHandlerFunc(t, serverBusy), "TestService", "busy")
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 		defer cancel()
@@ -109,7 +106,7 @@ func TestServerBusy(t *testing.T) {
 
 func TestTimeout(t *testing.T) {
 	withTestChannel(t, func(ch *Channel, hostPort string) {
-		ch.Register(HandlerFunc(timeout), "TestService", "timeout")
+		ch.Register(testHandlerFunc(t, timeout), "TestService", "timeout")
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 		defer cancel()
@@ -121,9 +118,9 @@ func TestTimeout(t *testing.T) {
 	})
 }
 
-func testFragmentation(t *testing.T) {
+func TestFragmentation(t *testing.T) {
 	withTestChannel(t, func(ch *Channel, hostPort string) {
-		ch.Register(HandlerFunc(echo), "TestService", "echo")
+		ch.Register(testHandlerFunc(t, echo), "TestService", "echo")
 
 		arg2 := make([]byte, MaxFramePayloadSize*2)
 		for i := 0; i < len(arg2); i++ {
