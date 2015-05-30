@@ -22,11 +22,13 @@ package main
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/uber/tchannel/golang"
 	"golang.org/x/net/context"
-	"os"
-	"time"
 )
+
+var log = tchannel.SimpleLogger
 
 type Headers map[string]string
 
@@ -41,34 +43,35 @@ func pingHandler(ctx context.Context, call *tchannel.InboundCall) {
 
 	var inArg2 tchannel.BytesInput
 	if err := call.ReadArg2(&inArg2); err != nil {
-		fmt.Printf("Could not read headers from client: %v", err)
+		log.Errorf("Could not read headers from client: %v", err)
 		return
 	}
 
 	var inArg3 tchannel.BytesInput
 	if err := call.ReadArg3(&inArg3); err != nil {
-		fmt.Printf("Could not read body from client: %v", err)
+		log.Errorf("Could not read body from client: %v", err)
 		return
 	}
 
 	if err := call.Response().WriteArg2(tchannel.NewJSONOutput(headers)); err != nil {
-		fmt.Printf("Could not echo response headers to client: %v", err)
+		log.Errorf("Could not echo response headers to client: %v", err)
 		return
 	}
 
 	pong := Pong{Message: fmt.Sprintf("ping %s", inArg3)}
 	if err := call.Response().WriteArg3(tchannel.NewJSONOutput(pong)); err != nil {
-		fmt.Printf("Could not write response body to client: %v", err)
+		log.Errorf("Could not write response body to client: %v", err)
 		return
 	}
 }
 
 func listenAndHandle(s *tchannel.Channel, hostPort string) {
-	fmt.Println("Serving ", hostPort)
-	err := s.ListenAndServe(hostPort) // If no error is returned, this blocks forever
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(-1)
+	log.Infof("Service %s", hostPort)
+
+	// If no error is returned, this blocks forever
+
+	if err := s.ListenAndServe(hostPort); err != nil {
+		log.Fatalf("Could not listen on %s: %v", hostPort, err)
 	}
 }
 
@@ -76,8 +79,7 @@ func main() {
 	// Create a new TChannel for handling requests
 	ch, err := tchannel.NewChannel(nil)
 	if err != nil {
-		fmt.Println(err)
-		return
+		log.Fatalf("Could not create new channel: %v", err)
 	}
 
 	// Register a handler for the ping message on the PingService
@@ -89,7 +91,7 @@ func main() {
 	// Create a new TChannel for sending requests.
 	client, err := tchannel.NewChannel(nil)
 	if err != nil {
-		fmt.Println(err)
+		log.Fatalf("Could not create new client channel: %v", err)
 	}
 
 	// Make a call to ourselves, with a timeout of 10s
@@ -98,31 +100,26 @@ func main() {
 
 	call, err := client.BeginCall(ctx, "127.0.0.1:10500", "PingService", "ping")
 	if err != nil {
-		fmt.Println(err)
-		return
+		log.Fatalf("Could not begin call to local ping service: %v", err)
 	}
 
 	if err := call.WriteArg2(tchannel.NewJSONOutput(Headers{})); err != nil {
-		fmt.Println(err)
-		return
+		log.Fatalf("Could not write headers: %v", err)
 	}
 
 	if err := call.WriteArg3(tchannel.NewJSONOutput(Ping{"Hello World!"})); err != nil {
-		fmt.Println(err)
-		return
+		log.Fatalf("Could not write ping: %v", err)
 	}
 
 	var responseHeaders Headers
 	if err := call.Response().ReadArg2(tchannel.NewJSONInput(&responseHeaders)); err != nil {
-		fmt.Println(err)
-		return
+		log.Fatalf("Could not read response headers: %v", err)
 	}
 
 	var pong Pong
 	if err := call.Response().ReadArg3(tchannel.NewJSONInput(&pong)); err != nil {
-		fmt.Println(err)
-		return
+		log.Fatalf("Could not read response pong: %v", err)
 	}
 
-	fmt.Println("Received pong:", pong.Message)
+	log.Infof("Received pong: %s", pong.Message)
 }
