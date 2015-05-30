@@ -131,21 +131,6 @@ func (r *ReadBuffer) FillFrom(ior io.Reader, n int) (int, error) {
 	return ior.Read(r.remaining)
 }
 
-// CurrentPos returns the current read position within the buffer
-func (r *ReadBuffer) CurrentPos() int {
-	return len(r.buffer) - len(r.remaining)
-}
-
-// Seek moves the current read position to the given offset in the buffer
-func (r *ReadBuffer) Seek(offset int) error {
-	if offset > len(r.buffer) {
-		return ErrEOF
-	}
-
-	r.remaining = r.buffer[offset:]
-	return nil
-}
-
 // Wrap initializes the buffer to read from the given byte slice
 func (r *ReadBuffer) Wrap(b []byte) {
 	r.buffer = b
@@ -310,21 +295,8 @@ func (w *WriteBuffer) Reset() {
 	w.err = nil
 }
 
-// CurrentPos returns the current write position in the buffer
-func (w *WriteBuffer) CurrentPos() int { return len(w.buffer) - len(w.remaining) }
-
 // Err returns the current error in the buffer
 func (w *WriteBuffer) Err() error { return w.err }
-
-// Seek moves the current write position to the given offset in the buffer
-func (w *WriteBuffer) Seek(offset int) error {
-	if offset > len(w.buffer) {
-		return ErrEOF
-	}
-
-	w.remaining = w.buffer[offset:]
-	return nil
-}
 
 // Wrap initializes the buffer to wrap the given byte slice
 func (w *WriteBuffer) Wrap(b []byte) {

@@ -70,43 +70,6 @@ func TestReadWrite(t *testing.T) {
 	require.NoError(t, r.Err())
 }
 
-func TestSeek(t *testing.T) {
-	w := NewWriteBufferWithSize(1024)
-	pos := w.CurrentPos()
-	w.WriteUint16(0)
-	w.WriteString("Hello NYC")
-	endPos := w.CurrentPos()
-
-	require.Nil(t, w.Seek(pos))
-	w.WriteUint16(uint16(len("Hello NYC")))
-	require.Nil(t, w.Seek(endPos))
-
-	pos = w.CurrentPos()
-	w.WriteUint16(0) // We'll come back to this
-	w.WriteString("The quick brown fox")
-	endPos = w.CurrentPos()
-
-	require.Nil(t, w.Seek(pos))
-	w.WriteUint16(uint16(len("The quick brown fox")))
-	require.Nil(t, w.Seek(endPos))
-
-	var b bytes.Buffer
-	_, err := w.FlushTo(&b)
-	require.Nil(t, err)
-
-	r := NewReadBufferWithSize(1024)
-	_, err = r.FillFrom(bytes.NewReader(b.Bytes()), w.BytesWritten())
-	require.Nil(t, err)
-
-	n := r.ReadUint16()
-	s := r.ReadString(int(n))
-	assert.Equal(t, "Hello NYC", s)
-
-	n = r.ReadUint16()
-	s = r.ReadString(int(n))
-	assert.Equal(t, "The quick brown fox", s)
-}
-
 func TestDeferredWrites(t *testing.T) {
 	w := NewWriteBufferWithSize(1024)
 	u16ref := w.DeferUint16()
