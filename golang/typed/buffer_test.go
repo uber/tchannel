@@ -48,6 +48,8 @@ func TestReadWrite(t *testing.T) {
 	w.WriteByte(0xFF)
 	w.WriteString(s)
 	w.WriteBytes(bslice)
+	w.WriteLen8String("hello")
+	w.WriteLen16String("This is a much larger string")
 	require.NoError(t, w.Err())
 
 	var b bytes.Buffer
@@ -56,31 +58,14 @@ func TestReadWrite(t *testing.T) {
 	r := NewReadBufferWithSize(1024)
 	r.FillFrom(bytes.NewReader(b.Bytes()), len(b.Bytes()))
 
-	{
-		n := r.ReadUint64()
-		assert.Equal(t, n, uint64(0x0123456789ABCDEF), "mismatched uint64")
-	}
-	{
-		n := r.ReadUint32()
-		assert.Equal(t, n, uint32(0xABCDEF01), "mismatched uint32")
-	}
-	{
-		n := r.ReadUint16()
-		assert.Equal(t, n, uint16(0x2345), "mismatched uint16")
-	}
-	{
-		n := r.ReadByte()
-		assert.Equal(t, n, byte(0xFF), "mismatched byte")
-	}
-	{
-
-		rs := r.ReadString(len(s))
-		assert.Equal(t, rs, s, "mismatched string")
-	}
-	{
-		rbslice := r.ReadBytes(len(bslice))
-		assert.Equal(t, rbslice, bslice, "mismatched byte slices")
-	}
+	assert.Equal(t, uint64(0x0123456789ABCDEF), r.ReadUint64())
+	assert.Equal(t, uint32(0xABCDEF01), r.ReadUint32())
+	assert.Equal(t, uint16(0x2345), r.ReadUint16())
+	assert.Equal(t, byte(0xFF), r.ReadByte())
+	assert.Equal(t, s, r.ReadString(len(s)))
+	assert.Equal(t, bslice, r.ReadBytes(len(bslice)))
+	assert.Equal(t, "hello", r.ReadLen8String())
+	assert.Equal(t, "This is a much larger string", r.ReadLen16String())
 
 	require.NoError(t, r.Err())
 }

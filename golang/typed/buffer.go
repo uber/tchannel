@@ -103,6 +103,18 @@ func (r *ReadBuffer) ReadUint64() uint64 {
 	return 0
 }
 
+// ReadLen8String reads an 8-bit length preceded string value
+func (r *ReadBuffer) ReadLen8String() string {
+	n := r.ReadByte()
+	return r.ReadString(int(n))
+}
+
+// ReadLen16String reads a 16-bit length preceded string value
+func (r *ReadBuffer) ReadLen16String() string {
+	n := r.ReadUint16()
+	return r.ReadString(int(n))
+}
+
 // BytesRemaining returns the number of unconsumed bytes remaining in the buffer
 func (r *ReadBuffer) BytesRemaining() int {
 	return len(r.remaining)
@@ -212,6 +224,18 @@ func (w *WriteBuffer) WriteString(s string) {
 	if b := w.reserve(len(s)); b != nil {
 		copy(b, s)
 	}
+}
+
+// WriteLen8String writes an 8-bit length preceded string
+func (w *WriteBuffer) WriteLen8String(s string) {
+	w.WriteByte(byte(len(s)))
+	w.WriteString(s)
+}
+
+// WriteLen16String writes a 16-bit length preceded string
+func (w *WriteBuffer) WriteLen16String(s string) {
+	w.WriteUint16(uint16(len(s)))
+	w.WriteString(s)
 }
 
 // DeferByte reserves space in the buffer for a single byte, and returns a
