@@ -155,7 +155,7 @@ type callReq struct {
 	TimeToLive time.Duration
 	Tracing    Span
 	Headers    callHeaders
-	Service    []byte
+	Service    string
 }
 
 func (m *callReq) ID() uint32               { return m.id }
@@ -163,7 +163,7 @@ func (m *callReq) messageType() messageType { return messageTypeCallReq }
 func (m *callReq) read(r *typed.ReadBuffer) error {
 	m.TimeToLive = time.Duration(r.ReadUint32()) * time.Millisecond
 	m.Tracing.read(r)
-	m.Service = []byte(r.ReadLen8String()) // TODO(mmihic): Keep service as string, it's easier to deal with
+	m.Service = r.ReadLen8String()
 	m.Headers = callHeaders{}
 	m.Headers.read(r)
 	return r.Err()
@@ -172,7 +172,7 @@ func (m *callReq) read(r *typed.ReadBuffer) error {
 func (m *callReq) write(w *typed.WriteBuffer) error {
 	w.WriteUint32(uint32(m.TimeToLive.Seconds() * 1000))
 	m.Tracing.write(w)
-	w.WriteLen8String(string(m.Service))
+	w.WriteLen8String(m.Service)
 	m.Headers.write(w)
 	return w.Err()
 }
