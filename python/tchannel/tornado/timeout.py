@@ -29,7 +29,7 @@ from ..errors import TimeoutError
 
 
 @contextlib2.contextmanager
-def timeout(future, seconds=1, io_loop=None):
+def timeout(future, seconds=0, io_loop=None):
     # TODO: This is probably too heavy to attach to every request, should do
     # this in the background.
     io_loop = io_loop or tornado.ioloop.IOLoop.current()
@@ -37,7 +37,9 @@ def timeout(future, seconds=1, io_loop=None):
     def raise_timeout(*args, **kwargs):
         if future.running():
             future.set_exception(TimeoutError())
-
-    io_loop.call_later(seconds, raise_timeout)
-
-    yield
+    if seconds == 0:
+        # No timeout if seconds is set to 0.
+        yield
+    else:
+        io_loop.call_later(seconds, raise_timeout)
+        yield

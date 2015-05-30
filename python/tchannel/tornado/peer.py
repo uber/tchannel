@@ -511,10 +511,13 @@ class PeerClientOperation(object):
         for k, v in self.headers.iteritems():
             headers.setdefault(k, v)
 
-        original_request = Request(
+        peer = self.peer
+        connection = yield peer.connect()
+
+        request = Request(
             service=self.service,
             argstreams=[InMemStream(endpoint), arg2, arg3],
-            id=0,
+            id=connection.next_message_id(),
             headers=headers,
             tracing=Trace(
                 name=endpoint,
@@ -531,50 +534,45 @@ class PeerClientOperation(object):
         # black list to record all used peers, so they aren't chosen again.
         blacklist = set()
         # only retry on non-stream request
-        if original_request.is_streaming_request():
-            connection = yield self.peer.connect()
-            message_id = connection.next_message_id()
-            original_request.id = message_id
-            response = yield connection.send_request(original_request)
-        else:
-            req = original_request
-            # mac number of times to retry 5.
-            peer = self.peer
-            for num_of_retry in range(retry_times):
-                try:
-                    req = original_request.clone()
-                    response = yield self._retry_send(
-                        peer, req, timeout_per_req)
-                    break
-                except (ProtocolError, TimeoutError) as e:
-                    req.set_exception(e)
-                    if not req.should_retry_on_error(e) or self._hostport:
-                        raise
+        if request.is_streaming_request:
+            retry_times = 1
+            timeout_per_req = 0
 
-                    if num_of_retry != retry_times - 1:
-                        # delay further retry
-                        yield gen.sleep(retry_delay)
-                    else:
-                        raise
+        # mac number of times to retry 3.
+        for num_of_retry in range(retry_times):
+            try:
+                response = yield self._retry_send(
+                    connection, request, timeout_per_req)
+                break
+            except (ProtocolError, TimeoutError) as e:
+                request.set_exception(e)
+                if not request.should_retry_on_error(e) or self._hostport:
+                    raise
 
-                    blacklist.add(peer.hostport)
-                    # find new peer
-                    peer = self.peer.tchannel.peers.choose(
-                        hostport=self._hostport,
-                        score_threshold=self._score_threshold,
-                        blacklist=blacklist,
-                    )
-                    if not peer:
-                        raise
+                if num_of_retry != retry_times - 1:
+                    # delay further retry
+                    yield gen.sleep(retry_delay)
+                else:
+                    raise
+
+                blacklist.add(peer.hostport)
+                # find new peer
+                peer = self.peer.tchannel.peers.choose(
+                    hostport=self._hostport,
+                    score_threshold=self._score_threshold,
+                    blacklist=blacklist,
+                )
+                if not peer:
+                    raise
+                connection = yield peer.connect()
+                # roll back request
+                request.rewind(connection.next_message_id())
 
         log.debug("Got response %s", response)
         raise gen.Return(response)
 
     @gen.coroutine
-    def _retry_send(self, peer, req, timeout_per_req):
-        connection = yield peer.connect()
-        req.id = connection.next_message_id()
-
+    def _retry_send(self, connection, req, timeout_per_req):
         response_future = connection.send_request(req)
         with timeout(response_future, timeout_per_req):
             response = yield response_future

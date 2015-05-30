@@ -20,9 +20,6 @@
 
 from __future__ import absolute_import
 
-import copy
-
-
 import tornado
 import tornado.gen
 
@@ -74,26 +71,23 @@ class Request(object):
         self.endpoint = ""
         self.scheme = scheme
 
-    def clone(self):
-        """deep clone request object"""
-        new_req = Request(
-            id=self.id,
-            flags=self.flags,
-            ttl=self.ttl,
-            tracing=self.tracing,
-            service=self.service,
-            checksum=self.checksum,
-            headers=copy.deepcopy(self.headers),
-            argstreams=[
+        self.is_streaming_request = self._is_streaming_request()
+        if not self.is_streaming_request:
+            self._copy_argstreams = [
                 self.argstreams[0].clone(),
                 self.argstreams[1].clone(),
                 self.argstreams[2].clone(),
-            ],
-            scheme=self.scheme,
-        )
-        new_req.state = self.state
-        new_req.endpoint = self.endpoint
-        return new_req
+            ]
+
+    def rewind(self, id=None):
+        self.id = id
+        self.argstreams = [
+            self._copy_argstreams[0].clone(),
+            self._copy_argstreams[1].clone(),
+            self._copy_argstreams[2].clone(),
+        ]
+        self.state = StreamState.init
+        self.tracing = Trace()
 
     @property
     def arg_scheme(self):
@@ -150,17 +144,22 @@ class Request(object):
         """
         return self.argstreams[2]
 
-    def is_streaming_request(self):
+    def _is_streaming_request(self):
         """check request is stream request or not"""
         arg2 = self.argstreams[1]
         arg3 = self.argstreams[2]
-        return not ((isinstance(arg2, InMemStream) and
+        return not (isinstance(arg2, InMemStream) and
                     isinstance(arg3, InMemStream) and
-                    arg2.state == StreamState.completed and
-                    arg3.state == StreamState.completed))
+                    ((arg2.auto_close is True and
+                      arg3.auto_close is True) or (
+                        arg2.state == StreamState.completed and
+                        arg3.state == StreamState.completed)))
 
     def should_retry_on_error(self, error):
         """rules for retry"""
+        if self.is_streaming_request:
+            # not retry for streaming request
+            return False
 
         retry_flag = self.headers.get('re', RetryType.DEFAULT)
 
