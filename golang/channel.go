@@ -40,14 +40,14 @@ const (
 	ephemeralHostPort = "0.0.0.0:0"
 )
 
-// A Handler is an object hat can be registered with a Channel
-// to process incoming calls for a given service and operation
+// A Handler is an object that can be registered with a Channel to process
+// incoming calls for a given service and operation
 type Handler interface {
 	// Handles an incoming call for service
 	Handle(ctx context.Context, call *InboundCall)
 }
 
-// The HandlerFunc is an adapter to allow the use of ordering functions as
+// A HandlerFunc is an adapter to allow the use of ordering functions as
 // TChannel handlers.  If f is a function with the appropriate signature,
 // HandlerFunc(f) is a Hander object that calls f
 type HandlerFunc func(ctx context.Context, call *InboundCall)
@@ -67,9 +67,10 @@ type ChannelOptions struct {
 	Logger Logger
 }
 
-// A Channel is a bi-directional connection to the peering and routing network.  Applications
-// can use a Channel to make service calls to remote peers via BeginCall, or to listen for incoming calls
-// from peers.  Applications that want to receive requests should call one of Serve or ListenAndServe
+// A Channel is a bi-directional connection to the peering and routing network.
+// Applications can use a Channel to make service calls to remote peers via
+// BeginCall, or to listen for incoming calls from peers.  Applications that
+// want to receive requests should call one of Serve or ListenAndServe
 type Channel struct {
 	log               Logger
 	hostPort          string
@@ -129,8 +130,8 @@ func (ch *Channel) Serve(l net.Listener) error {
 	return ch.serve()
 }
 
-// ListenAndServe listens on the given address and serves incoming requests.  The port
-// may be 0, in which case the channel will use an OS assigned port
+// ListenAndServe listens on the given address and serves incoming requests.
+// The port may be 0, in which case the channel will use an OS assigned port
 func (ch *Channel) ListenAndServe(hostPort string) error {
 	if err := ch.listen(hostPort); err != nil {
 		return err
@@ -166,7 +167,7 @@ func (ch *Channel) listen(hostPort string) error {
 	return nil
 }
 
-// Register regsters a handler for a service+operation pair
+// Register registers a handler for a service+operation pair
 func (ch *Channel) Register(h Handler, serviceName, operationName string) {
 	ch.handlers.register(h, serviceName, operationName)
 }
@@ -174,8 +175,7 @@ func (ch *Channel) Register(h Handler, serviceName, operationName string) {
 // BeginCall starts a new call to a remote peer, returning an OutboundCall that can
 // be used to write the arguments of the call
 // TODO(mmihic): Support CallOptions such as format, request specific checksums, retries, etc
-func (ch *Channel) BeginCall(ctx context.Context, hostPort,
-	serviceName, operationName string) (*OutboundCall, error) {
+func (ch *Channel) BeginCall(ctx context.Context, hostPort, serviceName, operationName string) (*OutboundCall, error) {
 	// TODO(mmihic): Keep-alive, manage pools, use existing inbound if possible, all that jazz
 	nconn, err := net.Dial("tcp", hostPort)
 	if err != nil {
@@ -201,34 +201,6 @@ func (ch *Channel) BeginCall(ctx context.Context, hostPort,
 	}
 
 	return call, nil
-}
-
-// RoundTrip calls a peer and waits for the response
-func (ch *Channel) RoundTrip(ctx context.Context, hostPort, serviceName, operationName string,
-	reqArg2, reqArg3 Output, resArg2, resArg3 Input) (bool, error) {
-
-	call, err := ch.BeginCall(ctx, hostPort, serviceName, operationName)
-	if err != nil {
-		return false, err
-	}
-
-	if err := call.WriteArg2(reqArg2); err != nil {
-		return false, err
-	}
-
-	if err := call.WriteArg3(reqArg3); err != nil {
-		return false, err
-	}
-
-	if err := call.Response().ReadArg2(resArg2); err != nil {
-		return false, err
-	}
-
-	if err := call.Response().ReadArg3(resArg3); err != nil {
-		return false, err
-	}
-
-	return call.Response().ApplicationError(), nil
 }
 
 // serve runs the listener to accept and manage new incoming connections, blocking
