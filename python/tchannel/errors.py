@@ -83,7 +83,7 @@ class StreamingError(TChannelError):
 
 
 class NoAvailablePeerError(TChannelError):
-    """Represent Error that TChannel can't find available peer for request"""
+    """Represents a failure to find any peers for a request."""
     pass
 
 
