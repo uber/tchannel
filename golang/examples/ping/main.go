@@ -21,11 +21,11 @@ package main
 // THE SOFTWARE.
 
 import (
-	"time"
+	"fmt"
 	"github.com/uber/tchannel/golang"
 	"golang.org/x/net/context"
-	"fmt"
 	"os"
+	"time"
 )
 
 type Headers map[string]string
@@ -93,18 +93,33 @@ func main() {
 	}
 
 	// Make a call to ourselves, with a timeout of 10s
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second * 10)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	var responseHeaders Headers
-	ping := Ping{"Hello, World!"}
-	var pong Pong
-
-	// RoundTrip returns bool, error.  The bool here is false.  Not sure why.
-	_, err = client.RoundTrip(ctx, "localhost:10500", "PingService", "ping",
-		tchannel.NewJSONOutput(Headers{}),  tchannel.NewJSONOutput(ping),
-		tchannel.NewJSONInput(&responseHeaders), tchannel.NewJSONInput(&pong))
+	call, err := client.BeginCall(ctx, "127.0.0.1:10500", "PingService", "ping")
 	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	if err := call.WriteArg2(tchannel.NewJSONOutput(Headers{})); err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	if err := call.WriteArg3(tchannel.NewJSONOutput(Ping{"Hello World!"})); err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	var responseHeaders Headers
+	if err := call.Response().ReadArg2(tchannel.NewJSONInput(&responseHeaders)); err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	var pong Pong
+	if err := call.Response().ReadArg3(tchannel.NewJSONInput(&pong)); err != nil {
 		fmt.Println(err)
 		return
 	}
