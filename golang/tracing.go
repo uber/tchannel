@@ -46,48 +46,19 @@ func (s Span) String() string {
 }
 
 func (s *Span) read(r *typed.ReadBuffer) error {
-	var err error
-	s.traceID, err = r.ReadUint64()
-	if err != nil {
-		return err
-	}
-
-	s.parentID, err = r.ReadUint64()
-	if err != nil {
-		return err
-	}
-
-	s.spanID, err = r.ReadUint64()
-	if err != nil {
-		return err
-	}
-
-	s.flags, err = r.ReadByte()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	s.traceID = r.ReadUint64()
+	s.parentID = r.ReadUint64()
+	s.spanID = r.ReadUint64()
+	s.flags = r.ReadByte()
+	return r.Err()
 }
 
 func (s *Span) write(w *typed.WriteBuffer) error {
-	if err := w.WriteUint64(s.traceID); err != nil {
-		return err
-	}
-
-	if err := w.WriteUint64(s.parentID); err != nil {
-		return err
-	}
-
-	if err := w.WriteUint64(s.spanID); err != nil {
-		return err
-	}
-
-	if err := w.WriteByte(s.flags); err != nil {
-		return err
-	}
-
-	return nil
+	w.WriteUint64(s.traceID)
+	w.WriteUint64(s.parentID)
+	w.WriteUint64(s.spanID)
+	w.WriteByte(s.flags)
+	return w.Err()
 }
 
 const (

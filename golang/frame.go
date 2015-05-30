@@ -74,57 +74,21 @@ func (fh FrameHeader) FrameSize() uint16 {
 func (fh FrameHeader) String() string { return fmt.Sprintf("%s[%d]", fh.messageType, fh.ID) }
 
 func (fh *FrameHeader) read(r *typed.ReadBuffer) error {
-	var err error
-	fh.size, err = r.ReadUint16()
-	if err != nil {
-		return err
-	}
-
-	msgType, err := r.ReadByte()
-	if err != nil {
-		return err
-	}
-
-	fh.messageType = messageType(msgType)
-
-	if _, err := r.ReadByte(); err != nil {
-		return err
-	}
-
-	fh.ID, err = r.ReadUint32()
-	if err != nil {
-		return err
-	}
-
-	if _, err := r.ReadBytes(len(fh.reserved)); err != nil {
-		return err
-	}
-
-	return nil
+	fh.size = r.ReadUint16()
+	fh.messageType = messageType(r.ReadByte())
+	fh.reserved1 = r.ReadByte()
+	fh.ID = r.ReadUint32()
+	r.ReadBytes(len(fh.reserved))
+	return r.Err()
 }
 
 func (fh *FrameHeader) write(w *typed.WriteBuffer) error {
-	if err := w.WriteUint16(fh.size); err != nil {
-		return err
-	}
-
-	if err := w.WriteByte(byte(fh.messageType)); err != nil {
-		return err
-	}
-
-	if err := w.WriteByte(fh.reserved1); err != nil {
-		return err
-	}
-
-	if err := w.WriteUint32(fh.ID); err != nil {
-		return err
-	}
-
-	if err := w.WriteBytes(fh.reserved[:]); err != nil {
-		return err
-	}
-
-	return nil
+	w.WriteUint16(fh.size)
+	w.WriteByte(byte(fh.messageType))
+	w.WriteByte(fh.reserved1)
+	w.WriteUint32(fh.ID)
+	w.WriteBytes(fh.reserved[:])
+	return w.Err()
 }
 
 // A Frame is a header and payload
