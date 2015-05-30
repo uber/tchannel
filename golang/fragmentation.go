@@ -23,23 +23,28 @@ package tchannel
 import (
 	"bytes"
 	"errors"
-	"github.com/uber/tchannel/golang/typed"
+	"fmt"
 	"io"
+
+	"github.com/uber/tchannel/golang/typed"
 )
 
 var (
-	// ErrMismatchedChecksumTypes is returned when a peer sends a continuation fragment containing
-	// a different checksum type from that used for the original message
+	// ErrMismatchedChecksumTypes is returned when a peer sends a
+	// continuation fragment containing a different checksum type from that
+	// used for the original message
 	ErrMismatchedChecksumTypes = errors.New("peer sent a different checksum type for fragment")
 
-	// ErrWriteAfterComplete is returned when a caller attempts to write to a body after the last fragment was sent
+	// ErrWriteAfterComplete is returned when a caller attempts to write to
+	// a body after the last fragment was sent
 	ErrWriteAfterComplete = errors.New("attempted to write to a stream after the last fragment sent")
 
-	// ErrMismatchedChecksum is returned when a local checksum calculation differs from that reported by peer
+	// ErrMismatchedChecksum is returned when a local checksum calculation
+	// differs from that reported by peer
 	ErrMismatchedChecksum = errors.New("local checksum differs from peer")
 
-	// ErrDataLeftover is returned when a caller considers an argument complete, but there is more data
-	// remaining in the argument
+	// ErrDataLeftover is returned when a caller considers an argument
+	// complete, but there is more data remaining in the argument
 	ErrDataLeftover = errors.New("more data remaining in argument")
 
 	errTooLarge                   = errors.New("impl error, data exceeds remaining fragment size")
@@ -53,7 +58,7 @@ const (
 	flagMoreFragments = 0x01
 )
 
-// An outbound fragment is a fragment being sent to a peer
+// An outFragment is a fragment being sent to a peer
 type outFragment struct {
 	frame               *Frame
 	checksum            Checksum
@@ -64,12 +69,12 @@ type outFragment struct {
 	content             *typed.WriteBuffer
 }
 
-// Returns the number of bytes remaining in the fragment
+// bytesRemaining returns the number of bytes remaining in the fragment
 func (f *outFragment) bytesRemaining() int {
 	return f.content.BytesRemaining()
 }
 
-// Finishes a fragment, optionally marking it as the last fragment
+// finish finishes a fragment, optionally marking it as the last fragment
 func (f *outFragment) finish(last bool) *Frame {
 	// If we still have a chunk open, close it before finishing the fragment
 	if f.chunkOpen() {
@@ -87,7 +92,7 @@ func (f *outFragment) finish(last bool) *Frame {
 	return f.frame
 }
 
-// Writes data for a chunked argument into the fragment.  The data must fit into the fragment
+// writeData writes data for a chunked argument into the fragment.  The data must fit into the fragment
 func (f *outFragment) writeChunkData(b []byte) (int, error) {
 	if !f.chunkOpen() {
 		return 0, errNoOpenChunk
@@ -103,12 +108,12 @@ func (f *outFragment) writeChunkData(b []byte) (int, error) {
 	return len(b), f.content.Err()
 }
 
-// Returns true if the fragment can fit a new chunk
+// canFitNewChunk returns true if the fragment can fit a new chunk
 func (f *outFragment) canFitNewChunk() bool {
 	return f.bytesRemaining() > 2
 }
 
-// Begins a new chunk at the current location in the fragment
+// beginChunk a new chunk at the current location in the fragment
 func (f *outFragment) beginChunk() error {
 	if f.chunkOpen() {
 		return errChunkAlreadyOpen
@@ -119,7 +124,7 @@ func (f *outFragment) beginChunk() error {
 	return nil
 }
 
-// Ends a previously opened chunk, recording the chunk size
+// endChunk a previously started chunk, recording the chunk size
 func (f *outFragment) endChunk() error {
 	if !f.chunkOpen() {
 		return errNoOpenChunk
@@ -131,10 +136,10 @@ func (f *outFragment) endChunk() error {
 	return nil
 }
 
-// Returns true if the fragment has a chunk open
+// chunkOpen returns true if the fragment has a chunk open
 func (f *outFragment) chunkOpen() bool { return f.currentChunkSizeRef != nil }
 
-// Creates a new outFragment around a frame and message, with a running checksum
+// newOutboundFragment creates a new outFragment around a frame and message, with a running checksum
 func newOutboundFragment(frame *Frame, msg message, checksum Checksum) (*outFragment, error) {
 	f := &outFragment{
 		frame:    frame,
@@ -159,7 +164,7 @@ func newOutboundFragment(frame *Frame, msg message, checksum Checksum) (*outFrag
 	return f, f.content.Err()
 }
 
-// A pseudo-channel for sending fragments to a remote peer.
+// An outputFragmentChannel is a pseudo-channel for sending fragments to a remote peer.
 // TODO(mmihic): Not happy with this name, or with this exact interface
 type outFragmentChannel interface {
 	// Opens a fragment for sending.  If there is an existing incomplete fragment on the channel,
@@ -170,7 +175,7 @@ type outFragmentChannel interface {
 	flushFragment(f *outFragment, last bool) error
 }
 
-// An bodyWriter is an io.Writer for a collection of arguments, capable of breaking
+// A bodyWriter is an io.Writer for a collection of arguments, capable of breaking
 // large arguments into multiple chunks spread across several fragments.  Upstream code can
 // send argument data via the standard io.Writer interface, but should call endArgument to
 // indicate when they are finished with the current argument.
@@ -181,12 +186,12 @@ type bodyWriter struct {
 	complete    bool
 }
 
-// Creates a new bodyWriter that creates and sends fragments through the provided channel.
+// newBodyWriter a new bodyWriter that creates and sends fragments through the provided channel.
 func newBodyWriter(ch outFragmentChannel) *bodyWriter {
 	return &bodyWriter{fragments: ch}
 }
 
-// Writes an entire argument
+// WriteArgument writes an entire argument to the underlying stream
 func (w *bodyWriter) WriteArgument(output Output, last bool) error {
 	if err := output.WriteTo(w); err != nil {
 		return err
@@ -195,7 +200,7 @@ func (w *bodyWriter) WriteArgument(output Output, last bool) error {
 	return w.endArgument(last)
 }
 
-// Writes argument bytes, potentially splitting them across fragments
+// Write writes argument contents, potentially splitting them across fragments
 func (w *bodyWriter) Write(b []byte) (int, error) {
 	if w.complete {
 		return 0, ErrWriteAfterComplete
@@ -245,6 +250,7 @@ func (w *bodyWriter) Write(b []byte) (int, error) {
 	return written, nil
 }
 
+// writeEmpty writes an empty chunk
 func (w *bodyWriter) writeEmpty() error {
 	// Make sure we have a fragment and an open chunk
 	if err := w.ensureOpenChunk(); err != nil {
@@ -260,6 +266,7 @@ func (w *bodyWriter) writeEmpty() error {
 	return nil
 }
 
+// finishIfFull finishes the current fragment if it cannot take any more data
 func (w *bodyWriter) finishIfFull() (bool, error) {
 	// If the fragment is complete, send it immediately
 	if w.fragment.bytesRemaining() > 0 {
@@ -273,7 +280,7 @@ func (w *bodyWriter) finishIfFull() (bool, error) {
 	return true, nil
 }
 
-// Ensures that we have a fragment and an open chunk
+// ensureOpenChunk ensures that we have a fragment and an open chunk
 func (w *bodyWriter) ensureOpenChunk() error {
 	for {
 		// No fragment - start a new one
@@ -302,7 +309,7 @@ func (w *bodyWriter) ensureOpenChunk() error {
 	}
 }
 
-// Finishes with the current fragment, closing any open chunk and sending the fragment down the channel
+// finishFragment completes the current fragment, closing any open chunk and sending the fragment down the channel
 func (w *bodyWriter) finishFragment(last bool) error {
 	w.fragment.endChunk()
 	if err := w.fragments.flushFragment(w.fragment, last); err != nil {
@@ -314,11 +321,13 @@ func (w *bodyWriter) finishFragment(last bool) error {
 	return nil
 }
 
-// Marks the argument as being complete.  If last is true, this is the last argument in the message
+// endArgument marks the current argument as being complete.  If last is true,
+// this is the last argument in the message
 func (w *bodyWriter) endArgument(last bool) error {
 	if w.alignsAtEnd {
-		// The last argument chunk aligned with the end of a fragment boundary - send another fragment
-		// containing an empty chunk so readers know the argument is complete
+		// The last argument chunk aligned with the end of a fragment
+		// boundary - send another fragment containing an empty chunk
+		// so readers know the argument is complete
 		if w.fragment != nil {
 			return errAlignedAtEndOfOpenFragment
 		}
@@ -355,7 +364,7 @@ type inFragment struct {
 	chunks   [][]byte // The argument chunks contained in the fragment
 }
 
-// Creates a new inFragment from an incoming frame and an expected message
+// newInboundFragment creates a new inFragment from an incoming frame and an expected message
 func newInboundFragment(frame *Frame, msg message, checksum Checksum) (*inFragment, error) {
 	f := &inFragment{
 		frame:    frame,
@@ -405,7 +414,7 @@ func newInboundFragment(frame *Frame, msg message, checksum Checksum) (*inFragme
 	return f, rbuf.Err()
 }
 
-// Consumes the next chunk in the fragment
+// nextChunk consumes and returns the next chunk in the fragment
 func (f *inFragment) nextChunk() []byte {
 	if len(f.chunks) == 0 {
 		return nil
@@ -416,22 +425,23 @@ func (f *inFragment) nextChunk() []byte {
 	return chunk
 }
 
-// returns true if there are more chunks remaining in the fragment
+// hasMoreChunks returns true if there are more chunks remaining in the fragment
 func (f *inFragment) hasMoreChunks() bool {
 	return len(f.chunks) > 0
 }
 
-// Psuedo-channel for receiving inbound fragments from a peer
+// inFragmentChannel is a psuedo-channel for receiving inbound fragments from a peer
 type inFragmentChannel interface {
 	// Waits for a fragment to become available.  May return immediately if there is already an open unconsumed
 	// fragment, or block until the next fragment appears
 	waitForFragment() (*inFragment, error)
 }
 
-// An bodyReader is an io.Reader for an individual TChannel argument, capable of reading large
-// arguments that have been split across fragments.  Upstream code can use the bodyReader like
-// a regular io.Reader to extract the argument data, and should call endArgument when they have finished
-// reading a given argument, to prepare the stream for the next argument.
+// An bodyReader is an io.Reader for an individual TChannel argument, capable
+// of reading large arguments that have been split across fragments.  Upstream
+// code can use the bodyReader like a regular io.Reader to extract the argument
+// data, and should call endArgument when they have finished reading a given
+// argument, to prepare the stream for the next argument.
 // TODO(mmihic): Refactor to handle all arguments of the body. similar to bodyWriter
 type bodyReader struct {
 	fragments            inFragmentChannel
@@ -440,7 +450,7 @@ type bodyReader struct {
 	lastPartInMessage    bool
 }
 
-// Reads an input argument from the stream
+// ReadArgument reads an entire input argument from the stream
 func (r *bodyReader) ReadArgument(input Input, last bool) error {
 	if err := input.ReadFrom(r); err != nil {
 		return err
@@ -449,6 +459,9 @@ func (r *bodyReader) ReadArgument(input Input, last bool) error {
 	return r.endArgument()
 }
 
+// Read reads argument bytes from the underlying stream, loading new fragments
+// until the provided byte array is fully read or there are no more chunks for
+// the current argument
 func (r *bodyReader) Read(b []byte) (int, error) {
 	totalRead := 0
 
@@ -477,7 +490,8 @@ func (r *bodyReader) Read(b []byte) (int, error) {
 	return totalRead, nil
 }
 
-// Marks the current argment as complete, confirming that we've read the entire argumentand have nothing left over
+// endArgument marks the current argment as complete, confirming that we've
+// read the entire argumentand have nothing left over
 func (r *bodyReader) endArgument() error {
 	if len(r.chunk) > 0 {
 		return ErrDataLeftover
@@ -505,6 +519,7 @@ func (r *bodyReader) endArgument() error {
 	return nil
 }
 
+// newBodyReader creates a new bodyReader around an input fragment channel
 func newBodyReader(ch inFragmentChannel, last bool) *bodyReader {
 	return &bodyReader{fragments: ch, lastPartInMessage: last}
 }
