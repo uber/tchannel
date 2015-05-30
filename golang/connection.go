@@ -66,9 +66,6 @@ var (
 
 // ConnectionOptions are options that control the behavior of a Connection
 type ConnectionOptions struct {
-	// The identity of the local peer
-	PeerInfo PeerInfo
-
 	// The frame pool, allowing better management of frame buffers.  Defaults to using raw heap
 	FramePool FramePool
 
@@ -95,7 +92,7 @@ type Connection struct {
 	stateMut       sync.RWMutex
 	inbound        messageExchangeSet
 	outbound       messageExchangeSet
-	handlers       handlerMap
+	handlers       *handlerMap
 	nextMessageID  uint32
 }
 
@@ -127,19 +124,19 @@ const (
 )
 
 // Creates a new TChannelConnection around an outbound connection initiated to a peer
-func newOutboundConnection(conn net.Conn, handlers handlerMap, log Logger,
+func newOutboundConnection(conn net.Conn, handlers *handlerMap, log Logger, peerInfo PeerInfo,
 	opts *ConnectionOptions) (*Connection, error) {
-	return newConnection(conn, connectionWaitingToSendInitReq, handlers, log, opts), nil
+	return newConnection(conn, connectionWaitingToSendInitReq, handlers, peerInfo, log, opts), nil
 }
 
 // Creates a new TChannelConnection based on an incoming connection from a peer
-func newInboundConnection(conn net.Conn, handlers handlerMap, log Logger,
+func newInboundConnection(conn net.Conn, handlers *handlerMap, peerInfo PeerInfo, log Logger,
 	opts *ConnectionOptions) (*Connection, error) {
-	return newConnection(conn, connectionWaitingToRecvInitReq, handlers, log, opts), nil
+	return newConnection(conn, connectionWaitingToRecvInitReq, handlers, peerInfo, log, opts), nil
 }
 
 // Creates a new connection in a given initial state
-func newConnection(conn net.Conn, initialState connectionState, handlers handlerMap, log Logger,
+func newConnection(conn net.Conn, initialState connectionState, handlers *handlerMap, peerInfo PeerInfo, log Logger,
 	opts *ConnectionOptions) *Connection {
 
 	if opts == nil {
@@ -167,7 +164,7 @@ func newConnection(conn net.Conn, initialState connectionState, handlers handler
 		framePool:     framePool,
 		state:         initialState,
 		sendCh:        make(chan *Frame, sendBufferSize),
-		localPeerInfo: opts.PeerInfo,
+		localPeerInfo: peerInfo,
 		checksumType:  opts.ChecksumType,
 		inbound: messageExchangeSet{
 			name:      messageExchangeSetInbound,

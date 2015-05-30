@@ -73,13 +73,12 @@ type ChannelOptions struct {
 // want to receive requests should call one of Serve or ListenAndServe
 type Channel struct {
 	log               Logger
-	hostPort          string
-	processName       string
 	connectionOptions ConnectionOptions
-	handlers          handlerMap
+	handlers          *handlerMap
 
-	mut sync.RWMutex // protects the listener
-	l   net.Listener // May be nil if this is a client only channel
+	mut      sync.RWMutex // protects the listener and the peer info
+	peerInfo PeerInfo     // May be ephemeral if this is a client only channel
+	l        net.Listener // May be nil if this is a client only channel
 }
 
 // NewChannel creates a new Channel.  The new channel can be used to send outbound requests
@@ -102,13 +101,14 @@ func NewChannel(opts *ChannelOptions) (*Channel, error) {
 
 	ch := &Channel{
 		connectionOptions: opts.DefaultConnectionOptions,
-		processName:       processName,
-		hostPort:          ephemeralHostPort,
-		log:               logger,
+		peerInfo: PeerInfo{
+			ProcessName: processName,
+			HostPort:    ephemeralHostPort,
+		},
+		log:      logger,
+		handlers: &handlerMap{},
 	}
 
-	ch.connectionOptions.PeerInfo.HostPort = ch.hostPort
-	ch.connectionOptions.PeerInfo.ProcessName = ch.processName
 	ch.connectionOptions.ChecksumType = ChecksumTypeCrc32
 	return ch, nil
 }
@@ -123,8 +123,7 @@ func (ch *Channel) Serve(l net.Listener) error {
 	}
 
 	ch.l = l
-	ch.connectionOptions.PeerInfo.HostPort = ch.hostPort
-	ch.hostPort = ch.l.Addr().String()
+	ch.peerInfo.HostPort = ch.l.Addr().String()
 	ch.mut.Unlock()
 
 	return ch.serve()
@@ -161,15 +160,22 @@ func (ch *Channel) listen(hostPort string) error {
 		return err
 	}
 
-	ch.connectionOptions.PeerInfo.HostPort = ch.hostPort
-	ch.hostPort = ch.l.Addr().String()
-	ch.log.Infof("%s listening on %s", ch.processName, ch.hostPort)
+	ch.peerInfo.HostPort = ch.l.Addr().String()
+	ch.log.Infof("%s listening on %s", ch.peerInfo.ProcessName, ch.peerInfo.HostPort)
 	return nil
 }
 
 // Register registers a handler for a service+operation pair
 func (ch *Channel) Register(h Handler, serviceName, operationName string) {
 	ch.handlers.register(h, serviceName, operationName)
+}
+
+// PeerInfo returns the current peer info for the channel
+func (ch *Channel) PeerInfo() PeerInfo {
+	ch.mut.RLock()
+	defer ch.mut.RUnlock()
+
+	return ch.peerInfo
 }
 
 // BeginCall starts a new call to a remote peer, returning an OutboundCall that can
@@ -182,7 +188,7 @@ func (ch *Channel) BeginCall(ctx context.Context, hostPort, serviceName, operati
 		return nil, err
 	}
 
-	conn, err := newOutboundConnection(nconn, ch.handlers, ch.log, &ch.connectionOptions)
+	conn, err := newOutboundConnection(nconn, ch.handlers, ch.log, ch.PeerInfo(), &ch.connectionOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +238,7 @@ func (ch *Channel) serve() error {
 
 		acceptBackoff = 0
 
-		_, err = newInboundConnection(netConn, ch.handlers, ch.log, &ch.connectionOptions)
+		_, err = newInboundConnection(netConn, ch.handlers, ch.PeerInfo(), ch.log, &ch.connectionOptions)
 		if err != nil {
 			// Server is getting overloaded - begin rejecting new connections
 			ch.log.Errorf("could not create new TChannelConnection for incoming conn: %v", err)
