@@ -69,7 +69,8 @@ function Counter(name, emitter) {
     self.name = name;
     self.emitter = emitter;
 }
-Counter.prototype.type = 'counter';
+Counter.type = 'counter';
+Counter.prototype.type = Counter.type;
 Counter.prototype.increment = emitStat;
 
 function Gauge(name, emitter) {
@@ -77,7 +78,8 @@ function Gauge(name, emitter) {
     self.name = name;
     self.emitter = emitter;
 }
-Gauge.prototype.type = 'gauge';
+Gauge.type = 'gauge';
+Gauge.prototype.type = Gauge.type;
 Gauge.prototype.update = emitStat;
 
 function Timing(name, emitter) {
@@ -85,7 +87,11 @@ function Timing(name, emitter) {
     self.name = name;
     self.emitter = emitter;
 }
-Timing.prototype.type = 'timing';
+Timing.type = 'timing';
+Timing.prototype.type = Timing.type;
 Timing.prototype.add = emitStat;
 
 module.exports = StatEmitter;
+module.exports.Counter = Counter;
+module.exports.Gauge = Gauge;
+module.exports.Timing = Timing;
