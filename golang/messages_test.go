@@ -78,7 +78,7 @@ func TestCallReq(t *testing.T) {
 			"r": "c",
 			"f": "d",
 		},
-		Service: []byte("udr"),
+		Service: "udr",
 	}
 
 	assert.Equal(t, uint32(0xDEADBEEF), r.ID())

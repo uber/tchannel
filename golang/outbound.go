@@ -68,7 +68,7 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string) (*Outbou
 		req: callReq{
 			id:         requestID,
 			Headers:    callHeaders{},
-			Service:    []byte(serviceName),
+			Service:    serviceName,
 			TimeToLive: timeToLive,
 		},
 		recvCh:   mex.recvCh,

@@ -97,13 +97,10 @@ func (f *outFragment) writeChunkData(b []byte) (int, error) {
 		return 0, errTooLarge
 	}
 
-	if err := f.content.WriteBytes(b); err != nil {
-		return 0, err
-	}
-
+	f.content.WriteBytes(b)
 	f.currentChunkSize += len(b)
 	f.checksum.Add(b)
-	return len(b), nil
+	return len(b), f.content.Err()
 }
 
 // Returns true if the fragment can fit a new chunk
@@ -117,7 +114,7 @@ func (f *outFragment) beginChunk() error {
 		return errChunkAlreadyOpen
 	}
 
-	f.currentChunkSizeRef, _ = f.content.DeferUint16()
+	f.currentChunkSizeRef = f.content.DeferUint16()
 	f.currentChunkSize = 0
 	return nil
 }
@@ -147,7 +144,7 @@ func newOutboundFragment(frame *Frame, msg message, checksum Checksum) (*outFrag
 	f.frame.Header.ID = msg.ID()
 	f.frame.Header.messageType = msg.messageType()
 	f.content = typed.NewWriteBuffer(f.frame.Payload[:])
-	f.flagsRef, _ = f.content.DeferByte()
+	f.flagsRef = f.content.DeferByte()
 
 	// Write message specific header
 	if err := msg.write(f.content); err != nil {
@@ -155,13 +152,11 @@ func newOutboundFragment(frame *Frame, msg message, checksum Checksum) (*outFrag
 	}
 
 	// Write checksum type
-	if err := f.content.WriteByte(byte(f.checksum.TypeCode())); err != nil {
-		return nil, err
-	}
+	f.content.WriteByte(byte(f.checksum.TypeCode()))
 
 	// Reserve checksum bytes
-	f.checksumRef, _ = f.content.DeferBytes(f.checksum.TypeCode().ChecksumSize())
-	return f, nil
+	f.checksumRef = f.content.DeferBytes(f.checksum.TypeCode().ChecksumSize())
+	return f, f.content.Err()
 }
 
 // A pseudo-channel for sending fragments to a remote peer.
@@ -371,11 +366,7 @@ func newInboundFragment(frame *Frame, msg message, checksum Checksum) (*inFragme
 	rbuf := typed.NewReadBuffer(payload)
 
 	// Fragment flags
-	flags, err := rbuf.ReadByte()
-	if err != nil {
-		return nil, err
-	}
-
+	flags := rbuf.ReadByte()
 	f.last = (flags & flagMoreFragments) == 0
 
 	// Message header
@@ -384,36 +375,26 @@ func newInboundFragment(frame *Frame, msg message, checksum Checksum) (*inFragme
 	}
 
 	// Checksum type and bytes
-	checksumType, err := rbuf.ReadByte()
-	if err != nil {
-		return nil, err
-	}
-
+	checksumType := rbuf.ReadByte()
 	if f.checksum == nil {
 		f.checksum = ChecksumType(checksumType).New()
 	} else if ChecksumType(checksumType) != checksum.TypeCode() {
 		return nil, ErrMismatchedChecksumTypes
 	}
 
-	peerChecksum, err := rbuf.ReadBytes(f.checksum.TypeCode().ChecksumSize())
-	if err != nil {
-		return nil, err
-	}
+	peerChecksum := rbuf.ReadBytes(f.checksum.TypeCode().ChecksumSize())
 
 	// Slice the remainder into chunks and confirm checksum
-	for rbuf.BytesRemaining() > 0 {
-		chunkSize, err := rbuf.ReadUint16()
-		if err != nil {
-			return nil, err
-		}
-
-		chunkBytes, err := rbuf.ReadBytes(int(chunkSize))
-		if err != nil {
-			return nil, err
-		}
+	for rbuf.BytesRemaining() > 0 && rbuf.Err() == nil {
+		chunkSize := rbuf.ReadUint16()
+		chunkBytes := rbuf.ReadBytes(int(chunkSize))
 
 		f.chunks = append(f.chunks, chunkBytes)
 		f.checksum.Add(chunkBytes)
+	}
+
+	if rbuf.Err() != nil {
+		return nil, rbuf.Err()
 	}
 
 	// Compare checksums
@@ -421,7 +402,7 @@ func newInboundFragment(frame *Frame, msg message, checksum Checksum) (*inFragme
 		return nil, ErrMismatchedChecksum
 	}
 
-	return f, nil
+	return f, rbuf.Err()
 }
 
 // Consumes the next chunk in the fragment

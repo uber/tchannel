@@ -21,12 +21,13 @@ package tchannel
 // THE SOFTWARE.
 
 import (
-	_ "encoding/hex"
+	"bytes"
 	"fmt"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel/golang/typed"
-	"testing"
 )
 
 func TestNoFragmentation(t *testing.T) {
@@ -38,7 +39,7 @@ func TestNoFragmentation(t *testing.T) {
 
 	// Should be a single frame
 	// fragment flags(1), checksum type (1), checksum(5), chunk size(2), chunk(5)
-	expectedFrames := typed.CombineBuffers([][]byte{
+	expectedFrames := combineBuffers([][]byte{
 		[]byte{0x00, byte(ChecksumTypeCrc32)},
 		ChecksumTypeCrc32.New().Add([]byte("Hello")),
 		[]byte{0x00, 0x05},
@@ -263,4 +264,13 @@ func assertFramesEqual(t *testing.T, expected [][]byte, frames []*Frame, msg str
 			fmt.Sprintf("incorrect size for frame %d of %s", i, msg))
 		assert.Equal(t, expected[i], frames[i].Payload[:frames[i].Header.PayloadSize()])
 	}
+}
+
+func combineBuffers(elements ...[][]byte) [][]byte {
+	var buffers [][]byte
+	for i := range elements {
+		buffers = append(buffers, bytes.Join(elements[i], []byte{}))
+	}
+
+	return buffers
 }
