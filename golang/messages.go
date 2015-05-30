@@ -90,11 +90,8 @@ func (m *initMessage) read(r *typed.ReadBuffer) error {
 	m.initParams = initParams{}
 	np := r.ReadUint16()
 	for i := 0; i < int(np); i++ {
-		klen := r.ReadUint16()
-		k := r.ReadString(int(klen))
-
-		vlen := r.ReadUint16()
-		v := r.ReadString(int(vlen))
+		k := r.ReadLen16String()
+		v := r.ReadLen16String()
 		m.initParams[k] = v
 	}
 
@@ -106,11 +103,8 @@ func (m *initMessage) write(w *typed.WriteBuffer) error {
 	w.WriteUint16(uint16(len(m.initParams)))
 
 	for k, v := range m.initParams {
-		w.WriteUint16(uint16(len(k)))
-		w.WriteString(k)
-
-		w.WriteUint16(uint16(len(v)))
-		w.WriteString(v)
+		w.WriteLen16String(k)
+		w.WriteLen16String(v)
 	}
 
 	return w.Err()
@@ -140,12 +134,8 @@ type callHeaders map[string]string
 func (ch callHeaders) read(r *typed.ReadBuffer) {
 	nh := r.ReadByte()
 	for i := 0; i < int(nh); i++ {
-		klen := r.ReadByte()
-		k := r.ReadString(int(klen))
-
-		vlen := r.ReadByte()
-		v := r.ReadString(int(vlen))
-
+		k := r.ReadLen8String()
+		v := r.ReadLen8String()
 		ch[k] = v
 	}
 }
@@ -154,11 +144,8 @@ func (ch callHeaders) write(w *typed.WriteBuffer) {
 	w.WriteByte(byte(len(ch)))
 
 	for k, v := range ch {
-		w.WriteByte(byte(len(k)))
-		w.WriteString(k)
-
-		w.WriteByte(byte(len(v)))
-		w.WriteString(v)
+		w.WriteLen8String(k)
+		w.WriteLen8String(v)
 	}
 }
 
@@ -176,10 +163,7 @@ func (m *callReq) messageType() messageType { return messageTypeCallReq }
 func (m *callReq) read(r *typed.ReadBuffer) error {
 	m.TimeToLive = time.Duration(r.ReadUint32()) * time.Millisecond
 	m.Tracing.read(r)
-
-	serviceNameLen := r.ReadByte()
-	m.Service = r.ReadBytes(int(serviceNameLen))
-
+	m.Service = []byte(r.ReadLen8String()) // TODO(mmihic): Keep service as string, it's easier to deal with
 	m.Headers = callHeaders{}
 	m.Headers.read(r)
 	return r.Err()
@@ -188,8 +172,7 @@ func (m *callReq) read(r *typed.ReadBuffer) error {
 func (m *callReq) write(w *typed.WriteBuffer) error {
 	w.WriteUint32(uint32(m.TimeToLive.Seconds() * 1000))
 	m.Tracing.write(w)
-	w.WriteByte(byte(len(m.Service)))
-	w.WriteBytes(m.Service)
+	w.WriteLen8String(string(m.Service))
 	m.Headers.write(w)
 	return w.Err()
 }
@@ -261,17 +244,14 @@ func (m *errorMessage) messageType() messageType { return messageTypeError }
 func (m *errorMessage) read(r *typed.ReadBuffer) error {
 	m.errCode = SystemErrCode(r.ReadByte())
 	m.tracing.read(r)
-
-	msgSize := r.ReadUint16()
-	m.message = r.ReadString(int(msgSize))
+	m.message = r.ReadLen16String()
 	return r.Err()
 }
 
 func (m *errorMessage) write(w *typed.WriteBuffer) error {
 	w.WriteByte(byte(m.errCode))
 	m.tracing.write(w)
-	w.WriteUint16(uint16(len(m.message)))
-	w.WriteString(m.message)
+	w.WriteLen16String(m.message)
 	return w.Err()
 }
 
