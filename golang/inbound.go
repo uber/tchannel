@@ -98,26 +98,27 @@ func (c *Connection) inboundCallComplete(messageID uint32) {
 }
 
 // Dispatches an inbound call to the appropriate handler
-func (p *Connection) dispatchInbound(call *InboundCall) {
-	p.log.Debugf("Received incoming call for %s from %s", call.ServiceName(), p.remotePeerInfo)
+func (c *Connection) dispatchInbound(call *InboundCall) {
+	c.log.Debugf("Received incoming call for %s from %s", call.ServiceName(), c.remotePeerInfo)
 
 	if err := call.readOperation(); err != nil {
-		p.log.Errorf("Could not read operation from %s: %v", p.remotePeerInfo, err)
-		p.inboundCallComplete(call.id)
+		c.log.Errorf("Could not read operation from %s: %v", c.remotePeerInfo, err)
+		c.inboundCallComplete(call.id)
 		return
 	}
 
-	// NB(mmihic): Don't cast operation name to string here - this will create a copy
-	// of the byte array, where as aliasing to string in the map look up can be optimized
-	// by the compiler to avoid the copy.  See https://github.com/golang/go/issues/3512
-	h := p.handlers.find(call.ServiceName(), call.Operation())
+	// NB(mmihic): Don't cast operation name to string here - this will
+	// create a copy of the byte array, where as aliasing to string in the
+	// map look up can be optimized by the compiler to avoid the copy.  See
+	// https://github.com/golang/go/issues/3512
+	h := c.handlers.find(call.ServiceName(), call.Operation())
 	if h == nil {
-		p.log.Errorf("Could not find handler for %s:%s", call.ServiceName(), call.Operation())
+		c.log.Errorf("Could not find handler for %s:%s", call.ServiceName(), call.Operation())
 		call.Response().SendSystemError(ErrHandlerNotFound)
 		return
 	}
 
-	p.log.Debugf("Dispatching %s:%s from %s", call.ServiceName(), call.Operation(), p.remotePeerInfo)
+	c.log.Debugf("Dispatching %s:%s from %s", call.ServiceName(), call.Operation(), c.remotePeerInfo)
 	h.Handle(call.ctx, call)
 }
 
