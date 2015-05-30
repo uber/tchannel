@@ -7,11 +7,14 @@ import (
 )
 
 var (
-	ErrInsufficientBuffer = errors.New("buffer is too small")
-	ErrBufferFull         = errors.New("no more room in buffer")
+	// ErrEOF is returned when trying to read past end of buffer
+	ErrEOF = errors.New("buffer is too small")
+
+	// ErrBufferFull is returned when trying to write past end of buffer
+	ErrBufferFull = errors.New("no more room in buffer")
 )
 
-// A typed.ReadBuffer is a wrapper around an underlying []byte with methods to read from
+// A ReadBuffer is a wrapper around an underlying []byte with methods to read from
 // that buffer in big-endian format.
 type ReadBuffer struct {
 	buffer    []byte
@@ -101,7 +104,7 @@ func (r *ReadBuffer) BytesRemaining() int {
 // FillFrom fills the buffer from a reader
 func (r *ReadBuffer) FillFrom(ior io.Reader, n int) (int, error) {
 	if len(r.buffer) < n {
-		return 0, ErrInsufficientBuffer
+		return 0, ErrEOF
 	}
 
 	r.remaining = r.buffer[:n]
@@ -116,7 +119,7 @@ func (r *ReadBuffer) CurrentPos() int {
 // Seek moves the current read position to the given offset in the buffer
 func (r *ReadBuffer) Seek(offset int) error {
 	if offset > len(r.buffer) {
-		return ErrInsufficientBuffer
+		return ErrEOF
 	}
 
 	r.remaining = r.buffer[offset:]
@@ -129,7 +132,7 @@ func (r *ReadBuffer) Wrap(b []byte) {
 	r.remaining = b
 }
 
-// A typed.WriteBuffer is a wrapper around an underlying []byte with methods to write to
+// A WriteBuffer is a wrapper around an underlying []byte with methods to write to
 // that buffer in big-endian format.  The buffer is of fixed size, and does not grow.
 type WriteBuffer struct {
 	buffer    []byte
@@ -302,7 +305,7 @@ func (w *WriteBuffer) CurrentPos() int { return len(w.buffer) - len(w.remaining)
 // Seek moves the current write position to the given offset in the buffer
 func (w *WriteBuffer) Seek(offset int) error {
 	if offset > len(w.buffer) {
-		return ErrInsufficientBuffer
+		return ErrEOF
 	}
 
 	w.remaining = w.buffer[offset:]
