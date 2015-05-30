@@ -63,7 +63,7 @@ func (c *Connection) handleCallReq(frame *Frame) {
 		conn:     c,
 		ctx:      ctx,
 		cancel:   cancel,
-		checksum: ChecksumTypeCrc32.New(), // TODO(mmihic): Make configurable or mirror req?
+		checksum: firstFragment.checksum.TypeCode().New(),
 		span:     callReq.Tracing,
 	}
 	res.body = newBodyWriter(res)
@@ -77,6 +77,7 @@ func (c *Connection) handleCallReq(frame *Frame) {
 		cancel:           cancel,
 		curFragment:      firstFragment,
 		recvLastFragment: firstFragment.last,
+		checksum:         firstFragment.checksum,
 		serviceName:      string(callReq.Service),
 		state:            inboundCallReadyToReadArg1,
 		span:             callReq.Tracing,
@@ -389,6 +390,7 @@ func (call *InboundCallResponse) beginFragment() (*outFragment, error) {
 			res.Tracing = *span
 		}
 
+		call.startedFirstFragment = true
 		msg = res
 	} else {
 		msg = &callResContinue{id: call.id}
