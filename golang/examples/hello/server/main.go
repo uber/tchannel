@@ -21,11 +21,11 @@ package main
 // THE SOFTWARE.
 
 import (
+	"flag"
+	"time"
+
 	"github.com/uber/tchannel/golang"
 	"golang.org/x/net/context"
-	"flag"
-	"os"
-	"time"
 )
 
 var log = tchannel.SimpleLogger
@@ -89,8 +89,7 @@ func main() {
 		Logger: log,
 	})
 	if err != nil {
-		log.Errorf("could not create channel %v", err)
-		os.Exit(-1)
+		log.Fatalf("could not create channel %v", err)
 	}
 
 	ch.Register(tchannel.HandlerFunc(echo), "TestService", "echo")
@@ -100,7 +99,6 @@ func main() {
 	ch.Register(tchannel.HandlerFunc(timeout), "TestService", "timeout")
 
 	if err := ch.ListenAndServe(*bindAddr); err != nil {
-		log.Errorf("Could not listen on %s: %v HERE!!!", *bindAddr, err)
-		os.Exit(-1)
+		log.Fatalf("Could not listen on %s: %v", *bindAddr, err)
 	}
 }
