@@ -65,17 +65,17 @@ func TestRoundTrip(t *testing.T) {
 		defer cancel()
 
 		call, err := ch.BeginCall(ctx, hostPort, "Capture", "ping")
-		require.Nil(t, err)
+		require.NoError(t, err)
 
-		require.Nil(t, call.WriteArg2(BytesOutput("Hello Header")))
-		require.Nil(t, call.WriteArg3(BytesOutput("Body Sent")))
+		require.NoError(t, call.WriteArg2(BytesOutput("Hello Header")))
+		require.NoError(t, call.WriteArg3(BytesOutput("Body Sent")))
 
 		var respArg2 BytesInput
-		require.Nil(t, call.Response().ReadArg2(&respArg2))
+		require.NoError(t, call.Response().ReadArg2(&respArg2))
 		assert.Equal(t, []byte("Hello Header"), []byte(respArg2))
 
 		var respArg3 BytesInput
-		require.Nil(t, call.Response().ReadArg3(&respArg3))
+		require.NoError(t, call.Response().ReadArg3(&respArg3))
 		assert.Equal(t, []byte("Body Sent"), []byte(respArg3))
 	})
 }
@@ -124,19 +124,19 @@ func TestFragmentation(t *testing.T) {
 
 		arg2 := make([]byte, MaxFramePayloadSize*2)
 		for i := 0; i < len(arg2); i++ {
-			arg2[i] = byte(i&0x0F) + 50
+			arg2[i] = byte('a' + (i % 10))
 		}
 
 		arg3 := make([]byte, MaxFramePayloadSize*3)
 		for i := 0; i < len(arg3); i++ {
-			arg3[i] = byte(i&0xF0) + 100
+			arg3[i] = byte('A' + (i % 10))
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 		defer cancel()
 
 		respArg2, respArg3, err := sendRecv(ctx, ch, hostPort, "TestService", "echo", arg2, arg3)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, arg2, respArg2)
 		assert.Equal(t, arg3, respArg3)
 	})
