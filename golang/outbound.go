@@ -181,19 +181,16 @@ func (call *OutboundCall) newFragment(initial bool, checksum Checksum) (*writabl
 	frame := call.conn.framePool.Get()
 	frame.Header.ID = call.id
 	if initial {
-		frame.Header.messageType = messageTypeCallReq
 		return newWritableFragment(frame, &call.req, checksum)
 	} else {
-		frame.Header.messageType = messageTypeCallReqContinue
 		return newWritableFragment(frame, &callReqContinue{id: call.id}, checksum)
 	}
 }
 
 // flushFragment flushes a complete fragment to the remote peer
 func (call *OutboundCall) flushFragment(fragment *writableFragment) error {
-	payloadSize := uint16(fragment.contents.BytesWritten())
 	frame := fragment.frame.(*Frame)
-	frame.Header.SetPayloadSize(payloadSize)
+	frame.Header.SetPayloadSize(uint16(fragment.contents.BytesWritten()))
 	select {
 	case <-call.mex.ctx.Done():
 		return call.failed(call.mex.ctx.Err())
@@ -316,6 +313,8 @@ func (c *Connection) handleError(frame *Frame) {
 }
 
 func newWritableFragment(frame *Frame, msg message, checksum Checksum) (*writableFragment, error) {
+	frame.Header.messageType = msg.messageType()
+
 	wbuf := typed.NewWriteBuffer(frame.Payload[:])
 	fragment := new(writableFragment)
 	fragment.frame = frame
