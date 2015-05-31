@@ -441,6 +441,7 @@ func (c *Connection) readFrames() {
 			c.handleError(frame)
 		default:
 			// TODO(mmihic): Log and close connection with protocol error
+			c.log.Errorf("Received unexpected frame %s from %s", frame.Header, c.remotePeerInfo)
 		}
 	}
 }
@@ -451,6 +452,7 @@ func (c *Connection) writeFrames() {
 	for f := range c.sendCh {
 		defer c.framePool.Release(f)
 
+		c.log.Debugf("Writing frame %s", f.Header)
 		if err := f.WriteTo(c.conn); err != nil {
 			c.connectionError(err)
 			return
