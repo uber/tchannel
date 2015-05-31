@@ -119,9 +119,10 @@ func TestArgEndOnFragmentBoundary(t *testing.T) {
 	// Each argument should line up exactly at the end of each fragment
 	in, out := buildChannels(ChecksumTypeCrc32)
 
-	// Calculate the number of bytes available in the fragment content, which is the size
-	// of the full frame minus the header content for the fragment.  Header content consists of
-	// 1 byte flag, 1 byte checksum type, 4 byte checksum value, for a total of 6 bytes
+	// Calculate the number of bytes available in the fragment content,
+	// which is the size of the full frame minus the header content for the
+	// fragment.  Header content consists of 1 byte flag, 1 byte checksum
+	// type, 4 byte checksum value, for a total of 6 bytes
 	fragmentContentSize := int(MaxFramePayloadSize) - 6
 	arg1 := make([]byte, fragmentContentSize-2) // reserve 2 bytes for the arg chunk size
 	for i := range arg1 {
@@ -151,8 +152,8 @@ func TestArgEndOnFragmentBoundary(t *testing.T) {
 	}
 	require.Nil(t, w.endArgument(true))
 
-	// We should have sent 4 fragments (one for arg1, one for zero arg1 size + arg2,
-	// one for zero arg2 size + arg3, one for zero arg3 size)
+	// We should have sent 4 fragments (one for arg1, one for zero arg1
+	// size + arg2, one for zero arg2 size + arg3, one for zero arg3 size)
 	sentFragments := out.sentFragments
 	require.Equal(t, 4, len(sentFragments))
 	lastFragment := sentFragments[len(sentFragments)-1]
