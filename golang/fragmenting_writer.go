@@ -7,6 +7,12 @@ import (
 	"github.com/uber/tchannel/golang/typed"
 )
 
+var (
+	errAlreadyWritingArgument = errors.New("already writing argument")
+	errNotWritingArgument     = errors.New("not writing argument")
+	errComplete               = errors.New("last argument already sent")
+)
+
 const (
 	chunkHeaderSize      = 2    // each chunk is a uint16
 	hasMoreFragmentsFlag = 0x01 // flags indicating there are more fragments coming
@@ -109,12 +115,6 @@ func newFragmentingWriter(sender fragmentSender, checksum Checksum) *fragmenting
 	}
 }
 
-var (
-	errAlreadyWritingArgument = errors.New("already writing argument")
-	errNotWritingArgument     = errors.New("not writing argument")
-	errComplete               = errors.New("last argument already sent")
-)
-
 // WriteArgument writes a full argument to the writer, fragmenting as needed
 func (w *fragmentingWriter) WriteArgument(arg Output, last bool) error {
 	if err := w.BeginArgument(); err != nil {
@@ -168,6 +168,11 @@ func (w *fragmentingWriter) BeginArgument() error {
 // Write writes argument data, breaking it into fragments as needed
 func (w *fragmentingWriter) Write(b []byte) (int, error) {
 	if w.err != nil {
+		return 0, w.err
+	}
+
+	if w.state != fragmentingWriteInArgument {
+		w.err = errNotWritingArgument
 		return 0, w.err
 	}
 

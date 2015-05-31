@@ -121,6 +121,102 @@ func TestFragmentationLastArgOnExactFragmentBoundary(t *testing.T) {
 	))
 }
 
+func TestFragmentationWriterErrors(t *testing.T) {
+	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
+		// Write without starting argument
+		_, err := w.Write(BytesOutput("foo"))
+		assert.Error(t, err)
+	})
+
+	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
+		// BeginArgument twice without starting argument
+		assert.NoError(t, w.BeginArgument())
+		assert.Error(t, w.BeginArgument())
+	})
+
+	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
+		// BeginArgument after writing final argument
+		assert.NoError(t, w.WriteArgument(BytesOutput("hello"), true))
+		assert.Error(t, w.BeginArgument())
+	})
+
+	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
+		// EndArgument without beginning argument
+		assert.Error(t, w.EndArgument(true))
+	})
+}
+
+func TestFragmentationReaderErrors(t *testing.T) {
+	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
+		// Read without starting argument
+		b := make([]byte, 10)
+		_, err := r.Read(b)
+		assert.Error(t, err)
+	})
+
+	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
+		// EndArgument without beginning argument
+		assert.Error(t, r.EndArgument(true))
+	})
+
+	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
+		// BeginArgument after reading final argument
+		assert.NoError(t, w.WriteArgument(BytesOutput("hello"), true))
+
+		var arg BytesInput
+		assert.NoError(t, r.ReadArgument(&arg, true))
+		assert.Equal(t, "hello", string(arg))
+		assert.Error(t, r.BeginArgument())
+	})
+
+	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
+		// Sender sent final argument, but receiver thinks there is more
+		assert.NoError(t, w.WriteArgument(BytesOutput("hello"), true))
+
+		var arg BytesInput
+		assert.Error(t, r.ReadArgument(&arg, false))
+	})
+
+	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
+		// EndArgument without receiving all data in chunk
+		assert.NoError(t, w.WriteArgument(BytesOutput("hello"), true))
+
+		assert.NoError(t, r.BeginArgument())
+		b := make([]byte, 3)
+		_, err := r.Read(b)
+		assert.NoError(t, err)
+		assert.Equal(t, "hel", string(b))
+		assert.Error(t, r.EndArgument(true))
+	})
+
+	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
+		// EndArgument without receiving all fragments
+		assert.NoError(t, w.WriteArgument(BytesOutput("hello world what's up"), true))
+
+		assert.NoError(t, r.BeginArgument())
+		b := make([]byte, 8)
+		_, err := r.Read(b)
+		assert.NoError(t, err)
+		assert.Equal(t, "hello wo", string(b))
+		assert.Error(t, r.EndArgument(true))
+	})
+
+	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
+		// BeginArgument while argument is in process
+		assert.NoError(t, w.WriteArgument(BytesOutput("hello world what's up"), true))
+		assert.NoError(t, r.BeginArgument())
+		assert.Error(t, r.BeginArgument())
+	})
+
+}
+
+func runFragmentationErrorTest(f func(w *fragmentingWriter, r *fragmentingReader)) {
+	ch := make(fragmentChannel, 10)
+	w := newFragmentingWriter(ch, ChecksumTypeCrc32.New())
+	r := newFragmentingReader(ch)
+	f(w, r)
+}
+
 func runFragmentationTest(t *testing.T, args []string, expectedFragments [][]byte) {
 	sendCh := make(fragmentChannel, 10)
 	recvCh := make(fragmentChannel, 10)
