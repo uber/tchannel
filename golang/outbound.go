@@ -114,9 +114,10 @@ func (c *Connection) handleCallResContinue(frame *Frame) {
 	}
 }
 
-// An OutboundCall is an active call to a remote peer.  A client makes a call by calling BeginCall on the TChannel,
-// writing argument content via WriteArg2() and WriteArg3(), and then reading reading response data via
-// the ReadArg2() and ReadArg3() methods on the Response() object.
+// An OutboundCall is an active call to a remote peer.  A client makes a call
+// by calling BeginCall on the TChannel, writing argument content via
+// WriteArg2() and WriteArg3(), and then reading reading response data via the
+// ReadArg2() and ReadArg3() methods on the Response() object.
 type OutboundCall struct {
 	id                uint32
 	req               callReq
@@ -140,12 +141,13 @@ const (
 	outboundCallError
 )
 
-// Response provides access to the call's response object, which can be used to read response arguments
+// Response provides access to the call's response object, which can be used to
+// read response arguments
 func (call *OutboundCall) Response() *OutboundCallResponse {
 	return call.res
 }
 
-// Writes the operation (arg1) to the call
+// writeOperation writes the operation (arg1) to the call
 func (call *OutboundCall) writeOperation(operation []byte) error {
 	if call.state != outboundCallReadyToWriteArg1 {
 		return call.failed(errCallStateMismatch)
@@ -159,7 +161,8 @@ func (call *OutboundCall) writeOperation(operation []byte) error {
 	return nil
 }
 
-// WriteArg2 writes the the second argument part to the request, blocking until the argument is written
+// WriteArg2 writes the the second argument part to the request, blocking until
+// the argument is written
 func (call *OutboundCall) WriteArg2(arg Output) error {
 	if call.state != outboundCallReadyToWriteArg2 {
 		return call.failed(errCallStateMismatch)
@@ -173,7 +176,8 @@ func (call *OutboundCall) WriteArg2(arg Output) error {
 	return nil
 }
 
-// WriteArg3 writes the third argument to the request, blocking until the argument is written
+// WriteArg3 writes the third argument to the request, blocking until the
+// argument is written
 func (call *OutboundCall) WriteArg3(arg Output) error {
 	if call.state != outboundCallReadyToWriteArg3 {
 		return call.failed(errCallStateMismatch)
@@ -187,14 +191,14 @@ func (call *OutboundCall) WriteArg3(arg Output) error {
 	return nil
 }
 
-// Marks a call as having failed
+// failed marks a call as having failed
 func (call *OutboundCall) failed(err error) error {
 	call.conn.outboundCallComplete(call.id)
 	call.state = outboundCallError
 	return err
 }
 
-// Starts a new fragment to send to the remote peer
+// beginFragment starts a new fragment to send to the remote peer
 func (call *OutboundCall) beginFragment() (*outFragment, error) {
 	frame := call.conn.framePool.Get()
 
@@ -214,7 +218,7 @@ func (call *OutboundCall) beginFragment() (*outFragment, error) {
 	return frag, nil
 }
 
-// Sends a complete fragment to the remote peer
+// flushFragment flushes a complete fragment to the remote peer
 func (call *OutboundCall) flushFragment(fragment *outFragment, last bool) error {
 	select {
 	case <-call.ctx.Done():
@@ -231,14 +235,13 @@ func (call *OutboundCall) flushFragment(fragment *outFragment, last bool) error 
 // An OutboundCallResponse is the response to an outbound call
 type OutboundCallResponse struct {
 	id                 uint32
-	res                callRes
+	responseCode       ResponseCode
 	checksum           Checksum
 	conn               *Connection
 	ctx                context.Context
 	recvCh             chan *Frame
 	state              outboundCallResponseState
 	curFragment        *inFragment
-	recvLastFragment   bool
 	lastArgumentReader *bodyReader
 }
 
@@ -257,7 +260,7 @@ const (
 // fragment is available, if the first fragment hasn't been received.
 func (call *OutboundCallResponse) ApplicationError() bool {
 	// TODO(mmihic): Wait for first fragment
-	return call.res.ResponseCode == responseApplicationError
+	return call.responseCode == responseApplicationError
 }
 
 // readOperation reads the operation
@@ -275,8 +278,8 @@ func (call *OutboundCallResponse) readOperation(arg Input) error {
 	return nil
 }
 
-// ReadArg2 reads the second argument from the response, blocking until the argument is read or
-// an error/timeout has occurred.
+// ReadArg2 reads the second argument from the response, blocking until the
+// argument is read or an error/timeout has occurred.
 func (call *OutboundCallResponse) ReadArg2(arg Input) error {
 	var operation BytesInput
 	if err := call.readOperation(&operation); err != nil {
@@ -296,8 +299,8 @@ func (call *OutboundCallResponse) ReadArg2(arg Input) error {
 	return nil
 }
 
-// ReadArg3 reads the third argument from the response, blocking until the argument is read or
-// an error/timeout has occurred.
+// ReadArg3 reads the third argument from the response, blocking until the
+// argument is read or an error/timeout has occurred.
 func (call *OutboundCallResponse) ReadArg3(arg Input) error {
 	if call.state != outboundCallResponseReadyToReadArg3 {
 		return call.failed(errCallStateMismatch)
@@ -312,13 +315,14 @@ func (call *OutboundCallResponse) ReadArg3(arg Input) error {
 	return nil
 }
 
-// Implementation of inFragmentChannel
+// waitForFragment waits for the next fragment to become available, or for the
+// call to timeout or be cancelled
 func (call *OutboundCallResponse) waitForFragment() (*inFragment, error) {
 	if call.curFragment != nil && call.curFragment.hasMoreChunks() {
 		return call.curFragment, nil
 	}
 
-	if call.recvLastFragment {
+	if call.curFragment != nil && call.curFragment.last {
 		return nil, call.failed(io.EOF)
 	}
 
@@ -329,7 +333,13 @@ func (call *OutboundCallResponse) waitForFragment() (*inFragment, error) {
 	case frame := <-call.recvCh:
 		switch frame.Header.messageType {
 		case messageTypeCallRes:
-			return call.parseFragment(frame, &call.res)
+			res := &callRes{}
+			f, err := call.parseFragment(frame, res)
+			if err != nil {
+				return nil, err
+			}
+			call.responseCode = res.ResponseCode
+			return f, nil
 
 		case messageTypeCallResContinue:
 			return call.parseFragment(frame, &callResContinue{})
@@ -352,29 +362,29 @@ func (call *OutboundCallResponse) waitForFragment() (*inFragment, error) {
 	}
 }
 
-// Parses an incoming fragment frame as a particular message type
+// parseFragment parses an incoming fragment frame as a particular message type
 func (call *OutboundCallResponse) parseFragment(frame *Frame, msg message) (*inFragment, error) {
 	fragment, err := newInboundFragment(frame, msg, call.checksum)
 	if err != nil {
 		return nil, call.failed(err)
 	}
 
-	call.checksum = fragment.checksum
 	call.curFragment = fragment
-	call.recvLastFragment = fragment.last
 	return fragment, nil
 }
 
-// Indicates that the call has failed
+// failed marks the call as having failed
 func (call *OutboundCallResponse) failed(err error) error {
+	call.conn.log.Debugf("Call %d failed during response handling: %v", call.id, err)
 	call.conn.outboundCallComplete(call.id)
 	return err
 }
 
-// Handles an error coming back from the peer server. If the error is a protocol level error, the entire
-// connection will be closed.  If the error is a reqest specific error, it will
-// be written to the request's response channel and converted into a SystemError
-// returned from the next reader or access call.
+// handleError andles an error coming back from the peer server. If the error
+// is a protocol level error, the entire connection will be closed.  If the
+// error is a reqest specific error, it will be written to the request's
+// response channel and converted into a SystemError returned from the next
+// reader or access call.
 func (c *Connection) handleError(frame *Frame) {
 	var errorMessage errorMessage
 	rbuf := typed.NewReadBuffer(frame.SizedPayload())
