@@ -33,7 +33,7 @@ var TChannelAsHTTP = require('../as/http');
  *    $ node examples/http_ingress.js --tchannel-port 4040 example 127.0.0.1:8000
  *
  * 3) start an egress proxy which will convert HTTP requests to TChannel calls:
- *    $ node examples/http_egress.js --http-port 8080 --peers 127.0.0.1:4040
+ *    $ node examples/http_egress.js --http-port 8080 --peers 127.0.0.1:4040 example
  *
  * 4) use it through the egress node:
  *    $ curl http://localhost:8080 # or open in browser to taste
