@@ -21,6 +21,7 @@ package tchannel
 // THE SOFTWARE.
 
 import (
+	"fmt"
 	"net"
 	"testing"
 	"time"
@@ -47,6 +48,7 @@ func timeout(t *testing.T, ctx context.Context, call *InboundCall) {
 }
 
 func echo(t *testing.T, ctx context.Context, call *InboundCall) {
+	fmt.Println("Entering echo")
 	var inArg2 BytesInput
 	var inArg3 BytesInput
 
@@ -118,7 +120,7 @@ func TestTimeout(t *testing.T) {
 	})
 }
 
-func TestFragmentation(t *testing.T) {
+func testFragmentation(t *testing.T) {
 	withTestChannel(t, func(ch *Channel, hostPort string) {
 		ch.Register(testHandlerFunc(t, echo), "TestService", "echo")
 

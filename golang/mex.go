@@ -4,12 +4,14 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/uber/tchannel/golang/typed"
 	"golang.org/x/net/context"
 )
 
 var (
-	errDuplicateMex   = errors.New("multiple attempts to use the message id")
-	errMexChannelFull = NewSystemError(ErrCodeBusy, "cannot send frame to message exchange channel")
+	errDuplicateMex        = errors.New("multiple attempts to use the message id")
+	errMexChannelFull      = NewSystemError(ErrCodeBusy, "cannot send frame to message exchange channel")
+	errUnexpectedFrameType = errors.New("unexpected frame received")
 )
 
 const (
@@ -26,6 +28,7 @@ type messageExchange struct {
 	ctx     context.Context
 	msgID   uint32
 	msgType messageType
+	mexset  *messageExchangeSet
 }
 
 // forwardPeerFrame forwards a frame from a peer to the message exchange, where
@@ -37,6 +40,56 @@ func (mex *messageExchange) forwardPeerFrame(frame *Frame) error {
 	default:
 		return errMexChannelFull
 	}
+}
+
+// recvPeerFrame waits for a new frame from the peer, or until the context
+// expires or is cancelled
+func (mex *messageExchange) recvPeerFrame() (*Frame, error) {
+	select {
+	case frame := <-mex.recvCh:
+		return frame, nil
+
+	case <-mex.ctx.Done():
+		return nil, mex.ctx.Err()
+	}
+}
+
+// recvPeerFrameOfType waits for a new frame of a given type from the peer, failing
+// if the next frame received is not of that type
+func (mex *messageExchange) recvPeerFrameOfType(msgType messageType) (*Frame, error) {
+	frame, err := mex.recvPeerFrame()
+	if err != nil {
+		return nil, err
+	}
+
+	switch frame.Header.messageType {
+	case msgType:
+		return frame, nil
+
+	case messageTypeError:
+		var err errorMessage
+		var rbuf typed.ReadBuffer
+		rbuf.Wrap(frame.SizedPayload())
+		err.read(&rbuf)
+		return nil, err.AsSystemError()
+
+	default:
+		// TODO(mmihic): Should be treated as a protocol error
+		mex.mexset.log.Warnf("Received unexpected message %d for %d",
+			int(frame.Header.messageType), frame.Header.ID)
+
+		return nil, errUnexpectedFrameType
+	}
+
+	return nil, nil
+}
+
+// shutdown shuts down the message exchange, removing it from the message
+// exchange so it cannot receive more messages from the peer.  The receive
+// channel remains open, however, in case there are concurrent goroutines
+// sending to it.
+func (mex *messageExchange) shutdown() {
+	mex.mexset.removeExchange(mex.msgID)
 }
 
 // messageExchangeSet manages a set of active message exchanges.  It is mainly
@@ -67,6 +120,7 @@ func (mexset *messageExchangeSet) newExchange(ctx context.Context,
 		msgID:   msgID,
 		ctx:     ctx,
 		recvCh:  make(chan *Frame, bufferSize),
+		mexset:  mexset,
 	}
 
 	mexset.mut.Lock()

@@ -38,6 +38,7 @@ var (
 
 // Handles an incoming call request, dispatching the call to the worker pool
 func (c *Connection) handleCallReq(frame *Frame) {
+	c.log.Debugf("Received call request")
 	callReq := callReq{id: frame.Header.ID}
 
 	firstFragment, err := newInboundFragment(frame, &callReq, nil)
