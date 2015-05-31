@@ -207,7 +207,50 @@ func TestFragmentationReaderErrors(t *testing.T) {
 		assert.NoError(t, r.BeginArgument())
 		assert.Error(t, r.BeginArgument())
 	})
+}
 
+func TestFragmentationChecksumTypeErrors(t *testing.T) {
+	sendCh := make(fragmentChannel, 10)
+	recvCh := make(fragmentChannel, 10)
+	w := newFragmentingWriter(sendCh, ChecksumTypeCrc32.New())
+	r := newFragmentingReader(recvCh)
+
+	// Write two fragments out
+	require.NoError(t, w.WriteArgument(BytesOutput("hello world this is two"), true))
+
+	// Intercept and change the checksum type between the first and second fragment
+	first := <-sendCh
+	recvCh <- first
+
+	second := <-sendCh
+	second[1] = byte(ChecksumTypeCrc32C)
+	recvCh <- second
+
+	// Attempt to read, should fail
+	var arg BytesInput
+	assert.Error(t, r.ReadArgument(&arg, true))
+}
+
+func TestFragmentationChecksumMismatch(t *testing.T) {
+	sendCh := make(fragmentChannel, 10)
+	recvCh := make(fragmentChannel, 10)
+	w := newFragmentingWriter(sendCh, ChecksumTypeCrc32.New())
+	r := newFragmentingReader(recvCh)
+
+	// Write two fragments out
+	require.NoError(t, w.WriteArgument(BytesOutput("hello world this is two"), true))
+
+	// Intercept and change the checksum value in the second fragment
+	first := <-sendCh
+	recvCh <- first
+
+	second := <-sendCh
+	second[2], second[3], second[4], second[5] = 0x01, 0x02, 0x03, 0x04
+	recvCh <- second
+
+	// Attempt to read, should fail due to mismatch between local checksum and peer supplied checksum
+	var arg BytesInput
+	assert.Error(t, r.ReadArgument(&arg, true))
 }
 
 func runFragmentationErrorTest(f func(w *fragmentingWriter, r *fragmentingReader)) {
