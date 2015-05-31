@@ -9,6 +9,8 @@ import (
 )
 
 var (
+	errMismatchedChecksumTypes  = errors.New("peer returned different checksum types between fragments")
+	errMismatchedChecksums      = errors.New("different checksums between peer and local")
 	errChunkExceedsFragmentSize = errors.New("peer chunk size exceeds remaining data in fragment")
 	errAlreadyReadingArgument   = errors.New("already reading argument")
 	errNotReadingArgument       = errors.New("not reading argument")
@@ -220,7 +222,7 @@ func (r *fragmentingReader) recvAndParseNextFragment(initial bool) error {
 	if r.checksum == nil {
 		r.checksum = nextFragment.checksumType.New()
 	} else if r.checksum.TypeCode() != nextFragment.checksumType {
-		return ErrMismatchedChecksumTypes
+		return errMismatchedChecksumTypes
 	}
 
 	// Split fragment into underlying chunks
@@ -243,7 +245,7 @@ func (r *fragmentingReader) recvAndParseNextFragment(initial bool) error {
 	// Validate checksums
 	localChecksum := r.checksum.Sum()
 	if bytes.Compare(nextFragment.checksum, localChecksum) != 0 {
-		return ErrMismatchedChecksum
+		return errMismatchedChecksums
 	}
 
 	// Pull out the first chunk to act as the current chunk
