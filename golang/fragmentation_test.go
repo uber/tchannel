@@ -1,28 +1,8 @@
 package tchannel
 
-// Copyright (c) 2015 Uber Technologies, Inc.
-
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
-
 import (
 	"bytes"
-	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -30,243 +10,337 @@ import (
 	"github.com/uber/tchannel/golang/typed"
 )
 
-func TestNoFragmentation(t *testing.T) {
-	in, out := buildChannels(ChecksumTypeCrc32)
+const (
+	testFragmentHeaderSize = 1 /* flags */ + 1 /* checksum type */ + 4 /* CRC32 checksum */
 
-	arg1 := []byte("Hello")
-	w := newBodyWriter(out)
-	require.Nil(t, w.WriteArgument(BytesOutput(arg1), true))
+	testFragmentPayloadSize = 10 // enough room for a small payload
+	testFragmentSize        = testFragmentHeaderSize + testFragmentPayloadSize
+)
 
-	// Should be a single frame
-	// fragment flags(1), checksum type (1), checksum(5), chunk size(2), chunk(5)
-	expectedFrames := combineBuffers([][]byte{
-		[]byte{0x00, byte(ChecksumTypeCrc32)},
-		ChecksumTypeCrc32.New().Add([]byte("Hello")),
-		[]byte{0x00, 0x05},
-		[]byte("Hello")})
-	assertFramesEqual(t, expectedFrames, out.sentFragments, "no fragmentation")
-
-	r1 := newBodyReader(in, true)
-	rarg1 := make([]byte, len(arg1))
-	if _, err := r1.Read(rarg1); err != nil {
-		require.Nil(t, err)
-	}
-
-	assert.Equal(t, arg1, rarg1)
-	require.Nil(t, r1.endArgument())
+func TestFragmentationEmptyArgs(t *testing.T) {
+	runFragmentationTest(t, []string{"", "", ""}, buffers([][]byte{{
+		0x0000,                                                  // flags
+		byte(ChecksumTypeCrc32), 0x0000, 0x0000, 0x0000, 0x0000, // empty checksum
+		0x0000, 0x0000, // arg 1 (length no body)
+		0x0000, 0x0000, // arg 2 (length no body)
+		0x0000, 0x0000, // arg 3 (length no body)
+	}}))
 }
 
-func TestFragmentationRoundTrip(t *testing.T) {
-	in, out := buildChannels(ChecksumTypeCrc32)
-
-	// Write three arguments, each of which should span fragments
-	arg1 := make([]byte, MaxFramePayloadSize*2+756)
-	for i := range arg1 {
-		arg1[i] = byte(i % 0x0F)
-	}
-	w := newBodyWriter(out)
-	if _, err := w.Write(arg1); err != nil {
-		require.Nil(t, err)
-	}
-	require.Nil(t, w.endArgument(false))
-
-	arg2 := make([]byte, MaxFramePayloadSize+229)
-	for i := range arg2 {
-		arg2[i] = byte(i%0x0F) + 0x10
-	}
-	if _, err := w.Write(arg2); err != nil {
-		require.Nil(t, err)
-	}
-	require.Nil(t, w.endArgument(false))
-
-	arg3 := make([]byte, MaxFramePayloadSize+72)
-	for i := range arg3 {
-		arg3[i] = byte(i%0x0F) + 0x20
-	}
-	if _, err := w.Write(arg3); err != nil {
-		require.Nil(t, err)
-	}
-	require.Nil(t, w.endArgument(true))
-
-	// Read the three arguments
-	r1 := newBodyReader(in, false)
-
-	rarg1 := make([]byte, len(arg1))
-	if _, err := r1.Read(rarg1); err != nil {
-		require.Nil(t, err)
-	}
-	assert.Equal(t, arg1, rarg1)
-	require.Nil(t, r1.endArgument())
-
-	r2 := newBodyReader(in, false)
-	rarg2 := make([]byte, len(arg2))
-	if _, err := r2.Read(rarg2); err != nil {
-		require.Nil(t, err)
-	}
-	assert.Equal(t, arg2, rarg2)
-	require.Nil(t, r2.endArgument())
-
-	r3 := newBodyReader(in, true)
-	rarg3 := make([]byte, len(arg3))
-	if _, err := r3.Read(rarg3); err != nil {
-		require.Nil(t, err)
-	}
-	assert.Equal(t, arg3, rarg3)
-	require.Nil(t, r3.endArgument())
+func TestFragmentationSingleFragment(t *testing.T) {
+	runFragmentationTest(t, []string{"A", "B", "C"}, buffers([][]byte{{
+		0x0000,                                         // flags
+		byte(ChecksumTypeCrc32), 0xa3, 0x83, 0x3, 0x48, // CRC32 checksum
+		0x0000, 0x0001, 'A', // arg 1 (length single character body)
+		0x0000, 0x0001, 'B', // arg 2 (length single character body)
+		0x0000, 0x0001, 'C', // arg 3 (length single character body)
+	}}))
 }
 
-func TestArgEndOnFragmentBoundary(t *testing.T) {
-	// Each argument should line up exactly at the end of each fragment
-	in, out := buildChannels(ChecksumTypeCrc32)
-
-	// Calculate the number of bytes available in the fragment content, which is the size
-	// of the full frame minus the header content for the fragment.  Header content consists of
-	// 1 byte flag, 1 byte checksum type, 4 byte checksum value, for a total of 6 bytes
-	fragmentContentSize := int(MaxFramePayloadSize) - 6
-	arg1 := make([]byte, fragmentContentSize-2) // reserve 2 bytes for the arg chunk size
-	for i := range arg1 {
-		arg1[i] = byte(i % 0x0F)
-	}
-	w := newBodyWriter(out)
-	if _, err := w.Write(arg1); err != nil {
-		require.Nil(t, err)
-	}
-	require.Nil(t, w.endArgument(false))
-
-	arg2 := make([]byte, len(arg1)-2) // additional 2 byte trailing size for arg1
-	for i := range arg2 {
-		arg2[i] = byte(i % 0x1F)
-	}
-	if _, err := w.Write(arg2); err != nil {
-		require.Nil(t, err)
-	}
-	require.Nil(t, w.endArgument(false))
-
-	arg3 := make([]byte, len(arg2)) // additional 2 byte trailing size for arg2
-	for i := range arg3 {
-		arg3[i] = byte(i % 0x2F)
-	}
-	if _, err := w.Write(arg3); err != nil {
-		require.Nil(t, err)
-	}
-	require.Nil(t, w.endArgument(true))
-
-	// We should have sent 4 fragments (one for arg1, one for zero arg1 size + arg2,
-	// one for zero arg2 size + arg3, one for zero arg3 size)
-	sentFragments := out.sentFragments
-	require.Equal(t, 4, len(sentFragments))
-	lastFragment := sentFragments[len(sentFragments)-1]
-
-	// 1 byte flags, 1 byte checksum type, 4 bytes checksum, 2 bytes size (0)
-	require.Equal(t, 8, int(lastFragment.Header.PayloadSize()))
-	r1 := newBodyReader(in, false)
-
-	rarg1 := make([]byte, len(arg1))
-	if _, err := r1.Read(rarg1); err != nil {
-		require.Nil(t, err)
-	}
-	assert.Equal(t, arg1, rarg1)
-	require.Nil(t, r1.endArgument())
-
-	r2 := newBodyReader(in, false)
-	rarg2 := make([]byte, len(arg2))
-	if _, err := r2.Read(rarg2); err != nil {
-		require.Nil(t, err)
-	}
-	assert.Equal(t, arg2, rarg2)
-	require.Nil(t, r2.endArgument())
-
-	r3 := newBodyReader(in, true)
-	rarg3 := make([]byte, len(arg3))
-	if _, err := r3.Read(rarg3); err != nil {
-		require.Nil(t, err)
-	}
-	assert.Equal(t, arg3, rarg3)
-	require.Nil(t, r3.endArgument())
+func TestFragmentationMultipleFragments(t *testing.T) {
+	runFragmentationTest(t, []string{"ABCDEFHIJKLM", "NOPQRZTUWXYZ", "012345678"}, buffers(
+		[][]byte{{
+			0x0001,                                          // has more fragments
+			byte(ChecksumTypeCrc32), 0x98, 0x43, 0x9a, 0x45, //  checksum
+			0x0000, 0x0008, 'A', 'B', 'C', 'D', 'E', 'F', 'H', 'I'}}, // first 8 bytes of arg 1
+		[][]byte{{
+			0x0001,                                          // has more fragments
+			byte(ChecksumTypeCrc32), 0xaf, 0xb9, 0x9c, 0x98, //  checksum
+			0x0000, 0x0004, 'J', 'K', 'L', 'M', // remaining 4 bytes of arg 1
+			0x0000, 0x0002, 'N', 'O'}}, // all of arg 2 that fits (2 bytes)
+		[][]byte{{
+			0x0001,                                          // has more fragments
+			byte(ChecksumTypeCrc32), 0x23, 0xae, 0x2f, 0x37, //  checksum
+			0x0000, 0x0008, 'P', 'Q', 'R', 'Z', 'T', 'U', 'W', 'X'}}, // more aarg 2
+		[][]byte{{
+			0x0001,                                          // has more fragments
+			byte(ChecksumTypeCrc32), 0xa2, 0x93, 0x74, 0xd8, //  checksum
+			0x0000, 0x0002, 'Y', 'Z', // last parts of arg 2
+			0x0000, 0x0004, '0', '1', '2', '3'}}, // first parts of arg 3
+		[][]byte{{
+			0x0000,                                          // no more fragments
+			byte(ChecksumTypeCrc32), 0xf3, 0x29, 0xbb, 0xd1, // checksum
+			0x0000, 0x0005, '4', '5', '6', '7', '8'}},
+	))
 }
 
-func TestEmptyFragments(t *testing.T) {
-	in, out := buildChannels(ChecksumTypeCrc32)
+func TestFragmentationMiddleArgNearFragmentBoundary(t *testing.T) {
+	// This covers the case where an argument in the middle ends near the
+	// end of a fragment boundary, such that there is not enough room to
+	// put another argument in the fragment.  In this case there should be
+	// an empty chunk for that argument in the next fragment
+	runFragmentationTest(t, []string{"ABCDEF", "NOPQ"}, buffers(
+		[][]byte{{
+			0x0001,                                          // has more fragments
+			byte(ChecksumTypeCrc32), 0xbb, 0x76, 0xfe, 0x69, // CRC32 checksum
+			0x0000, 0x0006, 'A', 'B', 'C', 'D', 'E', 'F'}}, // all of arg 1
+		[][]byte{{
+			0x0000,                                          // no more fragments
+			byte(ChecksumTypeCrc32), 0x5b, 0x3c, 0x54, 0xfe, // CRC32 checksum
+			0x0000, 0x0000, // empty chunk indicating the end of arg 1
+			0x0000, 0x0004, 'N', 'O', 'P', 'Q'}}, // all of arg 2
+	))
 
-	w := newBodyWriter(out)
-	require.Nil(t, w.WriteArgument(BytesOutput(nil), false))
-	require.Nil(t, w.WriteArgument(BytesOutput(nil), true))
-
-	r1 := newBodyReader(in, false)
-	var arg1 BytesInput
-	require.Nil(t, r1.ReadArgument(&arg1, false))
-	assert.Equal(t, 0, len(arg1))
-
-	r2 := newBodyReader(in, true)
-	var arg2 BytesInput
-	require.Nil(t, r2.ReadArgument(&arg2, true))
-	assert.Equal(t, 0, len(arg2))
 }
 
-func buildChannels(checksumType ChecksumType) (*inFragments, *outFragments) {
-	ch := make(chan *Frame, 512)
-
-	in := &inFragments{ch: ch}
-	out := &outFragments{ch: ch, checksum: checksumType.New()}
-	return in, out
+func TestFragmentationMiddleArgOnExactFragmentBoundary(t *testing.T) {
+	// This covers the case where an argument in the middle ends exactly at the end of a fragment.
+	// Again, there should be an empty chunk for that argument in the next fragment
+	runFragmentationTest(t, []string{"ABCDEFGH", "NOPQ"}, buffers(
+		[][]byte{{
+			0x0001,                                          // has more fragments
+			byte(ChecksumTypeCrc32), 0x68, 0xdc, 0xb6, 0x1c, // CRC32 checksum
+			0x0000, 0x0008, 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'}}, // all of arg 1
+		[][]byte{{
+			0x0000,                                         // no more fragments
+			byte(ChecksumTypeCrc32), 0x32, 0x66, 0xf, 0x25, // CRC32 checksum
+			0x0000, 0x0000, // empty chunk indicating the end of arg 1
+			0x0000, 0x0004, 'N', 'O', 'P', 'Q'}}, // all of arg 2
+	))
 }
 
-type inFragments struct {
-	checksum Checksum
-	ch       <-chan *Frame
-	current  *inFragment
+func TestFragmentationLastArgOnNearFragmentBoundary(t *testing.T) {
+	// Covers the case where the last argument ends near a fragment
+	// boundary.  No new fragments should get created
+	runFragmentationTest(t, []string{"ABCDEF"}, buffers(
+		[][]byte{{
+			0x0000,                                          // has more fragments
+			byte(ChecksumTypeCrc32), 0xbb, 0x76, 0xfe, 0x69, // CRC32 checksum
+			0x0000, 0x0006, 'A', 'B', 'C', 'D', 'E', 'F'}}, // all of arg 1
+	))
 }
 
-type sampleMessage struct{}
+func TestFragmentationLastArgOnExactFragmentBoundary(t *testing.T) {
+	// Covers the case where the last argument ends exactly on a fragment
+	// boundary.  No new fragments should get created
+	runFragmentationTest(t, []string{"ABCDEFGH"}, buffers(
+		[][]byte{{
+			0x0000,                                          // has more fragments
+			byte(ChecksumTypeCrc32), 0x68, 0xdc, 0xb6, 0x1c, // CRC32 checksum
+			0x0000, 0x0008, 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'}}, // all of arg 1
+	))
+}
 
-func (m *sampleMessage) ID() uint32                       { return 0xDEADBEEF }
-func (m *sampleMessage) messageType() messageType         { return messageTypeCallReq }
-func (m *sampleMessage) read(r *typed.ReadBuffer) error   { return nil }
-func (m *sampleMessage) write(w *typed.WriteBuffer) error { return nil }
+func TestFragmentationWriterErrors(t *testing.T) {
+	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
+		// Write without starting argument
+		_, err := w.Write(BytesOutput("foo"))
+		assert.Error(t, err)
+	})
 
-func (in *inFragments) waitForFragment() (*inFragment, error) {
-	if in.current == nil || !in.current.hasMoreChunks() {
-		var err error
-		f := <-in.ch
-		if in.current, err = newInboundFragment(f, &sampleMessage{}, in.checksum); err != nil {
-			return nil, err
+	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
+		// BeginArgument twice without starting argument
+		assert.NoError(t, w.BeginArgument())
+		assert.Error(t, w.BeginArgument())
+	})
+
+	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
+		// BeginArgument after writing final argument
+		assert.NoError(t, w.WriteArgument(BytesOutput("hello"), true))
+		assert.Error(t, w.BeginArgument())
+	})
+
+	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
+		// EndArgument without beginning argument
+		assert.Error(t, w.EndArgument(true))
+	})
+}
+
+func TestFragmentationReaderErrors(t *testing.T) {
+	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
+		// Read without starting argument
+		b := make([]byte, 10)
+		_, err := r.Read(b)
+		assert.Error(t, err)
+	})
+
+	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
+		// EndArgument without beginning argument
+		assert.Error(t, r.EndArgument(true))
+	})
+
+	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
+		// BeginArgument after reading final argument
+		assert.NoError(t, w.WriteArgument(BytesOutput("hello"), true))
+
+		var arg BytesInput
+		assert.NoError(t, r.ReadArgument(&arg, true))
+		assert.Equal(t, "hello", string(arg))
+		assert.Error(t, r.BeginArgument())
+	})
+
+	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
+		// Sender sent final argument, but receiver thinks there is more
+		assert.NoError(t, w.WriteArgument(BytesOutput("hello"), true))
+
+		var arg BytesInput
+		assert.Error(t, r.ReadArgument(&arg, false))
+	})
+
+	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
+		// EndArgument without receiving all data in chunk
+		assert.NoError(t, w.WriteArgument(BytesOutput("hello"), true))
+
+		assert.NoError(t, r.BeginArgument())
+		b := make([]byte, 3)
+		_, err := r.Read(b)
+		assert.NoError(t, err)
+		assert.Equal(t, "hel", string(b))
+		assert.Error(t, r.EndArgument(true))
+	})
+
+	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
+		// EndArgument without receiving all fragments
+		assert.NoError(t, w.WriteArgument(BytesOutput("hello world what's up"), true))
+
+		assert.NoError(t, r.BeginArgument())
+		b := make([]byte, 8)
+		_, err := r.Read(b)
+		assert.NoError(t, err)
+		assert.Equal(t, "hello wo", string(b))
+		assert.Error(t, r.EndArgument(true))
+	})
+
+	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
+		// BeginArgument while argument is in process
+		assert.NoError(t, w.WriteArgument(BytesOutput("hello world what's up"), true))
+		assert.NoError(t, r.BeginArgument())
+		assert.Error(t, r.BeginArgument())
+	})
+}
+
+func TestFragmentationChecksumTypeErrors(t *testing.T) {
+	sendCh := make(fragmentChannel, 10)
+	recvCh := make(fragmentChannel, 10)
+	w := newFragmentingWriter(sendCh, ChecksumTypeCrc32.New())
+	r := newFragmentingReader(recvCh)
+
+	// Write two fragments out
+	require.NoError(t, w.WriteArgument(BytesOutput("hello world this is two"), true))
+
+	// Intercept and change the checksum type between the first and second fragment
+	first := <-sendCh
+	recvCh <- first
+
+	second := <-sendCh
+	second[1] = byte(ChecksumTypeCrc32C)
+	recvCh <- second
+
+	// Attempt to read, should fail
+	var arg BytesInput
+	assert.Error(t, r.ReadArgument(&arg, true))
+}
+
+func TestFragmentationChecksumMismatch(t *testing.T) {
+	sendCh := make(fragmentChannel, 10)
+	recvCh := make(fragmentChannel, 10)
+	w := newFragmentingWriter(sendCh, ChecksumTypeCrc32.New())
+	r := newFragmentingReader(recvCh)
+
+	// Write two fragments out
+	require.NoError(t, w.WriteArgument(BytesOutput("hello world this is two"), true))
+
+	// Intercept and change the checksum value in the second fragment
+	first := <-sendCh
+	recvCh <- first
+
+	second := <-sendCh
+	second[2], second[3], second[4], second[5] = 0x01, 0x02, 0x03, 0x04
+	recvCh <- second
+
+	// Attempt to read, should fail due to mismatch between local checksum and peer supplied checksum
+	var arg BytesInput
+	assert.Error(t, r.ReadArgument(&arg, true))
+}
+
+func runFragmentationErrorTest(f func(w *fragmentingWriter, r *fragmentingReader)) {
+	ch := make(fragmentChannel, 10)
+	w := newFragmentingWriter(ch, ChecksumTypeCrc32.New())
+	r := newFragmentingReader(ch)
+	f(w, r)
+}
+
+func runFragmentationTest(t *testing.T, args []string, expectedFragments [][]byte) {
+	sendCh := make(fragmentChannel, 10)
+	recvCh := make(fragmentChannel, 10)
+
+	w := newFragmentingWriter(sendCh, ChecksumTypeCrc32.New())
+	r := newFragmentingReader(recvCh)
+
+	var fragments [][]byte
+	var actualArgs []string
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for fragment := range sendCh {
+			fragments = append(fragments, fragment)
+			recvCh <- fragment
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		for i := 0; i < len(args)-1; i++ {
+			var arg BytesInput
+			require.NoError(t, r.ReadArgument(&arg, false))
+			actualArgs = append(actualArgs, string(arg))
 		}
 
-		in.checksum = in.current.checksum
+		var arg BytesInput
+		require.NoError(t, r.ReadArgument(&arg, true))
+		actualArgs = append(actualArgs, string(arg))
+	}()
+
+	for i := 0; i < len(args)-1; i++ {
+		require.NoError(t, w.WriteArgument(BytesOutput(args[i]), false))
 	}
+	require.NoError(t, w.WriteArgument(BytesOutput(args[len(args)-1]), true))
+	close(sendCh)
 
-	return in.current, nil
+	wg.Wait()
+
+	assert.Equal(t, args, actualArgs)
+	assert.Equal(t, len(expectedFragments), len(fragments), "incorrect number of fragments")
+	for i := 0; i < len(expectedFragments); i++ {
+		expectedFragment, fragment := expectedFragments[i], fragments[i]
+		assert.Equal(t, expectedFragment, fragment, "incorrect fragment %d", i)
+	}
 }
 
-type outFragments struct {
-	fragmentSize  int
-	checksum      Checksum
-	ch            chan<- *Frame
-	sentFragments []*Frame
+type fragmentChannel chan []byte
+
+func (ch fragmentChannel) newFragment(initial bool, checksum Checksum) (*writableFragment, error) {
+	wbuf := typed.NewWriteBuffer(make([]byte, testFragmentSize))
+	fragment := new(writableFragment)
+	fragment.flagsRef = wbuf.DeferByte()
+	wbuf.WriteByte(byte(checksum.TypeCode()))
+	fragment.checksumRef = wbuf.DeferBytes(checksum.Size())
+	fragment.checksum = checksum
+	fragment.contents = wbuf
+	return fragment, wbuf.Err()
 }
 
-func (out *outFragments) beginFragment() (*outFragment, error) {
-	return newOutboundFragment(NewFrame(MaxFramePayloadSize), &sampleMessage{}, out.checksum)
-}
-
-func (out *outFragments) flushFragment(toSend *outFragment, last bool) error {
-	f := toSend.finish(last)
-	out.ch <- f
-	out.sentFragments = append(out.sentFragments, f)
+func (ch fragmentChannel) flushFragment(fragment *writableFragment) error {
+	var buf bytes.Buffer
+	fragment.contents.FlushTo(&buf)
+	ch <- buf.Bytes()
 	return nil
 }
 
-func assertFramesEqual(t *testing.T, expected [][]byte, frames []*Frame, msg string) {
-	require.Equal(t, len(expected), len(frames), fmt.Sprintf("incorrect number of frames for %s", msg))
-
-	for i := range expected {
-		assert.Equal(t, len(expected[i]), int(frames[i].Header.PayloadSize()),
-			fmt.Sprintf("incorrect size for frame %d of %s", i, msg))
-		assert.Equal(t, expected[i], frames[i].Payload[:frames[i].Header.PayloadSize()])
-	}
+func (ch fragmentChannel) recvNextFragment(initial bool) (*readableFragment, error) {
+	rbuf := typed.NewReadBuffer(<-ch)
+	fragment := new(readableFragment)
+	fragment.flags = rbuf.ReadByte()
+	fragment.checksumType = ChecksumType(rbuf.ReadByte())
+	fragment.checksum = rbuf.ReadBytes(fragment.checksumType.ChecksumSize())
+	fragment.contents = rbuf
+	return fragment, rbuf.Err()
 }
 
-func combineBuffers(elements ...[][]byte) [][]byte {
+func buffers(elements ...[][]byte) [][]byte {
 	var buffers [][]byte
 	for i := range elements {
 		buffers = append(buffers, bytes.Join(elements[i], []byte{}))
