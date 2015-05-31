@@ -20,30 +20,28 @@
 
 'use strict';
 
-require('./errors');
-require('./event_emitter.js');
-require('./argstream.js');
-require('./safe-quit.js');
-require('./timeouts.js');
-require('./send.js');
-require('./retry.js');
-require('./relay.js');
-require('./streaming.js');
-require('./streaming_bisect.js');
-require('./register.js');
-require('./identify.js');
-require('./max_pending.js');
-require('./tchannel.js');
-require('./regression-inOps-leak.js');
-require('./v2/index.js');
-require('./regression-listening-on-used-port.js');
-require('./as-thrift.js');
-require('./as-json.js');
-require('./as-http.js');
-require('./peers.js');
-require('./peer_states.js');
-require('./trace/');
-require('./request-stats.js');
-require('./streaming-resp-err.js');
-require('./double-response.js');
-require('./request-with-statsd.js');
+function MockStatsd() {
+    if (!(this instanceof MockStatsd)) {
+        return new MockStatsd();
+    }
+
+    var self = this;
+    self.parts = [];
+}
+
+MockStatsd.prototype.increment = function increment(key) {
+    var self = this;
+    self.parts.push({key: key, value: 1});
+};
+
+MockStatsd.prototype.timing = function timing(key, value) {
+    var self = this;
+    self.parts.push({key: key, value: value});
+};
+
+MockStatsd.prototype.gauge = function gauge(key, value) {
+    var self = this;
+    self.parts.push({key: key, value: value});
+};
+
+module.exports = MockStatsd;
