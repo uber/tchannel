@@ -23,7 +23,6 @@ package tchannel
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 
 	"github.com/uber/tchannel/golang/typed"
