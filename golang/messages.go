@@ -21,12 +21,12 @@ package tchannel
 // THE SOFTWARE.
 
 import (
-	"fmt"
-	"github.com/uber/tchannel/golang/typed"
 	"time"
+
+	"github.com/uber/tchannel/golang/typed"
 )
 
-// Type of message
+// messageType defines a type of message
 type messageType byte
 
 const (
@@ -39,45 +39,36 @@ const (
 	messageTypeError           messageType = 0xFF
 )
 
-var messageTypeNames = map[messageType]string{
-	messageTypeInitReq:         "initReq",
-	messageTypeInitRes:         "initRes",
-	messageTypeCallReq:         "callReq",
-	messageTypeCallReqContinue: "callReqContinue",
-	messageTypeCallRes:         "callRes",
-	messageTypeCallResContinue: "callResContinue",
-	messageTypeError:           "Error",
-}
+//go:generate stringer -type=messageType
 
-func (t messageType) String() string {
-	if name := messageTypeNames[t]; name != "" {
-		return name
-	}
-
-	return fmt.Sprintf("unknown: %x", int(t))
-}
-
-// Base interface for messages.  Has an id and a type, and knows how to read and write onto a binary stream
+// message is the base interface for messages.  Has an id and type, and knows
+// how to read and write onto a binary stream
 type message interface {
-	// The id of the message
+	// ID returns the id of the message
 	ID() uint32
 
-	// The type of the message
+	// messageType returns the type of the message
 	messageType() messageType
 
+	// read reads the message from a binary stream
 	read(r *typed.ReadBuffer) error
+
+	// write writes the message to a binary stream
 	write(w *typed.WriteBuffer) error
 }
 
-// Parameters to an initReq/InitRes
+// initParams are parameters to an initReq/InitRes
 type initParams map[string]string
 
-// Standard init params
 const (
-	InitParamHostPort    = "host_port"
+	// InitParamHostPort contains the host and port of the peer process
+	InitParamHostPort = "host_port"
+
+	// InitParamProcessName contains the name of the peer process
 	InitParamProcessName = "process_name"
 )
 
+// initMessage is the base for messages in the initialization handshake
 type initMessage struct {
 	id         uint32
 	Version    uint16
@@ -114,21 +105,21 @@ func (m *initMessage) ID() uint32 {
 	return m.id
 }
 
-// An initReq, containing context information to exchange with peer
+// An initReq contains context information sent from an initiating peer
 type initReq struct {
 	initMessage
 }
 
 func (m *initReq) messageType() messageType { return messageTypeInitReq }
 
-// An InitRes, containing context information to return to intiating peer
+// An initRes contains context information returned to an initiating peer
 type initRes struct {
 	initMessage
 }
 
 func (m *initRes) messageType() messageType { return messageTypeInitRes }
 
-// Headers passed as part of a CallReq/CallRes
+// callHeaders are passed as part of a CallReq/CallRes
 type callHeaders map[string]string
 
 func (ch callHeaders) read(r *typed.ReadBuffer) {
@@ -149,7 +140,7 @@ func (ch callHeaders) write(w *typed.WriteBuffer) {
 	}
 }
 
-// A CallReq for service
+// A callReq for service
 type callReq struct {
 	id         uint32
 	TimeToLive time.Duration
@@ -177,7 +168,7 @@ func (m *callReq) write(w *typed.WriteBuffer) error {
 	return w.Err()
 }
 
-// A continuation of a previous CallReq
+// A callReqContinue is continuation of a previous callReq
 type callReqContinue struct {
 	id uint32
 }
@@ -195,7 +186,7 @@ const (
 	responseApplicationError ResponseCode = 0x01
 )
 
-// A response to a CallReq
+// callRes is a response to a CallReq
 type callRes struct {
 	id           uint32
 	ResponseCode ResponseCode
@@ -221,7 +212,7 @@ func (m *callRes) write(w *typed.WriteBuffer) error {
 	return w.Err()
 }
 
-// A continuation of a previous CallRes
+// callResContinue is a  continuation of a previous CallRes
 type callResContinue struct {
 	id uint32
 }
@@ -231,7 +222,7 @@ func (c *callResContinue) messageType() messageType         { return messageType
 func (c *callResContinue) read(r *typed.ReadBuffer) error   { return nil }
 func (c *callResContinue) write(w *typed.WriteBuffer) error { return nil }
 
-// An Error message, a system-level error response to a request or a protocol level error
+// An errorMessage is a system-level error response to a request or a protocol level error
 type errorMessage struct {
 	id      uint32
 	errCode SystemErrCode
