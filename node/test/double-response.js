@@ -848,7 +848,8 @@ function allocThrift(cluster, options) {
                 head: opts.head,
                 body: DoubleError({
                     message: opts.body.value
-                })
+                }),
+                typeName: 'error'
             });
         } else if (opts.type === 'error') {
             return cb(new Error('Error: ' + opts.body.value));

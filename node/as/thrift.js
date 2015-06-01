@@ -104,8 +104,8 @@ function register(channel, name, opts, handle) {
                 if (!thriftRes.ok) {
                     assert(isError(thriftRes.body),
                         'not-ok body should be an error');
-                    assert(typeof thriftRes.fieldName === 'string',
-                        'expected not-ok response to have fieldName');
+                    assert(typeof thriftRes.typeName === 'string',
+                        'expected not-ok response to have typeName');
                 }
             }
 
@@ -113,7 +113,7 @@ function register(channel, name, opts, handle) {
                 head: thriftRes.head,
                 body: thriftRes.body,
                 ok: thriftRes.ok,
-                fieldName: thriftRes.fieldName,
+                typeName: thriftRes.typeName,
                 endpoint: name,
                 direction: 'out.response'
             });
@@ -308,7 +308,7 @@ TChannelAsThrift.prototype._stringify = function stringify(opts) {
     } else if (opts.direction === 'out.response') {
         var thriftResult = {};
         if (!opts.ok) {
-            thriftResult[opts.fieldName] = opts.body;
+            thriftResult[opts.typeName] = opts.body;
         } else {
             thriftResult.success = opts.body;
         }
