@@ -144,7 +144,10 @@ TChannelStatsd.prototype.onStat = function onStat(stat) {
             return self.statsd.timing(key, stat.value);
 
         default:
-            self.channel.logger.error(stat.type + ' is not a stats type.');
+            self.channel.logger.error('Trying to emit an invalid stat object', {
+                statType: stat.type,
+                statName: stat.name
+            });
             break;
     }
 };
