@@ -485,11 +485,11 @@ class PeerClientOperation(object):
         :param headers:
             Headers will be put int he message as protocol header.
         :param attempt_times:
-            Number of times to attempts.
+            Maximum number of attempts to send the message.
         :param ttl:
             Timeout for each request (ms).
         :param retry_delay:
-            Delay between each retry (s).
+            Delay between each retry (ms).
         :return:
             Future that contains the response from the peer. If None, an empty
             stream is used.
@@ -541,6 +541,8 @@ class PeerClientOperation(object):
         # only retry on non-stream request
         if request.is_streaming_request or self._hostport:
             attempt_times = 1
+
+        if request.is_streaming_request:
             request.ttl = 0
 
         # mac number of times to retry 3.
@@ -556,7 +558,7 @@ class PeerClientOperation(object):
 
                 if num_of_retry != attempt_times - 1:
                     # delay further retry
-                    yield gen.sleep(retry_delay)
+                    yield gen.sleep(retry_delay / 1000)
                 else:
                     raise
 
