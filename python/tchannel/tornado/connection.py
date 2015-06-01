@@ -417,6 +417,7 @@ class TornadoConnection(object):
         )
 
         log.debug("Connecting to %s", hostport)
+        print host, port
         try:
             yield stream.connect((host, int(port)))
         except socket.error as e:

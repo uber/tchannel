@@ -21,6 +21,7 @@
 from __future__ import absolute_import
 
 import pytest
+from tchannel.glossary import MAX_ATTEMPT_TIMES
 import tornado
 import tornado.gen
 from mock import patch
@@ -53,7 +54,7 @@ def handler_success(request, response, proxy):
 
 
 def server(endpoint):
-    tchannel_server = TChannel()
+    tchannel_server = TChannel(hostport='localhost:0')
     tchannel_server.register(endpoint, 'raw', handler_error)
     tchannel_server.listen()
     return tchannel_server
@@ -87,8 +88,8 @@ def test_retry_timeout():
                 headers={
                     're': RetryType.CONNECTION_ERROR_AND_TIMEOUT
                 },
-                timeout_per_req=0.005,
-                retry_times=3,
+                ttl=0.005,
+                attempt_times=3,
                 retry_delay=0.01,
             )
 
@@ -114,13 +115,14 @@ def test_retry_on_error_fail():
                 headers={
                     're': RetryType.CONNECTION_ERROR_AND_TIMEOUT
                 },
-                timeout_per_req=0.02,
-                retry_times=3,
+                ttl=0.02,
+                attempt_times=3,
                 retry_delay=0.01,
             )
 
         assert mock_should_retry_on_error.called
-        assert mock_should_retry_on_error.call_count == Request.MAX_RETRY_TIMES
+        assert mock_should_retry_on_error.call_count == (
+            MAX_ATTEMPT_TIMES)
         assert e.value.code == ErrorCode.busy
 
 
@@ -130,7 +132,7 @@ def test_retry_on_error_success():
     endpoint = b'tchannelretrytest'
     tchannel = chain(2, endpoint)
 
-    tchannel_success = TChannel()
+    tchannel_success = TChannel(hostport='localhost:0')
     tchannel_success.register(endpoint, 'raw', handler_success)
     tchannel_success.listen()
     tchannel.peers.get(tchannel_success.hostport)
@@ -150,8 +152,8 @@ def test_retry_on_error_success():
             headers={
                 're': RetryType.CONNECTION_ERROR_AND_TIMEOUT,
             },
-            timeout_per_req=0.01,
-            retry_times=3,
+            ttl=0.01,
+            attempt_times=3,
             retry_delay=0.01,
         )
 

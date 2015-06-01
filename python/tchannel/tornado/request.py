@@ -23,8 +23,8 @@ from __future__ import absolute_import
 import tornado
 import tornado.gen
 
-from ..messages import ErrorCode
 from ..glossary import DEFAULT_TTL
+from ..messages import ErrorCode
 from ..messages.common import FlagsType
 from ..messages.common import StreamState
 from ..transport_header import RetryType
@@ -39,9 +39,6 @@ class Request(object):
     Request class is used to represent the CallRequestMessage at User's level.
     This is going to hide the protocol level message information.
     """
-    MAX_RETRY_TIMES = 3
-    TIMEOUT = 1  # 1 second
-    RETRY_DELAY = 0.3  # 300 ms
 
     # TODO decide which elements inside "message" object to expose to user.
     def __init__(
@@ -81,11 +78,12 @@ class Request(object):
 
     def rewind(self, id=None):
         self.id = id
-        self.argstreams = [
-            self._copy_argstreams[0].clone(),
-            self._copy_argstreams[1].clone(),
-            self._copy_argstreams[2].clone(),
-        ]
+        if not self.is_streaming_request:
+            self.argstreams = [
+                self._copy_argstreams[0].clone(),
+                self._copy_argstreams[1].clone(),
+                self._copy_argstreams[2].clone(),
+            ]
         self.state = StreamState.init
         self.tracing = Trace()
 
@@ -150,13 +148,17 @@ class Request(object):
         arg3 = self.argstreams[2]
         return not (isinstance(arg2, InMemStream) and
                     isinstance(arg3, InMemStream) and
-                    ((arg2.auto_close is True and
-                      arg3.auto_close is True) or (
+                    ((arg2.auto_close and arg3.auto_close) or (
                         arg2.state == StreamState.completed and
                         arg3.state == StreamState.completed)))
 
     def should_retry_on_error(self, error):
-        """rules for retry"""
+        """rules for retry
+
+        :param error:
+            ProtocolException that returns from Server
+        """
+
         if self.is_streaming_request:
             # not retry for streaming request
             return False

@@ -25,3 +25,5 @@ MAX_MESSAGE_ID = 0xfffffffe
 
 # CallRequestMessage uses it as the default TTL value for the message.
 DEFAULT_TTL = 1000  # ms
+MAX_ATTEMPT_TIMES = 3
+RETRY_DELAY = 0.3  # 300 ms

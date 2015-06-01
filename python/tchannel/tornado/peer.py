@@ -27,6 +27,10 @@ from random import random
 
 from tornado import gen
 
+from tchannel.glossary import DEFAULT_TTL
+from tchannel.glossary import MAX_ATTEMPT_TIMES
+from tchannel.glossary import RETRY_DELAY
+
 from ..errors import NoAvailablePeerError
 from ..errors import ProtocolError
 from ..errors import TimeoutError
@@ -462,9 +466,9 @@ class PeerClientOperation(object):
     def send(self, arg1, arg2, arg3,
              traceflag=False,
              headers=None,
-             retry_times=Request.MAX_RETRY_TIMES,
-             timeout_per_req=Request.TIMEOUT,
-             retry_delay=Request.RETRY_DELAY):
+             attempt_times=MAX_ATTEMPT_TIMES,
+             ttl=DEFAULT_TTL,
+             retry_delay=RETRY_DELAY):
         """Make a request to the Peer.
 
         :param arg1:
@@ -480,12 +484,12 @@ class PeerClientOperation(object):
             Flag is for tracing.
         :param headers:
             Headers will be put int he message as protocol header.
-        :param retry_times:
-            Number of times to retry.
-        :param timeout_per_req:
-            Timeout for each request.
+        :param attempt_times:
+            Number of times to attempts.
+        :param ttl:
+            Timeout for each request (ms).
         :param retry_delay:
-            Delay between each retry.
+            Delay between each retry (s).
         :return:
             Future that contains the response from the peer. If None, an empty
             stream is used.
@@ -519,6 +523,7 @@ class PeerClientOperation(object):
             argstreams=[InMemStream(endpoint), arg2, arg3],
             id=connection.next_message_id(),
             headers=headers,
+            ttl=ttl,
             tracing=Trace(
                 name=endpoint,
                 trace_id=trace_id,
@@ -534,22 +539,22 @@ class PeerClientOperation(object):
         # black list to record all used peers, so they aren't chosen again.
         blacklist = set()
         # only retry on non-stream request
-        if request.is_streaming_request:
-            retry_times = 1
-            timeout_per_req = 0
+        if request.is_streaming_request or self._hostport:
+            attempt_times = 1
+            request.ttl = 0
 
         # mac number of times to retry 3.
-        for num_of_retry in range(retry_times):
+        for num_of_retry in range(attempt_times):
             try:
-                response = yield self._retry_send(
-                    connection, request, timeout_per_req)
+                response = yield self._send(
+                    connection, request)
                 break
             except (ProtocolError, TimeoutError) as e:
                 request.set_exception(e)
-                if not request.should_retry_on_error(e) or self._hostport:
+                if not request.should_retry_on_error(e):
                     raise
 
-                if num_of_retry != retry_times - 1:
+                if num_of_retry != attempt_times - 1:
                     # delay further retry
                     yield gen.sleep(retry_delay)
                 else:
@@ -572,9 +577,9 @@ class PeerClientOperation(object):
         raise gen.Return(response)
 
     @gen.coroutine
-    def _retry_send(self, connection, req, timeout_per_req):
+    def _send(self, connection, req):
         response_future = connection.send_request(req)
-        with timeout(response_future, timeout_per_req):
+        with timeout(response_future, req.ttl):
             response = yield response_future
 
         raise gen.Return(response)

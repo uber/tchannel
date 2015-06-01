@@ -37,7 +37,7 @@ def timeout(future, seconds=0, io_loop=None):
     def raise_timeout(*args, **kwargs):
         if future.running():
             future.set_exception(TimeoutError())
-    if seconds == 0:
+    if not seconds:
         # No timeout if seconds is set to 0.
         yield
     else:
