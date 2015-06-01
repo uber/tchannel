@@ -24,6 +24,7 @@ var assert = require('assert');
 var EventEmitter = require('./lib/event_emitter');
 var inherits = require('util').inherits;
 
+var TChannelOutRequest = require('./out_request.js');
 var errors = require('./errors');
 
 function TChannelRequest(channel, options) {
@@ -84,6 +85,9 @@ TChannelRequest.prototype.emitError = function emitError(err) {
     var self = this;
     if (!self.end) self.end = self.timers.now();
     self.err = err;
+
+    TChannelOutRequest.prototype.emitErrorStat.call(self, err);
+
     self.services.onRequestError(self);
     self.errorEvent.emit(self, err);
 };
@@ -92,6 +96,9 @@ TChannelRequest.prototype.emitResponse = function emitResponse(res) {
     var self = this;
     if (!self.end) self.end = self.timers.now();
     self.res = res;
+
+    TChannelOutRequest.prototype.emitResponseStat.call(self, res);
+
     self.services.onRequestResponse(self);
     self.responseEvent.emit(self, res);
 };
@@ -114,24 +121,6 @@ TChannelRequest.prototype.hookupCallback = function hookupCallback(callback) {
         if (called) return;
         called = true;
 
-        if (err.isErrorFrame) {
-            self.channel.outboundCallsSystemErrorsStat.increment(1, {
-                'target-service': self.serviceName,
-                'service': self.headers.cn,
-                // TODO should always be buffer
-                'target-endpoint': String(self.arg1),
-                'type': err.codeName
-            });
-        } else {
-            self.channel.outboundCallsOperationalErrorsStat.increment(1, {
-                'target-service': self.serviceName,
-                'service': self.headers.cn,
-                // TODO should always be buffer
-                'target-endpoint': String(self.arg1),
-                'type': err.type || 'unknown'
-            });
-        }
-
         emitLatency();
 
         callback(err, null, null, null);
@@ -141,25 +130,6 @@ TChannelRequest.prototype.hookupCallback = function hookupCallback(callback) {
         if (called) return;
         called = true;
         res.withArg23(function gotArg23(err, arg2, arg3) {
-            if (res.ok) {
-                self.channel.outboundCallsSuccessStat.increment(1, {
-                    'target-service': self.serviceName,
-                    'service': self.headers.cn,
-                    // TODO should always be buffer
-                    'target-endpoint': String(self.arg1)
-                });
-            } else {
-                self.channel.outboundCallsAppErrorsStat.increment(1, {
-                    'target-service': self.serviceName,
-                    'service': self.headers.cn,
-                    // TODO should always be buffer
-                    'target-endpoint': String(self.arg1),
-                    // TODO define transport header
-                    // for application error type
-                    'type': 'unknown'
-                });
-            }
-
             emitLatency();
 
             callback(err, res, arg2, arg3);
@@ -242,6 +212,7 @@ TChannelRequest.prototype.onIdentified = function onIdentified(peer) {
     }
     opts.timeout = self.timeout - self.elapsed;
     opts.retryCount = self.outReqs.length;
+    opts.logical = true;
 
     var outReq = peer.request(opts);
     self.outReqs.push(outReq);
