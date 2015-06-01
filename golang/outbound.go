@@ -101,7 +101,7 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string) (*Outbou
 // handleCallRes handles an incoming call req message, forwarding the
 // frame to the response channel waiting for it
 func (c *Connection) handleCallRes(frame *Frame) {
-	if err := c.outbound.forwardPeerFrame(frame.Header.ID, frame); err != nil {
+	if err := c.outbound.forwardPeerFrame(frame); err != nil {
 		c.outbound.removeExchange(frame.Header.ID)
 	}
 }
@@ -109,7 +109,7 @@ func (c *Connection) handleCallRes(frame *Frame) {
 // handleCallResContinue handles an incoming call res continue message,
 // forwarding the frame to the response channel waiting for it
 func (c *Connection) handleCallResContinue(frame *Frame) {
-	if err := c.outbound.forwardPeerFrame(frame.Header.ID, frame); err != nil {
+	if err := c.outbound.forwardPeerFrame(frame); err != nil {
 		c.outbound.removeExchange(frame.Header.ID)
 	}
 }
@@ -202,7 +202,7 @@ func (c *Connection) handleError(frame *Frame) {
 		return
 	}
 
-	if err := c.outbound.forwardPeerFrame(frame.Header.ID, frame); err != nil {
+	if err := c.outbound.forwardPeerFrame(frame); err != nil {
 		c.outbound.removeExchange(frame.Header.ID)
 	}
 }

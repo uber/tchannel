@@ -92,7 +92,7 @@ func (c *Connection) handleCallReq(frame *Frame) {
 // it to the request channel for that request, where it can be pulled during
 // defragmentation
 func (c *Connection) handleCallReqContinue(frame *Frame) {
-	if err := c.inbound.forwardPeerFrame(frame.Header.ID, frame); err != nil {
+	if err := c.inbound.forwardPeerFrame(frame); err != nil {
 		c.inbound.removeExchange(frame.Header.ID)
 	}
 }

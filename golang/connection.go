@@ -336,7 +336,7 @@ func (c *Connection) handleInitRes(frame *Frame) {
 		return
 	}
 
-	if err := c.outbound.forwardPeerFrame(frame.Header.ID, frame); err != nil {
+	if err := c.outbound.forwardPeerFrame(frame); err != nil {
 		c.connectionError(errCannotHandleInitRes)
 	}
 }
