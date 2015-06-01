@@ -43,6 +43,7 @@ var errors = require('./errors');
 var TChannelConnection = require('./connection');
 var TChannelPeers = require('./peers');
 var TChannelServices = require('./services');
+var TChannelStatsd = require('./lib/statsd');
 
 var TracingAgent = require('./trace/agent');
 
@@ -81,8 +82,15 @@ function TChannel(options) {
         processName: format('%s[%s]', process.title, process.pid)
     }, options);
 
-    // must have 'app', 'host', 'cluster', 'version'
+    // required: 'app'
+    // optional: 'host', 'cluster', 'version'
+    assert(!self.options.statTags || self.options.statTags.app, 'the stats must have the "app" tag');
     self.statTags = self.options.statTags || {};
+
+    self.statsd = self.options.statsd;
+    if (self.statsd) {
+        self.channelStatsd = new TChannelStatsd(self, self.statsd);
+    }
 
     self.requestDefaults = extend({
         timeout: TChannelRequest.defaultTimeout
