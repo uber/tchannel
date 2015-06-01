@@ -546,7 +546,7 @@ class PeerClientOperation(object):
             request.ttl = 0
 
         # mac number of times to retry 3.
-        for num_of_retry in range(attempt_times):
+        for num_of_attempt in range(attempt_times):
             try:
                 response = yield self._send(
                     connection, request)
@@ -556,7 +556,7 @@ class PeerClientOperation(object):
                 if not request.should_retry_on_error(e):
                     raise
 
-                if num_of_retry != attempt_times - 1:
+                if num_of_attempt != attempt_times - 1:
                     # delay further retry
                     yield gen.sleep(retry_delay / 1000)
                 else:
