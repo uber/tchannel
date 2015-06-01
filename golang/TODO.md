@@ -20,8 +20,8 @@ h1. Functionality
 h1. Cleanup
 
 - [X] Get rid of custom IOError type - not needed and misleading
-- [ ] Refactor bodyReader to work like bodyWriter and operate over the entire body not just an argument
-- [ ] Move message dumping into a separate hexer, make configurable
+- [X] Refactor bodyReader to work like bodyWriter and operate over the entire body not just an argument
+- [X] Move message dumping into a separate hexer, make configurable
 - [X] Remove hard-dependency on go-logging and replace with Logger interface
 - [ ] Make sure we don't leak frames anywhere (I know we do)
 - [ ] Implement real FramePool based on sync.Pool
