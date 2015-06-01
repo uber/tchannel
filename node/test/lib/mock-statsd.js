@@ -29,9 +29,9 @@ function MockStatsd() {
     self.parts = [];
 }
 
-MockStatsd.prototype.increment = function increment(key) {
+MockStatsd.prototype.increment = function increment(key, value) {
     var self = this;
-    self.parts.push({key: key, value: 1});
+    self.parts.push({key: key, value: Math.abs(value || 1)});
 };
 
 MockStatsd.prototype.timing = function timing(key, value) {

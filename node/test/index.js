@@ -47,3 +47,5 @@ require('./request-stats.js');
 require('./streaming-resp-err.js');
 require('./double-response.js');
 require('./request-with-statsd.js');
+require('./response-stats.js');
+require('./response-with-statsd.js');
