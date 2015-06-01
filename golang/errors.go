@@ -116,7 +116,7 @@ func (se SystemError) Code() SystemErrCode {
 	return se.code
 }
 
-// GetSystemErrCode returns the code to report for the given error.  If the error is a SystemError, we can
+// GetSystemErrorCode returns the code to report for the given error.  If the error is a SystemError, we can
 // get the code directly.  Otherwise treat it as an unexpected error
 func GetSystemErrorCode(err error) SystemErrCode {
 	if se, ok := err.(SystemError); ok {
