@@ -19,6 +19,7 @@
 // THE SOFTWARE.
 
 'use strict';
+var assert = require('assert');
 
 var EventEmitter = require('./lib/event_emitter');
 var inherits = require('util').inherits;
@@ -34,8 +35,14 @@ function TChannelOutResponse(id, options) {
     self.spanEvent = self.defineEvent('span');
     self.finishEvent = self.defineEvent('finish');
 
+    self.channel = options.channel;
+    self.callingService = options.callingService;
+    self.endpoint = options.endpoint;
     self.logger = options.logger;
+    self.latencyStart = options.latencyStart;
+    self.latencyEnd = null;
     self.random = options.random;
+    self.serviceName = options.serviceName;
     self.timers = options.timers;
 
     self.start = 0;
@@ -89,6 +96,21 @@ TChannelOutResponse.prototype._sendError = function _sendError(codeString, messa
     });
 };
 
+TChannelOutResponse.prototype._emitLatency = function _emitLatency() {
+    var self = this;
+    if (!self.latencyStart || self.latencyEnd) {
+        return;
+    }
+
+    self.latencyEnd = self.timers.now();
+    var latency = self.latencyEnd - self.latencyStart;
+    self.channel.inboundCallsLatencyStat.add(latency, {
+        'calling-service': self.callingService,
+        'service': self.serviceName,
+        'endpoint': self.endpoint
+    });
+};
+
 TChannelOutResponse.prototype.onFinish = function onFinish(_arg, self) {
     if (!self.end) self.end = self.timers.now();
     if (self.span) {
@@ -114,6 +136,13 @@ TChannelOutResponse.prototype.sendParts = function sendParts(parts, isLast) {
         case States.Error:
             // TODO: log warn
             break;
+        default:
+            assert(false, 'Wrong self state');
+            break;
+    }
+
+    if (isLast) {
+        self._emitLatency();
     }
 };
 
@@ -177,6 +206,7 @@ TChannelOutResponse.prototype.sendCallResponseContFrame = function sendCallRespo
 
 TChannelOutResponse.prototype.sendError = function sendError(codeString, message) {
     var self = this;
+    self._emitLatency();
     if (self.state === States.Done || self.state === States.Error) {
         self.errorEvent.emit(self, errors.ResponseAlreadyDone({
             attempted: 'send error frame: ' + codeString + ': ' + message,
@@ -193,7 +223,12 @@ TChannelOutResponse.prototype.sendError = function sendError(codeString, message
 
         self.codeString = codeString;
         self.message = message;
-
+        self.channel.inboundCallsSystemErrorsStat.increment(1, {
+            'calling-service': self.callingService,
+            'service': self.serviceName,
+            'endpoint': self.endpoint,
+            'type': self.codeString
+        });
         self._sendError(codeString, message);
         self.finishEvent.emit(self);
     }
@@ -234,8 +269,26 @@ TChannelOutResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
 TChannelOutResponse.prototype.send = function send(res1, res2) {
     var self = this;
 
+    self._emitLatency();
     self.arg2 = res1;
     self.arg3 = res2;
+
+    if (self.ok) {
+        self.channel.inboundCallsSuccessStat.increment(1, {
+            'calling-service': self.callingService,
+            'service': self.serviceName,
+            'endpoint': self.endpoint
+        });
+    } else {
+        // TODO: add outResponse.setErrorType()
+        var type = 'unknown';
+        self.channel.inboundCallsAppErrorsStat.increment(1, {
+            'calling-service': self.callingService,
+            'service': self.serviceName,
+            'endpoint': self.endpoint,
+            'type': type
+        });
+    }
 
     self.sendCallResponseFrame([self.arg1, res1, res2], true);
     self.finishEvent.emit(self);
