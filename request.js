@@ -243,17 +243,11 @@ TChannelRequest.prototype.onIdentified = function onIdentified(peer, perAttemptS
         opts[key] = self.options[key];
     }
     opts.timeout = self.timeout - self.elapsed;
+    opts.retryCount = self.outReqs.length;
     var outReq = peer.request(opts);
     self.outReqs.push(outReq);
 
-    if (self.outReqs.length === 1) {
-        self.channel.outboundCallsSentStat.increment(1, {
-            'target-service': outReq.serviceName,
-            'service': outReq.headers.cn,
-            // TODO should always be buffer
-            'target-endpoint': String(self.arg1)
-        });
-    } else {
+    if (self.outReqs.length !== 1) {
         self.channel.outboundCallsRetriesStat.increment(1, {
             'target-service': outReq.serviceName,
             'service': outReq.headers.cn,
