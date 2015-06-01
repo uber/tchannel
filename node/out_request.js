@@ -38,6 +38,8 @@ function TChannelOutRequest(id, options) {
     self.logger = options.logger;
     self.random = options.random;
     self.timers = options.timers;
+    self.retryCount = options.retryCount;
+    self.channel = options.channel;
 
     self.start = 0;
     self.end = 0;
@@ -188,9 +190,21 @@ TChannelOutRequest.prototype.sendCallRequestContFrame = function sendCallRequest
 TChannelOutRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     var self = this;
 
+    var endpoint = String(arg1);
+
     if (self.span) {
-        self.span.name = String(arg1);
+        self.span.name = endpoint;
     }
+
+    if (self.retryCount === 0) {
+        self.channel.outboundCallsSentStat.increment(1, {
+            'target-service': self.serviceName,
+            'service': self.headers.cn,
+            // TODO should always be buffer
+            'target-endpoint': endpoint
+        });
+    }
+
     if (callback) self.hookupCallback(callback);
     self.sendCallRequestFrame([arg1, arg2, arg3], true);
     self.finishEvent.emit(self);
