@@ -143,6 +143,12 @@ TChannelOutRequest.prototype.emitError = function emitError(err) {
     self.errorEvent.emit(self, err);
 };
 
+TChannelOutRequest.prototype.emitResponse = function emitResponse(res) {
+    var self = this;
+
+    self.responseEvent.emit(self, res);
+};
+
 TChannelOutRequest.prototype.sendParts = function sendParts(parts, isLast) {
     var self = this;
     switch (self.state) {
