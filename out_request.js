@@ -20,6 +20,7 @@
 
 'use strict';
 
+var assert = require('assert');
 var EventEmitter = require('./lib/event_emitter');
 var inherits = require('util').inherits;
 var parallel = require('run-parallel');
@@ -34,6 +35,8 @@ function TChannelOutRequest(id, options) {
     self.errorEvent = self.defineEvent('error');
     self.responseEvent = self.defineEvent('response');
     self.finishEvent = self.defineEvent('finish');
+
+    assert(options.channel, 'channel required');
 
     self.logger = options.logger;
     self.random = options.random;
@@ -109,12 +112,29 @@ TChannelOutRequest.prototype._sendCallRequestCont = function _sendCallRequestCon
 TChannelOutRequest.prototype.onError = function onError(err, self) {
     if (!self.end) self.end = self.timers.now();
     self.err = err;
+    self.emitPerAttemptLatency();
 };
 
 TChannelOutRequest.prototype.onResponse = function onResponse(res, self) {
     if (!self.end) self.end = self.timers.now();
     self.res = res;
     self.res.span = self.span;
+    self.emitPerAttemptLatency();
+};
+
+TChannelOutRequest.prototype.emitPerAttemptLatency =
+function emitPerAttemptLatency() {
+    var self = this;
+
+    var latency = self.end - self.start;
+    self.channel.outboundCallsPerAttemptLatencyStat.add(latency, {
+        'target-service': self.serviceName,
+        'service': self.headers.cn,
+        // TODO should always be buffer
+        'target-endpoint': String(self.arg1),
+        'peer': self.remoteAddr,
+        'retry-count': self.retryCount
+    });
 };
 
 TChannelOutRequest.prototype.sendParts = function sendParts(parts, isLast) {
@@ -206,6 +226,11 @@ TChannelOutRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     }
 
     if (callback) self.hookupCallback(callback);
+
+    self.arg1 = arg1;
+    self.arg2 = arg2;
+    self.arg3 = arg3;
+
     self.sendCallRequestFrame([arg1, arg2, arg3], true);
     self.finishEvent.emit(self);
     return self;

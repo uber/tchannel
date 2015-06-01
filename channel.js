@@ -392,8 +392,6 @@ TChannel.prototype.request = function channelRequest(options) {
         }
     }
 
-    opts.channel = self;
-
     var req = null;
     if (opts.host || // retries are only between hosts
         opts.streamed // streaming retries not yet implemented

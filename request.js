@@ -221,8 +221,6 @@ TChannelRequest.prototype.resend = function resend() {
         return;
     }
 
-    var perAttemptStart = self.timers.now();
-
     peer.waitForIdentified(onIdentified);
 
     function onIdentified(err) {
@@ -230,11 +228,11 @@ TChannelRequest.prototype.resend = function resend() {
             return self.emitError(err);
         }
 
-        self.onIdentified(peer, perAttemptStart);
+        self.onIdentified(peer);
     }
 };
 
-TChannelRequest.prototype.onIdentified = function onIdentified(peer, perAttemptStart) {
+TChannelRequest.prototype.onIdentified = function onIdentified(peer) {
     var self = this;
     var opts = {};
     var keys = Object.keys(self.options);
@@ -244,6 +242,7 @@ TChannelRequest.prototype.onIdentified = function onIdentified(peer, perAttemptS
     }
     opts.timeout = self.timeout - self.elapsed;
     opts.retryCount = self.outReqs.length;
+
     var outReq = peer.request(opts);
     self.outReqs.push(outReq);
 
@@ -263,28 +262,11 @@ TChannelRequest.prototype.onIdentified = function onIdentified(peer, perAttemptS
     outReq.send(self.arg1, self.arg2, self.arg3);
 
     function onError(err) {
-        emitPerAttemptLatency();
-
         self.onSubreqError(err);
     }
 
     function onResponse(res) {
-        emitPerAttemptLatency();
-
         self.onSubreqResponse(res);
-    }
-
-    function emitPerAttemptLatency() {
-        var latency = self.timers.now() - perAttemptStart;
-
-        self.channel.outboundCallsPerAttemptLatencyStat.add(latency, {
-            'target-service': self.serviceName,
-            'service': self.headers.cn,
-            // TODO should always be buffer
-            'target-endpoint': String(self.arg1),
-            'peer': peer.hostPort,
-            'retry-count': self.outReqs.length - 1
-        });
     }
 };
 
