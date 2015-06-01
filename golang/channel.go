@@ -40,21 +40,6 @@ const (
 	ephemeralHostPort = "0.0.0.0:0"
 )
 
-// A Handler is an object that can be registered with a Channel to process
-// incoming calls for a given service and operation
-type Handler interface {
-	// Handles an incoming call for service
-	Handle(ctx context.Context, call *InboundCall)
-}
-
-// A HandlerFunc is an adapter to allow the use of ordering functions as
-// TChannel handlers.  If f is a function with the appropriate signature,
-// HandlerFunc(f) is a Hander object that calls f
-type HandlerFunc func(ctx context.Context, call *InboundCall)
-
-// Handle calls f(ctx, call)
-func (f HandlerFunc) Handle(ctx context.Context, call *InboundCall) { f(ctx, call) }
-
 // ChannelOptions are used to control parameters on a create a TChannel
 type ChannelOptions struct {
 	// Default Connection options

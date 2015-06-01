@@ -22,7 +22,6 @@ package tchannel
 
 import (
 	"errors"
-	"sync"
 
 	"golang.org/x/net/context"
 )
@@ -92,7 +91,7 @@ func (c *Connection) handleCallReq(frame *Frame) {
 // it to the request channel for that request, where it can be pulled during
 // defragmentation
 func (c *Connection) handleCallReqContinue(frame *Frame) {
-	if err := c.inbound.forwardPeerFrame(frame.Header.ID, frame); err != nil {
+	if err := c.inbound.forwardPeerFrame(frame); err != nil {
 		c.inbound.removeExchange(frame.Header.ID)
 	}
 }
@@ -234,41 +233,4 @@ func (response *InboundCallResponse) WriteArg2(arg Output) error {
 // fully written or an error/timeout has occurred
 func (response *InboundCallResponse) WriteArg3(arg Output) error {
 	return response.writeArg3(arg)
-}
-
-// Manages handlers
-type handlerMap struct {
-	mut      sync.RWMutex
-	handlers map[string]map[string]Handler
-}
-
-// Registers a handler
-func (hmap *handlerMap) register(h Handler, serviceName, operation string) {
-	hmap.mut.Lock()
-	defer hmap.mut.Unlock()
-
-	if hmap.handlers == nil {
-		hmap.handlers = make(map[string]map[string]Handler)
-	}
-
-	operations := hmap.handlers[serviceName]
-	if operations == nil {
-		operations = make(map[string]Handler)
-		hmap.handlers[serviceName] = operations
-	}
-
-	operations[operation] = h
-}
-
-// Finds the handler matching the given service and operation.  See https://github.com/golang/go/issues/3512
-// for the reason that operation is []byte instead of a string
-func (hmap *handlerMap) find(serviceName string, operation []byte) Handler {
-	hmap.mut.RLock()
-	defer hmap.mut.RUnlock()
-
-	if operationMap := hmap.handlers[serviceName]; operationMap != nil {
-		return operationMap[string(operation)]
-	}
-
-	return nil
 }

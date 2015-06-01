@@ -1,5 +1,25 @@
 package tchannel
 
+// Copyright (c) 2015 Uber Technologies, Inc.
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
 import (
 	"errors"
 	"sync"
@@ -19,7 +39,7 @@ const (
 	messageExchangeSetOutbound = "outbound"
 )
 
-// A messageExchange tracks this channel's side of a message exchange with a
+// A messageExchange tracks this Connections's side of a message exchange with a
 // peer.  Each message exchange has a channel that can be used to receive
 // frames from the peer, and a Context that can controls when the exchange has
 // timed out or been cancelled.
@@ -83,24 +103,21 @@ func (mex *messageExchange) recvPeerFrameOfType(msgType messageType) (*Frame, er
 }
 
 // shutdown shuts down the message exchange, removing it from the message
-// exchange so it cannot receive more messages from the peer.  The receive
-// channel remains open, however, in case there are concurrent goroutines
-// sending to it.
+// exchange set so  that it cannot receive more messages from the peer.  The
+// receive channel remains open, however, in case there are concurrent
+// goroutines sending to it.
 func (mex *messageExchange) shutdown() {
 	mex.mexset.removeExchange(mex.msgID)
 }
 
-// messageExchangeSet manages a set of active message exchanges.  It is mainly
-// used to route frames from a peer to the appropriate messageExchange, or to
-// cancel or mark a messageExchange as being in error.  Each Connection
+// A messageExchangeSet manages a set of active message exchanges.  It is
+// mainly used to route frames from a peer to the appropriate messageExchange,
+// or to cancel or mark a messageExchange as being in error.  Each Connection
 // maintains two messageExchangeSets, one to manage exchanges that it has
-// initiated (outgoing), and another to manage exchanges that the peer has
-// initiated (incoming).  The message-type specific handlers are responsible
-// for ensuring that their message exchanges are properly registered and
-// removed from the corresponding exchange set, but a background garbage
-// collector also runs to find exchanges that have timed out or been cancelled
-// without having been removed, to ensure that even buggy code doesn't result
-// in out of memory situations
+// initiated (outbound), and another to manage exchanges that the peer has
+// initiated (inbound).  The message-type specific handlers are responsible for
+// ensuring that their message exchanges are properly registered and removed
+// from the corresponding exchange set.
 type messageExchangeSet struct {
 	log       Logger
 	name      string
@@ -155,15 +172,11 @@ func (mexset *messageExchangeSet) removeExchange(msgID uint32) {
 
 // forwardPeerFrame forwards a frame from the peer to the appropriate message
 // exchange
-// TODO(mmihic): We need to take the messageID here due to the weird
-// originalMessageID field in error frame.  If we instead made the error frame
-// message ID match the ID of the message in error, we could drop this
-// additional parameters
-func (mexset *messageExchangeSet) forwardPeerFrame(messageID uint32, frame *Frame) error {
+func (mexset *messageExchangeSet) forwardPeerFrame(frame *Frame) error {
 	mexset.log.Debugf("forwarding %s %s", mexset.name, frame.Header)
 
 	mexset.mut.Lock()
-	mex := mexset.exchanges[messageID]
+	mex := mexset.exchanges[frame.Header.ID]
 	mexset.mut.Unlock()
 
 	if mex == nil {
