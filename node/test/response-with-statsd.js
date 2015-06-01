@@ -70,13 +70,13 @@ allocCluster.test('emits stats on response ok', {
         assert.ifError(err, 'no error');
         assert.ok(res.ok, 'res should be ok');
         assert.deepEqual(statsd.parts, [{
-            key: 'waterSupply.1.0.inPipe.reservoir.get.inbound.calls.recvd',
+            key: 'tchannel.inbound.calls.recvd.inPipe.reservoir.Reservoir--get',
             value: 1
         }, {
-            key: 'waterSupply.1.0.inPipe.reservoir.get.inbound.calls.latency',
+            key: 'tchannel.inbound.calls.latency.inPipe.reservoir.Reservoir--get',
             value: 500
         }, {
-            key: 'waterSupply.1.0.inPipe.reservoir.get.inbound.calls.success',
+            key: 'tchannel.inbound.calls.success.inPipe.reservoir.Reservoir--get',
             value: 1
         }], 'stats keys/values as expected');
 
@@ -126,13 +126,13 @@ allocCluster.test('emits stats on response not ok', {
         assert.ifError(err, 'no error');
         assert.equal(res.ok, false, 'res should be not ok');
         assert.deepEqual(statsd.parts, [{
-            key: 'waterSupply.1.0.inPipe.reservoir.get.inbound.calls.recvd',
+            key: 'tchannel.inbound.calls.recvd.inPipe.reservoir.Reservoir--get',
             value: 1
         }, {
-            key: 'waterSupply.1.0.inPipe.reservoir.get.inbound.calls.latency',
+            key: 'tchannel.inbound.calls.latency.inPipe.reservoir.Reservoir--get',
             value: 500
         }, {
-            key: 'waterSupply.1.0.inPipe.reservoir.get.inbound.calls.app-errors',
+            key: 'tchannel.inbound.calls.app-errors.inPipe.reservoir.Reservoir--get.unknown',
             value: 1
         }], 'stats keys/values as expected');
 
@@ -182,16 +182,13 @@ allocCluster.test('emits stats on response error', {
         assert.notEqual(err, null, 'err should not be null');
         assert.equal(res, null, 'res should be null');
         assert.deepEqual(statsd.parts, [{
-            key: 'waterSupply.1.0.inPipe.reservoir.get.inbound.calls.recvd',
+            key: 'tchannel.inbound.calls.recvd.inPipe.reservoir.Reservoir--get',
             value: 1
         }, {
-            key: 'waterSupply.1.0.inPipe.reservoir.get.inbound.calls.latency',
+            key: 'tchannel.inbound.calls.latency.inPipe.reservoir.Reservoir--get',
             value: 500
         }, {
-            key: 'waterSupply.1.0.inPipe.reservoir.get.inbound.calls.system-errors',
-            value: 1
-        }, {
-            key: 'waterSupply.1.0.inPipe.reservoir.get.inbound.protocol-errors',
+            key: 'tchannel.inbound.calls.system-errors.inPipe.reservoir.Reservoir--get.ProtocolError',
             value: 1
         }], 'stats keys/values as expected');
 

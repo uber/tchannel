@@ -40,6 +40,7 @@ function TChannelOutResponse(id, options) {
     self.endpoint = options.endpoint;
     self.logger = options.logger;
     self.latencyStart = options.latencyStart;
+    self.latencyEnd = null;
     self.random = options.random;
     self.serviceName = options.serviceName;
     self.timers = options.timers;
@@ -119,7 +120,6 @@ TChannelOutResponse.prototype.onFinish = function onFinish(_arg, self) {
 
 TChannelOutResponse.prototype.sendParts = function sendParts(parts, isLast) {
     var self = this;
-    var error = false;
     switch (self.state) {
         case States.Initial:
             self.sendCallResponseFrame(parts, isLast);
@@ -128,23 +128,20 @@ TChannelOutResponse.prototype.sendParts = function sendParts(parts, isLast) {
             self.sendCallResponseContFrame(parts, isLast);
             break;
         case States.Done:
-            error = true;
             self.errorEvent.emit(self, errors.ResponseFrameState({
                 attempted: 'arg parts',
                 state: 'Done'
             }));
             break;
         case States.Error:
-            error = true;
             // TODO: log warn
             break;
         default:
-            error = true;
             assert(false, 'Wrong self state');
             break;
     }
 
-    if (isLast && !error) {
+    if (isLast) {
         self._emitLatency();
     }
 };
@@ -209,6 +206,7 @@ TChannelOutResponse.prototype.sendCallResponseContFrame = function sendCallRespo
 
 TChannelOutResponse.prototype.sendError = function sendError(codeString, message) {
     var self = this;
+    self._emitLatency();
     if (self.state === States.Done || self.state === States.Error) {
         self.errorEvent.emit(self, errors.ResponseAlreadyDone({
             attempted: 'send error frame: ' + codeString + ': ' + message,
@@ -218,7 +216,6 @@ TChannelOutResponse.prototype.sendError = function sendError(codeString, message
             errMessage: message
         }));
     } else {
-        self._emitLatency();
         if (self.span) {
             self.span.annotate('ss');
         }
@@ -232,15 +229,6 @@ TChannelOutResponse.prototype.sendError = function sendError(codeString, message
             'endpoint': self.endpoint,
             'type': self.codeString
         });
-
-        if (self.codeString === 'ProtocolError') {
-            self.channel.inboundProtocolErrorsStat.increment(1, {
-                'calling-service': self.callingService,
-                'service': self.serviceName,
-                'endpoint': self.endpoint
-            });
-        }
-
         self._sendError(codeString, message);
         self.finishEvent.emit(self);
     }
@@ -292,10 +280,8 @@ TChannelOutResponse.prototype.send = function send(res1, res2) {
             'endpoint': self.endpoint
         });
     } else {
-        var type = [self.arg2, self.arg3].filter(
-            function filter(val) {
-                return val;
-            }).join('.');
+        // TODO: add outResponse.setErrorType()
+        var type = 'unknown';
         self.channel.inboundCallsAppErrorsStat.increment(1, {
             'calling-service': self.callingService,
             'service': self.serviceName,

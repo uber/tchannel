@@ -222,10 +222,9 @@ TChannelConnectionBase.prototype.runHandler = function runHandler(req) {
         'endpoint': String(req.arg1)
     });
 
-    var latencyStart = self.timers.now();
+    req.latencyStart = self.timers.now();
     self.channel.handler.handleRequest(req, buildResponse);
     function buildResponse(options) {
-        options = extend({latencyStart: latencyStart}, options);
         return self.buildResponse(req, options);
     }
 };
@@ -242,6 +241,7 @@ TChannelConnectionBase.prototype.buildResponse = function buildResponse(req, opt
         channel: self.channel,
         callingService: req.headers.cn,
         endpoint: String(req.arg1),
+        latencyStart: req.latencyStart,
         serviceName: req.serviceName
     }, options);
     req.res = self.buildOutResponse(req, options);

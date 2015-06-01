@@ -69,18 +69,17 @@ allocCluster.test('emits stats on call success', {
     function onResponse(err, res, arg2, arg3) {
         assert.ifError(err, 'no error');
         assert.ok(res.ok, 'res should be ok');
-
         assert.deepEqual(statsd.parts, [{
-            key: 'pool.1.0.inPipe.reservoir.get.outbound.calls.sent',
+            key: 'tchannel.outbound.calls.sent.inPipe.reservoir.Reservoir--get',
             value: 1
         }, {
-            key: 'pool.1.0.inPipe.reservoir.get.outbound.calls.per-attempt-latency',
+            key: 'tchannel.outbound.calls.per-attempt-latency.inPipe.reservoir.Reservoir--get.' + server.hostPort.replace(':', '-') + '.0',
             value: 500
         }, {
-            key: 'pool.1.0.inPipe.reservoir.get.outbound.calls.success',
+            key: 'tchannel.outbound.calls.success.inPipe.reservoir.Reservoir--get',
             value: 1
         }, {
-            key: 'pool.1.0.inPipe.reservoir.get.outbound.calls.latency',
+            key: 'tchannel.outbound.calls.latency.inPipe.reservoir.Reservoir--get',
             value: 500
         }], 'stats keys/values as expected');
 
@@ -129,18 +128,17 @@ allocCluster.test('emits stats on call failure', {
     function onResponse(err, res, arg2, arg3) {
         assert.ifError(err, 'no error');
         assert.ok(res.ok === false, 'res should be not ok');
-
         assert.deepEqual(statsd.parts, [{
-            key: 'pool.1.0.inPipe.reservoir.get.outbound.calls.sent',
+            key: 'tchannel.outbound.calls.sent.inPipe.reservoir.Reservoir--get',
             value: 1
         }, {
-            key: 'pool.1.0.inPipe.reservoir.get.outbound.calls.per-attempt-latency',
+            key: 'tchannel.outbound.calls.per-attempt-latency.inPipe.reservoir.Reservoir--get.' + server.hostPort.replace(':', '-') + '.0',
             value: 500
         }, {
-            key: 'pool.1.0.inPipe.reservoir.get.outbound.calls.app-errors',
+            key: 'tchannel.outbound.calls.app-errors.inPipe.reservoir.Reservoir--get.unknown',
             value: 1
         }, {
-            key: 'pool.1.0.inPipe.reservoir.get.outbound.calls.latency',
+            key: 'tchannel.outbound.calls.latency.inPipe.reservoir.Reservoir--get',
             value: 500
         }], 'stats keys/values as expected');
 

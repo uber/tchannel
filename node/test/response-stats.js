@@ -66,7 +66,7 @@ allocCluster.test('emits response stats with ok', {
             tags: {
                 'calling-service': 'client',
                 service: 'server',
-                'endpoint': 'echo',
+                endpoint: 'echo',
                 app: 'server',
                 host: os.hostname()
             }
@@ -77,7 +77,7 @@ allocCluster.test('emits response stats with ok', {
             tags: {
                 'calling-service': 'client',
                 service: 'server',
-                'endpoint': 'echo',
+                endpoint: 'echo',
                 app: 'server',
                 host: os.hostname()
             }
@@ -88,7 +88,7 @@ allocCluster.test('emits response stats with ok', {
             tags: {
                 'calling-service': 'client',
                 service: 'server',
-                'endpoint': 'echo',
+                endpoint: 'echo',
                 app: 'server',
                 host: os.hostname()
             }
@@ -140,7 +140,7 @@ allocCluster.test('emits response stats with not ok', {
             tags: {
                 'calling-service': 'client',
                 service: 'server',
-                'endpoint': 'echo',
+                endpoint: 'echo',
                 app: 'server',
                 host: os.hostname()
             }
@@ -151,7 +151,7 @@ allocCluster.test('emits response stats with not ok', {
             tags: {
                 'calling-service': 'client',
                 service: 'server',
-                'endpoint': 'echo',
+                endpoint: 'echo',
                 app: 'server',
                 host: os.hostname()
             }
@@ -162,8 +162,8 @@ allocCluster.test('emits response stats with not ok', {
             tags: {
                 'calling-service': 'client',
                 service: 'server',
-                'endpoint': 'echo',
-                type: 'failure.busy',
+                endpoint: 'echo',
+                type: 'unknown',
                 app: 'server',
                 host: os.hostname()
             }
@@ -215,7 +215,7 @@ allocCluster.test('emits response stats with error', {
             tags: {
                 'calling-service': 'client',
                 service: 'server',
-                'endpoint': 'echo',
+                endpoint: 'echo',
                 app: 'server',
                 host: os.hostname()
             }
@@ -226,7 +226,7 @@ allocCluster.test('emits response stats with error', {
             tags: {
                 'calling-service': 'client',
                 service: 'server',
-                'endpoint': 'echo',
+                endpoint: 'echo',
                 app: 'server',
                 host: os.hostname()
             }
@@ -237,19 +237,8 @@ allocCluster.test('emits response stats with error', {
             tags: {
                 'calling-service': 'client',
                 service: 'server',
-                'endpoint': 'echo',
+                endpoint: 'echo',
                 type: 'ProtocolError',
-                app: 'server',
-                host: os.hostname()
-            }
-        }, {
-            name: 'inbound.protocol-errors',
-            type: 'counter',
-            value: 1,
-            tags: {
-                'calling-service': 'client',
-                service: 'server',
-                'endpoint': 'echo',
                 app: 'server',
                 host: os.hostname()
             }

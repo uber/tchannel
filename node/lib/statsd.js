@@ -22,11 +22,6 @@
 
 var assert = require('assert');
 
-var StatEmitter = require('./stat_emitter');
-var Counter = StatEmitter.Counter;
-var Gauge = StatEmitter.Gauge;
-var Timing = StatEmitter.Timing;
-
 function TChannelStatsd(channel, statsd) {
     if (!(this instanceof TChannelStatsd)) {
         return new TChannelStatsd(channel, statsd);
@@ -42,73 +37,134 @@ function TChannelStatsd(channel, statsd) {
     }
 }
 
-function getKeyOutbound(common, stat) {
-    // var host = common.host || 'host';
-    // var cluster = common.cluster || 'cluster';
-    var version = common.version || 'version';
-    var service = stat.tags.service;
-    var targetService = stat.tags['target-service'];
-
-    // Note: endpoint should have a finite value space
-    var endpoint = stat.tags['target-endpoint'] || 'endpoint';
-    endpoint = endpoint.indexOf('::') !== -1 ?
-        endpoint.split('::')[1] : endpoint;
-    return [
-        common.app,
-        // host,
-        // cluster,
-        version,
-        service,
-        targetService,
-        endpoint,
-        stat.name
-    ].join('.');
-}
-
-function getKeyInbound(common, stat) {
-    // var host = common.host || 'host';
-    // var cluster = common.cluster || 'cluster';
-    var version = common.version || 'version';
-    var service = stat.tags.service;
-    var callingService = stat.tags['calling-service'];
-
-    // Note: endpoint should have a finite value space
-    var endpoint = stat.tags.endpoint || 'endpoint';
-    endpoint = endpoint.indexOf('::') !== -1 ?
-        endpoint.split('::')[1] : endpoint;
-    return [
-        common.app,
-        // host,
-        // cluster,
-        version,
-        callingService,
-        service,
-        endpoint,
-        stat.name
-    ].join('.');
+function clean(str) {
+    return str
+        .replace(/:/g, '-')
+        .replace(/\./g, '-')
+        .replace(/{|}/g, '-');
 }
 
 function getKey(common, stat) {
-    if (stat.name.indexOf('inbound.') === 0) {
-        return getKeyInbound(common, stat);
-    } else if (stat.name.indexOf('outbound.') === 0) {
-        return getKeyOutbound(common, stat);
-    }
+    var prefix = ['tchannel', stat.name].join('.');
+    switch (stat.name) {
+        // outbound
+        case 'outbound.calls.sent':
+            return [
+                prefix,
+                clean(stat.tags.service),
+                clean(stat.tags['target-service']),
+                clean(stat.tags['target-endpoint'])
+            ].join('.');
+        case 'outbound.calls.success':
+            return [
+                prefix,
+                clean(stat.tags.service),
+                clean(stat.tags['target-service']),
+                clean(stat.tags['target-endpoint'])
+            ].join('.');
+        case 'outbound.calls.system-errors':
+            return [
+                prefix,
+                clean(stat.tags.service),
+                clean(stat.tags['target-service']),
+                clean(stat.tags['target-endpoint']),
+                clean(stat.tags.type)
+            ].join('.');
+        case 'outbound.calls.operational-errors':
+            return [
+                prefix,
+                clean(stat.tags.service),
+                clean(stat.tags['target-service']),
+                clean(stat.tags['target-endpoint']),
+                clean(stat.tags.type)
+            ].join('.');
+        case 'outbound.calls.app-errors':
+            return [
+                prefix,
+                clean(stat.tags.service),
+                clean(stat.tags['target-service']),
+                clean(stat.tags['target-endpoint']),
+                clean(stat.tags.type)
+            ].join('.');
+        case 'outbound.calls.retries':
+            return [
+                prefix,
+                clean(stat.tags.service),
+                clean(stat.tags['target-service']),
+                clean(stat.tags['target-endpoint']),
+                stat.tags['retry-count']
+            ].join('.');
+        case 'outbound.calls.latency':
+            return [
+                prefix,
+                clean(stat.tags.service),
+                clean(stat.tags['target-service']),
+                clean(stat.tags['target-endpoint'])
+            ].join('.');
+        case 'outbound.calls.per-attempt-latency':
+            return [
+                prefix,
+                clean(stat.tags.service),
+                clean(stat.tags['target-service']),
+                clean(stat.tags['target-endpoint']),
+                clean(stat.tags.peer),
+                stat.tags['retry-count']
+            ].join('.');
 
-    return '';
+        // inbound
+        case 'inbound.calls.recvd':
+            return [
+                prefix,
+                clean(stat.tags['calling-service']),
+                clean(stat.tags.service),
+                clean(stat.tags.endpoint)
+            ].join('.');
+        case 'inbound.calls.success':
+            return [
+                prefix,
+                clean(stat.tags['calling-service']),
+                clean(stat.tags.service),
+                clean(stat.tags.endpoint)
+            ].join('.');
+        case 'inbound.calls.system-errors':
+            return [
+                prefix,
+                clean(stat.tags['calling-service']),
+                clean(stat.tags.service),
+                clean(stat.tags.endpoint),
+                clean(stat.tags.type)
+            ].join('.');
+        case 'inbound.calls.app-errors':
+            return [
+                prefix,
+                clean(stat.tags['calling-service']),
+                clean(stat.tags.service),
+                clean(stat.tags.endpoint),
+                clean(stat.tags.type)
+            ].join('.');
+        case 'inbound.calls.latency':
+            return [
+                prefix,
+                clean(stat.tags['calling-service']),
+                clean(stat.tags.service),
+                clean(stat.tags.endpoint)
+            ].join('.');
+        default:
+        return '';
+    }
 }
 
 TChannelStatsd.prototype.onStat = function onStat(stat) {
     var self = this;
     var key = getKey(self.channel.statTags, stat);
     switch (stat.type) {
-        case Counter.type:
+        case 'counter':
             return self.statsd.increment(key, stat.value);
 
-        case Gauge.type:
+        case 'gauge':
             return self.statsd.gauge(key, stat.value);
 
-        case Timing.type:
+        case 'timing':
             return self.statsd.timing(key, stat.value);
 
         default:
