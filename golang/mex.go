@@ -80,8 +80,6 @@ func (mex *messageExchange) recvPeerFrameOfType(msgType messageType) (*Frame, er
 
 		return nil, errUnexpectedFrameType
 	}
-
-	return nil, nil
 }
 
 // shutdown shuts down the message exchange, removing it from the message
