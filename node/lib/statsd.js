@@ -20,8 +20,6 @@
 
 'use strict';
 
-var assert = require('assert');
-
 function TChannelStatsd(channel, statsd) {
     if (!(this instanceof TChannelStatsd)) {
         return new TChannelStatsd(channel, statsd);
@@ -38,10 +36,14 @@ function TChannelStatsd(channel, statsd) {
 }
 
 function clean(str) {
-    return str
-        .replace(/:/g, '-')
-        .replace(/\./g, '-')
-        .replace(/{|}/g, '-');
+    if (!str) {
+        return 'unknown';
+    } else {
+        return str
+            .replace(/:/g, '-')
+            .replace(/\./g, '-')
+            .replace(/{|}/g, '-');
+    }
 }
 
 function getKey(common, stat) {
@@ -49,108 +51,82 @@ function getKey(common, stat) {
     switch (stat.name) {
         // outbound
         case 'outbound.calls.sent':
-            return [
-                prefix,
-                clean(stat.tags.service),
-                clean(stat.tags['target-service']),
-                clean(stat.tags['target-endpoint'])
-            ].join('.');
+            return prefix + '.' +
+                clean(stat.tags.service) + '.' +
+                clean(stat.tags['target-service']) + '.' +
+                clean(stat.tags['target-endpoint']);
         case 'outbound.calls.success':
-            return [
-                prefix,
-                clean(stat.tags.service),
-                clean(stat.tags['target-service']),
-                clean(stat.tags['target-endpoint'])
-            ].join('.');
+            return prefix + '.' +
+                clean(stat.tags.service) + '.' +
+                clean(stat.tags['target-service']) + '.' +
+                clean(stat.tags['target-endpoint']);
         case 'outbound.calls.system-errors':
-            return [
-                prefix,
-                clean(stat.tags.service),
-                clean(stat.tags['target-service']),
-                clean(stat.tags['target-endpoint']),
-                clean(stat.tags.type)
-            ].join('.');
+            return prefix + '.' +
+                clean(stat.tags.service) + '.' +
+                clean(stat.tags['target-service']) + '.' +
+                clean(stat.tags['target-endpoint']) + '.' +
+                clean(stat.tags.type);
         case 'outbound.calls.operational-errors':
-            return [
-                prefix,
-                clean(stat.tags.service),
-                clean(stat.tags['target-service']),
-                clean(stat.tags['target-endpoint']),
-                clean(stat.tags.type)
-            ].join('.');
+            return prefix + '.' +
+                clean(stat.tags.service) + '.' +
+                clean(stat.tags['target-service']) + '.' +
+                clean(stat.tags['target-endpoint']) + '.' +
+                clean(stat.tags.type);
         case 'outbound.calls.app-errors':
-            return [
-                prefix,
-                clean(stat.tags.service),
-                clean(stat.tags['target-service']),
-                clean(stat.tags['target-endpoint']),
-                clean(stat.tags.type)
-            ].join('.');
+            return prefix + '.' +
+                clean(stat.tags.service) + '.' +
+                clean(stat.tags['target-service']) + '.' +
+                clean(stat.tags['target-endpoint']) + '.' +
+                clean(stat.tags.type);
         case 'outbound.calls.retries':
-            return [
-                prefix,
-                clean(stat.tags.service),
-                clean(stat.tags['target-service']),
-                clean(stat.tags['target-endpoint']),
-                stat.tags['retry-count']
-            ].join('.');
+            return prefix + '.' +
+                clean(stat.tags.service) + '.' +
+                clean(stat.tags['target-service']) + '.' +
+                clean(stat.tags['target-endpoint']) + '.' +
+                stat.tags['retry-count'];
         case 'outbound.calls.latency':
-            return [
-                prefix,
-                clean(stat.tags.service),
-                clean(stat.tags['target-service']),
-                clean(stat.tags['target-endpoint'])
-            ].join('.');
+            return prefix + '.' +
+                clean(stat.tags.service) + '.' +
+                clean(stat.tags['target-service']) + '.' +
+                clean(stat.tags['target-endpoint']);
         case 'outbound.calls.per-attempt-latency':
-            return [
-                prefix,
-                clean(stat.tags.service),
-                clean(stat.tags['target-service']),
-                clean(stat.tags['target-endpoint']),
-                clean(stat.tags.peer),
-                stat.tags['retry-count']
-            ].join('.');
+            return prefix + '.' +
+                clean(stat.tags.service) + '.' +
+                clean(stat.tags['target-service']) + '.' +
+                clean(stat.tags['target-endpoint']) + '.' +
+                clean(stat.tags.peer) + '.' +
+                stat.tags['retry-count'];
 
         // inbound
         case 'inbound.calls.recvd':
-            return [
-                prefix,
-                clean(stat.tags['calling-service']),
-                clean(stat.tags.service),
-                clean(stat.tags.endpoint)
-            ].join('.');
+            return prefix + '.' +
+                clean(stat.tags['calling-service']) + '.' +
+                clean(stat.tags.service) + '.' +
+                clean(stat.tags.endpoint);
         case 'inbound.calls.success':
-            return [
-                prefix,
-                clean(stat.tags['calling-service']),
-                clean(stat.tags.service),
-                clean(stat.tags.endpoint)
-            ].join('.');
+            return prefix + '.' +
+                clean(stat.tags['calling-service']) + '.' +
+                clean(stat.tags.service) + '.' +
+                clean(stat.tags.endpoint);
         case 'inbound.calls.system-errors':
-            return [
-                prefix,
-                clean(stat.tags['calling-service']),
-                clean(stat.tags.service),
-                clean(stat.tags.endpoint),
-                clean(stat.tags.type)
-            ].join('.');
+            return prefix + '.' +
+                clean(stat.tags['calling-service']) + '.' +
+                clean(stat.tags.service) + '.' +
+                clean(stat.tags.endpoint) + '.' +
+                clean(stat.tags.type);
         case 'inbound.calls.app-errors':
-            return [
-                prefix,
-                clean(stat.tags['calling-service']),
-                clean(stat.tags.service),
-                clean(stat.tags.endpoint),
-                clean(stat.tags.type)
-            ].join('.');
+            return prefix + '.' +
+                clean(stat.tags['calling-service']) + '.' +
+                clean(stat.tags.service) + '.' +
+                clean(stat.tags.endpoint) + '.' +
+                clean(stat.tags.type);
         case 'inbound.calls.latency':
-            return [
-                prefix,
-                clean(stat.tags['calling-service']),
-                clean(stat.tags.service),
-                clean(stat.tags.endpoint)
-            ].join('.');
+            return prefix + '.' +
+                clean(stat.tags['calling-service']) + '.' +
+                clean(stat.tags.service) + '.' +
+                clean(stat.tags.endpoint);
         default:
-        return '';
+            return 'tchannel.bad-stat-object';
     }
 }
 
@@ -168,7 +144,7 @@ TChannelStatsd.prototype.onStat = function onStat(stat) {
             return self.statsd.timing(key, stat.value);
 
         default:
-            assert(false, stat.type + ' is not a stats type.');
+            self.channel.logger.error(stat.type + ' is not a stats type.');
             break;
     }
 };
