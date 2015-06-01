@@ -34,7 +34,9 @@ var (
 	errInboundRequestAlreadyActive = errors.New("inbound request is already active; possible duplicate client id")
 )
 
-// Handles an incoming call request, dispatching the call to the worker pool
+// handleCallReq handls an incoming call request, registering a message
+// exchange to receive further fragments for that call, and dispatching it in
+// another goroutine
 func (c *Connection) handleCallReq(frame *Frame) {
 	callReq := new(callReq)
 	initialFragment, err := parseInboundFragment(frame, callReq)
@@ -86,25 +88,21 @@ func (c *Connection) handleCallReq(frame *Frame) {
 	go c.dispatchInbound(call)
 }
 
-// Handles the continuation of a call request.  Adds the frame to the channel for that call.
+// handleCallReqContinue handles the continuation of a call request, forwarding
+// it to the request channel for that request, where it can be pulled during
+// defragmentation
 func (c *Connection) handleCallReqContinue(frame *Frame) {
 	if err := c.inbound.forwardPeerFrame(frame.Header.ID, frame); err != nil {
 		c.inbound.removeExchange(frame.Header.ID)
 	}
 }
 
-// Called when an inbound request has completed (either successfully or due to timeout or error)
-func (c *Connection) inboundCallComplete(messageID uint32) {
-	c.inbound.removeExchange(messageID)
-}
-
-// Dispatches an inbound call to the appropriate handler
+// dispatchInbound ispatches an inbound call to the appropriate handler
 func (c *Connection) dispatchInbound(call *InboundCall) {
 	c.log.Debugf("Received incoming call for %s from %s", call.ServiceName(), c.remotePeerInfo)
 
 	if err := call.readOperation(); err != nil {
 		c.log.Errorf("Could not read operation from %s: %v", c.remotePeerInfo, err)
-		c.inboundCallComplete(call.mex.msgID)
 		return
 	}
 
@@ -115,6 +113,7 @@ func (c *Connection) dispatchInbound(call *InboundCall) {
 	h := c.handlers.find(call.ServiceName(), call.Operation())
 	if h == nil {
 		c.log.Errorf("Could not find handler for %s:%s", call.ServiceName(), call.Operation())
+		call.mex.shutdown()
 		call.Response().SendSystemError(ErrHandlerNotFound)
 		return
 	}

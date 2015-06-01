@@ -27,6 +27,7 @@ import (
 	"golang.org/x/net/context"
 )
 
+// beginCall begins an outbound call on the connection
 func (c *Connection) beginCall(ctx context.Context, serviceName string) (*OutboundCall, error) {
 	if err := c.withStateRLock(func() error {
 		switch c.state {
@@ -97,20 +98,16 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string) (*Outbou
 	return call, nil
 }
 
-// Marks an outbound call as being complete
-func (c *Connection) outboundCallComplete(messageID uint32) {
-	c.outbound.removeExchange(messageID)
-}
-
-// TODO(mmihic): Eventually these will have different semantics
-// Handles a CallRes frame.  Finds the response channel corresponding to that
-// message and sends it the frame
+// handleCallRes handles an incoming call req message, forwarding the
+// frame to the response channel waiting for it
 func (c *Connection) handleCallRes(frame *Frame) {
 	if err := c.outbound.forwardPeerFrame(frame.Header.ID, frame); err != nil {
 		c.outbound.removeExchange(frame.Header.ID)
 	}
 }
 
+// handleCallResContinue handles an incoming call res continue message,
+// forwarding the frame to the response channel waiting for it
 func (c *Connection) handleCallResContinue(frame *Frame) {
 	if err := c.outbound.forwardPeerFrame(frame.Header.ID, frame); err != nil {
 		c.outbound.removeExchange(frame.Header.ID)
@@ -118,7 +115,7 @@ func (c *Connection) handleCallResContinue(frame *Frame) {
 }
 
 // An OutboundCall is an active call to a remote peer.  A client makes a call
-// by calling BeginCall on the TChannel, writing argument content via
+// by calling BeginCall on the Channel, writing argument content via
 // WriteArg2() and WriteArg3(), and then reading reading response data via the
 // ReadArg2() and ReadArg3() methods on the Response() object.
 type OutboundCall struct {
@@ -185,11 +182,11 @@ func (response *OutboundCallResponse) ReadArg3(arg Input) error {
 	return response.readArg3(arg)
 }
 
-// handleError andles an error coming back from the peer server. If the error
-// is a protocol level error, the entire connection will be closed.  If the
-// error is a reqest specific error, it will be written to the request's
-// response channel and converted into a SystemError returned from the next
-// reader or access call.
+// handleError andles an error coming back from the peer. If the error is a
+// protocol level error, the entire connection will be closed.  If the error is
+// a request specific error, it will be written to the request's response
+// channel and converted into a SystemError returned from the next reader or
+// access call.
 func (c *Connection) handleError(frame *Frame) {
 	var errorMessage errorMessage
 	rbuf := typed.NewReadBuffer(frame.SizedPayload())
