@@ -74,7 +74,7 @@ function makeInreq(id, options) {
         if (called) return;
         called = true;
         self.conn.ops.popOutReq(id);
-        self.responseEvent.emit(self, res);
+        self.emitResponse(res);
     }
 };
 
