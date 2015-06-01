@@ -57,12 +57,10 @@ function onListening() {
     }, onResponse);
 
     function onResponse(err, resp) {
-        assert.ifError(err);
-        assert.equal(resp.ok, true);
-
         if (err) {
             console.log('got error', err);
         } else {
+            assert.equal(resp.ok, true);
             console.log('got resp', resp);
         }
 

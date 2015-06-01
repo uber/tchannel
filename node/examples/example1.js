@@ -57,24 +57,32 @@ var listening = ready(function (err) {
     client
         .request({serviceName: 'server'})
         .send('func1', "arg 1", "arg 2", function (err, res) {
-            assert.ifError(err);
-            assert.equal(res.ok, true);
-            console.log('normal res: ' + res.arg2.toString() + ' ' + res.arg3.toString());
-            done();
+            if (err) {
+                done(err);
+            } else {
+                assert.equal(res.ok, true);
+                console.log('normal res: ' + res.arg2.toString() + ' ' + res.arg3.toString());
+                done();
+            }
         });
     client
         .request({serviceName: 'server'})
         .send('func2', "arg 1", "arg 2", function (err, res) {
-            assert.ifError(err);
-            assert.equal(res.ok, false);
-            console.log('err res: ' + res.ok +
-                ' message: ' + String(res.arg3));
+            if (err) {
+                done(err);
+            } else {
+                assert.equal(res.ok, false);
+                console.log('err res: ' + res.ok + ' message: ' + String(res.arg3));
+            }
         });
 });
 
-function done() {
+function done(err) {
     server.close();
     client.close();
+    if (err) {
+        throw err;
+    }
 }
 
 server.listen(4040, '127.0.0.1', ready.signal);
