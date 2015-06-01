@@ -117,6 +117,7 @@ TChannelOutRequest.prototype.onError = function onError(err, self) {
 
     if (self.logical === false) {
         self.emitErrorStat(err);
+        self.emitLatency();
     }
 };
 
@@ -128,6 +129,7 @@ TChannelOutRequest.prototype.onResponse = function onResponse(res, self) {
 
     if (self.logical === false) {
         self.emitResponseStat(res);
+        self.emitLatency();
     }
 };
 
@@ -191,6 +193,18 @@ function emitPerAttemptLatency() {
         'target-endpoint': String(self.arg1),
         'peer': self.remoteAddr,
         'retry-count': self.retryCount
+    });
+};
+
+TChannelOutRequest.prototype.emitLatency = function emitLatency() {
+    var self = this;
+
+    var latency = self.end - self.start;
+    self.channel.outboundCallsLatencyStat.add(latency, {
+        'target-service': self.serviceName,
+        'service': self.headers.cn,
+        // TODO should always be buffer
+        'target-endpoint': String(self.arg1)
     });
 };
 

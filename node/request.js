@@ -87,6 +87,7 @@ TChannelRequest.prototype.emitError = function emitError(err) {
     self.err = err;
 
     TChannelOutRequest.prototype.emitErrorStat.call(self, err);
+    TChannelOutRequest.prototype.emitLatency.call(self);
 
     self.services.onRequestError(self);
     self.errorEvent.emit(self, err);
@@ -98,6 +99,7 @@ TChannelRequest.prototype.emitResponse = function emitResponse(res) {
     self.res = res;
 
     TChannelOutRequest.prototype.emitResponseStat.call(self, res);
+    TChannelOutRequest.prototype.emitLatency.call(self);
 
     self.services.onRequestResponse(self);
     self.responseEvent.emit(self, res);
@@ -121,8 +123,6 @@ TChannelRequest.prototype.hookupCallback = function hookupCallback(callback) {
         if (called) return;
         called = true;
 
-        emitLatency();
-
         callback(err, null, null, null);
     }
 
@@ -130,19 +130,7 @@ TChannelRequest.prototype.hookupCallback = function hookupCallback(callback) {
         if (called) return;
         called = true;
         res.withArg23(function gotArg23(err, arg2, arg3) {
-            emitLatency();
-
             callback(err, res, arg2, arg3);
-        });
-    }
-
-    function emitLatency() {
-        var latency = self.end - self.start;
-        self.channel.outboundCallsLatencyStat.add(latency, {
-            'target-service': self.serviceName,
-            'service': self.headers.cn,
-            // TODO should always be buffer
-            'target-endpoint': String(self.arg1)
         });
     }
 
