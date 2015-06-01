@@ -137,6 +137,12 @@ function emitPerAttemptLatency() {
     });
 };
 
+TChannelOutRequest.prototype.emitError = function emitError(err) {
+    var self = this;
+
+    self.errorEvent.emit(self, err);
+};
+
 TChannelOutRequest.prototype.sendParts = function sendParts(parts, isLast) {
     var self = this;
     switch (self.state) {
@@ -149,7 +155,7 @@ TChannelOutRequest.prototype.sendParts = function sendParts(parts, isLast) {
         case States.Done:
             // TODO: could probably happen normally, like say if a
             // streaming request is canceled
-            self.errorEvent.emit(self, errors.RequestFrameState({
+            self.emitError(errors.RequestFrameState({
                 attempted: 'arg parts',
                 state: 'Done'
             }));
@@ -173,13 +179,13 @@ TChannelOutRequest.prototype.sendCallRequestFrame = function sendCallRequestFram
             else self.state = States.Streaming;
             break;
         case States.Streaming:
-            self.errorEvent.emit(self, errors.RequestFrameState({
+            self.emitError(errors.RequestFrameState({
                 attempted: 'call request',
                 state: 'Streaming'
             }));
             break;
         case States.Done:
-            self.errorEvent.emit(self, errors.RequestAlreadyDone({
+            self.emitError(errors.RequestAlreadyDone({
                 attempted: 'call request'
             }));
             break;
@@ -190,7 +196,7 @@ TChannelOutRequest.prototype.sendCallRequestContFrame = function sendCallRequest
     var self = this;
     switch (self.state) {
         case States.Initial:
-            self.errorEvent.emit(self, errors.RequestFrameState({
+            self.emitError(errors.RequestFrameState({
                 attempted: 'call request continuation',
                 state: 'Initial'
             }));
@@ -200,7 +206,7 @@ TChannelOutRequest.prototype.sendCallRequestContFrame = function sendCallRequest
             if (isLast) self.state = States.Done;
             break;
         case States.Done:
-            self.errorEvent.emit(self, errors.RequestAlreadyDone({
+            self.emitError(errors.RequestAlreadyDone({
                 attempted: 'call request continuation'
             }));
             break;
@@ -302,7 +308,7 @@ TChannelOutRequest.prototype.checkTimeout = function checkTimeout() {
             self.end = now;
             self.timedOut = true;
             process.nextTick(function deferOutReqTimeoutErrorEmit() {
-                self.errorEvent.emit(self, errors.RequestTimeoutError({
+                self.emitError(errors.RequestTimeoutError({
                     id: self.id,
                     start: self.start,
                     elapsed: elapsed,
