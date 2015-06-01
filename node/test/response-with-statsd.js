@@ -24,7 +24,7 @@ var os = require('os');
 var TimeMock = require('time-mock');
 
 var allocCluster = require('./lib/alloc-cluster.js');
-var mockStatsd = require('./lib/mock-statsd.js');
+var nullStatsd = require('uber-statsd-client/null');
 var TChannelStatsd = require('../lib/statsd');
 var timers = TimeMock(Date.now());
 
@@ -36,7 +36,7 @@ allocCluster.test('emits stats on response ok', {
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
     var client = cluster.channels[1];
-    var statsd = mockStatsd();
+    var statsd = nullStatsd(3);
 
     server.makeSubChannel({
         serviceName: 'reservoir'
@@ -67,17 +67,28 @@ allocCluster.test('emits stats on response ok', {
     }).send('Reservoir::get', 'ton', '20', onResponse);
 
     function onResponse(err, res, arg2, arg3) {
-        assert.ifError(err, 'no error');
+        if (err) {
+            return assert.end(err);
+        }
         assert.ok(res.ok, 'res should be ok');
-        assert.deepEqual(statsd.parts, [{
-            key: 'tchannel.inbound.calls.recvd.inPipe.reservoir.Reservoir--get',
-            value: 1
+        assert.deepEqual(statsd._buffer._elements, [{
+            type: 'c',
+            name: 'tchannel.inbound.calls.recvd.inPipe.reservoir.Reservoir--get',
+            value: null,
+            delta: 1,
+            time: null
         }, {
-            key: 'tchannel.inbound.calls.latency.inPipe.reservoir.Reservoir--get',
-            value: 500
+            type: 'ms',
+            name: 'tchannel.inbound.calls.latency.inPipe.reservoir.Reservoir--get',
+            value: null,
+            delta: null,
+            time: 500
         }, {
-            key: 'tchannel.inbound.calls.success.inPipe.reservoir.Reservoir--get',
-            value: 1
+            type: 'c',
+            name: 'tchannel.inbound.calls.success.inPipe.reservoir.Reservoir--get',
+            value: null,
+            delta: 1,
+            time: null
         }], 'stats keys/values as expected');
 
         assert.end();
@@ -92,7 +103,7 @@ allocCluster.test('emits stats on response not ok', {
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
     var client = cluster.channels[1];
-    var statsd = mockStatsd();
+    var statsd = nullStatsd(3);
 
     server.makeSubChannel({
         serviceName: 'reservoir'
@@ -123,17 +134,28 @@ allocCluster.test('emits stats on response not ok', {
     }).send('Reservoir::get', 'ton', '20', onResponse);
 
     function onResponse(err, res, arg2, arg3) {
-        assert.ifError(err, 'no error');
+        if (err) {
+            return assert.end(err);
+        }
         assert.equal(res.ok, false, 'res should be not ok');
-        assert.deepEqual(statsd.parts, [{
-            key: 'tchannel.inbound.calls.recvd.inPipe.reservoir.Reservoir--get',
-            value: 1
+        assert.deepEqual(statsd._buffer._elements, [{
+            type: 'c',
+            name: 'tchannel.inbound.calls.recvd.inPipe.reservoir.Reservoir--get',
+            value: null,
+            delta: 1,
+            time: null
         }, {
-            key: 'tchannel.inbound.calls.latency.inPipe.reservoir.Reservoir--get',
-            value: 500
+            type: 'ms',
+            name: 'tchannel.inbound.calls.latency.inPipe.reservoir.Reservoir--get',
+            value: null,
+            delta: null,
+            time: 500
         }, {
-            key: 'tchannel.inbound.calls.app-errors.inPipe.reservoir.Reservoir--get.unknown',
-            value: 1
+            type: 'c',
+            name: 'tchannel.inbound.calls.app-errors.inPipe.reservoir.Reservoir--get.unknown',
+            value: null,
+            delta: 1,
+            time: null
         }], 'stats keys/values as expected');
 
         assert.end();
@@ -148,7 +170,7 @@ allocCluster.test('emits stats on response error', {
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
     var client = cluster.channels[1];
-    var statsd = mockStatsd();
+    var statsd = nullStatsd(3);
 
     server.makeSubChannel({
         serviceName: 'reservoir'
@@ -181,15 +203,24 @@ allocCluster.test('emits stats on response error', {
     function onResponse(err, res, arg2, arg3) {
         assert.notEqual(err, null, 'err should not be null');
         assert.equal(res, null, 'res should be null');
-        assert.deepEqual(statsd.parts, [{
-            key: 'tchannel.inbound.calls.recvd.inPipe.reservoir.Reservoir--get',
-            value: 1
+        assert.deepEqual(statsd._buffer._elements, [{
+            type: 'c',
+            name: 'tchannel.inbound.calls.recvd.inPipe.reservoir.Reservoir--get',
+            value: null,
+            delta: 1,
+            time: null
         }, {
-            key: 'tchannel.inbound.calls.latency.inPipe.reservoir.Reservoir--get',
-            value: 500
+            type: 'ms',
+            name: 'tchannel.inbound.calls.latency.inPipe.reservoir.Reservoir--get',
+            value: null,
+            delta: null,
+            time: 500
         }, {
-            key: 'tchannel.inbound.calls.system-errors.inPipe.reservoir.Reservoir--get.ProtocolError',
-            value: 1
+            type: 'c',
+            name: 'tchannel.inbound.calls.system-errors.inPipe.reservoir.Reservoir--get.ProtocolError',
+            value: null,
+            delta: 1,
+            time: null
         }], 'stats keys/values as expected');
 
         assert.end();
