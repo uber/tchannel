@@ -88,12 +88,15 @@ function allocCluster(opts) {
                         var desc = util.format(
                             'channel[%s] peer[%s] conn[%s] should .%s',
                             i, j, k, prop);
+
+                        var pending = conn.ops.getPending();
+
                         switch (prop) {
                         case 'inReqs':
-                            assert.equal(Object.keys(conn.requests.in).length, connExpect.inReqs, desc);
+                            assert.equal(pending.in, connExpect.inReqs, desc);
                             break;
                         case 'outReqs':
-                            assert.equal(Object.keys(conn.requests.out).length, connExpect.outReqs, desc);
+                            assert.equal(pending.out, connExpect.outReqs, desc);
                             break;
                         default:
                             assert.equal(conn[prop], connExpect[prop], desc);
@@ -128,6 +131,10 @@ function allocCluster(opts) {
 }
 
 allocCluster.test = function testCluster(desc, opts, t) {
+    if (opts === undefined) {
+        return test(desc);
+    }
+
     if (typeof opts === 'number') {
         opts = {
             numPeers: opts

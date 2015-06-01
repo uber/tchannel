@@ -46,12 +46,49 @@ module.exports.ArgChunkOutOfOrderError = TypedError({
     got: null
 });
 
+module.exports.CallReqBeforeInitReqError = TypedError({
+    type: 'tchannel.init.call-request-before-init-request',
+    message: 'call request before init request'
+});
+
+module.exports.CallReqContBeforeInitReqError = TypedError({
+    type: 'tchannel.init.call-request-cont-before-init-request',
+    message: 'call request cont before init request'
+});
+
+module.exports.CallResBeforeInitResError = TypedError({
+    type: 'tchannel.init.call-response-before-init-response',
+    message: 'call response before init response'
+});
+
+module.exports.CallResContBeforeInitResError = TypedError({
+    type: 'tchannel.init.call-response-cont-before-init-response',
+    message: 'call response cont before init response'
+});
+
 module.exports.ChecksumError = TypedError({
     type: 'tchannel.checksum',
     message: 'invalid checksum (type {checksumType}) expected: {expectedValue} actual: {actualValue}',
     checksumType: null,
     expectedValue: null,
     actualValue: null
+});
+
+module.exports.ConnectionStaleTimeoutError = TypedError({
+    type: 'tchannel.connection-stale.timeout',
+    message: 'Connection got two timeouts in a row.\n' +
+        'Connection has been marked as stale and will be timed out',
+    lastTimeoutTime: null
+});
+
+module.exports.ConnectionTimeoutError = TypedError({
+    type: 'tchannel.connection.timeout',
+    message: 'connection timed out after {elapsed}ms ' +
+        '(limit was {timeout}ms)',
+    id: null,
+    start: null,
+    elapsed: null,
+    timeout: null
 });
 
 module.exports.DuplicateHeaderKeyError = TypedError({
@@ -62,6 +99,16 @@ module.exports.DuplicateHeaderKeyError = TypedError({
     key: null,
     value: null,
     priorValue: null
+});
+
+module.exports.DuplicateInitRequestError = TypedError({
+    type: 'tchannel.init.duplicate-init-request',
+    message: 'tchannel: duplicate init request'
+});
+
+module.exports.DuplicateInitResponseError = TypedError({
+    type: 'tchannel.init.duplicate-init-response',
+    message: 'tchannel: duplicate init response'
 });
 
 module.exports.InvalidArgumentError = TypedError({
@@ -148,6 +195,11 @@ module.exports.JSONHeadStringifyError = WrappedError({
     direction: null
 });
 
+module.exports.LocalSocketCloseError = TypedError({
+    type: 'tchannel.socket-local-closed',
+    message: 'tchannel: Connection was manually closed.'
+});
+
 module.exports.MaxPendingError = TypedError({
     type: 'tchannel.max-pending',
     message: 'maximum pending requests exceeded (limit was {pending})',
@@ -204,6 +256,16 @@ module.exports.RequestFrameState = TypedError({
     state: null
 });
 
+module.exports.RequestTimeoutError = TypedError({
+    type: 'tchannel.request.timeout',
+    message: 'request timed out after {elapsed}ms ' +
+        '(limit was {timeout}ms)',
+    id: null,
+    start: null,
+    elapsed: null,
+    timeout: null
+});
+
 module.exports.ResponseAlreadyDone = TypedError({
     type: 'tchannel.response-already-done',
     message: 'cannot send {attempted}, response already done ' +
@@ -225,6 +287,26 @@ module.exports.ResponseFrameState = TypedError({
     state: null
 });
 
+module.exports.SendCallReqBeforeIdentifiedError = TypedError({
+    type: 'tchannel.init.send-call-request-before-indentified',
+    message: 'cannot send call request before the connection is identified'
+});
+
+module.exports.SendCallReqContBeforeIdentifiedError = TypedError({
+    type: 'tchannel.init.send-call-request-cont-before-indentified',
+    message: 'cannot send call request cont before the connection is identified'
+});
+
+module.exports.SendCallResBeforeIdentifiedError = TypedError({
+    type: 'tchannel.init.send-call-response-before-indentified',
+    message: 'cannot send call response before the connection is identified'
+});
+
+module.exports.SendCallResContBeforeIdentifiedError = TypedError({
+    type: 'tchannel.init.send-call-response-cont-before-indentified',
+    message: 'cannot send call response cont before the connection is identified'
+});
+
 module.exports.SocketClosedError = TypedError({
     type: 'tchannel.socket-closed',
     message: 'socket closed, {reason}',
@@ -239,26 +321,6 @@ module.exports.SocketError = WrappedError({
     remoteAddr: null
 });
 
-module.exports.TChannelCallReqBeforeInitReqError = TypedError({
-    type: 'tchannel.init.call-request-before-init-request',
-    message: 'call request before init request'
-});
-
-module.exports.TChannelCallReqContBeforeInitReqError = TypedError({
-    type: 'tchannel.init.call-request-cont-before-init-request',
-    message: 'call request cont before init request'
-});
-
-module.exports.TChannelCallResBeforeInitResError = TypedError({
-    type: 'tchannel.init.call-response-before-init-response',
-    message: 'call response before init response'
-});
-
-module.exports.TChannelCallResContBeforeInitResError = TypedError({
-    type: 'tchannel.init.call-response-cont-before-init-response',
-    message: 'call response cont before init response'
-});
-
 module.exports.TChannelConnectionCloseError = TypedError({
     type: 'tchannel.connection.close',
     message: 'connection closed'
@@ -269,21 +331,16 @@ module.exports.TChannelConnectionResetError = WrappedError({
     message: 'tchannel: {causeMessage}'
 });
 
-module.exports.TChannelDuplicateInitRequestError = TypedError({
-    type: 'tchannel.init.duplicate-init-request',
-    message: 'tchannel: duplicate init request'
-});
-
-module.exports.TChannelDuplicateInitResponseError = TypedError({
-    type: 'tchannel.init.duplicate-init-response',
-    message: 'tchannel: duplicate init response'
-});
-
 module.exports.TChannelListenError = WrappedError({
     type: 'tchannel.server.listen-failed',
     message: 'tchannel: {origMessage}',
     requestedPort: null,
     host: null
+});
+
+module.exports.TChannelLocalResetError = WrappedError({
+    type: 'tchannel.local.reset',
+    message: 'tchannel: {causeMessage}'
 });
 
 module.exports.TChannelReadProtocolError = WrappedError({
@@ -354,15 +411,6 @@ module.exports.ThriftHeadStringifyError = WrappedError({
     direction: null
 });
 
-module.exports.TimeoutError = TypedError({
-    type: 'tchannel.timeout',
-    message: 'timed out after {elapsed}ms (limit was {timeout}ms)',
-    id: null,
-    start: null,
-    elapsed: null,
-    timeout: null
-});
-
 module.exports.TopLevelRegisterError = TypedError({
     type: 'tchannel.top-level-register',
     message: 'Cannot register endpoints points on top-level channel.\n' +
@@ -396,30 +444,70 @@ module.exports.classify = function classify(err) {
         case 'tchannel.max-pending-for-service':
             return 'Declined';
 
-        case 'tchannel.timeout':
+        case 'tchannel.socket-local-closed':
+        case 'tchannel.local.reset':
+            return 'Cancelled';
+
+        case 'tchannel.request.timeout':
+        case 'tchannel.connection.timeout':
+        case 'tchannel.connection-stale.timeout':
             return 'Timeout';
 
-        case 'tchannel-handler.parse-error.body-failed':
-        case 'tchannel-handler.parse-error.head-failed':
+        case 'tchannel-handler.json.invalid-body':
+        case 'tchannel-json-handler.parse-error.body-failed':
+        case 'tchannel-json-handler.parse-error.head-failed':
+        case 'tchannel.request-frame-state':
+        case 'tchannel.request-already-done':
+        case 'tchannel-thrift-handler.parse-error.body-failed':
+        case 'tchannel-thrift-handler.parse-error.head-failed':
         case 'tchannel.checksum':
         case 'tchannel.duplicate-header-key':
+        case 'tchannel.null-key':
+        case 'tchannel.arg1-over-length-limit':
             return 'BadRequest';
 
+        case 'tchannel.init.call-request-before-init-request':
+        case 'tchannel.init.call-request-cont-before-init-request':
+        case 'tchannel.init.call-response-before-init-response':
+        case 'tchannel.init.call-response-cont-before-init-response':
+        case 'tchannel.init.duplicate-init-request':
+        case 'tchannel.init.duplicate-init-response':
+        case 'tchannel.init.send-call-request-before-indentified':
+        case 'tchannel.init.send-call-request-cont-before-indentified':
+        case 'tchannel.init.send-call-response-before-indentified':
+        case 'tchannel.init.send-call-response-cont-before-indentified':
         case 'tchannel.arg-chunk.gap':
         case 'tchannel.arg-chunk.out-of-order':
-        case 'tchannel.invalid-code-string':
         case 'tchannel.invalid-error-code':
         case 'tchannel.invalid-frame-type':
         case 'tchannel.missing-init-header':
-        case 'tchannel.null-key':
         case 'tchannel.protocol.read-failed':
         case 'tchannel.protocol.write-failed':
         case 'tchannel.unhandled-frame-type':
             return 'ProtocolError';
 
+        case 'tchannel.connection.close':
+        case 'tchannel.connection.reset':
         case 'tchannel.socket':
         case 'tchannel.socket-closed':
             return 'NetworkError';
+
+        case 'tchannel-json-handler.stringify-error.body-failed':
+        case 'tchannel-json-handler.stringify-error.head-failed':
+        case 'tchannel-thrift-handler.stringify-error.body-failed':
+        case 'tchannel-thrift-handler.stringify-error.head-failed':
+        case 'tchannel.response-already-done':
+        case 'tchannel.response-already-started':
+        case 'tchannel.response-frame-state':
+        case 'tchannel.invalid-argument':
+        case 'tchannel.invalid-handler':
+        case 'tchannel.invalid-handler.for-registration':
+        case 'tchannel.hydrated-error.default-type':
+        case 'tchannel.server.listen-failed':
+        case 'tchannel.top-level-register':
+        case 'tchannel.top-level-request':
+        case 'tchannel.unimplemented-method':
+            return 'UnexpectedError';
 
         default:
             return null;

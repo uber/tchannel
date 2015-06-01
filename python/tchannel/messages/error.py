@@ -46,7 +46,7 @@ class ErrorMessage(BaseMessage):
     """Respond to a CALL_REQ with a failure at the protocol level."""
     message_type = Types.ERROR
 
-    __slots__ = (
+    __slots__ = BaseMessage.__slots__ + (
         'code',
         'tracing',
         'description',
@@ -63,7 +63,8 @@ class ErrorMessage(BaseMessage):
         ErrorCode.fatal: 'fatal protocol error'
     }
 
-    def __init__(self, code=None, tracing=None, description=None):
+    def __init__(self, code=None, tracing=None, description=None, id=0):
+        super(ErrorMessage, self).__init__(id)
         self.code = ErrorCode(code) if code else ErrorCode.unexpected
         self.description = description or ''
         self.tracing = tracing or common.Tracing(0, 0, 0, 0)

@@ -51,6 +51,7 @@ function TChannelInRequest(id, options) {
     self.arg1 = emptyBuffer;
     self.arg2 = emptyBuffer;
     self.arg3 = emptyBuffer;
+    self.connection = options.connection;
 
     if (options.tracer) {
         self.span = options.tracer.setupNewSpan({
@@ -108,7 +109,7 @@ TChannelInRequest.prototype.checkTimeout = function checkTimeout() {
             // TODO: emit error on self.res instead / in additon to?
             // TODO: should cancel any pending handler
             process.nextTick(function deferInReqTimeoutErrorEmit() {
-                self.errorEvent.emit(self, errors.TimeoutError({
+                self.errorEvent.emit(self, errors.RequestTimeoutError({
                     id: self.id,
                     start: self.start,
                     elapsed: elapsed,

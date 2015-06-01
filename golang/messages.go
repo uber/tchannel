@@ -21,12 +21,12 @@ package tchannel
 // THE SOFTWARE.
 
 import (
-	"fmt"
-	"github.com/uber/tchannel/golang/typed"
 	"time"
+
+	"github.com/uber/tchannel/golang/typed"
 )
 
-// Type of message
+// messageType defines a type of message
 type messageType byte
 
 const (
@@ -39,45 +39,36 @@ const (
 	messageTypeError           messageType = 0xFF
 )
 
-var messageTypeNames = map[messageType]string{
-	messageTypeInitReq:         "initReq",
-	messageTypeInitRes:         "initRes",
-	messageTypeCallReq:         "callReq",
-	messageTypeCallReqContinue: "callReqContinue",
-	messageTypeCallRes:         "callRes",
-	messageTypeCallResContinue: "callResContinue",
-	messageTypeError:           "Error",
-}
+//go:generate stringer -type=messageType
 
-func (t messageType) String() string {
-	if name := messageTypeNames[t]; name != "" {
-		return name
-	}
-
-	return fmt.Sprintf("unknown: %x", int(t))
-}
-
-// Base interface for messages.  Has an id and a type, and knows how to read and write onto a binary stream
+// message is the base interface for messages.  Has an id and type, and knows
+// how to read and write onto a binary stream
 type message interface {
-	// The id of the message
+	// ID returns the id of the message
 	ID() uint32
 
-	// The type of the message
+	// messageType returns the type of the message
 	messageType() messageType
 
+	// read reads the message from a binary stream
 	read(r *typed.ReadBuffer) error
+
+	// write writes the message to a binary stream
 	write(w *typed.WriteBuffer) error
 }
 
-// Parameters to an initReq/InitRes
+// initParams are parameters to an initReq/InitRes
 type initParams map[string]string
 
-// Standard init params
 const (
-	InitParamHostPort    = "host_port"
+	// InitParamHostPort contains the host and port of the peer process
+	InitParamHostPort = "host_port"
+
+	// InitParamProcessName contains the name of the peer process
 	InitParamProcessName = "process_name"
 )
 
+// initMessage is the base for messages in the initialization handshake
 type initMessage struct {
 	id         uint32
 	Version    uint16
@@ -85,218 +76,99 @@ type initMessage struct {
 }
 
 func (m *initMessage) read(r *typed.ReadBuffer) error {
-	var err error
-	m.Version, err = r.ReadUint16()
-	if err != nil {
-		return err
-	}
+	m.Version = r.ReadUint16()
 
 	m.initParams = initParams{}
-	np, err := r.ReadUint16()
-	if err != nil {
-		return err
-	}
-
+	np := r.ReadUint16()
 	for i := 0; i < int(np); i++ {
-		klen, err := r.ReadUint16()
-		if err != nil {
-			return err
-		}
-
-		k, err := r.ReadString(int(klen))
-		if err != nil {
-			return err
-		}
-
-		vlen, err := r.ReadUint16()
-		if err != nil {
-			return err
-		}
-
-		v, err := r.ReadString(int(vlen))
-		if err != nil {
-			return err
-		}
-
+		k := r.ReadLen16String()
+		v := r.ReadLen16String()
 		m.initParams[k] = v
 	}
 
-	return nil
+	return r.Err()
 }
 
 func (m *initMessage) write(w *typed.WriteBuffer) error {
-	if err := w.WriteUint16(m.Version); err != nil {
-		return err
-	}
-
-	if err := w.WriteUint16(uint16(len(m.initParams))); err != nil {
-		return err
-	}
+	w.WriteUint16(m.Version)
+	w.WriteUint16(uint16(len(m.initParams)))
 
 	for k, v := range m.initParams {
-		if err := w.WriteUint16(uint16(len(k))); err != nil {
-			return err
-		}
-
-		if err := w.WriteString(k); err != nil {
-			return err
-		}
-
-		if err := w.WriteUint16(uint16(len(v))); err != nil {
-			return err
-		}
-
-		if err := w.WriteString(v); err != nil {
-			return err
-		}
+		w.WriteLen16String(k)
+		w.WriteLen16String(v)
 	}
 
-	return nil
+	return w.Err()
 }
 
 func (m *initMessage) ID() uint32 {
 	return m.id
 }
 
-// An initReq, containing context information to exchange with peer
+// An initReq contains context information sent from an initiating peer
 type initReq struct {
 	initMessage
 }
 
 func (m *initReq) messageType() messageType { return messageTypeInitReq }
 
-// An InitRes, containing context information to return to intiating peer
+// An initRes contains context information returned to an initiating peer
 type initRes struct {
 	initMessage
 }
 
 func (m *initRes) messageType() messageType { return messageTypeInitRes }
 
-// Headers passed as part of a CallReq/CallRes
+// callHeaders are passed as part of a CallReq/CallRes
 type callHeaders map[string]string
 
-func (ch callHeaders) read(r *typed.ReadBuffer) error {
-	nh, err := r.ReadByte()
-	if err != nil {
-		return err
-	}
-
+func (ch callHeaders) read(r *typed.ReadBuffer) {
+	nh := r.ReadByte()
 	for i := 0; i < int(nh); i++ {
-		klen, err := r.ReadByte()
-		if err != nil {
-			return err
-		}
-
-		k, err := r.ReadString(int(klen))
-		if err != nil {
-			return err
-		}
-
-		vlen, err := r.ReadByte()
-		if err != nil {
-			return err
-		}
-
-		v, err := r.ReadString(int(vlen))
-		if err != nil {
-			return err
-		}
-
+		k := r.ReadLen8String()
+		v := r.ReadLen8String()
 		ch[k] = v
 	}
-
-	return nil
 }
 
-func (ch callHeaders) write(w *typed.WriteBuffer) error {
-	if err := w.WriteByte(byte(len(ch))); err != nil {
-		return err
-	}
+func (ch callHeaders) write(w *typed.WriteBuffer) {
+	w.WriteByte(byte(len(ch)))
 
 	for k, v := range ch {
-		if err := w.WriteByte(byte(len(k))); err != nil {
-			return err
-		}
-
-		if err := w.WriteString(k); err != nil {
-			return err
-		}
-
-		if err := w.WriteByte(byte(len(v))); err != nil {
-			return err
-		}
-
-		if err := w.WriteString(v); err != nil {
-			return err
-		}
+		w.WriteLen8String(k)
+		w.WriteLen8String(v)
 	}
-
-	return nil
 }
 
-// A CallReq for service
+// A callReq for service
 type callReq struct {
 	id         uint32
 	TimeToLive time.Duration
 	Tracing    Span
 	Headers    callHeaders
-	Service    []byte
+	Service    string
 }
 
 func (m *callReq) ID() uint32               { return m.id }
 func (m *callReq) messageType() messageType { return messageTypeCallReq }
 func (m *callReq) read(r *typed.ReadBuffer) error {
-	var err error
-	ttl, err := r.ReadUint32()
-	if err != nil {
-		return err
-	}
-
-	m.TimeToLive = time.Duration(ttl) * time.Millisecond
-	if err := m.Tracing.read(r); err != nil {
-		return err
-	}
-
-	serviceNameLen, err := r.ReadByte()
-	if err != nil {
-		return err
-	}
-
-	if m.Service, err = r.ReadBytes(int(serviceNameLen)); err != nil {
-		return err
-	}
-
+	m.TimeToLive = time.Duration(r.ReadUint32()) * time.Millisecond
+	m.Tracing.read(r)
+	m.Service = r.ReadLen8String()
 	m.Headers = callHeaders{}
-	if err := m.Headers.read(r); err != nil {
-		return err
-	}
-	return nil
+	m.Headers.read(r)
+	return r.Err()
 }
 
 func (m *callReq) write(w *typed.WriteBuffer) error {
-	if err := w.WriteUint32(uint32(m.TimeToLive.Seconds() * 1000)); err != nil {
-		return err
-	}
-
-	if err := m.Tracing.write(w); err != nil {
-		return err
-	}
-
-	if err := w.WriteByte(byte(len(m.Service))); err != nil {
-		return err
-	}
-
-	if err := w.WriteBytes(m.Service); err != nil {
-		return err
-	}
-
-	if err := m.Headers.write(w); err != nil {
-		return err
-	}
-	return nil
+	w.WriteUint32(uint32(m.TimeToLive.Seconds() * 1000))
+	m.Tracing.write(w)
+	w.WriteLen8String(m.Service)
+	m.Headers.write(w)
+	return w.Err()
 }
 
-// A continuatin of a previous CallReq
+// A callReqContinue is continuation of a previous callReq
 type callReqContinue struct {
 	id uint32
 }
@@ -314,7 +186,7 @@ const (
 	responseApplicationError ResponseCode = 0x01
 )
 
-// A response to a CallReq
+// callRes is a response to a CallReq
 type callRes struct {
 	id           uint32
 	ResponseCode ResponseCode
@@ -326,42 +198,21 @@ func (m *callRes) ID() uint32               { return m.id }
 func (m *callRes) messageType() messageType { return messageTypeCallRes }
 
 func (m *callRes) read(r *typed.ReadBuffer) error {
-	var err error
-	c, err := r.ReadByte()
-	if err != nil {
-		return err
-	}
-	m.ResponseCode = ResponseCode(c)
-
-	if err := m.Tracing.read(r); err != nil {
-		return err
-	}
-
+	m.ResponseCode = ResponseCode(r.ReadByte())
+	m.Tracing.read(r)
 	m.Headers = callHeaders{}
-	if err := m.Headers.read(r); err != nil {
-		return err
-	}
-
-	return nil
+	m.Headers.read(r)
+	return r.Err()
 }
 
 func (m *callRes) write(w *typed.WriteBuffer) error {
-	if err := w.WriteByte(byte(m.ResponseCode)); err != nil {
-		return err
-	}
-
-	if err := m.Tracing.write(w); err != nil {
-		return err
-	}
-
-	if err := m.Headers.write(w); err != nil {
-		return err
-	}
-
-	return nil
+	w.WriteByte(byte(m.ResponseCode))
+	m.Tracing.write(w)
+	m.Headers.write(w)
+	return w.Err()
 }
 
-// A continuation of a previous CallRes
+// callResContinue is a  continuation of a previous CallRes
 type callResContinue struct {
 	id uint32
 }
@@ -371,7 +222,7 @@ func (c *callResContinue) messageType() messageType         { return messageType
 func (c *callResContinue) read(r *typed.ReadBuffer) error   { return nil }
 func (c *callResContinue) write(w *typed.WriteBuffer) error { return nil }
 
-// An Error message, a system-level error response to a request or a protocol level error
+// An errorMessage is a system-level error response to a request or a protocol level error
 type errorMessage struct {
 	id      uint32
 	errCode SystemErrCode
@@ -382,46 +233,17 @@ type errorMessage struct {
 func (m *errorMessage) ID() uint32               { return m.id }
 func (m *errorMessage) messageType() messageType { return messageTypeError }
 func (m *errorMessage) read(r *typed.ReadBuffer) error {
-	errCode, err := r.ReadByte()
-	if err != nil {
-		return err
-	}
-
-	m.errCode = SystemErrCode(errCode)
-	if err := m.tracing.read(r); err != nil {
-		return err
-	}
-
-	msgSize, err := r.ReadUint16()
-	if err != nil {
-		return err
-	}
-
-	if m.message, err = r.ReadString(int(msgSize)); err != nil {
-		return err
-	}
-
-	return nil
+	m.errCode = SystemErrCode(r.ReadByte())
+	m.tracing.read(r)
+	m.message = r.ReadLen16String()
+	return r.Err()
 }
 
 func (m *errorMessage) write(w *typed.WriteBuffer) error {
-	if err := w.WriteByte(byte(m.errCode)); err != nil {
-		return err
-	}
-
-	if err := m.tracing.write(w); err != nil {
-		return err
-	}
-
-	if err := w.WriteUint16(uint16(len(m.message))); err != nil {
-		return err
-	}
-
-	if err := w.WriteString(m.message); err != nil {
-		return err
-	}
-
-	return nil
+	w.WriteByte(byte(m.errCode))
+	m.tracing.write(w)
+	w.WriteLen16String(m.message)
+	return w.Err()
 }
 
 func (m errorMessage) AsSystemError() error {

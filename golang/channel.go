@@ -40,21 +40,6 @@ const (
 	ephemeralHostPort = "0.0.0.0:0"
 )
 
-// A Handler is an object hat can be registered with a Channel
-// to process incoming calls for a given service and operation
-type Handler interface {
-	// Handles an incoming call for service
-	Handle(ctx context.Context, call *InboundCall)
-}
-
-// The HandlerFunc is an adapter to allow the use of ordering functions as
-// TChannel handlers.  If f is a function with the appropriate signature,
-// HandlerFunc(f) is a Hander object that calls f
-type HandlerFunc func(ctx context.Context, call *InboundCall)
-
-// Handle calls f(ctx, call)
-func (f HandlerFunc) Handle(ctx context.Context, call *InboundCall) { f(ctx, call) }
-
 // ChannelOptions are used to control parameters on a create a TChannel
 type ChannelOptions struct {
 	// Default Connection options
@@ -67,18 +52,18 @@ type ChannelOptions struct {
 	Logger Logger
 }
 
-// A Channel is a bi-directional connection to the peering and routing network.  Applications
-// can use a Channel to make service calls to remote peers via BeginCall, or to listen for incoming calls
-// from peers.  Applications that want to receive requests should call one of Serve or ListenAndServe
+// A Channel is a bi-directional connection to the peering and routing network.
+// Applications can use a Channel to make service calls to remote peers via
+// BeginCall, or to listen for incoming calls from peers.  Applications that
+// want to receive requests should call one of Serve or ListenAndServe
 type Channel struct {
 	log               Logger
-	hostPort          string
-	processName       string
 	connectionOptions ConnectionOptions
-	handlers          handlerMap
+	handlers          *handlerMap
 
-	mut sync.RWMutex // protects the listener
-	l   net.Listener // May be nil if this is a client only channel
+	mut      sync.RWMutex // protects the listener and the peer info
+	peerInfo PeerInfo     // May be ephemeral if this is a client only channel
+	l        net.Listener // May be nil if this is a client only channel
 }
 
 // NewChannel creates a new Channel.  The new channel can be used to send outbound requests
@@ -101,13 +86,14 @@ func NewChannel(opts *ChannelOptions) (*Channel, error) {
 
 	ch := &Channel{
 		connectionOptions: opts.DefaultConnectionOptions,
-		processName:       processName,
-		hostPort:          ephemeralHostPort,
-		log:               logger,
+		peerInfo: PeerInfo{
+			ProcessName: processName,
+			HostPort:    ephemeralHostPort,
+		},
+		log:      logger,
+		handlers: &handlerMap{},
 	}
 
-	ch.connectionOptions.PeerInfo.HostPort = ch.hostPort
-	ch.connectionOptions.PeerInfo.ProcessName = ch.processName
 	ch.connectionOptions.ChecksumType = ChecksumTypeCrc32
 	return ch, nil
 }
@@ -122,15 +108,14 @@ func (ch *Channel) Serve(l net.Listener) error {
 	}
 
 	ch.l = l
-	ch.connectionOptions.PeerInfo.HostPort = ch.hostPort
-	ch.hostPort = ch.l.Addr().String()
+	ch.peerInfo.HostPort = ch.l.Addr().String()
 	ch.mut.Unlock()
 
 	return ch.serve()
 }
 
-// ListenAndServe listens on the given address and serves incoming requests.  The port
-// may be 0, in which case the channel will use an OS assigned port
+// ListenAndServe listens on the given address and serves incoming requests.
+// The port may be 0, in which case the channel will use an OS assigned port
 func (ch *Channel) ListenAndServe(hostPort string) error {
 	if err := ch.listen(hostPort); err != nil {
 		return err
@@ -160,29 +145,35 @@ func (ch *Channel) listen(hostPort string) error {
 		return err
 	}
 
-	ch.connectionOptions.PeerInfo.HostPort = ch.hostPort
-	ch.hostPort = ch.l.Addr().String()
-	ch.log.Infof("%s listening on %s", ch.processName, ch.hostPort)
+	ch.peerInfo.HostPort = ch.l.Addr().String()
+	ch.log.Infof("%s listening on %s", ch.peerInfo.ProcessName, ch.peerInfo.HostPort)
 	return nil
 }
 
-// Register regsters a handler for a service+operation pair
+// Register registers a handler for a service+operation pair
 func (ch *Channel) Register(h Handler, serviceName, operationName string) {
 	ch.handlers.register(h, serviceName, operationName)
+}
+
+// PeerInfo returns the current peer info for the channel
+func (ch *Channel) PeerInfo() PeerInfo {
+	ch.mut.RLock()
+	defer ch.mut.RUnlock()
+
+	return ch.peerInfo
 }
 
 // BeginCall starts a new call to a remote peer, returning an OutboundCall that can
 // be used to write the arguments of the call
 // TODO(mmihic): Support CallOptions such as format, request specific checksums, retries, etc
-func (ch *Channel) BeginCall(ctx context.Context, hostPort,
-	serviceName, operationName string) (*OutboundCall, error) {
+func (ch *Channel) BeginCall(ctx context.Context, hostPort, serviceName, operationName string) (*OutboundCall, error) {
 	// TODO(mmihic): Keep-alive, manage pools, use existing inbound if possible, all that jazz
 	nconn, err := net.Dial("tcp", hostPort)
 	if err != nil {
 		return nil, err
 	}
 
-	conn, err := newOutboundConnection(nconn, ch.handlers, ch.log, &ch.connectionOptions)
+	conn, err := newOutboundConnection(nconn, ch.handlers, ch.log, ch.PeerInfo(), &ch.connectionOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -201,34 +192,6 @@ func (ch *Channel) BeginCall(ctx context.Context, hostPort,
 	}
 
 	return call, nil
-}
-
-// RoundTrip calls a peer and waits for the response
-func (ch *Channel) RoundTrip(ctx context.Context, hostPort, serviceName, operationName string,
-	reqArg2, reqArg3 Output, resArg2, resArg3 Input) (bool, error) {
-
-	call, err := ch.BeginCall(ctx, hostPort, serviceName, operationName)
-	if err != nil {
-		return false, err
-	}
-
-	if err := call.WriteArg2(reqArg2); err != nil {
-		return false, err
-	}
-
-	if err := call.WriteArg3(reqArg3); err != nil {
-		return false, err
-	}
-
-	if err := call.Response().ReadArg2(resArg2); err != nil {
-		return false, err
-	}
-
-	if err := call.Response().ReadArg3(resArg3); err != nil {
-		return false, err
-	}
-
-	return call.Response().ApplicationError(), nil
 }
 
 // serve runs the listener to accept and manage new incoming connections, blocking
@@ -260,7 +223,7 @@ func (ch *Channel) serve() error {
 
 		acceptBackoff = 0
 
-		_, err = newInboundConnection(netConn, ch.handlers, ch.log, &ch.connectionOptions)
+		_, err = newInboundConnection(netConn, ch.handlers, ch.PeerInfo(), ch.log, &ch.connectionOptions)
 		if err != nil {
 			// Server is getting overloaded - begin rejecting new connections
 			ch.log.Errorf("could not create new TChannelConnection for incoming conn: %v", err)

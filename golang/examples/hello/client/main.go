@@ -21,11 +21,12 @@ package main
 // THE SOFTWARE.
 
 import (
-	"github.com/uber/tchannel/golang"
-	"golang.org/x/net/context"
 	"flag"
 	"os"
 	"time"
+
+	"github.com/uber/tchannel/golang"
+	"golang.org/x/net/context"
 )
 
 var log = tchannel.SimpleLogger
@@ -41,8 +42,7 @@ func asArgument(arg string) tchannel.Output {
 	if arg[0] == '@' {
 		f, err := os.Open(arg[1:])
 		if err != nil {
-			log.Errorf(err.Error())
-			os.Exit(-1)
+			log.Fatalf("Could not open %s", arg[1:])
 		}
 
 		return tchannel.NewStreamingOutput(f)
@@ -59,8 +59,7 @@ func main() {
 		Logger: log,
 	})
 	if err != nil {
-		log.Errorf("Could not create client channel: %v\n", err)
-		os.Exit(-1)
+		log.Fatalf("Could not create client channel: %v\n", err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(*timeout))
@@ -69,25 +68,20 @@ func main() {
 	call, err := ch.BeginCall(ctx, *peerAddr, *serviceName, *operationName)
 	if err != nil {
 		log.Errorf("Could not begin call to %v.%v@%v: %v", *serviceName, *operationName, *peerAddr, err)
-		log.Errorf("Is the server running?")
-
-		os.Exit(-1)
+		log.Fatalf("Is the server running?")
 	}
 
 	if err := call.WriteArg2(asArgument(*arg2)); err != nil {
-		log.Errorf("Could not write arg2: %v", err)
-		os.Exit(-1)
+		log.Fatalf("Could not write arg2: %v", err)
 	}
 
 	if err := call.WriteArg3(asArgument(*arg3)); err != nil {
-		log.Errorf("Could not write arg3: %v", err)
-		os.Exit(-1)
+		log.Fatalf("Could not write arg3: %v", err)
 	}
 
 	var respArg2 tchannel.BytesInput
 	if err := call.Response().ReadArg2(&respArg2); err != nil {
-		log.Errorf("Could not read arg2: %v", err)
-		os.Exit(-1)
+		log.Fatalf("Could not read arg2: %v", err)
 	}
 
 	if call.Response().ApplicationError() {
@@ -98,8 +92,7 @@ func main() {
 
 	var respArg3 tchannel.BytesInput
 	if err := call.Response().ReadArg3(&respArg3); err != nil {
-		log.Errorf("Could not read arg3: %v", err)
-		os.Exit(-1)
+		log.Fatalf("Could not read arg3: %v", err)
 	}
 
 	log.Infof("resp-arg3: %s", respArg3)

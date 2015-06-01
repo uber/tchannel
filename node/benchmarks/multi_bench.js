@@ -107,12 +107,17 @@ Test.prototype.newClient = function (id, callback) {
         self.clients[id] = newClient;
         // sending a ping to pre-connect the socket
         newClient
-            .request({host: '127.0.0.1:4040'})
-            .send('ping', null, null, function(err) {
-                if (err) return callback(err);
-                self.connectLatency.update(Date.now() - newClient.createTime);
-                self.readyLatency.update(Date.now() - newClient.createTime);
-                callback();
+            .waitForIdentified({
+                host: '127.0.0.1:4040'
+            }, function () {
+                newClient
+                    .request({host: '127.0.0.1:4040'})
+                    .send('ping', null, null, function(err) {
+                        if (err) return callback(err);
+                        self.connectLatency.update(Date.now() - newClient.createTime);
+                        self.readyLatency.update(Date.now() - newClient.createTime);
+                        callback();
+                    });
             });
     });
 };

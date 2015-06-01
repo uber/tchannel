@@ -25,22 +25,10 @@ import pytest
 from tchannel import tcurl
 from tchannel.errors import ConnectionClosedError
 from tchannel.errors import TChannelError
-from tchannel.tornado import Response
 from tchannel.tornado import TChannel
 from tchannel.tornado.connection import StreamConnection
 from tchannel.tornado.stream import InMemStream
 from tests.util import big_arg
-
-
-@pytest.fixture
-def call_response():
-    return Response(
-        argstreams=[
-            InMemStream(b'hello'),
-            InMemStream(''),
-            InMemStream('world')
-        ]
-    )
 
 
 @pytest.mark.gen_test
@@ -69,13 +57,9 @@ def test_tchannel_call_request_fragment(tchannel_server,
                                         arg2, arg3):
     endpoint = b'tchannelpeertest'
 
-    tchannel_server.expect_call(endpoint).and_return(Response(
-        argstreams=[
-            InMemStream(),
-            InMemStream(endpoint),
-            InMemStream(arg3)
-        ]
-    ))
+    tchannel_server.expect_call(endpoint).and_write(
+        headers=endpoint, body=arg3
+    )
 
     tchannel = TChannel()
 
@@ -91,19 +75,16 @@ def test_tchannel_call_request_fragment(tchannel_server,
 
 
 @pytest.mark.gen_test
-def test_tcurl(server):
+def test_tcurl(tchannel_server):
     endpoint = b'tcurltest'
 
-    server.expect_call(endpoint).and_return(Response(
-        argstreams=[
-            InMemStream(),
-            InMemStream(endpoint),
-            InMemStream("hello")
-        ]
-    ))
+    tchannel_server.expect_call(endpoint).and_write(
+        headers=endpoint,
+        body="hello"
+    )
 
     hostport = 'localhost:%d/%s' % (
-        server.port, endpoint.decode('ascii')
+        tchannel_server.port, endpoint.decode('ascii')
     )
     responses = yield tcurl.main(['--host', hostport, '-d', ''])
 
@@ -118,9 +99,12 @@ def test_tcurl(server):
 
 
 @pytest.mark.gen_test
-def test_endpoint_not_found(tchannel_server, call_response):
+def test_endpoint_not_found(tchannel_server):
     endpoint = b'tchanneltest'
-    tchannel_server.expect_call(endpoint).and_return(call_response)
+    tchannel_server.expect_call(endpoint).and_write(
+        headers=endpoint,
+        body='world'
+    )
     tchannel = TChannel()
 
     hostport = 'localhost:%d' % (tchannel_server.port)

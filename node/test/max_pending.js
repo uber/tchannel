@@ -36,7 +36,8 @@ testBattle('cap maximum pending requests', {
         }
     }
 }, [
-    'tchannel.timeout',
+    // TODO wtf please no connection timeout
+    'tchannel.connection.timeout',
     'tchannel.max-pending'
 ]);
 
@@ -51,7 +52,7 @@ testBattle('cap maximum pending requests per service', {
         }
     }
 }, [
-    'tchannel.timeout',
+    'tchannel.connection.timeout',
     'tchannel.max-pending-for-service'
 ]);
 
@@ -67,7 +68,7 @@ testBattle('channel-scoped max pending supercedes per-service', {
         }
     }
 }, [
-    'tchannel.timeout',
+    'tchannel.connection.timeout',
     'tchannel.max-pending'
 ]);
 
@@ -79,8 +80,8 @@ testBattle('do not opt-in for pending request tracking', {
         random: lucky
     }
 }, [
-    'tchannel.timeout',
-    'tchannel.timeout'
+    'tchannel.connection.timeout',
+    'tchannel.connection.timeout'
 ]);
 
 function testBattle(name, options, expectedErrorTypes) {
@@ -111,7 +112,7 @@ function testBattle(name, options, expectedErrorTypes) {
 
         // TODO ascertain why this test stalls non-deterministically, and with
         // increasing probability, for values from 2000ms down to 1000ms.
-        timers.advance(2000);
+        timers.advance(2100);
 
         function challengeSender() {
             return function sendChallenge(cb) {

@@ -25,10 +25,19 @@ import (
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Logger provides an abstract interface for logging from TChannel.  Applications
-// can use whatever logging library they prefer as long as they implement this
-// interface
+import (
+	"os"
+)
+
+// Logger provides an abstract interface for logging from TChannel.
+// Applications can provide their own implementation of this interface to adapt
+// TChannel logging to whatever logging library they prefer (stdlib log,
+// logrus, go-logging, etc).  The SimpleLogger adapts to the standard go log
+// package.
 type Logger interface {
+	// Fatalf logs a message, then exits with os.Exit(1)
+	Fatalf(msg string, args ...interface{})
+
 	// Errorf logs a message at error priority
 	Errorf(msg string, args ...interface{})
 
@@ -43,23 +52,29 @@ type Logger interface {
 }
 
 // NullLogger is a logger that emits nowhere
-var NullLogger = nullLogger{}
+var NullLogger Logger = nullLogger{}
 
 type nullLogger struct{}
 
+func (l nullLogger) Fatalf(msg string, arg ...interface{})  { os.Exit(1) }
 func (l nullLogger) Errorf(msg string, args ...interface{}) {}
 func (l nullLogger) Warnf(msg string, args ...interface{})  {}
 func (l nullLogger) Infof(msg string, args ...interface{})  {}
 func (l nullLogger) Debugf(msg string, args ...interface{}) {}
 
 // SimpleLogger prints logging information to the console
-var SimpleLogger = simpleLogger{}
+var SimpleLogger Logger = simpleLogger{}
 
 type simpleLogger struct{}
 
 const (
 	simpleLoggerStamp = "2006-01-02 15:04:05"
 )
+
+func (l simpleLogger) Fatalf(msg string, args ...interface{}) {
+	l.printfn("F", msg, args...)
+	os.Exit(1)
+}
 
 func (l simpleLogger) Errorf(msg string, args ...interface{}) { l.printfn("E", msg, args...) }
 func (l simpleLogger) Warnf(msg string, args ...interface{})  { l.printfn("W", msg, args...) }

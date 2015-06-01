@@ -25,46 +25,61 @@ import threading
 import tornado.ioloop
 
 import tchannel.tornado.tchannel as tornado_tchannel
-from tchannel.tornado.dispatch import RequestDispatcher
-from tchannel.tornado.broker import ArgSchemeBroker
 
 
 class Expectation(object):
-    """Represents an expectation for the ServerManager."""
+    """Represents an expectation for the TestServer."""
+
     def __init__(self):
-        # raw message to respond with
-        self.response = None
+        self.execute = None
 
-    def and_return(self, resp):
-        """Write the given Message as a response."""
-        self.response = resp
+    def and_write(self, body, headers=None):
+
+        def execute(request, response):
+            if headers:
+                response.write_header(headers)
+
+            response.write_body(body)
+
+        self.execute = execute
+
+    def and_result(self, result):
+
+        def execute(request, response):
+            response.write_result(result)
+
+        self.execute = execute
+
+    def and_raise(self, exc):
+
+        def execute(request, response):
+            raise exc
+
+        self.execute = execute
 
 
-class ServerManager(object):
+class TestServer(object):
     TIMEOUT = 0.15
 
     def __init__(self, port, timeout=None):
         self.port = port
-        self.timeout = timeout or self.TIMEOUT
+        self.tchannel = tornado_tchannel.TChannel("localhost:%d" % self.port)
 
+        self.timeout = timeout or self.TIMEOUT
         self.thread = None
         self.ready = False
-        self.dispatcher = None
 
-    def expect_call(self, endpoint, scheme=None):
-        assert self.dispatcher, "dispatcher not configured"
-
-        if not isinstance(endpoint, bytes):
-            endpoint = bytes(endpoint, 'ascii')
+    def expect_call(self, endpoint, scheme=None, **kwargs):
+        if scheme is not None:
+            assert isinstance(scheme, basestring)
 
         expectation = Expectation()
 
         def handle_expected_endpoint(request, response, proxy):
-            response.set_header_s(expectation.response.get_header_s())
-            response.set_body_s(expectation.response.get_body_s())
+            expectation.execute(request, response)
 
-        self.dispatcher.register(
-            endpoint, handle_expected_endpoint, ArgSchemeBroker(scheme)
+        self.tchannel.register(
+            endpoint, scheme, handle_expected_endpoint, **kwargs
         )
         return expectation
 
@@ -83,29 +98,13 @@ class ServerManager(object):
             pass
 
     def serve(self):
-        raise NotImplementedError()
+        self.tchannel.listen()
+        self.ready = True
+        tornado.ioloop.IOLoop.current().start()
 
     def stop(self):
         self.shutdown()
         self.thread.join()
-
-    def shutdown(self):
-        raise NotImplementedError()
-
-
-class TChannelServerManager(ServerManager):
-
-    def __init__(self, port, timeout=None, dispatcher=None):
-        super(TChannelServerManager, self).__init__(port, timeout)
-
-        self.dispatcher = dispatcher or RequestDispatcher()
-        self.tchannel = tornado_tchannel.TChannel("localhost:%d" % self.port)
-        self.port = port
-
-    def serve(self):
-        self.tchannel.host(self.dispatcher).listen()
-        self.ready = True
-        tornado.ioloop.IOLoop.current().start()
 
     def shutdown(self):
         tornado.ioloop.IOLoop.current().stop()

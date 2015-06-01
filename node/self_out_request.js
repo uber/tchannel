@@ -66,14 +66,14 @@ function makeInreq(id, options) {
     function onError(err) {
         if (called) return;
         called = true;
-        self.conn.popOutReq(id);
+        self.conn.ops.popOutReq(id);
         self.errorEvent.emit(self, err);
     }
 
     function onResponse(res) {
         if (called) return;
         called = true;
-        self.conn.popOutReq(id);
+        self.conn.ops.popOutReq(id);
         self.responseEvent.emit(self, res);
     }
 };
@@ -86,7 +86,7 @@ function passRequestParts(args, isLast ) {
     var self = this;
     self.inreq.handleFrame(args);
     if (isLast) self.inreq.handleFrame(null);
-    if (!self.closing) self.lastTimeoutTime = 0;
+    if (!self.closing) self.conn.ops.lastTimeoutTime = 0;
 };
 
 module.exports.OutRequest = SelfOutRequest;

@@ -1,5 +1,25 @@
 package typed
 
+// Copyright (c) 2015 Uber Technologies, Inc.
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
 import (
 	"encoding/binary"
 	"errors"
@@ -7,15 +27,19 @@ import (
 )
 
 var (
-	ErrInsufficientBuffer = errors.New("buffer is too small")
-	ErrBufferFull         = errors.New("no more room in buffer")
+	// ErrEOF is returned when trying to read past end of buffer
+	ErrEOF = errors.New("buffer is too small")
+
+	// ErrBufferFull is returned when trying to write past end of buffer
+	ErrBufferFull = errors.New("no more room in buffer")
 )
 
-// A typed.ReadBuffer is a wrapper around an underlying []byte with methods to read from
+// A ReadBuffer is a wrapper around an underlying []byte with methods to read from
 // that buffer in big-endian format.
 type ReadBuffer struct {
 	buffer    []byte
 	remaining []byte
+	err       error
 }
 
 // NewReadBuffer returns a ReadBuffer wrapping a byte slice
@@ -29,68 +53,86 @@ func NewReadBufferWithSize(size int) *ReadBuffer {
 }
 
 // ReadByte reads the next byte from the buffer
-func (r *ReadBuffer) ReadByte() (byte, error) {
+func (r *ReadBuffer) ReadByte() byte {
+	if r.err != nil {
+		return 0
+	}
+
 	if len(r.remaining) == 0 {
-		return 0, io.EOF
+		r.err = io.EOF
+		return 0
 	}
 
 	b := r.remaining[0]
 	r.remaining = r.remaining[1:]
-	return b, nil
+	return b
 }
 
 // ReadBytes returns the next n bytes from the buffer
-func (r *ReadBuffer) ReadBytes(n int) ([]byte, error) {
+func (r *ReadBuffer) ReadBytes(n int) []byte {
+	if r.err != nil {
+		return nil
+	}
+
 	if len(r.remaining) < n {
 		b := r.remaining
 		r.remaining = nil
-		return b, io.EOF
+		r.err = io.EOF
+		return b
 	}
 
 	b := r.remaining[0:n]
 	r.remaining = r.remaining[n:]
-	return b, nil
+	return b
 }
 
 // ReadString returns a string of size n from the buffer
-func (r *ReadBuffer) ReadString(n int) (string, error) {
-	b, err := r.ReadBytes(n)
-	if err != nil {
-		return "", err
+func (r *ReadBuffer) ReadString(n int) string {
+	if b := r.ReadBytes(n); b != nil {
+		// TODO(mmihic): This creates a copy, which sucks
+		return string(b)
 	}
 
-	// TODO(mmihic): This creates a copy, which sucks
-	return string(b), nil
+	return ""
 }
 
 // ReadUint16 returns the next value in the buffer as a uint16
-func (r *ReadBuffer) ReadUint16() (uint16, error) {
-	b, err := r.ReadBytes(2)
-	if err != nil {
-		return 0, err
+func (r *ReadBuffer) ReadUint16() uint16 {
+	if b := r.ReadBytes(2); b != nil {
+		return binary.BigEndian.Uint16(b)
 	}
 
-	return binary.BigEndian.Uint16(b), nil
+	return 0
 }
 
 // ReadUint32 returns the next value in the buffer as a uint32
-func (r *ReadBuffer) ReadUint32() (uint32, error) {
-	b, err := r.ReadBytes(4)
-	if err != nil {
-		return 0, err
+func (r *ReadBuffer) ReadUint32() uint32 {
+	if b := r.ReadBytes(4); b != nil {
+		return binary.BigEndian.Uint32(b)
 	}
 
-	return binary.BigEndian.Uint32(b), nil
+	return 0
 }
 
 // ReadUint64 returns the next value in the buffer as a uint64
-func (r *ReadBuffer) ReadUint64() (uint64, error) {
-	b, err := r.ReadBytes(8)
-	if err != nil {
-		return 0, err
+func (r *ReadBuffer) ReadUint64() uint64 {
+	if b := r.ReadBytes(8); b != nil {
+		return binary.BigEndian.Uint64(b)
 	}
 
-	return binary.BigEndian.Uint64(b), nil
+	return 0
+}
+
+// ReadLen8String reads an 8-bit length preceded string value
+func (r *ReadBuffer) ReadLen8String() string {
+	n := r.ReadByte()
+	return r.ReadString(int(n))
+}
+
+// ReadLen16String reads a 16-bit length preceded string value
+func (r *ReadBuffer) ReadLen16String() string {
+	n := r.ReadUint16()
+	return r.ReadString(int(n))
 }
 
 // BytesRemaining returns the number of unconsumed bytes remaining in the buffer
@@ -101,39 +143,30 @@ func (r *ReadBuffer) BytesRemaining() int {
 // FillFrom fills the buffer from a reader
 func (r *ReadBuffer) FillFrom(ior io.Reader, n int) (int, error) {
 	if len(r.buffer) < n {
-		return 0, ErrInsufficientBuffer
+		return 0, ErrEOF
 	}
 
+	r.err = nil
 	r.remaining = r.buffer[:n]
 	return ior.Read(r.remaining)
-}
-
-// CurrentPos returns the current read position within the buffer
-func (r *ReadBuffer) CurrentPos() int {
-	return len(r.buffer) - len(r.remaining)
-}
-
-// Seek moves the current read position to the given offset in the buffer
-func (r *ReadBuffer) Seek(offset int) error {
-	if offset > len(r.buffer) {
-		return ErrInsufficientBuffer
-	}
-
-	r.remaining = r.buffer[offset:]
-	return nil
 }
 
 // Wrap initializes the buffer to read from the given byte slice
 func (r *ReadBuffer) Wrap(b []byte) {
 	r.buffer = b
 	r.remaining = b
+	r.err = nil
 }
 
-// A typed.WriteBuffer is a wrapper around an underlying []byte with methods to write to
+// Err returns the error in the ReadBuffer
+func (r *ReadBuffer) Err() error { return r.err }
+
+// A WriteBuffer is a wrapper around an underlying []byte with methods to write to
 // that buffer in big-endian format.  The buffer is of fixed size, and does not grow.
 type WriteBuffer struct {
 	buffer    []byte
 	remaining []byte
+	err       error
 }
 
 // NewWriteBuffer creates a WriteBuffer wrapping the given slice
@@ -147,136 +180,119 @@ func NewWriteBufferWithSize(size int) *WriteBuffer {
 }
 
 // WriteByte writes a single byte to the buffer
-func (w *WriteBuffer) WriteByte(n byte) error {
+func (w *WriteBuffer) WriteByte(n byte) {
+	if w.err != nil {
+		return
+	}
+
 	if len(w.remaining) == 0 {
-		return ErrBufferFull
+		w.err = ErrBufferFull
+		return
 	}
 
 	w.remaining[0] = n
 	w.remaining = w.remaining[1:]
-	return nil
 }
 
 // WriteBytes writes a slice of bytes to the buffer
-func (w *WriteBuffer) WriteBytes(b []byte) error {
-	inbuf, err := w.reserve(len(b))
-	if err != nil {
-		return err
+func (w *WriteBuffer) WriteBytes(in []byte) {
+	if b := w.reserve(len(in)); b != nil {
+		copy(b, in)
 	}
-
-	copy(inbuf, b)
-	return nil
 }
 
 // WriteUint16 writes a big endian encoded uint16 value to the buffer
-func (w *WriteBuffer) WriteUint16(n uint16) error {
-	b, err := w.reserve(2)
-	if err != nil {
-		return err
+func (w *WriteBuffer) WriteUint16(n uint16) {
+	if b := w.reserve(2); b != nil {
+		binary.BigEndian.PutUint16(b, n)
 	}
-
-	binary.BigEndian.PutUint16(b, n)
-	return nil
 }
 
 // WriteUint32 writes a big endian uint32 value to the buffer
-func (w *WriteBuffer) WriteUint32(n uint32) error {
-	b, err := w.reserve(4)
-	if err != nil {
-		return err
+func (w *WriteBuffer) WriteUint32(n uint32) {
+	if b := w.reserve(4); b != nil {
+		binary.BigEndian.PutUint32(b, n)
 	}
-
-	binary.BigEndian.PutUint32(b, n)
-	return nil
 }
 
 // WriteUint64 writes a big endian uint64 to the buffer
-func (w *WriteBuffer) WriteUint64(n uint64) error {
-	b, err := w.reserve(8)
-	if err != nil {
-		return err
+func (w *WriteBuffer) WriteUint64(n uint64) {
+	if b := w.reserve(8); b != nil {
+		binary.BigEndian.PutUint64(b, n)
 	}
-
-	binary.BigEndian.PutUint64(b, n)
-	return nil
 }
 
 // WriteString writes a string to the buffer
-func (w *WriteBuffer) WriteString(s string) error {
-	// NB(mmihic): Don't just call WriteBytes; that will make a double copy of the string due to the cast
-	b, err := w.reserve(len(s))
-	if err != nil {
-		return err
+func (w *WriteBuffer) WriteString(s string) {
+	// NB(mmihic): Don't just call WriteBytes; that will make a double copy
+	// of the string due to the cast
+	if b := w.reserve(len(s)); b != nil {
+		copy(b, s)
 	}
+}
 
-	copy(b, s)
-	return nil
+// WriteLen8String writes an 8-bit length preceded string
+func (w *WriteBuffer) WriteLen8String(s string) {
+	w.WriteByte(byte(len(s)))
+	w.WriteString(s)
+}
+
+// WriteLen16String writes a 16-bit length preceded string
+func (w *WriteBuffer) WriteLen16String(s string) {
+	w.WriteUint16(uint16(len(s)))
+	w.WriteString(s)
 }
 
 // DeferByte reserves space in the buffer for a single byte, and returns a
 // reference that can be used to update that byte later
-func (w *WriteBuffer) DeferByte() (ByteRef, error) {
+func (w *WriteBuffer) DeferByte() ByteRef {
 	if len(w.remaining) == 0 {
-		return nil, ErrBufferFull
+		w.err = ErrBufferFull
+		return ByteRef(nil)
 	}
 
 	bufRef := ByteRef(w.remaining[0:])
 	w.remaining = w.remaining[1:]
-	return bufRef, nil
+	return bufRef
 }
 
-// DeferUint16 reserves space in the buffer for a uint16, and
-// returns a reference that can be used to update that uint16
-func (w *WriteBuffer) DeferUint16() (Uint16Ref, error) {
-	b, err := w.reserve(2)
-	if err != nil {
-		return nil, err
+// DeferUint16 reserves space in the buffer for a uint16, and returns a
+// reference that can be used to update that uint16
+func (w *WriteBuffer) DeferUint16() Uint16Ref {
+	return Uint16Ref(w.reserve(2))
+}
+
+// DeferUint32 reserves space in the buffer for a uint32, and returns a
+// reference that can be used to update that uint32
+func (w *WriteBuffer) DeferUint32() Uint32Ref {
+	return Uint32Ref(w.reserve(4))
+}
+
+// DeferUint64 reserves space in the buffer for a uint64, and returns a
+// reference that can be used to update that uint64
+func (w *WriteBuffer) DeferUint64() Uint64Ref {
+	return Uint64Ref(w.reserve(8))
+}
+
+// DeferBytes reserves space in the buffer for a fixed sequence of bytes, and
+// returns a reference that can be used to update those bytes
+func (w *WriteBuffer) DeferBytes(n int) BytesRef {
+	return BytesRef(w.reserve(n))
+}
+
+func (w *WriteBuffer) reserve(n int) []byte {
+	if w.err != nil {
+		return nil
 	}
 
-	return Uint16Ref(b), nil
-}
-
-// DeferUint32 reserves space in the buffer for a uint32, and
-// returns a reference that can be used to update that uint32
-func (w *WriteBuffer) DeferUint32() (Uint32Ref, error) {
-	b, err := w.reserve(4)
-	if err != nil {
-		return nil, err
-	}
-
-	return Uint32Ref(b), nil
-}
-
-// DeferUint64 reserves space in the buffer for a uint64, and
-// returns a reference that can be used to update that uint64
-func (w *WriteBuffer) DeferUint64() (Uint64Ref, error) {
-	b, err := w.reserve(8)
-	if err != nil {
-		return nil, err
-	}
-
-	return Uint64Ref(b), nil
-}
-
-// DeferBytes reserves space in the buffer for a fixed sequence of bytes,
-// and returns a reference that can be used to update those bytes
-func (w *WriteBuffer) DeferBytes(n int) (BytesRef, error) {
-	b, err := w.reserve(n)
-	if err != nil {
-		return nil, err
-	}
-
-	return BytesRef(b), nil
-}
-
-func (w *WriteBuffer) reserve(n int) ([]byte, error) {
 	if len(w.remaining) < n {
-		return nil, ErrBufferFull
+		w.err = ErrBufferFull
+		return nil
 	}
 
 	b := w.remaining[0:n]
 	w.remaining = w.remaining[n:]
-	return b, nil
+	return b
 }
 
 // BytesRemaining returns the number of available bytes remaining in the bufffer
@@ -294,20 +310,13 @@ func (w *WriteBuffer) FlushTo(iow io.Writer) (int, error) {
 func (w *WriteBuffer) BytesWritten() int { return len(w.buffer) - len(w.remaining) }
 
 // Reset resets the buffer to an empty state, ready for writing
-func (w *WriteBuffer) Reset() { w.remaining = w.buffer }
-
-// CurrentPos returns the current write position in the buffer
-func (w *WriteBuffer) CurrentPos() int { return len(w.buffer) - len(w.remaining) }
-
-// Seek moves the current write position to the given offset in the buffer
-func (w *WriteBuffer) Seek(offset int) error {
-	if offset > len(w.buffer) {
-		return ErrInsufficientBuffer
-	}
-
-	w.remaining = w.buffer[offset:]
-	return nil
+func (w *WriteBuffer) Reset() {
+	w.remaining = w.buffer
+	w.err = nil
 }
+
+// Err returns the current error in the buffer
+func (w *WriteBuffer) Err() error { return w.err }
 
 // Wrap initializes the buffer to wrap the given byte slice
 func (w *WriteBuffer) Wrap(b []byte) {
@@ -319,31 +328,55 @@ func (w *WriteBuffer) Wrap(b []byte) {
 type ByteRef []byte
 
 // Update updates the byte in the buffer
-func (ref ByteRef) Update(b byte) { ref[0] = b }
+func (ref ByteRef) Update(b byte) {
+	if ref != nil {
+		ref[0] = b
+	}
+}
 
 // A Uint16Ref is a reference to a uint16 placeholder in a buffer
 type Uint16Ref []byte
 
 // Update updates the uint16 in the buffer
-func (ref Uint16Ref) Update(n uint16) { binary.BigEndian.PutUint16(ref, n) }
+func (ref Uint16Ref) Update(n uint16) {
+	if ref != nil {
+		binary.BigEndian.PutUint16(ref, n)
+	}
+}
 
 // A Uint32Ref is a reference to a uint32 placeholder in a buffer
 type Uint32Ref []byte
 
 // Update updates the uint32 in the buffer
-func (ref Uint32Ref) Update(n uint32) { binary.BigEndian.PutUint32(ref, n) }
+func (ref Uint32Ref) Update(n uint32) {
+	if ref != nil {
+		binary.BigEndian.PutUint32(ref, n)
+	}
+}
 
 // A Uint64Ref is a reference to a uin64 placeholder in a buffer
 type Uint64Ref []byte
 
 // Update updates the uint64 in the buffer
-func (ref Uint64Ref) Update(n uint64) { binary.BigEndian.PutUint64(ref, n) }
+func (ref Uint64Ref) Update(n uint64) {
+	if ref != nil {
+		binary.BigEndian.PutUint64(ref, n)
+	}
+}
 
 // A BytesRef is a reference to a multi-byte placeholder in a buffer
 type BytesRef []byte
 
 // Update updates the bytes in the buffer
-func (ref BytesRef) Update(b []byte) { copy(ref, b) }
+func (ref BytesRef) Update(b []byte) {
+	if ref != nil {
+		copy(ref, b)
+	}
+}
 
 // UpdateString updates the bytes in the buffer from a string
-func (ref BytesRef) UpdateString(s string) { copy(ref, s) }
+func (ref BytesRef) UpdateString(s string) {
+	if ref != nil {
+		copy(ref, s)
+	}
+}

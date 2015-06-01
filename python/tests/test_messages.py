@@ -261,10 +261,10 @@ def test_message_fragment(arg2, arg3, connection):
     msg = CallRequestMessage(args=["", arg2, arg3])
     origin_msg = CallRequestMessage(args=["", arg2, arg3])
     message_factory = MessageFactory(connection)
-    fragments = message_factory.fragment(msg, 1)
+    fragments = message_factory.fragment(msg)
     recv_msg = None
     for fragment in fragments:
-        output = message_factory.build(0, fragment)
+        output = message_factory.build(fragment)
         if output:
             recv_msg = output
     header = yield recv_msg.get_header()

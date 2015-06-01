@@ -23,6 +23,8 @@ from __future__ import absolute_import
 import logging
 import os
 import sys
+import inspect
+from functools import partial
 
 import tornado.gen
 import tornado.ioloop
@@ -32,11 +34,14 @@ from tornado.netutil import bind_sockets
 
 from enum import IntEnum
 
+from .. import scheme
 from ..event import EventEmitter
 from ..event import EventRegistrar
 from ..handler import CallableRequestHandler
 from ..net import local_ip
 from .connection import StreamConnection
+from .dispatch import RequestDispatcher
+from .broker import ArgSchemeBroker
 from .peer import PeerGroup
 
 log = logging.getLogger('tchannel')
@@ -50,6 +55,12 @@ class State(IntEnum):
 
 class TChannel(object):
     """Manages inbound and outbound connections to various hosts."""
+
+    _SCHEMES = {
+        'raw': scheme.RawArgScheme,
+        'json': scheme.JsonArgScheme,
+        # 'http': scheme.HttpArgScheme, TODO
+    }
 
     def __init__(self, hostport=None, process_name=None, known_peers=None):
         """Build or re-use a TChannel.
@@ -68,21 +79,24 @@ class TChannel(object):
             Defaults to an empty list.
         """
         self._state = State.ready
+        self._handler = RequestDispatcher()
+
         self.peers = PeerGroup(self)
 
+        self._port = 0
+        self._host = None
         if hostport:
             self._host, port = hostport.rsplit(':', 1)
             self._port = int(port)
-        else:
+
+        if not self._host:
+            # TChannel(":4040") => determine IP automatically but use port
+            # 4040
             self._host = local_ip()
-            self._port = 0
 
         self.process_name = process_name or "%s[%s]" % (
             sys.argv[0], os.getpid()
         )
-
-        # RequestHandler to handle incoming calls.
-        self._handler = None
 
         # register event hooks
         self.event_emitter = EventEmitter()
@@ -122,20 +136,6 @@ class TChannel(object):
         """
         return self.peers.request(hostport=hostport, service=service, **kwargs)
 
-    def host(self, handler):
-        """Specify the RequestHandler to handle incoming requests.
-
-        Requests may be received via both, incoming and outgoing connections.
-
-        :param handler:
-            RequestHandler to handle incoming requests.
-        :return:
-            This TChannel instance to allow chaining requests to `host` and
-            `listen`
-        """
-        self._handler = handler
-        return self
-
     def listen(self):
         """Start listening for incoming connections.
 
@@ -154,13 +154,106 @@ class TChannel(object):
         server.add_sockets(sockets)
 
     @tornado.gen.coroutine
-    def receive_call(self, context, connection):
+    def receive_call(self, message, connection):
         if not self._handler:
             log.warn(
-                "Received %s but a handler has not been defined.", context
+                "Received %s but a handler has not been defined.", str(message)
             )
             return
-        self._handler.handle(context, connection)
+        self._handler.handle(message, connection)
+
+    def _register_simple(self, endpoint, scheme, f):
+        """Register a simple endpoint with this TChannel.
+
+        :param endpoint:
+            Name of the endpoint being registered.
+        :param scheme:
+            Name of the arg scheme under which the endpoint will be
+            registered.
+        :param f:
+            Callable handler for the endpoint.
+        """
+        assert scheme in self._SCHEMES, ("Unsupported arg scheme %s" % scheme)
+        scheme = self._SCHEMES[scheme]()
+        self._handler.register(endpoint, f, ArgSchemeBroker(scheme))
+        return f
+
+    def _register_thrift(self, service_module, handler, **kwargs):
+        """Register a Thrift endpoint on this TChannel.
+
+        :param service_module:
+            Reference to the Thrift-generated module for the service being
+            registered.
+        :param handler:
+            Handler for the endpoint
+        :param method:
+            Name of the Thrift method being registered. If omitted, ``f``'s
+            name is assumed to be the method name.
+        :param service:
+            Name of the Thrift service. By default this is determined
+            automatically from the module name.
+        """
+        import tchannel.thrift as thrift
+        # Imported inside the function so that we don't have a hard dependency
+        # on the Thrift library. This function is usable only if the Thrift
+        # library is installed.
+        thrift.register(self._handler, service_module, handler, **kwargs)
+        return handler
+
+    def register(self, endpoint, scheme=None, handler=None, **kwargs):
+        """Register a handler with this TChannel.
+
+        This may be used as a function or as a decorator.
+
+        .. code-block:: python
+
+            app = TChannel()
+
+            @app.register("hello", "json")
+            def hello(request, response, tchannel):
+                # ...
+
+            app.register(Foo, "thrift", handler_func)
+
+        :param endpoint:
+            Name of the endpoint being registered for raw and JSON arg
+            schemes. Reference to the Thrift-generated module for the Thrift
+            arg scheme.
+        :param scheme:
+            Name of the scheme under which the endpoint is being registered.
+            One of ``raw``, ``json``, and ``thrift``. Defaults to "raw",
+            except if ``endpoint`` was a module, in which case this defaults
+            to "thrift".
+        :param handler:
+            If specified, this is the handler function. If ignored, this
+            function returns a decorator that can be used to register the
+            handler function.
+        :returns:
+            If ``handler`` was specified, this returns ``handler``. Otherwise,
+            it returns a decorator that can be applied to a function to
+            register it as the handler.
+        """
+        assert endpoint, "endpoint is required"
+
+        if not scheme:
+            # scheme defaults to raw, unless the endpoint is a service module.
+            if inspect.ismodule(endpoint):
+                scheme = "thrift"
+            else:
+                scheme = "raw"
+        scheme = scheme.lower()
+
+        if scheme == 'thrift':
+            decorator = partial(self._register_thrift, endpoint, **kwargs)
+        else:
+            decorator = partial(
+                self._register_simple, endpoint, scheme, **kwargs
+            )
+
+        if handler is not None:
+            return decorator(handler)
+        else:
+            return decorator
 
 
 class TChannelServer(tornado.tcpserver.TCPServer):
@@ -194,5 +287,5 @@ class TChannelServer(tornado.tcpserver.TCPServer):
 
         yield conn.serve(handler=CallableRequestHandler(self._handle))
 
-    def _handle(self, context, connection):
-        self.tchannel.receive_call(context, connection)
+    def _handle(self, message, connection):
+        self.tchannel.receive_call(message, connection)

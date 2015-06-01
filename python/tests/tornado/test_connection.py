@@ -54,10 +54,10 @@ class ConnectionTestCase(tornado.testing.AsyncTestCase):
         """Verify calls are sent to handler properly."""
         self.client.ping()
 
-        ping = (yield self.server.await()).message
+        ping = yield self.server.await()
         assert ping.message_type == Types.PING_REQ
 
         self.server.pong()
 
-        pong = (yield self.client.await()).message
+        pong = yield self.client.await()
         assert pong.message_type == Types.PING_RES

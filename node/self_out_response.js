@@ -73,7 +73,7 @@ function passResponse(args, isLast ) {
         self.first = false;
         process.nextTick(emitResponse);
     }
-    if (!self.closing) self.conn.lastTimeoutTime = 0;
+    if (!self.closing) self.conn.ops.lastTimeoutTime = 0;
 
     function emitResponse() {
         self.inreq.responseEvent.emit(self, self.inres);
@@ -89,7 +89,7 @@ function passError(codeString, message) {
         originalId: self.id,
         message: message
     });
-    if (!self.closing) self.conn.lastTimeoutTime = 0;
+    if (!self.closing) self.conn.ops.lastTimeoutTime = 0;
     process.nextTick(emitError);
 
     function emitError() {

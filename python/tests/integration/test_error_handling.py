@@ -29,10 +29,10 @@ from tchannel.messages.call_request import CallRequestMessage
 from tchannel.messages.call_request_continue import CallRequestContinueMessage
 from tchannel.messages.common import ChecksumType
 from tchannel.messages.common import FlagsType
-from tchannel.tornado import RequestDispatcher
 from tchannel.tornado import TChannel
 from tchannel.tornado.connection import StreamConnection
-from tests.integration.server_manager import TChannelServerManager
+
+from .test_server import TestServer
 
 
 @tornado.gen.coroutine
@@ -46,20 +46,16 @@ def handler2(request, response, proxy):
     response.set_body_s(request.get_body_s())
 
 
-@pytest.fixture
-def handlers():
-    dispatcher = RequestDispatcher()
-    dispatcher.register("endpoint1", handler1)
-    dispatcher.register("endpoint2", handler2)
-    return dispatcher
+def register(tchannel):
+    tchannel.register("endpoint1", "raw", handler1)
+    tchannel.register("endpoint2", "raw", handler2)
 
 
 @pytest.yield_fixture
-def tchannel_server(random_open_port, handlers):
-    with TChannelServerManager(
-            port=random_open_port,
-            dispatcher=handlers) as manager:
-        yield manager
+def tchannel_server(random_open_port):
+    with TestServer(random_open_port) as server:
+        register(server.tchannel)
+        yield server
 
 
 @pytest.mark.gen_test
@@ -104,6 +100,7 @@ def test_invalid_message_during_streaming(tchannel_server):
             'a',
         ],
         headers={'as': 'raw'},
+        id=1,
     )
 
     callreqcontinue = CallRequestContinueMessage(
@@ -111,16 +108,17 @@ def test_invalid_message_during_streaming(tchannel_server):
         args=[
             'a',
         ],
+        id=1,
     )
 
-    resp_future = connection.send(callrequest, 1)
+    resp_future = connection.send(callrequest)
     for _ in xrange(10):
-        yield connection.write(callreqcontinue, 1)
+        yield connection.write(callreqcontinue)
 
     # bypass the default checksum calculation
     # set a wrong checksum
     callreqcontinue.checksum = (ChecksumType.crc32c, 1)
-    yield connection._write(callreqcontinue, 1)
+    yield connection._write(callreqcontinue)
 
     with pytest.raises(ProtocolException) as e:
         resp = yield resp_future
@@ -148,7 +146,7 @@ def test_continue_message_error(tchannel_server):
     )
 
     with pytest.raises(ProtocolException) as e:
-        yield connection.send(callreqcontinue, 1)
+        yield connection.send(callreqcontinue)
 
     assert (e.value.message ==
             u"missing call message after receiving continue message")

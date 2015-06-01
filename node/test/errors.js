@@ -26,6 +26,8 @@ var split2 = require('split2');
 var test = require('tape');
 var util = require('util');
 
+var Errors = require('../errors.js');
+
 test('errors module should be in sorted order', function t(assert) {
 
     var errorsPath = path.resolve(path.join(__dirname, '..', 'errors.js'));
@@ -63,4 +65,71 @@ test('errors module should be in sorted order', function t(assert) {
         if (allOk) assert.pass('errors module is in sorted order');
         assert.end();
     }
+});
+
+test('error case statements should not be duplicates', function t(assert) {
+
+    var errorsPath = path.resolve(path.join(__dirname, '..', 'errors.js'));
+    var stream = fs.createReadStream(errorsPath, 'utf8');
+    var caseStatements = [];
+    stream
+        .pipe(split2())
+        .on('data', extractCaseStatement)
+        .on('end', streamDone);
+
+    function extractCaseStatement(line) {
+        var match = /case/.exec(line);
+        if (match) {
+            caseStatements.push(line);
+        }
+    }
+
+    function streamDone() {
+        process.nextTick(checkCases);
+    }
+
+    function checkCases() {
+        var caseTypes = caseStatements.map(function extract(c) {
+            c = c.trim();
+            c = c.substr(6, c.length);
+            c = c.substr(0, c.length - 2);
+            return c;
+        });
+
+        var errorTypes = [];
+        var keys = Object.keys(Errors);
+        for (var i = 0; i < keys.length; i++) {
+            var errorFn = Errors[keys[i]];
+            if (!errorFn || !errorFn.type) {
+                continue;
+            }
+
+            errorTypes.push(errorFn.type);
+        }
+
+        assert.equal(caseTypes.length, errorTypes.length);
+        assert.deepEqual(
+            caseTypes.sort(),
+            errorTypes.sort()
+        );
+
+        assert.end();
+    }
+});
+
+test('all errors are classified', function t(assert) {
+    var keys = Object.keys(Errors);
+    for (var i = 0; i < keys.length; i++) {
+        var errorFn = Errors[keys[i]];
+        if (!errorFn || !errorFn.type) {
+            continue;
+        }
+
+        var errObj = errorFn(new Error('e'));
+
+        var errorClass = Errors.classify(errObj);
+        assert.ok(errorClass, errorFn.type + ' can be classified');
+    }
+
+    assert.end();
 });

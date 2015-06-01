@@ -20,9 +20,11 @@
 
 from __future__ import absolute_import
 
+
 import tornado
 import tornado.gen
 
+from ..glossary import DEFAULT_TTL
 from ..messages.common import FlagsType
 from ..messages.common import StreamState
 from ..zipkin.trace import Trace
@@ -41,7 +43,7 @@ class Request(object):
         self,
         id=None,
         flags=FlagsType.none,
-        ttl=10,
+        ttl=DEFAULT_TTL,
         tracing=None,
         service=None,
         headers=None,

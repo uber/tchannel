@@ -27,6 +27,7 @@ var StateMachine = require('./state_machine');
 var net = require('net');
 
 var TChannelConnection = require('./connection');
+var errors = require('./errors');
 var states = require('./states');
 
 function TChannelPeer(channel, hostPort, options) {
@@ -52,6 +53,7 @@ function TChannelPeer(channel, hostPort, options) {
         random: self.channel.random,
         period: self.options.period,
         maxErrorRate: self.options.maxErrorRate,
+        minimumRequests: self.options.minimumRequests,
         probation: self.options.probation,
         stateMachine: self,
         nextHandler: self
@@ -136,6 +138,37 @@ TChannelPeer.prototype.connect = function connect(outOnly) {
     return conn;
 };
 
+TChannelPeer.prototype.waitForIdentified =
+function waitForIdentified(callback) {
+    var self = this;
+
+    var conn = self.connect();
+
+    if (conn.closing) {
+        onConnectionClose(conn.closeError);
+    } else {
+        conn.closeEvent.on(onConnectionClose);
+
+        // conn.handler is a self peer detection
+        if (!self.isConnected() && conn.handler) {
+            conn.identifiedEvent.on(onIdentified);
+            return;
+        } else {
+            onIdentified();
+        }
+    }
+
+    function onConnectionClose(err) {
+        conn.closeEvent.removeListener(onConnectionClose);
+        callback(err || errors.TChannelConnectionCloseError());
+    }
+
+    function onIdentified() {
+        conn.closeEvent.removeListener(onConnectionClose);
+        callback(null);
+    }
+};
+
 TChannelPeer.prototype.request = function peerRequest(options) {
     var self = this;
     var req = self.connect().request(options);
@@ -166,10 +199,15 @@ TChannelPeer.prototype.addConnection = function addConnection(conn) {
         self.connections.unshift(conn);
     }
     conn.errorEvent.on(onConnectionError);
+    conn.closeEvent.on(onConnectionClose);
     return conn;
 
     function onConnectionError(/* err */) {
         // TODO: log?
+        self.removeConnection(conn);
+    }
+
+    function onConnectionClose() {
         self.removeConnection(conn);
     }
 };
@@ -228,7 +266,9 @@ TChannelPeer.prototype.countOutPending = function countOutPending() {
     var self = this;
     var pending = 0;
     for (var index = 0; index < self.connections.length; index++) {
-        pending += self.connections[index].pending.out;
+        var connPending = self.connections[index].ops.getPending();
+
+        pending += connPending.out;
     }
     return pending;
 };

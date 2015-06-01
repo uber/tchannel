@@ -225,6 +225,8 @@ function testSetup(desc, testFunc) {
             serviceName: 'tiberius'
         });
         var peer = client.peers.add(cluster.hosts[1]);
+        // manually set minRequests requirement to 0
+        peer.state.minRequests = 0;
         service.register('glad', function(req, res) {
             res.sendOk('pool', 'party');
         });

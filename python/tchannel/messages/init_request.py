@@ -33,12 +33,13 @@ class InitRequestMessage(BaseMessage):
     PROCESS_NAME = 'process_name'
 
     # Micro-optimizations are the best kinds of optimizations
-    __slots__ = (
+    __slots__ = BaseMessage.__slots__ + (
         'version',
         'headers',
     )
 
-    def __init__(self, version=None, headers=None):
+    def __init__(self, version=None, headers=None, id=0):
+        super(InitRequestMessage, self).__init__(id)
         self.version = version or PROTOCOL_VERSION
         self.headers = dict(headers) if headers else {}
 

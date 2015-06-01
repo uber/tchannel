@@ -21,7 +21,8 @@
 import pytest
 
 from tchannel.errors import ConnectionClosedError
-from tchannel.tornado import hyperbahn, TChannel
+from tchannel.tornado import TChannel
+from tchannel.tornado import hyperbahn
 
 
 def test_new_client_establishes_peers():
