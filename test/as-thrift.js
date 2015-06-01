@@ -318,7 +318,7 @@ function makeTChannelThriftServer(cluster, opts) {
         return cb(null, {
             ok: false,
             body: NoEchoError(body.value),
-            fieldName: 'noEcho'
+            typeName: 'noEcho'
         });
     }
 
@@ -328,7 +328,7 @@ function makeTChannelThriftServer(cluster, opts) {
             body: NoEchoTypedError({
                 value: body.value
             }),
-            fieldName: 'noEchoTyped'
+            typeName: 'noEchoTyped'
         });
     }
 
