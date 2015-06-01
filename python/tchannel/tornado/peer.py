@@ -558,7 +558,7 @@ class PeerClientOperation(object):
 
                 if num_of_attempt != attempt_times - 1:
                     # delay further retry
-                    yield gen.sleep(retry_delay / 1000)
+                    yield gen.sleep(retry_delay / 1000.0)
                 else:
                     raise
 
