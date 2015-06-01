@@ -25,6 +25,7 @@ import threading
 import tornado.ioloop
 
 import tchannel.tornado.tchannel as tornado_tchannel
+from tchannel.errors import TChannelError
 
 
 class Expectation(object):
@@ -48,7 +49,15 @@ class Expectation(object):
         def execute(request, response):
             response.write_result(result)
 
+        # raw message to respond with
+        self.response = None
+        self.protocoal_error = None
+
         self.execute = execute
+
+    def return_error(self, error):
+        """Write the given Error as a error response"""
+        self.protocoal_error = error
 
     def and_raise(self, exc):
 
@@ -56,6 +65,19 @@ class Expectation(object):
             raise exc
 
         self.execute = execute
+
+    def and_error(self, protocoal_error):
+
+        def execute(request, response):
+            # send error message for test purpose only
+            connection = response.connection
+            connection.send_error(
+                protocoal_error.code,
+                protocoal_error.description,
+                response.id,
+            )
+            # stop normal response streams
+            response.set_exception(TChannelError("stop stream"))
 
 
 class TestServer(object):

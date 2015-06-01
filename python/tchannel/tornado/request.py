@@ -20,14 +20,16 @@
 
 from __future__ import absolute_import
 
-
 import tornado
 import tornado.gen
 
 from ..glossary import DEFAULT_TTL
+from ..messages import ErrorCode
 from ..messages.common import FlagsType
 from ..messages.common import StreamState
+from ..transport_header import RetryType
 from ..zipkin.trace import Trace
+from .stream import InMemStream
 from .util import get_arg
 
 
@@ -56,15 +58,34 @@ class Request(object):
         self.service = service
         self.tracing = tracing or Trace()
         # argstreams is a list of InMemStream/PipeStream objects
-        self.argstreams = argstreams
+        self.argstreams = argstreams or [InMemStream(),
+                                         InMemStream(),
+                                         InMemStream()]
         self.checksum = checksum
         self.id = id
         self.headers = headers or {}
         self.state = StreamState.init
         self.endpoint = ""
-        self.header = None
-        self.body = None
         self.scheme = scheme
+
+        self.is_streaming_request = self._is_streaming_request()
+        if not self.is_streaming_request:
+            self._copy_argstreams = [
+                self.argstreams[0].clone(),
+                self.argstreams[1].clone(),
+                self.argstreams[2].clone(),
+            ]
+
+    def rewind(self, id=None):
+        self.id = id
+        if not self.is_streaming_request:
+            self.argstreams = [
+                self._copy_argstreams[0].clone(),
+                self._copy_argstreams[1].clone(),
+                self._copy_argstreams[2].clone(),
+            ]
+        self.state = StreamState.init
+        self.tracing = Trace()
 
     @property
     def arg_scheme(self):
@@ -120,3 +141,42 @@ class Request(object):
         :return: the argstream of body
         """
         return self.argstreams[2]
+
+    def _is_streaming_request(self):
+        """check request is stream request or not"""
+        arg2 = self.argstreams[1]
+        arg3 = self.argstreams[2]
+        return not (isinstance(arg2, InMemStream) and
+                    isinstance(arg3, InMemStream) and
+                    ((arg2.auto_close and arg3.auto_close) or (
+                        arg2.state == StreamState.completed and
+                        arg3.state == StreamState.completed)))
+
+    def should_retry_on_error(self, error):
+        """rules for retry
+
+        :param error:
+            ProtocolException that returns from Server
+        """
+
+        if self.is_streaming_request:
+            # not retry for streaming request
+            return False
+
+        retry_flag = self.headers.get('re', RetryType.DEFAULT)
+
+        if retry_flag == RetryType.NEVER:
+            return False
+
+        if error.code in [ErrorCode.bad_request, ErrorCode.cancelled]:
+            return False
+        elif error.code in [ErrorCode.busy, ErrorCode.declined]:
+            return True
+        elif error.code is ErrorCode.timeout:
+            return retry_flag is not RetryType.CONNECTION_ERROR
+        elif error.code in [ErrorCode.network_error,
+                            ErrorCode.fatal,
+                            ErrorCode.unexpected]:
+            return retry_flag is not RetryType.TIMEOUT
+        else:
+            return False

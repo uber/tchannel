@@ -27,7 +27,6 @@ import tornado.gen
 from tchannel.tornado import TChannel
 from tchannel.tornado.stream import InMemStream
 from tchannel.zipkin.zipkin_trace import ZipkinTraceHook
-
 from tests.integration.test_server import TestServer
 
 try:

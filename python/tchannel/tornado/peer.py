@@ -27,7 +27,16 @@ from random import random
 
 from tornado import gen
 
+from tchannel.glossary import DEFAULT_TTL
+from tchannel.glossary import MAX_ATTEMPT_TIMES
+from tchannel.glossary import RETRY_DELAY
+
+from ..errors import NoAvailablePeerError
+from ..errors import ProtocolError
+from ..errors import TimeoutError
 from ..handler import CallableRequestHandler
+from ..transport_header import ArgSchemeType
+from ..transport_header import RetryType
 from ..zipkin.annotation import Endpoint
 from ..zipkin.trace import Trace
 from .connection import StreamConnection
@@ -35,6 +44,7 @@ from .request import Request
 from .stream import InMemStream
 from .stream import Stream
 from .stream import read_full
+from .timeout import timeout
 
 try:
     # included in Tornado 4.2
@@ -169,13 +179,20 @@ class PeerGroup(object):
         :param service_threshold:
             If ``hostport`` was not specified, this specifies the score
             threshold at or below which peers will be ignored.
+        :param blacklist:
+            Peers on the blacklist won't be chosen.
         """
-        return self.choose(
-            hostport=kwargs.pop('hostport', None),
-            score_threshold=kwargs.pop('score_threshold', None),
-        ).request(**kwargs)
+        peer = self.choose(
+            hostport=kwargs.get('hostport', None),
+            score_threshold=kwargs.get('score_threshold', None),
+            blacklist=kwargs.get('blacklist', None),
+        )
+        if peer:
+            return peer.request(**kwargs)
+        else:
+            raise NoAvailablePeerError("Can't find available peer.")
 
-    def choose(self, hostport=None, score_threshold=None):
+    def choose(self, hostport=None, score_threshold=None, blacklist=None):
         """Choose a Peer that matches the given criteria.
 
         The Peer with the highest score will be chosen.
@@ -188,18 +205,23 @@ class PeerGroup(object):
             If specified, Peers with a score equal to or below this will be
             ignored. Defaults to the value specified when the PeerGroup was
             initialized.
+        :param blacklist:
+            Peers on the blacklist won't be chosen.
         :returns:
             A Peer that matches all the requested criteria or None if no such
             Peer was found.
         """
+
+        blacklist = blacklist or set()
         if hostport:
             return self.get(hostport)
 
         score_threshold = score_threshold or self._score_threshold or 0
         chosen_peer = None
         chosen_score = 0
+        hosts = self._peers.viewkeys() - blacklist
 
-        for host in self.hosts:
+        for host in hosts:
             peer = self.get(host)
             score = peer.state.score()
 
@@ -236,7 +258,7 @@ class Peer(object):
         """Initialize a Peer
 
         :param tchannel:
-            TChannel through which requests will be made
+            TChannel through which requests will be made.
         :param hostport:
             Host-port this Peer is for.
         :param state:
@@ -249,7 +271,6 @@ class Peer(object):
 
         self.tchannel = tchannel
         self.state = state
-
         self.host, port = hostport.rsplit(':', 1)
         self.port = int(port)
 
@@ -403,7 +424,11 @@ class PeerHealthyState(PeerState):
 class PeerClientOperation(object):
     """Encapsulates client operations that can be performed against a peer."""
 
-    def __init__(self, peer, service, **kwargs):
+    def __init__(self, peer, service, arg_scheme=None,
+                 retry=None,
+                 parent_tracing=None,
+                 hostport=None,
+                 score_threshold=None):
         """Initialize a new PeerClientOperation.
 
         :param peer:
@@ -411,19 +436,39 @@ class PeerClientOperation(object):
         :param service:
             Name of the service being called through this peer. Defaults to
             an empty string.
+        :param arg_scheme
+            arg scheme type
+        :param retry
+            retry type
+        :param parent_tracing
+            tracing span from parent request
         """
         assert peer, "peer must not be None"
         service = service or ''
 
         self.peer = peer
         self.service = service
-        self.parent_tracing = kwargs.get('parent_tracing', None)
+        self.parent_tracing = parent_tracing
+        self.headers = {
+            'as': arg_scheme or ArgSchemeType.DEFAULT,
+            're': retry or RetryType.DEFAULT,
+        }
+
+        # keep all arguments for retry purpose.
+        # not retry if hostport is set.
+        self._hostport = hostport
+        self._score_threshold = score_threshold
         # service name is not stored in peer because the same peer may be
         # used to call multiple services if it's being used for request
         # forwarding
 
     @gen.coroutine
-    def send(self, arg1, arg2, arg3, traceflag=False, headers=None):
+    def send(self, arg1, arg2, arg3,
+             traceflag=False,
+             headers=None,
+             attempt_times=MAX_ATTEMPT_TIMES,
+             ttl=DEFAULT_TTL,
+             retry_delay=RETRY_DELAY):
         """Make a request to the Peer.
 
         :param arg1:
@@ -439,10 +484,17 @@ class PeerClientOperation(object):
             Flag is for tracing.
         :param headers:
             Headers will be put int he message as protocol header.
+        :param attempt_times:
+            Maximum number of attempts to send the message.
+        :param ttl:
+            Timeout for each request (ms).
+        :param retry_delay:
+            Delay between each retry (ms).
         :return:
             Future that contains the response from the peer. If None, an empty
             stream is used.
         """
+
         arg1, arg2, arg3 = (
             maybe_stream(arg1), maybe_stream(arg2), maybe_stream(arg3)
         )
@@ -458,32 +510,80 @@ class PeerClientOperation(object):
             parent_span_id = None
             trace_id = None
 
-        # set 'as' to 'raw if 'as' is empty
+        # set default transport headers
         headers = headers or {}
-        if 'as' not in headers:
-            headers['as'] = 'raw'
+        for k, v in self.headers.iteritems():
+            headers.setdefault(k, v)
 
-        connection = yield self.peer.connect()
-        message_id = connection.next_message_id()
-        response = yield connection.send_request(
-            Request(
-                service=self.service,
-                argstreams=[InMemStream(endpoint), arg2, arg3],
-                id=message_id,
-                headers=headers,
-                tracing=Trace(
-                    name=endpoint,
-                    trace_id=trace_id,
-                    parent_span_id=parent_span_id,
-                    endpoint=Endpoint(self.peer.host,
-                                      self.peer.port,
-                                      self.service),
-                    traceflags=traceflag,
-                )
+        peer = self.peer
+        connection = yield peer.connect()
+
+        request = Request(
+            service=self.service,
+            argstreams=[InMemStream(endpoint), arg2, arg3],
+            id=connection.next_message_id(),
+            headers=headers,
+            ttl=ttl,
+            tracing=Trace(
+                name=endpoint,
+                trace_id=trace_id,
+                parent_span_id=parent_span_id,
+                endpoint=Endpoint(self.peer.host,
+                                  self.peer.port,
+                                  self.service),
+                traceflags=traceflag,
             )
         )
 
+        response = None
+        # black list to record all used peers, so they aren't chosen again.
+        blacklist = set()
+        # only retry on non-stream request
+        if request.is_streaming_request or self._hostport:
+            attempt_times = 1
+
+        if request.is_streaming_request:
+            request.ttl = 0
+
+        # mac number of times to retry 3.
+        for num_of_attempt in range(attempt_times):
+            try:
+                response = yield self._send(
+                    connection, request)
+                break
+            except (ProtocolError, TimeoutError) as e:
+                request.set_exception(e)
+                if not request.should_retry_on_error(e):
+                    raise
+
+                if num_of_attempt != attempt_times - 1:
+                    # delay further retry
+                    yield gen.sleep(retry_delay / 1000.0)
+                else:
+                    raise
+
+                blacklist.add(peer.hostport)
+                # find new peer
+                peer = self.peer.tchannel.peers.choose(
+                    hostport=self._hostport,
+                    score_threshold=self._score_threshold,
+                    blacklist=blacklist,
+                )
+                if not peer:
+                    raise
+                connection = yield peer.connect()
+                # roll back request
+                request.rewind(connection.next_message_id())
+
         log.debug("Got response %s", response)
+        raise gen.Return(response)
+
+    @gen.coroutine
+    def _send(self, connection, req):
+        response_future = connection.send_request(req)
+        with timeout(response_future, req.ttl):
+            response = yield response_future
+
         raise gen.Return(response)
 
 

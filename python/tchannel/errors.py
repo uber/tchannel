@@ -26,7 +26,7 @@ class TChannelError(Exception):
     pass
 
 
-class ProtocolException(TChannelError):
+class ProtocolError(TChannelError):
     """Represent a protocol-level exception"""
     __slots__ = (
         'code',
@@ -79,6 +79,11 @@ class InvalidChecksumError(TChannelError):
 
 class StreamingError(TChannelError):
     """Represent Streaming Message Exception"""
+    pass
+
+
+class NoAvailablePeerError(TChannelError):
+    """Represents a failure to find any peers for a request."""
     pass
 
 

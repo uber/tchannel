@@ -18,12 +18,22 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-# Largest message ID supported by the system.
-#
-# Message ID 0xffffffff is reserved
-MAX_MESSAGE_ID = 0xfffffffe
 
-# CallRequestMessage uses it as the default TTL value for the message.
-DEFAULT_TTL = 1000  # ms
-MAX_ATTEMPT_TIMES = 3
-RETRY_DELAY = 0.3  # 300 ms
+class RetryType(object):
+    """ Retry Type in the protocol header
+    For details, look at protocol definition.
+        https://github.com/uber/tchannel/blob/master/docs/protocol.md
+    """
+    NEVER = 'n'
+    CONNECTION_ERROR = 'c'
+    TIMEOUT = 't'
+    CONNECTION_ERROR_AND_TIMEOUT = 'ct'
+    DEFAULT = CONNECTION_ERROR
+
+
+class ArgSchemeType(object):
+    RAW = 'raw'
+    JSON = 'json'
+    HTTP = 'http'
+    THRIFT = 'thrift'
+    DEFAULT = RAW

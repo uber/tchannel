@@ -599,7 +599,6 @@ class StreamConnection(TornadoConnection):
         assert not self.closed
         assert self._loop_running, "Perform a handshake first."
 
-        request.id = request.id or self.next_message_id()
         assert request.id not in self._outstanding, (
             "Message ID '%d' already being used" % request.id
         )

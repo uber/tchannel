@@ -90,6 +90,10 @@ class Stream(object):
     def close(self):
         raise NotImplementedError()
 
+    def clone(self):
+        """Deep clone the current stream"""
+        raise NotImplementedError()
+
 
 class InMemStream(Stream):
 
@@ -106,6 +110,13 @@ class InMemStream(Stream):
         self.auto_close = auto_close
 
         self.exception = None
+
+    def clone(self):
+        new_stream = InMemStream()
+        new_stream.state = self.state
+        new_stream.auto_close = self.auto_close
+        new_stream._stream = deque(self._stream)
+        return new_stream
 
     @tornado.gen.coroutine
     def read(self):

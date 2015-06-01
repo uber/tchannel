@@ -20,10 +20,10 @@
 
 from __future__ import absolute_import
 
+import inspect
 import logging
 import os
 import sys
-import inspect
 from functools import partial
 
 import tornado.gen
@@ -39,9 +39,9 @@ from ..event import EventEmitter
 from ..event import EventRegistrar
 from ..handler import CallableRequestHandler
 from ..net import local_ip
+from .broker import ArgSchemeBroker
 from .connection import StreamConnection
 from .dispatch import RequestDispatcher
-from .broker import ArgSchemeBroker
 from .peer import PeerGroup
 
 log = logging.getLogger('tchannel')
@@ -125,7 +125,12 @@ class TChannel(object):
     def hostport(self):
         return "%s:%d" % (self._host, self._port)
 
-    def request(self, hostport=None, service=None, **kwargs):
+    def request(self,
+                hostport=None,
+                service=None,
+                arg_scheme=None,
+                retry=None,
+                **kwargs):
         """Initiate a new request through this TChannel.
 
         :param hostport:
@@ -133,8 +138,16 @@ class TChannel(object):
             known peer will be picked.
         :param service:
             Service being called. Defaults to an empty string.
+        :param arg_scheme:
+            Arg scheme type.
+        :param rety:
+            Retry flag
         """
-        return self.peers.request(hostport=hostport, service=service, **kwargs)
+        return self.peers.request(hostport=hostport,
+                                  service=service,
+                                  arg_scheme=arg_scheme,
+                                  retry=retry,
+                                  **kwargs)
 
     def listen(self):
         """Start listening for incoming connections.
