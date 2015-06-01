@@ -42,7 +42,7 @@ function TChannelStatsd(channel, statsd) {
     }
 }
 
-function getKey(common, stat) {
+function getKeyOutbound(common, stat) {
     // var host = common.host || 'host';
     // var cluster = common.cluster || 'cluster';
     var version = common.version || 'version';
@@ -65,12 +65,45 @@ function getKey(common, stat) {
     ].join('.');
 }
 
+function getKeyInbound(common, stat) {
+    // var host = common.host || 'host';
+    // var cluster = common.cluster || 'cluster';
+    var version = common.version || 'version';
+    var service = stat.tags.service;
+    var callingService = stat.tags['calling-service'];
+
+    // Note: endpoint should have a finite value space
+    var endpoint = stat.tags.endpoint || 'endpoint';
+    endpoint = endpoint.indexOf('::') !== -1 ?
+        endpoint.split('::')[1] : endpoint;
+    return [
+        common.app,
+        // host,
+        // cluster,
+        version,
+        callingService,
+        service,
+        endpoint,
+        stat.name
+    ].join('.');
+}
+
+function getKey(common, stat) {
+    if (stat.name.indexOf('inbound.') === 0) {
+        return getKeyInbound(common, stat);
+    } else if (stat.name.indexOf('outbound.') === 0) {
+        return getKeyOutbound(common, stat);
+    }
+
+    return '';
+}
+
 TChannelStatsd.prototype.onStat = function onStat(stat) {
     var self = this;
     var key = getKey(self.channel.statTags, stat);
     switch (stat.type) {
         case Counter.type:
-            return self.statsd.increment(key);
+            return self.statsd.increment(key, stat.value);
 
         case Gauge.type:
             return self.statsd.gauge(key, stat.value);

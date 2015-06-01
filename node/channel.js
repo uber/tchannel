@@ -64,14 +64,8 @@ function TChannel(options) {
     self.listeningEvent = self.defineEvent('listening');
     self.connectionEvent = self.defineEvent('connection');
     self.requestEvent = self.defineEvent('request');
-    self.outboundCallsSentStat = self.defineCounter('outbound.calls.sent');
-    self.outboundCallsSystemErrorsStat = self.defineCounter('outbound.calls.system-errors');
-    self.outboundCallsOperationalErrorsStat = self.defineCounter('outbound.calls.operational-errors');
-    self.outboundCallsSuccessStat = self.defineCounter('outbound.calls.success');
-    self.outboundCallsAppErrorsStat = self.defineCounter('outbound.calls.app-errors');
-    self.outboundCallsRetriesStat = self.defineCounter('outbound.calls.retries');
-    self.outboundCallsLatencyStat = self.defineTiming('outbound.calls.latency');
-    self.outboundCallsPerAttemptLatencyStat = self.defineTiming('outbound.calls.per-attempt-latency');
+    self.setupOutboundStats();
+    self.setupInboundStats();
 
     self.options = extend({
         timeoutCheckInterval: 100,
@@ -168,6 +162,34 @@ function TChannel(options) {
     self.serverConnections = null;
 }
 inherits(TChannel, StatEmitter);
+
+TChannel.prototype.setupOutboundStats = function setupOutboundStats() {
+    var self = this;
+    self.outboundCallsSentStat = self.defineCounter('outbound.calls.sent');
+    self.outboundCallsSuccessStat = self.defineCounter('outbound.calls.success');
+    self.outboundCallsSystemErrorsStat = self.defineCounter('outbound.calls.system-errors');
+    self.outboundCallsOperationalErrorsStat = self.defineCounter('outbound.calls.operational-errors');
+    self.outboundCallsAppErrorsStat = self.defineCounter('outbound.calls.app-errors');
+    self.outboundCallsRetriesStat = self.defineCounter('outbound.calls.retries');
+    // self.outboundRequestSizeStat = self.defineTiming('outbound.request.size');
+    // self.outboundResponseSizeStat = self.defineTiming('outbound.response.size');
+    self.outboundCallsLatencyStat = self.defineTiming('outbound.calls.latency');
+    self.outboundCallsPerAttemptLatencyStat = self.defineTiming('outbound.calls.per-attempt-latency');
+};
+
+TChannel.prototype.setupInboundStats = function setupInboundStats() {
+    var self = this;
+    self.inboundCallsRecvdStat = self.defineCounter('inbound.calls.recvd');
+    self.inboundCallsSuccessStat = self.defineCounter('inbound.calls.success');
+    self.inboundCallsSystemErrorsStat = self.defineCounter('inbound.calls.system-errors');
+    self.inboundCallsAppErrorsStat = self.defineCounter('inbound.calls.app-errors');
+    // self.inboundCallsCancelsRequestedStat = self.defineCounter('inbound.cancels.requested');
+    // self.inboundCallsCancelsHonoredStat = self.defineCounter('inbound.cancels.honored');
+    // self.inboundRequestSizeStat = self.defineTiming('inbound.request.size');
+    // self.inboundResponseSizeStat = self.defineTiming('inbound.response.size');
+    self.inboundProtocolErrorsStat = self.defineCounter('inbound.protocol-errors');
+    self.inboundCallsLatencyStat = self.defineTiming('inbound.calls.latency');
+};
 
 TChannel.prototype.getServer = function getServer() {
     var self = this;
