@@ -43,6 +43,7 @@ function TChannelOutRequest(id, options) {
     self.timers = options.timers;
     self.retryCount = options.retryCount;
     self.channel = options.channel;
+    self.logical = !!options.logical;
 
     self.start = 0;
     self.end = 0;
@@ -113,6 +114,10 @@ TChannelOutRequest.prototype.onError = function onError(err, self) {
     if (!self.end) self.end = self.timers.now();
     self.err = err;
     self.emitPerAttemptLatency();
+
+    if (self.logical === false) {
+        self.emitErrorStat(err);
+    }
 };
 
 TChannelOutRequest.prototype.onResponse = function onResponse(res, self) {
@@ -120,6 +125,58 @@ TChannelOutRequest.prototype.onResponse = function onResponse(res, self) {
     self.res = res;
     self.res.span = self.span;
     self.emitPerAttemptLatency();
+
+    if (self.logical === false) {
+        self.emitResponseStat(res);
+    }
+};
+
+
+TChannelOutRequest.prototype.emitErrorStat =
+function emitErrorStat(err) {
+    var self = this;
+
+    if (err.isErrorFrame) {
+        self.channel.outboundCallsSystemErrorsStat.increment(1, {
+            'target-service': self.serviceName,
+            'service': self.headers.cn,
+            // TODO should always be buffer
+            'target-endpoint': String(self.arg1),
+            'type': err.codeName
+        });
+    } else {
+        self.channel.outboundCallsOperationalErrorsStat.increment(1, {
+            'target-service': self.serviceName,
+            'service': self.headers.cn,
+            // TODO should always be buffer
+            'target-endpoint': String(self.arg1),
+            'type': err.type || 'unknown'
+        });
+    }
+};
+
+TChannelOutRequest.prototype.emitResponseStat =
+function emitResponseStat(res) {
+    var self = this;
+
+    if (res.ok) {
+        self.channel.outboundCallsSuccessStat.increment(1, {
+            'target-service': self.serviceName,
+            'service': self.headers.cn,
+            // TODO should always be buffer
+            'target-endpoint': String(self.arg1)
+        });
+    } else {
+        self.channel.outboundCallsAppErrorsStat.increment(1, {
+            'target-service': self.serviceName,
+            'service': self.headers.cn,
+            // TODO should always be buffer
+            'target-endpoint': String(self.arg1),
+            // TODO define transport header
+            // for application error type
+            'type': 'unknown'
+        });
+    }
 };
 
 TChannelOutRequest.prototype.emitPerAttemptLatency =
