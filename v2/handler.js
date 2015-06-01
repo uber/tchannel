@@ -65,6 +65,7 @@ function TChannelV2Handler(options) {
     self.tracer = self.options.tracer;
     self.hostPort = self.options.hostPort;
     self.processName = self.options.processName;
+    self.connection = self.options.connection;
     self.remoteHostPort = null; // filled in by identify message
     self.lastSentFrameId = 0;
     // TODO: GC these... maybe that's up to TChannel itself wrt ops
@@ -143,7 +144,7 @@ TChannelV2Handler.prototype.handleFrame = function handleFrame(frame, callback) 
 TChannelV2Handler.prototype.handleInitRequest = function handleInitRequest(reqFrame, callback) {
     var self = this;
     if (self.remoteHostPort !== null) {
-        return callback(errors.TChannelDuplicateInitRequestError());
+        return callback(errors.DuplicateInitRequestError());
     }
     /* jshint camelcase:false */
     var headers = reqFrame.body.headers;
@@ -161,7 +162,7 @@ TChannelV2Handler.prototype.handleInitRequest = function handleInitRequest(reqFr
 TChannelV2Handler.prototype.handleInitResponse = function handleInitResponse(resFrame, callback) {
     var self = this;
     if (self.remoteHostPort !== null) {
-        return callback(errors.TChannelDuplicateInitResponseError());
+        return callback(errors.DuplicateInitResponseError());
     }
     /* jshint camelcase:false */
     var headers = resFrame.body.headers;
@@ -178,7 +179,7 @@ TChannelV2Handler.prototype.handleInitResponse = function handleInitResponse(res
 TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFrame, callback) {
     var self = this;
     if (self.remoteHostPort === null) {
-        return callback(errors.TChannelCallReqBeforeInitReqError());
+        return callback(errors.CallReqBeforeInitReqError());
     }
     var req = self.buildInRequest(reqFrame);
     if (reqFrame.body.args && reqFrame.body.args[0] &&
@@ -208,7 +209,7 @@ TChannelV2Handler.prototype.callRequestFrameHandled = function callRequestFrameH
 TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(resFrame, callback) {
     var self = this;
     if (self.remoteHostPort === null) {
-        return callback(errors.TChannelCallResBeforeInitResError());
+        return callback(errors.CallResBeforeInitResError());
     }
     var res = self.buildInResponse(resFrame);
     if (resFrame.body.args && resFrame.body.args[0] &&
@@ -245,7 +246,7 @@ TChannelV2Handler.prototype.handleCancel = function handleCancel(frame, callback
 TChannelV2Handler.prototype.handleCallRequestCont = function handleCallRequestCont(reqFrame, callback) {
     var self = this;
     if (self.remoteHostPort === null) {
-        return callback(errors.TChannelCallReqContBeforeInitReqError());
+        return callback(errors.CallReqContBeforeInitReqError());
     }
     var id = reqFrame.id;
     var req = self.streamingReq[id];
@@ -258,7 +259,7 @@ TChannelV2Handler.prototype.handleCallRequestCont = function handleCallRequestCo
 TChannelV2Handler.prototype.handleCallResponseCont = function handleCallResponseCont(resFrame, callback) {
     var self = this;
     if (self.remoteHostPort === null) {
-        return callback(errors.TChannelCallResContBeforeInitResError());
+        return callback(errors.CallResContBeforeInitResError());
     }
     var id = resFrame.id;
     var res = self.streamingRes[id];
@@ -370,6 +371,10 @@ TChannelV2Handler.prototype.sendInitResponse = function sendInitResponse(reqFram
 
 TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame(req, flags, args) {
     var self = this;
+    if (self.remoteHostPort === null) {
+        self.errorEvent.emit(self, errors.SendCallReqBeforeIdentifiedError());
+        return;
+    }
     var reqBody = new v2.CallRequest(
         flags, req.ttl, req.tracing, req.serviceName, req.headers,
         req.checksum.type, args);
@@ -378,6 +383,10 @@ TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame
 
 TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFrame(res, flags, args) {
     var self = this;
+    if (self.remoteHostPort === null) {
+        self.errorEvent.emit(self, errors.SendCallResBeforeIdentifiedError());
+        return;
+    }
     var code = res.ok ? v2.CallResponse.Codes.OK : v2.CallResponse.Codes.Error;
     var resBody = new v2.CallResponse(
         flags, code, res.tracing, res.headers,
@@ -387,12 +396,20 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
 
 TChannelV2Handler.prototype.sendCallRequestContFrame = function sendCallRequestContFrame(req, flags, args) {
     var self = this;
+    if (self.remoteHostPort === null) {
+        self.errorEvent.emit(self, errors.SendCallReqContBeforeIdentifiedError());
+        return;
+    }
     var reqBody = new v2.CallRequestCont(flags, req.checksum.type, args);
     req.checksum = self._sendCallBodies(req.id, reqBody, req.checksum);
 };
 
 TChannelV2Handler.prototype.sendCallResponseContFrame = function sendCallResponseContFrame(res, flags, args) {
     var self = this;
+    if (self.remoteHostPort === null) {
+        self.errorEvent.emit(self, errors.SendCallResContBeforeIdentifiedError());
+        return;
+    }
     var resBody = new v2.CallResponseCont(flags, res.checksum.type, args);
     res.checksum = self._sendCallBodies(res.id, resBody, res.checksum);
 };
@@ -471,7 +488,8 @@ TChannelV2Handler.prototype.buildInRequest = function buildInRequest(reqFrame) {
         retryFlags: retryFlags,
         checksum: new v2.Checksum(reqFrame.body.csum.type),
         streamed: reqFrame.body.flags & v2.CallFlags.Fragment,
-        hostPort: self.hostPort // needed for tracing
+        hostPort: self.hostPort, // needed for tracing
+        connection: self.connection
     };
     if (opts.streamed) {
         return new StreamingInRequest(reqFrame.id, opts);
@@ -488,7 +506,8 @@ TChannelV2Handler.prototype.buildInResponse = function buildInResponse(resFrame)
         timers: self.timers,
         code: resFrame.body.code,
         checksum: new v2.Checksum(resFrame.body.csum.type),
-        streamed: resFrame.body.flags & v2.CallFlags.Fragment
+        streamed: resFrame.body.flags & v2.CallFlags.Fragment,
+        headers: resFrame.body.headers
     };
     if (opts.streamed) {
         return new StreamingInResponse(resFrame.id, opts);

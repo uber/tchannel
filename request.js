@@ -223,40 +223,13 @@ TChannelRequest.prototype.resend = function resend() {
 
     var perAttemptStart = self.timers.now();
 
-    var conn = peer.connect();
+    peer.waitForIdentified(onIdentified);
 
-    if (conn.closing) {
-        onConnectionClose(conn.closeError);
-    } else {
-        conn.closeEvent.on(onConnectionClose);
-
-        if (!peer.isConnected() && conn.handler) {
-            conn.identifiedEvent.on(onIdentified);
-            var timer = self.timers.setTimeout(onIdentifyTimeout, self.timeout - self.elapsed);
-            return;
-        } else {
-            onIdentified();
+    function onIdentified(err) {
+        if (err) {
+            return self.emitError(err);
         }
-    }
 
-    function onConnectionClose(err) {
-        conn.closeEvent.removeListener(onConnectionClose);
-        if (timer) {
-            self.timers.clearTimeout(timer);
-        }
-        self.emitError(err || errors.TChannelConnectionCloseError());
-    }
-
-    function onIdentifyTimeout() {
-        conn.closeEvent.removeListener(onConnectionClose);
-        self.checkTimeout();
-    }
-
-    function onIdentified() {
-        conn.closeEvent.removeListener(onConnectionClose);
-        if (timer) {
-            self.timers.clearTimeout(timer);
-        }
         self.onIdentified(peer, perAttemptStart);
     }
 };
@@ -379,7 +352,7 @@ TChannelRequest.prototype.checkTimeout = function checkTimeout(err, res) {
             self.emitResponse(res);
         }
     } else if (!self.err) {
-        self.emitError(errors.TimeoutError({
+        self.emitError(errors.RequestTimeoutError({
             start: self.start,
             elapsed: self.elapsed,
             timeout: self.timeout
@@ -400,24 +373,23 @@ TChannelRequest.prototype.shouldRetryError = function shouldRetryError(err) {
     }
 
     if (err) {
-        switch (err.type) {
-            case 'tchannel.bad-request':
-            case 'tchannel.canceled':
-            case 'tchannel.connection.reset':
+        var codeName = errors.classify(err);
+
+        switch (codeName) {
+            case 'BadRequest':
+            case 'Cancelled':
                 return false;
 
-            case 'tchannel.busy':
-            case 'tchannel.declined':
+            case 'Busy':
+            case 'Declined':
                 return true;
 
-            case 'tchannel.timeout':
+            case 'Timeout':
                 return !!self.options.retryFlags.onTimeout;
 
-            case 'tchannel.socket':
-            case 'tchannel.socket-closed':
-            case 'tchannel.network':
-            case 'tchannel.protocol':
-            case 'tchannel.unexpected':
+            case 'NetworkError':
+            case 'ProtocolError':
+            case 'UnexpectedError':
                 return !!self.options.retryFlags.onConnectionError;
 
             default:

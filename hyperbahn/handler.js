@@ -25,11 +25,13 @@
 var assert = require('assert');
 var util = require('util');
 
+var Errors = require('../errors.js');
 var TChannelJSON = require('../as/json');
 var TChannelEndpointHandler = require('../endpoint-handler');
 
 var MAX_RELAY_AD_ATTEMPTS = 2;
 var RELAY_AD_RETRY_TIME = 2 * 1000;
+var RELAY_AD_TIMEOUT = 500;
 
 module.exports = HyperbahnHandler;
 
@@ -58,6 +60,9 @@ function HyperbahnHandler(options) {
         self.handleAdvertise);
     self.tchannelJSON.register(self, 'relay-ad', self,
         self.handleRelayAdvertise);
+
+    self.relayAdTimeout = options.relayAdTimeout ||
+        RELAY_AD_TIMEOUT;
 }
 util.inherits(HyperbahnHandler, TChannelEndpointHandler);
 
@@ -203,20 +208,33 @@ function sendRelayAdvertise(hostPort, services, callback) {
     function tryRequest() {
         attempts++;
 
-        self.tchannelJSON.send(self.channel.request({
-            host: hostPort,
-            serviceName: 'hyperbahn'
-        }), 'relay-ad', null, {
-            services: services
-        }, onResponse);
+        self.channel.waitForIdentified({
+            host: hostPort
+        }, onIdentified);
+
+        function onIdentified(err) {
+            if (err) {
+                return onResponse(err);
+            }
+
+            self.tchannelJSON.send(self.channel.request({
+                host: hostPort,
+                serviceName: 'hyperbahn',
+                timeout: self.relayAdTimeout
+            }), 'relay-ad', null, {
+                services: services
+            }, onResponse);
+        }
 
         function onResponse(err, response) {
             if (response && response.ok) {
                 return callback(null, null);
             }
 
+            var codeName = Errors.classify(err);
+
             if (attempts <= MAX_RELAY_AD_ATTEMPTS && err &&
-                err.type === 'tchannel.socket'
+                codeName === 'NetworkError'
             ) {
                 setTimeout(tryRequest, RELAY_AD_RETRY_TIME);
             } else {
@@ -225,6 +243,7 @@ function sendRelayAdvertise(hostPort, services, callback) {
                     exitNode: hostPort,
                     services: services,
                     err: err,
+                    codeName: codeName,
                     responseBody: response && response.body
                 });
 

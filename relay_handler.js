@@ -54,7 +54,7 @@ RelayRequest.prototype.createOutRequest = function createOutRequest() {
     var elapsed = self.channel.timers.now() - self.inreq.start;
     self.outreq = self.channel.request({
         streamed: self.inreq.streamed,
-        ttl: self.inreq.ttl - elapsed,
+        timeout: self.inreq.ttl - elapsed,
         serviceName: self.inreq.serviceName,
         headers: self.inreq.headers,
         retryFlags: self.inreq.retryFlags
@@ -131,18 +131,66 @@ RelayRequest.prototype.onResponse = function onResponse(res) {
 RelayRequest.prototype.onError = function onError(err) {
     var self = this;
     if (!self.createOutResponse()) return;
-    var codeName = errors.classify(err);
-    if (codeName) {
-        self.outres.sendError(codeName, err.message);
-    } else {
-        self.outres.sendError('UnexpectedError', err.message);
-        self.channel.logger.error('unexpected error while forwarding', {
-            error: err
-            // TODO context
-        });
+    var codeName = errors.classify(err) || 'UnexpectedError';
+
+    self.outres.sendError(codeName, err.message);
+    self.logError(err, codeName);
+    // TODO: stat in some cases, e.g. declined / peer not available
+};
+
+RelayRequest.prototype.logError = function logError(err, codeName) {
+    var self = this;
+
+    var level;
+    switch (codeName) {
+        case 'ProtocolError':
+        case 'UnexpectedError':
+            level = 'error';
+            break;
+
+        case 'NetworkError':
+        case 'Cancelled':
+        case 'Declined':
+        case 'Busy':
+            level = 'warn';
+            break;
+
+        case 'BadRequest':
+        case 'Timeout':
+            level = 'info';
+            break;
+
     }
 
-    // TODO: stat in some cases, e.g. declined / peer not available
+    if (level === 'error' && err.isErrorFrame) {
+        level = 'warn';
+    }
+
+    var logger = self.channel.logger;
+    var logOptions = {
+        error: err,
+        isErrorFrame: err.isErrorFrame,
+        outRemoteAddr: self.outreq.remoteAddr,
+        inRemoteAddr: self.inreq.remoteAddr,
+        serviceName: self.outreq.serviceName,
+        outArg1: String(self.outreq.arg1)
+    };
+
+    if (err.isErrorFrame) {
+        if (level === 'warn') {
+            logger.warn('forwarding error frame', logOptions);
+        } else if (level === 'info') {
+            logger.info('forwarding expected error frame', logOptions);
+        }
+    } else {
+        if (level === 'error') {
+            logger.error('unexpected error while forwarding', logOptions);
+        } else if (level === 'warn') {
+            logger.warn('error while forwarding', logOptions);
+        } else if (level === 'info') {
+            logger.info('expected error while forwarding', logOptions);
+        }
+    }
 };
 
 function RelayHandler(channel) {
@@ -155,7 +203,10 @@ RelayHandler.prototype.type = 'tchannel.relay-handler';
 
 RelayHandler.prototype.handleRequest = function handleRequest(req, buildRes) {
     var self = this;
-    var rereq = self.reqs[req.id];
+
+    var reqKey = getReqKey(req);
+    var rereq = self.reqs[reqKey];
+
     if (rereq) {
         self.channel.logger.error('relay request already exists for incoming request', {
             inReqId: req.id,
@@ -168,12 +219,16 @@ RelayHandler.prototype.handleRequest = function handleRequest(req, buildRes) {
         return;
     }
     rereq = new RelayRequest(self.channel, req, buildRes);
-    self.reqs[req.id] = rereq;
+    self.reqs[reqKey] = rereq;
     rereq.finishEvent.on(rereqFinished);
     rereq.createOutRequest();
     function rereqFinished() {
-        delete self.reqs[req.id];
+        delete self.reqs[reqKey];
     }
 };
+
+function getReqKey(req) {
+    return req.connection.guid + '~' + req.id;
+}
 
 module.exports = RelayHandler;

@@ -45,7 +45,8 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
         random: self.channel.random,
         timers: self.channel.timers,
         hostPort: self.channel.hostPort,
-        tracer: self.tracer
+        tracer: self.tracer,
+        connection: self
     };
     // jshint forin:false
     for (var prop in self.options) {
@@ -85,7 +86,12 @@ TChannelConnection.prototype.setupSocket = function setupSocket() {
     }
 
     function onSocketClose() {
-        self.resetAll(errors.SocketClosedError({reason: 'remote clossed'}));
+        self.resetAll(errors.SocketClosedError({
+            reason: 'remote closed',
+            remoteAddr: self.remoteAddr,
+            direction: self.direction,
+            remoteName: self.remoteName
+        }));
         if (self.remoteName === '0.0.0.0:0') {
             self.channel.peers.delete(self.remoteAddr);
         }
@@ -110,7 +116,7 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     self.handler.callIncomingRequestEvent.on(onCallRequest);
     self.handler.callIncomingResponseEvent.on(onCallResponse);
     self.handler.callIncomingErrorEvent.on(onCallError);
-    self.timedOutEvent.on(self.onTimedOut);
+    self.timedOutEvent.on(onTimedOut);
 
     // TODO: restore dumping from old:
     // var stream = self.socket;
@@ -131,6 +137,10 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     // stream = stream
     //     .pipe(self.socket)
     //     ;
+
+    function onTimedOut(err) {
+        self.onTimedOut(err);
+    }
 
     function onWriteError(err) {
         self.onWriteError(err);
@@ -157,8 +167,13 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     }
 };
 
-TChannelConnection.prototype.onTimedOut = function onTimedOut(_arg, self) {
-    self.logger.warn(self.channel.hostPort + ' destroying socket from timeouts');
+TChannelConnection.prototype.onTimedOut = function onTimedOut(err) {
+    var self = this;
+
+    self.logger.warn('destroying socket from timeouts', {
+        hostPort: self.channel.hostPort
+    });
+    self.resetAll(err);
     self.socket.destroy();
 };
 
@@ -181,7 +196,7 @@ TChannelConnection.prototype.onHandlerError = function onHandlerError(err) {
 TChannelConnection.prototype.handleReadFrame = function handleReadFrame(frame) {
     var self = this;
     if (!self.closing) {
-        self.lastTimeoutTime = 0;
+        self.ops.lastTimeoutTime = 0;
     }
     self.handler.handleFrame(frame, handledFrame);
     function handledFrame(err) {
@@ -192,8 +207,8 @@ TChannelConnection.prototype.handleReadFrame = function handleReadFrame(frame) {
 TChannelConnection.prototype.onCallResponse = function onCallResponse(res) {
     var self = this;
 
-    var req = self.requests.out[res.id];
     var called = false;
+    var req = self.ops.getOutReq(res.id);
 
     if (res.state === States.Done || res.state === States.Error) {
         popOutReq();
@@ -203,14 +218,6 @@ TChannelConnection.prototype.onCallResponse = function onCallResponse(res) {
     }
 
     if (!req) {
-        self.logger.info('call response received for unknown or lost operation', {
-            responseId: res.id,
-            code: res.code,
-            arg1: Buffer.isBuffer(res.arg1) ?
-                String(res.arg1) : 'streamed-arg1',
-            remoteAddr: self.remoteAddr,
-            direction: self.direction
-        });
         return;
     }
 
@@ -230,38 +237,31 @@ TChannelConnection.prototype.onCallResponse = function onCallResponse(res) {
 
         called = true;
 
-        req = self.popOutReq(res.id);
-        if (!req) {
-            self.logger.info('full response received for unknown or lost operation', {
-                responseId: res.id,
-                code: res.code,
-                arg1: Buffer.isBuffer(res.arg1) ?
-                    String(res.arg1) : 'streamed-arg1',
-                remoteAddr: self.remoteAddr,
-                direction: self.direction
-            });
-            return;
-        }
+        self.ops.popOutReq(res.id, {
+            responseId: res.id,
+            code: res.code,
+            arg1: Buffer.isBuffer(res.arg1) ?
+                String(res.arg1) : 'streamed-arg1',
+            info: 'got call response for unknown id'
+        });
     }
 };
 
 TChannelConnection.prototype.onCallError = function onCallError(err) {
     var self = this;
 
-    var req = self.requests.out[err.originalId];
+    var req = self.ops.getOutReq(err.originalId);
 
     if (req && req.res) {
         req.res.errorEvent.emit(req.res, err);
     } else {
         // Only popOutReq if there is no call response object yet
-        req = self.popOutReq(err.originalId);
+        req = self.ops.popOutReq(err.originalId, {
+            err: err,
+            id: err.originalId,
+            info: 'got error frame for unknown id'
+        });
         if (!req) {
-            self.logger.info('error received for unknown or lost operation', {
-                err: err,
-                id: err.originalId,
-                remoteAddr: self.remoteAddr,
-                direction: self.direction
-            });
             return;
         }
 
@@ -319,7 +319,7 @@ TChannelConnection.prototype.close = function close(callback) {
         callback();
     } else {
         self.socket.once('close', callback);
-        self.resetAll(errors.SocketClosedError({reason: 'local close'}));
+        self.resetAll(errors.LocalSocketCloseError());
         self.socket.destroy();
     }
 };

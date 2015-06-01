@@ -27,8 +27,10 @@ var EventEmitter = require('./lib/event_emitter');
 
 var errors = require('./errors');
 var States = require('./reqres_states');
+var Operations = require('./operations');
 
 var DEFAULT_OUTGOING_REQ_TIMEOUT = 2000;
+var CONNECTION_BASE_IDENTIFIER = 0;
 
 function TChannelConnectionBase(channel, direction, remoteAddr) {
     assert(!channel.destroyed, 'refuse to create connection for destroyed channel');
@@ -53,101 +55,29 @@ function TChannelConnectionBase(channel, direction, remoteAddr) {
     self.timer = null;
     self.remoteName = null; // filled in by identify message
 
-    // TODO: factor out an operation collection abstraction
-    self.requests = {
-        in: {},
-        out: {}
-    };
-    self.pending = {
-        in: 0,
-        out: 0
-    };
+    self.ops = new Operations({
+        timers: self.timers,
+        logger: self.logger,
+        random: self.random,
+        initTimeout: self.channel.initTimeout,
+        timeoutCheckInterval: self.options.timeoutCheckInterval,
+        timeoutFuzz: self.options.timeoutFuzz,
+        connectionStalePeriod: self.options.connectionStalePeriod,
+        connection: self
+    });
 
-    self.lastTimeoutTime = 0;
+    self.guid = ++CONNECTION_BASE_IDENTIFIER;
 
-    self.startTimeoutTimer();
     self.tracer = self.channel.tracer;
+    self.ops.startTimeoutTimer();
 }
 inherits(TChannelConnectionBase, EventEmitter);
 
 TChannelConnectionBase.prototype.close = function close(callback) {
     var self = this;
-    self.resetAll(errors.SocketClosedError({reason: 'local close'}));
+
+    self.resetAll(errors.LocalSocketCloseError());
     callback();
-};
-
-// timeout check runs every timeoutCheckInterval +/- some random fuzz. Range is from
-//   base - fuzz/2 to base + fuzz/2
-TChannelConnectionBase.prototype.getTimeoutDelay = function getTimeoutDelay() {
-    var self = this;
-    var base = self.options.timeoutCheckInterval;
-    var fuzz = self.options.timeoutFuzz;
-    if (fuzz) {
-        fuzz = Math.round(Math.floor(self.random() * fuzz) - (fuzz / 2));
-    }
-    return base + fuzz;
-};
-
-TChannelConnectionBase.prototype.startTimeoutTimer = function startTimeoutTimer() {
-    var self = this;
-    self.timer = self.timers.setTimeout(function onChannelTimeout() {
-        // TODO: worth it to clear the fired self.timer objcet?
-        self.onTimeoutCheck();
-    }, self.getTimeoutDelay());
-};
-
-TChannelConnectionBase.prototype.clearTimeoutTimer = function clearTimeoutTimer() {
-    var self = this;
-    if (self.timer) {
-        self.timers.clearTimeout(self.timer);
-        self.timer = null;
-    }
-};
-
-// If the connection has some success and some timeouts, we should probably leave it up,
-// but if everything is timing out, then we should kill the connection.
-TChannelConnectionBase.prototype.onTimeoutCheck = function onTimeoutCheck() {
-    var self = this;
-    if (self.closing) {
-        return;
-    }
-    if (self.lastTimeoutTime) {
-        self.timedOutEvent.emit(self);
-    } else {
-        self.checkTimeout(self.requests.out, 'out');
-        self.checkTimeout(self.requests.in, 'in');
-        self.startTimeoutTimer();
-    }
-};
-
-TChannelConnectionBase.prototype.checkTimeout = function checkTimeout(ops, direction) {
-    var self = this;
-    var opKeys = Object.keys(ops);
-    for (var i = 0; i < opKeys.length; i++) {
-        var id = opKeys[i];
-        var req = ops[id];
-        if (req === undefined) {
-            self.logger.warn('unexpected undefined request', {
-                direction: direction,
-                id: id
-            });
-        } else if (req.timedOut) {
-            self.logger.warn('lingering timed-out request', {
-                direction: direction,
-                id: id
-            });
-            delete ops[id];
-            self.pending[direction]--;
-        } else if (req.checkTimeout()) {
-            if (direction === 'out') {
-                self.lastTimeoutTime = self.timers.now();
-            // } else {
-            //     req.res.sendError // XXX may need to build
-            }
-            delete ops[id];
-            self.pending[direction]--;
-        }
-    }
 };
 
 // this connection is completely broken, and is going away
@@ -156,15 +86,18 @@ TChannelConnectionBase.prototype.checkTimeout = function checkTimeout(ops, direc
 TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
     var self = this;
 
-    self.clearTimeoutTimer();
+    self.ops.destroy();
 
     if (self.closing) return;
     self.closing = true;
     self.closeError = err;
     self.closeEvent.emit(self, err);
 
-    var inOpKeys = Object.keys(self.requests.in);
-    var outOpKeys = Object.keys(self.requests.out);
+    var requests = self.ops.getRequests();
+    var pending = self.ops.getPending();
+
+    var inOpKeys = Object.keys(requests.in);
+    var outOpKeys = Object.keys(requests.out);
 
     if (!err) {
         err = new Error('unknown connection reset'); // TODO typed error
@@ -176,14 +109,17 @@ TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
         localName: self.channel.hostPort,
         numInOps: inOpKeys.length,
         numOutOps: outOpKeys.length,
-        inPending: self.pending.in,
-        outPending: self.pending.out
+        inPending: pending.in,
+        outPending: pending.out
     };
 
-    if (err.type.lastIndexOf('tchannel.socket', 0) < 0) {
+    if (err.type && err.type.lastIndexOf('tchannel.socket', 0) < 0) {
         self.logger.warn('resetting connection', logInfo);
         self.errorEvent.emit(self, err);
-    } else if (err.type !== 'tchannel.socket-closed') {
+    } else if (
+        err.type !== 'tchannel.socket-closed' &&
+        err.type !== 'tchannel.socket-local-closed'
+    ) {
         logInfo.error = extend(err);
         logInfo.error.message = err.message;
         self.logger.info('resetting connection', logInfo);
@@ -194,34 +130,33 @@ TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
     //   that once they do finish that their callback will swallow the response.
     inOpKeys.forEach(function eachInOp(id) {
         // TODO: support canceling pending handlers
-        delete self.requests.in[id];
+        self.ops.removeReq(id);
         // TODO report or handle or log errors or something
     });
 
     // for all outgoing requests, forward the triggering error to the user callback
     outOpKeys.forEach(function eachOutOp(id) {
-        var req = self.requests.out[id];
-        delete self.requests.out[id];
-        err = errors.TChannelConnectionResetError(err);
+        var req = requests.out[id];
+        self.ops.removeReq(id);
+
+        var info = {
+            remoteAddr: self.remoteAddr,
+            direction: self.direction,
+            remoteName: self.remoteName,
+            reqRemoteAddr: req.remoteAddr,
+            serviceName: req.serviceName,
+            outArg1: String(req.arg1)
+        };
+        if (err.type === 'tchannel.socket-local-closed') {
+            err = errors.TChannelLocalResetError(err, info);
+        } else {
+            err = errors.TChannelConnectionResetError(err, info);
+        }
+
         req.errorEvent.emit(req, err);
     });
 
-    self.pending.in = 0;
-    self.pending.out = 0;
-};
-
-TChannelConnectionBase.prototype.popOutReq = function popOutReq(id) {
-    var self = this;
-    var req = self.requests.out[id];
-    if (!req) {
-        // TODO else case. We should warn about an incoming response for an
-        // operation we did not send out.  This could be because of a timeout
-        // or could be because of a confused / corrupted server.
-        return;
-    }
-    delete self.requests.out[id];
-    self.pending.out--;
-    return req;
+    self.ops.clear();
 };
 
 // create a request
@@ -244,22 +179,17 @@ TChannelConnectionBase.prototype.request = function connBaseRequest(options) {
     options.tracer = self.tracer;
     var req = self.buildOutRequest(options);
 
-    return self._addOutReq(req);
-};
-
-TChannelConnectionBase.prototype._addOutReq = function _addOutReq(req) {
-    var self = this;
-    self.requests.out[req.id] = req;
-    self.pending.out++;
-    return req;
+    return self.ops.addOutReq(req);
 };
 
 TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(req) {
     var self = this;
+    
+    self.ops.addInReq(req);
+
     req.remoteAddr = self.remoteName;
-    self.pending.in++;
-    self.requests.in[req.id] = req;
     req.errorEvent.on(onReqError);
+
     process.nextTick(runHandler);
 
     function onReqError(err) {
@@ -274,7 +204,9 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
 TChannelConnectionBase.prototype.onReqError = function onReqError(req, err) {
     var self = this;
     if (!req.res) self.buildResponse(req);
-    if (err.type === 'tchannel.timeout') {
+    if (err.type === 'tchannel.timeout' ||
+        err.type === 'tchannel.request.timeout'
+    ) {
         req.res.sendError('Timeout', err.message);
     } else {
         var errName = err.name || err.constructor.name;
@@ -299,6 +231,7 @@ TChannelConnectionBase.prototype.buildResponse = function buildResponse(req, opt
         }));
     }
     req.res = self.buildOutResponse(req, options);
+    req.res.errorEvent.on(onError);
     req.res.finishEvent.on(opDone);
     req.res.spanEvent.on(handleSpanFromRes);
     return req.res;
@@ -312,20 +245,71 @@ TChannelConnectionBase.prototype.buildResponse = function buildResponse(req, opt
         done = true;
         self.onReqDone(req);
     }
+
+    function onError(err) {
+        self.onResponseError(err, req);
+    }
+};
+
+function isStringOrBuffer(x) {
+    return typeof x === 'string' || Buffer.isBuffer(x);
+}
+
+TChannelConnectionBase.prototype.onResponseError =
+function onResponseError(err, req) {
+    var self = this;
+
+    var loggingOptions = {
+        err: err,
+        arg1: String(req.arg1),
+        ok: req.res.ok,
+        type: req.res.type,
+        state: req.res.state === States.Done ? 'Done' :
+            req.res.state === States.Error ? 'Error' :
+            'Unknown'
+    };
+
+    if (req.res.state === States.Done) {
+        var arg2 = isStringOrBuffer(req.res.arg2) ?
+            req.res.arg2 : 'streaming';
+        var arg3 = isStringOrBuffer(req.res.arg3) ?
+            req.res.arg3 : 'streaming';
+
+        loggingOptions.bufArg2 = arg2.slice(0, 50);
+        loggingOptions.arg2 = String(arg2).slice(0, 50);
+        loggingOptions.bufArg3 = arg3.slice(0, 50);
+        loggingOptions.arg3 = String(arg3).slice(0, 50);
+    } else if (req.res.state === States.Error) {
+        loggingOptions.codeString = req.res.codeString;
+        loggingOptions.errMessage = req.res.message;
+    }
+
+    if ((err.type === 'tchannel.response-already-started' ||
+        err.type === 'tchannel.response-already-done') &&
+        req.timedOut
+    ) {
+        self.logger.info(
+            'error for timed out outgoing response', loggingOptions
+        );
+    } else {
+        self.logger.error(
+            'outgoing response has an error', loggingOptions
+        );
+    }
 };
 
 TChannelConnectionBase.prototype.onReqDone = function onReqDone(req) {
     var self = this;
+
+    var inreq = self.ops.popInReq(req.id);
+
     // incoming req that timed out are already cleaned up
-    if (self.requests.in[req.id] !== req && !req.timedOut) {
+    if (inreq !== req && !req.timedOut) {
         self.logger.warn('mismatched onReqDone callback', {
             hostPort: self.channel.hostPort,
-            hasInReq: self.requests.in[req.id] !== undefined,
+            hasInReq: inreq !== undefined,
             id: req.id
         });
-    } else {
-        delete self.requests.in[req.id];
-        self.pending.in--;
     }
 };
 

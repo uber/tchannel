@@ -55,6 +55,9 @@ function TChannelOutResponse(id, options) {
     self.arg2 = null;
     self.arg3 = null;
 
+    self.codeString = null;
+    self.message = null;
+
     self.finishEvent.on(self.onFinish);
 }
 
@@ -134,8 +137,17 @@ TChannelOutResponse.prototype.sendCallResponseFrame = function sendCallResponseF
             break;
         case States.Done:
         case States.Error:
+            var arg2 = args[1] || '';
+            var arg3 = args[2] || '';
+
             self.errorEvent.emit(self, errors.ResponseAlreadyDone({
-                attempted: 'call response'
+                attempted: 'call response',
+                state: self.state,
+                method: 'sendCallResponseFrame',
+                bufArg2: arg2.slice(0, 50),
+                arg2: String(arg2).slice(0, 50),
+                bufArg3: arg3.slice(0, 50),
+                arg3: String(arg3).slice(0, 50)
             }));
     }
 };
@@ -156,7 +168,9 @@ TChannelOutResponse.prototype.sendCallResponseContFrame = function sendCallRespo
         case States.Done:
         case States.Error:
             self.errorEvent.emit(self, errors.ResponseAlreadyDone({
-                attempted: 'call response continuation'
+                attempted: 'call response continuation',
+                state: self.state,
+                method: 'sendCallResponseContFrame'
             }));
     }
 };
@@ -166,13 +180,20 @@ TChannelOutResponse.prototype.sendError = function sendError(codeString, message
     if (self.state === States.Done || self.state === States.Error) {
         self.errorEvent.emit(self, errors.ResponseAlreadyDone({
             attempted: 'send error frame: ' + codeString + ': ' + message,
-            currentState: self.state
+            currentState: self.state,
+            method: 'sendError',
+            codeString: codeString,
+            errMessage: message
         }));
     } else {
         if (self.span) {
             self.span.annotate('ss');
         }
         self.state = States.Error;
+
+        self.codeString = codeString;
+        self.message = message;
+
         self._sendError(codeString, message);
         self.finishEvent.emit(self);
     }
@@ -182,7 +203,9 @@ TChannelOutResponse.prototype.setOk = function setOk(ok) {
     var self = this;
     if (self.state !== States.Initial) {
         self.errorEvent.emit(self, errors.ResponseAlreadyStarted({
-            state: self.state
+            state: self.state,
+            method: 'setOk',
+            ok: ok
         }));
     }
     self.ok = ok;
@@ -210,6 +233,10 @@ TChannelOutResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
 
 TChannelOutResponse.prototype.send = function send(res1, res2) {
     var self = this;
+
+    self.arg2 = res1;
+    self.arg3 = res2;
+
     self.sendCallResponseFrame([self.arg1, res1, res2], true);
     self.finishEvent.emit(self);
     return self;

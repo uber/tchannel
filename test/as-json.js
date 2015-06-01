@@ -49,6 +49,9 @@ allocCluster.test('getting an ok response', {
         assert.deepEqual(resp, {
             ok: true,
             head: null,
+            headers: {
+                'as': 'json'
+            },
             body: {
                 opts: {
                     isOptions: true
@@ -90,9 +93,13 @@ allocCluster.test('getting a not ok response', {
         assert.deepEqual(resp, {
             ok: false,
             head: null,
+            headers: {
+                'as': 'json'
+            },
             body: {
                 message: 'my error',
                 type: 'my-error',
+                fullType: 'my-error',
                 someField: 'some field',
                 name: 'MyErrorError'
             }
@@ -109,14 +116,10 @@ allocCluster.test('getting an UnexpectedError frame', {
     });
     var client = cluster.channels[1];
 
-    var _error = client.logger.error;
-    var messages = [];
-    client.logger.error = function error(msg) {
-        messages.push(msg);
-        if (msg !== 'Got unexpected error in handler') {
-            _error.apply(this, arguments);
-        }
-    };
+    client.logger.whitelist(
+        'error',
+        'Got unexpected error in handler'
+    );
 
     tchannelJSON.send(client.request({
         serviceName: 'server',
@@ -128,7 +131,7 @@ allocCluster.test('getting an UnexpectedError frame', {
         assert.equal(err.message, 'Unexpected Error');
 
         assert.equal(resp, undefined);
-        assert.equal(messages.length, 1);
+        assert.equal(client.logger.items().length, 1);
 
         assert.end();
     });

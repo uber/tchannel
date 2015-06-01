@@ -46,6 +46,8 @@ var TChannelServices = require('./services');
 
 var TracingAgent = require('./trace/agent');
 
+var CONN_STALE_PERIOD = 1500;
+
 // TODO restore spying
 // var Spy = require('./v2/spy');
 // var dumpEnabled = /\btchannel_dump\b/.test(process.env.NODE_DEBUG || '');
@@ -65,14 +67,16 @@ function TChannel(options) {
     self.outboundCallsSystemErrorsStat = self.defineCounter('outbound.calls.system-errors');
     self.outboundCallsOperationalErrorsStat = self.defineCounter('outbound.calls.operational-errors');
     self.outboundCallsSuccessStat = self.defineCounter('outbound.calls.success');
-    self.outboundCallsAppErrorsStat = self.defineCounter('outbound.app-errors.success');
+    self.outboundCallsAppErrorsStat = self.defineCounter('outbound.calls.app-errors');
     self.outboundCallsRetriesStat = self.defineCounter('outbound.calls.retries');
     self.outboundCallsLatencyStat = self.defineTiming('outbound.calls.latency');
     self.outboundCallsPerAttemptLatencyStat = self.defineTiming('outbound.calls.per-attempt-latency');
 
     self.options = extend({
-        timeoutCheckInterval: 1000,
+        timeoutCheckInterval: 100,
         timeoutFuzz: 100,
+        connectionStalePeriod: CONN_STALE_PERIOD,
+
         // TODO: maybe we should always add pid to user-supplied?
         processName: format('%s[%s]', process.title, process.pid)
     }, options);
@@ -87,6 +91,7 @@ function TChannel(options) {
     self.logger = self.options.logger || nullLogger;
     self.random = self.options.random || globalRandom;
     self.timers = self.options.timers || globalTimers;
+    self.initTimeout = self.options.initTimeout || 2000;
 
     // Filled in by the listen call:
     self.host = null;
@@ -363,6 +368,13 @@ TChannel.prototype.requestOptions = function requestOptions(options) {
     }
     // jshint forin:true
     return opts;
+};
+
+TChannel.prototype.waitForIdentified =
+function waitForIdentified(options, callback) {
+    var self = this;
+
+    self.peers.waitForIdentified(options, callback);
 };
 
 TChannel.prototype.request = function channelRequest(options) {
