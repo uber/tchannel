@@ -165,6 +165,8 @@ TChannelConnectionBase.prototype.request = function connBaseRequest(options) {
     if (!options) options = {};
     options.remoteAddr = self.remoteAddr;
 
+    options.channel = self.channel;
+
     // TODO: use this to protect against >4Mi outstanding messages edge case
     // (e.g. zombie operation bug, incredible throughput, or simply very long
     // timeout
