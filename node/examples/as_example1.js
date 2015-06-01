@@ -17,6 +17,9 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+'use strict';
+
+var assert = require('assert');
 
 var TChannelJSON = require('../as/json');
 var TChannel = require('../');
@@ -41,9 +44,12 @@ function echo(context, req, head, body, callback) {
 server.listen(4040, '127.0.0.1', onListening);
 
 function onListening() {
-    tchannelJSON.send(client.request({
+    client.makeSubChannel({
         serviceName: 'server',
-        host: '127.0.0.1:4040'
+        peers: [server.hostPort]
+    });
+    tchannelJSON.send(client.request({
+        serviceName: 'server'
     }), 'echo', {
         head: 'object'
     }, {
@@ -54,6 +60,7 @@ function onListening() {
         if (err) {
             console.log('got error', err);
         } else {
+            assert.equal(resp.ok, true);
             console.log('got resp', resp);
         }
 

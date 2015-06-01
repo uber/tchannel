@@ -67,6 +67,9 @@ function exec(req, buildRes) {
         });
         req.arg3.pipe(kid.stdin);
         kid.stdout.pipe(res.arg3);
+        req.arg3.on('end', function() {
+            res.arg3.end();
+        });
         // kid.stderr.pipe(res.arg3);
     });
 }
@@ -110,6 +113,15 @@ function echo(req, buildRes) {
     var res = buildRes({streamed: true});
     res.setOk(true);
     console.log('echo', req.id);
-    req.arg2.pipe(res.arg2);
-    req.arg3.pipe(res.arg3);
+    req.arg2.onValueReady(function(err, value) {
+        setImmediate(function end() {
+            res.arg2.end(value);
+        });
+    });
+
+    req.arg3.onValueReady(function(err, value) {
+        setImmediate(function end() {
+            res.arg3.end();
+        });
+    });
 }

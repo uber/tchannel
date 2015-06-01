@@ -17,12 +17,16 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+'use strict';
+
+var assert = require('assert');
 
 var TChannel = require('../channel.js');
 var EndpointHandler = require('../endpoint-handler.js');
 var CountedReadySignal = require('ready-signal/counted');
 
 var server = new TChannel({
+    serviceName: 'server',
     handler: EndpointHandler()
 });
 var client = new TChannel();
@@ -45,19 +49,41 @@ var listening = ready(function (err) {
         throw err;
     }
 
-    client
-        .request({host: '127.0.0.1:4040'})
-        .send('func1', "arg 1", "arg 2", function (err, res) {
-            console.log('normal res: ' + res.arg2.toString() + ' ' + res.arg3.toString());
-        });
-    client
-        .request({host: '127.0.0.1:4040'})
-        .send('func2', "arg 1", "arg 2", function (err, res) {
-            console.log('err res: ' + res.ok +
-                ' message: ' + String(res.arg3));
-        });
+    client.makeSubChannel({
+        serviceName: 'server',
+        peers: [server.hostPort]
+    });
 
+    client
+        .request({serviceName: 'server'})
+        .send('func1', "arg 1", "arg 2", function (err, res) {
+            if (err) {
+                done(err);
+            } else {
+                assert.equal(res.ok, true);
+                console.log('normal res: ' + res.arg2.toString() + ' ' + res.arg3.toString());
+                done();
+            }
+        });
+    client
+        .request({serviceName: 'server'})
+        .send('func2', "arg 1", "arg 2", function (err, res) {
+            if (err) {
+                done(err);
+            } else {
+                assert.equal(res.ok, false);
+                console.log('err res: ' + res.ok + ' message: ' + String(res.arg3));
+            }
+        });
 });
+
+function done(err) {
+    server.close();
+    client.close();
+    if (err) {
+        throw err;
+    }
+}
 
 server.listen(4040, '127.0.0.1', ready.signal);
 client.listen(4041, '127.0.0.1', ready.signal);

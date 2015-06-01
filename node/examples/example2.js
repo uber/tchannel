@@ -17,6 +17,9 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+'use strict';
+
+var assert = require('assert');
 
 var TChannel = require('../channel.js');
 var EndpointHandler = require('../endpoint-handler.js');
@@ -25,6 +28,7 @@ var CountedReadySignal = require('ready-signal/counted');
 var async = require('async');
 
 var server = new TChannel({
+    serviceName: 'server',
     handler: EndpointHandler()
 });
 var client = new TChannel({
@@ -50,24 +54,45 @@ var listening = ready(function (err) {
 
     async.series([
         function pingOne(done) {
+            client.makeSubChannel({
+                serviceName: 'server',
+                peers: [server.hostPort]
+            });
+
             client
-                .request({host: '127.0.0.1:4040'})
+                .request({serviceName: 'server'})
                 .send('ping', null, null, function (err, res) {
-                    console.log('ping res from client: ' + res.arg2 + ' ' + res.arg3);
-                    done();
+                    if (err) {
+                        done(err);
+                    } else {
+                        assert.equal(res.ok, true);
+                        console.log('ping res from client: ' + res.arg2 + ' ' + res.arg3);
+                        done();
+                    }
                 });
         },
 
         function pingTwo(done) {
             server
-                .request({host: '127.0.0.1:4041'})
+                .request(client.hostPort)
                 .send('ping', null, null, function (err, res) {
-                    console.log('ping res server: ' + res.arg2 + ' ' + res.arg3);
-                    done();
+                    if (err) {
+                        done(err);
+                    } else {
+                        assert.equal(res.ok, true);
+                        console.log('ping res server: ' + res.arg2 + ' ' + res.arg3);
+                        done();
+                    }
                 });
         }
 
-    ], function() {});
+    ], function done(error) {
+        server.close();
+        client.close();
+        if (error) {
+            throw error;
+        }
+    });
 });
 
 server.listen(4040, '127.0.0.1', ready.signal);
