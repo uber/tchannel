@@ -62,10 +62,13 @@ var listening = ready(function (err) {
             client
                 .request({serviceName: 'server'})
                 .send('ping', null, null, function (err, res) {
-                    assert.ifError(err);
-                    assert.equal(res.ok, true);
-                    console.log('ping res from client: ' + res.arg2 + ' ' + res.arg3);
-                    done();
+                    if (err) {
+                        done(err);
+                    } else {
+                        assert.equal(res.ok, true);
+                        console.log('ping res from client: ' + res.arg2 + ' ' + res.arg3);
+                        done();
+                    }
                 });
         },
 
@@ -73,16 +76,22 @@ var listening = ready(function (err) {
             server
                 .request(client.hostPort)
                 .send('ping', null, null, function (err, res) {
-                    assert.ifError(err);
-                    assert.equal(res.ok, true);
-                    console.log('ping res server: ' + res.arg2 + ' ' + res.arg3);
-                    done();
+                    if (err) {
+                        done(err);
+                    } else {
+                        assert.equal(res.ok, true);
+                        console.log('ping res server: ' + res.arg2 + ' ' + res.arg3);
+                        done();
+                    }
                 });
         }
 
-    ], function done() {
+    ], function done(error) {
         server.close();
         client.close();
+        if (error) {
+            throw error;
+        }
     });
 });
 
