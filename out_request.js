@@ -20,6 +20,7 @@
 
 'use strict';
 
+var assert = require('assert');
 var EventEmitter = require('./lib/event_emitter');
 var inherits = require('util').inherits;
 var parallel = require('run-parallel');
@@ -35,9 +36,14 @@ function TChannelOutRequest(id, options) {
     self.responseEvent = self.defineEvent('response');
     self.finishEvent = self.defineEvent('finish');
 
+    assert(options.channel, 'channel required');
+
     self.logger = options.logger;
     self.random = options.random;
     self.timers = options.timers;
+    self.retryCount = options.retryCount;
+    self.channel = options.channel;
+    self.logical = !!options.logical;
 
     self.start = 0;
     self.end = 0;
@@ -107,12 +113,111 @@ TChannelOutRequest.prototype._sendCallRequestCont = function _sendCallRequestCon
 TChannelOutRequest.prototype.onError = function onError(err, self) {
     if (!self.end) self.end = self.timers.now();
     self.err = err;
+    self.emitPerAttemptLatency();
+
+    if (self.logical === false) {
+        self.emitErrorStat(err);
+        self.emitLatency();
+    }
 };
 
 TChannelOutRequest.prototype.onResponse = function onResponse(res, self) {
     if (!self.end) self.end = self.timers.now();
     self.res = res;
     self.res.span = self.span;
+    self.emitPerAttemptLatency();
+
+    if (self.logical === false) {
+        self.emitResponseStat(res);
+        self.emitLatency();
+    }
+};
+
+
+TChannelOutRequest.prototype.emitErrorStat =
+function emitErrorStat(err) {
+    var self = this;
+
+    if (err.isErrorFrame) {
+        self.channel.outboundCallsSystemErrorsStat.increment(1, {
+            'target-service': self.serviceName,
+            'service': self.headers.cn,
+            // TODO should always be buffer
+            'target-endpoint': String(self.arg1),
+            'type': err.codeName
+        });
+    } else {
+        self.channel.outboundCallsOperationalErrorsStat.increment(1, {
+            'target-service': self.serviceName,
+            'service': self.headers.cn,
+            // TODO should always be buffer
+            'target-endpoint': String(self.arg1),
+            'type': err.type || 'unknown'
+        });
+    }
+};
+
+TChannelOutRequest.prototype.emitResponseStat =
+function emitResponseStat(res) {
+    var self = this;
+
+    if (res.ok) {
+        self.channel.outboundCallsSuccessStat.increment(1, {
+            'target-service': self.serviceName,
+            'service': self.headers.cn,
+            // TODO should always be buffer
+            'target-endpoint': String(self.arg1)
+        });
+    } else {
+        self.channel.outboundCallsAppErrorsStat.increment(1, {
+            'target-service': self.serviceName,
+            'service': self.headers.cn,
+            // TODO should always be buffer
+            'target-endpoint': String(self.arg1),
+            // TODO define transport header
+            // for application error type
+            'type': 'unknown'
+        });
+    }
+};
+
+TChannelOutRequest.prototype.emitPerAttemptLatency =
+function emitPerAttemptLatency() {
+    var self = this;
+
+    var latency = self.end - self.start;
+    self.channel.outboundCallsPerAttemptLatencyStat.add(latency, {
+        'target-service': self.serviceName,
+        'service': self.headers.cn,
+        // TODO should always be buffer
+        'target-endpoint': String(self.arg1),
+        'peer': self.remoteAddr,
+        'retry-count': self.retryCount
+    });
+};
+
+TChannelOutRequest.prototype.emitLatency = function emitLatency() {
+    var self = this;
+
+    var latency = self.end - self.start;
+    self.channel.outboundCallsLatencyStat.add(latency, {
+        'target-service': self.serviceName,
+        'service': self.headers.cn,
+        // TODO should always be buffer
+        'target-endpoint': String(self.arg1)
+    });
+};
+
+TChannelOutRequest.prototype.emitError = function emitError(err) {
+    var self = this;
+
+    self.errorEvent.emit(self, err);
+};
+
+TChannelOutRequest.prototype.emitResponse = function emitResponse(res) {
+    var self = this;
+
+    self.responseEvent.emit(self, res);
 };
 
 TChannelOutRequest.prototype.sendParts = function sendParts(parts, isLast) {
@@ -127,7 +232,7 @@ TChannelOutRequest.prototype.sendParts = function sendParts(parts, isLast) {
         case States.Done:
             // TODO: could probably happen normally, like say if a
             // streaming request is canceled
-            self.errorEvent.emit(self, errors.RequestFrameState({
+            self.emitError(errors.RequestFrameState({
                 attempted: 'arg parts',
                 state: 'Done'
             }));
@@ -151,13 +256,13 @@ TChannelOutRequest.prototype.sendCallRequestFrame = function sendCallRequestFram
             else self.state = States.Streaming;
             break;
         case States.Streaming:
-            self.errorEvent.emit(self, errors.RequestFrameState({
+            self.emitError(errors.RequestFrameState({
                 attempted: 'call request',
                 state: 'Streaming'
             }));
             break;
         case States.Done:
-            self.errorEvent.emit(self, errors.RequestAlreadyDone({
+            self.emitError(errors.RequestAlreadyDone({
                 attempted: 'call request'
             }));
             break;
@@ -168,7 +273,7 @@ TChannelOutRequest.prototype.sendCallRequestContFrame = function sendCallRequest
     var self = this;
     switch (self.state) {
         case States.Initial:
-            self.errorEvent.emit(self, errors.RequestFrameState({
+            self.emitError(errors.RequestFrameState({
                 attempted: 'call request continuation',
                 state: 'Initial'
             }));
@@ -178,7 +283,7 @@ TChannelOutRequest.prototype.sendCallRequestContFrame = function sendCallRequest
             if (isLast) self.state = States.Done;
             break;
         case States.Done:
-            self.errorEvent.emit(self, errors.RequestAlreadyDone({
+            self.emitError(errors.RequestAlreadyDone({
                 attempted: 'call request continuation'
             }));
             break;
@@ -188,10 +293,27 @@ TChannelOutRequest.prototype.sendCallRequestContFrame = function sendCallRequest
 TChannelOutRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     var self = this;
 
+    var endpoint = String(arg1);
+
     if (self.span) {
-        self.span.name = String(arg1);
+        self.span.name = endpoint;
     }
+
+    if (self.retryCount === 0) {
+        self.channel.outboundCallsSentStat.increment(1, {
+            'target-service': self.serviceName,
+            'service': self.headers.cn,
+            // TODO should always be buffer
+            'target-endpoint': endpoint
+        });
+    }
+
     if (callback) self.hookupCallback(callback);
+
+    self.arg1 = arg1;
+    self.arg2 = arg2;
+    self.arg3 = arg3;
+
     self.sendCallRequestFrame([arg1, arg2, arg3], true);
     self.finishEvent.emit(self);
     return self;
@@ -263,7 +385,7 @@ TChannelOutRequest.prototype.checkTimeout = function checkTimeout() {
             self.end = now;
             self.timedOut = true;
             process.nextTick(function deferOutReqTimeoutErrorEmit() {
-                self.errorEvent.emit(self, errors.RequestTimeoutError({
+                self.emitError(errors.RequestTimeoutError({
                     id: self.id,
                     start: self.start,
                     elapsed: elapsed,

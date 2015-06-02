@@ -93,7 +93,7 @@ function passError(codeString, message) {
     process.nextTick(emitError);
 
     function emitError() {
-        self.inreq.outreq.errorEvent.emit(self, err);
+        self.inreq.outreq.errorEvent.emit(self.inreq.outreq, err);
     }
 };
 

@@ -404,6 +404,7 @@ TChannel.prototype.request = function channelRequest(options) {
     if (opts.host || // retries are only between hosts
         opts.streamed // streaming retries not yet implemented
     ) {
+        opts.retryCount = 0;
         req = self.peers.request(null, opts);
     } else {
         req = new TChannelRequest(self, opts);

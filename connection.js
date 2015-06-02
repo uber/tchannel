@@ -228,7 +228,7 @@ TChannelConnection.prototype.onCallResponse = function onCallResponse(res) {
         res.span = req.span;
     }
 
-    req.responseEvent.emit(req, res);
+    req.emitResponse(res);
 
     function popOutReq() {
         if (called) {
