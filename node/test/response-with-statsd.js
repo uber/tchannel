@@ -78,17 +78,17 @@ allocCluster.test('emits stats on response ok', {
             delta: 1,
             time: null
         }, {
-            type: 'ms',
-            name: 'tchannel.inbound.calls.latency.inPipe.reservoir.Reservoir--get',
-            value: null,
-            delta: null,
-            time: 500
-        }, {
             type: 'c',
             name: 'tchannel.inbound.calls.success.inPipe.reservoir.Reservoir--get',
             value: null,
             delta: 1,
             time: null
+        }, {
+            type: 'ms',
+            name: 'tchannel.inbound.calls.latency.inPipe.reservoir.Reservoir--get',
+            value: null,
+            delta: null,
+            time: 500
         }], 'stats keys/values as expected');
 
         assert.end();
@@ -145,17 +145,17 @@ allocCluster.test('emits stats on response not ok', {
             delta: 1,
             time: null
         }, {
-            type: 'ms',
-            name: 'tchannel.inbound.calls.latency.inPipe.reservoir.Reservoir--get',
-            value: null,
-            delta: null,
-            time: 500
-        }, {
             type: 'c',
             name: 'tchannel.inbound.calls.app-errors.inPipe.reservoir.Reservoir--get.unknown',
             value: null,
             delta: 1,
             time: null
+        }, {
+            type: 'ms',
+            name: 'tchannel.inbound.calls.latency.inPipe.reservoir.Reservoir--get',
+            value: null,
+            delta: null,
+            time: 500
         }], 'stats keys/values as expected');
 
         assert.end();
@@ -210,17 +210,17 @@ allocCluster.test('emits stats on response error', {
             delta: 1,
             time: null
         }, {
-            type: 'ms',
-            name: 'tchannel.inbound.calls.latency.inPipe.reservoir.Reservoir--get',
-            value: null,
-            delta: null,
-            time: 500
-        }, {
             type: 'c',
             name: 'tchannel.inbound.calls.system-errors.inPipe.reservoir.Reservoir--get.ProtocolError',
             value: null,
             delta: 1,
             time: null
+        }, {
+            type: 'ms',
+            name: 'tchannel.inbound.calls.latency.inPipe.reservoir.Reservoir--get',
+            value: null,
+            delta: null,
+            time: 500
         }], 'stats keys/values as expected');
 
         assert.end();
