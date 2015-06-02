@@ -34,6 +34,8 @@ function TChannelOutResponse(id, options) {
     self.spanEvent = self.defineEvent('span');
     self.finishEvent = self.defineEvent('finish');
 
+    self.channel = options.channel;
+    self.inreq = options.inreq;
     self.logger = options.logger;
     self.random = options.random;
     self.timers = options.timers;
@@ -91,6 +93,12 @@ TChannelOutResponse.prototype._sendError = function _sendError(codeString, messa
 
 TChannelOutResponse.prototype.onFinish = function onFinish(_arg, self) {
     if (!self.end) self.end = self.timers.now();
+    var latency = self.end - self.inreq.start;
+    self.channel.inboundCallsLatencyStat.add(latency, {
+        'calling-service': self.inreq.headers.cn,
+        'service': self.inreq.serviceName,
+        'endpoint': String(self.inreq.arg1)
+    });
     if (self.span) {
         self.spanEvent.emit(self, self.span);
     }
@@ -113,6 +121,11 @@ TChannelOutResponse.prototype.sendParts = function sendParts(parts, isLast) {
             break;
         case States.Error:
             // TODO: log warn
+            break;
+        default:
+            self.channel.logger.error('TChannelOutResponse is in a wrong state', {
+                state: self.state
+            });
             break;
     }
 };
@@ -193,7 +206,12 @@ TChannelOutResponse.prototype.sendError = function sendError(codeString, message
 
         self.codeString = codeString;
         self.message = message;
-
+        self.channel.inboundCallsSystemErrorsStat.increment(1, {
+            'calling-service': self.inreq.headers.cn,
+            'service': self.inreq.serviceName,
+            'endpoint': String(self.inreq.arg1),
+            'type': self.codeString
+        });
         self._sendError(codeString, message);
         self.finishEvent.emit(self);
     }
@@ -236,6 +254,23 @@ TChannelOutResponse.prototype.send = function send(res1, res2) {
 
     self.arg2 = res1;
     self.arg3 = res2;
+
+    if (self.ok) {
+        self.channel.inboundCallsSuccessStat.increment(1, {
+            'calling-service': self.inreq.headers.cn,
+            'service': self.inreq.serviceName,
+            'endpoint': String(self.inreq.arg1)
+        });
+    } else {
+        // TODO: add outResponse.setErrorType()
+        var type = 'unknown';
+        self.channel.inboundCallsAppErrorsStat.increment(1, {
+            'calling-service': self.inreq.headers.cn,
+            'service': self.inreq.serviceName,
+            'endpoint': String(self.inreq.arg1),
+            'type': type
+        });
+    }
 
     self.sendCallResponseFrame([self.arg1, res1, res2], true);
     self.finishEvent.emit(self);
