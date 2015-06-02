@@ -24,7 +24,6 @@ var OutRequest = require('./self_out_request').OutRequest;
 var OutResponse = require('./self_out_response').OutResponse;
 var StreamingOutRequest = require('./self_out_request').StreamingOutRequest;
 var StreamingOutResponse = require('./self_out_response').StreamingOutResponse;
-var v2 = require('./v2/index');
 
 var inherits = require('util').inherits;
 
@@ -80,9 +79,8 @@ TChannelSelfConnection.prototype.buildOutResponse = function buildOutResponse(in
 TChannelSelfConnection.prototype.ping = function ping() {
     var self = this;
     var id = self.idCount++;
-    var body = new v2.PingResponse();
-    var res = new v2.Frame(id, body);
-    self.handlePingResponse(res);
+    // TODO: explicit type
+    self.pingResponseEvent.emit(self, {id: id});
 };
 
 module.exports = TChannelSelfConnection;

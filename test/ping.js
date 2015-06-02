@@ -18,49 +18,35 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-/* jshint maxparams:5 */
-
 'use strict';
 
-var tape = require('tape');
-var TChannel = require('../channel.js');
-var Ping = require('../v2/ping.js');
+var allocCluster = require('./lib/alloc-cluster.js');
 
-tape('ping with a remote connection', function (assert) {
-
-    var client = new TChannel();
-    var server = new TChannel();
-
-    server.listen(0, '127.0.0.1', function onListen() {
-
-        var peer = client.peers.choosePeer(null, {host: server.hostPort});
-        var conn = peer.connect();
-        conn.pingResponseEvent.on(function onResponse(res) {
-            assert.equals(res.type, Ping.Response.TypeCode,
-                'validate ping response');
-            server.close();
-            assert.end();
-        });
-
-        conn.ping();
+allocCluster.test('ping with a remote connection', 2, function t(cluster, assert) {
+    var client = cluster.channels[0];
+    var server = cluster.channels[1];
+    var peer = client.peers.choosePeer(null, {host: server.hostPort});
+    var conn = peer.connect();
+    conn.pingResponseEvent.on(function onResponse(res) {
+        assert.equals(res.id, conn.handler.lastSentFrameId,
+            'validate ping response id');
+        server.close();
+        assert.end();
     });
+
+    conn.ping();
 });
 
-tape('ping with a self connection', function (assert) {
-
-    var server = new TChannel();
-
-    server.listen(0, '127.0.0.1', function onListen() {
-
-        var peer = server.peers.choosePeer(null, {host: server.hostPort});
-        var conn = peer.connect();
-        conn.pingResponseEvent.on(function onRequest(res) {
-            assert.equals(res.type, Ping.Response.TypeCode,
-                'validate ping response');
-            server.close();
-            assert.end();
-        });
-
-        conn.ping();
+allocCluster.test('ping with a self connection', 1, function t(cluster, assert) {
+    var server = cluster.channels[0];
+    var peer = server.peers.choosePeer(null, {host: server.hostPort});
+    var conn = peer.connect();
+    conn.pingResponseEvent.on(function onResponse(res) {
+        assert.equals(res.id, conn.idCount - 1,
+            'validate ping response id');
+        server.close();
+        assert.end();
     });
+
+    conn.ping();
 });

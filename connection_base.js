@@ -204,12 +204,6 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
     }
 };
 
-TChannelConnectionBase.prototype.handlePingResponse =
-function handlePingResponse(res) {
-    var self = this;
-    self.pingResponseEvent.emit(self, res);
-};
-
 TChannelConnectionBase.prototype.onReqError = function onReqError(req, err) {
     var self = this;
     if (!req.res) self.buildResponse(req);

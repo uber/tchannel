@@ -198,6 +198,12 @@ TChannelConnection.prototype.onHandlerError = function onHandlerError(err) {
     self.socket.destroy();
 };
 
+TChannelConnectionBase.prototype.handlePingResponse = function handlePingResponse(resFrame) {
+    var self = this;
+    // TODO: explicit type
+    self.pingResponseEvent.emit(self, {id: resFrame.id});
+};
+
 TChannelConnection.prototype.handleReadFrame = function handleReadFrame(frame) {
     var self = this;
     if (!self.closing) {
