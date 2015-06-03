@@ -56,11 +56,8 @@ type BytesInput []byte
 // ReadFrom fills in the byte slice from the input stream
 func (in *BytesInput) ReadFrom(r io.Reader) error {
 	var err error
-	if *in, err = ioutil.ReadAll(r); err != nil && err != io.EOF {
-		return err
-	}
-
-	return nil
+	*in, err = ioutil.ReadAll(r)
+	return err
 }
 
 // StreamingOutput streams the contents of the given io.Reader
@@ -73,10 +70,8 @@ func NewStreamingOutput(r io.Reader) Output { return StreamingOutput{r} }
 
 // WriteTo streams the contents of the io.Reader to the output
 func (out StreamingOutput) WriteTo(w io.Writer) error {
-	if _, err := io.Copy(w, out.r); err != nil && err != io.EOF {
-		return err
-	}
-	return nil
+	_, err := io.Copy(w, out.r)
+	return err
 }
 
 // StreamingInput streams the contents of the argument to the given io.Writer

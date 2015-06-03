@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"testing/iotest"
 )
 
 type testObject struct {
@@ -34,7 +35,7 @@ type testObject struct {
 
 func TestStreamingInputOutput(t *testing.T) {
 	b := []byte("This is a pseudo-streamed value")
-	r := bytes.NewReader(b)
+	r := iotest.OneByteReader(bytes.NewReader(b))
 
 	var buffer bytes.Buffer
 	var w bytes.Buffer
