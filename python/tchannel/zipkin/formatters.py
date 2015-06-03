@@ -34,6 +34,7 @@
 from __future__ import absolute_import
 
 import base64
+import ctypes
 import socket
 import struct
 
@@ -97,6 +98,8 @@ def json_formatter(traces, *json_args, **json_kwargs):
 
 
 def ipv4_to_int(ipv4):
+    if ipv4 == 'localhost':
+        ipv4 = '127.0.0.1'
     return struct.unpack('!i', socket.inet_aton(ipv4))[0]
 
 
@@ -130,7 +133,7 @@ def binary_annotation_formatter(annotation, host=None):
     )
 
 
-def base64_thrift_formatter(trace, annotations):
+def thrift_formatter(trace, annotations, isbased64=False):
     thrift_annotations = []
     binary_annotations = []
 
@@ -143,6 +146,9 @@ def base64_thrift_formatter(trace, annotations):
                 port=endpoint.port,
                 service_name=endpoint.service_name,
             )
+
+        # convert port to range i16 (-32768 to 32767)
+        host.port = ctypes.c_int16(host.port).value
 
         if annotation.annotation_type == 'timestamp':
             thrift_annotations.append(ttypes.Annotation(
@@ -159,7 +165,10 @@ def base64_thrift_formatter(trace, annotations):
         id=trace.span_id,
         parent_id=trace.parent_span_id,
         annotations=thrift_annotations,
-        # disable binary_annotation
-        # binary_annotations=binary_annotations
+        binary_annotations=binary_annotations
     )
-    return base64_thrift(thrift_trace)
+
+    if isbased64:
+        return base64_thrift(thrift_trace)
+    else:
+        return thrift_trace

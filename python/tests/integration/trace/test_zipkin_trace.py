@@ -107,4 +107,3 @@ def test_zipkin_trace(trace_server):
             span_id = trace[0][u'span_id']
 
     assert parent_span_id == span_id
-    pass
