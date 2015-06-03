@@ -115,6 +115,7 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     self.handler.errorEvent.on(onHandlerError);
     self.handler.callIncomingRequestEvent.on(onCallRequest);
     self.handler.callIncomingResponseEvent.on(onCallResponse);
+    self.handler.pingIncomingResponseEvent.on(onPingResponse);
     self.handler.callIncomingErrorEvent.on(onCallError);
     self.timedOutEvent.on(onTimedOut);
 
@@ -162,6 +163,10 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
         self.onCallResponse(res);
     }
 
+    function onPingResponse(res) {
+        self.handlePingResponse(res);
+    }
+
     function onCallError(err) {
         self.onCallError(err);
     }
@@ -191,6 +196,12 @@ TChannelConnection.prototype.onHandlerError = function onHandlerError(err) {
     self.resetAll(err);
     // resetAll() does not close the socket
     self.socket.destroy();
+};
+
+TChannelConnectionBase.prototype.handlePingResponse = function handlePingResponse(resFrame) {
+    var self = this;
+    // TODO: explicit type
+    self.pingResponseEvent.emit(self, {id: resFrame.id});
 };
 
 TChannelConnection.prototype.handleReadFrame = function handleReadFrame(frame) {
@@ -245,6 +256,11 @@ TChannelConnection.prototype.onCallResponse = function onCallResponse(res) {
             info: 'got call response for unknown id'
         });
     }
+};
+
+TChannelConnection.prototype.ping = function ping() {
+    var self = this;
+    return self.handler.sendPingRequest();
 };
 
 TChannelConnection.prototype.onCallError = function onCallError(err) {

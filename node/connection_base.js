@@ -40,6 +40,7 @@ function TChannelConnectionBase(channel, direction, remoteAddr) {
     self.errorEvent = self.defineEvent('error');
     self.timedOutEvent = self.defineEvent('timedOut');
     self.spanEvent = self.defineEvent('span');
+    self.pingResponseEvent = self.defineEvent('pingResonse');
 
     self.closing = false;
     self.closeError = null;

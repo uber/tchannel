@@ -20,33 +20,33 @@
 
 'use strict';
 
-require('./errors');
-require('./event_emitter.js');
-require('./argstream.js');
-require('./safe-quit.js');
-require('./timeouts.js');
-require('./send.js');
-require('./retry.js');
-require('./relay.js');
-require('./streaming.js');
-require('./streaming_bisect.js');
-require('./register.js');
-require('./identify.js');
-require('./max_pending.js');
-require('./tchannel.js');
-require('./regression-inOps-leak.js');
-require('./v2/index.js');
-require('./regression-listening-on-used-port.js');
-require('./as-thrift.js');
-require('./as-json.js');
-require('./as-http.js');
-require('./peers.js');
-require('./peer_states.js');
-require('./trace/');
-require('./request-stats.js');
-require('./streaming-resp-err.js');
-require('./double-response.js');
-require('./request-with-statsd.js');
-require('./response-stats.js');
-require('./response-with-statsd.js');
-require('./ping.js');
+var allocCluster = require('./lib/alloc-cluster.js');
+
+allocCluster.test('ping with a remote connection', 2, function t(cluster, assert) {
+    var client = cluster.channels[0];
+    var server = cluster.channels[1];
+    var peer = client.peers.choosePeer(null, {host: server.hostPort});
+    var conn = peer.connect();
+    conn.pingResponseEvent.on(function onResponse(res) {
+        assert.equals(res.id, conn.handler.lastSentFrameId,
+            'validate ping response id');
+        server.close();
+        assert.end();
+    });
+
+    conn.ping();
+});
+
+allocCluster.test('ping with a self connection', 1, function t(cluster, assert) {
+    var server = cluster.channels[0];
+    var peer = server.peers.choosePeer(null, {host: server.hostPort});
+    var conn = peer.connect();
+    conn.pingResponseEvent.on(function onResponse(res) {
+        assert.equals(res.id, conn.idCount - 1,
+            'validate ping response id');
+        server.close();
+        assert.end();
+    });
+
+    conn.ping();
+});
