@@ -67,7 +67,7 @@ function TChannelOutRequest(id, options) {
         self.span = options.tracer.setupNewSpan({
             outgoing: true,
             parentSpan: options.parentSpan,
-            topLevelRequest: options.topLevelRequest,
+            hasNoParent: options.hasNoParent,
             spanid: null,
             traceid: null,
             parentid: null,

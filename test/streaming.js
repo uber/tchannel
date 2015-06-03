@@ -97,7 +97,7 @@ function partsTest(testCase, assert) {
     return function runSendTest(callback) {
         var options = extend({
             streamed: true,
-            topLevelRequest: true
+            hasNoParent: true
         }, testCase.opts);
 
         var peer = testCase.channel.peers.choosePeer(null, options);

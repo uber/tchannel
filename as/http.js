@@ -168,7 +168,7 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
 
     var options = tchannel.requestOptions({
         streamed: true,
-        topLevelRequest: true
+        hasNoParent: true
     });
     var peer = tchannel.peers.choosePeer(null, options);
     if (!peer) {

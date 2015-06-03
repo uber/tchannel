@@ -333,7 +333,7 @@ allocCluster.test('self send() with error frame', 1, function t(cluster, assert)
 
     subOne.request({
         host: one.hostPort,
-        topLevelRequest: true
+        hasNoParent: true
     }).send('foo', '', '', onResponse);
 
     function onResponse(err) {
@@ -365,7 +365,7 @@ function randSeq(seq) {
 function sendTest(testCase, assert) {
     return function runSendTest(callback) {
         testCase.opts = testCase.opts || {};
-        testCase.opts.topLevelRequest = true;
+        testCase.opts.hasNoParent = true;
 
         testCase.channel
             .request(testCase.opts)

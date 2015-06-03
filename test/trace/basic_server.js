@@ -110,7 +110,7 @@ test('basic tracing test', function (assert) {
         var req = clientChan.request({
             host: '127.0.0.1:4040',
             serviceName: 'server',
-            topLevelRequest: true,
+            hasNoParent: true,
             trace: true
         });
         var peers = client.peers.values();

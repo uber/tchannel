@@ -47,7 +47,7 @@ allocCluster.test('requests will timeout', {
     twoSub
         .request({
             serviceName: 'server',
-            topLevelRequest: true,
+            hasNoParent: true,
             timeout: 1000
         })
         .send('/normal-proxy', 'h', 'b', onResp);
@@ -61,7 +61,7 @@ allocCluster.test('requests will timeout', {
         twoSub
             .request({
                 serviceName: 'server',
-                topLevelRequest: true,
+                hasNoParent: true,
                 timeout: 1000
             })
             .send('/timeout', 'h', 'b', onTimeout);

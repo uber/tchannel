@@ -92,10 +92,10 @@ Agent.prototype.setupNewSpan = function setupNewSpan(options) {
     });
 
     var parentSpan = options.parentSpan;
-    if (options.outgoing && !parentSpan && !options.topLevelRequest) {
+    if (options.outgoing && !parentSpan && !options.hasNoParent) {
         throw errors.ParentSpanRequired({
             parentSpan: parentSpan,
-            topLevelRequest: options.topLevelRequest
+            hasNoParent: options.hasNoParent
         });
     }
 

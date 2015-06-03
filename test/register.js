@@ -220,7 +220,7 @@ allocCluster.test('register() with different results', {
 });
 
 function sendCall(channel, opts, op, cb) {
-    opts.topLevelRequest = true;
+    opts.hasNoParent = true;
 
     channel
         .request(opts)
