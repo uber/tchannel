@@ -260,7 +260,7 @@ TChannelConnection.prototype.onCallResponse = function onCallResponse(res) {
 
 TChannelConnection.prototype.ping = function ping() {
     var self = this;
-    self.handler.sendPingRequest();
+    return self.handler.sendPingRequest();
 };
 
 TChannelConnection.prototype.onCallError = function onCallError(err) {
