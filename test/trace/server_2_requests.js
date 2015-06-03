@@ -85,7 +85,7 @@ test('basic tracing test', function (assert) {
                 .request({
                     host: '127.0.0.1:4042',
                     serviceName: 'subservice',
-                    parentSpan: req.span,
+                    parent: req,
                     trace: true
                 }).send('/foobar', 'arg1', 'arg2', function (err, subRes) {
                     logger.debug("top level recv from subservice: " + subRes);
@@ -99,7 +99,7 @@ test('basic tracing test', function (assert) {
             var servReq = serverChan.request({
                 host: '127.0.0.1:4042',
                 serviceName: 'subservice',
-                parentSpan: req.span,
+                parent: req,
                 trace: true});
             var peers = server.peers.values();
             var ready = new CountedReadySignal(peers.length);
