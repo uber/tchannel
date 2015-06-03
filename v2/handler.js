@@ -435,6 +435,7 @@ TChannelV2Handler.prototype.sendPingRequest = function sendPingRequest() {
     var body = new v2.PingRequest();
     var reqFrame = new v2.Frame(id, body);
     self.pushFrame(reqFrame);
+    return id;
 };
 
 TChannelV2Handler.prototype.sendPingReponse = function sendPingReponse(res) {
