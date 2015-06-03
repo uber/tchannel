@@ -240,9 +240,9 @@ module.exports.NullKeyError = TypedError({
 module.exports.ParentSpanRequired = TypedError({
     type: 'tchannel.tracer.parent-span-required',
     message: 'parent span not specified for outgoing call req.\n' +
-        'Expected either a parent span or topLevelRequest.\n',
+        'Expected either a parent span or hasNoParent.\n',
     parentSpan: null,
-    topLevelRequest: null
+    hasNoParent: null
 });
 
 module.exports.ReconstructedError = TypedError({

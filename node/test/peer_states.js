@@ -240,7 +240,7 @@ function testSetup(desc, testFunc) {
             return function runSendTest(callback) {
                 client.request({
                     serviceName: 'tiberius', 
-                    topLevelRequest: true
+                    hasNoParent: true
                 }).send(op, '', '', onResult);
                 function onResult(err, res, arg2, arg3) {
                     callback(null, {

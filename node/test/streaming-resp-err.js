@@ -41,7 +41,7 @@ allocCluster.test('end response with error frame', {
         serviceName: 'stream'
     }).request({
         serviceName: 'stream',
-        topLevelRequest: true,
+        hasNoParent: true,
         host: server.hostPort,
         streamed: true
     });

@@ -61,7 +61,7 @@ allocCluster.test('emits stats on call success', {
 
     clientChan.request({
         serviceName: 'reservoir',
-        topLevelRequest: true,
+        hasNoParent: true,
         headers: {
             cn: 'inPipe'
         }
@@ -135,7 +135,7 @@ allocCluster.test('emits stats on call failure', {
 
     clientChan.request({
         serviceName: 'reservoir',
-        topLevelRequest: true,
+        hasNoParent: true,
         headers: {
             cn: 'inPipe'
         }

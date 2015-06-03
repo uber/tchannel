@@ -37,7 +37,7 @@ allocCluster.test('add a peer and request', {
 
     bob.request({
         serviceName: 'steve',
-        topLevelRequest: true
+        hasNoParent: true
     }).send('echo', 'a', 'b', onResponse);
 
     function onResponse(err) {
@@ -48,7 +48,7 @@ allocCluster.test('add a peer and request', {
         bob.peers.add(steve.hostPort);
         bob.request({
             serviceName: 'steve',
-            topLevelRequest: true
+            hasNoParent: true
         }).send('echo', 'a', 'b', onResponse2);
     }
 
@@ -77,7 +77,7 @@ allocCluster.test('adding a peer twice', {
     bob.peers.add(steve.hostPort);
     bob.request({
         serviceName: 'steve',
-        topLevelRequest: true
+        hasNoParent: true
     }).send('echo', 'a', 'b', onResponse2);
 
     function onResponse2(err, res) {
@@ -105,7 +105,7 @@ allocCluster.test('removing a peer and request', {
     bob.peers.add(steve.hostPort);
     bob.request({
         serviceName: 'steve',
-        topLevelRequest: true
+        hasNoParent: true
     }).send('echo', 'a', 'b', onResponse);
 
     function onResponse(err, res) {
@@ -115,7 +115,7 @@ allocCluster.test('removing a peer and request', {
         bob.peers.delete(steve.hostPort);
         bob.request({
             serviceName: 'steve',
-            topLevelRequest: true
+            hasNoParent: true
         }).send('echo', 'a', 'b', onResponse2);
     }
 
@@ -145,7 +145,7 @@ allocCluster.test('clearing peers and requests', {
     bob.peers.add(steve2.hostPort);
     bob.request({
         serviceName: 'steve',
-        topLevelRequest: true
+        hasNoParent: true
     }).send('echo', 'a', 'b', onResponse);
 
     function onResponse(err, res) {
@@ -155,7 +155,7 @@ allocCluster.test('clearing peers and requests', {
         bob.peers.clear();
         bob.request({
             serviceName: 'steve',
-            topLevelRequest: true
+            hasNoParent: true
         }).send('echo', 'a', 'b', onResponse2);
     }
 
@@ -189,11 +189,11 @@ allocCluster.test('delete peer() on top channel', {
     parallel([
         thunkSend(bob1, {
             serviceName: 'steve1',
-            topLevelRequest: true
+            hasNoParent: true
         }, 'echo', 'a', 'b'),
         thunkSend(bob2, {
             serviceName: 'steve2',
-            topLevelRequest: true
+            hasNoParent: true
         }, 'echo', 'a', 'b')
     ], onResponses);
 
@@ -209,11 +209,11 @@ allocCluster.test('delete peer() on top channel', {
         parallel([
             thunkSend(bob1, {
                 serviceName: 'steve1',
-                topLevelRequest: true
+                hasNoParent: true
             }, 'echo', 'a', 'b'),
             thunkSend(bob2, {
                 serviceName: 'steve2',
-                topLevelRequest: true
+                hasNoParent: true
             }, 'echo', 'a', 'b')
         ], onResponses2);
     }
@@ -261,11 +261,11 @@ allocCluster.test('peers.clear() on top channel', {
     parallel([
         thunkSend(bob1, {
             serviceName: 'steve1',
-            topLevelRequest: true
+            hasNoParent: true
         }, 'echo', 'a', 'b'),
         thunkSend(bob2, {
             serviceName: 'steve2',
-            topLevelRequest: true
+            hasNoParent: true
         }, 'echo', 'a', 'b')
     ], onResponses);
 
@@ -281,11 +281,11 @@ allocCluster.test('peers.clear() on top channel', {
         parallel([
             thunkSend(bob1, {
                 serviceName: 'steve1',
-                topLevelRequest: true
+                hasNoParent: true
             }, 'echo', 'a', 'b'),
             thunkSend(bob2, {
                 serviceName: 'steve2',
-                topLevelRequest: true
+                hasNoParent: true
             }, 'echo', 'a', 'b')
         ], onResponses2);
     }

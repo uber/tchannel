@@ -47,7 +47,7 @@ allocCluster.test('send and receiving an ok', {
 
     tchannelAsThrift.send(client.request({
         serviceName: 'server',
-        topLevelRequest: true
+        hasNoParent: true
     }), 'Chamber::echo', null, {
         value: 10
     }, function onResponse(err, res) {
@@ -71,7 +71,7 @@ allocCluster.test('send and receive a not ok', {
 
     tchannelAsThrift.send(client.request({
         serviceName: 'server',
-        topLevelRequest: true
+        hasNoParent: true
     }), 'Chamber::echo', null, {
         value: 10
     }, function onResponse(err, res) {
@@ -97,7 +97,7 @@ allocCluster.test('send and receive a typed not ok', {
 
     tchannelAsThrift.send(client.request({
         serviceName: 'server',
-        topLevelRequest: true
+        hasNoParent: true
     }), 'Chamber::echo', null, {
         value: 10
     }, function onResponse(err, res) {
@@ -123,7 +123,7 @@ allocCluster.test('sending and receiving headers', {
 
     tchannelAsThrift.send(client.request({
         serviceName: 'server',
-        topLevelRequest: true
+        hasNoParent: true
     }), 'Chamber::echo', {
         headerA: 'headerA',
         headerB: 'headerB'
@@ -157,7 +157,7 @@ allocCluster.test('getting an UnexpectedError frame', {
 
     tchannelAsThrift.send(client.request({
         serviceName: 'server',
-        topLevelRequest: true
+        hasNoParent: true
     }), 'Chamber::echo', null, {
         value: 10
     }, function onResponse(err, resp) {
@@ -184,7 +184,7 @@ allocCluster.test('getting a BadRequest frame', {
 
     client.request({
         serviceName: 'server',
-        topLevelRequest: true,
+        hasNoParent: true,
         timeout: 1500,
         headers: {
             as: 'thrift'
@@ -222,7 +222,7 @@ allocCluster.test('sending without as header', {
 
     client.request({
         serviceName: 'server',
-        topLevelRequest: true,
+        hasNoParent: true,
         timeout: 1500
     }).send('Chamber::echo', null, null, onResponse);
 
@@ -255,7 +255,7 @@ allocCluster.test('send without required fields', {
 
     tchannelAsThrift.send(client.request({
         serviceName: 'server',
-        topLevelRequest: true
+        hasNoParent: true
     }), 'Chamber::echo', null, {
         value: 'lol'
     }, function onResponse(err, res) {

@@ -52,7 +52,7 @@ allocCluster.test('emits stats', {
 
     clientChan.request({
         serviceName: 'server',
-        topLevelRequest: true,
+        hasNoParent: true,
         headers: {
             cn: 'client'
         }

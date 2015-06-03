@@ -139,7 +139,7 @@ test('basic tracing test', function (assert) {
             host: '127.0.0.1:4040',
             serviceName: 'server',
             trace: true,
-            topLevelRequest: true
+            hasNoParent: true
         });
         var peers = client.peers.values();
         var ready = new CountedReadySignal(peers.length);

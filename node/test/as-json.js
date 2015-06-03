@@ -37,7 +37,7 @@ allocCluster.test('getting an ok response', {
 
     tchannelJSON.send(client.request({
         serviceName: 'server',
-        topLevelRequest: true,
+        hasNoParent: true,
         timeout: 1500
     }), 'echo', {
         some: 'head'
@@ -81,7 +81,7 @@ allocCluster.test('getting a not ok response', {
     tchannelJSON.send(client.request({
         serviceName: 'server',
         timeout: 1500,
-        topLevelRequest: true
+        hasNoParent: true
     }), 'echo', {
         some: 'head'
     }, {
@@ -126,7 +126,7 @@ allocCluster.test('getting an UnexpectedError frame', {
     tchannelJSON.send(client.request({
         serviceName: 'server',
         timeout: 1500,
-        topLevelRequest: true
+        hasNoParent: true
     }), 'echo', null, null, function onResponse(err, resp) {
         assert.ok(err);
         assert.equal(err.isErrorFrame, true);
@@ -155,7 +155,7 @@ allocCluster.test('getting a BadRequest frame', {
         headers: {
             as: 'json'
         },
-        topLevelRequest: true
+        hasNoParent: true
     }).send('echo', '123malformed json', null, onResponse);
 
     function onResponse(err, resp) {
@@ -188,7 +188,7 @@ allocCluster.test('sending without as header', {
     client.request({
         serviceName: 'server',
         timeout: 1500,
-        topLevelRequest: true
+        hasNoParent: true
     }).send('echo', '123malformed json', null, onResponse);
 
     function onResponse(err, resp) {
