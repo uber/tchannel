@@ -105,13 +105,8 @@ func NewJSONInput(data interface{}) Input { return JSONInput{data} }
 
 // ReadFrom unmarshals the json data into the desired interface
 func (in JSONInput) ReadFrom(r io.Reader) error {
-	var bytes BytesInput
-
-	if err := bytes.ReadFrom(r); err != nil {
-		return err
-	}
-
-	return json.Unmarshal([]byte(bytes), in.data)
+	d := json.NewDecoder(r)
+	return d.Decode(in.data)
 }
 
 // JSONOutput writes an interface as an encoded JSON object
@@ -124,10 +119,6 @@ func NewJSONOutput(data interface{}) Output { return JSONOutput{data} }
 
 // WriteTo marshals the data to the output stream in json format
 func (out JSONOutput) WriteTo(w io.Writer) error {
-	bytes, err := json.Marshal(out.data)
-	if err != nil {
-		return err
-	}
-
-	return BytesOutput(bytes).WriteTo(w)
+	e := json.NewEncoder(w)
+	return e.Encode(out.data)
 }

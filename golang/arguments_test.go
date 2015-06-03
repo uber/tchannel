@@ -49,7 +49,7 @@ func TestJSONInputOutput(t *testing.T) {
 
 	var buffer bytes.Buffer
 	require.Nil(t, NewJSONOutput(obj).WriteTo(&buffer))
-	assert.Equal(t, "{\"name\":\"Foo\",\"value\":20756}", buffer.String())
+	assert.Equal(t, "{\"name\":\"Foo\",\"value\":20756}\n", buffer.String())
 
 	outObj := testObject{}
 	require.Nil(t, NewJSONInput(&outObj).ReadFrom(&buffer))
