@@ -71,15 +71,7 @@ EgressNodes.prototype.exitsFor = function exitsFor(serviceName) {
     var exitNodes = Object.create(null);
     for (var i = 0; i < k; i++) {
         var shardKey = serviceName + '~' + i;
-
-        // TODO ringpop will return itself if it cannot find
-        // it which is probably the wrong semantics.
         var node = self.ringpop.lookup(shardKey);
-
-        // TODO ringpop can return duplicates. do we want
-        // <= k exitNodes or k exitNodes ?
-        // TODO consider walking the ring instead.
-
         exitNodes[node] = exitNodes[node] || [];
         exitNodes[node].push(shardKey);
     }
