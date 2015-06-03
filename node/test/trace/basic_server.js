@@ -77,7 +77,7 @@ test('basic tracing test', function (assert) {
             var servReq = serverChan.request({
                 host: '127.0.0.1:4042',
                 serviceName: 'subservice',
-                parentSpan: req.span,
+                parent: req,
                 trace: true});
             var peers = server.peers.values();
             var ready = new CountedReadySignal(peers.length);

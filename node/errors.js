@@ -237,10 +237,10 @@ module.exports.NullKeyError = TypedError({
     endOffset: null
 });
 
-module.exports.ParentSpanRequired = TypedError({
-    type: 'tchannel.tracer.parent-span-required',
-    message: 'parent span not specified for outgoing call req.\n' +
-        'Expected either a parent span or hasNoParent.\n',
+module.exports.ParentRequired = TypedError({
+    type: 'tchannel.tracer.parent-required',
+    message: 'parent not specified for outgoing call req.\n' +
+        'Expected either a parent or hasNoParent.\n',
     parentSpan: null,
     hasNoParent: null
 });
@@ -515,7 +515,7 @@ module.exports.classify = function classify(err) {
         case 'tchannel.top-level-register':
         case 'tchannel.top-level-request':
         case 'tchannel.unimplemented-method':
-        case 'tchannel.tracer.parent-span-required':
+        case 'tchannel.tracer.parent-required':
             return 'UnexpectedError';
 
         default:

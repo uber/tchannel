@@ -93,7 +93,7 @@ Agent.prototype.setupNewSpan = function setupNewSpan(options) {
 
     var parentSpan = options.parentSpan;
     if (options.outgoing && !parentSpan && !options.hasNoParent) {
-        throw errors.ParentSpanRequired({
+        throw errors.ParentRequired({
             parentSpan: parentSpan,
             hasNoParent: options.hasNoParent
         });
