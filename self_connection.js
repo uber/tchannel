@@ -76,4 +76,12 @@ TChannelSelfConnection.prototype.buildOutResponse = function buildOutResponse(in
     }
 };
 
+TChannelSelfConnection.prototype.ping = function ping() {
+    var self = this;
+    var id = self.idCount++;
+    // TODO: explicit type
+    self.pingResponseEvent.emit(self, {id: id});
+    return id;
+};
+
 module.exports = TChannelSelfConnection;
