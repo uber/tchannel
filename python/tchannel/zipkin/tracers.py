@@ -36,11 +36,15 @@ import logging
 import sys
 from collections import defaultdict
 
-from formatters import base64_thrift_formatter
-from formatters import json_formatter
+from .formatters import base64_thrift_formatter
+from .formatters import json_formatter
+from ..thrift import client_for
+from ..tornado import hyperbahn
 
-from ..tornado.stream import InMemStream
 from .thrift import constants
+from .thrift import TCollector
+
+log = logging.getLogger('zipkin_tracing')
 
 zipkin_log = logging.getLogger('zipkin')
 
@@ -125,28 +129,24 @@ class TChannelZipkinTracer(object):
     This implementation sends all annotations immediately and doesn't implement
     buffering of any sort.
     """
+    TCollectorClient = client_for('tcollector', TCollector)
 
-    def __init__(self, tchannel):
+    def __init__(self, tchannel, routers):
         """
         :param tchannel:
             A tchannel instance to send the trace info to zipkin server
         """
         self._tchannel = tchannel
-        self.client = tchannel.request(
-            "tcollector"
-        )
+        self.client = TCollectorClient(self._tchannel)
+
+        hyperbahn.advertise(self._tchannel, 'tcollector', routers)
 
     def record(self, traces):
         for (trace, annotations) in traces:
             try:
-                self.client.send(
-                    InMemStream('span'),
-                    InMemStream(),
-                    InMemStream(base64_thrift_formatter(trace, annotations)),
-                    traceflag=False,  # disable tracing for span uploading
-                )
-            except:
-                pass
+                self.client.submit(base64_thrift_formatter(trace, annotations))
+            except Exception as e:
+                log.exception(e.message)
 
 
 class ZipkinTracer(object):

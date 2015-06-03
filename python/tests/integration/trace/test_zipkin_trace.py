@@ -18,6 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+import ujson
 import json
 
 import pytest
@@ -75,12 +76,20 @@ def trace_server(random_open_port):
         )
         yield server
 
+ROUTERS = []
+try:
+    host_path = "/etc/uber/autobahn/ringpop-v2.json"
+    if host_path:
+        with open(host_path, 'r') as f:
+            ROUTERS = ujson.load(f)
+except IOError:
+    pass
 
 @pytest.mark.gen_test
 def test_zipkin_trace(trace_server):
     endpoint = b'endpoint1'
-    zipkin_tracer = ZipkinTraceHook(dst=trace_buf)
     tchannel = TChannel()
+    zipkin_tracer = ZipkinTraceHook(dst=tchannel)
     tchannel.hooks.register(zipkin_tracer)
 
     hostport = 'localhost:%d' % trace_server.port

@@ -23,31 +23,57 @@
 #
 # DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING
 #
-#  options string: py:tornado
+#  options string: py:tornado,dynamic,utf8strings,new_style,slots
 #
 
-from thrift.protocol import TBinaryProtocol
-from thrift.protocol import TProtocol
-from thrift.Thrift import TApplicationException
-from thrift.Thrift import TException
-from thrift.Thrift import TMessageType
-from thrift.Thrift import TType
-from thrift.transport import TTransport
+from thrift.Thrift import TType, TMessageType, TException, TApplicationException
 
-try:
-  from thrift.protocol import fastbinary
-except:
-  fastbinary = None
+from thrift.protocol.TBase import TBase, TExceptionBase
 
 
+class AnnotationType(TBase):
+  BOOL = 0
+  BYTES = 1
+  I16 = 2
+  I32 = 3
+  I64 = 4
+  DOUBLE = 5
+  STRING = 6
 
-class Endpoint:
+  _VALUES_TO_NAMES = {
+    0: "BOOL",
+    1: "BYTES",
+    2: "I16",
+    3: "I32",
+    4: "I64",
+    5: "DOUBLE",
+    6: "STRING",
+  }
+
+  _NAMES_TO_VALUES = {
+    "BOOL": 0,
+    "BYTES": 1,
+    "I16": 2,
+    "I32": 3,
+    "I64": 4,
+    "DOUBLE": 5,
+    "STRING": 6,
+  }
+
+
+class Endpoint(TBase):
   """
   Attributes:
    - ipv4
    - port
    - service_name
   """
+
+  __slots__ = [ 
+    'ipv4',
+    'port',
+    'service_name',
+   ]
 
   thrift_spec = (
     None, # 0
@@ -61,59 +87,6 @@ class Endpoint:
     self.port = port
     self.service_name = service_name
 
-  def read(self, iprot):
-    if iprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None and fastbinary is not None:
-      fastbinary.decode_binary(self, iprot.trans, (self.__class__, self.thrift_spec))
-      return
-    iprot.readStructBegin()
-    while True:
-      (fname, ftype, fid) = iprot.readFieldBegin()
-      if ftype == TType.STOP:
-        break
-      if fid == 1:
-        if ftype == TType.I32:
-          self.ipv4 = iprot.readI32();
-        else:
-          iprot.skip(ftype)
-      elif fid == 2:
-        if ftype == TType.I16:
-          self.port = iprot.readI16();
-        else:
-          iprot.skip(ftype)
-      elif fid == 3:
-        if ftype == TType.STRING:
-          self.service_name = iprot.readString();
-        else:
-          iprot.skip(ftype)
-      else:
-        iprot.skip(ftype)
-      iprot.readFieldEnd()
-    iprot.readStructEnd()
-
-  def write(self, oprot):
-    if oprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and self.thrift_spec is not None and fastbinary is not None:
-      oprot.trans.write(fastbinary.encode_binary(self, (self.__class__, self.thrift_spec)))
-      return
-    oprot.writeStructBegin('Endpoint')
-    if self.ipv4 is not None:
-      oprot.writeFieldBegin('ipv4', TType.I32, 1)
-      oprot.writeI32(self.ipv4)
-      oprot.writeFieldEnd()
-    if self.port is not None:
-      oprot.writeFieldBegin('port', TType.I16, 2)
-      oprot.writeI16(self.port)
-      oprot.writeFieldEnd()
-    if self.service_name is not None:
-      oprot.writeFieldBegin('service_name', TType.STRING, 3)
-      oprot.writeString(self.service_name)
-      oprot.writeFieldEnd()
-    oprot.writeFieldStop()
-    oprot.writeStructEnd()
-
-  def validate(self):
-    return
-
-
   def __hash__(self):
     value = 17
     value = (value * 31) ^ hash(self.ipv4)
@@ -121,18 +94,8 @@ class Endpoint:
     value = (value * 31) ^ hash(self.service_name)
     return value
 
-  def __repr__(self):
-    L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
-    return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
 
-  def __eq__(self, other):
-    return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
-
-  def __ne__(self, other):
-    return not (self == other)
-
-class Annotation:
+class Annotation(TBase):
   """
   Attributes:
    - timestamp
@@ -140,6 +103,13 @@ class Annotation:
    - host
    - duration
   """
+
+  __slots__ = [ 
+    'timestamp',
+    'value',
+    'host',
+    'duration',
+   ]
 
   thrift_spec = (
     None, # 0
@@ -155,69 +125,6 @@ class Annotation:
     self.host = host
     self.duration = duration
 
-  def read(self, iprot):
-    if iprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None and fastbinary is not None:
-      fastbinary.decode_binary(self, iprot.trans, (self.__class__, self.thrift_spec))
-      return
-    iprot.readStructBegin()
-    while True:
-      (fname, ftype, fid) = iprot.readFieldBegin()
-      if ftype == TType.STOP:
-        break
-      if fid == 1:
-        if ftype == TType.I64:
-          self.timestamp = iprot.readI64();
-        else:
-          iprot.skip(ftype)
-      elif fid == 2:
-        if ftype == TType.STRING:
-          self.value = iprot.readString();
-        else:
-          iprot.skip(ftype)
-      elif fid == 3:
-        if ftype == TType.STRUCT:
-          self.host = Endpoint()
-          self.host.read(iprot)
-        else:
-          iprot.skip(ftype)
-      elif fid == 4:
-        if ftype == TType.I32:
-          self.duration = iprot.readI32();
-        else:
-          iprot.skip(ftype)
-      else:
-        iprot.skip(ftype)
-      iprot.readFieldEnd()
-    iprot.readStructEnd()
-
-  def write(self, oprot):
-    if oprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and self.thrift_spec is not None and fastbinary is not None:
-      oprot.trans.write(fastbinary.encode_binary(self, (self.__class__, self.thrift_spec)))
-      return
-    oprot.writeStructBegin('Annotation')
-    if self.timestamp is not None:
-      oprot.writeFieldBegin('timestamp', TType.I64, 1)
-      oprot.writeI64(self.timestamp)
-      oprot.writeFieldEnd()
-    if self.value is not None:
-      oprot.writeFieldBegin('value', TType.STRING, 2)
-      oprot.writeString(self.value)
-      oprot.writeFieldEnd()
-    if self.host is not None:
-      oprot.writeFieldBegin('host', TType.STRUCT, 3)
-      self.host.write(oprot)
-      oprot.writeFieldEnd()
-    if self.duration is not None:
-      oprot.writeFieldBegin('duration', TType.I32, 4)
-      oprot.writeI32(self.duration)
-      oprot.writeFieldEnd()
-    oprot.writeFieldStop()
-    oprot.writeStructEnd()
-
-  def validate(self):
-    return
-
-
   def __hash__(self):
     value = 17
     value = (value * 31) ^ hash(self.timestamp)
@@ -226,18 +133,47 @@ class Annotation:
     value = (value * 31) ^ hash(self.duration)
     return value
 
-  def __repr__(self):
-    L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
-    return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
 
-  def __eq__(self, other):
-    return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+class BinaryAnnotation(TBase):
+  """
+  Attributes:
+   - key
+   - value
+   - annotation_type
+   - host
+  """
 
-  def __ne__(self, other):
-    return not (self == other)
+  __slots__ = [ 
+    'key',
+    'value',
+    'annotation_type',
+    'host',
+   ]
 
-class Span:
+  thrift_spec = (
+    None, # 0
+    (1, TType.STRING, 'key', None, None, ), # 1
+    (2, TType.STRING, 'value', None, None, ), # 2
+    (3, TType.I32, 'annotation_type', None, None, ), # 3
+    (4, TType.STRUCT, 'host', (Endpoint, Endpoint.thrift_spec), None, ), # 4
+  )
+
+  def __init__(self, key=None, value=None, annotation_type=None, host=None,):
+    self.key = key
+    self.value = value
+    self.annotation_type = annotation_type
+    self.host = host
+
+  def __hash__(self):
+    value = 17
+    value = (value * 31) ^ hash(self.key)
+    value = (value * 31) ^ hash(self.value)
+    value = (value * 31) ^ hash(self.annotation_type)
+    value = (value * 31) ^ hash(self.host)
+    return value
+
+
+class Span(TBase):
   """
   Attributes:
    - trace_id
@@ -245,8 +181,19 @@ class Span:
    - id
    - parent_id
    - annotations
+   - binary_annotations
    - debug
   """
+
+  __slots__ = [ 
+    'trace_id',
+    'name',
+    'id',
+    'parent_id',
+    'annotations',
+    'binary_annotations',
+    'debug',
+   ]
 
   thrift_spec = (
     None, # 0
@@ -257,106 +204,18 @@ class Span:
     (5, TType.I64, 'parent_id', None, None, ), # 5
     (6, TType.LIST, 'annotations', (TType.STRUCT,(Annotation, Annotation.thrift_spec)), None, ), # 6
     None, # 7
-    None, # 8
+    (8, TType.LIST, 'binary_annotations', (TType.STRUCT,(BinaryAnnotation, BinaryAnnotation.thrift_spec)), None, ), # 8
     (9, TType.BOOL, 'debug', None, False, ), # 9
   )
 
-  def __init__(self, trace_id=None, name=None, id=None, parent_id=None, annotations=None, debug=thrift_spec[9][4],):
+  def __init__(self, trace_id=None, name=None, id=None, parent_id=None, annotations=None, binary_annotations=None, debug=thrift_spec[9][4],):
     self.trace_id = trace_id
     self.name = name
     self.id = id
     self.parent_id = parent_id
     self.annotations = annotations
+    self.binary_annotations = binary_annotations
     self.debug = debug
-
-  def read(self, iprot):
-    if iprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None and fastbinary is not None:
-      fastbinary.decode_binary(self, iprot.trans, (self.__class__, self.thrift_spec))
-      return
-    iprot.readStructBegin()
-    while True:
-      (fname, ftype, fid) = iprot.readFieldBegin()
-      if ftype == TType.STOP:
-        break
-      if fid == 1:
-        if ftype == TType.I64:
-          self.trace_id = iprot.readI64();
-        else:
-          iprot.skip(ftype)
-      elif fid == 3:
-        if ftype == TType.STRING:
-          self.name = iprot.readString();
-        else:
-          iprot.skip(ftype)
-      elif fid == 4:
-        if ftype == TType.I64:
-          self.id = iprot.readI64();
-        else:
-          iprot.skip(ftype)
-      elif fid == 5:
-        if ftype == TType.I64:
-          self.parent_id = iprot.readI64();
-        else:
-          iprot.skip(ftype)
-      elif fid == 6:
-        if ftype == TType.LIST:
-          self.annotations = []
-          (_etype3, _size0) = iprot.readListBegin()
-          for _i4 in xrange(_size0):
-            _elem5 = Annotation()
-            _elem5.read(iprot)
-            self.annotations.append(_elem5)
-          iprot.readListEnd()
-        else:
-          iprot.skip(ftype)
-      elif fid == 9:
-        if ftype == TType.BOOL:
-          self.debug = iprot.readBool();
-        else:
-          iprot.skip(ftype)
-      else:
-        iprot.skip(ftype)
-      iprot.readFieldEnd()
-    iprot.readStructEnd()
-
-  def write(self, oprot):
-    if oprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and self.thrift_spec is not None and fastbinary is not None:
-      oprot.trans.write(fastbinary.encode_binary(self, (self.__class__, self.thrift_spec)))
-      return
-    oprot.writeStructBegin('Span')
-    if self.trace_id is not None:
-      oprot.writeFieldBegin('trace_id', TType.I64, 1)
-      oprot.writeI64(self.trace_id)
-      oprot.writeFieldEnd()
-    if self.name is not None:
-      oprot.writeFieldBegin('name', TType.STRING, 3)
-      oprot.writeString(self.name)
-      oprot.writeFieldEnd()
-    if self.id is not None:
-      oprot.writeFieldBegin('id', TType.I64, 4)
-      oprot.writeI64(self.id)
-      oprot.writeFieldEnd()
-    if self.parent_id is not None:
-      oprot.writeFieldBegin('parent_id', TType.I64, 5)
-      oprot.writeI64(self.parent_id)
-      oprot.writeFieldEnd()
-    if self.annotations is not None:
-      oprot.writeFieldBegin('annotations', TType.LIST, 6)
-      oprot.writeListBegin(TType.STRUCT, len(self.annotations))
-      for iter6 in self.annotations:
-        iter6.write(oprot)
-      oprot.writeListEnd()
-      oprot.writeFieldEnd()
-    if self.debug is not None:
-      oprot.writeFieldBegin('debug', TType.BOOL, 9)
-      oprot.writeBool(self.debug)
-      oprot.writeFieldEnd()
-    oprot.writeFieldStop()
-    oprot.writeStructEnd()
-
-  def validate(self):
-    return
-
 
   def __hash__(self):
     value = 17
@@ -365,16 +224,31 @@ class Span:
     value = (value * 31) ^ hash(self.id)
     value = (value * 31) ^ hash(self.parent_id)
     value = (value * 31) ^ hash(self.annotations)
+    value = (value * 31) ^ hash(self.binary_annotations)
     value = (value * 31) ^ hash(self.debug)
     return value
 
-  def __repr__(self):
-    L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
-    return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
 
-  def __eq__(self, other):
-    return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+class Response(TBase):
+  """
+  Attributes:
+   - ok
+  """
 
-  def __ne__(self, other):
-    return not (self == other)
+  __slots__ = [ 
+    'ok',
+   ]
+
+  thrift_spec = (
+    None, # 0
+    (1, TType.BOOL, 'ok', None, None, ), # 1
+  )
+
+  def __init__(self, ok=None,):
+    self.ok = ok
+
+  def __hash__(self):
+    value = 17
+    value = (value * 31) ^ hash(self.ok)
+    return value
+
