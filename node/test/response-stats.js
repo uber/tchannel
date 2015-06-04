@@ -44,12 +44,12 @@ allocCluster.test('emits response stats with ok', {
         stats.push(stat);
     });
 
-    client.makeSubChannel({
+    var clientChan = client.makeSubChannel({
         serviceName: 'server',
         peers: [server.hostPort]
     });
 
-    client.request({
+    clientChan.request({
         serviceName: 'server',
         headers: {
             cn: 'client'
@@ -120,12 +120,12 @@ allocCluster.test('emits response stats with not ok', {
         stats.push(stat);
     });
 
-    client.makeSubChannel({
+    var clientChan = client.makeSubChannel({
         serviceName: 'server',
         peers: [server.hostPort]
     });
 
-    client.request({
+    clientChan.request({
         serviceName: 'server',
         headers: {
             cn: 'client'
@@ -197,12 +197,12 @@ allocCluster.test('emits response stats with error', {
         stats.push(stat);
     });
 
-    client.makeSubChannel({
+    var clientChan = client.makeSubChannel({
         serviceName: 'server',
         peers: [server.hostPort]
     });
 
-    client.request({
+    clientChan.request({
         serviceName: 'server',
         headers: {
             cn: 'client'

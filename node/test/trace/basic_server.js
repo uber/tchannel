@@ -23,7 +23,6 @@ var DebugLogtron = require('debug-logtron');
 var test = require('tape');
 
 var TChannel = require('../../channel.js');
-var EndpointHandler = require('../../endpoint-handler.js');
 
 var logger = DebugLogtron('tchannel');
 
@@ -40,19 +39,21 @@ test('basic tracing test', function (assert) {
     }
 
     var subservice = new TChannel({
-        handler: EndpointHandler(),
-        serviceName: 'subservice',
         logger: logger,
         traceReporter: traceReporter,
         trace: true
     });
+    var subChan = subservice.makeSubChannel({
+        serviceName: 'subservice'
+    });
 
     var server = new TChannel({
-        serviceName: 'server',
-        handler: EndpointHandler(),
         logger: logger,
         traceReporter: traceReporter,
         trace: true
+    });
+    var serverChan = server.makeSubChannel({
+        serviceName: 'server'
     });
 
     var client = new TChannel({
@@ -60,17 +61,20 @@ test('basic tracing test', function (assert) {
         traceReporter: traceReporter,
         trace: true
     });
+    var clientChan = client.makeSubChannel({
+        serviceName: 'server'
+    });
 
-    subservice.handler.register('/foobar', function (req, res) {
+    subChan.register('/foobar', function (req, res) {
         logger.debug("subserv sr");
         res.sendOk('result', 'success');
     });
 
     // normal response
-    server.handler.register('/top_level_endpoint', function (req, res) {
+    serverChan.register('/top_level_endpoint', function (req, res) {
         logger.debug("top level sending to subservice");
         setTimeout(function () {
-            var servReq = server.request({
+            var servReq = serverChan.request({
                 host: '127.0.0.1:4042',
                 serviceName: 'subservice',
                 parentSpan: req.span,
@@ -103,7 +107,7 @@ test('basic tracing test', function (assert) {
         }
         
         logger.debug('client making req');
-        var req = client.request({
+        var req = clientChan.request({
             host: '127.0.0.1:4040',
             serviceName: 'server',
             trace: true,

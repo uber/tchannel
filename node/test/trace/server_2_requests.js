@@ -23,7 +23,6 @@ var DebugLogtron = require('debug-logtron');
 var test = require('tape');
 
 var TChannel = require('../../channel.js');
-var EndpointHandler = require('../../endpoint-handler.js');
 
 var logger = DebugLogtron('tchannel');
 
@@ -40,19 +39,21 @@ test('basic tracing test', function (assert) {
     }
 
     var subservice = new TChannel({
-        serviceName: 'subservice',
-        handler: EndpointHandler(),
-        trace: true,
+        logger: logger,
         traceReporter: traceReporter,
-        logger: logger
+        trace: true
+    });
+    var subChan = subservice.makeSubChannel({
+        serviceName: 'subservice'
     });
 
     var server = new TChannel({
-        serviceName: 'server',
-        handler: EndpointHandler(),
-        trace: true,
+        logger: logger,
         traceReporter: traceReporter,
-        logger: logger
+        trace: true
+    });
+    var serverChan = server.makeSubChannel({
+        serviceName: 'server'
     });
 
     var client = new TChannel({
@@ -60,24 +61,27 @@ test('basic tracing test', function (assert) {
         traceReporter: traceReporter,
         trace: true
     });
+    var clientChan = client.makeSubChannel({
+        serviceName: 'server'
+    });
 
-    subservice.handler.register('/foobar', function (req, res) {
+    subChan.register('/foobar', function (req, res) {
         logger.debug("subserv sr");
         res.sendOk('result', 'success');
     });
 
-    subservice.handler.register('/barbaz', function (req, res) {
+    subChan.register('/barbaz', function (req, res) {
         logger.debug("subserv 2 sr");
         res.sendOk('result', 'success');
     });
 
     // normal response
-    server.handler.register('/top_level_endpoint', function (req, res) {
+    serverChan.register('/top_level_endpoint', function (req, res) {
         logger.debug("top level sending to subservice");
         var serverRequestsDone = CountedReadySignal(2);
 
         setTimeout(function () {
-            server
+            serverChan
                 .request({
                     host: '127.0.0.1:4042',
                     serviceName: 'subservice',
@@ -92,7 +96,7 @@ test('basic tracing test', function (assert) {
         }, 40);
 
         process.nextTick(function () {
-            var servReq = server.request({
+            var servReq = serverChan.request({
                 host: '127.0.0.1:4042',
                 serviceName: 'subservice',
                 parentSpan: req.span,
@@ -131,7 +135,7 @@ test('basic tracing test', function (assert) {
         }
 
         logger.debug('client making req');
-        var req = client.request({
+        var req = clientChan.request({
             host: '127.0.0.1:4040',
             serviceName: 'server',
             trace: true,

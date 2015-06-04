@@ -37,7 +37,9 @@ allocCluster.test('end response with error frame', {
         streamed: true
     }, streamHandler);
 
-    var req = client.request({
+    var req = client.makeSubChannel({
+        serviceName: 'stream'
+    }).request({
         serviceName: 'stream',
         host: server.hostPort,
         streamed: true

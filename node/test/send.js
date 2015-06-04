@@ -157,7 +157,7 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
 
     ].map(function eachTestCase(testCase) {
         testCase = extend({
-            channel: two,
+            channel: two.subChannels.server,
             opts: {
                 serviceName: 'server'
             }
@@ -274,13 +274,16 @@ allocCluster.test('request().send() to a pool of servers', 4, function t(cluster
 allocCluster.test('request().send() to self', 1, function t(cluster, assert) {
     var one = cluster.channels[0];
 
-    one.handler = EndpointHandler();
-    one.handler.register('foo', function foo(req, res, arg2, arg3) {
+    var subOne = one.makeSubChannel({
+        serviceName: 'one'
+    });
+
+    subOne.handler.register('foo', function foo(req, res, arg2, arg3) {
         assert.ok(typeof arg2 === 'string', 'handler got an arg2 string');
         assert.ok(typeof arg3 === 'string', 'handler got an arg3 string');
         res.sendOk(arg2, arg3);
     });
-    one.handler.register('bar', function bar(req, res, arg2, arg3) {
+    subOne.handler.register('bar', function bar(req, res, arg2, arg3) {
         assert.ok(typeof arg2 === 'string', 'handler got an arg2 string');
         assert.ok(typeof arg3 === 'string', 'handler got an arg3 string');
         res.sendNotOk(arg2, arg3);
@@ -304,7 +307,7 @@ allocCluster.test('request().send() to self', 1, function t(cluster, assert) {
         }
     }].map(function eachTestCase(testCase) {
         testCase = extend({
-            channel: one
+            channel: subOne
         }, testCase);
         return sendTest(testCase, assert);
     }), function onResults(err) {
@@ -320,13 +323,15 @@ allocCluster.test('request().send() to self', 1, function t(cluster, assert) {
 
 allocCluster.test('self send() with error frame', 1, function t(cluster, assert) {
     var one = cluster.channels[0];
+    var subOne = one.makeSubChannel({
+        serviceName: 'one'
+    });
 
-    one.handler = EndpointHandler();
-    one.handler.register('foo', function foo(req, res) {
+    subOne.handler.register('foo', function foo(req, res) {
         res.sendError('Cancelled', 'bye lol');
     });
 
-    one.request({
+    subOne.request({
         host: one.hostPort
     }).send('foo', '', '', onResponse);
 
