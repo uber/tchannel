@@ -577,8 +577,9 @@ value    | arg1                  | arg2                                     | ar
 `thrift` | string method name    | application headers `nh:2 (k~2 v~2){nh}` | thrift payload
 `json`   | method name as string | application headers as JSON              | body as JSON
 `http`   | method + URI          | headers as JSON array                    | raw body
+`raw`    | raw bytes             | raw bytes                                | raw bytes
 
-### Transport Header `cas` -- Claim An Start
+### Transport Header `cas` -- Claim At Start
 
 Value is string "host:port".
 
