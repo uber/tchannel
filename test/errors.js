@@ -31,25 +31,14 @@ var Errors = require('../errors.js');
 var errorsPath = path.resolve(path.join(__dirname, '..', 'errors.js'));
 
 test('errors module should be in sorted order', function t(assert) {
-    var stream = fs.createReadStream(errorsPath, 'utf8');
     var exportedErrors = [];
-    stream
-        .pipe(split2())
-        .on('data', extractExportedError)
-        .on('end', streamDone);
-
-    function extractExportedError(line) {
-        var match = /^module\.exports\.([^ ]+) *= *([\w_\-]+)/.exec(line);
-        if (match) {
+    processLineMatches(errorsPath,
+        /^module\.exports\.([^ ]+) *= *([\w_\-]+)/,
+        function each(match) {
             if (/Error$/.test(match[2])) {
                 exportedErrors.push(match[1]);
             }
-        }
-    }
-
-    function streamDone() {
-        process.nextTick(checkExportedErrors);
-    }
+        }, checkExportedErrors);
 
     function checkExportedErrors() {
         var expected = exportedErrors.slice().sort();
@@ -68,24 +57,12 @@ test('errors module should be in sorted order', function t(assert) {
 });
 
 test('error case statements should not be duplicates', function t(assert) {
-
-    var stream = fs.createReadStream(errorsPath, 'utf8');
     var caseStatements = [];
-    stream
-        .pipe(split2())
-        .on('data', extractCaseStatement)
-        .on('end', streamDone);
-
-    function extractCaseStatement(line) {
-        var match = /case/.exec(line);
-        if (match) {
-            caseStatements.push(line);
-        }
-    }
-
-    function streamDone() {
-        process.nextTick(checkCases);
-    }
+    processLineMatches(errorsPath,
+        /^.*case.*$/,
+        function each(match) {
+            caseStatements.push(match[0]);
+        }, checkCases);
 
     function checkCases() {
         var caseTypes = caseStatements.map(function extract(c) {
@@ -132,3 +109,21 @@ test('all errors are classified', function t(assert) {
 
     assert.end();
 });
+
+function processLineMatches(filePath, pattern, proc, done) {
+    fs.createReadStream(filePath, 'utf8')
+        .pipe(split2())
+        .on('data', eachLine)
+        .on('end', streamDone);
+
+    function eachLine(line) {
+        var match = pattern.exec(line);
+        if (match) {
+            proc(match);
+        }
+    }
+
+    function streamDone() {
+        process.nextTick(done);
+    }
+}
