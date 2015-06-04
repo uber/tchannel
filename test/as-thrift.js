@@ -28,7 +28,6 @@ var TypedError = require('error/typed');
 var fs = require('fs');
 
 var allocCluster = require('./lib/alloc-cluster.js');
-var TChannelAsThrift = require('../as/thrift.js');
 
 var globalThriftText = fs.readFileSync(
     path.join(__dirname, 'anechoic-chamber.thrift'), 'utf8'
@@ -241,7 +240,7 @@ allocCluster.test('send without required fields', {
     makeTChannelThriftServer(cluster, {
         okResponse: true
     });
-    var tchannelAsThrift = TChannelAsThrift({
+    var tchannelAsThrift = client.TChannelAsThrift({
         source: badThriftText
     });
 
@@ -300,7 +299,7 @@ function makeTChannelThriftServer(cluster, opts) {
         opts.networkFailureResponse ? networkFailureHandler :
             networkFailureHandler;
 
-    var tchannelAsThrift = new TChannelAsThrift({
+    var tchannelAsThrift = cluster.channels[0].TChannelAsThrift({
         source: opts.thriftText || globalThriftText,
         logParseFailures: false
     });
