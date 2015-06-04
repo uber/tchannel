@@ -119,6 +119,17 @@ type initRes struct {
 
 func (m *initRes) messageType() messageType { return messageTypeInitRes }
 
+// Known transport header keys for call requests.
+const (
+	ArgScheme            = "as"
+	CallerName           = "cn"
+	ClaimAtFinish        = "caf"
+	ClaimAtStart         = "cas"
+	FailureDomain        = "fd"
+	RetryFlags           = "re"
+	SpeculativeExecution = "se"
+)
+
 // callHeaders are passed as part of a CallReq/CallRes
 type callHeaders map[string]string
 
