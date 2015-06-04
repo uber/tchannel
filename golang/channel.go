@@ -165,7 +165,6 @@ func (ch *Channel) PeerInfo() PeerInfo {
 
 // BeginCall starts a new call to a remote peer, returning an OutboundCall that can
 // be used to write the arguments of the call
-// TODO(mmihic): Support CallOptions such as format, request specific checksums, retries, etc
 func (ch *Channel) BeginCall(ctx context.Context, hostPort, serviceName, operationName string, callOptions *CallOptions) (*OutboundCall, error) {
 	// TODO(mmihic): Keep-alive, manage pools, use existing inbound if possible, all that jazz
 	nconn, err := net.Dial("tcp", hostPort)

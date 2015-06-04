@@ -119,26 +119,47 @@ type initRes struct {
 
 func (m *initRes) messageType() messageType { return messageTypeInitRes }
 
-// Known transport header keys for call requests.
+// CallHeaderName is a type for call header names.
+type CallHeaderName string
+
+func (cn CallHeaderName) String() string { return string(cn) }
+
+// Known transport header keys for call requests. See protocol docs for more information.
 const (
-	ArgScheme            = "as"
-	CallerName           = "cn"
-	ClaimAtFinish        = "caf"
-	ClaimAtStart         = "cas"
-	FailureDomain        = "fd"
-	RetryFlags           = "re"
-	SpeculativeExecution = "se"
+	// ArgScheme header specifies the format of the args.
+	ArgScheme CallHeaderName = "as"
+
+	// CallerName header specifies the name of the service making the call.
+	CallerName CallHeaderName = "cn"
+
+	// ClaimAtFinish header value is host:port specifying the instance to send a claim message
+	// to when response is being sent.
+	ClaimAtFinish CallHeaderName = "caf"
+
+	// ClaimAtStart header value is host:port specifying another instance to send a claim message
+	// to when work is started.
+	ClaimAtStart CallHeaderName = "cas"
+
+	// FailureDomain header describes a group of related requests to the same service that are
+	// likely to fail in the same way if they were to fail.
+	FailureDomain CallHeaderName = "fd"
+
+	// RetryFlags header specifies whether retry policies.
+	RetryFlags CallHeaderName = "re"
+
+	// SpeculativeExecution header specifies the number of nodes on which to run the request.
+	SpeculativeExecution CallHeaderName = "se"
 )
 
 // callHeaders are passed as part of a CallReq/CallRes
-type callHeaders map[string]string
+type callHeaders map[CallHeaderName]string
 
 func (ch callHeaders) read(r *typed.ReadBuffer) {
 	nh := r.ReadByte()
 	for i := 0; i < int(nh); i++ {
 		k := r.ReadLen8String()
 		v := r.ReadLen8String()
-		ch[k] = v
+		ch[CallHeaderName(k)] = v
 	}
 }
 
@@ -146,7 +167,7 @@ func (ch callHeaders) write(w *typed.WriteBuffer) {
 	w.WriteByte(byte(len(ch)))
 
 	for k, v := range ch {
-		w.WriteLen8String(k)
+		w.WriteLen8String(k.String())
 		w.WriteLen8String(v)
 	}
 }

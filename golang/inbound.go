@@ -143,11 +143,12 @@ func (call *InboundCall) Operation() []byte {
 	return call.operation
 }
 
-// Headers returns the call headers from the request.
+// Format the format of the request from the ArgScheme transport header.
 func (call *InboundCall) Format() Format {
 	return Format(call.headers[ArgScheme])
 }
 
+// CallerName returns the caller name from the CallerName transport header.
 func (call *InboundCall) CallerName() string {
 	return call.headers[CallerName]
 }
