@@ -79,7 +79,6 @@ allocCluster.test('send and receive a not ok', {
         assert.ok(!res.ok);
         assert.equal(res.body.value, 10);
         assert.equal(res.body.message, 'No echo');
-        assert.equal(res.body.nameAsThrift, 'noEcho');
         assert.equal(res.body.type, 'tchannel.hydrated-error.default-type');
 
         assert.end();
@@ -105,7 +104,6 @@ allocCluster.test('send and receive a typed not ok', {
         assert.ok(!res.ok);
         assert.equal(res.body.value, 10);
         assert.equal(res.body.message, 'No echo typed error');
-        assert.equal(res.body.nameAsThrift, 'noEchoTyped');
         assert.equal(res.body.type, 'server.no-echo');
 
         assert.end();
@@ -280,7 +278,6 @@ function makeTChannelThriftServer(cluster, opts) {
     var NoEchoTypedError = TypedError({
         type: 'server.no-echo',
         message: 'No echo typed error',
-        nameAsThrift: 'noEchoTyped',
         value: null
     });
 
@@ -318,7 +315,11 @@ function makeTChannelThriftServer(cluster, opts) {
     }
 
     function notOkHandler(opts, req, head, body, cb) {
-        return cb(null, {ok: false, body: NoEchoError(body.value)});
+        return cb(null, {
+            ok: false,
+            body: NoEchoError(body.value),
+            typeName: 'noEcho'
+        });
     }
 
     function notOkTypedHandler(opts, req, head, body, cb) {
@@ -326,7 +327,8 @@ function makeTChannelThriftServer(cluster, opts) {
             ok: false,
             body: NoEchoTypedError({
                 value: body.value
-            })
+            }),
+            typeName: 'noEchoTyped'
         });
     }
 
@@ -338,7 +340,6 @@ function makeTChannelThriftServer(cluster, opts) {
 
     function NoEchoError(value) {
         var err = new Error('No echo');
-        err.nameAsThrift = 'noEcho';
         err.value = value;
         return err;
     }
