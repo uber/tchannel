@@ -44,7 +44,9 @@ function Agent(options) {
     // incoming reuqests
     self.serviceName = options.serviceName || null;
 
-    self.reporter = options.reporter || nullReporter;
+    if (options.reporter) {
+        self.reporter = options.reporter;
+    }
 }
 
 function compareBufs(buf1, buf2) {
@@ -121,5 +123,5 @@ Agent.prototype.report = function report(span) {
     }
 };
 
-function nullReporter() {}
+Agent.prototype.reporter = function nullReporter() {};
 
