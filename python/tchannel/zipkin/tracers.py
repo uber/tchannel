@@ -39,7 +39,6 @@ from collections import defaultdict
 from .formatters import json_formatter
 from .formatters import thrift_formatter
 from ..thrift import client_for
-from ..tornado import hyperbahn
 
 from .thrift import constants
 from .thrift import TCollector
@@ -122,6 +121,7 @@ class RawZipkinTracer(object):
             )
 
 
+# TODO add different thrift service name
 TCollectorClient = client_for('tcollector', TCollector)
 
 
@@ -133,25 +133,22 @@ class TChannelZipkinTracer(object):
     buffering of any sort.
     """
 
-    def __init__(self, tchannel, routers):
+    def __init__(self, tchannel):
         """
         :param tchannel:
             A tchannel instance to send the trace info to zipkin server
-        :param routers:
-            A list contains hyperbahn instances' ip addresses
         """
         self._tchannel = tchannel
-        self.client = TCollectorClient(self._tchannel)
-
-        if routers:
-            hyperbahn.advertise(self._tchannel, 'tcollector', routers)
 
     def record(self, traces):
+        def submit_callback(f):
+            if f.exception():
+                log.error('Fail to submit zipkin trace: ',
+                          exc_info=f.exc_info())
+
         for (trace, annotations) in traces:
-            try:
-                self.client.submit(thrift_formatter(trace, annotations))
-            except Exception as e:
-                log.exception(e.message)
+            f = self.client.submit(thrift_formatter(trace, annotations))
+            f.add_done_callback(submit_callback)
 
 
 class ZipkinTracer(object):

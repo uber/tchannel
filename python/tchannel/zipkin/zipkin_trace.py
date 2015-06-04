@@ -29,21 +29,19 @@ from tchannel.zipkin.tracers import TChannelZipkinTracer
 class ZipkinTraceHook(EventHook):
     """generate zipkin-style span for tracing"""
 
-    def __init__(self, tchannel=None, dst=None, routers=None):
+    def __init__(self, tchannel=None, dst=None):
         """Log zipkin style trace.
 
         :param tchannel:
             The tchannel instance to send zipkin trace spans
         :param dst:
             The destination to output trace information
-        :param routers:
-            A list contains hyperbahn instances' ip addresses
         """
 
         if tchannel:
             # TChannelZipkinTracer generates Base64-encoded span
             # and uploads to zipkin server
-            self.tracer = TChannelZipkinTracer(tchannel, routers)
+            self.tracer = TChannelZipkinTracer(tchannel)
         else:
             # DebugTracer generates json style span info and writes
             # to dst. By default it writes to stdout
