@@ -57,7 +57,7 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string, callOpti
 	}
 
 	headers := callHeaders{
-		CallerName: c.localPeerInfo.ProcessName,
+		CallerName: c.localPeerInfo.ServiceName,
 	}
 	callOptions.setHeaders(headers)
 

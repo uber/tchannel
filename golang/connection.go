@@ -23,14 +23,15 @@ package tchannel
 import (
 	"errors"
 	"fmt"
-	"github.com/uber/tchannel/golang/typed"
-	"golang.org/x/net/context"
 	"net"
 	"sync"
 	"sync/atomic"
+
+	"github.com/uber/tchannel/golang/typed"
+	"golang.org/x/net/context"
 )
 
-// PeerInfo contains nformation about a TChannel peer
+// PeerInfo contains information about a TChannel peer
 type PeerInfo struct {
 	// The host and port that can be used to contact the peer, as encoded by net.JoinHostPort
 	HostPort string
@@ -41,6 +42,18 @@ type PeerInfo struct {
 
 func (p PeerInfo) String() string {
 	return fmt.Sprintf("%s(%s)", p.HostPort, p.ProcessName)
+}
+
+// LocalPeerInfo adds service name to the peer info, only required for the local peer.
+type LocalPeerInfo struct {
+	PeerInfo
+
+	// ServiceName is the service name for the local peer.
+	ServiceName string
+}
+
+func (p LocalPeerInfo) String() string {
+	return fmt.Sprintf("%v: %v", p.ServiceName, p.PeerInfo)
 }
 
 // CurrentProtocolVersion is the current version of the TChannel protocol
@@ -88,7 +101,7 @@ type Connection struct {
 	checksumType   ChecksumType
 	framePool      FramePool
 	conn           net.Conn
-	localPeerInfo  PeerInfo
+	localPeerInfo  LocalPeerInfo
 	remotePeerInfo PeerInfo
 	sendCh         chan *Frame
 	state          connectionState
@@ -128,19 +141,19 @@ const (
 )
 
 // Creates a new Connection around an outbound connection initiated to a peer
-func newOutboundConnection(conn net.Conn, handlers *handlerMap, log Logger, peerInfo PeerInfo,
+func newOutboundConnection(conn net.Conn, handlers *handlerMap, log Logger, peerInfo LocalPeerInfo,
 	opts *ConnectionOptions) (*Connection, error) {
 	return newConnection(conn, connectionWaitingToSendInitReq, handlers, peerInfo, log, opts), nil
 }
 
 // Creates a new Connection based on an incoming connection from a peer
-func newInboundConnection(conn net.Conn, handlers *handlerMap, peerInfo PeerInfo, log Logger,
+func newInboundConnection(conn net.Conn, handlers *handlerMap, peerInfo LocalPeerInfo, log Logger,
 	opts *ConnectionOptions) (*Connection, error) {
 	return newConnection(conn, connectionWaitingToRecvInitReq, handlers, peerInfo, log, opts), nil
 }
 
 // Creates a new connection in a given initial state
-func newConnection(conn net.Conn, initialState connectionState, handlers *handlerMap, peerInfo PeerInfo, log Logger,
+func newConnection(conn net.Conn, initialState connectionState, handlers *handlerMap, peerInfo LocalPeerInfo, log Logger,
 	opts *ConnectionOptions) *Connection {
 
 	if opts == nil {

@@ -61,15 +61,15 @@ type Channel struct {
 	connectionOptions ConnectionOptions
 	handlers          *handlerMap
 
-	mut      sync.RWMutex // protects the listener and the peer info
-	peerInfo PeerInfo     // May be ephemeral if this is a client only channel
-	l        net.Listener // May be nil if this is a client only channel
+	mut      sync.RWMutex  // protects the listener and the peer info
+	peerInfo LocalPeerInfo // May be ephemeral if this is a client only channel
+	l        net.Listener  // May be nil if this is a client only channel
 }
 
 // NewChannel creates a new Channel.  The new channel can be used to send outbound requests
 // to peers, but will not listen or handling incoming requests until one of ListenAndServe
-// or Serve is called
-func NewChannel(opts *ChannelOptions) (*Channel, error) {
+// or Serve is called. The local service name should be passed to serviceName.
+func NewChannel(serviceName string, opts *ChannelOptions) (*Channel, error) {
 	if opts == nil {
 		opts = &ChannelOptions{}
 	}
@@ -86,9 +86,12 @@ func NewChannel(opts *ChannelOptions) (*Channel, error) {
 
 	ch := &Channel{
 		connectionOptions: opts.DefaultConnectionOptions,
-		peerInfo: PeerInfo{
-			ProcessName: processName,
-			HostPort:    ephemeralHostPort,
+		peerInfo: LocalPeerInfo{
+			PeerInfo: PeerInfo{
+				ProcessName: processName,
+				HostPort:    ephemeralHostPort,
+			},
+			ServiceName: serviceName,
 		},
 		log:      logger,
 		handlers: &handlerMap{},
@@ -156,7 +159,7 @@ func (ch *Channel) Register(h Handler, serviceName, operationName string) {
 }
 
 // PeerInfo returns the current peer info for the channel
-func (ch *Channel) PeerInfo() PeerInfo {
+func (ch *Channel) PeerInfo() LocalPeerInfo {
 	ch.mut.RLock()
 	defer ch.mut.RUnlock()
 

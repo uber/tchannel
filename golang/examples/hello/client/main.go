@@ -55,7 +55,7 @@ func asArgument(arg string) tchannel.Output {
 func main() {
 	flag.Parse()
 
-	ch, err := tchannel.NewChannel(&tchannel.ChannelOptions{
+	ch, err := tchannel.NewChannel("hello-client", &tchannel.ChannelOptions{
 		Logger: log,
 	})
 	if err != nil {

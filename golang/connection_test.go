@@ -32,7 +32,8 @@ import (
 
 // Values used in tests
 var (
-	testProcessName = "test-channel"
+	testServiceName = "test-channel"
+	testProcessName = "Test Channel"
 	testArg2        = []byte("Header in arg2")
 	testArg3        = []byte("Body in arg3")
 )
@@ -94,7 +95,7 @@ func TestRoundTrip(t *testing.T) {
 		assert.Equal(t, testArg3, []byte(respArg3))
 
 		assert.Equal(t, JSON, echoSaver.format)
-		assert.Equal(t, testProcessName, echoSaver.caller)
+		assert.Equal(t, testServiceName, echoSaver.caller)
 	})
 }
 
@@ -112,7 +113,7 @@ func TestDefaultFormat(t *testing.T) {
 		require.Equal(t, testArg2, arg2)
 		require.Equal(t, testArg3, arg3)
 		require.Equal(t, Raw, echoSaver.format)
-		assert.Equal(t, testProcessName, echoSaver.caller)
+		assert.Equal(t, testServiceName, echoSaver.caller)
 	})
 }
 
@@ -213,7 +214,7 @@ func withTestChannel(t *testing.T, f func(ch *Channel, hostPort string)) {
 		Logger:      SimpleLogger,
 	}
 
-	ch, err := NewChannel(&opts)
+	ch, err := NewChannel(testServiceName, &opts)
 	require.Nil(t, err)
 
 	l, err := net.Listen("tcp", "127.0.0.1:0")

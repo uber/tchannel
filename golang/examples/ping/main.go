@@ -77,7 +77,7 @@ func listenAndHandle(s *tchannel.Channel, hostPort string) {
 
 func main() {
 	// Create a new TChannel for handling requests
-	ch, err := tchannel.NewChannel(nil)
+	ch, err := tchannel.NewChannel("ping-server", nil)
 	if err != nil {
 		log.Fatalf("Could not create new channel: %v", err)
 	}
@@ -89,7 +89,7 @@ func main() {
 	go listenAndHandle(ch, "127.0.0.1:10500")
 
 	// Create a new TChannel for sending requests.
-	client, err := tchannel.NewChannel(nil)
+	client, err := tchannel.NewChannel("ping-client", nil)
 	if err != nil {
 		log.Fatalf("Could not create new client channel: %v", err)
 	}
