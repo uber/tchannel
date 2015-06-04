@@ -65,25 +65,24 @@ test('error case statements should not be duplicates', function t(assert) {
         }, checkCases);
 
     function checkCases() {
-
-        var errorTypes = [];
-        var keys = Object.keys(Errors);
-        for (var i = 0; i < keys.length; i++) {
-            var errorFn = Errors[keys[i]];
-            if (!errorFn || !errorFn.type) {
-                continue;
-            }
-
-            errorTypes.push(errorFn.type);
-        }
-
+        var errorTypes = getValueTypes(Errors);
+        caseTypes.sort();
+        errorTypes.sort();
         assert.equal(caseTypes.length, errorTypes.length);
-        assert.deepEqual(
-            caseTypes.sort(),
-            errorTypes.sort()
-        );
-
+        assert.deepEqual(caseTypes, errorTypes);
         assert.end();
+    }
+
+    function getValueTypes(obj) {
+        var types = [];
+        var keys = Object.keys(obj);
+        for (var i = 0; i < keys.length; i++) {
+            var val = obj[keys[i]];
+            if (val && val.type) {
+                types.push(val.type);
+            }
+        }
+        return types;
     }
 });
 
