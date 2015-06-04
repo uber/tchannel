@@ -52,7 +52,9 @@ allocCluster.test('send relay requests', {
         }
     });
 
-    twoClient.request().send('echo', 'foo', 'bar', function done(err, res, arg2, arg3) {
+    twoClient.request({
+        hasNoParent: true
+    }).send('echo', 'foo', 'bar', function done(err, res, arg2, arg3) {
         assert.ifError(err, 'no unexpected error');
         assert.equal(String(arg2), 'foo', 'expected arg2');
         assert.equal(String(arg3), 'bar', 'expected arg3');
@@ -87,6 +89,7 @@ allocCluster.test('relay respects ttl', {
 
     sourceChan.request({
         serviceName: 'dest',
+        hasNoParent: true,
         timeout: 250
     }).send('echoTTL', null, null, onResponse);
 
@@ -141,7 +144,9 @@ allocCluster.test('relay an error frame', {
         }
     });
 
-    twoClient.request().send('decline', 'foo', 'bar', function done(err, res, arg2, arg3) {
+    twoClient.request({
+        hasNoParent: true
+    }).send('decline', 'foo', 'bar', function done(err, res, arg2, arg3) {
         assert.equal(err.type, 'tchannel.declined', 'expected declined error');
 
         assert.end();

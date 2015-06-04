@@ -21,6 +21,7 @@
 'use strict';
 
 var Span = require('./span');
+var errors = require('../errors.js');
 
 module.exports = Agent;
 
@@ -43,7 +44,9 @@ function Agent(options) {
     // incoming reuqests
     self.serviceName = options.serviceName || null;
 
-    self.reporter = options.reporter || self.reporter;
+    if (options.reporter) {
+        self.reporter = options.reporter;
+    }
 }
 
 function compareBufs(buf1, buf2) {
@@ -91,9 +94,11 @@ Agent.prototype.setupNewSpan = function setupNewSpan(options) {
     });
 
     var parentSpan = options.parentSpan;
-    if (options.outgoing && !parentSpan && !options.topLevelRequest) {
-        self.logger.warn("TChannel tracer: parent span not specified " +
-            "for outgoing request!", options);
+    if (options.outgoing && !parentSpan && !options.hasNoParent) {
+        throw errors.ParentRequired({
+            parentSpan: parentSpan,
+            hasNoParent: options.hasNoParent
+        });
     }
 
     if (parentSpan && (!options.parentid && !options.traceid)) {
@@ -118,11 +123,5 @@ Agent.prototype.report = function report(span) {
     }
 };
 
-// Default reporter, just logs.
-Agent.prototype.reporter = function (span) {
-    var self = this;
-
-    // TODO: actual reporting
-    self.logger.info('got span: ' + span.toString());
-};
+Agent.prototype.reporter = function nullReporter() {};
 

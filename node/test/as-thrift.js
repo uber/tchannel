@@ -46,7 +46,8 @@ allocCluster.test('send and receiving an ok', {
     var client = cluster.channels[1].subChannels.server;
 
     tchannelAsThrift.send(client.request({
-        serviceName: 'server'
+        serviceName: 'server',
+        hasNoParent: true
     }), 'Chamber::echo', null, {
         value: 10
     }, function onResponse(err, res) {
@@ -69,7 +70,8 @@ allocCluster.test('send and receive a not ok', {
     var client = cluster.channels[1].subChannels.server;
 
     tchannelAsThrift.send(client.request({
-        serviceName: 'server'
+        serviceName: 'server',
+        hasNoParent: true
     }), 'Chamber::echo', null, {
         value: 10
     }, function onResponse(err, res) {
@@ -94,7 +96,8 @@ allocCluster.test('send and receive a typed not ok', {
     var client = cluster.channels[1].subChannels.server;
 
     tchannelAsThrift.send(client.request({
-        serviceName: 'server'
+        serviceName: 'server',
+        hasNoParent: true
     }), 'Chamber::echo', null, {
         value: 10
     }, function onResponse(err, res) {
@@ -119,7 +122,8 @@ allocCluster.test('sending and receiving headers', {
     var client = cluster.channels[1].subChannels.server;
 
     tchannelAsThrift.send(client.request({
-        serviceName: 'server'
+        serviceName: 'server',
+        hasNoParent: true
     }), 'Chamber::echo', {
         headerA: 'headerA',
         headerB: 'headerB'
@@ -152,7 +156,8 @@ allocCluster.test('getting an UnexpectedError frame', {
     );
 
     tchannelAsThrift.send(client.request({
-        serviceName: 'server'
+        serviceName: 'server',
+        hasNoParent: true
     }), 'Chamber::echo', null, {
         value: 10
     }, function onResponse(err, resp) {
@@ -179,6 +184,7 @@ allocCluster.test('getting a BadRequest frame', {
 
     client.request({
         serviceName: 'server',
+        hasNoParent: true,
         timeout: 1500,
         headers: {
             as: 'thrift'
@@ -216,6 +222,7 @@ allocCluster.test('sending without as header', {
 
     client.request({
         serviceName: 'server',
+        hasNoParent: true,
         timeout: 1500
     }).send('Chamber::echo', null, null, onResponse);
 
@@ -240,14 +247,15 @@ allocCluster.test('send without required fields', {
     makeTChannelThriftServer(cluster, {
         okResponse: true
     });
+
+    var client = cluster.channels[1].subChannels.server;
     var tchannelAsThrift = client.TChannelAsThrift({
         source: badThriftText
     });
 
-    var client = cluster.channels[1].subChannels.server;
-
     tchannelAsThrift.send(client.request({
-        serviceName: 'server'
+        serviceName: 'server',
+        hasNoParent: true
     }), 'Chamber::echo', null, {
         value: 'lol'
     }, function onResponse(err, res) {

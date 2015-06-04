@@ -51,6 +51,7 @@ allocCluster.test('emits response stats with ok', {
 
     clientChan.request({
         serviceName: 'server',
+        hasNoParent: true,
         headers: {
             cn: 'client'
         }
@@ -127,6 +128,7 @@ allocCluster.test('emits response stats with not ok', {
 
     clientChan.request({
         serviceName: 'server',
+        hasNoParent: true,
         headers: {
             cn: 'client'
         }
@@ -204,6 +206,7 @@ allocCluster.test('emits response stats with error', {
 
     clientChan.request({
         serviceName: 'server',
+        hasNoParent: true,
         headers: {
             cn: 'client'
         }

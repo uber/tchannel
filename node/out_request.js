@@ -44,6 +44,8 @@ function TChannelOutRequest(id, options) {
     self.retryCount = options.retryCount;
     self.channel = options.channel;
     self.logical = !!options.logical;
+    self.parent = options.parent;
+    self.hasNoParent = options.hasNoParent;
 
     self.start = 0;
     self.end = 0;
@@ -66,8 +68,8 @@ function TChannelOutRequest(id, options) {
         // new span with new ids
         self.span = options.tracer.setupNewSpan({
             outgoing: true,
-            parentSpan: options.parentSpan,
-            topLevelRequest: options.topLevelRequest,
+            parentSpan: options.parent && options.parent.span,
+            hasNoParent: options.hasNoParent,
             spanid: null,
             traceid: null,
             parentid: null,

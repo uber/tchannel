@@ -237,6 +237,14 @@ module.exports.NullKeyError = TypedError({
     endOffset: null
 });
 
+module.exports.ParentRequired = TypedError({
+    type: 'tchannel.tracer.parent-required',
+    message: 'parent not specified for outgoing call req.\n' +
+        'Expected either a parent or hasNoParent.\n',
+    parentSpan: null,
+    hasNoParent: null
+});
+
 module.exports.ReconstructedError = TypedError({
     type: 'tchannel.hydrated-error.default-type',
     message: 'TChannel json hydrated error;' +
@@ -507,6 +515,7 @@ module.exports.classify = function classify(err) {
         case 'tchannel.top-level-register':
         case 'tchannel.top-level-request':
         case 'tchannel.unimplemented-method':
+        case 'tchannel.tracer.parent-required':
             return 'UnexpectedError';
 
         default:

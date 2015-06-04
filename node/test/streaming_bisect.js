@@ -92,6 +92,7 @@ function streamingEchoTest(cluster, state, assert, callback) {
 
     cluster.testRawClient.request({
         serviceName: 'test_as_raw',
+        hasNoParent: true,
         headers: {
             as: 'raw'
         },
