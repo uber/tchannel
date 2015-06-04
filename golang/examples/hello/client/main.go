@@ -65,7 +65,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(*timeout))
 	defer cancel()
 
-	call, err := ch.BeginCall(ctx, *peerAddr, *serviceName, *operationName)
+	call, err := ch.BeginCall(ctx, *peerAddr, *serviceName, *operationName, nil)
 	if err != nil {
 		log.Errorf("Could not begin call to %v.%v@%v: %v", *serviceName, *operationName, *peerAddr, err)
 		log.Fatalf("Is the server running?")

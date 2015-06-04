@@ -98,7 +98,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	call, err := client.BeginCall(ctx, "127.0.0.1:10500", "PingService", "ping")
+	call, err := client.BeginCall(ctx, "127.0.0.1:10500", "PingService", "ping", nil)
 	if err != nil {
 		log.Fatalf("Could not begin call to local ping service: %v", err)
 	}
