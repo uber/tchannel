@@ -25,16 +25,16 @@
 
 var path = require('path');
 var TypedError = require('error/typed');
-var thriftify = require('thriftify');
+var fs = require('fs');
 
 var allocCluster = require('./lib/alloc-cluster.js');
 var TChannelAsThrift = require('../as/thrift.js');
 
-var globalSpec = thriftify.readSpecSync(
-    path.join(__dirname, 'anechoic-chamber.thrift')
+var globalThriftText = fs.readFileSync(
+    path.join(__dirname, 'anechoic-chamber.thrift'), 'utf8'
 );
-var badSpec = thriftify.readSpecSync(
-    path.join(__dirname, 'bad-anechoic-chamber.thrift')
+var badThriftText = fs.readFileSync(
+    path.join(__dirname, 'bad-anechoic-chamber.thrift'), 'utf8'
 );
 
 allocCluster.test('send and receiving an ok', {
@@ -242,7 +242,7 @@ allocCluster.test('send without required fields', {
         okResponse: true
     });
     var tchannelAsThrift = TChannelAsThrift({
-        spec: badSpec
+        source: badThriftText
     });
 
     tchannelAsThrift.send(client.request({
@@ -299,7 +299,7 @@ function makeTChannelThriftServer(cluster, opts) {
             networkFailureHandler;
 
     var tchannelAsThrift = new TChannelAsThrift({
-        spec: opts.spec || globalSpec,
+        source: opts.thriftText || globalThriftText,
         logParseFailures: false
     });
     tchannelAsThrift.register(server, 'Chamber::echo', options, fn);
