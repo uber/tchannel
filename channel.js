@@ -173,7 +173,7 @@ function TChannel(options) {
         self.tracer = new TracingAgent({
             logger: self.logger,
             forceTrace: self.options.forceTrace,
-            serviceName: self.options.tracingServiceName,
+            serviceName: self.options.serviceNameOverwrite,
             reporter: self.options.traceReporter
         });
 
