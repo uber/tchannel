@@ -40,6 +40,8 @@ var TChannelRequest = require('./request');
 var TChannelServiceNameHandler = require('./service-name-handler');
 var errors = require('./errors');
 
+var TChannelAsThrift = require('./as/thrift');
+var TChannelAsJSON = require('./as/json');
 var TChannelConnection = require('./connection');
 var TChannelPeers = require('./peers');
 var TChannelServices = require('./services');
@@ -180,6 +182,9 @@ function TChannel(options) {
     // lazily created by .getServer (usually from .listen)
     self.serverSocket = null;
     self.serverConnections = null;
+
+    self.TChannelAsThrift = TChannelAsThrift;
+    self.TChannelAsJSON = TChannelAsJSON;
 }
 inherits(TChannel, StatEmitter);
 
