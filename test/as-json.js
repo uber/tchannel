@@ -24,7 +24,6 @@
 
 var TypedError = require('error/typed');
 
-var TChannelJSON = require('../as/json.js');
 var allocCluster = require('./lib/alloc-cluster.js');
 
 allocCluster.test('getting an ok response', {
@@ -220,7 +219,7 @@ function makeTChannelJSONServer(cluster, opts) {
         opts.networkFailureResponse ? networkFailureHandler :
             networkFailureHandler;
 
-    var tchannelJSON = TChannelJSON({
+    var tchannelJSON = cluster.channels[0].TChannelAsJSON({
         logParseFailures: false
     });
     tchannelJSON.register(server, 'echo', options, fn);
