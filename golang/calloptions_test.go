@@ -32,12 +32,13 @@ func TestSetHeaders(t *testing.T) {
 		expectedHeaders callHeaders
 	}{
 		{
+			// When no format is specified, Raw should be used by default.
 			format:          "",
-			expectedHeaders: make(callHeaders),
+			expectedHeaders: callHeaders{ArgScheme: Raw.String()},
 		},
 		{
 			format:          Thrift,
-			expectedHeaders: callHeaders{ArgScheme: "thrift"},
+			expectedHeaders: callHeaders{ArgScheme: Thrift.String()},
 		},
 	}
 

@@ -30,6 +30,13 @@ import (
 	"golang.org/x/net/context"
 )
 
+// Values used in tests
+var (
+	testProcessName = "test-channel"
+	testArg2        = []byte("Header in arg2")
+	testArg3        = []byte("Body in arg3")
+)
+
 func testHandlerFunc(t *testing.T, f func(t *testing.T, ctx context.Context, call *InboundCall)) Handler {
 	return HandlerFunc(func(ctx context.Context, call *InboundCall) {
 		f(t, ctx, call)
@@ -75,19 +82,37 @@ func TestRoundTrip(t *testing.T) {
 		call, err := ch.BeginCall(ctx, hostPort, "Capture", "ping", &CallOptions{Format: JSON})
 		require.NoError(t, err)
 
-		require.NoError(t, call.WriteArg2(BytesOutput("Hello Header")))
-		require.NoError(t, call.WriteArg3(BytesOutput("Body Sent")))
+		require.NoError(t, call.WriteArg2(BytesOutput(testArg2)))
+		require.NoError(t, call.WriteArg3(BytesOutput(testArg3)))
 
 		var respArg2 BytesInput
 		require.NoError(t, call.Response().ReadArg2(&respArg2))
-		assert.Equal(t, []byte("Hello Header"), []byte(respArg2))
+		assert.Equal(t, testArg2, []byte(respArg2))
 
 		var respArg3 BytesInput
 		require.NoError(t, call.Response().ReadArg3(&respArg3))
-		assert.Equal(t, []byte("Body Sent"), []byte(respArg3))
+		assert.Equal(t, testArg3, []byte(respArg3))
 
 		assert.Equal(t, JSON, echoSaver.format)
-		assert.Equal(t, "test-channel", echoSaver.caller)
+		assert.Equal(t, testProcessName, echoSaver.caller)
+	})
+}
+
+func TestDefaultFormat(t *testing.T) {
+	withTestChannel(t, func(ch *Channel, hostPort string) {
+		echoSaver := &echoSaver{}
+		ch.Register(testHandlerFunc(t, echoSaver.echo), "Capture", "ping")
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		defer cancel()
+
+		arg2, arg3, err := sendRecv(ctx, ch, hostPort, "Capture", "ping", testArg2, testArg3)
+		require.Nil(t, err)
+
+		require.Equal(t, testArg2, arg2)
+		require.Equal(t, testArg3, arg3)
+		require.Equal(t, Raw, echoSaver.format)
+		assert.Equal(t, testProcessName, echoSaver.caller)
 	})
 }
 
@@ -184,7 +209,7 @@ func sendRecv(ctx context.Context, ch *Channel, hostPort string, serviceName, op
 
 func withTestChannel(t *testing.T, f func(ch *Channel, hostPort string)) {
 	opts := ChannelOptions{
-		ProcessName: "test-channel",
+		ProcessName: testProcessName,
 		Logger:      SimpleLogger,
 	}
 

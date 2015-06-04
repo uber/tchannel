@@ -25,9 +25,10 @@ type Format string
 
 // The list of formats supported by tchannel.
 const (
-	Thrift Format = "thrift"
-	JSON   Format = "json"
 	HTTP   Format = "http"
+	JSON   Format = "json"
+	Raw    Format = "raw"
+	Thrift Format = "thrift"
 )
 
 func (f Format) String() string {
@@ -41,8 +42,17 @@ type CallOptions struct {
 	Format Format
 }
 
+var defaultCallOptions = &CallOptions{}
+
 func (c *CallOptions) setHeaders(headers callHeaders) {
-	if c.Format != "" {
-		headers[ArgScheme] = c.Format.String()
+	if c == nil {
+		c = defaultCallOptions
 	}
+
+	format := Raw
+	if c.Format != "" {
+		format = c.Format
+	}
+
+	headers[ArgScheme] = format.String()
 }
