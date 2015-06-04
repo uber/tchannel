@@ -28,9 +28,9 @@ var util = require('util');
 
 var Errors = require('../errors.js');
 
-test('errors module should be in sorted order', function t(assert) {
+var errorsPath = path.resolve(path.join(__dirname, '..', 'errors.js'));
 
-    var errorsPath = path.resolve(path.join(__dirname, '..', 'errors.js'));
+test('errors module should be in sorted order', function t(assert) {
     var stream = fs.createReadStream(errorsPath, 'utf8');
     var exportedErrors = [];
     stream
@@ -69,7 +69,6 @@ test('errors module should be in sorted order', function t(assert) {
 
 test('error case statements should not be duplicates', function t(assert) {
 
-    var errorsPath = path.resolve(path.join(__dirname, '..', 'errors.js'));
     var stream = fs.createReadStream(errorsPath, 'utf8');
     var caseStatements = [];
     stream
