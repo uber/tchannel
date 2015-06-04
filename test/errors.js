@@ -57,20 +57,14 @@ test('errors module should be in sorted order', function t(assert) {
 });
 
 test('error case statements should not be duplicates', function t(assert) {
-    var caseStatements = [];
+    var caseTypes = [];
     processLineMatches(errorsPath,
-        /^.*case.*$/,
+        /case\s+(['"])(.+?)\1/,
         function each(match) {
-            caseStatements.push(match[0]);
+            caseTypes.push(match[2]);
         }, checkCases);
 
     function checkCases() {
-        var caseTypes = caseStatements.map(function extract(c) {
-            c = c.trim();
-            c = c.substr(6, c.length);
-            c = c.substr(0, c.length - 2);
-            return c;
-        });
 
         var errorTypes = [];
         var keys = Object.keys(Errors);
