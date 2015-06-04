@@ -139,11 +139,12 @@ class TChannelZipkinTracer(object):
             A tchannel instance to send the trace info to zipkin server
         """
         self._tchannel = tchannel
+        self.client = TCollectorClient(self._tchannel)
 
     def record(self, traces):
         def submit_callback(f):
             if f.exception():
-                log.error('Fail to submit zipkin trace: ',
+                log.error('Fail to submit zipkin trace',
                           exc_info=f.exc_info())
 
         for (trace, annotations) in traces:
