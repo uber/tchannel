@@ -54,6 +54,7 @@ allocCluster.test('request retries', {
             } else {
                 var str = String(arg3);
                 str = str.toUpperCase();
+                res.headers.as = 'raw';
                 res.sendOk('served by ' + n, str);
             }
         });
@@ -67,6 +68,9 @@ allocCluster.test('request retries', {
         serviceName: 'tristan',
         peers: cluster.hosts,
         requestDefaults: {
+            headers: {
+                as: 'raw'
+            },
             serviceName: 'tristan'
         }
     });
@@ -157,6 +161,7 @@ allocCluster.test('request application retries', {
         });
         chan.register('foo', function foo(req, res, arg2, arg3) {
             var rand = random();
+            res.headers.as = 'raw';
             if (rand) {
                 res.sendNotOk('meh', 'lol');
             } else {
@@ -173,7 +178,10 @@ allocCluster.test('request application retries', {
         serviceName: 'tristan',
         peers: cluster.hosts,
         requestDefaults: {
-            serviceName: 'tristan'
+            serviceName: 'tristan',
+            headers: {
+                as: 'raw'
+            }
         }
     });
 
@@ -273,6 +281,7 @@ allocCluster.test('retryFlags work', {
         });
         chan.register('foo', function foo(req, res, arg2, arg3) {
             var rand = random();
+            res.headers.as = 'raw';
             if (rand >= 0.9) {
                 res.sendError('Busy', 'nop');
             } else if (rand >= 0.5) {
@@ -293,7 +302,10 @@ allocCluster.test('retryFlags work', {
         serviceName: 'tristan',
         peers: cluster.hosts,
         requestDefaults: {
-            serviceName: 'tristan'
+            serviceName: 'tristan',
+            headers: {
+                as: 'raw'
+            }
         }
     });
 

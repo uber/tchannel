@@ -67,11 +67,13 @@ test('basic tracing test', function (assert) {
 
     subChan.register('/foobar', function (req, res) {
         logger.debug("subserv sr");
+        res.headers.as = 'raw';
         res.sendOk('result', 'success');
     });
 
     subChan.register('/barbaz', function (req, res) {
         logger.debug("subserv 2 sr");
+        res.headers.as = 'raw';
         res.sendOk('result', 'success');
     });
 
@@ -86,9 +88,13 @@ test('basic tracing test', function (assert) {
                     host: '127.0.0.1:4042',
                     serviceName: 'subservice',
                     parent: req,
+                    headers: {
+                        as: 'raw'
+                    },
                     trace: true
                 }).send('/foobar', 'arg1', 'arg2', function (err, subRes) {
                     logger.debug("top level recv from subservice: " + subRes);
+                    res.headers.as = 'raw';
                     if (err) return res.sendOk('error', err);
 
                     serverRequestsDone.signal();
@@ -100,6 +106,9 @@ test('basic tracing test', function (assert) {
                 host: '127.0.0.1:4042',
                 serviceName: 'subservice',
                 parent: req,
+                headers: {
+                    as: 'raw'
+                },
                 trace: true});
             var peers = server.peers.values();
             var ready = new CountedReadySignal(peers.length);
@@ -113,6 +122,7 @@ test('basic tracing test', function (assert) {
             ready(function send() {
                 servReq.send('/barbaz', 'arg1', 'arg2', function (err, subRes) {
                     logger.debug("top level recv from subservice: " + subRes);
+                    res.headers.as = 'raw';
                     if (err) return res.sendOk('error', err);
 
                     serverRequestsDone.signal();
@@ -121,6 +131,7 @@ test('basic tracing test', function (assert) {
         });
 
         serverRequestsDone(function () {
+            res.headers.as = 'raw';
             res.sendOk('result', 'success');
         });
 
@@ -139,7 +150,10 @@ test('basic tracing test', function (assert) {
             host: '127.0.0.1:4040',
             serviceName: 'server',
             trace: true,
-            hasNoParent: true
+            hasNoParent: true,
+            headers: {
+                as: 'raw'
+            }
         });
         var peers = client.peers.values();
         var ready = new CountedReadySignal(peers.length);

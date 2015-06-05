@@ -22,6 +22,7 @@
 
 var EventEmitter = require('../lib/event_emitter');
 var util = require('util');
+var assert = require('assert');
 
 var OutRequest = require('./out_request').OutRequest;
 var OutResponse = require('./out_response').OutResponse;
@@ -72,6 +73,8 @@ function TChannelV2Handler(options) {
     self.streamingReq = Object.create(null);
     self.streamingRes = Object.create(null);
     self.writeBuffer = new Buffer(v2.Frame.MaxSize);
+
+    self.requireAs = self.options.requireAs === false ? false : true;
 }
 
 util.inherits(TChannelV2Handler, EventEmitter);
@@ -181,7 +184,31 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
     if (self.remoteHostPort === null) {
         return callback(errors.CallReqBeforeInitReqError());
     }
+
     var req = self.buildInRequest(reqFrame);
+
+    if (!reqFrame.body ||
+        !reqFrame.body.headers ||
+        !reqFrame.body.headers.as
+    ) {
+        if (self.requireAs) {
+            var err = errors.AsHeaderRequired({
+                frame: 'request'
+            });
+            self.sendErrorFrame(
+                req.res, 'ProtocolError', err.message
+            );
+            return callback();
+        } else {
+            self.logger.error('Expected "as" header for incoming req', {
+                arg1: String(reqFrame.body.args[0]),
+                serviceName: reqFrame.body.serviceName,
+                callerName: reqFrame.body.headers.cn,
+                remoteHostPort: self.remoteHostPort
+            });
+        }
+    }
+
     if (reqFrame.body.args && reqFrame.body.args[0] &&
         reqFrame.body.args[0].length > v2.CallRequest.MaxArg1Size) {
         req.res = self.buildOutResponse(req);
@@ -212,6 +239,25 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
         return callback(errors.CallResBeforeInitResError());
     }
     var res = self.buildInResponse(resFrame);
+
+    if (!resFrame.body ||
+        !resFrame.body.headers ||
+        !resFrame.body.headers.as
+    ) {
+        if (self.requireAs) {
+            var err = errors.AsHeaderRequired({
+                frame: 'response'
+            });
+            return callback(err);
+        } else {
+            self.logger.error('Expected "as" for incoming response', {
+                code: resFrame.body.code,
+                remoteHostPort: self.remoteHostPort,
+                endpoint: String(resFrame.body.args[0])
+            });
+        }
+    }
+
     if (resFrame.body.args && resFrame.body.args[0] &&
         resFrame.body.args[0].length > v2.CallResponse.MaxArg1Size) {
         return callback(errors.Arg1OverLengthLimit({
@@ -379,6 +425,19 @@ TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame
     var reqBody = new v2.CallRequest(
         flags, req.ttl, req.tracing, req.serviceName, req.headers,
         req.checksum.type, args);
+
+    if (self.requireAs) {
+        assert(req.headers && req.headers.as,
+            'Expected the "as" transport header to be set for request');
+    } else {
+        self.logger.error('Expected "as" header to be set for request', {
+            arg1: String(args[0]),
+            callerName: req.headers && req.headers.cn,
+            remoteHostPort: self.remoteHostPort,
+            serviceName: req.serviceName
+        });
+    }
+
     req.checksum = self._sendCallBodies(req.id, reqBody, null);
 };
 
@@ -392,6 +451,18 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
     var resBody = new v2.CallResponse(
         flags, code, res.tracing, res.headers,
         res.checksum.type, args);
+
+    if (self.requireAs) {
+        assert(res.headers && res.headers.as,
+            'Expected the "as" transport header to be set for response');
+    } else {
+        self.logger.error('Expected "as" header to be set for response', {
+            code: code,
+            remoteHostPort: self.remoteHostPort,
+            arg1: String(args[0])
+        });
+    }
+
     res.checksum = self._sendCallBodies(res.id, resBody, null);
 };
 
