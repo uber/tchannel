@@ -3,3 +3,4 @@
 .DS_Store
 build
 Godeps/_workspace
+examples/thrift/gen-go
