@@ -22,6 +22,7 @@ package tchannel
 
 import (
 	"errors"
+	"io"
 
 	"github.com/uber/tchannel/golang/typed"
 )
@@ -57,39 +58,34 @@ type reqResWriter struct {
 	err                error
 }
 
-// writeArg1 writes the first argument to the request/response
-func (w *reqResWriter) writeArg1(arg Output) error {
-	return w.writeArg(arg, false, reqResWriterPreArg1, reqResWriterPreArg2)
-}
-
-// writeArg2 writes the second argument to the request/response
-func (w *reqResWriter) writeArg2(arg Output) error {
-	return w.writeArg(arg, false, reqResWriterPreArg2, reqResWriterPreArg3)
-}
-
-// writeArg3 writes the third argument to the request/response
-func (w *reqResWriter) writeArg3(arg Output) error {
-	return w.writeArg(arg, true, reqResWriterPreArg3, reqResWriterComplete)
-}
-
-// writeArg writes an argument, failing if the writer is not in the given
-// inState, and leaving the writer in the given outState when complete
-func (w *reqResWriter) writeArg(arg Output, last bool,
-	inState reqResWriterState, outState reqResWriterState) error {
+func (w *reqResWriter) argWriter(last bool, inState reqResWriterState, outState reqResWriterState) (io.WriteCloser, error) {
 	if w.err != nil {
-		return w.err
+		return nil, w.err
 	}
 
 	if w.state != inState {
-		return w.failed(errReqResWriterStateMismatch)
+		return nil, w.failed(errReqResWriterStateMismatch)
 	}
 
-	if err := w.contents.WriteArgument(arg, last); err != nil {
-		return w.failed(err)
+	argWriter, err := w.contents.ArgWriter(last)
+	if err != nil {
+		return nil, err
 	}
 
 	w.state = outState
-	return nil
+	return argWriter, nil
+}
+
+func (w *reqResWriter) arg1Writer() (io.WriteCloser, error) {
+	return w.argWriter(false /* last */, reqResWriterPreArg1, reqResWriterPreArg2)
+}
+
+func (w *reqResWriter) arg2Writer() (io.WriteCloser, error) {
+	return w.argWriter(false /* last */, reqResWriterPreArg2, reqResWriterPreArg3)
+}
+
+func (w *reqResWriter) arg3Writer() (io.WriteCloser, error) {
+	return w.argWriter(true /* last */, reqResWriterPreArg3, reqResWriterComplete)
 }
 
 // newFragment creates a new fragment for marshaling into
@@ -165,35 +161,35 @@ type reqResReader struct {
 	err                error
 }
 
-// readArg1 reads the first argument from the underlying stream
-func (r *reqResReader) readArg1(arg Input) error {
-	return r.readArg(arg, false, reqResReaderPreArg1, reqResReaderPreArg2)
+// arg1Reader returns an io.ReadCloser to read arg1.
+func (r *reqResReader) arg1Reader() (io.ReadCloser, error) {
+	return r.argReader(false /* last */, reqResReaderPreArg1, reqResReaderPreArg2)
 }
 
-// readArg2 reads the second argument from the underlying stream
-func (r *reqResReader) readArg2(arg Input) error {
-	return r.readArg(arg, false, reqResReaderPreArg2, reqResReaderPreArg3)
+// arg2Reader returns an io.ReadCloser to read arg2.
+func (r *reqResReader) arg2Reader() (io.ReadCloser, error) {
+	return r.argReader(false /* last */, reqResReaderPreArg2, reqResReaderPreArg3)
 }
 
-// readArg3 reads the third argument from the undetlying stream
-func (r *reqResReader) readArg3(arg Input) error {
-	return r.readArg(arg, true, reqResReaderPreArg3, reqResReaderComplete)
+// arg3Reader returns an io.ReadCloser to read arg3.
+func (r *reqResReader) arg3Reader() (io.ReadCloser, error) {
+	return r.argReader(true /* last */, reqResReaderPreArg3, reqResReaderComplete)
 }
 
-// readArg reads the given argument, failing if the reader is not in the
-// provided inState.  Leaves the reader in the provided outState
-func (r *reqResReader) readArg(arg Input, last bool,
-	inState reqResReaderState, outState reqResReaderState) error {
+// argReader returns an io.ReadCloser that can be used to read an argument. The ReadCloser
+// must be closed once the argument has been read.
+func (r *reqResReader) argReader(last bool, inState reqResReaderState, outState reqResReaderState) (io.ReadCloser, error) {
 	if r.state != inState {
-		return r.failed(errReqResReaderStateMismatch)
+		return nil, r.failed(errReqResReaderStateMismatch)
 	}
 
-	if err := r.contents.ReadArgument(arg, last); err != nil {
-		return r.failed(err)
+	argReader, err := r.contents.ArgReader(last)
+	if err != nil {
+		return nil, r.failed(err)
 	}
 
 	r.state = outState
-	return nil
+	return argReader, nil
 }
 
 // recvNextFragment receives the next fragment from the underlying message exchange.

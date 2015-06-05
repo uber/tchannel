@@ -23,6 +23,7 @@ package tchannel
 import (
 	"errors"
 	"fmt"
+	"io"
 
 	"github.com/uber/tchannel/golang/typed"
 )
@@ -109,9 +110,14 @@ type fragmentingWriterState int
 const (
 	fragmentingWriteStart fragmentingWriterState = iota
 	fragmentingWriteInArgument
+	fragmentingWriteInLastArgument
 	fragmentingWriteWaitingForArgument
 	fragmentingWriteComplete
 )
+
+func (s fragmentingWriterState) isWritingArgument() bool {
+	return s == fragmentingWriteInArgument || s == fragmentingWriteInLastArgument
+}
 
 // A fragmentingWriter writes one or more arguments to an underlying stream,
 // breaking them into fragments as needed, and applying an overarching
@@ -135,31 +141,27 @@ func newFragmentingWriter(sender fragmentSender, checksum Checksum) *fragmenting
 	}
 }
 
-// WriteArgument writes a full argument to the writer, fragmenting as needed
-func (w *fragmentingWriter) WriteArgument(arg Output, last bool) error {
-	if err := w.BeginArgument(); err != nil {
-		return err
+// ArgWriter returns an io.WriteCloser to write an argument. The WriteCloser will handle
+// fragmentation as needed. Once the argument is written, the WriteCloser must be closed.
+func (w *fragmentingWriter) ArgWriter(last bool) (io.WriteCloser, error) {
+	if err := w.BeginArgument(last); err != nil {
+		return nil, err
 	}
-
-	if err := arg.WriteTo(w); err != nil {
-		return err
-	}
-
-	return w.EndArgument(last)
+	return w, nil
 }
 
 // BeginArgument tells the writer that the caller is starting a new argument.
 // Must not be called while an existing argument is in place
-func (w *fragmentingWriter) BeginArgument() error {
+func (w *fragmentingWriter) BeginArgument(last bool) error {
 	if w.err != nil {
 		return w.err
 	}
 
-	switch w.state {
-	case fragmentingWriteComplete:
+	switch {
+	case w.state == fragmentingWriteComplete:
 		w.err = errComplete
 		return w.err
-	case fragmentingWriteInArgument:
+	case w.state.isWritingArgument():
 		w.err = errAlreadyWritingArgument
 		return w.err
 	}
@@ -182,6 +184,9 @@ func (w *fragmentingWriter) BeginArgument() error {
 
 	w.curChunk = newWritableChunk(w.checksum, w.curFragment.contents)
 	w.state = fragmentingWriteInArgument
+	if last {
+		w.state = fragmentingWriteInLastArgument
+	}
 	return nil
 }
 
@@ -191,7 +196,7 @@ func (w *fragmentingWriter) Write(b []byte) (int, error) {
 		return 0, w.err
 	}
 
-	if w.state != fragmentingWriteInArgument {
+	if !w.state.isWritingArgument() {
 		w.err = errNotWritingArgument
 		return 0, w.err
 	}
@@ -222,14 +227,18 @@ func (w *fragmentingWriter) Write(b []byte) (int, error) {
 	}
 }
 
-// EndArgument ends the current argument.  If last is true, this is the final
-// argument in the message
-func (w *fragmentingWriter) EndArgument(last bool) error {
+func (w *fragmentingWriter) Close() error {
+	return w.EndArgument()
+}
+
+// EndArgument ends the current argument.
+func (w *fragmentingWriter) EndArgument() error {
+	last := w.state == fragmentingWriteInLastArgument
 	if w.err != nil {
 		return w.err
 	}
 
-	if w.state != fragmentingWriteInArgument {
+	if !w.state.isWritingArgument() {
 		w.err = errNotWritingArgument
 		return w.err
 	}

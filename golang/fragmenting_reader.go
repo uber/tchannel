@@ -57,9 +57,14 @@ type fragmentingReadState int
 const (
 	fragmentingReadStart fragmentingReadState = iota
 	fragmentingReadInArgument
+	fragmentingReadInLastArgument
 	fragmentingReadWaitingForArgument
 	fragmentingReadComplete
 )
+
+func (s fragmentingReadState) isReadingArgument() bool {
+	return s == fragmentingReadInArgument || s == fragmentingReadInLastArgument
+}
 
 type fragmentingReader struct {
 	state            fragmentingReadState
@@ -78,28 +83,25 @@ func newFragmentingReader(receiver fragmentReceiver) *fragmentingReader {
 	}
 }
 
-func (r *fragmentingReader) ReadArgument(arg Input, last bool) error {
-	if err := r.BeginArgument(); err != nil {
-		return err
+// ArgReader returns an io.ReadCloser to read an argument. The ReadCloser will handle
+// fragmentation as needed. Once the argument has been read, the ReadCloser must be closed.
+func (r *fragmentingReader) ArgReader(last bool) (io.ReadCloser, error) {
+	if err := r.BeginArgument(last); err != nil {
+		return nil, err
 	}
-
-	if err := arg.ReadFrom(r); err != nil {
-		return err
-	}
-
-	return r.EndArgument(last)
+	return r, nil
 }
 
-func (r *fragmentingReader) BeginArgument() error {
+func (r *fragmentingReader) BeginArgument(last bool) error {
 	if r.err != nil {
 		return r.err
 	}
 
-	switch r.state {
-	case fragmentingReadInArgument:
+	switch {
+	case r.state.isReadingArgument():
 		r.err = errAlreadyReadingArgument
 		return r.err
-	case fragmentingReadComplete:
+	case r.state == fragmentingReadComplete:
 		r.err = errComplete
 		return r.err
 	}
@@ -114,6 +116,9 @@ func (r *fragmentingReader) BeginArgument() error {
 	}
 
 	r.state = fragmentingReadInArgument
+	if last {
+		r.state = fragmentingReadInLastArgument
+	}
 	return nil
 }
 
@@ -122,7 +127,7 @@ func (r *fragmentingReader) Read(b []byte) (int, error) {
 		return 0, r.err
 	}
 
-	if r.state != fragmentingReadInArgument {
+	if !r.state.isReadingArgument() {
 		r.err = errNotReadingArgument
 		return 0, r.err
 	}
@@ -162,12 +167,17 @@ func (r *fragmentingReader) Read(b []byte) (int, error) {
 	}
 }
 
-func (r *fragmentingReader) EndArgument(last bool) error {
+func (r *fragmentingReader) Close() error {
+	return r.EndArgument()
+}
+
+func (r *fragmentingReader) EndArgument() error {
+	last := r.state == fragmentingReadInLastArgument
 	if r.err != nil {
 		return r.err
 	}
 
-	if r.state != fragmentingReadInArgument {
+	if !r.state.isReadingArgument() {
 		r.err = errNotReadingArgument
 		return r.err
 	}

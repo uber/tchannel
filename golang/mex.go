@@ -128,7 +128,7 @@ type messageExchangeSet struct {
 // newExchange creates and adds a new message exchange to this set
 func (mexset *messageExchangeSet) newExchange(ctx context.Context,
 	msgType messageType, msgID uint32, bufferSize int) (*messageExchange, error) {
-	mexset.log.Debugf("Creating new %s message exchange for [%s:%d]", mexset.name, msgType, msgID)
+	mexset.log.Debugf("Creating new %s message exchange for [%v:%d]", mexset.name, msgType, msgID)
 
 	mex := &messageExchange{
 		msgType: msgType,
