@@ -75,6 +75,7 @@ function TChannelV2Handler(options) {
     self.writeBuffer = new Buffer(v2.Frame.MaxSize);
 
     self.requireAs = self.options.requireAs === false ? false : true;
+    self.requireCn = self.options.requireCn === false ? false : true;
 }
 
 util.inherits(TChannelV2Handler, EventEmitter);
@@ -185,6 +186,7 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
         return callback(errors.CallReqBeforeInitReqError());
     }
 
+    var err;
     var req = self.buildInRequest(reqFrame);
 
     if (!reqFrame.body ||
@@ -192,7 +194,7 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
         !reqFrame.body.headers.as
     ) {
         if (self.requireAs) {
-            var err = errors.AsHeaderRequired({
+            err = errors.AsHeaderRequired({
                 frame: 'request'
             });
             self.sendErrorFrame(
@@ -204,6 +206,23 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
                 arg1: String(reqFrame.body.args[0]),
                 serviceName: reqFrame.body.serviceName,
                 callerName: reqFrame.body.headers.cn,
+                remoteHostPort: self.remoteHostPort
+            });
+        }
+    }
+
+    if (!reqFrame.body ||
+        !reqFrame.body.headers ||
+        !reqFrame.body.headers.cn
+    ) {
+        if (self.requireCn) {
+            err = errors.CnHeaderRequired();
+            self.sendErrorFrame(req.res, 'ProtocolError', err.message);
+            return callback();
+        } else {
+            self.logger.error('Expected "cn" header for incoming req', {
+                arg1: String(reqFrame.body.args[0]),
+                serviceName: reqFrame.body.serviceName,
                 remoteHostPort: self.remoteHostPort
             });
         }
@@ -433,6 +452,17 @@ TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame
         self.logger.error('Expected "as" header to be set for request', {
             arg1: String(args[0]),
             callerName: req.headers && req.headers.cn,
+            remoteHostPort: self.remoteHostPort,
+            serviceName: req.serviceName
+        });
+    }
+
+    if (self.requireCn) {
+        assert(req.headers && req.headers.cn,
+            'Expected the "cn" transport header to be set for requiest');
+    } else {
+        self.logger.error('Expected "cn" header to be set for request', {
+            arg1: String(args[0]),
             remoteHostPort: self.remoteHostPort,
             serviceName: req.serviceName
         });

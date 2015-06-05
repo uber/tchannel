@@ -80,6 +80,11 @@ module.exports.ChecksumError = TypedError({
     actualValue: null
 });
 
+module.exports.CnHeaderRequired = TypedError({
+    type: 'tchannel.handler.incoming-req-cn-header-required',
+    message: 'Expected incoming call request to have "cn" header set.'
+});
+
 module.exports.ConnectionStaleTimeoutError = TypedError({
     type: 'tchannel.connection-stale.timeout',
     message: 'Connection got two timeouts in a row.\n' +
@@ -499,6 +504,7 @@ module.exports.classify = function classify(err) {
         case 'tchannel.protocol.write-failed':
         case 'tchannel.unhandled-frame-type':
         case 'tchannel.handler.incoming-req-as-header-required':
+        case 'tchannel.handler.incoming-req-cn-header-required':
             return 'ProtocolError';
 
         case 'tchannel.connection.close':
