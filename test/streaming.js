@@ -102,6 +102,8 @@ function partsTest(testCase, assert) {
 
         var peer = testCase.channel.peers.choosePeer(null, options);
         var conn = peer.connect();
+        options.headers = options.headers || {};
+        options.headers.as = 'raw';
         var req = conn.request(options);
         conn.on('identified', function onId() {
             var resultReady = Ready();
@@ -152,6 +154,7 @@ function echoHandler() {
     var handler = EndpointHandler();
     function foo(req, buildRes) {
         var res = buildRes({streamed: true});
+        res.headers.as = 'raw';
         res.setOk(true);
 
         req.arg2.on('data', function onArg2Data(chunk) {

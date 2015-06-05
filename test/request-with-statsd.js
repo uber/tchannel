@@ -42,6 +42,7 @@ allocCluster.test('emits stats on call success', {
         serviceName: 'reservoir'
     }).register('Reservoir::get', function get(req, res, h, b) {
         timers.setTimeout(function onSend() {
+            res.headers.as = 'raw';
             res.sendOk(h, b);
         }, 500);
         timers.advance(500);
@@ -56,7 +57,12 @@ allocCluster.test('emits stats on call success', {
     client.channelStatsd = new TChannelStatsd(client, statsd);
     var clientChan = client.makeSubChannel({
         serviceName: 'reservoir',
-        peers: [server.hostPort]
+        peers: [server.hostPort],
+        requestDefaults: {
+            headers: {
+                as: 'raw'
+            }
+        }
     });
 
     clientChan.request({
@@ -116,6 +122,7 @@ allocCluster.test('emits stats on call failure', {
         serviceName: 'reservoir'
     }).register('Reservoir::get', function get(req, res, h, b) {
         timers.setTimeout(function onSend() {
+            res.headers.as = 'raw';
             res.sendNotOk(h, '0');
         }, 500);
         timers.advance(500);
@@ -130,7 +137,12 @@ allocCluster.test('emits stats on call failure', {
     client.channelStatsd = new TChannelStatsd(client, statsd);
     var clientChan = client.makeSubChannel({
         serviceName: 'reservoir',
-        peers: [server.hostPort]
+        peers: [server.hostPort],
+        requestDefaults: {
+            headers: {
+                as: 'raw'
+            }
+        }
     });
 
     clientChan.request({

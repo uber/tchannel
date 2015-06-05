@@ -46,6 +46,12 @@ module.exports.ArgChunkOutOfOrderError = TypedError({
     got: null
 });
 
+module.exports.AsHeaderRequired = TypedError({
+    type: 'tchannel.handler.incoming-req-as-header-required',
+    message: 'Expected incoming call {frame} to have "as" header set.',
+    frame: null
+});
+
 module.exports.CallReqBeforeInitReqError = TypedError({
     type: 'tchannel.init.call-request-before-init-request',
     message: 'call request before init request'
@@ -492,6 +498,7 @@ module.exports.classify = function classify(err) {
         case 'tchannel.protocol.read-failed':
         case 'tchannel.protocol.write-failed':
         case 'tchannel.unhandled-frame-type':
+        case 'tchannel.handler.incoming-req-as-header-required':
             return 'ProtocolError';
 
         case 'tchannel.connection.close':

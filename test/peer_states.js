@@ -30,6 +30,11 @@ allocCluster.test('healthy state stays healthy', {
     channelOptions: {
         timers: MockTimers(Date.now()),
         random: winning
+    },
+    requestDefaults: {
+        headers: {
+            as: 'raw'
+        }
     }
 }, function t(cluster, assert) {
     var one = cluster.channels[0];
@@ -228,6 +233,7 @@ function testSetup(desc, testFunc) {
         // manually set minRequests requirement to 0
         peer.state.minRequests = 0;
         service.register('glad', function(req, res) {
+            res.headers.as = 'raw';
             res.sendOk('pool', 'party');
         });
         service.register('sad', function(req, res) {
@@ -240,7 +246,10 @@ function testSetup(desc, testFunc) {
             return function runSendTest(callback) {
                 client.request({
                     serviceName: 'tiberius', 
-                    hasNoParent: true
+                    hasNoParent: true,
+                    headers: {
+                        as: 'raw'
+                    }
                 }).send(op, '', '', onResult);
                 function onResult(err, res, arg2, arg3) {
                     callback(null, {
