@@ -73,6 +73,8 @@ function TChannelV2Handler(options) {
     self.streamingReq = Object.create(null);
     self.streamingRes = Object.create(null);
     self.writeBuffer = new Buffer(v2.Frame.MaxSize);
+
+    self.forceAs = self.options.forceAs === false ? false : true;
 }
 
 util.inherits(TChannelV2Handler, EventEmitter);
@@ -189,13 +191,20 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
         !reqFrame.body.headers ||
         !reqFrame.body.headers.as
     ) {
-        var err = errors.AsHeaderRequired({
-            frame: 'request'
-        });
-        self.sendErrorFrame(
-            req.res, 'ProtocolError', err.message
-        );
-        return callback();
+        if (self.forceAs) {
+            var err = errors.AsHeaderRequired({
+                frame: 'request'
+            });
+            self.sendErrorFrame(
+                req.res, 'ProtocolError', err.message
+            );
+            return callback();
+        } else {
+            self.logger.error('Expected "as" header for incoming req', {
+                arg1: String(reqFrame.body.args[0]),
+                serviceName: reqFrame.body.serviceName
+            });
+        }
     }
 
     if (reqFrame.body.args && reqFrame.body.args[0] &&
@@ -233,10 +242,16 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
         !resFrame.body.headers ||
         !resFrame.body.headers.as
     ) {
-        var err = errors.AsHeaderRequired({
-            frame: 'response'
-        });
-        return callback(err);
+        if (self.forceAs) {
+            var err = errors.AsHeaderRequired({
+                frame: 'response'
+            });
+            return callback(err);
+        } else {
+            self.logger.error('Expected "as" for incoming response', {
+                code: resFrame.body.code
+            });
+        }
     }
 
     if (resFrame.body.args && resFrame.body.args[0] &&
@@ -407,8 +422,15 @@ TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame
         flags, req.ttl, req.tracing, req.serviceName, req.headers,
         req.checksum.type, args);
 
-    assert(req.headers && req.headers.as,
-        'Expected the "as" transport header to be set for request');
+    if (self.forceAs) {
+        assert(req.headers && req.headers.as,
+            'Expected the "as" transport header to be set for request');
+    } else {
+        self.logger.error('Expected "as" header to be set for request', {
+            arg1: String(args[0]),
+            serviceName: req.serviceName
+        });
+    }
 
     req.checksum = self._sendCallBodies(req.id, reqBody, null);
 };
@@ -424,8 +446,14 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
         flags, code, res.tracing, res.headers,
         res.checksum.type, args);
 
-    assert(res.headers && res.headers.as,
-        'Expected the "as" transport header to be set for response');
+    if (self.forceAs) {
+        assert(res.headers && res.headers.as,
+            'Expected the "as" transport header to be set for response');
+    } else {
+        self.logger.error('Expected "as" header to be set for response', {
+            code: code
+        });
+    }
 
     res.checksum = self._sendCallBodies(res.id, resBody, null);
 };
