@@ -20,34 +20,37 @@
 
 'use strict';
 
-require('./errors');
-require('./event_emitter.js');
-require('./argstream.js');
-require('./safe-quit.js');
-require('./timeouts.js');
-require('./send.js');
-require('./retry.js');
-require('./relay.js');
-require('./streaming.js');
-require('./streaming_bisect.js');
-require('./register.js');
-require('./identify.js');
-require('./max_pending.js');
-require('./tchannel.js');
-require('./regression-inOps-leak.js');
-require('./v2/index.js');
-require('./regression-listening-on-used-port.js');
-require('./as-thrift.js');
-require('./as-json.js');
-require('./as-http.js');
-require('./peers.js');
-require('./peer_states.js');
-require('./trace/');
-require('./request-stats.js');
-require('./streaming-resp-err.js');
-require('./double-response.js');
-require('./request-with-statsd.js');
-require('./response-stats.js');
-require('./response-with-statsd.js');
-require('./ping.js');
-require('./permissions_cache.js');
+var inherits = require('util').inherits;
+var LRUCache = require('lru-cache');
+
+function PermissionsCache(options) {
+    if (!(this instanceof PermissionsCache)) {
+        return new PermissionsCache(options);
+    }
+    var self = this;
+
+    self.options = options;
+    PermissionsCache.super_.call(self, self.options);
+
+    self.channel = self.options.channel;
+    self.logger = self.options.logger;
+    self.value = 0;
+
+    self.channel.statEvent.addListener(self.increment.bind(self));
+}
+
+inherits(PermissionsCache, LRUCache);
+
+PermissionsCache.prototype.increment = function increment(stat) {
+    var self = this;
+    if (stat.name === 'inbound.calls.recvd' && stat.type === 'counter') {
+        var key = createCallsKey(stat.tags['calling-service'], stat.tags.service);
+        self.set(key, (self.get(key) || 0) + 1);
+    }
+};
+
+function createCallsKey(caller, callee) {
+    return caller + '_' + callee;
+}
+
+module.exports = PermissionsCache;
