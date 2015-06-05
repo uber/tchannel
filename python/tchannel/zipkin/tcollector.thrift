@@ -38,14 +38,14 @@ struct Annotation {
   4: optional i32 duration         // how long did the operation take? microseconds
 }
 
-//enum AnnotationType { BOOL, BYTES, I16, I32, I64, DOUBLE, STRING }
+enum AnnotationType { BOOL, BYTES, I16, I32, I64, DOUBLE, STRING }
 
-//struct BinaryAnnotation {
-//  1: string key,
-//  2: binary value,
-//  3: AnnotationType annotation_type,
-//  4: optional Endpoint host
-//}
+struct BinaryAnnotation {
+  1: string key,
+  2: binary value,
+  3: AnnotationType annotation_type,
+  4: optional Endpoint host
+}
 
 struct Span {
   1: i64 trace_id                  // unique trace id, use for all spans in trace
@@ -53,6 +53,14 @@ struct Span {
   4: i64 id,                       // unique span id, only used for this span
   5: optional i64 parent_id,                // parent span id
   6: list<Annotation> annotations, // list of all annotations/events that occured
-  //8: list<BinaryAnnotation> binary_annotations, // any binary annotations
+  8: list<BinaryAnnotation> binary_annotations, // any binary annotations
   9: optional bool debug = 0
+}
+
+struct Response {
+  1: bool ok
+}
+
+service TCollector {
+  Response submit(1: Span span)
 }

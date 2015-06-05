@@ -36,11 +36,14 @@ import logging
 import sys
 from collections import defaultdict
 
-from formatters import base64_thrift_formatter
-from formatters import json_formatter
+from .formatters import json_formatter
+from .formatters import thrift_formatter
+from ..thrift import client_for
 
-from ..tornado.stream import InMemStream
 from .thrift import constants
+from .thrift import TCollector
+
+log = logging.getLogger('zipkin_tracing')
 
 zipkin_log = logging.getLogger('zipkin')
 
@@ -114,8 +117,12 @@ class RawZipkinTracer(object):
     def record(self, traces):
         for (trace, annotations) in traces:
             self._logger.info(
-                base64_thrift_formatter(trace, annotations)
+                thrift_formatter(trace, annotations, isbased64=True)
             )
+
+
+# TODO add different thrift service name
+TCollectorClient = client_for('tcollector', TCollector)
 
 
 class TChannelZipkinTracer(object):
@@ -132,21 +139,17 @@ class TChannelZipkinTracer(object):
             A tchannel instance to send the trace info to zipkin server
         """
         self._tchannel = tchannel
-        self.client = tchannel.request(
-            "tcollector"
-        )
+        self.client = TCollectorClient(self._tchannel)
 
     def record(self, traces):
+        def submit_callback(f):
+            if f.exception():
+                log.error('Fail to submit zipkin trace',
+                          exc_info=f.exc_info())
+
         for (trace, annotations) in traces:
-            try:
-                self.client.send(
-                    InMemStream('span'),
-                    InMemStream(),
-                    InMemStream(base64_thrift_formatter(trace, annotations)),
-                    traceflag=False,  # disable tracing for span uploading
-                )
-            except:
-                pass
+            f = self.client.submit(thrift_formatter(trace, annotations))
+            f.add_done_callback(submit_callback)
 
 
 class ZipkinTracer(object):

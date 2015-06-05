@@ -23,10 +23,14 @@
 #
 # DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING
 #
-#  options string: py:tornado
+#  options string: py:tornado,dynamic,utf8strings,new_style,slots
 #
+
+from thrift.Thrift import TType, TMessageType, TException, TApplicationException
+from ttypes import *
 
 CLIENT_SEND = "cs"
 CLIENT_RECV = "cr"
 SERVER_SEND = "ss"
 SERVER_RECV = "sr"
+

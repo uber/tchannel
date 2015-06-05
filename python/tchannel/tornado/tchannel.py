@@ -39,6 +39,7 @@ from ..event import EventEmitter
 from ..event import EventRegistrar
 from ..handler import CallableRequestHandler
 from ..net import local_ip
+from ..zipkin.zipkin_trace import ZipkinTraceHook
 from .broker import ArgSchemeBroker
 from .connection import StreamConnection
 from .dispatch import RequestDispatcher
@@ -101,6 +102,7 @@ class TChannel(object):
         # register event hooks
         self.event_emitter = EventEmitter()
         self.hooks = EventRegistrar(self.event_emitter)
+        self.hooks.register(ZipkinTraceHook(tchannel=self))
 
         if known_peers:
             for peer_hostport in known_peers:

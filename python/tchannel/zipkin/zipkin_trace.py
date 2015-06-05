@@ -30,6 +30,14 @@ class ZipkinTraceHook(EventHook):
     """generate zipkin-style span for tracing"""
 
     def __init__(self, tchannel=None, dst=None):
+        """Log zipkin style trace.
+
+        :param tchannel:
+            The tchannel instance to send zipkin trace spans
+        :param dst:
+            The destination to output trace information
+        """
+
         if tchannel:
             # TChannelZipkinTracer generates Base64-encoded span
             # and uploads to zipkin server
