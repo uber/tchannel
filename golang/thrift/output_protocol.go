@@ -2,6 +2,7 @@ package thrift
 
 import (
 	"errors"
+	"io"
 	"log"
 
 	"golang.org/x/net/context"
@@ -33,7 +34,9 @@ type outProtocol struct {
 	options *TChanOutboundOptions
 
 	// call is the current call.
-	call *tchannel.OutboundCall
+	call       *tchannel.OutboundCall
+	arg3Writer io.WriteCloser
+	arg3Reader io.ReadCloser
 
 	// seqID is thrift's sequence ID, which we store when a call is made, and return on Read.
 	// This is a hack to get around the thrift client checking the sequence ID.
@@ -49,19 +52,6 @@ func NewTChanOutbound(tchan *tchannel.Channel, options *TChanOutboundOptions) th
 		tchan:    tchan,
 		options:  options,
 	}
-}
-
-// newArg creates channels for reading/writing a new argumenp.
-func (p *outProtocol) createArg() (readerWriterArg, chan struct{}) {
-	updated := make(chan struct{})
-	errC := make(chan error)
-
-	p.errC = errC
-	return readerWriterArg{
-		transport: p.transport,
-		updated:   updated,
-		err:       errC,
-	}, updated
 }
 
 func (p *outProtocol) beginCall(method string) (*tchannel.OutboundCall, error) {
@@ -83,40 +73,60 @@ func (p *outProtocol) WriteMessageBegin(name string, _ thrift.TMessageType, seqI
 	if p.call, err = p.beginCall(name); err != nil {
 		return err
 	}
-	if err = p.call.WriteArg2(nullArg{}); err != nil {
+	writer, err := p.call.Arg2Writer()
+	if err != nil {
+		return err
+	}
+	if err := writer.Close(); err != nil {
 		return err
 	}
 
-	return p.writeArg3(p.call)
+	if p.arg3Writer, err = p.call.Arg3Writer(); err != nil {
+		return err
+	}
+
+	p.transport.Writer = p.arg3Writer
+	return nil
 }
 
 // WriteMessageEnd gets the response
 func (p *outProtocol) WriteMessageEnd() error {
-	// The call request has been written completely, close the error channel.
-	// TODO(prashant): Deal with errors occurring during Write or in the underlying protocol.
-	close(p.errC)
-	return nil
+	writer := p.arg3Writer
+	p.arg3Writer = nil
+	p.transport.Writer = nil
+	return writer.Close()
 }
 
 func (p *outProtocol) ReadMessageBegin() (string, thrift.TMessageType, int32, error) {
 	resp := p.call.Response()
 
 	// ReadArg2 has to be called before checking Response.ApplicationError.
-	if err := resp.ReadArg2(nullArg{}); err != nil {
+	reader, err := resp.Arg2Reader()
+	if err != nil {
 		return "", 0, 0, err
 	}
+	if err := reader.Close(); err != nil {
+		return "", 0, 0, err
+	}
+
 	if resp.ApplicationError() {
 		// TODO(prashant): Return a better error?
 		log.Printf("AppError!")
 		return "", 0, 0, errors.New("application error")
 	}
 
-	err := p.readArg3(resp)
-	return "", thrift.REPLY, p.seqID, err
+	if p.arg3Reader, err = resp.Arg3Reader(); err != nil {
+		return "", 0, 0, err
+	}
+
+	p.transport.Reader = p.arg3Reader
+	return "", thrift.CALL, p.seqID, err
 }
 
 func (p *outProtocol) ReadMessageEnd() error {
-	close(p.errC)
+	reader := p.arg3Reader
 	p.call = nil
-	return nil
+	p.arg3Reader = nil
+	p.transport.Reader = nil
+	return reader.Close()
 }

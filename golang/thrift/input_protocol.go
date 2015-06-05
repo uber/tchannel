@@ -1,6 +1,7 @@
 package thrift
 
 import (
+	"io"
 	"strings"
 
 	"github.com/apache/thrift/lib/go/thrift"
@@ -18,7 +19,9 @@ func NewTChannelInbound(call *tchannel.InboundCall) thrift.TProtocol {
 type inProtocol struct {
 	*protocol
 
-	call *tchannel.InboundCall
+	call       *tchannel.InboundCall
+	arg3Writer io.WriteCloser
+	arg3Reader io.ReadCloser
 }
 
 func (p *inProtocol) Method() string {
@@ -28,17 +31,27 @@ func (p *inProtocol) Method() string {
 }
 
 func (p *inProtocol) ReadMessageBegin() (string, thrift.TMessageType, int32, error) {
-	if err := p.call.ReadArg2(nullArg{}); err != nil {
+	reader, err := p.call.Arg2Reader()
+	if err != nil {
+		return "", 0, 0, err
+	}
+	if err := reader.Close(); err != nil {
 		return "", 0, 0, err
 	}
 
-	err := p.readArg3(p.call)
+	if p.arg3Reader, err = p.call.Arg3Reader(); err != nil {
+		return "", 0, 0, err
+	}
+
+	p.transport.Reader = p.arg3Reader
 	return p.Method(), thrift.CALL, 0, err
 }
 
 func (p *inProtocol) ReadMessageEnd() error {
-	close(p.errC)
-	return nil
+	reader := p.arg3Reader
+	p.arg3Reader = nil
+	p.transport.Reader = nil
+	return reader.Close()
 }
 
 func (p *inProtocol) WriteMessageBegin(name string, typeID thrift.TMessageType, seqID int32) error {
@@ -48,16 +61,27 @@ func (p *inProtocol) WriteMessageBegin(name string, typeID thrift.TMessageType, 
 		resp.SetApplicationError()
 	}
 
-	if err := resp.WriteArg2(nullArg{}); err != nil {
+	writer, err := resp.Arg2Writer()
+	if err != nil {
+		return err
+	}
+	if err := writer.Close(); err != nil {
 		return err
 	}
 
-	return p.writeArg3(resp)
+	if p.arg3Writer, err = resp.Arg3Writer(); err != nil {
+		return err
+	}
+
+	p.transport.Writer = p.arg3Writer
+	return nil
 }
 
 // WriteMessageEnd is called after writing out the call response.
 func (p *inProtocol) WriteMessageEnd() error {
-	close(p.errC)
+	writer := p.arg3Writer
 	p.call = nil
-	return nil
+	p.arg3Writer = nil
+	p.transport.Writer = nil
+	return writer.Close()
 }

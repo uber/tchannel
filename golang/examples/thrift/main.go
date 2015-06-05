@@ -29,7 +29,7 @@ func main() {
 		log.Fatalf("setupServer failed: %v", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
 	opts := tthrift.TChanOutboundOptions{
@@ -48,13 +48,12 @@ func main() {
 
 	go listenConsole()
 
-	log.Printf("Server and clients will run for 10 seconds!")
+	// Run for 10 seconds, then stop
 	time.Sleep(time.Second * 10)
-	log.Printf("Closing!")
 }
 
 func setupServer() (net.Listener, error) {
-	tchan, err := tchannel.NewChannel("server", nil)
+	tchan, err := tchannel.NewChannel("server", optsFor("server"))
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +76,7 @@ func setupServer() (net.Listener, error) {
 }
 
 func runClient1(opts tthrift.TChanOutboundOptions) error {
-	tchan, err := tchannel.NewChannel("client1", nil)
+	tchan, err := tchannel.NewChannel("client1", optsFor("client1"))
 	if err != nil {
 		return err
 	}
@@ -91,14 +90,14 @@ func runClient1(opts tthrift.TChanOutboundOptions) error {
 			log.Println("Echo(Hi) = ", res, ", err: ", err)
 			client.OneWay()
 			log.Println("AppError = ", client.AppError())
-			time.Sleep(time.Second)
+			time.Sleep(100 * time.Millisecond)
 		}
 	}()
 	return nil
 }
 
 func runClient2(opts tthrift.TChanOutboundOptions) error {
-	tchan, err := tchannel.NewChannel("client2", nil)
+	tchan, err := tchannel.NewChannel("client2", optsFor("client2"))
 	if err != nil {
 		return err
 	}
@@ -110,7 +109,7 @@ func runClient2(opts tthrift.TChanOutboundOptions) error {
 	go func() {
 		for {
 			client.Test()
-			time.Sleep(time.Second)
+			time.Sleep(100 * time.Millisecond)
 		}
 	}()
 	return nil
@@ -132,7 +131,7 @@ func listenConsole() {
 func printStack() {
 	buf := make([]byte, 10000)
 	runtime.Stack(buf, true /* all */)
-	fmt.Println("=== STACK ===\n" + string(buf))
+	fmt.Println("Stack:\n", string(buf))
 }
 
 type firstHandler struct{}
@@ -162,4 +161,11 @@ type secondHandler struct{}
 func (h *secondHandler) Test() error {
 	log.Println("secondHandler: Test()")
 	return nil
+}
+
+func optsFor(processName string) *tchannel.ChannelOptions {
+	return &tchannel.ChannelOptions{
+		ProcessName: processName,
+		Logger:      tchannel.SimpleLogger,
+	}
 }
