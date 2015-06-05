@@ -189,7 +189,9 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
         !reqFrame.body.headers ||
         !reqFrame.body.headers.as
     ) {
-        var err = errors.AsHeaderRequired();
+        var err = errors.AsHeaderRequired({
+            frame: 'request'
+        });
         self.sendErrorFrame(
             req.res, 'ProtocolError', err.message
         );
@@ -226,6 +228,17 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
         return callback(errors.CallResBeforeInitResError());
     }
     var res = self.buildInResponse(resFrame);
+
+    if (!resFrame.body ||
+        !resFrame.body.headers ||
+        !resFrame.body.headers.as
+    ) {
+        var err = errors.AsHeaderRequired({
+            frame: 'response'
+        });
+        return callback(err);
+    }
+
     if (resFrame.body.args && resFrame.body.args[0] &&
         resFrame.body.args[0].length > v2.CallResponse.MaxArg1Size) {
         return callback(errors.Arg1OverLengthLimit({
@@ -395,7 +408,7 @@ TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame
         req.checksum.type, args);
 
     assert(req.headers && req.headers.as,
-        'Expected the "as" transport header to be set');
+        'Expected the "as" transport header to be set for request');
 
     req.checksum = self._sendCallBodies(req.id, reqBody, null);
 };
@@ -410,6 +423,10 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
     var resBody = new v2.CallResponse(
         flags, code, res.tracing, res.headers,
         res.checksum.type, args);
+
+    assert(res.headers && res.headers.as,
+        'Expected the "as" transport header to be set for response');
+
     res.checksum = self._sendCallBodies(res.id, resBody, null);
 };
 
