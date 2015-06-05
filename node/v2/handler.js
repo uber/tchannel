@@ -74,7 +74,7 @@ function TChannelV2Handler(options) {
     self.streamingRes = Object.create(null);
     self.writeBuffer = new Buffer(v2.Frame.MaxSize);
 
-    self.forceAs = self.options.forceAs === false ? false : true;
+    self.requireAs = self.options.requireAs === false ? false : true;
 }
 
 util.inherits(TChannelV2Handler, EventEmitter);
@@ -191,7 +191,7 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
         !reqFrame.body.headers ||
         !reqFrame.body.headers.as
     ) {
-        if (self.forceAs) {
+        if (self.requireAs) {
             var err = errors.AsHeaderRequired({
                 frame: 'request'
             });
@@ -242,7 +242,7 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
         !resFrame.body.headers ||
         !resFrame.body.headers.as
     ) {
-        if (self.forceAs) {
+        if (self.requireAs) {
             var err = errors.AsHeaderRequired({
                 frame: 'response'
             });
@@ -422,7 +422,7 @@ TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame
         flags, req.ttl, req.tracing, req.serviceName, req.headers,
         req.checksum.type, args);
 
-    if (self.forceAs) {
+    if (self.requireAs) {
         assert(req.headers && req.headers.as,
             'Expected the "as" transport header to be set for request');
     } else {
@@ -446,7 +446,7 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
         flags, code, res.tracing, res.headers,
         res.checksum.type, args);
 
-    if (self.forceAs) {
+    if (self.requireAs) {
         assert(res.headers && res.headers.as,
             'Expected the "as" transport header to be set for response');
     } else {

@@ -116,7 +116,7 @@ function TChannel(options) {
     self.random = self.options.random || globalRandom;
     self.timers = self.options.timers || globalTimers;
     self.initTimeout = self.options.initTimeout || 2000;
-    self.forceAs = self.options.forceAs;
+    self.requireAs = self.options.requireAs;
 
     // Filled in by the listen call:
     self.host = null;
