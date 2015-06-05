@@ -56,6 +56,11 @@ StreamingInRequest.prototype.handleFrame = function handleFrame(parts) {
     self._argstream.handleFrame(parts);
 };
 
+StreamingInRequest.prototype.withArg1 = function withArg1(callback) {
+    var self = this;
+    self.arg1.onValueReady(callback);
+};
+
 StreamingInRequest.prototype.withArg2 = function withArg2(callback) {
     var self = this;
     self.arg2.onValueReady(callback);
