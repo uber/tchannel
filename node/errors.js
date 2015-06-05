@@ -48,7 +48,8 @@ module.exports.ArgChunkOutOfOrderError = TypedError({
 
 module.exports.AsHeaderRequired = TypedError({
     type: 'tchannel.handler.incoming-req-as-header-required',
-    message: 'Expected incoming call request to have "as" header set.'
+    message: 'Expected incoming call {frame} to have "as" header set.',
+    frame: null
 });
 
 module.exports.CallReqBeforeInitReqError = TypedError({
