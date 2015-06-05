@@ -85,7 +85,7 @@ var bindAddr = flag.String("bind", "127.0.0.1:10500", "host and port on which to
 func main() {
 	flag.Parse()
 
-	ch, err := tchannel.NewChannel(&tchannel.ChannelOptions{
+	ch, err := tchannel.NewChannel("hello-server", &tchannel.ChannelOptions{
 		Logger: log,
 	})
 	if err != nil {

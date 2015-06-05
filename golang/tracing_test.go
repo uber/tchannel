@@ -21,11 +21,12 @@ package tchannel
 // THE SOFTWARE.
 
 import (
+	"testing"
+	"time"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
-	"testing"
-	"time"
 )
 
 type TracingRequest struct{}
@@ -58,7 +59,7 @@ func TestTracingPropagates(t *testing.T) {
 			var childRequest TracingRequest
 			var childResponse TracingResponse
 
-			outcall, err := ch.BeginCall(ctx, hostPort, "TestService", "call2")
+			outcall, err := ch.BeginCall(ctx, hostPort, "TestService", "call2", nil)
 			if err != nil {
 				incall.Response().SendSystemError(err)
 				return
@@ -119,7 +120,7 @@ func TestTracingPropagates(t *testing.T) {
 		var request TracingRequest
 		var response TracingResponse
 
-		call, err := ch.BeginCall(ctx, hostPort, "TestService", "call1")
+		call, err := ch.BeginCall(ctx, hostPort, "TestService", "call1", nil)
 		require.NoError(t, err)
 		require.NoError(t, call.WriteArg2(NewJSONOutput(headers)))
 		require.NoError(t, call.WriteArg3(NewJSONOutput(&request)))

@@ -28,7 +28,7 @@ import (
 )
 
 // beginCall begins an outbound call on the connection
-func (c *Connection) beginCall(ctx context.Context, serviceName string) (*OutboundCall, error) {
+func (c *Connection) beginCall(ctx context.Context, serviceName string, callOptions *CallOptions) (*OutboundCall, error) {
 	if err := c.withStateRLock(func() error {
 		switch c.state {
 		case connectionActive, connectionStartClose, connectionInboundClosed:
@@ -56,12 +56,17 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string) (*Outbou
 		return nil, err
 	}
 
+	headers := callHeaders{
+		CallerName: c.localPeerInfo.ServiceName,
+	}
+	callOptions.setHeaders(headers)
+
 	call := new(OutboundCall)
 	call.mex = mex
 	call.conn = c
 	call.callReq = callReq{
 		id:         requestID,
-		Headers:    callHeaders{},
+		Headers:    headers,
 		Service:    serviceName,
 		TimeToLive: timeToLive,
 	}

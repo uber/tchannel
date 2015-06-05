@@ -30,6 +30,14 @@ import (
 	"golang.org/x/net/context"
 )
 
+// Values used in tests
+var (
+	testServiceName = "test-channel"
+	testProcessName = "Test Channel"
+	testArg2        = []byte("Header in arg2")
+	testArg3        = []byte("Body in arg3")
+)
+
 func testHandlerFunc(t *testing.T, f func(t *testing.T, ctx context.Context, call *InboundCall)) Handler {
 	return HandlerFunc(func(ctx context.Context, call *InboundCall) {
 		f(t, ctx, call)
@@ -43,12 +51,20 @@ func serverBusy(t *testing.T, ctx context.Context, call *InboundCall) {
 func timeout(t *testing.T, ctx context.Context, call *InboundCall) {
 	deadline, _ := ctx.Deadline()
 	time.Sleep(deadline.Add(time.Second * 1).Sub(time.Now()))
-	echo(t, ctx, call)
+	(&echoSaver{}).echo(t, ctx, call)
 }
 
-func echo(t *testing.T, ctx context.Context, call *InboundCall) {
+type echoSaver struct {
+	format Format
+	caller string
+}
+
+func (e *echoSaver) echo(t *testing.T, ctx context.Context, call *InboundCall) {
 	var inArg2 BytesInput
 	var inArg3 BytesInput
+
+	e.format = call.Format()
+	e.caller = call.CallerName()
 
 	require.NoError(t, call.ReadArg2(&inArg2))
 	require.NoError(t, call.ReadArg3(&inArg3))
@@ -58,25 +74,46 @@ func echo(t *testing.T, ctx context.Context, call *InboundCall) {
 
 func TestRoundTrip(t *testing.T) {
 	withTestChannel(t, func(ch *Channel, hostPort string) {
-
-		ch.Register(testHandlerFunc(t, echo), "Capture", "ping")
+		echoSaver := &echoSaver{}
+		ch.Register(testHandlerFunc(t, echoSaver.echo), "Capture", "ping")
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 		defer cancel()
 
-		call, err := ch.BeginCall(ctx, hostPort, "Capture", "ping")
+		call, err := ch.BeginCall(ctx, hostPort, "Capture", "ping", &CallOptions{Format: JSON})
 		require.NoError(t, err)
 
-		require.NoError(t, call.WriteArg2(BytesOutput("Hello Header")))
-		require.NoError(t, call.WriteArg3(BytesOutput("Body Sent")))
+		require.NoError(t, call.WriteArg2(BytesOutput(testArg2)))
+		require.NoError(t, call.WriteArg3(BytesOutput(testArg3)))
 
 		var respArg2 BytesInput
 		require.NoError(t, call.Response().ReadArg2(&respArg2))
-		assert.Equal(t, []byte("Hello Header"), []byte(respArg2))
+		assert.Equal(t, testArg2, []byte(respArg2))
 
 		var respArg3 BytesInput
 		require.NoError(t, call.Response().ReadArg3(&respArg3))
-		assert.Equal(t, []byte("Body Sent"), []byte(respArg3))
+		assert.Equal(t, testArg3, []byte(respArg3))
+
+		assert.Equal(t, JSON, echoSaver.format)
+		assert.Equal(t, testServiceName, echoSaver.caller)
+	})
+}
+
+func TestDefaultFormat(t *testing.T) {
+	withTestChannel(t, func(ch *Channel, hostPort string) {
+		echoSaver := &echoSaver{}
+		ch.Register(testHandlerFunc(t, echoSaver.echo), "Capture", "ping")
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		defer cancel()
+
+		arg2, arg3, err := sendRecv(ctx, ch, hostPort, "Capture", "ping", testArg2, testArg3)
+		require.Nil(t, err)
+
+		require.Equal(t, testArg2, arg2)
+		require.Equal(t, testArg3, arg3)
+		require.Equal(t, Raw, echoSaver.format)
+		assert.Equal(t, testServiceName, echoSaver.caller)
 	})
 }
 
@@ -120,7 +157,7 @@ func TestTimeout(t *testing.T) {
 
 func TestFragmentation(t *testing.T) {
 	withTestChannel(t, func(ch *Channel, hostPort string) {
-		ch.Register(testHandlerFunc(t, echo), "TestService", "echo")
+		ch.Register(testHandlerFunc(t, (&echoSaver{}).echo), "TestService", "echo")
 
 		arg2 := make([]byte, MaxFramePayloadSize*2)
 		for i := 0; i < len(arg2); i++ {
@@ -145,7 +182,7 @@ func TestFragmentation(t *testing.T) {
 func sendRecv(ctx context.Context, ch *Channel, hostPort string, serviceName, operation string,
 	arg2, arg3 []byte) ([]byte, []byte, error) {
 
-	call, err := ch.BeginCall(ctx, hostPort, serviceName, operation)
+	call, err := ch.BeginCall(ctx, hostPort, serviceName, operation, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -173,10 +210,11 @@ func sendRecv(ctx context.Context, ch *Channel, hostPort string, serviceName, op
 
 func withTestChannel(t *testing.T, f func(ch *Channel, hostPort string)) {
 	opts := ChannelOptions{
-		Logger: SimpleLogger,
+		ProcessName: testProcessName,
+		Logger:      SimpleLogger,
 	}
 
-	ch, err := NewChannel(&opts)
+	ch, err := NewChannel(testServiceName, &opts)
 	require.Nil(t, err)
 
 	l, err := net.Listen("tcp", "127.0.0.1:0")

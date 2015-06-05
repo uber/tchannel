@@ -79,6 +79,7 @@ func (c *Connection) handleCallReq(frame *Frame) {
 	call.mex = mex
 	call.initialFragment = initialFragment
 	call.serviceName = string(callReq.Service)
+	call.headers = callReq.Headers
 	call.span = callReq.Tracing
 	call.response = response
 	call.messageForFragment = func(initial bool) message { return new(callReqContinue) }
@@ -128,6 +129,7 @@ type InboundCall struct {
 	response    *InboundCallResponse
 	serviceName string
 	operation   []byte
+	headers     callHeaders
 	span        Span
 }
 
@@ -139,6 +141,16 @@ func (call *InboundCall) ServiceName() string {
 // Operation returns the operation being called
 func (call *InboundCall) Operation() []byte {
 	return call.operation
+}
+
+// Format the format of the request from the ArgScheme transport header.
+func (call *InboundCall) Format() Format {
+	return Format(call.headers[ArgScheme])
+}
+
+// CallerName returns the caller name from the CallerName transport header.
+func (call *InboundCall) CallerName() string {
+	return call.headers[CallerName]
 }
 
 // Reads the entire operation name (arg1) from the request stream.

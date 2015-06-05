@@ -55,7 +55,7 @@ func asArgument(arg string) tchannel.Output {
 func main() {
 	flag.Parse()
 
-	ch, err := tchannel.NewChannel(&tchannel.ChannelOptions{
+	ch, err := tchannel.NewChannel("hello-client", &tchannel.ChannelOptions{
 		Logger: log,
 	})
 	if err != nil {
@@ -65,7 +65,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(*timeout))
 	defer cancel()
 
-	call, err := ch.BeginCall(ctx, *peerAddr, *serviceName, *operationName)
+	call, err := ch.BeginCall(ctx, *peerAddr, *serviceName, *operationName, nil)
 	if err != nil {
 		log.Errorf("Could not begin call to %v.%v@%v: %v", *serviceName, *operationName, *peerAddr, err)
 		log.Fatalf("Is the server running?")
