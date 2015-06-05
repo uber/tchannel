@@ -89,7 +89,8 @@ test('basic tracing test', function (assert) {
                     serviceName: 'subservice',
                     parent: req,
                     headers: {
-                        as: 'raw'
+                        as: 'raw',
+                        cn: 'wat'
                     },
                     trace: true
                 }).send('/foobar', 'arg1', 'arg2', function (err, subRes) {
@@ -107,7 +108,8 @@ test('basic tracing test', function (assert) {
                 serviceName: 'subservice',
                 parent: req,
                 headers: {
-                    as: 'raw'
+                    as: 'raw',
+                    cn: 'wat'
                 },
                 trace: true});
             var peers = server.peers.values();
@@ -152,7 +154,8 @@ test('basic tracing test', function (assert) {
             trace: true,
             hasNoParent: true,
             headers: {
-                as: 'raw'
+                as: 'raw',
+                cn: 'wat'
             }
         });
         var peers = client.peers.values();

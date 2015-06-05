@@ -50,7 +50,8 @@ allocCluster.test('emits response stats with ok', {
         peers: [server.hostPort],
         requestDefaults: {
             headers: {
-                as: 'raw'
+                as: 'raw',
+                cn: 'wat'
             }
         }
     });
@@ -133,7 +134,8 @@ allocCluster.test('emits response stats with not ok', {
         peers: [server.hostPort],
         requestDefaults: {
             headers: {
-                as: 'raw'
+                as: 'raw',
+                cn: 'wat'
             }
         }
     });
@@ -216,7 +218,8 @@ allocCluster.test('emits response stats with error', {
         peers: [server.hostPort],
         requestDefaults: {
             headers: {
-                as: 'raw'
+                as: 'raw',
+                cn: 'wat'
             }
         }
     });

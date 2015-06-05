@@ -49,7 +49,8 @@ allocCluster.test('requests will timeout', {
             serviceName: 'server',
             hasNoParent: true,
             headers: {
-                'as': 'raw'
+                'as': 'raw',
+                cn: 'wat'
             },
             timeout: 1000
         })
@@ -66,7 +67,8 @@ allocCluster.test('requests will timeout', {
                 serviceName: 'server',
                 hasNoParent: true,
                 headers: {
-                    'as': 'raw'
+                    'as': 'raw',
+                    cn: 'wat'
                 },
                 timeout: 1000
             })

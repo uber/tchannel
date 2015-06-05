@@ -339,7 +339,8 @@ allocCluster.test('self send() with error frame', 1, function t(cluster, assert)
         host: one.hostPort,
         hasNoParent: true,
         headers: {
-            'as': 'raw'
+            'as': 'raw',
+            cn: 'wat'
         }
     }).send('foo', '', '', onResponse);
 
@@ -374,7 +375,8 @@ function sendTest(testCase, assert) {
         testCase.opts = testCase.opts || {};
         testCase.opts.hasNoParent = true;
         testCase.opts.headers = {
-            'as': 'raw'
+            'as': 'raw',
+            cn: 'wat'
         };
 
         testCase.channel

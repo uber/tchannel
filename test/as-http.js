@@ -150,7 +150,10 @@ function allocHTTPBridge(opts) {
     var chanOpts = {
         serviceName: serviceName,
         requestDefaults: {
-            serviceName: serviceName
+            serviceName: serviceName,
+            headers: {
+                cn: 'wat'
+            }
         }
     };
 

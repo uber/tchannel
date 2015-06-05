@@ -805,7 +805,12 @@ function allocThrift(cluster, options) {
         serviceName: 'server',
         peers: [
             cluster.channels[0].hostPort
-        ]
+        ],
+        requestDefaults: {
+            headers: {
+                cn: 'wat'
+            }
+        }
     });
     var DoubleError = TypedError({
         type: 'double',

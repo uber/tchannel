@@ -35,7 +35,8 @@ allocCluster.test('add a peer and request', {
         serviceName: 'steve',
         requestDefaults: {
             headers: {
-                as: 'raw'
+                as: 'raw',
+                cn: 'wat'
             }
         }
     });
@@ -78,7 +79,8 @@ allocCluster.test('adding a peer twice', {
         serviceName: 'steve',
         requestDefaults: {
             headers: {
-                as: 'raw'
+                as: 'raw',
+                cn: 'wat'
             }
         }
     });
@@ -112,7 +114,8 @@ allocCluster.test('removing a peer and request', {
         serviceName: 'steve',
         requestDefaults: {
             headers: {
-                as: 'raw'
+                as: 'raw',
+                cn: 'wat'
             }
         }
     });
@@ -156,7 +159,8 @@ allocCluster.test('clearing peers and requests', {
         serviceName: 'steve',
         requestDefaults: {
             headers: {
-                as: 'raw'
+                as: 'raw',
+                cn: 'wat'
             }
         }
     });
@@ -200,7 +204,8 @@ allocCluster.test('delete peer() on top channel', {
         serviceName: 'steve1',
         requestDefaults: {
             headers: {
-                as: 'raw'
+                as: 'raw',
+                cn: 'wat'
             }
         }
     });
@@ -208,7 +213,8 @@ allocCluster.test('delete peer() on top channel', {
         serviceName: 'steve2',
         requestDefaults: {
             headers: {
-                as: 'raw'
+                as: 'raw',
+                cn: 'wat'
             }
         }
     });
@@ -282,7 +288,8 @@ allocCluster.test('peers.clear() on top channel', {
         serviceName: 'steve1',
         requestDefaults: {
             headers: {
-                as: 'raw'
+                as: 'raw',
+                cn: 'wat'
             }
         }
     });
@@ -290,7 +297,8 @@ allocCluster.test('peers.clear() on top channel', {
         serviceName: 'steve2',
         requestDefaults: {
             headers: {
-                as: 'raw'
+                as: 'raw',
+                cn: 'wat'
             }
         }
     });

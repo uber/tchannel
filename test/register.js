@@ -30,7 +30,8 @@ allocCluster.test('register() with different results', {
         requestDefaults: {
             timeout: 100,
             headers: {
-                as: 'raw'
+                as: 'raw',
+                cn: 'wat'
             }
         }
     }
