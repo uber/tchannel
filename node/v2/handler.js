@@ -202,7 +202,9 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
         } else {
             self.logger.error('Expected "as" header for incoming req', {
                 arg1: String(reqFrame.body.args[0]),
-                serviceName: reqFrame.body.serviceName
+                serviceName: reqFrame.body.serviceName,
+                callerName: reqFrame.body.headers.cn,
+                remoteHostPort: self.remoteHostPort
             });
         }
     }
@@ -249,7 +251,9 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
             return callback(err);
         } else {
             self.logger.error('Expected "as" for incoming response', {
-                code: resFrame.body.code
+                code: resFrame.body.code,
+                remoteHostPort: self.remoteHostPort,
+                endpoint: String(resFrame.body.args[0])
             });
         }
     }
@@ -428,6 +432,8 @@ TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame
     } else {
         self.logger.error('Expected "as" header to be set for request', {
             arg1: String(args[0]),
+            callerName: req.headers && req.headers.cn,
+            remoteHostPort: self.remoteHostPort,
             serviceName: req.serviceName
         });
     }
@@ -451,7 +457,9 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
             'Expected the "as" transport header to be set for response');
     } else {
         self.logger.error('Expected "as" header to be set for response', {
-            code: code
+            code: code,
+            remoteHostPort: self.remoteHostPort,
+            arg1: String(args[0])
         });
     }
 
