@@ -109,8 +109,14 @@ function onEndpointHandled(service, name) {
 ServiceDispatchHandler.prototype.handleDefault =
 function handleDefault(req, buildRes) {
     var self = this;
-    var svcchan = self.getServiceChannel(req.serviceName, true);
+    var svcchan = self.getOrCreateServiceChannel(req.serviceName);
     svcchan.handler.handleRequest(req, buildRes);
+};
+
+ServiceDispatchHandler.prototype.getOrCreateServiceChannel =
+function getOrCreateServiceChannel(serviceName) {
+    var self = this;
+    return self.getServiceChannel(serviceName, true);
 };
 
 ServiceDispatchHandler.prototype.getServiceChannel =
@@ -130,7 +136,7 @@ function getServiceChannel(serviceName, create) {
 ServiceDispatchHandler.prototype.getServicePeer =
 function getServicePeer(serviceName, hostPort) {
     var self = this;
-    var svcchan = self.getServiceChannel(serviceName, true);
+    var svcchan = self.getOrCreateServiceChannel(serviceName);
     return self._getServicePeer(svcchan, hostPort);
 };
 
