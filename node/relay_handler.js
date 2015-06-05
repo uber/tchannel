@@ -117,6 +117,7 @@ RelayRequest.prototype.onResponse = function onResponse(res) {
 
     if (!self.createOutResponse({
         streamed: self.inres.streamed,
+        headers: self.inres.headers,
         code: self.inres.code
     })) return;
 
