@@ -60,7 +60,8 @@ allocCluster.test('emits stats on call success', {
         peers: [server.hostPort],
         requestDefaults: {
             headers: {
-                as: 'raw'
+                as: 'raw',
+                cn: 'wat'
             }
         }
     });
@@ -140,7 +141,8 @@ allocCluster.test('emits stats on call failure', {
         peers: [server.hostPort],
         requestDefaults: {
             headers: {
-                as: 'raw'
+                as: 'raw',
+                cn: 'wat'
             }
         }
     });

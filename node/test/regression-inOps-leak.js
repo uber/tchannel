@@ -29,7 +29,8 @@ allocCluster.test('does not leak inOps', {
         serverTimeoutDefault: 100,
         requestDefaults: {
             headers: {
-                as: 'raw'
+                as: 'raw',
+                cn: 'wat'
             }
         }
     }

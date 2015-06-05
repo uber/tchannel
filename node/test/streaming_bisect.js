@@ -94,7 +94,8 @@ function streamingEchoTest(cluster, state, assert, callback) {
         serviceName: 'test_as_raw',
         hasNoParent: true,
         headers: {
-            as: 'raw'
+            as: 'raw',
+            cn: 'wat'
         },
         streamed: true
     }).sendStreams('streaming_echo', reqHeadStream, reqBodyStream, onResult);
