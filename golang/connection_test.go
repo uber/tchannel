@@ -145,7 +145,7 @@ func TestTimeout(t *testing.T) {
 	withTestChannel(t, func(ch *Channel, hostPort string) {
 		ch.Register(testHandlerFunc(t, timeout), "TestService", "timeout")
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
 		defer cancel()
 
 		_, _, err := sendRecv(ctx, ch, hostPort, "TestService", "timeout", []byte("Arg2"), []byte("Arg3"))
