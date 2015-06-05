@@ -45,6 +45,7 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
         random: self.channel.random,
         timers: self.channel.timers,
         hostPort: self.channel.hostPort,
+        forceAs: self.channel.forceAs,
         tracer: self.tracer,
         connection: self
     };
