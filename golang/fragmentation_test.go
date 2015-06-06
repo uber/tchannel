@@ -150,19 +150,21 @@ func TestFragmentationWriterErrors(t *testing.T) {
 
 	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
 		// BeginArgument twice without starting argument
-		assert.NoError(t, w.BeginArgument())
-		assert.Error(t, w.BeginArgument())
+		assert.NoError(t, w.BeginArgument(false /* last */))
+		assert.Error(t, w.BeginArgument(false /* last */))
 	})
 
 	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
 		// BeginArgument after writing final argument
-		assert.NoError(t, w.WriteArgument(BytesOutput("hello"), true))
-		assert.Error(t, w.BeginArgument())
+		writer, err := w.ArgWriter(true /* last */)
+		assert.NoError(t, err)
+		assert.NoError(t, WriteArg(writer, BytesOutput("hello")))
+		assert.Error(t, w.BeginArgument(false /* last */))
 	})
 
 	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
 		// EndArgument without beginning argument
-		assert.Error(t, w.EndArgument(true))
+		assert.Error(t, w.EndArgument())
 	})
 }
 
@@ -176,56 +178,72 @@ func TestFragmentationReaderErrors(t *testing.T) {
 
 	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
 		// EndArgument without beginning argument
-		assert.Error(t, r.EndArgument(true))
+		assert.Error(t, r.EndArgument())
 	})
 
 	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
 		// BeginArgument after reading final argument
-		assert.NoError(t, w.WriteArgument(BytesOutput("hello"), true))
+		writer, err := w.ArgWriter(true /* last */)
+		assert.NoError(t, err)
+		assert.NoError(t, WriteArg(writer, BytesOutput("hello")))
+
+		reader, err := r.ArgReader(true /* last */)
+		assert.NoError(t, err)
 
 		var arg BytesInput
-		assert.NoError(t, r.ReadArgument(&arg, true))
+		assert.NoError(t, ReadArg(reader, &arg))
 		assert.Equal(t, "hello", string(arg))
-		assert.Error(t, r.BeginArgument())
+		assert.Error(t, r.BeginArgument(false /* last */))
 	})
 
 	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
 		// Sender sent final argument, but receiver thinks there is more
-		assert.NoError(t, w.WriteArgument(BytesOutput("hello"), true))
+		writer, err := w.ArgWriter(true /* last */)
+		assert.NoError(t, err)
+		assert.NoError(t, WriteArg(writer, BytesOutput("hello")))
+
+		reader, err := r.ArgReader(false /* last */)
+		assert.NoError(t, err)
 
 		var arg BytesInput
-		assert.Error(t, r.ReadArgument(&arg, false))
+		assert.Error(t, ReadArg(reader, &arg))
 	})
 
 	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
 		// EndArgument without receiving all data in chunk
-		assert.NoError(t, w.WriteArgument(BytesOutput("hello"), true))
+		writer, err := w.ArgWriter(true /* last */)
+		assert.NoError(t, err)
+		assert.NoError(t, WriteArg(writer, BytesOutput("hello")))
 
-		assert.NoError(t, r.BeginArgument())
+		assert.NoError(t, r.BeginArgument(true /* last */))
 		b := make([]byte, 3)
-		_, err := r.Read(b)
+		_, err = r.Read(b)
 		assert.NoError(t, err)
 		assert.Equal(t, "hel", string(b))
-		assert.Error(t, r.EndArgument(true))
+		assert.Error(t, r.EndArgument())
 	})
 
 	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
 		// EndArgument without receiving all fragments
-		assert.NoError(t, w.WriteArgument(BytesOutput("hello world what's up"), true))
+		writer, err := w.ArgWriter(true /* last */)
+		assert.NoError(t, err)
+		assert.NoError(t, WriteArg(writer, BytesOutput("hello world what's up")))
 
-		assert.NoError(t, r.BeginArgument())
+		assert.NoError(t, r.BeginArgument(true /* last */))
 		b := make([]byte, 8)
-		_, err := r.Read(b)
+		_, err = r.Read(b)
 		assert.NoError(t, err)
 		assert.Equal(t, "hello wo", string(b))
-		assert.Error(t, r.EndArgument(true))
+		assert.Error(t, r.EndArgument())
 	})
 
 	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
 		// BeginArgument while argument is in process
-		assert.NoError(t, w.WriteArgument(BytesOutput("hello world what's up"), true))
-		assert.NoError(t, r.BeginArgument())
-		assert.Error(t, r.BeginArgument())
+		writer, err := w.ArgWriter(true /* last */)
+		assert.NoError(t, err)
+		assert.NoError(t, WriteArg(writer, BytesOutput("hello world what's up")))
+		assert.NoError(t, r.BeginArgument(false /* last */))
+		assert.Error(t, r.BeginArgument(false /* last */))
 	})
 }
 
@@ -236,7 +254,9 @@ func TestFragmentationChecksumTypeErrors(t *testing.T) {
 	r := newFragmentingReader(recvCh)
 
 	// Write two fragments out
-	require.NoError(t, w.WriteArgument(BytesOutput("hello world this is two"), true))
+	writer, err := w.ArgWriter(true /* last */)
+	assert.NoError(t, err)
+	require.NoError(t, WriteArg(writer, BytesOutput("hello world this is two")))
 
 	// Intercept and change the checksum type between the first and second fragment
 	first := <-sendCh
@@ -247,8 +267,11 @@ func TestFragmentationChecksumTypeErrors(t *testing.T) {
 	recvCh <- second
 
 	// Attempt to read, should fail
+	reader, err := r.ArgReader(true /* last */)
+	assert.NoError(t, err)
+
 	var arg BytesInput
-	assert.Error(t, r.ReadArgument(&arg, true))
+	assert.Error(t, ReadArg(reader, &arg))
 }
 
 func TestFragmentationChecksumMismatch(t *testing.T) {
@@ -258,7 +281,9 @@ func TestFragmentationChecksumMismatch(t *testing.T) {
 	r := newFragmentingReader(recvCh)
 
 	// Write two fragments out
-	require.NoError(t, w.WriteArgument(BytesOutput("hello world this is two"), true))
+	writer, err := w.ArgWriter(true /* last */)
+	assert.NoError(t, err)
+	require.NoError(t, WriteArg(writer, BytesOutput("hello world this is two")))
 
 	// Intercept and change the checksum value in the second fragment
 	first := <-sendCh
@@ -269,8 +294,11 @@ func TestFragmentationChecksumMismatch(t *testing.T) {
 	recvCh <- second
 
 	// Attempt to read, should fail due to mismatch between local checksum and peer supplied checksum
+	reader, err := r.ArgReader(true /* last */)
+	assert.NoError(t, err)
+
 	var arg BytesInput
-	assert.Error(t, r.ReadArgument(&arg, true))
+	assert.Error(t, ReadArg(reader, &arg))
 }
 
 func runFragmentationErrorTest(f func(w *fragmentingWriter, r *fragmentingReader)) {
@@ -304,20 +332,30 @@ func runFragmentationTest(t *testing.T, args []string, expectedFragments [][]byt
 		defer wg.Done()
 
 		for i := 0; i < len(args)-1; i++ {
+			reader, err := r.ArgReader(false /* last */)
+			require.NoError(t, err)
+
 			var arg BytesInput
-			require.NoError(t, r.ReadArgument(&arg, false))
+			require.NoError(t, ReadArg(reader, &arg))
 			actualArgs = append(actualArgs, string(arg))
 		}
 
+		reader, err := r.ArgReader(true /* last */)
+		require.NoError(t, err)
+
 		var arg BytesInput
-		require.NoError(t, r.ReadArgument(&arg, true))
+		require.NoError(t, ReadArg(reader, &arg))
 		actualArgs = append(actualArgs, string(arg))
 	}()
 
 	for i := 0; i < len(args)-1; i++ {
-		require.NoError(t, w.WriteArgument(BytesOutput(args[i]), false))
+		writer, err := w.ArgWriter(false /* last */)
+		assert.NoError(t, err)
+		require.NoError(t, WriteArg(writer, BytesOutput(args[i])))
 	}
-	require.NoError(t, w.WriteArgument(BytesOutput(args[len(args)-1]), true))
+	writer, err := w.ArgWriter(true /* last */)
+	assert.NoError(t, err)
+	require.NoError(t, WriteArg(writer, BytesOutput(args[len(args)-1])))
 	close(sendCh)
 
 	wg.Wait()

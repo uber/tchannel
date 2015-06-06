@@ -117,3 +117,20 @@ func (out JSONOutput) WriteTo(w io.Writer) error {
 	e := json.NewEncoder(w)
 	return e.Encode(out.data)
 }
+
+// WriteArg writes an argument to an io.WriteCloser.
+func WriteArg(argWriter io.WriteCloser, arg Output) error {
+	if err := arg.WriteTo(argWriter); err != nil {
+		return err
+	}
+	return argWriter.Close()
+}
+
+// ReadArg reads an argument from an io.ReadCloser.
+func ReadArg(argReader io.ReadCloser, arg Input) error {
+	if err := arg.ReadFrom(argReader); err != nil {
+		return err
+	}
+
+	return argReader.Close()
+}

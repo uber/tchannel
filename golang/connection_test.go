@@ -69,7 +69,10 @@ func (e *echoSaver) echo(t *testing.T, ctx context.Context, call *InboundCall) {
 	require.NoError(t, call.ReadArg2(&inArg2))
 	require.NoError(t, call.ReadArg3(&inArg3))
 	require.NoError(t, call.Response().WriteArg2(BytesOutput(inArg2)))
-	require.NoError(t, call.Response().WriteArg3(BytesOutput(inArg3)))
+
+	arg3Writer, err := call.Response().Arg3Writer()
+	require.NoError(t, err)
+	require.NoError(t, WriteArg(arg3Writer, BytesOutput(inArg3)))
 }
 
 func TestRoundTrip(t *testing.T) {

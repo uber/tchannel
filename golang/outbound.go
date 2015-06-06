@@ -21,6 +21,7 @@ package tchannel
 // THE SOFTWARE.
 
 import (
+	"io"
 	"time"
 
 	"github.com/uber/tchannel/golang/typed"
@@ -138,20 +139,43 @@ func (call *OutboundCall) Response() *OutboundCallResponse {
 
 // writeOperation writes the operation (arg1) to the call
 func (call *OutboundCall) writeOperation(operation []byte) error {
-	operationOut := BytesOutput(operation)
-	return call.writeArg1(operationOut)
+	writer, err := call.arg1Writer()
+	if err != nil {
+		return err
+	}
+	return WriteArg(writer, BytesOutput(operation))
+}
+
+// Arg2Writer returns a WriteCloser that can be used to write the second argument.
+// The returned writer must be closed once the write is complete.
+func (call *OutboundCall) Arg2Writer() (io.WriteCloser, error) {
+	return call.arg2Writer()
+}
+
+// Arg3Writer returns a WriteCloser that can be used to write the last argument.
+// The returned writer must be closed once the write is complete.
+func (call *OutboundCall) Arg3Writer() (io.WriteCloser, error) {
+	return call.arg3Writer()
 }
 
 // WriteArg2 writes the second argument in the request, blocking until the argument is
 // fully written or an error/timeout has occurred.
 func (call *OutboundCall) WriteArg2(arg Output) error {
-	return call.writeArg2(arg)
+	writer, err := call.Arg2Writer()
+	if err != nil {
+		return err
+	}
+	return WriteArg(writer, arg)
 }
 
 // WriteArg3 writes the third argument in the request, blocking until the argument is
 // fully written or an error/timeout has occurred
 func (call *OutboundCall) WriteArg3(arg Output) error {
-	return call.writeArg3(arg)
+	writer, err := call.arg3Writer()
+	if err != nil {
+		return err
+	}
+	return WriteArg(writer, arg)
 }
 
 // An OutboundCallResponse is the response to an outbound call
@@ -170,21 +194,45 @@ func (response *OutboundCallResponse) ApplicationError() bool {
 	return response.callRes.ResponseCode == responseApplicationError
 }
 
+// Arg2Reader returns an io.ReadCloser to read the second argument.
+// The ReadCloser must be closed once the argument has been read.
+func (response *OutboundCallResponse) Arg2Reader() (io.ReadCloser, error) {
+	reader, err := response.arg1Reader()
+	if err != nil {
+		return nil, err
+	}
+	var operation BytesInput
+	if err := ReadArg(reader, &operation); err != nil {
+		return nil, err
+	}
+
+	return response.arg2Reader()
+}
+
+// Arg3Reader returns an io.ReadCloser to read the last argument.
+// The ReadCloser must be closed once the argument has been read.
+func (response *OutboundCallResponse) Arg3Reader() (io.ReadCloser, error) {
+	return response.arg3Reader()
+}
+
 // ReadArg2 reads the second argument from the response, blocking until the
 // argument is ready or an error/timeout has occurred
 func (response *OutboundCallResponse) ReadArg2(arg Input) error {
-	var operation BytesInput
-	if err := response.readArg1(&operation); err != nil {
+	reader, err := response.Arg2Reader()
+	if err != nil {
 		return err
 	}
-
-	return response.readArg2(arg)
+	return ReadArg(reader, arg)
 }
 
 // ReadArg3 reads the third argument from the response, blocking until the
 // argument is ready or an error/timeout has occurred.
 func (response *OutboundCallResponse) ReadArg3(arg Input) error {
-	return response.readArg3(arg)
+	reader, err := response.Arg3Reader()
+	if err != nil {
+		return err
+	}
+	return ReadArg(reader, arg)
 }
 
 // handleError andles an error coming back from the peer. If the error is a
