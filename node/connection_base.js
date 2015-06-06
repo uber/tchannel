@@ -31,6 +31,7 @@ var Operations = require('./operations');
 
 var DEFAULT_OUTGOING_REQ_TIMEOUT = 2000;
 var CONNECTION_BASE_IDENTIFIER = 0;
+var DEFAULT_REPORT_INTERVAL = 1000;
 
 function TChannelConnectionBase(channel, direction, remoteAddr) {
     assert(!channel.destroyed, 'refuse to create connection for destroyed channel');
@@ -53,6 +54,7 @@ function TChannelConnectionBase(channel, direction, remoteAddr) {
     self.timers = channel.timers;
     self.direction = direction;
     self.remoteAddr = remoteAddr;
+    self.reportInterval = self.options.reportInterval || DEFAULT_REPORT_INTERVAL;
     self.timer = null;
     self.remoteName = null; // filled in by identify message
 
@@ -71,6 +73,31 @@ function TChannelConnectionBase(channel, direction, remoteAddr) {
 
     self.tracer = self.channel.tracer;
     self.ops.startTimeoutTimer();
+
+    if (direction === 'out') {
+        self.channel.connectionsInitiatedStat.increment(1, {
+            'host-port': self.channel.hostPort || '0.0.0.0:0',
+            'peer-host-port': self.remoteAddr
+        });
+    } else {
+        self.channel.connectionsAcceptedStat.increment(1, {
+            'host-port': self.channel.hostPort,
+            'peer-host-port': self.remoteAddr
+        });
+    }
+
+    if (self.reportInterval > 0) {
+        self.reportTimer = self.timers.setTimeout(
+            onReport, self.reportInterval
+        );
+    }
+
+    function onReport() {
+        self.channel.connectionsActiveStat.update(1, {
+            'host-port': self.channel.hostPort,
+            'peer-host-port': self.remoteAddr
+        });
+    }
 }
 inherits(TChannelConnectionBase, EventEmitter);
 
@@ -102,6 +129,39 @@ TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
 
     if (!err) {
         err = new Error('unknown connection reset'); // TODO typed error
+    }
+
+    if (!self.remoteName) {
+        if (self.direction === 'out') {
+            self.channel.connectionsConnectErrorsStat.increment(1, {
+                'host-port': self.channel.hostPort || '0.0.0.0:0',
+                'peer-host-port': self.remoteAddr
+            });
+        } else {
+            self.channel.connectionsAcceptedErrorsStat.increment(1, {
+                'host-port': self.channel.hostPort
+            });
+        }
+    } else {
+        if (err.type !== 'tchannel.socket-local-closed' &&
+            err.type !== 'tchannel.socket-closed') {
+            self.channel.connectionsErrorsStat.increment(1, {
+                'host-port': self.channel.hostPort || '0.0.0.0:0',
+                'peer-host-port': self.remoteAddr,
+                'type': err.type // TODO unified error type
+            });
+        }
+
+        self.channel.connectionsClosedStat.increment(1, {
+            'host-port': self.channel.hostPort || '0.0.0.0:0',
+            'peer-host-port': self.remoteAddr,
+            'reason': err.type // TODO unified reason type
+        });
+    }
+
+    if (self.reportTimer) {
+        self.timers.clearTimeout(self.reportTimer);
+        self.reportTimer = null;
     }
 
     var logInfo = {

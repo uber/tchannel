@@ -89,6 +89,16 @@ function TChannel(options) {
     // self.inboundProtocolErrorsStat = self.defineCounter('inbound.protocol-errors');
     self.inboundCallsLatencyStat = self.defineTiming('inbound.calls.latency');
 
+    self.connectionsActiveStat = self.defineGauge('connections.active');
+    self.connectionsInitiatedStat = self.defineCounter('connections.initiated');
+    self.connectionsConnectErrorsStat = self.defineCounter('connections.connect-errors');
+    self.connectionsAcceptedStat = self.defineCounter('connections.accepted');
+    self.connectionsAcceptedErrorsStat = self.defineCounter('connections.accept-errors');
+    self.connectionsErrorsStat = self.defineCounter('connections.errors');
+    self.connectionsClosedStat = self.defineCounter('connections.closed');
+    // self.connectionsBytesSentStat = self.defineCounter('connections.bytes-sent');
+    // self.connectionsBytesRcvdStat = self.defineCounter('connections.bytes-recvd');
+
     self.options = extend({
         timeoutCheckInterval: 100,
         timeoutFuzz: 100,
