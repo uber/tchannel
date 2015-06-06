@@ -131,22 +131,18 @@ function getKey(common, stat) {
         // connection
         case 'connections.active':
             return prefix + '.' +
-                clean(stat.tags['host-port'], 'host-port') + '.' +
                 clean(stat.tags['peer-host-port'], 'peer-host-port');
 
         case 'connections.initiated':
             return prefix + '.' +
-                clean(stat.tags['host-port'], 'host-port') + '.' +
                 clean(stat.tags['peer-host-port'], 'peer-host-port');
 
         case 'connections.connect-errors':
             return prefix + '.' +
-                clean(stat.tags['host-port'], 'host-port') + '.' +
                 clean(stat.tags['peer-host-port'], 'peer-host-port');
 
         case 'connections.accepted':
             return prefix + '.' +
-                clean(stat.tags['host-port'], 'host-port') + '.' +
                 clean(stat.tags['peer-host-port'], 'peer-host-port');
 
         case 'connections.accept-errors':
@@ -155,13 +151,11 @@ function getKey(common, stat) {
 
         case 'connections.errors':
             return prefix + '.' +
-                clean(stat.tags['host-port'], 'host-port') + '.' +
                 clean(stat.tags['peer-host-port'], 'peer-host-port') + '.' +
                 clean(stat.tags.type, 'type');
 
         case 'connections.closed':
             return prefix + '.' +
-                clean(stat.tags['host-port'], 'host-port') + '.' +
                 clean(stat.tags['peer-host-port'], 'peer-host-port') + '.' +
                 clean(stat.tags.reason, 'reason');
 

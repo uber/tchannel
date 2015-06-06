@@ -36,15 +36,11 @@ allocCluster.test('emits stats on response ok', {
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
     var client = cluster.channels[1];
-    var serverHost = cluster.hosts[0]
-        .replace(/:/g, '-')
-        .replace(/\./g, '-');
-    var hostKey;
+    var clientHost;
     server.on('connection', function onConnection(conn) {
-        var clientHost = conn.remoteAddr
+        clientHost = conn.remoteAddr
             .replace(/:/g, '-')
             .replace(/\./g, '-');
-        hostKey = serverHost + '.' + clientHost;
     });
     var statsd = nullStatsd(4);
 
@@ -91,7 +87,7 @@ allocCluster.test('emits stats on response ok', {
         assert.ok(res.ok, 'res should be ok');
         assert.deepEqual(statsd._buffer._elements, [{
             type: 'c',
-            name: 'tchannel.connections.accepted.' + hostKey,
+            name: 'tchannel.connections.accepted.' + clientHost,
             value: null,
             delta: 1,
             time: null
@@ -127,15 +123,11 @@ allocCluster.test('emits stats on response not ok', {
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
     var client = cluster.channels[1];
-    var serverHost = cluster.hosts[0]
-        .replace(/:/g, '-')
-        .replace(/\./g, '-');
-    var hostKey;
+    var clientHost;
     server.on('connection', function onConnection(conn) {
-        var clientHost = conn.remoteAddr
+        clientHost = conn.remoteAddr
             .replace(/:/g, '-')
             .replace(/\./g, '-');
-        hostKey = serverHost + '.' + clientHost;
     });
     var statsd = nullStatsd(4);
 
@@ -182,7 +174,7 @@ allocCluster.test('emits stats on response not ok', {
         assert.equal(res.ok, false, 'res should be not ok');
         assert.deepEqual(statsd._buffer._elements, [{
             type: 'c',
-            name: 'tchannel.connections.accepted.' + hostKey,
+            name: 'tchannel.connections.accepted.' + clientHost,
             value: null,
             delta: 1,
             time: null
@@ -218,15 +210,11 @@ allocCluster.test('emits stats on response error', {
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
     var client = cluster.channels[1];
-    var serverHost = cluster.hosts[0]
-        .replace(/:/g, '-')
-        .replace(/\./g, '-');
-    var hostKey;
+    var clientHost;
     server.on('connection', function onConnection(conn) {
-        var clientHost = conn.remoteAddr
+        clientHost = conn.remoteAddr
             .replace(/:/g, '-')
             .replace(/\./g, '-');
-        hostKey = serverHost + '.' + clientHost;
     });
     var statsd = nullStatsd(4);
 
@@ -270,7 +258,7 @@ allocCluster.test('emits stats on response error', {
         assert.equal(res, null, 'res should be null');
         assert.deepEqual(statsd._buffer._elements, [{
             type: 'c',
-            name: 'tchannel.connections.accepted.' + hostKey,
+            name: 'tchannel.connections.accepted.' + clientHost,
             value: null,
             delta: 1,
             time: null
