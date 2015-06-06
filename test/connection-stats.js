@@ -46,12 +46,12 @@ allocCluster.test('emits connection stats with success', {
         stats.push(stat);
     });
 
-    client.makeSubChannel({
+    var subClient = client.makeSubChannel({
         serviceName: 'server',
         peers: [server.hostPort]
     });
 
-    client.request({
+    subClient.request({
         serviceName: 'server',
         headers: {
             cn: 'client'
@@ -113,12 +113,12 @@ allocCluster.test('emits connection stats with failure', {
         stats.push(stat);
     });
 
-    client.makeSubChannel({
+    var subClient = client.makeSubChannel({
         serviceName: 'server',
         peers: ['localhost:4040']
     });
 
-    client.request({
+    subClient.request({
         serviceName: 'server',
         headers: {
             cn: 'client'
@@ -184,12 +184,12 @@ allocCluster.test('emits active connections', {
         stats.push(stat);
     });
 
-    client.makeSubChannel({
+    var subClient = client.makeSubChannel({
         serviceName: 'server',
         peers: [server.hostPort]
     });
 
-    client.request({
+    subClient.request({
         serviceName: 'server',
         headers: {
             cn: 'client'
