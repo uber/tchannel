@@ -146,7 +146,7 @@ func (call *OutboundCall) writeOperation(operation []byte) error {
 	return WriteArg(writer, BytesOutput(operation))
 }
 
-// Arg2Writer returns a WriteCloser that can be used to write the last argument.
+// Arg2Writer returns a WriteCloser that can be used to write the second argument.
 // The returned writer must be closed once the write is complete.
 func (call *OutboundCall) Arg2Writer() (io.WriteCloser, error) {
 	return call.arg2Writer()
@@ -209,7 +209,7 @@ func (response *OutboundCallResponse) Arg2Reader() (io.ReadCloser, error) {
 	return response.arg2Reader()
 }
 
-// Arg3Reader returns an io.ReadCloser to read the second argument.
+// Arg3Reader returns an io.ReadCloser to read the last argument.
 // The ReadCloser must be closed once the argument has been read.
 func (response *OutboundCallResponse) Arg3Reader() (io.ReadCloser, error) {
 	return response.arg3Reader()

@@ -176,7 +176,7 @@ func (call *InboundCall) Arg2Reader() (io.ReadCloser, error) {
 	return call.arg2Reader()
 }
 
-// Arg3Reader returns an io.ReadCloser to read the second argument.
+// Arg3Reader returns an io.ReadCloser to read the last argument.
 // The ReadCloser must be closed once the argument has been read.
 func (call *InboundCall) Arg3Reader() (io.ReadCloser, error) {
 	return call.arg3Reader()
@@ -257,7 +257,7 @@ func (response *InboundCallResponse) SetApplicationError() error {
 	return nil
 }
 
-// Arg2Writer returns a WriteCloser that can be used to write the last argument.
+// Arg2Writer returns a WriteCloser that can be used to write the second argument.
 // The returned writer must be closed once the write is complete.
 func (response *InboundCallResponse) Arg2Writer() (io.WriteCloser, error) {
 	writer, err := response.arg1Writer()
