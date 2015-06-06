@@ -29,6 +29,8 @@ allocCluster.test('emits stats', {
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
     var client = cluster.channels[1];
+    var serverHost = cluster.hosts[0];
+    var clientHost = cluster.hosts[1];
     var stats = [];
 
     server.makeSubChannel({
@@ -72,6 +74,16 @@ allocCluster.test('emits stats', {
         assert.ok(res.ok);
 
         assert.deepEqual(stats, [{
+            name: 'connections.initiated',
+            type: 'counter',
+            value: 1,
+            tags: {
+                'host-port': clientHost,
+                'peer-host-port': serverHost,
+                app: 'client',
+                host: os.hostname()
+            }
+        }, {
             name: 'outbound.calls.sent',
             type: 'counter',
             value: 1,
@@ -85,7 +97,7 @@ allocCluster.test('emits stats', {
         }, {
             name: 'outbound.calls.per-attempt-latency',
             type: 'timing',
-            value: stats[1].value,
+            value: stats[2].value,
             tags: {
                 'target-service': 'server',
                 service: 'client',
@@ -109,7 +121,7 @@ allocCluster.test('emits stats', {
         }, {
             name: 'outbound.calls.latency',
             type: 'timing',
-            value: stats[3].value,
+            value: stats[4].value,
             tags: {
                 'target-service': 'server',
                 service: 'client',
