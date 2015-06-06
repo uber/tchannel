@@ -39,10 +39,6 @@ allocCluster.test('emits stats on call success', {
     var serverHost = cluster.hosts[0]
         .replace(/:/g, '-')
         .replace(/\./g, '-');
-    var clientHost = cluster.hosts[1]
-        .replace(/:/g, '-')
-        .replace(/\./g, '-');
-    var hostKey = clientHost + '.' + serverHost;
     var statsd = nullStatsd(5);
 
     server.makeSubChannel({
@@ -88,7 +84,7 @@ allocCluster.test('emits stats on call success', {
         assert.ok(res.ok, 'res should be ok');
         assert.deepEqual(statsd._buffer._elements, [{
             type: 'c',
-            name: 'tchannel.connections.initiated.' + hostKey,
+            name: 'tchannel.connections.initiated.' + serverHost,
             value: null,
             delta: 1,
             time: null
@@ -133,10 +129,6 @@ allocCluster.test('emits stats on call failure', {
     var serverHost = cluster.hosts[0]
         .replace(/:/g, '-')
         .replace(/\./g, '-');
-    var clientHost = cluster.hosts[1]
-        .replace(/:/g, '-')
-        .replace(/\./g, '-');
-    var hostKey = clientHost + '.' + serverHost;
     var statsd = nullStatsd(5);
 
     server.makeSubChannel({
@@ -182,7 +174,7 @@ allocCluster.test('emits stats on call failure', {
         assert.ok(res.ok === false, 'res should be not ok');
         assert.deepEqual(statsd._buffer._elements, [{
             type: 'c',
-            name: 'tchannel.connections.initiated.' + hostKey,
+            name: 'tchannel.connections.initiated.' + serverHost,
             value: null,
             delta: 1,
             time: null

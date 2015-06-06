@@ -36,10 +36,6 @@ allocCluster.test('emits connection stats with success', {
     var serverHost = cluster.hosts[0]
         .replace(/:/g, '-')
         .replace(/\./g, '-');
-    var clientHost = cluster.hosts[1]
-        .replace(/:/g, '-')
-        .replace(/\./g, '-');
-    var hostKey = clientHost + '.' + serverHost;
     var statsd = nullStatsd(2);
 
     server.makeSubChannel({
@@ -76,13 +72,13 @@ allocCluster.test('emits connection stats with success', {
         server.close();
         assert.deepEqual(statsd._buffer._elements, [{
             type: 'c',
-            name: 'tchannel.connections.initiated.' + hostKey,
+            name: 'tchannel.connections.initiated.' + serverHost,
             value: null,
             delta: 1,
             time: null
         }, {
             type: 'c',
-            name: 'tchannel.connections.closed.' + hostKey + '.tchannel-socket-local-closed',
+            name: 'tchannel.connections.closed.' + serverHost + '.tchannel-socket-local-closed',
             value: null,
             delta: 1,
             time: null
@@ -96,10 +92,7 @@ allocCluster.test('emits connection stats with failure', {
     numPeers: 1
 }, function t(cluster, assert) {
     var client = cluster.channels[0];
-    var clientHost = cluster.hosts[0]
-        .replace(/:/g, '-')
-        .replace(/\./g, '-');
-    var hostKey = clientHost + '.localhost-4040';
+    var hostKey = 'localhost-4040';
     var statsd = nullStatsd(2);
 
     client.statTags = client.options.statTags = {
@@ -157,10 +150,6 @@ allocCluster.test('emits active connections', {
     var serverHost = cluster.hosts[0]
         .replace(/:/g, '-')
         .replace(/\./g, '-');
-    var clientHost = cluster.hosts[1]
-        .replace(/:/g, '-')
-        .replace(/\./g, '-');
-    var hostKey = clientHost + '.' + serverHost;
     var statsd = nullStatsd(3);
 
     server.makeSubChannel({
@@ -199,19 +188,19 @@ allocCluster.test('emits active connections', {
         process.nextTick(function next() {
             assert.deepEqual(statsd._buffer._elements, [{
                 type: 'c',
-                name: 'tchannel.connections.initiated.' + hostKey,
+                name: 'tchannel.connections.initiated.' + serverHost,
                 value: null,
                 delta: 1,
                 time: null
             }, {
                 type: 'g',
-                name: 'tchannel.connections.active.' + hostKey,
+                name: 'tchannel.connections.active.' + serverHost,
                 value: 1,
                 delta: null,
                 time: null
             }, {
                 type: 'c',
-                name: 'tchannel.connections.closed.' + hostKey + '.tchannel-socket-local-closed',
+                name: 'tchannel.connections.closed.' + serverHost + '.tchannel-socket-local-closed',
                 value: null,
                 delta: 1,
                 time: null
