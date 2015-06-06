@@ -69,7 +69,8 @@ allocCluster.test('request retries', {
         peers: cluster.hosts,
         requestDefaults: {
             headers: {
-                as: 'raw'
+                as: 'raw',
+                cn: 'wat'
             },
             serviceName: 'tristan'
         }
@@ -180,7 +181,8 @@ allocCluster.test('request application retries', {
         requestDefaults: {
             serviceName: 'tristan',
             headers: {
-                as: 'raw'
+                as: 'raw',
+                cn: 'wat'
             }
         }
     });
@@ -304,7 +306,8 @@ allocCluster.test('retryFlags work', {
         requestDefaults: {
             serviceName: 'tristan',
             headers: {
-                as: 'raw'
+                as: 'raw',
+                cn: 'wat'
             }
         }
     });

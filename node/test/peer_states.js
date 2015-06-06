@@ -33,7 +33,8 @@ allocCluster.test('healthy state stays healthy', {
     },
     requestDefaults: {
         headers: {
-            as: 'raw'
+            as: 'raw',
+            cn: 'wat'
         }
     }
 }, function t(cluster, assert) {
@@ -248,7 +249,8 @@ function testSetup(desc, testFunc) {
                     serviceName: 'tiberius', 
                     hasNoParent: true,
                     headers: {
-                        as: 'raw'
+                        as: 'raw',
+                        cn: 'wat'
                     }
                 }).send(op, '', '', onResult);
                 function onResult(err, res, arg2, arg3) {

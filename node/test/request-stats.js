@@ -47,7 +47,8 @@ allocCluster.test('emits stats', {
         peers: [server.hostPort],
         requestDefaults: {
             headers: {
-                as: 'raw'
+                as: 'raw',
+                cn: 'wat'
             }
         }
     });

@@ -119,7 +119,8 @@ function testBattle(name, options, expectedErrorTypes) {
                 dumChannel.request({
                     serviceName: 'battle',
                     headers: {
-                        as: 'raw'
+                        as: 'raw',
+                        cn: 'wat'
                     },
                     timeout: 1000
                 }).send('start', '', '', regardless(cb));

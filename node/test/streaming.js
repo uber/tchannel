@@ -104,6 +104,7 @@ function partsTest(testCase, assert) {
         var conn = peer.connect();
         options.headers = options.headers || {};
         options.headers.as = 'raw';
+        options.headers.cn = 'wat';
         var req = conn.request(options);
         conn.on('identified', function onId() {
             var resultReady = Ready();
