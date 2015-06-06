@@ -52,11 +52,11 @@ allocCluster.test('emits connection stats with success', {
         version: '1.0'
     };
     client.channelStatsd = new TChannelStatsd(client, statsd);
-    client.makeSubChannel({
+    var subClient = client.makeSubChannel({
         serviceName: 'reservoir',
         peers: [server.hostPort]
     });
-    client.request({
+    subClient.request({
         serviceName: 'reservoir',
         headers: {
             cn: 'inPipe'
@@ -109,11 +109,11 @@ allocCluster.test('emits connection stats with failure', {
         version: '1.0'
     };
     client.channelStatsd = new TChannelStatsd(client, statsd);
-    client.makeSubChannel({
+    var subClient = client.makeSubChannel({
         serviceName: 'reservoir',
         peers: ['localhost:4040']
     });
-    client.request({
+    subClient.request({
         serviceName: 'reservoir',
         headers: {
             cn: 'inPipe'
@@ -173,11 +173,11 @@ allocCluster.test('emits active connections', {
         version: '1.0'
     };
     client.channelStatsd = new TChannelStatsd(client, statsd);
-    client.makeSubChannel({
+    var subClient = client.makeSubChannel({
         serviceName: 'reservoir',
         peers: [server.hostPort]
     });
-    client.request({
+    subClient.request({
         serviceName: 'reservoir',
         headers: {
             cn: 'inPipe'
