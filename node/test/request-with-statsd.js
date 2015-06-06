@@ -36,7 +36,14 @@ allocCluster.test('emits stats on call success', {
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
     var client = cluster.channels[1];
-    var statsd = nullStatsd(4);
+    var serverHost = cluster.hosts[0]
+        .replace(/:/g, '-')
+        .replace(/\./g, '-');
+    var clientHost = cluster.hosts[1]
+        .replace(/:/g, '-')
+        .replace(/\./g, '-');
+    var hostKey = clientHost + '.' + serverHost;
+    var statsd = nullStatsd(5);
 
     server.makeSubChannel({
         serviceName: 'reservoir'
@@ -81,6 +88,12 @@ allocCluster.test('emits stats on call success', {
         assert.ok(res.ok, 'res should be ok');
         assert.deepEqual(statsd._buffer._elements, [{
             type: 'c',
+            name: 'tchannel.connections.initiated.' + hostKey,
+            value: null,
+            delta: 1,
+            time: null
+        }, {
+            type: 'c',
             name: 'tchannel.outbound.calls.sent.inPipe.reservoir.Reservoir--get',
             value: null,
             delta: 1,
@@ -117,7 +130,14 @@ allocCluster.test('emits stats on call failure', {
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
     var client = cluster.channels[1];
-    var statsd = nullStatsd(4);
+    var serverHost = cluster.hosts[0]
+        .replace(/:/g, '-')
+        .replace(/\./g, '-');
+    var clientHost = cluster.hosts[1]
+        .replace(/:/g, '-')
+        .replace(/\./g, '-');
+    var hostKey = clientHost + '.' + serverHost;
+    var statsd = nullStatsd(5);
 
     server.makeSubChannel({
         serviceName: 'reservoir'
@@ -161,6 +181,12 @@ allocCluster.test('emits stats on call failure', {
         }
         assert.ok(res.ok === false, 'res should be not ok');
         assert.deepEqual(statsd._buffer._elements, [{
+            type: 'c',
+            name: 'tchannel.connections.initiated.' + hostKey,
+            value: null,
+            delta: 1,
+            time: null
+        }, {
             type: 'c',
             name: 'tchannel.outbound.calls.sent.inPipe.reservoir.Reservoir--get',
             value: null,
