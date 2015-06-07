@@ -97,6 +97,7 @@ type ConnectionOptions struct {
 
 // Connection represents a connection to a remote peer.
 type Connection struct {
+	connID         uint32
 	log            Logger
 	checksumType   ChecksumType
 	framePool      FramePool
@@ -111,6 +112,9 @@ type Connection struct {
 	handlers       *handlerMap
 	nextMessageID  uint32
 }
+
+// nextConnID gives an ID for each connection for debugging purposes.
+var nextConnID uint32
 
 type connectionState int
 
@@ -175,7 +179,11 @@ func newConnection(conn net.Conn, initialState connectionState, handlers *handle
 		framePool = DefaultFramePool
 	}
 
+	connID := atomic.AddUint32(&nextConnID, 1)
+	log.Debugf("C%v created for %v (%v) local: %v remote: %v",
+		connID, peerInfo.ServiceName, peerInfo.ProcessName, conn.LocalAddr(), conn.RemoteAddr())
 	c := &Connection{
+		connID:        connID,
 		log:           log,
 		conn:          conn,
 		framePool:     framePool,
@@ -454,7 +462,7 @@ func (c *Connection) readFrames() {
 			c.handleError(frame)
 		default:
 			// TODO(mmihic): Log and close connection with protocol error
-			c.log.Errorf("Received unexpected frame %s from %s", frame.Header, c.remotePeerInfo)
+			c.log.Errorf("C%v Received unexpected frame %s from %s", c.connID, frame.Header, c.remotePeerInfo)
 		}
 	}
 }
@@ -465,7 +473,7 @@ func (c *Connection) writeFrames() {
 	for f := range c.sendCh {
 		defer c.framePool.Release(f)
 
-		c.log.Debugf("Writing frame %s", f.Header)
+		c.log.Debugf("C%v Writing frame %s", c.connID, f.Header)
 		if err := f.WriteTo(c.conn); err != nil {
 			c.connectionError(err)
 			return
@@ -484,6 +492,6 @@ func (c *Connection) closeNetwork() {
 	// closed; no need to close the send channel (and closing the send
 	// channel would be dangerous since other goroutine might be sending)
 	if err := c.conn.Close(); err != nil {
-		c.log.Warnf("could not close connection to peer %s: %v", c.remotePeerInfo, err)
+		c.log.Warnf("C%v could not close connection to peer %s: %v", c.connID, c.remotePeerInfo, err)
 	}
 }
