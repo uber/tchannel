@@ -192,7 +192,7 @@ func TestFragmentationReaderErrors(t *testing.T) {
 		assert.NoError(t, err)
 
 		var arg []byte
-		assert.NoError(t, NewArgReader(reader, nil).ReadBytes(&arg))
+		assert.NoError(t, NewArgReader(reader, nil).Read(&arg))
 		assert.Equal(t, "hello", string(arg))
 		assert.Error(t, r.BeginArgument(false /* last */))
 	})
@@ -207,7 +207,7 @@ func TestFragmentationReaderErrors(t *testing.T) {
 		assert.NoError(t, err)
 
 		var arg []byte
-		assert.Error(t, NewArgReader(reader, nil).ReadBytes(&arg))
+		assert.Error(t, NewArgReader(reader, nil).Read(&arg))
 	})
 
 	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
@@ -272,7 +272,7 @@ func TestFragmentationChecksumTypeErrors(t *testing.T) {
 	assert.NoError(t, err)
 
 	var arg []byte
-	assert.Error(t, NewArgReader(reader, nil).ReadBytes(&arg))
+	assert.Error(t, NewArgReader(reader, nil).Read(&arg))
 }
 
 func TestFragmentationChecksumMismatch(t *testing.T) {
@@ -299,7 +299,7 @@ func TestFragmentationChecksumMismatch(t *testing.T) {
 	assert.NoError(t, err)
 
 	var arg []byte
-	assert.Error(t, NewArgReader(reader, nil).ReadBytes(&arg))
+	assert.Error(t, NewArgReader(reader, nil).Read(&arg))
 }
 
 func runFragmentationErrorTest(f func(w *fragmentingWriter, r *fragmentingReader)) {
@@ -337,7 +337,7 @@ func runFragmentationTest(t *testing.T, args []string, expectedFragments [][]byt
 			require.NoError(t, err)
 
 			var arg []byte
-			require.NoError(t, NewArgReader(reader, nil).ReadBytes(&arg))
+			require.NoError(t, NewArgReader(reader, nil).Read(&arg))
 			actualArgs = append(actualArgs, string(arg))
 		}
 
@@ -345,7 +345,7 @@ func runFragmentationTest(t *testing.T, args []string, expectedFragments [][]byt
 		require.NoError(t, err)
 
 		var arg []byte
-		require.NoError(t, NewArgReader(reader, nil).ReadBytes(&arg))
+		require.NoError(t, NewArgReader(reader, nil).Read(&arg))
 		actualArgs = append(actualArgs, string(arg))
 	}()
 

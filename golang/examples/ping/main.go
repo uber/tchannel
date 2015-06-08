@@ -42,13 +42,13 @@ func pingHandler(ctx context.Context, call *tchannel.InboundCall) {
 	var headers Headers
 
 	var inArg2 []byte
-	if err := tchannel.NewArgReader(call.Arg2Reader()).ReadBytes(&inArg2); err != nil {
+	if err := tchannel.NewArgReader(call.Arg2Reader()).Read(&inArg2); err != nil {
 		log.Errorf("Could not read headers from client: %v", err)
 		return
 	}
 
 	var inArg3 []byte
-	if err := tchannel.NewArgReader(call.Arg2Reader()).ReadBytes(&inArg3); err != nil {
+	if err := tchannel.NewArgReader(call.Arg2Reader()).Read(&inArg3); err != nil {
 		log.Errorf("Could not read body from client: %v", err)
 		return
 	}

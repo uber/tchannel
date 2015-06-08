@@ -174,7 +174,7 @@ func (response *OutboundCallResponse) ApplicationError() bool {
 // The ReadCloser must be closed once the argument has been read.
 func (response *OutboundCallResponse) Arg2Reader() (io.ReadCloser, error) {
 	var operation []byte
-	if err := NewArgReader(response.arg1Reader()).ReadBytes(&operation); err != nil {
+	if err := NewArgReader(response.arg1Reader()).Read(&operation); err != nil {
 		return nil, err
 	}
 

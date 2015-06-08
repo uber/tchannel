@@ -48,8 +48,8 @@ func (r *ArgReader) read(f func() error) error {
 	return r.reader.Close()
 }
 
-// ReadBytes reads from the reader into the byte slice.
-func (r *ArgReader) ReadBytes(bs *[]byte) error {
+// Read reads from the reader into the byte slice.
+func (r *ArgReader) Read(bs *[]byte) error {
 	return r.read(func() error {
 		var err error
 		*bs, err = ioutil.ReadAll(r.reader)

@@ -66,8 +66,8 @@ func (e *echoSaver) echo(t *testing.T, ctx context.Context, call *InboundCall) {
 	e.format = call.Format()
 	e.caller = call.CallerName()
 
-	require.NoError(t, NewArgReader(call.Arg2Reader()).ReadBytes(&inArg2))
-	require.NoError(t, NewArgReader(call.Arg3Reader()).ReadBytes(&inArg3))
+	require.NoError(t, NewArgReader(call.Arg2Reader()).Read(&inArg2))
+	require.NoError(t, NewArgReader(call.Arg3Reader()).Read(&inArg3))
 	require.NoError(t, NewArgWriter(call.Response().Arg2Writer()).Write(inArg2))
 	require.NoError(t, NewArgWriter(call.Response().Arg3Writer()).Write(inArg3))
 }
@@ -87,11 +87,11 @@ func TestRoundTrip(t *testing.T) {
 		require.NoError(t, NewArgWriter(call.Arg3Writer()).Write(testArg3))
 
 		var respArg2 []byte
-		require.NoError(t, NewArgReader(call.Response().Arg2Reader()).ReadBytes(&respArg2))
+		require.NoError(t, NewArgReader(call.Response().Arg2Reader()).Read(&respArg2))
 		assert.Equal(t, testArg2, []byte(respArg2))
 
 		var respArg3 []byte
-		require.NoError(t, NewArgReader(call.Response().Arg3Reader()).ReadBytes(&respArg3))
+		require.NoError(t, NewArgReader(call.Response().Arg3Reader()).Read(&respArg3))
 		assert.Equal(t, testArg3, []byte(respArg3))
 
 		assert.Equal(t, JSON, echoSaver.format)
@@ -196,12 +196,12 @@ func sendRecv(ctx context.Context, ch *Channel, hostPort string, serviceName, op
 	}
 
 	var respArg2 []byte
-	if err := NewArgReader(call.Response().Arg2Reader()).ReadBytes(&respArg2); err != nil {
+	if err := NewArgReader(call.Response().Arg2Reader()).Read(&respArg2); err != nil {
 		return nil, nil, err
 	}
 
 	var respArg3 []byte
-	if err := NewArgReader(call.Response().Arg3Reader()).ReadBytes(&respArg3); err != nil {
+	if err := NewArgReader(call.Response().Arg3Reader()).Read(&respArg3); err != nil {
 		return nil, nil, err
 	}
 

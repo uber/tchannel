@@ -157,7 +157,7 @@ func (call *InboundCall) CallerName() string {
 // Reads the entire operation name (arg1) from the request stream.
 func (call *InboundCall) readOperation() error {
 	var arg1 []byte
-	if err := NewArgReader(call.arg1Reader()).ReadBytes(&arg1); err != nil {
+	if err := NewArgReader(call.arg1Reader()).Read(&arg1); err != nil {
 		return call.failed(err)
 	}
 

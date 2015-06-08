@@ -32,7 +32,7 @@ var log = tchannel.SimpleLogger
 
 func echo(ctx context.Context, call *tchannel.InboundCall) {
 	var inArg2 []byte
-	if err := tchannel.NewArgReader(call.Arg2Reader()).ReadBytes(&inArg2); err != nil {
+	if err := tchannel.NewArgReader(call.Arg2Reader()).Read(&inArg2); err != nil {
 		log.Errorf("could not start arg2: %v", err)
 		return
 	}
@@ -40,7 +40,7 @@ func echo(ctx context.Context, call *tchannel.InboundCall) {
 	log.Infof("Arg2: %s", inArg2)
 
 	var inArg3 []byte
-	if err := tchannel.NewArgReader(call.Arg3Reader()).ReadBytes(&inArg3); err != nil {
+	if err := tchannel.NewArgReader(call.Arg3Reader()).Read(&inArg3); err != nil {
 		log.Errorf("could not start arg3: %v", err)
 		return
 	}

@@ -98,7 +98,7 @@ func main() {
 	}
 
 	var respArg2 []byte
-	if err := tchannel.NewArgReader(call.Response().Arg2Reader()).ReadBytes(&respArg2); err != nil {
+	if err := tchannel.NewArgReader(call.Response().Arg2Reader()).Read(&respArg2); err != nil {
 		log.Fatalf("Could not read arg2: %v", err)
 	}
 
@@ -109,7 +109,7 @@ func main() {
 	log.Infof("resp-arg2: %s", respArg2)
 
 	var respArg3 []byte
-	if err := tchannel.NewArgReader(call.Response().Arg3Reader()).ReadBytes(&respArg3); err != nil {
+	if err := tchannel.NewArgReader(call.Response().Arg3Reader()).Read(&respArg3); err != nil {
 		log.Fatalf("Could not read arg3: %v", err)
 	}
 
