@@ -22,6 +22,7 @@ package main
 
 import (
 	"flag"
+	"io"
 	"os"
 	"time"
 
@@ -38,18 +39,27 @@ var arg2 = flag.String("arg2", "hello", "Input for arg2.  Curl-style, use @foo.t
 var arg3 = flag.String("arg3", "world", "Input for arg3.  Curl-style, use @foo.txt to read from foo.txt")
 var timeout = flag.Int("timeout", 30, "Timeout (in seconds)")
 
-func asArgument(arg string) tchannel.Output {
+type osArgWriter struct {
+	tchannel.ArgWriter
+}
+
+func writeArgument(writer io.WriteCloser, arg string) error {
+	defer writer.Close()
+
 	if arg[0] == '@' {
 		f, err := os.Open(arg[1:])
 		if err != nil {
 			log.Fatalf("Could not open %s", arg[1:])
 		}
 
-		return tchannel.NewStreamingOutput(f)
+		if _, err := io.Copy(writer, f); err != nil {
+			return err
+		}
+	} else {
+		writer.Write([]byte(arg))
 	}
 
-	return tchannel.BytesOutput([]byte(arg))
-
+	return writer.Close()
 }
 
 func main() {
@@ -71,16 +81,24 @@ func main() {
 		log.Fatalf("Is the server running?")
 	}
 
-	if err := call.WriteArg2(asArgument(*arg2)); err != nil {
+	writer, err := call.Arg2Writer()
+	if err == nil {
+		err = writeArgument(writer, *arg2)
+	}
+	if err != nil {
 		log.Fatalf("Could not write arg2: %v", err)
 	}
 
-	if err := call.WriteArg3(asArgument(*arg3)); err != nil {
+	writer, err = call.Arg3Writer()
+	if err == nil {
+		err = writeArgument(writer, *arg3)
+	}
+	if err != nil {
 		log.Fatalf("Could not write arg3: %v", err)
 	}
 
-	var respArg2 tchannel.BytesInput
-	if err := call.Response().ReadArg2(&respArg2); err != nil {
+	var respArg2 []byte
+	if err := tchannel.NewArgReader(call.Response().Arg2Reader()).ReadBytes(&respArg2); err != nil {
 		log.Fatalf("Could not read arg2: %v", err)
 	}
 
@@ -90,8 +108,8 @@ func main() {
 
 	log.Infof("resp-arg2: %s", respArg2)
 
-	var respArg3 tchannel.BytesInput
-	if err := call.Response().ReadArg3(&respArg3); err != nil {
+	var respArg3 []byte
+	if err := tchannel.NewArgReader(call.Response().Arg3Reader()).ReadBytes(&respArg3); err != nil {
 		log.Fatalf("Could not read arg3: %v", err)
 	}
 

@@ -31,28 +31,28 @@ import (
 var log = tchannel.SimpleLogger
 
 func echo(ctx context.Context, call *tchannel.InboundCall) {
-	var inArg2 tchannel.BytesInput
-	if err := call.ReadArg2(&inArg2); err != nil {
+	var inArg2 []byte
+	if err := tchannel.NewArgReader(call.Arg2Reader()).ReadBytes(&inArg2); err != nil {
 		log.Errorf("could not start arg2: %v", err)
 		return
 	}
 
 	log.Infof("Arg2: %s", inArg2)
 
-	var inArg3 tchannel.BytesInput
-	if err := call.ReadArg3(&inArg3); err != nil {
+	var inArg3 []byte
+	if err := tchannel.NewArgReader(call.Arg3Reader()).ReadBytes(&inArg3); err != nil {
 		log.Errorf("could not start arg3: %v", err)
 		return
 	}
 
 	log.Infof("Arg3: %s", inArg3)
 
-	if err := call.Response().WriteArg2(tchannel.BytesOutput(inArg2)); err != nil {
+	if err := tchannel.NewArgWriter(call.Response().Arg2Writer()).Write(inArg2); err != nil {
 		log.Errorf("could not write arg2: %v", err)
 		return
 	}
 
-	if err := call.Response().WriteArg3(tchannel.BytesOutput(inArg3)); err != nil {
+	if err := tchannel.NewArgWriter(call.Response().Arg3Writer()).Write(inArg3); err != nil {
 		log.Errorf("could not write arg3: %v", err)
 		return
 	}

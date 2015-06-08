@@ -41,25 +41,25 @@ type Pong Ping
 func pingHandler(ctx context.Context, call *tchannel.InboundCall) {
 	var headers Headers
 
-	var inArg2 tchannel.BytesInput
-	if err := call.ReadArg2(&inArg2); err != nil {
+	var inArg2 []byte
+	if err := tchannel.NewArgReader(call.Arg2Reader()).ReadBytes(&inArg2); err != nil {
 		log.Errorf("Could not read headers from client: %v", err)
 		return
 	}
 
-	var inArg3 tchannel.BytesInput
-	if err := call.ReadArg3(&inArg3); err != nil {
+	var inArg3 []byte
+	if err := tchannel.NewArgReader(call.Arg2Reader()).ReadBytes(&inArg3); err != nil {
 		log.Errorf("Could not read body from client: %v", err)
 		return
 	}
 
-	if err := call.Response().WriteArg2(tchannel.NewJSONOutput(headers)); err != nil {
+	if err := tchannel.NewArgWriter(call.Response().Arg2Writer()).WriteJSON(headers); err != nil {
 		log.Errorf("Could not echo response headers to client: %v", err)
 		return
 	}
 
 	pong := Pong{Message: fmt.Sprintf("ping %s", inArg3)}
-	if err := call.Response().WriteArg3(tchannel.NewJSONOutput(pong)); err != nil {
+	if err := tchannel.NewArgWriter(call.Response().Arg3Writer()).WriteJSON(pong); err != nil {
 		log.Errorf("Could not write response body to client: %v", err)
 		return
 	}
@@ -106,21 +106,21 @@ func main() {
 		log.Fatalf("Could not begin call to local ping service: %v", err)
 	}
 
-	if err := call.WriteArg2(tchannel.NewJSONOutput(Headers{})); err != nil {
+	if err := tchannel.NewArgWriter(call.Arg2Writer()).WriteJSON(Headers{}); err != nil {
 		log.Fatalf("Could not write headers: %v", err)
 	}
 
-	if err := call.WriteArg3(tchannel.NewJSONOutput(Ping{"Hello World!"})); err != nil {
+	if err := tchannel.NewArgWriter(call.Arg3Writer()).WriteJSON(Ping{"Hello World!"}); err != nil {
 		log.Fatalf("Could not write ping: %v", err)
 	}
 
 	var responseHeaders Headers
-	if err := call.Response().ReadArg2(tchannel.NewJSONInput(&responseHeaders)); err != nil {
+	if err := tchannel.NewArgReader(call.Response().Arg2Reader()).ReadJSON(&responseHeaders); err != nil {
 		log.Fatalf("Could not read response headers: %v", err)
 	}
 
 	var pong Pong
-	if err := call.Response().ReadArg3(tchannel.NewJSONInput(&pong)); err != nil {
+	if err := tchannel.NewArgReader(call.Response().Arg3Reader()).ReadJSON(&pong); err != nil {
 		log.Fatalf("Could not read response pong: %v", err)
 	}
 
