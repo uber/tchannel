@@ -112,7 +112,7 @@ class TChannel(object):
             for peer_hostport in known_peers:
                 self.peers.add(peer_hostport)
 
-    def advertise(self, router):
+    def advertise(self, router, name=None):
         """Advertise the given TChannel to Hyperbahn.
 
         This informs Hyperbahn that the given client/service is using TChannel
@@ -120,16 +120,16 @@ class TChannel(object):
 
         It also tells the TChannel about the given Hyperbahn routers.
 
-        :param tchannel:
-            TChannel to register with Hyperbahn
         :param routers:
             Seed list of addresses of Hyperbahn routers
+        :param name:
+            Name to be register on the hyperbahn.
         :returns:
             A future that resolves to the remote server's response after
             the first advertise is successful.
         """
-
-        return hyperbahn.advertise(self, self.name, router)
+        name = name or self.name
+        return hyperbahn.advertise(self, name, router)
 
     @property
     def closed(self):
