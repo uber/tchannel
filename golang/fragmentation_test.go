@@ -144,7 +144,7 @@ func TestFragmentationLastArgOnExactFragmentBoundary(t *testing.T) {
 func TestFragmentationWriterErrors(t *testing.T) {
 	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
 		// Write without starting argument
-		_, err := w.Write(BytesOutput("foo"))
+		_, err := w.Write([]byte("foo"))
 		assert.Error(t, err)
 	})
 
@@ -158,7 +158,8 @@ func TestFragmentationWriterErrors(t *testing.T) {
 		// BeginArgument after writing final argument
 		writer, err := w.ArgWriter(true /* last */)
 		assert.NoError(t, err)
-		assert.NoError(t, WriteArg(writer, BytesOutput("hello")))
+
+		assert.NoError(t, NewArgWriter(writer, nil).Write([]byte("hello")))
 		assert.Error(t, w.BeginArgument(false /* last */))
 	})
 
@@ -185,13 +186,13 @@ func TestFragmentationReaderErrors(t *testing.T) {
 		// BeginArgument after reading final argument
 		writer, err := w.ArgWriter(true /* last */)
 		assert.NoError(t, err)
-		assert.NoError(t, WriteArg(writer, BytesOutput("hello")))
+		assert.NoError(t, NewArgWriter(writer, nil).Write([]byte("hello")))
 
 		reader, err := r.ArgReader(true /* last */)
 		assert.NoError(t, err)
 
-		var arg BytesInput
-		assert.NoError(t, ReadArg(reader, &arg))
+		var arg []byte
+		assert.NoError(t, NewArgReader(reader, nil).ReadBytes(&arg))
 		assert.Equal(t, "hello", string(arg))
 		assert.Error(t, r.BeginArgument(false /* last */))
 	})
@@ -200,20 +201,20 @@ func TestFragmentationReaderErrors(t *testing.T) {
 		// Sender sent final argument, but receiver thinks there is more
 		writer, err := w.ArgWriter(true /* last */)
 		assert.NoError(t, err)
-		assert.NoError(t, WriteArg(writer, BytesOutput("hello")))
+		assert.NoError(t, NewArgWriter(writer, nil).Write([]byte("hello")))
 
 		reader, err := r.ArgReader(false /* last */)
 		assert.NoError(t, err)
 
-		var arg BytesInput
-		assert.Error(t, ReadArg(reader, &arg))
+		var arg []byte
+		assert.Error(t, NewArgReader(reader, nil).ReadBytes(&arg))
 	})
 
 	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
 		// EndArgument without receiving all data in chunk
 		writer, err := w.ArgWriter(true /* last */)
 		assert.NoError(t, err)
-		assert.NoError(t, WriteArg(writer, BytesOutput("hello")))
+		assert.NoError(t, NewArgWriter(writer, nil).Write([]byte("hello")))
 
 		assert.NoError(t, r.BeginArgument(true /* last */))
 		b := make([]byte, 3)
@@ -227,7 +228,7 @@ func TestFragmentationReaderErrors(t *testing.T) {
 		// EndArgument without receiving all fragments
 		writer, err := w.ArgWriter(true /* last */)
 		assert.NoError(t, err)
-		assert.NoError(t, WriteArg(writer, BytesOutput("hello world what's up")))
+		assert.NoError(t, NewArgWriter(writer, nil).Write([]byte("hello world what's up")))
 
 		assert.NoError(t, r.BeginArgument(true /* last */))
 		b := make([]byte, 8)
@@ -241,7 +242,7 @@ func TestFragmentationReaderErrors(t *testing.T) {
 		// BeginArgument while argument is in process
 		writer, err := w.ArgWriter(true /* last */)
 		assert.NoError(t, err)
-		assert.NoError(t, WriteArg(writer, BytesOutput("hello world what's up")))
+		assert.NoError(t, NewArgWriter(writer, nil).Write([]byte("hello world what's up")))
 		assert.NoError(t, r.BeginArgument(false /* last */))
 		assert.Error(t, r.BeginArgument(false /* last */))
 	})
@@ -256,7 +257,7 @@ func TestFragmentationChecksumTypeErrors(t *testing.T) {
 	// Write two fragments out
 	writer, err := w.ArgWriter(true /* last */)
 	assert.NoError(t, err)
-	require.NoError(t, WriteArg(writer, BytesOutput("hello world this is two")))
+	assert.NoError(t, NewArgWriter(writer, nil).Write([]byte("hello world what's up")))
 
 	// Intercept and change the checksum type between the first and second fragment
 	first := <-sendCh
@@ -270,8 +271,8 @@ func TestFragmentationChecksumTypeErrors(t *testing.T) {
 	reader, err := r.ArgReader(true /* last */)
 	assert.NoError(t, err)
 
-	var arg BytesInput
-	assert.Error(t, ReadArg(reader, &arg))
+	var arg []byte
+	assert.Error(t, NewArgReader(reader, nil).ReadBytes(&arg))
 }
 
 func TestFragmentationChecksumMismatch(t *testing.T) {
@@ -283,7 +284,7 @@ func TestFragmentationChecksumMismatch(t *testing.T) {
 	// Write two fragments out
 	writer, err := w.ArgWriter(true /* last */)
 	assert.NoError(t, err)
-	require.NoError(t, WriteArg(writer, BytesOutput("hello world this is two")))
+	assert.NoError(t, NewArgWriter(writer, nil).Write([]byte("hello world this is two")))
 
 	// Intercept and change the checksum value in the second fragment
 	first := <-sendCh
@@ -297,8 +298,8 @@ func TestFragmentationChecksumMismatch(t *testing.T) {
 	reader, err := r.ArgReader(true /* last */)
 	assert.NoError(t, err)
 
-	var arg BytesInput
-	assert.Error(t, ReadArg(reader, &arg))
+	var arg []byte
+	assert.Error(t, NewArgReader(reader, nil).ReadBytes(&arg))
 }
 
 func runFragmentationErrorTest(f func(w *fragmentingWriter, r *fragmentingReader)) {
@@ -335,27 +336,27 @@ func runFragmentationTest(t *testing.T, args []string, expectedFragments [][]byt
 			reader, err := r.ArgReader(false /* last */)
 			require.NoError(t, err)
 
-			var arg BytesInput
-			require.NoError(t, ReadArg(reader, &arg))
+			var arg []byte
+			require.NoError(t, NewArgReader(reader, nil).ReadBytes(&arg))
 			actualArgs = append(actualArgs, string(arg))
 		}
 
 		reader, err := r.ArgReader(true /* last */)
 		require.NoError(t, err)
 
-		var arg BytesInput
-		require.NoError(t, ReadArg(reader, &arg))
+		var arg []byte
+		require.NoError(t, NewArgReader(reader, nil).ReadBytes(&arg))
 		actualArgs = append(actualArgs, string(arg))
 	}()
 
 	for i := 0; i < len(args)-1; i++ {
 		writer, err := w.ArgWriter(false /* last */)
 		assert.NoError(t, err)
-		require.NoError(t, WriteArg(writer, BytesOutput(args[i])))
+		require.NoError(t, NewArgWriter(writer, nil).Write([]byte(args[i])))
 	}
 	writer, err := w.ArgWriter(true /* last */)
 	assert.NoError(t, err)
-	require.NoError(t, WriteArg(writer, BytesOutput(args[len(args)-1])))
+	require.NoError(t, NewArgWriter(writer, nil).Write([]byte(args[len(args)-1])))
 	close(sendCh)
 
 	wg.Wait()
