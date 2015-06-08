@@ -28,7 +28,7 @@ from tchannel.tornado.peer import Peer
 
 @pytest.fixture
 def tchannel():
-    return TChannel(caller_name='test')
+    return TChannel(name='test')
 
 
 @pytest.fixture
@@ -45,7 +45,7 @@ def test_peer_caching(tchannel, peer):
 
 def test_known_peers():
     peers = ["localhost:%d" % port for port in range(4040, 4101)]
-    tchannel = TChannel(known_peers=peers)
+    tchannel = TChannel('test', known_peers=peers)
 
     for peer in peers:
         assert tchannel.peers.lookup(peer)

@@ -34,10 +34,10 @@ def test_reuse():
     hostport1 = 'localhost:%d' % unused_port()
     hostport2 = 'localhost:%d' % unused_port()
 
-    server1 = TChannel(hostport1, caller_name='test')
+    server1 = TChannel('test', hostport1)
     server1.listen()
 
-    server2 = TChannel(hostport2, caller_name='test')
+    server2 = TChannel('test', hostport2)
     server2.listen()
 
     @server2.register('hello')

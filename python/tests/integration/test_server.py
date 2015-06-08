@@ -86,8 +86,9 @@ class TestServer(object):
     def __init__(self, port, timeout=None):
         self.port = port
         self.tchannel = tornado_tchannel.TChannel(
-            "localhost:%d" % self.port,
-            caller_name='test')
+            name='test',
+            hostport="localhost:%d" % self.port,
+        )
 
         self.timeout = timeout or self.TIMEOUT
         self.thread = None

@@ -63,10 +63,12 @@ class TChannel(object):
         # 'http': scheme.HttpArgScheme, TODO
     }
 
-    def __init__(self, hostport=None, process_name=None, caller_name=None,
+    def __init__(self, name, hostport=None, process_name=None,
                  known_peers=None):
         """Build or re-use a TChannel.
 
+        :param name:
+            Name is used to identify client or service itself.
         :param hostport:
             The host-port at which the service behind this TChannel is
             reachable. The port specified in the ``hostport`` is what the
@@ -79,9 +81,6 @@ class TChannel(object):
         :param known_peers:
             A list of host-ports at which already known peers can be reached.
             Defaults to an empty list.
-        :param caller_name:
-            Name of the caller. This will be set in the TChannel
-            protocol header.
         """
         self._state = State.ready
         self._handler = RequestDispatcher()
@@ -103,7 +102,7 @@ class TChannel(object):
             sys.argv[0], os.getpid()
         )
 
-        self.caller_name = caller_name
+        self.name = name
 
         # register event hooks
         self.event_emitter = EventEmitter()
@@ -113,18 +112,16 @@ class TChannel(object):
             for peer_hostport in known_peers:
                 self.peers.add(peer_hostport)
 
-    def advertise(self, caller_name, router):
-        """Advertise the given TChannel to Hyperbahn using the given name.
+    def advertise(self, router):
+        """Advertise the given TChannel to Hyperbahn.
 
-        This informs Hyperbahn that the given service is hosted at this
-        TChannel at a fixed rate.
+        This informs Hyperbahn that the given client/service is using TChannel
+        at a fixed rate.
 
         It also tells the TChannel about the given Hyperbahn routers.
 
         :param tchannel:
             TChannel to register with Hyperbahn
-        :param caller_name:
-            Name of the caller behind this TChannel
         :param routers:
             Seed list of addresses of Hyperbahn routers
         :returns:
@@ -132,8 +129,7 @@ class TChannel(object):
             the first advertise is successful.
         """
 
-        self.caller_name = caller_name
-        hyperbahn.advertise(self, caller_name, router)
+        return hyperbahn.advertise(self, self.name, router)
 
     @property
     def closed(self):
