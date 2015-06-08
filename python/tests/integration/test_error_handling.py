@@ -62,7 +62,7 @@ def tchannel_server(random_open_port):
 def test_unexpected_error_from_handler(tchannel_server):
     # test for invalid call request message
     hostport = 'localhost:%d' % tchannel_server.port
-    tchannel = TChannel()
+    tchannel = TChannel(caller_name='test')
     connection = yield StreamConnection.outgoing(
         hostport=hostport,
         tchannel=tchannel,
@@ -86,7 +86,7 @@ def test_unexpected_error_from_handler(tchannel_server):
 def test_invalid_message_during_streaming(tchannel_server):
     # test for invalid call request message
     hostport = 'localhost:%d' % tchannel_server.port
-    tchannel = TChannel()
+    tchannel = TChannel(caller_name='test')
     connection = yield StreamConnection.outgoing(
         hostport=hostport,
         tchannel=tchannel,
@@ -132,7 +132,7 @@ def test_invalid_message_during_streaming(tchannel_server):
 def test_continue_message_error(tchannel_server):
     # test for invalid call request message
     hostport = 'localhost:%d' % tchannel_server.port
-    tchannel = TChannel()
+    tchannel = TChannel(caller_name='test')
     connection = yield StreamConnection.outgoing(
         hostport=hostport,
         tchannel=tchannel,

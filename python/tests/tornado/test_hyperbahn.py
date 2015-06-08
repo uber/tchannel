@@ -43,7 +43,7 @@ def test_new_client_establishes_peers():
 
 @pytest.mark.gen_test
 def test_request():
-    channel = TChannel()
+    channel = TChannel(caller_name='test')
     hyperbahn.advertise(channel, 'foo', ['127.0.0.1:23000'])
 
     # Just want to make sure all the plumbing fits together.
@@ -58,7 +58,7 @@ def test_request():
 
 @pytest.mark.gen_test
 def test_register():
-    channel = TChannel()
+    channel = TChannel(caller_name='test')
 
     with pytest.raises(ConnectionClosedError):
         yield hyperbahn.advertise(channel, 'foo', ['127.0.0.1:23000'])

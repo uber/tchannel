@@ -61,7 +61,7 @@ def server(endpoint):
 
 
 def chain(number_of_peers, endpoint):
-    tchannel = TChannel()
+    tchannel = TChannel(caller_name='test')
     for i in range(number_of_peers):
         tchannel.peers.get(server(endpoint).hostport)
 
@@ -132,7 +132,7 @@ def test_retry_on_error_success():
     endpoint = b'tchannelretrytest'
     tchannel = chain(2, endpoint)
 
-    tchannel_success = TChannel(hostport='localhost:0')
+    tchannel_success = TChannel(hostport='localhost:0', caller_name='test')
     tchannel_success.register(endpoint, 'raw', handler_success)
     tchannel_success.listen()
     tchannel.peers.get(tchannel_success.hostport)

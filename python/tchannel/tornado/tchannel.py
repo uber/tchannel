@@ -34,12 +34,12 @@ from tornado.netutil import bind_sockets
 
 from enum import IntEnum
 
+from . import hyperbahn
 from .. import scheme
 from ..event import EventEmitter
 from ..event import EventRegistrar
 from ..handler import CallableRequestHandler
 from ..net import local_ip
-from ..zipkin.zipkin_trace import ZipkinTraceHook
 from .broker import ArgSchemeBroker
 from .connection import StreamConnection
 from .dispatch import RequestDispatcher
@@ -63,7 +63,8 @@ class TChannel(object):
         # 'http': scheme.HttpArgScheme, TODO
     }
 
-    def __init__(self, hostport=None, process_name=None, known_peers=None):
+    def __init__(self, hostport=None, process_name=None, caller_name=None,
+                 known_peers=None):
         """Build or re-use a TChannel.
 
         :param hostport:
@@ -78,6 +79,9 @@ class TChannel(object):
         :param known_peers:
             A list of host-ports at which already known peers can be reached.
             Defaults to an empty list.
+        :param caller_name:
+            Name of the caller. This will be set in the TChannel
+            protocol header.
         """
         self._state = State.ready
         self._handler = RequestDispatcher()
@@ -99,14 +103,37 @@ class TChannel(object):
             sys.argv[0], os.getpid()
         )
 
+        self.caller_name = caller_name
+
         # register event hooks
         self.event_emitter = EventEmitter()
         self.hooks = EventRegistrar(self.event_emitter)
-        self.hooks.register(ZipkinTraceHook(tchannel=self))
 
         if known_peers:
             for peer_hostport in known_peers:
                 self.peers.add(peer_hostport)
+
+    def advertise(self, caller_name, router):
+        """Advertise the given TChannel to Hyperbahn using the given name.
+
+        This informs Hyperbahn that the given service is hosted at this
+        TChannel at a fixed rate.
+
+        It also tells the TChannel about the given Hyperbahn routers.
+
+        :param tchannel:
+            TChannel to register with Hyperbahn
+        :param caller_name:
+            Name of the caller behind this TChannel
+        :param routers:
+            Seed list of addresses of Hyperbahn routers
+        :returns:
+            A future that resolves to the remote server's response after
+            the first advertise is successful.
+        """
+
+        self.caller_name = caller_name
+        hyperbahn.advertise(self, caller_name, router)
 
     @property
     def closed(self):

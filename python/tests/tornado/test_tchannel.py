@@ -28,7 +28,7 @@ from tchannel.tornado.peer import Peer
 
 @pytest.fixture
 def tchannel():
-    return TChannel()
+    return TChannel(caller_name='test')
 
 
 @pytest.fixture
