@@ -51,9 +51,5 @@ func (hmap *handlerMap) find(serviceName string, operation []byte) Handler {
 	hmap.mut.RLock()
 	defer hmap.mut.RUnlock()
 
-	if operationMap := hmap.handlers[serviceName]; operationMap != nil {
-		return operationMap[string(operation)]
-	}
-
-	return nil
+	return hmap.handlers[serviceName][string(operation)]
 }
