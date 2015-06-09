@@ -64,11 +64,15 @@ Span.prototype.toString = function toString() {
         return "[" + ann.value + " " + ann.timestamp + "]";
     }).join(' ');
 
+    var binaryAnnotations = self.binaryAnnotations.map(function (ann) {
+        return "[" + ann.key + " " + ann.value + " (" + ann.type + ")]";
+    }).join(' ');
+
     return "SPAN: traceid: " + self.traceid.toString('hex') + " spanid: " +
         self.id.toString('hex') + " parentid: " +
         self.parentid.toString('hex') + " name: " + self.name +
-        " servicename: " + self.endpoint.serviceName + 
-        " annotations: " + strAnnotations;
+        " servicename: " + self.endpoint.serviceName +
+        " annotations: " + strAnnotations + ' ' + binaryAnnotations;
 };
 
 Span.prototype.toJSON = function toJSON() {

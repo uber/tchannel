@@ -30,14 +30,35 @@ var logger = DebugLogtron('tchannel');
 var fixture = require('./server_2_requests_fixture');
 var validators = require('../lib/simple_validators');
 
+var fs = require('fs');
+
+var TCollectorReporter = require('/home/uber/uber/tcollector-reporter/index.js');
+
 test('basic tracing test', function (assert) {
 
     var spans = [];
 
+    var tracechan = new TChannel();
+
+    var autobahnHostPortList = JSON.parse(
+        fs.readFileSync('/etc/uber/autobahn/ringpop-v2.json', 'utf8')
+    );
+
+    var reporter = TCollectorReporter({
+        channel: tracechan.makeSubChannel({
+            trace: false,
+            serviceName: 'tcollector',
+            peers: autobahnHostPortList
+        }),
+        logger: logger
+    });
+
     function traceReporter(span) {
         spans.push(span);
-        logger.debug(span.toString());
+        console.log(span.toString());
+        reporter.report(span);
     }
+
 
     var subservice = new TChannel({
         serviceName: 'subservice',
@@ -63,6 +84,7 @@ test('basic tracing test', function (assert) {
 
     subservice.handler.register('/foobar', function (req, res) {
         logger.debug("subserv sr");
+        req.span.annotateBinary("servicename", "subservice");
         res.sendOk('result', 'success');
     });
 
@@ -75,6 +97,8 @@ test('basic tracing test', function (assert) {
     server.handler.register('/top_level_endpoint', function (req, res) {
         logger.debug("top level sending to subservice");
         var serverRequestsDone = CountedReadySignal(2);
+
+        req.span.annotateBinary("foo", "bar");
 
         setTimeout(function () {
             server
