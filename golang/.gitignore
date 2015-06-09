@@ -4,3 +4,5 @@
 build
 Godeps/_workspace
 examples/thrift/gen-go
+thrift/gen-go
+messagetype_string.go
