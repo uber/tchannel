@@ -68,6 +68,7 @@ examples: clean setup thrift_example
 
 thrift_gen:
 	cd examples/thrift && thrift -r --gen go:thrift_import=github.com/apache/thrift/lib/go/thrift test.thrift
+	cd thrift && thrift -r --gen go:thrift_import=github.com/apache/thrift/lib/go/thrift test.thrift
 
 .PHONY: all help clean fmt format test vet
 .SILENT: all help clean fmt format test vet

@@ -22,6 +22,7 @@ package tchannel
 
 import (
 	"errors"
+	"fmt"
 	"io"
 
 	"golang.org/x/net/context"
@@ -113,6 +114,7 @@ func (c *Connection) dispatchInbound(call *InboundCall) {
 	// https://github.com/golang/go/issues/3512
 	h := c.handlers.find(call.ServiceName(), call.Operation())
 	if h == nil {
+		fmt.Printf("Could not find handler for %s:%s\n", call.ServiceName(), call.Operation())
 		c.log.Errorf("Could not find handler for %s:%s", call.ServiceName(), call.Operation())
 		call.mex.shutdown()
 		call.Response().SendSystemError(ErrHandlerNotFound)

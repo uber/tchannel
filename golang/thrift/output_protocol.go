@@ -22,13 +22,14 @@ package thrift
 import (
 	"errors"
 	"io"
-	"log"
 
 	"golang.org/x/net/context"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	tchannel "github.com/uber/tchannel/golang"
 )
+
+var ErrApplication = errors.New("application error")
 
 // TChanOutboundOptions are parameters passed to the underlying tchannel when making requests.
 type TChanOutboundOptions struct {
@@ -65,11 +66,11 @@ type outProtocol struct {
 // NewTChanOutbound returns a protocol that can used to instantiate a thrift client
 // that communicates over tchannel.
 // Note: The returned protocol must be used as the input *and* output protocol.
-func NewTChanOutbound(tchan *tchannel.Channel, options *TChanOutboundOptions) thrift.TProtocol {
+func NewTChanOutbound(tchan *tchannel.Channel, options TChanOutboundOptions) thrift.TProtocol {
 	return &outProtocol{
 		protocol: newProtocol(),
 		tchan:    tchan,
-		options:  options,
+		options:  &options,
 	}
 }
 
@@ -129,9 +130,7 @@ func (p *outProtocol) ReadMessageBegin() (string, thrift.TMessageType, int32, er
 	}
 
 	if resp.ApplicationError() {
-		// TODO(prashant): Return a better error?
-		log.Printf("AppError!")
-		return "", 0, 0, errors.New("application error")
+		return "", 0, 0, ErrApplication
 	}
 
 	if p.arg3Reader, err = resp.Arg3Reader(); err != nil {
