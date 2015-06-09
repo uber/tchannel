@@ -179,7 +179,7 @@ func newConnection(conn net.Conn, initialState connectionState, handlers *handle
 	}
 
 	connID := atomic.AddUint32(&nextConnID, 1)
-	log.SetPrefix(fmt.Sprintf("C%v ", connID))
+	log = PrefixedLogger(fmt.Sprintf("C%v ", connID), log)
 	log.Debugf("created for %v (%v) local: %v remote: %v",
 		peerInfo.ServiceName, peerInfo.ProcessName, conn.LocalAddr(), conn.RemoteAddr())
 	c := &Connection{
