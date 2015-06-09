@@ -512,7 +512,7 @@ class PeerClientOperation(object):
             trace_id = None
 
         if traceflag is None:
-            traceflag = self.peer.tchannel.zipkin
+            traceflag = self.peer.tchannel.trace
 
         # set default transport headers
         headers = headers or {}
