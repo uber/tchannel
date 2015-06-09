@@ -20,8 +20,6 @@
 
 'use strict';
 
-var fs = require('fs');
-
 var PermissionsCache = require('../hyperbahn/permissions_cache.js');
 var allocCluster = require('./lib/alloc-cluster.js');
 
@@ -56,17 +54,11 @@ allocCluster.test('permissionsCache: counts service request counts', {
             as: 'raw'
         }
     }).send('echo', 'a', 'b', onResponse);
-
+    
     function onResponse(err, res, arg2, arg3) {
         assert.ifError(err);
-
-        fs.writeFile('./test_result', JSON.stringify(cache.keys()), function (err) {
-            if (err) {
-                return console.log(err);
-            }
-        });
-        assert.ok(res.ok);
         assert.ok(cache.keys().indexOf('client_server') >= 0);
         assert.end();
+        cache.clearBuckets();
     }
 });
