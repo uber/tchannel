@@ -50,11 +50,11 @@ struct BinaryAnnotation {
 }
 
 struct Span {
-  1: i64 trace_id                  // unique trace id, use for all spans in trace
+  1: binary trace_id                  // unique trace id, use for all spans in trace
   2: optional Endpoint host
   3: string name,                  // span name, rpc method for example
-  4: i64 id,                       // unique span id, only used for this span
-  5: optional i64 parent_id,                // parent span id
+  4: binary id,                       // unique span id, only used for this span
+  5: optional binary parent_id,                // parent span id
   6: list<Annotation> annotations, // list of all annotations/events that occured
   7: list<BinaryAnnotation> binary_annotations, // any binary annotations
   8: optional bool debug = 0

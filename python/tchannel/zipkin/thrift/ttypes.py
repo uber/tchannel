@@ -209,11 +209,11 @@ class Span(TBase):
 
   thrift_spec = (
     None, # 0
-    (1, TType.I64, 'trace_id', None, None, ), # 1
+    (1, TType.STRING, 'trace_id', None, None, ), # 1
     (2, TType.STRUCT, 'host', (Endpoint, Endpoint.thrift_spec), None, ), # 2
     (3, TType.STRING, 'name', None, None, ), # 3
-    (4, TType.I64, 'id', None, None, ), # 4
-    (5, TType.I64, 'parent_id', None, None, ), # 5
+    (4, TType.STRING, 'id', None, None, ), # 4
+    (5, TType.STRING, 'parent_id', None, None, ), # 5
     (6, TType.LIST, 'annotations', (TType.STRUCT,(Annotation, Annotation.thrift_spec)), None, ), # 6
     (7, TType.LIST, 'binary_annotations', (TType.STRUCT,(BinaryAnnotation, BinaryAnnotation.thrift_spec)), None, ), # 7
     (8, TType.BOOL, 'debug', None, False, ), # 8

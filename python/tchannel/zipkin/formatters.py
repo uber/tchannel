@@ -131,6 +131,10 @@ def binary_annotation_formatter(annotation):
     )
 
 
+def i64_to_string(data):
+    return struct.pack('>q', data)
+
+
 def thrift_formatter(trace, annotations, isbased64=False):
     thrift_annotations = []
     binary_annotations = []
@@ -154,11 +158,11 @@ def thrift_formatter(trace, annotations, isbased64=False):
                 binary_annotation_formatter(annotation))
 
     thrift_trace = ttypes.Span(
-        trace_id=trace.trace_id,
+        trace_id=i64_to_string(trace.trace_id),
         name=trace.name,
-        id=trace.span_id,
+        id=i64_to_string(trace.span_id),
         host=host,
-        parent_id=trace.parent_span_id,
+        parent_id=i64_to_string(trace.parent_span_id),
         annotations=thrift_annotations,
         binary_annotations=binary_annotations
     )
