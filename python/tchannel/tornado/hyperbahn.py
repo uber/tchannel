@@ -50,7 +50,7 @@ def advertise(tchannel, service, routers):
         Seed list of addresses of Hyperbahn routers
     :returns:
         A future that resolves to the remote server's response after the first
-        advertise is successful.
+        advertise finishes.
     """
 
     for router in routers:

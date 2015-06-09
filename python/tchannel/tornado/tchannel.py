@@ -126,7 +126,7 @@ class TChannel(object):
             Name to be register on the hyperbahn.
         :returns:
             A future that resolves to the remote server's response after
-            the first advertise is successful.
+            the first advertise finishes.
         """
         name = name or self.name
         return hyperbahn.advertise(self, name, router)
