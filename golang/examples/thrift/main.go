@@ -53,9 +53,9 @@ func main() {
 	defer cancel()
 
 	opts := tthrift.TChanOutboundOptions{
-		Context:         ctx,
-		Dst:             listener.Addr().String(),
-		AutobahnService: "server",
+		Context:          ctx,
+		Dst:              listener.Addr().String(),
+		HyperbahnService: "server",
 	}
 
 	if err := runClient1(opts); err != nil {

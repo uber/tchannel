@@ -156,10 +156,10 @@ func getClients(ctx context.Context, dst string) (*gen.SimpleServiceClient, *gen
 	}
 
 	opts := TChanOutboundOptions{
-		Context:         ctx,
-		Dst:             dst,
-		AutobahnService: "service",
-		ThriftService:   "SimpleService",
+		Context:          ctx,
+		Dst:              dst,
+		HyperbahnService: "service",
+		ThriftService:    "SimpleService",
 	}
 	protocol := NewTChanOutbound(tchan, opts)
 	simpleClient := gen.NewSimpleServiceClientProtocol(nil, protocol, protocol)

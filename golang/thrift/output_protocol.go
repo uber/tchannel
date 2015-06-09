@@ -39,8 +39,8 @@ type TChanOutboundOptions struct {
 	// Dst is the host:port of the service to call.
 	Dst string
 
-	// AutobahnService is the Autobahn service name.
-	AutobahnService string
+	// HyperbahnService is the Hyperbahn service name.
+	HyperbahnService string
 
 	// ThriftService is the Thrift service name.
 	ThriftService string
@@ -76,7 +76,7 @@ func NewTChanOutbound(tchan *tchannel.Channel, options TChanOutboundOptions) thr
 
 func (p *outProtocol) beginCall(method string) (*tchannel.OutboundCall, error) {
 	opts := p.options
-	return p.tchan.BeginCall(opts.Context, opts.Dst, opts.AutobahnService, opts.ThriftService+"::"+method, &tchannel.CallOptions{
+	return p.tchan.BeginCall(opts.Context, opts.Dst, opts.HyperbahnService, opts.ThriftService+"::"+method, &tchannel.CallOptions{
 		Format: tchannel.Thrift,
 	})
 }
