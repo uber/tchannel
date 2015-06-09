@@ -39,7 +39,9 @@ function PermissionsCache(options) {
 
     self.channel = self.options.channel;
     self.logger = self.options.logger;
-    self._bucketIntervals = [];
+    self._intervalId = setInterval(
+        bucketResetCallback(self), BUCKET_RESET_DURATION
+    );
 
     self.channel.statEvent.addListener(self.increment.bind(self));
 }
@@ -48,9 +50,7 @@ inherits(PermissionsCache, LRUCache);
 
 PermissionsCache.prototype.clearBuckets = function clearBuckets() {
     var self = this;
-    for (var i = 0; i < self._bucketIntervals.length; i++) {
-        clearInterval(self._bucketIntervals[i]);
-    }
+    clearInterval(self._intervalId);
     self.reset();
 };
 
@@ -62,7 +62,7 @@ PermissionsCache.prototype.increment = function increment(stat) {
         );
         var tokens = self.get(key);
         if (typeof tokens === 'undefined') {
-            self.initializeTokenBucket(key);
+            self.resetBucketTokens(key);
             tokens = self.get(key);
         }
 
@@ -70,17 +70,18 @@ PermissionsCache.prototype.increment = function increment(stat) {
     }
 };
 
-PermissionsCache.prototype.initializeTokenBucket =
-function initializeTokenBucket(key) {
+PermissionsCache.prototype.resetBucketTokens = function resetBucketTokens(key) {
+    // A pretty anemic method right now to be sure, but I suspect there might
+    // be more to this logic in the future.
     var self = this;
-    
-    resetTokens();
-    self._bucketIntervals.push(setInterval(resetTokens, BUCKET_RESET_DURATION));
-
-    function resetTokens() {
-        self.set(key, NUM_TOKENS);
-    }
+    self.set(key, NUM_TOKENS);
 };
+
+function bucketResetCallback(cache) {
+    return function() {
+        cache.keys().map(cache.resetBucketTokens.bind(cache));
+    };
+}
 
 function createCallsKey(caller, callee) {
     return caller + '_' + callee;
