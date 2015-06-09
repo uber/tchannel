@@ -56,11 +56,15 @@ type ChannelOptions struct {
 // Applications can use a Channel to make service calls to remote peers via
 // BeginCall, or to listen for incoming calls from peers.  Applications that
 // want to receive requests should call one of Serve or ListenAndServe
+// TODO(prashant): Shutdown all subchannels + peers when channel is closed.
 type Channel struct {
 	log               Logger
 	connectionOptions ConnectionOptions
 	handlers          *handlerMap
+	peers             *PeerList
+	subChannels       map[string]*SubChannel
 
+	closed   bool
 	mut      sync.RWMutex  // protects the listener and the peer info
 	peerInfo LocalPeerInfo // May be ephemeral if this is a client only channel
 	l        net.Listener  // May be nil if this is a client only channel
@@ -93,10 +97,12 @@ func NewChannel(serviceName string, opts *ChannelOptions) (*Channel, error) {
 			},
 			ServiceName: serviceName,
 		},
-		log:      logger,
-		handlers: &handlerMap{},
+		log:         logger,
+		handlers:    &handlerMap{},
+		subChannels: make(map[string]*SubChannel),
 	}
 
+	ch.peers = newPeerList(ch)
 	ch.connectionOptions.ChecksumType = ChecksumTypeCrc32
 	return ch, nil
 }
@@ -114,6 +120,7 @@ func (ch *Channel) Serve(l net.Listener) error {
 	ch.peerInfo.HostPort = ch.l.Addr().String()
 	ch.mut.Unlock()
 
+	ch.log.Debugf("%v (%v) listening on %v", ch.peerInfo.ProcessName, ch.peerInfo.ServiceName, ch.peerInfo.HostPort)
 	return ch.serve()
 }
 
@@ -166,34 +173,43 @@ func (ch *Channel) PeerInfo() LocalPeerInfo {
 	return ch.peerInfo
 }
 
+func (ch *Channel) registerNewSubChannel(serviceName string) *SubChannel {
+	ch.mut.Lock()
+	defer ch.mut.Unlock()
+
+	// Recheck for the subchannel under the write lock.
+	if sc, ok := ch.subChannels[serviceName]; ok {
+		return sc
+	}
+
+	sc := newSubChannel(serviceName, ch.peers)
+	ch.subChannels[serviceName] = sc
+	return sc
+}
+
+// GetSubChannel returns a SubChannel for the given service name.
+func (ch *Channel) GetSubChannel(serviceName string) *SubChannel {
+	ch.mut.RLock()
+
+	if sc, ok := ch.subChannels[serviceName]; ok {
+		ch.mut.RUnlock()
+		return sc
+	}
+
+	ch.mut.RUnlock()
+	return ch.registerNewSubChannel(serviceName)
+}
+
 // BeginCall starts a new call to a remote peer, returning an OutboundCall that can
 // be used to write the arguments of the call
 func (ch *Channel) BeginCall(ctx context.Context, hostPort, serviceName, operationName string, callOptions *CallOptions) (*OutboundCall, error) {
-	// TODO(mmihic): Keep-alive, manage pools, use existing inbound if possible, all that jazz
-	nconn, err := net.Dial("tcp", hostPort)
-	if err != nil {
-		return nil, err
-	}
+	// Add this peer if we don't already have it.
+	ch.peers.GetOrAdd(hostPort)
+	sc := ch.GetSubChannel(serviceName)
 
-	conn, err := newOutboundConnection(nconn, ch.handlers, ch.log, ch.PeerInfo(), &ch.connectionOptions)
-	if err != nil {
-		return nil, err
-	}
+	// TODO call this specific peer
 
-	if err := conn.sendInit(ctx); err != nil {
-		return nil, err
-	}
-
-	call, err := conn.beginCall(ctx, serviceName, callOptions)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := call.writeOperation([]byte(operationName)); err != nil {
-		return nil, err
-	}
-
-	return call, nil
+	return sc.BeginCall(ctx, operationName, callOptions)
 }
 
 // serve runs the listener to accept and manage new incoming connections, blocking
@@ -218,21 +234,45 @@ func (ch *Channel) serve() error {
 				time.Sleep(acceptBackoff)
 				continue
 			} else {
+				// Only log an error if we are not shutdown.
+				if ch.Closed() {
+					return nil
+				}
 				ch.log.Errorf("unrecoverable accept error: %v; closing server", err)
-				return nil
+				return err
 			}
 		}
 
 		acceptBackoff = 0
 
-		_, err = newInboundConnection(netConn, ch.handlers, ch.PeerInfo(), ch.log, &ch.connectionOptions)
+		// Register the connection in the peer once the channel is set up.
+		onActive := func(c *Connection) {
+			ch.log.Debugf("Add connection as an active peer for %v", c.remotePeerInfo.HostPort)
+			p := ch.peers.GetOrAdd(c.remotePeerInfo.HostPort)
+			p.AddConnection(c)
+		}
+		_, err = newInboundConnection(netConn, ch.handlers, ch.PeerInfo(), ch.log, onActive, &ch.connectionOptions)
 		if err != nil {
 			// Server is getting overloaded - begin rejecting new connections
 			ch.log.Errorf("could not create new TChannelConnection for incoming conn: %v", err)
 			netConn.Close()
 			continue
 		}
-
-		// TODO(mmihic): Register connection so we can close them when the channel is closed
 	}
+}
+
+// Closed returns whether this channel has been closed with .Close()
+func (ch *Channel) Closed() bool {
+	ch.mut.Lock()
+	defer ch.mut.Unlock()
+	return ch.closed
+}
+
+// Close closes the channel including all connections to any active peers.
+func (ch *Channel) Close() {
+	ch.mut.Lock()
+	defer ch.mut.Unlock()
+
+	ch.closed = true
+	ch.peers.Close()
 }
