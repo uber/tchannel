@@ -36,7 +36,7 @@ def service(tmpdir):
 
 
 def mk_client(service, port):
-    tchannel = TChannel()
+    tchannel = TChannel(name='test')
     hostport = "localhost:%d" % port
     return thrift_client_for("service", service)(tchannel, hostport)
 

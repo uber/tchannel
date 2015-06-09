@@ -80,7 +80,7 @@ def trace_server(random_open_port):
 def test_zipkin_trace(trace_server):
     endpoint = b'endpoint1'
     zipkin_tracer = ZipkinTraceHook(dst=trace_buf)
-    tchannel = TChannel()
+    tchannel = TChannel(name='test')
     tchannel.hooks.register(zipkin_tracer)
 
     hostport = 'localhost:%d' % trace_server.port

@@ -61,7 +61,7 @@ def test_tchannel_call_request_fragment(tchannel_server,
         headers=endpoint, body=arg3
     )
 
-    tchannel = TChannel()
+    tchannel = TChannel(name='test')
 
     hostport = 'localhost:%d' % (tchannel_server.port)
 
@@ -105,7 +105,7 @@ def test_endpoint_not_found(tchannel_server):
         headers=endpoint,
         body='world'
     )
-    tchannel = TChannel()
+    tchannel = TChannel(name='test')
 
     hostport = 'localhost:%d' % (tchannel_server.port)
 

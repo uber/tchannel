@@ -55,7 +55,7 @@ def conn():
     conn = InstanceDouble('tchannel.tornado.connection.StreamConnection')
     allow(conn).send_error
     allow(conn).post_response
-    conn.tchannel = TChannel()
+    conn.tchannel = TChannel(name='test')
 
     return conn
 

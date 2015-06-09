@@ -452,6 +452,7 @@ class PeerClientOperation(object):
         self.headers = {
             'as': arg_scheme or ArgSchemeType.DEFAULT,
             're': retry or RetryType.DEFAULT,
+            'cn': self.peer.tchannel.name,
         }
 
         # keep all arguments for retry purpose.

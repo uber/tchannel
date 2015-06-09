@@ -289,7 +289,7 @@ def main(argv=None):
     if args.verbose:
         log.setLevel(logging.DEBUG)
 
-    tchannel = TChannel()
+    tchannel = TChannel(name='tcurl.py')
     if args.in_port:
         create_server(tchannel, args.in_port)
 

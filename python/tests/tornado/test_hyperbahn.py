@@ -29,7 +29,7 @@ def test_new_client_establishes_peers():
     routers = ['127.0.0.1:2300' + str(i) for i in xrange(5)]
 
     # TChannel knows about one of the peers already.
-    channel = TChannel(known_peers=['127.0.0.1:23002'])
+    channel = TChannel('test', known_peers=['127.0.0.1:23002'])
 
     hyperbahn.advertise(
         channel,
@@ -43,7 +43,7 @@ def test_new_client_establishes_peers():
 
 @pytest.mark.gen_test
 def test_request():
-    channel = TChannel()
+    channel = TChannel(name='test')
     hyperbahn.advertise(channel, 'foo', ['127.0.0.1:23000'])
 
     # Just want to make sure all the plumbing fits together.
@@ -58,7 +58,7 @@ def test_request():
 
 @pytest.mark.gen_test
 def test_register():
-    channel = TChannel()
+    channel = TChannel(name='test')
 
     with pytest.raises(ConnectionClosedError):
         yield hyperbahn.advertise(channel, 'foo', ['127.0.0.1:23000'])

@@ -34,12 +34,12 @@ from tornado.netutil import bind_sockets
 
 from enum import IntEnum
 
+from . import hyperbahn
 from .. import scheme
 from ..event import EventEmitter
 from ..event import EventRegistrar
 from ..handler import CallableRequestHandler
 from ..net import local_ip
-from ..zipkin.zipkin_trace import ZipkinTraceHook
 from .broker import ArgSchemeBroker
 from .connection import StreamConnection
 from .dispatch import RequestDispatcher
@@ -63,9 +63,12 @@ class TChannel(object):
         # 'http': scheme.HttpArgScheme, TODO
     }
 
-    def __init__(self, hostport=None, process_name=None, known_peers=None):
+    def __init__(self, name, hostport=None, process_name=None,
+                 known_peers=None):
         """Build or re-use a TChannel.
 
+        :param name:
+            Name is used to identify client or service itself.
         :param hostport:
             The host-port at which the service behind this TChannel is
             reachable. The port specified in the ``hostport`` is what the
@@ -99,14 +102,34 @@ class TChannel(object):
             sys.argv[0], os.getpid()
         )
 
+        self.name = name
+
         # register event hooks
         self.event_emitter = EventEmitter()
         self.hooks = EventRegistrar(self.event_emitter)
-        self.hooks.register(ZipkinTraceHook(tchannel=self))
 
         if known_peers:
             for peer_hostport in known_peers:
                 self.peers.add(peer_hostport)
+
+    def advertise(self, router, name=None):
+        """Advertise the given TChannel to Hyperbahn.
+
+        This informs Hyperbahn that the given client/service is using TChannel
+        at a fixed rate.
+
+        It also tells the TChannel about the given Hyperbahn routers.
+
+        :param routers:
+            Seed list of addresses of Hyperbahn routers
+        :param name:
+            Name to be register on the hyperbahn.
+        :returns:
+            A future that resolves to the remote server's response after
+            the first advertise finishes.
+        """
+        name = name or self.name
+        return hyperbahn.advertise(self, name, router)
 
     @property
     def closed(self):
