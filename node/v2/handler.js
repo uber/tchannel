@@ -197,6 +197,7 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
             err = errors.AsHeaderRequired({
                 frame: 'request'
             });
+            req.res = self.buildOutResponse(req);
             self.sendErrorFrame(
                 req.res, 'ProtocolError', err.message
             );
@@ -217,6 +218,7 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
     ) {
         if (self.requireCn) {
             err = errors.CnHeaderRequired();
+            req.res = self.buildOutResponse(req);
             self.sendErrorFrame(req.res, 'ProtocolError', err.message);
             return callback();
         } else {
@@ -448,7 +450,7 @@ TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame
     if (self.requireAs) {
         assert(req.headers && req.headers.as,
             'Expected the "as" transport header to be set for request');
-    } else {
+    } else if (!req.headers || !req.headers.as) {
         self.logger.error('Expected "as" header to be set for request', {
             arg1: String(args[0]),
             callerName: req.headers && req.headers.cn,
@@ -460,7 +462,7 @@ TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame
     if (self.requireCn) {
         assert(req.headers && req.headers.cn,
             'Expected the "cn" transport header to be set for requiest');
-    } else {
+    } else if (!req.headers || !req.headers.cn) {
         self.logger.error('Expected "cn" header to be set for request', {
             arg1: String(args[0]),
             remoteHostPort: self.remoteHostPort,
@@ -485,7 +487,7 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
     if (self.requireAs) {
         assert(res.headers && res.headers.as,
             'Expected the "as" transport header to be set for response');
-    } else {
+    } else if (!res.headers || !res.headers.as) {
         self.logger.error('Expected "as" header to be set for response', {
             code: code,
             remoteHostPort: self.remoteHostPort,
