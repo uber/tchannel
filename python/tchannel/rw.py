@@ -347,7 +347,7 @@ class NumberReadWriter(ReadWriter):
         1: '>B',
         2: '>H',
         4: '>I',
-        8: '>Q',
+        8: '>q',
     }
 
     __slots__ = ('_width', '_format')
