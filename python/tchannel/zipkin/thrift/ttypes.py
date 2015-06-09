@@ -78,7 +78,7 @@ class Endpoint(TBase):
   thrift_spec = (
     None, # 0
     (1, TType.I32, 'ipv4', None, None, ), # 1
-    (2, TType.I16, 'port', None, None, ), # 2
+    (2, TType.I32, 'port', None, None, ), # 2
     (3, TType.STRING, 'service_name', None, None, ), # 3
   )
 
@@ -100,36 +100,31 @@ class Annotation(TBase):
   Attributes:
    - timestamp
    - value
-   - host
    - duration
   """
 
   __slots__ = [ 
     'timestamp',
     'value',
-    'host',
     'duration',
    ]
 
   thrift_spec = (
     None, # 0
-    (1, TType.I64, 'timestamp', None, None, ), # 1
+    (1, TType.DOUBLE, 'timestamp', None, None, ), # 1
     (2, TType.STRING, 'value', None, None, ), # 2
-    (3, TType.STRUCT, 'host', (Endpoint, Endpoint.thrift_spec), None, ), # 3
-    (4, TType.I32, 'duration', None, None, ), # 4
+    (3, TType.I32, 'duration', None, None, ), # 3
   )
 
-  def __init__(self, timestamp=None, value=None, host=None, duration=None,):
+  def __init__(self, timestamp=None, value=None, duration=None,):
     self.timestamp = timestamp
     self.value = value
-    self.host = host
     self.duration = duration
 
   def __hash__(self):
     value = 17
     value = (value * 31) ^ hash(self.timestamp)
     value = (value * 31) ^ hash(self.value)
-    value = (value * 31) ^ hash(self.host)
     value = (value * 31) ^ hash(self.duration)
     return value
 
@@ -138,38 +133,53 @@ class BinaryAnnotation(TBase):
   """
   Attributes:
    - key
-   - value
+   - string_value
+   - double_value
+   - bool_value
+   - bytes_value
+   - int_value
    - annotation_type
-   - host
   """
 
   __slots__ = [ 
     'key',
-    'value',
+    'string_value',
+    'double_value',
+    'bool_value',
+    'bytes_value',
+    'int_value',
     'annotation_type',
-    'host',
    ]
 
   thrift_spec = (
     None, # 0
     (1, TType.STRING, 'key', None, None, ), # 1
-    (2, TType.STRING, 'value', None, None, ), # 2
-    (3, TType.I32, 'annotation_type', None, None, ), # 3
-    (4, TType.STRUCT, 'host', (Endpoint, Endpoint.thrift_spec), None, ), # 4
+    (2, TType.STRING, 'string_value', None, None, ), # 2
+    (3, TType.DOUBLE, 'double_value', None, None, ), # 3
+    (4, TType.BOOL, 'bool_value', None, None, ), # 4
+    (5, TType.STRING, 'bytes_value', None, None, ), # 5
+    (6, TType.I64, 'int_value', None, None, ), # 6
+    (7, TType.I32, 'annotation_type', None, None, ), # 7
   )
 
-  def __init__(self, key=None, value=None, annotation_type=None, host=None,):
+  def __init__(self, key=None, string_value=None, double_value=None, bool_value=None, bytes_value=None, int_value=None, annotation_type=None,):
     self.key = key
-    self.value = value
+    self.string_value = string_value
+    self.double_value = double_value
+    self.bool_value = bool_value
+    self.bytes_value = bytes_value
+    self.int_value = int_value
     self.annotation_type = annotation_type
-    self.host = host
 
   def __hash__(self):
     value = 17
     value = (value * 31) ^ hash(self.key)
-    value = (value * 31) ^ hash(self.value)
+    value = (value * 31) ^ hash(self.string_value)
+    value = (value * 31) ^ hash(self.double_value)
+    value = (value * 31) ^ hash(self.bool_value)
+    value = (value * 31) ^ hash(self.bytes_value)
+    value = (value * 31) ^ hash(self.int_value)
     value = (value * 31) ^ hash(self.annotation_type)
-    value = (value * 31) ^ hash(self.host)
     return value
 
 
@@ -177,6 +187,7 @@ class Span(TBase):
   """
   Attributes:
    - trace_id
+   - host
    - name
    - id
    - parent_id
@@ -187,6 +198,7 @@ class Span(TBase):
 
   __slots__ = [ 
     'trace_id',
+    'host',
     'name',
     'id',
     'parent_id',
@@ -198,18 +210,18 @@ class Span(TBase):
   thrift_spec = (
     None, # 0
     (1, TType.I64, 'trace_id', None, None, ), # 1
-    None, # 2
+    (2, TType.STRUCT, 'host', (Endpoint, Endpoint.thrift_spec), None, ), # 2
     (3, TType.STRING, 'name', None, None, ), # 3
     (4, TType.I64, 'id', None, None, ), # 4
     (5, TType.I64, 'parent_id', None, None, ), # 5
     (6, TType.LIST, 'annotations', (TType.STRUCT,(Annotation, Annotation.thrift_spec)), None, ), # 6
-    None, # 7
-    (8, TType.LIST, 'binary_annotations', (TType.STRUCT,(BinaryAnnotation, BinaryAnnotation.thrift_spec)), None, ), # 8
-    (9, TType.BOOL, 'debug', None, False, ), # 9
+    (7, TType.LIST, 'binary_annotations', (TType.STRUCT,(BinaryAnnotation, BinaryAnnotation.thrift_spec)), None, ), # 7
+    (8, TType.BOOL, 'debug', None, False, ), # 8
   )
 
-  def __init__(self, trace_id=None, name=None, id=None, parent_id=None, annotations=None, binary_annotations=None, debug=thrift_spec[9][4],):
+  def __init__(self, trace_id=None, host=None, name=None, id=None, parent_id=None, annotations=None, binary_annotations=None, debug=thrift_spec[8][4],):
     self.trace_id = trace_id
+    self.host = host
     self.name = name
     self.id = id
     self.parent_id = parent_id
@@ -220,6 +232,7 @@ class Span(TBase):
   def __hash__(self):
     value = 17
     value = (value * 31) ^ hash(self.trace_id)
+    value = (value * 31) ^ hash(self.host)
     value = (value * 31) ^ hash(self.name)
     value = (value * 31) ^ hash(self.id)
     value = (value * 31) ^ hash(self.parent_id)

@@ -1,3 +1,4 @@
+
 # Copyright (c) 2015 Uber Technologies, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -40,6 +41,7 @@ from ..event import EventEmitter
 from ..event import EventRegistrar
 from ..handler import CallableRequestHandler
 from ..net import local_ip
+from ..zipkin.zipkin_trace import ZipkinTraceHook
 from .broker import ArgSchemeBroker
 from .connection import StreamConnection
 from .dispatch import RequestDispatcher
@@ -64,7 +66,7 @@ class TChannel(object):
     }
 
     def __init__(self, name, hostport=None, process_name=None,
-                 known_peers=None):
+                 known_peers=None, zipkin=False):
         """Build or re-use a TChannel.
 
         :param name:
@@ -81,6 +83,8 @@ class TChannel(object):
         :param known_peers:
             A list of host-ports at which already known peers can be reached.
             Defaults to an empty list.
+        :param zipkin:
+            Flag to turn on/off zipkin trace.
         """
         self._state = State.ready
         self._handler = RequestDispatcher()
@@ -103,14 +107,23 @@ class TChannel(object):
         )
 
         self.name = name
+        self._zipkin = zipkin
 
         # register event hooks
         self.event_emitter = EventEmitter()
         self.hooks = EventRegistrar(self.event_emitter)
+        self.hooks.register(ZipkinTraceHook(tchannel=self))
 
         if known_peers:
             for peer_hostport in known_peers:
                 self.peers.add(peer_hostport)
+
+    @property
+    def zipkin(self):
+        if hasattr(self._zipkin, '__call__'):
+            return self._zipkin()
+        else:
+            return self._zipkin
 
     def advertise(self, router, name=None):
         """Advertise the given TChannel to Hyperbahn.

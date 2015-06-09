@@ -34,7 +34,6 @@
 from __future__ import absolute_import
 
 import base64
-import ctypes
 import socket
 import struct
 
@@ -112,7 +111,7 @@ def base64_thrift(thrift_obj):
     return base64.b64encode(trans.getvalue())
 
 
-def binary_annotation_formatter(annotation, host=None):
+def binary_annotation_formatter(annotation):
     annotation_types = {
         'string': ttypes.AnnotationType.STRING,
         'bytes': ttypes.AnnotationType.BYTES,
@@ -128,8 +127,7 @@ def binary_annotation_formatter(annotation, host=None):
     return ttypes.BinaryAnnotation(
         annotation.name,
         value,
-        annotation_type,
-        host
+        annotation_type
     )
 
 
@@ -147,22 +145,19 @@ def thrift_formatter(trace, annotations, isbased64=False):
                 service_name=endpoint.service_name,
             )
 
-        # convert port to range i16 (-32768 to 32767)
-        host.port = ctypes.c_int16(host.port).value
-
         if annotation.annotation_type == 'timestamp':
             thrift_annotations.append(ttypes.Annotation(
                 timestamp=annotation.value,
-                value=annotation.name,
-                host=host))
+                value=annotation.name))
         else:
             binary_annotations.append(
-                binary_annotation_formatter(annotation, host))
+                binary_annotation_formatter(annotation))
 
     thrift_trace = ttypes.Span(
         trace_id=trace.trace_id,
         name=trace.name,
         id=trace.span_id,
+        host=host,
         parent_id=trace.parent_span_id,
         annotations=thrift_annotations,
         binary_annotations=binary_annotations

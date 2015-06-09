@@ -26,35 +26,38 @@ namespace rb Zipkin
 // this represents a host and port in a network
 struct Endpoint {
   1: i32 ipv4,
-  2: i16 port                      // beware that this will give us negative ports. some conversion needed
+  2: i32 port,
   3: string service_name           // which service did this operation happen on?
 }
 
 // some event took place, either one by the framework or by the user
 struct Annotation {
-  1: i64 timestamp                 // microseconds from epoch
+  1: double timestamp                 // milliseconds from epoch (converted to microseconds in query service)
   2: string value                  // what happened at the timestamp?
-  3: optional Endpoint host        // host this happened on
-  4: optional i32 duration         // how long did the operation take? microseconds
+  3: optional i32 duration         // how long did the operation take? microseconds
 }
 
 enum AnnotationType { BOOL, BYTES, I16, I32, I64, DOUBLE, STRING }
 
 struct BinaryAnnotation {
   1: string key,
-  2: binary value,
-  3: AnnotationType annotation_type,
-  4: optional Endpoint host
+  2: optional string string_value,
+  3: optional double double_value
+  4: optional bool bool_value,
+  5: optional binary bytes_value,
+  6: optional i64 int_value,
+  7: AnnotationType annotation_type,
 }
 
 struct Span {
   1: i64 trace_id                  // unique trace id, use for all spans in trace
+  2: optional Endpoint host
   3: string name,                  // span name, rpc method for example
   4: i64 id,                       // unique span id, only used for this span
   5: optional i64 parent_id,                // parent span id
   6: list<Annotation> annotations, // list of all annotations/events that occured
-  8: list<BinaryAnnotation> binary_annotations, // any binary annotations
-  9: optional bool debug = 0
+  7: list<BinaryAnnotation> binary_annotations, // any binary annotations
+  8: optional bool debug = 0
 }
 
 struct Response {

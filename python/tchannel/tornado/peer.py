@@ -465,7 +465,7 @@ class PeerClientOperation(object):
 
     @gen.coroutine
     def send(self, arg1, arg2, arg3,
-             traceflag=False,
+             traceflag=None,
              headers=None,
              attempt_times=MAX_ATTEMPT_TIMES,
              ttl=DEFAULT_TTL,
@@ -510,6 +510,9 @@ class PeerClientOperation(object):
         else:
             parent_span_id = None
             trace_id = None
+
+        if traceflag is None:
+            traceflag = self.peer.tchannel.zipkin
 
         # set default transport headers
         headers = headers or {}
