@@ -98,11 +98,9 @@ func (l nullLogger) Infof(msg string, args ...interface{})  {}
 func (l nullLogger) Debugf(msg string, args ...interface{}) {}
 
 // SimpleLogger prints logging information to the console
-var SimpleLogger Logger = &simpleLogger{}
+var SimpleLogger Logger = simpleLogger{}
 
-type simpleLogger struct {
-	prefix string
-}
+type simpleLogger struct{}
 
 const (
 	simpleLoggerStamp = "2006-01-02 15:04:05"
@@ -113,10 +111,10 @@ func (l simpleLogger) Fatalf(msg string, args ...interface{}) {
 	os.Exit(1)
 }
 
-func (l *simpleLogger) Errorf(msg string, args ...interface{}) { l.printfn("E", msg, args...) }
-func (l *simpleLogger) Warnf(msg string, args ...interface{})  { l.printfn("W", msg, args...) }
-func (l *simpleLogger) Infof(msg string, args ...interface{})  { l.printfn("I", msg, args...) }
-func (l *simpleLogger) Debugf(msg string, args ...interface{}) { l.printfn("D", msg, args...) }
-func (l *simpleLogger) printfn(prefix, msg string, args ...interface{}) {
-	fmt.Printf("%s [%s] %s%s\n", time.Now().Format(simpleLoggerStamp), prefix, l.prefix, fmt.Sprintf(msg, args...))
+func (l simpleLogger) Errorf(msg string, args ...interface{}) { l.printfn("E", msg, args...) }
+func (l simpleLogger) Warnf(msg string, args ...interface{})  { l.printfn("W", msg, args...) }
+func (l simpleLogger) Infof(msg string, args ...interface{})  { l.printfn("I", msg, args...) }
+func (l simpleLogger) Debugf(msg string, args ...interface{}) { l.printfn("D", msg, args...) }
+func (l simpleLogger) printfn(prefix, msg string, args ...interface{}) {
+	fmt.Printf("%s [%s] %s\n", time.Now().Format(simpleLoggerStamp), prefix, fmt.Sprintf(msg, args...))
 }
