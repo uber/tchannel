@@ -45,11 +45,13 @@ function HyperbahnHandler(options) {
 
     assert(options && options.channel, 'channel required');
     assert(options && options.egressNodes, 'egressNodes required');
+    assert(options && options.callerName, 'callerName required');
 
     // TODO support blackList
 
     self.channel = options.channel;
     self.egressNodes = options.egressNodes;
+    self.callerName = options.callerName;
 
     self.tchannelJSON = TChannelJSON({
         logger: self.channel.logger
@@ -116,9 +118,11 @@ function handleAdvertise(self, req, arg2, arg3, cb) {
         var hostPort = exitNodeKeys[k];
         var exitNodeServices = servicesByExitNode[hostPort];
 
-        self.sendRelayAdvertise(
-            hostPort, exitNodeServices, onFinish
-        );
+        self.sendRelayAdvertise({
+            hostPort: hostPort,
+            services: exitNodeServices,
+            inreq: req
+        }, onFinish);
     }
 
     onFinish();
@@ -148,6 +152,9 @@ function sendAdvertise(services, options, callback) {
     }
 
     options.serviceName = 'hyperbahn';
+    options.hasNoParent = true;
+    options.headers = options.headers || {};
+    options.headers.cn = self.callerName;
 
     var req = self.channel.request(options);
     self.tchannelJSON.send(req, 'ad', null, {
@@ -198,7 +205,7 @@ function handleRelayAdvertise(self, req, arg2, arg3, cb) {
 };
 
 HyperbahnHandler.prototype.sendRelayAdvertise =
-function sendRelayAdvertise(hostPort, services, callback) {
+function sendRelayAdvertise(opts, callback) {
     var self = this;
 
     var attempts = 0;
@@ -209,7 +216,7 @@ function sendRelayAdvertise(hostPort, services, callback) {
         attempts++;
 
         self.channel.waitForIdentified({
-            host: hostPort
+            host: opts.hostPort
         }, onIdentified);
 
         function onIdentified(err) {
@@ -218,11 +225,15 @@ function sendRelayAdvertise(hostPort, services, callback) {
             }
 
             self.tchannelJSON.send(self.channel.request({
-                host: hostPort,
+                host: opts.hostPort,
                 serviceName: 'hyperbahn',
-                timeout: self.relayAdTimeout
+                timeout: self.relayAdTimeout,
+                headers: {
+                    cn: self.callerName
+                },
+                parent: opts.inreq
             }), 'relay-ad', null, {
-                services: services
+                services: opts.services
             }, onResponse);
         }
 
@@ -240,8 +251,8 @@ function sendRelayAdvertise(hostPort, services, callback) {
             } else {
                 var logger = self.channel.logger;
                 logger.error('Could not send relay advertise', {
-                    exitNode: hostPort,
-                    services: services,
+                    exitNode: opts.hostPort,
+                    services: opts.services,
                     err: err,
                     codeName: codeName,
                     responseBody: response && response.body
