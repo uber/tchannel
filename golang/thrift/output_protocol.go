@@ -120,7 +120,7 @@ func (p *outProtocol) WriteMessageEnd() error {
 func (p *outProtocol) ReadMessageBegin() (string, thrift.TMessageType, int32, error) {
 	resp := p.call.Response()
 
-	// ReadArg2 has to be called before checking Response.ApplicationError.
+	// Arg2Writer has to be called before checking Response.ApplicationError.
 	reader, err := resp.Arg2Reader()
 	if err != nil {
 		return "", 0, 0, err
@@ -129,8 +129,9 @@ func (p *outProtocol) ReadMessageBegin() (string, thrift.TMessageType, int32, er
 		return "", 0, 0, err
 	}
 
+	msgType := thrift.CALL
 	if resp.ApplicationError() {
-		return "", 0, 0, ErrApplication
+		msgType = thrift.EXCEPTION
 	}
 
 	if p.arg3Reader, err = resp.Arg3Reader(); err != nil {
@@ -138,7 +139,7 @@ func (p *outProtocol) ReadMessageBegin() (string, thrift.TMessageType, int32, er
 	}
 
 	p.transport.Reader = p.arg3Reader
-	return "", thrift.CALL, p.seqID, err
+	return "", msgType, p.seqID, err
 }
 
 func (p *outProtocol) ReadMessageEnd() error {

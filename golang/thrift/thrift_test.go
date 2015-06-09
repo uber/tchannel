@@ -29,6 +29,7 @@ import (
 
 	"golang.org/x/net/context"
 
+	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	tchannel "github.com/uber/tchannel/golang"
@@ -76,10 +77,12 @@ func TestRequest(t *testing.T) {
 
 func TestRequestError(t *testing.T) {
 	withSetup(t, func(ctx context.Context, args testArgs) {
-		args.s1.On("Simple").Return(errors.New("err"))
+		args.s1.On("Simple").Return(errors.New("simple_err"))
 		got := args.c1.Simple()
 		require.Error(t, got)
-		require.Equal(t, ErrApplication, got)
+		require.Contains(t, got.Error(), "simple_err")
+		_, ok := got.(thrift.TApplicationException)
+		require.True(t, ok)
 	})
 }
 
