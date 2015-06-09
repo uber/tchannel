@@ -197,6 +197,7 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
             err = errors.AsHeaderRequired({
                 frame: 'request'
             });
+            req.res = self.buildOutResponse(req);
             self.sendErrorFrame(
                 req.res, 'ProtocolError', err.message
             );
@@ -217,6 +218,7 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
     ) {
         if (self.requireCn) {
             err = errors.CnHeaderRequired();
+            req.res = self.buildOutResponse(req);
             self.sendErrorFrame(req.res, 'ProtocolError', err.message);
             return callback();
         } else {
