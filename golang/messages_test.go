@@ -23,11 +23,12 @@ package tchannel
 import (
 	"bytes"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel/golang/typed"
-	"testing"
-	"time"
 )
 
 func TestInitReq(t *testing.T) {
@@ -139,7 +140,7 @@ func TestErrorMessage(t *testing.T) {
 
 func assertRoundTrip(t *testing.T, expected message, actual message) {
 	w := typed.NewWriteBufferWithSize(1024)
-	require.Nil(t, expected.write(w), fmt.Sprintf("error writing message %s", expected.messageType()))
+	require.Nil(t, expected.write(w), fmt.Sprintf("error writing message %v", expected.messageType()))
 
 	var b bytes.Buffer
 	w.FlushTo(&b)
@@ -147,7 +148,7 @@ func assertRoundTrip(t *testing.T, expected message, actual message) {
 	r := typed.NewReadBufferWithSize(1024)
 	_, err := r.FillFrom(bytes.NewReader(b.Bytes()), len(b.Bytes()))
 	require.Nil(t, err)
-	require.Nil(t, actual.read(r), fmt.Sprintf("error reading message %s", expected.messageType()))
+	require.Nil(t, actual.read(r), fmt.Sprintf("error reading message %v", expected.messageType()))
 
-	assert.Equal(t, expected, actual, fmt.Sprintf("pre- and post-marshal %s do not match", expected.messageType()))
+	assert.Equal(t, expected, actual, fmt.Sprintf("pre- and post-marshal %v do not match", expected.messageType()))
 }
