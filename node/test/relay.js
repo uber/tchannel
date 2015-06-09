@@ -154,7 +154,7 @@ allocCluster.test('relay an error frame', {
             serviceName: 'two',
             headers: {
                 as: 'raw',
-cn: 'wat'
+                cn: 'wat'
             }
         }
     });
