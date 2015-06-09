@@ -60,19 +60,16 @@ type echoSaver struct {
 }
 
 func (e *echoSaver) echo(t *testing.T, ctx context.Context, call *InboundCall) {
-	var inArg2 BytesInput
-	var inArg3 BytesInput
+	var inArg2 []byte
+	var inArg3 []byte
 
 	e.format = call.Format()
 	e.caller = call.CallerName()
 
-	require.NoError(t, call.ReadArg2(&inArg2))
-	require.NoError(t, call.ReadArg3(&inArg3))
-	require.NoError(t, call.Response().WriteArg2(BytesOutput(inArg2)))
-
-	arg3Writer, err := call.Response().Arg3Writer()
-	require.NoError(t, err)
-	require.NoError(t, WriteArg(arg3Writer, BytesOutput(inArg3)))
+	require.NoError(t, NewArgReader(call.Arg2Reader()).Read(&inArg2))
+	require.NoError(t, NewArgReader(call.Arg3Reader()).Read(&inArg3))
+	require.NoError(t, NewArgWriter(call.Response().Arg2Writer()).Write(inArg2))
+	require.NoError(t, NewArgWriter(call.Response().Arg3Writer()).Write(inArg3))
 }
 
 func TestRoundTrip(t *testing.T) {
@@ -86,15 +83,15 @@ func TestRoundTrip(t *testing.T) {
 		call, err := ch.BeginCall(ctx, hostPort, "Capture", "ping", &CallOptions{Format: JSON})
 		require.NoError(t, err)
 
-		require.NoError(t, call.WriteArg2(BytesOutput(testArg2)))
-		require.NoError(t, call.WriteArg3(BytesOutput(testArg3)))
+		require.NoError(t, NewArgWriter(call.Arg2Writer()).Write(testArg2))
+		require.NoError(t, NewArgWriter(call.Arg3Writer()).Write(testArg3))
 
-		var respArg2 BytesInput
-		require.NoError(t, call.Response().ReadArg2(&respArg2))
+		var respArg2 []byte
+		require.NoError(t, NewArgReader(call.Response().Arg2Reader()).Read(&respArg2))
 		assert.Equal(t, testArg2, []byte(respArg2))
 
-		var respArg3 BytesInput
-		require.NoError(t, call.Response().ReadArg3(&respArg3))
+		var respArg3 []byte
+		require.NoError(t, NewArgReader(call.Response().Arg3Reader()).Read(&respArg3))
 		assert.Equal(t, testArg3, []byte(respArg3))
 
 		assert.Equal(t, JSON, echoSaver.format)
@@ -190,25 +187,25 @@ func sendRecv(ctx context.Context, ch *Channel, hostPort string, serviceName, op
 		return nil, nil, err
 	}
 
-	if err := call.WriteArg2(BytesOutput(arg2)); err != nil {
+	if err := NewArgWriter(call.Arg2Writer()).Write(arg2); err != nil {
 		return nil, nil, err
 	}
 
-	if err := call.WriteArg3(BytesOutput(arg3)); err != nil {
+	if err := NewArgWriter(call.Arg3Writer()).Write(arg3); err != nil {
 		return nil, nil, err
 	}
 
-	var respArg2 BytesInput
-	if err := call.Response().ReadArg2(&respArg2); err != nil {
+	var respArg2 []byte
+	if err := NewArgReader(call.Response().Arg2Reader()).Read(&respArg2); err != nil {
 		return nil, nil, err
 	}
 
-	var respArg3 BytesInput
-	if err := call.Response().ReadArg3(&respArg3); err != nil {
+	var respArg3 []byte
+	if err := NewArgReader(call.Response().Arg3Reader()).Read(&respArg3); err != nil {
 		return nil, nil, err
 	}
 
-	return []byte(respArg2), []byte(respArg3), nil
+	return respArg2, respArg3, nil
 }
 
 func withTestChannel(t *testing.T, f func(ch *Channel, hostPort string)) {

@@ -46,11 +46,11 @@ func TestTracingPropagates(t *testing.T) {
 			headers := Headers{}
 
 			var request TracingRequest
-			if err := incall.ReadArg2(NewJSONInput(&headers)); err != nil {
+			if err := NewArgReader(incall.Arg2Reader()).ReadJSON(&headers); err != nil {
 				return
 			}
 
-			if err := incall.ReadArg3(NewJSONInput(&request)); err != nil {
+			if err := NewArgReader(incall.Arg3Reader()).ReadJSON(&request); err != nil {
 				return
 			}
 
@@ -65,22 +65,22 @@ func TestTracingPropagates(t *testing.T) {
 				return
 			}
 
-			if err := outcall.WriteArg2(NewJSONOutput(headers)); err != nil {
+			if err := NewArgWriter(outcall.Arg2Writer()).WriteJSON(headers); err != nil {
 				incall.Response().SendSystemError(err)
 				return
 			}
 
-			if err := outcall.WriteArg3(NewJSONOutput(childRequest)); err != nil {
+			if err := NewArgWriter(outcall.Arg3Writer()).WriteJSON(childRequest); err != nil {
 				incall.Response().SendSystemError(err)
 				return
 			}
 
-			if err := outcall.Response().ReadArg2(NewJSONInput(&headers)); err != nil {
+			if err := NewArgReader(outcall.Response().Arg2Reader()).ReadJSON(&headers); err != nil {
 				incall.Response().SendSystemError(err)
 				return
 			}
 
-			if err := outcall.Response().ReadArg3(NewJSONInput(&childResponse)); err != nil {
+			if err := NewArgReader(outcall.Response().Arg3Reader()).ReadJSON(&childResponse); err != nil {
 				incall.Response().SendSystemError(err)
 				return
 			}
@@ -91,8 +91,8 @@ func TestTracingPropagates(t *testing.T) {
 				Child:   &childResponse,
 			}
 
-			incall.Response().WriteArg2(NewJSONOutput(headers))
-			incall.Response().WriteArg3(NewJSONOutput(response))
+			NewArgWriter(incall.Response().Arg2Writer()).WriteJSON(headers)
+			NewArgWriter(incall.Response().Arg3Writer()).WriteJSON(response)
 		}
 
 		srv2 := func(ctx context.Context, call *InboundCall) {
@@ -102,12 +102,12 @@ func TestTracingPropagates(t *testing.T) {
 				return
 			}
 
-			call.Response().WriteArg2(NewJSONOutput(Headers{}))
-			call.Response().WriteArg3(NewJSONOutput(TracingResponse{
+			NewArgWriter(call.Response().Arg2Writer()).WriteJSON(Headers{})
+			NewArgWriter(call.Response().Arg3Writer()).WriteJSON(TracingResponse{
 				SpanID:   span.SpanID(),
 				TraceID:  span.TraceID(),
 				ParentID: span.ParentID(),
-			}))
+			})
 		}
 
 		ch.Register(HandlerFunc(srv1), "TestService", "call1")
@@ -122,10 +122,10 @@ func TestTracingPropagates(t *testing.T) {
 
 		call, err := ch.BeginCall(ctx, hostPort, "TestService", "call1", nil)
 		require.NoError(t, err)
-		require.NoError(t, call.WriteArg2(NewJSONOutput(headers)))
-		require.NoError(t, call.WriteArg3(NewJSONOutput(&request)))
-		require.NoError(t, call.Response().ReadArg2(NewJSONInput(&headers)))
-		require.NoError(t, call.Response().ReadArg3(NewJSONInput(&response)))
+		require.NoError(t, NewArgWriter(call.Arg2Writer()).WriteJSON(headers))
+		require.NoError(t, NewArgWriter(call.Arg3Writer()).WriteJSON(&request))
+		require.NoError(t, NewArgReader(call.Response().Arg2Reader()).ReadJSON(&headers))
+		require.NoError(t, NewArgReader(call.Response().Arg3Reader()).ReadJSON(&response))
 
 		clientSpan := CurrentSpan(ctx)
 		require.NotNil(t, clientSpan)

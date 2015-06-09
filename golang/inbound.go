@@ -156,13 +156,8 @@ func (call *InboundCall) CallerName() string {
 
 // Reads the entire operation name (arg1) from the request stream.
 func (call *InboundCall) readOperation() error {
-	reader, err := call.arg1Reader()
-	if err != nil {
-		return call.failed(err)
-	}
-
-	var arg1 BytesInput
-	if err := ReadArg(reader, &arg1); err != nil {
+	var arg1 []byte
+	if err := NewArgReader(call.arg1Reader()).Read(&arg1); err != nil {
 		return call.failed(err)
 	}
 
@@ -180,26 +175,6 @@ func (call *InboundCall) Arg2Reader() (io.ReadCloser, error) {
 // The ReadCloser must be closed once the argument has been read.
 func (call *InboundCall) Arg3Reader() (io.ReadCloser, error) {
 	return call.arg3Reader()
-}
-
-// ReadArg2 reads the second argument from the request, blocking until the
-// argument is ready or an error/timeout has occurred
-func (call *InboundCall) ReadArg2(arg Input) error {
-	reader, err := call.Arg2Reader()
-	if err != nil {
-		return err
-	}
-	return ReadArg(reader, arg)
-}
-
-// ReadArg3 reads the third argument from the request, blocking until the
-// argument is ready or an error/timeout has occurred.
-func (call *InboundCall) ReadArg3(arg Input) error {
-	reader, err := call.Arg3Reader()
-	if err != nil {
-		return err
-	}
-	return ReadArg(reader, arg)
 }
 
 // Response provides access to the InboundCallResponse object which can be used
@@ -260,14 +235,9 @@ func (response *InboundCallResponse) SetApplicationError() error {
 // Arg2Writer returns a WriteCloser that can be used to write the second argument.
 // The returned writer must be closed once the write is complete.
 func (response *InboundCallResponse) Arg2Writer() (io.WriteCloser, error) {
-	writer, err := response.arg1Writer()
-	if err != nil {
+	if err := NewArgWriter(response.arg1Writer()).Write(nil); err != nil {
 		return nil, err
 	}
-	if err := WriteArg(writer, BytesOutput(nil)); err != nil {
-		return nil, err
-	}
-
 	return response.arg2Writer()
 }
 
@@ -275,24 +245,4 @@ func (response *InboundCallResponse) Arg2Writer() (io.WriteCloser, error) {
 // The returned writer must be closed once the write is complete.
 func (response *InboundCallResponse) Arg3Writer() (io.WriteCloser, error) {
 	return response.arg3Writer()
-}
-
-// WriteArg2 writes the second argument in the response, blocking until the argument is
-// fully written or an error/timeout has occurred.
-func (response *InboundCallResponse) WriteArg2(arg Output) error {
-	writer, err := response.Arg2Writer()
-	if err != nil {
-		return err
-	}
-	return WriteArg(writer, arg)
-}
-
-// WriteArg3 writes the third argument in the response, blocking until the argument is
-// fully written or an error/timeout has occurred
-func (response *InboundCallResponse) WriteArg3(arg Output) error {
-	writer, err := response.Arg3Writer()
-	if err != nil {
-		return err
-	}
-	return WriteArg(writer, arg)
 }

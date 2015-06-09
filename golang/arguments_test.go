@@ -22,38 +22,52 @@ package tchannel
 
 import (
 	"bytes"
+	"io"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
-	"testing/iotest"
 )
+
+type bufferWithClose struct {
+	*bytes.Buffer
+	closed bool
+}
+
+var _ io.WriteCloser = &bufferWithClose{}
+var _ io.ReadCloser = &bufferWithClose{}
+
+func newWriter() *bufferWithClose {
+	return &bufferWithClose{bytes.NewBuffer(nil), false}
+}
+
+func newReader(bs []byte) *bufferWithClose {
+	return &bufferWithClose{bytes.NewBuffer(bs), false}
+}
+
+func (w *bufferWithClose) Close() error {
+	w.closed = true
+	return nil
+}
 
 type testObject struct {
 	Name  string `json:"name"`
 	Value int    `json:"value"`
 }
 
-func TestStreamingInputOutput(t *testing.T) {
-	b := []byte("This is a pseudo-streamed value")
-	r := iotest.OneByteReader(bytes.NewReader(b))
-
-	var buffer bytes.Buffer
-	var w bytes.Buffer
-
-	require.Nil(t, NewStreamingOutput(r).WriteTo(&buffer))
-	require.Nil(t, NewStreamingInput(&w).ReadFrom(&buffer))
-	assert.Equal(t, b, w.Bytes())
-}
-
 func TestJSONInputOutput(t *testing.T) {
 	obj := testObject{Name: "Foo", Value: 20756}
 
-	var buffer bytes.Buffer
-	require.Nil(t, NewJSONOutput(obj).WriteTo(&buffer))
-	assert.Equal(t, "{\"name\":\"Foo\",\"value\":20756}\n", buffer.String())
+	writer := newWriter()
+	require.Nil(t, NewArgWriter(writer, nil).WriteJSON(obj))
+	assert.True(t, writer.closed)
+	assert.Equal(t, "{\"name\":\"Foo\",\"value\":20756}\n", writer.String())
 
+	reader := newReader(writer.Bytes())
 	outObj := testObject{}
-	require.Nil(t, NewJSONInput(&outObj).ReadFrom(&buffer))
+	require.Nil(t, NewArgReader(reader, nil).ReadJSON(&outObj))
+
+	assert.True(t, reader.closed)
 	assert.Equal(t, "Foo", outObj.Name)
 	assert.Equal(t, 20756, outObj.Value)
 }
