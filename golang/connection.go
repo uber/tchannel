@@ -112,6 +112,9 @@ type Connection struct {
 	nextMessageID  uint32
 }
 
+// nextConnID gives an ID for each connection for debugging purposes.
+var nextConnID uint32
+
 type connectionState int
 
 const (
@@ -175,6 +178,10 @@ func newConnection(conn net.Conn, initialState connectionState, handlers *handle
 		framePool = DefaultFramePool
 	}
 
+	connID := atomic.AddUint32(&nextConnID, 1)
+	log = PrefixedLogger(fmt.Sprintf("C%v ", connID), log)
+	log.Debugf("created for %v (%v) local: %v remote: %v",
+		peerInfo.ServiceName, peerInfo.ProcessName, conn.LocalAddr(), conn.RemoteAddr())
 	c := &Connection{
 		log:           log,
 		conn:          conn,
