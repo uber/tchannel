@@ -28,7 +28,7 @@ import (
 	"github.com/uber/tchannel/golang"
 )
 
-// NewTChannelInbound creates a NewTChannelInbound
+// NewTChannelInbound creates a protocol used for inbound Thrift calls over TChannel.
 func NewTChannelInbound(call *tchannel.InboundCall) thrift.TProtocol {
 	return &inProtocol{
 		protocol: newProtocol(),

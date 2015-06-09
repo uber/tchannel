@@ -48,8 +48,4 @@ func (t *readerWriterTransport) Close() error {
 	return nil
 }
 
-func (t *readerWriterTransport) Write(p []byte) (n int, err error) {
-	return t.Writer.Write(p)
-}
-
 var _ thrift.TTransport = &readerWriterTransport{}

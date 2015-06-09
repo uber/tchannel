@@ -36,7 +36,7 @@ import (
 	"github.com/uber/tchannel/golang/thrift/mocks"
 )
 
-// Generate the SimpleService mock using go generate.
+// Generate the service mocks using go generate.
 //go:generate mockery -name SimpleService
 //go:generate mockery -name SecondService
 
