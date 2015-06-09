@@ -35,6 +35,9 @@ import (
 // logrus, go-logging, etc).  The SimpleLogger adapts to the standard go log
 // package.
 type Logger interface {
+	// SetPrefix sets a prefix used all logged messages.
+	SetPrefix(prefix string)
+
 	// Fatalf logs a message, then exits with os.Exit(1)
 	Fatalf(msg string, args ...interface{})
 
@@ -56,6 +59,7 @@ var NullLogger Logger = nullLogger{}
 
 type nullLogger struct{}
 
+func (l nullLogger) SetPrefix(prefix string)                {}
 func (l nullLogger) Fatalf(msg string, arg ...interface{})  { os.Exit(1) }
 func (l nullLogger) Errorf(msg string, args ...interface{}) {}
 func (l nullLogger) Warnf(msg string, args ...interface{})  {}
@@ -63,9 +67,11 @@ func (l nullLogger) Infof(msg string, args ...interface{})  {}
 func (l nullLogger) Debugf(msg string, args ...interface{}) {}
 
 // SimpleLogger prints logging information to the console
-var SimpleLogger Logger = simpleLogger{}
+var SimpleLogger Logger = &simpleLogger{}
 
-type simpleLogger struct{}
+type simpleLogger struct {
+	prefix string
+}
 
 const (
 	simpleLoggerStamp = "2006-01-02 15:04:05"
@@ -76,10 +82,11 @@ func (l simpleLogger) Fatalf(msg string, args ...interface{}) {
 	os.Exit(1)
 }
 
-func (l simpleLogger) Errorf(msg string, args ...interface{}) { l.printfn("E", msg, args...) }
-func (l simpleLogger) Warnf(msg string, args ...interface{})  { l.printfn("W", msg, args...) }
-func (l simpleLogger) Infof(msg string, args ...interface{})  { l.printfn("I", msg, args...) }
-func (l simpleLogger) Debugf(msg string, args ...interface{}) { l.printfn("D", msg, args...) }
-func (l simpleLogger) printfn(prefix, msg string, args ...interface{}) {
-	fmt.Printf("%s [%s] %s\n", time.Now().Format(simpleLoggerStamp), prefix, fmt.Sprintf(msg, args...))
+func (l *simpleLogger) SetPrefix(prefix string)                { l.prefix = prefix }
+func (l *simpleLogger) Errorf(msg string, args ...interface{}) { l.printfn("E", msg, args...) }
+func (l *simpleLogger) Warnf(msg string, args ...interface{})  { l.printfn("W", msg, args...) }
+func (l *simpleLogger) Infof(msg string, args ...interface{})  { l.printfn("I", msg, args...) }
+func (l *simpleLogger) Debugf(msg string, args ...interface{}) { l.printfn("D", msg, args...) }
+func (l *simpleLogger) printfn(prefix, msg string, args ...interface{}) {
+	fmt.Printf("%s [%s] %s%s\n", time.Now().Format(simpleLoggerStamp), prefix, l.prefix, fmt.Sprintf(msg, args...))
 }
