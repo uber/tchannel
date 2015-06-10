@@ -59,7 +59,7 @@ function TChannelInRequest(id, options) {
             traceid: self.tracing.traceid,
             parentid: self.tracing.parentid,
             flags: self.tracing.flags,
-            hostPort: options.hostPort,
+            remoteName: options.hostPort,
             serviceName: self.serviceName,
             name: '' // fill this in later
         });

@@ -60,7 +60,7 @@ function compareBufs(buf1, buf2) {
 Agent.prototype.setupNewSpan = function setupNewSpan(options) {
     var self = this;
 
-    var hostPortParts = options.hostPort.split(":");
+    var hostPortParts = options.remoteName.split(":");
     var host = hostPortParts[0], port = parseInt(hostPortParts[1], 10);
 
     var empty = new Buffer([0, 0, 0, 0, 0, 0, 0, 0]);
