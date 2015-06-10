@@ -320,6 +320,15 @@ TChannelConnection.prototype.start = function start() {
 
 TChannelConnection.prototype.onOutIdentified = function onOutIdentified(init) {
     var self = this;
+
+    if (init.hostPort === '0.0.0.0:0') {
+        return self.emit('error', errors.EphemeralInitResponse({
+            hostPort: init.hostPort,
+            socketRemoteAddr: self.socketRemoteAddr,
+            processName: init.processName
+        }));
+    }
+
     self.remoteName = init.hostPort;
     self.identifiedEvent.emit(self, {
         hostPort: init.hostPort,
