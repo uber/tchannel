@@ -64,14 +64,6 @@ function handleRequest(req, buildRes) {
         return;
     }
 
-    if (!req.streamed) {
-        var name = String(req.arg1);
-        self.onEndpointHandled(req.serviceName, name);
-    } else {
-        var statsdKey = 'server.request-stream.' + req.serviceName;
-        self.statsd.increment(statsdKey);
-    }
-
     var chan = self.channel.subChannels[req.serviceName];
     if (chan) {
         // Temporary hack. Need to set json by default because
@@ -79,26 +71,6 @@ function handleRequest(req, buildRes) {
         chan.handler.handleRequest(req, buildRes);
     } else {
         self.handleDefault(req, buildRes);
-    }
-};
-
-ServiceDispatchHandler.prototype.onEndpointHandled =
-function onEndpointHandled(service, name) {
-    var self = this;
-
-    var logRequest = self.config.get('server.logRequest');
-
-    var endpointName = name
-        .replace(/\//g, '_')
-        .replace(/:/g, '_');
-
-    var statsdKey = 'server.request.' + service +
-        '.' + endpointName;
-
-    self.statsd.increment(statsdKey);
-
-    if (logRequest && logRequest[name] === false) {
-        return;
     }
 };
 
@@ -276,13 +248,5 @@ function updateExitNodes(exitNodes, svcchan) {
 // exitNodes we wont have massive imbalance of dispatch having 500 workers and
 // the small service having 2 workers.  We would need two hops to find an exit
 // node though
-
-function numberOrDefault(config, key, defaultValue) {
-    var value = config.get(key);
-    if (typeof value === 'number') {
-        return value;
-    }
-    return defaultValue;
-}
 
 module.exports = ServiceDispatchHandler;
