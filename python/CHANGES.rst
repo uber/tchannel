@@ -1,8 +1,11 @@
 Changelog for tchannel.py
 =========================
 
-
-0.8.0 (unreleased)
+0.8.2 (unreleased)
 ------------------
 
-- Initial release
+
+0.8.1 (2015-06-10)
+------------------
+
+- Initial release.
