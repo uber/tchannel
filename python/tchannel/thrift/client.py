@@ -31,7 +31,7 @@ from tchannel.tornado.broker import ArgSchemeBroker
 from .scheme import ThriftArgScheme
 
 # Generated clients will use this base class.
-_ClientBase = namedtuple('_ClientBase', 'tchannel hostport service')
+_ClientBase = namedtuple('_ClientBase', 'tchannel hostport service trace')
 
 
 def client_for(service, service_module, thrift_service_name=None):
@@ -78,7 +78,7 @@ def client_for(service, service_module, thrift_service_name=None):
         )
     ]
 
-    def new(cls, tchannel, hostport=None):
+    def new(cls, tchannel, hostport=None, trace=False):
         """
         :param tchannel:
             TChannel through which the requests will be sent.
@@ -86,7 +86,7 @@ def client_for(service, service_module, thrift_service_name=None):
             Address of the machine to which the requests will be sent, or None
             if the TChannel will do peer selection on a per-request basis.
         """
-        return _ClientBase.__new__(cls, tchannel, hostport, service)
+        return _ClientBase.__new__(cls, tchannel, hostport, service, trace)
 
     new.__name__ = '__new__'
     methods = {'__new__': new}
@@ -157,6 +157,7 @@ def generate_method(service_module, service_name, method_name):
             endpoint,
             {},  # TODO: Figure out how to receive headers for the call
             call_args,
+            traceflag=self.trace
         )
 
         call_result = yield response.get_body()

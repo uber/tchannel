@@ -162,7 +162,7 @@ type OutboundCallResponse struct {
 }
 
 // ApplicationError returns true if the call resulted in an application level error
-// TODO(mmihic): In current implementation, you must have called ReadArg2 before this
+// TODO(mmihic): In current implementation, you must have called Arg2Reader before this
 // method returns the proper value.  We should instead have this block until the first
 // fragment is available, if the first fragment hasn't been received.
 func (response *OutboundCallResponse) ApplicationError() bool {

@@ -51,6 +51,41 @@ type Logger interface {
 	Debugf(msg string, args ...interface{})
 }
 
+type prefixLogger struct {
+	prefix string
+	logger Logger
+}
+
+// PrefixLogger returns a Logger that prefixes all logged messages with the given prefix.
+func PrefixedLogger(prefix string, logger Logger) Logger {
+	// Avoid layers of indirect calls when wrapping another prefixLogger.
+	if pl, ok := logger.(*prefixLogger); ok {
+		prefix = prefix + pl.prefix
+		logger = pl.logger
+	}
+	return &prefixLogger{prefix, logger}
+}
+
+func (l *prefixLogger) Fatalf(msg string, args ...interface{}) {
+	l.logger.Fatalf(l.prefix+msg, args...)
+}
+
+func (l *prefixLogger) Errorf(msg string, args ...interface{}) {
+	l.logger.Errorf(l.prefix+msg, args...)
+}
+
+func (l *prefixLogger) Warnf(msg string, args ...interface{}) {
+	l.logger.Warnf(l.prefix+msg, args...)
+}
+
+func (l *prefixLogger) Infof(msg string, args ...interface{}) {
+	l.logger.Infof(l.prefix+msg, args...)
+}
+
+func (l *prefixLogger) Debugf(msg string, args ...interface{}) {
+	l.logger.Debugf(l.prefix+msg, args...)
+}
+
 // NullLogger is a logger that emits nowhere
 var NullLogger Logger = nullLogger{}
 

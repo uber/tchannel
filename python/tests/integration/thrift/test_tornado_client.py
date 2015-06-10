@@ -21,6 +21,7 @@
 from __future__ import absolute_import
 
 import pytest
+from mock import patch
 
 from tchannel import errors
 from tchannel.thrift import client_for as thrift_client_for
@@ -35,10 +36,10 @@ def service(tmpdir):
         yield m
 
 
-def mk_client(service, port):
+def mk_client(service, port, trace=False):
     tchannel = TChannel(name='test')
     hostport = "localhost:%d" % port
-    return thrift_client_for("service", service)(tchannel, hostport)
+    return thrift_client_for("service", service)(tchannel, hostport, trace)
 
 
 @pytest.mark.gen_test
@@ -64,9 +65,15 @@ def test_protocol_error(tchannel_server, service):
         method='getItem',
     ).and_raise(ValueError("I was not defined in the IDL"))
 
-    client = mk_client(service, tchannel_server.port)
+    client = mk_client(service, tchannel_server.port, trace=False)
     with pytest.raises(errors.ProtocolError):
-        yield client.getItem("foo")
+        with patch(
+            'tchannel.zipkin.tracers.TChannelZipkinTracer.record',
+            autospec=True,
+        ) as mock_trace_record:
+            yield client.getItem("foo")
+
+    assert not mock_trace_record.called
 
 
 @pytest.mark.gen_test
@@ -77,7 +84,16 @@ def test_thrift_exception(tchannel_server, service):
         method='getItem',
     ).and_raise(service.ItemDoesNotExist("stahp"))
 
-    client = mk_client(service, tchannel_server.port)
-    with pytest.raises(service.ItemDoesNotExist) as excinfo:
-        yield client.getItem("foo")
+    client = mk_client(service, tchannel_server.port, trace=True)
+
+    with patch(
+        'tchannel.zipkin.tracers.TChannelZipkinTracer.record',
+        autospec=True,
+    ) as mock_trace_record:
+        with (
+            pytest.raises(service.ItemDoesNotExist)
+        ) as excinfo:
+            yield client.getItem("foo")
+
+    assert mock_trace_record.called
     assert 'stahp' in str(excinfo.value)

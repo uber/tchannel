@@ -70,7 +70,7 @@ class Annotation(_AnnotationBase):
 
 def timestamp(name, ts=None):
     if ts is None:
-        ts = math.trunc(time.time() * 1000 * 1000)
+        ts = math.trunc(time.time() * 1000)
 
     return Annotation(name, ts, 'timestamp')
 
