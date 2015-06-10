@@ -30,6 +30,8 @@ var TChannelConnection = require('./connection');
 var errors = require('./errors');
 var states = require('./states');
 
+var DEFAULT_REPORT_INTERVAL = 1000;
+
 function TChannelPeer(channel, hostPort, options) {
     if (!(this instanceof TChannelPeer)) {
         return new TChannelPeer(channel, hostPort, options);
@@ -65,6 +67,25 @@ function TChannelPeer(channel, hostPort, options) {
     } else {
         self.setState(states.HealthyState);
     }
+
+    self.reportInterval = self.options.reportInterval || DEFAULT_REPORT_INTERVAL;
+    if (self.reportInterval > 0) {
+        self.reportTimer = self.stateOptions.timers.setTimeout(
+            onReport, self.reportInterval
+        );
+    }
+
+    function onReport() {
+        if (!self.hostPort) {
+            return;
+        }
+
+        var count = self.countConnections('out');
+        self.channel.connectionsActiveStat.update(count, {
+            'host-port': self.channel.hostPort,
+            'peer-host-port': self.hostPort
+        });
+    }
 }
 
 inherits(TChannelPeer, EventEmitter);
@@ -87,6 +108,11 @@ TChannelPeer.prototype.isConnected = function isConnected(direction, identified)
 
 TChannelPeer.prototype.close = function close(callback) {
     var self = this;
+    if (self.reportTimer) {
+        self.stateOptions.timers.clearTimeout(self.reportTimer);
+        self.reportTimer = null;
+    }
+
     var counter = self.connections.length;
     if (counter) {
         self.connections.forEach(function eachConn(conn) {
@@ -125,6 +151,23 @@ TChannelPeer.prototype.getOutConnection = function getOutConnection() {
         if (!conn.closing) return conn;
     }
     return null;
+};
+
+TChannelPeer.prototype.countConnections = function countConnections(direction) {
+    var self = this;
+    if (!direction) {
+        return self.connections.length;
+    }
+
+    var count = 0;
+    for (var i = 0; i < self.connections.length; i++) {
+        var conn = self.connections[i];
+        if (conn.direction === direction) {
+            count++;
+        }
+    }
+
+    return count;
 };
 
 TChannelPeer.prototype.connect = function connect(outOnly) {

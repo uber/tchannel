@@ -36,7 +36,13 @@ allocCluster.test('emits stats on response ok', {
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
     var client = cluster.channels[1];
-    var statsd = nullStatsd(3);
+    var clientHost;
+    server.on('connection', function onConnection(conn) {
+        clientHost = conn.remoteAddr
+            .replace(/:/g, '-')
+            .replace(/\./g, '-');
+    });
+    var statsd = nullStatsd(4);
 
     server.makeSubChannel({
         serviceName: 'reservoir'
@@ -81,6 +87,12 @@ allocCluster.test('emits stats on response ok', {
         assert.ok(res.ok, 'res should be ok');
         assert.deepEqual(statsd._buffer._elements, [{
             type: 'c',
+            name: 'tchannel.connections.accepted.' + clientHost,
+            value: null,
+            delta: 1,
+            time: null
+        }, {
+            type: 'c',
             name: 'tchannel.inbound.calls.recvd.inPipe.reservoir.Reservoir--get',
             value: null,
             delta: 1,
@@ -111,7 +123,13 @@ allocCluster.test('emits stats on response not ok', {
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
     var client = cluster.channels[1];
-    var statsd = nullStatsd(3);
+    var clientHost;
+    server.on('connection', function onConnection(conn) {
+        clientHost = conn.remoteAddr
+            .replace(/:/g, '-')
+            .replace(/\./g, '-');
+    });
+    var statsd = nullStatsd(4);
 
     server.makeSubChannel({
         serviceName: 'reservoir'
@@ -156,6 +174,12 @@ allocCluster.test('emits stats on response not ok', {
         assert.equal(res.ok, false, 'res should be not ok');
         assert.deepEqual(statsd._buffer._elements, [{
             type: 'c',
+            name: 'tchannel.connections.accepted.' + clientHost,
+            value: null,
+            delta: 1,
+            time: null
+        }, {
+            type: 'c',
             name: 'tchannel.inbound.calls.recvd.inPipe.reservoir.Reservoir--get',
             value: null,
             delta: 1,
@@ -186,7 +210,13 @@ allocCluster.test('emits stats on response error', {
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
     var client = cluster.channels[1];
-    var statsd = nullStatsd(3);
+    var clientHost;
+    server.on('connection', function onConnection(conn) {
+        clientHost = conn.remoteAddr
+            .replace(/:/g, '-')
+            .replace(/\./g, '-');
+    });
+    var statsd = nullStatsd(4);
 
     server.makeSubChannel({
         serviceName: 'reservoir'
@@ -227,6 +257,12 @@ allocCluster.test('emits stats on response error', {
         assert.notEqual(err, null, 'err should not be null');
         assert.equal(res, null, 'res should be null');
         assert.deepEqual(statsd._buffer._elements, [{
+            type: 'c',
+            name: 'tchannel.connections.accepted.' + clientHost,
+            value: null,
+            delta: 1,
+            time: null
+        }, {
             type: 'c',
             name: 'tchannel.inbound.calls.recvd.inPipe.reservoir.Reservoir--get',
             value: null,

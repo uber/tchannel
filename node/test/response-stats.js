@@ -29,7 +29,12 @@ allocCluster.test('emits response stats with ok', {
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
     var client = cluster.channels[1];
+    var serverHost = cluster.hosts[0];
+    var clientHost;
     var stats = [];
+    server.on('connection', function onConnection(conn) {
+        clientHost = conn.remoteAddr;
+    });
 
     server.makeSubChannel({
         serviceName: 'server'
@@ -70,6 +75,17 @@ allocCluster.test('emits response stats with ok', {
         }
         assert.ok(res.ok, 'res should be ok');
         assert.deepEqual(stats, [{
+            name: 'connections.accepted',
+            type: 'counter',
+            value: 1,
+            tags:
+            {
+                'host-port': serverHost,
+                'peer-host-port': clientHost,
+                app: 'server',
+                host: os.hostname()
+           }
+        }, {
             name: 'inbound.calls.recvd',
             type: 'counter',
             value: 1,
@@ -94,7 +110,7 @@ allocCluster.test('emits response stats with ok', {
         }, {
             name: 'inbound.calls.latency',
             type: 'timing',
-            value: stats[2].value,
+            value: stats[3].value,
             tags: {
                 'calling-service': 'client',
                 service: 'server',
@@ -113,7 +129,12 @@ allocCluster.test('emits response stats with not ok', {
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
     var client = cluster.channels[1];
+    var serverHost = cluster.hosts[0];
+    var clientHost;
     var stats = [];
+    server.on('connection', function onConnection(conn) {
+        clientHost = conn.remoteAddr;
+    });
 
     server.makeSubChannel({
         serviceName: 'server'
@@ -154,6 +175,17 @@ allocCluster.test('emits response stats with not ok', {
         }
         assert.equal(res.ok, false, 'res should be not ok');
         assert.deepEqual(stats, [{
+            name: 'connections.accepted',
+            type: 'counter',
+            value: 1,
+            tags:
+            {
+                'host-port': serverHost,
+                'peer-host-port': clientHost,
+                app: 'server',
+                host: os.hostname()
+           }
+        }, {
             name: 'inbound.calls.recvd',
             type: 'counter',
             value: 1,
@@ -179,7 +211,7 @@ allocCluster.test('emits response stats with not ok', {
         }, {
             name: 'inbound.calls.latency',
             type: 'timing',
-            value: stats[2].value,
+            value: stats[3].value,
             tags: {
                 'calling-service': 'client',
                 service: 'server',
@@ -198,7 +230,12 @@ allocCluster.test('emits response stats with error', {
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
     var client = cluster.channels[1];
+    var serverHost = cluster.hosts[0];
+    var clientHost;
     var stats = [];
+    server.on('connection', function onConnection(conn) {
+        clientHost = conn.remoteAddr;
+    });
 
     server.makeSubChannel({
         serviceName: 'server'
@@ -236,6 +273,17 @@ allocCluster.test('emits response stats with error', {
         assert.notEqual(err, null, 'err should not be null');
         assert.equal(res, null, 'res should be null');
         assert.deepEqual(stats, [{
+            name: 'connections.accepted',
+            type: 'counter',
+            value: 1,
+            tags:
+            {
+                'host-port': serverHost,
+                'peer-host-port': clientHost,
+                app: 'server',
+                host: os.hostname()
+           }
+        }, {
             name: 'inbound.calls.recvd',
             type: 'counter',
             value: 1,
@@ -261,7 +309,7 @@ allocCluster.test('emits response stats with error', {
         }, {
             name: 'inbound.calls.latency',
             type: 'timing',
-            value: stats[2].value,
+            value: stats[3].value,
             tags: {
                 'calling-service': 'client',
                 service: 'server',

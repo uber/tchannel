@@ -127,6 +127,39 @@ function getKey(common, stat) {
                 clean(stat.tags['calling-service'], 'calling-service') + '.' +
                 clean(stat.tags.service, 'service') + '.' +
                 clean(stat.tags.endpoint, 'endpoint');
+
+        // connection
+        case 'connections.active':
+            return prefix + '.' +
+                clean(stat.tags['peer-host-port'], 'peer-host-port');
+
+        case 'connections.initiated':
+            return prefix + '.' +
+                clean(stat.tags['peer-host-port'], 'peer-host-port');
+
+        case 'connections.connect-errors':
+            return prefix + '.' +
+                clean(stat.tags['peer-host-port'], 'peer-host-port');
+
+        case 'connections.accepted':
+            return prefix + '.' +
+                clean(stat.tags['peer-host-port'], 'peer-host-port');
+
+        case 'connections.accept-errors':
+            return prefix + '.' +
+                clean(stat.tags['host-port'], 'host-port');
+
+        case 'connections.errors':
+            return prefix + '.' +
+                clean(stat.tags['peer-host-port'], 'peer-host-port') + '.' +
+                clean(stat.tags.type, 'type');
+
+        case 'connections.closed':
+            return prefix + '.' +
+                clean(stat.tags['peer-host-port'], 'peer-host-port') + '.' +
+                clean(stat.tags.reason, 'reason');
+
+        // other types
         default:
             return 'tchannel.bad-stat-object';
     }

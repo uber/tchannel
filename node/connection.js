@@ -22,6 +22,7 @@
 
 var assert = require('assert');
 var bufrw = require('bufrw');
+var extend = require('xtend');
 var ReadMachine = require('bufrw/stream/read_machine');
 var inherits = require('util').inherits;
 
@@ -37,6 +38,18 @@ function TChannelConnection(channel, socket, direction, remoteAddr) {
     var self = this;
     TChannelConnectionBase.call(self, channel, direction, remoteAddr);
     self.identifiedEvent = self.defineEvent('identified');
+
+    if (direction === 'out') {
+        self.channel.connectionsInitiatedStat.increment(1, {
+            'host-port': self.channel.hostPort || '0.0.0.0:0',
+            'peer-host-port': self.remoteAddr
+        });
+    } else {
+        self.channel.connectionsAcceptedStat.increment(1, {
+            'host-port': self.channel.hostPort,
+            'peer-host-port': self.remoteAddr
+        });
+    }
 
     self.socket = socket;
 
@@ -200,7 +213,7 @@ TChannelConnection.prototype.onHandlerError = function onHandlerError(err) {
     self.socket.destroy();
 };
 
-TChannelConnectionBase.prototype.handlePingResponse = function handlePingResponse(resFrame) {
+TChannelConnection.prototype.handlePingResponse = function handlePingResponse(resFrame) {
     var self = this;
     // TODO: explicit type
     self.pingResponseEvent.emit(self, {id: resFrame.id});
@@ -376,6 +389,113 @@ TChannelConnection.prototype.buildOutResponse = function buildOutResponse(req, o
         // jshint forin:true
     }
     return self.handler.buildOutResponse(req, opts);
+};
+
+// this connection is completely broken, and is going away
+// In addition to erroring out all of the pending work, we reset the state
+// in case anybody stumbles across this object in a core dump.
+TChannelConnection.prototype.resetAll = function resetAll(err) {
+    var self = this;
+
+    self.ops.destroy();
+
+    if (self.closing) return;
+    self.closing = true;
+    self.closeError = err;
+    self.closeEvent.emit(self, err);
+
+    var requests = self.ops.getRequests();
+    var pending = self.ops.getPending();
+
+    var inOpKeys = Object.keys(requests.in);
+    var outOpKeys = Object.keys(requests.out);
+
+    if (!err) {
+        err = new Error('unknown connection reset'); // TODO typed error
+    }
+
+    if (!self.remoteName) {
+        if (self.direction === 'out') {
+            self.channel.connectionsConnectErrorsStat.increment(1, {
+                'host-port': self.channel.hostPort || '0.0.0.0:0',
+                'peer-host-port': self.remoteAddr
+            });
+        } else {
+            self.channel.connectionsAcceptedErrorsStat.increment(1, {
+                'host-port': self.channel.hostPort,
+                'peer-host-port': self.remoteAddr
+            });
+        }
+    } else {
+        if (err.type !== 'tchannel.socket-local-closed') {
+            self.channel.connectionsErrorsStat.increment(1, {
+                'host-port': self.channel.hostPort || '0.0.0.0:0',
+                'peer-host-port': self.remoteAddr,
+                'type': err.type // TODO unified error type
+            });
+        }
+
+        self.channel.connectionsClosedStat.increment(1, {
+            'host-port': self.channel.hostPort || '0.0.0.0:0',
+            'peer-host-port': self.remoteAddr,
+            'reason': err.type // TODO unified reason type
+        });
+    }
+
+    var logInfo = {
+        error: err,
+        remoteName: self.remoteName,
+        localName: self.channel.hostPort,
+        numInOps: inOpKeys.length,
+        numOutOps: outOpKeys.length,
+        inPending: pending.in,
+        outPending: pending.out
+    };
+
+    if (err.type && err.type.lastIndexOf('tchannel.socket', 0) < 0) {
+        self.logger.warn('resetting connection', logInfo);
+        self.errorEvent.emit(self, err);
+    } else if (
+        err.type !== 'tchannel.socket-closed' &&
+        err.type !== 'tchannel.socket-local-closed'
+    ) {
+        logInfo.error = extend(err);
+        logInfo.error.message = err.message;
+        self.logger.info('resetting connection', logInfo);
+    }
+
+    // requests that we've received we can delete, but these reqs may have started their
+    //   own outgoing work, which is hard to cancel. By setting this.closing, we make sure
+    //   that once they do finish that their callback will swallow the response.
+    inOpKeys.forEach(function eachInOp(id) {
+        // TODO: support canceling pending handlers
+        self.ops.removeReq(id);
+        // TODO report or handle or log errors or something
+    });
+
+    // for all outgoing requests, forward the triggering error to the user callback
+    outOpKeys.forEach(function eachOutOp(id) {
+        var req = requests.out[id];
+        self.ops.removeReq(id);
+
+        var info = {
+            remoteAddr: self.remoteAddr,
+            direction: self.direction,
+            remoteName: self.remoteName,
+            reqRemoteAddr: req.remoteAddr,
+            serviceName: req.serviceName,
+            outArg1: String(req.arg1)
+        };
+        if (err.type === 'tchannel.socket-local-closed') {
+            err = errors.TChannelLocalResetError(err, info);
+        } else {
+            err = errors.TChannelConnectionResetError(err, info);
+        }
+
+        req.errorEvent.emit(req, err);
+    });
+
+    self.ops.clear();
 };
 
 module.exports = TChannelConnection;

@@ -218,8 +218,7 @@ The total number of connections from the target peer accepted by this process
 over its lifetime. 
 
 ##### connections.accept-errors
-The total number of accept errors that have occurred on this process.  Will not
-include a peer tag.
+The total number of accept errors that have occurred on this process.
 
 ##### connections.errors
 The total number of fatal connection-level errors that have occurred to
