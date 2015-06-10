@@ -54,6 +54,7 @@ function TChannelConnection(channel, socket, direction, socketRemoteAddr) {
     }
 
     self.socket = socket;
+    self.ephemeral = false;
 
     var opts = {
         logger: self.channel.logger,
@@ -109,8 +110,9 @@ TChannelConnection.prototype.setupSocket = function setupSocket() {
             direction: self.direction,
             remoteName: self.remoteName
         }));
-        if (self.remoteName === '0.0.0.0:0') {
-            self.channel.peers.delete(self.remoteAddr);
+
+        if (self.ephemeral) {
+            self.channel.peers.delete(self.socketRemoteAddr);
         }
     }
 
@@ -341,6 +343,7 @@ TChannelConnection.prototype.onOutIdentified = function onOutIdentified(init) {
 TChannelConnection.prototype.onInIdentified = function onInIdentified(init) {
     var self = this;
     if (init.hostPort === '0.0.0.0:0') {
+        self.ephemeral = true;
         self.remoteName = '' + self.socket.remoteAddress + ':' + self.socket.remotePort;
         assert(self.remoteName !== self.channel.hostPort,
               'should not be able to receive ephemeral connection from self');
