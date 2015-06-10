@@ -40,6 +40,7 @@ from ..event import EventEmitter
 from ..event import EventRegistrar
 from ..handler import CallableRequestHandler
 from ..net import local_ip
+from ..zipkin.zipkin_trace import ZipkinTraceHook
 from .broker import ArgSchemeBroker
 from .connection import StreamConnection
 from .dispatch import RequestDispatcher
@@ -64,7 +65,7 @@ class TChannel(object):
     }
 
     def __init__(self, name, hostport=None, process_name=None,
-                 known_peers=None):
+                 known_peers=None, trace=False):
         """Build or re-use a TChannel.
 
         :param name:
@@ -81,6 +82,9 @@ class TChannel(object):
         :param known_peers:
             A list of host-ports at which already known peers can be reached.
             Defaults to an empty list.
+        :param trace:
+            Flag to turn on/off zipkin trace. It can be a bool variable or
+            a function that return true or false.
         """
         self._state = State.ready
         self._handler = RequestDispatcher()
@@ -103,14 +107,23 @@ class TChannel(object):
         )
 
         self.name = name
+        self._trace = trace
 
         # register event hooks
         self.event_emitter = EventEmitter()
         self.hooks = EventRegistrar(self.event_emitter)
+        self.hooks.register(ZipkinTraceHook(tchannel=self))
 
         if known_peers:
             for peer_hostport in known_peers:
                 self.peers.add(peer_hostport)
+
+    @property
+    def trace(self):
+        if callable(self._trace):
+            return self._trace()
+        else:
+            return self._trace
 
     def advertise(self, router, name=None):
         """Advertise the given TChannel to Hyperbahn.
