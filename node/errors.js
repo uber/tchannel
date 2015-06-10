@@ -122,6 +122,14 @@ module.exports.DuplicateInitResponseError = TypedError({
     message: 'tchannel: duplicate init response'
 });
 
+module.exports.EphemeralInitResponse = TypedError({
+    type: 'tchannel.init.ephemeral-init-response',
+    message: 'tchannel: got 0.0.0.0:0 as hostPort in Init Response',
+    hostPort: null,
+    socketRemoteAddr: null,
+    processName: null
+});
+
 module.exports.InvalidArgumentError = TypedError({
     type: 'tchannel.invalid-argument',
     message: 'invalid argument, expected array or null',
@@ -505,6 +513,7 @@ module.exports.classify = function classify(err) {
         case 'tchannel.unhandled-frame-type':
         case 'tchannel.handler.incoming-req-as-header-required':
         case 'tchannel.handler.incoming-req-cn-header-required':
+        case 'tchannel.init.ephemeral-init-response':
             return 'ProtocolError';
 
         case 'tchannel.connection.close':
