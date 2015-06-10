@@ -179,6 +179,14 @@ RelayRequest.prototype.logError = function logError(err, codeName) {
         outArg1: String(self.outreq.arg1)
     };
 
+    if (self.outreq.outReqs) {
+        logOptions.allErrors = [];
+        for (var i = 0; i < self.outreq.outReqs.length; i++) {
+            var individualReq = self.outreq.outReqs[i];
+            logOptions.allErrors.push(individualReq.err || null);
+        }
+    }
+
     if (err.isErrorFrame) {
         if (level === 'warn') {
             logger.warn('forwarding error frame', logOptions);
