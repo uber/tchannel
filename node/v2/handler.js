@@ -461,7 +461,7 @@ TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame
 
     if (self.requireCn) {
         assert(req.headers && req.headers.cn,
-            'Expected the "cn" transport header to be set for requiest');
+            'Expected the "cn" transport header to be set for request');
     } else if (!req.headers || !req.headers.cn) {
         self.logger.error('Expected "cn" header to be set for request', {
             arg1: String(args[0]),
