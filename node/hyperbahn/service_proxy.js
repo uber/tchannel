@@ -23,8 +23,6 @@
 var assert = require('assert');
 var RelayHandler = require('../relay_handler');
 
-var REGISTER_GRACE_PERIOD = 1000;
-var REGISTER_TTL = 1000;
 var DEFAULT_LOG_GRACE_PERIOD = 5 * 60 * 1000;
 
 function ServiceDispatchHandler(options) {
@@ -36,7 +34,6 @@ function ServiceDispatchHandler(options) {
     self.options = options;
     assert(options, 'service dispatch handler options not actually optional');
     self.channel = self.options.channel;
-    self.config = self.options.config;
     self.logger = self.options.logger;
     self.statsd = self.options.statsd;
     self.egressNodes = self.options.egressNodes;
@@ -45,11 +42,6 @@ function ServiceDispatchHandler(options) {
         DEFAULT_LOG_GRACE_PERIOD;
 
     self.egressNodes.on('membershipChanged', onMembershipChanged);
-
-    self.registerTTL = numberOrDefault(self.config,
-        'core.exitNode.registerTTL', REGISTER_TTL);
-    self.registrationGracePeriod = numberOrDefault(self.config,
-        'core.exitNode.registrationGracePeriod', REGISTER_GRACE_PERIOD);
 
     function onMembershipChanged() {
         self.updateServiceChannels();
@@ -72,14 +64,6 @@ function handleRequest(req, buildRes) {
         return;
     }
 
-    if (!req.streamed) {
-        var name = String(req.arg1);
-        self.onEndpointHandled(req.serviceName, name);
-    } else {
-        var statsdKey = 'server.request-stream.' + req.serviceName;
-        self.statsd.increment(statsdKey);
-    }
-
     var chan = self.channel.subChannels[req.serviceName];
     if (chan) {
         // Temporary hack. Need to set json by default because
@@ -87,26 +71,6 @@ function handleRequest(req, buildRes) {
         chan.handler.handleRequest(req, buildRes);
     } else {
         self.handleDefault(req, buildRes);
-    }
-};
-
-ServiceDispatchHandler.prototype.onEndpointHandled =
-function onEndpointHandled(service, name) {
-    var self = this;
-
-    var logRequest = self.config.get('server.logRequest');
-
-    var endpointName = name
-        .replace(/\//g, '_')
-        .replace(/:/g, '_');
-
-    var statsdKey = 'server.request.' + service +
-        '.' + endpointName;
-
-    self.statsd.increment(statsdKey);
-
-    if (logRequest && logRequest[name] === false) {
-        return;
     }
 };
 
@@ -284,13 +248,5 @@ function updateExitNodes(exitNodes, svcchan) {
 // exitNodes we wont have massive imbalance of dispatch having 500 workers and
 // the small service having 2 workers.  We would need two hops to find an exit
 // node though
-
-function numberOrDefault(config, key, defaultValue) {
-    var value = config.get(key);
-    if (typeof value === 'number') {
-        return value;
-    }
-    return defaultValue;
-}
 
 module.exports = ServiceDispatchHandler;
