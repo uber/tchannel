@@ -175,6 +175,7 @@ RelayRequest.prototype.logError = function logError(err, codeName) {
         outRemoteAddr: self.outreq.remoteAddr,
         inRemoteAddr: self.inreq.remoteAddr,
         serviceName: self.outreq.serviceName,
+        callerName: self.inreq.headers.cn,
         outArg1: String(self.outreq.arg1)
     };
 
