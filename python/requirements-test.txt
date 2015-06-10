@@ -29,3 +29,6 @@ crcmod
 # Mocks
 mock
 doubles
+
+# for releases
+zest.releaser
