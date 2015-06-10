@@ -20,7 +20,6 @@
 
 'use strict';
 
-var inherits = require('util').inherits;
 var LRUCache = require('lru-cache');
 
 var BUCKET_RESET_DURATION = 1000;
@@ -34,24 +33,30 @@ function PermissionsCache(options) {
     }
     var self = this;
 
-    self.options = options;
-    PermissionsCache.super_.call(self, self.options);
+    self.lru = LRUCache(options);
 
-    self.channel = self.options.channel;
-    self.logger = self.options.logger;
-    self._intervalId = setInterval(
-        bucketResetCallback(self), BUCKET_RESET_DURATION
-    );
+    self.channel = options.channel;
+    self.logger = options.logger;
+    self._intervalId = setInterval(bucketReset, BUCKET_RESET_DURATION);
 
-    self.channel.statEvent.addListener(self.increment.bind(self));
+    self.channel.statEvent.addListener(increment);
+
+    function bucketReset() {
+        var keys = self.lru.keys();
+        for (var i = 0; i < keys.length; i++) {
+            self.resetBucketTokens(keys[i]);
+        }
+    }
+
+    function increment(stat) {
+        self.increment(stat);
+    }
 }
-
-inherits(PermissionsCache, LRUCache);
 
 PermissionsCache.prototype.clearBuckets = function clearBuckets() {
     var self = this;
     clearInterval(self._intervalId);
-    self.reset();
+    self.lru.reset();
 };
 
 PermissionsCache.prototype.increment = function increment(stat) {
@@ -60,13 +65,13 @@ PermissionsCache.prototype.increment = function increment(stat) {
         var key = createCallsKey(
             stat.tags['calling-service'], stat.tags.service
         );
-        var tokens = self.get(key);
+        var tokens = self.lru.get(key);
         if (typeof tokens === 'undefined') {
             self.resetBucketTokens(key);
-            tokens = self.get(key);
+            tokens = self.lru.get(key);
         }
 
-        self.set(key, tokens - 1);
+        self.lru.set(key, tokens - 1);
     }
 };
 
@@ -74,14 +79,8 @@ PermissionsCache.prototype.resetBucketTokens = function resetBucketTokens(key) {
     // A pretty anemic method right now to be sure, but I suspect there might
     // be more to this logic in the future.
     var self = this;
-    self.set(key, NUM_TOKENS);
+    self.lru.set(key, NUM_TOKENS);
 };
-
-function bucketResetCallback(cache) {
-    return function() {
-        cache.keys().map(cache.resetBucketTokens.bind(cache));
-    };
-}
 
 function createCallsKey(caller, callee) {
     return caller + '_' + callee;

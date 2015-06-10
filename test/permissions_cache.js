@@ -57,7 +57,7 @@ allocCluster.test('permissionsCache: counts service request counts', {
     
     function onResponse(err, res, arg2, arg3) {
         assert.ifError(err);
-        assert.ok(cache.keys().indexOf('client_server') >= 0);
+        assert.ok(cache.lru.keys().indexOf('client_server') >= 0);
         assert.end();
         cache.clearBuckets();
     }
