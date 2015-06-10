@@ -328,10 +328,8 @@ func (c *Connection) handleInitReq(frame *Frame) {
 
 	c.remotePeerInfo.HostPort = req.initParams[InitParamHostPort]
 	c.remotePeerInfo.ProcessName = req.initParams[InitParamProcessName]
-	fmt.Printf("remotePeer as sent: %+v\n", c.remotePeerInfo)
 	if c.remotePeerInfo.IsEphemeral() {
 		c.remotePeerInfo.HostPort = c.conn.RemoteAddr().String()
-		fmt.Printf("remotePeer not a real port, update to %+v\n", c.remotePeerInfo)
 	}
 
 	res := initRes{initMessage{id: frame.Header.ID}}

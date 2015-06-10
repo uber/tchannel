@@ -3,6 +3,8 @@ package tchannel
 import "golang.org/x/net/context"
 
 // SubChannel allows calling a specific service on a channel.
+// TODO(prashant): Allow creating a subchannel with default call options.
+// TODO(prashant): Allow registering handlers on a subchannel.
 type SubChannel struct {
 	serviceName        string
 	defaultCallOptions *CallOptions
@@ -22,26 +24,11 @@ func (c *SubChannel) ServiceName() string {
 }
 
 // BeginCall starts a new call to a remote peer, returning an OutboundCall that can
-// be used to write the arguments of the call
+// be used to write the arguments of the call.
 func (c *SubChannel) BeginCall(ctx context.Context, operationName string, callOptions *CallOptions) (*OutboundCall, error) {
 	if callOptions == nil {
 		callOptions = defaultCallOptions
 	}
 
-	p := c.peers.Get()
-	conn, err := p.GetConnection(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	call, err := conn.beginCall(ctx, c.serviceName, callOptions)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := call.writeOperation([]byte(operationName)); err != nil {
-		return nil, err
-	}
-
-	return call, err
+	return c.peers.Get().BeginCall(ctx, c.serviceName, operationName, callOptions)
 }

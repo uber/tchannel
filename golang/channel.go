@@ -194,7 +194,8 @@ func (ch *Channel) registerNewSubChannel(serviceName string) *SubChannel {
 	return sc
 }
 
-// GetSubChannel returns a SubChannel for the given service name.
+// GetSubChannel returns a SubChannel for the given service name. If the subchannel does not
+// exist, it is created.
 func (ch *Channel) GetSubChannel(serviceName string) *SubChannel {
 	mutable := &ch.mutable
 	mutable.mut.RLock()
@@ -209,15 +210,10 @@ func (ch *Channel) GetSubChannel(serviceName string) *SubChannel {
 }
 
 // BeginCall starts a new call to a remote peer, returning an OutboundCall that can
-// be used to write the arguments of the call
+// be used to write the arguments of the call.
 func (ch *Channel) BeginCall(ctx context.Context, hostPort, serviceName, operationName string, callOptions *CallOptions) (*OutboundCall, error) {
-	// Add this peer if we don't already have it.
-	ch.peers.GetOrAdd(hostPort)
-	sc := ch.GetSubChannel(serviceName)
-
-	// TODO call this specific peer
-
-	return sc.BeginCall(ctx, operationName, callOptions)
+	p := ch.peers.GetOrAdd(hostPort)
+	return p.BeginCall(ctx, serviceName, operationName, callOptions)
 }
 
 // serve runs the listener to accept and manage new incoming connections, blocking
