@@ -21,7 +21,6 @@
 'use strict';
 
 var assert = require('assert');
-var PermissionsCache = require('./permissions_cache');
 var RelayHandler = require('../relay_handler');
 
 var REGISTER_GRACE_PERIOD = 1000;
@@ -43,10 +42,7 @@ function ServiceDispatchHandler(options) {
 
     self.egressNodes.on('membershipChanged', onMembershipChanged);
 
-    self.permissionsCache = new PermissionsCache({
-        channel: self.channel,
-        logger: self.logger
-    });
+    self.permissionsCache = options.permissionsCache;
     self.registerTTL = numberOrDefault(self.config,
         'core.exitNode.registerTTL', REGISTER_TTL);
     self.registrationGracePeriod = numberOrDefault(self.config,
