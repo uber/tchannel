@@ -50,3 +50,4 @@ require('./request-with-statsd.js');
 require('./response-stats.js');
 require('./response-with-statsd.js');
 require('./ping.js');
+require('./permissions_cache.js');

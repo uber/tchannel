@@ -40,6 +40,7 @@ function ServiceDispatchHandler(options) {
     self.createdAt = self.channel.timers.now();
     self.logGracePeriod = self.options.logGracePeriod ||
         DEFAULT_LOG_GRACE_PERIOD;
+    self.permissionsCache = options.permissionsCache;
 
     self.egressNodes.on('membershipChanged', onMembershipChanged);
 
