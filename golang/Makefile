@@ -28,8 +28,6 @@ clean:
 	go clean
 	rm -rf $(BUILD)
 	rm -rf messagetype_string.go
-	rm -rf examples/thrift/gen-go
-	rm -rf thrift/gen-go
 	echo
 
 fmt format:
@@ -39,7 +37,7 @@ fmt format:
 
 test_ci: test
 
-test: clean setup thrift_gen
+test: clean setup
 	echo Testing packages:
 	go test $(PKGS) $(TEST_ARG) -parallel=4
 
