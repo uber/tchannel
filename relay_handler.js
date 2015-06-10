@@ -45,7 +45,7 @@ RelayRequest.prototype.createOutRequest = function createOutRequest() {
     if (self.outreq) {
         self.channel.logger.warn('relay request already started', {
             // TODO: better context
-            remoteAddr: self.inreq.remoteAddr,
+            inRemoteName: self.inreq.remoteAddr,
             id: self.inreq.id
         });
         return;
@@ -88,7 +88,7 @@ RelayRequest.prototype.createOutResponse = function createOutResponse(options) {
     if (self.outres) {
         self.channel.logger.warn('relay request already responded', {
             // TODO: better context
-            remoteAddr: self.inreq.remoteAddr,
+            inRemoteName: self.inreq.remoteAddr,
             id: self.inreq.id
         });
         return;
@@ -108,7 +108,7 @@ RelayRequest.prototype.onResponse = function onResponse(res) {
     if (self.inres) {
         self.channel.logger.warn('relay request got more than one response callback', {
             // TODO: better context
-            remoteAddr: res.remoteAddr,
+            inRemoteName: res.remoteAddr,
             id: res.id
         });
         return;
@@ -172,8 +172,8 @@ RelayRequest.prototype.logError = function logError(err, codeName) {
     var logOptions = {
         error: err,
         isErrorFrame: err.isErrorFrame,
-        outRemoteAddr: self.outreq.remoteAddr,
-        inRemoteAddr: self.inreq.remoteAddr,
+        outRemoteName: self.outreq.remoteAddr,
+        inRemoteName: self.inreq.remoteAddr,
         serviceName: self.outreq.serviceName,
         callerName: self.inreq.headers.cn,
         outArg1: String(self.outreq.arg1)
