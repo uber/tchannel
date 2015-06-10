@@ -56,11 +56,11 @@ type prefixLogger struct {
 	logger Logger
 }
 
-// PrefixLogger returns a Logger that prefixes all logged messages with the given prefix.
+// PrefixedLogger returns a Logger that prefixes all logged messages with the given prefix.
 func PrefixedLogger(prefix string, logger Logger) Logger {
-	// Avoid layers of indirect calls when wrapping another prefixLogger.
+	// If a prefix is already set, then append the given prefix to the existing prefix.
 	if pl, ok := logger.(*prefixLogger); ok {
-		prefix = prefix + pl.prefix
+		prefix = pl.prefix + prefix
 		logger = pl.logger
 	}
 	return &prefixLogger{prefix, logger}

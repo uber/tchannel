@@ -21,16 +21,31 @@ package tchannel
 // THE SOFTWARE.
 
 import (
-	"errors"
+	"fmt"
 	"io"
 
 	"github.com/uber/tchannel/golang/typed"
 )
 
-var (
-	errReqResReaderStateMismatch = errors.New("attempting read outside of expected state")
-	errReqResWriterStateMismatch = errors.New("attempting write outside of expected state")
-)
+type errReqResWriterStateMismatch struct {
+	state         reqResWriterState
+	expectedState reqResWriterState
+}
+
+func (e errReqResWriterStateMismatch) Error() string {
+	return fmt.Sprintf("attempting write outside of expected state, in %v expected %v",
+		e.state, e.expectedState)
+}
+
+type errReqResReaderStateMismatch struct {
+	state         reqResReaderState
+	expectedState reqResReaderState
+}
+
+func (e errReqResReaderStateMismatch) Error() string {
+	return fmt.Sprintf("attempting read outside of expected state, in %v expected %v",
+		e.state, e.expectedState)
+}
 
 // reqResWriterState defines the state of a request/response writer
 type reqResWriterState int
@@ -41,6 +56,8 @@ const (
 	reqResWriterPreArg3
 	reqResWriterComplete
 )
+
+//go:generate stringer -type=reqResWriterState
 
 // messageForFragment determines which message should be used for the given
 // fragment
@@ -55,8 +72,11 @@ type reqResWriter struct {
 	mex                *messageExchange
 	state              reqResWriterState
 	messageForFragment messageForFragment
+	log                Logger
 	err                error
 }
+
+//go:generate stringer -type=reqResReaderState
 
 func (w *reqResWriter) argWriter(last bool, inState reqResWriterState, outState reqResWriterState) (io.WriteCloser, error) {
 	if w.err != nil {
@@ -64,7 +84,7 @@ func (w *reqResWriter) argWriter(last bool, inState reqResWriterState, outState 
 	}
 
 	if w.state != inState {
-		return nil, w.failed(errReqResWriterStateMismatch)
+		return nil, w.failed(errReqResWriterStateMismatch{state: w.state, expectedState: inState})
 	}
 
 	argWriter, err := w.contents.ArgWriter(last)
@@ -132,6 +152,7 @@ func (w *reqResWriter) flushFragment(fragment *writableFragment) error {
 
 // failed marks the writer as having failed
 func (w *reqResWriter) failed(err error) error {
+	w.log.Debugf("writer failed: %v existing err: %v", err, w.err)
 	if w.err != nil {
 		return w.err
 	}
@@ -158,6 +179,7 @@ type reqResReader struct {
 	state              reqResReaderState
 	messageForFragment messageForFragment
 	initialFragment    *readableFragment
+	log                Logger
 	err                error
 }
 
@@ -180,7 +202,7 @@ func (r *reqResReader) arg3Reader() (io.ReadCloser, error) {
 // must be closed once the argument has been read.
 func (r *reqResReader) argReader(last bool, inState reqResReaderState, outState reqResReaderState) (io.ReadCloser, error) {
 	if r.state != inState {
-		return nil, r.failed(errReqResReaderStateMismatch)
+		return nil, r.failed(errReqResReaderStateMismatch{state: r.state, expectedState: inState})
 	}
 
 	argReader, err := r.contents.ArgReader(last)
@@ -218,6 +240,7 @@ func (r *reqResReader) recvNextFragment(initial bool) (*readableFragment, error)
 
 // failed indicates the reader failed
 func (r *reqResReader) failed(err error) error {
+	r.log.Debugf("reader failed: %v existing err: %v", err, r.err)
 	if r.err != nil {
 		return r.err
 	}
