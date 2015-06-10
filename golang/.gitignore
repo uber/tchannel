@@ -4,3 +4,5 @@
 build
 Godeps/_workspace
 messagetype_string.go
+reqresreaderstate_string.go
+reqreswriterstate_string.go

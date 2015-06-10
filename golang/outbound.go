@@ -21,6 +21,7 @@ package tchannel
 // THE SOFTWARE.
 
 import (
+	"fmt"
 	"io"
 	"time"
 
@@ -71,6 +72,7 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string, callOpti
 		Service:    serviceName,
 		TimeToLive: timeToLive,
 	}
+	call.log = PrefixedLogger(fmt.Sprintf("Out%v-Call ", requestID), c.log)
 
 	// TODO(mmihic): It'd be nice to do this without an fptr
 	call.messageForFragment = func(initial bool) message {
@@ -92,6 +94,7 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string, callOpti
 
 	response := new(OutboundCallResponse)
 	response.mex = mex
+	response.log = PrefixedLogger(fmt.Sprintf("Out%v-Response ", requestID), c.log)
 	response.messageForFragment = func(initial bool) message {
 		if initial {
 			return &response.callRes

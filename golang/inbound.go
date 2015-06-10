@@ -22,6 +22,7 @@ package tchannel
 
 import (
 	"errors"
+	"fmt"
 	"io"
 
 	"golang.org/x/net/context"
@@ -62,6 +63,7 @@ func (c *Connection) handleCallReq(frame *Frame) {
 	response.contents = newFragmentingWriter(response, initialFragment.checksumType.New())
 	response.cancel = cancel
 	response.span = callReq.Tracing
+	response.log = PrefixedLogger(fmt.Sprintf("In%v-Response ", callReq.ID()), c.log)
 	response.messageForFragment = func(initial bool) message {
 		if initial {
 			callRes := new(callRes)
@@ -83,6 +85,7 @@ func (c *Connection) handleCallReq(frame *Frame) {
 	call.headers = callReq.Headers
 	call.span = callReq.Tracing
 	call.response = response
+	call.log = PrefixedLogger(fmt.Sprintf("In%v-Call ", callReq.ID()), c.log)
 	call.messageForFragment = func(initial bool) message { return new(callReqContinue) }
 	call.contents = newFragmentingReader(call)
 
@@ -226,7 +229,10 @@ func (response *InboundCallResponse) SendSystemError(err error) error {
 // only be called before any arguments have been sent to the calling peer.
 func (response *InboundCallResponse) SetApplicationError() error {
 	if response.state > reqResWriterPreArg2 {
-		return response.failed(errReqResReaderStateMismatch)
+		return response.failed(errReqResWriterStateMismatch{
+			state:         response.state,
+			expectedState: reqResWriterPreArg2,
+		})
 	}
 	response.applicationError = true
 	return nil

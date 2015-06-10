@@ -27,7 +27,7 @@ clean:
 	echo Cleaning build artifacts...
 	go clean
 	rm -rf $(BUILD)
-	rm -rf messagetype_string.go
+	rm -rf messagetype_string.go reqresreaderstate_string.go reqreswriterstate_string.go
 	echo
 
 fmt format:
