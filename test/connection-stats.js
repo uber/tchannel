@@ -115,6 +115,8 @@ allocCluster.test('emits connection stats with failure', {
 
     var subClient = client.makeSubChannel({
         serviceName: 'server',
+        // there should be nothing running on this port
+        // the connection is supposed to fail
         peers: ['localhost:4040']
     });
 
