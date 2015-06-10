@@ -90,7 +90,7 @@ function handleAdvertise(self, req, arg2, arg3, cb) {
 
     for (var i = 0; i < services.length; i++) {
         var service = services[i];
-        service.hostPort = req.remoteAddr;
+        service.hostPort = req.connection.remoteName;
 
         var serviceName = service.serviceName;
         if (serviceName === '') {
