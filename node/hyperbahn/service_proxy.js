@@ -23,8 +23,6 @@
 var assert = require('assert');
 var RelayHandler = require('../relay_handler');
 
-var REGISTER_GRACE_PERIOD = 1000;
-var REGISTER_TTL = 1000;
 var DEFAULT_LOG_GRACE_PERIOD = 5 * 60 * 1000;
 
 function ServiceDispatchHandler(options) {
@@ -36,7 +34,6 @@ function ServiceDispatchHandler(options) {
     self.options = options;
     assert(options, 'service dispatch handler options not actually optional');
     self.channel = self.options.channel;
-    self.config = self.options.config;
     self.logger = self.options.logger;
     self.statsd = self.options.statsd;
     self.egressNodes = self.options.egressNodes;
@@ -45,11 +42,6 @@ function ServiceDispatchHandler(options) {
         DEFAULT_LOG_GRACE_PERIOD;
 
     self.egressNodes.on('membershipChanged', onMembershipChanged);
-
-    self.registerTTL = numberOrDefault(self.config,
-        'core.exitNode.registerTTL', REGISTER_TTL);
-    self.registrationGracePeriod = numberOrDefault(self.config,
-        'core.exitNode.registrationGracePeriod', REGISTER_GRACE_PERIOD);
 
     function onMembershipChanged() {
         self.updateServiceChannels();
