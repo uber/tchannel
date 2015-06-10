@@ -234,7 +234,7 @@ TChannel.prototype.onServerSocketConnection = function onServerSocketConnection(
 
     if (self.destroyed) {
         self.logger.error('got incoming socket whilst destroyed', {
-            remoteAddr: sock.remoteAddr,
+            remoteAddress: sock.remoteAddress,
             remotePort: sock.remotePort,
             hostPort: self.hostPort
         });
