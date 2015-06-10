@@ -62,12 +62,15 @@ type Channel struct {
 	connectionOptions ConnectionOptions
 	handlers          *handlerMap
 	peers             *PeerList
-	subChannels       map[string]*SubChannel
 
-	closed   bool
-	mut      sync.RWMutex  // protects the listener and the peer info
-	peerInfo LocalPeerInfo // May be ephemeral if this is a client only channel
-	l        net.Listener  // May be nil if this is a client only channel
+	// mutable contains all the members of Channel which are mutable.
+	mutable struct {
+		mut         sync.RWMutex // protects members of the mutable struct.
+		closed      bool
+		peerInfo    LocalPeerInfo // May be ephemeral if this is a client only channel
+		l           net.Listener  // May be nil if this is a client only channel
+		subChannels map[string]*SubChannel
+	}
 }
 
 // NewChannel creates a new Channel.  The new channel can be used to send outbound requests
@@ -90,18 +93,17 @@ func NewChannel(serviceName string, opts *ChannelOptions) (*Channel, error) {
 
 	ch := &Channel{
 		connectionOptions: opts.DefaultConnectionOptions,
-		peerInfo: LocalPeerInfo{
-			PeerInfo: PeerInfo{
-				ProcessName: processName,
-				HostPort:    ephemeralHostPort,
-			},
-			ServiceName: serviceName,
-		},
-		log:         logger,
-		handlers:    &handlerMap{},
-		subChannels: make(map[string]*SubChannel),
+		log:               logger,
+		handlers:          &handlerMap{},
 	}
-
+	ch.mutable.peerInfo = LocalPeerInfo{
+		PeerInfo: PeerInfo{
+			ProcessName: processName,
+			HostPort:    ephemeralHostPort,
+		},
+		ServiceName: serviceName,
+	}
+	ch.mutable.subChannels = make(map[string]*SubChannel)
 	ch.peers = newPeerList(ch)
 	ch.connectionOptions.ChecksumType = ChecksumTypeCrc32
 	return ch, nil
@@ -109,18 +111,20 @@ func NewChannel(serviceName string, opts *ChannelOptions) (*Channel, error) {
 
 // Serve serves incoming requests using the provided listener
 func (ch *Channel) Serve(l net.Listener) error {
-	ch.mut.Lock()
+	mutable := &ch.mutable
+	mutable.mut.Lock()
 
-	if ch.l != nil {
-		ch.mut.Unlock()
+	if mutable.l != nil {
+		mutable.mut.Unlock()
 		return errAlreadyListening
 	}
 
-	ch.l = l
-	ch.peerInfo.HostPort = ch.l.Addr().String()
-	ch.mut.Unlock()
+	mutable.l = l
+	mutable.peerInfo.HostPort = l.Addr().String()
+	mutable.mut.Unlock()
 
-	ch.log.Debugf("%v (%v) listening on %v", ch.peerInfo.ProcessName, ch.peerInfo.ServiceName, ch.peerInfo.HostPort)
+	peerInfo := mutable.peerInfo
+	ch.log.Debugf("%v (%v) listening on %v", peerInfo.ProcessName, peerInfo.ServiceName, peerInfo.HostPort)
 	return ch.serve()
 }
 
@@ -136,10 +140,11 @@ func (ch *Channel) ListenAndServe(hostPort string) error {
 
 // listen listens on the given address but does not begin serving request.
 func (ch *Channel) listen(hostPort string) error {
-	ch.mut.Lock()
-	defer ch.mut.Unlock()
+	mutable := &ch.mutable
+	mutable.mut.Lock()
+	defer mutable.mut.Unlock()
 
-	if ch.l != nil {
+	if mutable.l != nil {
 		return errAlreadyListening
 	}
 
@@ -149,14 +154,15 @@ func (ch *Channel) listen(hostPort string) error {
 		return err
 	}
 
-	ch.l, err = net.ListenTCP("tcp", addr)
+	mutable.l, err = net.ListenTCP("tcp", addr)
 	if err != nil {
 		ch.log.Errorf("Could not listen on %s: %v", hostPort, err)
 		return err
 	}
 
-	ch.peerInfo.HostPort = ch.l.Addr().String()
-	ch.log.Infof("%s listening on %s", ch.peerInfo.ProcessName, ch.peerInfo.HostPort)
+	mutable.peerInfo.HostPort = mutable.l.Addr().String()
+	peerInfo := mutable.peerInfo
+	ch.log.Infof("%s listening on %s", peerInfo.ProcessName, peerInfo.HostPort)
 	return nil
 }
 
@@ -167,36 +173,38 @@ func (ch *Channel) Register(h Handler, serviceName, operationName string) {
 
 // PeerInfo returns the current peer info for the channel
 func (ch *Channel) PeerInfo() LocalPeerInfo {
-	ch.mut.RLock()
-	defer ch.mut.RUnlock()
+	ch.mutable.mut.RLock()
+	defer ch.mutable.mut.RUnlock()
 
-	return ch.peerInfo
+	return ch.mutable.peerInfo
 }
 
 func (ch *Channel) registerNewSubChannel(serviceName string) *SubChannel {
-	ch.mut.Lock()
-	defer ch.mut.Unlock()
+	mutable := &ch.mutable
+	mutable.mut.Lock()
+	defer mutable.mut.Unlock()
 
 	// Recheck for the subchannel under the write lock.
-	if sc, ok := ch.subChannels[serviceName]; ok {
+	if sc, ok := mutable.subChannels[serviceName]; ok {
 		return sc
 	}
 
 	sc := newSubChannel(serviceName, ch.peers)
-	ch.subChannels[serviceName] = sc
+	mutable.subChannels[serviceName] = sc
 	return sc
 }
 
 // GetSubChannel returns a SubChannel for the given service name.
 func (ch *Channel) GetSubChannel(serviceName string) *SubChannel {
-	ch.mut.RLock()
+	mutable := &ch.mutable
+	mutable.mut.RLock()
 
-	if sc, ok := ch.subChannels[serviceName]; ok {
-		ch.mut.RUnlock()
+	if sc, ok := mutable.subChannels[serviceName]; ok {
+		mutable.mut.RUnlock()
 		return sc
 	}
 
-	ch.mut.RUnlock()
+	mutable.mut.RUnlock()
 	return ch.registerNewSubChannel(serviceName)
 }
 
@@ -218,7 +226,7 @@ func (ch *Channel) serve() error {
 	acceptBackoff := 0 * time.Millisecond
 
 	for {
-		netConn, err := ch.l.Accept()
+		netConn, err := ch.mutable.l.Accept()
 		if err != nil {
 			// Backoff from new accepts if this is a temporary error
 			if ne, ok := err.(net.Error); ok && ne.Temporary() {
@@ -263,16 +271,16 @@ func (ch *Channel) serve() error {
 
 // Closed returns whether this channel has been closed with .Close()
 func (ch *Channel) Closed() bool {
-	ch.mut.Lock()
-	defer ch.mut.Unlock()
-	return ch.closed
+	ch.mutable.mut.Lock()
+	defer ch.mutable.mut.Unlock()
+	return ch.mutable.closed
 }
 
 // Close closes the channel including all connections to any active peers.
 func (ch *Channel) Close() {
-	ch.mut.Lock()
-	defer ch.mut.Unlock()
+	ch.mutable.mut.Lock()
+	defer ch.mutable.mut.Unlock()
 
-	ch.closed = true
+	ch.mutable.closed = true
 	ch.peers.Close()
 }
