@@ -29,7 +29,7 @@ var logger = DebugLogtron('tchannel');
 var fixture = require('./server_2_requests_fixture');
 var validators = require('../lib/simple_validators');
 
-test('basic tracing test', function (assert) {
+test('server 2 requests tracing test', function (assert) {
 
     var spans = [];
 
@@ -55,6 +55,10 @@ test('basic tracing test', function (assert) {
     var serverChan = server.makeSubChannel({
         serviceName: 'server'
     });
+    var subServiceClientChan = server.makeSubChannel({
+        serviceName: 'subservice',
+        peers: ['127.0.0.1:4042']
+    });
 
     var client = new TChannel({
         logger: logger,
@@ -62,7 +66,8 @@ test('basic tracing test', function (assert) {
         trace: true
     });
     var clientChan = client.makeSubChannel({
-        serviceName: 'server'
+        serviceName: 'server',
+        peers: ['127.0.0.1:4040']
     });
 
     subChan.register('/foobar', function (req, res) {
@@ -83,9 +88,8 @@ test('basic tracing test', function (assert) {
         var serverRequestsDone = CountedReadySignal(2);
 
         setTimeout(function () {
-            serverChan
+            subServiceClientChan
                 .request({
-                    host: '127.0.0.1:4042',
                     serviceName: 'subservice',
                     parent: req,
                     headers: {
@@ -103,8 +107,7 @@ test('basic tracing test', function (assert) {
         }, 40);
 
         process.nextTick(function () {
-            var servReq = serverChan.request({
-                host: '127.0.0.1:4042',
+            var servReq = subServiceClientChan.request({
                 serviceName: 'subservice',
                 parent: req,
                 headers: {
@@ -149,7 +152,6 @@ test('basic tracing test', function (assert) {
 
         logger.debug('client making req');
         var req = clientChan.request({
-            host: '127.0.0.1:4040',
             serviceName: 'server',
             trace: true,
             hasNoParent: true,

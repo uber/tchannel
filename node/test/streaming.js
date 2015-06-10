@@ -105,8 +105,8 @@ function partsTest(testCase, assert) {
         options.headers = options.headers || {};
         options.headers.as = 'raw';
         options.headers.cn = 'wat';
-        var req = conn.request(options);
         conn.on('identified', function onId() {
+            var req = conn.request(options);
             var resultReady = Ready();
             req.hookupCallback(resultReady.signal);
             req.arg1.end(testCase.op);

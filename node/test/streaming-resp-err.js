@@ -37,17 +37,9 @@ allocCluster.test('end response with error frame', {
         streamed: true
     }, streamHandler);
 
-    var req = client.makeSubChannel({
-        serviceName: 'stream'
-    }).request({
+    var subChan = client.makeSubChannel({
         serviceName: 'stream',
-        hasNoParent: true,
-        headers: {
-            as: 'raw',
-            cn: 'wat'
-        },
-        host: server.hostPort,
-        streamed: true
+        peers: [server.hostPort]
     });
 
     var peers = client.peers.values();
@@ -56,6 +48,16 @@ allocCluster.test('end response with error frame', {
         peer.connect().on('identified', ready.signal);
     });
     ready(function send() {
+        var req = subChan.request({
+            serviceName: 'stream',
+            hasNoParent: true,
+            headers: {
+                as: 'raw',
+                cn: 'wat'
+            },
+            streamed: true
+        });
+
         req.arg1.end('stream');
         req.arg2.end();
         req.arg3.end();
