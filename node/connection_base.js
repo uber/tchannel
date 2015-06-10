@@ -78,7 +78,9 @@ inherits(TChannelConnectionBase, EventEmitter);
 TChannelConnectionBase.prototype.request = function connBaseRequest(options) {
     var self = this;
     if (!options) options = {};
-    options.remoteAddr = self.remoteAddr;
+
+    assert(self.remoteName, 'cannot make request unless identified');
+    options.remoteAddr = self.remoteName;
 
     options.channel = self.channel;
 
