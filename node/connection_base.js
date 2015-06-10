@@ -32,7 +32,7 @@ var Operations = require('./operations');
 var DEFAULT_OUTGOING_REQ_TIMEOUT = 2000;
 var CONNECTION_BASE_IDENTIFIER = 0;
 
-function TChannelConnectionBase(channel, direction, remoteAddr) {
+function TChannelConnectionBase(channel, direction, socketRemoteAddr) {
     assert(!channel.destroyed, 'refuse to create connection for destroyed channel');
 
     var self = this;
@@ -52,7 +52,7 @@ function TChannelConnectionBase(channel, direction, remoteAddr) {
     self.random = channel.random;
     self.timers = channel.timers;
     self.direction = direction;
-    self.remoteAddr = remoteAddr;
+    self.socketRemoteAddr = socketRemoteAddr;
     self.timer = null;
     self.remoteName = null; // filled in by identify message
 
