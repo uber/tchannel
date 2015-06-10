@@ -25,6 +25,7 @@ var RelayHandler = require('../relay_handler');
 
 var REGISTER_GRACE_PERIOD = 1000;
 var REGISTER_TTL = 1000;
+var DEFAULT_LOG_GRACE_PERIOD = 5 * 60 * 1000;
 
 function ServiceDispatchHandler(options) {
     if (!(this instanceof ServiceDispatchHandler)) {
@@ -39,6 +40,9 @@ function ServiceDispatchHandler(options) {
     self.logger = self.options.logger;
     self.statsd = self.options.statsd;
     self.egressNodes = self.options.egressNodes;
+    self.createdAt = self.channel.timers.now();
+    self.logGracePeriod = self.options.logGracePeriod ||
+        DEFAULT_LOG_GRACE_PERIOD;
 
     self.egressNodes.on('membershipChanged', onMembershipChanged);
 
@@ -124,9 +128,12 @@ function getServiceChannel(serviceName, create) {
     var self = this;
     var svcchan = self.channel.subChannels[serviceName];
     if (!svcchan && create) {
-        self.logger.info('Creating new sub channel', {
-            serviceName: serviceName
-        });
+        var now = self.channel.timers.now();
+        if (now >= self.createdAt + self.logGracePeriod) {
+            self.logger.info('Creating new sub channel', {
+                serviceName: serviceName
+            });
+        }
 
         svcchan = self.createServiceChannel(serviceName);
     }
