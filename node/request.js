@@ -215,7 +215,8 @@ TChannelRequest.prototype.onIdentified = function onIdentified(peer) {
         });
     }
 
-    self.triedRemoteAddrs[outReq.remoteAddr] = (self.triedRemoteAddrs[outReq.remoteAddr] || 0) + 1;
+    self.triedRemoteAddrs[outReq.remoteAddr] =
+        (self.triedRemoteAddrs[outReq.remoteAddr] || 0) + 1;
     outReq.responseEvent.on(onResponse);
     outReq.errorEvent.on(onError);
     outReq.send(self.arg1, self.arg2, self.arg3);
