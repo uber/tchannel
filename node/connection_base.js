@@ -74,10 +74,6 @@ function TChannelConnectionBase(channel, direction, remoteAddr) {
 }
 inherits(TChannelConnectionBase, EventEmitter);
 
-TChannelConnectionBase.prototype.close = function close(callback) {
-    callback();
-};
-
 // create a request
 TChannelConnectionBase.prototype.request = function connBaseRequest(options) {
     var self = this;

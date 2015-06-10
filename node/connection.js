@@ -213,7 +213,7 @@ TChannelConnection.prototype.onHandlerError = function onHandlerError(err) {
     self.socket.destroy();
 };
 
-TChannelConnectionBase.prototype.handlePingResponse = function handlePingResponse(resFrame) {
+TChannelConnection.prototype.handlePingResponse = function handlePingResponse(resFrame) {
     var self = this;
     // TODO: explicit type
     self.pingResponseEvent.emit(self, {id: resFrame.id});
@@ -394,7 +394,7 @@ TChannelConnection.prototype.buildOutResponse = function buildOutResponse(req, o
 // this connection is completely broken, and is going away
 // In addition to erroring out all of the pending work, we reset the state
 // in case anybody stumbles across this object in a core dump.
-TChannelConnectionBase.prototype.resetAll = function resetAll(err) {
+TChannelConnection.prototype.resetAll = function resetAll(err) {
     var self = this;
 
     self.ops.destroy();

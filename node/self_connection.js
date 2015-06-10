@@ -84,4 +84,8 @@ TChannelSelfConnection.prototype.ping = function ping() {
     return id;
 };
 
+TChannelSelfConnection.prototype.close = function close(callback) {
+    callback();
+};
+
 module.exports = TChannelSelfConnection;
