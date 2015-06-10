@@ -67,7 +67,7 @@ function TChannelV2Handler(options) {
     self.hostPort = self.options.hostPort;
     self.processName = self.options.processName;
     self.connection = self.options.connection;
-    self.remoteHostPort = null; // filled in by identify message
+    self.remoteName = null; // filled in by identify message
     self.lastSentFrameId = 0;
     // TODO: GC these... maybe that's up to TChannel itself wrt ops
     self.streamingReq = Object.create(null);
@@ -147,7 +147,7 @@ TChannelV2Handler.prototype.handleFrame = function handleFrame(frame, callback) 
 
 TChannelV2Handler.prototype.handleInitRequest = function handleInitRequest(reqFrame, callback) {
     var self = this;
-    if (self.remoteHostPort !== null) {
+    if (self.remoteName !== null) {
         return callback(errors.DuplicateInitRequestError());
     }
     /* jshint camelcase:false */
@@ -158,14 +158,14 @@ TChannelV2Handler.prototype.handleInitRequest = function handleInitRequest(reqFr
     };
     /* jshint camelcase:true */
     self.sendInitResponse(reqFrame);
-    self.remoteHostPort = init.hostPort;
+    self.remoteName = init.hostPort;
     self.initRequestEvent.emit(self, init);
     callback();
 };
 
 TChannelV2Handler.prototype.handleInitResponse = function handleInitResponse(resFrame, callback) {
     var self = this;
-    if (self.remoteHostPort !== null) {
+    if (self.remoteName !== null) {
         return callback(errors.DuplicateInitResponseError());
     }
     /* jshint camelcase:false */
@@ -175,14 +175,14 @@ TChannelV2Handler.prototype.handleInitResponse = function handleInitResponse(res
         processName: headers.process_name
     };
     /* jshint camelcase:true */
-    self.remoteHostPort = init.hostPort;
+    self.remoteName = init.hostPort;
     self.initResponseEvent.emit(self, init);
     callback();
 };
 
 TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFrame, callback) {
     var self = this;
-    if (self.remoteHostPort === null) {
+    if (self.remoteName === null) {
         return callback(errors.CallReqBeforeInitReqError());
     }
 
@@ -207,7 +207,7 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
                 arg1: String(reqFrame.body.args[0]),
                 serviceName: reqFrame.body.service,
                 callerName: reqFrame.body.headers.cn,
-                remoteHostPort: self.remoteHostPort
+                remoteName: self.remoteName
             });
         }
     }
@@ -225,7 +225,7 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
             self.logger.warn('Expected "cn" header for incoming req', {
                 arg1: String(reqFrame.body.args[0]),
                 serviceName: reqFrame.body.service,
-                remoteHostPort: self.remoteHostPort
+                remoteName: self.remoteName
             });
         }
     }
@@ -256,7 +256,7 @@ TChannelV2Handler.prototype.callRequestFrameHandled = function callRequestFrameH
 
 TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(resFrame, callback) {
     var self = this;
-    if (self.remoteHostPort === null) {
+    if (self.remoteName === null) {
         return callback(errors.CallResBeforeInitResError());
     }
     var res = self.buildInResponse(resFrame);
@@ -273,7 +273,7 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
         } else {
             self.logger.warn('Expected "as" for incoming response', {
                 code: resFrame.body.code,
-                remoteHostPort: self.remoteHostPort,
+                remoteName: self.remoteName,
                 endpoint: String(resFrame.body.args[0])
             });
         }
@@ -286,7 +286,7 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
                 limit: '0x' + v2.CallResponse.MaxArg1Size.toString(16)
         }));
     }
-    res.remoteAddr = self.remoteHostPort;
+    res.remoteAddr = self.remoteName;
     self._handleCallFrame(res, resFrame, callResponseFrameHandled);
     function callResponseFrameHandled(err) {
         self.callResponseFrameHandled(res, err, callback);
@@ -312,7 +312,7 @@ TChannelV2Handler.prototype.handleCancel = function handleCancel(frame, callback
 
 TChannelV2Handler.prototype.handleCallRequestCont = function handleCallRequestCont(reqFrame, callback) {
     var self = this;
-    if (self.remoteHostPort === null) {
+    if (self.remoteName === null) {
         return callback(errors.CallReqContBeforeInitReqError());
     }
     var id = reqFrame.id;
@@ -325,7 +325,7 @@ TChannelV2Handler.prototype.handleCallRequestCont = function handleCallRequestCo
 
 TChannelV2Handler.prototype.handleCallResponseCont = function handleCallResponseCont(resFrame, callback) {
     var self = this;
-    if (self.remoteHostPort === null) {
+    if (self.remoteName === null) {
         return callback(errors.CallResContBeforeInitResError());
     }
     var id = resFrame.id;
@@ -439,7 +439,7 @@ TChannelV2Handler.prototype.sendInitResponse = function sendInitResponse(reqFram
 
 TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame(req, flags, args) {
     var self = this;
-    if (self.remoteHostPort === null) {
+    if (self.remoteName === null) {
         self.errorEvent.emit(self, errors.SendCallReqBeforeIdentifiedError());
         return;
     }
@@ -454,7 +454,7 @@ TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame
         self.logger.error('Expected "as" header to be set for request', {
             arg1: String(args[0]),
             callerName: req.headers && req.headers.cn,
-            remoteHostPort: self.remoteHostPort,
+            remoteName: self.remoteName,
             serviceName: req.serviceName
         });
     }
@@ -465,7 +465,7 @@ TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame
     } else if (!req.headers || !req.headers.cn) {
         self.logger.error('Expected "cn" header to be set for request', {
             arg1: String(args[0]),
-            remoteHostPort: self.remoteHostPort,
+            remoteName: self.remoteName,
             serviceName: req.serviceName
         });
     }
@@ -475,7 +475,7 @@ TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame
 
 TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFrame(res, flags, args) {
     var self = this;
-    if (self.remoteHostPort === null) {
+    if (self.remoteName === null) {
         self.errorEvent.emit(self, errors.SendCallResBeforeIdentifiedError());
         return;
     }
@@ -490,7 +490,7 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
     } else if (!res.headers || !res.headers.as) {
         self.logger.error('Expected "as" header to be set for response', {
             code: code,
-            remoteHostPort: self.remoteHostPort,
+            remoteName: self.remoteName,
             arg1: String(args[0])
         });
     }
@@ -500,7 +500,7 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
 
 TChannelV2Handler.prototype.sendCallRequestContFrame = function sendCallRequestContFrame(req, flags, args) {
     var self = this;
-    if (self.remoteHostPort === null) {
+    if (self.remoteName === null) {
         self.errorEvent.emit(self, errors.SendCallReqContBeforeIdentifiedError());
         return;
     }
@@ -510,7 +510,7 @@ TChannelV2Handler.prototype.sendCallRequestContFrame = function sendCallRequestC
 
 TChannelV2Handler.prototype.sendCallResponseContFrame = function sendCallResponseContFrame(res, flags, args) {
     var self = this;
-    if (self.remoteHostPort === null) {
+    if (self.remoteName === null) {
         self.errorEvent.emit(self, errors.SendCallResContBeforeIdentifiedError());
         return;
     }
