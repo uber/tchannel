@@ -124,7 +124,7 @@ module.exports.DuplicateInitResponseError = TypedError({
 
 module.exports.EphemeralInitResponse = TypedError({
     type: 'tchannel.init.ephemeral-init-response',
-    message: 'tchannel: got 0.0.0.0:0 as hostPort in Init Response',
+    message: 'tchannel: got invalid 0.0.0.0:0 as hostPort in Init Response',
     hostPort: null,
     socketRemoteAddr: null,
     processName: null
