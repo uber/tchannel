@@ -60,7 +60,8 @@ class InvalidEndpointError(TChannelError):
 
 
 class TimeoutError(TChannelError):
-    pass
+    # TODO fix circular dependence
+    code = 0x01
 
 
 class ConnectionClosedError(TChannelError):

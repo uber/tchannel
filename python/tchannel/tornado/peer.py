@@ -587,9 +587,7 @@ class PeerClientOperation(object):
     @gen.coroutine
     def _send(self, connection, req):
         response_future = connection.send_request(req)
-        # Remove the local timeout (req.ttl)
-        # TODO figure out what to do with local timeout
-        with timeout(response_future, 0):
+        with timeout(response_future, req.ttl):
             response = yield response_future
 
         raise gen.Return(response)
