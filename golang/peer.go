@@ -7,9 +7,8 @@ import (
 	"golang.org/x/net/context"
 )
 
-var (
-	errInvalidConnectionState = errors.New("connection is in an invalid state")
-)
+// ErrInvalidConnectionState indicates that the connection is not in a valid state.
+var ErrInvalidConnectionState = errors.New("connection is in an invalid state")
 
 // PeerList maintains a list of Peers.
 type PeerList struct {
@@ -129,9 +128,10 @@ func (p *Peer) GetConnection(ctx context.Context) (*Connection, error) {
 }
 
 // AddConnection adds an active connection to the peer's connection list.
+// If a connection is not active, ErrInvalidConnectionState will be returned.
 func (p *Peer) AddConnection(c *Connection) error {
 	if !c.IsActive() {
-		return errInvalidConnectionState
+		return ErrInvalidConnectionState
 	}
 
 	p.mut.Lock()
