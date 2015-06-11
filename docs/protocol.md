@@ -193,7 +193,7 @@ may or may not help on modern Intel processors.
 
 0 or more bytes whose contents are determined by the frame type.
 
-The leng of the payload is frame `size` - 16.
+The length of the payload is frame `size` - 16.
 
 Full details on each payload body follow below.
 
@@ -357,7 +357,7 @@ type of 0x02 (cancelled).
 The id in the frame of the cancel message should match the id of the req frame
 intended to be cancelled.
 
-Note that since message ids are scoped to a connection, cancelling a message
+Note that since message ids are scoped to a connection, canceling a message
 might trigger the cancellation of one or more dependent messages.
 
 "why" is a string describing why the cancel was initiated. It is used only for
@@ -542,7 +542,7 @@ If nh is 1 or more, then that many key/value pairs follow.
 
 Each key and value string is preceded by one byte encoding its length.
 
-For example, the folloing hex dump:
+For example, the following hex dump:
 
 ```
 0103 6369 6402 6869  ..cid.hi
@@ -550,7 +550,7 @@ For example, the folloing hex dump:
 
 Encodes exactly one key/val pair: `("cid", "hi")`.
 
-The following table ilsts the valid transport header keys and whether they are
+The following table lists the valid transport header keys and whether they are
 valid or not in a call req or res.  Following sections will elaborate on details.
 
 name  | req | res | description
