@@ -188,7 +188,7 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
             self.sendRequest(treq, hreq, forwarded);
         }
 
-        return treq;
+        return null;
     }
 
     function forwarded(err, head, body) {
