@@ -28,6 +28,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/uber/tchannel/golang/testutils"
 	"golang.org/x/net/context"
 )
 
@@ -129,7 +130,7 @@ func TestReuseConnection(t *testing.T) {
 
 			// We need the servers to have their peers set before making outgoing calls
 			// for the outgoing calls to contain the correct peerInfo.
-			require.True(t, waitFor(time.Second, func() bool {
+			require.True(t, testutils.WaitFor(time.Second, func() bool {
 				return !ch1.PeerInfo().IsEphemeral() && !ch2.PeerInfo().IsEphemeral()
 			}))
 

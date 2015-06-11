@@ -24,6 +24,7 @@ import (
 	"errors"
 	"net"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -31,8 +32,10 @@ import (
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	tchannel "github.com/uber/tchannel/golang"
+	"github.com/uber/tchannel/golang/testutils"
 	gen "github.com/uber/tchannel/golang/thrift/gen-go/test"
 	"github.com/uber/tchannel/golang/thrift/mocks"
 )
@@ -86,15 +89,29 @@ func TestRequestError(t *testing.T) {
 	})
 }
 
-// TODO(prashant): Test disabled as it fails with connection pooling.
-func testOneWay(t *testing.T) {
+func TestOneWay(t *testing.T) {
 	withSetup(t, func(ctx context.Context, args testArgs) {
-		args.s1.On("OneWay").Return(nil)
+		var wg sync.WaitGroup
+		wg.Add(2)
+
+		onDone := func(_ mock.Arguments) {
+			wg.Done()
+		}
+
+		args.s1.On("OneWay").
+			Return(nil).
+			Run(onDone)
 		require.NoError(t, args.c1.OneWay())
 
 		// One way methods do not propagate any information (even on error)
-		args.s1.On("OneWay").Return(errors.New("err"))
+		args.s1.On("OneWay").
+			Return(errors.New("err")).
+			Run(onDone)
 		require.NoError(t, args.c1.OneWay())
+
+		// Since the client returns immediately, we need to wait to
+		// make sure the server was actually called.
+		require.True(t, testutils.WaitWG(&wg, time.Second))
 	})
 }
 
@@ -154,7 +171,9 @@ func setupServer(h *mocks.SimpleService, sh *mocks.SecondService) (net.Listener,
 }
 
 func getClients(ctx context.Context, dst string) (*gen.SimpleServiceClient, *gen.SecondServiceClient, error) {
-	tchan, err := tchannel.NewChannel("client", nil)
+	tchan, err := tchannel.NewChannel("client", &tchannel.ChannelOptions{
+		Logger: tchannel.SimpleLogger,
+	})
 	if err != nil {
 		return nil, nil, err
 	}

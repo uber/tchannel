@@ -131,7 +131,7 @@ func TestDeferredWrites(t *testing.T) {
 	assert.Equal(t, uint32(495404), u32)
 
 	u64 := r.ReadUint64()
-	assert.Equal(t, uint32(0x40950459), u64)
+	assert.Equal(t, uint64(0x40950459), u64)
 
 	b := r.ReadBytes(5)
 	assert.Equal(t, []byte{0x30, 0x12, 0x45, 0x55, 0x65}, b)
