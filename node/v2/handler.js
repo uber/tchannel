@@ -203,9 +203,9 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
             );
             return callback();
         } else {
-            self.logger.error('Expected "as" header for incoming req', {
+            self.logger.warn('Expected "as" header for incoming req', {
                 arg1: String(reqFrame.body.args[0]),
-                serviceName: reqFrame.body.serviceName,
+                serviceName: reqFrame.body.service,
                 callerName: reqFrame.body.headers.cn,
                 remoteHostPort: self.remoteHostPort
             });
@@ -222,9 +222,9 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
             self.sendErrorFrame(req.res, 'ProtocolError', err.message);
             return callback();
         } else {
-            self.logger.error('Expected "cn" header for incoming req', {
+            self.logger.warn('Expected "cn" header for incoming req', {
                 arg1: String(reqFrame.body.args[0]),
-                serviceName: reqFrame.body.serviceName,
+                serviceName: reqFrame.body.service,
                 remoteHostPort: self.remoteHostPort
             });
         }
@@ -271,7 +271,7 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
             });
             return callback(err);
         } else {
-            self.logger.error('Expected "as" for incoming response', {
+            self.logger.warn('Expected "as" for incoming response', {
                 code: resFrame.body.code,
                 remoteHostPort: self.remoteHostPort,
                 endpoint: String(resFrame.body.args[0])
@@ -461,7 +461,7 @@ TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame
 
     if (self.requireCn) {
         assert(req.headers && req.headers.cn,
-            'Expected the "cn" transport header to be set for requiest');
+            'Expected the "cn" transport header to be set for request');
     } else if (!req.headers || !req.headers.cn) {
         self.logger.error('Expected "cn" header to be set for request', {
             arg1: String(args[0]),
