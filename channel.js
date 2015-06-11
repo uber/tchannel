@@ -284,12 +284,13 @@ TChannel.prototype.onServerSocketListening = function onServerSocketListening() 
     self.listening = true;
 
     if (self.subChannels) {
-        Object.keys(self.subChannels).forEach(function each(serviceName) {
-            var chan = self.subChannels[serviceName];
+        var subChanNames = Object.keys(self.subChannels);
+        for (var i = 0; i < subChanNames.length; i++) {
+            var chan = self.subChannels[subChanNames[i]];
             if (!chan.hostPort) {
                 chan.hostPort = self.hostPort;
             }
-        });
+        }
     }
 
     self.listeningEvent.emit(self);
