@@ -361,6 +361,47 @@ allocCluster.test('self send() with error frame', 1, function t(cluster, assert)
     }
 });
 
+allocCluster.test('send() with requestDefaults', 2, function t(cluster, assert) {
+    var one = cluster.channels[0];
+    var two = cluster.channels[1];
+    var subOne = one.makeSubChannel({
+        serviceName: 'one'
+    });
+
+    var subTwo = two.makeSubChannel({
+        serviceName: 'one',
+        requestDefaults: {
+            headers: {
+                cn: 'foo'
+            }
+        },
+        peers: [one.hostPort]
+    });
+
+    subOne.handler.register('foo', function foo(req, res) {
+        res.headers.as = 'raw';
+        res.sendOk('', req.headers.cn);
+    });
+
+    subTwo.request({
+        serviceName: 'one',
+        hasNoParent: true,
+        headers: {
+            'as': 'raw',
+            cn: 'wat'
+        }
+    }).send('foo', '', '', onResponse);
+
+    function onResponse(err, resp, arg2, arg3) {
+        assert.ifError(err);
+        assert.ok(resp.ok);
+
+        assert.equal(String(arg3), 'wat');
+
+        assert.end();
+    }
+});
+
 function randSeq(seq) {
     var i = 0;
     return function random() {
