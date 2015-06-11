@@ -32,13 +32,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
+
 import logging
 import sys
 from collections import defaultdict
 
 from .formatters import json_formatter
 from .formatters import thrift_formatter
-from ..thrift import client_for
 
 from .thrift import constants
 from .thrift import TCollector
@@ -121,10 +122,6 @@ class RawZipkinTracer(object):
             )
 
 
-# TODO add different thrift service name
-TCollectorClient = client_for('tcollector', TCollector)
-
-
 class TChannelZipkinTracer(object):
     """
     Send annotations to Zipkin as Base64-encoded Thrift via TChannel.
@@ -138,6 +135,12 @@ class TChannelZipkinTracer(object):
         :param tchannel:
             A tchannel instance to send the trace info to zipkin server
         """
+
+        from ..thrift import client_for
+
+        # TODO add different thrift service name
+        TCollectorClient = client_for('tcollector', TCollector)
+
         self._tchannel = tchannel
         self.client = TCollectorClient(self._tchannel)
 

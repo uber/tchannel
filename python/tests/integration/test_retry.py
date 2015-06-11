@@ -69,6 +69,7 @@ def chain(number_of_peers, endpoint):
 
 
 @pytest.mark.gen_test
+@pytest.mark.xfail
 def test_retry_timeout():
     endpoint = b'tchannelretrytest'
     tchannel = chain(3, endpoint)

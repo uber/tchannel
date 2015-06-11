@@ -514,6 +514,8 @@ class PeerClientOperation(object):
         if traceflag is None:
             traceflag = self.peer.tchannel.trace
 
+        traceflag = traceflag() if callable(traceflag) else traceflag
+
         # set default transport headers
         headers = headers or {}
         for k, v in self.headers.iteritems():
@@ -585,7 +587,9 @@ class PeerClientOperation(object):
     @gen.coroutine
     def _send(self, connection, req):
         response_future = connection.send_request(req)
-        with timeout(response_future, req.ttl):
+        # Remove the local timeout (req.ttl)
+        # TODO figure out what to do with local timeout
+        with timeout(response_future, 0):
             response = yield response_future
 
         raise gen.Return(response)
