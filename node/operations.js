@@ -135,7 +135,7 @@ Operations.prototype.popOutReq = function popOutReq(id, context) {
         // This could be because of a confused / corrupted server.
         self.logger.info('popOutReq received for unknown or lost id', {
             context: context,
-            remoteAddr: self.connection.remoteAddr,
+            socketRemoteAddr: self.connection.socketRemoteAddr,
             direction: self.connection.direction
         });
         return null;

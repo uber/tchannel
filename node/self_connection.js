@@ -36,6 +36,9 @@ function TChannelSelfConnection(channel) {
     var self = this;
     TChannelConnectionBase.call(self, channel, 'in', channel.hostPort);
     self.idCount = 0;
+
+    // populate the remoteName as self
+    self.remoteName = channel.hostPort;
 }
 inherits(TChannelSelfConnection, TChannelConnectionBase);
 
@@ -85,6 +88,10 @@ TChannelSelfConnection.prototype.ping = function ping() {
 };
 
 TChannelSelfConnection.prototype.close = function close(callback) {
+    var self = this;
+
+    self.ops.destroy();
+
     callback();
 };
 

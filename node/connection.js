@@ -32,26 +32,29 @@ var States = require('./reqres_states');
 
 var TChannelConnectionBase = require('./connection_base');
 
-function TChannelConnection(channel, socket, direction, remoteAddr) {
-    assert(remoteAddr !== channel.hostPort, 'refusing to create self connection');
+function TChannelConnection(channel, socket, direction, socketRemoteAddr) {
+    assert(socketRemoteAddr !== channel.hostPort,
+        'refusing to create self connection'
+    );
 
     var self = this;
-    TChannelConnectionBase.call(self, channel, direction, remoteAddr);
+    TChannelConnectionBase.call(self, channel, direction, socketRemoteAddr);
     self.identifiedEvent = self.defineEvent('identified');
 
     if (direction === 'out') {
         self.channel.connectionsInitiatedStat.increment(1, {
             'host-port': self.channel.hostPort || '0.0.0.0:0',
-            'peer-host-port': self.remoteAddr
+            'peer-host-port': socketRemoteAddr
         });
     } else {
         self.channel.connectionsAcceptedStat.increment(1, {
             'host-port': self.channel.hostPort,
-            'peer-host-port': self.remoteAddr
+            'peer-host-port': socketRemoteAddr
         });
     }
 
     self.socket = socket;
+    self.ephemeral = false;
 
     var opts = {
         logger: self.channel.logger,
@@ -103,12 +106,13 @@ TChannelConnection.prototype.setupSocket = function setupSocket() {
     function onSocketClose() {
         self.resetAll(errors.SocketClosedError({
             reason: 'remote closed',
-            remoteAddr: self.remoteAddr,
+            socketRemoteAddr: self.socketRemoteAddr,
             direction: self.direction,
             remoteName: self.remoteName
         }));
-        if (self.remoteName === '0.0.0.0:0') {
-            self.channel.peers.delete(self.remoteAddr);
+
+        if (self.ephemeral) {
+            self.channel.peers.delete(self.socketRemoteAddr);
         }
     }
 
@@ -320,6 +324,15 @@ TChannelConnection.prototype.start = function start() {
 
 TChannelConnection.prototype.onOutIdentified = function onOutIdentified(init) {
     var self = this;
+
+    if (init.hostPort === '0.0.0.0:0') {
+        return self.emit('error', errors.EphemeralInitResponse({
+            hostPort: init.hostPort,
+            socketRemoteAddr: self.socketRemoteAddr,
+            processName: init.processName
+        }));
+    }
+
     self.remoteName = init.hostPort;
     self.identifiedEvent.emit(self, {
         hostPort: init.hostPort,
@@ -330,6 +343,7 @@ TChannelConnection.prototype.onOutIdentified = function onOutIdentified(init) {
 TChannelConnection.prototype.onInIdentified = function onInIdentified(init) {
     var self = this;
     if (init.hostPort === '0.0.0.0:0') {
+        self.ephemeral = true;
         self.remoteName = '' + self.socket.remoteAddress + ':' + self.socket.remotePort;
         assert(self.remoteName !== self.channel.hostPort,
               'should not be able to receive ephemeral connection from self');
@@ -361,7 +375,7 @@ TChannelConnection.prototype.onSocketError = function onSocketError(err) {
         self.resetAll(errors.SocketError(err, {
             hostPort: self.channel.hostPort,
             direction: self.direction,
-            remoteAddr: self.remoteAddr
+            socketRemoteAddr: self.socketRemoteAddr
         }));
     }
 };
@@ -418,26 +432,26 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
         if (self.direction === 'out') {
             self.channel.connectionsConnectErrorsStat.increment(1, {
                 'host-port': self.channel.hostPort || '0.0.0.0:0',
-                'peer-host-port': self.remoteAddr
+                'peer-host-port': self.socketRemoteAddr
             });
         } else {
             self.channel.connectionsAcceptedErrorsStat.increment(1, {
                 'host-port': self.channel.hostPort,
-                'peer-host-port': self.remoteAddr
+                'peer-host-port': self.socketRemoteAddr
             });
         }
     } else {
         if (err.type !== 'tchannel.socket-local-closed') {
             self.channel.connectionsErrorsStat.increment(1, {
                 'host-port': self.channel.hostPort || '0.0.0.0:0',
-                'peer-host-port': self.remoteAddr,
+                'peer-host-port': self.remoteName,
                 'type': err.type // TODO unified error type
             });
         }
 
         self.channel.connectionsClosedStat.increment(1, {
             'host-port': self.channel.hostPort || '0.0.0.0:0',
-            'peer-host-port': self.remoteAddr,
+            'peer-host-port': self.remoteName,
             'reason': err.type // TODO unified reason type
         });
     }
@@ -479,7 +493,7 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
         self.ops.removeReq(id);
 
         var info = {
-            remoteAddr: self.remoteAddr,
+            socketRemoteAddr: self.socketRemoteAddr,
             direction: self.direction,
             remoteName: self.remoteName,
             reqRemoteAddr: req.remoteAddr,

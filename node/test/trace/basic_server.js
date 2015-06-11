@@ -55,6 +55,10 @@ test('basic tracing test', function (assert) {
     var serverChan = server.makeSubChannel({
         serviceName: 'server'
     });
+    var subServiceChan = server.makeSubChannel({
+        serviceName: 'subservice',
+        peers: ['127.0.0.1:4042']
+    });
 
     var client = new TChannel({
         logger: logger,
@@ -62,7 +66,8 @@ test('basic tracing test', function (assert) {
         trace: true
     });
     var clientChan = client.makeSubChannel({
-        serviceName: 'server'
+        serviceName: 'server',
+        peers: ['127.0.0.1:4040']
     });
 
     subChan.register('/foobar', function (req, res) {
@@ -75,15 +80,15 @@ test('basic tracing test', function (assert) {
     serverChan.register('/top_level_endpoint', function (req, res) {
         logger.debug("top level sending to subservice");
         setTimeout(function () {
-            var servReq = serverChan.request({
-                host: '127.0.0.1:4042',
+            var servReq = subServiceChan.request({
                 serviceName: 'subservice',
                 parent: req,
                 headers: {
                     as: 'raw',
                     cn: 'wat'
                 },
-                trace: true});
+                trace: true
+            });
             var peers = server.peers.values();
             var ready = new CountedReadySignal(peers.length);
             peers.forEach(function each(peer) {
@@ -114,7 +119,6 @@ test('basic tracing test', function (assert) {
 
         logger.debug('client making req');
         var req = clientChan.request({
-            host: '127.0.0.1:4040',
             serviceName: 'server',
             hasNoParent: true,
             trace: true,

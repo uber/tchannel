@@ -166,6 +166,7 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
     // - driving peer selection manually therefore
     // TODO: more http state machine integration
 
+    var treq;
     var options = tchannel.requestOptions({
         streamed: true,
         hasNoParent: true
@@ -177,16 +178,17 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
         return null;
     } else {
         // TODO: observable
-        var treq = peer.request(options);
         if (!peer.isConnected()) {
             peer.connect().on('identified', function onIdentified() {
+                treq = peer.request(options);
                 self.sendRequest(treq, hreq, forwarded);
             });
         } else {
+            treq = peer.request(options);
             self.sendRequest(treq, hreq, forwarded);
         }
 
-        return treq;
+        return null;
     }
 
     function forwarded(err, head, body) {

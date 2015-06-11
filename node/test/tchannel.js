@@ -47,7 +47,7 @@ test('add peer: get connection', function t(assert) {
     var connection = server.peers.add(clientName).connect();
 
     assert.ok(connection, 'A connection object should be returned');
-    assert.equals(connection.remoteAddr, '127.0.0.1:4041', 'Remote address should match the client');
+    assert.equals(connection.socketRemoteAddr, '127.0.0.1:4041', 'Remote address should match the client');
     server.quit(assert.end);
   });
 });
@@ -58,7 +58,7 @@ test('peer add, connect', function t(assert) {
   server.listen(serverOptions.port, serverOptions.host, function listening() {
     var connection = server.peers.add(clientName).connect();
     assert.ok(connection, 'A connection object should be returned');
-    assert.equals(connection.remoteAddr, '127.0.0.1:4041', 'Remote address should match the client');
+    assert.equals(connection.socketRemoteAddr, '127.0.0.1:4041', 'Remote address should match the client');
     server.quit(assert.end);
   });
 });
@@ -80,7 +80,7 @@ test('get peer: should return requested peer', function t(assert) {
   server.listen(serverOptions.port, serverOptions.host, function listening() {
     server.peers.add(clientName).connect();
     assert.equals(clientName,
-      server.peers.get(clientName).connections[0].remoteAddr,
+      server.peers.get(clientName).connections[0].socketRemoteAddr,
       'added peer connection');
     server.quit(assert.end);
   });
@@ -94,8 +94,8 @@ test('get peers: should get all peers', function t(assert) {
     server.peers.add(client1Name).connect();
     var peers = server.peers.values();
     assert.equals(peers.length, 2);
-    assert.equals(clientName, peers[0].connections[0].remoteAddr, 'first peer connection');
-    assert.equals(client1Name, peers[1].connections[0].remoteAddr, 'first peer connection');
+    assert.equals(clientName, peers[0].connections[0].socketRemoteAddr, 'first peer connection');
+    assert.equals(client1Name, peers[1].connections[0].socketRemoteAddr, 'first peer connection');
     server.quit(assert.end);
   });
 });
@@ -119,7 +119,7 @@ test('getOut connection: add and get for provided peer', function t(assert) {
     assert.ok(peer, 'added peer should be returned');
     var conn = peer.connect();
     assert.ok(conn, 'added connections should be returned');
-    assert.equals(conn.remoteAddr, clientName, 'Remote address should match the client');
+    assert.equals(conn.socketRemoteAddr, clientName, 'Remote address should match the client');
     server.quit(assert.end);
   });
 });

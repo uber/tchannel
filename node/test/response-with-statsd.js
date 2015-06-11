@@ -38,7 +38,7 @@ allocCluster.test('emits stats on response ok', {
     var client = cluster.channels[1];
     var clientHost;
     server.on('connection', function onConnection(conn) {
-        clientHost = conn.remoteAddr
+        clientHost = conn.socketRemoteAddr
             .replace(/:/g, '-')
             .replace(/\./g, '-');
     });
@@ -125,7 +125,7 @@ allocCluster.test('emits stats on response not ok', {
     var client = cluster.channels[1];
     var clientHost;
     server.on('connection', function onConnection(conn) {
-        clientHost = conn.remoteAddr
+        clientHost = conn.socketRemoteAddr
             .replace(/:/g, '-')
             .replace(/\./g, '-');
     });
@@ -212,7 +212,7 @@ allocCluster.test('emits stats on response error', {
     var client = cluster.channels[1];
     var clientHost;
     server.on('connection', function onConnection(conn) {
-        clientHost = conn.remoteAddr
+        clientHost = conn.socketRemoteAddr
             .replace(/:/g, '-')
             .replace(/\./g, '-');
     });

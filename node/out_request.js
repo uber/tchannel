@@ -74,7 +74,7 @@ function TChannelOutRequest(id, options) {
             traceid: null,
             parentid: null,
             flags: options.trace? 1 : 0,
-            hostPort: self.remoteAddr,
+            remoteName: self.remoteAddr,
             serviceName: self.serviceName,
             name: '' // fill this in later
         });

@@ -234,35 +234,35 @@ TChannel.prototype.onServerSocketConnection = function onServerSocketConnection(
 
     if (self.destroyed) {
         self.logger.error('got incoming socket whilst destroyed', {
-            remoteAddr: sock.remoteAddr,
+            remoteAddress: sock.remoteAddress,
             remotePort: sock.remotePort,
             hostPort: self.hostPort
         });
         return;
     }
 
-    var remoteAddr = sock.remoteAddress + ':' + sock.remotePort;
-    var conn = new TChannelConnection(self, sock, 'in', remoteAddr);
+    var socketRemoteAddr = sock.remoteAddress + ':' + sock.remotePort;
+    var conn = new TChannelConnection(self, sock, 'in', socketRemoteAddr);
 
     conn.spanEvent.on(function handleSpanFromConn(span) {
         self.tracer.report(span);
     });
 
-    if (self.serverConnections[remoteAddr]) {
-        var oldConn = self.serverConnections[remoteAddr];
+    if (self.serverConnections[socketRemoteAddr]) {
+        var oldConn = self.serverConnections[socketRemoteAddr];
         oldConn.resetAll(errors.SocketClosedError({
-            reason: 'duplicate remoteAddr incoming conn'
+            reason: 'duplicate socketRemoteAddr incoming conn'
         }));
-        delete self.serverConnections[remoteAddr];
+        delete self.serverConnections[socketRemoteAddr];
     }
 
     sock.on('close', onSocketClose);
 
-    self.serverConnections[remoteAddr] = conn;
+    self.serverConnections[socketRemoteAddr] = conn;
     self.connectionEvent.emit(self, conn);
 
     function onSocketClose() {
-        delete self.serverConnections[remoteAddr];
+        delete self.serverConnections[socketRemoteAddr];
     }
 };
 

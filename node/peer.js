@@ -42,11 +42,12 @@ function TChannelPeer(channel, hostPort, options) {
     self.stateChangedEvent = self.defineEvent('stateChanged');
     self.allocConnectionEvent = self.defineEvent('allocConnection');
 
+    assert(hostPort !== '0.0.0.0:0', 'Cannot create ephemeral peer');
+
     self.channel = channel;
     self.logger = self.channel.logger;
     self.options = options || {};
     self.hostPort = hostPort;
-    self.isEphemeral = self.hostPort === '0.0.0.0:0';
     self.connections = [];
     self.random = self.channel.random;
 

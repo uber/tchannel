@@ -33,7 +33,7 @@ allocCluster.test('emits response stats with ok', {
     var clientHost;
     var stats = [];
     server.on('connection', function onConnection(conn) {
-        clientHost = conn.remoteAddr;
+        clientHost = conn.socketRemoteAddr;
     });
 
     server.makeSubChannel({
@@ -133,7 +133,7 @@ allocCluster.test('emits response stats with not ok', {
     var clientHost;
     var stats = [];
     server.on('connection', function onConnection(conn) {
-        clientHost = conn.remoteAddr;
+        clientHost = conn.socketRemoteAddr;
     });
 
     server.makeSubChannel({
@@ -234,7 +234,7 @@ allocCluster.test('emits response stats with error', {
     var clientHost;
     var stats = [];
     server.on('connection', function onConnection(conn) {
-        clientHost = conn.remoteAddr;
+        clientHost = conn.socketRemoteAddr;
     });
 
     server.makeSubChannel({
