@@ -269,6 +269,9 @@ TChannel.prototype.onServerSocketConnection = function onServerSocketConnection(
 TChannel.prototype.onServerSocketListening = function onServerSocketListening() {
     var self = this;
 
+    var address = self.serverSocket.address();
+    var hostPort = self.host + ':' + address.port;
+
     if (self.destroyed) {
         self.logger.error('got serverSocket listen whilst destroyed', {
             requestHostPort: self.host + ':' + self.requestedPort,
@@ -277,8 +280,7 @@ TChannel.prototype.onServerSocketListening = function onServerSocketListening() 
         return;
     }
 
-    var address = self.serverSocket.address();
-    self.hostPort = self.host + ':' + address.port;
+    self.hostPort = hostPort;
     self.listening = true;
 
     if (self.subChannels) {
