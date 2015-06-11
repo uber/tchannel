@@ -1,10 +1,12 @@
-package tchannel
+package testutils
 
-import "time"
+import (
+	"time"
+)
 
-// waitFor will retry f till it returns true for a maximum of timeout.
+// WaitFor will retry f till it returns true for a maximum of timeout.
 // It returns true if f returned true, false if timeout was hit.
-func waitFor(timeout time.Duration, f func() bool) bool {
+func WaitFor(timeout time.Duration, f func() bool) bool {
 	timeoutEnd := time.Now().Add(timeout)
 
 	const maxSleep = time.Millisecond * 50
