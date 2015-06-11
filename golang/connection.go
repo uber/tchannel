@@ -44,6 +44,11 @@ func (p PeerInfo) String() string {
 	return fmt.Sprintf("%s(%s)", p.HostPort, p.ProcessName)
 }
 
+// IsEphemeral returns if hostPort is the default ephemeral hostPort.
+func (p PeerInfo) IsEphemeral() bool {
+	return p.HostPort == "" || p.HostPort == ephemeralHostPort
+}
+
 // LocalPeerInfo adds service name to the peer info, only required for the local peer.
 type LocalPeerInfo struct {
 	PeerInfo
@@ -95,6 +100,9 @@ type ConnectionOptions struct {
 	ChecksumType ChecksumType
 }
 
+// OnActiveHandler is the event handler for when a connection becomes active.
+type OnActiveHandler func(c *Connection)
+
 // Connection represents a connection to a remote peer.
 type Connection struct {
 	log            Logger
@@ -110,6 +118,7 @@ type Connection struct {
 	outbound       messageExchangeSet
 	handlers       *handlerMap
 	nextMessageID  uint32
+	onActive       OnActiveHandler
 }
 
 // nextConnID gives an ID for each connection for debugging purposes.
@@ -144,20 +153,25 @@ const (
 )
 
 // Creates a new Connection around an outbound connection initiated to a peer
-func newOutboundConnection(conn net.Conn, handlers *handlerMap, log Logger, peerInfo LocalPeerInfo,
+func newOutboundConnection(hostPort string, handlers *handlerMap, log Logger, peerInfo LocalPeerInfo,
 	opts *ConnectionOptions) (*Connection, error) {
-	return newConnection(conn, connectionWaitingToSendInitReq, handlers, peerInfo, log, opts), nil
+	conn, err := net.Dial("tcp", hostPort)
+	if err != nil {
+		return nil, err
+	}
+
+	return newConnection(conn, connectionWaitingToSendInitReq, handlers, peerInfo, log, nil, opts), nil
 }
 
 // Creates a new Connection based on an incoming connection from a peer
 func newInboundConnection(conn net.Conn, handlers *handlerMap, peerInfo LocalPeerInfo, log Logger,
-	opts *ConnectionOptions) (*Connection, error) {
-	return newConnection(conn, connectionWaitingToRecvInitReq, handlers, peerInfo, log, opts), nil
+	onActive OnActiveHandler, opts *ConnectionOptions) (*Connection, error) {
+	return newConnection(conn, connectionWaitingToRecvInitReq, handlers, peerInfo, log, onActive, opts), nil
 }
 
 // Creates a new connection in a given initial state
-func newConnection(conn net.Conn, initialState connectionState, handlers *handlerMap, peerInfo LocalPeerInfo, log Logger,
-	opts *ConnectionOptions) *Connection {
+func newConnection(conn net.Conn, initialState connectionState, handlers *handlerMap, peerInfo LocalPeerInfo,
+	log Logger, onActive OnActiveHandler, opts *ConnectionOptions) *Connection {
 
 	if opts == nil {
 		opts = &ConnectionOptions{}
@@ -201,11 +215,23 @@ func newConnection(conn net.Conn, initialState connectionState, handlers *handle
 			exchanges: make(map[uint32]*messageExchange),
 		},
 		handlers: handlers,
+		onActive: onActive,
 	}
 
 	go c.readFrames()
 	go c.writeFrames()
 	return c
+}
+
+// IsActive returns whether this connection is in an active state.
+func (c *Connection) IsActive() bool {
+	return c.state == connectionActive
+}
+
+func (c *Connection) callOnActive() {
+	if f := c.onActive; f != nil {
+		f(c)
+	}
 }
 
 // Initiates a handshake with a peer.
@@ -259,7 +285,7 @@ func (c *Connection) sendInit(ctx context.Context) error {
 	}
 
 	c.remotePeerInfo.HostPort = res.initParams[InitParamHostPort]
-	if c.remotePeerInfo.HostPort == ephemeralHostPort || c.remotePeerInfo.HostPort == "" {
+	if c.remotePeerInfo.IsEphemeral() {
 		c.remotePeerInfo.HostPort = c.conn.RemoteAddr().String()
 	}
 	c.remotePeerInfo.ProcessName = res.initParams[InitParamProcessName]
@@ -271,6 +297,7 @@ func (c *Connection) sendInit(ctx context.Context) error {
 		return nil
 	})
 
+	c.callOnActive()
 	return nil
 }
 
@@ -301,6 +328,9 @@ func (c *Connection) handleInitReq(frame *Frame) {
 
 	c.remotePeerInfo.HostPort = req.initParams[InitParamHostPort]
 	c.remotePeerInfo.ProcessName = req.initParams[InitParamProcessName]
+	if c.remotePeerInfo.IsEphemeral() {
+		c.remotePeerInfo.HostPort = c.conn.RemoteAddr().String()
+	}
 
 	res := initRes{initMessage{id: frame.Header.ID}}
 	res.initParams = initParams{
@@ -321,6 +351,8 @@ func (c *Connection) handleInitReq(frame *Frame) {
 
 		return nil
 	})
+
+	c.callOnActive()
 }
 
 // Handles an incoming InitRes.  If we are waiting for the peer to send us an

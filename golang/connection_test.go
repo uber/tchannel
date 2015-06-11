@@ -22,6 +22,7 @@ package tchannel
 
 import (
 	"net"
+	"sync"
 	"testing"
 	"time"
 
@@ -117,6 +118,52 @@ func TestDefaultFormat(t *testing.T) {
 	})
 }
 
+func TestReuseConnection(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+
+	withTestChannel(t, func(ch1 *Channel, hostPort1 string) {
+		withTestChannel(t, func(ch2 *Channel, hostPort2 string) {
+			ch1.Register(testHandlerFunc(t, (&echoSaver{}).echo), "s1", "op")
+			ch2.Register(testHandlerFunc(t, (&echoSaver{}).echo), "s2", "op")
+
+			// We need the servers to have their peers set before making outgoing calls
+			// for the outgoing calls to contain the correct peerInfo.
+			require.True(t, waitFor(time.Second, func() bool {
+				return !ch1.PeerInfo().IsEphemeral() && !ch2.PeerInfo().IsEphemeral()
+			}))
+
+			outbound, err := ch1.BeginCall(ctx, hostPort2, "s2", "op", nil)
+			require.NoError(t, err)
+
+			// Try to make another call at the same time, should reuse the same connection.
+			outbound2, err := ch1.BeginCall(ctx, hostPort2, "s2", "op", nil)
+			require.NoError(t, err)
+			assert.Equal(t, outbound.conn, outbound2.conn)
+
+			// When ch2 tries to call ch1, it should reuse the inbound connection from ch1.
+			outbound3, err := ch2.BeginCall(ctx, hostPort1, "s1", "op", nil)
+			require.NoError(t, err)
+			assert.Equal(t, outbound.conn.conn.RemoteAddr(), outbound3.conn.conn.LocalAddr())
+			assert.Equal(t, outbound.conn.conn.LocalAddr(), outbound3.conn.conn.RemoteAddr())
+
+			// Ensure all calls can complete in parallel.
+			var wg sync.WaitGroup
+			for _, call := range []*OutboundCall{outbound, outbound2, outbound3} {
+				wg.Add(1)
+				go func(call *OutboundCall) {
+					defer wg.Done()
+					resp1, resp2, err := sendRecvArgs(call, []byte("arg2"), []byte("arg3"))
+					require.NoError(t, err)
+					assert.Equal(t, resp1, []byte("arg2"), "result does match argument")
+					assert.Equal(t, resp2, []byte("arg3"), "result does match argument")
+				}(call)
+			}
+			wg.Wait()
+		})
+	})
+}
+
 func TestBadRequest(t *testing.T) {
 	withTestChannel(t, func(ch *Channel, hostPort string) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
@@ -179,14 +226,7 @@ func TestFragmentation(t *testing.T) {
 	})
 }
 
-func sendRecv(ctx context.Context, ch *Channel, hostPort string, serviceName, operation string,
-	arg2, arg3 []byte) ([]byte, []byte, error) {
-
-	call, err := ch.BeginCall(ctx, hostPort, serviceName, operation, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-
+func sendRecvArgs(call *OutboundCall, arg2, arg3 []byte) ([]byte, []byte, error) {
 	if err := NewArgWriter(call.Arg2Writer()).Write(arg2); err != nil {
 		return nil, nil, err
 	}
@@ -208,6 +248,17 @@ func sendRecv(ctx context.Context, ch *Channel, hostPort string, serviceName, op
 	return respArg2, respArg3, nil
 }
 
+func sendRecv(ctx context.Context, ch *Channel, hostPort string, serviceName, operation string,
+	arg2, arg3 []byte) ([]byte, []byte, error) {
+
+	call, err := ch.BeginCall(ctx, hostPort, serviceName, operation, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return sendRecvArgs(call, arg2, arg3)
+}
+
 func withTestChannel(t *testing.T, f func(ch *Channel, hostPort string)) {
 	opts := ChannelOptions{
 		ProcessName: testProcessName,
@@ -223,4 +274,6 @@ func withTestChannel(t *testing.T, f func(ch *Channel, hostPort string)) {
 	go ch.Serve(l)
 
 	f(ch, l.Addr().String())
+
+	ch.Close()
 }
