@@ -514,6 +514,8 @@ class PeerClientOperation(object):
         if traceflag is None:
             traceflag = self.peer.tchannel.trace
 
+        traceflag = traceflag() if callable(traceflag) else traceflag
+
         # set default transport headers
         headers = headers or {}
         for k, v in self.headers.iteritems():
