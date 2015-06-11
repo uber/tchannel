@@ -88,6 +88,10 @@ TChannelSelfConnection.prototype.ping = function ping() {
 };
 
 TChannelSelfConnection.prototype.close = function close(callback) {
+    var self = this;
+
+    self.ops.destroy();
+
     callback();
 };
 
