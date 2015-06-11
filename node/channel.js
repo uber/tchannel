@@ -269,25 +269,28 @@ TChannel.prototype.onServerSocketConnection = function onServerSocketConnection(
 TChannel.prototype.onServerSocketListening = function onServerSocketListening() {
     var self = this;
 
+    var address = self.serverSocket.address();
+    var hostPort = self.host + ':' + address.port;
+
     if (self.destroyed) {
         self.logger.error('got serverSocket listen whilst destroyed', {
-            requestHostPort: self.host + ':' + self.requestedPort,
-            hostPort: self.host + ':' + self.serverSocket.address().port
+            requestedPort: self.requestedPort,
+            hostPort: hostPort
         });
         return;
     }
 
-    var address = self.serverSocket.address();
-    self.hostPort = self.host + ':' + address.port;
+    self.hostPort = hostPort;
     self.listening = true;
 
     if (self.subChannels) {
-        Object.keys(self.subChannels).forEach(function each(serviceName) {
-            var chan = self.subChannels[serviceName];
+        var subChanNames = Object.keys(self.subChannels);
+        for (var i = 0; i < subChanNames.length; i++) {
+            var chan = self.subChannels[subChanNames[i]];
             if (!chan.hostPort) {
                 chan.hostPort = self.hostPort;
             }
-        });
+        }
     }
 
     self.listeningEvent.emit(self);
