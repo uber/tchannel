@@ -463,8 +463,9 @@ code   | name                 | description
 `0x03` | busy                 | Node is too busy, this request is safe to retry elsewhere if desired, prefer other peers for future requests where possible.
 `0x04` | declined             | Node declined request for reasons other than load, the request is safe to retry elsewhere if desired, do not change peer preferencing for future requests.
 `0x05` | unexpected error     | Request resulted in an unexpected error. The request may have been completed before the error, retry only if the request is idempotent or duplicate execution can be handled.
-`0x06` | bad request          | Request args do not match expectations, request will never be satisfied, do not retry
+`0x06` | bad request          | Request args do not match expectations, request will never be satisfied, do not retry.
 `0x07` | network error        | A network error (e.g. socket error) occurred.
+`0x08` | unhealthy            | A relay on the network declined to forward the request to an unhealthy node, do not retry.
 `0xFF` | fatal protocol error | Connection will close after this frame. message ID of this frame should be `0xFFFFFFFF`.
 
 ### id:4
