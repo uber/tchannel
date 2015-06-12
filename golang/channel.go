@@ -195,6 +195,14 @@ func (ch *Channel) GetSubChannel(serviceName string) *SubChannel {
 	return ch.registerNewSubChannel(serviceName)
 }
 
+// Peers returns the PeerList for the channel.
+func (ch *Channel) Peers() *PeerList {
+	ch.mutable.mut.RLock()
+	defer ch.mutable.mut.RUnlock()
+
+	return ch.peers
+}
+
 // BeginCall starts a new call to a remote peer, returning an OutboundCall that can
 // be used to write the arguments of the call.
 func (ch *Channel) BeginCall(ctx context.Context, hostPort, serviceName, operationName string, callOptions *CallOptions) (*OutboundCall, error) {

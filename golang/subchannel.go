@@ -29,6 +29,10 @@ func (c *SubChannel) BeginCall(ctx context.Context, operationName string, callOp
 	if callOptions == nil {
 		callOptions = defaultCallOptions
 	}
-
 	return c.peers.Get().BeginCall(ctx, c.serviceName, operationName, callOptions)
+}
+
+// Peers returns the PeerList for this subchannel.
+func (c *SubChannel) Peers() *PeerList {
+	return c.peers
 }
