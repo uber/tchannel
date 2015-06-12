@@ -31,14 +31,13 @@ function ServiceDispatchHandler(options) {
     }
     var self = this;
 
-    self.options = options;
     assert(options, 'service dispatch handler options not actually optional');
-    self.channel = self.options.channel;
-    self.logger = self.options.logger;
-    self.statsd = self.options.statsd;
-    self.egressNodes = self.options.egressNodes;
+    self.channel = options.channel;
+    self.logger = options.logger;
+    self.statsd = options.statsd;
+    self.egressNodes = options.egressNodes;
     self.createdAt = self.channel.timers.now();
-    self.logGracePeriod = self.options.logGracePeriod ||
+    self.logGracePeriod = options.logGracePeriod ||
         DEFAULT_LOG_GRACE_PERIOD;
     self.permissionsCache = options.permissionsCache;
 
