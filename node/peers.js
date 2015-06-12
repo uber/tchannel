@@ -39,6 +39,7 @@ function TChannelPeers(channel, options) {
     self.channel = channel;
     self.logger = self.channel.logger;
     self.options = options || {};
+    self.initialPeerState = self.options.initialPeerState;
     self._map = Object.create(null);
     self.selfPeer = TChannelSelfPeer(self.channel);
 }
@@ -79,8 +80,10 @@ TChannelPeers.prototype.add = function add(hostPort, options) {
             return self.selfPeer;
         }
         if (self.channel.topChannel) {
-            peer = self.channel.topChannel.peers.add(hostPort);
+            peer = self.channel.topChannel.peers.add(hostPort, options);
         } else {
+            options = options || {};
+            options.initialState = self.initialPeerState;
             peer = TChannelPeer(self.channel, hostPort, options);
             self.allocPeerEvent.emit(self, peer);
         }
