@@ -173,6 +173,11 @@ func (response *OutboundCallResponse) ApplicationError() bool {
 	return response.callRes.ResponseCode == responseApplicationError
 }
 
+// Format the format of the request from the ArgScheme transport header.
+func (response *OutboundCallResponse) Format() Format {
+	return Format(response.callRes.Headers[ArgScheme])
+}
+
 // Arg2Reader returns an io.ReadCloser to read the second argument.
 // The ReadCloser must be closed once the argument has been read.
 func (response *OutboundCallResponse) Arg2Reader() (io.ReadCloser, error) {
