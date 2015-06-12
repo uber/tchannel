@@ -1,7 +1,7 @@
 GODEPS := $(shell pwd)/Godeps/_workspace
 OLDGOPATH := $(GOPATH)
 PATH := $(GODEPS)/bin:$(PATH)
-PKGS := . ./thrift ./typed ./examples/hello/server ./examples/hello/client ./examples/ping ./examples/thrift
+PKGS := . ./hyperbahn ./thrift ./typed ./examples/hello/server ./examples/hello/client ./examples/ping ./examples/thrift ./examples/hyperbahn/echo-server
 BUILD := ./build
 SRCS := $(foreach pkg,$(PKGS),$(wildcard $(pkg)/*.go))
 export GOPATH = $(GODEPS):$(OLDGOPATH)
@@ -65,6 +65,7 @@ examples: clean setup thrift_example
 	go build -o $(BUILD)/examples/hello/server ./examples/hello/server
 	go build -o $(BUILD)/examples/hello/client ./examples/hello/client
 	go build -o $(BUILD)/examples/ping/pong    ./examples/ping/main.go
+	go build -o $(BUILD)/examples/hyperbahn/echo-server    ./examples/hyperbahn/echo-server/main.go
 
 thrift_gen:
 	cd examples/thrift && thrift -r --gen go:thrift_import=github.com/apache/thrift/lib/go/thrift test.thrift
