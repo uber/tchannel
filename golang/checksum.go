@@ -66,9 +66,9 @@ func (t ChecksumType) New() Checksum {
 	case ChecksumTypeNone:
 		return nullChecksum{}
 	case ChecksumTypeCrc32:
-		return &crc32Checksum{crc32: crc32.NewIEEE()}
+		return &hashChecksum{checksumType: t, hash: crc32.NewIEEE()}
 	case ChecksumTypeCrc32C:
-		return &crc32Checksum{crc32: crc32.New(crc32CastagnoliTable)}
+		return &hashChecksum{checksumType: t, hash: crc32.New(crc32CastagnoliTable)}
 	case ChecksumTypeFarmhash:
 		// TODO(mmihic): Implement
 		return nil
@@ -108,19 +108,20 @@ func (c nullChecksum) Add(b []byte) []byte { return nil }
 // Sum returns the current checksum calculation
 func (c nullChecksum) Sum() []byte { return nil }
 
-// CRC32 Checksum
-type crc32Checksum struct {
-	crc32 hash.Hash32
+// Hash Checksum
+type hashChecksum struct {
+	checksumType ChecksumType
+	hash         hash.Hash
 }
 
 // TypeCode returns the type of the checksum
-func (c *crc32Checksum) TypeCode() ChecksumType { return ChecksumTypeCrc32 }
+func (h *hashChecksum) TypeCode() ChecksumType { return h.checksumType }
 
 // Size returns the size of the checksum data
-func (c *crc32Checksum) Size() int { return crc32.Size }
+func (h *hashChecksum) Size() int { return h.hash.Size() }
 
 // Add adds a byte slice to the checksum calculation
-func (c *crc32Checksum) Add(b []byte) []byte { c.crc32.Write(b); return c.Sum() }
+func (h *hashChecksum) Add(b []byte) []byte { h.hash.Write(b); return h.Sum() }
 
 // Sum returns the current value of the checksum calculation
-func (c *crc32Checksum) Sum() []byte { return c.crc32.Sum(nil) }
+func (h *hashChecksum) Sum() []byte { return h.hash.Sum(nil) }
