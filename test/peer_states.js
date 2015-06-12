@@ -24,19 +24,15 @@ var series = require('run-series');
 var parallel = require('run-parallel');
 var MockTimers = require('time-mock');
 var allocCluster = require('./lib/alloc-cluster.js');
+var States = require('../states');
 
 allocCluster.test('healthy state stays healthy', {
     numPeers: 2,
     channelOptions: {
         timers: MockTimers(Date.now()),
-        random: winning
+        random: winning,
+        initialPeerState: States.HealthyState
     },
-    requestDefaults: {
-        headers: {
-            as: 'raw',
-            cn: 'wat'
-        }
-    }
 }, function t(cluster, assert) {
     var one = cluster.channels[0];
     var peer = one.peers.add(cluster.hosts[1]);
@@ -57,7 +53,7 @@ allocCluster.test('healthy state stays healthy', {
     });
 });
 
-testSetup('stays healthy with partial success', function t(cluster, assert) {
+testSetup('stays healthy with partial success', {}, function t(cluster, assert) {
     var peer = cluster.client.peers.get(cluster.hosts[1]);
 
     series([
@@ -75,7 +71,7 @@ testSetup('stays healthy with partial success', function t(cluster, assert) {
                 cluster.send('glad'),
                 cluster.send('sad'),
                 cluster.send('glad'),
-                cluster.send('sad'),
+                cluster.send('sad')
             ], done);
         },
 
@@ -88,7 +84,36 @@ testSetup('stays healthy with partial success', function t(cluster, assert) {
     ], assert.end);
 });
 
-testSetup('healthy goes unhealthy with partial success', function t(cluster, assert) {
+testSetup('stays healthy with complete success when locked', {
+    initialPeerState: States.LockedHealthyState
+}, function t(cluster, assert) {
+    var peer = cluster.client.peers.get(cluster.hosts[1]);
+
+    series([
+        function checkIt(done) {
+            assert.equals(peer.state.shouldRequest(), 1.0, 'expected fully connected score');
+            assert.equals(peer.state.type, 'tchannel.healthy-locked', 'locked healthy');
+            done();
+        },
+
+        function sendIt(done) {
+            parallel([
+                cluster.send('sad'),
+                cluster.send('sad'),
+                cluster.send('sad')
+            ], done);
+        },
+
+        function checkItAgain(done) {
+            peer.channel.timers.advance(1000);
+            assert.equals(peer.state.shouldRequest(), 1.0, 'expected fully connected score');
+            assert.equals(peer.state.type, 'tchannel.healthy-locked', 'still locked healthy');
+            done();
+        }
+    ], assert.end);
+});
+
+testSetup('healthy goes unhealthy with partial success', {}, function t(cluster, assert) {
     var peer = cluster.client.peers.get(cluster.hosts[1]);
 
     series([
@@ -116,7 +141,7 @@ testSetup('healthy goes unhealthy with partial success', function t(cluster, ass
     ], assert.end);
 });
 
-testSetup('one check per period while unhealthy', function t(cluster, assert) {
+testSetup('one check per period while unhealthy', {}, function t(cluster, assert) {
     var peer = cluster.client.peers.get(cluster.hosts[1]);
 
     series([
@@ -152,7 +177,7 @@ testSetup('one check per period while unhealthy', function t(cluster, assert) {
     ], assert.end);
 });
 
-testSetup('consecutive success during unhealthy periods restores health', function t(cluster, assert) {
+testSetup('consecutive success during unhealthy periods restores health', {}, function t(cluster, assert) {
     var peer = cluster.client.peers.get(cluster.hosts[1]);
 
     var Steps = [
@@ -213,13 +238,20 @@ testSetup('consecutive success during unhealthy periods restores health', functi
 
 });
 
-function testSetup(desc, testFunc) {
+function testSetup(desc, options, testFunc) {
     allocCluster.test(desc, {
         numPeers: 2,
         channelOptions: {
             timers: MockTimers(Date.now()),
-            random: winning
-        }
+            random: winning,
+            initialPeerState: options.initialPeerState || States.HealthyState,
+            requestDefaults: {
+                headers: {
+                    as: 'raw',
+                    cn: 'wat'
+                }
+            }
+        },
     }, function t(cluster, assert) {
         var one = cluster.channels[0];
         var two = cluster.channels[1];
@@ -247,11 +279,7 @@ function testSetup(desc, testFunc) {
             return function runSendTest(callback) {
                 client.request({
                     serviceName: 'tiberius', 
-                    hasNoParent: true,
-                    headers: {
-                        as: 'raw',
-                        cn: 'wat'
-                    }
+                    hasNoParent: true
                 }).send(op, '', '', onResult);
                 function onResult(err, res, arg2, arg3) {
                     callback(null, {
