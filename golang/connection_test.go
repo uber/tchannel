@@ -98,6 +98,7 @@ func TestRoundTrip(t *testing.T) {
 
 		assert.Equal(t, JSON, echoSaver.format)
 		assert.Equal(t, testServiceName, echoSaver.caller)
+		assert.Equal(t, JSON, call.Response().Format(), "response Format should match request Format")
 	})
 }
 
@@ -109,13 +110,14 @@ func TestDefaultFormat(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 		defer cancel()
 
-		arg2, arg3, err := sendRecv(ctx, ch, hostPort, "Capture", "ping", testArg2, testArg3)
+		arg2, arg3, resp, err := sendRecv(ctx, ch, hostPort, "Capture", "ping", testArg2, testArg3)
 		require.Nil(t, err)
 
 		require.Equal(t, testArg2, arg2)
 		require.Equal(t, testArg3, arg3)
 		require.Equal(t, Raw, echoSaver.format)
 		assert.Equal(t, testServiceName, echoSaver.caller)
+		assert.Equal(t, Raw, resp.Format(), "response Format should match request Format")
 	})
 }
 
@@ -154,7 +156,7 @@ func TestReuseConnection(t *testing.T) {
 				wg.Add(1)
 				go func(call *OutboundCall) {
 					defer wg.Done()
-					resp1, resp2, err := sendRecvArgs(call, []byte("arg2"), []byte("arg3"))
+					resp1, resp2, _, err := sendRecvArgs(call, []byte("arg2"), []byte("arg3"))
 					require.NoError(t, err)
 					assert.Equal(t, resp1, []byte("arg2"), "result does match argument")
 					assert.Equal(t, resp2, []byte("arg3"), "result does match argument")
@@ -170,7 +172,7 @@ func TestBadRequest(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 		defer cancel()
 
-		_, _, err := sendRecv(ctx, ch, hostPort, "Nowhere", "Noone", []byte("Headers"), []byte("Body"))
+		_, _, _, err := sendRecv(ctx, ch, hostPort, "Nowhere", "Noone", []byte("Headers"), []byte("Body"))
 		require.NotNil(t, err)
 		assert.Equal(t, ErrCodeBadRequest, GetSystemErrorCode(err))
 	})
@@ -183,7 +185,7 @@ func TestServerBusy(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 		defer cancel()
 
-		_, _, err := sendRecv(ctx, ch, hostPort, "TestService", "busy", []byte("Arg2"), []byte("Arg3"))
+		_, _, _, err := sendRecv(ctx, ch, hostPort, "TestService", "busy", []byte("Arg2"), []byte("Arg3"))
 		require.NotNil(t, err)
 		assert.Equal(t, ErrCodeBusy, GetSystemErrorCode(err))
 	})
@@ -196,7 +198,7 @@ func TestTimeout(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
 		defer cancel()
 
-		_, _, err := sendRecv(ctx, ch, hostPort, "TestService", "timeout", []byte("Arg2"), []byte("Arg3"))
+		_, _, _, err := sendRecv(ctx, ch, hostPort, "TestService", "timeout", []byte("Arg2"), []byte("Arg3"))
 
 		// TODO(mmihic): Maybe translate this into ErrTimeout (or vice versa)?
 		assert.Equal(t, context.DeadlineExceeded, err)
@@ -220,41 +222,42 @@ func TestFragmentation(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 		defer cancel()
 
-		respArg2, respArg3, err := sendRecv(ctx, ch, hostPort, "TestService", "echo", arg2, arg3)
+		respArg2, respArg3, _, err := sendRecv(ctx, ch, hostPort, "TestService", "echo", arg2, arg3)
 		require.NoError(t, err)
 		assert.Equal(t, arg2, respArg2)
 		assert.Equal(t, arg3, respArg3)
 	})
 }
 
-func sendRecvArgs(call *OutboundCall, arg2, arg3 []byte) ([]byte, []byte, error) {
+func sendRecvArgs(call *OutboundCall, arg2, arg3 []byte) ([]byte, []byte, *OutboundCallResponse, error) {
 	if err := NewArgWriter(call.Arg2Writer()).Write(arg2); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	if err := NewArgWriter(call.Arg3Writer()).Write(arg3); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
+	resp := call.Response()
 	var respArg2 []byte
-	if err := NewArgReader(call.Response().Arg2Reader()).Read(&respArg2); err != nil {
-		return nil, nil, err
+	if err := NewArgReader(resp.Arg2Reader()).Read(&respArg2); err != nil {
+		return nil, nil, nil, err
 	}
 
 	var respArg3 []byte
-	if err := NewArgReader(call.Response().Arg3Reader()).Read(&respArg3); err != nil {
-		return nil, nil, err
+	if err := NewArgReader(resp.Arg3Reader()).Read(&respArg3); err != nil {
+		return nil, nil, nil, err
 	}
 
-	return respArg2, respArg3, nil
+	return respArg2, respArg3, resp, nil
 }
 
 func sendRecv(ctx context.Context, ch *Channel, hostPort string, serviceName, operation string,
-	arg2, arg3 []byte) ([]byte, []byte, error) {
+	arg2, arg3 []byte) ([]byte, []byte, *OutboundCallResponse, error) {
 
 	call, err := ch.BeginCall(ctx, hostPort, serviceName, operation, nil)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	return sendRecvArgs(call, arg2, arg3)
