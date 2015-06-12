@@ -64,10 +64,11 @@ func (c *Connection) handleCallReq(frame *Frame) {
 	response.cancel = cancel
 	response.span = callReq.Tracing
 	response.log = PrefixedLogger(fmt.Sprintf("In%v-Response ", callReq.ID()), c.log)
+	response.headers = callHeaders{}
 	response.messageForFragment = func(initial bool) message {
 		if initial {
 			callRes := new(callRes)
-			callRes.Headers = callHeaders{}
+			callRes.Headers = response.headers
 			callRes.ResponseCode = responseOK
 			if response.applicationError {
 				callRes.ResponseCode = responseApplicationError
@@ -89,6 +90,7 @@ func (c *Connection) handleCallReq(frame *Frame) {
 	call.messageForFragment = func(initial bool) message { return new(callReqContinue) }
 	call.contents = newFragmentingReader(call)
 
+	setResponseHeaders(call.headers, response.headers)
 	go c.dispatchInbound(call)
 }
 
@@ -192,6 +194,7 @@ type InboundCallResponse struct {
 
 	cancel           context.CancelFunc
 	applicationError bool
+	headers          callHeaders
 	span             Span
 }
 

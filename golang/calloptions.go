@@ -56,3 +56,8 @@ func (c *CallOptions) setHeaders(headers callHeaders) {
 
 	headers[ArgScheme] = format.String()
 }
+
+// setResponseHeaders copies some headers from the incoming call request to the response.
+func setResponseHeaders(reqHeaders, respHeaders callHeaders) {
+	respHeaders[ArgScheme] = reqHeaders[ArgScheme]
+}
