@@ -1,10 +1,16 @@
 Changelog for tchannel.py
 =========================
 
-0.8.3 (unreleased)
+0.8.4 (unreleased)
 ------------------
 
 - Nothing changed yet.
+
+
+0.8.3 (2015-06-15)
+------------------
+
+- Added 'as' attr into response header
 
 
 0.8.2 (2015-06-11)
