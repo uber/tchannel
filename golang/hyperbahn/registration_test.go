@@ -100,7 +100,10 @@ func runRetryTest(t *testing.T, f func(r *retryTest)) {
 		require.NoError(t, err)
 		defer clientCh.Close()
 
-		r.client = NewClient(clientCh, []string{hostPort}, &ClientOptions{Handler: r})
+		r.client = NewClient(clientCh, []string{hostPort}, &ClientOptions{
+			Handler:      r,
+			FailStrategy: FailStrategyIgnore,
+		})
 		f(r)
 		r.mock.AssertExpectations(t)
 	})

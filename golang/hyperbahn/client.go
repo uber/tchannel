@@ -14,12 +14,25 @@ type Client struct {
 	opts  ClientOptions
 }
 
+// FailStrategy is the strategy to use when registration fails maxRegistrationFailures
+// times consecutively in the background. This is not used if the initial registration fails.
+type FailStrategy int
+
+const (
+	// FailStrategyFatal will call Fatalf on the channel's logger after triggerring handler.OnError.
+	// This is the default strategy.
+	FailStrategyFatal FailStrategy = iota
+	// FailStrategyIgnore will only call handler.OnError, even on fatal errors.
+	FailStrategyIgnore
+)
+
 const hyperbahnServiceName = "hyperbahn"
 
 // ClientOptions are used to configure this Hyperbahn client.
 type ClientOptions struct {
-	Timeout time.Duration
-	Handler Handler
+	Timeout      time.Duration
+	Handler      Handler
+	FailStrategy FailStrategy
 }
 
 // ErrAppError is returned if there was an application error during registration.

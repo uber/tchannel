@@ -259,6 +259,11 @@ func (ch *Channel) serve() {
 	}
 }
 
+// Logger returns the logger for this channel.
+func (ch *Channel) Logger() Logger {
+	return ch.log
+}
+
 // Closed returns whether this channel has been closed with .Close()
 func (ch *Channel) Closed() bool {
 	ch.mutable.mut.Lock()

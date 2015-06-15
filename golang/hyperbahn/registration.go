@@ -14,9 +14,9 @@ const (
 	maxRegistrationFailures = 5
 	// registrationInterval is the (approximate) time interval between re-registrations.
 	// The interval is fuzzed to fuzzAmount.
-	registrationInterval = 60 * time.Second
+	registrationInterval = 10 * time.Second
 	// registrationRetryInterval is the duration to wait on failed registrations before retrying.
-	registrationRetryInterval = 5 * time.Second
+	registrationRetryInterval = 1 * time.Second
 	// fuzzInterval is used to fuzz the registration interval.
 	fuzzInterval = 10 * time.Second
 )
@@ -88,6 +88,9 @@ func (c *Client) registrationLoop() {
 			consecutiveFailures++
 			if consecutiveFailures >= maxRegistrationFailures {
 				c.opts.Handler.OnError(ErrRegistrationFailed{Cause: err, WillRetry: false})
+				if c.opts.FailStrategy == FailStrategyFatal {
+					c.tchan.Logger().Fatalf("Hyperbahn client registration failed: %v", err)
+				}
 				return
 			}
 			c.opts.Handler.OnError(ErrRegistrationFailed{Cause: err, WillRetry: true})
