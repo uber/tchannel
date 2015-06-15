@@ -314,6 +314,7 @@ TChannelRequest.prototype.shouldRetryError = function shouldRetryError(err) {
         switch (codeName) {
             case 'BadRequest':
             case 'Cancelled':
+            case 'Unhealthy':
                 return false;
 
             case 'Busy':
