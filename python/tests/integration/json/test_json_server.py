@@ -103,6 +103,8 @@ def test_json_server(json_server, sample_json):
         body,
     )
 
+    # check protocol header
+    assert resp.headers['as'] == 'json'
     # compare header's json
     rheader = yield resp.get_header()
     assert rheader == header
