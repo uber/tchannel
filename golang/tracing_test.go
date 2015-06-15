@@ -41,7 +41,7 @@ type TracingResponse struct {
 type Headers map[string]string
 
 func TestTracingPropagates(t *testing.T) {
-	withTestChannel(t, func(ch *Channel, hostPort string) {
+	withTestChannel(t, testServiceName, func(ch *Channel, hostPort string) {
 		srv1 := func(ctx context.Context, incall *InboundCall) {
 			headers := Headers{}
 
@@ -59,7 +59,7 @@ func TestTracingPropagates(t *testing.T) {
 			var childRequest TracingRequest
 			var childResponse TracingResponse
 
-			outcall, err := ch.BeginCall(ctx, hostPort, "TestService", "call2", nil)
+			outcall, err := ch.BeginCall(ctx, hostPort, testServiceName, "call2", nil)
 			if err != nil {
 				incall.Response().SendSystemError(err)
 				return
@@ -110,8 +110,8 @@ func TestTracingPropagates(t *testing.T) {
 			})
 		}
 
-		ch.Register(HandlerFunc(srv1), "TestService", "call1")
-		ch.Register(HandlerFunc(srv2), "TestService", "call2")
+		ch.Register(HandlerFunc(srv1), "call1")
+		ch.Register(HandlerFunc(srv2), "call2")
 
 		ctx, cancel := context.WithTimeout(NewRootContext(context.Background()), 5*time.Second)
 		defer cancel()
@@ -120,7 +120,7 @@ func TestTracingPropagates(t *testing.T) {
 		var request TracingRequest
 		var response TracingResponse
 
-		call, err := ch.BeginCall(ctx, hostPort, "TestService", "call1", nil)
+		call, err := ch.BeginCall(ctx, hostPort, testServiceName, "call1", nil)
 		require.NoError(t, err)
 		require.NoError(t, NewArgWriter(call.Arg2Writer()).WriteJSON(headers))
 		require.NoError(t, NewArgWriter(call.Arg3Writer()).WriteJSON(&request))

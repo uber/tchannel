@@ -34,7 +34,7 @@ import (
 
 // Values used in tests
 var (
-	testServiceName = "test-channel"
+	testServiceName = "TestService"
 	testProcessName = "Test Channel"
 	testArg2        = []byte("Header in arg2")
 	testArg3        = []byte("Body in arg3")
@@ -75,9 +75,9 @@ func (e *echoSaver) echo(t *testing.T, ctx context.Context, call *InboundCall) {
 }
 
 func TestRoundTrip(t *testing.T) {
-	withTestChannel(t, func(ch *Channel, hostPort string) {
+	withTestChannel(t, "Capture", func(ch *Channel, hostPort string) {
 		echoSaver := &echoSaver{}
-		ch.Register(testHandlerFunc(t, echoSaver.echo), "Capture", "ping")
+		ch.Register(testHandlerFunc(t, echoSaver.echo), "ping")
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 		defer cancel()
@@ -97,15 +97,15 @@ func TestRoundTrip(t *testing.T) {
 		assert.Equal(t, testArg3, []byte(respArg3))
 
 		assert.Equal(t, JSON, echoSaver.format)
-		assert.Equal(t, testServiceName, echoSaver.caller)
+		assert.Equal(t, "Capture", echoSaver.caller)
 		assert.Equal(t, JSON, call.Response().Format(), "response Format should match request Format")
 	})
 }
 
 func TestDefaultFormat(t *testing.T) {
-	withTestChannel(t, func(ch *Channel, hostPort string) {
+	withTestChannel(t, "Capture", func(ch *Channel, hostPort string) {
 		echoSaver := &echoSaver{}
-		ch.Register(testHandlerFunc(t, echoSaver.echo), "Capture", "ping")
+		ch.Register(testHandlerFunc(t, echoSaver.echo), "ping")
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 		defer cancel()
@@ -116,7 +116,7 @@ func TestDefaultFormat(t *testing.T) {
 		require.Equal(t, testArg2, arg2)
 		require.Equal(t, testArg3, arg3)
 		require.Equal(t, Raw, echoSaver.format)
-		assert.Equal(t, testServiceName, echoSaver.caller)
+		assert.Equal(t, "Capture", echoSaver.caller)
 		assert.Equal(t, Raw, resp.Format(), "response Format should match request Format")
 	})
 }
@@ -125,10 +125,10 @@ func TestReuseConnection(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
-	withTestChannel(t, func(ch1 *Channel, hostPort1 string) {
-		withTestChannel(t, func(ch2 *Channel, hostPort2 string) {
-			ch1.Register(testHandlerFunc(t, (&echoSaver{}).echo), "s1", "op")
-			ch2.Register(testHandlerFunc(t, (&echoSaver{}).echo), "s2", "op")
+	withTestChannel(t, "s1", func(ch1 *Channel, hostPort1 string) {
+		withTestChannel(t, "s2", func(ch2 *Channel, hostPort2 string) {
+			ch1.Register(testHandlerFunc(t, (&echoSaver{}).echo), "op")
+			ch2.Register(testHandlerFunc(t, (&echoSaver{}).echo), "op")
 
 			// We need the servers to have their peers set before making outgoing calls
 			// for the outgoing calls to contain the correct peerInfo.
@@ -168,7 +168,7 @@ func TestReuseConnection(t *testing.T) {
 }
 
 func TestBadRequest(t *testing.T) {
-	withTestChannel(t, func(ch *Channel, hostPort string) {
+	withTestChannel(t, "svc", func(ch *Channel, hostPort string) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 		defer cancel()
 
@@ -179,21 +179,21 @@ func TestBadRequest(t *testing.T) {
 }
 
 func TestServerBusy(t *testing.T) {
-	withTestChannel(t, func(ch *Channel, hostPort string) {
-		ch.Register(testHandlerFunc(t, serverBusy), "TestService", "busy")
+	withTestChannel(t, testServiceName, func(ch *Channel, hostPort string) {
+		ch.Register(testHandlerFunc(t, serverBusy), "busy")
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 		defer cancel()
 
-		_, _, _, err := sendRecv(ctx, ch, hostPort, "TestService", "busy", []byte("Arg2"), []byte("Arg3"))
+		_, _, _, err := sendRecv(ctx, ch, hostPort, testServiceName, "busy", []byte("Arg2"), []byte("Arg3"))
 		require.NotNil(t, err)
 		assert.Equal(t, ErrCodeBusy, GetSystemErrorCode(err))
 	})
 }
 
 func TestTimeout(t *testing.T) {
-	withTestChannel(t, func(ch *Channel, hostPort string) {
-		ch.Register(testHandlerFunc(t, timeout), "TestService", "timeout")
+	withTestChannel(t, testServiceName, func(ch *Channel, hostPort string) {
+		ch.Register(testHandlerFunc(t, timeout), "timeout")
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
 		defer cancel()
@@ -206,8 +206,8 @@ func TestTimeout(t *testing.T) {
 }
 
 func TestFragmentation(t *testing.T) {
-	withTestChannel(t, func(ch *Channel, hostPort string) {
-		ch.Register(testHandlerFunc(t, (&echoSaver{}).echo), "TestService", "echo")
+	withTestChannel(t, testServiceName, func(ch *Channel, hostPort string) {
+		ch.Register(testHandlerFunc(t, (&echoSaver{}).echo), "echo")
 
 		arg2 := make([]byte, MaxFramePayloadSize*2)
 		for i := 0; i < len(arg2); i++ {
@@ -222,7 +222,7 @@ func TestFragmentation(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 		defer cancel()
 
-		respArg2, respArg3, _, err := sendRecv(ctx, ch, hostPort, "TestService", "echo", arg2, arg3)
+		respArg2, respArg3, _, err := sendRecv(ctx, ch, hostPort, testServiceName, "echo", arg2, arg3)
 		require.NoError(t, err)
 		assert.Equal(t, arg2, respArg2)
 		assert.Equal(t, arg3, respArg3)
@@ -263,13 +263,13 @@ func sendRecv(ctx context.Context, ch *Channel, hostPort string, serviceName, op
 	return sendRecvArgs(call, arg2, arg3)
 }
 
-func withTestChannel(t *testing.T, f func(ch *Channel, hostPort string)) {
+func withTestChannel(t *testing.T, serviceName string, f func(ch *Channel, hostPort string)) {
 	opts := ChannelOptions{
 		ProcessName: testProcessName,
 		Logger:      SimpleLogger,
 	}
 
-	ch, err := NewChannel(testServiceName, &opts)
+	ch, err := NewChannel(serviceName, &opts)
 	require.Nil(t, err)
 
 	l, err := net.Listen("tcp", "127.0.0.1:0")

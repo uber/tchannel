@@ -45,7 +45,7 @@ func (s *Server) Register(thriftName string, processorInterface reflect.Type, pr
 	handler := &Handler{processor}
 	for i := 0; i < processorInterface.NumMethod(); i++ {
 		methodName := processorInterface.Method(i).Name
-		s.Channel.Register(handler, s.Channel.PeerInfo().ServiceName, thriftName+"::"+methodName)
+		s.Channel.Register(handler, thriftName+"::"+methodName)
 	}
 }
 
