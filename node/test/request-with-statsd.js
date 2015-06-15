@@ -84,13 +84,13 @@ allocCluster.test('emits stats on call success', {
         assert.ok(res.ok, 'res should be ok');
         assert.deepEqual(statsd._buffer._elements, [{
             type: 'c',
-            name: 'tchannel.connections.initiated.' + serverHost,
+            name: 'tchannel.outbound.calls.sent.inPipe.reservoir.Reservoir--get',
             value: null,
             delta: 1,
             time: null
         }, {
             type: 'c',
-            name: 'tchannel.outbound.calls.sent.inPipe.reservoir.Reservoir--get',
+            name: 'tchannel.connections.initiated.' + serverHost,
             value: null,
             delta: 1,
             time: null
@@ -174,13 +174,13 @@ allocCluster.test('emits stats on call failure', {
         assert.ok(res.ok === false, 'res should be not ok');
         assert.deepEqual(statsd._buffer._elements, [{
             type: 'c',
-            name: 'tchannel.connections.initiated.' + serverHost,
+            name: 'tchannel.outbound.calls.sent.inPipe.reservoir.Reservoir--get',
             value: null,
             delta: 1,
             time: null
         }, {
             type: 'c',
-            name: 'tchannel.outbound.calls.sent.inPipe.reservoir.Reservoir--get',
+            name: 'tchannel.connections.initiated.' + serverHost,
             value: null,
             delta: 1,
             time: null
