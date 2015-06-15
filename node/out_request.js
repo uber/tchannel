@@ -301,6 +301,15 @@ TChannelOutRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
         self.span.name = endpoint;
     }
 
+    if (self.logical === false && self.retryCount === 0) {
+        self.channel.outboundCallsSentStat.increment(1, {
+            'target-service': self.serviceName,
+            'service': self.headers.cn,
+            // TODO should always be buffer
+            'target-endpoint': endpoint
+        });
+    }
+
     if (callback) self.hookupCallback(callback);
 
     self.arg1 = arg1;
