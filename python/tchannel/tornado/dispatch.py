@@ -89,6 +89,7 @@ class RequestDispatcher(BaseRequestHandler):
                 checksum=request.checksum,
                 tracing=request.tracing,
                 connection=connection,
+                headers={'as': request.headers.get('as', 'raw')},
             )
 
             connection.post_response(response)
