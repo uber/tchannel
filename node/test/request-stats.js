@@ -72,18 +72,7 @@ allocCluster.test('emits stats', {
         assert.ifError(err);
 
         assert.ok(res.ok);
-
         assert.deepEqual(stats, [{
-            name: 'connections.initiated',
-            type: 'counter',
-            value: 1,
-            tags: {
-                'host-port': clientHost,
-                'peer-host-port': serverHost,
-                app: 'client',
-                host: os.hostname()
-            }
-        }, {
             name: 'outbound.calls.sent',
             type: 'counter',
             value: 1,
@@ -91,6 +80,16 @@ allocCluster.test('emits stats', {
                 'target-service': 'server',
                 service: 'client',
                 'target-endpoint': 'echo',
+                app: 'client',
+                host: os.hostname()
+            }
+        }, {
+            name: 'connections.initiated',
+            type: 'counter',
+            value: 1,
+            tags: {
+                'host-port': clientHost,
+                'peer-host-port': serverHost,
                 app: 'client',
                 host: os.hostname()
             }
