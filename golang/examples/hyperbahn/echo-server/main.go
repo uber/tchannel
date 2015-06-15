@@ -18,14 +18,20 @@ func main() {
 		log.Fatalf("Failed to create channel: %v", err)
 	}
 
-	l, err := net.Listen("tcp", ":61543")
+	l, err := net.Listen("tcp", "127.0.0.1:61543")
 	if err != nil {
 		log.Fatalf("Could not listen: %v", err)
 	}
 	log.Printf("Listening on %v", l.Addr())
 
 	tchan.Register(handler{}, "echo")
-	tchan.Serve(l)
+	go tchan.Serve(l)
+
+	time.Sleep(100 * time.Millisecond)
+
+	if len(os.Args[1:]) == 0 {
+		log.Fatalf("You must provide Hyperbahn nodes as arguments")
+	}
 
 	// register service with Hyperbahn.
 	client := hyperbahn.NewClient(tchan, os.Args[1:], &hyperbahn.ClientOptions{
@@ -33,7 +39,7 @@ func main() {
 		Timeout: time.Second,
 	})
 	if err := client.Register(); err != nil {
-		fmt.Println("Register threw error:", err)
+		log.Fatalf("Register threw error: %v", err)
 	}
 
 	// Server will keep running till Ctrl-C.
