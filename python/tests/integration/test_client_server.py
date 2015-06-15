@@ -72,6 +72,7 @@ def test_tchannel_call_request_fragment(tchannel_server,
     body = yield response.get_body()
     assert header == endpoint
     assert body == arg3
+    assert response.headers['as'] == 'raw'
 
 
 @pytest.mark.gen_test
