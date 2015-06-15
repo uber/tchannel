@@ -106,11 +106,19 @@ standardizing operational error types is outside the scope of the core metrics.
 
 ##### outbound.calls.app-errors
 
-The total number of CallResponse/NotOk responses received from calls initiated
-by this service to the the target service/endpoint.  MAY include an additional
-``type`` tag indicating the type of application-level error received.
-Standardization of application-level error types is outside the scope of the
-core metrics.
+The total number of CallResponse/NotOk responses reported to the application
+from calls initiated by this service to the the target service/endpoint.  MAY
+include an additional ``type`` tag indicating the type of application-level
+error received. Standardization of application-level error types is outside
+the scope of the core metrics.
+
+##### outbound.calls.per-attempt.app-errors
+
+The total number of CallResponse/NotOk responses per attempt received
+from calls initiated by this service to the the target service/endpoint.  MAY
+include an additional ``type`` tag indicating the type of application-level
+error received. Standardization of application-level error types is outside
+the scope of the core metrics.
 
 ##### outbound.calls.retries
 The total number of retries performed by the sending service.  SHOULD include a
