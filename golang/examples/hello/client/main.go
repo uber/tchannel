@@ -33,7 +33,7 @@ import (
 var log = tchannel.SimpleLogger
 
 var peerAddr = flag.String("peer", "localhost:10500", "Host and port of remote peer")
-var serviceName = flag.String("service", "TestService", "Name of service to invoke")
+var serviceName = flag.String("service", "HelloService", "Name of service to invoke")
 var operationName = flag.String("operation", "echo", "Name of operation to invoke")
 var arg2 = flag.String("arg2", "hello", "Input for arg2.  Curl-style, use @foo.txt to read from foo.txt")
 var arg3 = flag.String("arg3", "world", "Input for arg3.  Curl-style, use @foo.txt to read from foo.txt")
@@ -59,7 +59,7 @@ func writeArgument(writer io.WriteCloser, arg string) error {
 		writer.Write([]byte(arg))
 	}
 
-	return writer.Close()
+	return nil
 }
 
 func main() {

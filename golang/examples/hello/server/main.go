@@ -85,18 +85,18 @@ var bindAddr = flag.String("bind", "127.0.0.1:10500", "host and port on which to
 func main() {
 	flag.Parse()
 
-	ch, err := tchannel.NewChannel("hello-server", &tchannel.ChannelOptions{
+	ch, err := tchannel.NewChannel("HelloService", &tchannel.ChannelOptions{
 		Logger: log,
 	})
 	if err != nil {
 		log.Fatalf("could not create channel %v", err)
 	}
 
-	ch.Register(tchannel.HandlerFunc(echo), "TestService", "echo")
-	ch.Register(tchannel.HandlerFunc(serverBusy), "TestService", "busy")
-	ch.Register(tchannel.HandlerFunc(badRequest), "TestService", "badRequest")
-	ch.Register(tchannel.HandlerFunc(appError), "TestService", "appError")
-	ch.Register(tchannel.HandlerFunc(timeout), "TestService", "timeout")
+	ch.Register(tchannel.HandlerFunc(echo), "echo")
+	ch.Register(tchannel.HandlerFunc(serverBusy), "busy")
+	ch.Register(tchannel.HandlerFunc(badRequest), "badRequest")
+	ch.Register(tchannel.HandlerFunc(appError), "appError")
+	ch.Register(tchannel.HandlerFunc(timeout), "timeout")
 
 	if err := ch.ListenAndServe(*bindAddr); err != nil {
 		log.Fatalf("Could not listen on %s: %v", *bindAddr, err)

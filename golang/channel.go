@@ -167,8 +167,8 @@ func (ch *Channel) listen(hostPort string) error {
 }
 
 // Register registers a handler for a service+operation pair
-func (ch *Channel) Register(h Handler, serviceName, operationName string) {
-	ch.handlers.register(h, serviceName, operationName)
+func (ch *Channel) Register(h Handler, operationName string) {
+	ch.handlers.register(h, ch.PeerInfo().ServiceName, operationName)
 }
 
 // PeerInfo returns the current peer info for the channel

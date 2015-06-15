@@ -48,7 +48,7 @@ func pingHandler(ctx context.Context, call *tchannel.InboundCall) {
 	}
 
 	var inArg3 []byte
-	if err := tchannel.NewArgReader(call.Arg2Reader()).Read(&inArg3); err != nil {
+	if err := tchannel.NewArgReader(call.Arg3Reader()).Read(&inArg3); err != nil {
 		log.Errorf("Could not read body from client: %v", err)
 		return
 	}
@@ -77,13 +77,13 @@ func listenAndHandle(s *tchannel.Channel, hostPort string) {
 
 func main() {
 	// Create a new TChannel for handling requests
-	ch, err := tchannel.NewChannel("ping-server", nil)
+	ch, err := tchannel.NewChannel("PingService", &tchannel.ChannelOptions{Logger: tchannel.SimpleLogger})
 	if err != nil {
 		log.Fatalf("Could not create new channel: %v", err)
 	}
 
 	// Register a handler for the ping message on the PingService
-	ch.Register(tchannel.HandlerFunc(pingHandler), "PingService", "ping")
+	ch.Register(tchannel.HandlerFunc(pingHandler), "ping")
 
 	// Listen for incoming requests
 	go listenAndHandle(ch, "127.0.0.1:10500")
