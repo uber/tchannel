@@ -165,7 +165,7 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
         }, testCase);
         return sendTest(testCase, assert);
     }), function onResults(err) {
-        assert.ifError(err, 'no errors from sending');
+        if (err) return assert.end(err);
         cluster.assertCleanState(assert, {
             channels: [{
                 peers: [{
@@ -335,30 +335,64 @@ allocCluster.test('self send() with error frame', 1, function t(cluster, assert)
         res.sendError('Cancelled', 'bye lol');
     });
 
-    subOne.request({
-        host: one.hostPort,
-        hasNoParent: true,
-        headers: {
-            'as': 'raw',
-            cn: 'wat'
+    subOne.register('unhealthy', function unhealthy(req, res) {
+        res.sendError('Unhealthy', 'smallest violin');
+    });
+
+    function cancelCase(callback) {
+        subOne.request({
+            host: one.hostPort,
+            hasNoParent: true,
+            headers: {
+                'as': 'raw',
+                cn: 'wat'
+            }
+        }).send('foo', '', '', onResponse);
+
+        function onResponse(err) {
+            assert.equal(err.message, 'bye lol');
+            assert.deepEqual(err, {
+                type: 'tchannel.canceled',
+                fullType: 'tchannel.canceled',
+                isErrorFrame: true,
+                codeName: 'Cancelled',
+                errorCode: 2,
+                originalId: 0,
+                name: 'TchannelCanceledError',
+                message: 'bye lol'
+            });
+            callback();
         }
-    }).send('foo', '', '', onResponse);
-
-    function onResponse(err) {
-        assert.equal(err.message, 'bye lol');
-        assert.deepEqual(err, {
-            type: 'tchannel.canceled',
-            fullType: 'tchannel.canceled',
-            isErrorFrame: true,
-            codeName: 'Cancelled',
-            errorCode: 2,
-            originalId: 0,
-            name: 'TchannelCanceledError',
-            message: 'bye lol'
-        });
-
-        assert.end();
     }
+
+    function unhealthyCase(callback) {
+        subOne.request({
+            host: one.hostPort,
+            hasNoParent: true,
+            headers: {
+                'as': 'raw',
+                cn: 'wat'
+            }
+        }).send('unhealthy', '', '', onResponse);
+
+        function onResponse(err) {
+            assert.equal(err.message, 'smallest violin');
+            assert.deepEqual(err, {
+                type: 'tchannel.unhealthy',
+                fullType: 'tchannel.unhealthy',
+                isErrorFrame: true,
+                codeName: 'Unhealthy',
+                errorCode: 8,
+                originalId: 1,
+                name: 'TchannelUnhealthyError',
+                message: 'smallest violin'
+            });
+            callback();
+        }
+    }
+
+    parallel([cancelCase, unhealthyCase], assert.end);
+
 });
 
 allocCluster.test('send() with requestDefaults', 2, function t(cluster, assert) {
