@@ -207,7 +207,8 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
                 arg1: String(reqFrame.body.args[0]),
                 serviceName: reqFrame.body.service,
                 callerName: reqFrame.body.headers.cn,
-                remoteName: self.remoteName
+                remoteName: self.remoteName,
+                socketRemoteAddr: self.connection.socketRemoteAddr
             });
         }
     }
@@ -225,7 +226,8 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
             self.logger.warn('Expected "cn" header for incoming req', {
                 arg1: String(reqFrame.body.args[0]),
                 serviceName: reqFrame.body.service,
-                remoteName: self.remoteName
+                remoteName: self.remoteName,
+                socketRemoteAddr: self.connection.socketRemoteAddr
             });
         }
     }
@@ -274,7 +276,8 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
             self.logger.warn('Expected "as" for incoming response', {
                 code: resFrame.body.code,
                 remoteName: self.remoteName,
-                endpoint: String(resFrame.body.args[0])
+                endpoint: String(resFrame.body.args[0]),
+                socketRemoteAddr: self.connection.socketRemoteAddr
             });
         }
     }
@@ -455,7 +458,8 @@ TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame
             arg1: String(args[0]),
             callerName: req.headers && req.headers.cn,
             remoteName: self.remoteName,
-            serviceName: req.serviceName
+            serviceName: req.serviceName,
+            socketRemoteAddr: self.connection.socketRemoteAddr
         });
     }
 
@@ -466,7 +470,8 @@ TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame
         self.logger.error('Expected "cn" header to be set for request', {
             arg1: String(args[0]),
             remoteName: self.remoteName,
-            serviceName: req.serviceName
+            serviceName: req.serviceName,
+            socketRemoteAddr: self.connection.socketRemoteAddr
         });
     }
 
@@ -491,7 +496,8 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
         self.logger.error('Expected "as" header to be set for response', {
             code: code,
             remoteName: self.remoteName,
-            arg1: String(args[0])
+            arg1: String(args[0]),
+            socketRemoteAddr: self.connection.socketRemoteAddr
         });
     }
 
