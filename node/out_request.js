@@ -233,7 +233,7 @@ TChannelOutRequest.prototype.sendParts = function sendParts(parts, isLast) {
             break;
         case States.Done:
             // TODO: could probably happen normally, like say if a
-            // streaming request is canceled
+            // streaming request is cancelled
             self.emitError(errors.RequestFrameState({
                 attempted: 'arg parts',
                 state: 'Done'
