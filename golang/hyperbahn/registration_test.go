@@ -39,7 +39,7 @@ func TestRegistrationFailed(t *testing.T) {
 		require.NoError(t, err)
 		defer clientCh.Close()
 
-		client := NewClient(clientCh, []string{hostPort}, nil)
+		client := NewClient(clientCh, configFor(hostPort), nil)
 		require.Error(t, client.Register())
 	})
 }
@@ -100,7 +100,7 @@ func runRetryTest(t *testing.T, f func(r *retryTest)) {
 		require.NoError(t, err)
 		defer clientCh.Close()
 
-		r.client = NewClient(clientCh, []string{hostPort}, &ClientOptions{
+		r.client = NewClient(clientCh, configFor(hostPort), &ClientOptions{
 			Handler:      r,
 			FailStrategy: FailStrategyIgnore,
 		})
@@ -209,6 +209,12 @@ func TestRetryFailure(t *testing.T) {
 		// Wait for the handler to be called and the mock expectation to be recorded.
 		<-noRetryFail
 	})
+}
+
+func configFor(node string) Configuration {
+	return Configuration{
+		InitialNodes: []string{node},
+	}
 }
 
 func withSetup(t *testing.T, f func(ch *tchannel.Channel, hostPort string)) {
