@@ -24,6 +24,7 @@ var assert = require('assert');
 var RelayHandler = require('../relay_handler');
 var EventEmitter = require('../lib/event_emitter');
 var util = require('util');
+var ServiceHealthProxy = require('./service_health_proxy');
 
 var DEFAULT_LOG_GRACE_PERIOD = 5 * 60 * 1000;
 
@@ -46,6 +47,7 @@ function ServiceDispatchHandler(options) {
         DEFAULT_LOG_GRACE_PERIOD;
     self.permissionsCache = options.permissionsCache;
     self.serviceReqDefaults = options.serviceReqDefaults || {};
+    self.circuits = options.circuits;
 
     self.egressNodes.on('membershipChanged', onMembershipChanged);
 
@@ -162,7 +164,17 @@ function createServiceChannel(serviceName) {
         }
     }
 
-    svcchan.handler = new RelayHandler(svcchan);
+    var handler = new RelayHandler(svcchan);
+
+    // Decorate a circuit health monitor to egress request handlers.
+    if (mode === 'exit' && self.circuits) {
+        handler = new ServiceHealthProxy({
+            nextHandler: handler,
+            circuits: self.circuits
+        });
+    }
+
+    svcchan.handler = handler;
 
     return svcchan;
 };
@@ -177,6 +189,14 @@ function updateServiceChannels() {
         if (chan.serviceProxyMode) {
             self.updateServiceChannel(chan);
         }
+    }
+
+    if (self.circuits) {
+        self.circuits.updateServices(managesService);
+    }
+
+    function managesService(serviceName) {
+        return self.egressNodes.isExitFor(serviceName);
     }
 };
 

@@ -581,15 +581,19 @@ module.exports.classify = function classify(err) {
     }
 };
 
+// To determine whether a circuit should break for each response code.
+// TODO consider whether to keep a circuit healthy if a downstream circuit is
+// unhealthy.
 var symptoms = {
     'BadRequest': false, // not an indicator of bad health
     'Cancelled': false, // not an indicator of bad health
-    'Timeout': true, // TODO throttle
-    'Busy': true, // TODO throttle
+    'Unhealthy': true,
+    'Timeout': true,
+    'Busy': true,
     'Declined': true,
     'UnexpectedError': true,
     'NetworkError': true,
-    'FatalProtocolError': true
+    'ProtocolError': true
 };
 
 module.exports.isUnhealthy = function isUnhealthy(code) {
