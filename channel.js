@@ -116,6 +116,7 @@ function TChannel(options) {
     self.statsd = self.options.statsd;
     if (self.statsd) {
         self.channelStatsd = new TChannelStatsd(self, self.statsd);
+        self.options.statsd = null;
     }
 
     self.requestDefaults = extend({
