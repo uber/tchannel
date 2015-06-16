@@ -22,6 +22,7 @@ package thrift
 
 import (
 	"io"
+	"io/ioutil"
 	"strings"
 
 	"github.com/apache/thrift/lib/go/thrift"
@@ -55,6 +56,8 @@ func (p *inProtocol) ReadMessageBegin() (string, thrift.TMessageType, int32, err
 	if err != nil {
 		return "", 0, 0, err
 	}
+	// TODO(prashant): Read application headers out of arg2.
+	io.Copy(ioutil.Discard, reader)
 	if err := reader.Close(); err != nil {
 		return "", 0, 0, err
 	}
@@ -85,6 +88,8 @@ func (p *inProtocol) WriteMessageBegin(name string, typeID thrift.TMessageType, 
 	if err != nil {
 		return err
 	}
+	// TODO(prashant): Support application headers.
+	writer.Write([]byte{0, 0})
 	if err := writer.Close(); err != nil {
 		return err
 	}

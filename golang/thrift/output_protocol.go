@@ -22,6 +22,7 @@ package thrift
 import (
 	"errors"
 	"io"
+	"io/ioutil"
 
 	"golang.org/x/net/context"
 
@@ -29,6 +30,8 @@ import (
 	tchannel "github.com/uber/tchannel/golang"
 )
 
+// ErrApplication is returned on application errors.
+// TODO(prashant): Remove this and return the real error?
 var ErrApplication = errors.New("application error")
 
 // TChanOutboundOptions are parameters passed to the underlying tchannel when making requests.
@@ -97,6 +100,8 @@ func (p *outProtocol) WriteMessageBegin(name string, _ thrift.TMessageType, seqI
 	if err != nil {
 		return err
 	}
+	// TODO(prashant): Support application headers.
+	writer.Write([]byte{0, 0})
 	if err := writer.Close(); err != nil {
 		return err
 	}
@@ -125,6 +130,8 @@ func (p *outProtocol) ReadMessageBegin() (string, thrift.TMessageType, int32, er
 	if err != nil {
 		return "", 0, 0, err
 	}
+	// TODO(prashant): Read application headers out of arg2.
+	io.Copy(ioutil.Discard, reader)
 	if err := reader.Close(); err != nil {
 		return "", 0, 0, err
 	}
