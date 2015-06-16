@@ -20,32 +20,19 @@
 
 'use strict';
 
-var assert = require('assert');
+// A very thin wrapper such that the proxy for an individual egress service
+// name can tap into the common circuit breaker before forwarding to its
+// specific relay handler.
 
-// Peer and Circuit are state machines.
-
-module.exports = StateMachine;
-
-function StateMachine() {
+function ServiceHealthProxy(options) {
     var self = this;
-    self.state = null;
-    self.stateOptions = null;
+    self.circuits = options.circuits;
+    self.nextHandler = options.nextHandler;
 }
 
-StateMachine.prototype.setState = function setState(StateType) {
+ServiceHealthProxy.prototype.handleRequest = function handleRequest(req, buildRes) {
     var self = this;
-    var currentType = self.state && self.state.type;
-    if (currentType &&
-        StateType.prototype.type &&
-        StateType.prototype.type === currentType) {
-        return;
-    }
-    assert(self.stateOptions, 'state machine must have stateOptions');
-    var state = new StateType(self.stateOptions);
-    if (state && state.type === currentType) {
-        return;
-    }
-    var oldState = self.state;
-    self.state = state;
-    self.stateChangedEvent.emit(self, [oldState, state]);
+    return self.circuits.handleRequest(req, buildRes, self.nextHandler);
 };
+
+module.exports = ServiceHealthProxy;

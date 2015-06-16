@@ -114,7 +114,7 @@ HealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
         self.okCount = 0;
         self.notOkCount = 0;
     }
-    return self.stateMachine.shouldRequest(req, options);
+    return self.nextHandler.shouldRequest(req, options);
 };
 
 HealthyState.prototype.onRequestResponse = function onRequestResponse(/* req */) {
