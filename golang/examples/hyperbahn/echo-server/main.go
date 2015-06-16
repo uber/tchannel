@@ -32,8 +32,6 @@ func main() {
 	tchan.Register(handler{}, "echo")
 	tchan.Serve(l)
 
-	time.Sleep(100 * time.Millisecond)
-
 	if len(os.Args[1:]) == 0 {
 		log.Fatalf("You must provide Hyperbahn nodes as arguments")
 	}
