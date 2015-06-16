@@ -22,7 +22,7 @@
 
 var errors = require('./errors.js');
 
-var TOMBSTONE_TTL = 5000;
+var TOMBSTONE_TTL_OFFSET = 500;
 
 module.exports = Operations;
 
@@ -56,11 +56,12 @@ function Operations(opts) {
     self.lastTimeoutTime = 0;
 }
 
-function OperationTombstone(id, time) {
+function OperationTombstone(id, time, timeout) {
     var self = this;
 
     self.id = id;
     self.time = time;
+    self.timeout = timeout;
 }
 
 Operations.prototype.startTimeoutTimer =
@@ -142,8 +143,13 @@ Operations.prototype.popOutReq = function popOutReq(id, context) {
     }
 
     delete self.requests.out[id];
+
+    var now = self.timers.now();
+    var timeout = now + TOMBSTONE_TTL_OFFSET + req.ttl +
+        self._getTimeoutFuzz();
+
     self.tombstones.out.push(new OperationTombstone(
-        req.id, self.timers.now()
+        req.id, self.timers.now(), timeout
     ));
     self.pending.out--;
 
@@ -244,7 +250,7 @@ function _onTimeoutCheck() {
     var now = self.timers.now();
     for (var i = 0; i < self.tombstones.out.length; i++) {
         var tombstone = self.tombstones.out[i];
-        if (now >= tombstone.time + TOMBSTONE_TTL) {
+        if (now >= tombstone.timeout) {
             self.tombstones.out.splice(i, 1);
             i--;
         }
