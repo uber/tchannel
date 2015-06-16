@@ -109,14 +109,22 @@ function allocCluster(opts) {
 
     function createChannel(i) {
         var chan = TChannel(extend(channelOptions));
-        var port = opts.listen && opts.listen[i] || 0;
-        chan.on('listening', chanReady);
-        chan.listen(port, host);
         cluster.channels[i] = chan;
 
+        var port = opts.listen ? opts.listen[i] : 0;
+        if (port === null) {
+            chanReady();
+        } else {
+            chan.on('listening', chanReady);
+            chan.listen(port, host);
+        }
+
         function chanReady() {
-            var port = chan.address().port;
-            cluster.hosts[i] = util.format('%s:%s', host, port);
+            if (port === null) {
+                cluster.hosts[i] = null;
+            } else {
+                cluster.hosts[i] = util.format('%s:%s', host, chan.address().port);
+            }
             cluster.ready.signal(cluster);
         }
     }
