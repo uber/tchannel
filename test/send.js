@@ -325,6 +325,41 @@ allocCluster.test('request().send() to self', 1, function t(cluster, assert) {
     });
 });
 
+allocCluster.test('send to self', {
+    numPeers: 1
+}, function t(cluster, assert) {
+    var one = cluster.channels[0];
+    var subOne = one.makeSubChannel({
+        serviceName: 'one',
+        peers: [one.hostPort],
+        requestDefaults: {
+            hasNoParent: true,
+            headers: {
+                as: 'raw',
+                cn: 'wat'
+            }
+        }
+    });
+
+    subOne.handler.register('foo', function foo(req, res) {
+        res.headers.as = 'raw';
+        res.sendOk('', 'bar');
+    });
+
+    subOne.request({
+        serviceName: 'one'
+    }).send('foo', '', '', onResponse);
+
+    function onResponse(err, resp, arg2, arg3) {
+        assert.ifError(err);
+
+        assert.ok(resp.ok);
+        assert.equal(String(arg3), 'bar');
+
+        assert.end();
+    }
+});
+
 allocCluster.test('self send() with error frame', 1, function t(cluster, assert) {
     var one = cluster.channels[0];
     var subOne = one.makeSubChannel({
