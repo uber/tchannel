@@ -91,7 +91,8 @@ func setupServer() (net.Listener, error) {
 	sh := &secondHandler{}
 	server.Register("Second", reflect.TypeOf(sh), gen.NewSecondProcessor(&secondHandler{}))
 
-	go tchan.Serve(listener)
+	// Serve will set the local peer info, and start accepting sockets in a separate goroutine.
+	tchan.Serve(listener)
 	return listener, nil
 }
 

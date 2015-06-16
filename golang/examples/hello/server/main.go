@@ -101,4 +101,7 @@ func main() {
 	if err := ch.ListenAndServe(*bindAddr); err != nil {
 		log.Fatalf("Could not listen on %s: %v", *bindAddr, err)
 	}
+
+	// Serve accepts connections in the background, so block until ctrl-c.
+	select {}
 }

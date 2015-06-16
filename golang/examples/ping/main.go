@@ -68,8 +68,7 @@ func pingHandler(ctx context.Context, call *tchannel.InboundCall) {
 func listenAndHandle(s *tchannel.Channel, hostPort string) {
 	log.Infof("Service %s", hostPort)
 
-	// If no error is returned, this blocks forever
-
+	// If no error is returned, the listen was successful. Serving happens in the background.
 	if err := s.ListenAndServe(hostPort); err != nil {
 		log.Fatalf("Could not listen on %s: %v", hostPort, err)
 	}
@@ -86,7 +85,7 @@ func main() {
 	ch.Register(tchannel.HandlerFunc(pingHandler), "ping")
 
 	// Listen for incoming requests
-	go listenAndHandle(ch, "127.0.0.1:10500")
+	listenAndHandle(ch, "127.0.0.1:10500")
 
 	// Create a new TChannel for sending requests.
 	client, err := tchannel.NewChannel("ping-client", nil)
@@ -97,9 +96,6 @@ func main() {
 	// Make a call to ourselves, with a timeout of 10s
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-
-	// Wait for the server to start before connecting
-	time.Sleep(time.Millisecond * 100)
 
 	call, err := client.BeginCall(ctx, "127.0.0.1:10500", "PingService", "ping", nil)
 	if err != nil {
