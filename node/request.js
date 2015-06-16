@@ -157,7 +157,7 @@ TChannelRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
         'target-service': self.serviceName,
         'service': self.headers.cn,
         // TODO should always be buffer
-        'target-endpoint': self.arg1
+        'target-endpoint': String(self.arg1)
     });
 
     self.services.onRequest(self);
