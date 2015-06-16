@@ -39,7 +39,7 @@ type TChanOutboundOptions struct {
 	// Context is the context.Context with timeout and deadline information.
 	Context context.Context
 
-	// Dst is the host:port of the service to call.
+	// Dst is the host:port for a specific peer to call. This field is optional.
 	Dst string
 
 	// HyperbahnService is the Hyperbahn service name.
@@ -79,9 +79,18 @@ func NewTChanOutbound(tchan *tchannel.Channel, options TChanOutboundOptions) thr
 
 func (p *outProtocol) beginCall(method string) (*tchannel.OutboundCall, error) {
 	opts := p.options
-	return p.tchan.BeginCall(opts.Context, opts.Dst, opts.HyperbahnService, opts.ThriftService+"::"+method, &tchannel.CallOptions{
-		Format: tchannel.Thrift,
-	})
+	sc := p.tchan.GetSubChannel(opts.HyperbahnService)
+
+	// If dst is specified, use that specific peer to make the call. Otherwise, use any peer.
+	peer := sc.Peers().Get()
+	if opts.Dst != "" {
+		peer = sc.Peers().GetOrAdd(opts.Dst)
+	}
+
+	return peer.BeginCall(opts.Context, opts.HyperbahnService, opts.ThriftService+"::"+method,
+		&tchannel.CallOptions{
+			Format: tchannel.Thrift,
+		})
 }
 
 // WriteMessageBegin begins the outgoing call over Thrift. The underlying binary protocol is not
