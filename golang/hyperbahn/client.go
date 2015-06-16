@@ -30,6 +30,7 @@ const hyperbahnServiceName = "hyperbahn"
 
 // ClientOptions are used to configure this Hyperbahn client.
 type ClientOptions struct {
+	// Timeout defaults to 1 second if it is not set.
 	Timeout      time.Duration
 	Handler      Handler
 	FailStrategy FailStrategy
@@ -46,6 +47,9 @@ func NewClient(ch *tchannel.Channel, initialNodes []string, opts *ClientOptions)
 	client := &Client{tchan: ch}
 	if opts != nil {
 		client.opts = *opts
+	}
+	if client.opts.Timeout == 0 {
+		client.opts.Timeout = time.Second
 	}
 	if client.opts.Handler == nil {
 		client.opts.Handler = nullHandler{}

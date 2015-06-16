@@ -51,7 +51,7 @@ type adResponse struct {
 }
 
 func (c *Client) sendRegistration() error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	ctx, cancel := context.WithTimeout(context.Background(), c.opts.Timeout)
 	defer cancel()
 
 	sc := c.tchan.GetSubChannel(hyperbahnServiceName)
