@@ -84,20 +84,41 @@ calls initiated by this service to the target service/endpoint.  MUST include
 an additional ``type`` tag indicating the type of error received; valid values are
 the error code names described in the TChannel protocol doc.
 
+##### outbound.calls.per-attempt.system-errors
+The total number of Error frame responses per attempt (initial request or retry)
+from calls initiated by this service to the target service/endpoint.  MUST include
+an additional ``type`` tag indicating the type of error received; valid values are
+the error code names described in the TChannel protocol doc.
+
 ##### outbound.calls.operational-errors
-The total number of errors that occured whilst sending outgoing calls initiated
-by this service to the target service/endpoint. These are not error frames but
-actual local socket level errors or timeout errors. SHOULD include an additional
-``type`` tag indicating the type of error received; standardizing operational
-error types is outside the scope of the core metrics.
+The total number of errors reported to the application whilst sending outgoing
+calls initiated by this service to the target service/endpoint. These are not
+error frames but actual local socket level errors or timeout errors. SHOULD
+include an additional ``type`` tag indicating the type of error received;
+standardizing operational error types is outside the scope of the core metrics.
+
+##### outbound.calls.per-attempt.operational-errors
+The total number of errors occured per attempt whilst sending outgoing
+calls initiated by this service to the target service/endpoint. These are not
+error frames but actual local socket level errors or timeout errors. SHOULD
+include an additional ``type`` tag indicating the type of error received;
+standardizing operational error types is outside the scope of the core metrics.
 
 ##### outbound.calls.app-errors
 
-The total number of CallResponse/NotOk responses received from calls initiated
-by this service to the the target service/endpoint.  MAY include an additional
-``type`` tag indicating the type of application-level error received.
-Standardization of application-level error types is outside the scope of the
-core metrics.
+The total number of CallResponse/NotOk responses reported to the application
+from calls initiated by this service to the the target service/endpoint.  MAY
+include an additional ``type`` tag indicating the type of application-level
+error received. Standardization of application-level error types is outside
+the scope of the core metrics.
+
+##### outbound.calls.per-attempt.app-errors
+
+The total number of CallResponse/NotOk responses per attempt received
+from calls initiated by this service to the the target service/endpoint.  MAY
+include an additional ``type`` tag indicating the type of application-level
+error received. Standardization of application-level error types is outside
+the scope of the core metrics.
 
 ##### outbound.calls.retries
 The total number of retries performed by the sending service.  SHOULD include a
