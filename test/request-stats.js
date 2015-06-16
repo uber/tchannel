@@ -94,9 +94,20 @@ allocCluster.test('emits stats', {
                 host: os.hostname()
             }
         }, {
+            name: 'inbound.response.size',
+            type: 'counter',
+            value: 64,
+            tags: {
+                'calling-service': 'client',
+                service: 'server',
+                endpoint: 'echo',
+                app: 'client',
+                host: os.hostname()
+            }
+        }, {
             name: 'outbound.calls.per-attempt-latency',
             type: 'timing',
-            value: stats[2].value,
+            value: stats[3].value,
             tags: {
                 'target-service': 'server',
                 service: 'client',
@@ -120,7 +131,7 @@ allocCluster.test('emits stats', {
         }, {
             name: 'outbound.calls.latency',
             type: 'timing',
-            value: stats[4].value,
+            value: stats[5].value,
             tags: {
                 'target-service': 'server',
                 service: 'client',

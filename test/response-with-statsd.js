@@ -42,7 +42,7 @@ allocCluster.test('emits stats on response ok', {
             .replace(/:/g, '-')
             .replace(/\./g, '-');
     });
-    var statsd = nullStatsd(4);
+    var statsd = nullStatsd(5);
 
     server.makeSubChannel({
         serviceName: 'reservoir'
@@ -93,6 +93,12 @@ allocCluster.test('emits stats on response ok', {
             time: null
         }, {
             type: 'c',
+            name: 'tchannel.inbound.request.size.inPipe.reservoir.Reservoir--get',
+            value: null,
+            delta: 109,
+            time: null
+        }, {
+            type: 'c',
             name: 'tchannel.inbound.calls.recvd.inPipe.reservoir.Reservoir--get',
             value: null,
             delta: 1,
@@ -129,7 +135,7 @@ allocCluster.test('emits stats on response not ok', {
             .replace(/:/g, '-')
             .replace(/\./g, '-');
     });
-    var statsd = nullStatsd(4);
+    var statsd = nullStatsd(5);
 
     server.makeSubChannel({
         serviceName: 'reservoir'
@@ -180,6 +186,12 @@ allocCluster.test('emits stats on response not ok', {
             time: null
         }, {
             type: 'c',
+            name: 'tchannel.inbound.request.size.inPipe.reservoir.Reservoir--get',
+            value: null,
+            delta: 109,
+            time: null
+        }, {
+            type: 'c',
             name: 'tchannel.inbound.calls.recvd.inPipe.reservoir.Reservoir--get',
             value: null,
             delta: 1,
@@ -216,7 +228,7 @@ allocCluster.test('emits stats on response error', {
             .replace(/:/g, '-')
             .replace(/\./g, '-');
     });
-    var statsd = nullStatsd(4);
+    var statsd = nullStatsd(5);
 
     server.makeSubChannel({
         serviceName: 'reservoir'
@@ -261,6 +273,12 @@ allocCluster.test('emits stats on response error', {
             name: 'tchannel.connections.accepted.' + clientHost,
             value: null,
             delta: 1,
+            time: null
+        }, {
+            type: 'c',
+            name: 'tchannel.inbound.request.size.inPipe.reservoir.Reservoir--get',
+            value: null,
+            delta: 109,
             time: null
         }, {
             type: 'c',

@@ -86,6 +86,17 @@ allocCluster.test('emits response stats with ok', {
                 host: os.hostname()
            }
         }, {
+            name: 'inbound.request.size',
+            type: 'counter',
+            value: 93,
+            tags: {
+                'calling-service': 'client',
+                service: 'server',
+                endpoint: 'echo',
+                app: 'server',
+                host: os.hostname()
+            }
+        }, {
             name: 'inbound.calls.recvd',
             type: 'counter',
             value: 1,
@@ -110,7 +121,7 @@ allocCluster.test('emits response stats with ok', {
         }, {
             name: 'inbound.calls.latency',
             type: 'timing',
-            value: stats[3].value,
+            value: stats[4].value,
             tags: {
                 'calling-service': 'client',
                 service: 'server',
@@ -186,6 +197,17 @@ allocCluster.test('emits response stats with not ok', {
                 host: os.hostname()
            }
         }, {
+            name: 'inbound.request.size',
+            type: 'counter',
+            value: 93,
+            tags: {
+                'calling-service': 'client',
+                service: 'server',
+                endpoint: 'echo',
+                app: 'server',
+                host: os.hostname()
+            }
+        }, {
             name: 'inbound.calls.recvd',
             type: 'counter',
             value: 1,
@@ -211,7 +233,7 @@ allocCluster.test('emits response stats with not ok', {
         }, {
             name: 'inbound.calls.latency',
             type: 'timing',
-            value: stats[3].value,
+            value: stats[4].value,
             tags: {
                 'calling-service': 'client',
                 service: 'server',
@@ -284,6 +306,17 @@ allocCluster.test('emits response stats with error', {
                 host: os.hostname()
            }
         }, {
+            name: 'inbound.request.size',
+            type: 'counter',
+            value: 93,
+            tags: {
+                'calling-service': 'client',
+                service: 'server',
+                endpoint: 'echo',
+                app: 'server',
+                host: os.hostname()
+            }
+        }, {
             name: 'inbound.calls.recvd',
             type: 'counter',
             value: 1,
@@ -309,7 +342,7 @@ allocCluster.test('emits response stats with error', {
         }, {
             name: 'inbound.calls.latency',
             type: 'timing',
-            value: stats[3].value,
+            value: stats[4].value,
             tags: {
                 'calling-service': 'client',
                 service: 'server',
