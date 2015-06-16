@@ -19,4 +19,5 @@
 // THE SOFTWARE.
 
 require('./basic_server');
+require('./ephemeral_client');
 require('./server_2_requests');
