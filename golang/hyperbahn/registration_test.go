@@ -217,7 +217,8 @@ func withSetup(t *testing.T, f func(ch *tchannel.Channel, hostPort string)) {
 	defer serverCh.Close()
 	listener, err := net.Listen("tcp", ":0")
 	require.NoError(t, err)
-	go serverCh.Serve(listener)
+	serverCh.Serve(listener)
 
 	f(serverCh, listener.Addr().String())
+	serverCh.Close()
 }

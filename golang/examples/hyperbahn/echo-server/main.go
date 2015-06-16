@@ -25,7 +25,7 @@ func main() {
 	log.Printf("Listening on %v", l.Addr())
 
 	tchan.Register(handler{}, "echo")
-	go tchan.Serve(l)
+	tchan.Serve(l)
 
 	time.Sleep(100 * time.Millisecond)
 
