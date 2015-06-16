@@ -6,11 +6,11 @@ type Event int
 const (
 	// UnknownEvent should never be used.
 	UnknownEvent Event = iota
-	// RegistrationAttempt is triggerred when the client tries to register.
+	// RegistrationAttempt is triggered when the client tries to register.
 	RegistrationAttempt
-	// Registered is triggerred when the initial registration for a service is successful.
+	// Registered is triggered when the initial registration for a service is successful.
 	Registered
-	// RegistrationRefreshed is triggerred on periodic registrations.
+	// RegistrationRefreshed is triggered on periodic registrations.
 	RegistrationRefreshed
 )
 

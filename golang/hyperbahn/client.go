@@ -19,7 +19,7 @@ type Client struct {
 type FailStrategy int
 
 const (
-	// FailStrategyFatal will call Fatalf on the channel's logger after triggerring handler.OnError.
+	// FailStrategyFatal will call Fatalf on the channel's logger after triggering handler.OnError.
 	// This is the default strategy.
 	FailStrategyFatal FailStrategy = iota
 	// FailStrategyIgnore will only call handler.OnError, even on fatal errors.

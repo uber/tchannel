@@ -24,7 +24,7 @@ const (
 // timeSleep is a variable for stubbing in unit tests.
 var timeSleep = time.Sleep
 
-// ErrRegistrationFailed is triggerred when registration is failed.
+// ErrRegistrationFailed is triggered when registration is failed.
 type ErrRegistrationFailed struct {
 	// WillRetry is set to true if registration will be retried.
 	WillRetry bool
