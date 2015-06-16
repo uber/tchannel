@@ -248,6 +248,7 @@ TChannel.prototype.onServerSocketConnection = function onServerSocketConnection(
     conn.spanEvent.on(function handleSpanFromConn(span) {
         self.tracer.report(span);
     });
+    conn.errorEvent.on(onConnectionError);
 
     if (self.serverConnections[socketRemoteAddr]) {
         var oldConn = self.serverConnections[socketRemoteAddr];
@@ -263,6 +264,17 @@ TChannel.prototype.onServerSocketConnection = function onServerSocketConnection(
     self.connectionEvent.emit(self, conn);
 
     function onSocketClose() {
+        delete self.serverConnections[socketRemoteAddr];
+    }
+
+    function onConnectionError(err) {
+        self.logger.error('Got a connection error', {
+            err: err,
+            direction: conn.direction,
+            remoteName: conn.remoteName,
+            socketRemoteAddr: conn.socketRemoteAddr
+        });
+
         delete self.serverConnections[socketRemoteAddr];
     }
 };
