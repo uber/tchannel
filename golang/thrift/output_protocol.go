@@ -22,6 +22,7 @@ package thrift
 import (
 	"errors"
 	"io"
+	"io/ioutil"
 
 	"golang.org/x/net/context"
 
@@ -29,6 +30,8 @@ import (
 	tchannel "github.com/uber/tchannel/golang"
 )
 
+// ErrApplication is returned on application errors.
+// TODO(prashant): Remove this and return the real error?
 var ErrApplication = errors.New("application error")
 
 // TChanOutboundOptions are parameters passed to the underlying tchannel when making requests.
@@ -36,7 +39,7 @@ type TChanOutboundOptions struct {
 	// Context is the context.Context with timeout and deadline information.
 	Context context.Context
 
-	// Dst is the host:port of the service to call.
+	// Dst is the host:port for a specific peer to call. This field is optional.
 	Dst string
 
 	// HyperbahnService is the Hyperbahn service name.
@@ -76,9 +79,18 @@ func NewTChanOutbound(tchan *tchannel.Channel, options TChanOutboundOptions) thr
 
 func (p *outProtocol) beginCall(method string) (*tchannel.OutboundCall, error) {
 	opts := p.options
-	return p.tchan.BeginCall(opts.Context, opts.Dst, opts.HyperbahnService, opts.ThriftService+"::"+method, &tchannel.CallOptions{
-		Format: tchannel.Thrift,
-	})
+	sc := p.tchan.GetSubChannel(opts.HyperbahnService)
+
+	// If dst is specified, use that specific peer to make the call. Otherwise, use any peer.
+	peer := sc.Peers().Get()
+	if opts.Dst != "" {
+		peer = sc.Peers().GetOrAdd(opts.Dst)
+	}
+
+	return peer.BeginCall(opts.Context, opts.HyperbahnService, opts.ThriftService+"::"+method,
+		&tchannel.CallOptions{
+			Format: tchannel.Thrift,
+		})
 }
 
 // WriteMessageBegin begins the outgoing call over Thrift. The underlying binary protocol is not
@@ -97,6 +109,8 @@ func (p *outProtocol) WriteMessageBegin(name string, _ thrift.TMessageType, seqI
 	if err != nil {
 		return err
 	}
+	// TODO(prashant): Support application headers.
+	writer.Write([]byte{0, 0})
 	if err := writer.Close(); err != nil {
 		return err
 	}
@@ -125,6 +139,8 @@ func (p *outProtocol) ReadMessageBegin() (string, thrift.TMessageType, int32, er
 	if err != nil {
 		return "", 0, 0, err
 	}
+	// TODO(prashant): Read application headers out of arg2.
+	io.Copy(ioutil.Discard, reader)
 	if err := reader.Close(); err != nil {
 		return "", 0, 0, err
 	}

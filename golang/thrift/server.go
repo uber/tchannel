@@ -58,5 +58,8 @@ type Handler struct {
 // a tchannel protocol.
 func (h *Handler) Handle(ctx context.Context, call *tchannel.InboundCall) {
 	protocol := NewTChannelInbound(call)
-	h.processor.Process(protocol, protocol)
+	_, err := h.processor.Process(protocol, protocol)
+	if err != nil {
+		// TODO(prashant): Separate application errors from tchannel errors and log tchannel errors.
+	}
 }
