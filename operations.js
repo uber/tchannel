@@ -199,12 +199,20 @@ Operations.prototype.destroy = function destroy() {
 Operations.prototype._getTimeoutDelay =
 function _getTimeoutDelay() {
     var self = this;
-    var base = self.timeoutCheckInterval;
+
+    return self.timeoutCheckInterval + self._getTimeoutFuzz();
+};
+
+Operations.prototype._getTimeoutFuzz =
+function _getTimeoutFuzz() {
+    var self = this;
+
     var fuzz = self.timeoutFuzz;
-    if (fuzz) {
-        fuzz = Math.round(Math.floor(self.random() * fuzz) - (fuzz / 2));
+    if (!fuzz) {
+        return 0;
     }
-    return base + fuzz;
+
+    return Math.round(Math.floor(self.random() * fuzz)) - (fuzz / 2);
 };
 
 // If the connection has some success and some timeouts, we should probably leave it up,
