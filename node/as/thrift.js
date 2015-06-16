@@ -52,7 +52,40 @@ function TChannelAsThrift(opts) {
     var logParseFailures = opts && opts.logParseFailures;
     self.logParseFailures = typeof logParseFailures === 'boolean' ?
         logParseFailures : true;
+
+    // only used in request()
+    self.channel = opts.channel;
 }
+
+function TChannelThriftRequest(options) {
+    var self = this;
+
+    self.channel = options.channel;
+    self.reqOptions = options.reqOptions;
+    self.tchannelThrift = options.tchannelThrift;
+}
+
+TChannelThriftRequest.prototype.send =
+function send(endpoint, head, body, callback) {
+    var self = this;
+
+    var outreq = self.channel.request(self.reqOptions);
+    self.tchannelThrift.send(outreq, endpoint, head, body, callback);
+};
+
+TChannelAsThrift.prototype.request = function request(reqOptions) {
+    var self = this;
+
+    assert(self.channel, 'channel is required for thrift.request()');
+
+    var req = new TChannelThriftRequest({
+        channel: self.channel,
+        reqOptions: reqOptions,
+        tchannelThrift: self
+    });
+
+    return req;
+};
 
 TChannelAsThrift.prototype.register =
 function register(channel, name, opts, handle) {
