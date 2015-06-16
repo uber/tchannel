@@ -18,68 +18,61 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+var allocCluster = require('../lib/alloc-cluster.js');
 var CountedReadySignal = require('ready-signal/counted');
 var DebugLogtron = require('debug-logtron');
 var test = require('tape');
 
 var TChannel = require('../../channel.js');
-
-var logger = DebugLogtron('tchannel');
-
 var fixture = require('./basic_server_fixture');
 var validators = require('../lib/simple_validators');
 
-test('basic tracing test', function (assert) {
-
-    var spans = [];
-
-    function traceReporter(span) {
-        spans.push(span);
-        logger.debug(span.toString());
-    }
-
-    var subservice = new TChannel({
-        logger: logger,
-        traceReporter: traceReporter,
+allocCluster.test('basic tracing test', {
+    numPeers: 3,
+    channelOptions: {
+        traceReporter: testTraceReporter(),
         trace: true
-    });
+    },
+    listen: [
+        4040,
+        4041,
+        4042
+    ]
+}, function t(cluster, assert) {
+    var logger = cluster.logger;
+    var server = cluster.channels[0];
+    var client = cluster.channels[1];
+    var subservice = cluster.channels[2];
+    var traceReporter = server.tracer.reporter;
+
     var subChan = subservice.makeSubChannel({
         serviceName: 'subservice'
     });
-
-    var server = new TChannel({
-        logger: logger,
-        traceReporter: traceReporter,
-        trace: true
-    });
-    var serverChan = server.makeSubChannel({
-        serviceName: 'server'
-    });
-    var subServiceChan = server.makeSubChannel({
-        serviceName: 'subservice',
-        peers: ['127.0.0.1:4042']
-    });
-
-    var client = new TChannel({
-        logger: logger,
-        traceReporter: traceReporter,
-        trace: true
-    });
-    var clientChan = client.makeSubChannel({
-        serviceName: 'server',
-        peers: ['127.0.0.1:4040']
-    });
-
     subChan.register('/foobar', function (req, res) {
         logger.debug("subserv sr");
         res.headers.as = 'raw';
         res.sendOk('result', 'success');
     });
 
-    // normal response
-    serverChan.register('/top_level_endpoint', function (req, res) {
-        logger.debug("top level sending to subservice");
-        setTimeout(function () {
+    var serverChan = server.makeSubChannel({
+        serviceName: 'server'
+    });
+    serverChan.register('/top_level_endpoint', handleTopLevelEndpoint);
+
+    var subServiceChan = server.makeSubChannel({
+        serviceName: 'subservice'
+    });
+    var clientChan = client.makeSubChannel({
+        serviceName: 'server',
+    });
+
+    clientChan.peers.add(server.hostPort);
+    subServiceChan.peers.add(subservice.hostPort);
+    withReadyPeers(client, clientPeersReady);
+
+    function handleTopLevelEndpoint(req, res) {
+        withReadyPeers(server, function send() {
+            logger.debug("top level sending to subservice");
             var servReq = subServiceChan.request({
                 serviceName: 'subservice',
                 parent: req,
@@ -89,34 +82,16 @@ test('basic tracing test', function (assert) {
                 },
                 trace: true
             });
-            var peers = server.peers.values();
-            var ready = new CountedReadySignal(peers.length);
-            peers.forEach(function each(peer) {
-                if (peer.isConnected()) {
-                    ready.signal();
-                } else {
-                    peer.connect().on('identified', ready.signal);
-                }
+            servReq.send('/foobar', 'arg1', 'arg2', function response(err, subRes) {
+                logger.debug('top level recv from subservice');
+                res.headers.as = 'raw';
+                if (err) return res.sendOk('error', err);
+                res.sendOk('result', 'success: ' + subRes);
             });
-            ready(function send() {
-                servReq.send('/foobar', 'arg1', 'arg2', function response(err, subRes) {
-                    logger.debug('top level recv from subservice');
-                    res.headers.as = 'raw';
-                    if (err) return res.sendOk('error', err);
-                    res.sendOk('result', 'success: ' + subRes);
-                });
-            });
-        }, 40);
-    });
+        });
+    }
 
-    var ready = CountedReadySignal(3);
-    var requestsDone = CountedReadySignal(1);
-
-    ready(function (err) {
-        if (err) {
-            throw err;
-        }
-
+    function clientPeersReady() {
         logger.debug('client making req');
         var req = clientChan.request({
             serviceName: 'server',
@@ -127,36 +102,41 @@ test('basic tracing test', function (assert) {
                 cn: 'wat'
             }
         });
-        var peers = client.peers.values();
-        var ready = new CountedReadySignal(peers.length);
-        peers.forEach(function each(peer) {
-            peer.connect().on('identified', ready.signal);
+        req.send('/top_level_endpoint', "arg 1", "arg 2", function (err, res) {
+            logger.debug("client recv from top level: " + res);
+            testDone();
         });
-        ready(function send() {
-            req.send('/top_level_endpoint', "arg 1", "arg 2", function (err, res) {
-                    logger.debug("client recv from top level: " + res);
-                    requestsDone.signal();
-                });
+    }
+
+    function testDone() {
+        // we clean up spans in their toJSON method for transport, so
+        // do that and then validate them
+        var cleanspans = traceReporter.spans.map(function (item) {
+            return item.toJSON();
         });
-    });
+        validators.validateSpans(assert, cleanspans, fixture);
 
-    server.listen(4040, '127.0.0.1', ready.signal);
-    client.listen(4041, '127.0.0.1', ready.signal);
-    subservice.listen(4042, '127.0.0.1', ready.signal);
-
-    requestsDone(function () {
-        setTimeout(function () {
-            // we clean up spans in their toJSON method for transport, so
-            // do that and then validate them
-            var cleanspans = spans.map(function (item) {
-                return item.toJSON();
-            });
-            validators.validateSpans(assert, cleanspans, fixture);
-
-            assert.end();
-            client.close();
-            server.close();
-            subservice.close();
-        }, 10);
-    });
+        assert.end();
+    }
 });
+
+function testTraceReporter() {
+    function reporter(span) {
+        reporter.spans.push(span);
+    }
+    reporter.spans = [];
+    return reporter;
+}
+
+function withReadyPeers(chan, callback) {
+    var peerList = chan.peers.values();
+    var peersReady = new CountedReadySignal(peerList.length);
+    peersReady(callback);
+    peerList.forEach(function each(peer) {
+        if (peer.isConnected()) {
+            peersReady.signal();
+        } else {
+            peer.connect().on('identified', peersReady.signal);
+        }
+    });
+}
