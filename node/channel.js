@@ -84,8 +84,8 @@ function TChannel(options) {
     self.inboundCallsAppErrorsStat = self.defineCounter('inbound.calls.app-errors');
     // self.inboundCallsCancelsRequestedStat = self.defineCounter('inbound.cancels.requested');
     // self.inboundCallsCancelsHonoredStat = self.defineCounter('inbound.cancels.honored');
-    // self.inboundRequestSizeStat = self.defineTiming('inbound.request.size');
-    // self.inboundResponseSizeStat = self.defineTiming('inbound.response.size');
+    self.inboundRequestSizeStat = self.defineCounter('inbound.request.size');
+    self.inboundResponseSizeStat = self.defineCounter('inbound.response.size');
     // self.inboundProtocolErrorsStat = self.defineCounter('inbound.protocol-errors');
     self.inboundCallsLatencyStat = self.defineTiming('inbound.calls.latency');
 
