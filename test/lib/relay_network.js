@@ -199,9 +199,11 @@ RelayNetwork.prototype.setCluster = function setCluster(cluster) {
                         cn: serviceName
                     },
                     hasNoParent: true
-                },
-                peers: self.topology[serviceName] // TODO this really ought to be linked directly to the root peers
+                }
             });
+            // The subchannel's peers are linked to the peer list as managed by
+            // incoming connections from the relays.
+            subChannel.peers = channel.peers;
 
             // Set up server
             var endpointHandler = new EndpointHandler(serviceName);
