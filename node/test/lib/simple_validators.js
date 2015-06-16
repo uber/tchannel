@@ -43,44 +43,58 @@ function validateSpans(assert, actual, expected) {
     // So we base an id off the contents and then validate.
 
     var actualById = {};
-    var expectedById = {};
-
-    function mapSpanToUniqueId(item) {
-        return item.name + item.endpoint.ipv4 + item.endpoint.port +
-            item.annotations.reduce(function (str, item) {
-                return str + item.value;
-            }, "");
-    }
-
     actual.forEach(function (item) {
-        actualById[mapSpanToUniqueId(item)] = item;
+        actualById[uniqueSpanId(item)] = item;
     });
 
     expected.forEach(function (item) {
-        expectedById[mapSpanToUniqueId(item)] = item;
+        var id = uniqueSpanId(item);
+        var actualValue = actualById[id];
+        if (!actualValue) {
+            assert.fail('missing span id ' + id);
+        } else {
+            validateOne(assert, actualValue, item);
+        }
     });
 
-    module.exports.validate(assert, actualById, expectedById);
+    // TODO: assert that we didn't get any extra spans
 };
+
+function uniqueSpanId(item) {
+    return item.name +
+           item.endpoint.ipv4 +
+           item.endpoint.port +
+           catValues(item.annotations);
+}
+
+function catValues(array) {
+    return array.reduce(catValue, '');
+    function catValue(str, item) {
+        return str + item.value;
+    }
+}
+
+function validateOne(assert, actual, expected) {
+    if (Buffer.isBuffer(actualValue)) {
+        actualValue = actualValue.toString('hex');
+    }
+
+    if (typeof expectedValue === 'function') {
+        return expectedValue(assert, actualValue, key);
+    }
+
+    if (typeof expectedValue === 'object') {
+        return validate(assert, actualValue, expectedValue);
+    }
+
+    assert.equals(actualValue, expectedValue, "key: " + key);
+}
 
 module.exports.validate = function validate(assert, actual, expected) {
     Object.keys(expected).forEach(function (key) {
         var actualValue = actual[key];
         var expectedValue = expected[key];
-
-        if (Buffer.isBuffer(actualValue)) {
-            actualValue = actualValue.toString('hex');
-        }
-
-        if (typeof expectedValue === 'function') {
-            return expectedValue(assert, actualValue, key);
-        }
-
-        if (typeof expectedValue === 'object') {
-            return validate(assert, actualValue, expectedValue);
-        }
-
-        assert.equals(actualValue, expectedValue, "key: " + key);
+        validateOne(assert, actualValue, expectedValue);
     });
 };
 
