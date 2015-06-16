@@ -275,9 +275,7 @@ func withTestChannel(t *testing.T, serviceName string, f func(ch *Channel, hostP
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	require.Nil(t, err)
 
-	go ch.Serve(l)
-
+	ch.Serve(l)
 	f(ch, l.Addr().String())
-
 	ch.Close()
 }

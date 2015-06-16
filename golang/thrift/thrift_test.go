@@ -137,9 +137,9 @@ func withSetup(t *testing.T, f func(ctx context.Context, args testArgs)) {
 	defer cancel()
 
 	// Start server
-	listener, err := setupServer(args.s1, args.s2)
+	tchan, listener, err := setupServer(args.s1, args.s2)
 	require.NoError(t, err)
-	defer listener.Close()
+	defer tchan.Close()
 
 	// Get client1
 	args.c1, args.c2, err = getClients(ctx, listener.Addr().String())
@@ -151,23 +151,23 @@ func withSetup(t *testing.T, f func(ctx context.Context, args testArgs)) {
 	args.s2.AssertExpectations(t)
 }
 
-func setupServer(h *mocks.SimpleService, sh *mocks.SecondService) (net.Listener, error) {
+func setupServer(h *mocks.SimpleService, sh *mocks.SecondService) (*tchannel.Channel, net.Listener, error) {
 	tchan, err := tchannel.NewChannel("service", nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	listener, err := net.Listen("tcp", ":0")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	server := NewServer(tchan)
 	server.Register("SimpleService", reflect.TypeOf(h), gen.NewSimpleServiceProcessor(h))
 	server.Register("SecondService", reflect.TypeOf(sh), gen.NewSecondServiceProcessor(sh))
 
-	go tchan.Serve(listener)
-	return listener, nil
+	tchan.Serve(listener)
+	return tchan, listener, nil
 }
 
 func getClients(ctx context.Context, dst string) (*gen.SimpleServiceClient, *gen.SecondServiceClient, error) {

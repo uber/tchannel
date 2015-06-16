@@ -109,37 +109,10 @@ func NewChannel(serviceName string, opts *ChannelOptions) (*Channel, error) {
 	return ch, nil
 }
 
-// Serve serves incoming requests using the provided listener
+// Serve serves incoming requests using the provided listener.
+// The local peer info is set synchronously, but the actual socket listening is done in
+// a separate goroutine.
 func (ch *Channel) Serve(l net.Listener) error {
-	mutable := &ch.mutable
-	mutable.mut.Lock()
-
-	if mutable.l != nil {
-		mutable.mut.Unlock()
-		return errAlreadyListening
-	}
-
-	mutable.l = l
-	mutable.peerInfo.HostPort = l.Addr().String()
-	mutable.mut.Unlock()
-
-	peerInfo := mutable.peerInfo
-	ch.log.Debugf("%v (%v) listening on %v", peerInfo.ProcessName, peerInfo.ServiceName, peerInfo.HostPort)
-	return ch.serve()
-}
-
-// ListenAndServe listens on the given address and serves incoming requests.
-// The port may be 0, in which case the channel will use an OS assigned port
-func (ch *Channel) ListenAndServe(hostPort string) error {
-	if err := ch.listen(hostPort); err != nil {
-		return err
-	}
-
-	return ch.serve()
-}
-
-// listen listens on the given address but does not begin serving request.
-func (ch *Channel) listen(hostPort string) error {
 	mutable := &ch.mutable
 	mutable.mut.Lock()
 	defer mutable.mut.Unlock()
@@ -148,22 +121,35 @@ func (ch *Channel) listen(hostPort string) error {
 		return errAlreadyListening
 	}
 
-	addr, err := net.ResolveTCPAddr("tcp", hostPort)
-	if err != nil {
-		ch.log.Errorf("Could not resolve network %s: %v", hostPort, err)
-		return err
-	}
+	mutable.l = l
+	mutable.peerInfo.HostPort = l.Addr().String()
 
-	mutable.l, err = net.ListenTCP("tcp", addr)
-	if err != nil {
-		ch.log.Errorf("Could not listen on %s: %v", hostPort, err)
-		return err
-	}
-
-	mutable.peerInfo.HostPort = mutable.l.Addr().String()
 	peerInfo := mutable.peerInfo
-	ch.log.Infof("%s listening on %s", peerInfo.ProcessName, peerInfo.HostPort)
+	ch.log.Debugf("%v (%v) listening on %v", peerInfo.ProcessName, peerInfo.ServiceName, peerInfo.HostPort)
+	go ch.serve()
 	return nil
+}
+
+// ListenAndServe listens on the given address and serves incoming requests.
+// The port may be 0, in which case the channel will use an OS assigned port
+// This method does not block as the handling of connections is done in a goroutine.
+func (ch *Channel) ListenAndServe(hostPort string) error {
+	mutable := &ch.mutable
+	mutable.mut.RLock()
+
+	if mutable.l != nil {
+		mutable.mut.RUnlock()
+		return errAlreadyListening
+	}
+
+	l, err := net.Listen("tcp", hostPort)
+	if err != nil {
+		mutable.mut.RUnlock()
+		return err
+	}
+
+	mutable.mut.RUnlock()
+	return ch.Serve(l)
 }
 
 // Register registers a handler for a service+operation pair
@@ -218,7 +204,7 @@ func (ch *Channel) BeginCall(ctx context.Context, hostPort, serviceName, operati
 
 // serve runs the listener to accept and manage new incoming connections, blocking
 // until the channel is closed.
-func (ch *Channel) serve() error {
+func (ch *Channel) serve() {
 	acceptBackoff := 0 * time.Millisecond
 
 	for {
@@ -240,10 +226,10 @@ func (ch *Channel) serve() error {
 			} else {
 				// Only log an error if we are not shutdown.
 				if ch.Closed() {
-					return nil
+					return
 				}
-				ch.log.Errorf("unrecoverable accept error: %v; closing server", err)
-				return err
+				ch.log.Fatalf("unrecoverable accept error: %v; closing server", err)
+				return
 			}
 		}
 
@@ -278,5 +264,8 @@ func (ch *Channel) Close() {
 	defer ch.mutable.mut.Unlock()
 
 	ch.mutable.closed = true
+	if ch.mutable.l != nil {
+		ch.mutable.l.Close()
+	}
 	ch.peers.Close()
 }
