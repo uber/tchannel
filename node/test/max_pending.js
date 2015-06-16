@@ -22,14 +22,12 @@
 
 var parallel = require('run-parallel');
 var Result = require('bufrw/result');
-var MockTimers = require('time-mock');
 var allocCluster = require('./lib/alloc-cluster');
 
 testBattle('cap maximum pending requests', {
     numPeers: 2,
     channelOptions: {
         maxPending: 2,
-        timers: MockTimers(Date.now()),
         random: lucky,
         requestDefaults: {
             trackPending: true
@@ -37,7 +35,7 @@ testBattle('cap maximum pending requests', {
     }
 }, [
     // TODO wtf please no connection timeout
-    'tchannel.connection.timeout',
+    'tchannel.request.timeout',
     'tchannel.max-pending'
 ]);
 
@@ -45,14 +43,13 @@ testBattle('cap maximum pending requests per service', {
     numPeers: 2,
     channelOptions: {
         maxPendingForService: 2,
-        timers: MockTimers(1.5e12), // approximately soon
         random: lucky,
         requestDefaults: {
             trackPending: true
         }
     }
 }, [
-    'tchannel.connection.timeout',
+    'tchannel.request.timeout',
     'tchannel.max-pending-for-service'
 ]);
 
@@ -61,14 +58,13 @@ testBattle('channel-scoped max pending supercedes per-service', {
     channelOptions: {
         maxPending: 2,
         maxPendingForService: 2,
-        timers: MockTimers(1.5e12), // approximately soon
         random: lucky,
         requestDefaults: {
             trackPending: true
         }
     }
 }, [
-    'tchannel.connection.timeout',
+    'tchannel.request.timeout',
     'tchannel.max-pending'
 ]);
 
@@ -76,19 +72,17 @@ testBattle('do not opt-in for pending request tracking', {
     numPeers: 2,
     channelOptions: {
         maxPending: 1,
-        timers: MockTimers(Date.now()),
         random: lucky
     }
 }, [
-    'tchannel.connection.timeout',
-    'tchannel.connection.timeout'
+    'tchannel.request.timeout',
+    'tchannel.request.timeout'
 ]);
 
 function testBattle(name, options, expectedErrorTypes) {
     allocCluster.test(name, options, function t(cluster, assert) {
         var tweedleDee = cluster.channels[0];
         var tweedleDum = cluster.channels[1];
-        var timers = tweedleDee.timers;
 
         var deeChannel = tweedleDee.makeSubChannel({
             serviceName: 'battle'
@@ -103,16 +97,20 @@ function testBattle(name, options, expectedErrorTypes) {
             // Let's just say we did
         });
 
-        parallel([challengeSender(), challengeSender()], function verifyIt(err, results) {
-            if (err) return assert.end(err);
-            assert.equals(results[0].err.type, expectedErrorTypes[0], 'first should fail due to a timeout');
-            assert.equals(results[1].err.type, expectedErrorTypes[1], 'second should fail because max pending exceeded');
+        parallel([
+            challengeSender(),
+            challengeSender()
+        ], function verifyIt(err, results) {
+            if (err) {
+                return assert.end(err);
+            }
+
+            assert.equal(results[0].err.type, expectedErrorTypes[0],
+                'first should fail due to a timeout');
+            assert.equal(results[1].err.type, expectedErrorTypes[1],
+                'second should fail because max pending exceeded');
             assert.end();
         });
-
-        // TODO ascertain why this test stalls non-deterministically, and with
-        // increasing probability, for values from 2000ms down to 1000ms.
-        timers.advance(2100);
 
         function challengeSender() {
             return function sendChallenge(cb) {
@@ -122,7 +120,8 @@ function testBattle(name, options, expectedErrorTypes) {
                         as: 'raw',
                         cn: 'wat'
                     },
-                    timeout: 1000
+                    hasNoParent: true,
+                    timeout: 50
                 }).send('start', '', '', regardless(cb));
             };
         }
