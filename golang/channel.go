@@ -195,6 +195,11 @@ func (ch *Channel) GetSubChannel(serviceName string) *SubChannel {
 	return ch.registerNewSubChannel(serviceName)
 }
 
+// Peers returns the PeerList for the channel.
+func (ch *Channel) Peers() *PeerList {
+	return ch.peers
+}
+
 // BeginCall starts a new call to a remote peer, returning an OutboundCall that can
 // be used to write the arguments of the call.
 func (ch *Channel) BeginCall(ctx context.Context, hostPort, serviceName, operationName string, callOptions *CallOptions) (*OutboundCall, error) {
@@ -249,6 +254,11 @@ func (ch *Channel) serve() {
 			continue
 		}
 	}
+}
+
+// Logger returns the logger for this channel.
+func (ch *Channel) Logger() Logger {
+	return ch.log
 }
 
 // Closed returns whether this channel has been closed with .Close()
