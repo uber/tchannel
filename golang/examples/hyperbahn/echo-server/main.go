@@ -18,7 +18,12 @@ func main() {
 		log.Fatalf("Failed to create channel: %v", err)
 	}
 
-	l, err := net.Listen("tcp", "127.0.0.1:61543")
+	listenIP, err := tchannel.ListenIP()
+	if err != nil {
+		log.Fatalf("Failed to get IP to listen on: %v", err)
+	}
+
+	l, err := net.Listen("tcp", listenIP.String()+":61543")
 	if err != nil {
 		log.Fatalf("Could not listen: %v", err)
 	}
