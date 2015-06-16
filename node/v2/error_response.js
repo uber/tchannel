@@ -51,6 +51,7 @@ Codes.Declined = 0x04;
 Codes.UnexpectedError = 0x05;
 Codes.BadRequest = 0x06;
 Codes.NetworkError = 0x07;
+Codes.Unhealthy = 0x08;
 Codes.ProtocolError = 0xff;
 
 var CodeNames = Object.create(null);
@@ -62,6 +63,7 @@ CodeNames[Codes.UnexpectedError] = 'unexpected error';
 CodeNames[Codes.BadRequest] = 'bad request';
 CodeNames[Codes.NetworkError] = 'network error';
 CodeNames[Codes.ProtocolError] = 'protocol error';
+CodeNames[Codes.Unhealthy] = 'unhealthy';
 
 var CodeErrors = Object.create(null);
 CodeErrors[Codes.Timeout] = TypedError({
@@ -126,6 +128,14 @@ CodeErrors[Codes.ProtocolError] = TypedError({
     isErrorFrame: true,
     codeName: 'ProtocolError',
     errorCode: Codes.ProtocolError,
+    originalId: null
+});
+CodeErrors[Codes.Unhealthy] = TypedError({
+    type: 'tchannel.unhealthy',
+    message: 'TChannel unhealthy',
+    isErrorFrame: true,
+    codeName: 'Unhealthy',
+    errorCode: Codes.Unhealthy,
     originalId: null
 });
 
