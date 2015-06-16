@@ -246,8 +246,14 @@ TChannelPeer.prototype.addConnection = function addConnection(conn) {
     conn.closeEvent.on(onConnectionClose);
     return conn;
 
-    function onConnectionError(/* err */) {
-        // TODO: log?
+    function onConnectionError(err) {
+        self.logger.error('Got a connection error', {
+            err: err,
+            direction: conn.direction,
+            remoteName: conn.remoteName,
+            socketRemoteAddr: conn.socketRemoteAddr
+        });
+
         self.removeConnection(conn);
     }
 
