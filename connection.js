@@ -460,6 +460,7 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
         error: err,
         remoteName: self.remoteName,
         localName: self.channel.hostPort,
+        socketRemoteAddr: self.socketRemoteAddr,
         numInOps: inOpKeys.length,
         numOutOps: outOpKeys.length,
         inPending: pending.in,
