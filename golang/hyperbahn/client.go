@@ -41,9 +41,9 @@ type ClientOptions struct {
 var ErrAppError = errors.New("app error")
 
 // NewClient creates a new Hyperbahn client using the given channel.
-// initialNodes is a list of hostPort strings identifying the initial Hyperbahn nodes to connect to.
+// config is the environment-specific configuration for Hyperbahn such as the list of initial nodes.
 // opts are optional, and are used to customize the client.
-func NewClient(ch *tchannel.Channel, initialNodes []string, opts *ClientOptions) *Client {
+func NewClient(ch *tchannel.Channel, config Configuration, opts *ClientOptions) *Client {
 	client := &Client{tchan: ch}
 	if opts != nil {
 		client.opts = *opts
@@ -56,7 +56,7 @@ func NewClient(ch *tchannel.Channel, initialNodes []string, opts *ClientOptions)
 	}
 
 	// Add the given initial nodes as peers.
-	for _, node := range initialNodes {
+	for _, node := range config.InitialNodes {
 		addPeer(ch, node)
 	}
 

@@ -34,7 +34,8 @@ func main() {
 	}
 
 	// register service with Hyperbahn.
-	client := hyperbahn.NewClient(tchan, os.Args[1:], &hyperbahn.ClientOptions{
+	config := hyperbahn.Configuration{InitialNodes: os.Args[1:]}
+	client := hyperbahn.NewClient(tchan, config, &hyperbahn.ClientOptions{
 		Handler: eventHandler{},
 		Timeout: time.Second,
 	})
