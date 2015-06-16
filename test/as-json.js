@@ -69,6 +69,27 @@ allocCluster.test('getting an ok response', {
     });
 });
 
+allocCluster.test('sending using request()', {
+    numPeers: 2
+}, function t(cluster, assert) {
+    var tchannelJSON = makeTChannelJSONServer(cluster, {
+        okResponse: true
+    });
+
+    tchannelJSON.request({
+        serviceName: 'server',
+        hasNoParent: true,
+        timeout: 1500
+    }).send('echo', null, 'body', function onResponse(err, resp) {
+        assert.ifError(err);
+
+        assert.ok(resp.ok);
+        assert.equal(resp.body.body, 'body');
+
+        assert.end();
+    });
+});
+
 allocCluster.test('getting a not ok response', {
     numPeers: 2
 }, function t(cluster, assert) {
@@ -236,7 +257,8 @@ function makeTChannelJSONServer(cluster, opts) {
             networkFailureHandler;
 
     var tchannelJSON = cluster.channels[0].TChannelAsJSON({
-        logParseFailures: false
+        logParseFailures: false,
+        channel: cluster.channels[1].subChannels.server
     });
     tchannelJSON.register(server, 'echo', options, fn);
 

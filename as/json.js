@@ -47,7 +47,40 @@ function TChannelJSON(options) {
     var logParseFailures = options && options.logParseFailures;
     self.logParseFailures = typeof logParseFailures === 'boolean' ?
         logParseFailures : true;
+
+    // only used in request()
+    self.channel = options.channel;
 }
+
+function TChannelJSONRequest(options) {
+    var self = this;
+
+    self.channel = options.channel;
+    self.reqOptions = options.reqOptions;
+    self.tchannelJSON = options.tchannelJSON;
+}
+
+TChannelJSONRequest.prototype.send =
+function send(endpoint, head, body, callback) {
+    var self = this;
+
+    var outreq = self.channel.request(self.reqOptions);
+    self.tchannelJSON.send(outreq, endpoint, head, body, callback);
+};
+
+TChannelJSON.prototype.request = function request(reqOptions) {
+    var self = this;
+
+    assert(self.channel, 'channel is required for json.request()');
+
+    var req = new TChannelJSONRequest({
+        channel: self.channel,
+        reqOptions: reqOptions,
+        tchannelJSON: self
+    });
+
+    return req;
+};
 
 /*eslint max-params: [2, 5]*/
 TChannelJSON.prototype.send = function send(

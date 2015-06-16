@@ -13,7 +13,9 @@ var server = TChannel({
     serviceName: 'server'
 });
 var client = TChannel();
-var tchannelJSON = TChannelJSON();
+var tchannelJSON = TChannelJSON({
+    channel: client
+});
 
 var context = {};
 
@@ -29,10 +31,10 @@ function echo(context, req, head, body, callback) {
 server.listen(4040, '127.0.0.1', onListening);
 
 function onListening() {
-    tchannelJSON.send(client.request({
+    tchannelJSON.request({
         serviceName: 'server',
         host: '127.0.0.1:4040'
-    }), 'echo', {
+    }).send('echo', {
         head: 'object'
     }, {
         body: 'object'
@@ -70,6 +72,14 @@ type TChannelJSONHandler<T> : (
 ) => void
 
 type TChannelJSON : {
+    request: (reqOptions: Object) => {
+        send: (
+            endpoint: String,
+            head: JSONSerializable,
+            body: JSONSerializable,
+            callback: Callback<Error, JSONResponse>
+        ) => void
+    },
     send: (
         req: TChannelRequest,
         endpoint: String,
@@ -88,15 +98,16 @@ type TChannelJSON : {
 tchannel/as/json : ({
     logger?: Object,
     strictMode?: Boolean,
-    logParseFailures?: Boolean
+    logParseFailures?: Boolean,
+    channel?: TChannel
 }) => TChannelJSON
 ```
 
 ### `var tchannelJSON = TChannelJSON(opts)`
 
 `TChannelJSON` returns a `tchannelJSON` interface with a 
-`.send()` and `.register()` method used to send call requests
-and register call request handlers
+`.request()`, `.send()` and `.register()` method used to 
+send call requests and register call request handlers
 
 It can be passed options.
 
@@ -111,6 +122,20 @@ It can be passed options.
     it is set to true we will log parse failures to the logger using
     `logger.warn()`. If you do not want these log statements you
     can set the option to `false`
+ - `opts.channel` The channel used to make requests on. This
+    option is required if you want to use the `.request()` method
+
+### `tchannelJSON.request(reqOpts).send(endpoint, head, body, cb)`
+
+You **MUST** pass in a `channel` option to `TChannelJSON()`
+to use this method
+
+The `.request()` method can be used to make an outgoing JSON
+request.
+
+It returns an object with a `.send()` method used to send requests
+
+This is just sugar for `tchannelJSON.send(...)`
 
 ### `tchannelJSON.send(req, endpoint, head, body, callback)`
 
