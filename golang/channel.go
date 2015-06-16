@@ -197,9 +197,6 @@ func (ch *Channel) GetSubChannel(serviceName string) *SubChannel {
 
 // Peers returns the PeerList for the channel.
 func (ch *Channel) Peers() *PeerList {
-	ch.mutable.mut.RLock()
-	defer ch.mutable.mut.RUnlock()
-
 	return ch.peers
 }
 
