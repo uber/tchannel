@@ -168,7 +168,8 @@ class Request(object):
         if retry_flag == RetryType.NEVER:
             return False
 
-        if error.code in [ErrorCode.bad_request, ErrorCode.cancelled]:
+        if error.code in [ErrorCode.bad_request, ErrorCode.cancelled,
+                          ErrorCode.unhealthy]:
             return False
         elif error.code in [ErrorCode.busy, ErrorCode.declined]:
             return True

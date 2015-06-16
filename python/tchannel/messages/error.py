@@ -37,6 +37,7 @@ class ErrorCode(enum.IntEnum):
     unexpected = 0x05
     bad_request = 0x06
     network_error = 0x07
+    unhealthy = 0x08
     fatal = 0xff
 
 error_code_rw = rw.number(1)
