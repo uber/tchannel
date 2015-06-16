@@ -56,7 +56,7 @@ Codes.ProtocolError = 0xff;
 
 var CodeNames = Object.create(null);
 CodeNames[Codes.Timeout] = 'timeout';
-CodeNames[Codes.Cancelled] = 'canceled';
+CodeNames[Codes.Cancelled] = 'cancelled';
 CodeNames[Codes.Busy] = 'busy';
 CodeNames[Codes.Declined] = 'declined';
 CodeNames[Codes.UnexpectedError] = 'unexpected error';
@@ -75,8 +75,8 @@ CodeErrors[Codes.Timeout] = TypedError({
     originalId: null
 });
 CodeErrors[Codes.Cancelled] = TypedError({
-    type: 'tchannel.canceled',
-    message: 'TChannel canceled',
+    type: 'tchannel.cancelled',
+    message: 'TChannel cancelled',
     isErrorFrame: true,
     codeName: 'Cancelled',
     errorCode: Codes.Cancelled,

@@ -67,12 +67,12 @@ The following diagram illustrates Hyperbahn's Circuit Breaking implementation:
 
 Healthy Circuits check their stats incrementally using the following criteria to determine if the Circuit should become Unhealthy:
 
-| Parameter                 | How it's used                                              | Example                                     |
-| ------------------------- | ---------------------------------------------------------- | ------------------------------------------- |
-| `Window`                  | Period of time to sample request stats from.               | 1 second                                    |
-| `Threshold`               | How many requests must fail within the Window.             | 50%                                         |
-| `MinRequests`             | Minimum amount of requests before Window can be checked.   | 10                                          |
-| `NonCircuitingExceptions` | Valid exceptions that do not contribute to circuit health. | `tchannel.bad-request`, `tchannel.canceled` |
+| Parameter                 | How it's used                                              | Example                                      |
+| ------------------------- | ---------------------------------------------------------- | -------------------------------------------- |
+| `Window`                  | Period of time to sample request stats from.               | 1 second                                     |
+| `Threshold`               | How many requests must fail within the Window.             | 50%                                          |
+| `MinRequests`             | Minimum amount of requests before Window can be checked.   | 10                                           |
+| `NonCircuitingExceptions` | Valid exceptions that do not contribute to circuit health. | `tchannel.bad-request`, `tchannel.cancelled` |
 
 ### Healthy Criteria
 
