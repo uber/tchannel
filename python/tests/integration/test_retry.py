@@ -177,6 +177,8 @@ def test_retry_on_error_success():
     (RetryType.CONNECTION_ERROR_AND_TIMEOUT, ErrorCode.bad_request, False),
     (RetryType.CONNECTION_ERROR, ErrorCode.fatal, True),
     (RetryType.TIMEOUT, ErrorCode.fatal, False),
+    (RetryType.TIMEOUT, ErrorCode.unhealthy, False),
+    (RetryType.CONNECTION_ERROR_AND_TIMEOUT, ErrorCode.unhealthy, False),
 ],
     ids=lambda arg: str(arg)
 )
