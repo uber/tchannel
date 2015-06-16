@@ -94,6 +94,23 @@ RelayRequest.prototype.createOutResponse = function createOutResponse(options) {
         });
         return;
     }
+
+    // It is possible that the inreq gets reaped with a timeout
+    // It is also possible that the out request gets repead with a timeout
+    // Both the in & out req try to create an outgoing response
+    if (self.inreq.res && self.inreq.res.codeString === 'Timeout') {
+        self.channel.logger.info('relay: in request already timed out', {
+            codeString: self.inreq.res.codeString,
+            responseMessage: self.inreq.res.message,
+            serviceName: self.outreq.serviceName,
+            arg1: String(self.outreq.arg1),
+            outRemoteAddr: self.outreq.remoteAddr,
+            inRemoteAddr: self.inreq.remoteAddr,
+            inSocketRemoteAddr: self.inreq.connection.socketRemoteAddr
+        });
+        return;
+    }
+
     self.outres = self.buildRes(options);
     self.outres.finishEvent.on(emitFinish);
     return self.outres;
