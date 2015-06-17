@@ -256,6 +256,17 @@ func (ch *Channel) serve() {
 	}
 }
 
+// Ping sends a ping message to the given hostPort and waits for a response.
+func (ch *Channel) Ping(ctx context.Context, hostPort string) error {
+	peer := ch.Peers().GetOrAdd(hostPort)
+	conn, err := peer.GetConnection(ctx)
+	if err != nil {
+		return err
+	}
+
+	return conn.ping(ctx)
+}
+
 // Logger returns the logger for this channel.
 func (ch *Channel) Logger() Logger {
 	return ch.log

@@ -36,6 +36,8 @@ const (
 	messageTypeCallRes         messageType = 0x04
 	messageTypeCallReqContinue messageType = 0x13
 	messageTypeCallResContinue messageType = 0x14
+	messageTypePingReq         messageType = 0xd0
+	messageTypePingRes         messageType = 0xd1
 	messageTypeError           messageType = 0xFF
 )
 
@@ -56,6 +58,11 @@ type message interface {
 	// write writes the message to a binary stream
 	write(w *typed.WriteBuffer) error
 }
+
+type noBodyMsg struct{}
+
+func (noBodyMsg) read(r *typed.ReadBuffer) error   { return nil }
+func (noBodyMsg) write(w *typed.WriteBuffer) error { return nil }
 
 // initParams are parameters to an initReq/InitRes
 type initParams map[string]string
@@ -202,13 +209,12 @@ func (m *callReq) write(w *typed.WriteBuffer) error {
 
 // A callReqContinue is continuation of a previous callReq
 type callReqContinue struct {
+	noBodyMsg
 	id uint32
 }
 
-func (c *callReqContinue) ID() uint32                       { return c.id }
-func (c *callReqContinue) messageType() messageType         { return messageTypeCallReqContinue }
-func (c *callReqContinue) read(r *typed.ReadBuffer) error   { return nil }
-func (c *callReqContinue) write(w *typed.WriteBuffer) error { return nil }
+func (c *callReqContinue) ID() uint32               { return c.id }
+func (c *callReqContinue) messageType() messageType { return messageTypeCallReqContinue }
 
 // ResponseCode to a CallReq
 type ResponseCode byte
@@ -244,7 +250,7 @@ func (m *callRes) write(w *typed.WriteBuffer) error {
 	return w.Err()
 }
 
-// callResContinue is a  continuation of a previous CallRes
+// callResContinue is a continuation of a previous CallRes
 type callResContinue struct {
 	id uint32
 }
@@ -282,3 +288,20 @@ func (m errorMessage) AsSystemError() error {
 	// TODO(mmihic): Might be nice to return one of the well defined error types
 	return NewSystemError(m.errCode, m.message)
 }
+
+type pingReq struct {
+	noBodyMsg
+	id uint32
+}
+
+func (c *pingReq) ID() uint32               { return c.id }
+func (c *pingReq) messageType() messageType { return messageTypePingReq }
+
+// pingRes is a ping response to a protocol level ping request.
+type pingRes struct {
+	noBodyMsg
+	id uint32
+}
+
+func (c *pingRes) ID() uint32               { return c.id }
+func (c *pingRes) messageType() messageType { return messageTypePingRes }

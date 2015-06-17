@@ -355,6 +355,43 @@ func (c *Connection) handleInitReq(frame *Frame) {
 	c.callOnActive()
 }
 
+// ping sends a ping message and waits for a ping response.
+func (c *Connection) ping(ctx context.Context) error {
+	req := &pingReq{id: c.NextMessageID()}
+	mex, err := c.outbound.newExchange(ctx, req.messageType(), req.ID(), 1)
+	if err != nil {
+		return c.connectionError(err)
+	}
+	defer c.outbound.removeExchange(req.ID())
+
+	if err := c.sendMessage(req); err != nil {
+		return c.connectionError(err)
+	}
+
+	res := &pingRes{}
+	err = c.recvMessage(ctx, res, mex.recvCh)
+	if err != nil {
+		return c.connectionError(err)
+	}
+
+	return nil
+}
+
+// handlePingRes calls registered ping handlers.
+func (c *Connection) handlePingRes(frame *Frame) {
+	if err := c.outbound.forwardPeerFrame(frame); err != nil {
+		c.connectionError(errCannotHandleInitRes)
+	}
+}
+
+// handlePingReq responds to the pingReq message with a pingRes.
+func (c *Connection) handlePingReq(frame *Frame) {
+	pingRes := &pingRes{id: frame.Header.ID}
+	if err := c.sendMessage(pingRes); err != nil {
+		c.connectionError(err)
+	}
+}
+
 // Handles an incoming InitRes.  If we are waiting for the peer to send us an
 // InitRes, forward the InitRes to the waiting goroutine
 
@@ -489,6 +526,10 @@ func (c *Connection) readFrames() {
 			c.handleInitReq(frame)
 		case messageTypeInitRes:
 			c.handleInitRes(frame)
+		case messageTypePingReq:
+			c.handlePingReq(frame)
+		case messageTypePingRes:
+			c.handlePingRes(frame)
 		case messageTypeError:
 			c.handleError(frame)
 		default:
