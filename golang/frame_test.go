@@ -22,10 +22,12 @@ package tchannel
 
 import (
 	"bytes"
+	"io"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel/golang/typed"
-	"testing"
 )
 
 func TestFraming(t *testing.T) {
@@ -49,4 +51,20 @@ func TestFraming(t *testing.T) {
 	require.Nil(t, fh2.read(rbuf))
 
 	assert.Equal(t, fh, fh2)
+}
+
+func TestEmptyPayload(t *testing.T) {
+	f := NewFrame(MaxFramePayloadSize)
+	m := &pingRes{id: 1}
+	require.NoError(t, f.write(m))
+
+	// Write out the frame.
+	buf := &bytes.Buffer{}
+	require.NoError(t, f.WriteTo(buf))
+	assert.Equal(t, FrameHeaderSize, buf.Len())
+
+	// Read the frame from the buffer.
+	// net.Conn returns io.EOF if you try to read 0 bytes at the end.
+	// This is also simulated by the LimitedReader so we use that here.
+	require.NoError(t, f.ReadFrom(&io.LimitedReader{R: buf, N: FrameHeaderSize}))
 }
