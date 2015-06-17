@@ -96,7 +96,6 @@ function getKey(common, stat) {
                 clean(stat.tags.service, 'service') + '.' +
                 clean(stat.tags['target-service'], 'target-service') + '.' +
                 clean(stat.tags['target-endpoint'], 'endpoint') + '.' +
-                clean(stat.tags.peer) + '.' +
                 stat.tags['retry-count'];
 
         // inbound
