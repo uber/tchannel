@@ -96,7 +96,7 @@ allocCluster.test('emits stats on call success', {
             time: null
         }, {
             type: 'ms',
-            name: 'tchannel.outbound.calls.per-attempt-latency.inPipe.reservoir.Reservoir--get.' + server.hostPort.replace(':', '-') + '.0',
+            name: 'tchannel.outbound.calls.per-attempt-latency.inPipe.reservoir.Reservoir--get.0',
             value: null,
             delta: null,
             time: 500
@@ -186,7 +186,7 @@ allocCluster.test('emits stats on call failure', {
             time: null
         }, {
             type: 'ms',
-            name: 'tchannel.outbound.calls.per-attempt-latency.inPipe.reservoir.Reservoir--get.' + server.hostPort.replace(':', '-') + '.0',
+            name: 'tchannel.outbound.calls.per-attempt-latency.inPipe.reservoir.Reservoir--get.0',
             value: null,
             delta: null,
             time: 500
