@@ -471,10 +471,6 @@ module.exports.classify = function classify(err) {
         case 'tchannel.max-pending-for-service':
             return 'Declined';
 
-        case 'tchannel.socket-local-closed':
-        case 'tchannel.local.reset':
-            return 'Cancelled';
-
         case 'tchannel.request.timeout':
         case 'tchannel.connection.timeout':
         case 'tchannel.connection-stale.timeout':
@@ -520,6 +516,8 @@ module.exports.classify = function classify(err) {
         case 'tchannel.connection.reset':
         case 'tchannel.socket':
         case 'tchannel.socket-closed':
+        case 'tchannel.socket-local-closed':
+        case 'tchannel.local.reset':
             return 'NetworkError';
 
         case 'tchannel-json-handler.stringify-error.body-failed':
