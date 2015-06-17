@@ -135,7 +135,7 @@ allocCluster.test('emits stats on call failure', {
     var serverHost = cluster.hosts[0]
         .replace(/:/g, '-')
         .replace(/\./g, '-');
-    var statsd = nullStatsd(6);
+    var statsd = nullStatsd(7);
 
     server.makeSubChannel({
         serviceName: 'reservoir'
@@ -202,6 +202,12 @@ allocCluster.test('emits stats on call failure', {
             value: null,
             delta: null,
             time: 500
+        }, {
+            type: 'c',
+            name: 'tchannel.outbound.calls.per-attempt.app-errors.inPipe.reservoir.Reservoir--get.unknown.0',
+            value: null,
+            delta: 1,
+            time: null
         }, {
             type: 'c',
             name: 'tchannel.outbound.calls.app-errors.inPipe.reservoir.Reservoir--get.unknown',
