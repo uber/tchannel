@@ -70,8 +70,11 @@ function TChannel(options) {
     self.outboundCallsSentStat = self.defineCounter('outbound.calls.sent');
     self.outboundCallsSuccessStat = self.defineCounter('outbound.calls.success');
     self.outboundCallsSystemErrorsStat = self.defineCounter('outbound.calls.system-errors');
+    self.outboundCallsPerAttemptSystemErrorsStat = self.defineCounter('outbound.calls.per-attempt.system-errors');
     self.outboundCallsOperationalErrorsStat = self.defineCounter('outbound.calls.operational-errors');
+    self.outboundCallsPerAttemptOperationalErrorsStat = self.defineCounter('outbound.calls.per-attempt.operational-errors');
     self.outboundCallsAppErrorsStat = self.defineCounter('outbound.calls.app-errors');
+    self.outboundCallsPerAttemptAppErrorsStat = self.defineCounter('outbound.calls.per-attempt.app-errors');
     self.outboundCallsRetriesStat = self.defineCounter('outbound.calls.retries');
     // self.outboundRequestSizeStat = self.defineTiming('outbound.request.size');
     // self.outboundResponseSizeStat = self.defineTiming('outbound.response.size');
