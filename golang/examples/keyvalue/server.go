@@ -19,24 +19,28 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create tchannel: %v", err)
 	}
-	ch.ListenAndServe("127.0.0.1:12345")
+	ip, err := tchannel.ListenIP()
+	if err != nil {
+		log.Fatalf("Failed to find IP to Listen on: %v", err)
+	}
+	ch.ListenAndServe(ip.String() + ":12345")
 
 	// Create the handler for KeyValue service,
 	h := NewKVHandler()
 	server := thrift.NewServer(ch)
 	server.Register("KeyValue", reflect.TypeOf(h), keyvalue.NewKeyValueProcessor(h))
 
-	nodes := os.Args[1:]
-	if len(nodes) == 0 {
+	config := hyperbahn.Configuration{InitialNodes: os.Args[1:]}
+	if len(config.InitialNodes) == 0 {
 		log.Fatalf("No Autobahn nodes to register to given")
 	}
-	client := hyperbahn.NewClient(ch, nodes, nil)
+	client := hyperbahn.NewClient(ch, config, nil)
 	if err := client.Register(); err != nil {
 		log.Fatalf("Hyperbahn registration failed: %v", err)
 	}
 
 	// The service is now started up, run it till we receive a ctrl-c.
-	log.Printf("KeyValue service has started")
+	log.Printf("KeyValue service has started on %v", ch.PeerInfo().HostPort)
 	select {}
 }
 

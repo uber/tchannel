@@ -28,11 +28,11 @@ func main() {
 	}
 
 	// Set up Hyperbahn client.
-	nodes := os.Args[1:]
-	if len(nodes) == 0 {
+	config := hyperbahn.Configuration{InitialNodes: os.Args[1:]}
+	if len(config.InitialNodes) == 0 {
 		log.Fatalf("No Autobahn nodes to register to given")
 	}
-	hyperbahn.NewClient(ch, nodes, nil)
+	hyperbahn.NewClient(ch, config, nil)
 
 	// Read commands from the command line and execute them.
 	scanner := bufio.NewScanner(os.Stdin)

@@ -50,6 +50,8 @@ To get the server ready, the following needs to be done:
 ### Create a TChannel
 Create a channel using [tchannel.NewChannel](http://godoc.org/github.com/uber/tchannel/golang#NewChannel) and listen using [Channel.ListenAndServe](http://godoc.org/github.com/uber/tchannel/golang#Channel.ListenAndServe).
 
+The address passed to Listen should be a remote IP that can be used for incoming connections from other machines. You can use [tchannel.ListenIP](http://godoc.org/github.com/uber/tchannel/golang#ListenIP) which uses heuristics to determine a good remote IP.
+
 When creating a channel, you can pass additional [options](http://godoc.org/github.com/uber/tchannel/golang#ChannelOptions).
 
 ### Create and register Thrift handler
@@ -70,7 +72,7 @@ Create an instance of your handler type, and then create a [thrift.Server](http:
 
 ### Register with Hyperbahn
 
-Create a Hyperbahn client using [hyperbahn.NewClient](http://godoc.org/github.com/uber/tchannel/golang/hyperbahn#NewClient) which requires a list of Hyperbahn nodes to connect to. This should be loaded from a configuration file for the current environment. You can also pass more [options](http://godoc.org/github.com/uber/tchannel/golang/hyperbahn#ClientOptions) when creating the client.
+Create a Hyperbahn client using [hyperbahn.NewClient](http://godoc.org/github.com/uber/tchannel/golang/hyperbahn#NewClient) which requires a Hyperbahn configuration object which should be loaded from a configuration file for the current environment. You can also pass more [options](http://godoc.org/github.com/uber/tchannel/golang/hyperbahn#ClientOptions) when creating the client.
 
 Call [Register](http://godoc.org/github.com/uber/tchannel/golang/hyperbahn#Client.Register) to register the service with Hyperbahn.
 
