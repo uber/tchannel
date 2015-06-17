@@ -126,8 +126,10 @@ func (f *Frame) ReadFrom(r io.Reader) error {
 		return err
 	}
 
-	if _, err := r.Read(f.SizedPayload()); err != nil {
-		return err
+	if f.Header.PayloadSize() > 0 {
+		if _, err := r.Read(f.SizedPayload()); err != nil {
+			return err
+		}
 	}
 
 	return nil

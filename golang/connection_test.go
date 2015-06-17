@@ -167,6 +167,21 @@ func TestReuseConnection(t *testing.T) {
 	})
 }
 
+func TestPing(t *testing.T) {
+	withTestChannel(t, "ping-host", func(ch *Channel, hostPort string) {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		defer cancel()
+
+		opts := &ChannelOptions{
+			ProcessName: "ping-client",
+			Logger:      SimpleLogger,
+		}
+		clientCh, err := NewChannel("ping-test", opts)
+		require.NoError(t, err)
+		require.NoError(t, clientCh.Ping(ctx, hostPort))
+	})
+}
+
 func TestBadRequest(t *testing.T) {
 	withTestChannel(t, "svc", func(ch *Channel, hostPort string) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
