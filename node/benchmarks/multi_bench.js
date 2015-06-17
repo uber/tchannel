@@ -117,7 +117,12 @@ Test.prototype.newClient = function (id, callback) {
         }, function () {
             newClient
                 .request({
-                    host: '127.0.0.1:4040'
+                    host: '127.0.0.1:4040',
+                    hasNoParent: true,
+                    headers: {
+                        as: 'raw',
+                        cn: 'multi_bench'
+                    }
                 })
                 .send('ping', null, null, function(err) {
                     if (err) return callback(err);
@@ -171,8 +176,11 @@ Test.prototype.sendNext = function () {
     this.clients[curClient]
         .request({
             host: '127.0.0.1:4040',
+            hasNoParent: true,
             timeout: 10000,
             headers: {
+                as: 'raw',
+                cn: 'multi_bench',
                 benchHeader1: 'bench value one',
                 benchHeader2: 'bench value two',
                 benchHeader3: 'bench value three'
