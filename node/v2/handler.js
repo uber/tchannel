@@ -231,7 +231,6 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
             });
         }
     }
-
     if (reqFrame.body.args && reqFrame.body.args[0] &&
         reqFrame.body.args[0].length > v2.CallRequest.MaxArg1Size) {
         req.res = self.buildOutResponse(req);
@@ -241,6 +240,11 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
         return callback();
     }
     self._handleCallFrame(req, reqFrame, callRequestFrameHandled);
+    self.connection.channel.inboundRequestSizeStat.increment(reqFrame.size, {
+        'calling-service': req.headers.cn,
+        'service': req.serviceName,
+        'endpoint': String(req.arg1)
+    });
     function callRequestFrameHandled(err) {
         self.callRequestFrameHandled(req, err, callback);
     }
@@ -289,6 +293,14 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
                 limit: '0x' + v2.CallResponse.MaxArg1Size.toString(16)
         }));
     }
+
+    var req = self.connection.ops.getOutReq(res.id);
+    self.connection.channel.inboundResponseSizeStat.increment(resFrame.size, {
+        'calling-service': !req ? null : req.headers.cn,
+        'service': !req ? null : req.serviceName,
+        'endpoint': !req ? null : String(req.arg1)
+    });
+
     res.remoteAddr = self.remoteName;
     self._handleCallFrame(res, resFrame, callResponseFrameHandled);
     function callResponseFrameHandled(err) {
@@ -323,7 +335,13 @@ TChannelV2Handler.prototype.handleCallRequestCont = function handleCallRequestCo
     if (!req) {
         return callback(new Error('call request cont for unknown request')); // TODO typed error
     }
+
     self._handleCallFrame(req, reqFrame, callback);
+    self.connection.channel.inboundRequestSizeStat.increment(reqFrame.size, {
+        'calling-service': req.headers.cn,
+        'service': req.serviceName,
+        'endpoint': String(req.arg1)
+    });
 };
 
 TChannelV2Handler.prototype.handleCallResponseCont = function handleCallResponseCont(resFrame, callback) {
@@ -336,6 +354,14 @@ TChannelV2Handler.prototype.handleCallResponseCont = function handleCallResponse
     if (!res) {
         return callback(new Error('call response cont for unknown response')); // TODO typed error
     }
+
+    var req = self.connection.ops.getOutReq(res.id);
+    self.connection.channel.inboundResponseSizeStat.increment(resFrame.size, {
+        'calling-service': !req ? null : req.headers.cn,
+        'service': !req ? null : req.serviceName,
+        'endpoint': !req ? null : String(req.arg1)
+    });
+
     self._handleCallFrame(res, resFrame, callback);
 };
 
