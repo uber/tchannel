@@ -60,6 +60,28 @@ allocCluster.test('send and receiving an ok', {
     });
 });
 
+allocCluster.test('sending using request()', {
+    numPeers: 2
+}, function t(cluster, assert) {
+    var tchannelAsThrift = makeTChannelThriftServer(cluster, {
+        okResponse: true
+    });
+
+    tchannelAsThrift.request({
+        serviceName: 'server',
+        hasNoParent: true
+    }).send('Chamber::echo', null, {
+        value: 10
+    }, function onResponse(err, res) {
+        assert.ifError(err);
+
+        assert.ok(res.ok);
+        assert.equal(res.headers.as, 'thrift');
+        assert.equal(res.body, 10);
+        assert.end();
+    });
+});
+
 allocCluster.test('send and receive a not ok', {
     numPeers: 2
 }, function t(cluster, assert) {
@@ -317,7 +339,8 @@ function makeTChannelThriftServer(cluster, opts) {
 
     var tchannelAsThrift = cluster.channels[0].TChannelAsThrift({
         source: opts.thriftText || globalThriftText,
-        logParseFailures: false
+        logParseFailures: false,
+        channel: cluster.channels[1].subChannels.server
     });
     tchannelAsThrift.register(server, 'Chamber::echo', options, fn);
 
