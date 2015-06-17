@@ -204,7 +204,7 @@ allocCluster.test('emits stats on call failure', {
             time: 500
         }, {
             type: 'c',
-            name: 'tchannel.outbound.calls.per-attempt.app-errors.inPipe.reservoir.Reservoir--get.unknown',
+            name: 'tchannel.outbound.calls.per-attempt.app-errors.inPipe.reservoir.Reservoir--get.unknown.0',
             value: null,
             delta: 1,
             time: null
