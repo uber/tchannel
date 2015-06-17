@@ -66,7 +66,7 @@ benchProc.stdout
             lpad(result.mean.toFixed(2), 7),
             lpad(result.p95.toFixed(2), 7),
             lpad(result.elapsed, 6),
-            lpad(result.rate.toFixed(2), 8)
+            lpad(typeof result.rate === 'number' ? result.rate.toFixed(2) : 'NaN', 8)
         ));
     });
 
