@@ -41,19 +41,24 @@ function TChannelPeers(channel, options) {
     self.options = options || {};
     self.initialPeerState = self.options.initialPeerState;
     self._map = Object.create(null);
-    self.selfPeer = TChannelSelfPeer(self.channel);
+    self.selfPeer = null;
 }
 
 inherits(TChannelPeers, EventEmitter);
 
 TChannelPeers.prototype.close = function close(callback) {
     var self = this;
-    var peers = [self.selfPeer].concat(self.values());
-    var counter = peers.length;
+
+    var peers = self.values();
+    if (self.selfPeer) {
+        peers.push(self.selfPeer);
+    }
+    var counter = peers.length + 1;
     peers.forEach(function eachPeer(peer) {
         peer.close(onClose);
     });
     self.clear();
+    onClose();
 
     function onClose() {
         if (--counter <= 0) {
@@ -77,6 +82,10 @@ TChannelPeers.prototype.add = function add(hostPort, options) {
     var peer = self._map[hostPort];
     if (!peer) {
         if (hostPort === self.channel.hostPort) {
+            if (!self.selfPeer) {
+                self.selfPeer = TChannelSelfPeer(self.channel);
+            }
+
             return self.selfPeer;
         }
         if (self.channel.topChannel) {
@@ -181,6 +190,9 @@ TChannelPeers.prototype.choosePeer = function choosePeer(req, options) {
         return self.add(options.host);
     } else {
         hosts = Object.keys(self._map);
+        if (self.selfPeer) {
+            hosts.push(self.selfPeer.hostPort);
+        }
     }
     if (!hosts || !hosts.length) return null;
 
