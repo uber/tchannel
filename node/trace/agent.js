@@ -97,7 +97,8 @@ Agent.prototype.setupNewSpan = function setupNewSpan(options) {
     if (options.outgoing && !parentSpan && !options.hasNoParent) {
         throw errors.ParentRequired({
             parentSpan: parentSpan,
-            hasNoParent: options.hasNoParent
+            hasNoParent: options.hasNoParent,
+            serviceName: options.serviceName
         });
     }
 

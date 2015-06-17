@@ -475,10 +475,13 @@ TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame
     var reqBody = new v2.CallRequest(
         flags, req.ttl, req.tracing, req.serviceName, req.headers,
         req.checksum.type, args);
+    var message;
 
     if (self.requireAs) {
-        assert(req.headers && req.headers.as,
-            'Expected the "as" transport header to be set for request');
+        message = 'Expected the "as" transport header to be set for request\n' +
+            'Got request for ' + req.serviceName + ' ' + String(args[0]) + ' without as header';
+
+        assert(req.headers && req.headers.as, message);
     } else if (!req.headers || !req.headers.as) {
         self.logger.error('Expected "as" header to be set for request', {
             arg1: String(args[0]),
@@ -490,8 +493,10 @@ TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame
     }
 
     if (self.requireCn) {
-        assert(req.headers && req.headers.cn,
-            'Expected the "cn" transport header to be set for request');
+        message = 'Expected the "cn" transport header to be set for request\n' +
+            'Got request for ' + req.serviceName + ' ' + String(args[0]) + ' without cn header';
+
+        assert(req.headers && req.headers.cn, message);
     } else if (!req.headers || !req.headers.cn) {
         self.logger.error('Expected "cn" header to be set for request', {
             arg1: String(args[0]),

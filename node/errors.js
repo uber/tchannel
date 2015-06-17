@@ -259,9 +259,11 @@ module.exports.NullKeyError = TypedError({
 module.exports.ParentRequired = TypedError({
     type: 'tchannel.tracer.parent-required',
     message: 'parent not specified for outgoing call req.\n' +
-        'Expected either a parent or hasNoParent.\n',
+        'Expected either a parent or hasNoParent.\n' +
+        'For the call to {serviceName}.\n',
     parentSpan: null,
-    hasNoParent: null
+    hasNoParent: null,
+    serviceName: null
 });
 
 module.exports.ReconstructedError = TypedError({
