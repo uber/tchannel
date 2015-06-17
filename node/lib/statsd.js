@@ -73,7 +73,8 @@ function getKey(common, stat) {
                 clean(stat.tags.service, 'service') + '.' +
                 clean(stat.tags['target-service'], 'target-service') + '.' +
                 clean(stat.tags['target-endpoint'], 'endpoint') + '.' +
-                clean(stat.tags.type, 'type');
+                clean(stat.tags.type, 'type') + '.' +
+                stat.tags['retry-count'];
         case 'outbound.calls.operational-errors':
             return prefix + '.' +
                 clean(stat.tags.service, 'service') + '.' +
@@ -85,7 +86,8 @@ function getKey(common, stat) {
                 clean(stat.tags.service, 'service') + '.' +
                 clean(stat.tags['target-service'], 'target-service') + '.' +
                 clean(stat.tags['target-endpoint'], 'endpoint') + '.' +
-                clean(stat.tags.type, 'type');
+                clean(stat.tags.type, 'type') + '.' +
+                stat.tags['retry-count'];
         case 'outbound.calls.app-errors':
             return prefix + '.' +
                 clean(stat.tags.service, 'service') + '.' +
@@ -97,7 +99,8 @@ function getKey(common, stat) {
                 clean(stat.tags.service, 'service') + '.' +
                 clean(stat.tags['target-service'], 'target-service') + '.' +
                 clean(stat.tags['target-endpoint'], 'endpoint') + '.' +
-                clean(stat.tags.type, 'type');
+                clean(stat.tags.type, 'type') + '.' +
+                stat.tags['retry-count'];
         case 'outbound.calls.retries':
             return prefix + '.' +
                 clean(stat.tags.service, 'service') + '.' +

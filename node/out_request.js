@@ -147,7 +147,8 @@ function emitPerAttemptErrorStat(err) {
             'service': self.headers.cn,
             // TODO should always be buffer
             'target-endpoint': String(self.arg1),
-            'type': err.codeName
+            'type': err.codeName,
+            'retry-count': self.retryCount
         });
     } else {
         self.channel.outboundCallsPerAttemptOperationalErrorsStat.increment(1, {
@@ -155,7 +156,8 @@ function emitPerAttemptErrorStat(err) {
             'service': self.headers.cn,
             // TODO should always be buffer
             'target-endpoint': String(self.arg1),
-            'type': err.type || 'unknown'
+            'type': err.type || 'unknown',
+            'retry-count': self.retryCounts
         });
     }
 };
@@ -219,7 +221,8 @@ function emitPerAttemptResponseStat(res) {
             'target-endpoint': String(self.arg1),
             // TODO define transport header
             // for application error type
-            'type': 'unknown'
+            'type': 'unknown',
+            'retry-count': self.retryCount
         });
     }
 };
