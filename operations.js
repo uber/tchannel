@@ -22,7 +22,7 @@
 
 var errors = require('./errors.js');
 
-var TOMBSTONE_TTL = 5000;
+var TOMBSTONE_TTL_OFFSET = 500;
 
 module.exports = Operations;
 
@@ -56,11 +56,12 @@ function Operations(opts) {
     self.lastTimeoutTime = 0;
 }
 
-function OperationTombstone(id, time) {
+function OperationTombstone(id, time, timeout) {
     var self = this;
 
     self.id = id;
     self.time = time;
+    self.timeout = timeout;
 }
 
 Operations.prototype.startTimeoutTimer =
@@ -142,8 +143,13 @@ Operations.prototype.popOutReq = function popOutReq(id, context) {
     }
 
     delete self.requests.out[id];
+
+    var now = self.timers.now();
+    var timeout = now + TOMBSTONE_TTL_OFFSET + req.ttl +
+        self._getTimeoutFuzz();
+
     self.tombstones.out.push(new OperationTombstone(
-        req.id, self.timers.now()
+        req.id, self.timers.now(), timeout
     ));
     self.pending.out--;
 
@@ -199,12 +205,20 @@ Operations.prototype.destroy = function destroy() {
 Operations.prototype._getTimeoutDelay =
 function _getTimeoutDelay() {
     var self = this;
-    var base = self.timeoutCheckInterval;
+
+    return self.timeoutCheckInterval + self._getTimeoutFuzz();
+};
+
+Operations.prototype._getTimeoutFuzz =
+function _getTimeoutFuzz() {
+    var self = this;
+
     var fuzz = self.timeoutFuzz;
-    if (fuzz) {
-        fuzz = Math.round(Math.floor(self.random() * fuzz) - (fuzz / 2));
+    if (!fuzz) {
+        return 0;
     }
-    return base + fuzz;
+
+    return Math.round(Math.floor(self.random() * fuzz)) - (fuzz / 2);
 };
 
 // If the connection has some success and some timeouts, we should probably leave it up,
@@ -236,7 +250,7 @@ function _onTimeoutCheck() {
     var now = self.timers.now();
     for (var i = 0; i < self.tombstones.out.length; i++) {
         var tombstone = self.tombstones.out[i];
-        if (now >= tombstone.time + TOMBSTONE_TTL) {
+        if (now >= tombstone.timeout) {
             self.tombstones.out.splice(i, 1);
             i--;
         }
