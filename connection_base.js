@@ -152,7 +152,10 @@ TChannelConnectionBase.prototype.buildResponse = function buildResponse(req, opt
     var done = false;
     if (req.res && req.res.state !== States.Initial) {
         self.errorEvent.emit(self, errors.ResponseAlreadyStarted({
-            state: req.res.state
+            state: req.res.state,
+            reason: 'buildResponse called twice',
+            codeString: req.res.codeString,
+            responseMessage: req.res.message
         }));
     }
     options = extend({
