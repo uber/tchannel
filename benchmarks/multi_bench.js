@@ -100,7 +100,13 @@ Test.prototype.run = function (callback) {
 Test.prototype.newClient = function (id, callback) {
     var self = this;
     var port = 4041 + id;
-    var newClient = new TChannel();
+    var clientChan = new TChannel();
+    var newClient = clientChan.makeSubChannel({
+        serviceName: 'benchmark',
+        requestDefaults: {
+            serviceName: 'benchmark'
+        }
+    });
     newClient.createTime = Date.now();
     newClient.listen(port, "127.0.0.1", function (err) {
         if (err) return callback(err);
@@ -166,7 +172,6 @@ Test.prototype.sendNext = function () {
         .request({
             host: '127.0.0.1:4040',
             timeout: 10000,
-            serviceName: 'benchmark',
             headers: {
                 benchHeader1: 'bench value one',
                 benchHeader2: 'bench value two',
