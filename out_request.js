@@ -116,6 +116,7 @@ TChannelOutRequest.prototype.onError = function onError(err, self) {
     if (!self.end) self.end = self.timers.now();
     self.err = err;
     self.emitPerAttemptLatency();
+    self.emitPerAttemptErrorStat(err);
 
     if (self.logical === false) {
         self.emitErrorStat(err);
@@ -128,6 +129,7 @@ TChannelOutRequest.prototype.onResponse = function onResponse(res, self) {
     self.res = res;
     self.res.span = self.span;
     self.emitPerAttemptLatency();
+    self.emitPerAttemptResponseStat(res);
 
     if (self.logical === false) {
         self.emitResponseStat(res);
@@ -135,6 +137,28 @@ TChannelOutRequest.prototype.onResponse = function onResponse(res, self) {
     }
 };
 
+TChannelOutRequest.prototype.emitPerAttemptErrorStat =
+function emitPerAttemptErrorStat(err) {
+    var self = this;
+
+    if (err.isErrorFrame) {
+        self.channel.outboundCallsPerAttemptSystemErrorsStat.increment(1, {
+            'target-service': self.serviceName,
+            'service': self.headers.cn,
+            // TODO should always be buffer
+            'target-endpoint': String(self.arg1),
+            'type': err.codeName
+        });
+    } else {
+        self.channel.outboundCallsPerAttemptOperationalErrorsStat.increment(1, {
+            'target-service': self.serviceName,
+            'service': self.headers.cn,
+            // TODO should always be buffer
+            'target-endpoint': String(self.arg1),
+            'type': err.type || 'unknown'
+        });
+    }
+};
 
 TChannelOutRequest.prototype.emitErrorStat =
 function emitErrorStat(err) {
@@ -172,6 +196,23 @@ function emitResponseStat(res) {
         });
     } else {
         self.channel.outboundCallsAppErrorsStat.increment(1, {
+            'target-service': self.serviceName,
+            'service': self.headers.cn,
+            // TODO should always be buffer
+            'target-endpoint': String(self.arg1),
+            // TODO define transport header
+            // for application error type
+            'type': 'unknown'
+        });
+    }
+};
+
+TChannelOutRequest.prototype.emitPerAttemptResponseStat =
+function emitPerAttemptResponseStat(res) {
+    var self = this;
+
+    if (!res.ok) {
+        self.channel.outboundCallsPerAttemptAppErrorsStat.increment(1, {
             'target-service': self.serviceName,
             'service': self.headers.cn,
             // TODO should always be buffer
