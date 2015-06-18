@@ -28,14 +28,16 @@ var errors = require('../errors');
 // [key, val] tuples may be better. At the very least, such structure would
 // allow for more precise error reporting.
 
-function HeaderRW(countrw, keyrw, valrw) {
+function HeaderRW(countrw, keyrw, valrw, options) {
     if (!(this instanceof HeaderRW)) {
-        return new HeaderRW(countrw, keyrw, valrw);
+        return new HeaderRW(countrw, keyrw, valrw, options);
     }
     var self = this;
     self.countrw = countrw;
     self.keyrw = keyrw;
     self.valrw = valrw;
+    self.enforceHeaderCount = options.enforceHeaderCount;
+    self.enforceKeyLength = options.enforceKeyLength;
     bufrw.Base.call(self);
 }
 inherits(HeaderRW, bufrw.Base);
@@ -98,7 +100,7 @@ HeaderRW.prototype.readFrom = function readFrom(buffer, offset) {
     offset = res.offset;
     n = res.value;
 
-    if (n > 128) {
+    if (self.enforceHeaderCount && n > 128) {
         return bufrw.ReadResult.error(errors.TooManyHeaders({
             offset: offset,
             endOffset: res.offset,
@@ -119,7 +121,7 @@ HeaderRW.prototype.readFrom = function readFrom(buffer, offset) {
                 endOffset: res.offset
             }), offset, headers);
         // TODO: check key is 16 bytes; not 16 characters
-        } else if (key.length > 16) {
+        } else if (self.enforceKeyLength && key.length > 16) {
             return bufrw.ReadResult.error(errors.TransportHeaderTooLong({
                 offset: offset,
                 endOffset: res.offset,
@@ -152,7 +154,13 @@ HeaderRW.prototype.readFrom = function readFrom(buffer, offset) {
 module.exports = HeaderRW;
 
 // nh:1 (hk~1 hv~1){nh}
-module.exports.header1 = HeaderRW(bufrw.UInt8, bufrw.str1, bufrw.str1);
+module.exports.header1 = HeaderRW(bufrw.UInt8, bufrw.str1, bufrw.str1, {
+    enforceHeaderCount: true,
+    enforceKeyLength: true
+});
 
 // nh:2 (hk~2 hv~2){nh}
-module.exports.header2 = HeaderRW(bufrw.UInt16BE, bufrw.str2, bufrw.str2);
+module.exports.header2 = HeaderRW(bufrw.UInt16BE, bufrw.str2, bufrw.str2, {
+    enforceHeaderCount: false,
+    enforceKeyLength: false
+});
