@@ -459,6 +459,14 @@ module.exports.TopLevelRequestError = TypedError({
         'Must use a sub channel directly.'
 });
 
+module.exports.TransportHeaderTooLong = TypedError({
+    type: 'tchannel.tranport-header-too-long',
+    message: 'The header: {headerName} exceeds 16 bytes',
+    headerName: null,
+    offset: null,
+    endOffset: null
+});
+
 module.exports.UnimplementedMethod = TypedError({
     message: 'Unimplemented {className}#{methodName}',
     type: 'tchannel.unimplemented-method',
@@ -519,6 +527,7 @@ module.exports.classify = function classify(err) {
         case 'tchannel.handler.incoming-req-as-header-required':
         case 'tchannel.handler.incoming-req-cn-header-required':
         case 'tchannel.init.ephemeral-init-response':
+        case 'tchannel.tranport-header-too-long':
         case 'tchannel.protocol.failed':
             return 'ProtocolError';
 

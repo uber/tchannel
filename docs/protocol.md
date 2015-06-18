@@ -528,6 +528,8 @@ Duplicate header keys are not allowed and should result in a parse error.
 Header keys may not be 0 length (should result in a parse error), but header
 values may be 0 length.
 
+Header keys have a maximum length of 16 bytes;
+
 Schema:
 ```
 nh:1 (hk~1 hv~1){nh}
