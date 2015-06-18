@@ -98,6 +98,14 @@ HeaderRW.prototype.readFrom = function readFrom(buffer, offset) {
     offset = res.offset;
     n = res.value;
 
+    if (n > 128) {
+        return bufrw.ReadResult.error(errors.TooManyHeaders({
+            offset: offset,
+            endOffset: res.offset,
+            count: n
+        }), offset, headers);
+    }
+
     for (var i = 0; i < n; i++) {
         start = offset;
 
