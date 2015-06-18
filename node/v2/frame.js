@@ -98,7 +98,11 @@ function readFrameFrom(buffer, offset) {
     offset += 8;
 
     res = BodyType.RW.readFrom(buffer, offset);
-    if (res.err) return res;
+    if (res.err) {
+        // TODO: wrapped?
+        res.err.frameId = frame.id;
+        return res;
+    }
     offset = res.offset;
     frame.body = res.value;
 

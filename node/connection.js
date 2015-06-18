@@ -188,15 +188,22 @@ TChannelConnection.prototype.sendProtocolError =
 function sendProtocolError(type, err) {
     var self = this;
 
-    var protocolError =
+    var ProtocolError =
         type === 'write' ? errors.TChannelWriteProtocolError :
         type === 'read' ? errors.TChannelReadProtocolError :
         errors.TChannelProtocolError;
 
-    self.resetAll(protocolError(err, {
+    var protocolError = ProtocolError(err, {
         remoteName: self.remoteName,
-        localName: self.channel.hostPort
-    }));
+        localName: self.channel.hostPort,
+        frameId: err.frameId
+    });
+
+    self.handler.sendErrorFrame({
+        id: protocolError.frameId || 0xFFFFFFFF
+    }, 'ProtocolError', protocolError.message);
+
+    self.resetAll(protocolError);
     self.socket.destroy();
 };
 
@@ -473,7 +480,11 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
         outPending: pending.out
     };
 
-    if (err.type && err.type.lastIndexOf('tchannel.socket', 0) < 0) {
+    var errorCodeName = errors.classify(err);
+
+    if (errorCodeName !== 'NetworkError' &&
+        errorCodeName !== 'ProtocolError'
+    ) {
         self.logger.warn('resetting connection', logInfo);
         self.errorEvent.emit(self, err);
     } else if (
