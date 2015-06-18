@@ -92,11 +92,7 @@ TChannelConnection.prototype.setupSocket = function setupSocket() {
     function onSocketChunk(chunk) {
         var err = self.mach.handleChunk(chunk);
         if (err) {
-            self.resetAll(errors.TChannelReadProtocolError(err, {
-                remoteName: self.remoteName,
-                localName: self.channel.hostPort
-            }));
-            self.socket.destroy();
+            self.sendProtocolError('read', err);
         }
     }
 
@@ -188,6 +184,22 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     }
 };
 
+TChannelConnection.prototype.sendProtocolError =
+function sendProtocolError(type, err) {
+    var self = this;
+
+    var protocolError =
+        type === 'write' ? errors.TChannelWriteProtocolError :
+        type === 'read' ? errors.TChannelReadProtocolError :
+        errors.TChannelProtocolError;
+
+    self.resetAll(protocolError(err, {
+        remoteName: self.remoteName,
+        localName: self.channel.hostPort
+    }));
+    self.socket.destroy();
+};
+
 TChannelConnection.prototype.onTimedOut = function onTimedOut(err) {
     var self = this;
 
@@ -200,11 +212,8 @@ TChannelConnection.prototype.onTimedOut = function onTimedOut(err) {
 
 TChannelConnection.prototype.onWriteError = function onWriteError(err) {
     var self = this;
-    self.resetAll(errors.TChannelWriteProtocolError(err, {
-        remoteName: self.remoteName,
-        localName: self.channel.hostPort
-    }));
-    self.socket.destroy();
+
+    self.sendProtocolError('write', err);
 };
 
 TChannelConnection.prototype.onHandlerError = function onHandlerError(err) {
