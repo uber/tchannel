@@ -23,8 +23,18 @@
 /* jshint maxparams:5 */
 
 var TypedError = require('error/typed');
+var test = require('tape');
 
+var TChannelJSON = require('../as/json.js');
 var allocCluster = require('./lib/alloc-cluster.js');
+
+test('TChannelJSON options are optional', function t(assert) {
+    assert.doesNotThrow(function noThrow() {
+        TChannelJSON();
+    });
+
+    assert.end();
+});
 
 allocCluster.test('getting an ok response', {
     numPeers: 2
