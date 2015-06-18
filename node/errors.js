@@ -447,6 +447,14 @@ module.exports.ThriftHeadStringifyError = WrappedError({
     direction: null
 });
 
+module.exports.TooManyHeaders = TypedError({
+    type: 'tchannel.protocol.too-many-headers',
+    message: 'Got too many headers. Expected at most 128 but got: {count}',
+    count: null,
+    offset: null,
+    endOffset: null
+});
+
 module.exports.TopLevelRegisterError = TypedError({
     type: 'tchannel.top-level-register',
     message: 'Cannot register endpoints points on top-level channel.\n' +
@@ -529,6 +537,7 @@ module.exports.classify = function classify(err) {
         case 'tchannel.init.ephemeral-init-response':
         case 'tchannel.tranport-header-too-long':
         case 'tchannel.protocol.failed':
+        case 'tchannel.protocol.too-many-headers':
             return 'ProtocolError';
 
         case 'tchannel.connection.close':

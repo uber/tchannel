@@ -533,6 +533,7 @@ Header keys may not be 0 length (should result in a parse error), but header
 values may be 0 length.
 
 Header keys have a maximum length of 16 bytes;
+The total number of transport headers allowed is 128
 
 Schema:
 ```

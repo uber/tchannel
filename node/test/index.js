@@ -55,3 +55,5 @@ require('./permissions_cache.js');
 require('./connection-stats.js');
 require('./connection-with-statsd.js');
 require('./request-error-context.js');
+require('./max-call-overhead.js');
+

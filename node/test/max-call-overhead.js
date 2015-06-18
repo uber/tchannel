@@ -112,6 +112,57 @@ allocCluster.test('request() with large arg1', {
     }
 });
 
+allocCluster.test('request() with too many headers', {
+    numPeers: 2
+}, function t(cluster, assert) {
+    cluster.logger.whitelist('info', 'resetting connection');
+
+    var one = remoteService(cluster.channels[0]);
+    var two = cluster.channels[1];
+
+    var subTwo = two.makeSubChannel({
+        serviceName: 'server'
+    });
+
+    subTwo.waitForIdentified({
+        host: one.hostPort
+    }, function onIdentified(err) {
+        assert.ifError(err);
+
+        var headers = {
+            'as': 'raw',
+            'cn': 'wat'
+        };
+        for (var i = 0; i < 127; i++) {
+            headers[i] = String(i);
+        }
+
+        subTwo.request({
+            serviceName: 'server',
+            hasNoParent: true,
+            headers: headers
+        }).send('echo', 'a', 'b', onResponse);
+    });
+
+    function onResponse(err, resp, arg2, arg3) {
+        assert.ok(err);
+        assert.ok(err.isErrorFrame);
+        assert.equal(err.codeName, 'ProtocolError');
+        assert.equal(err.message,
+            'tchannel read failure: Got too many headers. Expected at most 128 but got: 130'
+        );
+
+        assert.equal(null, resp);
+
+        assert.equal(cluster.logger.items().length, 1);
+        var logLine = cluster.logger.items()[0];
+        assert.equal(logLine.levelName, 'info');
+        assert.equal(logLine.meta.error.type, 'tchannel.protocol.read-failed');
+
+        assert.end();
+    }
+});
+
 function remoteService(chan) {
     chan.makeSubChannel({
         serviceName: 'server'
