@@ -90,10 +90,7 @@ TChannelConnection.prototype.setupSocket = function setupSocket() {
     self.socket.on('error', onSocketError);
 
     function onSocketChunk(chunk) {
-        self.mach.handleChunk(chunk, chunkHandled);
-    }
-
-    function chunkHandled(err) {
+        var err = self.mach.handleChunk(chunk);
         if (err) {
             self.resetAll(errors.TChannelReadProtocolError(err, {
                 remoteName: self.remoteName,
