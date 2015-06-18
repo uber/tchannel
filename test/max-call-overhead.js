@@ -69,6 +69,49 @@ allocCluster.test('request() with large header key', {
     }
 });
 
+allocCluster.test('request() with large arg1', {
+    numPeers: 2
+}, function t(cluster, assert) {
+    var one = remoteService(cluster.channels[0]);
+    var two = cluster.channels[1];
+
+    var subTwo = two.makeSubChannel({
+        serviceName: 'server'
+    });
+
+    subTwo.waitForIdentified({
+        host: one.hostPort
+    }, function onIdentified(err) {
+        assert.ifError(err);
+
+        var arg1 = '';
+        for (var i = 0; i < 16 * 1024 + 1; i++) {
+            arg1 += 'a';
+        }
+
+        subTwo.request({
+            serviceName: 'server',
+            hasNoParent: true,
+            headers: {
+                'as': 'raw',
+                'cn': 'wat'
+            }
+        }).send(arg1, 'a', 'b', onResponse);
+    });
+
+    function onResponse(err, resp, arg2, arg3) {
+        assert.ok(err);
+        assert.equal(err.type, 'tchannel.arg1-over-length-limit');
+        assert.equal(err.message,
+            'arg 1 length 0x4001 is larger than the limit 0x4000'
+        );
+
+        assert.equal(null, resp);
+
+        assert.end();
+    }
+});
+
 function remoteService(chan) {
     chan.makeSubChannel({
         serviceName: 'server'
