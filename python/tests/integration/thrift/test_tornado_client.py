@@ -97,3 +97,24 @@ def test_thrift_exception(tchannel_server, service):
 
     assert mock_trace_record.called
     assert 'stahp' in str(excinfo.value)
+
+
+@pytest.mark.gen_test
+def test_false_result(service):
+    # Verify that we aren't treating False as None.
+
+    app = TChannel(name='app')
+
+    @app.register(service)
+    def healthy(request, response, body):
+        return False
+
+    app.listen()
+
+    client = TChannel(name='client')
+    response = yield client.request(
+        hostport=app.hostport, arg_scheme='thrift'
+    ).send('Service::healthy', '\x00\x00', '\x00')
+
+    body = yield response.get_body()
+    assert body == '\x02\x00\x00\x00\x00'

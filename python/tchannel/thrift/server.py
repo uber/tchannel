@@ -110,7 +110,7 @@ def build_handler(result_type, f):
         except Exception:
             res.write_exc_info(sys.exc_info())
         else:
-            if not res.finished and result:
+            if not res.finished and result is not None:
                 # The user never called write_result or threw an
                 # exception. The result was most likely returned by the
                 # function.
@@ -150,7 +150,7 @@ class ThriftResponse(object):
         assert not self.finished, "Already sent a response"
 
         spec = self.result.thrift_spec[0]
-        if result:
+        if result is not None:
             assert spec, "Tried to return a result for a void method."
             setattr(self.result, spec[2], result)
 

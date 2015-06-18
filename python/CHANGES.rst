@@ -4,7 +4,8 @@ Changelog for tchannel.py
 0.8.4 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Fix bug where False and False-like values were being treated as None in
+  Thrift servers.
 
 
 0.8.3 (2015-06-15)
