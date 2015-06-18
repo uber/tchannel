@@ -95,6 +95,12 @@ Operations.prototype.getOutReq = function getOutReq(id) {
     return self.requests.out[id];
 };
 
+Operations.prototype.getInReq = function getInReq(id) {
+    var self = this;
+
+    return self.requests.in[id];
+};
+
 Operations.prototype.addOutReq = function addOutReq(req) {
     var self = this;
 

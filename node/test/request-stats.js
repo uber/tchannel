@@ -70,7 +70,6 @@ allocCluster.test('emits stats', {
 
     function onResponse(err, res, arg2, arg3) {
         assert.ifError(err);
-
         assert.ok(res.ok);
         assert.deepEqual(stats, [{
             name: 'outbound.calls.sent',
@@ -94,6 +93,17 @@ allocCluster.test('emits stats', {
                 host: os.hostname()
             }
         }, {
+            name: 'outbound.request.size',
+            type: 'counter',
+            value: 93,
+            tags: {
+                'target-service': 'server',
+                service: 'client',
+                'target-endpoint': 'echo',
+                app: 'client',
+                host: os.hostname()
+            }
+        }, {
             name: 'inbound.response.size',
             type: 'counter',
             value: 64,
@@ -107,7 +117,7 @@ allocCluster.test('emits stats', {
         }, {
             name: 'outbound.calls.per-attempt-latency',
             type: 'timing',
-            value: stats[3].value,
+            value: stats[4].value,
             tags: {
                 'target-service': 'server',
                 service: 'client',
@@ -131,7 +141,7 @@ allocCluster.test('emits stats', {
         }, {
             name: 'outbound.calls.latency',
             type: 'timing',
-            value: stats[5].value,
+            value: stats[6].value,
             tags: {
                 'target-service': 'server',
                 service: 'client',
