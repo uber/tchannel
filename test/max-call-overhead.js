@@ -148,10 +148,11 @@ allocCluster.test('request() with too many headers', {
 
     function onResponse(err, resp, arg2, arg3) {
         assert.ok(err);
-        assert.ok(err.isErrorFrame);
-        assert.equal(err.codeName, 'ProtocolError');
+        assert.equal(err.fullType, 
+            'tchannel.connection.reset~!~tchannel.protocol.write-failed~!~tchannel.protocol.too-many-headers'
+        );
         assert.equal(err.message,
-            'tchannel read failure: Got too many headers. Expected at most 128 but got: 130'
+            'tchannel: tchannel write failure: Got too many headers. Expected at most 128 but got: 130'
         );
 
         assert.equal(null, resp);
@@ -159,7 +160,7 @@ allocCluster.test('request() with too many headers', {
         assert.equal(cluster.logger.items().length, 1);
         var logLine = cluster.logger.items()[0];
         assert.equal(logLine.levelName, 'info');
-        assert.equal(logLine.meta.error.type, 'tchannel.protocol.read-failed');
+        assert.equal(logLine.meta.error.type, 'tchannel.protocol.write-failed');
 
         assert.end();
     }

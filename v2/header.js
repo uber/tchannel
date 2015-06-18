@@ -71,6 +71,14 @@ HeaderRW.prototype.writeInto = function writeInto(headers, buffer, offset) {
 
     res = self.countrw.writeInto(keys.length, buffer, offset);
 
+    if (self.enforceHeaderCount && keys.length > 128) {
+        return bufrw.WriteResult.error(errors.TooManyHeaders({
+            offset: offset,
+            endOffset: res.offset,
+            count: keys.length
+        }), offset);
+    }
+
     for (var i = 0; i < keys.length; i++) {
         if (res.err) return res;
         offset = res.offset;
