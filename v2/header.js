@@ -110,6 +110,13 @@ HeaderRW.prototype.readFrom = function readFrom(buffer, offset) {
                 offset: offset,
                 endOffset: res.offset
             }), offset, headers);
+        // TODO: check key is 16 bytes; not 16 characters
+        } else if (key.length > 16) {
+            return bufrw.ReadResult.error(errors.TransportHeaderTooLong({
+                offset: offset,
+                endOffset: res.offset,
+                headerName: key
+            }), offset, headers);
         }
         offset = res.offset;
 
