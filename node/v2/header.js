@@ -76,6 +76,15 @@ HeaderRW.prototype.writeInto = function writeInto(headers, buffer, offset) {
         offset = res.offset;
 
         var key = keys[i];
+        // TODO: Check that its' 16 bytes
+        if (self.enforceKeyLength && key.length > 16) {
+            return bufrw.WriteResult.error(errors.TransportHeaderTooLong({
+                offset: offset,
+                endOffset: res.offset,
+                headerName: key
+            }), offset);
+        }
+
         res = self.keyrw.writeInto(key, buffer, offset);
         if (res.err) return res;
         offset = res.offset;
