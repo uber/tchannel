@@ -72,7 +72,7 @@ func (c *Client) sendRegistration() error {
 
 func (c *Client) fuzzedRegistrationInterval() time.Duration {
 	// fuzz is a random value between -fuzzInterval and fuzzInterval
-	fuzz := time.Duration(rand.Intn(int(fuzzInterval)*2)) - fuzzInterval
+	fuzz := time.Duration(rand.Int63n(int64(fuzzInterval)*2)) - fuzzInterval
 	return registrationInterval + fuzz
 }
 
