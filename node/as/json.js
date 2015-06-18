@@ -49,7 +49,7 @@ function TChannelJSON(options) {
         logParseFailures : true;
 
     // only used in request()
-    self.channel = options.channel;
+    self.channel = options && options.channel;
 }
 
 function TChannelJSONRequest(options) {
