@@ -107,6 +107,16 @@ function getKey(common, stat) {
                 clean(stat.tags['target-service'], 'target-service') + '.' +
                 clean(stat.tags['target-endpoint'], 'endpoint') + '.' +
                 stat.tags['retry-count'];
+        case 'outbound.request.size':
+            return prefix + '.' +
+                clean(stat.tags.service, 'service') + '.' +
+                clean(stat.tags['target-service'], 'target-service') + '.' +
+                clean(stat.tags['target-endpoint'], 'endpoint');
+        case 'outbound.response.size':
+            return prefix + '.' +
+                clean(stat.tags.service, 'service') + '.' +
+                clean(stat.tags['target-service'], 'target-service') + '.' +
+                clean(stat.tags['target-endpoint'], 'endpoint');
         case 'outbound.calls.latency':
             return prefix + '.' +
                 clean(stat.tags.service, 'service') + '.' +
