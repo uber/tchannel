@@ -52,10 +52,11 @@ allocCluster.test('request() with large header key', {
 
     function onResponse(err, resp, arg2, arg3) {
         assert.ok(err);
-        assert.ok(err.isErrorFrame);
-        assert.equal(err.codeName, 'ProtocolError');
+        assert.equal(err.fullType,
+            'tchannel.connection.reset~!~tchannel.protocol.write-failed~!~tchannel.tranport-header-too-long'
+        );
         assert.equal(err.message,
-            'tchannel read failure: The header: someReallyLargeHeaderKey exceeds 16 bytes'
+            'tchannel: tchannel write failure: The header: someReallyLargeHeaderKey exceeds 16 bytes'
         );
 
         assert.equal(null, resp);
@@ -63,7 +64,8 @@ allocCluster.test('request() with large header key', {
         assert.equal(cluster.logger.items().length, 1);
         var logLine = cluster.logger.items()[0];
         assert.equal(logLine.levelName, 'info');
-        assert.equal(logLine.meta.error.type, 'tchannel.protocol.read-failed');
+        assert.equal(logLine.meta.error.type, 'tchannel.protocol.write-failed');
+
 
         assert.end();
     }
