@@ -188,23 +188,35 @@ TChannelConnection.prototype.sendProtocolError =
 function sendProtocolError(type, err) {
     var self = this;
 
-    var ProtocolError =
-        type === 'write' ? errors.TChannelWriteProtocolError :
-        type === 'read' ? errors.TChannelReadProtocolError :
-        errors.TChannelProtocolError;
+    assert(type === 'write' || type === 'read',
+        'Got invalid type: ' + type);
 
-    var protocolError = ProtocolError(err, {
-        remoteName: self.remoteName,
-        localName: self.channel.hostPort,
-        frameId: err.frameId
-    });
+    var protocolError;
 
-    self.handler.sendErrorFrame({
-        id: protocolError.frameId || 0xFFFFFFFF
-    }, 'ProtocolError', protocolError.message);
+    if (type === 'read') {
+        protocolError = errors.TChannelReadProtocolError(err, {
+            remoteName: self.remoteName,
+            localName: self.channel.hostPort,
+            frameId: err.frameId
+        });
 
-    self.resetAll(protocolError);
-    self.socket.destroy();
+        self.handler.sendErrorFrame({
+            id: protocolError.frameId || 0xFFFFFFFF
+        }, 'ProtocolError', protocolError.message);
+
+        self.resetAll(protocolError);
+        self.socket.destroy();
+    } else if (type === 'write') {
+        protocolError = errors.TChannelWriteProtocolError(err, {
+            remoteName: self.remoteName,
+            localName: self.channel.hostPort,
+            frameId: err.frameId
+        });
+
+        // TODO: what if you have a write error in a call req cont frame
+        self.resetAll(protocolError);
+        self.socket.destroy();
+    }
 };
 
 TChannelConnection.prototype.onTimedOut = function onTimedOut(err) {
