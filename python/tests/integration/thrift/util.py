@@ -64,6 +64,8 @@ def get_service_module(root, tornado=False):
                  throws (1: ItemAlreadyExists alreadyExists);
             Item getItem(1: string key)
                  throws (1: ItemDoesNotExist doesNotExist);
+
+            bool healthy();
         }
     """))
     with root.as_cwd():
