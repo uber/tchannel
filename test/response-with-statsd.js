@@ -77,7 +77,8 @@ allocCluster.test('emits stats on response ok', {
         hasNoParent: true,
         headers: {
             cn: 'inPipe'
-        }
+        },
+        timeout: 1000
     }).send('Reservoir::get', 'ton', '20', onResponse);
 
     function onResponse(err, res, arg2, arg3) {
@@ -176,7 +177,8 @@ allocCluster.test('emits stats on response not ok', {
         hasNoParent: true,
         headers: {
             cn: 'inPipe'
-        }
+        },
+        timeout: 1000
     }).send('Reservoir::get', 'ton', '20', onResponse);
 
     function onResponse(err, res, arg2, arg3) {

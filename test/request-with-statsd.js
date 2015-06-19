@@ -65,7 +65,8 @@ allocCluster.test('emits stats on call success', {
             headers: {
                 as: 'raw',
                 cn: 'wat'
-            }
+            },
+            timeout: 1000
         }
     });
 
@@ -176,7 +177,8 @@ allocCluster.test('emits stats on call failure', {
         hasNoParent: true,
         headers: {
             cn: 'inPipe'
-        }
+        },
+        timeout: 1000
     }).send('Reservoir::get', 'ton', '20', onResponse);
 
     function onResponse(err, res, arg2, arg3) {

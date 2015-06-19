@@ -55,6 +55,7 @@ allocCluster.test('end response with error frame', {
                 as: 'raw',
                 cn: 'wat'
             },
+            timeout: 1000,
             streamed: true
         });
 
