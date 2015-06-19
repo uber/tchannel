@@ -188,7 +188,7 @@ function getClientChannel(options) {
 
     if (!options || !options.serviceName) {
         throw HyperbahnClientInvalidOptionError({
-            method: 'getClientSubChannel',
+            method: 'getClientChannel',
             name: 'serviceName',
             expected: 'string',
             actual: options ? typeof options.serviceName : 'undefined'
