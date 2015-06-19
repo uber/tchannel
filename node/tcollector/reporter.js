@@ -21,7 +21,6 @@
 'use strict';
 
 var path = require('path');
-var Int64 = require('node-int64');
 var fs = require('fs');
 
 var tcollectorSpec = fs.readFileSync(
