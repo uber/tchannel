@@ -29,7 +29,7 @@ var errors = require('./errors');
 var States = require('./reqres_states');
 var Operations = require('./operations');
 
-var DEFAULT_OUTGOING_REQ_TIMEOUT = 2000;
+var DEFAULT_OUTGOING_REQ_TIMEOUT = 100;
 var CONNECTION_BASE_IDENTIFIER = 0;
 
 function TChannelConnectionBase(channel, direction, socketRemoteAddr) {
