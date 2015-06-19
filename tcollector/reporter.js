@@ -51,10 +51,11 @@ function TCollectorTraceReporter(options) {
 
 function ipToInt(ip) {
     var ipl = 0;
-    ip.split('.').forEach(function( octet ) {
+    var parts = ip.split('.');
+    for (var i = 0; i < parts; i++) {
         ipl <<= 8;
-        ipl += parseInt(octet);
-    });
+        ipl += parseInt(parts[i], 10);
+    }
     return (ipl >>> 0);
 }
 
