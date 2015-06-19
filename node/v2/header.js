@@ -48,6 +48,13 @@ HeaderRW.prototype.byteLength = function byteLength(headers) {
     var keys = Object.keys(headers);
     var res;
 
+    if (keys.length > self.maxHeaderCount) {
+        return bufrw.LengthResult.error(errors.TooManyHeaders({
+            count: keys.length,
+            maxCount: self.maxHeaderCount
+        }));
+    }
+
     length += self.countrw.width;
 
     for (var i = 0; i < keys.length; i++) {
