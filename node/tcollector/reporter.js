@@ -119,41 +119,41 @@ TCollectorTraceReporter.prototype.report = function report(span, callback) {
         timeout: 100,
         trace: false,
         hasNoParent: true,
-        headers:{
-            cn: "tcollector-reporter",
+        headers: {
+            cn: 'tcollector-reporter',
             shardKey: span.traceid.toString('base64')
         },
         serviceName: 'tcollector',
         retryLimit: 1,
-        retryFlags: {never: true}
+        retryFlags: {
+            never: true
+        }
     });
 
-    self.tchannelThrift.send(
-        req,
-        'TCollector::submit',
-        null,
-        {span: jsonSpanToThriftSpan(span)},
-        function (err, response) {
-            if (err) {
-                self.logger.warn("Zipkin span submit failed", {
-                    err: err
-                });
-                if (callback) {
-                    callback(err);
-                }
-                return;
-            }
+    self.tchannelThrift.send(req, 'TCollector::submit', null, {
+        span: jsonSpanToThriftSpan(span)
+    }, onResponse);
 
-            if (!response.ok) {
-                self.logger.warn("Zipkin span submit failed: not ok", {
-                    response: response
-                });
-            }
-
+    function onResponse(err, response) {
+        if (err) {
+            self.logger.warn('Zipkin span submit failed', {
+                err: err
+            });
             if (callback) {
-                callback();
+                callback(err);
             }
+            return;
         }
-    );
+
+        if (!response.ok) {
+            self.logger.warn('Zipkin span submit failed: not ok', {
+                response: response
+            });
+        }
+
+        if (callback) {
+            callback();
+        }
+    }
 };
 
