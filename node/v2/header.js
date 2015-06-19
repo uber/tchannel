@@ -84,17 +84,17 @@ HeaderRW.prototype.writeInto = function writeInto(headers, buffer, offset) {
         offset = res.offset;
 
         var key = keys[i];
-        // TODO: Check that its' 16 bytes
-        if (key.length > self.maxKeyLength) {
+        res = self.keyrw.writeInto(key, buffer, offset);
+        if (res.err) return res;
+
+        var keyByteLength = res.offset - offset;
+        if (keyByteLength > self.maxKeyLength) {
             return bufrw.WriteResult.error(errors.TransportHeaderTooLong({
                 headerName: key,
                 offset: offset,
                 endOffset: res.offset
             }), offset);
         }
-
-        res = self.keyrw.writeInto(key, buffer, offset);
-        if (res.err) return res;
         offset = res.offset;
 
         res = self.valrw.writeInto(headers[key], buffer, offset);
@@ -137,8 +137,7 @@ HeaderRW.prototype.readFrom = function readFrom(buffer, offset) {
                 offset: offset,
                 endOffset: res.offset
             }), offset, headers);
-        // TODO: check key is 16 bytes; not 16 characters
-        } else if (key.length > self.maxKeyLength) {
+        } else if (res.offset - offset > self.maxKeyLength) {
             return bufrw.ReadResult.error(errors.TransportHeaderTooLong({
                 headerName: key,
                 offset: offset,
