@@ -440,6 +440,14 @@ module.exports.ThriftHeadStringifyError = WrappedError({
     direction: null
 });
 
+module.exports.TooManyHeaders = TypedError({
+    type: 'tchannel.protocol.too-many-headers',
+    message: 'Got too many headers. Expected at most 128 but got: {count}',
+    count: null,
+    offset: null,
+    endOffset: null
+});
+
 module.exports.TopLevelRegisterError = TypedError({
     type: 'tchannel.top-level-register',
     message: 'Cannot register endpoints points on top-level channel.\n' +
@@ -450,6 +458,14 @@ module.exports.TopLevelRequestError = TypedError({
     type: 'tchannel.top-level-request',
     message: 'Cannot make request() on top level tchannel.\n' +
         'Must use a sub channel directly.'
+});
+
+module.exports.TransportHeaderTooLong = TypedError({
+    type: 'tchannel.transport-header-too-long',
+    message: 'The header: {headerName} exceeds 16 bytes',
+    headerName: null,
+    offset: null,
+    endOffset: null
 });
 
 module.exports.UnimplementedMethod = TypedError({
@@ -512,6 +528,8 @@ module.exports.classify = function classify(err) {
         case 'tchannel.handler.incoming-req-as-header-required':
         case 'tchannel.handler.incoming-req-cn-header-required':
         case 'tchannel.init.ephemeral-init-response':
+        case 'tchannel.transport-header-too-long':
+        case 'tchannel.protocol.too-many-headers':
             return 'ProtocolError';
 
         case 'tchannel.connection.close':

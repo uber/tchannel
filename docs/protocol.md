@@ -307,6 +307,8 @@ The meaning of the three args depends on the systems on each end. The format of
 arg1, arg2, and arg3 is unspecified at the transport level. These are opaque
 binary blobs as far as tchannel is concerned.
 
+The size of `arg1` is at most 16KiB.
+
 Future versions will likely allow callers to specify specific service instances
 on which to run this request, or a mechanism to route a certain percentage of
 all traffic to a subset of instances for canary analysis.
@@ -327,6 +329,8 @@ Very similar to call req (type 0x03), differing only in:
 - no `service` field
 
 All common fields have identical definition to call req, see its section above for detail.  It is not necessary for arg1 to have the same value between the call req and the call res; by convention, existing implementations leave arg1 at zero length for call res messages.
+
+The size of `arg1` is at most 16KiB.
 
 Headers described below in the "Transport Headers" section.
 
@@ -527,6 +531,9 @@ Duplicate header keys are not allowed and should result in a parse error.
 
 Header keys may not be 0 length (should result in a parse error), but header
 values may be 0 length.
+
+Header keys have a maximum length of 16 bytes;
+The total number of transport headers allowed is 128
 
 Schema:
 ```
