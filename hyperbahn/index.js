@@ -26,7 +26,6 @@ var WrappedError = require('error/wrapped');
 var timers = require('timers');
 var util = require('util');
 var EventEmitter = require('events').EventEmitter;
-var NullLogtron = require('null-logtron');
 var NullStatsd = require('uber-statsd-client/null');
 
 var Reporter = require('../tcollector/reporter.js');
@@ -116,7 +115,7 @@ function HyperbahnClient(options) {
     self.reportTracing = 'reportTracing' in options ?
         options.reportTracing : true;
 
-    self.logger = options.logger || NullLogtron();
+    self.logger = options.logger || self.tchannel.logger;
     self.statsd = options.statsd || NullStatsd();
 
     assert(self.tchannel.tracer,
