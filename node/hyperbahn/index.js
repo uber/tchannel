@@ -26,7 +26,6 @@ var WrappedError = require('error/wrapped');
 var timers = require('timers');
 var util = require('util');
 var EventEmitter = require('events').EventEmitter;
-var NullStatsd = require('uber-statsd-client/null');
 
 var Reporter = require('../tcollector/reporter.js');
 var TChannelJSON = require('../as/json.js');
@@ -116,7 +115,7 @@ function HyperbahnClient(options) {
         options.reportTracing : true;
 
     self.logger = options.logger || self.tchannel.logger;
-    self.statsd = options.statsd || NullStatsd();
+    self.statsd = options.statsd;
 
     assert(self.tchannel.tracer,
         'Top channel must have trace enabled'
@@ -244,9 +243,11 @@ function registrationFailure(err) {
     self.destroy();
     self.emit('error', err);
 
-    self.statsd.increment(
-        'hyperbahn-client.' + self.serviceName + '.registration.failure'
-    );
+    if (self.statsd) {
+        self.statsd.increment(
+            'hyperbahn-client.' + self.serviceName + '.registration.failure'
+        );
+    }
 };
 
 // ## register
@@ -336,10 +337,12 @@ HyperbahnClient.prototype.register = function register(opts) {
             return;
         }
 
-        self.statsd.increment(
-            'hyperbahn-client.' + self.serviceName +
-                '.registration.success'
-        );
+        if (self.statsd) {
+            self.statsd.increment(
+                'hyperbahn-client.' + self.serviceName +
+                    '.registration.success'
+            );
+        }
 
         self.latestRegistrationResult = result;
         self.state = States.REGISTERED;
