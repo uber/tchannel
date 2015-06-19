@@ -25,6 +25,7 @@ var bufrw = require('bufrw');
 var http = require('http');
 var PassThrough = require('readable-stream').PassThrough;
 var extend = require('xtend');
+var errors = require('../errors.js');
 
 var headerRW = bufrw.Repeat(bufrw.UInt16BE,
     bufrw.Series(bufrw.str2, bufrw.str2));
@@ -158,7 +159,8 @@ TChannelHTTP.prototype.setHandler = function register(tchannel, handler) {
     return tchannel.handler;
 };
 
-TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, hreq, hres) {
+TChannelHTTP.prototype.forwardToTChannel =
+    function forwardToTChannel(tchannel, hreq, hres, tchannelRequestOptions, callback) {
     var self = this;
 
     // TODO: no retrying due to:
@@ -167,14 +169,16 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
     // TODO: more http state machine integration
 
     var treq;
-    var options = tchannel.requestOptions({
+    if (!tchannelRequestOptions) tchannelRequestOptions = {};
+    var options = tchannel.requestOptions(extend({
         streamed: true,
         hasNoParent: true
-    });
+    }, tchannelRequestOptions));
     var peer = tchannel.peers.choosePeer(null, options);
     if (!peer) {
         hres.writeHead(503, 'Service Unavailable: no tchannel peer');
         hres.end(); // TODO: error content
+        callback(errors.NoPeerAvailable);
         return null;
     } else {
         // TODO: observable
@@ -208,6 +212,9 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
             }
             hres.writeHead(head.statusCode, head.message, headers);
             body.pipe(hres);
+        }
+        if (typeof callback === 'function') {
+            callback(err)
         }
     }
 };
