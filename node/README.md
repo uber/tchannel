@@ -187,7 +187,7 @@ This will allow you to either test TChannel without using
 
 #### `options.reqTimeoutDefault`
 
-default value: `5000`
+default value: `100`
 
 A default timeout for request timeouts.
 
@@ -329,7 +329,7 @@ You must specify the host you want to write to. This should be
 #### `options.timeout`
 
 You should specify a timeout for this operation. This will
-    default to 5000.
+    default to 100.
 
 This will call your callback with a timeout error if no response
     was received within the timeout.
@@ -439,7 +439,7 @@ error.
 #### TChannel client timeouts
 
 Every outgoing tchannel request has a timeout associated with
-it in the client. This defaults to 5000.
+it in the client. This defaults to 100.
 
 If there is no call response or error frame for the outgoing
 id within the timeout the pending request will be errored.
