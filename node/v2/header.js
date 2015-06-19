@@ -36,8 +36,8 @@ function HeaderRW(countrw, keyrw, valrw, options) {
     self.countrw = countrw;
     self.keyrw = keyrw;
     self.valrw = valrw;
-    self.enforceHeaderCount = options.enforceHeaderCount;
-    self.enforceKeyLength = options.enforceKeyLength;
+    self.maxHeaderCount = options.maxHeaderCount;
+    self.maxKeyLength = options.maxKeyLength;
     bufrw.Base.call(self);
 }
 inherits(HeaderRW, bufrw.Base);
@@ -71,7 +71,7 @@ HeaderRW.prototype.writeInto = function writeInto(headers, buffer, offset) {
 
     res = self.countrw.writeInto(keys.length, buffer, offset);
 
-    if (self.enforceHeaderCount && keys.length > 128) {
+    if (keys.length > self.maxHeaderCount) {
         return bufrw.WriteResult.error(errors.TooManyHeaders({
             offset: offset,
             endOffset: res.offset,
@@ -85,7 +85,7 @@ HeaderRW.prototype.writeInto = function writeInto(headers, buffer, offset) {
 
         var key = keys[i];
         // TODO: Check that its' 16 bytes
-        if (self.enforceKeyLength && key.length > 16) {
+        if (key.length > self.maxKeyLength) {
             return bufrw.WriteResult.error(errors.TransportHeaderTooLong({
                 offset: offset,
                 endOffset: res.offset,
@@ -117,7 +117,7 @@ HeaderRW.prototype.readFrom = function readFrom(buffer, offset) {
     offset = res.offset;
     n = res.value;
 
-    if (self.enforceHeaderCount && n > 128) {
+    if (n > self.maxHeaderCount) {
         return bufrw.ReadResult.error(errors.TooManyHeaders({
             offset: offset,
             endOffset: res.offset,
@@ -138,7 +138,7 @@ HeaderRW.prototype.readFrom = function readFrom(buffer, offset) {
                 endOffset: res.offset
             }), offset, headers);
         // TODO: check key is 16 bytes; not 16 characters
-        } else if (self.enforceKeyLength && key.length > 16) {
+        } else if (key.length > self.maxKeyLength) {
             return bufrw.ReadResult.error(errors.TransportHeaderTooLong({
                 offset: offset,
                 endOffset: res.offset,
@@ -172,12 +172,12 @@ module.exports = HeaderRW;
 
 // nh:1 (hk~1 hv~1){nh}
 module.exports.header1 = HeaderRW(bufrw.UInt8, bufrw.str1, bufrw.str1, {
-    enforceHeaderCount: true,
-    enforceKeyLength: true
+    maxHeaderCount: 128,
+    maxKeyLength: 16
 });
 
 // nh:2 (hk~2 hv~2){nh}
 module.exports.header2 = HeaderRW(bufrw.UInt16BE, bufrw.str2, bufrw.str2, {
-    enforceHeaderCount: false,
-    enforceKeyLength: false
+    maxHeaderCount: Infinity,
+    maxKeyLength: Infinity
 });
