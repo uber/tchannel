@@ -36,7 +36,6 @@ function TCollectorTraceReporter(options) {
     var self = this;
 
     self.logger = options.logger;
-
     self.channel = options.channel;
 
     if (!self.channel) {
@@ -44,7 +43,7 @@ function TCollectorTraceReporter(options) {
         throw new Error('TCollectorTraceReporter must be passed a tchannel');
     }
 
-    self.tchannelThrift = new self.channel.TChannelAsThrift({
+    self.tchannelThrift = self.channel.TChannelAsThrift({
         source: tcollectorSpec
     });
 }
