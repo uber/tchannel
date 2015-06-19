@@ -124,10 +124,9 @@ function HyperbahnClient(options) {
     );
 
     var reporter = Reporter({
-        channel: self.tchannel.makeSubChannel({
-            trace: false,
+        channel: self.getClientChannel({
             serviceName: 'tcollector',
-            peers: self.hostPortList
+            trace: false
         }),
         logger: options.logger
     });
@@ -202,6 +201,7 @@ function getClientChannel(options) {
 
     return self.tchannel.makeSubChannel({
         serviceName: options.serviceName,
+        trace: options.trace,
         requestDefaults: {
             serviceName: options.serviceName,
             timeout: options.timeout,
