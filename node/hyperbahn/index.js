@@ -28,8 +28,9 @@ var util = require('util');
 var EventEmitter = require('events').EventEmitter;
 var NullLogtron = require('null-logtron');
 var NullStatsd = require('uber-statsd-client/null');
-var TChannelJSON = require('tchannel/as/json');
-var Reporter = require('tcollector-reporter');
+
+var Reporter = require('../tcollector/reporter.js');
+var TChannelJSON = require('../as/json.js');
 
 var HyperbahnClientInvalidOptionError = TypedError({
     type: 'hyperbahn-client.invalid-option',
