@@ -23,8 +23,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
-	"reflect"
 	"sync"
 
 	"github.com/uber/tchannel/golang"
@@ -46,9 +46,10 @@ func main() {
 	ch.ListenAndServe(ip.String() + ":12345")
 
 	// Create the handler for KeyValue service,
-	h := NewKVHandler()
+	h := newKVHandler()
 	server := thrift.NewServer(ch)
-	server.Register("KeyValue", reflect.TypeOf(h), keyvalue.NewKeyValueProcessor(h))
+	server.RegisterV2(keyvalue.NewTChanKeyValueServer(h))
+	server.RegisterV2(keyvalue.NewTChanAdminServer(h))
 
 	config := hyperbahn.Configuration{InitialNodes: os.Args[1:]}
 	if len(config.InitialNodes) == 0 {
@@ -70,27 +71,48 @@ type kvHandler struct {
 }
 
 // NewKVHandler returns a new handler for the KeyValue service.
-func NewKVHandler() keyvalue.KeyValue {
+func newKVHandler() *kvHandler {
 	return &kvHandler{vals: make(map[string]string)}
 }
 
 // Get returns the value stored for the given key.
-func (h *kvHandler) Get(key string) (string, error) {
+func (h *kvHandler) Get(ctx thrift.Context, key string) (string, error) {
 	h.mut.RLock()
 	defer h.mut.RUnlock()
 
 	if val, ok := h.vals[key]; ok {
 		return val, nil
 	}
-	return "", fmt.Errorf("no value found for key: %q", key)
+
+	return "", &keyvalue.KeyNotFound{Key: key}
 }
 
 // Set sets the value for a given key.
-func (h *kvHandler) Set(key, value string) error {
-	fmt.Println("got a set", key, value)
+func (h *kvHandler) Set(ctx thrift.Context, key, value string) error {
+	deadline, ok := ctx.Deadline()
+	fmt.Println("Set ", key, value, "Deadline", ok, deadline)
 	h.mut.Lock()
 	defer h.mut.Unlock()
 
 	h.vals[key] = value
+	return nil
+}
+
+// HealthCheck return the health status of this process.
+func (h *kvHandler) HealthCheck(ctx thrift.Context) (string, error) {
+	return "OK", nil
+}
+
+// ClearAll clears all the keys.
+func (h *kvHandler) ClearAll(ctx thrift.Context) error {
+	// TODO(prashant): Check if the user is allowed from headers in the context.
+	if rand.Intn(2) == 1 {
+		return &keyvalue.NotAuthorized{}
+	}
+
+	h.mut.Lock()
+	defer h.mut.Unlock()
+
+	h.vals = make(map[string]string)
 	return nil
 }
