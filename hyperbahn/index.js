@@ -244,7 +244,7 @@ function registrationFailure(err) {
     self.emit('error', err);
 
     self.statsd.increment(
-        'autobahn-client.' + self.serviceName + '.registration.failure'
+        'hyperbahn-client.' + self.serviceName + '.registration.failure'
     );
 };
 
@@ -347,7 +347,7 @@ AutobahnClient.prototype.register = function register(opts) {
         }
 
         self.statsd.increment(
-            'autobahn-client.' + self.serviceName +
+            'hyperbahn-client.' + self.serviceName +
                 '.registration.success'
         );
 
