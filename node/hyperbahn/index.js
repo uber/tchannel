@@ -320,22 +320,11 @@ AutobahnClient.prototype.register = function register(opts) {
                 serviceName: self.serviceName,
                 hostPort: self.hostPort
             };
-            if (err.type === 'autobahn.register.invalid-service-name') {
-                self.logger[self.hardFail ? 'fatal' : 'warn'](
-                    'AutobahnClient: invalid service name (from Autobahn)',
-                    errInfo2
-                );
-            } else if (err.type === 'autobahn.register.invalid-host-port') {
-                self.logger[self.hardFail ? 'fatal' : 'warn'](
-                    'AutobahnClient: invalid service name (from Autobahn)',
-                    errInfo2
-                );
-            } else {
-                self.logger[self.hardFail ? 'fatal' : 'warn'](
-                    'AutobahnClient: unexpected failure (from Autobahn)',
-                    errInfo2
-                );
-            }
+
+            self.logger[self.hardFail ? 'fatal' : 'warn'](
+                'HyperbahnClient: unexpected failure (from Hyperbahn)',
+                errInfo2
+            );
 
             if (self.hardFail) {
                 self.registrationFailure(err);
