@@ -31,21 +31,21 @@ var NullStatsd = require('uber-statsd-client/null');
 var TChannelJSON = require('tchannel/as/json');
 var Reporter = require('tcollector-reporter');
 
-var AutobahnClientInvalidOptionError = TypedError({
-    type: 'autobahn-client.invalid-option',
-    message: 'AutobahnClient {method}: invalid option {name}' +
+var HyperbahnClientInvalidOptionError = TypedError({
+    type: 'hyperbahn-client.invalid-option',
+    message: 'HyperbahnClient {method}: invalid option {name}' +
         ', expected {expected}, got {actual}'
 });
 
 var RegistrationTimeoutError = WrappedError({
-    type: 'autobahn-client.registration-timeout',
+    type: 'hyperbahn-client.registration-timeout',
     message: 'Hyperbahn registration timed out after {time} ms!.\n' +
         '{origMessage}.\n'
 });
 
 var AlreadyDestroyed = TypedError({
-    type: 'autobahn-client.already-destroyed',
-    message: 'AutobahnClient was already destroyed.\n' +
+    type: 'hyperbahn-client.already-destroyed',
+    message: 'HyperbahnClient was already destroyed.\n' +
         'Cannot invoke {method}.',
     method: null
 });
@@ -57,24 +57,24 @@ var States = {
 var DEFAULT_TTL = 60 * 1000;
 var REGISTER_ERROR_DELAY = 200;
 
-module.exports = AutobahnClient;
+module.exports = HyperbahnClient;
 
-// # AutobahnClient
+// # HyperbahnClient
 // options.
 //   * (required) tchannel: tchannel instance
 //   * (required) serviceName: string service name
-//   * (required) hostPortList: array of initial autobahn nodes
+//   * (required) hostPortList: array of initial hyperbahn nodes
 //   * callerName: the caller name
 //   * logger: logtron instance
 //   * reportTracing: Whether to report tracing
 //   * hardFail: boolean; default false; whether or not to fail hard when we
-//     can't register or on unexpected autobahn errors
+//     can't register or on unexpected hyperbahn errors
 //   * registrationTimeout: integer. In hardFail mode we default to 5000. If
 //     not in hardFail mode we don't time out registrations.
-function AutobahnClient(options) {
+function HyperbahnClient(options) {
     /*eslint max-statements: [2, 25] complexity: [2, 20] */
-    if (!(this instanceof AutobahnClient)) {
-        return new AutobahnClient(options);
+    if (!(this instanceof HyperbahnClient)) {
+        return new HyperbahnClient(options);
     }
 
     var self = this;
@@ -82,7 +82,7 @@ function AutobahnClient(options) {
     EventEmitter.call(this);
 
     if (!options || !options.tchannel || options.tchannel.topChannel) {
-        throw AutobahnClientInvalidOptionError({
+        throw HyperbahnClientInvalidOptionError({
             method: 'constructor',
             name: 'tchannel',
             expected: 'top level tchannel instance',
@@ -91,7 +91,7 @@ function AutobahnClient(options) {
     }
 
     if (!options.serviceName) {
-        throw AutobahnClientInvalidOptionError({
+        throw HyperbahnClientInvalidOptionError({
             method: 'constructor',
             name: 'serviceName',
             expected: 'string',
@@ -99,7 +99,7 @@ function AutobahnClient(options) {
         });
     }
     if (!Array.isArray(options.hostPortList)) {
-        throw AutobahnClientInvalidOptionError({
+        throw HyperbahnClientInvalidOptionError({
             method: 'constructor',
             name: 'hostPortList',
             expected: 'array',
