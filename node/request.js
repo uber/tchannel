@@ -77,7 +77,7 @@ inherits(TChannelRequest, EventEmitter);
 
 
 TChannelRequest.defaultRetryLimit = 5;
-TChannelRequest.defaultTimeout = 5000;
+TChannelRequest.defaultTimeout = 100;
 
 TChannelRequest.prototype.type = 'tchannel.request';
 
