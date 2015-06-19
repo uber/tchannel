@@ -37,7 +37,7 @@ var StreamingInResponse = require('../streaming_in_response');
 var v2 = require('./index');
 var errors = require('../errors');
 
-var SERVER_TIMEOUT_DEFAULT = 1000;
+var SERVER_TIMEOUT_DEFAULT = 100;
 
 module.exports = TChannelV2Handler;
 
