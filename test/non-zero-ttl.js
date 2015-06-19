@@ -20,41 +20,43 @@
 
 'use strict';
 
-require('./errors');
-require('./event_emitter.js');
-require('./argstream.js');
-require('./safe-quit.js');
-require('./timeouts.js');
-require('./send.js');
-require('./retry.js');
-require('./relay.js');
-require('./streaming.js');
-require('./streaming_bisect.js');
-require('./register.js');
-require('./identify.js');
-require('./max_pending.js');
-require('./tchannel.js');
-require('./regression-inOps-leak.js');
-require('./v2/index.js');
-require('./regression-listening-on-used-port.js');
-require('./as-thrift.js');
-require('./as-json.js');
-require('./as-http.js');
-require('./peers.js');
-require('./peer_states.js');
-require('./trace/');
-require('./streaming-resp-err.js');
-require('./double-response.js');
-require('./ping.js');
-require('./request-stats.js');
-require('./request-with-statsd.js');
-require('./response-stats.js');
-require('./response-with-statsd.js');
-require('./ping.js');
-require('./permissions_cache.js');
-require('./connection-stats.js');
-require('./connection-with-statsd.js');
-require('./request-error-context.js');
-require('./max-call-overhead.js');
+var allocCluster = require('./lib/alloc-cluster.js');
 
-require('./non-zero-ttl.js');
+allocCluster.test('request() with zero timeout', {
+    numPeers: 2
+}, function t(cluster, assert) {
+    var one = cluster.channels[0];
+    var two = cluster.channels[1];
+
+    var subTwo = two.makeSubChannel({
+        serviceName: 'server'
+    });
+
+    subTwo.waitForIdentified({
+        host: one.hostPort
+    }, function onIdentified(err) {
+        assert.ifError(err);
+
+        subTwo.request({
+            timeout: 0,
+            host: one.hostPort,
+            hasNoParent: true,
+            headers: {
+                'as': 'raw',
+                'cn': 'wat'
+            }
+        }).send('echo', '', '', onResponse);
+    });
+
+    function onResponse(err, resp) {
+        assert.ok(err);
+        assert.equal(err.type, 'tchannel.protocol');
+        assert.equal(err.message,
+            'tchannel read failure: Got an invalid ttl. Expected positive ttl but got 0'
+        );
+
+        assert.equal(resp, null);
+
+        assert.end();
+    }
+});
