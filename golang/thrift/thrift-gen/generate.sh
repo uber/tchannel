@@ -29,4 +29,5 @@ thrift -r --gen go:thrift_import=github.com/apache/thrift/lib/go/thrift -o "$THR
 rm -rf "$THRIFT_GENDIR/$THRIFTNAME/"*-remote
 
 # Generate the TChannel client
-go run *.go --inputFile "$THRIFTFILE" --outputFile "$THRIFT_GENDIR/$THRIFTNAME/tchan-$THRIFTNAME.go"
+FILES=`ls *.go | grep -v _test.go`
+go run $FILES --inputFile "$THRIFTFILE" --outputFile "$THRIFT_GENDIR/$THRIFTNAME/tchan-$THRIFTNAME.go"
