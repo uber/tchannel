@@ -28,14 +28,16 @@ var errors = require('../errors');
 // [key, val] tuples may be better. At the very least, such structure would
 // allow for more precise error reporting.
 
-function HeaderRW(countrw, keyrw, valrw) {
+function HeaderRW(countrw, keyrw, valrw, options) {
     if (!(this instanceof HeaderRW)) {
-        return new HeaderRW(countrw, keyrw, valrw);
+        return new HeaderRW(countrw, keyrw, valrw, options);
     }
     var self = this;
     self.countrw = countrw;
     self.keyrw = keyrw;
     self.valrw = valrw;
+    self.maxHeaderCount = options.maxHeaderCount;
+    self.maxKeyLength = options.maxKeyLength;
     bufrw.Base.call(self);
 }
 inherits(HeaderRW, bufrw.Base);
@@ -69,11 +71,28 @@ HeaderRW.prototype.writeInto = function writeInto(headers, buffer, offset) {
 
     res = self.countrw.writeInto(keys.length, buffer, offset);
 
+    if (keys.length > self.maxHeaderCount) {
+        return bufrw.WriteResult.error(errors.TooManyHeaders({
+            offset: offset,
+            endOffset: res.offset,
+            count: keys.length
+        }), offset);
+    }
+
     for (var i = 0; i < keys.length; i++) {
         if (res.err) return res;
         offset = res.offset;
 
         var key = keys[i];
+        // TODO: Check that its' 16 bytes
+        if (key.length > self.maxKeyLength) {
+            return bufrw.WriteResult.error(errors.TransportHeaderTooLong({
+                offset: offset,
+                endOffset: res.offset,
+                headerName: key
+            }), offset);
+        }
+
         res = self.keyrw.writeInto(key, buffer, offset);
         if (res.err) return res;
         offset = res.offset;
@@ -98,6 +117,14 @@ HeaderRW.prototype.readFrom = function readFrom(buffer, offset) {
     offset = res.offset;
     n = res.value;
 
+    if (n > self.maxHeaderCount) {
+        return bufrw.ReadResult.error(errors.TooManyHeaders({
+            offset: offset,
+            endOffset: res.offset,
+            count: n
+        }), offset, headers);
+    }
+
     for (var i = 0; i < n; i++) {
         start = offset;
 
@@ -109,6 +136,13 @@ HeaderRW.prototype.readFrom = function readFrom(buffer, offset) {
             return bufrw.ReadResult.error(errors.NullKeyError({
                 offset: offset,
                 endOffset: res.offset
+            }), offset, headers);
+        // TODO: check key is 16 bytes; not 16 characters
+        } else if (key.length > self.maxKeyLength) {
+            return bufrw.ReadResult.error(errors.TransportHeaderTooLong({
+                offset: offset,
+                endOffset: res.offset,
+                headerName: key
             }), offset, headers);
         }
         offset = res.offset;
@@ -137,7 +171,13 @@ HeaderRW.prototype.readFrom = function readFrom(buffer, offset) {
 module.exports = HeaderRW;
 
 // nh:1 (hk~1 hv~1){nh}
-module.exports.header1 = HeaderRW(bufrw.UInt8, bufrw.str1, bufrw.str1);
+module.exports.header1 = HeaderRW(bufrw.UInt8, bufrw.str1, bufrw.str1, {
+    maxHeaderCount: 128,
+    maxKeyLength: 16
+});
 
 // nh:2 (hk~2 hv~2){nh}
-module.exports.header2 = HeaderRW(bufrw.UInt16BE, bufrw.str2, bufrw.str2);
+module.exports.header2 = HeaderRW(bufrw.UInt16BE, bufrw.str2, bufrw.str2, {
+    maxHeaderCount: Infinity,
+    maxKeyLength: Infinity
+});

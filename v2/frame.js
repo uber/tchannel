@@ -23,6 +23,8 @@
 var bufrw = require('bufrw');
 var errors = require('../errors');
 
+var Types = require('./index.js').Types;
+
 /* jshint maxparams:5 */
 
 module.exports = Frame;
@@ -98,7 +100,15 @@ function readFrameFrom(buffer, offset) {
     offset += 8;
 
     res = BodyType.RW.readFrom(buffer, offset);
-    if (res.err) return res;
+    if (res.err) {
+        if (frame.type === Types.CallRequest ||
+            frame.type === Types.CallRequestCont
+        ) {
+            // TODO: wrapped?
+            res.err.frameId = frame.id;
+        }
+        return res;
+    }
     offset = res.offset;
     frame.body = res.value;
 

@@ -90,16 +90,9 @@ TChannelConnection.prototype.setupSocket = function setupSocket() {
     self.socket.on('error', onSocketError);
 
     function onSocketChunk(chunk) {
-        self.mach.handleChunk(chunk, chunkHandled);
-    }
-
-    function chunkHandled(err) {
+        var err = self.mach.handleChunk(chunk);
         if (err) {
-            self.resetAll(errors.TChannelReadProtocolError(err, {
-                remoteName: self.remoteName,
-                localName: self.channel.hostPort
-            }));
-            self.socket.destroy();
+            self.sendProtocolError('read', err);
         }
     }
 
@@ -191,6 +184,41 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     }
 };
 
+TChannelConnection.prototype.sendProtocolError =
+function sendProtocolError(type, err) {
+    var self = this;
+
+    assert(type === 'write' || type === 'read',
+        'Got invalid type: ' + type);
+
+    var protocolError;
+
+    if (type === 'read') {
+        protocolError = errors.TChannelReadProtocolError(err, {
+            remoteName: self.remoteName,
+            localName: self.channel.hostPort,
+            frameId: err.frameId
+        });
+
+        self.handler.sendErrorFrame({
+            id: protocolError.frameId || 0xFFFFFFFF
+        }, 'ProtocolError', protocolError.message);
+
+        self.resetAll(protocolError);
+        self.socket.destroy();
+    } else if (type === 'write') {
+        protocolError = errors.TChannelWriteProtocolError(err, {
+            remoteName: self.remoteName,
+            localName: self.channel.hostPort,
+            frameId: err.frameId
+        });
+
+        // TODO: what if you have a write error in a call req cont frame
+        self.resetAll(protocolError);
+        self.socket.destroy();
+    }
+};
+
 TChannelConnection.prototype.onTimedOut = function onTimedOut(err) {
     var self = this;
 
@@ -203,11 +231,8 @@ TChannelConnection.prototype.onTimedOut = function onTimedOut(err) {
 
 TChannelConnection.prototype.onWriteError = function onWriteError(err) {
     var self = this;
-    self.resetAll(errors.TChannelWriteProtocolError(err, {
-        remoteName: self.remoteName,
-        localName: self.channel.hostPort
-    }));
-    self.socket.destroy();
+
+    self.sendProtocolError('write', err);
 };
 
 TChannelConnection.prototype.onHandlerError = function onHandlerError(err) {
@@ -467,7 +492,11 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
         outPending: pending.out
     };
 
-    if (err.type && err.type.lastIndexOf('tchannel.socket', 0) < 0) {
+    var errorCodeName = errors.classify(err);
+
+    if (errorCodeName !== 'NetworkError' &&
+        errorCodeName !== 'ProtocolError'
+    ) {
         self.logger.warn('resetting connection', logInfo);
         self.errorEvent.emit(self, err);
     } else if (
