@@ -56,7 +56,7 @@ allocCluster.test('request() with large header key', {
             'tchannel.connection.reset~!~tchannel.protocol.write-failed~!~tchannel.transport-header-too-long'
         );
         assert.equal(err.message,
-            'tchannel: tchannel write failure: The header: someReallyLargeHeaderKey exceeds 16 bytes'
+            'tchannel: tchannel write failure: transport header: someReallyLargeHeaderKey exceeds 16 bytes'
         );
 
         assert.equal(null, resp);
@@ -152,7 +152,7 @@ allocCluster.test('request() with too many headers', {
             'tchannel.connection.reset~!~tchannel.protocol.write-failed~!~tchannel.protocol.too-many-headers'
         );
         assert.equal(err.message,
-            'tchannel: tchannel write failure: Got too many headers. Expected at most 128 but got: 130'
+            'tchannel: tchannel write failure: too many transport headers, got 130, expected at most 128'
         );
 
         assert.equal(null, resp);

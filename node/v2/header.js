@@ -48,6 +48,13 @@ HeaderRW.prototype.byteLength = function byteLength(headers) {
     var keys = Object.keys(headers);
     var res;
 
+    if (keys.length > self.maxHeaderCount) {
+        return bufrw.LengthResult.error(errors.TooManyHeaders({
+            count: keys.length,
+            maxHeaderCount: self.maxHeaderCount
+        }));
+    }
+
     length += self.countrw.width;
 
     for (var i = 0; i < keys.length; i++) {
@@ -58,6 +65,12 @@ HeaderRW.prototype.byteLength = function byteLength(headers) {
 
         res = self.valrw.byteLength(headers[key]);
         if (res.err) return res;
+        if (res.length > self.maxKeyLength) {
+            return bufrw.LengthResult.error(errors.TransportHeaderTooLong({
+                maxLength: self.maxKeyLength,
+                headerName: key
+            }));
+        }
         length += res.length;
     }
 
@@ -73,9 +86,10 @@ HeaderRW.prototype.writeInto = function writeInto(headers, buffer, offset) {
 
     if (keys.length > self.maxHeaderCount) {
         return bufrw.WriteResult.error(errors.TooManyHeaders({
+            count: keys.length,
+            maxHeaderCount: self.maxHeaderCount,
             offset: offset,
-            endOffset: res.offset,
-            count: keys.length
+            endOffset: res.offset
         }), offset);
     }
 
@@ -84,17 +98,18 @@ HeaderRW.prototype.writeInto = function writeInto(headers, buffer, offset) {
         offset = res.offset;
 
         var key = keys[i];
-        // TODO: Check that its' 16 bytes
-        if (key.length > self.maxKeyLength) {
-            return bufrw.WriteResult.error(errors.TransportHeaderTooLong({
-                offset: offset,
-                endOffset: res.offset,
-                headerName: key
-            }), offset);
-        }
-
         res = self.keyrw.writeInto(key, buffer, offset);
         if (res.err) return res;
+
+        var keyByteLength = res.offset - offset;
+        if (keyByteLength > self.maxKeyLength) {
+            return bufrw.WriteResult.error(errors.TransportHeaderTooLong({
+                maxLength: self.maxKeyLength,
+                headerName: key,
+                offset: offset,
+                endOffset: res.offset
+            }), offset);
+        }
         offset = res.offset;
 
         res = self.valrw.writeInto(headers[key], buffer, offset);
@@ -119,9 +134,10 @@ HeaderRW.prototype.readFrom = function readFrom(buffer, offset) {
 
     if (n > self.maxHeaderCount) {
         return bufrw.ReadResult.error(errors.TooManyHeaders({
+            count: n,
+            maxHeaderCount: self.maxHeaderCount,
             offset: offset,
-            endOffset: res.offset,
-            count: n
+            endOffset: res.offset
         }), offset, headers);
     }
 
@@ -137,12 +153,12 @@ HeaderRW.prototype.readFrom = function readFrom(buffer, offset) {
                 offset: offset,
                 endOffset: res.offset
             }), offset, headers);
-        // TODO: check key is 16 bytes; not 16 characters
-        } else if (key.length > self.maxKeyLength) {
+        } else if (res.offset - offset > self.maxKeyLength) {
             return bufrw.ReadResult.error(errors.TransportHeaderTooLong({
+                maxLength: self.maxKeyLength,
+                headerName: key,
                 offset: offset,
-                endOffset: res.offset,
-                headerName: key
+                endOffset: res.offset
             }), offset, headers);
         }
         offset = res.offset;
