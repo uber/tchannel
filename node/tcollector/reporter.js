@@ -24,7 +24,9 @@ var path = require('path');
 var Int64 = require('node-int64');
 var fs = require('fs');
 
-var tcollectorSpec = fs.readFileSync(path.join(__dirname, 'tcollector.thrift'), 'utf8');
+var tcollectorSpec = fs.readFileSync(
+    path.join(__dirname, 'tcollector.thrift'), 'utf8'
+);
 
 module.exports = TCollectorTraceReporter;
 
