@@ -83,7 +83,7 @@ function jsonSpanToThriftSpan(span) {
             }
 
             if (item.type === 'boolean') {
-                ret.annotation_type = 'BOOL';
+                ret.annotationType = 'BOOL';
                 ret.boolValue = item.value;
             }
 
@@ -93,7 +93,7 @@ function jsonSpanToThriftSpan(span) {
             }
 
             else {
-                ret.annotation_type = 'STRING'
+                ret.annotationType = 'STRING'
                 ret.stringValue = String(item.value);
             }
 
