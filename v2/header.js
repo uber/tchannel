@@ -58,6 +58,12 @@ HeaderRW.prototype.byteLength = function byteLength(headers) {
 
         res = self.valrw.byteLength(headers[key]);
         if (res.err) return res;
+        if (res.length > self.maxKeyLength) {
+            return bufrw.LengthResult.error(errors.TransportHeaderTooLong({
+                maxLength: self.maxKeyLength,
+                headerName: key
+            }));
+        }
         length += res.length;
     }
 
