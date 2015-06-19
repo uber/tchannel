@@ -21,6 +21,8 @@
 'use strict';
 
 var bufrw = require('bufrw');
+
+var errors = require('../errors');
 var ArgsRW = require('./args');
 var Checksum = require('./checksum');
 var header = require('./header');
@@ -104,6 +106,13 @@ function readCallReqFrom(buffer, offset) {
     // ttl:4
     res = bufrw.UInt32BE.readFrom(buffer, offset);
     if (res.err) return res;
+
+    if (res.value === 0) {
+        return bufrw.ReadResult.error(errors.InvalidTTL({
+            ttl: res.value
+        }), offset, body);
+    }
+
     offset = res.offset;
     body.ttl = res.value;
 
