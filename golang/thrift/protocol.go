@@ -28,11 +28,11 @@ type protocol struct {
 
 	// transport is the underlying transport that the TProtocol will write to.
 	// The actual readers/writers are set from the tchannel WriteTo/ReadFrom calls.
-	transport *readerWriterTransport
+	transport *readWriterTransport
 }
 
 func newProtocol() *protocol {
-	transport := &readerWriterTransport{}
+	transport := &readWriterTransport{}
 	return &protocol{
 		TProtocol: thrift.NewTBinaryProtocolTransport(transport),
 		transport: transport,
