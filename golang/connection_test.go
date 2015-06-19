@@ -193,6 +193,19 @@ func TestBadRequest(t *testing.T) {
 	})
 }
 
+func TestNoTimeout(t *testing.T) {
+	withTestChannel(t, "svc", func(ch *Channel, hostPort string) {
+		ch.Register(testHandlerFunc(t, (&echoSaver{}).echo), "Echo")
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		_, _, _, err := sendRecv(ctx, ch, hostPort, "svc", "Echo", []byte("Headers"), []byte("Body"))
+		require.NotNil(t, err)
+		assert.Equal(t, ErrTimeoutRequired, err)
+	})
+}
+
 func TestServerBusy(t *testing.T) {
 	withTestChannel(t, testServiceName, func(ch *Channel, hostPort string) {
 		ch.Register(testHandlerFunc(t, serverBusy), "busy")

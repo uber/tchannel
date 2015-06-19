@@ -82,6 +82,9 @@ var (
 
 	// ErrTimeout is a SytemError indicating the request has timed out
 	ErrTimeout = NewSystemError(ErrCodeTimeout, "timeout")
+
+	// ErrTimeoutRequired is a SystemError indicating that timeouts must be specified.
+	ErrTimeoutRequired = NewSystemError(ErrCodeBadRequest, "timeout required")
 )
 
 // A SystemError is a system-level error, containing an error code and message

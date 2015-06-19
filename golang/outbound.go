@@ -46,9 +46,13 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string, callOpti
 		return nil, err
 	}
 
-	deadline, _ := ctx.Deadline()
+	deadline, ok := ctx.Deadline()
+	// No deadline was set, we should not support no deadlines.
+	if !ok {
+		return nil, ErrTimeoutRequired
+	}
 	timeToLive := deadline.Sub(time.Now())
-	if timeToLive < 0 {
+	if timeToLive <= 0 {
 		return nil, ErrTimeout
 	}
 
