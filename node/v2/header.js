@@ -80,6 +80,7 @@ HeaderRW.prototype.writeInto = function writeInto(headers, buffer, offset) {
     if (keys.length > self.maxHeaderCount) {
         return bufrw.WriteResult.error(errors.TooManyHeaders({
             count: keys.length,
+            maxCount: self.maxHeaderCount,
             offset: offset,
             endOffset: res.offset
         }), offset);
@@ -127,6 +128,7 @@ HeaderRW.prototype.readFrom = function readFrom(buffer, offset) {
     if (n > self.maxHeaderCount) {
         return bufrw.ReadResult.error(errors.TooManyHeaders({
             count: n,
+            maxCount: self.maxHeaderCount,
             offset: offset,
             endOffset: res.offset
         }), offset, headers);

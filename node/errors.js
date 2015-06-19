@@ -442,8 +442,9 @@ module.exports.ThriftHeadStringifyError = WrappedError({
 
 module.exports.TooManyHeaders = TypedError({
     type: 'tchannel.protocol.too-many-headers',
-    message: 'too many transport headers, got {count}, expected at most 128',
+    message: 'too many transport headers, got {count}, expected at most {maxHeaderCount}',
     count: null,
+    maxHeaderCount: null,
     offset: null,
     endOffset: null
 });
