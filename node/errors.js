@@ -462,7 +462,8 @@ module.exports.TopLevelRequestError = TypedError({
 
 module.exports.TransportHeaderTooLong = TypedError({
     type: 'tchannel.transport-header-too-long',
-    message: 'transport header: {headerName} exceeds 16 bytes',
+    message: 'transport header: {headerName} exceeds {maxLength} bytes',
+    maxLength: null,
     headerName: null,
     offset: null,
     endOffset: null

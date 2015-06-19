@@ -90,6 +90,7 @@ HeaderRW.prototype.writeInto = function writeInto(headers, buffer, offset) {
         var keyByteLength = res.offset - offset;
         if (keyByteLength > self.maxKeyLength) {
             return bufrw.WriteResult.error(errors.TransportHeaderTooLong({
+                maxLength: self.maxKeyLength,
                 headerName: key,
                 offset: offset,
                 endOffset: res.offset
@@ -139,6 +140,7 @@ HeaderRW.prototype.readFrom = function readFrom(buffer, offset) {
             }), offset, headers);
         } else if (res.offset - offset > self.maxKeyLength) {
             return bufrw.ReadResult.error(errors.TransportHeaderTooLong({
+                maxLength: self.maxKeyLength,
                 headerName: key,
                 offset: offset,
                 endOffset: res.offset
