@@ -372,13 +372,6 @@ module.exports.TChannelLocalResetError = WrappedError({
     message: 'tchannel: {causeMessage}'
 });
 
-module.exports.TChannelProtocolError = WrappedError({
-    type: 'tchannel.protocol.failed',
-    message: 'tchannel failure: {origMessage}',
-    remoteName: null,
-    localName: null
-});
-
 module.exports.TChannelReadProtocolError = WrappedError({
     type: 'tchannel.protocol.read-failed',
     message: 'tchannel read failure: {origMessage}',
@@ -536,7 +529,6 @@ module.exports.classify = function classify(err) {
         case 'tchannel.handler.incoming-req-cn-header-required':
         case 'tchannel.init.ephemeral-init-response':
         case 'tchannel.tranport-header-too-long':
-        case 'tchannel.protocol.failed':
         case 'tchannel.protocol.too-many-headers':
             return 'ProtocolError';
 
