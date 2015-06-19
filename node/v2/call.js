@@ -148,6 +148,12 @@ function writeCallReqInto(body, buffer, offset) {
     // flags:1 -- filled in later after argsrw
     offset += bufrw.UInt8.width;
 
+    if (body.ttl === 0) {
+        return bufrw.WriteResult.error(errors.InvalidTTL({
+            ttl: body.ttl
+        }), offset);
+    }
+
     // ttl:4
     res = bufrw.UInt32BE.writeInto(body.ttl, buffer, offset);
     if (res.err) return res;
