@@ -63,12 +63,10 @@ function convertHost(endpoint) {
         ipv4: ipToInt(endpoint.ipv4),
         port: endpoint.port,
         serviceName: endpoint.serviceName
-    }
+    };
 }
 
 function jsonSpanToThriftSpan(span) {
-    /*jshint camelcase: false*/
-
     var annotations = span.annotations.map(function fixAnnotation(item) {
         return {
             timestamp: item.timestamp,
@@ -80,20 +78,16 @@ function jsonSpanToThriftSpan(span) {
         span.binaryAnnotations.map(function fixBinAnnotation(item) {
             var ret = {
                 key: item.key
-            }
+            };
 
             if (item.type === 'boolean') {
                 ret.annotationType = 'BOOL';
                 ret.boolValue = item.value;
-            }
-
-            else if (item.type === 'number') {
+            } else if (item.type === 'number') {
                 ret.annotationType = 'DOUBLE';
                 ret.doubleValue = item.value;
-            }
-
-            else {
-                ret.annotationType = 'STRING'
+            } else {
+                ret.annotationType = 'STRING';
                 ret.stringValue = String(item.value);
             }
 
