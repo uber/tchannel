@@ -461,7 +461,7 @@ module.exports.TopLevelRequestError = TypedError({
 });
 
 module.exports.TransportHeaderTooLong = TypedError({
-    type: 'tchannel.tranport-header-too-long',
+    type: 'tchannel.transport-header-too-long',
     message: 'The header: {headerName} exceeds 16 bytes',
     headerName: null,
     offset: null,
@@ -528,7 +528,7 @@ module.exports.classify = function classify(err) {
         case 'tchannel.handler.incoming-req-as-header-required':
         case 'tchannel.handler.incoming-req-cn-header-required':
         case 'tchannel.init.ephemeral-init-response':
-        case 'tchannel.tranport-header-too-long':
+        case 'tchannel.transport-header-too-long':
         case 'tchannel.protocol.too-many-headers':
             return 'ProtocolError';
 
