@@ -172,6 +172,12 @@ module.exports.InvalidJSONBody = TypedError({
     body: null
 });
 
+module.exports.InvalidTTL = TypedError({
+    type: 'tchannel.protocol.invalid-ttl',
+    message: 'Got an invalid ttl. Expected positive ttl but got {ttl}',
+    ttl: null
+});
+
 module.exports.JSONBodyParserError = WrappedError({
     type: 'tchannel-json-handler.parse-error.body-failed',
     message: 'Could not parse body (arg3) argument.\n' +
@@ -532,6 +538,7 @@ module.exports.classify = function classify(err) {
         case 'tchannel.init.ephemeral-init-response':
         case 'tchannel.transport-header-too-long':
         case 'tchannel.protocol.too-many-headers':
+        case 'tchannel.protocol.invalid-ttl':
             return 'ProtocolError';
 
         case 'tchannel.connection.close':
