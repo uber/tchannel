@@ -56,5 +56,5 @@ require('./connection-stats.js');
 require('./connection-with-statsd.js');
 require('./request-error-context.js');
 require('./max-call-overhead.js');
-
+require('./relay.js');
 require('./non-zero-ttl.js');
