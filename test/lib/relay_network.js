@@ -20,10 +20,13 @@
 
 'use strict';
 
+var tape = require('tape');
 var parallel = require('run-parallel');
 var NullStatsd = require('uber-statsd-client/null');
 var debugLogtron = require('debug-logtron');
 var inherits = require('util').inherits;
+var tapeCluster = require('tape-cluster');
+
 var allocCluster = require('./alloc-cluster.js');
 var EventEmitter = require('../../lib/event_emitter.js');
 var EndpointHandler = require('../../endpoint-handler.js');
@@ -58,6 +61,10 @@ FakeEgressNodes.prototype.exitsFor = function exitsFor(serviceName) {
 };
 
 function RelayNetwork(options) {
+    if (!(this instanceof RelayNetwork)) {
+        return new RelayNetwork(options);
+    }
+
     var self = this;
 
     self.numRelays = options.numRelays || 3;
@@ -65,8 +72,10 @@ function RelayNetwork(options) {
     self.serviceNames = options.serviceNames || ['alice', 'bob', 'charlie'];
     self.kValue = options.kValue || 2;
     self.createCircuits = options.createCircuits || noop;
+    self.clusterOptions = options.cluster || {};
 
     self.numPeers = self.numRelays + self.serviceNames.length * self.numInstancesPerService;
+    self.clusterOptions.numPeers = self.numPeers;
     self.cluster = null;
     self.topology = null;
     self.relayChannels = null;
@@ -86,20 +95,24 @@ function RelayNetwork(options) {
     self.instanceIndexes = instanceIndexes;
 }
 
-RelayNetwork.test = function test(name, options, callback) {
-    var network = new RelayNetwork(options);
-    var clusterOptions = options.cluster || {};
-    clusterOptions.numPeers = network.numPeers;
-    allocCluster.test(name, clusterOptions, onCluster);
-    function onCluster(cluster, assert) {
-        network.setCluster(cluster);
-        network.connect(onConnected);
+RelayNetwork.test = tapeCluster(tape, RelayNetwork);
 
-        function onConnected(err) {
-            if (err) return assert.err(err);
-            callback(network, assert);
-        }
+RelayNetwork.prototype.bootstrap = function bootstrap(cb) {
+    var self = this;
+
+    allocCluster(self.clusterOptions).ready(clusterReady);
+
+    function clusterReady(cluster) {
+        self.setCluster(cluster);
+        self.connect(cb);
     }
+};
+
+RelayNetwork.prototype.close = function close(cb) {
+    var self = this;
+
+    self.cluster.destroy();
+    cb();
 };
 
 RelayNetwork.prototype.setCluster = function setCluster(cluster) {
