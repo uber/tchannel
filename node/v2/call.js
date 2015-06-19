@@ -107,7 +107,7 @@ function readCallReqFrom(buffer, offset) {
     res = bufrw.UInt32BE.readFrom(buffer, offset);
     if (res.err) return res;
 
-    if (res.value === 0) {
+    if (res.value <= 0) {
         return bufrw.ReadResult.error(errors.InvalidTTL({
             ttl: res.value
         }), offset, body);
@@ -148,7 +148,7 @@ function writeCallReqInto(body, buffer, offset) {
     // flags:1 -- filled in later after argsrw
     offset += bufrw.UInt8.width;
 
-    if (body.ttl === 0) {
+    if (body.ttl <= 0) {
         return bufrw.WriteResult.error(errors.InvalidTTL({
             ttl: body.ttl
         }), offset);

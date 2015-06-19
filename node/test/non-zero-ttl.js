@@ -74,7 +74,63 @@ allocCluster.test('request() with zero timeout', {
         assert.equal(logLine.levelName, 'info');
         assert.equal(logLine.meta.error.type, 'tchannel.protocol.write-failed');
 
+        assert.end();
+    }
+});
 
+var allocCluster = require('./lib/alloc-cluster.js');
+
+allocCluster.test('request() with zero timeout', {
+    numPeers: 2
+}, function t(cluster, assert) {
+    cluster.logger.whitelist('info', 'resetting connection');
+
+    var one = cluster.channels[0];
+    var two = cluster.channels[1];
+
+    var subTwo = two.makeSubChannel({
+        serviceName: 'server'
+    });
+
+    subTwo.waitForIdentified({
+        host: one.hostPort
+    }, function onIdentified(err) {
+        assert.ifError(err);
+
+        var peer = subTwo.peers.add(one.hostPort);
+        var conn = peer.connect();
+
+        var req = conn.buildOutRequest({
+            channel: conn.channel,
+            remoteAddr: conn.remoteName,
+            ttl: -10,
+            tracer: conn.tracer,
+            serviceName: 'server',
+            host: one.hostPort,
+            hasNoParent: true,
+            headers: {
+                'as': 'raw',
+                'cn': 'wat'
+            }
+        });
+        conn.ops.addOutReq(req);
+
+        req.send('echo', '', '', onResponse);
+    });
+
+    function onResponse(err, resp) {
+        assert.ok(err);
+        assert.equal(err.type, 'tchannel.connection.reset');
+        assert.equal(err.message,
+            'tchannel: tchannel write failure: Got an invalid ttl. Expected positive ttl but got -10'
+        );
+
+        assert.equal(resp, null);
+
+        assert.equal(cluster.logger.items().length, 1);
+        var logLine = cluster.logger.items()[0];
+        assert.equal(logLine.levelName, 'info');
+        assert.equal(logLine.meta.error.type, 'tchannel.protocol.write-failed');
 
         assert.end();
     }
