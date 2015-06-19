@@ -137,7 +137,7 @@ function HyperbahnClient(options) {
     };
 
     if (!self.reportTracing) {
-        self.logger.warn('AutobahnClient tcollector tracing is OFF', {
+        self.logger.warn('HyperbahnClient tcollector tracing is OFF', {
             service: self.serviceName
         });
     }
@@ -166,16 +166,17 @@ function HyperbahnClient(options) {
     }
 }
 
-util.inherits(AutobahnClient, EventEmitter);
+util.inherits(HyperbahnClient, EventEmitter);
 
-AutobahnClient.prototype.setReportTracing = function setReportTracing(bool) {
+HyperbahnClient.prototype.setReportTracing = function setReportTracing(bool) {
     var self = this;
 
     self.reportTracing = bool;
 };
 
 // Gets the subchannel for hitting a particular service.
-AutobahnClient.prototype.getClientChannel = function getClientChannel(options) {
+HyperbahnClient.prototype.getClientChannel =
+function getClientChannel(options) {
     var self = this;
 
     if (self._destroyed) {
@@ -186,7 +187,7 @@ AutobahnClient.prototype.getClientChannel = function getClientChannel(options) {
     }
 
     if (!options || !options.serviceName) {
-        throw AutobahnClientInvalidOptionError({
+        throw HyperbahnClientInvalidOptionError({
             method: 'getClientSubChannel',
             name: 'serviceName',
             expected: 'string',
@@ -215,7 +216,7 @@ AutobahnClient.prototype.getClientChannel = function getClientChannel(options) {
 // ## registrationTimeout
 // Called after a certain amount of time to have a fatal error when reg fails.
 // Will not be called if options.registrationTimeout isn't passed in
-AutobahnClient.prototype.registrationTimeout =
+HyperbahnClient.prototype.registrationTimeout =
 function registrationTimeout() {
     var self = this;
 
@@ -226,7 +227,7 @@ function registrationTimeout() {
             time: self.registrationTimeoutTime
         });
 
-        self.logger.fatal('AutobahnClient: registration timed out', {
+        self.logger.fatal('HyperbahnClient: registration timed out', {
             timeout: self.registrationTimeout,
             error: err
         });
@@ -236,7 +237,7 @@ function registrationTimeout() {
     // TODO else warn
 };
 
-AutobahnClient.prototype.registrationFailure =
+HyperbahnClient.prototype.registrationFailure =
 function registrationFailure(err) {
     var self = this;
 
@@ -249,12 +250,12 @@ function registrationFailure(err) {
 };
 
 // ## register
-// Register with Autobahn. If called with a callback, the callback will not be
+// Register with Hyperbahn. If called with a callback, the callback will not be
 // called until there has been a successful registration. This function
 // attempts a register and retries until there are no healthy servers left; it
 // will then repeatedly choose random servers to try until it finds one that
 // works.
-AutobahnClient.prototype.register = function register(opts) {
+HyperbahnClient.prototype.register = function register(opts) {
     var self = this;
     // Attempt a registration. If it succeeds, setTimeout to re-register with
     // the same server after the TTL.
@@ -275,7 +276,7 @@ AutobahnClient.prototype.register = function register(opts) {
             self.registrationTimeoutTime
         );
     } else {
-        self.logger.info('AutobahnClient registration timeout disabled', {
+        self.logger.info('HyperbahnClient registration timeout disabled', {
             service: self.serviceName
         });
     }
@@ -301,7 +302,7 @@ AutobahnClient.prototype.register = function register(opts) {
         /*eslint max-statements: [2, 40] */
         if (err) {
             self.logger[self.hardFail ? 'error' : 'warn'](
-                'AutobahnClient: registration failure, ' +
+                'HyperbahnClient: registration failure, ' +
                 'marking server as sick', {
                 error: err,
                 serviceName: self.serviceName,
@@ -353,7 +354,7 @@ AutobahnClient.prototype.register = function register(opts) {
     self.emit('register-attempt');
 };
 
-AutobahnClient.prototype.registerAgain =
+HyperbahnClient.prototype.registerAgain =
 function registerAgain(delay) {
     var self = this;
 
@@ -370,7 +371,7 @@ function registerAgain(delay) {
 };
 
 // ## destroy
-AutobahnClient.prototype.destroy = function destroy() {
+HyperbahnClient.prototype.destroy = function destroy() {
     this._destroyed = true;
     timers.clearTimeout(this._registrationTimer);
     timers.clearTimeout(this.registrationTimeoutTimer);
