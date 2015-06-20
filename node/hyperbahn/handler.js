@@ -24,13 +24,14 @@
 
 var assert = require('assert');
 var util = require('util');
+var setTimeout = require('timers').setTimeout;
 
 var Errors = require('../errors.js');
 var TChannelJSON = require('../as/json');
 var TChannelEndpointHandler = require('../endpoint-handler');
 
-var MAX_RELAY_AD_ATTEMPTS = 2;
-var RELAY_AD_RETRY_TIME = 2 * 1000;
+var MAX_RELAY_AD_ATTEMPTS = 4;
+var RELAY_AD_RETRY_TIME = 1 * 1000;
 var RELAY_AD_TIMEOUT = 500;
 
 module.exports = HyperbahnHandler;
@@ -65,6 +66,10 @@ function HyperbahnHandler(options) {
 
     self.relayAdTimeout = options.relayAdTimeout ||
         RELAY_AD_TIMEOUT;
+    self.relayAdRetryTime = options.relayAdRetryTime ||
+        RELAY_AD_RETRY_TIME;
+    self.maxRelayAdAttempts = options.maxRelayAdAttempts ||
+        MAX_RELAY_AD_ATTEMPTS;
 }
 util.inherits(HyperbahnHandler, TChannelEndpointHandler);
 
@@ -244,10 +249,13 @@ function sendRelayAdvertise(opts, callback) {
 
             var codeName = Errors.classify(err);
 
-            if (attempts <= MAX_RELAY_AD_ATTEMPTS && err &&
-                codeName === 'NetworkError'
+            if (attempts <= self.maxRelayAdAttempts && err &&
+                (
+                    codeName === 'NetworkError' ||
+                    codeName === 'Timeout'
+                )
             ) {
-                setTimeout(tryRequest, RELAY_AD_RETRY_TIME);
+                setTimeout(tryRequest, self.relayAdRetryTime);
             } else {
                 var logger = self.channel.logger;
                 logger.error('Could not send relay advertise', {
