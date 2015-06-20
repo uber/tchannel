@@ -56,6 +56,7 @@
     "safe-json-parse": "^4.0.0",
     "split2": "^0.2.1",
     "tape": "^4.0.0",
+    "tape-cluster": "2.1.0",
     "through2": "^0.6.3",
     "time-mock": "^0.1.2",
     "uber-licence": "^1.1.0",

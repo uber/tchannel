@@ -20,23 +20,38 @@
 
 'use strict';
 
+var tape = require('tape');
 var parallel = require('run-parallel');
 var NullStatsd = require('uber-statsd-client/null');
 var debugLogtron = require('debug-logtron');
 var inherits = require('util').inherits;
+var tapeCluster = require('tape-cluster');
+
 var allocCluster = require('./alloc-cluster.js');
 var EventEmitter = require('../../lib/event_emitter.js');
 var EndpointHandler = require('../../endpoint-handler.js');
 var ServiceProxy = require('../../hyperbahn/service_proxy.js');
+var HyperbahnHandler = require('../../hyperbahn/handler.js');
 
 function noop() {}
 
 // e.g., topology = {'alice': ['127.0.0.1:4040'], 'bob': ['127.0.0.1:4041']}, '127.0.0.1:4040'
-function FakeEgressNodes(topology, hostPort) {
+function FakeEgressNodes(options) {
+    if (!(this instanceof FakeEgressNodes)) {
+        return new FakeEgressNodes(options);
+    }
+
     var self = this;
+
     EventEmitter.call(self);
-    self.hostPort = hostPort;
-    self.topology = topology;
+
+    self.hostPort = options.hostPort;
+
+    // Everyone must mutate this
+    self.topology = options.topology;
+    self.kValue = options.kValue;
+    self.relayChannels = options.relayChannels;
+
     self.membershipChangedEvent = self.defineEvent('membershipChanged');
 }
 
@@ -44,20 +59,52 @@ inherits(FakeEgressNodes, EventEmitter);
 
 FakeEgressNodes.prototype.isExitFor = function isExitFor(serviceName) {
     var self = this;
+
     return self.topology[serviceName].indexOf(self.hostPort) >= 0;
+};
+
+FakeEgressNodes.prototype.getRandomNodes =
+function getRandomNodes(serviceName) {
+    var self = this;
+
+    var hosts = [];
+
+    for (var i = 0; i < self.kValue; i++) {
+        var n = Math.floor(Math.random() * self.relayChannels.length);
+
+        var node = self.relayChannels[n].hostPort;
+        if (hosts.indexOf(node) === -1) {
+            hosts.push(node);
+        }
+    }
+
+    self.topology[serviceName] = hosts;
+
+    return hosts;
 };
 
 FakeEgressNodes.prototype.exitsFor = function exitsFor(serviceName) {
     var self = this;
+
     var hostPorts = self.topology[serviceName];
+
+    // A random service; pick k random things
+    if (!hostPorts) {
+        hostPorts = self.getRandomNodes(serviceName);
+    }
+
     var result = Object.create(null);
-    hostPorts.forEach(function (hostPort, index) {
-        result[hostPort] = serviceName + "~" + index;
+    hostPorts.forEach(function buildResult(hostPort, index) {
+        result[hostPort] = serviceName + '~' + index;
     });
     return result;
 };
 
 function RelayNetwork(options) {
+    if (!(this instanceof RelayNetwork)) {
+        return new RelayNetwork(options);
+    }
+
     var self = this;
 
     self.numRelays = options.numRelays || 3;
@@ -65,9 +112,13 @@ function RelayNetwork(options) {
     self.serviceNames = options.serviceNames || ['alice', 'bob', 'charlie'];
     self.kValue = options.kValue || 2;
     self.createCircuits = options.createCircuits || noop;
+    self.clusterOptions = options.cluster || {};
 
     self.numPeers = self.numRelays + self.serviceNames.length * self.numInstancesPerService;
+    self.clusterOptions.numPeers = self.numPeers;
     self.cluster = null;
+
+    // The topology gets mutate by all the fake egress nodes to get consensus
     self.topology = null;
     self.relayChannels = null;
     self.serviceChannels = null;
@@ -86,20 +137,24 @@ function RelayNetwork(options) {
     self.instanceIndexes = instanceIndexes;
 }
 
-RelayNetwork.test = function test(name, options, callback) {
-    var network = new RelayNetwork(options);
-    var clusterOptions = options.cluster || {};
-    clusterOptions.numPeers = network.numPeers;
-    allocCluster.test(name, clusterOptions, onCluster);
-    function onCluster(cluster, assert) {
-        network.setCluster(cluster);
-        network.connect(onConnected);
+RelayNetwork.test = tapeCluster(tape, RelayNetwork);
 
-        function onConnected(err) {
-            if (err) return assert.err(err);
-            callback(network, assert);
-        }
+RelayNetwork.prototype.bootstrap = function bootstrap(cb) {
+    var self = this;
+
+    allocCluster(self.clusterOptions).ready(clusterReady);
+
+    function clusterReady(cluster) {
+        self.setCluster(cluster);
+        self.connect(cb);
     }
+};
+
+RelayNetwork.prototype.close = function close(cb) {
+    var self = this;
+
+    self.cluster.destroy();
+    cb();
 };
 
 RelayNetwork.prototype.setCluster = function setCluster(cluster) {
@@ -129,18 +184,25 @@ RelayNetwork.prototype.setCluster = function setCluster(cluster) {
         var serviceName = self.serviceNames[index];
         var relayHostPorts = [];
         for (var kIndex = 0; kIndex < self.kValue; kIndex++) {
-            relayHostPorts.push(
-                self.relayChannels[
-                    (index + kIndex) %
-                    self.relayChannels.length
-                ].hostPort
-            );
+            var hostPort = self.relayChannels[
+                (index + kIndex) %
+                self.relayChannels.length
+            ].hostPort;
+
+            if (relayHostPorts.indexOf(hostPort) === -1) {
+                relayHostPorts.push(hostPort);
+            }
         }
         self.topology[serviceName] = relayHostPorts;
     });
 
     self.egressNodesForRelay = self.relayChannels.map(function eachRelay(relayChannel, index) {
-        return new FakeEgressNodes(self.topology, relayChannel.hostPort);
+        return new FakeEgressNodes({
+            topology: self.topology,
+            hostPort: relayChannel.hostPort,
+            relayChannels: self.relayChannels,
+            kValue: self.kValue
+        });
     });
 
     // Set up relays
@@ -162,6 +224,23 @@ RelayNetwork.prototype.setCluster = function setCluster(cluster) {
                 probation: null
             })
         });
+
+        var hyperbahnChannel = relayChannel.makeSubChannel({
+            serviceName: 'hyperbahn'
+        });
+        var hyperbahnHandler = HyperbahnHandler({
+            channel: hyperbahnChannel,
+            egressNodes: egressNodes,
+            callerName: 'hyperbahn'
+        });
+        hyperbahnHandler.advertise =
+        function advertise(serviceObj) {
+            var peer = relayChannel.handler.getServicePeer(
+                serviceObj.serviceName, serviceObj.hostPort
+            );
+            peer.connect();
+        };
+        hyperbahnChannel.handler = hyperbahnHandler;
 
         // In response to artificial advertisement
         self.serviceNames.forEach(function eachServiceName(serviceName, index) {
