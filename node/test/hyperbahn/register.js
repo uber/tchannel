@@ -41,7 +41,7 @@ function runTests(HyperbahnCluster) {
             callerName: 'hello-bob-test',
             hostPortList: cluster.hostPortList,
             tchannel: bob.channel,
-            logger: DebugLogtron('autobahnClient')
+            logger: DebugLogtron('hyperbahnClient')
         });
 
         client.once('registered', onResponse);

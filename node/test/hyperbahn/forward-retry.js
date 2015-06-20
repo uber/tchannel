@@ -38,20 +38,20 @@ function runTests(HyperbahnCluster) {
         var steve = cluster.remotes.steve;
         var bob = cluster.remotes.bob;
 
-        var steveAutobahnClient = new HyperbahnClient({
+        var steveHyperbahnClient = new HyperbahnClient({
             serviceName: steve.serviceName,
             hostPortList: cluster.hostPortList,
             tchannel: steve.channel,
             callerName: 'forward-retry-test',
-            logger: DebugLogtron('autobahnClient')
+            logger: DebugLogtron('hyperbahnClient')
         });
 
         var tchannelJSON = TChannelJSON({
             logger: steve.logger
         });
 
-        steveAutobahnClient.once('registered', onSteveRegistered);
-        steveAutobahnClient.register(onSteveRegistered);
+        steveHyperbahnClient.once('registered', onSteveRegistered);
+        steveHyperbahnClient.register(onSteveRegistered);
 
         // TODO: intermittent flap about can't request on destroyed channel
         // TODO: flappy leaked handle hang
@@ -106,7 +106,7 @@ function runTests(HyperbahnCluster) {
         }
 
         function finish() {
-            steveAutobahnClient.destroy();
+            steveHyperbahnClient.destroy();
             assert.end();
         }
     });

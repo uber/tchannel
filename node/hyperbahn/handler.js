@@ -128,7 +128,7 @@ function handleAdvertise(self, req, arg2, arg3, cb) {
     onFinish();
 
     // TODO remove blocking on fanout finish. Requires fixing
-    // autobahn tests upstream
+    // hyperbahn tests upstream
     function onFinish() {
         if (--counter === 0) {
             cb(null, {

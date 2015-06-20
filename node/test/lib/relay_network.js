@@ -231,7 +231,7 @@ RelayNetwork.prototype.setCluster = function setCluster(cluster) {
         var hyperbahnHandler = HyperbahnHandler({
             channel: hyperbahnChannel,
             egressNodes: egressNodes,
-            callerName: 'autobahn'
+            callerName: 'hyperbahn'
         });
         hyperbahnHandler.advertise =
         function advertise(serviceObj) {

@@ -42,18 +42,18 @@ function runTests(HyperbahnCluster) {
             logger: cluster.logger
         });
 
-        var steveAutobahnClient = new HyperbahnClient({
+        var steveHyperbahnClient = new HyperbahnClient({
             serviceName: steve.serviceName,
             callerName: 'forward-test',
             hostPortList: cluster.hostPortList,
             tchannel: steve.channel,
-            logger: DebugLogtron('autobahnClient')
+            logger: DebugLogtron('hyperbahnClient')
         });
-        steveAutobahnClient.once('registered', onRegistered);
-        steveAutobahnClient.register();
+        steveHyperbahnClient.once('registered', onRegistered);
+        steveHyperbahnClient.register();
 
         function onRegistered() {
-            var result = steveAutobahnClient.latestRegistrationResult;
+            var result = steveHyperbahnClient.latestRegistrationResult;
 
             assert.equal(result.head, null, 'header is null');
             assert.ok(result.body, 'got a body');
@@ -71,7 +71,7 @@ function runTests(HyperbahnCluster) {
             assert.ifError(err);
             assert.equal(String(resp.body), 'oh hi lol');
 
-            steveAutobahnClient.destroy();
+            steveHyperbahnClient.destroy();
             assert.end();
         }
     });
