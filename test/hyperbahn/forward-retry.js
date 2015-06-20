@@ -1,19 +1,18 @@
 'use strict';
 
-var AutobahnClient = require('../');
-
 var DebugLogtron = require('debug-logtron');
 
-var allocCluster = require('autobahn/test/lib/test-cluster.js');
-var TChannelJSON = require('tchannel/as/json');
+var HyperbahnClient = require('../../hyperbahn/index.js');
+var HyperbahnCluster = require('../lib/hyperbahn-cluster.js');
+var TChannelJSON = require('../../as/json');
 
-allocCluster.test('register and forward', {
+HyperbahnCluster.test('register and forward', {
     size: 10
 }, function t(cluster, assert) {
     var steve = cluster.remotes.steve;
     var bob = cluster.remotes.bob;
 
-    var steveAutobahnClient = new AutobahnClient({
+    var steveAutobahnClient = new HyperbahnClient({
         serviceName: steve.serviceName,
         hostPortList: cluster.hostPortList,
         tchannel: steve.channel,
