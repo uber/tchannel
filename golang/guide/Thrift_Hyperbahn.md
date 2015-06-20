@@ -2,6 +2,12 @@
 
 The code matching this guide is [here](../examples/keyvalue).
 
+This version of TChannel+Thrift generates code using thrift-gen. This new method has known limitations:
+ * Only supports a single thrift file at a time.
+ * No support for TChannel headers or error frames.
+
+There may be bugs with the code generation used as well.
+
 ## Dependencies
 
 Make sure your [GOPATH is set up](http://golang.org/doc/code.html) before following this guide.
@@ -10,6 +16,7 @@ You'll need to `go get` the following:
 * github.com/uber/tchannel/golang
 * github.com/uber/tchannel/golang/hyperbahn
 * github.com/uber/tchannel/golang/thrift
+* github.com/uber/tchannel/golang/thrift-gen
 
 Use [Godep](https://github.com/tools/godep) to manage dependencies, as the API is still in development and will change.
 
@@ -37,7 +44,19 @@ This defines a service named `KeyValue` with two methods:
 Once you have defined your service, you should generate the Thrift client by running the following:
 
 ```bash
+# cd to directory thrift-gen inside the tchannel/thrift/ folder.
+./generate.sh ~/src/keyvalue/keyvalue.thrift
+```
+
+This runs the Thrift compiler, and `thrift-gen` to generate the client and service bindings.
+You can run the commands manually as well:
+
+```bash
+# Generate serialization/deserialization logic.
 thrift -r --gen go:thrift_import=github.com/apache/thrift/lib/go/thrift keyvalue.thrift
+
+# Generate TChannel service interfaces in the same directory where Thrift generates code.
+thrift-gen --inputFile "$THRIFTFILE" --outputFile "THRIFT_FILE_FOLDER/gen-go/thriftName/tchan-keyvalue.go"
 ```
 
 ## Go server
@@ -56,19 +75,14 @@ When creating a channel, you can pass additional [options](http://godoc.org/gith
 
 ### Create and register Thrift handler
 
-Create a custom type with methods required by the Thrift generated interface. You can examine this interface by looking in `gen-go/keyvalue/keyvalue.thrift`. For example, the interface for our definition file looks like:
+Create a custom type with methods required by the Thrift generated interface. You can examine this interface by looking in `gen-go/keyvalue/tchan-keyvalue.go`. For example, the interface for our definition file looks like:
 ```go
-type KeyValue interface {
-	// Parameters:
-	//  - Key
-	Get(key string) (r string, err error)
-	// Parameters:
-	//  - Key
-	//  - Value
-	Set(key string, value string) (err error)
+type TChanKeyValue interface {
+	Get(ctx thrift.Context, key string) (r string, err error)
+	Set(ctx thrift.Context, key string, value string) (err error)
 }
 ```
-Create an instance of your handler type, and then create a [thrift.Server](http://godoc.org/github.com/uber/tchannel/golang/thrift#NewServer) and [register](http://godoc.org/github.com/uber/tchannel/golang/thrift#Server.Register) your Thrift handler.
+Create an instance of your handler type, and then create a [thrift.Server](http://godoc.org/github.com/uber/tchannel/golang/thrift#NewServer) and [register](http://godoc.org/github.com/uber/tchannel/golang/thrift#Server.RegisterV2) your Thrift handler.
 
 ### Advertise with Hyperbahn
 
@@ -91,7 +105,7 @@ Your service can now be accessed from any language over Hyperbahn + TChannel!
 
 ## Go client
 
-Note: The client interface is still in active development.
+Note: The client implementation is still in active development.
 
 To make a client that talks, you need to:
 
@@ -117,50 +131,30 @@ need to do anything further.
 
 ### Create a Thrift client
 
-To create a Thrift protocol, you need:
- * A context
- * The Hyperbahn service name (e.g. the service name passed on the server to NewChannel)
- * The Thrift service name (e.g. the name specified in the Thrift definition file for the service)
+The Thrift client has two parts:
+1. The `thrift.TChanClient` which is configured to hit a specific Hyperbahn service.
+2. A generated client which uses an underlying `thrift.TChanClient` to call methods for a specific Thrift service.
 
-These are passed through the `TChanOutboundOptions` when creating a new protocol:
-
+To create a `thrift.TChanClient`, use `thrift.NewClient`. This client can then be used to create a generated client:
 ```go
-protocol := thrift.NewTChanOutbound(ch, thrift.TChanOutboundOptions{
-  Context:          ctx,
-  HyperbahnService: "keyvalue",
-  ThriftService:    "KeyValue",
-})
+thriftClient := thrift.NewClient(ch, "keyvalue", nil)
+client := keyvalue.NewTChanKeyValueClient(thriftClient)
 ```
-
- The client is generated using the same protocol as both the input protocol and the output protocol:
- ```go
- client := keyvalue.NewKeyValueClientProtocol(nil, protocol, protocol)
- ```
-
-No transport is required, as the TChannel protocol is tied to the TChannel transport. The returned client is used to make remote calls to a service.
-
-*Note*: Context is supposed to be passed on a per-call basis. The plan is to generate a client that passes context as the first parameter when making method calls.
 
 ### Make remote calls
 
 Method calls on the client make remote calls over TChannel. E.g.
 ```go
-err := client.Set("hello", "world")
-val, err := client.Get("hello")
+err := client.Set(ctx, "hello", "world")
+val, err := client.Get(ctx, "hello")
 // val = "world"
 ```
 
-The Thrift client is not thread-safe, and so clients should not be shared across goroutines.
-Creating a client is very cheap, as the underlying connections are managed and pooled by TChannel.
+You must pass a context when making method calls which passes the deadline, and in future, additional context such as application headers.
 
 ## Limitations & Upcoming Changes
 
 TChannel's peer selection does not yet have a detailed health model for nodes, and selection
 does not balance load across nodes.
 
-The autogenerated Thrift code is very simple and so there are many features that are not yet exposed:
- * Trace propagation
- * Custom deadlines.
- * Application headers
-
-The API may change to expose these features, although the overall structure of the code will be very similar.
+The thrift-gen autogenerated code is very new and may have many bugs.
