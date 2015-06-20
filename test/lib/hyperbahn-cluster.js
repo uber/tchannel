@@ -149,7 +149,7 @@ function HyperbahnRemote(opts) {
     self.serviceName = opts.subChannel.serviceName;
     self.channel = opts.subChannel.topChannel;
     self.clientChannel = self.channel.makeSubChannel({
-        serviceName: 'autobahn-client',
+        serviceName: 'hyperbahn-client',
         peers: opts.hostPortList,
         requestDefaults: {
             hasNoParent: true,

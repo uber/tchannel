@@ -35,6 +35,6 @@ function runTests(HyperbahnCluster) {
     require('./register.js')(HyperbahnCluster);
     require('./forward-retry.js')(HyperbahnCluster);
     
-    require('./autobahn-down.js')(HyperbahnCluster);
-    require('./autobahn-times-out.js')(HyperbahnCluster);
+    require('./hyperbahn-down.js')(HyperbahnCluster);
+    require('./hyperbahn-times-out.js')(HyperbahnCluster);
 }

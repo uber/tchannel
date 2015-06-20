@@ -22,16 +22,16 @@
 
 var test = require('tape');
 
-test('register with autobahn + error frame');
-test('register with autobahn + error frame + no hardFail');
+test('register with hyperbahn + error frame');
+test('register with hyperbahn + error frame + no hardFail');
 
 // TODO test registationTimeout semantics
 test('register with invalid serviceName');
 test('register with invalid host port');
-test('register with unexpected autobahn failure');
+test('register with unexpected hyperbahn failure');
 test('register with invalid serviceName + no hardFail');
 test('register with invalid host port + no hardFail');
-test('register with unexpected autobahn failure + no hardFail');
+test('register with unexpected hyperbahn failure + no hardFail');
 
 test('register in a loop');
 
