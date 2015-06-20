@@ -34,14 +34,14 @@ function runTests(HyperbahnCluster) {
     HyperbahnCluster.test('register with hyperbahn down', {
         size: 2
     }, function t(cluster, assert) {
-        var bob = cluster.remotes.bob;
+        var bob = cluster.dummies[0];
 
         var client = HyperbahnClient({
             serviceName: 'A',
             callerName: 'A-client',
             // 5001 & 5002 should be DEAD ports
             hostPortList: ['127.0.0.1:5001', '127.0.0.1:5002'],
-            tchannel: bob.channel,
+            tchannel: bob,
             hardFail: true,
             registrationTimeout: 200,
             logger: DebugLogtron('hyperbahnClient')
@@ -81,14 +81,14 @@ function runTests(HyperbahnCluster) {
     HyperbahnCluster.test('register with hyperbahn down + no hardFail', {
         size: 5
     }, function t(cluster, assert) {
-        var bob = cluster.remotes.bob;
+        var bob = cluster.dummies[0];
 
         var client = HyperbahnClient({
             serviceName: 'A',
             callerName: 'A-client',
             // 5001 & 5002 should be DEAD ports
             hostPortList: ['127.0.0.1:5001', '127.0.0.1:5002'],
-            tchannel: bob.channel,
+            tchannel: bob,
             logger: DebugLogtron('hyperbahnClient')
         });
 
