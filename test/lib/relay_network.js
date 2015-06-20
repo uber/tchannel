@@ -142,12 +142,14 @@ RelayNetwork.prototype.setCluster = function setCluster(cluster) {
         var serviceName = self.serviceNames[index];
         var relayHostPorts = [];
         for (var kIndex = 0; kIndex < self.kValue; kIndex++) {
-            relayHostPorts.push(
-                self.relayChannels[
-                    (index + kIndex) %
-                    self.relayChannels.length
-                ].hostPort
-            );
+            var hostPort = self.relayChannels[
+                (index + kIndex) %
+                self.relayChannels.length
+            ].hostPort;
+
+            if (relayHostPorts.indexOf(hostPort) === -1) {
+                relayHostPorts.push(hostPort);
+            }
         }
         self.topology[serviceName] = relayHostPorts;
     });
