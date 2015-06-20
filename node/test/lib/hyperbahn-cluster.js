@@ -79,14 +79,17 @@ HyperbahnCluster.prototype.bootstrap = function bootstrap(cb) {
         var relayNetwork = self.relayNetwork;
         self.logger = self.relayNetwork.cluster.logger;
 
-        self.remotes.steve = HyperbahnRemote({
-            subChannel: relayNetwork.subChannelsByName.steve[0]
-        });
-        self.remotes.bob = HyperbahnRemote({
-            subChannel: relayNetwork.subChannelsByName.bob[0]
-        });
         self.hostPortList = relayNetwork.relayChannels.map(function p(c) {
             return c.hostPort;
+        });
+
+        self.remotes.steve = HyperbahnRemote({
+            subChannel: relayNetwork.subChannelsByName.steve[0],
+            hostPortList: self.hostPortList
+        });
+        self.remotes.bob = HyperbahnRemote({
+            subChannel: relayNetwork.subChannelsByName.bob[0],
+            hostPortList: self.hostPortList
         });
 
         cb();
@@ -113,5 +116,23 @@ function HyperbahnRemote(opts) {
 
     self.serviceName = opts.subChannel.serviceName;
     self.channel = opts.subChannel.topChannel;
-    self.clientChannel = opts.subChannel;
+    self.clientChannel = self.channel.makeSubChannel({
+        serviceName: 'autobahn-client',
+        peers: opts.hostPortList,
+        requestDefaults: {
+            hasNoParent: true,
+            headers: {
+                as: 'raw',
+                cn: self.serviceName
+            }
+        }
+    });
+    self.serverChannel = opts.subChannel;
+
+    self.serverChannel.register('echo', echo);
+
+    function echo(req, res, a, b) {
+        res.headers.as = 'raw';
+        res.sendOk(String(a), String(b));
+    }
 }
