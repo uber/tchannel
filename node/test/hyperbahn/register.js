@@ -1,47 +1,42 @@
 'use strict';
 
-var TChannel = require('tchannel');
 var DebugLogtron = require('debug-logtron');
 
-var AutobahnClient = require('../');
+var HyperbahnClient = require('../../hyperbahn/index.js');
+var HyperbahnCluster = require('../lib/hyperbahn-cluster.js');
 
-var allocCluster = require('autobahn/test/lib/test-cluster.js');
-
-allocCluster.test('can register', {
+HyperbahnCluster.test('can register', {
     size: 5
 }, function t(cluster, assert) {
-    var tchannel = new TChannel();
+    var bob = cluster.remotes.bob;
 
-    tchannel.listen(0, '127.0.0.1', function listening() {
-        var client = new AutobahnClient({
+    var client = new HyperbahnClient({
+        serviceName: 'hello-bob',
+        callerName: 'hello-bob-test',
+        hostPortList: cluster.hostPortList,
+        tchannel: bob.channel,
+        logger: DebugLogtron('autobahnClient')
+    });
+
+    client.once('registered', onResponse);
+    client.register();
+
+    function onResponse() {
+        var result = client.latestRegistrationResult;
+
+        cluster.checkExitPeers(assert, {
             serviceName: 'hello-bob',
-            callerName: 'hello-bob-test',
-            hostPortList: cluster.hostPortList,
-            tchannel: tchannel,
-            logger: DebugLogtron('autobahnClient')
+            hostPort: bob.channel.hostPort
         });
 
-        client.once('registered', onResponse);
-        client.register();
+        assert.equal(result.head, null);
 
-        function onResponse() {
-            var result = client.latestRegistrationResult;
+        // Because of duplicates in a size 5 cluster we know
+        // that we have at most 5 kValues
+        assert.ok(result.body.connectionCount <= 5,
+            'expect to have at most 5 register results');
 
-            cluster.checkExitPeers(assert, {
-                serviceName: 'hello-bob',
-                hostPort: tchannel.hostPort
-            });
-
-            assert.equal(result.head, null);
-
-            // Because of duplicates in a size 5 cluster we know
-            // that we have at most 5 kValues
-            assert.ok(result.body.connectionCount <= 5,
-                'expect to have at most 5 register results');
-
-            tchannel.close();
-            client.destroy();
-            assert.end();
-        }
-    });
+        client.destroy();
+        assert.end();
+    }
 });
