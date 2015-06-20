@@ -34,7 +34,7 @@ allocCluster.test('emits connection stats with success', {
     var server = cluster.channels[0];
     var client = cluster.channels[1];
     var serverHost = cluster.hosts[0]
-        .replace(/:/g, '-')
+        .split(':')[0]
         .replace(/\./g, '-');
     var statsd = nullStatsd(2);
 
@@ -92,7 +92,7 @@ allocCluster.test('emits connection stats with failure', {
     numPeers: 1
 }, function t(cluster, assert) {
     var client = cluster.channels[0];
-    var hostKey = 'localhost-4040';
+    var hostKey = 'localhost';
     var statsd = nullStatsd(2);
 
     client.statTags = client.options.statTags = {
@@ -148,7 +148,7 @@ allocCluster.test('emits active connections', {
     var server = cluster.channels[0];
     var client = cluster.channels[1];
     var serverHost = cluster.hosts[0]
-        .replace(/:/g, '-')
+        .split(':')[0]
         .replace(/\./g, '-');
     var statsd = nullStatsd(3);
 
