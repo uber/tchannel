@@ -1,9 +1,5 @@
 'use strict';
 
-require('format-stack').set({
-    traces: 'short'
-});
-
 require('./forward.js');
 require('./register.js');
 require('./forward-retry.js');
