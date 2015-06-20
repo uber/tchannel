@@ -55,7 +55,7 @@ function HyperbahnCluster(options) {
 
     self.relayNetwork = RelayNetwork({
         numRelays: self.size,
-        numInstancesPerService: self.size,
+        numInstancesPerService: 1,
         kValue: 5,
         serviceNames: ['bob', 'steve', 'mary'],
         cluster: options.cluster
