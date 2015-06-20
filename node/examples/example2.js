@@ -18,82 +18,104 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 'use strict';
+/*eslint no-console: 0*/
 
+var console = require('console');
 var assert = require('assert');
 
 var TChannel = require('../channel.js');
-var EndpointHandler = require('../endpoint-handler.js');
-var CountedReadySignal = require('ready-signal/counted');
 
-var async = require('async');
-
-var server = new TChannel({
-    serviceName: 'server',
-    handler: EndpointHandler()
-});
-var client = new TChannel({
-    handler: EndpointHandler()
-});
+var server = new TChannel();
+var client = new TChannel();
 
 // bidirectional messages
-server.handler.register('ping', function onPing(req, res) {
-    console.log('server got ping req from ' + req.remoteAddr);
+server.makeSubChannel({
+    serviceName: 'server'
+}).register('ping', function onPing(req, res) {
+    console.log('server got ping req from', {
+        remoteAddr: req.remoteAddr
+    });
+    res.headers.as = 'raw';
     res.sendOk('pong', null);
 });
-client.handler.register('ping', function onPing(req, res) {
-    console.log('client got ping req from ' + req.remoteAddr);
+client.makeSubChannel({
+    serviceName: 'client'
+}).register('ping', function onPing(req, res) {
+    console.log('client got ping req from', {
+        remoteAddr: req.remoteAddr
+    });
+    res.headers.as = 'raw';
     res.sendOk('pong', null);
 });
 
+server.listen(4040, '127.0.0.1', function onServerListen() {
+    client.listen(4041, '127.0.0.1', onListen);
+});
 
-var ready = CountedReadySignal(2);
-var listening = ready(function (err) {
+function onListen() {
+    var clientOutChan = client.makeSubChannel({
+        serviceName: 'server',
+        peers: [server.hostPort],
+        requestDefaults: {
+            headers: {
+                'as': 'raw',
+                'cn': 'example-client'
+            }
+        }
+    });
+    var serverOutChan = server.makeSubChannel({
+        serviceName: 'client',
+        peers: [client.hostPort],
+        requestDefaults: {
+            headers: {
+                'as': 'raw',
+                'cn': 'example-server'
+            }
+        }
+    });
+
+    clientOutChan.request({
+        serviceName: 'server',
+        hasNoParent: true
+    }).send('ping', null, null, onClientResponse);
+
+    function onClientResponse(err, res, arg2, arg3) {
+        if (err) {
+            return finish(err);
+        }
+
+        assert.equal(res.ok, true);
+        console.log('ping res from server', {
+            arg2: arg2.toString(),
+            arg3: arg3.toString()
+        });
+
+        serverOutChan.request({
+            serviceName: 'client',
+            hasNoParent: true
+        }).send('ping', null, null, onServerResponse);
+    }
+
+    function onServerResponse(err, res, arg2, arg3) {
+        if (err) {
+            return finish(err);
+        }
+
+        assert.equal(res.ok, true);
+        console.log('ping res from client', {
+            arg2: arg2.toString(),
+            arg3: arg3.toString()
+        });
+
+        finish();
+    }
+}
+
+function finish(err) {
     if (err) {
         throw err;
     }
 
-    async.series([
-        function pingOne(done) {
-            client.makeSubChannel({
-                serviceName: 'server',
-                peers: [server.hostPort]
-            });
-
-            client
-                .request({serviceName: 'server'})
-                .send('ping', null, null, function (err, res) {
-                    if (err) {
-                        done(err);
-                    } else {
-                        assert.equal(res.ok, true);
-                        console.log('ping res from client: ' + res.arg2 + ' ' + res.arg3);
-                        done();
-                    }
-                });
-        },
-
-        function pingTwo(done) {
-            server
-                .request(client.hostPort)
-                .send('ping', null, null, function (err, res) {
-                    if (err) {
-                        done(err);
-                    } else {
-                        assert.equal(res.ok, true);
-                        console.log('ping res server: ' + res.arg2 + ' ' + res.arg3);
-                        done();
-                    }
-                });
-        }
-
-    ], function done(error) {
-        server.close();
-        client.close();
-        if (error) {
-            throw error;
-        }
-    });
-});
-
-server.listen(4040, '127.0.0.1', ready.signal);
-client.listen(4041, '127.0.0.1', ready.signal);
+    server.close();
+    client.close();
+}

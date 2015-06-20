@@ -18,72 +18,92 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 'use strict';
+/*eslint no-console: 0*/
 
 var assert = require('assert');
+var console = require('console');
+var setTimeout = require('timers').setTimeout;
 
 var TChannel = require('../channel.js');
-var EndpointHandler = require('../endpoint-handler.js');
-var CountedReadySignal = require('ready-signal/counted');
 
-var server = new TChannel({
-    serviceName: 'server',
-    handler: EndpointHandler()
-});
+var counter = 2;
+var server = new TChannel();
 var client = new TChannel();
 
+var serverChan = server.makeSubChannel({
+    serviceName: 'server'
+});
+
 // normal response
-server.handler.register('func1', function (req, res) {
-    console.log('func1 responding with a small delay:' + req.arg2.toString() + ' 2:' + req.arg3.toString());
-    setTimeout(function() {
+serverChan.register('func1', function onReq(req, res, arg2, arg3) {
+    console.log('func1 responding with a small delay', {
+        arg2: arg2.toString(),
+        arg3: arg3.toString()
+    });
+    setTimeout(function onTimeout() {
+        res.headers.as = 'raw';
         res.sendOk('result', 'indeed it did');
     }, Math.random() * 1000);
 });
+
 // err response
-server.handler.register('func2', function (req, res) {
+serverChan.register('func2', function onReq2(req, res) {
+    res.headers.as = 'raw';
     res.sendNotOk(null, 'it failed');
 });
 
-var ready = CountedReadySignal(2);
-var listening = ready(function (err) {
-    if (err) {
-        throw err;
-    }
-
-    client.makeSubChannel({
+server.listen(4040, '127.0.0.1', function onListen() {
+    var clientChan = client.makeSubChannel({
         serviceName: 'server',
-        peers: [server.hostPort]
+        peers: [server.hostPort],
+        requestDefaults: {
+            hasNoParent: true,
+            headers: {
+                'as': 'raw',
+                'cn': 'example-client'
+            }
+        }
     });
 
-    client
-        .request({serviceName: 'server'})
-        .send('func1', "arg 1", "arg 2", function (err, res) {
-            if (err) {
-                done(err);
-            } else {
-                assert.equal(res.ok, true);
-                console.log('normal res: ' + res.arg2.toString() + ' ' + res.arg3.toString());
-                done();
-            }
-        });
-    client
-        .request({serviceName: 'server'})
-        .send('func2', "arg 1", "arg 2", function (err, res) {
-            if (err) {
-                done(err);
-            } else {
-                assert.equal(res.ok, false);
-                console.log('err res: ' + res.ok + ' message: ' + String(res.arg3));
-            }
-        });
+    clientChan.request({
+        serviceName: 'server',
+        timeout: 1000
+    }).send('func1', 'arg 1', 'arg 2', function onResp(err, res, arg2, arg3) {
+        if (err) {
+            finish(err);
+        } else {
+            assert.equal(res.ok, true);
+            console.log('normal res:', {
+                arg2: arg2.toString(),
+                arg3: arg3.toString()
+            });
+            finish();
+        }
+    });
+
+    clientChan.request({
+        serviceName: 'server'
+    }).send('func2', 'arg 1', 'arg 2', function onResp(err, res, arg2, arg3) {
+        if (err) {
+            finish(err);
+        } else {
+            assert.equal(res.ok, false);
+            console.log('err res: ', {
+                ok: res.ok,
+                message: String(arg3)
+            });
+            finish();
+        }
+    });
 });
 
-function done(err) {
-    server.close();
-    client.close();
+function finish(err) {
     if (err) {
         throw err;
     }
-}
 
-server.listen(4040, '127.0.0.1', ready.signal);
-client.listen(4041, '127.0.0.1', ready.signal);
+    if (--counter === 0) {
+        server.close();
+        client.close();
+    }
+}
