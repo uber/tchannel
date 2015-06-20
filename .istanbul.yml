@@ -5,7 +5,6 @@ instrumentation:
         - examples/*
         - scripts/*
         - v1/*
-        - hyperbahn/service_proxy.js
 check:
     global:
         statements: 80
