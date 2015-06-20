@@ -129,6 +129,5 @@ test('running send_test.js', function t(assert) {
 function spawnExample(exampleName, cb) {
     var file = path.join(__dirname, '..', 'examples', exampleName);
 
-    console.log(file);
     exec('node ' + file, cb);
 }
