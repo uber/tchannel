@@ -40,7 +40,8 @@ module.exports = HyperbahnCluster;
             bob: TChannel
         },
         logger: Logger,
-        hostPortList: Array<String>
+        hostPortList: Array<String>,
+        apps: Array<HyperbahnApps>
     }
 
 */
@@ -62,6 +63,7 @@ function HyperbahnCluster(options) {
     });
 
     self.remotes = {};
+    self.apps = null;
     self.logger = null;
     self.hostPortList = null;
 }
@@ -81,6 +83,12 @@ HyperbahnCluster.prototype.bootstrap = function bootstrap(cb) {
 
         self.hostPortList = relayNetwork.relayChannels.map(function p(c) {
             return c.hostPort;
+        });
+        self.apps = relayNetwork.relayChannels.map(function p(channel, index) {
+            return HyperbahnApp({
+                relayChannel: channel,
+                egressNodes: relayNetwork.egressNodesForRelay[index]
+            });
         });
 
         self.remotes.steve = HyperbahnRemote({
@@ -105,6 +113,30 @@ HyperbahnCluster.prototype.close = function close(cb) {
     var self = this;
 
     self.relayNetwork.close(cb);
+};
+
+function HyperbahnApp(opts) {
+    if (!(this instanceof HyperbahnApp)) {
+        return new HyperbahnApp(opts);
+    }
+
+    var self = this;
+
+    self.relayChannel = opts.relayChannel;
+    self.egressNodes = opts.egressNodes;
+    self.hostPort = self.relayChannel.hostPort;
+}
+
+HyperbahnApp.prototype.exitsFor = function exitsFor(serviceName) {
+    var self = this;
+
+    return self.egressNodes.exitsFor(serviceName);
+};
+
+HyperbahnApp.prototype.destroy = function destroy() {
+    var self = this;
+
+    self.relayChannel.close();
 };
 
 function HyperbahnRemote(opts) {
