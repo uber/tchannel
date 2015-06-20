@@ -37,7 +37,7 @@ allocCluster.test('emits stats on call success', {
     var server = cluster.channels[0];
     var client = cluster.channels[1];
     var serverHost = cluster.hosts[0]
-        .replace(/:/g, '-')
+        .split(':')[0]
         .replace(/\./g, '-');
     var statsd = nullStatsd(7);
 
@@ -140,7 +140,7 @@ allocCluster.test('emits stats on call failure', {
     var server = cluster.channels[0];
     var client = cluster.channels[1];
     var serverHost = cluster.hosts[0]
-        .replace(/:/g, '-')
+        .split(':')[0]
         .replace(/\./g, '-');
     var statsd = nullStatsd(8);
 
