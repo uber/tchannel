@@ -39,7 +39,7 @@ allocCluster.test('emits stats on response ok', {
     var clientHost;
     server.on('connection', function onConnection(conn) {
         clientHost = conn.socketRemoteAddr
-            .replace(/:/g, '-')
+            .split(':')[0]
             .replace(/\./g, '-');
     });
     var statsd = nullStatsd(6);
@@ -139,7 +139,7 @@ allocCluster.test('emits stats on response not ok', {
     var clientHost;
     server.on('connection', function onConnection(conn) {
         clientHost = conn.socketRemoteAddr
-            .replace(/:/g, '-')
+            .split(':')[0]
             .replace(/\./g, '-');
     });
     var statsd = nullStatsd(6);
@@ -239,7 +239,7 @@ allocCluster.test('emits stats on response error', {
     var clientHost;
     server.on('connection', function onConnection(conn) {
         clientHost = conn.socketRemoteAddr
-            .replace(/:/g, '-')
+            .split(':')[0]
             .replace(/\./g, '-');
     });
     var statsd = nullStatsd(5);
