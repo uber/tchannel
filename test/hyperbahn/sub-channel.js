@@ -1,12 +1,12 @@
 'use strict';
 
 var test = require('tape');
-var TChannel = require('tchannel');
+var TChannel = require('../../');
 
-var AutobahnClient = require('../index.js');
+var HyperbahnClient = require('../../hyperbahn/index.js');
 
 test('getting client subChannel without serviceName', function t(assert) {
-    var client = AutobahnClient({
+    var client = HyperbahnClient({
         tchannel: TChannel(),
         serviceName: 'foo',
         callerName: 'foo-test',
@@ -25,7 +25,7 @@ test('getting client subChannel without serviceName', function t(assert) {
 });
 
 test('getting a client subChannel', function t(assert) {
-    var client = AutobahnClient({
+    var client = HyperbahnClient({
         tchannel: TChannel(),
         serviceName: 'foo',
         callerName: 'foo-test',
@@ -42,7 +42,7 @@ test('getting a client subChannel', function t(assert) {
 });
 
 test('double getting a client subChannel', function t(assert) {
-    var client = AutobahnClient({
+    var client = HyperbahnClient({
         tchannel: TChannel(),
         serviceName: 'foo',
         callerName: 'foo-test',
