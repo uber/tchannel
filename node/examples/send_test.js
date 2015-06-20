@@ -22,21 +22,33 @@ var TChannel = require('../channel.js');
 var EndpointHandler = require('../endpoint-handler.js');
 var CountedReadySignal = require('ready-signal/counted');
 
-var server = new TChannel({
+var server = new TChannel().makeSubChannel({
+    serviceName: 'server',
+    peers: ['127.0.0.1:4041'],
     handler: EndpointHandler()
 });
-var client = new TChannel({
+var client = new TChannel().makeSubChannel({
+    serviceName: 'client',
+    peers: ['127.0.0.1:4040'],
     handler: EndpointHandler()
 });
-var client2 = new TChannel({timeoutCheckInterval: 100, timeoutFuzz: 5});
+var client2 = new TChannel({
+    timeoutCheckInterval: 100,
+    timeoutFuzz: 5
+}).makeSubChannel({
+    serviceName: 'client2',
+    peers: ['127.0.0.1:4040']
+});
 
 // normal response
 server.handler.register('func 1', function (req, res) {
     console.log('func 1 responding immediately');
+    res.headers.as = 'raw';
     res.sendOk('result', 'indeed it did');
 });
 // err response
 server.handler.register('func 2', function (req, res) {
+    res.headers.as = 'raw';
     res.sendNotOk(null, 'it failed');
 });
 
@@ -46,6 +58,7 @@ server.handler.register('func 3', function (req, res) {
     console.log('func 3 starting response timer');
     setTimeout(function () {
         console.log('func 3 responding now');
+        res.headers.as = 'raw';
         res.sendOk('slow result', 'sorry for the delay');
         serverDone.signal();
     }, 1000);
@@ -58,52 +71,91 @@ serverDone(function done() {
 // bidirectional messages
 server.handler.register('ping', function onPing(req, res) {
     console.log('server got ping req from ' + req.remoteAddr);
+    res.headers.as = 'raw';
     res.sendOk('pong', null);
 });
 client.handler.register('ping', function onPing(req, res) {
     console.log('client got ping req from ' + req.remoteAddr);
+    res.headers.as = 'raw';
     res.sendOk('pong', null);
 });
 
 var ready = CountedReadySignal(3);
 
 var listening = ready(function (err) {
-    var req = client
-        .request({host: '127.0.0.1:4040'});
+    var req = client.request({
+        headers: {
+            cn: 'client',
+            as: 'raw'
+        },
+        hasNoParent: true
+    });
     client.waitForIdentified({host: '127.0.0.1:4040'}, function onIdentified() {
         req.send('ping', null, null, function (err, res) {
             console.log('ping res from client: ' + res.arg2 + ' ' + res.arg3);
-            server
-                .request({host: '127.0.0.1:4041'})
-                .send('ping', null, null, function (err, res) {
+            var sreq = server.request({
+                    headers: {
+                        cn: 'server',
+                        as: 'raw'
+                    },
+                    hasNoParent: true
+                });
+            server.waitForIdentified({host: '127.0.0.1:4041'}, function onClientIdentified() {
+                sreq.send('ping', null, null, function (err, res) {
                     console.log('ping res server: ' + res.arg2 + ' ' + res.arg3);
                     client.close();
                 });
+            })
         });
     });
 
     // very aggressive settings. Not recommended for real life.
-    var req2 = client2.request({host: '127.0.0.1:4040', timeout: 500});
+    var req2 = client2.request({
+        headers: {
+            cn: 'client2',
+            as: 'raw'
+        },
+        hasNoParent: true,
+        timeout: 500
+    });
     client2.waitForIdentified({host: '127.0.0.1:4040'}, function onIdentified() {
         req2.send('func 3', 'arg2', 'arg3', function (err, res) {
             console.log('2 slow res: ' + formatRes(err, res));
             client2
-                .request({host: '127.0.0.1:4040', timeout: 500})
-                .send('func 3', 'arg2', 'arg3', function (err, res) {
+                .request({
+                    headers: {
+                        cn: 'client2',
+                        as: 'raw'
+                    },
+                    hasNoParent: true,
+                    timeout: 500
+                }).send('func 3', 'arg2', 'arg3', function (err, res) {
                     console.log('3 slow res: ' + formatRes(err, res));
                 });
 
             client2
-                .request({host: '127.0.0.1:4040', timeout: 500})
-                .send('func 3', 'arg2', 'arg3', function (err, res) {
+                .request({
+                    headers: {
+                        cn: 'client2',
+                        as: 'raw'
+                    },
+                    hasNoParent: true,
+                    timeout: 500
+                }).send('func 3', 'arg2', 'arg3', function (err, res) {
                     console.log('4 slow res: ' + formatRes(err, res));
                     client2.close();
                 });
         });
 
         client2
-            .request({host: '127.0.0.1:4040', timeout: 500})
-            .send('func 1', 'arg2', 'arg3', function (err, res) {
+            .request({
+                headers: {
+                    cn: 'client2',
+                    as: 'raw'
+                },
+                hasNoParent: true,
+                timeout: 500
+            }).send('func 1', 'arg2', 'arg3', function (err, res) {
                 console.log('1 fast res: ' + formatRes(err, res));
             });
     });

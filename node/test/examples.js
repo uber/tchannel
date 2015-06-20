@@ -69,6 +69,63 @@ test('running example2.js', function t(assert) {
     }
 });
 
+test('running as_example.js', function t(assert) {
+    spawnExample('as_example1.js', onChild);
+
+    function onChild(err, stdout, stderr) {
+        assert.ifError(err);
+        assert.equal(stderr, '');
+
+        assert.ok(stdout.indexOf(
+            'got resp { ok: true,'
+        ) >= 0);
+        assert.ok(stdout.indexOf(
+            '  head: { head: \'object\' },'
+        ) >= 0);
+        assert.ok(stdout.indexOf(
+            '  body: { body: \'object\' },'
+        ) >= 0);
+        assert.ok(stdout.indexOf(
+            '  headers: { as: \'json\' } }'
+        ) >= 0);
+
+        assert.end();
+    }
+});
+
+test('running send_test.js', function t(assert) {
+    spawnExample('send_test.js', onChild);
+
+    function onChild(err, stdout, stderr) {
+        assert.ifError(err);
+        assert.equal(stderr, '');
+        [
+            'server got ping req from 127.0.0.1:',
+            'func 3 starting response timer',
+            'func 1 responding immediately',
+            'ping res from client: pong',
+            '1 fast res: arg2=result arg3=indeed it did',
+            'client got ping req from 127.0.0.1:',
+            'ping res server: pong',
+            '2 slow res: err=request timed out after',
+            'func 3 starting response timer',
+            'func 3 starting response timer',
+            'func 3 responding now',
+            '3 slow res: err=request timed out after',
+            '4 slow res: err=request timed out after',
+            'func 3 responding now',
+            'func 3 responding now'
+        ].forEach(function each(str) {
+            assert.ok(stdout.indexOf(
+                str
+            ) >= 0);
+        });
+
+        assert.end();
+    }
+});
+
+
 function spawnExample(exampleName, cb) {
     var file = path.join(__dirname, '..', 'examples', exampleName);
 
