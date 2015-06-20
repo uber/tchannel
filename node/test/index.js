@@ -57,3 +57,4 @@ require('./connection-with-statsd.js');
 require('./request-error-context.js');
 require('./max-call-overhead.js');
 require('./non-zero-ttl.js');
+require('./hyperbahn/');
