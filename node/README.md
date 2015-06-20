@@ -106,8 +106,7 @@ See the [docs](./docs/) folder.
 
 ## Further examples
 
- - [example1.js](examples/example1.js)
- - [example2.js](examples/example2.js)
+See the [examples](./examples/) folder
 
 ## Installation
 
