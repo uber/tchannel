@@ -20,6 +20,8 @@
 
 'use strict';
 
+var HyperbahnCluster = require('./lib/hyperbahn-cluster.js');
+
 require('./errors');
 require('./event_emitter.js');
 require('./argstream.js');
@@ -57,4 +59,5 @@ require('./connection-with-statsd.js');
 require('./request-error-context.js');
 require('./max-call-overhead.js');
 require('./non-zero-ttl.js');
-require('./hyperbahn/');
+
+require('./hyperbahn/')(HyperbahnCluster);
