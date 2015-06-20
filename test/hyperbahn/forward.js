@@ -2,12 +2,11 @@
 
 var DebugLogtron = require('debug-logtron');
 
-var AutobahnClient = require('../');
+var HyperbahnClient = require('../../hyperbahn/index.js');
+var HyperbahnCluster = require('../lib/hyperbahn-cluster.js');
+var TChannelJSON = require('../../as/json');
 
-var allocCluster = require('autobahn/test/lib/test-cluster.js');
-var TChannelJSON = require('tchannel/as/json');
-
-allocCluster.test('register and forward', {
+HyperbahnCluster.test('register and forward', {
     size: 5
 }, function t(cluster, assert) {
     var steve = cluster.remotes.steve;
@@ -17,7 +16,7 @@ allocCluster.test('register and forward', {
         logger: cluster.logger
     });
 
-    var steveAutobahnClient = new AutobahnClient({
+    var steveAutobahnClient = new HyperbahnClient({
         serviceName: steve.serviceName,
         callerName: 'forward-test',
         hostPortList: cluster.hostPortList,
