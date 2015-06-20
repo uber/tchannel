@@ -52,57 +52,6 @@ function onListening() {
 }
 ```
 
-## JSON documentation
-
-```jsig
-type JSONSerializable : Any
-
-type JSONResponse : {
-    ok: Boolean,
-    head: JSONSerializable,
-    body: JSONSerializable
-}
-
-type TChannelJSONHandler<T> : (
-    opts: T,
-    req: TChannelInRequest,
-    head: JSONSerializable,
-    body: JSONSerializable,
-    callback: Callback<Error, JSONResponse>
-) => void
-
-type TChannelJSON : {
-    request: (reqOptions: Object) => {
-        send: (
-            endpoint: String,
-            head: JSONSerializable,
-            body: JSONSerializable,
-            callback: Callback<Error, JSONResponse>
-        ) => void
-    },
-    send: (
-        req: TChannelRequest,
-        endpoint: String,
-        head: JSONSerializable,
-        body: JSONSerializable,
-        callback: Callback<Error, JSONResponse>
-    ) => void,
-    register: (
-        tchannel: TChannel,
-        arg1: String,
-        opts: T,
-        handler: TChannelJSONHandler<T>
-    ) => void
-}
-
-tchannel/as/json : ({
-    logger?: Object,
-    strictMode?: Boolean,
-    logParseFailures?: Boolean,
-    channel?: TChannel
-}) => TChannelJSON
-```
-
 ### `var tchannelJSON = TChannelJSON(opts)`
 
 `TChannelJSON` returns a `tchannelJSON` interface with a 
