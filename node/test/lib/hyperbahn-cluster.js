@@ -23,6 +23,7 @@
 var tape = require('tape');
 var tapeCluster = require('tape-cluster');
 
+var allocCluster = require('./alloc-cluster.js');
 var RelayNetwork = require('./relay_network.js');
 
 HyperbahnCluster.test = tapeCluster(tape, HyperbahnCluster);
@@ -66,6 +67,8 @@ function HyperbahnCluster(options) {
     self.apps = null;
     self.logger = null;
     self.hostPortList = null;
+    self.dummyCluster = null;
+    self.dummies = null;
 }
 
 HyperbahnCluster.prototype.bootstrap = function bootstrap(cb) {
@@ -100,6 +103,15 @@ HyperbahnCluster.prototype.bootstrap = function bootstrap(cb) {
             hostPortList: self.hostPortList
         });
 
+        allocCluster({
+            numPeers: 2
+        }).ready(onDummyCluster);
+    }
+
+    function onDummyCluster(cluster) {
+        self.dummyCluster = cluster;
+        self.dummies = cluster.channels;
+
         cb();
     }
 };
@@ -112,6 +124,7 @@ function checkExitPeers(assert, options) {
 HyperbahnCluster.prototype.close = function close(cb) {
     var self = this;
 
+    self.dummyCluster.destroy();
     self.relayNetwork.close(cb);
 };
 
