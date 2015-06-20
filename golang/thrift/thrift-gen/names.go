@@ -90,8 +90,15 @@ func camcelCase(name string) string {
 }
 
 // goPublicName returns a go identifier that is exported.
-func goPublicName(thriftName string) string {
-	name := goName(thriftName)
+func goPublicName(name string) string {
+	// Public names cannot clash with goKeywords as they are all lowercase.
+	name = camcelCase(name)
+	return strings.ToUpper(name[0:1]) + name[1:]
+}
+
+// goPublicFieldName returns the name of the field as used in a struct.
+func goPublicFieldName(name string) string {
+	name = goName(name)
 	return strings.ToUpper(name[0:1]) + name[1:]
 }
 
