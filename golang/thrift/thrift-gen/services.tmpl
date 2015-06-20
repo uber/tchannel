@@ -118,7 +118,7 @@ import (
 				{{ end }}
 			}
 			{{ if .HasReturn }}
-			res.Success = &r
+			res.Success = {{ .WrapResult "r" }}
 			{{ end }}
 
 			return err == nil, &res, nil

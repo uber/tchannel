@@ -73,7 +73,7 @@ func main() {
 
 	goTmpl := template.Must(template.New("thrift-gen").Funcs(funcs).ParseFiles("services.tmpl"))
 	for filename, v := range parsed {
-		wrappedServices, err := wrapServices(v.Services)
+		wrappedServices, err := wrapServices(v)
 		if err != nil {
 			log.Fatalf("Service parsing error: %v", err)
 		}

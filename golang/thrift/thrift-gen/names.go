@@ -111,18 +111,3 @@ var thriftToGo = map[string]string{
 	"double": "float64",
 	"string": "string",
 }
-
-func isBasicType(thriftType string) bool {
-	_, ok := thriftToGo[thriftType]
-	return ok
-}
-
-// goType returns the Go type name for the given thrift type.
-func goType(thriftType string) string {
-	goType, ok := thriftToGo[thriftType]
-	if !ok {
-		return "*" + thriftType
-	}
-
-	return goType
-}

@@ -52,22 +52,18 @@ func TestAllThrift(t *testing.T) {
 }
 
 func copyFile(src, dst string) error {
-	fmt.Println("copyFile to ", dst)
 	f, err := os.Open(src)
 	if err != nil {
-		fmt.Println("1")
 		return err
 	}
 	defer f.Close()
 
 	writeF, err := os.OpenFile(dst, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
 	if err != nil {
-		fmt.Println("2")
 		return err
 	}
 	defer writeF.Close()
 
-	fmt.Println("out file %v", dst)
 	_, err = io.Copy(writeF, f)
 	return err
 }
