@@ -16,46 +16,50 @@ Status is being tracked in #78.
 
 ```js
 var TChannel = require('tchannel');
-var EndpointHandler = require('tchannel/endpoint-handler');
-var CountedReadySignal = require('ready-signal/counted');
 
-var server = new TChannel({
-    handler: EndpointHandler()
-});
+var server = new TChannel();
 var client = new TChannel();
 
+var serverChan = server.makeSubChannel({
+    serviceName: 'server'
+});
+
 // normal response
-server.handler.register('func 1', function (req, res) {
-    console.log('func 1 responding immediately 1:' + req.arg2.toString() + ' 2:' + req.arg3.toString());
+serverChan.register('func1', function onReq(req, res, arg2, arg3) {
+    console.log('func1 responding', { arg2: arg2.toString(), arg3: arg3.toString() });
+    res.headers.as = 'raw';
     res.sendOk('result', 'indeed it did');
 });
+
 // err response
-server.handler.register('func 2', function (req, res) {
+serverChan.register('func2', function onReq2(req, res) {
+    res.headers.as = 'raw';
     res.sendNotOk(null, 'it failed');
 });
 
-var ready = CountedReadySignal(2);
-var listening = ready(function (err) {
-    if (err) {
-        throw err;
-    }
+server.listen(4040, '127.0.0.1', function onListen() {
+    var clientChan = client.makeSubChannel({
+        serviceName: 'server',
+        peers: [server.hostPort],
+        requestDefaults: {
+            hasNoParent: true,
+            headers: { 'as': 'raw', 'cn': 'example-client' }
+        }
+    });
 
-    client
-        .request({host: '127.0.0.1:4040'})
-        .send('func 1', "arg 1", "arg 2", function (err, res) {
-            console.log('normal res: ' + res.arg2.toString() + ' ' + res.arg3.toString());
-        });
-    client
-        .request({host: '127.0.0.1:4040'})
-        .send('func 2', "arg 1", "arg 2", function (err, res) {
-            console.log('err res: ' + res.ok + 
-                ' message: ' + String(res.arg3));
-        });
+    clientChan.request({
+        serviceName: 'server',
+        timeout: 1000
+    }).send('func1', 'arg 1', 'arg 2', function onResp(err, res, arg2, arg3) {
+        console.log('normal res:', { arg2: arg2.toString(), arg3: arg3.toString() });
+    });
 
+    clientChan.request({
+        serviceName: 'server'
+    }).send('func2', 'arg 1', 'arg 2', function onResp(err, res, arg2, arg3) {
+        console.log('err res: ', { ok: res.ok, message: String(arg3) });
+    });
 });
-
-server.listen(4040, '127.0.0.1', ready.signal);
-client.listen(4041, '127.0.0.1', ready.signal);
 ```
 
 This example registers two functions on the "server". "func 1" always works and "func 2" always
