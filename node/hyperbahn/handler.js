@@ -245,7 +245,10 @@ function sendRelayAdvertise(opts, callback) {
             var codeName = Errors.classify(err);
 
             if (attempts <= MAX_RELAY_AD_ATTEMPTS && err &&
-                codeName === 'NetworkError'
+                (
+                    codeName === 'NetworkError' ||
+                    codeName === 'Timeout'
+                )
             ) {
                 setTimeout(tryRequest, RELAY_AD_RETRY_TIME);
             } else {
