@@ -34,16 +34,16 @@ function runTests(HyperbahnCluster) {
     HyperbahnCluster.test('register with timed out hyperbahn', {
         size: 2
     }, function t(cluster, assert) {
-        var bob = cluster.remotes.bob;
-        var steve = cluster.remotes.steve;
+        var bob = cluster.dummies[0];
+        var steve = cluster.dummies[1];
 
-        MockBahn(steve.channel);
+        MockBahn(steve);
 
         var client = HyperbahnClient({
             serviceName: 'A',
             callerName: 'A-client',
-            hostPortList: [steve.channel.hostPort],
-            tchannel: bob.channel,
+            hostPortList: [steve.hostPort],
+            tchannel: bob,
             hardFail: true,
             registrationTimeout: 100,
             logger: DebugLogtron('hyperbahnClient')
@@ -80,16 +80,16 @@ function runTests(HyperbahnCluster) {
     HyperbahnCluster.test('register with timed out hyperbahn + no hardFail', {
         size: 2
     }, function t(cluster, assert) {
-        var bob = cluster.remotes.bob;
-        var steve = cluster.remotes.steve;
+        var bob = cluster.dummies[0];
+        var steve = cluster.dummies[0];
 
-        MockBahn(steve.channel);
+        MockBahn(steve);
 
         var client = HyperbahnClient({
             serviceName: 'A',
             callerName: 'A-client',
-            hostPortList: [steve.channel.hostPort],
-            tchannel: bob.channel,
+            hostPortList: [steve.hostPort],
+            tchannel: bob,
             logger: DebugLogtron('hyperbahnClient')
         });
 
