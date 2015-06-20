@@ -2,15 +2,7 @@
 
 network multiplexing and framing protocol for RPC
 
-## Stability: experimental
-
-NOTE: `master:node` is **not yet stable**
-
-Once we have completed an API that implements all of the v2 protocol, we will
-cut the first `node-v2*` tag.  Until then, we are not publishing to npm and the
-package.json version will not be updated.
-
-Status is being tracked in #78.
+## Stability: stable
 
 ## Example
 
