@@ -122,5 +122,8 @@ See the [examples](./examples/) folder
  - jwolski
  - Raynos
  - jcorbin
+ - kriskowal
+ - shannili
+ - rf
 
 ## MIT Licenced
