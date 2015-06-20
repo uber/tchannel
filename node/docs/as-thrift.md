@@ -82,8 +82,6 @@ send call requests and register call request handlers
 It can be passed options.
 
  - required `opts.source` The thrift idl as a string
- - `opts.bossMode` bossMode defaults to false. When bossMode
-    is set to true we remove some safety checks.
  - `opts.logParseFailures` logParseFailures defaults to true. When
     it is set to true we will log parse failures to the logger using
     `logger.warn()`. If you do not want these log statements you
