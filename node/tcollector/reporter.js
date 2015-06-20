@@ -37,10 +37,16 @@ function TCollectorTraceReporter(options) {
 
     self.logger = options.logger;
     self.channel = options.channel;
+    self.callerName = options.callerName;
 
     if (!self.channel) {
         // TODO: typederror or vld
         throw new Error('TCollectorTraceReporter must be passed a tchannel');
+    }
+
+    if (!self.callerName) {
+        // TODO: typederror or vld
+        throw new Error('TCollectorTraceReporter must be passed a callerName');
     }
 
     self.tchannelThrift = self.channel.TChannelAsThrift({
@@ -120,7 +126,7 @@ TCollectorTraceReporter.prototype.report = function report(span, callback) {
         trace: false,
         hasNoParent: true,
         headers: {
-            cn: 'tcollector-reporter',
+            cn: self.callerName,
             shardKey: span.traceid.toString('base64')
         },
         serviceName: 'tcollector',
