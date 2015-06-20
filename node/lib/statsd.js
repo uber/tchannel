@@ -52,6 +52,7 @@ function cleanHostPort(str, field) {
     if (!str) {
         return 'no-' + field;
     } else {
+        // assuming ipv4
         return str
             .split(':')[0]
             .replace(/\//g, '-')
