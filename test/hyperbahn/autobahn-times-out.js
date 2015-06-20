@@ -2,30 +2,32 @@
 
 var DebugLogtron = require('debug-logtron');
 
-var AutobahnClient = require('../index.js');
+var HyperbahnClient = require('../../hyperbahn/index.js');
+var HyperbahnCluster = require('../lib/hyperbahn-cluster.js');
 
-var allocCluster = require('autobahn/test/lib/test-cluster.js');
-
-allocCluster.test('register with timed out autobahn', {
+HyperbahnCluster.test('register with timed out hyperbahn', {
     size: 2
 }, function t(cluster, assert) {
-    MockBahn(cluster.dummies[0]);
+    var bob = cluster.remotes.bob;
+    var steve = cluster.remotes.steve;
 
-    var client = AutobahnClient({
+    MockBahn(steve.channel);
+
+    var client = HyperbahnClient({
         serviceName: 'A',
         callerName: 'A-client',
-        hostPortList: [cluster.dummies[0].hostPort],
-        tchannel: cluster.dummies[1],
+        hostPortList: [steve.channel.hostPort],
+        tchannel: bob.channel,
         hardFail: true,
         registrationTimeout: 100,
-        logger: DebugLogtron('autobahnClient')
+        logger: DebugLogtron('hyperbahnClient')
     });
 
     client.logger.whitelist('error',
-        'AutobahnClient: registration failure, marking server as sick'
+        'HyperbahnClient: registration failure, marking server as sick'
     );
     client.logger.whitelist('fatal',
-        'AutobahnClient: registration timed out'
+        'HyperbahnClient: registration timed out'
     );
 
     client.register({
@@ -37,10 +39,10 @@ allocCluster.test('register with timed out autobahn', {
         assert.ok(err);
 
         assert.equal(err.type,
-            'autobahn-client.registration-timeout');
+            'hyperbahn-client.registration-timeout');
         assert.equal(err.time, 100);
         assert.equal(err.fullType,
-            'autobahn-client.registration-timeout' +
+            'hyperbahn-client.registration-timeout' +
             '~!~error.wrapped-unknown');
         assert.equal(err.causeMessage,
             'registration timeout!');
@@ -49,17 +51,20 @@ allocCluster.test('register with timed out autobahn', {
     }
 });
 
-allocCluster.test('register with timed out autobahn + no hardFail', {
+HyperbahnCluster.test('register with timed out hyperbahn + no hardFail', {
     size: 2
 }, function t(cluster, assert) {
-    MockBahn(cluster.dummies[0]);
+    var bob = cluster.remotes.bob;
+    var steve = cluster.remotes.steve;
 
-    var client = AutobahnClient({
+    MockBahn(steve.channel);
+
+    var client = HyperbahnClient({
         serviceName: 'A',
         callerName: 'A-client',
-        hostPortList: [cluster.dummies[0].hostPort],
-        tchannel: cluster.dummies[1],
-        logger: DebugLogtron('autobahnClient')
+        hostPortList: [steve.channel.hostPort],
+        tchannel: bob.channel,
+        logger: DebugLogtron('hyperbahnClient')
     });
 
     var attempts = 0;
