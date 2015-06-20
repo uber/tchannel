@@ -23,40 +23,47 @@
 var DebugLogtron = require('debug-logtron');
 
 var HyperbahnClient = require('../../hyperbahn/index.js');
-var HyperbahnCluster = require('../lib/hyperbahn-cluster.js');
 
-HyperbahnCluster.test('can register', {
-    size: 5
-}, function t(cluster, assert) {
-    var bob = cluster.remotes.bob;
+module.exports = runTests;
 
-    var client = new HyperbahnClient({
-        serviceName: 'hello-bob',
-        callerName: 'hello-bob-test',
-        hostPortList: cluster.hostPortList,
-        tchannel: bob.channel,
-        logger: DebugLogtron('autobahnClient')
-    });
+if (require.main === module) {
+    runTests(require('../lib/hyperbahn-cluster.js'));
+}
 
-    client.once('registered', onResponse);
-    client.register();
+function runTests(HyperbahnCluster) {
+    HyperbahnCluster.test('can register', {
+        size: 5
+    }, function t(cluster, assert) {
+        var bob = cluster.remotes.bob;
 
-    function onResponse() {
-        var result = client.latestRegistrationResult;
-
-        cluster.checkExitPeers(assert, {
+        var client = new HyperbahnClient({
             serviceName: 'hello-bob',
-            hostPort: bob.channel.hostPort
+            callerName: 'hello-bob-test',
+            hostPortList: cluster.hostPortList,
+            tchannel: bob.channel,
+            logger: DebugLogtron('autobahnClient')
         });
 
-        assert.equal(result.head, null);
+        client.once('registered', onResponse);
+        client.register();
 
-        // Because of duplicates in a size 5 cluster we know
-        // that we have at most 5 kValues
-        assert.ok(result.body.connectionCount <= 5,
-            'expect to have at most 5 register results');
+        function onResponse() {
+            var result = client.latestRegistrationResult;
 
-        client.destroy();
-        assert.end();
-    }
-});
+            cluster.checkExitPeers(assert, {
+                serviceName: 'hello-bob',
+                hostPort: bob.channel.hostPort
+            });
+
+            assert.equal(result.head, null);
+
+            // Because of duplicates in a size 5 cluster we know
+            // that we have at most 5 kValues
+            assert.ok(result.body.connectionCount <= 5,
+                'expect to have at most 5 register results');
+
+            client.destroy();
+            assert.end();
+        }
+    });
+}

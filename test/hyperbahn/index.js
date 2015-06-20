@@ -20,11 +20,21 @@
 
 'use strict';
 
-require('./forward.js');
-require('./register.js');
-require('./forward-retry.js');
-require('./todo.js');
 require('./constructor.js');
+require('./todo.js');
 require('./sub-channel.js');
-require('./autobahn-down.js');
-require('./autobahn-times-out.js');
+
+module.exports = runTests;
+
+if (require.main === module) {
+    runTests(require('../lib/hyperbahn-cluster.js'));
+}
+
+function runTests(HyperbahnCluster) {
+    require('./forward.js')(HyperbahnCluster);
+    require('./register.js')(HyperbahnCluster);
+    require('./forward-retry.js')(HyperbahnCluster);
+    
+    require('./autobahn-down.js')(HyperbahnCluster);
+    require('./autobahn-times-out.js')(HyperbahnCluster);
+}
