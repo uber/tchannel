@@ -44,12 +44,16 @@ function echo(context, req, head, body, callback) {
 server.listen(4040, '127.0.0.1', onListening);
 
 function onListening() {
-    client.makeSubChannel({
+    client = client.makeSubChannel({
         serviceName: 'server',
         peers: [server.hostPort]
     });
     tchannelJSON.send(client.request({
-        serviceName: 'server'
+        headers: {
+            cn: 'client'
+        },
+        serviceName: 'server',
+        hasNoParent: true
     }), 'echo', {
         head: 'object'
     }, {
