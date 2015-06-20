@@ -31,6 +31,7 @@ var allocCluster = require('./alloc-cluster.js');
 var EventEmitter = require('../../lib/event_emitter.js');
 var EndpointHandler = require('../../endpoint-handler.js');
 var ServiceProxy = require('../../hyperbahn/service_proxy.js');
+var HyperbahnHandler = require('../../hyperbahn/handler.js');
 
 function noop() {}
 
@@ -177,6 +178,23 @@ RelayNetwork.prototype.setCluster = function setCluster(cluster) {
                 probation: null
             })
         });
+
+        var hyperbahnChannel = relayChannel.makeSubChannel({
+            serviceName: 'hyperbahn'
+        });
+        var hyperbahnHandler = HyperbahnHandler({
+            channel: hyperbahnChannel,
+            egressNodes: egressNodes,
+            callerName: 'autobahn'
+        });
+        hyperbahnHandler.advertise =
+        function advertise(serviceObj) {
+            var peer = relayChannel.handler.getServicePeer(
+                serviceObj.serviceName, serviceObj.hostPort
+            );
+            peer.connect();
+        };
+        hyperbahnChannel.handler = hyperbahnHandler;
 
         // In response to artificial advertisement
         self.serviceNames.forEach(function eachServiceName(serviceName, index) {
