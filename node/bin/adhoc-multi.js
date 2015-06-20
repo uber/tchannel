@@ -189,9 +189,8 @@ function createClient(options) {
                     res.headers.as = 'raw';
                     res.sendOk(
                         r.arg2,
-                        enumerated(options.serviceName)
-                        + ' says "' + String(r.arg3)
-                        + '"'
+                        enumerated(options.serviceName) +
+                            ' says "' + String(r.arg3) + '"'
                     );
                 }
             }
