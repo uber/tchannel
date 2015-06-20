@@ -20,3 +20,4 @@ that are available.
  - [errors](./errors.md)
  - [peer-to-peer](./peer-to-peer.md)
  - [statsd](./statsd.md)
+ - [streaming](./streaming.md)
