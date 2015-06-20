@@ -93,6 +93,11 @@ HyperbahnCluster.prototype.bootstrap = function bootstrap(cb) {
     }
 };
 
+HyperbahnCluster.prototype.checkExitPeers =
+function checkExitPeers(assert, options) {
+    // TODO implement
+};
+
 HyperbahnCluster.prototype.close = function close(cb) {
     var self = this;
 
