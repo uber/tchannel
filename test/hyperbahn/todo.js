@@ -22,18 +22,18 @@
 
 var test = require('tape');
 
-test('register with hyperbahn + error frame');
-test('register with hyperbahn + error frame + no hardFail');
+test('advertise with hyperbahn + error frame');
+test('advertise with hyperbahn + error frame + no hardFail');
 
-// TODO test registationTimeout semantics
-test('register with invalid serviceName');
-test('register with invalid host port');
-test('register with unexpected hyperbahn failure');
-test('register with invalid serviceName + no hardFail');
-test('register with invalid host port + no hardFail');
-test('register with unexpected hyperbahn failure + no hardFail');
+// TODO test advertisementTimeout semantics
+test('advertise with invalid serviceName');
+test('advertise with invalid host port');
+test('advertise with unexpected hyperbahn failure');
+test('advertise with invalid serviceName + no hardFail');
+test('advertise with invalid host port + no hardFail');
+test('advertise with unexpected hyperbahn failure + no hardFail');
 
-test('register in a loop');
+test('advertise in a loop');
 
-test('calling register() after destroy');
+test('calling advertise() after destroy');
 test('calling getClientSubChannel() after destroy');

@@ -4,12 +4,12 @@ To be able to make requests to a hyperbahn router it's recommended
 that you use the hyperbahn client.
 
 The hyperbahn client makes it easy to make requests to any service
-that hyperbahn knows about and makes it easy to register your
+that hyperbahn knows about and makes it easy to advertise your
 service with hyperbahn.
 
 The hyperbahn client has a few important methods
 
- - `hyperbahnClient.register();`
+ - `hyperbahnClient.advertise();`
  - `hyperbahnClient.getClientChannel({ serviceName: '...' });`
 
 ## Stability: stable
@@ -31,15 +31,15 @@ var hyperbahnClient = HyperbahnClient({
     hardFail: true
 });
 
-hyperbahnClient.register();
-hyperbahnClient.once('registered', onRegistered);
+hyperbahnClient.advertise();
+hyperbahnClient.once('advertised', onAdvertised);
 
-function onRegistered() {
+function onAdvertised() {
     /* hooray! */
 }
 ```
 
-The hyperbahnClient is used to `register()` with the hyperbahn
+The hyperbahnClient is used to `advertise()` with the hyperbahn
 router which will advertise your serviceName.
 
 It's also used to get a subchannel when making out going requests
@@ -70,21 +70,21 @@ router.
 ### `options.logger`
 
 A logger that hyperbahn client uses to log information about
-registrations
+advertisements
 
 ### `options.statsd`
 
 A statsd client hyperbahn client uses to count information about
-registration.
+advertisement.
 
 Counters:
 
- - `hyperbahn-client.{serviceName}.registration.success`
- - `hyperbahn-client.{serviceName}.registration.failure`
+ - `hyperbahn-client.{serviceName}.advertisement.success`
+ - `hyperbahn-client.{serviceName}.advertisement.failure`
 
-### `options.registrationTimeout`
+### `options.advertisementTimeout`
 
-If set; hyperbahn client registration will timeout.
+If set; hyperbahn client advertisemnt will timeout.
 
 This defaults to 5000 if `hardFail` is `true` and defaults to
 `Infinity` (no timeout) if `hardFail` is `false`.
@@ -92,21 +92,21 @@ This defaults to 5000 if `hardFail` is `true` and defaults to
 ### `options.hardFail`
 
 The hyperbahnClient by default runs in a hybrid mode. This means
-that `hardFail` is set to false and it will register() forever.
+that `hardFail` is set to false and it will advertise() forever.
 
 This is recommended for services that are both a HTTP server and
 a tchannel server.
 
 Any services that a pure tchannel server should set `hardFail`
-to true. This means that if hyperbahnClient cannot register
-after the `registrationTimeout` (default 5 seconds) it will
+to true. This means that if hyperbahnClient cannot advertise
+after the `advertisementTimeout` (default 5 seconds) it will
 emit an error event.
 
-Not being able to register with hyperbahn is a fatal exception.
+Not being able to advertise with hyperbahn is a fatal exception.
 
-### `hyperbahnClient.register()`
+### `hyperbahnClient.advertise()`
 
-You must call `register()` to start the registration loop with
+You must call `advertise()` to start the advertisement loop with
 the hyperbahn router. 
 
 ### `hyperbahnClient.getClientChannel(opts)`
@@ -120,16 +120,16 @@ This sub channel is pre-configured with the correct peers list
 and callerName so you can make requests to it without configuring
 it.
 
-### `hyperbahnClient.once('registered', listener)`
+### `hyperbahnClient.once('advertised', listener)`
 
 This event gets emitted every time hyperbahn router confirms your
-registration. This means the hyperbahn router will start routing
+advertisement. This means the hyperbahn router will start routing
 requests to you.
 
-Hyperbahn client will register every minute with the hyperbahn
+Hyperbahn client will advertise every minute with the hyperbahn
 routers. This event should get emitted every minute.
 
 ### `hyperbahnClient.once('error', listener)`
 
 This event gets emitted if there's a failure with hyperbahn
-registration. This only gets emitted if `hardFail` is `true`.
+advertisement. This only gets emitted if `hardFail` is `true`.
