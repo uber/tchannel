@@ -30,7 +30,7 @@ var os = require('os');
 var console = require('console');
 
 var TChannel = require('../');
-var AutobahnClient = require('../hyperbahn/');
+var HyperbahnClient = require('../hyperbahn/');
 
 if (require.main === module) {
     main();
@@ -61,7 +61,7 @@ function main() {
         res.sendOk(arg2, arg3);
     });
 
-    var autobahnClient = new AutobahnClient({
+    var hyperbahnClient = new HyperbahnClient({
         tchannel: tchannel,
         serviceName: serviceName,
         hostPortList: [
@@ -69,7 +69,7 @@ function main() {
         ],
         forwardRetries: 5,
         checkForwardListInterval: 60000,
-        registrationTimeout: 5000,
+        advertisementTimeout: 5000,
         logger: logtron
     });
 
@@ -81,16 +81,16 @@ function main() {
         }
 
         console.log('listening', tchannel.address());
-        console.log('registering', autobahnHost, autobahnPort);
+        console.log('advertising', autobahnHost, autobahnPort);
 
-        autobahnClient.on('registered', function onRegister(err2) {
+        hyperbahnClient.on('advertised', function onAdvertised(err2) {
             if (err2) {
                 throw err2;
             }
 
-            console.log('registered');
+            console.log('advertised');
         });
-        autobahnClient.register();
+        hyperbahnClient.advertise();
     });
 }
 

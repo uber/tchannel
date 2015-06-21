@@ -32,7 +32,7 @@ if (require.main === module) {
 }
 
 function runTests(HyperbahnCluster) {
-    HyperbahnCluster.test('register and forward', {
+    HyperbahnCluster.test('advertise and forward', {
         size: 5
     }, function t(cluster, assert) {
         var steve = cluster.remotes.steve;
@@ -49,11 +49,11 @@ function runTests(HyperbahnCluster) {
             tchannel: steve.channel,
             logger: DebugLogtron('hyperbahnClient')
         });
-        steveHyperbahnClient.once('registered', onRegistered);
-        steveHyperbahnClient.register();
+        steveHyperbahnClient.once('advertised', onAdvertised);
+        steveHyperbahnClient.advertise();
 
-        function onRegistered() {
-            var result = steveHyperbahnClient.latestRegistrationResult;
+        function onAdvertised() {
+            var result = steveHyperbahnClient.latestAdvertisementResult;
 
             assert.equal(result.head, null, 'header is null');
             assert.ok(result.body, 'got a body');

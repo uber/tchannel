@@ -31,7 +31,7 @@ if (require.main === module) {
 }
 
 function runTests(HyperbahnCluster) {
-    HyperbahnCluster.test('can register', {
+    HyperbahnCluster.test('can advertise', {
         size: 5
     }, function t(cluster, assert) {
         var bob = cluster.remotes.bob;
@@ -44,11 +44,11 @@ function runTests(HyperbahnCluster) {
             logger: DebugLogtron('hyperbahnClient')
         });
 
-        client.once('registered', onResponse);
-        client.register();
+        client.once('advertised', onResponse);
+        client.advertise();
 
         function onResponse() {
-            var result = client.latestRegistrationResult;
+            var result = client.latestAdvertisementResult;
 
             cluster.checkExitPeers(assert, {
                 serviceName: 'hello-bob',
@@ -60,7 +60,7 @@ function runTests(HyperbahnCluster) {
             // Because of duplicates in a size 5 cluster we know
             // that we have at most 5 kValues
             assert.ok(result.body.connectionCount <= 5,
-                'expect to have at most 5 register results');
+                'expect to have at most 5 advertise results');
 
             client.destroy();
             assert.end();
