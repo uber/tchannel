@@ -9,6 +9,10 @@ to the hyperbahn instances and will be routed based on the
 However tchannel can also be used to make peer to peer request
 to individual tchannel instances
 
+## Stability: stable
+
+[![unstable](http://badges.github.io/stability-badges/dist/unstable.svg)](http://github.com/badges/stability-badges)
+
 ## `channel.waitForIdentified()`
 
 ## `channel.request({ host: ... })`

@@ -3,6 +3,10 @@
 The following is documentation on how to use the `as/json` implementation
 to handle encoding and decoding for you
 
+## Stability: stable
+
+[![stable](http://badges.github.io/stability-badges/dist/stable.svg)](http://github.com/badges/stability-badges)
+
 ## JSON example
 
 ```js

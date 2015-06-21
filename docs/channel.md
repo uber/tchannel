@@ -7,6 +7,10 @@ Below we document the interface of tchannel itself; This includes
  - `register()`
  - `listen()`
 
+## Stability: stable
+
+[![stable](http://badges.github.io/stability-badges/dist/stable.svg)](http://github.com/badges/stability-badges)
+
 ## `var channel = TChannel(options)`
 
 To create a `channel` you call `TChannel` with some options.

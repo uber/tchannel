@@ -4,6 +4,8 @@ network multiplexing and framing protocol for RPC
 
 ## Stability: stable
 
+[![stable](http://badges.github.io/stability-badges/dist/stable.svg)](http://github.com/badges/stability-badges)
+
 ## Example
 
 ```js
