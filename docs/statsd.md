@@ -25,6 +25,12 @@ TChannel can emit the following stats:
  - `inbound.calls.app-errors.{calling-service}.{service}.{endpoint}.{type}`
  - `inbound.request.size.{calling-service}.{service}.{endpoint}`
  - `inbound.response.size.{calling-service}.{service}.{endpoint}`
+ - `connections.initiated.{peer-host}`
+ - `connections.connect-errors.{peer-host}`
+ - `connections.accepted.{peer-host}`
+ - `connections.accept-errors.{host}`
+ - `connections.errors.{peer-host}.{type}`
+ - `connections.closed.{peer-host}.{reason}`
 
 ### Timers
 
@@ -33,4 +39,5 @@ TChannel can emit the following stats:
  - `inbound.calls.latency.{calling-service}.{service}.{endpoint}`
 
 ### Gauges
-`
+
+ - `connections.active.{peer-host}`
