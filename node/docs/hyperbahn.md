@@ -108,17 +108,6 @@ Not being able to register with hyperbahn is a fatal exception
 You must call `register()` to start the registration loop with
 the hyperbahn router. 
 
-### `hyperbahnClient.once('registered', listener)`
-
-This event gets emitted once hyperbahn router confirms your
-registration. This means the hyperbahn router will start routing
-requests to you.
-
-### `hyperbahnClient.once('error', listener)`
-
-This event gets emitted if there's a failure with hyperbahn
-registration. This only gets emitted if `hardFail` is `true`.
-
 ### `hyperbahnClient.getClientChannel(opts)`
 
 You can call `getClientChannel()` to get the client sub channel
@@ -129,3 +118,17 @@ for a particular serviceName.
 This sub channel is pre-configured with the correct peers list
 and callerName so you can make requests to it without configuring
 it.
+
+### `hyperbahnClient.once('registered', listener)`
+
+This event gets emitted every time hyperbahn router confirms your
+registration. This means the hyperbahn router will start routing
+requests to you.
+
+Hyperbahn client will register every minute with the hyperbahn
+routers. This event should get emitted every minute.
+
+### `hyperbahnClient.once('error', listener)`
+
+This event gets emitted if there's a failure with hyperbahn
+registration. This only gets emitted if `hardFail` is `true`.
