@@ -3,9 +3,9 @@
 The following is documentation on how to use the `as/thrift` implementation
 to handle encoding and decoding for you
 
-## Stability: stable
+## Stability: unstable
 
-[![stable](http://badges.github.io/stability-badges/dist/stable.svg)](http://github.com/badges/stability-badges)
+[![unstable](http://badges.github.io/stability-badges/dist/unstable.svg)](http://github.com/badges/stability-badges)
 
 ## Thrift example
 
