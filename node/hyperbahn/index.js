@@ -36,9 +36,9 @@ var HyperbahnClientInvalidOptionError = TypedError({
         ', expected {expected}, got {actual}'
 });
 
-var RegistrationTimeoutError = WrappedError({
-    type: 'hyperbahn-client.registration-timeout',
-    message: 'Hyperbahn registration timed out after {time} ms!.\n' +
+var AdvertisementTimeoutError = WrappedError({
+    type: 'hyperbahn-client.advertisement-timeout',
+    message: 'Hyperbahn advertisement timed out after {time} ms!.\n' +
         '{origMessage}.\n'
 });
 
@@ -50,11 +50,11 @@ var AlreadyDestroyed = TypedError({
 });
 
 var States = {
-    UNREGISTERED: 'UNREGISTERED',
-    REGISTERED: 'REGISTERED'
+    UNADVERTISED: 'UNADVERTISED',
+    ADVERTISED: 'ADVERTISED'
 };
 var DEFAULT_TTL = 60 * 1000;
-var REGISTER_ERROR_DELAY = 200;
+var ADVERTISEMENT_ERROR_DELAY = 200;
 
 module.exports = HyperbahnClient;
 
@@ -67,9 +67,10 @@ module.exports = HyperbahnClient;
 //   * logger: logtron instance
 //   * reportTracing: Whether to report tracing
 //   * hardFail: boolean; default false; whether or not to fail hard when we
-//     can't register or on unexpected hyperbahn errors
-//   * registrationTimeout: integer. In hardFail mode we default to 5000. If
-//     not in hardFail mode we don't time out registrations.
+//     can't advertise or on unexpected hyperbahn errors
+//   * registrationTimeout: deprecated
+//   * advertisementTimeout: integer. In hardFail mode we default to 5000. If
+//     not in hardFail mode we don't time out advertisements.
 function HyperbahnClient(options) {
     /*eslint max-statements: [2, 25] complexity: [2, 20] */
     if (!(this instanceof HyperbahnClient)) {
@@ -153,15 +154,18 @@ function HyperbahnClient(options) {
 
     self.hardFail = !!options.hardFail;
     self.lastError = null;
-    self.latestRegistrationResult = null;
+    self.latestAdvertisementResult = null;
 
-    self.state = States.UNREGISTERED;
+    self.state = States.UNADVERTISED;
     self._destroyed = false;
 
+    var advertisementTimeout = options.advertisementTimeout ||
+        options.registrationTimeout;
+
     if (self.hardFail) {
-        self.registrationTimeoutTime = options.registrationTimeout || 5000;
+        self.advertisementTimeoutTime = advertisementTimeout || 5000;
     } else {
-        self.registrationTimeoutTime = options.registrationTimeout;
+        self.advertisementTimeoutTime = advertisementTimeout;
     }
 }
 
@@ -221,32 +225,32 @@ function getClientChannel(options) {
     return self.tchannel.makeSubChannel(channelOptions);
 };
 
-// ## registrationTimeout
+// ## advertisementTimeout
 // Called after a certain amount of time to have a fatal error when reg fails.
-// Will not be called if options.registrationTimeout isn't passed in
-HyperbahnClient.prototype.registrationTimeout =
-function registrationTimeout() {
+// Will not be called if options.advertisementTimeout isn't passed in
+HyperbahnClient.prototype.advertisementTimeout =
+function advertisementTimeout() {
     var self = this;
 
-    if (self.state === States.UNREGISTERED) {
+    if (self.state === States.UNADVERTISED) {
         var lastError = self.lastError ||
-            new Error('registration timeout!');
-        var err = RegistrationTimeoutError(lastError, {
-            time: self.registrationTimeoutTime
+            new Error('advertisement timeout!');
+        var err = AdvertisementTimeoutError(lastError, {
+            time: self.advertisementTimeoutTime
         });
 
-        self.logger.fatal('HyperbahnClient: registration timed out', {
-            timeout: self.registrationTimeout,
+        self.logger.fatal('HyperbahnClient: advertisement timed out', {
+            timeout: self.advertisementTimeout,
             error: err
         });
 
-        self.registrationFailure(err);
+        self.advertisementFailure(err);
     }
     // TODO else warn
 };
 
-HyperbahnClient.prototype.registrationFailure =
-function registrationFailure(err) {
+HyperbahnClient.prototype.advertisementFailure =
+function advertisementFailure(err) {
     var self = this;
 
     self.destroy();
@@ -254,45 +258,48 @@ function registrationFailure(err) {
 
     if (self.statsd) {
         self.statsd.increment(
-            'hyperbahn-client.' + self.serviceName + '.registration.failure'
+            'hyperbahn-client.' + self.serviceName + '.advertisement.failure'
         );
     }
 };
 
-// ## register
-// Register with Hyperbahn. If called with a callback, the callback will not be
-// called until there has been a successful registration. This function
-// attempts a register and retries until there are no healthy servers left; it
+// ## advertise
+// Advertise with Hyperbahn. If called with a callback, the callback will not be
+// called until there has been a successful advertisement. This function
+// attempts a advertise and retries until there are no healthy servers left; it
 // will then repeatedly choose random servers to try until it finds one that
 // works.
-HyperbahnClient.prototype.register = function register(opts) {
+// register is **deprecated**
+HyperbahnClient.prototype.register =
+HyperbahnClient.prototype.advertise =
+function advertise(opts) {
     var self = this;
-    // Attempt a registration. If it succeeds, setTimeout to re-register with
+    // Attempt a advertisement. If it succeeds, setTimeout to re-advertise with
     // the same server after the TTL.
 
     if (self._destroyed) {
         self.emit('error', AlreadyDestroyed({
-            method: 'register'
+            method: 'advertise'
         }));
         return;
     }
 
-    if (self.registrationTimeoutTime) {
+    if (self.advertisementTimeoutTime) {
         // Start the timeout timer
-        self.registrationTimeoutTimer = timers.setTimeout(
-            function registrationTimeoutTimer() {
-                self.registrationTimeout();
+        self.advertisementTimeoutTimer = timers.setTimeout(
+            function advertisementTimeoutTimer() {
+                self.advertisementTimeout();
             },
-            self.registrationTimeoutTime
+            self.advertisementTimeoutTime
         );
     } else {
-        self.logger.info('HyperbahnClient registration timeout disabled', {
+        self.logger.info('HyperbahnClient advertisement timeout disabled', {
             service: self.serviceName
         });
     }
 
     assert(self.tchannel.hostPort,
-        'must call tchannel.listen() before register()'
+        'must call tchannel.listen() before advertise()'
     );
 
     var req = self.hyperbahnChannel.request({
@@ -308,11 +315,11 @@ HyperbahnClient.prototype.register = function register(opts) {
             cost: 0,
             serviceName: self.serviceName
         }]
-    }, function registerInternalCb(err, result) {
+    }, function advertiseInternalCb(err, result) {
         /*eslint max-statements: [2, 40] */
         if (err) {
             self.logger[self.hardFail ? 'error' : 'warn'](
-                'HyperbahnClient: registration failure, ' +
+                'HyperbahnClient: advertisement failure, ' +
                 'marking server as sick', {
                 error: err,
                 serviceName: self.serviceName,
@@ -320,7 +327,7 @@ HyperbahnClient.prototype.register = function register(opts) {
             });
             self.lastError = err;
 
-            self.registerAgain(REGISTER_ERROR_DELAY);
+            self.advertiseAgain(ADVERTISEMENT_ERROR_DELAY);
             return;
         }
 
@@ -338,9 +345,9 @@ HyperbahnClient.prototype.register = function register(opts) {
             );
 
             if (self.hardFail) {
-                self.registrationFailure(err);
+                self.advertisementFailure(err);
             } else {
-                self.registerAgain(REGISTER_ERROR_DELAY);
+                self.advertiseAgain(ADVERTISEMENT_ERROR_DELAY);
             }
 
             return;
@@ -349,34 +356,37 @@ HyperbahnClient.prototype.register = function register(opts) {
         if (self.statsd) {
             self.statsd.increment(
                 'hyperbahn-client.' + self.serviceName +
-                    '.registration.success'
+                    '.advertisement.success'
             );
         }
 
-        self.latestRegistrationResult = result;
-        self.state = States.REGISTERED;
-        timers.clearTimeout(self.registrationTimeoutTimer);
+        self.latestAdvertisementResult = result;
+        self.state = States.ADVERTISED;
+        timers.clearTimeout(self.advertisementTimeoutTimer);
 
         var ttl = DEFAULT_TTL;
 
-        self.registerAgain(ttl);
+        self.advertiseAgain(ttl);
+
+        // registered event is deprecated
         self.emit('registered');
+        self.emit('advertised');
     });
 
-    self.emit('register-attempt');
+    self.emit('advertise-attempt');
 };
 
-HyperbahnClient.prototype.registerAgain =
-function registerAgain(delay) {
+HyperbahnClient.prototype.advertiseAgain =
+function advertiseAgain(delay) {
     var self = this;
 
     if (self._destroyed) {
         return;
     }
 
-    self._registrationTimer = timers.setTimeout(
-        function registerTimeout() {
-            self.register();
+    self._advertisementTimer = timers.setTimeout(
+        function advertiseTimeout() {
+            self.advertise();
         },
         delay
     );
@@ -385,6 +395,6 @@ function registerAgain(delay) {
 // ## destroy
 HyperbahnClient.prototype.destroy = function destroy() {
     this._destroyed = true;
-    timers.clearTimeout(this._registrationTimer);
-    timers.clearTimeout(this.registrationTimeoutTimer);
+    timers.clearTimeout(this._advertisementTimer);
+    timers.clearTimeout(this.advertisementTimeoutTimer);
 };

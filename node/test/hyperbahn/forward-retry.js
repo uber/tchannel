@@ -32,7 +32,7 @@ if (require.main === module) {
 }
 
 function runTests(HyperbahnCluster) {
-    HyperbahnCluster.test('register and forward', {
+    HyperbahnCluster.test('advertise and forward', {
         size: 10
     }, function t(cluster, assert) {
         var steve = cluster.remotes.steve;
@@ -50,13 +50,13 @@ function runTests(HyperbahnCluster) {
             logger: steve.logger
         });
 
-        steveHyperbahnClient.once('registered', onSteveRegistered);
-        steveHyperbahnClient.register(onSteveRegistered);
+        steveHyperbahnClient.once('advertised', onSteveAdvertised);
+        steveHyperbahnClient.advertise(onSteveAdvertised);
 
         // TODO: intermittent flap about can't request on destroyed channel
         // TODO: flappy leaked handle hang
 
-        function onSteveRegistered() {
+        function onSteveAdvertised() {
             var egressNodes = cluster.apps[0].exitsFor(steve.serviceName);
 
             cluster.apps.forEach(function destroyBobEgressNodes(node) {

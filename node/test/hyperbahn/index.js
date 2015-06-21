@@ -32,9 +32,9 @@ if (require.main === module) {
 
 function runTests(HyperbahnCluster) {
     require('./forward.js')(HyperbahnCluster);
-    require('./register.js')(HyperbahnCluster);
+    require('./advertise.js')(HyperbahnCluster);
     require('./forward-retry.js')(HyperbahnCluster);
-    
+
     require('./hyperbahn-down.js')(HyperbahnCluster);
     require('./hyperbahn-times-out.js')(HyperbahnCluster);
 }

@@ -31,7 +31,7 @@ if (require.main === module) {
 }
 
 function runTests(HyperbahnCluster) {
-    HyperbahnCluster.test('register with hyperbahn down', {
+    HyperbahnCluster.test('advertise with hyperbahn down', {
         size: 2
     }, function t(cluster, assert) {
         var bob = cluster.dummies[0];
@@ -43,30 +43,30 @@ function runTests(HyperbahnCluster) {
             hostPortList: ['127.0.0.1:5001', '127.0.0.1:5002'],
             tchannel: bob,
             hardFail: true,
-            registrationTimeout: 200,
+            advertisementTimeout: 200,
             logger: DebugLogtron('hyperbahnClient')
         });
 
         client.logger.whitelist('error',
-            'HyperbahnClient: registration failure, marking server as sick'
+            'HyperbahnClient: advertisement failure, marking server as sick'
         );
         client.logger.whitelist('fatal',
-            'HyperbahnClient: registration timed out'
+            'HyperbahnClient: advertisement timed out'
         );
 
-        client.register();
+        client.advertise();
         client.once('error', onError);
 
         function onError(err) {
             assert.ok(err);
 
             assert.equal(err.type,
-                'hyperbahn-client.registration-timeout');
+                'hyperbahn-client.advertisement-timeout');
             assert.equal(err.time, 200);
             assert.equal(err.code, 'ECONNREFUSED');
             assert.equal(err.syscall, 'connect');
             assert.equal(err.fullType,
-                'hyperbahn-client.registration-timeout' +
+                'hyperbahn-client.advertisement-timeout' +
                 '~!~tchannel.socket' +
                 '~!~error.wrapped-io.connect.ECONNREFUSED');
             assert.equal(err.causeMessage,
@@ -78,7 +78,7 @@ function runTests(HyperbahnCluster) {
         }
     });
 
-    HyperbahnCluster.test('register with hyperbahn down + no hardFail', {
+    HyperbahnCluster.test('advertise with hyperbahn down + no hardFail', {
         size: 5
     }, function t(cluster, assert) {
         var bob = cluster.dummies[0];
@@ -95,19 +95,21 @@ function runTests(HyperbahnCluster) {
         var attempts = 0;
 
         client.on('error', onError);
-        client.on('register-attempt', onRegisterAttempt);
-        client.register();
+        client.on('advertise-attempt', onAdvertisementAttempt);
+        client.advertise();
 
         function onError() {
             assert.ok(false, 'should not error');
         }
 
-        function onRegisterAttempt() {
+        function onAdvertisementAttempt() {
             if (++attempts < 3) {
                 return;
             }
 
-            client.removeListener('register-attempt', onRegisterAttempt);
+            client.removeListener(
+                'advertise-attempt', onAdvertisementAttempt
+            );
 
             client.destroy();
             assert.ok(true);

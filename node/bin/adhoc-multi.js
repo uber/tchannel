@@ -37,7 +37,7 @@ var fs = require('fs');
 var CountedReadySignal = require('ready-signal/counted');
 
 var TChannel = require('../');
-var AutobahnClient = require('../hyperbahn/');
+var HyperbahnClient = require('../hyperbahn/');
 var DebugLogger = require('debug-logtron');
 
 if (require.main === module) {
@@ -56,7 +56,7 @@ function main() {
     var rcount = Math.abs(process.argv[2] || 1);
     var opts = {};
     opts.listenReady = CountedReadySignal(rcount);
-    opts.registerReady = CountedReadySignal(rcount);
+    opts.advertiseReady = CountedReadySignal(rcount);
     opts.serviceName = process.argv[3] || 'service';
     opts.port = +process.argv[4] || 6000;
     opts.host = getHost();
@@ -79,12 +79,12 @@ function start(opts, rcount) {
     opts.listenReady(function onListen() {
         console.log('All channel listen started.');
         for (i = 0; i < rcount; i++) {
-            register(opts, clients[i]);
+            advertise(opts, clients[i]);
         }
     });
 
-    opts.registerReady(function onRegister() {
-        console.log('All clients registered.');
+    opts.advertiseReady(function onAdvertised() {
+        console.log('All clients advertised.');
         var chan = createChannel(opts);
         var service = opts.serviceName + '_0';
         chan.makeSubChannel({
@@ -126,19 +126,19 @@ function createClient(options) {
     var onResponse = options.isLast ? finish : forwardChannel;
     var count = options.i;
 
-    console.log('registering ' + enumerated(EP_NAME));
+    console.log('advertising ' + enumerated(EP_NAME));
     tchannel.makeSubChannel({
         serviceName: enumerated(options.serviceName)
     }).register(enumerated(EP_NAME), onResponse);
 
-    var autobahnClient = new AutobahnClient({
+    var hyperbahnClient = new HyperbahnClient({
         tchannel: tchannel,
         serviceName: enumerated(options.serviceName),
         callerName: enumerated(options.serviceName, count - 1),
         hostPortList: options.autobahnList,
         forwardRetries: 5,
         checkForwardListInterval: 60000,
-        registrationTimeout: 5000,
+        adverisementTimeout: 5000,
         logger: options.logger
     });
 
@@ -147,7 +147,7 @@ function createClient(options) {
     tchannel.listen(options.port + count, options.host, onListen);
     return {
         channel: tchannel,
-        client: autobahnClient
+        client: hyperbahnClient
     };
 
     function onListen(err) {
@@ -205,18 +205,18 @@ function createClient(options) {
     }
 }
 
-function register(options, pair) {
-    var autobahnClient = pair.client;
-    console.log('Registering at Hyperbahn', autobahnClient.hostPortList[0]);
+function advertise(options, pair) {
+    var hyperbahnClient = pair.client;
+    console.log('Advertising at Hyperbahn', hyperbahnClient.hostPortList[0]);
 
-    autobahnClient.on('registered', onRegister);
-    autobahnClient.register();
-    function onRegister(err2) {
+    hyperbahnClient.on('advertised', onAdvertised);
+    hyperbahnClient.advertise();
+    function onAdvertised(err2) {
         if (err2) {
             throw err2;
         }
-        console.log('Registered at Hyperbahn', autobahnClient.hostPortList[0]);
-        options.registerReady.signal();
+        console.log('Advertised at Hyperbahn', hyperbahnClient.hostPortList[0]);
+        options.advertiseReady.signal();
     }
 }
 
