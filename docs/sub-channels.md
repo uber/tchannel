@@ -6,7 +6,6 @@ to implement a serviceName you create a subchannel for it.
 Whenever you want to talk to a downstream service; you create
 a subchannel for it.
 
-
 ## Stability: stable
 
 [![stable](http://badges.github.io/stability-badges/dist/stable.svg)](http://github.com/badges/stability-badges)
@@ -95,7 +94,8 @@ In these cases you can set `hasNoParent` to `true`
 
 ### `req.send(arg1, arg2, arg3, cb)`
 
-Consider using `as-json` or `as-thrift` to make send data down
+Consider using [`as-json`](./as-json.md) or 
+[`as-thrift`](./as-thrift.md) to make send data down
 outgoing requests that use json or thrift encoding.
 Calling `send()` directly is for when you want to deal with
 binary buffers.
@@ -120,7 +120,8 @@ The callback will either get called with `cb(err)` or with
 
 ## `subChannel.register(name, handler)`
 
-Consider using `as-json` or `as-thrift` to register endpoints
+Consider using [`as-json`](./as-json.md) or
+[`as-thrift`](./as-thrift.md) to register endpoints
 that use json or thrift encoding. Calling `register()` directly
 is for when you want to deal with binary buffers.
 
