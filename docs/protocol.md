@@ -573,6 +573,8 @@ name  | req | res | description
 
 ### Transport Header `as` -- Arg Scheme
 
+The `as` header is **required**
+
 This describes the format of the args for endpoint handlers and/or protocol
 inspectors. The primary RPC mechanism will use "thrift". "http" and "json" are
 used for interop with other systems.
@@ -601,6 +603,8 @@ Value is string "host:port".
 Send claim message to `host:port` when response is being sent.
 
 ### Transport Header `cn` -- Caller Name
+
+The `cn` header is **required**
 
 Value is name of the service making the call.
 

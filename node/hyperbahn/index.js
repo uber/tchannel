@@ -198,19 +198,27 @@ function getClientChannel(options) {
         return self.tchannel.subChannels[options.serviceName];
     }
 
-    return self.tchannel.makeSubChannel({
+    var channelOptions = {
+        peers: self.hostPortList,
         serviceName: options.serviceName,
-        trace: options.trace,
         requestDefaults: {
             serviceName: options.serviceName,
-            timeout: options.timeout,
-            retryLimit: options.retryLimit,
             headers: {
                 cn: self.callerName
             }
-        },
-        peers: self.hostPortList
-    });
+        }
+    };
+    if ('trace' in options) {
+        channelOptions.trace = options.trace;
+    }
+    if ('timeout' in options) {
+        channelOptions.requestDefaults.timeout = options.timeout;
+    }
+    if ('retryLimit' in options) {
+        channelOptions.requestDefaults.retryLimit = options.retryLimit;
+    }
+
+    return self.tchannel.makeSubChannel(channelOptions);
 };
 
 // ## registrationTimeout
