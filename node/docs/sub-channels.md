@@ -12,6 +12,12 @@ a subchannel for it.
 
 ## `channel.makeSubChannel(options)`
 
+**Note:** Favor using `hyperbahnClient.getClientChannel()` for
+any creating sub channels if your making requests to hyperbahn
+
+See the [hyperbahn](./hyperbahn.md) documentation on how to
+create sub channels with hyperbahn
+
 To create a sub channel you call `makeSubChannel` on the root
 channel.
 
