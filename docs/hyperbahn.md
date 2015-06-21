@@ -87,7 +87,7 @@ Counters:
 If set; hyperbahn client registration will timeout.
 
 This defaults to 5000 if `hardFail` is `true` and defaults to
-`Infinity` (no timeout) if `hardFaile` is `false`.
+`Infinity` (no timeout) if `hardFail` is `false`.
 
 ### `options.hardFail`
 
@@ -99,9 +99,10 @@ a tchannel server.
 
 Any services that a pure tchannel server should set `hardFail`
 to true. This means that if hyperbahnClient cannot register
-after the `registrationTimeout` (default 5 seconds).
+after the `registrationTimeout` (default 5 seconds) it will
+emit an error event.
 
-Not being able to register with hyperbahn is a fatal exception
+Not being able to register with hyperbahn is a fatal exception.
 
 ### `hyperbahnClient.register()`
 
