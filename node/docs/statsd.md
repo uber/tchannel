@@ -2,6 +2,10 @@
 
 TChannel can emit the following stats:
 
+## Stability: stable
+
+[![stable](http://badges.github.io/stability-badges/dist/stable.svg)](http://github.com/badges/stability-badges)
+
 ### Counters
 
  - `outbound.calls.sent.{service}.{target-service}.{target-endpoint}`

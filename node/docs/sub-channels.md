@@ -3,6 +3,10 @@
 TChannel supports the notion of sub channels. Whenever you want
 to implement a serviceName you create a subchannel for it.
 
+## Stability: stable
+
+[![stable](http://badges.github.io/stability-badges/dist/stable.svg)](http://github.com/badges/stability-badges)
+
 Whenever you want to talk to a downstream service; you create
 a subchannel for it.
 
