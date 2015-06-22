@@ -22,10 +22,10 @@
 
 var path = require('path');
 var fs = require('fs');
+var assert = require('assert');
 
-var tcollectorSpec = fs.readFileSync(
-    path.join(__dirname, 'tcollector.thrift'), 'utf8'
-);
+var tcollectorSpec =
+    fs.readFileSync(path.join(__dirname, 'tcollector.thrift'), 'utf8');
 
 module.exports = TCollectorTraceReporter;
 
@@ -35,43 +35,47 @@ function TCollectorTraceReporter(options) {
     }
     var self = this;
 
+    assert(typeof options === 'object', 'options required');
+    assert(typeof options.logger === 'object', 'logger required');
+    assert(typeof options.channel === 'object', 'channel required');
+    assert(typeof options.callerName === 'string', 'callerName required');
+
     self.logger = options.logger;
     self.channel = options.channel;
     self.callerName = options.callerName;
 
+    /*istanbul ignore if*/
     if (!self.channel) {
         // TODO: typederror or vld
         throw new Error('TCollectorTraceReporter must be passed a tchannel');
     }
 
-    if (!self.callerName) {
-        // TODO: typederror or vld
-        throw new Error('TCollectorTraceReporter must be passed a callerName');
-    }
-
-    self.tchannelThrift = self.channel.TChannelAsThrift({
+    self.tchannelThrift = new self.channel.TChannelAsThrift({
         source: tcollectorSpec
     });
 }
 
-function ipToInt(ip) {
+TCollectorTraceReporter.ipToInt = function ipToInt(ip) {
     var ipl = 0;
     var parts = ip.split('.');
-    for (var i = 0; i < parts; i++) {
+    for (var i = 0; i < parts.length; i++) {
         ipl <<= 8;
         ipl += parseInt(parts[i], 10);
     }
     return (ipl >>> 0);
-}
+};
 
-function convertHost(endpoint) {
+TCollectorTraceReporter.convertHost = function convertHost(endpoint) {
     return {
-        ipv4: ipToInt(endpoint.ipv4),
+        // the >> 0 here effectively casts the ip as a signed int since
+        // thrift doesn't have unsigned types
+        ipv4: TCollectorTraceReporter.ipToInt(endpoint.ipv4) >> 0,
         port: endpoint.port,
         serviceName: endpoint.serviceName
     };
-}
+};
 
+TCollectorTraceReporter.jsonSpanToThriftSpan =
 function jsonSpanToThriftSpan(span) {
     var annotations = span.annotations.map(function fixAnnotation(item) {
         return {
@@ -83,7 +87,13 @@ function jsonSpanToThriftSpan(span) {
     var binaryAnnotations =
         span.binaryAnnotations.map(function fixBinAnnotation(item) {
             var ret = {
-                key: item.key
+                key: item.key,
+                annotationType: null,
+                boolValue: null,
+                intValue: null,
+                doubleValue: null,
+                stringValue: null,
+                bytesValue: null
             };
 
             if (item.type === 'boolean') {
@@ -102,7 +112,8 @@ function jsonSpanToThriftSpan(span) {
 
     if (!span.host) {
         // Workaround to support older tchannels
-        span.host = convertHost(span.annotations[0].host);
+        span.host =
+            TCollectorTraceReporter.convertHost(span.annotations[0].host);
     }
 
     var mapped = {
@@ -116,7 +127,7 @@ function jsonSpanToThriftSpan(span) {
     };
 
     return mapped;
-}
+};
 
 TCollectorTraceReporter.prototype.report = function report(span, callback) {
     var self = this;
@@ -131,33 +142,37 @@ TCollectorTraceReporter.prototype.report = function report(span, callback) {
         },
         serviceName: 'tcollector',
         retryLimit: 1,
-        retryFlags: {
-            never: true
-        }
+        retryFlags: {never: true}
     });
 
-    self.tchannelThrift.send(req, 'TCollector::submit', null, {
-        span: jsonSpanToThriftSpan(span)
-    }, onResponse);
+    self.tchannelThrift.send(
+        req,
+        'TCollector::submit',
+        null,
+        {span: TCollectorTraceReporter.jsonSpanToThriftSpan(span)},
+        onResponse
+    );
 
     function onResponse(err, response) {
         if (err) {
             self.logger.warn('Zipkin span submit failed', {
                 err: err
             });
+
             if (callback) {
                 callback(err);
             }
-            return;
-        }
 
-        if (!response.ok) {
+        } else if (!response.ok) {
             self.logger.warn('Zipkin span submit failed: not ok', {
                 response: response
             });
-        }
 
-        if (callback) {
+            if (callback) {
+                callback(response.body);
+            }
+
+        } else if (callback) {
             callback();
         }
     }
