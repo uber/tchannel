@@ -63,21 +63,21 @@ func NewClient(ch *tchannel.Channel, config Configuration, opts *ClientOptions) 
 	return client
 }
 
-// addPeer registers a peer in the Hyperbahn subchannel.
+// addPeer adds a peer to the Hyperbahn subchannel.
 // TODO(prashant): Start connections to the peers in the background.
 func addPeer(ch *tchannel.Channel, hostPort string) {
 	peers := ch.GetSubChannel(hyperbahnServiceName).Peers()
 	peers.Add(hostPort)
 }
 
-// Register registers the service to Hyperbahn, and returns any errors on initial registration.
-// If the registration succeeds, a goroutine is started to refresh the registration periodically.
-func (c *Client) Register() error {
-	if err := c.sendRegistration(); err != nil {
+// Advertise advertises the service with Hyperbahn, and returns any errors on initial advertisement.
+// If the advertisement succeeds, a goroutine is started to re-advertise periodically.
+func (c *Client) Advertise() error {
+	if err := c.sendAdvertise(); err != nil {
 		return err
 	}
-	c.opts.Handler.On(Registered)
-	go c.registrationLoop()
+	c.opts.Handler.On(Advertised)
+	go c.advertiseLoop()
 	return nil
 }
 

@@ -6,17 +6,17 @@ type Event int
 const (
 	// UnknownEvent should never be used.
 	UnknownEvent Event = iota
-	// RegistrationAttempt is triggered when the client tries to register.
-	RegistrationAttempt
-	// Registered is triggered when the initial registration for a service is successful.
-	Registered
-	// RegistrationRefreshed is triggered on periodic registrations.
-	RegistrationRefreshed
+	// SendAdvertise is triggered when the Hyperbahn client tries to advertise.
+	SendAdvertise
+	// Advertised is triggered when the initial advertisement for a service is successful.
+	Advertised
+	// Readvertised is triggered on periodic advertisements.
+	Readvertised
 )
 
 //go:generate stringer -type=Event
 
-// Handler
+// Handler is the interface for handling Hyperbahn events and errors.
 type Handler interface {
 	// On is called when events are triggered.
 	On(event Event)

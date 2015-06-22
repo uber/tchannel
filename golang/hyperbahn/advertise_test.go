@@ -13,7 +13,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-func registrationHandler(t *testing.T, f func(req adRequest) (adResponse, error)) tchannel.Handler {
+func advertiseHandler(t *testing.T, f func(req adRequest) (adResponse, error)) tchannel.Handler {
 	return tchannel.HandlerFunc(func(ctx context.Context, call *tchannel.InboundCall) {
 		var arg2 []byte
 		var req adRequest
@@ -33,14 +33,14 @@ func registrationHandler(t *testing.T, f func(req adRequest) (adResponse, error)
 	})
 }
 
-func TestRegistrationFailed(t *testing.T) {
+func TestAdvertiseFailed(t *testing.T) {
 	withSetup(t, func(serverCh *tchannel.Channel, hostPort string) {
 		clientCh, err := tchannel.NewChannel("my-client", nil)
 		require.NoError(t, err)
 		defer clientCh.Close()
 
 		client := NewClient(clientCh, configFor(hostPort), nil)
-		require.Error(t, client.Register())
+		require.Error(t, client.Advertise())
 	})
 }
 
@@ -79,11 +79,11 @@ func (r *retryTest) setup() {
 	r.sleepArgs, r.sleepBlock = testutils.SleepStub(&timeSleep)
 }
 
-func (r *retryTest) setRegistrationSuccess() {
+func (r *retryTest) setAdvertiseSuccess() {
 	r.respCh <- 1
 }
 
-func (r *retryTest) setRegistrationFailure() {
+func (r *retryTest) setAdvertiseFailure() {
 	r.respCh <- 0
 }
 
@@ -94,7 +94,7 @@ func runRetryTest(t *testing.T, f func(r *retryTest)) {
 	defer testutils.ResetSleepStub(&timeSleep)
 
 	withSetup(t, func(serverCh *tchannel.Channel, hostPort string) {
-		serverCh.Register(registrationHandler(t, r.adHandler), "ad")
+		serverCh.Register(advertiseHandler(t, r.adHandler), "ad")
 
 		clientCh, err := tchannel.NewChannel("my-client", nil)
 		require.NoError(t, err)
@@ -109,98 +109,98 @@ func runRetryTest(t *testing.T, f func(r *retryTest)) {
 	})
 }
 
-func TestRegistrationSuccess(t *testing.T) {
+func TestAdvertiseSuccess(t *testing.T) {
 	runRetryTest(t, func(r *retryTest) {
-		r.mock.On("On", RegistrationAttempt).Return().
+		r.mock.On("On", SendAdvertise).Return().
 			Times(1 /* initial */ + 10 /* successful retries */)
-		r.mock.On("On", Registered).Return().Once()
-		r.setRegistrationSuccess()
-		require.NoError(t, r.client.Register())
+		r.mock.On("On", Advertised).Return().Once()
+		r.setAdvertiseSuccess()
+		require.NoError(t, r.client.Advertise())
 
 		// Verify that the arguments passed to 'ad' are correct.
 		expectedRequest := adRequest{[]service{{Name: "my-client", Cost: 0}}}
 		require.Equal(t, expectedRequest, r.req)
 
-		// Verify re-registrations happen after sleeping for ~registrationInterval.
-		r.mock.On("On", RegistrationRefreshed).Return().Times(10)
+		// Verify readvertise happen after sleeping for ~advertiseInterval.
+		r.mock.On("On", Readvertised).Return().Times(10)
 		for i := 0; i < 10; i++ {
 			s1 := <-r.sleepArgs
-			require.True(t, s1 >= registrationInterval-fuzzInterval)
-			require.True(t, s1 <= registrationInterval+fuzzInterval)
+			require.True(t, s1 >= advertiseInterval-fuzzInterval)
+			require.True(t, s1 <= advertiseInterval+fuzzInterval)
 			r.sleepBlock <- struct{}{}
 
-			r.setRegistrationSuccess()
+			r.setAdvertiseSuccess()
 			require.Equal(t, expectedRequest, r.req)
 		}
 
-		// Block till the last registration completes.
+		// Block till the last advertise completes.
 		<-r.sleepArgs
 	})
 }
 
 func TestRetryTemporaryFailure(t *testing.T) {
 	runRetryTest(t, func(r *retryTest) {
-		r.mock.On("On", RegistrationAttempt).Return().
+		r.mock.On("On", SendAdvertise).Return().
 			Times(1 /* initial */ + 3 /* fail */ + 10 /* successful */)
-		r.mock.On("On", Registered).Return().Once()
-		r.setRegistrationSuccess()
-		require.NoError(t, r.client.Register())
+		r.mock.On("On", Advertised).Return().Once()
+		r.setAdvertiseSuccess()
+		require.NoError(t, r.client.Advertise())
 
 		s1 := <-r.sleepArgs
-		require.True(t, s1 >= registrationInterval-fuzzInterval)
-		require.True(t, s1 <= registrationInterval+fuzzInterval)
+		require.True(t, s1 >= advertiseInterval-fuzzInterval)
+		require.True(t, s1 <= advertiseInterval+fuzzInterval)
 
 		// When registrations fail, it retries after a short connection and triggers OnError.
-		r.mock.On("OnError", ErrRegistrationFailed{true, ErrAppError}).Return(nil).Times(3)
+		r.mock.On("OnError", ErrAdvertiseFailed{true, ErrAppError}).Return(nil).Times(3)
 		for i := 0; i < 3; i++ {
 			r.sleepBlock <- struct{}{}
-			r.setRegistrationFailure()
+			r.setAdvertiseFailure()
 
 			s1 := <-r.sleepArgs
-			require.True(t, s1 == registrationRetryInterval)
+			require.True(t, s1 == advertiseRetryInterval)
 		}
 
 		// If the retry suceeds, then it goes back to normal.
-		r.mock.On("On", RegistrationRefreshed).Return().Times(10)
+		r.mock.On("On", Readvertised).Return().Times(10)
 		// Verify re-registrations continue as usual when it succeeds.
 		for i := 0; i < 10; i++ {
 			r.sleepBlock <- struct{}{}
-			r.setRegistrationSuccess()
+			r.setAdvertiseSuccess()
 
 			s1 := <-r.sleepArgs
-			require.True(t, s1 >= registrationInterval-fuzzInterval)
-			require.True(t, s1 <= registrationInterval+fuzzInterval)
+			require.True(t, s1 >= advertiseInterval-fuzzInterval)
+			require.True(t, s1 <= advertiseInterval+fuzzInterval)
 		}
 	})
 }
 
 func TestRetryFailure(t *testing.T) {
 	runRetryTest(t, func(r *retryTest) {
-		r.mock.On("On", RegistrationAttempt).Return().
-			Times(1 /* initial */ + maxRegistrationFailures /* fail */)
-		r.mock.On("On", Registered).Return().Once()
+		r.mock.On("On", SendAdvertise).Return().
+			Times(1 /* initial */ + maxAdvertiseFailures /* fail */)
+		r.mock.On("On", Advertised).Return().Once()
 
-		r.setRegistrationSuccess()
-		require.NoError(t, r.client.Register())
+		r.setAdvertiseSuccess()
+		require.NoError(t, r.client.Advertise())
 
 		s1 := <-r.sleepArgs
-		require.True(t, s1 >= registrationInterval-fuzzInterval)
-		require.True(t, s1 <= registrationInterval+fuzzInterval)
+		require.True(t, s1 >= advertiseInterval-fuzzInterval)
+		require.True(t, s1 <= advertiseInterval+fuzzInterval)
 
 		// When retries fail maxRegistrationFailures times, we receive:
 		// maxRegistrationFailures - 1 OnError WithRetry=True
 		// 1 OnError WithRetry=False
 		noRetryFail := make(chan struct{})
-		r.mock.On("OnError", ErrRegistrationFailed{true, ErrAppError}).Return(nil).Times(maxRegistrationFailures - 1)
-		r.mock.On("OnError", ErrRegistrationFailed{false, ErrAppError}).Return(nil).Run(func(_ mock.Arguments) {
+		r.mock.On("OnError", ErrAdvertiseFailed{true, ErrAppError}).Return(nil).Times(maxAdvertiseFailures - 1)
+		r.mock.On("OnError", ErrAdvertiseFailed{false, ErrAppError}).Return(nil).Run(func(_ mock.Arguments) {
 			noRetryFail <- struct{}{}
 		}).Once()
-		for i := 0; i < maxRegistrationFailures-1; i++ {
+		for i := 0; i < maxAdvertiseFailures-1; i++ {
 			r.sleepBlock <- struct{}{}
-			r.setRegistrationFailure()
+			r.setAdvertiseFailure()
 
 			s1 := <-r.sleepArgs
-			require.True(t, s1 == registrationRetryInterval)
+			require.True(t, s1 == advertiseRetryInterval)
 		}
 
 		r.sleepBlock <- struct{}{}
