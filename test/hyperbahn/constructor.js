@@ -22,15 +22,21 @@
 
 var test = require('tape');
 var TChannel = require('../../');
+var DebugLogtron = require('debug-logtron');
 
 var HyperbahnClient = require('../../hyperbahn/index.js');
 
 test('creating HyperbahnClient with new', function t(assert) {
+    var logger = DebugLogtron('hyperbahnclient');
+
     var c = new HyperbahnClient({
-        tchannel: TChannel(),
+        tchannel: TChannel({
+            logger: logger
+        }),
         serviceName: 'foo',
         callerName: 'foo-test',
-        hostPortList: []
+        hostPortList: [],
+        logger: logger
     });
 
     assert.ok(c, 'can create a client');
