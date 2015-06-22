@@ -37,6 +37,9 @@ func (s *State) goType(thriftType *parser.Type) string {
 	if thriftType.Name == "list" {
 		return "[]" + s.goType(thriftType.ValueType)
 	}
+	if thriftType.Name == "set" {
+		return "map[" + s.goType(thriftType.ValueType) + "]bool"
+	}
 	if thriftType.Name == "map" {
 		return "map[" + s.goType(thriftType.KeyType) + "]" + s.goType(thriftType.ValueType)
 	}
@@ -54,6 +57,7 @@ func (s *State) goType(thriftType *parser.Type) string {
 		return goThriftName
 	}
 	if rootType.Name == "list" ||
+		rootType.Name == "set" ||
 		rootType.Name == "map" {
 		return goThriftName
 	}
