@@ -1,5 +1,6 @@
 #!/bin/sh
 # Helper script to invoke Apache Thrift's compiler and thrift-gen for a given Thrift file.
+set -e
 
 THRIFTFILE="$1"
 if [ -z "$THRIFTFILE" ]; then

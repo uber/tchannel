@@ -25,8 +25,9 @@ package main
 
 import "strings"
 
-// goKeywords taken from https://golang.org/ref/spec#Keywords
+// goKeywords taken from https://golang.org/ref/spec#Keywords (and added error).
 var goKeywords = map[string]bool{
+	"error":       true,
 	"break":       true,
 	"default":     true,
 	"func":        true,
@@ -89,17 +90,26 @@ func camcelCase(name string) string {
 	return strings.Join(parts, "")
 }
 
+func avoidThriftClash(name string) string {
+	if strings.HasSuffix(name, "Result") || strings.HasSuffix(name, "Args") {
+		return name + "_"
+	}
+	return name
+}
+
 // goPublicName returns a go identifier that is exported.
 func goPublicName(name string) string {
 	// Public names cannot clash with goKeywords as they are all lowercase.
 	name = camcelCase(name)
-	return strings.ToUpper(name[0:1]) + name[1:]
+	name = strings.ToUpper(name[0:1]) + name[1:]
+	return name
 }
 
 // goPublicFieldName returns the name of the field as used in a struct.
 func goPublicFieldName(name string) string {
 	name = goName(name)
-	return strings.ToUpper(name[0:1]) + name[1:]
+	name = strings.ToUpper(name[0:1]) + name[1:]
+	return avoidThriftClash(name)
 }
 
 var thriftToGo = map[string]string{
