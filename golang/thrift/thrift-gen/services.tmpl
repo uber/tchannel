@@ -13,9 +13,9 @@ import (
 
 {{ range .Services }}
 	type {{ .Interface }} interface {
-    {{ range .Methods }}
+		{{ range .Methods }}
 			{{ .Name }}({{ .ArgList }}) {{ .RetType }}
-    {{ end }}
+		{{ end }}
 	}
 {{ end }}
 
@@ -31,13 +31,13 @@ import (
 		return &{{ .ClientStruct }}{client: client}
 	}
 
-  {{ range .Methods }}
+	{{ range .Methods }}
 		func (c *{{ $svc.ClientStruct }}) {{ .Name }}({{ .ArgList }}) {{ .RetType }} {
 			var resp {{ .ResultType }}
 			args := {{ .ArgsType }}{
-        {{ range .Arguments }}
+				{{ range .Arguments }}
 					{{ .ArgStructName }}: {{ .Name }},
-        {{ end }}
+				{{ end }}
 			}
 			success, err := c.client.Call(ctx, "{{ $svc.ThriftName }}", "{{ .ThriftName }}", &args, &resp)
 			if err == nil && !success {
@@ -54,7 +54,7 @@ import (
 				return err
 			{{ end }}
 		}
-  {{ end }}
+	{{ end }}
 
 	type {{ .ServerStruct }} struct {
 		handler {{ .Interface }}
@@ -78,10 +78,10 @@ import (
 
 	func (s *{{ .ServerStruct }}) Handle(ctx {{ contextType }}, methodName string, protocol athrift.TProtocol) (bool, athrift.TStruct, error) {
 		switch methodName {
-      {{ range .Methods }}
+			{{ range .Methods }}
 				case "{{ .ThriftName }}":
 					return s.{{ .HandleFunc }}(ctx, protocol)
-      {{ end }}
+			{{ end }}
 			default:
 				return false, nil, fmt.Errorf("method %v not found in service %v", methodName, s.Service())
 		}
@@ -96,12 +96,12 @@ import (
 				return false, nil, err
 			}
 
-      {{ if .HasReturn }}
+			{{ if .HasReturn }}
 				r, err :=
-      {{ else }}
+			{{ else }}
 				err :=
-      {{ end }}
-				s.handler.{{ .Name }}({{ .CallList "req" }})
+			{{ end }}
+					s.handler.{{ .Name }}({{ .CallList "req" }})
 
 			if err != nil {
 				{{ if .HasExceptions }}

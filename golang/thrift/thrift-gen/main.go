@@ -38,22 +38,15 @@ import (
 	"github.com/samuel/go-thrift/parser"
 )
 
-// noNewLiteral is used in templates to specify that the following newline should be removed.
-const noNewLiteral = "[[COLLAPSE-NL]]"
-
 var (
 	inputFile  = flag.String("inputFile", "", "The .thrift file to generate a client for")
 	outputFile = flag.String("outputFile", "out.go", "The output file to generate go code to")
 
-	// These regexps are used to clean up the generated template code a little.
-	spaceRegexp = regexp.MustCompile(`[ ]+`)
-	nlRegexp    = regexp.MustCompile(`\n\n+`)
-	noNLRegexp  = regexp.MustCompile(`[ \t]*\[\[COLLAPSE\-NL\]\][ \t]*`)
+	nlSpaceNL = regexp.MustCompile(`\n[ \t]+\n`)
 )
 
 var funcs = map[string]interface{}{
 	"contextType": contextType,
-	"nonl":        noNewLine,
 }
 
 // TemplateData is the data passed to the template that generates code.
@@ -105,16 +98,8 @@ func packageName(fullPath string) string {
 }
 
 func cleanGeneratedCode(generated []byte) []byte {
-	generated = noNLRegexp.ReplaceAll(generated, []byte(noNewLiteral))
-	generated = bytes.Replace(generated, []byte(noNewLiteral+"\n"), nil, -1)
-	generated = spaceRegexp.ReplaceAll(generated, []byte(" "))
-	generated = nlRegexp.ReplaceAll(generated, []byte("\n\n"))
+	generated = nlSpaceNL.ReplaceAll(generated, []byte("\n"))
 	return generated
-}
-
-// Template functions
-func noNewLine() string {
-	return noNewLiteral
 }
 
 func contextType() string {
