@@ -140,7 +140,6 @@ TChannelJSON.prototype.send = function send(
     }
 };
 
-
 function TChannelJSONResponse(response, parseResult) {
     var self = this;
 
@@ -165,6 +164,8 @@ TChannelJSON.prototype.register = function register(
     if (!self.logger) {
         self.logger = tchannel.logger;
     }
+
+    assert(typeof arg1 === 'string', 'endpoint has to be a string');
 
     tchannel.register(arg1, endpointHandler);
 
