@@ -247,12 +247,20 @@ TChannelPeer.prototype.addConnection = function addConnection(conn) {
     return conn;
 
     function onConnectionError(err) {
-        self.logger.error('Got a connection error', {
+        var codeName = errors.classify(err);
+
+        var loggerInfo = {
             err: err,
             direction: conn.direction,
             remoteName: conn.remoteName,
             socketRemoteAddr: conn.socketRemoteAddr
-        });
+        };
+
+        if (codeName === 'Timeout') {
+            self.logger.warn('Got a connection error', loggerInfo);
+        } else {
+            self.logger.error('Got an unexpected connection error', loggerInfo);
+        }
 
         self.removeConnection(conn);
     }
