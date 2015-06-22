@@ -46,22 +46,24 @@ func (s *State) goType(thriftType *parser.Type) string {
 		return goType
 	}
 
+	goThriftName := goPublicFieldName(thriftType.Name)
+
 	// Check if the type has a typedef to the direct Go type.
 	rootType := s.rootType(thriftType)
 	if _, ok := thriftToGo[rootType.Name]; ok {
-		return thriftType.Name
+		return goThriftName
 	}
 	if rootType.Name == "list" ||
 		rootType.Name == "map" {
-		return thriftType.Name
+		return goThriftName
 	}
 
 	// If it's a typedef to another struct, then the typedef is defined as a pointer
 	// so we do not want the pointer type here.
 	if rootType != thriftType {
-		return thriftType.Name
+		return goThriftName
 	}
 
 	// If it's not a typedef for a basic type, we use a pointer.
-	return "*" + thriftType.Name
+	return "*" + goThriftName
 }

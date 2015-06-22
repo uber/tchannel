@@ -1,6 +1,9 @@
 
 typedef i64 X
 typedef X Z
+typedef X Y
+typedef i64 i
+typedef i64 func
 
 struct S {
   1: X x
@@ -11,7 +14,7 @@ struct S {
 typedef S ST
 
 service Test {
-  Y M1(1: X arg1)
+  Y M1(1: X arg1, 2: i arg2)
   X M2(1: Y arg1)
   Z M3(1: X arg1)
   S M4(1: S arg1)
