@@ -45,7 +45,7 @@ thrift -r --gen go:thrift_import=github.com/apache/thrift/lib/go/thrift keyvalue
 To get the server ready, the following needs to be done:
 1. Create the TChannel which is the network layer protocol.
 2. Create a handler to handle the methods defined in the Thrift definition, and register it with tchannel/thrift.
-3. Create a Hyperbahn client and register your service with Hyperbahn.
+3. Create a Hyperbahn client and advertise your service with Hyperbahn.
 
 ### Create a TChannel
 Create a channel using [tchannel.NewChannel](http://godoc.org/github.com/uber/tchannel/golang#NewChannel) and listen using [Channel.ListenAndServe](http://godoc.org/github.com/uber/tchannel/golang#Channel.ListenAndServe).
@@ -70,11 +70,11 @@ type KeyValue interface {
 ```
 Create an instance of your handler type, and then create a [thrift.Server](http://godoc.org/github.com/uber/tchannel/golang/thrift#NewServer) and [register](http://godoc.org/github.com/uber/tchannel/golang/thrift#Server.Register) your Thrift handler.
 
-### Register with Hyperbahn
+### Advertise with Hyperbahn
 
-Create a Hyperbahn client using [hyperbahn.NewClient](http://godoc.org/github.com/uber/tchannel/golang/hyperbahn#NewClient) which requires a Hyperbahn configuration object which should be loaded from a configuration file for the current environment. You can also pass more [options](http://godoc.org/github.com/uber/tchannel/golang/hyperbahn#ClientOptions) when creating the client.
+Create a Hyperbahn client using [hyperbahn.NewClient](http://godoc.org/github.com/uber/tchannel/golang/hyperbahn#NewClient) which requires a Hyperbahn configuration object that should be loaded from a configuration file for the current environment. You can also pass more [options](http://godoc.org/github.com/uber/tchannel/golang/hyperbahn#ClientOptions) when creating the client.
 
-Call [Register](http://godoc.org/github.com/uber/tchannel/golang/hyperbahn#Client.Register) to register the service with Hyperbahn.
+Call [Advertise](http://godoc.org/github.com/uber/tchannel/golang/hyperbahn#Client.Advertise) to advertise the service with Hyperbahn.
 
 ### Serving
 
@@ -110,7 +110,7 @@ You can use an existing TChannel which hosts a service to make client calls.
 ### Set up Hyperbahn
 
 Similar to the server code, create a new Hyperbahn client using hyperbahn.NewClient. You do not
-need to call Register, as the client does not have any services to register.
+need to call Advertise, as the client does not have any services to advertise over Hyperbahn.
 
 If you have already set up an existing client for use with a server, then you do not
 need to do anything further.

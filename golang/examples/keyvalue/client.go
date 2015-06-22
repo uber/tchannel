@@ -30,7 +30,7 @@ func main() {
 	// Set up Hyperbahn client.
 	config := hyperbahn.Configuration{InitialNodes: os.Args[1:]}
 	if len(config.InitialNodes) == 0 {
-		log.Fatalf("No Autobahn nodes to register to given")
+		log.Fatalf("No Autobahn nodes to connect to given")
 	}
 	hyperbahn.NewClient(ch, config, nil)
 

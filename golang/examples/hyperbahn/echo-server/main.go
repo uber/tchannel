@@ -36,14 +36,14 @@ func main() {
 		log.Fatalf("You must provide Hyperbahn nodes as arguments")
 	}
 
-	// register service with Hyperbahn.
+	// advertise service with Hyperbahn.
 	config := hyperbahn.Configuration{InitialNodes: os.Args[1:]}
 	client := hyperbahn.NewClient(tchan, config, &hyperbahn.ClientOptions{
 		Handler: eventHandler{},
 		Timeout: time.Second,
 	})
-	if err := client.Register(); err != nil {
-		log.Fatalf("Register threw error: %v", err)
+	if err := client.Advertise(); err != nil {
+		log.Fatalf("Advertise failed: %v", err)
 	}
 
 	// Server will keep running till Ctrl-C.

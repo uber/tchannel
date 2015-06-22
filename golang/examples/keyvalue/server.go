@@ -32,11 +32,11 @@ func main() {
 
 	config := hyperbahn.Configuration{InitialNodes: os.Args[1:]}
 	if len(config.InitialNodes) == 0 {
-		log.Fatalf("No Autobahn nodes to register to given")
+		log.Fatalf("No Autobahn nodes to advertise with")
 	}
 	client := hyperbahn.NewClient(ch, config, nil)
-	if err := client.Register(); err != nil {
-		log.Fatalf("Hyperbahn registration failed: %v", err)
+	if err := client.Advertise(); err != nil {
+		log.Fatalf("Hyperbahn advertise failed: %v", err)
 	}
 
 	// The service is now started up, run it till we receive a ctrl-c.
