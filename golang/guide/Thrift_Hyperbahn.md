@@ -62,6 +62,7 @@ thrift-gen --inputFile "$THRIFTFILE" --outputFile "THRIFT_FILE_FOLDER/gen-go/thr
 ## Go server
 
 To get the server ready, the following needs to be done:
+
 1. Create the TChannel which is the network layer protocol.
 2. Create a handler to handle the methods defined in the Thrift definition, and register it with tchannel/thrift.
 3. Create a Hyperbahn client and advertise your service with Hyperbahn.
@@ -132,6 +133,7 @@ need to do anything further.
 ### Create a Thrift client
 
 The Thrift client has two parts:
+
 1. The `thrift.TChanClient` which is configured to hit a specific Hyperbahn service.
 2. A generated client which uses an underlying `thrift.TChanClient` to call methods for a specific Thrift service.
 
