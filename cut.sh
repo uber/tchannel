@@ -40,9 +40,12 @@ cd -L $(dirname -- $(cd -L -- $(dirname -- $0); pwd))
 
 DEV_BRANCH=dev_node
 
-VERSION=$(node -e 'console.log(require("./node/package").version)')
-LAST_VERSION=$(echo $VERSION | sed -e 's/.*[^0-9]//')
-VERSION=$(echo $(echo $VERSION | sed -E -e 's/[0-9]+$//')$(( $LAST_VERSION + 1 )))
+if [ "$1" == "" ]; then
+    echo "must pass in version as first arg";
+    exit 1;
+fi
+
+VERSION=$1
 node >node/package.json.new <<EOF
 var data = require("./node/package");
 data.version = "$VERSION";
