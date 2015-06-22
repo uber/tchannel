@@ -23,10 +23,7 @@
 var thriftify = require('thriftify');
 var path = require('path');
 var test = require('tape');
-var DebugLogtron = require('debug-logtron');
-var CountedReady = require('ready-signal/counted');
 var fs = require('fs');
-var TChannel = require('../channel');
 var Buffer = require('buffer').Buffer;
 var timers = require('timers');
 
