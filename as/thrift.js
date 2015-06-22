@@ -95,6 +95,8 @@ function register(channel, name, opts, handle) {
         self.logger = channel.logger;
     }
 
+    assert(typeof name === 'string', 'endpoint has to be a string');
+
     channel.register(name, handleThriftRequest);
 
     function handleThriftRequest(req, res, inHeadBuffer, inBodyBuffer) {
