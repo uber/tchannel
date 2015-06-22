@@ -20,9 +20,7 @@
 
 'use strict';
 
-var TChannel = require('../../channel');
 var allocCluster = require('../lib/alloc-cluster');
-var RelayHandler = require('../../relay_handler');
 
 allocCluster.test('get spans from outpeer', {
     numPeers: 2
@@ -152,7 +150,7 @@ function echo(req, res, arg2, arg3) {
 
 function spanToString(span) {
     var annotations = span.annotations.map(function (item) {
-        return '[' + item.value + '@' + item.timestamp + ']'
+        return '[' + item.value + '@' + item.timestamp + ']';
     }).join(' ');
 
     return ("SPAN: traceid: " + span.traceid.toString('base64') +
@@ -161,6 +159,3 @@ function spanToString(span) {
         " :: " + span.name + " port " + span.annotations[0].host.port + " " + annotations);
 }
 
-function prettyPrintSpan(span) {
-    console.log(spanToString(span));
-}
