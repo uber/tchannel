@@ -240,11 +240,13 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
         return callback();
     }
     self._handleCallFrame(req, reqFrame, callRequestFrameHandled);
-    self.connection.channel.inboundRequestSizeStat.increment(reqFrame.size, {
-        'calling-service': req.headers.cn,
-        'service': req.serviceName,
-        'endpoint': String(req.arg1)
-    });
+    if (self.connection.channel.emittingStats) {
+        self.connection.channel.inboundRequestSizeStat.increment(reqFrame.size, {
+            'calling-service': req.headers.cn,
+            'service': req.serviceName,
+            'endpoint': String(req.arg1)
+        });
+    }
     function callRequestFrameHandled(err) {
         self.callRequestFrameHandled(req, err, callback);
     }
@@ -294,12 +296,14 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
         }));
     }
 
-    var req = self.connection.ops.getOutReq(res.id);
-    self.connection.channel.inboundResponseSizeStat.increment(resFrame.size, {
-        'calling-service': !req ? null : req.headers.cn,
-        'service': !req ? null : req.serviceName,
-        'endpoint': !req ? null : String(req.arg1)
-    });
+    if (self.connection.channel.emittingStats) {
+        var req = self.connection.ops.getOutReq(res.id);
+        self.connection.channel.inboundResponseSizeStat.increment(resFrame.size, {
+            'calling-service': !req ? null : req.headers.cn,
+            'service': !req ? null : req.serviceName,
+            'endpoint': !req ? null : String(req.arg1)
+        });
+    }
 
     res.remoteAddr = self.remoteName;
     self._handleCallFrame(res, resFrame, callResponseFrameHandled);
@@ -337,11 +341,13 @@ TChannelV2Handler.prototype.handleCallRequestCont = function handleCallRequestCo
     }
 
     self._handleCallFrame(req, reqFrame, callback);
-    self.connection.channel.inboundRequestSizeStat.increment(reqFrame.size, {
-        'calling-service': req.headers.cn,
-        'service': req.serviceName,
-        'endpoint': String(req.arg1)
-    });
+    if (self.connection.channel.emittingStats) {
+        self.connection.channel.inboundRequestSizeStat.increment(reqFrame.size, {
+            'calling-service': req.headers.cn,
+            'service': req.serviceName,
+            'endpoint': String(req.arg1)
+        });
+    }
 };
 
 TChannelV2Handler.prototype.handleCallResponseCont = function handleCallResponseCont(resFrame, callback) {
@@ -355,12 +361,14 @@ TChannelV2Handler.prototype.handleCallResponseCont = function handleCallResponse
         return callback(new Error('call response cont for unknown response')); // TODO typed error
     }
 
-    var req = self.connection.ops.getOutReq(res.id);
-    self.connection.channel.inboundResponseSizeStat.increment(resFrame.size, {
-        'calling-service': !req ? null : req.headers.cn,
-        'service': !req ? null : req.serviceName,
-        'endpoint': !req ? null : String(req.arg1)
-    });
+    if (self.connection.channel.emittingStats) {
+        var req = self.connection.ops.getOutReq(res.id);
+        self.connection.channel.inboundResponseSizeStat.increment(resFrame.size, {
+            'calling-service': !req ? null : req.headers.cn,
+            'service': !req ? null : req.serviceName,
+            'endpoint': !req ? null : String(req.arg1)
+        });
+    }
 
     self._handleCallFrame(res, resFrame, callback);
 };
@@ -508,11 +516,13 @@ TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame
 
     var result = self._sendCallBodies(req.id, reqBody, null);
     req.checksum = result.checksum;
-    self.connection.channel.outboundRequestSizeStat.increment(result.size, {
-        'target-service': req.serviceName,
-        'service': req.headers.cn,
-        'target-endpoint': String(args[0])
-    });
+    if (self.connection.channel.emittingStats) {
+        self.connection.channel.outboundRequestSizeStat.increment(result.size, {
+            'target-service': req.serviceName,
+            'service': req.headers.cn,
+            'target-endpoint': String(args[0])
+        });
+    }
 };
 
 TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFrame(res, flags, args) {
@@ -540,12 +550,14 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
 
     var result = self._sendCallBodies(res.id, resBody, null);
     res.checksum = result.checksum;
-    var req = self.connection.ops.getInReq(res.id);
-    self.connection.channel.outboundResponseSizeStat.increment(result.size, {
-        'target-service': !req ? null : req.serviceName,
-        'service': !req ? null : req.headers.cn,
-        'target-endpoint': !req ? null : String(req.arg1)
-    });
+    if (self.connection.channel.emittingStats) {
+        var req = self.connection.ops.getInReq(res.id);
+        self.connection.channel.outboundResponseSizeStat.increment(result.size, {
+            'target-service': !req ? null : req.serviceName,
+            'service': !req ? null : req.headers.cn,
+            'target-endpoint': !req ? null : String(req.arg1)
+        });
+    }
 };
 
 TChannelV2Handler.prototype.sendCallRequestContFrame = function sendCallRequestContFrame(req, flags, args) {
@@ -558,12 +570,14 @@ TChannelV2Handler.prototype.sendCallRequestContFrame = function sendCallRequestC
     var result = self._sendCallBodies(req.id, reqBody, req.checksum);
     req.checksum = result.checksum;
 
-    var req0 = self.connection.ops.getOutReq(req.id);
-    self.connection.channel.outboundRequestSizeStat.increment(result.size, {
-        'target-service': !req0 ? null : req0.serviceName,
-        'service': !req0 ? null : req0.headers.cn,
-        'target-endpoint': !req0 ? null : String(req0.arg1)
-    });
+    if (self.connection.channel.emittingStats) {
+        var req0 = self.connection.ops.getOutReq(req.id);
+        self.connection.channel.outboundRequestSizeStat.increment(result.size, {
+            'target-service': !req0 ? null : req0.serviceName,
+            'service': !req0 ? null : req0.headers.cn,
+            'target-endpoint': !req0 ? null : String(req0.arg1)
+        });
+    }
 };
 
 TChannelV2Handler.prototype.sendCallResponseContFrame = function sendCallResponseContFrame(res, flags, args) {
@@ -575,12 +589,14 @@ TChannelV2Handler.prototype.sendCallResponseContFrame = function sendCallRespons
     var resBody = new v2.CallResponseCont(flags, res.checksum.type, args);
     var result = self._sendCallBodies(res.id, resBody, res.checksum);
     res.checksum = result.checksum;
-    var req = self.connection.ops.getInReq(res.id);
-    self.connection.channel.outboundResponseSizeStat.increment(result.size, {
-        'target-service': !req ? null : req.serviceName,
-        'service': !req ? null : req.headers.cn,
-        'target-endpoint': !req ? null : String(req.arg1)
-    });
+    if (self.connection.channel.emittingStats) {
+        var req = self.connection.ops.getInReq(res.id);
+        self.connection.channel.outboundResponseSizeStat.increment(result.size, {
+            'target-service': !req ? null : req.serviceName,
+            'service': !req ? null : req.headers.cn,
+            'target-endpoint': !req ? null : String(req.arg1)
+        });
+    }
 };
 
 TChannelV2Handler.prototype._sendCallBodies = function _sendCallBodies(id, body, checksum) {
