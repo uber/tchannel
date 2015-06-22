@@ -38,9 +38,11 @@ function TCollectorTraceReporter(options) {
     assert(typeof options === 'object', 'options required');
     assert(typeof options.logger === 'object', 'logger required');
     assert(typeof options.channel === 'object', 'channel required');
+    assert(typeof options.callerName === 'string', 'callerName required');
 
     self.logger = options.logger;
     self.channel = options.channel;
+    self.callerName = options.callerName;
 
     /*istanbul ignore if*/
     if (!self.channel) {
@@ -55,10 +57,11 @@ function TCollectorTraceReporter(options) {
 
 TCollectorTraceReporter.ipToInt = function ipToInt(ip) {
     var ipl = 0;
-    ip.split('.').forEach(function eachOctet(octet) {
+    var parts = ip.split('.');
+    for (var i = 0; i < parts.length; i++) {
         ipl <<= 8;
-        ipl += parseInt(octet, 10);
-    });
+        ipl += parseInt(parts[i], 10);
+    }
     return (ipl >>> 0);
 };
 
@@ -134,7 +137,7 @@ TCollectorTraceReporter.prototype.report = function report(span, callback) {
         trace: false,
         hasNoParent: true,
         headers: {
-            cn: 'tcollector-reporter',
+            cn: self.callerName,
             shardKey: span.traceid.toString('base64')
         },
         serviceName: 'tcollector',

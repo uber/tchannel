@@ -126,7 +126,7 @@ function HyperbahnClient(options) {
             serviceName: 'tcollector',
             trace: false
         }),
-        logger: options.logger,
+        logger: self.logger,
         callerName: self.callerName
     });
     self.tchannel.tracer.reporter = function report(span) {

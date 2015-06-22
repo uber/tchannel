@@ -1,3 +1,23 @@
+// Copyright (c) 2015 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
 'use strict';
 
 var thriftify = require('thriftify');
@@ -9,6 +29,8 @@ var fs = require('fs');
 var TChannel = require('../channel');
 var Buffer = require('buffer').Buffer;
 var timers = require('timers');
+
+var allocCluster = require('./lib/alloc-cluster');
 
 var TCollectorReporter = require('../tcollector/reporter');
 
@@ -162,72 +184,62 @@ test('jsonSpanToThriftSpan', function t2(assert) {
     assert.end();
 });
 
-test('functional test', function t3(assert) {
-    var logger = DebugLogtron('tcollector');
+allocCluster.test('functional test', {
+    numPeers: 2,
+}, function t3(cluster, assert) {
+    var clientTChannel = cluster.channels[0];
 
-    var ready = CountedReady(2);
+    var serverTChannel = cluster.channels[1];
 
-    var clientTChannel = TChannel({
-        logger: logger
+    var tcClientSubchan = clientTChannel.makeSubChannel({
+        peers: [serverTChannel.hostPort],
+        serviceName: 'tcollector'
     });
 
-    var serverTChannel = TChannel({
-        logger: logger
+    var tcServerSubchan = serverTChannel.makeSubChannel({
+        serviceName: 'tcollector'
     });
 
-    clientTChannel.listen(0, '127.0.0.1', ready.signal);
-    serverTChannel.listen(0, '127.0.0.1', ready.signal);
+    var reporter = TCollectorReporter({
+        logger: cluster.logger,
+        channel: tcClientSubchan,
+        callerName: 'tc-reporter'
+    });
 
-    ready(function chansListening() {
-        var tcClientSubchan = clientTChannel.makeSubChannel({
-            peers: [serverTChannel.hostPort],
-            serviceName: 'tcollector'
-        });
+    var thrift = new serverTChannel.TChannelAsThrift({
+        source: tcollectorSpec
+    });
 
-        var tcServerSubchan = serverTChannel.makeSubChannel({
-            serviceName: 'tcollector'
-        });
+    thrift.register(
+        tcServerSubchan,
+        'TCollector::submit',
+        {},
+        onSubmit
+    );
 
-        var reporter = TCollectorReporter({
-            logger: logger,
-            channel: tcClientSubchan
-        });
+    reporter.report(testSpan);
 
-        var thrift = new serverTChannel.TChannelAsThrift({
-            source: tcollectorSpec
-        });
-
-        thrift.register(
-            tcServerSubchan,
-            'TCollector::submit',
-            {},
-            onSubmit
+    function onSubmit(opts, req, head, body, done) {
+        assert.equals(
+            req.headers.shardKey,
+            testSpan.traceid.toString('base64')
         );
 
-        reporter.report(testSpan);
+        assert.equals(
+            req.headers.shardKey,
+            body.span.traceId.toString('base64')
+        );
 
-        function onSubmit(opts, req, head, body, done) {
-            assert.equals(
-                req.headers.shardKey,
-                testSpan.traceid.toString('base64')
-            );
+        assert.deepEqual(body.span.id, testSpan.id);
+        assert.equals(body.span.host.ipv4, -1062731775);
+        assert.equals(body.span.annotations.length, 2);
 
-            assert.equals(
-                req.headers.shardKey,
-                body.span.traceId.toString('base64')
-            );
+        done(null, {ok: true, body: {ok: true}});
 
-            assert.deepEqual(body.span.id, testSpan.id);
-            assert.equals(body.span.host.ipv4, -1062731775);
-            assert.equals(body.span.annotations.length, 2);
-
-            done(null, {ok: true, body: {ok: true}});
-
-            timers.setTimeout(function n() {
-                clientTChannel.close();
-                serverTChannel.close();
-                assert.end();
-            }, 5);
-        }
-    });
+        timers.setTimeout(function n() {
+            clientTChannel.close();
+            serverTChannel.close();
+            assert.end();
+        }, 5);
+    }
 });
