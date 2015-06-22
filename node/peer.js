@@ -86,6 +86,10 @@ function TChannelPeer(channel, hostPort, options) {
             'host-port': self.channel.hostPort,
             'peer-host-port': self.hostPort
         });
+
+        self.reportTimer = self.stateOptions.timers.setTimeout(
+            onReport, self.reportInterval
+        );
     }
 }
 
