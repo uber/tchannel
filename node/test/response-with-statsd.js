@@ -31,7 +31,8 @@ var timers = TimeMock(Date.now());
 allocCluster.test('emits stats on response ok', {
     numPeers: 2,
     channelOptions: {
-        timers: timers
+        timers: timers,
+        emittingStats: true
     }
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
@@ -131,7 +132,8 @@ allocCluster.test('emits stats on response ok', {
 allocCluster.test('emits stats on response not ok', {
     numPeers: 2,
     channelOptions: {
-        timers: timers
+        timers: timers,
+        emittingStats: true
     }
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
@@ -231,7 +233,8 @@ allocCluster.test('emits stats on response not ok', {
 allocCluster.test('emits stats on response error', {
     numPeers: 2,
     channelOptions: {
-        timers: timers
+        timers: timers,
+        emittingStats: true
     }
 }, function t(cluster, assert) {
     var server = cluster.channels[0];

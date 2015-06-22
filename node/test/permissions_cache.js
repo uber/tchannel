@@ -24,7 +24,8 @@ var PermissionsCache = require('../hyperbahn/permissions_cache.js');
 var allocCluster = require('./lib/alloc-cluster.js');
 
 allocCluster.test('permissionsCache: counts service request counts', {
-    numPeers: 2
+    numPeers: 2,
+    emittingStats: true
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
     var client = cluster.channels[1];
