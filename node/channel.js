@@ -67,41 +67,6 @@ function TChannel(options) {
     self.connectionEvent = self.defineEvent('connection');
     self.requestEvent = self.defineEvent('request');
 
-    self.outboundCallsSentStat = self.defineCounter('outbound.calls.sent');
-    self.outboundCallsSuccessStat = self.defineCounter('outbound.calls.success');
-    self.outboundCallsSystemErrorsStat = self.defineCounter('outbound.calls.system-errors');
-    self.outboundCallsPerAttemptSystemErrorsStat = self.defineCounter('outbound.calls.per-attempt.system-errors');
-    self.outboundCallsOperationalErrorsStat = self.defineCounter('outbound.calls.operational-errors');
-    self.outboundCallsPerAttemptOperationalErrorsStat = self.defineCounter('outbound.calls.per-attempt.operational-errors');
-    self.outboundCallsAppErrorsStat = self.defineCounter('outbound.calls.app-errors');
-    self.outboundCallsPerAttemptAppErrorsStat = self.defineCounter('outbound.calls.per-attempt.app-errors');
-    self.outboundCallsRetriesStat = self.defineCounter('outbound.calls.retries');
-    self.outboundRequestSizeStat = self.defineCounter('outbound.request.size');
-    self.outboundResponseSizeStat = self.defineCounter('outbound.response.size');
-    self.outboundCallsLatencyStat = self.defineTiming('outbound.calls.latency');
-    self.outboundCallsPerAttemptLatencyStat = self.defineTiming('outbound.calls.per-attempt-latency');
-
-    self.inboundCallsRecvdStat = self.defineCounter('inbound.calls.recvd');
-    self.inboundCallsSuccessStat = self.defineCounter('inbound.calls.success');
-    self.inboundCallsSystemErrorsStat = self.defineCounter('inbound.calls.system-errors');
-    self.inboundCallsAppErrorsStat = self.defineCounter('inbound.calls.app-errors');
-    // self.inboundCallsCancelsRequestedStat = self.defineCounter('inbound.cancels.requested');
-    // self.inboundCallsCancelsHonoredStat = self.defineCounter('inbound.cancels.honored');
-    self.inboundRequestSizeStat = self.defineCounter('inbound.request.size');
-    self.inboundResponseSizeStat = self.defineCounter('inbound.response.size');
-    // self.inboundProtocolErrorsStat = self.defineCounter('inbound.protocol-errors');
-    self.inboundCallsLatencyStat = self.defineTiming('inbound.calls.latency');
-
-    self.connectionsActiveStat = self.defineGauge('connections.active');
-    self.connectionsInitiatedStat = self.defineCounter('connections.initiated');
-    self.connectionsConnectErrorsStat = self.defineCounter('connections.connect-errors');
-    self.connectionsAcceptedStat = self.defineCounter('connections.accepted');
-    self.connectionsAcceptedErrorsStat = self.defineCounter('connections.accept-errors');
-    self.connectionsErrorsStat = self.defineCounter('connections.errors');
-    self.connectionsClosedStat = self.defineCounter('connections.closed');
-    // self.connectionsBytesSentStat = self.defineCounter('connections.bytes-sent');
-    // self.connectionsBytesRcvdStat = self.defineCounter('connections.bytes-recvd');
-
     self.options = extend({
         timeoutCheckInterval: 100,
         timeoutFuzz: 100,
@@ -110,6 +75,8 @@ function TChannel(options) {
         // TODO: maybe we should always add pid to user-supplied?
         processName: format('%s[%s]', process.title, process.pid)
     }, options);
+
+    self.emittingStats = self.options.emittingStats;
 
     // required: 'app'
     // optional: 'host', 'cluster', 'version'
@@ -120,6 +87,44 @@ function TChannel(options) {
     if (self.statsd) {
         self.channelStatsd = new TChannelStatsd(self, self.statsd);
         self.options.statsd = null;
+        self.emittingStats = true;
+    }
+
+    if (self.emittingStats) {
+        self.outboundCallsSentStat = self.defineCounter('outbound.calls.sent');
+        self.outboundCallsSuccessStat = self.defineCounter('outbound.calls.success');
+        self.outboundCallsSystemErrorsStat = self.defineCounter('outbound.calls.system-errors');
+        self.outboundCallsPerAttemptSystemErrorsStat = self.defineCounter('outbound.calls.per-attempt.system-errors');
+        self.outboundCallsOperationalErrorsStat = self.defineCounter('outbound.calls.operational-errors');
+        self.outboundCallsPerAttemptOperationalErrorsStat = self.defineCounter('outbound.calls.per-attempt.operational-errors');
+        self.outboundCallsAppErrorsStat = self.defineCounter('outbound.calls.app-errors');
+        self.outboundCallsPerAttemptAppErrorsStat = self.defineCounter('outbound.calls.per-attempt.app-errors');
+        self.outboundCallsRetriesStat = self.defineCounter('outbound.calls.retries');
+        self.outboundRequestSizeStat = self.defineCounter('outbound.request.size');
+        self.outboundResponseSizeStat = self.defineCounter('outbound.response.size');
+        self.outboundCallsLatencyStat = self.defineTiming('outbound.calls.latency');
+        self.outboundCallsPerAttemptLatencyStat = self.defineTiming('outbound.calls.per-attempt-latency');
+
+        self.inboundCallsRecvdStat = self.defineCounter('inbound.calls.recvd');
+        self.inboundCallsSuccessStat = self.defineCounter('inbound.calls.success');
+        self.inboundCallsSystemErrorsStat = self.defineCounter('inbound.calls.system-errors');
+        self.inboundCallsAppErrorsStat = self.defineCounter('inbound.calls.app-errors');
+        // self.inboundCallsCancelsRequestedStat = self.defineCounter('inbound.cancels.requested');
+        // self.inboundCallsCancelsHonoredStat = self.defineCounter('inbound.cancels.honored');
+        self.inboundRequestSizeStat = self.defineCounter('inbound.request.size');
+        self.inboundResponseSizeStat = self.defineCounter('inbound.response.size');
+        // self.inboundProtocolErrorsStat = self.defineCounter('inbound.protocol-errors');
+        self.inboundCallsLatencyStat = self.defineTiming('inbound.calls.latency');
+
+        self.connectionsActiveStat = self.defineGauge('connections.active');
+        self.connectionsInitiatedStat = self.defineCounter('connections.initiated');
+        self.connectionsConnectErrorsStat = self.defineCounter('connections.connect-errors');
+        self.connectionsAcceptedStat = self.defineCounter('connections.accepted');
+        self.connectionsAcceptedErrorsStat = self.defineCounter('connections.accept-errors');
+        self.connectionsErrorsStat = self.defineCounter('connections.errors');
+        self.connectionsClosedStat = self.defineCounter('connections.closed');
+        // self.connectionsBytesSentStat = self.defineCounter('connections.bytes-sent');
+        // self.connectionsBytesRcvdStat = self.defineCounter('connections.bytes-recvd');
     }
 
     self.requestDefaults = extend({

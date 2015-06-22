@@ -70,7 +70,7 @@ function TChannelPeer(channel, hostPort, options) {
     }
 
     self.reportInterval = self.options.reportInterval || DEFAULT_REPORT_INTERVAL;
-    if (self.reportInterval > 0) {
+    if (self.channel.emittingStats && self.reportInterval > 0) {
         self.reportTimer = self.stateOptions.timers.setTimeout(
             onReport, self.reportInterval
         );
@@ -86,6 +86,10 @@ function TChannelPeer(channel, hostPort, options) {
             'host-port': self.channel.hostPort,
             'peer-host-port': self.hostPort
         });
+
+        self.reportTimer = self.stateOptions.timers.setTimeout(
+            onReport, self.reportInterval
+        );
     }
 }
 

@@ -25,7 +25,10 @@ var os = require('os');
 var allocCluster = require('./lib/alloc-cluster.js');
 
 allocCluster.test('emits response stats with ok', {
-    numPeers: 2
+    numPeers: 2,
+    channelOptions: {
+        emittingStats: true
+    }
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
     var client = cluster.channels[1];
@@ -147,7 +150,10 @@ allocCluster.test('emits response stats with ok', {
 });
 
 allocCluster.test('emits response stats with not ok', {
-    numPeers: 2
+    numPeers: 2,
+    channelOptions: {
+        emittingStats: true
+    }
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
     var client = cluster.channels[1];
@@ -270,7 +276,10 @@ allocCluster.test('emits response stats with not ok', {
 });
 
 allocCluster.test('emits response stats with error', {
-    numPeers: 2
+    numPeers: 2,
+    channelOptions: {
+        emittingStats: true
+    }
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
     var client = cluster.channels[1];

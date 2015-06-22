@@ -153,12 +153,14 @@ TChannelRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     self.start = self.timers.now();
     self.resendSanity = self.limit + 1;
 
-    self.channel.outboundCallsSentStat.increment(1, {
-        'target-service': self.serviceName,
-        'service': self.headers.cn,
-        // TODO should always be buffer
-        'target-endpoint': String(self.arg1)
-    });
+    if (self.channel.emittingStats) {
+        self.channel.outboundCallsSentStat.increment(1, {
+            'target-service': self.serviceName,
+            'service': self.headers.cn,
+            // TODO should always be buffer
+            'target-endpoint': String(self.arg1)
+        });
+    }
 
     self.services.onRequest(self);
     self.resend();
@@ -212,7 +214,7 @@ TChannelRequest.prototype.onIdentified = function onIdentified(peer) {
     var outReq = peer.request(opts);
     self.outReqs.push(outReq);
 
-    if (self.outReqs.length !== 1) {
+    if (self.channel.emittingStats && self.outReqs.length !== 1) {
         self.channel.outboundCallsRetriesStat.increment(1, {
             'target-service': outReq.serviceName,
             'service': outReq.headers.cn,
