@@ -366,6 +366,10 @@ TChannel.prototype.makeSubChannel = function makeSubChannel(options) {
     }
     self.subChannels[chan.serviceName] = chan;
 
+    // Subchannels should not have tracers; all tracing goes
+    // through the top channel.
+    chan.tracer = null;
+
     if (self.hostPort) {
         chan.hostPort = self.hostPort;
     }
