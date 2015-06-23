@@ -21,7 +21,6 @@ package tchannel
 // THE SOFTWARE.
 
 import (
-	"net"
 	"sync"
 	"testing"
 	"time"
@@ -292,18 +291,7 @@ func sendRecv(ctx context.Context, ch *Channel, hostPort string, serviceName, op
 }
 
 func withTestChannel(t *testing.T, serviceName string, f func(ch *Channel, hostPort string)) {
-	opts := ChannelOptions{
-		ProcessName: testProcessName,
-		Logger:      SimpleLogger,
-	}
-
-	ch, err := NewChannel(serviceName, &opts)
-	require.Nil(t, err)
-
-	l, err := net.Listen("tcp", "127.0.0.1:0")
-	require.Nil(t, err)
-
-	ch.Serve(l)
-	f(ch, l.Addr().String())
-	ch.Close()
+	require.NoError(t, withServerChannel(&testChannelOpts{
+		ServiceName: serviceName,
+	}, f))
 }
