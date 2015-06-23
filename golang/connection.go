@@ -172,9 +172,13 @@ func newInboundConnection(conn net.Conn, handlers *handlerMap, peerInfo LocalPee
 // Creates a new connection in a given initial state
 func newConnection(conn net.Conn, initialState connectionState, handlers *handlerMap, peerInfo LocalPeerInfo,
 	log Logger, onActive OnActiveHandler, opts *ConnectionOptions) *Connection {
-
 	if opts == nil {
 		opts = &ConnectionOptions{}
+	}
+
+	checksumType := opts.ChecksumType
+	if checksumType == ChecksumTypeNone {
+		checksumType = ChecksumTypeCrc32C
 	}
 
 	sendBufferSize := opts.SendBufferSize
@@ -203,7 +207,7 @@ func newConnection(conn net.Conn, initialState connectionState, handlers *handle
 		state:         initialState,
 		sendCh:        make(chan *Frame, sendBufferSize),
 		localPeerInfo: peerInfo,
-		checksumType:  opts.ChecksumType,
+		checksumType:  checksumType,
 		inbound: messageExchangeSet{
 			name:      messageExchangeSetInbound,
 			log:       log,

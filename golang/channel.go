@@ -105,7 +105,6 @@ func NewChannel(serviceName string, opts *ChannelOptions) (*Channel, error) {
 	}
 	ch.mutable.subChannels = make(map[string]*SubChannel)
 	ch.peers = newPeerList(ch)
-	ch.connectionOptions.ChecksumType = ChecksumTypeCrc32C
 	return ch, nil
 }
 
