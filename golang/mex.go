@@ -44,11 +44,12 @@ const (
 // frames from the peer, and a Context that can controls when the exchange has
 // timed out or been cancelled.
 type messageExchange struct {
-	recvCh  chan *Frame
-	ctx     context.Context
-	msgID   uint32
-	msgType messageType
-	mexset  *messageExchangeSet
+	recvCh    chan *Frame
+	ctx       context.Context
+	msgID     uint32
+	msgType   messageType
+	mexset    *messageExchangeSet
+	framePool FramePool
 }
 
 // forwardPeerFrame forwards a frame from a peer to the message exchange, where
@@ -126,16 +127,17 @@ type messageExchangeSet struct {
 }
 
 // newExchange creates and adds a new message exchange to this set
-func (mexset *messageExchangeSet) newExchange(ctx context.Context,
+func (mexset *messageExchangeSet) newExchange(ctx context.Context, framePool FramePool,
 	msgType messageType, msgID uint32, bufferSize int) (*messageExchange, error) {
 	mexset.log.Debugf("Creating new %s message exchange for [%v:%d]", mexset.name, msgType, msgID)
 
 	mex := &messageExchange{
-		msgType: msgType,
-		msgID:   msgID,
-		ctx:     ctx,
-		recvCh:  make(chan *Frame, bufferSize),
-		mexset:  mexset,
+		msgType:   msgType,
+		msgID:     msgID,
+		ctx:       ctx,
+		recvCh:    make(chan *Frame, bufferSize),
+		mexset:    mexset,
+		framePool: framePool,
 	}
 
 	mexset.mut.Lock()

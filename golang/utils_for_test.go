@@ -27,6 +27,8 @@ import (
 	"flag"
 	"fmt"
 	"net"
+
+	"golang.org/x/net/context"
 )
 
 var connectionLog = flag.Bool("connectionLog", false, "Enables connection logging in tests")
@@ -90,4 +92,71 @@ func withServerChannel(opts *testChannelOpts, f func(ch *Channel, hostPort strin
 	f(ch, l.Addr().String())
 	ch.Close()
 	return nil
+}
+
+// rawHandler is the interface for a raw handler.
+// TODO(prashant): Make Raw/JSON handlers that can be used by external users.
+type rawHandler interface {
+	// Handle is called on incoming calls, and contains all the arguments.
+	// If an error is returned, it will set ApplicationError Arg3 will be the error string.
+	Handle(ctx context.Context, args *rawArgs) (*rawRes, error)
+	OnError(ctx context.Context, err error)
+}
+
+// rawArgs parses the arguments from an incoming call req.
+type rawArgs struct {
+	Format    Format
+	Operation string
+	Arg2      []byte
+	Arg3      []byte
+}
+
+// rawRes represents the response to an incoming call req.
+type rawRes struct {
+	// IsErr is used to set an application error on the underlying call res.
+	IsErr bool
+	Arg2  []byte
+	Arg3  []byte
+}
+
+// AsRaw wraps a RawHandler as a Handler that can be passed to Register.
+func AsRaw(handler rawHandler) Handler {
+	return HandlerFunc(func(ctx context.Context, call *InboundCall) {
+		var args rawArgs
+		args.Format = call.Format()
+		args.Operation = string(call.Operation())
+		if err := NewArgReader(call.Arg2Reader()).Read(&args.Arg2); err != nil {
+			handler.OnError(ctx, err)
+			return
+		}
+		if err := NewArgReader(call.Arg3Reader()).Read(&args.Arg3); err != nil {
+			handler.OnError(ctx, err)
+			return
+		}
+
+		resp, err := handler.Handle(ctx, &args)
+		response := call.Response()
+		if err != nil {
+			resp = &rawRes{
+				IsErr: true,
+				Arg2:  nil,
+				Arg3:  []byte(err.Error()),
+			}
+		}
+
+		if resp.IsErr {
+			if err := response.SetApplicationError(); err != nil {
+				handler.OnError(ctx, err)
+				return
+			}
+		}
+		if err := NewArgWriter(response.Arg2Writer()).Write(resp.Arg2); err != nil {
+			handler.OnError(ctx, err)
+			return
+		}
+		if err := NewArgWriter(response.Arg3Writer()).Write(resp.Arg3); err != nil {
+			handler.OnError(ctx, err)
+			return
+		}
+	})
 }

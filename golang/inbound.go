@@ -35,26 +35,26 @@ var (
 	errInboundRequestAlreadyActive = errors.New("inbound request is already active; possible duplicate client id")
 )
 
-// handleCallReq handls an incoming call request, registering a message
+// handleCallReq handles an incoming call request, registering a message
 // exchange to receive further fragments for that call, and dispatching it in
 // another goroutine
-func (c *Connection) handleCallReq(frame *Frame) {
+func (c *Connection) handleCallReq(frame *Frame) bool {
 	callReq := new(callReq)
-	initialFragment, err := parseInboundFragment(frame, callReq)
+	initialFragment, err := parseInboundFragment(c.framePool, frame, callReq)
 	if err != nil {
 		// TODO(mmihic): Probably want to treat this as a protocol error
 		c.log.Errorf("could not decode %s: %v", frame.Header, err)
-		return
+		return true
 	}
 
 	c.log.Debugf("span=%s", callReq.Tracing)
 	ctx, cancel := context.WithTimeout(context.Background(), callReq.TimeToLive)
 	ctx = context.WithValue(ctx, tracingKey, &callReq.Tracing)
 
-	mex, err := c.inbound.newExchange(ctx, callReq.messageType(), frame.Header.ID, 512)
+	mex, err := c.inbound.newExchange(ctx, c.framePool, callReq.messageType(), frame.Header.ID, 512)
 	if err != nil {
 		c.log.Errorf("could not register exchange for %s", frame.Header)
-		return
+		return true
 	}
 
 	response := new(InboundCallResponse)
@@ -92,15 +92,18 @@ func (c *Connection) handleCallReq(frame *Frame) {
 
 	setResponseHeaders(call.headers, response.headers)
 	go c.dispatchInbound(call)
+	return false
 }
 
 // handleCallReqContinue handles the continuation of a call request, forwarding
 // it to the request channel for that request, where it can be pulled during
 // defragmentation
-func (c *Connection) handleCallReqContinue(frame *Frame) {
+func (c *Connection) handleCallReqContinue(frame *Frame) bool {
 	if err := c.inbound.forwardPeerFrame(frame); err != nil {
 		c.inbound.removeExchange(frame.Header.ID)
+		return true
 	}
+	return false
 }
 
 // dispatchInbound ispatches an inbound call to the appropriate handler

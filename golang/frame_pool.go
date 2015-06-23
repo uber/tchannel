@@ -30,7 +30,7 @@ type FramePool interface {
 }
 
 // The DefaultFramePool uses the heap as the pool
-var DefaultFramePool = defaultFramePool{}
+var DefaultFramePool FramePool = defaultFramePool{}
 
 type defaultFramePool struct{}
 
