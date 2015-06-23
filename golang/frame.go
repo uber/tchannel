@@ -125,9 +125,8 @@ func (f *Frame) ReadFrom(r io.Reader) error {
 	if err := f.Header.read(&rbuf); err != nil {
 		return err
 	}
-
 	if f.Header.PayloadSize() > 0 {
-		if _, err := r.Read(f.SizedPayload()); err != nil {
+		if _, err := io.ReadFull(r, f.SizedPayload()); err != nil {
 			return err
 		}
 	}

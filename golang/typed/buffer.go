@@ -148,7 +148,7 @@ func (r *ReadBuffer) FillFrom(ior io.Reader, n int) (int, error) {
 
 	r.err = nil
 	r.remaining = r.buffer[:n]
-	return ior.Read(r.remaining)
+	return io.ReadFull(ior, r.remaining)
 }
 
 // Wrap initializes the buffer to read from the given byte slice
