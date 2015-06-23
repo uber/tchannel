@@ -126,11 +126,12 @@ allocCluster.test('removing a peer and request', {
         hasNoParent: true
     }).send('echo', 'a', 'b', onResponse);
 
+    var peer;
     function onResponse(err, res) {
         assert.ifError(err, 'request with peer should not fail');
         assert.equal(res.ok, true, 'response should be ok');
 
-        bob.peers.delete(steve.hostPort);
+        peer = bob.peers.delete(steve.hostPort);
         bob.request({
             serviceName: 'steve',
             hasNoParent: true
@@ -142,7 +143,7 @@ allocCluster.test('removing a peer and request', {
         assert.equal(err.type, 'tchannel.no-peer-available',
             'expected no peer available');
 
-        assert.end();
+        peer.close(assert.end);
     }
 });
 
@@ -233,6 +234,7 @@ allocCluster.test('delete peer() on top channel', {
         }, 'echo', 'a', 'b')
     ], onResponses);
 
+    var peer;
     function onResponses(err, results) {
         assert.ifError(err, 'should not error');
 
@@ -240,7 +242,7 @@ allocCluster.test('delete peer() on top channel', {
             assert.ok(resp.ok, 'response should be ok');
         });
 
-        bob.peers.delete(steve.hostPort);
+        peer = bob.peers.delete(steve.hostPort);
 
         parallel([
             thunkSend(bob1, {
@@ -264,7 +266,7 @@ allocCluster.test('delete peer() on top channel', {
         assert.equal(bob2.peers.keys().length, 0,
             'bob2 has no peers');
 
-        assert.end();
+        peer.close(assert.end);
     }
 
     function thunkSend(channel, reqOpts, arg1, arg2, arg3) {
@@ -303,7 +305,7 @@ allocCluster.test('peers.clear() on top channel', {
         }
     });
 
-    bob1.peers.add(steve.hostPort);
+    var peer = bob1.peers.add(steve.hostPort);
     bob2.peers.add(steve.hostPort);
 
     parallel([
@@ -348,7 +350,7 @@ allocCluster.test('peers.clear() on top channel', {
         assert.equal(bob2.peers.keys().length, 0,
             'bob2 has no peers');
 
-        assert.end();
+        peer.close(assert.end);
     }
 
     function thunkSend(channel, reqOpts, arg1, arg2, arg3) {

@@ -268,6 +268,7 @@ allocCluster.test('request().send() to a pool of servers', 4, function t(cluster
                     };
                 })
             });
+            client.close();
             assert.end();
         });
     }

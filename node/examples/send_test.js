@@ -22,20 +22,23 @@ var TChannel = require('../channel.js');
 var EndpointHandler = require('../endpoint-handler.js');
 var CountedReadySignal = require('ready-signal/counted');
 
-var server = new TChannel().makeSubChannel({
+var topServer = new TChannel();
+var server = topServer.makeSubChannel({
     serviceName: 'server',
     peers: ['127.0.0.1:4041'],
     handler: EndpointHandler()
 });
-var client = new TChannel().makeSubChannel({
+var topClient = new TChannel();
+var client = topClient.makeSubChannel({
     serviceName: 'client',
     peers: ['127.0.0.1:4040'],
     handler: EndpointHandler()
 });
-var client2 = new TChannel({
+var topClient2 = new TChannel({
     timeoutCheckInterval: 100,
     timeoutFuzz: 5
-}).makeSubChannel({
+});
+var client2 = topClient2.makeSubChannel({
     serviceName: 'client2',
     peers: ['127.0.0.1:4040']
 });
@@ -65,7 +68,7 @@ server.handler.register('func 3', function (req, res) {
 });
 
 serverDone(function done() {
-    server.close();
+    topServer.close();
 });
 
 // bidirectional messages
@@ -103,7 +106,7 @@ var listening = ready(function (err) {
             server.waitForIdentified({host: '127.0.0.1:4041'}, function onClientIdentified() {
                 sreq.send('ping', null, null, function (err, res) {
                     console.log('ping res server: ' + res.arg2 + ' ' + res.arg3);
-                    client.close();
+                    topClient.close();
                 });
             })
         });
@@ -143,7 +146,7 @@ var listening = ready(function (err) {
                     timeout: 500
                 }).send('func 3', 'arg2', 'arg3', function (err, res) {
                     console.log('4 slow res: ' + formatRes(err, res));
-                    client2.close();
+                    topClient2.close();
                 });
         });
 

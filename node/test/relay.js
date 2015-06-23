@@ -63,6 +63,8 @@ allocCluster.test('send relay requests', {
         assert.ifError(err, 'no unexpected error');
         assert.equal(String(arg2), 'foo', 'expected arg2');
         assert.equal(String(arg3), 'bar', 'expected arg3');
+
+        client.close();
         assert.end();
     });
 });
@@ -169,6 +171,7 @@ allocCluster.test('relay an error frame', {
     }).send('decline', 'foo', 'bar', function done(err, res, arg2, arg3) {
         assert.equal(err.type, 'tchannel.declined', 'expected declined error');
 
+        client.close();
         assert.end();
     });
 
