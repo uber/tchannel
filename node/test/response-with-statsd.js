@@ -42,7 +42,7 @@ allocCluster.test('emits stats on response ok', {
             .split(':')[0]
             .replace(/\./g, '-');
     });
-    var statsd = nullStatsd(6);
+    var statsd = nullStatsd(8);
 
     server.makeSubChannel({
         serviceName: 'reservoir'
@@ -86,6 +86,7 @@ allocCluster.test('emits stats on response ok', {
             return assert.end(err);
         }
         assert.ok(res.ok, 'res should be ok');
+        console.log(statsd._buffer._elements);
         assert.deepEqual(statsd._buffer._elements, [{
             type: 'c',
             name: 'tchannel.connections.accepted.' + clientHost,
@@ -95,6 +96,12 @@ allocCluster.test('emits stats on response ok', {
         }, {
             type: 'c',
             name: 'tchannel.inbound.request.size.inPipe.reservoir.Reservoir--get',
+            value: null,
+            delta: 109,
+            time: null
+        }, {
+            type: 'c',
+            name: 'tchannel.connections.bytes-recvd.127-0-0-1',
             value: null,
             delta: 109,
             time: null
@@ -113,6 +120,12 @@ allocCluster.test('emits stats on response ok', {
         }, {
             type: 'c',
             name: 'tchannel.outbound.response.size.inPipe.reservoir.Reservoir--get',
+            value: null,
+            delta: 67,
+            time: null
+        }, {
+            type: 'c',
+            name: 'tchannel.connections.bytes-sent.127-0-0-1',
             value: null,
             delta: 67,
             time: null
@@ -142,7 +155,7 @@ allocCluster.test('emits stats on response not ok', {
             .split(':')[0]
             .replace(/\./g, '-');
     });
-    var statsd = nullStatsd(6);
+    var statsd = nullStatsd(8);
 
     server.makeSubChannel({
         serviceName: 'reservoir'
@@ -200,6 +213,12 @@ allocCluster.test('emits stats on response not ok', {
             time: null
         }, {
             type: 'c',
+            name: 'tchannel.connections.bytes-recvd.127-0-0-1',
+            value: null,
+            delta: 109,
+            time: null
+        }, {
+            type: 'c',
             name: 'tchannel.inbound.calls.recvd.inPipe.reservoir.Reservoir--get',
             value: null,
             delta: 1,
@@ -213,6 +232,12 @@ allocCluster.test('emits stats on response not ok', {
         }, {
             type: 'c',
             name: 'tchannel.outbound.response.size.inPipe.reservoir.Reservoir--get',
+            value: null,
+            delta: 73,
+            time: null
+        }, {
+            type: 'c',
+            name: 'tchannel.connections.bytes-sent.127-0-0-1',
             value: null,
             delta: 73,
             time: null
@@ -242,7 +267,7 @@ allocCluster.test('emits stats on response error', {
             .split(':')[0]
             .replace(/\./g, '-');
     });
-    var statsd = nullStatsd(5);
+    var statsd = nullStatsd(6);
 
     server.makeSubChannel({
         serviceName: 'reservoir'
@@ -291,6 +316,12 @@ allocCluster.test('emits stats on response error', {
         }, {
             type: 'c',
             name: 'tchannel.inbound.request.size.inPipe.reservoir.Reservoir--get',
+            value: null,
+            delta: 109,
+            time: null
+        }, {
+            type: 'c',
+            name: 'tchannel.connections.bytes-recvd.127-0-0-1',
             value: null,
             delta: 109,
             time: null

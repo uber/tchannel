@@ -89,7 +89,7 @@ function TChannel(options) {
     // self.inboundCallsCancelsHonoredStat = self.defineCounter('inbound.cancels.honored');
     self.inboundRequestSizeStat = self.defineCounter('inbound.request.size');
     self.inboundResponseSizeStat = self.defineCounter('inbound.response.size');
-    // self.inboundProtocolErrorsStat = self.defineCounter('inbound.protocol-errors');
+    self.inboundProtocolErrorsStat = self.defineCounter('inbound.protocol-errors');
     self.inboundCallsLatencyStat = self.defineTiming('inbound.calls.latency');
 
     self.connectionsActiveStat = self.defineGauge('connections.active');
@@ -99,8 +99,8 @@ function TChannel(options) {
     self.connectionsAcceptedErrorsStat = self.defineCounter('connections.accept-errors');
     self.connectionsErrorsStat = self.defineCounter('connections.errors');
     self.connectionsClosedStat = self.defineCounter('connections.closed');
-    // self.connectionsBytesSentStat = self.defineCounter('connections.bytes-sent');
-    // self.connectionsBytesRcvdStat = self.defineCounter('connections.bytes-recvd');
+    self.connectionsBytesSentStat = self.defineCounter('connections.bytes-sent');
+    self.connectionsBytesRcvdStat = self.defineCounter('connections.bytes-recvd');
 
     self.options = extend({
         timeoutCheckInterval: 100,

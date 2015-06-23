@@ -104,6 +104,16 @@ allocCluster.test('emits stats', {
                 host: os.hostname()
             }
         }, {
+            name: 'connections.bytes-sent',
+            type: 'counter',
+            value: 93,
+            tags: {
+                'host-port': clientHost,
+                'peer-host-port': serverHost,
+                app: 'client',
+                host: os.hostname()
+            }
+        }, {
             name: 'inbound.response.size',
             type: 'counter',
             value: 64,
@@ -115,9 +125,19 @@ allocCluster.test('emits stats', {
                 host: os.hostname()
             }
         }, {
+            name: 'connections.bytes-recvd',
+            type: 'counter',
+            value: 64,
+            tags: {
+                'host-port': clientHost,
+                'peer-host-port': serverHost,
+                app: 'client',
+                host: os.hostname()
+            }
+        }, {
             name: 'outbound.calls.per-attempt-latency',
             type: 'timing',
-            value: stats[4].value,
+            value: stats[6].value,
             tags: {
                 'target-service': 'server',
                 service: 'client',
@@ -141,7 +161,7 @@ allocCluster.test('emits stats', {
         }, {
             name: 'outbound.calls.latency',
             type: 'timing',
-            value: stats[6].value,
+            value: stats[8].value,
             tags: {
                 'target-service': 'server',
                 service: 'client',

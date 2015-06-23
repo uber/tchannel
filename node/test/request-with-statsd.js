@@ -39,7 +39,7 @@ allocCluster.test('emits stats on call success', {
     var serverHost = cluster.hosts[0]
         .split(':')[0]
         .replace(/\./g, '-');
-    var statsd = nullStatsd(7);
+    var statsd = nullStatsd(9);
 
     server.makeSubChannel({
         serviceName: 'reservoir'
@@ -103,7 +103,19 @@ allocCluster.test('emits stats on call success', {
             time: null
         }, {
             type: 'c',
+            name: 'tchannel.connections.bytes-sent.localhost',
+            value: null,
+            delta: 109,
+            time: null
+        }, {
+            type: 'c',
             name: 'tchannel.inbound.response.size.inPipe.reservoir.Reservoir--get',
+            value: null,
+            delta: 67,
+            time: null
+        }, {
+            type: 'c',
+            name: 'tchannel.connections.bytes-recvd.localhost',
             value: null,
             delta: 67,
             time: null
@@ -142,7 +154,7 @@ allocCluster.test('emits stats on call failure', {
     var serverHost = cluster.hosts[0]
         .split(':')[0]
         .replace(/\./g, '-');
-    var statsd = nullStatsd(8);
+    var statsd = nullStatsd(10);
 
     server.makeSubChannel({
         serviceName: 'reservoir'
@@ -206,7 +218,19 @@ allocCluster.test('emits stats on call failure', {
             time: null
         }, {
             type: 'c',
+            name: 'tchannel.connections.bytes-sent.localhost',
+            value: null,
+            delta: 109,
+            time: null
+        }, {
+            type: 'c',
             name: 'tchannel.inbound.response.size.inPipe.reservoir.Reservoir--get',
+            value: null,
+            delta: 66,
+            time: null
+        }, {
+            type: 'c',
+            name: 'tchannel.connections.bytes-recvd.localhost',
             value: null,
             delta: 66,
             time: null
