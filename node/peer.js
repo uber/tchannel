@@ -306,7 +306,7 @@ TChannelPeer.prototype.makeOutConnection = function makeOutConnection(socket) {
     return conn;
 
     function handleSpanFromConn(span) {
-        self.channel.tracer.report(span);
+        chan.tracer.report(span);
     }
 };
 
