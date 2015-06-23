@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"io"
 	"testing"
+	"testing/iotest"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -51,6 +52,30 @@ func TestFraming(t *testing.T) {
 	require.Nil(t, fh2.read(rbuf))
 
 	assert.Equal(t, fh, fh2)
+}
+
+func TestPartialRead(t *testing.T) {
+	f := NewFrame(MaxFramePayloadSize)
+	f.Header.size = FrameHeaderSize + 2134
+	f.Header.messageType = messageTypeCallReq
+	f.Header.ID = 0xDEADBEED
+
+	// We set the full payload but only the first 2134 bytes should be written.
+	for i := 0; i < len(f.Payload); i++ {
+		val := (i * 37) % 256
+		f.Payload[i] = byte(val)
+	}
+	buf := &bytes.Buffer{}
+	require.NoError(t, f.WriteTo(buf))
+	assert.Equal(t, f.Header.size, uint16(buf.Len()), "frame size should match written bytes")
+
+	// Read the data back, from a reader that fragments.
+	f2 := NewFrame(MaxFramePayloadSize)
+	require.NoError(t, f2.ReadFrom(iotest.OneByteReader(buf)))
+
+	// Ensure header and payload are the same.
+	require.Equal(t, f.Header, f2.Header, "frame headers don't match")
+	require.Equal(t, f.SizedPayload(), f2.SizedPayload(), "payload does not match")
 }
 
 func TestEmptyPayload(t *testing.T) {
