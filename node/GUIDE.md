@@ -91,7 +91,7 @@ var ctx = {
 };
 
 keyThrift.register(keyChan, 'KeyValue::get_v1', ctx, get);
-keyThrift.register(keyChane, 'KeyValue::put_v1', ctx, put);
+keyThrift.register(keyChan, 'KeyValue::put_v1', ctx, put);
 
 function get(context, req, head, body, cb) {
     cb(null, {
