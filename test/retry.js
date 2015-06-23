@@ -142,6 +142,8 @@ allocCluster.test('request retries', {
                 }]
             }]
         });
+
+        client.close();
         assert.end();
     }
 });
@@ -255,6 +257,8 @@ allocCluster.test('request application retries', {
                 peers: []
             }]
         });
+
+        client.close();
         assert.end();
     }
 });
@@ -391,6 +395,8 @@ allocCluster.test('retryFlags work', {
                 }]
             }]
         });
+
+        client.close();
         assert.end();
     }
 });

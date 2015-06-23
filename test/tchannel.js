@@ -104,10 +104,13 @@ test('get peers: should get all peers', function t(assert) {
 test('remove peer: should remove requested peer', function t(assert) {
   var server = new TChannel();
   server.listen(serverOptions.port, serverOptions.host, function listening() {
-    server.peers.delete(clientName, server.peers.add(clientName).connect());
+    var peer = server.peers.add(clientName);
+    server.peers.delete(clientName, peer.connect());
     assert.notOk(server.peers.get(clientName),
       'Added peer should have been deleted. Nothing should be returned');
-    server.quit(assert.end);
+    peer.close(function onClose() {
+      server.quit(assert.end);
+    });
   });
 });
 
