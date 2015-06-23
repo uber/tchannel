@@ -547,10 +547,11 @@ func (c *Connection) readFrames() {
 // writes them to the connection.
 func (c *Connection) writeFrames() {
 	for f := range c.sendCh {
-		defer c.framePool.Release(f)
-
 		c.log.Debugf("Writing frame %s", f.Header)
-		if err := f.WriteTo(c.conn); err != nil {
+
+		err := f.WriteTo(c.conn)
+		c.framePool.Release(f)
+		if err != nil {
 			c.connectionError(err)
 			return
 		}
