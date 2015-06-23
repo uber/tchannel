@@ -64,7 +64,12 @@ function TChannelInRequest(id, options) {
             name: '' // fill this in later
         });
 
-        // TODO: better annotations
+        self.span.annotateBinary('cn', self.headers.cn);
+        self.span.annotateBinary('as', self.headers.as);
+        if (self.connection) {
+            self.span.annotateBinary('src', self.connection.remoteName);
+        }
+
         self.span.annotate('sr');
     } else {
         self.span = null;
