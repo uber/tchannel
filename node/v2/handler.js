@@ -245,6 +245,10 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
         'service': req.serviceName,
         'endpoint': String(req.arg1)
     });
+    self.connection.channel.connectionsBytesRcvdStat.increment(reqFrame.size, {
+        'host-port': self.connection.channel.hostPort || '0.0.0.0:0',
+        'peer-host-port': self.connection.socketRemoteAddr
+    });
     function callRequestFrameHandled(err) {
         self.callRequestFrameHandled(req, err, callback);
     }
@@ -300,6 +304,10 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
         'service': !req ? null : req.serviceName,
         'endpoint': !req ? null : String(req.arg1)
     });
+    self.connection.channel.connectionsBytesRcvdStat.increment(resFrame.size, {
+        'host-port': self.connection.channel.hostPort || '0.0.0.0:0',
+        'peer-host-port': self.connection.socketRemoteAddr
+    });
 
     res.remoteAddr = self.remoteName;
     self._handleCallFrame(res, resFrame, callResponseFrameHandled);
@@ -342,6 +350,10 @@ TChannelV2Handler.prototype.handleCallRequestCont = function handleCallRequestCo
         'service': req.serviceName,
         'endpoint': String(req.arg1)
     });
+    self.connection.channel.connectionsBytesRcvdStat.increment(reqFrame.size, {
+        'host-port': self.connection.channel.hostPort || '0.0.0.0:0',
+        'peer-host-port': self.connection.socketRemoteAddr
+    });
 };
 
 TChannelV2Handler.prototype.handleCallResponseCont = function handleCallResponseCont(resFrame, callback) {
@@ -360,6 +372,10 @@ TChannelV2Handler.prototype.handleCallResponseCont = function handleCallResponse
         'calling-service': !req ? null : req.headers.cn,
         'service': !req ? null : req.serviceName,
         'endpoint': !req ? null : String(req.arg1)
+    });
+    self.connection.channel.connectionsBytesRcvdStat.increment(resFrame.size, {
+        'host-port': self.connection.channel.hostPort || '0.0.0.0:0',
+        'peer-host-port': self.connection.socketRemoteAddr
     });
 
     self._handleCallFrame(res, resFrame, callback);
@@ -513,6 +529,10 @@ TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame
         'service': req.headers.cn,
         'target-endpoint': String(args[0])
     });
+    self.connection.channel.connectionsBytesSentStat.increment(result.size, {
+        'host-port': self.connection.channel.hostPort || '0.0.0.0:0',
+        'peer-host-port': self.connection.socketRemoteAddr
+    });
 };
 
 TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFrame(res, flags, args) {
@@ -546,6 +566,10 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
         'service': !req ? null : req.headers.cn,
         'target-endpoint': !req ? null : String(req.arg1)
     });
+    self.connection.channel.connectionsBytesSentStat.increment(result.size, {
+        'host-port': self.connection.channel.hostPort || '0.0.0.0:0',
+        'peer-host-port': self.connection.socketRemoteAddr
+    });
 };
 
 TChannelV2Handler.prototype.sendCallRequestContFrame = function sendCallRequestContFrame(req, flags, args) {
@@ -564,6 +588,10 @@ TChannelV2Handler.prototype.sendCallRequestContFrame = function sendCallRequestC
         'service': !req0 ? null : req0.headers.cn,
         'target-endpoint': !req0 ? null : String(req0.arg1)
     });
+    self.connection.channel.connectionsBytesSentStat.increment(result.size, {
+        'host-port': self.connection.channel.hostPort || '0.0.0.0:0',
+        'peer-host-port': self.connection.socketRemoteAddr
+    });
 };
 
 TChannelV2Handler.prototype.sendCallResponseContFrame = function sendCallResponseContFrame(res, flags, args) {
@@ -580,6 +608,10 @@ TChannelV2Handler.prototype.sendCallResponseContFrame = function sendCallRespons
         'target-service': !req ? null : req.serviceName,
         'service': !req ? null : req.headers.cn,
         'target-endpoint': !req ? null : String(req.arg1)
+    });
+    self.connection.channel.connectionsBytesSentStat.increment(result.size, {
+        'host-port': self.connection.channel.hostPort || '0.0.0.0:0',
+        'peer-host-port': self.connection.socketRemoteAddr
     });
 };
 
