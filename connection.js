@@ -200,6 +200,11 @@ function sendProtocolError(type, err) {
             frameId: err.frameId
         });
 
+        self.channel.inboundProtocolErrorsStat.increment(1, {
+            'host-port': self.channel.hostPort || '0.0.0.0:0',
+            'peer-host-port': self.socketRemoteAddr
+        });
+
         self.handler.sendErrorFrame({
             id: protocolError.frameId || 0xFFFFFFFF
         }, 'ProtocolError', protocolError.message);
