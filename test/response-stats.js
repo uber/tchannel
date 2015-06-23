@@ -97,6 +97,16 @@ allocCluster.test('emits response stats with ok', {
                 host: os.hostname()
             }
         }, {
+            name: 'connections.bytes-recvd',
+            type: 'counter',
+            value: 93,
+            tags: {
+                'host-port': serverHost,
+                'peer-host-port': clientHost,
+                app: 'server',
+                host: os.hostname()
+            }
+        }, {
             name: 'inbound.calls.recvd',
             type: 'counter',
             value: 1,
@@ -130,9 +140,19 @@ allocCluster.test('emits response stats with ok', {
                 host: os.hostname()
             }
         }, {
+            name: 'connections.bytes-sent',
+            type: 'counter',
+            value: 64,
+            tags: {
+                'host-port': serverHost,
+                'peer-host-port': clientHost,
+                app: 'server',
+                host: os.hostname()
+            }
+        }, {
             name: 'inbound.calls.latency',
             type: 'timing',
-            value: stats[5].value,
+            value: stats[7].value,
             tags: {
                 'calling-service': 'client',
                 service: 'server',
@@ -219,6 +239,16 @@ allocCluster.test('emits response stats with not ok', {
                 host: os.hostname()
             }
         }, {
+            name: 'connections.bytes-recvd',
+            type: 'counter',
+            value: 93,
+            tags: {
+                'host-port': serverHost,
+                'peer-host-port': clientHost,
+                app: 'server',
+                host: os.hostname()
+            }
+        }, {
             name: 'inbound.calls.recvd',
             type: 'counter',
             value: 1,
@@ -253,9 +283,19 @@ allocCluster.test('emits response stats with not ok', {
                 host: os.hostname()
             }
         }, {
+            name: 'connections.bytes-sent',
+            type: 'counter',
+            value: 73,
+            tags: {
+                'host-port': serverHost,
+                'peer-host-port': clientHost,
+                app: 'server',
+                host: os.hostname()
+            }
+        }, {
             name: 'inbound.calls.latency',
             type: 'timing',
-            value: stats[5].value,
+            value: stats[7].value,
             tags: {
                 'calling-service': 'client',
                 service: 'server',
@@ -339,6 +379,16 @@ allocCluster.test('emits response stats with error', {
                 host: os.hostname()
             }
         }, {
+            name: 'connections.bytes-recvd',
+            type: 'counter',
+            value: 93,
+            tags: {
+                'host-port': serverHost,
+                'peer-host-port': clientHost,
+                app: 'server',
+                host: os.hostname()
+            }
+        }, {
             name: 'inbound.calls.recvd',
             type: 'counter',
             value: 1,
@@ -364,7 +414,7 @@ allocCluster.test('emits response stats with error', {
         }, {
             name: 'inbound.calls.latency',
             type: 'timing',
-            value: stats[4].value,
+            value: stats[5].value,
             tags: {
                 'calling-service': 'client',
                 service: 'server',
