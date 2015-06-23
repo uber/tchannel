@@ -69,5 +69,6 @@ function onListening() {
         }
 
         server.close();
+        client.close();
     }
 }

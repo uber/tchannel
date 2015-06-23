@@ -69,7 +69,7 @@ test('running example2.js', function t(assert) {
     }
 });
 
-test('running as_example.js', function t(assert) {
+test('running as_example1.js', function t(assert) {
     spawnExample('as_example1.js', onChild);
 
     function onChild(err, stdout, stderr) {
