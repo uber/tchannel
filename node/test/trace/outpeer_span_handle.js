@@ -51,7 +51,7 @@ allocCluster.test('get spans from outpeer', {
             serviceName: 'two',
             headers: {
                 as: 'raw',
-                cn: 'wat'
+                cn: 'one'
             }
         }
     });
@@ -63,7 +63,7 @@ allocCluster.test('get spans from outpeer', {
             serviceName: 'one',
             headers: {
                 as: 'raw',
-                cn: 'wat'
+                cn: 'two'
             }
         }
     });
@@ -89,6 +89,10 @@ allocCluster.test('get spans from outpeer', {
                 traces.forEach(function (b) {
                     assert.deepEquals(a.traceid, b.traceid, 'all spans have same traceid');
                 });
+
+                assert.ok(a.binaryAnnotations.some(function (anno) {
+                    return anno.key === 'as' && anno.value === 'raw';
+                }), 'has as=raw annotation');
             });
 
             var oneSpans = traces.filter(function (item) {
@@ -108,6 +112,38 @@ allocCluster.test('get spans from outpeer', {
                     );
                 });
             });
+
+            oneSpans.forEach(function (oneSpan) {
+                assert.ok(oneSpan.binaryAnnotations.some(function (anno) {
+                    return anno.key === 'cn' && anno.value === 'two';
+                }), 'each one span has cn=two annotation');
+            });
+
+            twoSpans.forEach(function (twoSpan) {
+                assert.ok(twoSpan.binaryAnnotations.some(function (anno) {
+                    return anno.key === 'cn' && anno.value === 'one';
+                }), 'each two span has cn=one annotation');
+            });
+
+            var oneSr = oneSpans.filter(function (oneSpan) {
+                return oneSpan.annotations.some(function (a) {
+                    return a.value[0] === 's';
+                });
+            })[0];
+
+            assert.ok(oneSr.binaryAnnotations.some(function (a) {
+                return a.key === 'src' && a.value === two.hostPort;
+            }), 'oneSr has src = two.hostPort');
+
+            var twoSr = twoSpans.filter(function (twoSpan) {
+                return twoSpan.annotations.some(function (a) {
+                    return a.value[0] === 's';
+                });
+            })[0];
+
+            assert.ok(twoSr.binaryAnnotations.some(function (a) {
+                return a.key === 'src' && a.value === one.hostPort;
+            }), 'twoSr has src = one.hostPort');
 
             assert.end();
         });
@@ -153,9 +189,14 @@ function spanToString(span) {
         return '[' + item.value + '@' + item.timestamp + ']';
     }).join(' ');
 
+    var binaryAnnotations = span.binaryAnnotations.map(function (item) {
+        return '[' + item.key + '=' + item.value + ']';
+    }).join(' ');
+
     return ("SPAN: traceid: " + span.traceid.toString('base64') +
         ' spanid: ' + span.id.toString('base64') + ' parentid: ' +
         span.parentid.toString('base64') + ' ' + span.annotations[0].host.serviceName +
-        " :: " + span.name + " port " + span.annotations[0].host.port + " " + annotations);
+        " :: " + span.name + " port " + span.annotations[0].host.port + " " + annotations + " " +
+        binaryAnnotations);
 }
 

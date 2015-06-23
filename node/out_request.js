@@ -343,6 +343,9 @@ TChannelOutRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
 
     if (self.span) {
         self.span.name = endpoint;
+
+        self.span.annotateBinary('as', self.headers.as);
+        self.span.annotateBinary('cn', self.headers.cn);
     }
 
     if (self.logical === false && self.retryCount === 0) {
