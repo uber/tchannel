@@ -267,7 +267,7 @@ func (c *Connection) sendInit(ctx context.Context) error {
 		InitParamProcessName: c.localPeerInfo.ProcessName,
 	}
 
-	mex, err := c.outbound.newExchange(ctx, req.messageType(), req.ID(), 1)
+	mex, err := c.outbound.newExchange(ctx, c.framePool, req.messageType(), req.ID(), 1)
 	if err != nil {
 		return c.connectionError(err)
 	}
@@ -362,7 +362,7 @@ func (c *Connection) handleInitReq(frame *Frame) {
 // ping sends a ping message and waits for a ping response.
 func (c *Connection) ping(ctx context.Context) error {
 	req := &pingReq{id: c.NextMessageID()}
-	mex, err := c.outbound.newExchange(ctx, req.messageType(), req.ID(), 1)
+	mex, err := c.outbound.newExchange(ctx, c.framePool, req.messageType(), req.ID(), 1)
 	if err != nil {
 		return c.connectionError(err)
 	}
@@ -382,10 +382,13 @@ func (c *Connection) ping(ctx context.Context) error {
 }
 
 // handlePingRes calls registered ping handlers.
-func (c *Connection) handlePingRes(frame *Frame) {
+func (c *Connection) handlePingRes(frame *Frame) bool {
 	if err := c.outbound.forwardPeerFrame(frame); err != nil {
-		c.connectionError(errCannotHandleInitRes)
+		c.log.Warnf("Got unexpected ping response: %+v", frame.Header)
+		return true
 	}
+	// ping req is waiting for this frame, and will release it.
+	return false
 }
 
 // handlePingReq responds to the pingReq message with a pingRes.
@@ -404,7 +407,7 @@ func (c *Connection) handlePingReq(frame *Frame) {
 // to process the InitRes.  We probably want to move the InitRes checking to
 // here (where it will run in the receiver goroutine and thus block new
 // incoming messages), and simply signal the init goroutine that we are done
-func (c *Connection) handleInitRes(frame *Frame) {
+func (c *Connection) handleInitRes(frame *Frame) bool {
 	if err := c.withStateRLock(func() error {
 		switch c.state {
 		case connectionWaitingToRecvInitRes:
@@ -426,12 +429,16 @@ func (c *Connection) handleInitRes(frame *Frame) {
 		}
 	}); err != nil {
 		c.connectionError(err)
-		return
+		return true
 	}
 
 	if err := c.outbound.forwardPeerFrame(frame); err != nil {
 		c.connectionError(errCannotHandleInitRes)
+		return true
 	}
+
+	// init req waits for this message and will release it when done.
+	return false
 }
 
 // sendMessage sends a standalone message (typically a control message)
@@ -517,28 +524,34 @@ func (c *Connection) readFrames() {
 			return
 		}
 
+		// call req and call res messages may not want the frame released immediately.
+		releaseFrame := true
 		switch frame.Header.messageType {
 		case messageTypeCallReq:
-			c.handleCallReq(frame)
+			releaseFrame = c.handleCallReq(frame)
 		case messageTypeCallReqContinue:
-			c.handleCallReqContinue(frame)
+			releaseFrame = c.handleCallReqContinue(frame)
 		case messageTypeCallRes:
-			c.handleCallRes(frame)
+			releaseFrame = c.handleCallRes(frame)
 		case messageTypeCallResContinue:
-			c.handleCallResContinue(frame)
+			releaseFrame = c.handleCallResContinue(frame)
 		case messageTypeInitReq:
 			c.handleInitReq(frame)
 		case messageTypeInitRes:
-			c.handleInitRes(frame)
+			releaseFrame = c.handleInitRes(frame)
 		case messageTypePingReq:
 			c.handlePingReq(frame)
 		case messageTypePingRes:
-			c.handlePingRes(frame)
+			releaseFrame = c.handlePingRes(frame)
 		case messageTypeError:
 			c.handleError(frame)
 		default:
 			// TODO(mmihic): Log and close connection with protocol error
 			c.log.Errorf("Received unexpected frame %s from %s", frame.Header, c.remotePeerInfo)
+		}
+
+		if releaseFrame {
+			c.framePool.Release(frame)
 		}
 	}
 }

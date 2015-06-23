@@ -57,7 +57,7 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string, callOpti
 	}
 
 	requestID := c.NextMessageID()
-	mex, err := c.outbound.newExchange(ctx, messageTypeCallReq, requestID, 512)
+	mex, err := c.outbound.newExchange(ctx, c.framePool, messageTypeCallReq, requestID, 512)
 	if err != nil {
 		return nil, err
 	}
@@ -113,18 +113,22 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string, callOpti
 
 // handleCallRes handles an incoming call req message, forwarding the
 // frame to the response channel waiting for it
-func (c *Connection) handleCallRes(frame *Frame) {
+func (c *Connection) handleCallRes(frame *Frame) bool {
 	if err := c.outbound.forwardPeerFrame(frame); err != nil {
 		c.outbound.removeExchange(frame.Header.ID)
+		return true
 	}
+	return false
 }
 
 // handleCallResContinue handles an incoming call res continue message,
 // forwarding the frame to the response channel waiting for it
-func (c *Connection) handleCallResContinue(frame *Frame) {
+func (c *Connection) handleCallResContinue(frame *Frame) bool {
 	if err := c.outbound.forwardPeerFrame(frame); err != nil {
 		c.outbound.removeExchange(frame.Header.ID)
+		return true
 	}
+	return false
 }
 
 // An OutboundCall is an active call to a remote peer.  A client makes a call

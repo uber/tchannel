@@ -77,7 +77,22 @@ func (p *recordingFramePool) Get() *Frame {
 	return frame
 }
 
+func zeroOut(bs []byte) {
+	for i := range bs {
+		bs[i] = 0
+	}
+}
+
 func (p *recordingFramePool) Release(f *Frame) {
+	// Make sure the payload is not used after this point by clearing the frame.
+	zeroOut(f.Payload)
+	f.Payload = nil
+	zeroOut(f.buffer)
+	f.buffer = nil
+	zeroOut(f.headerBuffer)
+	f.headerBuffer = nil
+	f.Header = FrameHeader{}
+
 	p.mut.Lock()
 	defer p.mut.Unlock()
 
@@ -96,26 +111,17 @@ func (p *recordingFramePool) CheckEmpty() (int, string) {
 	var badCalls []string
 	badCalls = append(badCalls, p.badRelease...)
 	for f, s := range p.allocations {
-		badCalls = append(badCalls, fmt.Sprintf("frame %v not released, get from: %v", f.Header, s))
+		badCalls = append(badCalls, fmt.Sprintf("frame %p: %v not released, get from: %v", f, f.Header, s))
 	}
 	return len(p.allocations), strings.Join(badCalls, "\n")
 }
 
 func TestFramesReleased(t *testing.T) {
 	testutils.SetTimeout(t, time.Second*100)
-
-	pool := newRecordingFramePool()
-	origPool := DefaultFramePool
-	DefaultFramePool = pool
-	defer func() { DefaultFramePool = origPool }()
-
 	const (
-		// requestsPerGoroutine = 10
-		// numGoroutines        = 10
-		// maxRandArg           = 512 * 1024
-		requestsPerGoroutine = 1
-		numGoroutines        = 1
-		maxRandArg           = 500 * 1024
+		requestsPerGoroutine = 10
+		numGoroutines        = 10
+		maxRandArg           = 512 * 1024
 	)
 
 	// Generate random bytes used to create arguments.
@@ -128,6 +134,7 @@ func TestFramesReleased(t *testing.T) {
 		}
 	}
 
+	pool := newRecordingFramePool()
 	require.NoError(t, withServerChannel(&testChannelOpts{
 		ServiceName: "swap-server",
 		DefaultConnectionOptions: ConnectionOptions{
@@ -139,6 +146,11 @@ func TestFramesReleased(t *testing.T) {
 		clientCh, err := NewChannel("swap-client", nil)
 		require.NoError(t, err)
 		defer clientCh.Close()
+
+		// Create an active connection that can be shared by the goroutines by calling Ping.
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		require.NoError(t, clientCh.Ping(ctx, hostPort))
 
 		generateArg := func(n int) []byte {
 			from := rand.Intn(maxRandArg - n)
@@ -179,6 +191,9 @@ func TestFramesReleased(t *testing.T) {
 
 		wg.Wait()
 	}))
+
+	// Wait a few milliseconds for the closing of channels to take effect.
+	time.Sleep(10 * time.Millisecond)
 
 	if unreleasedCount, isEmpty := pool.CheckEmpty(); isEmpty != "" || unreleasedCount > 0 {
 		t.Errorf("Frame pool has %v unreleased frames, errors:\n%v", unreleasedCount, isEmpty)

@@ -44,6 +44,7 @@ type readableFragment struct {
 	checksumType ChecksumType
 	checksum     []byte
 	contents     *typed.ReadBuffer
+	done         func()
 }
 
 type fragmentReceiver interface {
@@ -72,6 +73,7 @@ type fragmentingReader struct {
 	curChunk         []byte
 	hasMoreFragments bool
 	receiver         fragmentReceiver
+	curFragment      *readableFragment
 	checksum         Checksum
 	err              error
 }
@@ -210,6 +212,7 @@ func (r *fragmentingReader) EndArgument() error {
 			return r.err
 		}
 
+		r.curFragment.done()
 		r.curChunk = nil
 		r.state = fragmentingReadComplete
 		return nil
@@ -243,38 +246,43 @@ func (r *fragmentingReader) recvAndParseNextFragment(initial bool) error {
 		return r.err
 	}
 
-	nextFragment, err := r.receiver.recvNextFragment(initial)
+	if r.curFragment != nil {
+		r.curFragment.done()
+	}
+
+	var err error
+	r.curFragment, err = r.receiver.recvNextFragment(initial)
 	if err != nil {
 		return err
 	}
 
 	// Set checksum, or confirm new checksum is the same type as the prior checksum
 	if r.checksum == nil {
-		r.checksum = nextFragment.checksumType.New()
-	} else if r.checksum.TypeCode() != nextFragment.checksumType {
+		r.checksum = r.curFragment.checksumType.New()
+	} else if r.checksum.TypeCode() != r.curFragment.checksumType {
 		return errMismatchedChecksumTypes
 	}
 
 	// Split fragment into underlying chunks
-	r.hasMoreFragments = (nextFragment.flags & hasMoreFragmentsFlag) == hasMoreFragmentsFlag
+	r.hasMoreFragments = (r.curFragment.flags & hasMoreFragmentsFlag) == hasMoreFragmentsFlag
 	r.remainingChunks = nil
-	for nextFragment.contents.BytesRemaining() > 0 && nextFragment.contents.Err() == nil {
-		chunkSize := nextFragment.contents.ReadUint16()
-		if chunkSize > uint16(nextFragment.contents.BytesRemaining()) {
+	for r.curFragment.contents.BytesRemaining() > 0 && r.curFragment.contents.Err() == nil {
+		chunkSize := r.curFragment.contents.ReadUint16()
+		if chunkSize > uint16(r.curFragment.contents.BytesRemaining()) {
 			return errChunkExceedsFragmentSize
 		}
-		chunkData := nextFragment.contents.ReadBytes(int(chunkSize))
+		chunkData := r.curFragment.contents.ReadBytes(int(chunkSize))
 		r.remainingChunks = append(r.remainingChunks, chunkData)
 		r.checksum.Add(chunkData)
 	}
 
-	if nextFragment.contents.Err() != nil {
-		return nextFragment.contents.Err()
+	if r.curFragment.contents.Err() != nil {
+		return r.curFragment.contents.Err()
 	}
 
 	// Validate checksums
 	localChecksum := r.checksum.Sum()
-	if bytes.Compare(nextFragment.checksum, localChecksum) != 0 {
+	if bytes.Compare(r.curFragment.checksum, localChecksum) != 0 {
 		return errMismatchedChecksums
 	}
 

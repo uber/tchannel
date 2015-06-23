@@ -230,7 +230,7 @@ func (r *reqResReader) recvNextFragment(initial bool) (*readableFragment, error)
 	}
 
 	// Parse the message and setup the fragment
-	fragment, err := parseInboundFragment(frame, message)
+	fragment, err := parseInboundFragment(r.mex.framePool, frame, message)
 	if err != nil {
 		return nil, r.failed(err)
 	}
@@ -251,7 +251,7 @@ func (r *reqResReader) failed(err error) error {
 }
 
 // parseInboundFragment parses an incoming fragment based on the given message
-func parseInboundFragment(frame *Frame, message message) (*readableFragment, error) {
+func parseInboundFragment(framePool FramePool, frame *Frame, message message) (*readableFragment, error) {
 	rbuf := typed.NewReadBuffer(frame.SizedPayload())
 	fragment := new(readableFragment)
 	fragment.flags = rbuf.ReadByte()
@@ -262,5 +262,8 @@ func parseInboundFragment(frame *Frame, message message) (*readableFragment, err
 	fragment.checksumType = ChecksumType(rbuf.ReadByte())
 	fragment.checksum = rbuf.ReadBytes(fragment.checksumType.ChecksumSize())
 	fragment.contents = rbuf
+	fragment.done = func() {
+		framePool.Release(frame)
+	}
 	return fragment, rbuf.Err()
 }
