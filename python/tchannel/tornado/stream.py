@@ -21,6 +21,7 @@
 from collections import deque
 
 import tornado
+import tornado.concurrent
 import tornado.gen
 import tornado.ioloop
 from tornado.iostream import PipeIOStream
@@ -47,6 +48,7 @@ def read_full(stream):
 
     chunks = []
     chunk = yield stream.read()
+
     while chunk:
         chunks.append(chunk)
         chunk = yield stream.read()
@@ -118,37 +120,53 @@ class InMemStream(Stream):
         new_stream._stream = deque(self._stream)
         return new_stream
 
-    @tornado.gen.coroutine
     def read(self):
-        if (self.state != StreamState.completed and
-                len(self._stream) == 0):
-            yield self._condition.wait()
 
-        if self.exception:
-            raise self.exception
+        def read_chunk(future):
+            if self.exception:
+                future.set_exception(self.exception)
+                return future
 
-        chunk = ""
-        while len(self._stream) > 0 and len(chunk) < common.MAX_PAYLOAD_SIZE:
-            chunk += self._stream.popleft()
+            chunk = ""
 
-        raise tornado.gen.Return(chunk)
+            while len(self._stream) and len(chunk) < common.MAX_PAYLOAD_SIZE:
+                chunk += self._stream.popleft()
 
-    @tornado.gen.coroutine
+            future.set_result(chunk)
+            return future
+
+        read_future = tornado.concurrent.Future()
+
+        # We're not ready yet
+        if self.state != StreamState.completed and not len(self._stream):
+            wait_future = self._condition.wait()
+            wait_future.add_done_callback(
+                lambda f: f.exception() or read_chunk(read_future)
+            )
+            return read_future
+
+        return read_chunk(read_future)
+
     def write(self, chunk):
         if self.exception:
             raise self.exception
 
         if self.state == StreamState.completed:
             raise StreamingError("Stream has been closed.")
+
         if chunk:
             self._stream.append(chunk)
             self._condition.notify()
+
+        # This needs to return a future to match the async interface.
+        r = tornado.concurrent.Future()
+        r.set_result(None)
+        return r
 
     def set_exception(self, exception):
         self.exception = exception
         self.close()
 
-    @tornado.gen.coroutine
     def close(self):
         self.state = StreamState.completed
         self._condition.notify()
