@@ -21,7 +21,7 @@
 import argparse
 
 
-def get_args():
+def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--port",
@@ -31,9 +31,9 @@ def get_args():
         "--host",
         dest="host", default="localhost"
     )
-    parser.add_argument(
-        "--file",
-        dest="filename"
-    )
+    return parser
 
+
+def get_args():
+    parser = get_parser()
     return parser.parse_args()

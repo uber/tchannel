@@ -34,7 +34,6 @@ import tornado.ioloop
 
 from .tornado import TChannel
 from .tornado.stream import InMemStream
-from .tornado.util import print_arg
 
 log = logging.getLogger('tchannel')
 
@@ -120,14 +119,6 @@ def parse_args(args=None):
         action="store_true"
     )
 
-    parser.add_argument(
-        "--listen",
-        dest="in_port",
-        default=None,
-        type=int,
-        help="Port for inbound connections"
-    )
-
     args = parser.parse_args(args)
 
     # Allow a body/header to specified once and shared across multiple
@@ -140,15 +131,15 @@ def parse_args(args=None):
             args.body = args.body * len(args.headers)
 
         else:
-            raise argparse.ArgumentError(
+            parser.error(
                 "Multiple header/body arguments given "
                 "but not of the same degree."
             )
 
     if len(args.host) != max(1, len(args.headers), len(args.body)):
         if len(args.host) != 1:
-            raise argparse.ArgumentError(
-                "Number of hosts specified doesn't agree with the number of"
+            parser.error(
+                "Number of hosts specified doesn't agree with the number of "
                 "header/body arguments."
             )
 
@@ -159,18 +150,6 @@ def parse_args(args=None):
     args.host = (h if '/' in h else h + '/' for h in args.host)
 
     return args
-
-
-@tornado.gen.coroutine
-def handler1(request, response, proxy):
-    yield print_arg(request, 1)
-    yield print_arg(request, 2)
-    yield response.write_body('world')
-
-
-def create_server(tchannel, in_port):
-    tchannel.register('hi', handler=handler1)
-    tchannel.listen()
 
 
 def chunk(iterable, n):
@@ -290,8 +269,6 @@ def main(argv=None):
         log.setLevel(logging.DEBUG)
 
     tchannel = TChannel(name='tcurl.py')
-    if args.in_port:
-        create_server(tchannel, args.in_port)
 
     results = yield multi_tcurl(
         tchannel,
@@ -309,14 +286,8 @@ def main(argv=None):
 
 
 def start_ioloop():  # pragma: no cover
-    args = parse_args()
     ioloop = tornado.ioloop.IOLoop.current()
-
-    if not args.in_port:
-        ioloop.run_sync(main)
-    else:
-        main()
-        ioloop.start()
+    ioloop.run_sync(main)
 
 
 if __name__ == '__main__':  # pragma: no cover

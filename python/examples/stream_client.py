@@ -24,7 +24,7 @@ import sys
 import tornado
 import tornado.ioloop
 
-from options import get_args
+from options import get_parser
 from tchannel.tornado import TChannel
 from tchannel.tornado.stream import InMemStream
 from tchannel.tornado.stream import PipeStream
@@ -33,7 +33,10 @@ from tchannel.tornado.util import print_arg
 
 @tornado.gen.coroutine
 def send_stream(arg1, arg2, arg3, host):
-    tchannel = TChannel()
+    tchannel = TChannel(
+        name='stream-client',
+    )
+
     response = yield tchannel.request(host).send(
         arg1,
         arg2,
@@ -45,13 +48,19 @@ def send_stream(arg1, arg2, arg3, host):
 
 
 def main():
-    args = get_args()
+    parser = get_parser()
+    parser.add_argument(
+        "--file",
+        dest="filename"
+    )
+    args = parser.parse_args()
 
     arg1 = InMemStream("echo")
     arg2 = InMemStream()
     arg3 = InMemStream()
 
     ioloop = tornado.ioloop.IOLoop.current()
+
     if args.filename == "stdin":
         arg3 = PipeStream(sys.stdin.fileno())
         send_stream(arg1, arg2, arg3, args.host)
@@ -62,6 +71,7 @@ def main():
         ioloop.run_sync(lambda: send_stream(arg1, arg2, arg3, args.host))
     else:
         raise NotImplementedError()
+
 
 if __name__ == '__main__':  # pragma: no cover
     main()

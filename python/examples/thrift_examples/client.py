@@ -28,7 +28,8 @@ from tchannel.tornado import TChannel
 
 @gen.coroutine
 def run():
-    client = client_for('hello', HelloService)(TChannel(), 'localhost:4040')
+    tchannel = TChannel(name='thrift-client')
+    client = client_for('hello', HelloService)(tchannel, 'localhost:4040')
     response = yield client.hello("world")
     print response
 
