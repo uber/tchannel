@@ -149,13 +149,20 @@ TChannelPeer.prototype.getInConnection = function getInConnection() {
     return null;
 };
 
-TChannelPeer.prototype.getOutConnection = function getOutConnection() {
+TChannelPeer.prototype.getOutConnection = function getOutConnection(identified) {
     var self = this;
+    var candidate = null;
     for (var i = self.connections.length - 1; i >= 0; i--) {
         var conn = self.connections[i];
-        if (!conn.closing) return conn;
+        if (!conn.closing) {
+            if (!identified || conn.remoteName) {
+                return conn;
+            } else {
+                candidate = candidate || conn;
+            }
+        }
     }
-    return null;
+    return candidate;
 };
 
 TChannelPeer.prototype.countConnections = function countConnections(direction) {
@@ -177,7 +184,7 @@ TChannelPeer.prototype.countConnections = function countConnections(direction) {
 
 TChannelPeer.prototype.connect = function connect(outOnly) {
     var self = this;
-    var conn = self.getOutConnection();
+    var conn = self.getOutConnection(true);
     if (!conn || (outOnly && conn.direction !== 'out')) {
         var socket = self.makeOutSocket();
         conn = self.makeOutConnection(socket);
