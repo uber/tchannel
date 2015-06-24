@@ -57,7 +57,7 @@ def parse_args(args=None):
         default=[None],
         nargs='*',
         help=(
-            "arg3. Can be specified multiple times to trigger simultaneous"
+            "arg3. Can be specified multiple times to trigger simultaneous "
             "requests."
         ),
     )
@@ -77,7 +77,7 @@ def parse_args(args=None):
         default=[None],
         nargs='*',
         help=(
-            "arg2. Can be speecified multiple time to trigger simultaneous"
+            "arg2. Can be speecified multiple time to trigger simultaneous "
             "requests."
         ),
     )
@@ -172,28 +172,28 @@ def multi_tcurl(
     quiet=False,
     batch_size=100,
 ):
-
     all_requests = getattr(itertools, 'izip', zip)(hostports, headers, bodies)
 
-    for requests in chunk(all_requests, batch_size):
-        futures = []
+    with timing(profile):
+        for requests in chunk(all_requests, batch_size):
+            futures = []
 
-        for hostport, header, body in requests:
-            futures.append(
-                tcurl(tchannel, hostport, header, body, service, quiet)
-            )
+            for hostport, header, body in requests:
+                futures.append(
+                    tcurl(tchannel, hostport, header, body, service, quiet)
+                )
 
-            if rps:
-                yield tornado.gen.sleep(1.0 / rps)
+                if rps:
+                    yield tornado.gen.sleep(1.0 / rps)
 
-        wait_iterator = tornado.gen.WaitIterator(*futures)
-        results = []
+            wait_iterator = tornado.gen.WaitIterator(*futures)
+            results = []
 
-        while not wait_iterator.done():
-            try:
-                results.append((yield wait_iterator.next()))
-            except Exception:
-                raise
+            while not wait_iterator.done():
+                try:
+                    results.append((yield wait_iterator.next()))
+                except Exception:
+                    raise
 
     raise tornado.gen.Return(results)
 
@@ -209,15 +209,17 @@ def tcurl(tchannel, hostport, headers, body, service, quiet=False):
         log.debug("> Arg3: %s" % body)
 
     request = tchannel.request(host, service)
+
     response = yield request.send(
-        InMemStream(endpoint),
-        InMemStream(headers),
-        InMemStream(body)
+        endpoint,
+        headers,
+        body,
     )
 
     if not quiet:
         log.debug("< Host: %s" % host)
         log.debug("<  Msg: %s" % response.id)
+
     raise tornado.gen.Return(response)
 
 
@@ -225,11 +227,11 @@ def tcurl(tchannel, hostport, headers, body, service, quiet=False):
 def timing(profile=False):
     start = time.time()
 
+    profiler = None
+
     if profile:
         profiler = cProfile.Profile()
         profiler.enable()
-    else:
-        profiler = None
 
     info = collections.Counter()
 
@@ -239,19 +241,11 @@ def timing(profile=False):
         profiler.disable()
         profiler.create_stats()
         stats = pstats.Stats(profiler)
-        stats.sort_stats('cumulative').print_stats(15)
+        stats.sort_stats('time').print_stats(15)
 
     stop = time.time()
 
-    # TODO: report errors/successes
-    log.info(
-        "took %.2fs for %s requests (%.2f rps) with %d failures (%.2f)",
-        stop - start,
-        info['requests'],
-        info['requests'] / (stop - start),
-        info['failures'],
-        1.0 * info['failures'] / info['requests'],
-    )
+    log.info("took %.2fs seconds" % (stop - start))
 
 
 @tornado.gen.coroutine
