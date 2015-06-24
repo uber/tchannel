@@ -42,6 +42,7 @@ require('./regression-listening-on-used-port.js');
 require('./as-thrift.js');
 require('./as-json.js');
 require('./as-http.js');
+require('./peer.js');
 require('./peers.js');
 require('./peer_states.js');
 require('./trace/');
