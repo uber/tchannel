@@ -34,7 +34,7 @@ service KeyValue {
 }
 ```
 
-Our service will have two tchannel endpoints that can be.
+Our service will have two tchannel endpoints that can be accessed.
 Namely `KeyValue::get_v1` and `KeyValue::put_v1`.
 
 ## Writing a tchannel server
@@ -43,7 +43,7 @@ To get a server up and running you need to do the following:
 
 1. Create a TChannel and listen on a port
 2. Configure your endpoint handlers using TChannelThrift
-3. Create a hyperbahn client and register with hyperbahn
+3. Create a hyperbahn client and advertise with hyperbahn
 
 ### Creating a tchannel
 
