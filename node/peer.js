@@ -149,13 +149,17 @@ TChannelPeer.prototype.getInConnection = function getInConnection() {
     return null;
 };
 
-TChannelPeer.prototype.getOutConnection = function getOutConnection() {
+TChannelPeer.prototype.getOutConnection = function getOutConnection(preferIdentified) {
     var self = this;
+    var candidate = null;
     for (var i = self.connections.length - 1; i >= 0; i--) {
         var conn = self.connections[i];
-        if (!conn.closing) return conn;
+        if (conn.closing) continue;
+        if (!preferIdentified) return conn; // user doesn't care, take last outgoing
+        if (conn.remoteName) return conn; // user wanted an identified channel, and we found one
+        if (!candidate) candidate = conn; // we'll fallback to returning this if we can't find an identified one
     }
-    return null;
+    return candidate;
 };
 
 TChannelPeer.prototype.countConnections = function countConnections(direction) {
@@ -177,7 +181,7 @@ TChannelPeer.prototype.countConnections = function countConnections(direction) {
 
 TChannelPeer.prototype.connect = function connect(outOnly) {
     var self = this;
-    var conn = self.getOutConnection();
+    var conn = self.getOutConnection(true);
     if (!conn || (outOnly && conn.direction !== 'out')) {
         var socket = self.makeOutSocket();
         conn = self.makeOutConnection(socket);
@@ -198,7 +202,7 @@ function waitForIdentified(callback) {
         conn.closeEvent.on(onConnectionClose);
 
         // conn.handler is a self peer detection
-        if (!self.isConnected() && conn.handler) {
+        if (!conn.remoteName) {
             conn.identifiedEvent.on(onIdentified);
             return;
         } else {
