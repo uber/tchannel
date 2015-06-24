@@ -220,14 +220,6 @@ RelayNetwork.test('relay network changes dont break', {
     kValue: 1,
     numRelays: 2
 }, function t(network, assert) {
-
-    network.forEachSubChannel(function register(channel, serviceName, instanceIndex) {
-        channel.handler.register('ping', function ping(req, res) {
-            res.headers.as = 'raw';
-            res.sendOk('' + instanceIndex, serviceName);
-        });
-    });
-
     var aliceHosts = network.topology.alice;
     var bobHosts = network.topology.bob;
     network.topology.bob = aliceHosts;
