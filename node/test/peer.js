@@ -59,8 +59,40 @@ allocCluster.test('peer should use the identified connection', {
             'should use the identified connection'
         );
 
+        assert.notEqual(conn, peer.getOutConnection(true), 'should return the identified connection');
+        assert.equals(conn, peer.getOutConnection(), 'should return the latest connection');
+
         client.close();
         server.close();
         assert.end();
     }
+});
+
+allocCluster.test('peer should return the latest connection when none is identified', {
+    numPeers: 2
+}, function t(cluster, assert) {
+    var server = cluster.channels[0];
+    var client = cluster.channels[1];
+    var serverHost = cluster.hosts[0];
+
+    server.makeSubChannel({
+        serviceName: 'server'
+    });
+
+    var subClient = client.makeSubChannel({
+        serviceName: 'server',
+        peers: [server.hostPort]
+    });
+
+    var peer = subClient.peers.get(serverHost);
+    var socket = peer.makeOutSocket();
+    var conn = peer.makeOutConnection(socket);
+    peer.addConnection(conn);
+
+    assert.equals(conn, peer.getOutConnection(true), 'should return the latest connection');
+    assert.equals(conn, peer.getOutConnection(), 'should return the latest connection');
+
+    client.close();
+    server.close();
+    assert.end();
 });
