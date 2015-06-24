@@ -37,7 +37,7 @@ def main():
 
     args = get_args()
     conn = yield StreamConnection.outgoing('%s:%d' % (args.host, args.port))
-    conn.tchannel = TChannel()
+    conn.tchannel = TChannel(name='tornado-client')
     N = 10000
     before = time.time()
     batch_size = 100

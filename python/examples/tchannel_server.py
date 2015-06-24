@@ -30,7 +30,11 @@ from tchannel.tornado import TChannel
 def main():  # pragma: no cover
     args = get_args()
 
-    client = TChannel('localhost:%d' % args.port)
+    client = TChannel(
+        name='tchannel_server',
+        hostport='%s:%d' % (args.host, args.port),
+    )
+
     register_example_endpoints(client)
     client.listen()
 

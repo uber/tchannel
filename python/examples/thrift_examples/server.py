@@ -23,7 +23,7 @@ from tornado import ioloop
 from hello import HelloService
 from tchannel.tornado import TChannel
 
-app = TChannel('localhost:4040')
+app = TChannel('thrift-server', 'localhost:4040')
 
 
 @app.register(HelloService)
