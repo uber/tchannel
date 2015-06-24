@@ -24,6 +24,7 @@ var allocCluster = require('./lib/alloc-cluster');
 var TChannel = require('../channel');
 var RelayHandler = require('../relay_handler');
 var RelayNetwork = require('./lib/relay_network');
+var CountedReady = require('ready-signal/counted');
 
 allocCluster.test('send relay requests', {
     numPeers: 2
@@ -211,4 +212,33 @@ RelayNetwork.test('relay through a network', {
         assert.equal(arg3.toString(), 'bob', 'response relayed to and from requested service');
         assert.end();
     });
+});
+
+RelayNetwork.test('relay network changes dont break', {
+    serviceNames: ['alice', 'bob'],
+    numInstancesPerService: 1,
+    kValue: 1,
+    numRelays: 2
+}, function t(network, assert) {
+    var aliceHosts = network.topology.alice;
+    var bobHosts = network.topology.bob;
+    network.topology.bob = aliceHosts;
+    network.topology.alice = bobHosts;
+
+    var ready = CountedReady(2);
+
+    network.relayChannels[0].handler.roleTransitionEvent.on(function (stuff) {
+        assert.equals(stuff.newMode, 'forward');
+        ready.signal();
+    });
+
+    network.relayChannels[1].handler.roleTransitionEvent.on(function (stuff) {
+        assert.equals(stuff.newMode, 'forward');
+        ready.signal();
+    });
+
+    network.egressNodesForRelay[0].membershipChangedEvent.emit();
+    network.egressNodesForRelay[1].membershipChangedEvent.emit();
+
+    ready(assert.end);
 });

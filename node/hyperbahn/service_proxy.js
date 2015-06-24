@@ -22,6 +22,8 @@
 
 var assert = require('assert');
 var RelayHandler = require('../relay_handler');
+var EventEmitter = require('../lib/event_emitter');
+var util = require('util');
 
 var DEFAULT_LOG_GRACE_PERIOD = 5 * 60 * 1000;
 
@@ -30,6 +32,9 @@ function ServiceDispatchHandler(options) {
         return new ServiceDispatchHandler(options);
     }
     var self = this;
+
+    EventEmitter.call(self);
+    self.roleTransitionEvent = self.defineEvent('roleTransition');
 
     self.options = options;
     assert(options, 'service dispatch handler options not actually optional');
@@ -48,6 +53,8 @@ function ServiceDispatchHandler(options) {
         self.updateServiceChannels();
     }
 }
+
+util.inherits(ServiceDispatchHandler, EventEmitter);
 
 ServiceDispatchHandler.prototype.type = 'tchannel.hyperbahn.service-dispatch-handler';
 
@@ -185,7 +192,8 @@ function changeToExit(exitNodes, svcchan) {
     var oldMode = svcchan.serviceProxyMode;
     svcchan.serviceProxyMode = 'exit';
     svcchan.peers.clear();
-    self.emit('roleTransition', svcchan, {
+    self.roleTransitionEvent.emit(self, {
+        svcchan: svcchan,
         oldMode: oldMode,
         newMode: 'exit'
     });
@@ -213,7 +221,8 @@ function changeToForward(exitNodes, svcchan) {
     for (var i = 0; i < exitNames.length; i++) {
         self._getServicePeer(svcchan, exitNames[i]);
     }
-    self.emit('roleTransition', svcchan, {
+    self.roleTransitionEvent.emit(self, {
+        svcchan: svcchan,
         oldMode: oldMode,
         newMode: 'forward'
     });
