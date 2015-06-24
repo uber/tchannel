@@ -202,7 +202,7 @@ function waitForIdentified(callback) {
         conn.closeEvent.on(onConnectionClose);
 
         // conn.handler is a self peer detection
-        if (!self.isConnected() && conn.handler) {
+        if (!conn.remoteName) {
             conn.identifiedEvent.on(onIdentified);
             return;
         } else {
