@@ -27,6 +27,7 @@ from random import random
 
 from tornado import gen
 
+from tchannel.event import EventType
 from tchannel.glossary import DEFAULT_TTL
 from tchannel.glossary import MAX_ATTEMPT_TIMES
 from tchannel.glossary import RETRY_DELAY
@@ -529,6 +530,7 @@ class PeerClientOperation(object):
             argstreams=[InMemStream(endpoint), arg2, arg3],
             id=connection.next_message_id(),
             headers=headers,
+            endpoint=endpoint,
             ttl=ttl,
             tracing=Trace(
                 name=endpoint,
@@ -548,10 +550,40 @@ class PeerClientOperation(object):
         if request.is_streaming_request:
             request.ttl = 0
 
-        response = yield self.send_with_retry(
-            request, peer, attempt_times, retry_delay)
+        # event: send_request
+        self.peer.tchannel.event_emitter.fire(
+            EventType.before_send_request,
+            request,
+        )
+
+        try:
+            response = yield self.send_with_retry(
+                request, peer, attempt_times, retry_delay)
+        except ProtocolError as protocol_error:
+            # event: after_receive_protocol_error
+            self.peer.tchannel.event_emitter.fire(
+                EventType.after_receive_system_error,
+                request,
+                protocol_error,
+            )
+            raise
+        except TimeoutError as operational_error:
+            # event: on_operational_error
+            self.peer.tchannel.event_emitter.fire(
+                EventType.on_operational_error,
+                request,
+                operational_error,
+            )
+            raise
 
         log.debug("Got response %s", response)
+        # event: after_receive_response
+        self.peer.tchannel.event_emitter.fire(
+            EventType.after_receive_response,
+            request,
+            response,
+        )
+
         raise gen.Return(response)
 
     @gen.coroutine
@@ -573,37 +605,90 @@ class PeerClientOperation(object):
             try:
                 response = yield self._send(connection, request)
                 break
-            except (ProtocolError, TimeoutError) as e:
-                # stop the outgoing request
-                request.set_exception(e)
-
-                should_retry = (
-                    request.should_retry_on_error(e) and
-                    num_of_attempt != attempt_times - 1
+            except ProtocolError as protocol_error:
+                # event: after_receive_protocol_error_per_attempt
+                self.peer.tchannel.event_emitter.fire(
+                    EventType.after_receive_system_error_per_attempt,
+                    request,
+                    protocol_error,
                 )
 
-                if not should_retry:
-                    raise
-
-                # delay further retry
-                yield gen.sleep(retry_delay / 1000.0)
-
-                blacklist.add(peer.hostport)
-                # find new peer
-                peer = self.peer.tchannel.peers.choose(
-                    hostport=self._hostport,
-                    score_threshold=self._score_threshold,
-                    blacklist=blacklist,
+                (peer, connection) = yield self.prepare_for_retry(
+                    request, connection, protocol_error,
+                    peer, blacklist, retry_delay,
+                    num_of_attempt, attempt_times,
                 )
 
-                # no peer is available
-                if not peer:
+                if not connection:
                     raise
-                connection = yield peer.connect()
-                # roll back request
-                request.rewind(connection.next_message_id())
+            except TimeoutError as operational_error:
+                # event: on_operational_error_per_attempt
+                self.peer.tchannel.event_emitter.fire(
+                    EventType.on_operational_error_per_attempt,
+                    request,
+                    operational_error,
+                )
+
+                (peer, connection) = yield self.prepare_for_retry(
+                    request, connection, operational_error,
+                    peer, blacklist, retry_delay,
+                    num_of_attempt, attempt_times,
+                )
+
+                if not connection:
+                    raise
 
         raise gen.Return(response)
+
+    @gen.coroutine
+    def prepare_for_retry(self, request, connection, protocol_error,
+                          peer, blacklist, retry_delay,
+                          num_of_attempt, max_attempt_times):
+
+        self.clean_up_outgoing_request(request, connection, protocol_error)
+        if not self.should_retry(request, protocol_error,
+                                 num_of_attempt, max_attempt_times):
+            raise gen.Return((None, None))
+
+        # delay further retry
+        yield gen.sleep(retry_delay / 1000.0)
+
+        result = yield self.prepare_next_request(request, peer, blacklist)
+        raise gen.Return(result)
+
+    @gen.coroutine
+    def prepare_next_request(self, request, peer, blacklist):
+        blacklist.add(peer.hostport)
+        # find new peer
+        peer = self.peer.tchannel.peers.choose(
+            hostport=self._hostport,
+            score_threshold=self._score_threshold,
+            blacklist=blacklist,
+        )
+
+        # no peer is available
+        if not peer:
+            raise gen.Return((None, None))
+
+        connection = yield peer.connect()
+        # roll back request
+        request.rewind(connection.next_message_id())
+
+        raise gen.Return((peer, connection))
+
+    @staticmethod
+    def should_retry(request, error, num_of_attempt, max_attempt_times):
+        return (
+            request.should_retry_on_error(error) and
+            num_of_attempt != max_attempt_times - 1
+        )
+
+    @staticmethod
+    def clean_up_outgoing_request(request, connection, error):
+        # stop the outgoing request
+        request.set_exception(error)
+        # remove from pending request list
+        connection.remove_outstanding_request(request)
 
 
 def maybe_stream(s):

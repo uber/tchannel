@@ -21,7 +21,6 @@
 from __future__ import absolute_import
 
 import pytest
-from tchannel.glossary import MAX_ATTEMPT_TIMES
 import tornado
 import tornado.gen
 from mock import patch
@@ -29,11 +28,12 @@ from mock import patch
 from tchannel.errors import ProtocolError
 from tchannel.errors import TChannelError
 from tchannel.errors import TimeoutError
+from tchannel.glossary import MAX_ATTEMPT_TIMES
 from tchannel.messages import ErrorCode
-from tchannel.transport_header import RetryType
 from tchannel.tornado import Request
 from tchannel.tornado import TChannel
 from tchannel.tornado.stream import InMemStream
+from tchannel.transport_header import RetryType
 
 
 @tornado.gen.coroutine

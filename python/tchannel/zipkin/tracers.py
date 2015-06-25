@@ -40,9 +40,8 @@ from collections import defaultdict
 
 from .formatters import json_formatter
 from .formatters import thrift_formatter
-
-from .thrift import constants
 from .thrift import TCollector
+from .thrift import constants
 
 log = logging.getLogger('zipkin_tracing')
 
