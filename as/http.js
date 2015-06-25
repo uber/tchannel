@@ -25,6 +25,7 @@ var bufrw = require('bufrw');
 var http = require('http');
 var PassThrough = require('readable-stream').PassThrough;
 var extend = require('xtend');
+var extendInto = require('xtend/mutable');
 var errors = require('../errors.js');
 
 var headerRW = bufrw.Repeat(bufrw.UInt16BE,
@@ -159,8 +160,7 @@ TChannelHTTP.prototype.setHandler = function register(tchannel, handler) {
     return tchannel.handler;
 };
 
-TChannelHTTP.prototype.forwardToTChannel =
-    function forwardToTChannel(tchannel, hreq, hres, tchannelRequestOptions, callback) {
+TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, hreq, hres, tchannelRequestOptions, callback) {
     var self = this;
 
     // TODO: no retrying due to:
@@ -169,8 +169,7 @@ TChannelHTTP.prototype.forwardToTChannel =
     // TODO: more http state machine integration
 
     var treq;
-    if (!tchannelRequestOptions) tchannelRequestOptions = {};
-    var options = tchannel.requestOptions(extend({
+    var options = tchannel.requestOptions(extendInto({
         streamed: true,
         hasNoParent: true
     }, tchannelRequestOptions));
@@ -213,9 +212,7 @@ TChannelHTTP.prototype.forwardToTChannel =
             hres.writeHead(head.statusCode, head.message, headers);
             body.pipe(hres);
         }
-        if (typeof callback === 'function') {
-            callback(err)
-        }
+        callback(err)
     }
 };
 
