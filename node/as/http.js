@@ -212,7 +212,7 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
             hres.writeHead(head.statusCode, head.message, headers);
             body.pipe(hres);
         }
-        callback(err)
+        callback(err);
     }
 };
 
