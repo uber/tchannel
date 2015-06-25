@@ -33,7 +33,6 @@ import time
 import tornado.ioloop
 
 from .tornado import TChannel
-from .tornado.stream import InMemStream
 
 log = logging.getLogger('tchannel')
 
