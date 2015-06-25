@@ -400,6 +400,9 @@ func (ch fragmentChannel) recvNextFragment(initial bool) (*readableFragment, err
 	return fragment, rbuf.Err()
 }
 
+func (ch fragmentChannel) doneReading() {}
+func (ch fragmentChannel) doneSending() {}
+
 func buffers(elements ...[][]byte) [][]byte {
 	var buffers [][]byte
 	for i := range elements {

@@ -191,6 +191,8 @@ func (call *InboundCall) Response() *InboundCallResponse {
 	return call.response
 }
 
+func (call *InboundCall) doneReading() {}
+
 // An InboundCallResponse is used to send the response back to the calling peer
 type InboundCallResponse struct {
 	reqResWriter
@@ -257,4 +259,10 @@ func (response *InboundCallResponse) Arg2Writer() (io.WriteCloser, error) {
 // The returned writer must be closed once the write is complete.
 func (response *InboundCallResponse) Arg3Writer() (io.WriteCloser, error) {
 	return response.arg3Writer()
+}
+
+// doneSending shuts down the message exchange for this call.
+// For incoming calls, the last message is sending the call response.
+func (response *InboundCallResponse) doneSending() {
+	response.mex.shutdown()
 }

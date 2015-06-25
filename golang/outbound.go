@@ -165,6 +165,8 @@ func (call *OutboundCall) Arg3Writer() (io.WriteCloser, error) {
 	return call.arg3Writer()
 }
 
+func (call *OutboundCall) doneSending() {}
+
 // An OutboundCallResponse is the response to an outbound call
 type OutboundCallResponse struct {
 	reqResReader
@@ -226,4 +228,10 @@ func (c *Connection) handleError(frame *Frame) {
 	if err := c.outbound.forwardPeerFrame(frame); err != nil {
 		c.outbound.removeExchange(frame.Header.ID)
 	}
+}
+
+// doneReading shuts down the message exchange for this call.
+// For outgoing calls, the last message is reading the call response.
+func (response *OutboundCallResponse) doneReading() {
+	response.mex.shutdown()
 }
