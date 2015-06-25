@@ -47,6 +47,7 @@ function TChannelInRequest(id, options) {
     self.remoteAddr = null;
     self.headers = options.headers || {};
     self.checksum = options.checksum || null;
+    self.retryFlags = options.retryFlags || null;
     self.streamed = false;
     self.arg1 = emptyBuffer;
     self.arg2 = emptyBuffer;
