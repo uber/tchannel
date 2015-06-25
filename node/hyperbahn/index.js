@@ -89,6 +89,8 @@ function HyperbahnClient(options) {
     self.reportTracing = 'reportTracing' in options ?
         options.reportTracing : true;
     self.hardFail = !!options.hardFail;
+    self.advertiseInterval = options.advertiseInterval || DEFAULT_TTL;
+    self.timeoutFuzz = self.advertiseInterval;
 
     self.logger = options.logger || self.tchannel.logger;
     self.statsd = options.statsd;
@@ -333,14 +335,21 @@ function advertise(opts) {
         self.state = States.ADVERTISED;
         timers.clearTimeout(self.advertisementTimeoutTimer);
 
-        var ttl = DEFAULT_TTL;
-
-        self.advertiseAgain(ttl);
+        self.advertiseAgain(self.getTimeoutFuzz());
 
         // registered event is deprecated
         self.emit('registered');
         self.emit('advertised');
     }
+};
+
+HyperbahnClient.prototype.getTimeoutFuzz = function getTimeoutFuzz() {
+    var self = this;
+
+    var fuzz = self.timeoutFuzz;
+    var delay = Math.round(Math.floor(Math.random() * fuzz)) - (fuzz / 2);
+
+    return self.advertiseInterval + delay;
 };
 
 HyperbahnClient.prototype.advertiseAgain =
