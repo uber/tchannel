@@ -74,7 +74,7 @@ def test_after_receive_system_error(stats_hook, request):
     stats_hook.after_receive_system_error(request, error)
     stats_hook._stats.count.assert_called_with(
         "tchannel.outbound.calls.system-errors.no-service." +
-        "test.endpoint1.bad_request", 1
+        "test.endpoint1.bad-request", 1
     )
 
 
@@ -83,7 +83,7 @@ def test_after_receive_system_error_per_attempt(stats_hook, request):
     stats_hook.after_receive_system_error_per_attempt(request, error)
     stats_hook._stats.count.assert_called_with(
         "tchannel.outbound.calls.per-attempt.system-errors.no-service." +
-        "test.endpoint1.bad_request", 1
+        "test.endpoint1.bad-request", 1
     )
 
 

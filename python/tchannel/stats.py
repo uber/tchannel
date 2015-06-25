@@ -134,4 +134,4 @@ def clean(key, field):
             "{", "-").replace(
             "}", "-").replace(
             ":", "-").replace(
-            " ", "_")
+            " ", "-")
