@@ -116,6 +116,34 @@ func (p *recordingFramePool) CheckEmpty() (int, string) {
 	return len(p.allocations), strings.Join(badCalls, "\n")
 }
 
+func getConnections(ch *Channel) []*Connection {
+	var connections []*Connection
+	for _, p := range ch.peers.peers {
+		for _, c := range p.connections {
+			connections = append(connections, c)
+		}
+	}
+	return connections
+}
+
+func checkEmptyExchanges(c *Connection) string {
+	fmt.Println("Connection %p has %v %v", c, len(c.outbound.exchanges), len(c.inbound.exchanges))
+	if exchangesLeft := len(c.outbound.exchanges) + len(c.inbound.exchanges); exchangesLeft > 0 {
+		return fmt.Sprintf("connection %p had %v leftover exchanges", c, exchangesLeft)
+	}
+	return ""
+}
+
+func checkEmptyExchangesConns(connections []*Connection) string {
+	var errors []string
+	for _, c := range connections {
+		if v := checkEmptyExchanges(c); v != "" {
+			errors = append(errors, v)
+		}
+	}
+	return strings.Join(errors, "\n")
+}
+
 func TestFramesReleased(t *testing.T) {
 	testutils.SetTimeout(t, time.Second*100)
 	const (
@@ -134,6 +162,7 @@ func TestFramesReleased(t *testing.T) {
 		}
 	}
 
+	var connections []*Connection
 	pool := newRecordingFramePool()
 	require.NoError(t, withServerChannel(&testChannelOpts{
 		ServiceName: "swap-server",
@@ -190,6 +219,9 @@ func TestFramesReleased(t *testing.T) {
 		}
 
 		wg.Wait()
+
+		connections = append(connections, getConnections(serverCh)...)
+		connections = append(connections, getConnections(clientCh)...)
 	}))
 
 	// Wait a few milliseconds for the closing of channels to take effect.
@@ -197,5 +229,10 @@ func TestFramesReleased(t *testing.T) {
 
 	if unreleasedCount, isEmpty := pool.CheckEmpty(); isEmpty != "" || unreleasedCount > 0 {
 		t.Errorf("Frame pool has %v unreleased frames, errors:\n%v", unreleasedCount, isEmpty)
+	}
+
+	// Check the message exchanges and make sure they are all empty.
+	if exchangesLeft := checkEmptyExchangesConns(connections); exchangesLeft != "" {
+		t.Errorf("Found uncleared message exchanges:\n%v", exchangesLeft)
 	}
 }

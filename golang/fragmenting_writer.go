@@ -103,6 +103,9 @@ type fragmentSender interface {
 
 	// flushFragment flushes the given fragment
 	flushFragment(f *writableFragment) error
+
+	// doneSending is called when the fragment receiver is finished sending all fragments.
+	doneSending()
 }
 
 type fragmentingWriterState int
@@ -258,6 +261,7 @@ func (w *fragmentingWriter) EndArgument() error {
 		w.state = fragmentingWriteComplete
 		w.curFragment.finish(false)
 		w.err = w.sender.flushFragment(w.curFragment)
+		w.sender.doneSending()
 		return w.err
 	}
 

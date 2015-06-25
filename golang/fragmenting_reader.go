@@ -51,6 +51,9 @@ type fragmentReceiver interface {
 	// recvNextFragment returns the next received fragment, blocking until
 	// it's available or a deadline/cancel occurs
 	recvNextFragment(intial bool) (*readableFragment, error)
+
+	// doneReading is called when the fragment receiver is finished reading all fragments.
+	doneReading()
 }
 
 type fragmentingReadState int
@@ -212,6 +215,7 @@ func (r *fragmentingReader) EndArgument() error {
 			return r.err
 		}
 
+		r.receiver.doneReading()
 		r.curFragment.done()
 		r.curChunk = nil
 		r.state = fragmentingReadComplete
