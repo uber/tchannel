@@ -46,6 +46,7 @@ function ServiceDispatchHandler(options) {
     self.logGracePeriod = self.options.logGracePeriod ||
         DEFAULT_LOG_GRACE_PERIOD;
     self.permissionsCache = options.permissionsCache;
+    self.serviceReqDefaults = options.serviceReqDefaults || {};
 
     self.egressNodes.on('membershipChanged', onMembershipChanged);
 
@@ -139,9 +140,15 @@ function createServiceChannel(serviceName) {
     var exitNodes = self.egressNodes.exitsFor(serviceName);
     var isExit = self.egressNodes.isExitFor(serviceName);
     var mode = isExit ? 'exit' : 'forward';
-    var svcchan = self.channel.makeSubChannel({
+
+    var options = {
         serviceName: serviceName
-    });
+    };
+    if (self.serviceReqDefaults[serviceName]) {
+        options.requestDefaults = self.serviceReqDefaults[serviceName];
+    }
+
+    var svcchan = self.channel.makeSubChannel(options);
     svcchan.serviceProxyMode = mode; // duck: punched
 
     if (mode === 'forward') {
