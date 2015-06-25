@@ -12,7 +12,6 @@ setup(
     packages=find_packages(),
     install_requires=[
         'contextlib2',
-        'enum34',
         'crcmod',
         'tornado>=4.0,<5.0',
         'toro>=0.8,<0.9',

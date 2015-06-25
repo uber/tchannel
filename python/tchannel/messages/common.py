@@ -25,9 +25,8 @@ from collections import namedtuple
 
 import crcmod.predefined
 
-from enum import IntEnum
-
 from .. import rw
+from ..enum import enum
 from ..errors import InvalidChecksumError
 from .types import Types
 
@@ -40,16 +39,21 @@ PROTOCOL_VERSION = 0x02
 MAX_PAYLOAD_SIZE = 0xFFEF   # 64*1024 - 16 - 1
 
 
-class StreamState(IntEnum):
-    init = 0x00,
-    streaming = 0x01,
-    completed = 0x02,
-    none = 0x03
+StreamState = enum(
+    'StreamState',
+    init=0x00,
+    streaming=0x01,
+    completed=0x02,
+    none=0x03,
+)
 
 
-class FlagsType(IntEnum):
-    none = 0x00,
-    fragment = 0x01
+FlagsType = enum(
+    'FlagsType',
+    none=0x00,
+    fragment=0x01,
+)
+
 
 Tracing = namedtuple('Tracing', 'span_id parent_id trace_id traceflags')
 
@@ -62,15 +66,13 @@ tracing_rw = rw.instance(
 )
 
 
-class ChecksumType(IntEnum):
-    none = 0x00
-    crc32 = 0x01
-    farm32 = 0x02
-    crc32c = 0x03
-
-    @staticmethod
-    def standardize(checksum):
-        return (ChecksumType(checksum[0]), checksum[1])
+ChecksumType = enum(
+    'ChecksumType',
+    none=0x00,
+    crc32=0x01,
+    farm32=0x02,
+    crc32c=0x03,
+)
 
 
 checksum_rw = rw.switch(

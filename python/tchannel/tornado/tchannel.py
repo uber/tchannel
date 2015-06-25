@@ -32,10 +32,10 @@ import tornado.iostream
 import tornado.tcpserver
 from tornado.netutil import bind_sockets
 
-from enum import IntEnum
 
 from . import hyperbahn
 from .. import scheme
+from ..enum import enum
 from ..event import EventEmitter
 from ..event import EventRegistrar
 from ..handler import CallableRequestHandler
@@ -45,14 +45,15 @@ from .broker import ArgSchemeBroker
 from .connection import StreamConnection
 from .dispatch import RequestDispatcher
 from .peer import PeerGroup
-
 log = logging.getLogger('tchannel')
 
 
-class State(IntEnum):
-    ready = 0
-    closing = 1
-    closed = 2
+State = enum(
+    'State',
+    ready=0,
+    closing=1,
+    closed=2,
+)
 
 
 class TChannel(object):

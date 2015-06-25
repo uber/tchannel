@@ -23,8 +23,7 @@ from __future__ import absolute_import
 import tornado
 import tornado.gen
 
-from enum import IntEnum
-
+from ..enum import enum
 from ..errors import TChannelError
 from ..messages.common import FlagsType
 from ..messages.common import StreamState
@@ -32,9 +31,11 @@ from .stream import InMemStream
 from .util import get_arg
 
 
-class StatusCode(IntEnum):
-    ok = 0x00,
-    error = 0x01
+StatusCode = enum(
+    'StatusCode',
+    ok=0x00,
+    error=0x01,
+)
 
 
 class Response(object):

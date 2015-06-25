@@ -20,6 +20,7 @@
 
 from __future__ import absolute_import
 
+import pytest
 from mock import MagicMock
 
 from tchannel.event import EventEmitter
@@ -27,15 +28,16 @@ from tchannel.event import EventRegistrar
 from tchannel.event import EventType
 
 
-def test_event_hook():
+@pytest.mark.parametrize('event_name', EventType._fields)
+def test_event_hook(event_name):
+    event_value = getattr(EventType, event_name)
     mock_hook = MagicMock()
 
     event_emitter = EventEmitter()
     event_emitter.register_hook(mock_hook)
 
-    for event_type in EventType:
-        event_emitter.fire(event_type, None)
-        assert getattr(mock_hook, event_type.name).called is True
+    event_emitter.fire(event_value, None)
+    assert getattr(mock_hook, event_name).called is True
 
 
 def test_decorator_registration():

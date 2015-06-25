@@ -20,25 +20,25 @@
 
 from __future__ import absolute_import
 
-import enum
-
 from . import common
 from .. import rw
+from ..enum import enum
 from .base import BaseMessage
 from .types import Types
 
 
-@enum.unique
-class ErrorCode(enum.IntEnum):
-    timeout = 0x01
-    cancelled = 0x02
-    busy = 0x03
-    declined = 0x04
-    unexpected = 0x05
-    bad_request = 0x06
-    network_error = 0x07
-    unhealthy = 0x08
-    fatal = 0xff
+ErrorCode = enum(
+    'ErrorCode',
+    timeout=0x01,
+    cancelled=0x02,
+    busy=0x03,
+    declined=0x04,
+    unexpected=0x05,
+    bad_request=0x06,
+    network_error=0x07,
+    unhealthy=0x08,
+    fatal=0xff,
+)
 
 error_code_rw = rw.number(1)
 
@@ -66,7 +66,7 @@ class ErrorMessage(BaseMessage):
 
     def __init__(self, code=None, tracing=None, description=None, id=0):
         super(ErrorMessage, self).__init__(id)
-        self.code = ErrorCode(code) if code else ErrorCode.unexpected
+        self.code = code if code else ErrorCode.unexpected
         self.description = description or ''
         self.tracing = tracing or common.Tracing(0, 0, 0, 0)
 
