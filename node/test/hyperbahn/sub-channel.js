@@ -35,11 +35,11 @@ test('getting client subChannel without serviceName', function t(assert) {
 
     assert.throws(function throwIt() {
         client.getClientChannel();
-    }, /invalid option serviceName/);
+    }, /must pass serviceName/);
 
     assert.throws(function throwIt() {
         client.getClientChannel({});
-    }, /invalid option serviceName/);
+    }, /must pass serviceName/);
 
     assert.end();
 });
