@@ -576,8 +576,11 @@ class PeerClientOperation(object):
             except (ProtocolError, TimeoutError) as e:
                 # stop the outgoing request
                 request.set_exception(e)
-                if not request.should_retry_on_error(e) or (
-                        num_of_attempt == attempt_times - 1):
+
+                should_retry = request.should_retry_on_error(e) and (
+                    num_of_attempt != attempt_times - 1)
+
+                if not should_retry:
                     raise
 
                 # delay further retry
