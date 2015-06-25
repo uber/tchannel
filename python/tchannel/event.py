@@ -32,21 +32,16 @@ log = logging.getLogger('tchannel')
 """Types to represent system events"""
 EventType = enum(
     'EventType',
-
-    before_send_request = 0x00,
-    after_send_request = 0x01,
-
-    before_send_response = 0x10,
-    after_send_response = 0x11,
-
-    before_receive_request = 0x20,
-    after_receive_request = 0x21,
-
-    before_receive_response = 0x30,
-    after_receive_response = 0x31,
-
-    after_receive_error = 0x40,
-    after_send_error = 0x41,
+    before_send_request=0x00,
+    after_send_request=0x01,
+    before_send_response=0x10,
+    after_send_response=0x11,
+    before_receive_request=0x20,
+    after_receive_request=0x21,
+    before_receive_response=0x30,
+    after_receive_response=0x31,
+    after_receive_error=0x40,
+    after_send_error=0x41,
 )
 
 
