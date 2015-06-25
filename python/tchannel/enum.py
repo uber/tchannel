@@ -20,35 +20,10 @@
 
 from __future__ import absolute_import
 
-import pytest
-from mock import MagicMock
-
-from tchannel.event import EventEmitter
-from tchannel.event import EventRegistrar
-from tchannel.event import EventType
+import collections
 
 
-@pytest.mark.parametrize('event_name', EventType._fields)
-def test_event_hook(event_name):
-    event_value = getattr(EventType, event_name)
-    mock_hook = MagicMock()
-
-    event_emitter = EventEmitter()
-    event_emitter.register_hook(mock_hook)
-
-    event_emitter.fire(event_value, None)
-    assert getattr(mock_hook, event_name).called is True
-
-
-def test_decorator_registration():
-    event_emitter = EventEmitter()
-    registrar = EventRegistrar(event_emitter)
-
-    called = [False]
-
-    @registrar.before_send_request
-    def foo():
-        called[0] = True
-
-    event_emitter.fire(EventType.before_send_request)
-    assert called[0] is True
+def enum(class_name, **values):
+    class_type = collections.namedtuple(class_name, values.keys())
+    instance = class_type(**values)
+    return instance

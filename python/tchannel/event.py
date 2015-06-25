@@ -24,30 +24,25 @@ import collections
 import functools
 import logging
 
-from enum import IntEnum
-from enum import unique
+from .enum import enum
 
 log = logging.getLogger('tchannel')
 
 
-@unique
-class EventType(IntEnum):
-    """Types to represent system events"""
-
-    before_send_request = 0x00
-    after_send_request = 0x01
-
-    before_send_response = 0x10
-    after_send_response = 0x11
-
-    before_receive_request = 0x20
-    after_receive_request = 0x21
-
-    before_receive_response = 0x30
-    after_receive_response = 0x31
-
-    after_receive_error = 0x40
-    after_send_error = 0x41
+"""Types to represent system events"""
+EventType = enum(
+    'EventType',
+    before_send_request=0x00,
+    after_send_request=0x01,
+    before_send_response=0x10,
+    after_send_response=0x11,
+    before_receive_request=0x20,
+    after_receive_request=0x21,
+    before_receive_response=0x30,
+    after_receive_response=0x31,
+    after_receive_error=0x40,
+    after_send_error=0x41,
+)
 
 
 class EventHook(object):
@@ -119,13 +114,14 @@ class EventEmitter(object):
         event handlers.
         """
         if event_type is not None:
-            assert event_type in EventType, "unrecognized event type"
+            assert type(event_type) is int, "register hooks with int values"
             return self.hooks[event_type].append(hook)
 
-        for event_type in EventType:
-            func = getattr(hook, event_type.name, None)
+        for event_type in EventType._fields:
+            func = getattr(hook, event_type, None)
             if callable(func):
-                self.register_hook(func, event_type)
+                event_value = getattr(EventType, event_type)
+                self.register_hook(func, event_value)
 
     def fire(self, event, *args, **kwargs):
         for hook in self.hooks[event]:
@@ -144,8 +140,8 @@ class EventRegistrar(object):
         return self.event_emitter.register_hook(hook, event_type)
 
     def __getattr__(self, attr):
-        if attr in EventType.__members__:
-            event_type = EventType[attr]
+        if attr in EventType._fields:
+            event_type = getattr(EventType, attr)
             return functools.partial(
                 self.register,
                 event_type=event_type,

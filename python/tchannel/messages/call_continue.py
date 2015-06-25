@@ -44,10 +44,11 @@ class CallContinueMessage(BaseMessage):
     ):
         super(CallContinueMessage, self).__init__(id)
         self.flags = flags
+
         if checksum is None:
             self.checksum = (common.ChecksumType.none, None)
         else:
-            self.checksum = common.ChecksumType.standardize(checksum)
+            self.checksum = (checksum[0], checksum[1])
 
         self.args = args or []
 
