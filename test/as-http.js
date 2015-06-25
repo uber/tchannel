@@ -192,7 +192,7 @@ function allocHTTPBridge(opts) {
     }
 
     function onEgressRequest(hreq, hres) {
-        cluster.asHTTP.forwardToTChannel(cluster.egressChan, hreq, hres);
+        cluster.asHTTP.forwardToTChannel(cluster.egressChan, hreq, hres, {}, function nocallback(err){});
     }
 
     function destroy(callback) {
