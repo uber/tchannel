@@ -122,6 +122,8 @@ allocCluster.test('relay respects ttl', {
 allocCluster.test('relay an error frame', {
     numPeers: 4
 }, function t(cluster, assert) {
+    cluster.logger.whitelist('warn', 'forwarding error frame');
+
     var one = cluster.channels[0];
     var two = cluster.channels[1];
     var three = cluster.channels[2];
@@ -172,6 +174,7 @@ allocCluster.test('relay an error frame', {
     }).send('decline', 'foo', 'bar', function done(err, res, arg2, arg3) {
         assert.equal(err.type, 'tchannel.declined', 'expected declined error');
 
+        assert.ok(cluster.logger.items().length >= 1);
         client.close();
         assert.end();
     });
@@ -192,11 +195,10 @@ RelayNetwork.test('relay through a network', {
     kValue: 1,
     numRelays: 2
 }, function t(network, assert) {
-
-    network.forEachSubChannel(function register(channel, serviceName, instanceIndex) {
-        channel.handler.register('ping', function ping(req, res) {
+    network.forEachSubChannel(function register(c, service, index) {
+        c.register('ping', function ping(req, res) {
             res.headers.as = 'raw';
-            res.sendOk('' + instanceIndex, serviceName);
+            res.sendOk('' + index, service);
         });
     });
 
@@ -208,10 +210,56 @@ RelayNetwork.test('relay through a network', {
             as: 'raw'
         }
     }).send('ping', 'foo', 'bar', function onResponse(err, res, arg2, arg3) {
-        if (err) return assert.end(err);
-        assert.equal(arg3.toString(), 'bob', 'response relayed to and from requested service');
+        if (err) {
+            return assert.end(err);
+        }
+        assert.equal(arg3.toString(), 'bob',
+            'response relayed to and from requested service');
         assert.end();
     });
+});
+
+RelayNetwork.test('relay respects relayFlags', {
+    serviceNames: ['alice', 'bob'],
+    numInstancesPerService: 3,
+    kValue: 1,
+    numRelays: 2
+}, function t(network, assert) {
+    network.cluster.logger.whitelist('warn', 'forwarding error frame');
+
+    var counters = {
+        alice: 0,
+        bob: 0
+    };
+
+    network.forEachSubChannel(function register(c, service) {
+        c.register('ping', function ping(req, res) {
+            counters[service]++;
+            res.sendError('UnexpectedError', 'oops');
+        });
+    });
+
+    network.subChannelsByName.alice[0].request({
+        hasNoParent: true,
+        serviceName: 'bob',
+        headers: {
+            cn: 'alice',
+            as: 'raw'
+        },
+        retryFlags: {
+            never: true
+        }
+    }).send('ping', 'foo', 'bar', onResponse);
+
+    function onResponse(err, res, arg2, arg3) {
+        assert.ok(err);
+        assert.equal(err.message, 'oops');
+
+        assert.equal(counters.alice, 0);
+        assert.equal(counters.bob, 1);
+
+        assert.end();
+    }
 });
 
 RelayNetwork.test('relay network changes dont break', {
@@ -220,6 +268,8 @@ RelayNetwork.test('relay network changes dont break', {
     kValue: 1,
     numRelays: 2
 }, function t(network, assert) {
+    network.cluster.logger.whitelist('info', 'Changing to forward node');
+
     var aliceHosts = network.topology.alice;
     var bobHosts = network.topology.bob;
     network.topology.bob = aliceHosts;
@@ -227,15 +277,17 @@ RelayNetwork.test('relay network changes dont break', {
 
     var ready = CountedReady(2);
 
-    network.relayChannels[0].handler.roleTransitionEvent.on(function (stuff) {
-        assert.equals(stuff.newMode, 'forward');
-        ready.signal();
-    });
+    network.relayChannels[0].handler.roleTransitionEvent
+        .on(function forwardChange(stuff) {
+            assert.equals(stuff.newMode, 'forward');
+            ready.signal();
+        });
 
-    network.relayChannels[1].handler.roleTransitionEvent.on(function (stuff) {
-        assert.equals(stuff.newMode, 'forward');
-        ready.signal();
-    });
+    network.relayChannels[1].handler.roleTransitionEvent
+        .on(function forwardChange(stuff) {
+            assert.equals(stuff.newMode, 'forward');
+            ready.signal();
+        });
 
     network.egressNodesForRelay[0].membershipChangedEvent.emit();
     network.egressNodesForRelay[1].membershipChangedEvent.emit();

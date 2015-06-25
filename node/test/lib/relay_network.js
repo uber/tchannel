@@ -23,7 +23,6 @@
 var tape = require('tape');
 var parallel = require('run-parallel');
 var NullStatsd = require('uber-statsd-client/null');
-var debugLogtron = require('debug-logtron');
 var inherits = require('util').inherits;
 var tapeCluster = require('tape-cluster');
 
@@ -212,7 +211,7 @@ RelayNetwork.prototype.setCluster = function setCluster(cluster) {
 
         relayChannel.handler = new ServiceProxy({
             channel: relayChannel,
-            logger: debugLogtron('serviceproxy' + index, {enabled: true}),
+            logger: self.cluster.logger,
             statsd: statsd,
             egressNodes: egressNodes,
             circuits: self.createCircuits({
