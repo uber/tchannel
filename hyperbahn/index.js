@@ -306,6 +306,7 @@ function advertise(opts) {
         serviceName: 'hyperbahn',
         timeout: (opts && opts.timeout) || 50,
         hasNoParent: true,
+        trace: false,
         headers: {
             cn: self.callerName
         }
