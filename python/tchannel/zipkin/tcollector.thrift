@@ -12,58 +12,55 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-namespace java com.twitter.zipkin.gen
-namespace rb Zipkin
 
-//************** Collection related structs **************
+// One span refers to one RPC call. The `host` field, which is of type
+// `Endpoint`, will be the server being hit by the call.
 
-// these are the annotations we always expect to find in a span
-//const string CLIENT_SEND = "cs"
-//const string CLIENT_RECV = "cr"
-//const string SERVER_SEND = "ss"
-//const string SERVER_RECV = "sr"
-
-// this represents a host and port in a network
 struct Endpoint {
-  1: i32 ipv4,
-  2: i32 port,
-  3: string service_name           // which service did this operation happen on?
+    1: i32 ipv4
+    2: i32 port
+    3: string serviceName
 }
 
-// some event took place, either one by the framework or by the user
+// Regular annotations just associate a timestamp with a string value
 struct Annotation {
-  1: double timestamp                 // milliseconds from epoch (converted to microseconds in query service)
-  2: string value                  // what happened at the timestamp?
-  3: optional i32 duration         // how long did the operation take? microseconds
+    // Timestamp is in milliseconds since epoch. This is converted to
+    // microseconds since epoch in the query service since that's what the
+    // web frontend expects.
+    1: double timestamp
+    2: string value                  // what happened at the timestamp?
+    3: optional i32 duration         // how long did the operation take in ms
 }
 
 enum AnnotationType { BOOL, BYTES, I16, I32, I64, DOUBLE, STRING }
 
+// Binary annotations associate a string key with a value of a particular
+// type
 struct BinaryAnnotation {
-  1: string key,
-  2: optional string string_value,
-  3: optional double double_value
-  4: optional bool bool_value,
-  5: optional binary bytes_value,
-  6: optional i64 int_value,
-  7: AnnotationType annotation_type,
+    1: string key
+    2: optional string stringValue
+    3: optional double doubleValue
+    4: optional bool boolValue
+    5: optional binary bytesValue
+    6: optional i64 intValue
+    7: AnnotationType annotationType
 }
 
 struct Span {
-  1: binary trace_id                  // unique trace id, use for all spans in trace
-  2: optional Endpoint host
-  3: string name,                  // span name, rpc method for example
-  4: binary id,                       // unique span id, only used for this span
-  5: optional binary parent_id,                // parent span id
-  6: list<Annotation> annotations, // list of all annotations/events that occured
-  7: list<BinaryAnnotation> binary_annotations, // any binary annotations
-  8: optional bool debug = 0
+    1: binary traceId           // unique trace id, use for all spans in trace
+    2: Endpoint host            // host being remotely procedure called
+    3: string name              // span name, rpc method for example
+    4: binary id                // unique span id, only used for this span
+    5: binary parentId          // parent span id, 0 if no parent
+    6: list<Annotation> annotations
+    7: list<BinaryAnnotation> binaryAnnotations
+    8: optional bool debug = 0
 }
 
 struct Response {
-  1: bool ok
+    1: bool ok
 }
 
 service TCollector {
-  Response submit(1: Span span)
+    Response submit(1: Span span)
 }

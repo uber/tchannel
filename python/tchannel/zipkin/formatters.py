@@ -125,9 +125,9 @@ def binary_annotation_formatter(annotation):
         value = value.encode('utf-8')
 
     return ttypes.BinaryAnnotation(
-        annotation.name,
-        value,
-        annotation_type
+        key=annotation.name,
+        stringValue=value,
+        annotationType=annotation_type
     )
 
 
@@ -139,14 +139,14 @@ def thrift_formatter(trace, annotations, isbased64=False):
     thrift_annotations = []
     binary_annotations = []
 
+    host = None
     for annotation in annotations:
-        host = None
         endpoint = annotation.endpoint or trace.endpoint
-        if endpoint:
+        if endpoint and not host:
             host = ttypes.Endpoint(
                 ipv4=ipv4_to_int(endpoint.ipv4),
                 port=endpoint.port,
-                service_name=endpoint.service_name,
+                serviceName=endpoint.service_name,
             )
 
         if annotation.annotation_type == 'timestamp':
@@ -158,13 +158,13 @@ def thrift_formatter(trace, annotations, isbased64=False):
                 binary_annotation_formatter(annotation))
 
     thrift_trace = ttypes.Span(
-        trace_id=i64_to_string(trace.trace_id),
+        traceId=i64_to_string(trace.trace_id),
         name=trace.name,
         id=i64_to_string(trace.span_id),
         host=host,
-        parent_id=i64_to_string(trace.parent_span_id),
+        parentId=i64_to_string(trace.parent_span_id),
         annotations=thrift_annotations,
-        binary_annotations=binary_annotations
+        binaryAnnotations=binary_annotations
     )
 
     if isbased64:
