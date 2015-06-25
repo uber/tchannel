@@ -26,7 +26,6 @@ var http = require('http');
 var PassThrough = require('readable-stream').PassThrough;
 var extend = require('xtend');
 var extendInto = require('xtend/mutable');
-var errors = require('../errors.js');
 
 var headerRW = bufrw.Repeat(bufrw.UInt16BE,
     bufrw.Series(bufrw.str2, bufrw.str2));
