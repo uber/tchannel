@@ -157,6 +157,7 @@ function sendAdvertise(services, options, callback) {
     }
 
     options.serviceName = 'hyperbahn';
+    options.trace = false;
     options.hasNoParent = true;
     options.headers = options.headers || {};
     options.headers.cn = self.callerName;
@@ -232,6 +233,7 @@ function sendRelayAdvertise(opts, callback) {
             self.tchannelJSON.send(self.channel.request({
                 host: opts.hostPort,
                 serviceName: 'hyperbahn',
+                trace: false,
                 timeout: self.relayAdTimeout,
                 headers: {
                     cn: self.callerName
