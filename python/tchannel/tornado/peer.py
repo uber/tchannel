@@ -577,8 +577,10 @@ class PeerClientOperation(object):
                 # stop the outgoing request
                 request.set_exception(e)
 
-                should_retry = request.should_retry_on_error(e) and (
-                    num_of_attempt != attempt_times - 1)
+                should_retry = (
+                    request.should_retry_on_error(e) and
+                    num_of_attempt != attempt_times - 1
+                )
 
                 if not should_retry:
                     raise
