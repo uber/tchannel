@@ -93,8 +93,8 @@ allocCluster.test('sending OK OK', {
             var record1 = lines[0];
             var record2 = lines[1];
 
-            var err1 = record1.fields.err;
-            var err2 = record2.fields.err;
+            var err1 = record1.fields.error;
+            var err2 = record2.fields.error;
 
             assert.equal(record2.fields.state, 'Done');
             assert.equal(record2.fields.msg,
@@ -151,8 +151,8 @@ allocCluster.test('sending OK NOT_OK', {
             var record1 = lines[0];
             var record2 = lines[1];
 
-            var err1 = record1.fields.err;
-            var err2 = record2.fields.err;
+            var err1 = record1.fields.error;
+            var err2 = record2.fields.error;
 
             assert.equal(record2.fields.state, 'Done');
             assert.equal(record2.fields.msg,
@@ -213,8 +213,8 @@ allocCluster.test('sending OK ERROR_FRAME', {
             var record1 = lines[0];
             var record2 = lines[1];
 
-            var err1 = record1.fields.err;
-            var err2 = record2.fields.err;
+            var err1 = record1.fields.error;
+            var err2 = record2.fields.error;
 
             assert.equal(record1.fields.msg,
                 'Got unexpected error in handler');
@@ -268,8 +268,8 @@ allocCluster.test('sending NOT_OK OK', {
             var record1 = lines[0];
             var record2 = lines[1];
 
-            var err1 = record1.fields.err;
-            var err2 = record2.fields.err;
+            var err1 = record1.fields.error;
+            var err2 = record2.fields.error;
 
             assert.equal(record2.fields.state, 'Done');
             assert.equal(record2.fields.msg,
@@ -326,8 +326,8 @@ allocCluster.test('sending NOT_OK NOT_OK', {
             var record1 = lines[0];
             var record2 = lines[1];
 
-            var err1 = record1.fields.err;
-            var err2 = record2.fields.err;
+            var err1 = record1.fields.error;
+            var err2 = record2.fields.error;
 
             assert.equal(record2.fields.state, 'Done');
             assert.equal(record2.fields.msg,
@@ -388,8 +388,8 @@ allocCluster.test('sending NOT_OK ERROR_FRAME', {
             var record1 = lines[0];
             var record2 = lines[1];
 
-            var err1 = record1.fields.err;
-            var err2 = record2.fields.err;
+            var err1 = record1.fields.error;
+            var err2 = record2.fields.error;
 
             assert.equal(record1.fields.msg,
                 'Got unexpected error in handler');
@@ -448,9 +448,9 @@ allocCluster.test('sending ERROR_FRAME OK', {
             var record2 = lines[1];
             var record3 = lines[2];
 
-            var err1 = record1.fields.err;
-            var err2 = record2.fields.err;
-            var err3 = record3.fields.err;
+            var err1 = record1.fields.error;
+            var err2 = record2.fields.error;
+            var err3 = record3.fields.error;
 
             assert.equal(record1.fields.msg,
                 'Got unexpected error in handler');
@@ -519,9 +519,9 @@ allocCluster.test('sending ERROR_FRAME NOT_OK', {
             var record2 = lines[1];
             var record3 = lines[2];
 
-            var err1 = record1.fields.err;
-            var err2 = record2.fields.err;
-            var err3 = record3.fields.err;
+            var err1 = record1.fields.error;
+            var err2 = record2.fields.error;
+            var err3 = record3.fields.error;
 
             assert.equal(record1.fields.msg,
                 'Got unexpected error in handler');
@@ -590,9 +590,9 @@ allocCluster.test('sending ERROR_FRAME ERROR_FRAME', {
             var record2 = lines[1];
             var record3 = lines[2];
 
-            var err1 = record1.fields.err;
-            var err2 = record2.fields.err;
-            var err3 = record3.fields.err;
+            var err1 = record1.fields.error;
+            var err2 = record2.fields.error;
+            var err3 = record3.fields.error;
 
             assert.equal(record1.fields.msg,
                 'Got unexpected error in handler');
@@ -651,8 +651,8 @@ allocCluster.test('sending INTERNAL_TIMEOUT OK', {
             var record1 = lines[0];
             var record2 = lines[1];
 
-            var err1 = record1.fields.err;
-            var err2 = record2.fields.err;
+            var err1 = record1.fields.error;
+            var err2 = record2.fields.error;
 
             assert.equal(record2.fields.state, 'Error');
             assert.equal(record2.fields.msg,
@@ -709,8 +709,8 @@ allocCluster.test('sending INTERNAL_TIMEOUT NOT_OK', {
             var record1 = lines[0];
             var record2 = lines[1];
 
-            var err1 = record1.fields.err;
-            var err2 = record2.fields.err;
+            var err1 = record1.fields.error;
+            var err2 = record2.fields.error;
 
             assert.equal(record2.fields.state, 'Error');
             assert.equal(record2.fields.msg,
@@ -771,8 +771,8 @@ allocCluster.test('sending INTERNAL_TIMEOUT ERROR_FRAME', {
             var record1 = lines[0];
             var record2 = lines[1];
 
-            var err1 = record1.fields.err;
-            var err2 = record2.fields.err;
+            var err1 = record1.fields.error;
+            var err2 = record2.fields.error;
 
             assert.equal(record1.fields.msg,
                 'Got unexpected error in handler');

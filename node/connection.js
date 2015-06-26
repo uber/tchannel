@@ -322,7 +322,7 @@ TChannelConnection.prototype.onCallError = function onCallError(err) {
     } else {
         // Only popOutReq if there is no call response object yet
         req = self.ops.popOutReq(err.originalId, {
-            err: err,
+            error: err,
             id: err.originalId,
             info: 'got error frame for unknown id'
         });

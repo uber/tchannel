@@ -258,7 +258,7 @@ TChannelPeer.prototype.addConnection = function addConnection(conn) {
         var codeName = errors.classify(err);
 
         var loggerInfo = {
-            err: err,
+            error: err,
             direction: conn.direction,
             remoteName: conn.remoteName,
             socketRemoteAddr: conn.socketRemoteAddr

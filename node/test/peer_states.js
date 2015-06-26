@@ -283,7 +283,7 @@ function testSetup(desc, options, testFunc) {
                 }).send(op, '', '', onResult);
                 function onResult(err, res, arg2, arg3) {
                     callback(null, {
-                        err: err,
+                        error: err,
                         ok: res && res.ok,
                         arg2: arg2,
                         arg3: arg3
