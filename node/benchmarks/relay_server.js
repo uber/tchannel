@@ -30,7 +30,9 @@ var Reporter = require('../tcollector/reporter.js');
 var ServiceProxy = require('../hyperbahn/service_proxy.js');
 var FakeEgressNodes = require('../test/lib/fake-egress-nodes.js');
 
-var argv = parseArgs(process.argv.slice(2));
+var argv = parseArgs(process.argv.slice(2), {
+    boolean: ['trace']
+});
 
 if (argv.type === 'bench-relay') {
     process.title = 'nodejs-benchmarks-relay_bench_server';
@@ -56,6 +58,8 @@ function RelayServer(opts) {
         opts.type === 'bench-relay' || opts.type === 'trace-relay',
         'a valid type required'
     );
+    assert('trace' in opts, 'trace is a required options');
+    assert('debug' in opts, 'debug is a required options');
 
     var benchHostPort = '127.0.0.1:' + opts.benchPort;
     var benchRelayHostPort = '127.0.0.1:' + opts.benchRelayPort;
@@ -66,7 +70,7 @@ function RelayServer(opts) {
         statTags: {
             app: 'relay-server'
         },
-        // logger: require('debug-logtron')('relay'),
+        logger: opts.debug ? require('debug-logtron')('relay') : null,
         trace: true,
         statsd: NullStatsd()
     });
@@ -99,9 +103,14 @@ function RelayServer(opts) {
         logger: self.relay.logger,
         callerName: opts.type
     });
-    self.relay.tracer.reporter = function report(span) {
-        self.reporter.report(span);
-    };
+
+    if (opts.trace) {
+        self.relay.tracer.reporter = function report(span) {
+            self.reporter.report(span, {
+                timeout: 10 * 1000
+            });
+        };
+    }
 
     if (opts.type === 'bench-relay') {
         self.relay.handler.createServiceChannel('benchmark');

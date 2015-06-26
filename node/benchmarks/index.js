@@ -41,7 +41,7 @@ var argv = parseArgs(process.argv.slice(2), {
     alias: {
         o: 'output'
     },
-    boolean: ['relay']
+    boolean: ['relay', 'trace', 'debug']
 });
 
 function run(script, args) {
@@ -57,7 +57,7 @@ var serverProc = run(server);
 serverProc.stdout.pipe(process.stderr);
 serverProc.stderr.pipe(process.stderr);
 
-if (argv.relay) {
+if (argv.trace) {
     var traceProc = run(trace);
     traceProc.stdout.pipe(process.stderr);
     traceProc.stderr.pipe(process.stdout);
@@ -66,7 +66,7 @@ if (argv.relay) {
 var benchRelayProc;
 var traceRelayProc;
 
-if (argv.relay) {
+if (argv.relay || argv.trace) {
     setTimeout(startRelayServers, 500);
 } else {
     startBench();
@@ -78,20 +78,26 @@ function startRelayServers() {
         '--tracePort', '4039',
         '--benchRelayPort', '4038',
         '--traceRelayPort', '4037',
-        '--type', 'bench-relay'
+        '--type', 'bench-relay',
+        argv.trace ? '--trace' : '--no-trace',
+        argv.debug ? '--debug' : '--no-debug'
     ]);
     benchRelayProc.stdout.pipe(process.stderr);
     benchRelayProc.stderr.pipe(process.stderr);
 
-    traceRelayProc = run(relay, [
-        '--benchPort', '4040',
-        '--tracePort', '4039',
-        '--benchRelayPort', '4038',
-        '--traceRelayPort', '4037',
-        '--type', 'trace-relay'
-    ]);
-    traceRelayProc.stdout.pipe(process.stderr);
-    traceRelayProc.stderr.pipe(process.stderr);
+    if (argv.trace) {
+        traceRelayProc = run(relay, [
+            '--benchPort', '4040',
+            '--tracePort', '4039',
+            '--benchRelayPort', '4038',
+            '--traceRelayPort', '4037',
+            '--type', 'trace-relay',
+            argv.trace ? '--trace' : '--no-trace',
+            argv.debug ? '--debug' : '--no-debug'
+        ]);
+        traceRelayProc.stdout.pipe(process.stderr);
+        traceRelayProc.stderr.pipe(process.stderr);
+    }
 
     setTimeout(startBench, 500);
 }
@@ -126,9 +132,13 @@ function startBench() {
 
     benchProc.once('close', function onClose() {
         serverProc.kill();
-        if (argv.relay) {
+        if (traceProc) {
             traceProc.kill();
+        }
+        if (traceRelayProc) {
             traceRelayProc.kill();
+        }
+        if (benchRelayProc) {
             benchRelayProc.kill();
         }
     });
