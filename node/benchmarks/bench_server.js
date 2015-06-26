@@ -20,8 +20,16 @@
 
 'use strict';
 
+var NullStatsd = require('uber-statsd-client/null');
+
 var TChannel = require('../channel');
-var server = new TChannel();
+var server = TChannel({
+    statTags: {
+        app: 'my-server'
+    },
+    trace: true,
+    statsd: NullStatsd()
+});
 
 var serverChan = server.makeSubChannel({
     serviceName: 'benchmark'
