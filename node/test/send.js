@@ -361,7 +361,7 @@ allocCluster.test('send to self', {
     }
 });
 
-allocCluster.test.only('send junk transport headers', {
+allocCluster.test('send junk transport headers', {
     numPeers: 2
 }, function t(cluster, assert) {
     cluster.logger.whitelist('info', 'resetting connection');
