@@ -25,44 +25,50 @@ from .messages.error import ErrorMessage
 from .tornado.response import StatusCode
 
 
-class StatsHook(EventHook):
+class StatsdHook(EventHook):
+    """Collect Statsd information in the tchannel req/resp."""
 
-    def __init__(self, stats):
-        self._stats = stats
+    def __init__(self, statsd):
+        """
+
+        :param statsd: instance of StatsD.
+            `Link text https://github.com/etsy/statsd`
+        """
+        self._statsd = statsd
 
     def before_send_request(self, request):
-        stats_name = "tchannel.outbound.calls.sent"
+        statsd_name = "tchannel.outbound.calls.sent"
         (service, target_service, target_endpoint) = (
             extract_meta_info_from_request(request))
 
-        key = '.'.join([stats_name,
+        key = '.'.join([statsd_name,
                         clean(service, 'service'),
                         clean(target_service, 'target-service'),
                         clean(target_endpoint, 'target-endpoint')
                         ])
 
-        self._stats.count(key, 1)
+        self._statsd.count(key, 1)
 
     def after_receive_response(self, request, response):
         if response.code == StatusCode.ok:
-            stats_name = "tchannel.outbound.calls.success"
+            statsd_name = "tchannel.outbound.calls.success"
         else:
-            stats_name = "tchannel.outbound.calls.app-errors"
+            statsd_name = "tchannel.outbound.calls.app-errors"
         (service, target_service, target_endpoint) = (
             extract_meta_info_from_request(request))
-        key = '.'.join([stats_name,
+        key = '.'.join([statsd_name,
                         clean(service, 'service'),
                         clean(target_service, 'target-service'),
                         clean(target_endpoint, 'target-endpoint')
                         ])
 
-        self._stats.count(key, 1)
+        self._statsd.count(key, 1)
 
     def after_receive_system_error(self, request, error):
-        stats_name = "tchannel.outbound.calls.system-errors"
+        statsd_name = "tchannel.outbound.calls.system-errors"
         (service, target_service, target_endpoint) = (
             extract_meta_info_from_request(request))
-        key = '.'.join([stats_name,
+        key = '.'.join([statsd_name,
                         clean(service, 'service'),
                         clean(target_service, 'target-service'),
                         clean(target_endpoint, 'target-endpoint'),
@@ -70,13 +76,13 @@ class StatsHook(EventHook):
                               get(error.code, None), 'type')
                         ])
 
-        self._stats.count(key, 1)
+        self._statsd.count(key, 1)
 
     def after_receive_system_error_per_attempt(self, request, error):
-        stats_name = "tchannel.outbound.calls.per-attempt.system-errors"
+        statsd_name = "tchannel.outbound.calls.per-attempt.system-errors"
         (service, target_service, target_endpoint) = (
             extract_meta_info_from_request(request))
-        key = '.'.join([stats_name,
+        key = '.'.join([statsd_name,
                         clean(service, 'service'),
                         clean(target_service, 'target-service'),
                         clean(target_endpoint, 'target-endpoint'),
@@ -84,13 +90,13 @@ class StatsHook(EventHook):
                               get(error.code, None), 'type')
                         ])
 
-        self._stats.count(key, 1)
+        self._statsd.count(key, 1)
 
     def on_operational_error_per_attempt(self, request, error):
-        stats_name = "tchannel.outbound.calls.per-attempt.operational-errors"
+        statsd_name = "tchannel.outbound.calls.per-attempt.operational-errors"
         (service, target_service, target_endpoint) = (
             extract_meta_info_from_request(request))
-        key = '.'.join([stats_name,
+        key = '.'.join([statsd_name,
                         clean(service, 'service'),
                         clean(target_service, 'target-service'),
                         clean(target_endpoint, 'target-endpoint'),
@@ -98,13 +104,13 @@ class StatsHook(EventHook):
                               get(error.code, None), 'type')
                         ])
 
-        self._stats.count(key, 1)
+        self._statsd.count(key, 1)
 
     def on_operational_error(self, request, error):
-        stats_name = "tchannel.outbound.calls.operational-errors"
+        statsd_name = "tchannel.outbound.calls.operational-errors"
         (service, target_service, target_endpoint) = (
             extract_meta_info_from_request(request))
-        key = '.'.join([stats_name,
+        key = '.'.join([statsd_name,
                         clean(service, 'service'),
                         clean(target_service, 'target-service'),
                         clean(target_endpoint, 'target-endpoint'),
@@ -112,7 +118,7 @@ class StatsHook(EventHook):
                               get(error.code, None), 'type')
                         ])
 
-        self._stats.count(key, 1)
+        self._statsd.count(key, 1)
 
 
 def extract_meta_info_from_request(request):
