@@ -24,6 +24,8 @@ import socket
 
 import pytest
 
+from tests.integration.test_server import TestServer
+
 
 class _MockConnection(object):
     def __init__(self):
@@ -53,3 +55,9 @@ def random_open_port():
         return sock.getsockname()[1]
     finally:
         sock.close()
+
+
+@pytest.yield_fixture
+def tchannel_server(random_open_port):
+    with TestServer(random_open_port) as server:
+        yield server
