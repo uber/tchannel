@@ -53,7 +53,10 @@ function run(script, args) {
     return child;
 }
 
-var serverProc = run(server);
+var serverProc = run(server, [
+    argv.trace ? '--trace' : '--no-trace',
+    '--traceRelayHostPort', '127.0.0.1:4037'
+]);
 serverProc.stdout.pipe(process.stderr);
 serverProc.stderr.pipe(process.stderr);
 

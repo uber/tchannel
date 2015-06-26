@@ -23,8 +23,18 @@
 var process = require('process');
 process.title = 'nodejs-benchmarks-bench_server';
 
+var parseArgs = require('minimist');
+var assert = require('assert');
 var NullStatsd = require('uber-statsd-client/null');
 
+var argv = parseArgs(process.argv.slice(2), {
+    boolean: ['trace']
+});
+
+assert('trace' in argv, 'trace option needed');
+assert(argv.traceRelayHostPort, 'traceRelayHostPort needed');
+
+var Reporter = require('../tcollector/reporter.js');
 var TChannel = require('../channel');
 var server = TChannel({
     statTags: {
@@ -33,6 +43,22 @@ var server = TChannel({
     trace: true,
     statsd: NullStatsd()
 });
+
+var reporter = Reporter({
+    channel: server.makeSubChannel({
+        serviceName: 'tcollector',
+        peers: [argv.traceRelayHostPort]
+    }),
+    logger: server.logger,
+    callerName: 'my-server'
+});
+if (argv.trace) {
+    server.tracer.reporter = function report(span) {
+        reporter.report(span, {
+            timeout: 10 * 1000
+        });
+    };
+}
 
 var serverChan = server.makeSubChannel({
     serviceName: 'benchmark'
