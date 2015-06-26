@@ -245,6 +245,7 @@ function sendAdvertiseRequest(opts, cb) {
         timeout: (opts && opts.timeout) || 50,
         hasNoParent: true,
         trace: false,
+        retryLimit: 1,
         headers: {
             cn: self.callerName
         }
