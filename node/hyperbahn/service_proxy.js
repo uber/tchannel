@@ -272,13 +272,9 @@ function isBlocked(cn, serviceName) {
     cn = cn || '*';
     serviceName = serviceName || '*';
 
-    if (self.blockingTable[cn] && (
-        self.blockingTable[cn][serviceName] ||
-        self.blockingTable[cn]['*'])) {
-        return true;
-    } else if (self.blockingTable['*'] && (
-        self.blockingTable['*'][serviceName] ||
-        self.blockingTable['*']['*'])) {
+    if (self.blockingTable[cn + '~~' + serviceName] ||
+        self.blockingTable['*~~' + serviceName] ||
+        self.blockingTable[cn + '~~*']) {
         return true;
     }
 
@@ -290,17 +286,10 @@ function block(cn, serviceName) {
     var self = this;
     cn = cn || '*';
     serviceName = serviceName || '*';
-
-    if (!self.blockingTable) {
-        self.blockingTable = {};
-    }
-
-    var target = self.blockingTable[cn];
-    if (!target) {
-        self.blockingTable[cn] = target = {};
-    }
-
-    target[serviceName] = Date.now();
+    self.blockingTable = self.blockingTable || {};
+    assert(cn !== '*' || serviceName !== '*', 'at least one of cn/serviceName should be provided');
+    var key = cn + '~~' + serviceName;
+    self.blockingTable[key] = Date.now();
 };
 
 ServiceDispatchHandler.prototype.unblock =
@@ -312,31 +301,21 @@ function unblock(cn, serviceName) {
 
     cn = cn || '*';
     serviceName = serviceName || '*';
-    var callerNames;
-
-    if (cn === '*') {
-        callerNames = Object.keys(self.blockingTable);
-    } else {
-        callerNames = [cn];
-    }
-
-    callerNames.forEach(function each(callerName) {
-        clearCN(callerName);
+    
+    var keys = Object.keys(self.blockingTable);
+    keys.forEach(function each(key) {
+        clear(key);
     });
 
     if (Object.keys(self.blockingTable).length === 0) {
         self.blockingTable = null;
     }
 
-    function clearCN(callerName) {
-        var target = self.blockingTable[callerName];
-        if (!target) {
-            return;
-        }
-
-        delete target[serviceName];
-        if (serviceName === '*' || Object.keys(target).length === 0) {
-            delete self.blockingTable[callerName];
+    function clear(key) {
+        var strs = key.split('~~');
+        if ((cn === '*' || strs[0] === cn) &&
+            (serviceName === '*' || strs[1] === serviceName)) {
+            delete self.blockingTable[key];
         }
     }
 };
