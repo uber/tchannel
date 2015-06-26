@@ -154,7 +154,10 @@ function TChannel(options) {
     // how to handle incoming requests
     if (!self.options.handler) {
         if (!self.serviceName) {
-            self.handler = TChannelServiceNameHandler(self);
+            self.handler = TChannelServiceNameHandler({
+                channel: self,
+                isBusy: self.options.isBusy
+            });
         } else {
             self.handler = EndpointHandler(self.serviceName);
         }
