@@ -19,6 +19,7 @@
 # THE SOFTWARE.
 
 from __future__ import absolute_import
+import re
 
 from .event import EventHook
 from .messages.error import ErrorMessage
@@ -31,21 +32,13 @@ class StatsdHook(EventHook):
     def __init__(self, statsd):
         """
 
-        :param statsd: instance of StatsD.
-            `Link text https://github.com/etsy/statsd`
+        :param statsd: instance of `StatsD <https://github.com/etsy/statsd>`
         """
         self._statsd = statsd
 
     def before_send_request(self, request):
         statsd_name = "tchannel.outbound.calls.sent"
-        (service, target_service, target_endpoint) = (
-            extract_meta_info_from_request(request))
-
-        key = '.'.join([statsd_name,
-                        clean(service, 'service'),
-                        clean(target_service, 'target-service'),
-                        clean(target_endpoint, 'target-endpoint')
-                        ])
+        key = common_prefix(statsd_name, request)
 
         self._statsd.count(key, 1)
 
@@ -54,74 +47,49 @@ class StatsdHook(EventHook):
             statsd_name = "tchannel.outbound.calls.success"
         else:
             statsd_name = "tchannel.outbound.calls.app-errors"
-        (service, target_service, target_endpoint) = (
-            extract_meta_info_from_request(request))
-        key = '.'.join([statsd_name,
-                        clean(service, 'service'),
-                        clean(target_service, 'target-service'),
-                        clean(target_endpoint, 'target-endpoint')
-                        ])
+        key = common_prefix(statsd_name, request)
 
         self._statsd.count(key, 1)
 
     def after_receive_system_error(self, request, error):
         statsd_name = "tchannel.outbound.calls.system-errors"
-        (service, target_service, target_endpoint) = (
-            extract_meta_info_from_request(request))
-        key = '.'.join([statsd_name,
-                        clean(service, 'service'),
-                        clean(target_service, 'target-service'),
-                        clean(target_endpoint, 'target-endpoint'),
-                        clean(ErrorMessage.ERROR_CODES.
-                              get(error.code, None), 'type')
-                        ])
+        prefix = common_prefix(statsd_name, request)
+        key = prefix + '.' + clean(
+            ErrorMessage.ERROR_CODES.get(error.code, None), 'type'
+        )
 
         self._statsd.count(key, 1)
 
     def after_receive_system_error_per_attempt(self, request, error):
         statsd_name = "tchannel.outbound.calls.per-attempt.system-errors"
-        (service, target_service, target_endpoint) = (
-            extract_meta_info_from_request(request))
-        key = '.'.join([statsd_name,
-                        clean(service, 'service'),
-                        clean(target_service, 'target-service'),
-                        clean(target_endpoint, 'target-endpoint'),
-                        clean(ErrorMessage.ERROR_CODES.
-                              get(error.code, None), 'type')
-                        ])
+        prefix = common_prefix(statsd_name, request)
+        key = prefix + '.' + clean(
+            ErrorMessage.ERROR_CODES.get(error.code, None), 'type'
+        )
 
         self._statsd.count(key, 1)
 
     def on_operational_error_per_attempt(self, request, error):
         statsd_name = "tchannel.outbound.calls.per-attempt.operational-errors"
-        (service, target_service, target_endpoint) = (
-            extract_meta_info_from_request(request))
-        key = '.'.join([statsd_name,
-                        clean(service, 'service'),
-                        clean(target_service, 'target-service'),
-                        clean(target_endpoint, 'target-endpoint'),
-                        clean(ErrorMessage.ERROR_CODES.
-                              get(error.code, None), 'type')
-                        ])
+        prefix = common_prefix(statsd_name, request)
+        key = prefix + '.' + clean(
+            ErrorMessage.ERROR_CODES.get(error.code, None), 'type'
+        )
 
         self._statsd.count(key, 1)
 
     def on_operational_error(self, request, error):
         statsd_name = "tchannel.outbound.calls.operational-errors"
-        (service, target_service, target_endpoint) = (
-            extract_meta_info_from_request(request))
-        key = '.'.join([statsd_name,
-                        clean(service, 'service'),
-                        clean(target_service, 'target-service'),
-                        clean(target_endpoint, 'target-endpoint'),
-                        clean(ErrorMessage.ERROR_CODES.
-                              get(error.code, None), 'type')
-                        ])
+
+        prefix = common_prefix(statsd_name, request)
+        key = prefix + '.' + clean(
+            ErrorMessage.ERROR_CODES.get(error.code, None), 'type'
+        )
 
         self._statsd.count(key, 1)
 
 
-def extract_meta_info_from_request(request):
+def extract_metadata(request):
     service = request.headers.get('cn', None)
     target_service = request.service
     target_endpoint = request.endpoint
@@ -129,15 +97,24 @@ def extract_meta_info_from_request(request):
     return (service, target_service, target_endpoint)
 
 
+def common_prefix(statsd_name, request):
+    (service, target_service, target_endpoint) = (
+        extract_metadata(request)
+    )
+
+    return '.'.join([statsd_name,
+                     clean(service, 'service'),
+                     clean(target_service, 'target-service'),
+                     clean(target_endpoint, 'target-endpoint')
+                     ])
+
+
+rexp = re.compile(r'[{}/\\:\s.]+')
+
+
 def clean(key, field):
     if not key:
         return 'no-' + field
     else:
 
-        return key.replace(
-            ".", "-").replace(
-            "\/", "-").replace(
-            "{", "-").replace(
-            "}", "-").replace(
-            ":", "-").replace(
-            " ", "-")
+        return rexp.sub('-', key)
