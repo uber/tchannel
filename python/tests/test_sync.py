@@ -25,3 +25,10 @@ import pytest
 
 def test_works():
     assert False
+
+def test_hi():
+
+    import ipdb; ipdb.set_trace()
+
+    assert True
+

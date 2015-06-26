@@ -32,3 +32,6 @@ doubles
 
 # for releases
 zest.releaser
+
+# for debugging
+ipdb
