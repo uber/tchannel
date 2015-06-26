@@ -21,6 +21,7 @@
 'use strict';
 
 var async = require('async');
+var NullStatsd = require('uber-statsd-client/null');
 var metrics = require('metrics');
 var parseArgs = require('minimist');
 var process = require('process');
@@ -112,7 +113,13 @@ Test.prototype.run = function (callback) {
 Test.prototype.newClient = function (id, callback) {
     var self = this;
     var port = 4041 + id;
-    var clientChan = new TChannel();
+    var clientChan = TChannel({
+        statTags: {
+            app: 'my-client'
+        },
+        trace: true,
+        statsd: NullStatsd()
+    });
     var newClient = clientChan.makeSubChannel({
         serviceName: 'benchmark',
         peers: [DESTINATION_SERVER]

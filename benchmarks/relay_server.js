@@ -20,11 +20,19 @@
 
 'use strict';
 
+var NullStatsd = require('uber-statsd-client/null');
+
 var TChannel = require('../channel.js');
 var ServiceProxy = require('../hyperbahn/service_proxy.js');
 var FakeEgressNodes = require('../test/lib/fake-egress-nodes.js');
 
-var relay = TChannel();
+var relay = TChannel({
+    statTags: {
+        app: 'relay-server'
+    },
+    trace: true,
+    statsd: NullStatsd()
+});
 relay.handler = ServiceProxy({
     channel: relay,
     egressNodes: FakeEgressNodes({
