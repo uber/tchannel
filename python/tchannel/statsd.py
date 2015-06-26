@@ -26,6 +26,9 @@ from .messages.error import ErrorMessage
 from .tornado.response import StatusCode
 
 
+WILDCHAR_REXP = re.compile(r'[{}/\\:\s.]+')
+
+
 class StatsdHook(EventHook):
     """Collect Statsd information in the tchannel req/resp."""
 
@@ -109,12 +112,9 @@ def common_prefix(statsd_name, request):
                      ])
 
 
-rexp = re.compile(r'[{}/\\:\s.]+')
-
-
 def clean(key, field):
     if not key:
         return 'no-' + field
     else:
 
-        return rexp.sub('-', key)
+        return WILDCHAR_REXP.sub('-', key)
