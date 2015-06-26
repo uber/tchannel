@@ -164,6 +164,14 @@ module.exports.InvalidHandlerForRegister = TypedError({
     handler: null
 });
 
+module.exports.InvalidHeaderTypeError = TypedError({
+    type: 'tchannel.invalid-header-type',
+    message: 'invalid header type for header {name}; ' +
+        'expected string, got {headerType}',
+    headerType: null,
+    name: null
+});
+
 module.exports.InvalidJSONBody = TypedError({
     type: 'tchannel-handler.json.invalid-body',
     message: 'Invalid error body, expected a typed-error',
@@ -558,6 +566,7 @@ module.exports.classify = function classify(err) {
         case 'tchannel.response-frame-state':
         case 'tchannel.invalid-argument':
         case 'tchannel.invalid-handler':
+        case 'tchannel.invalid-header-type':
         case 'tchannel.invalid-handler.for-registration':
         case 'tchannel.hydrated-error.default-type':
         case 'tchannel.server.listen-failed':

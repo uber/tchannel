@@ -112,6 +112,14 @@ HeaderRW.prototype.writeInto = function writeInto(headers, buffer, offset) {
         }
         offset = res.offset;
 
+        // TODO consider supporting buffers
+        if (typeof headers[key] !== 'string') {
+            return bufrw.WriteResult.error(errors.InvalidHeaderTypeError({
+                name: key,
+                headerType: typeof headers[key]
+            }), offset);
+        }
+
         res = self.valrw.writeInto(headers[key], buffer, offset);
     }
 
