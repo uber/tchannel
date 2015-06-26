@@ -20,13 +20,9 @@
 
 'use strict';
 
-var parallel = require('run-parallel');
 var Buffer = require('buffer').Buffer;
-var extend = require('xtend');
 var allocCluster = require('./lib/alloc-cluster.js');
-var EndpointHandler = require('../endpoint-handler');
 var TChannel = require('../channel.js');
-var CountedReadySignal = require('ready-signal/counted');
 
 allocCluster.test('request().send() to a server', 2, function t(cluster, assert) {
     var two = cluster.channels[1];
@@ -52,7 +48,7 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
         isBusy: isBusy
     });
 
-    one.listen(0, '127.0.0.1', listening)
+    one.listen(0, '127.0.0.1', listening);
 
     var twoSubChan;
 
