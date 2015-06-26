@@ -45,13 +45,22 @@ var argv = parseArgs(process.argv.slice(2), {
         numRequests: 20000,
         pipeline: '10,100,1000,20000',
         sizes: '4,4096'
-    }
+    },
+    boolean: ['relay']
 });
 var multiplicity = parseInt(argv.multiplicity, 10);
 var numClients = parseInt(argv.numClients, 10);
 var numRequests = parseInt(argv.numRequests, 10);
 argv.pipeline = parseIntList(argv.pipeline);
 argv.sizes = parseIntList(argv.sizes);
+
+var DESTINATION_SERVER;
+
+if (argv.relay) {
+    DESTINATION_SERVER = '127.0.0.1:4039';
+} else {
+    DESTINATION_SERVER = '127.0.0.1:4040';
+}
 
 // -- test harness
 
@@ -106,7 +115,7 @@ Test.prototype.newClient = function (id, callback) {
     var clientChan = new TChannel();
     var newClient = clientChan.makeSubChannel({
         serviceName: 'benchmark',
-        peers: ['127.0.0.1:4040']
+        peers: [DESTINATION_SERVER]
     });
     newClient.createTime = Date.now();
     newClient.listen(port, "127.0.0.1", function (err) {
