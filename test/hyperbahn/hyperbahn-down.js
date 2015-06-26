@@ -111,8 +111,8 @@ function runTests(HyperbahnCluster) {
 
         function onAdvertisementAttempt() {
             var delta = Date.now() - start;
-            assert.ok(gap[attempts][0] < delta);
-            assert.ok(delta < gap[attempts][1]);
+            assert.ok(gap[attempts][0] <= delta);
+            assert.ok(delta <= gap[attempts][1]);
 
             if (++attempts < 3) {
                 return;
