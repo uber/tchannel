@@ -60,7 +60,7 @@ argv.sizes = parseIntList(argv.sizes);
 var DESTINATION_SERVER;
 
 if (argv.relay) {
-    DESTINATION_SERVER = '127.0.0.1:4039';
+    DESTINATION_SERVER = '127.0.0.1:4038';
 } else {
     DESTINATION_SERVER = '127.0.0.1:4040';
 }

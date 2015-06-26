@@ -38,12 +38,20 @@ if (argv.type === 'bench-relay') {
     process.title = 'nodejs-benchmarks-relay_trace_server';
 }
 
+RelayServer(argv);
+
 function RelayServer(opts) {
+    /*eslint max-statements: [2, 25]*/
     if (!(this instanceof RelayServer)) {
         return new RelayServer(opts);
     }
 
-    assert(opts.benchPort, 'localPort required');
+    var self = this;
+
+    assert(opts.benchPort, 'benchPort required');
+    assert(opts.benchRelayPort, 'benchRelayPort required');
+    assert(opts.tracePort, 'tracePort required');
+    assert(opts.traceRelayPort, 'traceRelayPort required');
     assert(
         opts.type === 'bench-relay' || opts.type === 'trace-relay',
         'a valid type required'
@@ -54,15 +62,16 @@ function RelayServer(opts) {
     var traceHostPort = '127.0.0.1:' + opts.tracePort;
     var traceRelayHostPort = '127.0.0.1:' + opts.traceRelayPort;
 
-    var relay = TChannel({
+    self.relay = TChannel({
         statTags: {
             app: 'relay-server'
         },
+        // logger: require('debug-logtron')('relay'),
         trace: true,
         statsd: NullStatsd()
     });
-    relay.handler = ServiceProxy({
-        channel: relay,
+    self.relay.handler = ServiceProxy({
+        channel: self.relay,
         egressNodes: FakeEgressNodes({
             hostPort: opts.type === 'bench-relay' ?
                 benchRelayHostPort : opts.type === 'trace-relay' ?
@@ -74,45 +83,47 @@ function RelayServer(opts) {
         })
     });
 
-    var reporter = Reporter({
-        channel: relay.makeSubChannel({
+    self.tcollectorChannel = TChannel({
+        trace: false,
+        statsd: NullStatsd(),
+        logger: self.relay.logger,
+        statTags: {
+            app: 'relay-server'
+        }
+    });
+    self.reporter = Reporter({
+        channel: self.tcollectorChannel.makeSubChannel({
             serviceName: 'tcollector',
-            peers: [traceRelayHostPort],
-            trace: false,
-            requestDefaults: {
-                serviceName: 'tcollector',
-                headers: {
-                    cn: opts.type
-                }
-            }
+            peers: [traceRelayHostPort]
         }),
+        logger: self.relay.logger,
         callerName: opts.type
     });
-    relay.tracer.reporter = function report(span) {
-        reporter.report(span);
+    self.relay.tracer.reporter = function report(span) {
+        self.reporter.report(span);
     };
 
     if (opts.type === 'bench-relay') {
-        relay.handler.createServiceChannel('benchmark');
-        relay.listen(opts.benchRelayPort, '127.0.0.1', onListen);
+        self.relay.handler.createServiceChannel('benchmark');
+        self.relay.listen(opts.benchRelayPort, '127.0.0.1', onListen);
     } else if (opts.type === 'trace-relay') {
-        relay.handler.createServiceChannel('tcollector');
-        relay.listen(opts.traceRelayPort, '127.0.0.1', onListen);
+        self.relay.handler.createServiceChannel('tcollector');
+        self.relay.listen(opts.traceRelayPort, '127.0.0.1', onListen);
     }
 
     function onListen() {
+        var peer;
+
         if (opts.type === 'bench-relay') {
-            var peer = relay.handler.getServicePeer(
+            peer = self.relay.handler.getServicePeer(
                 'benchmark', benchHostPort
             );
             peer.connect();
-        } else if (opts.type = 'trace-relay') {
-            var peer = relay.handler.getServicePeer(
-                'benchmark', traceHostPort
+        } else if (opts.type === 'trace-relay') {
+            peer = self.relay.handler.getServicePeer(
+                'tcollector', traceHostPort
             );
             peer.connect();
         }
-        
     }
-
 }
