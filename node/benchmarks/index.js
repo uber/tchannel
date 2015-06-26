@@ -20,12 +20,15 @@
 
 'use strict';
 
+/*eslint no-console: 0*/
 var childProcess = require('child_process');
 var parseArgs = require('minimist');
 var path = require('path');
 var ldj = require('ldjson-stream');
 var fs = require('fs');
 var util = require('util');
+var process = require('process');
+var console = require('console');
 
 var server = path.join(__dirname, 'bench_server.js');
 var bench = path.join(__dirname, 'multi_bench.js');
@@ -55,9 +58,9 @@ benchProc.stderr.pipe(process.stderr);
 
 benchProc.stdout
     .pipe(ldj.parse())
-    .on('data', function(result) {
+    .on('data', function onChunk(result) {
         console.log(util.format(
-            "%s, %s/%s min/max/avg/p95: %s/%s/%s/%s %sms total, %s ops/sec",
+            '%s, %s/%s min/max/avg/p95: %s/%s/%s/%s %sms total, %s ops/sec',
             lpad(result.descr, 13),
             lpad(result.pipeline, 5),
             result.numClients,
@@ -66,7 +69,9 @@ benchProc.stdout
             lpad(result.mean.toFixed(2), 7),
             lpad(result.p95.toFixed(2), 7),
             lpad(result.elapsed, 6),
-            lpad(typeof result.rate === 'number' ? result.rate.toFixed(2) : 'NaN', 8)
+            lpad(typeof result.rate === 'number' ?
+                result.rate.toFixed(2) : 'NaN', 8
+            )
         ));
     });
 
@@ -75,14 +80,13 @@ if (argv.output) {
         .pipe(fs.createWriteStream(argv.output, {encoding: 'utf8'}));
 }
 
-
 benchProc.once('close', function onClose() {
     serverProc.kill();
 });
 
 function lpad(input, len, chr) {
     var str = input.toString();
-    chr = chr || " ";
+    chr = chr || ' ';
 
     while (str.length < len) {
         str = chr + str;

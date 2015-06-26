@@ -18,11 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-var async = require('async');
-var metrics = require("metrics");
-var parseArgs = require('minimist');
+'use strict';
 
-var TChannel = require("../channel");
+var async = require('async');
+var metrics = require('metrics');
+var parseArgs = require('minimist');
+var process = require('process');
+
+var TChannel = require('../channel');
 var base2 = require('../test/lib/base2');
 var LCGStream = require('../test/lib/rng_stream');
 
