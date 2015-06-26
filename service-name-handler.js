@@ -21,19 +21,37 @@
 'use strict';
 
 var errors = require('./errors');
+var assert = require('assert');
 
-function TChannelServiceNameHandler(channel) {
+function TChannelServiceNameHandler(options) {
     if (!(this instanceof TChannelServiceNameHandler)) {
-        return new TChannelServiceNameHandler(channel);
+        return new TChannelServiceNameHandler(options);
     }
     var self = this;
-    self.channel = channel;
+
+    assert(typeof options === 'object', 'options required');
+
+    self.channel = options.channel;
+    assert(typeof self.channel === 'object', 'expected options.tchannel to be object');
+
+    self.isBusy = options.isBusy || null;
+    if (self.isBusy) {
+        assert(typeof self.isBusy === 'function', 'expected options.isBusy to be function');
+    }
 }
 
 TChannelServiceNameHandler.prototype.type = 'tchannel.service-name-handler';
 
 TChannelServiceNameHandler.prototype.handleRequest = function handleRequest(req, buildRes) {
     var self = this;
+
+    if (self.isBusy) {
+        var busyInfo = self.isBusy();
+        if (busyInfo.busy === true) {
+            buildRes().sendError('Busy', busyInfo.reason || 'server is busy');
+        }
+    }
+
     if (!req.serviceName) {
         buildRes().sendError('BadRequest', 'no service name given');
         return;
