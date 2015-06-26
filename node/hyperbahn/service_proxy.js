@@ -73,6 +73,11 @@ function handleRequest(req, buildRes) {
         return;
     }
 
+    if (self.isBlocked(req.headers && req.headers.cn, req.serviceName)) {
+        req.connection.ops.popInReq(req.id);
+        return;
+    }
+
     var chan = self.channel.subChannels[req.serviceName];
     if (chan) {
         // Temporary hack. Need to set json by default because
@@ -254,6 +259,85 @@ function updateExitNodes(exitNodes, svcchan) {
     var exitNames = Object.keys(exitNodes);
     for (i = 0; i < exitNames.length; i++) {
         self._getServicePeer(svcchan, exitNames[i]);
+    }
+};
+
+ServiceDispatchHandler.prototype.isBlocked =
+function isBlocked(cn, serviceName) {
+    var self = this;
+    if (!self.blockingTable) {
+        return false;
+    }
+
+    cn = cn || '*';
+    serviceName = serviceName || '*';
+
+    if (self.blockingTable[cn] && (
+        self.blockingTable[cn][serviceName] ||
+        self.blockingTable[cn]['*'])) {
+        return true;
+    } else if (self.blockingTable['*'] && (
+        self.blockingTable['*'][serviceName] ||
+        self.blockingTable['*']['*'])) {
+        return true;
+    }
+
+    return false;
+};
+
+ServiceDispatchHandler.prototype.block =
+function block(cn, serviceName) {
+    var self = this;
+    cn = cn || '*';
+    serviceName = serviceName || '*';
+
+    if (!self.blockingTable) {
+        self.blockingTable = {};
+    }
+
+    var target = self.blockingTable[cn];
+    if (!target) {
+        self.blockingTable[cn] = target = {};
+    }
+
+    target[serviceName] = Date.now();
+};
+
+ServiceDispatchHandler.prototype.unblock =
+function unblock(cn, serviceName) {
+    var self = this;
+    if (!self.blockingTable) {
+        return;
+    }
+
+    cn = cn || '*';
+    serviceName = serviceName || '*';
+    var callerNames;
+
+    if (cn === '*') {
+        callerNames = Object.keys(self.blockingTable);
+    } else {
+        callerNames = [cn];
+    }
+
+    callerNames.forEach(function each(callerName) {
+        clearCN(callerName);
+    });
+
+    if (Object.keys(self.blockingTable).length === 0) {
+        self.blockingTable = null;
+    }
+
+    function clearCN(callerName) {
+        var target = self.blockingTable[callerName];
+        if (!target) {
+            return;
+        }
+
+        delete target[serviceName];
+        if (serviceName === '*' || Object.keys(target).length === 0) {
+            delete self.blockingTable[callerName];
+        }
     }
 };
 
