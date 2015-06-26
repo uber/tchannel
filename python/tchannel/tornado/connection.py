@@ -275,7 +275,6 @@ class TornadoConnection(object):
         self.write(message)
         return future
 
-    @tornado.gen.coroutine
     def write(self, message):
         """Writes the given message up the wire.
 
@@ -294,8 +293,15 @@ class TornadoConnection(object):
             message_factory = self.response_message_factory
 
         fragments = message_factory.fragment(message)
+
+        write_future = self._write(fragments.next())
+
         for fragment in fragments:
-            yield self._write(fragment)
+            write_future.add_done_callback(
+                lambda f: f.exception() or self.write(fragment)
+            )
+
+        return write_future
 
     def _write(self, message):
         """Writes the given message up the wire.
