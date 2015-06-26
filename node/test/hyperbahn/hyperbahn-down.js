@@ -93,6 +93,13 @@ function runTests(HyperbahnCluster) {
         });
 
         var attempts = 0;
+        var start = Date.now();
+
+        var gap = {
+            0: [0, 10],
+            1: [200, 225],
+            2: [1200, 1250]
+        };
 
         client.on('error', onError);
         client.on('advertise-attempt', onAdvertisementAttempt);
@@ -103,6 +110,10 @@ function runTests(HyperbahnCluster) {
         }
 
         function onAdvertisementAttempt() {
+            var delta = Date.now() - start;
+            assert.ok(gap[attempts][0] < delta);
+            assert.ok(delta < gap[attempts][1]);
+
             if (++attempts < 3) {
                 return;
             }
