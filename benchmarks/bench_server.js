@@ -18,21 +18,25 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+'use strict';
+
 var TChannel = require('../channel');
-var EndpointHandler = require('../endpoint-handler');
-var server = new TChannel({
-    handler: EndpointHandler()
+var server = new TChannel();
+
+var serverChan = server.makeSubChannel({
+    serviceName: 'server'
 });
+
 server.listen(4040, '127.0.0.1');
 
 var keys = {};
 
-server.handler.register('ping', function onPing(req, res) {
+serverChan.register('ping', function onPing(req, res) {
     res.headers.as = 'raw';
     res.sendOk('pong', null);
 });
 
-server.handler.register('set', function onSet(req, res, arg2, arg3) {
+serverChan.register('set', function onSet(req, res, arg2, arg3) {
     var key = arg2.toString('utf8');
     var val = arg3.toString('utf8');
     keys[key] = val;
@@ -40,7 +44,7 @@ server.handler.register('set', function onSet(req, res, arg2, arg3) {
     res.sendOk('ok', 'really ok');
 });
 
-server.handler.register('get', function onGet(req, res, arg2, arg3){
+serverChan.register('get', function onGet(req, res, arg2, arg3) {
     var key = arg2.toString('utf8');
     res.headers.as = 'raw';
     if (keys[key] !== undefined) {
