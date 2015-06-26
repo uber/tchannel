@@ -47,8 +47,8 @@ TChannelServiceNameHandler.prototype.handleRequest = function handleRequest(req,
 
     if (self.isBusy) {
         var busyInfo = self.isBusy();
-        if (busyInfo && busyInfo.busy === true) {
-            buildRes().sendError('Busy', busyInfo.reason || 'server is busy');
+        if (busyInfo) {
+            buildRes().sendError('Busy', busyInfo);
         }
     }
 
