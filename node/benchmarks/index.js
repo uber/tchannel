@@ -29,9 +29,11 @@ var fs = require('fs');
 var util = require('util');
 var process = require('process');
 var console = require('console');
+var setTimeout = require('timers').setTimeout;
 
 var server = path.join(__dirname, 'bench_server.js');
 var relay = path.join(__dirname, 'relay_server.js');
+var trace = path.join(__dirname, 'trace_server.js');
 var bench = path.join(__dirname, 'multi_bench.js');
 
 var argv = parseArgs(process.argv.slice(2), {
@@ -56,44 +58,81 @@ serverProc.stdout.pipe(process.stderr);
 serverProc.stderr.pipe(process.stderr);
 
 if (argv.relay) {
-    var relayProc = run(relay);
-    relayProc.stdout.pipe(process.stderr);
-    relayProc.stderr.pipe(process.stderr);
+    var traceProc = run(trace);
+    traceProc.stdout.pipe(process.stderr);
+    traceProc.stderr.pipe(process.stdout);
 }
 
-var benchProc = run(bench, argv['--']);
-benchProc.stderr.pipe(process.stderr);
+var benchRelayProc;
+var traceRelayProc;
 
-benchProc.stdout
-    .pipe(ldj.parse())
-    .on('data', function onChunk(result) {
-        console.log(util.format(
-            '%s, %s/%s min/max/avg/p95: %s/%s/%s/%s %sms total, %s ops/sec',
-            lpad(result.descr, 13),
-            lpad(result.pipeline, 5),
-            result.numClients,
-            lpad(result.min, 4),
-            lpad(result.max, 4),
-            lpad(result.mean.toFixed(2), 7),
-            lpad(result.p95.toFixed(2), 7),
-            lpad(result.elapsed, 6),
-            lpad(typeof result.rate === 'number' ?
-                result.rate.toFixed(2) : 'NaN', 8
-            )
-        ));
-    });
+if (argv.relay) {
+    setTimeout(startRelayServers, 500);
+} else {
+    startBench();
+}
 
-if (argv.output) {
+function startRelayServers() {
+    benchRelayProc = run(relay, [
+        '--benchPort', '4040',
+        '--tracePort', '4039',
+        '--benchRelayPort', '4038',
+        '--traceRelayPort', '4037',
+        '--type', 'bench-relay'
+    ]);
+    benchRelayProc.stdout.pipe(process.stderr);
+    benchRelayProc.stderr.pipe(process.stderr);
+
+    traceRelayProc = run(relay, [
+        '--benchPort', '4040',
+        '--tracePort', '4039',
+        '--benchRelayPort', '4038',
+        '--traceRelayPort', '4037',
+        '--type', 'trace-relay'
+    ]);
+    traceRelayProc.stdout.pipe(process.stderr);
+    traceRelayProc.stderr.pipe(process.stderr);
+
+    setTimeout(startBench, 500);
+}
+
+function startBench() {
+    var benchProc = run(bench, argv['--']);
+    benchProc.stderr.pipe(process.stderr);
+
     benchProc.stdout
-        .pipe(fs.createWriteStream(argv.output, {encoding: 'utf8'}));
-}
+        .pipe(ldj.parse())
+        .on('data', function onChunk(result) {
+            console.log(util.format(
+                '%s, %s/%s min/max/avg/p95: %s/%s/%s/%s %sms total, %s ops/sec',
+                lpad(result.descr, 13),
+                lpad(result.pipeline, 5),
+                result.numClients,
+                lpad(result.min, 4),
+                lpad(result.max, 4),
+                lpad(result.mean.toFixed(2), 7),
+                lpad(result.p95.toFixed(2), 7),
+                lpad(result.elapsed, 6),
+                lpad(typeof result.rate === 'number' ?
+                    result.rate.toFixed(2) : 'NaN', 8
+                )
+            ));
+        });
 
-benchProc.once('close', function onClose() {
-    serverProc.kill();
-    if (relayProc) {
-        relayProc.kill();
+    if (argv.output) {
+        benchProc.stdout
+            .pipe(fs.createWriteStream(argv.output, {encoding: 'utf8'}));
     }
-});
+
+    benchProc.once('close', function onClose() {
+        serverProc.kill();
+        if (argv.relay) {
+            traceProc.kill();
+            traceRelayProc.kill();
+            benchRelayProc.kill();
+        }
+    });
+}
 
 function lpad(input, len, chr) {
     var str = input.toString();
