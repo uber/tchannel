@@ -43,6 +43,8 @@ function TCollectorTraceReporter(options) {
     self.logger = options.logger;
     self.channel = options.channel;
     self.callerName = options.callerName;
+    self.logWarnings = 'logWarnings' in options ?
+        options.logWarnings : true;
 
     /*istanbul ignore if*/
     if (!self.channel) {
@@ -161,18 +163,24 @@ function report(span, opts, callback) {
 
     function onResponse(err, response) {
         if (err) {
-            self.logger.warn('Zipkin span submit failed', {
-                error: err
-            });
+            if (self.logWarnings) {
+                self.logger.warn('Zipkin span submit failed', {
+                    error: err,
+                    serviceName: 'tcollector'
+                });
+            }
 
             if (callback) {
                 callback(err);
             }
 
         } else if (!response.ok) {
-            self.logger.warn('Zipkin span submit failed: not ok', {
-                response: response
-            });
+            if (self.logWarnings) {
+                self.logger.warn('Zipkin span submit failed: not ok', {
+                    error: response.body,
+                    serviceName: 'tcollector'
+                });
+            }
 
             if (callback) {
                 callback(response.body);
