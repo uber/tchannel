@@ -162,7 +162,7 @@ function report(span, opts, callback) {
     function onResponse(err, response) {
         if (err) {
             self.logger.warn('Zipkin span submit failed', {
-                err: err
+                error: err
             });
 
             if (callback) {

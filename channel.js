@@ -274,7 +274,7 @@ TChannel.prototype.onServerSocketConnection = function onServerSocketConnection(
         var codeName = errors.classify(err);
 
         var loggerInfo = {
-            err: err,
+            error: err,
             direction: conn.direction,
             remoteName: conn.remoteName,
             socketRemoteAddr: conn.socketRemoteAddr
@@ -329,7 +329,7 @@ TChannel.prototype.onServerSocketError = function onServerSocketError(err) {
         });
     }
     self.logger.error('server socket error', {
-        err: err,
+        error: err,
         requestedPort: self.requestedPort,
         host: self.host,
         hostPort: self.hostPort || null

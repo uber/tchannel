@@ -197,7 +197,7 @@ TChannelJSON.prototype.register = function register(
 
                 self.logger.error('Got unexpected error in handler', {
                     endpoint: arg1,
-                    err: err
+                    error: err
                 });
                 return res.sendError('UnexpectedError', 'Unexpected Error');
             }

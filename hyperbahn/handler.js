@@ -264,7 +264,7 @@ function sendRelayAdvertise(opts, callback) {
                 logger.error('Could not send relay advertise', {
                     exitNode: opts.hostPort,
                     services: opts.services,
-                    err: err,
+                    error: err,
                     codeName: codeName,
                     responseBody: response && response.body
                 });

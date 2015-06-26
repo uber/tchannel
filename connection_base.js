@@ -192,7 +192,7 @@ function onResponseError(err, req) {
     var self = this;
 
     var loggingOptions = {
-        err: err,
+        error: err,
         arg1: String(req.arg1),
         ok: req.res.ok,
         type: req.res.type,
