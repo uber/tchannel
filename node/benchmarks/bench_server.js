@@ -24,7 +24,7 @@ var TChannel = require('../channel');
 var server = new TChannel();
 
 var serverChan = server.makeSubChannel({
-    serviceName: 'server'
+    serviceName: 'benchmark'
 });
 
 server.listen(4040, '127.0.0.1');
