@@ -30,12 +30,6 @@ var EventEmitter = require('events').EventEmitter;
 var Reporter = require('../tcollector/reporter.js');
 var TChannelJSON = require('../as/json.js');
 
-var HyperbahnClientInvalidOptionError = TypedError({
-    type: 'hyperbahn-client.invalid-option',
-    message: 'HyperbahnClient {method}: invalid option {name}' +
-        ', expected {expected}, got {actual}'
-});
-
 var AdvertisementTimeoutError = WrappedError({
     type: 'hyperbahn-client.advertisement-timeout',
     message: 'Hyperbahn advertisement timed out after {time} ms!.\n' +
@@ -54,7 +48,18 @@ var States = {
     ADVERTISED: 'ADVERTISED'
 };
 var DEFAULT_TTL = 60 * 1000;
-var ADVERTISEMENT_ERROR_DELAY = 200;
+var DEFAULT_ERROR_RETRY_TIMES = [
+    200, // One fast retry
+
+    1000, // Fibonacci backoff
+    1000,
+    2000,
+    3000,
+    5000,
+    8000,
+
+    10000 // Max out at 10 seconds
+];
 
 module.exports = HyperbahnClient;
 
@@ -81,48 +86,28 @@ function HyperbahnClient(options) {
 
     EventEmitter.call(this);
 
-    if (!options || !options.tchannel || options.tchannel.topChannel) {
-        throw HyperbahnClientInvalidOptionError({
-            method: 'constructor',
-            name: 'tchannel',
-            expected: 'top level tchannel instance',
-            actual: options ? typeof options.tchannel : 'undefined'
-        });
-    }
-
-    if (!options.serviceName) {
-        throw HyperbahnClientInvalidOptionError({
-            method: 'constructor',
-            name: 'serviceName',
-            expected: 'string',
-            actual: typeof options.serviceName
-        });
-    }
-    if (!Array.isArray(options.hostPortList)) {
-        throw HyperbahnClientInvalidOptionError({
-            method: 'constructor',
-            name: 'hostPortList',
-            expected: 'array',
-            actual: typeof options.hostPortList
-        });
-    }
+    assert(options && options.tchannel && !options.tchannel.topChannel,
+        'Must pass in top level tchannel');
+    assert(options.tchannel.tracer, 'Top channel must have trace enabled');
+    assert(options.serviceName, 'must pass in serviceName');
+    assert(Array.isArray(options.hostPortList),
+        'Must pass in hostPortList');
 
     self.hostPortList = options.hostPortList;
-
     self.serviceName = options.serviceName;
     self.callerName = options.callerName || options.serviceName;
     self.tchannel = options.tchannel;
     self.reportTracing = 'reportTracing' in options ?
         options.reportTracing : true;
+    self.hardFail = !!options.hardFail;
+    self.advertiseInterval = options.advertiseInterval || DEFAULT_TTL;
+    self.timeoutFuzz = self.advertiseInterval;
+    self.errorRetryTimes = options.errorRetryTimes || DEFAULT_ERROR_RETRY_TIMES;
 
     self.logger = options.logger || self.tchannel.logger;
     self.statsd = options.statsd;
 
-    assert(self.tchannel.tracer,
-        'Top channel must have trace enabled'
-    );
-
-    var reporter = Reporter({
+    self.reporter = Reporter({
         channel: self.getClientChannel({
             serviceName: 'tcollector',
             trace: false
@@ -132,7 +117,7 @@ function HyperbahnClient(options) {
     });
     self.tchannel.tracer.reporter = function report(span) {
         if (self.reportTracing) {
-            reporter.report(span);
+            self.reporter.report(span);
         }
     };
 
@@ -147,21 +132,16 @@ function HyperbahnClient(options) {
             serviceName: 'hyperbahn',
             peers: self.hostPortList
         });
+    self.tchannelJSON = TChannelJSON();
 
-    self.tchannelJSON = TChannelJSON({
-        logger: self.logger
-    });
-
-    self.hardFail = !!options.hardFail;
     self.lastError = null;
     self.latestAdvertisementResult = null;
-
+    self.attemptCounter = 0;
     self.state = States.UNADVERTISED;
     self._destroyed = false;
 
     var advertisementTimeout = options.advertisementTimeout ||
         options.registrationTimeout;
-
     if (self.hardFail) {
         self.advertisementTimeoutTime = advertisementTimeout || 5000;
     } else {
@@ -182,20 +162,13 @@ HyperbahnClient.prototype.getClientChannel =
 function getClientChannel(options) {
     var self = this;
 
+    assert(options && options.serviceName, 'must pass serviceName');
+
     if (self._destroyed) {
         self.emit('error', AlreadyDestroyed({
             method: 'getClientChannel'
         }));
         return null;
-    }
-
-    if (!options || !options.serviceName) {
-        throw HyperbahnClientInvalidOptionError({
-            method: 'getClientChannel',
-            name: 'serviceName',
-            expected: 'string',
-            actual: options ? typeof options.serviceName : 'undefined'
-        });
     }
 
     if (self.tchannel.subChannels[options.serviceName]) {
@@ -263,6 +236,28 @@ function advertisementFailure(err) {
     }
 };
 
+HyperbahnClient.prototype.sendAdvertiseRequest =
+function sendAdvertiseRequest(opts, cb) {
+    var self = this;
+
+    var req = self.hyperbahnChannel.request({
+        serviceName: 'hyperbahn',
+        timeout: (opts && opts.timeout) || 50,
+        hasNoParent: true,
+        trace: false,
+        retryLimit: 1,
+        headers: {
+            cn: self.callerName
+        }
+    });
+    self.tchannelJSON.send(req, 'ad', null, {
+        services: [{
+            cost: 0,
+            serviceName: self.serviceName
+        }]
+    }, cb);
+};
+
 // ## advertise
 // Advertise with Hyperbahn. If called with a callback, the callback will not be
 // called until there has been a successful advertisement. This function
@@ -276,6 +271,9 @@ function advertise(opts) {
     var self = this;
     // Attempt a advertisement. If it succeeds, setTimeout to re-advertise with
     // the same server after the TTL.
+
+    assert(self.tchannel.hostPort,
+        'must call tchannel.listen() before advertise()');
 
     if (self._destroyed) {
         self.emit('error', AlreadyDestroyed({
@@ -298,25 +296,11 @@ function advertise(opts) {
         });
     }
 
-    assert(self.tchannel.hostPort,
-        'must call tchannel.listen() before advertise()'
-    );
+    self.attemptCounter++;
+    self.sendAdvertiseRequest(opts, advertiseInternalCb);
+    self.emit('advertise-attempt');
 
-    var req = self.hyperbahnChannel.request({
-        serviceName: 'hyperbahn',
-        timeout: (opts && opts.timeout) || 50,
-        hasNoParent: true,
-        trace: false,
-        headers: {
-            cn: self.callerName
-        }
-    });
-    self.tchannelJSON.send(req, 'ad', null, {
-        services: [{
-            cost: 0,
-            serviceName: self.serviceName
-        }]
-    }, function advertiseInternalCb(err, result) {
+    function advertiseInternalCb(err, result) {
         /*eslint max-statements: [2, 40] */
         if (err) {
             self.logger[self.hardFail ? 'error' : 'warn'](
@@ -328,7 +312,7 @@ function advertise(opts) {
             });
             self.lastError = err;
 
-            self.advertiseAgain(ADVERTISEMENT_ERROR_DELAY);
+            self.advertiseAgain(self.getErrorRetryTime());
             return;
         }
 
@@ -348,7 +332,7 @@ function advertise(opts) {
             if (self.hardFail) {
                 self.advertisementFailure(err);
             } else {
-                self.advertiseAgain(ADVERTISEMENT_ERROR_DELAY);
+                self.advertiseAgain(self.getErrorRetryTime());
             }
 
             return;
@@ -362,19 +346,32 @@ function advertise(opts) {
         }
 
         self.latestAdvertisementResult = result;
+        self.attemptCounter = 0;
         self.state = States.ADVERTISED;
         timers.clearTimeout(self.advertisementTimeoutTimer);
 
-        var ttl = DEFAULT_TTL;
-
-        self.advertiseAgain(ttl);
+        self.advertiseAgain(self.getHealthyRetryTime());
 
         // registered event is deprecated
         self.emit('registered');
         self.emit('advertised');
-    });
+    }
+};
 
-    self.emit('advertise-attempt');
+HyperbahnClient.prototype.getErrorRetryTime = function getErrorRetryTime() {
+    var self = this;
+
+    return self.errorRetryTimes[self.attemptCounter - 1] ||
+        self.errorRetryTimes[self.errorRetryTimes.length - 1];
+};
+
+HyperbahnClient.prototype.getHealthyRetryTime = function getHealthyRetryTime() {
+    var self = this;
+
+    var fuzz = self.timeoutFuzz;
+    var delay = Math.round(Math.floor(Math.random() * fuzz)) - (fuzz / 2);
+
+    return self.advertiseInterval + delay;
 };
 
 HyperbahnClient.prototype.advertiseAgain =

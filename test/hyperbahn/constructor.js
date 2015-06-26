@@ -47,7 +47,7 @@ test('creating HyperbahnClient with new', function t(assert) {
 test('create HyperbahnClient without options', function t(assert) {
     assert.throws(function throwIt() {
         HyperbahnClient();
-    }, /invalid option tchannel/);
+    }, /Must pass in top level tchannel/);
 
     assert.end();
 });
@@ -55,7 +55,7 @@ test('create HyperbahnClient without options', function t(assert) {
 test('create HyperbahnClient without options.tchannel', function t(assert) {
     assert.throws(function throwIt() {
         HyperbahnClient({});
-    }, /invalid option tchannel/);
+    }, /Must pass in top level tchannel/);
 
     assert.end();
 });
@@ -69,7 +69,7 @@ test('create HyperbahnClient with a subchannel', function t(assert) {
                 serviceName: 'foo'
             })
         });
-    }, /invalid option tchannel/);
+    }, /Must pass in top level tchannel/);
 
     assert.end();
 });
@@ -81,7 +81,7 @@ test('create HyperbahnClient without serviceName', function t(assert) {
         HyperbahnClient({
             tchannel: tchannel
         });
-    }, /invalid option serviceName/);
+    }, /must pass in serviceName/);
 
     assert.end();
 });
@@ -94,7 +94,7 @@ test('create HyperbahnClient without hostPortList', function t(assert) {
             tchannel: tchannel,
             serviceName: 'foo'
         });
-    }, /invalid option hostPortList/);
+    }, /Must pass in hostPortList/);
 
     assert.end();
 });

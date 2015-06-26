@@ -30,9 +30,9 @@ var Errors = require('../errors.js');
 var TChannelJSON = require('../as/json');
 var TChannelEndpointHandler = require('../endpoint-handler');
 
-var MAX_RELAY_AD_ATTEMPTS = 4;
+var MAX_RELAY_AD_ATTEMPTS = 2;
 var RELAY_AD_RETRY_TIME = 1 * 1000;
-var RELAY_AD_TIMEOUT = 500;
+var RELAY_AD_TIMEOUT = 50;
 
 module.exports = HyperbahnHandler;
 
@@ -238,6 +238,7 @@ function sendRelayAdvertise(opts, callback) {
                 headers: {
                     cn: self.callerName
                 },
+                retryLimit: 1,
                 parent: opts.inreq
             }), 'relay-ad', null, {
                 services: opts.services
