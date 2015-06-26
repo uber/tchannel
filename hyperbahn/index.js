@@ -48,7 +48,18 @@ var States = {
     ADVERTISED: 'ADVERTISED'
 };
 var DEFAULT_TTL = 60 * 1000;
-var ADVERTISEMENT_ERROR_DELAY = 200;
+var DEFAULT_ERROR_RETRY_TIMES = [
+    200, // One fast retry
+
+    1000, // Fibonacci backoff
+    1000,
+    2000,
+    3000,
+    5000,
+    8000,
+
+    10000 // Max out at 10 seconds
+];
 
 module.exports = HyperbahnClient;
 
@@ -91,6 +102,7 @@ function HyperbahnClient(options) {
     self.hardFail = !!options.hardFail;
     self.advertiseInterval = options.advertiseInterval || DEFAULT_TTL;
     self.timeoutFuzz = self.advertiseInterval;
+    self.errorRetryTimes = options.errorRetryTimes || DEFAULT_ERROR_RETRY_TIMES;
 
     self.logger = options.logger || self.tchannel.logger;
     self.statsd = options.statsd;
@@ -124,7 +136,7 @@ function HyperbahnClient(options) {
 
     self.lastError = null;
     self.latestAdvertisementResult = null;
-
+    self.attemptCounter = 0;
     self.state = States.UNADVERTISED;
     self._destroyed = false;
 
@@ -283,6 +295,7 @@ function advertise(opts) {
         });
     }
 
+    self.attemptCounter++;
     self.sendAdvertiseRequest(opts, advertiseInternalCb);
     self.emit('advertise-attempt');
 
@@ -298,7 +311,7 @@ function advertise(opts) {
             });
             self.lastError = err;
 
-            self.advertiseAgain(ADVERTISEMENT_ERROR_DELAY);
+            self.advertiseAgain(self.getErrorRetryTime());
             return;
         }
 
@@ -318,7 +331,7 @@ function advertise(opts) {
             if (self.hardFail) {
                 self.advertisementFailure(err);
             } else {
-                self.advertiseAgain(ADVERTISEMENT_ERROR_DELAY);
+                self.advertiseAgain(self.getErrorRetryTime());
             }
 
             return;
@@ -332,10 +345,11 @@ function advertise(opts) {
         }
 
         self.latestAdvertisementResult = result;
+        self.attemptCounter = 0;
         self.state = States.ADVERTISED;
         timers.clearTimeout(self.advertisementTimeoutTimer);
 
-        self.advertiseAgain(self.getTimeoutFuzz());
+        self.advertiseAgain(self.getHealthyRetryTime());
 
         // registered event is deprecated
         self.emit('registered');
@@ -343,7 +357,14 @@ function advertise(opts) {
     }
 };
 
-HyperbahnClient.prototype.getTimeoutFuzz = function getTimeoutFuzz() {
+HyperbahnClient.prototype.getErrorRetryTime = function getErrorRetryTime() {
+    var self = this;
+
+    return self.errorRetryTimes[self.attemptCounter - 1] ||
+        self.errorRetryTimes[self.errorRetryTimes.length - 1];
+};
+
+HyperbahnClient.prototype.getHealthyRetryTime = function getHealthyRetryTime() {
     var self = this;
 
     var fuzz = self.timeoutFuzz;
