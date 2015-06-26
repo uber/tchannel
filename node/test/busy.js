@@ -33,14 +33,11 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
         count += 1;
 
         if (count < 2) {
-            return {busy: false};
+            return null;
         }
 
         else {
-            return {
-                busy: true,
-                reason: 'server is too busy'
-            };
+            return 'server is too busy';
         }
     }
 
