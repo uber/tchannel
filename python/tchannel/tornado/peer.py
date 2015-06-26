@@ -558,7 +558,8 @@ class PeerClientOperation(object):
 
         try:
             response = yield self.send_with_retry(
-                request, peer, attempt_times, retry_delay)
+                request, peer, attempt_times, retry_delay
+            )
         except ProtocolError as protocol_error:
             # event: after_receive_protocol_error
             self.peer.tchannel.event_emitter.fire(
