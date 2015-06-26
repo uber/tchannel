@@ -66,6 +66,8 @@ test('clear cn/service', function t(assert) {
     proxy.block('*', 'service1');
     proxy.block(null, 'service2');
 
+    proxy.unblock('client1', 'service1');
+    proxy.unblock('client2', 'service1');
     proxy.unblock('*', 'service1');
 
     assert.notOk(proxy.isBlocked('client1', 'service1'), 'client1/service1 should be cleared');
@@ -75,7 +77,8 @@ test('clear cn/service', function t(assert) {
     assert.ok(proxy.isBlocked('client1', 'service2'), 'client1/service2 shouldn\'t be cleared');
     assert.ok(proxy.isBlocked('*', 'service2'), 'blocking */service2 shouldn\'t be cleared');
 
-    proxy.unblock();
+    proxy.unblock('client1', 'service2');
+    proxy.unblock(null, 'service2');
     assert.notOk(proxy.isBlocked('client1', 'service2'), 'client1/service2 should be cleared');
     assert.notOk(proxy.isBlocked('*', 'service2'), 'blocking */service2 should be cleared');
     assert.equals(proxy.blockingTable, null, 'blocking table should be cleared');
