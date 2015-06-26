@@ -145,14 +145,14 @@ allocCluster.test('register() with different results', {
         assert.ifError(err);
 
         var errorCall = results.errorCall;
-        assert.equal(errorCall.err, null);
+        assert.equal(errorCall.error, null);
         assert.ok(Buffer.isBuffer(errorCall.head));
         assert.equal(String(errorCall.head), '');
         assert.ok(Buffer.isBuffer(errorCall.body));
         assert.equal(String(errorCall.body), 'abc');
 
         var errorFrameCall = results.errorFrameCall;
-        var frameErr = errorFrameCall.err;
+        var frameErr = errorFrameCall.error;
         assert.equal(frameErr.type, 'tchannel.busy');
         assert.equal(frameErr.isErrorFrame, true);
         assert.equal(frameErr.errorCode, 3);
@@ -162,70 +162,70 @@ allocCluster.test('register() with different results', {
         assert.equal(errorFrameCall.body || null, null);
 
         var bufferHead = results.bufferHead;
-        assert.equal(bufferHead.err, null);
+        assert.equal(bufferHead.error, null);
         assert.ok(Buffer.isBuffer(bufferHead.head));
         assert.equal(String(bufferHead.head), 'abc');
         assert.ok(Buffer.isBuffer(bufferHead.body));
         assert.equal(String(bufferHead.body), '');
 
         var stringHead = results.stringHead;
-        assert.equal(stringHead.err, null);
+        assert.equal(stringHead.error, null);
         assert.ok(Buffer.isBuffer(stringHead.head));
         assert.equal(String(stringHead.head), 'abc');
         assert.ok(Buffer.isBuffer(stringHead.body));
         assert.equal(String(stringHead.body), '');
 
         var objectHead = results.objectHead;
-        assert.equal(objectHead.err, null);
+        assert.equal(objectHead.error, null);
         assert.ok(Buffer.isBuffer(objectHead.head));
         assert.equal(String(objectHead.head), '{"value":"abc"}');
         assert.ok(Buffer.isBuffer(objectHead.body));
         assert.equal(String(objectHead.body), '');
 
         var nullHead = results.nullHead;
-        assert.equal(nullHead.err, null);
+        assert.equal(nullHead.error, null);
         assert.ok(Buffer.isBuffer(nullHead.head));
         assert.equal(String(nullHead.head), '');
         assert.ok(Buffer.isBuffer(nullHead.body));
         assert.equal(String(nullHead.body), '');
 
         var undefHead = results.undefHead;
-        assert.equal(undefHead.err, null);
+        assert.equal(undefHead.error, null);
         assert.ok(Buffer.isBuffer(undefHead.head));
         assert.equal(String(undefHead.head), '');
         assert.ok(Buffer.isBuffer(undefHead.body));
         assert.equal(String(undefHead.body), '');
 
         var bufferBody = results.bufferBody;
-        assert.equal(bufferBody.err, null);
+        assert.equal(bufferBody.error, null);
         assert.ok(Buffer.isBuffer(bufferBody.head));
         assert.equal(String(bufferBody.head), '');
         assert.ok(Buffer.isBuffer(bufferBody.body));
         assert.equal(String(bufferBody.body), 'abc');
 
         var stringBody = results.stringBody;
-        assert.equal(stringBody.err, null);
+        assert.equal(stringBody.error, null);
         assert.ok(Buffer.isBuffer(stringBody.head));
         assert.equal(String(stringBody.head), '');
         assert.ok(Buffer.isBuffer(stringBody.body));
         assert.equal(String(stringBody.body), 'abc');
 
         var objectBody = results.objectBody;
-        assert.equal(objectBody.err, null);
+        assert.equal(objectBody.error, null);
         assert.ok(Buffer.isBuffer(objectBody.head));
         assert.equal(String(objectBody.head), '');
         assert.ok(Buffer.isBuffer(objectBody.body));
         assert.equal(String(objectBody.body), '{"value":"abc"}');
 
         var nullBody = results.nullBody;
-        assert.equal(nullBody.err, null);
+        assert.equal(nullBody.error, null);
         assert.ok(Buffer.isBuffer(nullBody.head));
         assert.equal(String(nullBody.head), '');
         assert.ok(Buffer.isBuffer(nullBody.body));
         assert.equal(String(nullBody.body), '');
 
         var undefBody = results.undefBody;
-        assert.equal(undefBody.err, null);
+        assert.equal(undefBody.error, null);
         assert.ok(Buffer.isBuffer(undefBody.head));
         assert.equal(String(undefBody.head), '');
         assert.ok(Buffer.isBuffer(undefBody.body));
@@ -244,7 +244,7 @@ function sendCall(channel, opts, op, cb) {
 
     function onResult(err, res, arg2, arg3) {
         cb(null, {
-            err: err,
+            error: err,
             head: arg2,
             body: arg3
         });

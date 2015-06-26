@@ -218,7 +218,7 @@ keyThrift.request({
 }, function onResponse(err, resp) {
     if (err) {
         return logger.error('got an error', {
-            err: err
+            error: err
         });
     }
 

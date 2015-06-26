@@ -127,7 +127,7 @@ function register(channel, name, opts, handle) {
 
                 self.logger.error('Got unexpected error in handler', {
                     endpoint: name,
-                    err: err
+                    error: err
                 });
 
                 return res.sendError('UnexpectedError', 'Unexpected Error');
