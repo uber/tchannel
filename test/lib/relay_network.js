@@ -23,81 +23,16 @@
 var tape = require('tape');
 var parallel = require('run-parallel');
 var NullStatsd = require('uber-statsd-client/null');
-var inherits = require('util').inherits;
 var tapeCluster = require('tape-cluster');
 
+var FakeEgressNodes = require('./fake-egress-nodes.js');
 var allocCluster = require('./alloc-cluster.js');
-var EventEmitter = require('../../lib/event_emitter.js');
 var EndpointHandler = require('../../endpoint-handler.js');
 var ServiceProxy = require('../../hyperbahn/service_proxy.js');
 var HyperbahnHandler = require('../../hyperbahn/handler.js');
 
 function noop() {}
 
-// e.g., topology = {'alice': ['127.0.0.1:4040'], 'bob': ['127.0.0.1:4041']}, '127.0.0.1:4040'
-function FakeEgressNodes(options) {
-    if (!(this instanceof FakeEgressNodes)) {
-        return new FakeEgressNodes(options);
-    }
-
-    var self = this;
-
-    EventEmitter.call(self);
-
-    self.hostPort = options.hostPort;
-
-    // Everyone must mutate this
-    self.topology = options.topology;
-    self.kValue = options.kValue;
-    self.relayChannels = options.relayChannels;
-
-    self.membershipChangedEvent = self.defineEvent('membershipChanged');
-}
-
-inherits(FakeEgressNodes, EventEmitter);
-
-FakeEgressNodes.prototype.isExitFor = function isExitFor(serviceName) {
-    var self = this;
-
-    return self.topology[serviceName].indexOf(self.hostPort) >= 0;
-};
-
-FakeEgressNodes.prototype.getRandomNodes =
-function getRandomNodes(serviceName) {
-    var self = this;
-
-    var hosts = [];
-
-    for (var i = 0; i < self.kValue; i++) {
-        var n = Math.floor(Math.random() * self.relayChannels.length);
-
-        var node = self.relayChannels[n].hostPort;
-        if (hosts.indexOf(node) === -1) {
-            hosts.push(node);
-        }
-    }
-
-    self.topology[serviceName] = hosts;
-
-    return hosts;
-};
-
-FakeEgressNodes.prototype.exitsFor = function exitsFor(serviceName) {
-    var self = this;
-
-    var hostPorts = self.topology[serviceName];
-
-    // A random service; pick k random things
-    if (!hostPorts) {
-        hostPorts = self.getRandomNodes(serviceName);
-    }
-
-    var result = Object.create(null);
-    hostPorts.forEach(function buildResult(hostPort, index) {
-        result[hostPort] = serviceName + '~' + index;
-    });
-    return result;
-};
 
 function RelayNetwork(options) {
     if (!(this instanceof RelayNetwork)) {
