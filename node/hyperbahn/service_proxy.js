@@ -73,6 +73,11 @@ function handleRequest(req, buildRes) {
         return;
     }
 
+    if (self.isBlocked(req.headers && req.headers.cn, req.serviceName)) {
+        req.connection.ops.popInReq(req.id);
+        return;
+    }
+
     var chan = self.channel.subChannels[req.serviceName];
     if (chan) {
         // Temporary hack. Need to set json by default because
@@ -254,6 +259,50 @@ function updateExitNodes(exitNodes, svcchan) {
     var exitNames = Object.keys(exitNodes);
     for (i = 0; i < exitNames.length; i++) {
         self._getServicePeer(svcchan, exitNames[i]);
+    }
+};
+
+ServiceDispatchHandler.prototype.isBlocked =
+function isBlocked(cn, serviceName) {
+    var self = this;
+    if (!self.blockingTable) {
+        return false;
+    }
+
+    cn = cn || '*';
+    serviceName = serviceName || '*';
+
+    if (self.blockingTable[cn + '~~' + serviceName] ||
+        self.blockingTable['*~~' + serviceName] ||
+        self.blockingTable[cn + '~~*']) {
+        return true;
+    }
+
+    return false;
+};
+
+ServiceDispatchHandler.prototype.block =
+function block(cn, serviceName) {
+    var self = this;
+    cn = cn || '*';
+    serviceName = serviceName || '*';
+    self.blockingTable = self.blockingTable || {};
+    assert(cn !== '*' || serviceName !== '*', 'at least one of cn/serviceName should be provided');
+    self.blockingTable[cn + '~~' + serviceName] = Date.now();
+};
+
+ServiceDispatchHandler.prototype.unblock =
+function unblock(cn, serviceName) {
+    var self = this;
+    if (!self.blockingTable) {
+        return;
+    }
+
+    cn = cn || '*';
+    serviceName = serviceName || '*';
+    delete self.blockingTable[cn + '~~' + serviceName];
+    if (Object.keys(self.blockingTable).length === 0) {
+        self.blockingTable = null;
     }
 };
 
