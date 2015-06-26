@@ -361,6 +361,54 @@ allocCluster.test('send to self', {
     }
 });
 
+allocCluster.test.only('send junk transport headers', {
+    numPeers: 2
+}, function t(cluster, assert) {
+    cluster.logger.whitelist('info', 'resetting connection');
+
+    var one = cluster.channels[0];
+    var two = cluster.channels[1];
+    var subOne = one.makeSubChannel({
+        serviceName: 'one',
+        requestDefaults: {
+            hasNoParent: true,
+            headers: {
+                as: 'raw',
+                cn: 'wat'
+            }
+        }
+    });
+
+    subOne.waitForIdentified({
+        host: two.hostPort
+    }, onIdentified);
+
+    function onIdentified(err1) {
+        assert.ifError(err1);
+
+        subOne.request({
+            serviceName: 'one',
+            host: two.hostPort,
+            headers: {
+                foo: undefined
+            }
+        }).send('foo', '', '', onResponse);
+
+        function onResponse(err2) {
+            assert.ok(err2);
+            assert.equal(err2.type, 'tchannel.connection.reset');
+
+            assert.equal(err2.message,
+                'tchannel: tchannel write failure: invalid ' +
+                'header type for header foo; expected string, ' +
+                'got undefined'
+            );
+
+            assert.end();
+        }
+    }
+});
+
 allocCluster.test('self send() with error frame', 1, function t(cluster, assert) {
     var one = cluster.channels[0];
     var subOne = one.makeSubChannel({
