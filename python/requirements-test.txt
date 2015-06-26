@@ -23,7 +23,7 @@ tornado>=4.0,<5.0
 thrift==0.9.2
 
 # checksum calculation
-pyfarmhash
+pyfarmhash==0.2.0
 crcmod
 
 # Mocks
