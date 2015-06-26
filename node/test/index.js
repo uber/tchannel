@@ -61,5 +61,6 @@ require('./request-error-context.js');
 require('./max-call-overhead.js');
 require('./non-zero-ttl.js');
 require('./examples.js');
+require('./busy.js');
 
 require('./hyperbahn/')(HyperbahnCluster);
