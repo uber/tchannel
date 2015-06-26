@@ -1,6 +1,7 @@
 kill-dead-benchmarks:
-	ps aux | grep nodejs-benchmarks | awk '{ print $$2; }' | xargs kill;
+	ps aux | pkill -f nodejs-benchmarks;
 
 top-benchmark:
-	top -cp `ps aux | grep nodejs-benchmarks | grep -v grep | awk '{ print $$2; }' | tr "\\n" "," | sed 's/,$$//'`;
+	top -cp `pgrep -f nodejs-benchmarks | tr "\\n" "," | sed 's/,$$//'`;
 
+.PHONY: kill-dead-benchmarks top-benchmark
