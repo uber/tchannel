@@ -22,13 +22,30 @@ from __future__ import absolute_import
 
 import pytest
 
+from tchannel.sync import TChannelSyncClient
 
-def test_works():
-    assert False
 
-def test_hi():
+@pytest.mark.sync
+def test_sync_client_should_get_response():
+
+    # @todo this needs to start ioloop in seperate thread
+    #  endpoint = 'health'
+    # else this test will get a ioloop already started error
+    # tchannel_server.expect_call(endpoint).and_write(
+    #     headers=endpoint,
+    #     body="healthy"
+    # )
+    # hostport = 'localhost:%d' % tchannel_server.port
+
+    # the following will work with examples/
+    client = TChannelSyncClient('test-client')
+    request = client.request('localhost:8888')
+    response = request.send('hi', None, "")
+    # assert response.header == ""
+    # assert response.body == "hi"
 
     import ipdb; ipdb.set_trace()
 
     assert True
+
 
