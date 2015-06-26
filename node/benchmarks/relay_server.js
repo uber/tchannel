@@ -20,6 +20,9 @@
 
 'use strict';
 
+var process = require('process');
+process.title = 'nodejs-benchmarks-relay_server';
+
 var NullStatsd = require('uber-statsd-client/null');
 
 var TChannel = require('../channel.js');

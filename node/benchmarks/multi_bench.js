@@ -26,6 +26,8 @@ var metrics = require('metrics');
 var parseArgs = require('minimist');
 var process = require('process');
 
+process.title = 'nodejs-benchmarks-multi_bench';
+
 var TChannel = require('../channel');
 var base2 = require('../test/lib/base2');
 var LCGStream = require('../test/lib/rng_stream');
