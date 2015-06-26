@@ -288,8 +288,7 @@ function block(cn, serviceName) {
     serviceName = serviceName || '*';
     self.blockingTable = self.blockingTable || {};
     assert(cn !== '*' || serviceName !== '*', 'at least one of cn/serviceName should be provided');
-    var key = cn + '~~' + serviceName;
-    self.blockingTable[key] = Date.now();
+    self.blockingTable[cn + '~~' + serviceName] = Date.now();
 };
 
 ServiceDispatchHandler.prototype.unblock =
@@ -301,22 +300,9 @@ function unblock(cn, serviceName) {
 
     cn = cn || '*';
     serviceName = serviceName || '*';
-    
-    var keys = Object.keys(self.blockingTable);
-    keys.forEach(function each(key) {
-        clear(key);
-    });
-
+    delete self.blockingTable[cn + '~~' + serviceName];
     if (Object.keys(self.blockingTable).length === 0) {
         self.blockingTable = null;
-    }
-
-    function clear(key) {
-        var strs = key.split('~~');
-        if ((cn === '*' || strs[0] === cn) &&
-            (serviceName === '*' || strs[1] === serviceName)) {
-            delete self.blockingTable[key];
-        }
     }
 };
 
