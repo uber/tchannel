@@ -270,6 +270,7 @@ TChannel.prototype.onServerSocketConnection = function onServerSocketConnection(
         delete self.serverConnections[socketRemoteAddr];
     }
 
+    // TODO: move method
     function onConnectionError(err) {
         var codeName = errors.classify(err);
 
