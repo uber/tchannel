@@ -20,38 +20,99 @@
 
 'use strict';
 
-var process = require('process');
-process.title = 'nodejs-benchmarks-relay_server';
-
 var NullStatsd = require('uber-statsd-client/null');
+var parseArgs = require('minimist');
+var process = require('process');
+var assert = require('assert');
 
 var TChannel = require('../channel.js');
+var Reporter = require('../tcollector/reporter.js');
 var ServiceProxy = require('../hyperbahn/service_proxy.js');
 var FakeEgressNodes = require('../test/lib/fake-egress-nodes.js');
 
-var relay = TChannel({
-    statTags: {
-        app: 'relay-server'
-    },
-    trace: true,
-    statsd: NullStatsd()
-});
-relay.handler = ServiceProxy({
-    channel: relay,
-    egressNodes: FakeEgressNodes({
-        hostPort: '127.0.0.1:4039',
-        topology: {
-            'benchmark': ['127.0.0.1:4039']
-        }
-    })
-});
+var argv = parseArgs(process.argv.slice(2));
 
-relay.handler.createServiceChannel('benchmark');
-relay.listen(4039, '127.0.0.1', onListen);
+if (argv.type === 'bench-relay') {
+    process.title = 'nodejs-benchmarks-relay_bench_server';
+} else if (argv.type === 'trace-relay') {
+    process.title = 'nodejs-benchmarks-relay_trace_server';
+}
 
-function onListen() {
-    var peer = relay.handler.getServicePeer(
-        'benchmark', '127.0.0.1:4040'
+function RelayServer(opts) {
+    if (!(this instanceof RelayServer)) {
+        return new RelayServer(opts);
+    }
+
+    assert(opts.benchPort, 'localPort required');
+    assert(
+        opts.type === 'bench-relay' || opts.type === 'trace-relay',
+        'a valid type required'
     );
-    peer.connect();
+
+    var benchHostPort = '127.0.0.1:' + opts.benchPort;
+    var benchRelayHostPort = '127.0.0.1:' + opts.benchRelayPort;
+    var traceHostPort = '127.0.0.1:' + opts.tracePort;
+    var traceRelayHostPort = '127.0.0.1:' + opts.traceRelayPort;
+
+    var relay = TChannel({
+        statTags: {
+            app: 'relay-server'
+        },
+        trace: true,
+        statsd: NullStatsd()
+    });
+    relay.handler = ServiceProxy({
+        channel: relay,
+        egressNodes: FakeEgressNodes({
+            hostPort: opts.type === 'bench-relay' ?
+                benchRelayHostPort : opts.type === 'trace-relay' ?
+                traceRelayHostPort : null,
+            topology: {
+                'benchmark': [benchRelayHostPort],
+                'tcollector': [traceRelayHostPort]
+            }
+        })
+    });
+
+    var reporter = Reporter({
+        channel: relay.makeSubChannel({
+            serviceName: 'tcollector',
+            peers: [traceRelayHostPort],
+            trace: false,
+            requestDefaults: {
+                serviceName: 'tcollector',
+                headers: {
+                    cn: opts.type
+                }
+            }
+        }),
+        callerName: opts.type
+    });
+    relay.tracer.reporter = function report(span) {
+        reporter.report(span);
+    };
+
+    if (opts.type === 'bench-relay') {
+        relay.handler.createServiceChannel('benchmark');
+        relay.listen(opts.benchRelayPort, '127.0.0.1', onListen);
+    } else if (opts.type === 'trace-relay') {
+        relay.handler.createServiceChannel('tcollector');
+        relay.listen(opts.traceRelayPort, '127.0.0.1', onListen);
+    }
+
+    function onListen() {
+        if (opts.type === 'bench-relay') {
+            var peer = relay.handler.getServicePeer(
+                'benchmark', benchHostPort
+            );
+            peer.connect();
+        } else if (opts.type = 'trace-relay') {
+            var peer = relay.handler.getServicePeer(
+                'benchmark', traceHostPort
+            );
+            peer.connect();
+        }
+        
+    }
+
 }
