@@ -31,13 +31,15 @@ var process = require('process');
 var console = require('console');
 
 var server = path.join(__dirname, 'bench_server.js');
+var relay = path.join(__dirname, 'relay_server.js');
 var bench = path.join(__dirname, 'multi_bench.js');
 
 var argv = parseArgs(process.argv.slice(2), {
     '--': true,
     alias: {
         o: 'output'
-    }
+    },
+    boolean: ['relay']
 });
 
 function run(script, args) {
@@ -52,6 +54,12 @@ function run(script, args) {
 var serverProc = run(server);
 serverProc.stdout.pipe(process.stderr);
 serverProc.stderr.pipe(process.stderr);
+
+if (argv.relay) {
+    var relayProc = run(relay);
+    relayProc.stdout.pipe(process.stderr);
+    relayProc.stderr.pipe(process.stderr);
+}
 
 var benchProc = run(bench, argv['--']);
 benchProc.stderr.pipe(process.stderr);
@@ -82,6 +90,9 @@ if (argv.output) {
 
 benchProc.once('close', function onClose() {
     serverProc.kill();
+    if (relayProc) {
+        relayProc.kill();
+    }
 });
 
 function lpad(input, len, chr) {
