@@ -18,11 +18,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-var async = require('async');
-var metrics = require("metrics");
-var parseArgs = require('minimist');
+'use strict';
 
-var TChannel = require("../channel");
+var async = require('async');
+var NullStatsd = require('uber-statsd-client/null');
+var metrics = require('metrics');
+var parseArgs = require('minimist');
+var process = require('process');
+
+process.title = 'nodejs-benchmarks-multi_bench';
+
+var TChannel = require('../channel');
+var Reporter = require('../tcollector/reporter.js');
 var base2 = require('../test/lib/base2');
 var LCGStream = require('../test/lib/rng_stream');
 
@@ -42,13 +49,27 @@ var argv = parseArgs(process.argv.slice(2), {
         numRequests: 20000,
         pipeline: '10,100,1000,20000',
         sizes: '4,4096'
-    }
+    },
+    boolean: ['relay', 'trace']
 });
 var multiplicity = parseInt(argv.multiplicity, 10);
 var numClients = parseInt(argv.numClients, 10);
 var numRequests = parseInt(argv.numRequests, 10);
 argv.pipeline = parseIntList(argv.pipeline);
 argv.sizes = parseIntList(argv.sizes);
+
+var DESTINATION_SERVER;
+var TRACE_SERVER;
+
+if (argv.relay) {
+    DESTINATION_SERVER = '127.0.0.1:4038';
+} else {
+    DESTINATION_SERVER = '127.0.0.1:4040';
+}
+
+if (argv.trace) {
+    TRACE_SERVER = '127.0.0.1:4037';
+}
 
 // -- test harness
 
@@ -100,37 +121,54 @@ Test.prototype.run = function (callback) {
 Test.prototype.newClient = function (id, callback) {
     var self = this;
     var port = 4041 + id;
-    var clientChan = new TChannel();
+    var clientChan = TChannel({
+        statTags: {
+            app: 'my-client'
+        },
+        trace: true,
+        statsd: NullStatsd()
+    });
+    if (argv.trace) {
+        var reporter = Reporter({
+            channel: clientChan.makeSubChannel({
+                serviceName: 'tcollector',
+                peers: [TRACE_SERVER]
+            }),
+            logger: clientChan.logger,
+            callerName: 'my-client'
+        });
+
+        clientChan.tracer.reporter = function report(span) {
+            reporter.report(span, {
+                timeout: 10 * 1000
+            });
+        };
+    }
+
     var newClient = clientChan.makeSubChannel({
         serviceName: 'benchmark',
-        requestDefaults: {
-            serviceName: 'benchmark'
-        }
+        peers: [DESTINATION_SERVER]
     });
     newClient.createTime = Date.now();
     newClient.listen(port, "127.0.0.1", function (err) {
         if (err) return callback(err);
         self.clients[id] = newClient;
         // sending a ping to pre-connect the socket
-        newClient.waitForIdentified({
-            host: '127.0.0.1:4040'
-        }, function () {
-            newClient
-                .request({
-                    host: '127.0.0.1:4040',
-                    hasNoParent: true,
-                    headers: {
-                        as: 'raw',
-                        cn: 'multi_bench'
-                    }
-                })
-                .send('ping', null, null, function(err) {
-                    if (err) return callback(err);
-                    self.connectLatency.update(Date.now() - newClient.createTime);
-                    self.readyLatency.update(Date.now() - newClient.createTime);
-                    callback();
-                });
-        });
+        newClient
+            .request({
+                serviceName: 'benchmark',
+                hasNoParent: true,
+                headers: {
+                    as: 'raw',
+                    cn: 'multi_bench'
+                }
+            })
+            .send('ping', null, null, function(err) {
+                if (err) return callback(err);
+                self.connectLatency.update(Date.now() - newClient.createTime);
+                self.readyLatency.update(Date.now() - newClient.createTime);
+                callback();
+            });
     });
 };
 
@@ -175,7 +213,7 @@ Test.prototype.sendNext = function () {
 
     this.clients[curClient]
         .request({
-            host: '127.0.0.1:4040',
+            serviceName: 'benchmark',
             hasNoParent: true,
             timeout: 10000,
             headers: {

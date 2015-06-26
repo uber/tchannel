@@ -18,21 +18,62 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-var TChannel = require('../channel');
-var EndpointHandler = require('../endpoint-handler');
-var server = new TChannel({
-    handler: EndpointHandler()
+'use strict';
+
+var process = require('process');
+process.title = 'nodejs-benchmarks-bench_server';
+
+var parseArgs = require('minimist');
+var assert = require('assert');
+var NullStatsd = require('uber-statsd-client/null');
+
+var argv = parseArgs(process.argv.slice(2), {
+    boolean: ['trace']
 });
+
+assert('trace' in argv, 'trace option needed');
+assert(argv.traceRelayHostPort, 'traceRelayHostPort needed');
+
+var Reporter = require('../tcollector/reporter.js');
+var TChannel = require('../channel');
+var server = TChannel({
+    statTags: {
+        app: 'my-server'
+    },
+    trace: true,
+    statsd: NullStatsd()
+});
+
+var reporter = Reporter({
+    channel: server.makeSubChannel({
+        serviceName: 'tcollector',
+        peers: [argv.traceRelayHostPort]
+    }),
+    logger: server.logger,
+    callerName: 'my-server'
+});
+if (argv.trace) {
+    server.tracer.reporter = function report(span) {
+        reporter.report(span, {
+            timeout: 10 * 1000
+        });
+    };
+}
+
+var serverChan = server.makeSubChannel({
+    serviceName: 'benchmark'
+});
+
 server.listen(4040, '127.0.0.1');
 
 var keys = {};
 
-server.handler.register('ping', function onPing(req, res) {
+serverChan.register('ping', function onPing(req, res) {
     res.headers.as = 'raw';
     res.sendOk('pong', null);
 });
 
-server.handler.register('set', function onSet(req, res, arg2, arg3) {
+serverChan.register('set', function onSet(req, res, arg2, arg3) {
     var key = arg2.toString('utf8');
     var val = arg3.toString('utf8');
     keys[key] = val;
@@ -40,7 +81,7 @@ server.handler.register('set', function onSet(req, res, arg2, arg3) {
     res.sendOk('ok', 'really ok');
 });
 
-server.handler.register('get', function onGet(req, res, arg2, arg3){
+serverChan.register('get', function onGet(req, res, arg2, arg3) {
     var key = arg2.toString('utf8');
     res.headers.as = 'raw';
     if (keys[key] !== undefined) {

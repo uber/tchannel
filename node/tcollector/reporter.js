@@ -129,11 +129,17 @@ function jsonSpanToThriftSpan(span) {
     return mapped;
 };
 
-TCollectorTraceReporter.prototype.report = function report(span, callback) {
+TCollectorTraceReporter.prototype.report =
+function report(span, opts, callback) {
     var self = this;
 
+    if (typeof opts === 'function') {
+        callback = opts;
+        opts = null;
+    }
+
     var req = self.channel.request({
-        timeout: 100,
+        timeout: (opts && opts.timeout) || 100,
         trace: false,
         hasNoParent: true,
         headers: {
