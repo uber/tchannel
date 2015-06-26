@@ -100,25 +100,37 @@ Test.prototype.run = function (callback) {
 Test.prototype.newClient = function (id, callback) {
     var self = this;
     var port = 4041 + id;
-    var newClient = new TChannel();
+    var clientChan = new TChannel();
+    var newClient = clientChan.makeSubChannel({
+        serviceName: 'benchmark',
+        requestDefaults: {
+            serviceName: 'benchmark'
+        }
+    });
     newClient.createTime = Date.now();
     newClient.listen(port, "127.0.0.1", function (err) {
         if (err) return callback(err);
         self.clients[id] = newClient;
         // sending a ping to pre-connect the socket
-        newClient
-            .waitForIdentified({
-                host: '127.0.0.1:4040'
-            }, function () {
-                newClient
-                    .request({host: '127.0.0.1:4040'})
-                    .send('ping', null, null, function(err) {
-                        if (err) return callback(err);
-                        self.connectLatency.update(Date.now() - newClient.createTime);
-                        self.readyLatency.update(Date.now() - newClient.createTime);
-                        callback();
-                    });
-            });
+        newClient.waitForIdentified({
+            host: '127.0.0.1:4040'
+        }, function () {
+            newClient
+                .request({
+                    host: '127.0.0.1:4040',
+                    hasNoParent: true,
+                    headers: {
+                        as: 'raw',
+                        cn: 'multi_bench'
+                    }
+                })
+                .send('ping', null, null, function(err) {
+                    if (err) return callback(err);
+                    self.connectLatency.update(Date.now() - newClient.createTime);
+                    self.readyLatency.update(Date.now() - newClient.createTime);
+                    callback();
+                });
+        });
     });
 };
 
@@ -164,9 +176,11 @@ Test.prototype.sendNext = function () {
     this.clients[curClient]
         .request({
             host: '127.0.0.1:4040',
+            hasNoParent: true,
             timeout: 10000,
-            serviceName: 'benchmark',
             headers: {
+                as: 'raw',
+                cn: 'multi_bench',
                 benchHeader1: 'bench value one',
                 benchHeader2: 'bench value two',
                 benchHeader3: 'bench value three'

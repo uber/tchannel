@@ -28,6 +28,7 @@ server.listen(4040, '127.0.0.1');
 var keys = {};
 
 server.handler.register('ping', function onPing(req, res) {
+    res.headers.as = 'raw';
     res.sendOk('pong', null);
 });
 
@@ -35,11 +36,13 @@ server.handler.register('set', function onSet(req, res, arg2, arg3) {
     var key = arg2.toString('utf8');
     var val = arg3.toString('utf8');
     keys[key] = val;
+    res.headers.as = 'raw';
     res.sendOk('ok', 'really ok');
 });
 
 server.handler.register('get', function onGet(req, res, arg2, arg3){
     var key = arg2.toString('utf8');
+    res.headers.as = 'raw';
     if (keys[key] !== undefined) {
         var val = keys[key];
         res.sendOk(val.length.toString(10), val);
