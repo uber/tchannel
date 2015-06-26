@@ -26,7 +26,7 @@ from tchannel.sync import TChannelSyncClient
 
 
 @pytest.mark.sync
-def test_sync_client_should_get_response():
+def test_sync_client_should_get_response(tchannel_server):
 
     # @todo this needs to start ioloop in seperate thread
     #  endpoint = 'health'

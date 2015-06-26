@@ -123,9 +123,12 @@ class TestServer(object):
             pass
 
     def serve(self):
+        io_loop = tornado.ioloop.IOLoop()
+        io_loop.make_current()
+        
         self.tchannel.listen()
         self.ready = True
-        tornado.ioloop.IOLoop.current().start()
+        io_loop.start()
 
     def stop(self):
         self.shutdown()

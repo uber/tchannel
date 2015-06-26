@@ -88,7 +88,7 @@ class TChannelSyncClient(object):
 class SyncClientOperation(object):
     """Allows making client operation requests synchronously.
 
-    Composes a tchannel.TChannelClientOperation
+    Composes a tchannel.
 
     This object acts like tchannel.TChannelClientOperation, but instead
     uses a temporary ioloop to make the request synchronously.
