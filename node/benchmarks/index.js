@@ -136,27 +136,40 @@ function startBench() {
 
     if (argv.torch) {
         assert(argv.torch === 'client' ||
-               argv.torch === 'relay',
+               argv.torch === 'relay' ||
+               argv.torch === 'server',
                'Torch flag must be client or relay'
         );
         assert(argv.torchFile, 'torchFile needed');
 
         var torchPid;
         var torchFile = argv.torchFile;
+        var torchTime = argv.torchTime || '30';
+        var torchDelay = argv.torchDelay || 15 * 1000;
+        var torchType = argv.torchType || 'raw';
 
         if (argv.torch === 'relay') {
             torchPid = benchRelayProc.pid;
         } else if (argv.torch === 'client') {
             torchPid = benchProc.pid;
+        } else if (argv.torch === 'server') {
+            torchPid = serverProc.pid;
         }
 
-        var torchProc = childProcess.spawn('sudo', [
-            'torch', torchPid, 'raw', '30'
-        ]);
-        torchProc.stdout.pipe(
-            fs.createWriteStream(torchFile)
-        );
-        torchProc.stderr.pipe(process.stderr);
+        setTimeout(function delayTorching() {
+            var torchProc = childProcess.spawn('sudo', [
+                'torch', torchPid, torchType, torchTime
+            ]);
+            torchProc.stdout.pipe(
+                fs.createWriteStream(torchFile)
+            );
+            torchProc.stderr.pipe(process.stderr);
+            console.error('starting flaming');
+
+            torchProc.once('close', function onTorchClose() {
+                console.error('finished flaming');
+            });
+        }, torchDelay);
     }
 
     benchProc.once('close', function onClose() {
