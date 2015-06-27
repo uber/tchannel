@@ -251,9 +251,6 @@ TChannel.prototype.onServerSocketConnection = function onServerSocketConnection(
     var socketRemoteAddr = sock.remoteAddress + ':' + sock.remotePort;
     var conn = new TChannelConnection(self, sock, 'in', socketRemoteAddr);
 
-    conn.spanEvent.on(function handleSpanFromConn(span) {
-        self.tracer.report(span);
-    });
     conn.errorEvent.on(onConnectionError);
 
     if (self.serverConnections[socketRemoteAddr]) {

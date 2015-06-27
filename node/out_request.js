@@ -58,13 +58,14 @@ function TChannelOutRequest(id, options) {
     self.headers = options.headers || {};
     self.checksumType = options.checksumType || 0;
     self.checksum = options.checksum || null;
+    self.forwardTrace = options.forwardTrace || false;
 
     self.streamed = false;
     self.arg1 = null;
     self.arg2 = null;
     self.arg3 = null;
 
-    if (options.tracer) {
+    if (options.tracer && !self.forwardTrace) {
         // new span with new ids
         self.span = options.tracer.setupNewSpan({
             outgoing: true,
@@ -73,7 +74,7 @@ function TChannelOutRequest(id, options) {
             spanid: null,
             traceid: null,
             parentid: null,
-            flags: options.trace? 1 : 0,
+            flags: options.trace ? 1 : 0,
             remoteName: self.remoteAddr,
             serviceName: self.serviceName,
             name: '' // fill this in later
