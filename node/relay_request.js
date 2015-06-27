@@ -57,6 +57,8 @@ RelayRequest.prototype.createOutRequest = function createOutRequest(host) {
         timeout: self.inreq.ttl - elapsed,
         host: host,
         parent: self.inreq,
+        tracing: self.inreq.tracing,
+        forwardTrace: true,
         serviceName: self.inreq.serviceName,
         headers: self.inreq.headers,
         retryFlags: self.inreq.retryFlags
