@@ -65,9 +65,6 @@ TChannelInResponse.prototype.type = 'tchannel.incoming-response';
 
 TChannelInResponse.prototype.onFinish = function onFinish(_arg, self) {
     self.state = States.Done;
-    if (self.span) {
-        self.spanEvent.emit(self);
-    }
 };
 
 TChannelInResponse.prototype.handleFrame = function handleFrame(parts) {
