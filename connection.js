@@ -281,7 +281,7 @@ TChannelConnection.prototype.onCallResponse = function onCallResponse(res) {
         return;
     }
 
-    if (self.tracer) {
+    if (self.tracer && !req.forwardTrace) {
         // TODO: better annotations
         req.span.annotate('cr');
         self.tracer.report(req.span);
