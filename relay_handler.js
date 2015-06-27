@@ -46,16 +46,27 @@ RelayHandler.prototype.handleRequest = function handleRequest(req, buildRes) {
             priorOutReqId: rereq.outreq && rereq.outreq.id
             // TODO more context, like outreq remote addr
         });
-        buildRes().sendError('UnexpectedError', 'request id exists in relay handler');
+        buildRes().sendError(
+            'UnexpectedError', 'request id exists in relay handler'
+        );
         return;
     }
+
     rereq = new RelayRequest(self.channel, req, buildRes);
+
     self.reqs[reqKey] = rereq;
     rereq.finishEvent.on(rereqFinished);
     rereq.createOutRequest();
+
     function rereqFinished() {
-        delete self.reqs[reqKey];
+        self.clearRequest(reqKey);
     }
+};
+
+RelayHandler.prototype.clearRequest = function clearRequest(reqKey) {
+    var self = this;
+
+    delete self.reqs[reqKey];
 };
 
 function getReqKey(req) {
