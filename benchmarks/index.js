@@ -30,6 +30,7 @@ var util = require('util');
 var process = require('process');
 var console = require('console');
 var setTimeout = require('timers').setTimeout;
+var assert = require('assert');
 
 var server = path.join(__dirname, 'bench_server.js');
 var relay = path.join(__dirname, 'relay_server.js');
@@ -131,6 +132,31 @@ function startBench() {
     if (argv.output) {
         benchProc.stdout
             .pipe(fs.createWriteStream(argv.output, {encoding: 'utf8'}));
+    }
+
+    if (argv.torch) {
+        assert(argv.torch === 'client' ||
+               argv.torch === 'relay',
+               'Torch flag must be client or relay'
+        );
+        assert(argv.torchFile, 'torchFile needed');
+
+        var torchPid;
+        var torchFile = argv.torchFile;
+
+        if (argv.torch === 'relay') {
+            torchPid = benchRelayProc.pid;
+        } else if (argv.torch === 'client') {
+            torchPid = benchProc.pid;
+        }
+
+        var torchProc = childProcess.spawn('sudo', [
+            'torch', torchPid, 'raw', '30'
+        ]);
+        torchProc.stdout.pipe(
+            fs.createWriteStream(torchFile)
+        );
+        torchProc.stderr.pipe(process.stderr);
     }
 
     benchProc.once('close', function onClose() {

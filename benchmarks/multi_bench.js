@@ -215,7 +215,7 @@ Test.prototype.sendNext = function () {
         .request({
             serviceName: 'benchmark',
             hasNoParent: true,
-            timeout: 10000,
+            timeout: 30000,
             headers: {
                 as: 'raw',
                 cn: 'multi_bench',
