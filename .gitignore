@@ -3,3 +3,7 @@ TODO.md
 coverage/
 benchmarks/*.json
 node/node_modules/
+benchmarks/*.svg
+benchmarks/*.raw
+benchmarks/*.html
+benchmarks/*.folded

@@ -158,6 +158,7 @@ Test.prototype.newClient = function (id, callback) {
             .request({
                 serviceName: 'benchmark',
                 hasNoParent: true,
+                timeout: 30 * 1000,
                 headers: {
                     as: 'raw',
                     cn: 'multi_bench'
@@ -255,9 +256,11 @@ Test.prototype.printStats = function () {
 
 var tests = [];
 
-argv.pipeline.forEach(function each(pipeline) {
-    tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: pipeline}));
-});
+if (!argv.skipPing) {
+    argv.pipeline.forEach(function each(pipeline) {
+        tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: pipeline}));
+    });
+}
 
 var randBytes = new LCGStream({
     seed: 1234,
