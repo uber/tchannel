@@ -36,6 +36,7 @@ function RelayRequest(channel, inreq, buildRes) {
     self.outres = null;
     self.outreq = null;
     self.buildRes = buildRes;
+    self.peer = null;
 }
 inherits(RelayRequest, EventEmitter);
 
@@ -51,11 +52,33 @@ RelayRequest.prototype.createOutRequest = function createOutRequest(host) {
         return;
     }
 
+    self.peer = self.channel.peers.choosePeer(null, {
+        host: host
+    });
+    if (!self.peer) {
+        self.onError(errors.NoPeerAvailable());
+        return;
+    }
+
+    self.peer.waitForIdentified(onIdentified);
+
+    function onIdentified(err) {
+        self.onIdentified(err);
+    }
+};
+
+RelayRequest.prototype.onIdentified = function onIdentified(err1) {
+    var self = this;
+
+    if (err1) {
+        self.onError(err1);
+        return;
+    }
+
     var elapsed = self.channel.timers.now() - self.inreq.start;
-    self.outreq = self.channel.request({
+    self.outreq = self.peer.request({
         streamed: self.inreq.streamed,
         timeout: self.inreq.ttl - elapsed,
-        host: host,
         parent: self.inreq,
         serviceName: self.inreq.serviceName,
         headers: self.inreq.headers,
@@ -73,14 +96,12 @@ RelayRequest.prototype.createOutRequest = function createOutRequest(host) {
         self.outreq.send(self.inreq.arg1, self.inreq.arg2, self.inreq.arg3);
     }
 
-    return self.outreq;
-
     function onResponse(res) {
         self.onResponse(res);
     }
 
-    function onError(err) {
-        self.onError(err);
+    function onError(err2) {
+        self.onError(err2);
     }
 };
 
@@ -190,10 +211,10 @@ RelayRequest.prototype.logError = function logError(err, codeName) {
     var logOptions = {
         error: err,
         isErrorFrame: err.isErrorFrame,
-        outRemoteAddr: self.outreq.remoteAddr,
+        outRemoteAddr: self.outreq && self.outreq.remoteAddr,
         inRemoteAddr: self.inreq.remoteAddr,
-        serviceName: self.outreq.serviceName,
-        outArg1: String(self.outreq.arg1)
+        serviceName: self.inreq.serviceName,
+        outArg1: String(self.inreq.arg1)
     };
 
     if (err.isErrorFrame) {
