@@ -52,10 +52,9 @@ RelayHandler.prototype.handleRequest = function handleRequest(req, buildRes) {
         return;
     }
 
-    rereq = new RelayRequest(self.channel, req, buildRes);
+    rereq = new RelayRequest(self.channel, req, buildRes, rereqFinished);
 
     self.reqs[reqKey] = rereq;
-    rereq.finishEvent.on(rereqFinished);
     rereq.createOutRequest();
 
     function rereqFinished() {
