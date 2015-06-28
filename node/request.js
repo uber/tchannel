@@ -156,12 +156,7 @@ TChannelRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     self.start = self.timers.now();
     self.resendSanity = self.limit + 1;
 
-    self.channel.outboundCallsSentStat.increment(1, {
-        'target-service': self.serviceName,
-        'service': self.headers.cn,
-        // TODO should always be buffer
-        'target-endpoint': String(self.arg1)
-    });
+    TChannelOutRequest.prototype.emitOutboundCallsSent.call(self);
 
     self.services.onRequest(self);
     self.resend();
