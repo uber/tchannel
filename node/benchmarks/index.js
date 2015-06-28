@@ -173,6 +173,7 @@ function startBench() {
     }
 
     benchProc.once('close', function onClose() {
+        console.error('benchmark finished');
         serverProc.kill();
         if (traceProc) {
             traceProc.kill();
