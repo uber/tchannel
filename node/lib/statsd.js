@@ -93,7 +93,7 @@ function cleanHostPort(str, field) {
 
 function getKey(stat) {
     /*eslint complexity: [2, 50]*/
-    var prefix = 'tchannel' + '.' + stat.name;
+    var prefix = 'tchannel.' + stat.name;
     switch (stat.name) {
         // outbound
         case 'outbound.calls.sent':
