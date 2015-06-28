@@ -41,6 +41,7 @@ function TChannelPeers(channel, options) {
     self.options = options || {};
     self.initialPeerState = self.options.initialPeerState;
     self._map = Object.create(null);
+    self._keys = [];
     self.selfPeer = null;
 }
 
@@ -97,6 +98,7 @@ TChannelPeers.prototype.add = function add(hostPort, options) {
             self.allocPeerEvent.emit(self, peer);
         }
         self._map[hostPort] = peer;
+        self._keys.push(hostPort);
     }
     return peer;
 };
@@ -107,17 +109,18 @@ TChannelPeers.prototype.addPeer = function addPeer(peer) {
     assert(!self._map[peer.hostPort], 'peer already defined');
     if (peer.hostPort !== self.channel.hostPort) {
         self._map[peer.hostPort] = peer;
+        self._keys.push(peer.hostPort);
     }
 };
 
 TChannelPeers.prototype.keys = function keys() {
     var self = this;
-    return Object.keys(self._map);
+    return self._keys.slice();
 };
 
 TChannelPeers.prototype.values = function values() {
     var self = this;
-    var keys = Object.keys(self._map);
+    var keys = self._keys;
     var ret = new Array(keys.length);
     for (var i = 0; i < keys.length; i++) {
         ret[i] = self._map[keys[i]];
@@ -127,7 +130,7 @@ TChannelPeers.prototype.values = function values() {
 
 TChannelPeers.prototype.entries = function entries() {
     var self = this;
-    var keys = Object.keys(self._map);
+    var keys = self._keys;
     var ret = new Array(keys.length);
     for (var i = 0; i < keys.length; i++) {
         ret[i] = [keys[i], self._map[keys[i]]];
@@ -144,23 +147,33 @@ TChannelPeers.prototype.clear = function clear() {
         for (var i = 0; i < names.length; i++) {
             var subChannel = self.channel.subChannels[names[i]];
             subChannel.peers._map = Object.create(null);
+            subChannel.peers._keys = [];
         }
     }
     self._map = Object.create(null);
+    self._keys = [];
     return vals;
 };
 
 TChannelPeers.prototype.delete = function del(hostPort) {
     var self = this;
     var peer = self._map[hostPort];
+
+    if (!peer) {
+        return;
+    }
+
     if (self.channel.subChannels) {
         var names = Object.keys(self.channel.subChannels);
         for (var i = 0; i < names.length; i++) {
             var subChannel = self.channel.subChannels[names[i]];
-            delete subChannel.peers._map[hostPort];
+            subChannel.peers.delete(hostPort);
         }
     }
     delete self._map[hostPort];
+    var index = self._keys.indexOf(hostPort);
+    self._keys.splice(index, 1);
+
     return peer;
 };
 
@@ -182,6 +195,7 @@ TChannelPeers.prototype.request = function peersRequest(req, options) {
 };
 
 TChannelPeers.prototype.choosePeer = function choosePeer(req, options) {
+    /*eslint complexity: [2, 15]*/
     var self = this;
 
     if (!options) options = {};
