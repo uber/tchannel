@@ -568,9 +568,9 @@ function OutboundRequestSizeTags(serviceName, cn, endpoint) {
     self.cluster = null;
     self.version = null;
 
-    self['target-service'] = serviceName;
+    self.targetService = serviceName;
     self.service = cn;
-    self['target-endpoint'] = endpoint;
+    self.targetEndpoint = endpoint;
 }
 
 function ConnectionsBytesSentTags(hostPort, peer) {
@@ -581,8 +581,8 @@ function ConnectionsBytesSentTags(hostPort, peer) {
     self.cluster = null;
     self.version = null;
 
-    self['host-port'] = hostPort;
-    self['peer-host-port'] = peer;
+    self.hostPort = hostPort;
+    self.peerHostPort = peer;
 }
 
 TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFrame(res, flags, args) {
@@ -616,10 +616,17 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
         'service': !req ? null : req.headers.cn,
         'target-endpoint': !req ? null : String(req.arg1)
     });
-    self.connection.channel.connectionsBytesSentStat.increment(result.size, {
-        'host-port': self.connection.channel.hostPort || '0.0.0.0:0',
-        'peer-host-port': self.connection.socketRemoteAddr
-    });
+
+    var channel = self.connection.channel;
+    channel.emitFastStat(channel.buildStat(
+        'connections.bytes-sent',
+        'counter',
+        result.size,
+        new ConnectionsBytesSentTags(
+            channel.hostPort || '0.0.0.0:0',
+            self.connection.socketRemoteAddr
+        )
+    ));
 };
 
 TChannelV2Handler.prototype.sendCallRequestContFrame = function sendCallRequestContFrame(req, flags, args) {
@@ -633,15 +640,29 @@ TChannelV2Handler.prototype.sendCallRequestContFrame = function sendCallRequestC
     req.checksum = result.checksum;
 
     var req0 = self.connection.ops.getOutReq(req.id);
-    self.connection.channel.outboundRequestSizeStat.increment(result.size, {
-        'target-service': !req0 ? null : req0.serviceName,
-        'service': !req0 ? null : req0.headers.cn,
-        'target-endpoint': !req0 ? null : String(req0.arg1)
-    });
-    self.connection.channel.connectionsBytesSentStat.increment(result.size, {
-        'host-port': self.connection.channel.hostPort || '0.0.0.0:0',
-        'peer-host-port': self.connection.socketRemoteAddr
-    });
+
+    var channel = self.connection.channel;
+    channel.emitFastStat(channel.buildStat(
+        'outbound.request.size',
+        'counter',
+        result.size,
+        new OutboundRequestSizeTags(
+            req0 ? req0.serviceName : '',
+            req0 ? req0.headers.cn : '',
+            req0 ? req.endpoint : ''
+        )
+    ));
+
+    var channel = self.connection.channel;
+    channel.emitFastStat(channel.buildStat(
+        'connections.bytes-sent',
+        'counter',
+        result.size,
+        new ConnectionsBytesSentTags(
+            channel.hostPort || '0.0.0.0:0',
+            self.connection.socketRemoteAddr
+        )
+    ));
 };
 
 TChannelV2Handler.prototype.sendCallResponseContFrame = function sendCallResponseContFrame(res, flags, args) {
@@ -659,10 +680,17 @@ TChannelV2Handler.prototype.sendCallResponseContFrame = function sendCallRespons
         'service': !req ? null : req.headers.cn,
         'target-endpoint': !req ? null : String(req.arg1)
     });
-    self.connection.channel.connectionsBytesSentStat.increment(result.size, {
-        'host-port': self.connection.channel.hostPort || '0.0.0.0:0',
-        'peer-host-port': self.connection.socketRemoteAddr
-    });
+
+    var channel = self.connection.channel;
+    channel.emitFastStat(channel.buildStat(
+        'connections.bytes-sent',
+        'counter',
+        result.size,
+        new ConnectionsBytesSentTags(
+            channel.hostPort || '0.0.0.0:0',
+            self.connection.socketRemoteAddr
+        )
+    ));
 };
 
 TChannelV2Handler.prototype._sendCallBodies = function _sendCallBodies(id, body, checksum) {

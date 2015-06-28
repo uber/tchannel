@@ -158,8 +158,8 @@ allocCluster.test('emits response stats with ok', {
             type: 'counter',
             value: 64,
             tags: {
-                'host-port': serverHost,
-                'peer-host-port': clientHost,
+                hostPort: serverHost,
+                peerHostPort: clientHost,
                 app: 'server',
                 host: os.hostname(),
                 cluster: '',
@@ -319,8 +319,8 @@ allocCluster.test('emits response stats with not ok', {
             type: 'counter',
             value: 73,
             tags: {
-                'host-port': serverHost,
-                'peer-host-port': clientHost,
+                hostPort: serverHost,
+                peerHostPort: clientHost,
                 app: 'server',
                 host: os.hostname(),
                 cluster: '',

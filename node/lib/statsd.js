@@ -170,8 +170,8 @@ function getKey(stat) {
         case 'outbound.request.size':
             return prefix + '.' +
                 clean(stat.tags.service, 'service') + '.' +
-                clean(stat.tags['target-service'], 'target-service') + '.' +
-                clean(stat.tags['target-endpoint'], 'no-endpoint');
+                clean(stat.tags.targetService, 'target-service') + '.' +
+                clean(stat.tags.targetEndpoint, 'no-endpoint');
 
         case 'outbound.response.size':
             return prefix + '.' +
@@ -274,7 +274,7 @@ function getKey(stat) {
 
         case 'connections.bytes-sent':
             return prefix + '.' +
-                cleanHostPort(stat.tags['peer-host-port'], 'no-peer-host-port');
+                cleanHostPort(stat.tags.peerHostPort, 'no-peer-host-port');
 
         case 'connections.bytes-recvd':
             return prefix + '.' +
