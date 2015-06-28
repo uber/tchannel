@@ -146,12 +146,6 @@ TChannelConnectionBase.prototype.runHandler = function runHandler(req) {
         )
     ));
 
-    // self.channel.inboundCallsRecvdStat.increment(1, {
-    //     'calling-service': req.headers.cn,
-    //     'service': req.serviceName,
-    //     'endpoint': String(req.arg1)
-    // });
-
     self.channel.handler.handleRequest(req, buildResponse);
     function buildResponse(options) {
         return self.buildResponse(req, options);
