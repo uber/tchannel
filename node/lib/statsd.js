@@ -284,22 +284,17 @@ TChannelStatsd.prototype.onStat = function onStat(stat) {
 
     var key = getKey(stat);
 
-    switch (stat.type) {
-        case 'counter':
-            return self.statsd.increment(key, stat.value);
-
-        case 'gauge':
-            return self.statsd.gauge(key, stat.value);
-
-        case 'timing':
-            return self.statsd.timing(key, stat.value);
-
-        default:
-            self.channel.logger.error('Trying to emit an invalid stat object', {
-                statType: stat.type,
-                statName: stat.name
-            });
-            break;
+    if (stat.type === 'counter') {
+        return self.statsd.increment(key, stat.value);
+    } else if (stat.type === 'gauge') {
+        return self.statsd.gauge(key, stat.value);
+    } else if (stat.type === 'timing') {
+        return self.statsd.timing(key, stat.value);
+    } else {
+        self.channel.logger.error('Trying to emit an invalid stat object', {
+            statType: stat.type,
+            statName: stat.name
+        });
     }
 };
 
