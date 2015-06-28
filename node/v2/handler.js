@@ -302,7 +302,7 @@ function incomingRequestInvalid(reqFrame, req) {
             v2.CallRequest.MaxArg1Size.toString(16));
         return true;
     }
-}
+};
 
 TChannelV2Handler.prototype.callRequestFrameHandled = function callRequestFrameHandled(req, err, callback) {
     var self = this;
@@ -448,8 +448,7 @@ TChannelV2Handler.prototype.handleCallRequestCont = function handleCallRequestCo
             req.endpoint
         )
     ));
-    
-    var channel = self.connection.channel;
+
     channel.emitFastStat(channel.buildStat(
         'connections.bytes-recvd',
         'counter',

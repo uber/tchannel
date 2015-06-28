@@ -20,8 +20,6 @@
 
 'use strict';
 
-var inherits = require('util').inherits;
-
 var errors = require('./errors');
 
 function RelayRequest(channel, inreq, buildRes, onfinish) {
