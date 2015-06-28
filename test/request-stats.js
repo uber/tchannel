@@ -103,11 +103,11 @@ allocCluster.test('emits stats', {
             type: 'counter',
             value: 93,
             tags: {
-                'target-service': 'server',
+                targetService: 'server',
                 service: 'client',
                 cluster: '',
                 version: '',
-                'target-endpoint': 'echo',
+                targetEndpoint: 'echo',
                 app: 'client',
                 host: os.hostname()
             }
@@ -116,8 +116,8 @@ allocCluster.test('emits stats', {
             type: 'counter',
             value: 93,
             tags: {
-                'host-port': clientHost,
-                'peer-host-port': serverHost,
+                hostPort: clientHost,
+                peerHostPort: serverHost,
                 app: 'client',
                 cluster: '',
                 version: '',
