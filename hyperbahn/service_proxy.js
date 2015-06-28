@@ -131,6 +131,7 @@ function _getServicePeer(svcchan, hostPort) {
     if (!peer) {
         peer = svcchan.peers.add(hostPort);
     }
+
     if (!peer.serviceProxyServices) {
         peer.serviceProxyServices = {};
     }
