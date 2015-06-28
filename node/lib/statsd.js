@@ -20,6 +20,8 @@
 
 'use strict';
 
+var LENGHT_ARRAYS = {};
+
 function TChannelStatsd(channel, statsd) {
     if (!(this instanceof TChannelStatsd)) {
         return new TChannelStatsd(channel, statsd);
@@ -43,7 +45,11 @@ function clean(str, field) {
         return field;
     }
 
-    copy = [];
+    copy = LENGHT_ARRAYS[str.length];
+    if (!copy) {
+        copy = LENGHT_ARRAYS[str.length] = [];
+    }
+
     for (var i = 0; i < str.length; i++) {
         var char = str[i];
 
@@ -53,9 +59,9 @@ function clean(str, field) {
             char === '{' ||
             char === '}'
         ) {
-            copy.push('-');
+            copy[i] = '-';
         } else {
-            copy.push(char);
+            copy[i] = char;
         }
     }
 
@@ -69,22 +75,23 @@ function cleanHostPort(str, field) {
         return field;
     }
 
-    copy = [];
-    for (var i = 0; i < str.length; i++) {
-        var char = str[i];
+    var length = str.indexOf(':');
 
-        if (char === ':') {
-            break;
-        }
+    copy = LENGHT_ARRAYS[length];
+    if (!copy) {
+        copy = LENGHT_ARRAYS[length] = [];
+    }
+    for (var i = 0; i < length; i++) {
+        var char = str[i];
 
         if (char === '/' ||
             char === '.' ||
             char === '{' ||
             char === '}'
         ) {
-            copy.push('-');
+            copy[i] = '-';
         } else {
-            copy.push(char);
+            copy[i] = char;
         }
     }
 
