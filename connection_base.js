@@ -121,7 +121,7 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
 
 TChannelConnectionBase.prototype.onReqError = function onReqError(req, err) {
     var self = this;
-    if (!req.res) self.buildResponse(req);
+    if (!req.res) self.buildResponse(req, {});
     if (err.type === 'tchannel.timeout' ||
         err.type === 'tchannel.request.timeout'
     ) {
@@ -148,7 +148,7 @@ TChannelConnectionBase.prototype.runHandler = function runHandler(req) {
 
     self.channel.handler.handleRequest(req, buildResponse);
     function buildResponse(options) {
-        return self.buildResponse(req, options);
+        return self.buildResponse(req, options || {});
     }
 };
 
@@ -165,9 +165,10 @@ function InboundCallsRecvdTags(cn, serviceName, endpoint) {
     self.endpoint = endpoint || '';
 }
 
-TChannelConnectionBase.prototype.buildResponse = function buildResponse(req, options) {
+TChannelConnectionBase.prototype.buildResponse =
+function buildResponse(req, options) {
     var self = this;
-    var done = false;
+
     if (req.res && req.res.state !== States.Initial) {
         self.errorEvent.emit(self, errors.ResponseAlreadyStarted({
             state: req.res.state,
@@ -176,25 +177,23 @@ TChannelConnectionBase.prototype.buildResponse = function buildResponse(req, opt
             responseMessage: req.res.message
         }));
     }
-    options = extend({
-        channel: self.channel,
-        inreq: req
-    }, options);
+
+    options.channel = self.channel;
+    options.inreq = req;
+
+    // TODO give this options a well defined type
     req.res = self.buildOutResponse(req, options);
+
     req.res.errorEvent.on(onError);
     req.res.finishEvent.on(opDone);
+
     if (!req.forwardTrace) {
-        req.res.spanEvent.on(handleSpanFromRes);
+        self.captureResponseSpans(req.res);
     }
+
     return req.res;
 
-    function handleSpanFromRes(span) {
-        self.channel.tracer.report(span);
-    }
-
     function opDone() {
-        if (done) return;
-        done = true;
         self.onReqDone(req);
     }
 
@@ -203,9 +202,27 @@ TChannelConnectionBase.prototype.buildResponse = function buildResponse(req, opt
     }
 };
 
+TChannelConnectionBase.prototype.captureResponseSpans =
+function captureResponseSpans(res) {
+    var self = this;
+
+    res.spanEvent.on(handleSpanFromRes);
+
+    function handleSpanFromRes(span) {
+        self.handleSpanFromRes(span);
+    }
+}
+
 function isStringOrBuffer(x) {
     return typeof x === 'string' || Buffer.isBuffer(x);
 }
+
+TChannelConnectionBase.prototype.handleSpanFromRes =
+function handleSpanFromRes(span) {
+    var self = this;
+
+    self.channel.tracer.report(span);
+};
 
 TChannelConnectionBase.prototype.onResponseError =
 function onResponseError(err, req) {
