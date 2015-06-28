@@ -57,7 +57,7 @@ test('basic tracing test', function (assert) {
     });
     var subServiceChan = server.makeSubChannel({
         serviceName: 'subservice',
-        peers: ['127.0.0.1:4042']
+        peers: ['127.0.0.1:9997']
     });
 
     var client = new TChannel({
@@ -67,7 +67,7 @@ test('basic tracing test', function (assert) {
     });
     var clientChan = client.makeSubChannel({
         serviceName: 'server',
-        peers: ['127.0.0.1:4040']
+        peers: ['127.0.0.1:9999']
     });
 
     subChan.register('/foobar', function (req, res) {
@@ -140,9 +140,9 @@ test('basic tracing test', function (assert) {
         });
     });
 
-    server.listen(4040, '127.0.0.1', ready.signal);
-    client.listen(4041, '127.0.0.1', ready.signal);
-    subservice.listen(4042, '127.0.0.1', ready.signal);
+    server.listen(9999, '127.0.0.1', ready.signal);
+    client.listen(9998, '127.0.0.1', ready.signal);
+    subservice.listen(9997, '127.0.0.1', ready.signal);
 
     requestsDone(function () {
         setTimeout(function () {
