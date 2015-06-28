@@ -90,15 +90,15 @@ function TChannel(options) {
     // self.outboundCallsLatencyStat = self.defineTiming('outbound.calls.latency');
     // self.outboundCallsPerAttemptLatencyStat = self.defineTiming('outbound.calls.per-attempt-latency');
 
-    self.inboundCallsSuccessStat = self.defineCounter('inbound.calls.success');
+    // self.inboundCallsSuccessStat = self.defineCounter('inbound.calls.success');
     self.inboundCallsSystemErrorsStat = self.defineCounter('inbound.calls.system-errors');
-    self.inboundCallsAppErrorsStat = self.defineCounter('inbound.calls.app-errors');
+    // self.inboundCallsAppErrorsStat = self.defineCounter('inbound.calls.app-errors');
     // self.inboundCallsCancelsRequestedStat = self.defineCounter('inbound.cancels.requested');
     // self.inboundCallsCancelsHonoredStat = self.defineCounter('inbound.cancels.honored');
     // self.inboundRequestSizeStat = self.defineCounter('inbound.request.size');
     // self.inboundResponseSizeStat = self.defineCounter('inbound.response.size');
     self.inboundProtocolErrorsStat = self.defineCounter('inbound.protocol-errors');
-    self.inboundCallsLatencyStat = self.defineTiming('inbound.calls.latency');
+    // self.inboundCallsLatencyStat = self.defineTiming('inbound.calls.latency');
 
     self.connectionsActiveStat = self.defineGauge('connections.active');
     self.connectionsInitiatedStat = self.defineCounter('connections.initiated');
