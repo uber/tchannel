@@ -71,7 +71,7 @@ function RelayServer(opts) {
             app: 'relay-server'
         },
         logger: opts.debug ? require('debug-logtron')('relay') : null,
-        trace: true,
+        trace: false,
         statsd: NullStatsd()
     });
     self.relay.handler = ServiceProxy({
