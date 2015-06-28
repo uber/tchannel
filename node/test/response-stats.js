@@ -94,7 +94,7 @@ allocCluster.test('emits response stats with ok', {
             type: 'counter',
             value: 93,
             tags: {
-                'calling-service': 'client',
+                callingService: 'client',
                 service: 'server',
                 endpoint: 'echo',
                 app: 'server',
@@ -107,8 +107,8 @@ allocCluster.test('emits response stats with ok', {
             type: 'counter',
             value: 93,
             tags: {
-                'host-port': serverHost,
-                'peer-host-port': clientHost,
+                hostPort: serverHost,
+                peerHostPort: clientHost,
                 app: 'server',
                 host: os.hostname(),
                 cluster: '',
@@ -254,7 +254,7 @@ allocCluster.test('emits response stats with not ok', {
             type: 'counter',
             value: 93,
             tags: {
-                'calling-service': 'client',
+                callingService: 'client',
                 service: 'server',
                 endpoint: 'echo',
                 app: 'server',
@@ -267,8 +267,8 @@ allocCluster.test('emits response stats with not ok', {
             type: 'counter',
             value: 93,
             tags: {
-                'host-port': serverHost,
-                'peer-host-port': clientHost,
+                hostPort: serverHost,
+                peerHostPort: clientHost,
                 app: 'server',
                 host: os.hostname(),
                 cluster: '',
@@ -412,7 +412,7 @@ allocCluster.test('emits response stats with error', {
             type: 'counter',
             value: 93,
             tags: {
-                'calling-service': 'client',
+                callingService: 'client',
                 service: 'server',
                 endpoint: 'echo',
                 app: 'server',
@@ -425,8 +425,8 @@ allocCluster.test('emits response stats with error', {
             type: 'counter',
             value: 93,
             tags: {
-                'host-port': serverHost,
-                'peer-host-port': clientHost,
+                hostPort: serverHost,
+                peerHostPort: clientHost,
                 app: 'server',
                 host: os.hostname(),
                 cluster: '',
