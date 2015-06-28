@@ -92,17 +92,40 @@ TChannelOutResponse.prototype._sendError = function _sendError(codeString, messa
 };
 
 TChannelOutResponse.prototype.onFinish = function onFinish(_arg, self) {
-    if (!self.end) self.end = self.timers.now();
+    if (!self.end) {
+        self.end = self.timers.now();
+    }
+
     var latency = self.end - self.inreq.start;
-    self.channel.inboundCallsLatencyStat.add(latency, {
-        'calling-service': self.inreq.headers.cn,
-        'service': self.inreq.serviceName,
-        'endpoint': String(self.inreq.arg1)
-    });
+
+    self.channel.emitFastStat(self.channel.buildStat(
+        'inbound.calls.latency',
+        'timing',
+        latency,
+        new InboundCallsLatencyTags(
+            self.inreq.headers.cn,
+            self.inreq.serviceName,
+            self.inreq.endpoint
+        )
+    ));
+
     if (self.span) {
         self.spanEvent.emit(self, self.span);
     }
 };
+
+function InboundCallsLatencyTags(cn, serviceName, endpoint) {
+    var self = this;
+
+    self.app = '';
+    self.host = '';
+    self.cluster = '';
+    self.version = '';
+
+    self.callingService = cn;
+    self.service = serviceName;
+    self.endpoint = endpoint;
+}
 
 TChannelOutResponse.prototype.sendParts = function sendParts(parts, isLast) {
     var self = this;
@@ -256,25 +279,62 @@ TChannelOutResponse.prototype.send = function send(res1, res2) {
     self.arg3 = res2;
 
     if (self.ok) {
-        self.channel.inboundCallsSuccessStat.increment(1, {
-            'calling-service': self.inreq.headers.cn,
-            'service': self.inreq.serviceName,
-            'endpoint': String(self.inreq.arg1)
-        });
+        self.channel.emitFastStat(self.channel.buildStat(
+            'inbound.calls.success',
+            'counter',
+            1,
+            new InboundCallsSuccessTags(
+                self.inreq.headers.cn,
+                self.inreq.serviceName,
+                self.inreq.endpoint
+            )
+        ));
     } else {
         // TODO: add outResponse.setErrorType()
-        var type = 'unknown';
-        self.channel.inboundCallsAppErrorsStat.increment(1, {
-            'calling-service': self.inreq.headers.cn,
-            'service': self.inreq.serviceName,
-            'endpoint': String(self.inreq.arg1),
-            'type': type
-        });
+        self.channel.emitFastStat(self.channel.buildStat(
+            'inbound.calls.app-errors',
+            'counter',
+            1,
+            new InboundCallsAppErrorsTags(
+                self.inreq.headers.cn,
+                self.inreq.serviceName,
+                self.inreq.endpoint,
+                'unknown'
+            )
+        ));
     }
 
     self.sendCallResponseFrame([self.arg1, res1, res2], true);
     self.finishEvent.emit(self);
+
     return self;
 };
+
+function InboundCallsSuccessTags(cn, serviceName, endpoint) {
+    var self = this;
+
+    self.app = '';
+    self.host = '';
+    self.cluster = '';
+    self.version = '';
+
+    self.callingService = cn;
+    self.service = serviceName;
+    self.endpoint = endpoint;
+}
+
+function InboundCallsAppErrorsTags(cn, serviceName, endpoint, type) {
+    var self = this;
+
+    self.app = '';
+    self.host = '';
+    self.cluster = '';
+    self.version = '';
+
+    self.callingService = cn;
+    self.service = serviceName;
+    self.endpoint = endpoint;
+    self.type = type;
+}
 
 module.exports = TChannelOutResponse;
