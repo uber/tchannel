@@ -141,8 +141,8 @@ allocCluster.test('emits stats', {
             type: 'counter',
             value: 64,
             tags: {
-                'host-port': clientHost,
-                'peer-host-port': serverHost,
+                hostPort: clientHost,
+                peerHostPort: serverHost,
                 app: 'client',
                 cluster: '',
                 version: '',
