@@ -128,7 +128,7 @@ allocCluster.test('emits stats', {
             type: 'counter',
             value: 64,
             tags: {
-                'calling-service': 'client',
+                callingService: 'client',
                 service: 'server',
                 endpoint: 'echo',
                 app: 'client',
