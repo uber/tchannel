@@ -145,7 +145,7 @@ function startBench() {
         var torchPid;
         var torchFile = argv.torchFile;
         var torchTime = argv.torchTime || '30';
-        var torchDelay = argv.torchDelay || 15 * 1000;
+        var torchDelay = argv.torchDelay || 10 * 1000;
         var torchType = argv.torchType || 'raw';
 
         if (argv.torch === 'relay') {
