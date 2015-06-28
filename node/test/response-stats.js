@@ -145,9 +145,9 @@ allocCluster.test('emits response stats with ok', {
             type: 'counter',
             value: 64,
             tags: { 
-                'target-service': 'server',
+                targetService: 'server',
                 service: 'client',
-                'target-endpoint': 'echo',
+                targetEndpoint: 'echo',
                 app: 'server',
                 host: os.hostname(),
                 cluster: '',
@@ -306,9 +306,9 @@ allocCluster.test('emits response stats with not ok', {
             type: 'counter',
             value: 73,
             tags: {
-                'target-service': 'server',
+                targetService: 'server',
                 service: 'client',
-                'target-endpoint': 'echo',
+                targetEndpoint: 'echo',
                 app: 'server',
                 host: os.hostname(),
                 cluster: '',
