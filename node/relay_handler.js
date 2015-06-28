@@ -69,7 +69,7 @@ RelayHandler.prototype.clearRequest = function clearRequest(reqKey) {
 };
 
 function getReqKey(req) {
-    return req.connection.guid + '~' + req.id;
+    return req.connection.guid + String(req.id);
 }
 
 module.exports = RelayHandler;
