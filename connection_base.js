@@ -160,7 +160,7 @@ function InboundCallsRecvdTags(cn, serviceName, endpoint) {
     self.cluster = '';
     self.version = '';
 
-    self['calling-service'] = cn;
+    self.callingService = cn || '';
     self.service = serviceName;
     self.endpoint = endpoint || '';
 }
