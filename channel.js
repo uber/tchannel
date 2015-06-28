@@ -40,6 +40,7 @@ var TChannelRequest = require('./request');
 var TChannelServiceNameHandler = require('./service-name-handler');
 var errors = require('./errors');
 
+var Stat = require('./lib/stat.js');
 var TChannelAsThrift = require('./as/thrift');
 var TChannelAsJSON = require('./as/json');
 var TChannelConnection = require('./connection');
@@ -50,6 +51,15 @@ var TChannelStatsd = require('./lib/statsd');
 var TracingAgent = require('./trace/agent');
 
 var CONN_STALE_PERIOD = 1500;
+
+function StatTags(statTags) {
+    var self = this;
+
+    self.app = statTags.app || '';
+    self.host = statTags.host || '';
+    self.cluster = statTags.cluster || '';
+    self.version = statTags.version || '';
+}
 
 // TODO restore spying
 // var Spy = require('./v2/spy');
@@ -114,7 +124,7 @@ function TChannel(options) {
     // required: 'app'
     // optional: 'host', 'cluster', 'version'
     assert(!self.options.statTags || self.options.statTags.app, 'the stats must have the "app" tag');
-    self.statTags = self.options.statTags || {};
+    self.statTags = new StatTags(self.options.statTags || {});
 
     self.statsd = self.options.statsd;
     if (self.statsd) {
@@ -354,6 +364,7 @@ TChannel.prototype.makeSubChannel = function makeSubChannel(options) {
         }
     }
     var chan = TChannel(opts);
+
     chan.topChannel = self;
     if (options.peers) {
         for (i = 0; i < options.peers.length; i++) {
@@ -546,6 +557,30 @@ TChannel.prototype.close = function close(callback) {
                 callback();
             }
         }
+    }
+};
+
+TChannel.prototype.buildStat =
+function buildStat(name, type, value, tags) {
+    var self = this;
+
+    tags.app = self.statTags.app;
+    tags.host = self.statTags.host;
+    tags.cluster = self.statTags.cluster;
+    tags.version = self.statTags.version;
+
+    return new Stat(
+        name, type, value, tags
+    );
+};
+
+TChannel.prototype.emitFastStat = function emitFastStat(stat) {
+    var self = this;
+
+    if (self.topChannel) {
+        self.topChannel.statEvent.emit(self, stat);
+    } else {
+        self.statEvent.emit(self, stat);
     }
 };
 

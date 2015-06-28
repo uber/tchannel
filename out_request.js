@@ -62,6 +62,7 @@ function TChannelOutRequest(id, options) {
 
     self.streamed = false;
     self.arg1 = null;
+    self.endpoint = null;
     self.arg2 = null;
     self.arg3 = null;
 
@@ -147,7 +148,7 @@ function emitPerAttemptErrorStat(err) {
             'target-service': self.serviceName,
             'service': self.headers.cn,
             // TODO should always be buffer
-            'target-endpoint': String(self.arg1),
+            'target-endpoint': self.endpoint,
             'type': err.codeName,
             'retry-count': self.retryCount
         });
@@ -156,7 +157,7 @@ function emitPerAttemptErrorStat(err) {
             'target-service': self.serviceName,
             'service': self.headers.cn,
             // TODO should always be buffer
-            'target-endpoint': String(self.arg1),
+            'target-endpoint': self.endpoint,
             'type': err.type || 'unknown',
             'retry-count': self.retryCounts
         });
@@ -172,7 +173,7 @@ function emitErrorStat(err) {
             'target-service': self.serviceName,
             'service': self.headers.cn,
             // TODO should always be buffer
-            'target-endpoint': String(self.arg1),
+            'target-endpoint': self.endpoint,
             'type': err.codeName
         });
     } else {
@@ -180,7 +181,7 @@ function emitErrorStat(err) {
             'target-service': self.serviceName,
             'service': self.headers.cn,
             // TODO should always be buffer
-            'target-endpoint': String(self.arg1),
+            'target-endpoint': self.endpoint,
             'type': err.type || 'unknown'
         });
     }
@@ -195,14 +196,14 @@ function emitResponseStat(res) {
             'target-service': self.serviceName,
             'service': self.headers.cn,
             // TODO should always be buffer
-            'target-endpoint': String(self.arg1)
+            'target-endpoint': self.endpoint
         });
     } else {
         self.channel.outboundCallsAppErrorsStat.increment(1, {
             'target-service': self.serviceName,
             'service': self.headers.cn,
             // TODO should always be buffer
-            'target-endpoint': String(self.arg1),
+            'target-endpoint': self.endpoint,
             // TODO define transport header
             // for application error type
             'type': 'unknown'
@@ -219,7 +220,7 @@ function emitPerAttemptResponseStat(res) {
             'target-service': self.serviceName,
             'service': self.headers.cn,
             // TODO should always be buffer
-            'target-endpoint': String(self.arg1),
+            'target-endpoint': self.endpoint,
             // TODO define transport header
             // for application error type
             'type': 'unknown',
@@ -237,7 +238,7 @@ function emitPerAttemptLatency() {
         'target-service': self.serviceName,
         'service': self.headers.cn,
         // TODO should always be buffer
-        'target-endpoint': String(self.arg1),
+        'target-endpoint': self.endpoint,
         'peer': self.remoteAddr,
         'retry-count': self.retryCount
     });
@@ -251,7 +252,7 @@ TChannelOutRequest.prototype.emitLatency = function emitLatency() {
         'target-service': self.serviceName,
         'service': self.headers.cn,
         // TODO should always be buffer
-        'target-endpoint': String(self.arg1)
+        'target-endpoint': self.endpoint
     });
 };
 
@@ -340,10 +341,10 @@ TChannelOutRequest.prototype.sendCallRequestContFrame = function sendCallRequest
 TChannelOutRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     var self = this;
 
-    var endpoint = String(arg1);
+    self.endpoint = String(arg1);
 
     if (self.span) {
-        self.span.name = endpoint;
+        self.span.name = self.endpoint;
 
         self.span.annotateBinary('as', self.headers.as);
         self.span.annotateBinary('cn', self.headers.cn);
@@ -354,7 +355,7 @@ TChannelOutRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
             'target-service': self.serviceName,
             'service': self.headers.cn,
             // TODO should always be buffer
-            'target-endpoint': endpoint
+            'target-endpoint': self.endpoint
         });
     }
 
