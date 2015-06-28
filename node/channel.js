@@ -86,12 +86,10 @@ function TChannel(options) {
     self.outboundCallsAppErrorsStat = self.defineCounter('outbound.calls.app-errors');
     self.outboundCallsPerAttemptAppErrorsStat = self.defineCounter('outbound.calls.per-attempt.app-errors');
     self.outboundCallsRetriesStat = self.defineCounter('outbound.calls.retries');
-    self.outboundRequestSizeStat = self.defineCounter('outbound.request.size');
     self.outboundResponseSizeStat = self.defineCounter('outbound.response.size');
     self.outboundCallsLatencyStat = self.defineTiming('outbound.calls.latency');
     self.outboundCallsPerAttemptLatencyStat = self.defineTiming('outbound.calls.per-attempt-latency');
 
-    self.inboundCallsRecvdStat = self.defineCounter('inbound.calls.recvd');
     self.inboundCallsSuccessStat = self.defineCounter('inbound.calls.success');
     self.inboundCallsSystemErrorsStat = self.defineCounter('inbound.calls.system-errors');
     self.inboundCallsAppErrorsStat = self.defineCounter('inbound.calls.app-errors');
@@ -109,7 +107,6 @@ function TChannel(options) {
     self.connectionsAcceptedErrorsStat = self.defineCounter('connections.accept-errors');
     self.connectionsErrorsStat = self.defineCounter('connections.errors');
     self.connectionsClosedStat = self.defineCounter('connections.closed');
-    self.connectionsBytesSentStat = self.defineCounter('connections.bytes-sent');
     self.connectionsBytesRcvdStat = self.defineCounter('connections.bytes-recvd');
 
     self.options = extend({
