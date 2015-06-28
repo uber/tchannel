@@ -98,13 +98,13 @@ function getKey(stat) {
         // outbound
         case 'outbound.calls.success':
         case 'outbound.calls.latency':
+        case 'outbound.response.size':
             return prefix + '.' +
                 clean(stat.tags.service, 'no-service') + '.' +
                 clean(stat.tags.targetService, 'no-target-service') + '.' +
                 clean(stat.tags.targetEndpoint, 'no-endpoint');
 
         case 'outbound.calls.sent':
-        case 'outbound.response.size':
             return prefix + '.' +
                 clean(stat.tags.service, 'no-service') + '.' +
                 clean(stat.tags['target-service'], 'no-target-service') + '.' +
