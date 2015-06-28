@@ -57,23 +57,7 @@ function TChannelInRequest(id, options) {
     self.forwardTrace = false;
 
     if (options.tracer) {
-        self.span = options.tracer.setupNewSpan({
-            spanid: self.tracing.spanid,
-            traceid: self.tracing.traceid,
-            parentid: self.tracing.parentid,
-            flags: self.tracing.flags,
-            remoteName: options.hostPort,
-            serviceName: self.serviceName,
-            name: '' // fill this in later
-        });
-
-        self.span.annotateBinary('cn', self.headers.cn);
-        self.span.annotateBinary('as', self.headers.as);
-        if (self.connection) {
-            self.span.annotateBinary('src', self.connection.remoteName);
-        }
-
-        self.span.annotate('sr');
+        self.setupTracing(options);
     } else {
         self.span = null;
     }
@@ -89,13 +73,38 @@ inherits(TChannelInRequest, EventEmitter);
 
 TChannelInRequest.prototype.type = 'tchannel.incoming-request';
 
+TChannelInRequest.prototype.setupTracing = function setupTracing(options) {
+    var self = this;
+
+    self.span = options.tracer.setupNewSpan({
+        spanid: self.tracing.spanid,
+        traceid: self.tracing.traceid,
+        parentid: self.tracing.parentid,
+        flags: self.tracing.flags,
+        remoteName: options.hostPort,
+        serviceName: self.serviceName,
+        name: '' // fill this in later
+    });
+
+    self.span.annotateBinary('cn', self.headers.cn);
+    self.span.annotateBinary('as', self.headers.as);
+    if (self.connection) {
+        self.span.annotateBinary('src', self.connection.remoteName);
+    }
+
+    self.span.annotate('sr');
+};
+
 TChannelInRequest.prototype.onFinish = function onFinish(_arg, self) {
     self.state = States.Done;
 };
 
 TChannelInRequest.prototype.handleFrame = function handleFrame(parts) {
     var self = this;
-    if (!parts) return;
+    if (!parts) {
+        return;
+    }
+
     if (parts.length !== 3 || self.state !== States.Initial) {
         self.errorEvent.emit(self, new Error(
             'un-streamed argument defragmentation is not implemented'));
@@ -104,7 +113,9 @@ TChannelInRequest.prototype.handleFrame = function handleFrame(parts) {
     self.endpoint = String(self.arg1);
     self.arg2 = parts[1] || emptyBuffer;
     self.arg3 = parts[2] || emptyBuffer;
-    if (self.span) self.span.name = String(self.arg1);
+    if (self.span) {
+        self.span.name = self.endpoint;
+    }
     self.finishEvent.emit(self);
 };
 
