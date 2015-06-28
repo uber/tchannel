@@ -124,27 +124,7 @@ Operations.prototype.popOutReq = function popOutReq(id, context) {
 
     var req = self.requests.out[id];
     if (!req) {
-        var tombstones = self.tombstones.out;
-        var isStale = false;
-
-        for (var i = 0; i < tombstones.length; i++) {
-            if (tombstones[i].id === id) {
-                isStale = true;
-                break;
-            }
-        }
-
-        // If this id has been timed out then just return
-        if (isStale) {
-            return null;
-        }
-
-        // This could be because of a confused / corrupted server.
-        self.logger.info('popOutReq received for unknown or lost id', {
-            context: context,
-            socketRemoteAddr: self.connection.socketRemoteAddr,
-            direction: self.connection.direction
-        });
+        self.logMissingOutRequest(id, context);
         return null;
     }
 
@@ -160,6 +140,50 @@ Operations.prototype.popOutReq = function popOutReq(id, context) {
     self.pending.out--;
 
     return req;
+};
+
+Operations.prototype.logMissingOutRequest =
+function logMissingOutRequest(id, context) {
+    var self = this;
+
+    var tombstones = self.tombstones.out;
+    var isStale = false;
+
+    for (var i = 0; i < tombstones.length; i++) {
+        if (tombstones[i].id === id) {
+            isStale = true;
+            break;
+        }
+    }
+
+    // If this id has been timed out then just return
+    if (isStale) {
+        return null;
+    }
+
+    // context is err or res
+    if (context.originalId) {
+        context = {
+            error: context,
+            id: context.originalId,
+            info: 'got error frame for unknown id'
+        };
+    } else if (context.id) {
+        context = {
+            responseId: context.id,
+            code: context.code,
+            arg1: Buffer.isBuffer(context.arg1) ?
+                String(context.arg1) : 'streamed-arg1',
+            info: 'got call response for unknown id'
+        };
+    }
+
+    // This could be because of a confused / corrupted server.
+    self.logger.info('popOutReq received for unknown or lost id', {
+        context: context,
+        socketRemoteAddr: self.connection.socketRemoteAddr,
+        direction: self.connection.direction
+    });
 };
 
 Operations.prototype.popInReq = function popInReq(id) {
