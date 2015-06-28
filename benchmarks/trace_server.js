@@ -39,7 +39,7 @@ var tcollectorChan = server.makeSubChannel({
     serviceName: 'tcollector'
 });
 
-server.listen(4039, '127.0.0.1');
+server.listen(7039, '127.0.0.1');
 
 tcollectorChan.register('TCollector::submit', function onSubmit(req, res) {
     var arg2 = new Buffer([0x00, 0x00]);

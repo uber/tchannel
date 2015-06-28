@@ -62,13 +62,13 @@ var DESTINATION_SERVER;
 var TRACE_SERVER;
 
 if (argv.relay) {
-    DESTINATION_SERVER = '127.0.0.1:4038';
+    DESTINATION_SERVER = '127.0.0.1:7038';
 } else {
-    DESTINATION_SERVER = '127.0.0.1:4040';
+    DESTINATION_SERVER = '127.0.0.1:7040';
 }
 
 if (argv.trace) {
-    TRACE_SERVER = '127.0.0.1:4037';
+    TRACE_SERVER = '127.0.0.1:7037';
 }
 
 // -- test harness
@@ -120,7 +120,7 @@ Test.prototype.run = function (callback) {
 
 Test.prototype.newClient = function (id, callback) {
     var self = this;
-    var port = 4041 + id;
+    var port = 7041 + id;
     var clientChan = TChannel({
         statTags: {
             app: 'my-client'
