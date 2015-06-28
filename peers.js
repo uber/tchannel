@@ -222,7 +222,7 @@ TChannelPeers.prototype.choosePeer = function choosePeer(req, options) {
     var selectedScore = 0;
     for (var i = 0; i < hosts.length; i++) {
         var hostPort = hosts[i];
-        var peer = self.add(hostPort);
+        var peer = self._map[hostPort];
         if (!req || !req.triedRemoteAddrs[hostPort]) {
             var score = peer.state.shouldRequest(req, options);
             var want = score > threshold &&
