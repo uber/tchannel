@@ -710,33 +710,31 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
         self.errorEvent.emit(self, errors.SendCallResBeforeIdentifiedError());
         return;
     }
+
     var code = res.ok ? v2.CallResponse.Codes.OK : v2.CallResponse.Codes.Error;
     var resBody = new v2.CallResponse(
         flags, code, res.tracing, res.headers,
         res.checksum.type, args);
 
-    if (self.requireAs) {
-        assert(res.headers && res.headers.as,
-            'Expected the "as" transport header to be set for response');
-    } else if (!res.headers || !res.headers.as) {
-        self.logger.error('Expected "as" header to be set for response', {
-            code: code,
-            remoteName: self.remoteName,
-            arg1: String(args[0]),
-            socketRemoteAddr: self.connection.socketRemoteAddr
-        });
-    }
+    self.validateCallResponseFrame(res);
 
     var result = self._sendCallBodies(res.id, resBody, null);
     res.checksum = result.checksum;
-    var req = self.connection.ops.getInReq(res.id);
-    self.connection.channel.outboundResponseSizeStat.increment(result.size, {
-        'target-service': !req ? null : req.serviceName,
-        'service': !req ? null : req.headers.cn,
-        'target-endpoint': !req ? null : String(req.arg1)
-    });
 
     var channel = self.connection.channel;
+
+    var req = res.inreq;
+    channel.emitFastStat(channel.buildStat(
+        'outbound.response.size',
+        'counter',
+        result.size,
+        new OutboundResponseSizeTags(
+            req.serviceName,
+            req.headers.cn,
+            req.endpoint
+        )
+    ));
+
     channel.emitFastStat(channel.buildStat(
         'connections.bytes-sent',
         'counter',
@@ -746,6 +744,36 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
             self.connection.socketRemoteAddr
         )
     ));
+};
+
+function OutboundResponseSizeTags(serviceName, cn, endpoint) {
+    var self = this;
+
+    self.app = null;
+    self.host = null;
+    self.cluster = null;
+    self.version = null;
+
+    self.targetService = serviceName;
+    self.service = cn;
+    self.targetEndpoint = endpoint;
+}
+
+TChannelV2Handler.prototype.validateCallResponseFrame =
+function validateCallResponseFrame(res) {
+    var self = this;
+
+    if (self.requireAs) {
+        assert(res.headers && res.headers.as,
+            'Expected the "as" transport header to be set for response');
+    } else if (!res.headers || !res.headers.as) {
+        self.logger.error('Expected "as" header to be set for response', {
+            code: res.code,
+            remoteName: self.remoteName,
+            arg1: self.inreq.endpoint,
+            socketRemoteAddr: self.connection.socketRemoteAddr
+        });
+    }
 };
 
 TChannelV2Handler.prototype.sendCallRequestContFrame = function sendCallRequestContFrame(req, flags, args) {
@@ -792,14 +820,21 @@ TChannelV2Handler.prototype.sendCallResponseContFrame = function sendCallRespons
     var resBody = new v2.CallResponseCont(flags, res.checksum.type, args);
     var result = self._sendCallBodies(res.id, resBody, res.checksum);
     res.checksum = result.checksum;
-    var req = self.connection.ops.getInReq(res.id);
-    self.connection.channel.outboundResponseSizeStat.increment(result.size, {
-        'target-service': !req ? null : req.serviceName,
-        'service': !req ? null : req.headers.cn,
-        'target-endpoint': !req ? null : String(req.arg1)
-    });
 
+    var req = res.inreq;
     var channel = self.connection.channel;
+
+    channel.emitFastStat(channel.buildStat(
+        'outbound.response.size',
+        'counter',
+        result.size,
+        new OutboundResponseSizeTags(
+            req.serviceName,
+            req.headers.cn,
+            req.endpoint
+        )
+    ));
+
     channel.emitFastStat(channel.buildStat(
         'connections.bytes-sent',
         'counter',
