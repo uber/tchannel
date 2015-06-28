@@ -83,7 +83,7 @@ test('test of thriftify spec', function t1(assert) {
         ],
         'host': {
             'ipv4': 2130706433,
-            'port': 4040,
+            'port': 9999,
             'serviceName': 'server'
         },
         'binaryAnnotations': [

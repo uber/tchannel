@@ -117,7 +117,7 @@ allocCluster.test('emits connection stats with failure', {
         serviceName: 'server',
         // there should be nothing running on this port
         // the connection is supposed to fail
-        peers: ['localhost:4040']
+        peers: ['localhost:9999']
     });
 
     subClient.request({
@@ -128,7 +128,7 @@ allocCluster.test('emits connection stats with failure', {
     });
 
     client.waitForIdentified({
-        host: 'localhost:4040'
+        host: 'localhost:9999'
     }, onIdentified);
 
     function onIdentified(err) {
@@ -141,7 +141,7 @@ allocCluster.test('emits connection stats with failure', {
                 tags:
                 {
                     'host-port': clientHost,
-                    'peer-host-port': 'localhost:4040',
+                    'peer-host-port': 'localhost:9999',
                     app: 'server',
                     host: os.hostname()
                }
@@ -152,7 +152,7 @@ allocCluster.test('emits connection stats with failure', {
                 tags:
                 {
                     'host-port': clientHost,
-                    'peer-host-port': 'localhost:4040',
+                    'peer-host-port': 'localhost:9999',
                     app: 'server',
                     host: os.hostname()
                }
