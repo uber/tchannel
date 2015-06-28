@@ -96,9 +96,14 @@ function getKey(stat) {
     var prefix = 'tchannel.' + stat.name;
     switch (stat.name) {
         // outbound
-        case 'outbound.calls.sent':
         case 'outbound.calls.success':
         case 'outbound.calls.latency':
+            return prefix + '.' +
+                clean(stat.tags.service, 'no-service') + '.' +
+                clean(stat.tags.targetService, 'no-target-service') + '.' +
+                clean(stat.tags.targetEndpoint, 'no-endpoint');
+
+        case 'outbound.calls.sent':
         case 'outbound.response.size':
             return prefix + '.' +
                 clean(stat.tags.service, 'no-service') + '.' +
@@ -106,6 +111,12 @@ function getKey(stat) {
                 clean(stat.tags['target-endpoint'], 'no-endpoint');
 
         case 'outbound.calls.app-errors':
+            return prefix + '.' +
+                clean(stat.tags.service, 'no-service') + '.' +
+                clean(stat.tags.targetService, 'no-target-service') + '.' +
+                clean(stat.tags.targetEndpoint, 'no-endpoint') + '.' +
+                clean(stat.tags.type, 'no-type');
+
         case 'outbound.calls.system-errors':
         case 'outbound.calls.operational-errors':
             return prefix + '.' +
@@ -116,7 +127,6 @@ function getKey(stat) {
 
         case 'outbound.calls.per-attempt.system-errors':
         case 'outbound.calls.per-attempt.operational-errors':
-        case 'outbound.calls.per-attempt.app-errors':
             return prefix + '.' +
                 clean(stat.tags.service, 'no-service') + '.' +
                 clean(stat.tags['target-service'], 'no-target-service') + '.' +
@@ -124,13 +134,27 @@ function getKey(stat) {
                 clean(stat.tags.type, 'no-type') + '.' +
                 stat.tags['retry-count'];
 
+        case 'outbound.calls.per-attempt.app-errors':
+            return prefix + '.' +
+                clean(stat.tags.service, 'no-service') + '.' +
+                clean(stat.tags.targetService, 'no-target-service') + '.' +
+                clean(stat.tags.targetEndpoint, 'no-endpoint') + '.' +
+                clean(stat.tags.type, 'no-type') + '.' +
+                stat.tags.retryCount;
+
         case 'outbound.calls.retries':
-        case 'outbound.calls.per-attempt-latency':
             return prefix + '.' +
                 clean(stat.tags.service, 'no-service') + '.' +
                 clean(stat.tags['target-service'], 'no-target-service') + '.' +
                 clean(stat.tags['target-endpoint'], 'no-endpoint') + '.' +
                 stat.tags['retry-count'];
+
+        case 'outbound.calls.per-attempt-latency':
+            return prefix + '.' +
+                clean(stat.tags.service, 'no-service') + '.' +
+                clean(stat.tags.targetService, 'no-target-service') + '.' +
+                clean(stat.tags.targetEndpoint, 'no-endpoint') + '.' +
+                stat.tags.retryCount;
 
         case 'outbound.request.size':
             return prefix + '.' +
