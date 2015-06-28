@@ -23,9 +23,9 @@
 var test = require('tape');
 var TChannel = require('../channel.js');
 
-var serverOptions = {host: '127.0.0.1', port: 4040};
-var clientOptions = {host: '127.0.0.1', port: 4041};
-var client1Options = {host: '127.0.0.1', port: 4042};
+var serverOptions = {host: '127.0.0.1', port: 14045};
+var clientOptions = {host: '127.0.0.1', port: 14046};
+var client1Options = {host: '127.0.0.1', port: 14047};
 var clientName = clientOptions.host + ':' + clientOptions.port;
 var client1Name = client1Options.host + ':' + client1Options.port;
 
@@ -47,7 +47,7 @@ test('add peer: get connection', function t(assert) {
     var connection = server.peers.add(clientName).connect();
 
     assert.ok(connection, 'A connection object should be returned');
-    assert.equals(connection.socketRemoteAddr, '127.0.0.1:4041', 'Remote address should match the client');
+    assert.equals(connection.socketRemoteAddr, '127.0.0.1:14046', 'Remote address should match the client');
     server.quit(assert.end);
   });
 });
@@ -58,7 +58,7 @@ test('peer add, connect', function t(assert) {
   server.listen(serverOptions.port, serverOptions.host, function listening() {
     var connection = server.peers.add(clientName).connect();
     assert.ok(connection, 'A connection object should be returned');
-    assert.equals(connection.socketRemoteAddr, '127.0.0.1:4041', 'Remote address should match the client');
+    assert.equals(connection.socketRemoteAddr, '127.0.0.1:14046', 'Remote address should match the client');
     server.quit(assert.end);
   });
 });

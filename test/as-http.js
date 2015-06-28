@@ -134,8 +134,7 @@ function allocHTTPBridge(opts) {
     // egress( HTTP -> TChannel ) -> ingress( TChannel -> HTTP )
 
     var cluster = allocCluster({
-        numPeers: 2,
-        listen: [4040, 4041]
+        numPeers: 2
     });
     var tready = cluster.ready;
     var tdestroy = cluster.destroy;
