@@ -206,7 +206,7 @@ TChannelPeers.prototype.choosePeer = function choosePeer(req, options) {
     if (options.host) {
         return self.add(options.host);
     } else {
-        hosts = Object.keys(self._map);
+        hosts = self._keys;
     }
 
     if (!hosts || !hosts.length) {
