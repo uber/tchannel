@@ -132,7 +132,7 @@ allocCluster.test('emits response stats with ok', {
             type: 'counter',
             value: 1,
             tags: {
-                'calling-service': 'client',
+                callingService: 'client',
                 service: 'server',
                 endpoint: 'echo',
                 app: 'server',
@@ -170,7 +170,7 @@ allocCluster.test('emits response stats with ok', {
             type: 'timing',
             value: stats[7].value,
             tags: {
-                'calling-service': 'client',
+                callingService: 'client',
                 service: 'server',
                 endpoint: 'echo',
                 app: 'server',
@@ -292,7 +292,7 @@ allocCluster.test('emits response stats with not ok', {
             type: 'counter',
             value: 1,
             tags: {
-                'calling-service': 'client',
+                callingService: 'client',
                 service: 'server',
                 endpoint: 'echo',
                 type: 'unknown',
@@ -331,7 +331,7 @@ allocCluster.test('emits response stats with not ok', {
             type: 'timing',
             value: stats[7].value,
             tags: {
-                'calling-service': 'client',
+                callingService: 'client',
                 service: 'server',
                 endpoint: 'echo',
                 app: 'server',
@@ -464,7 +464,7 @@ allocCluster.test('emits response stats with error', {
             type: 'timing',
             value: stats[5].value,
             tags: {
-                'calling-service': 'client',
+                callingService: 'client',
                 service: 'server',
                 endpoint: 'echo',
                 app: 'server',
