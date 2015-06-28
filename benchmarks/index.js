@@ -56,7 +56,7 @@ function run(script, args) {
 
 var serverProc = run(server, [
     argv.trace ? '--trace' : '--no-trace',
-    '--traceRelayHostPort', '127.0.0.1:4037'
+    '--traceRelayHostPort', '127.0.0.1:7037'
 ]);
 serverProc.stdout.pipe(process.stderr);
 serverProc.stderr.pipe(process.stderr);
@@ -78,10 +78,10 @@ if (argv.relay || argv.trace) {
 
 function startRelayServers() {
     benchRelayProc = run(relay, [
-        '--benchPort', '4040',
-        '--tracePort', '4039',
-        '--benchRelayPort', '4038',
-        '--traceRelayPort', '4037',
+        '--benchPort', '7040',
+        '--tracePort', '7039',
+        '--benchRelayPort', '7038',
+        '--traceRelayPort', '7037',
         '--type', 'bench-relay',
         argv.trace ? '--trace' : '--no-trace',
         argv.debug ? '--debug' : '--no-debug'
@@ -91,10 +91,10 @@ function startRelayServers() {
 
     if (argv.trace) {
         traceRelayProc = run(relay, [
-            '--benchPort', '4040',
-            '--tracePort', '4039',
-            '--benchRelayPort', '4038',
-            '--traceRelayPort', '4037',
+            '--benchPort', '7040',
+            '--tracePort', '7039',
+            '--benchRelayPort', '7038',
+            '--traceRelayPort', '7037',
             '--type', 'trace-relay',
             argv.trace ? '--trace' : '--no-trace',
             argv.debug ? '--debug' : '--no-debug'
