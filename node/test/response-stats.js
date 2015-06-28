@@ -25,7 +25,13 @@ var os = require('os');
 var allocCluster = require('./lib/alloc-cluster.js');
 
 allocCluster.test('emits response stats with ok', {
-    numPeers: 2
+    numPeers: 2,
+    channelOptions: {
+        statTags: {
+            app: 'server',
+            host: os.hostname()
+        }
+    }
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
     var client = cluster.channels[1];
@@ -42,10 +48,6 @@ allocCluster.test('emits response stats with ok', {
         res.headers.as = 'raw';
         res.sendOk(h, b);
     });
-    server.statTags = server.options.statTags = {
-        app: 'server',
-        host: os.hostname()
-    };
     server.on('stat', function onStat(stat) {
         stats.push(stat);
     });
@@ -83,7 +85,9 @@ allocCluster.test('emits response stats with ok', {
                 'host-port': serverHost,
                 'peer-host-port': clientHost,
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
            }
         }, {
             name: 'inbound.request.size',
@@ -94,7 +98,9 @@ allocCluster.test('emits response stats with ok', {
                 service: 'server',
                 endpoint: 'echo',
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'connections.bytes-recvd',
@@ -104,7 +110,9 @@ allocCluster.test('emits response stats with ok', {
                 'host-port': serverHost,
                 'peer-host-port': clientHost,
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'inbound.calls.recvd',
@@ -115,7 +123,9 @@ allocCluster.test('emits response stats with ok', {
                 service: 'server',
                 endpoint: 'echo',
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'inbound.calls.success',
@@ -126,7 +136,9 @@ allocCluster.test('emits response stats with ok', {
                 service: 'server',
                 endpoint: 'echo',
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'outbound.response.size',
@@ -137,7 +149,9 @@ allocCluster.test('emits response stats with ok', {
                 service: 'client',
                 'target-endpoint': 'echo',
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'connections.bytes-sent',
@@ -147,7 +161,9 @@ allocCluster.test('emits response stats with ok', {
                 'host-port': serverHost,
                 'peer-host-port': clientHost,
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'inbound.calls.latency',
@@ -158,7 +174,9 @@ allocCluster.test('emits response stats with ok', {
                 service: 'server',
                 endpoint: 'echo',
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }]);
 
@@ -167,7 +185,13 @@ allocCluster.test('emits response stats with ok', {
 });
 
 allocCluster.test('emits response stats with not ok', {
-    numPeers: 2
+    numPeers: 2,
+    channelOptions: {
+        statTags: {
+            app: 'server',
+            host: os.hostname()
+        }
+    }
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
     var client = cluster.channels[1];
@@ -184,10 +208,6 @@ allocCluster.test('emits response stats with not ok', {
         res.headers.as = 'raw';
         res.sendNotOk('failure', 'busy');
     });
-    server.statTags = server.options.statTags = {
-        app: 'server',
-        host: os.hostname()
-    };
     server.on('stat', function onStat(stat) {
         stats.push(stat);
     });
@@ -225,7 +245,9 @@ allocCluster.test('emits response stats with not ok', {
                 'host-port': serverHost,
                 'peer-host-port': clientHost,
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
            }
         }, {
             name: 'inbound.request.size',
@@ -236,7 +258,9 @@ allocCluster.test('emits response stats with not ok', {
                 service: 'server',
                 endpoint: 'echo',
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'connections.bytes-recvd',
@@ -246,7 +270,9 @@ allocCluster.test('emits response stats with not ok', {
                 'host-port': serverHost,
                 'peer-host-port': clientHost,
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'inbound.calls.recvd',
@@ -257,7 +283,9 @@ allocCluster.test('emits response stats with not ok', {
                 service: 'server',
                 endpoint: 'echo',
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'inbound.calls.app-errors',
@@ -269,7 +297,9 @@ allocCluster.test('emits response stats with not ok', {
                 endpoint: 'echo',
                 type: 'unknown',
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'outbound.response.size',
@@ -280,7 +310,9 @@ allocCluster.test('emits response stats with not ok', {
                 service: 'client',
                 'target-endpoint': 'echo',
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'connections.bytes-sent',
@@ -290,7 +322,9 @@ allocCluster.test('emits response stats with not ok', {
                 'host-port': serverHost,
                 'peer-host-port': clientHost,
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'inbound.calls.latency',
@@ -301,7 +335,9 @@ allocCluster.test('emits response stats with not ok', {
                 service: 'server',
                 endpoint: 'echo',
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }]);
 
@@ -310,7 +346,13 @@ allocCluster.test('emits response stats with not ok', {
 });
 
 allocCluster.test('emits response stats with error', {
-    numPeers: 2
+    numPeers: 2,
+    channelOptions: {
+        statTags: {
+            app: 'server',
+            host: os.hostname()
+        }
+    }
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
     var client = cluster.channels[1];
@@ -326,10 +368,6 @@ allocCluster.test('emits response stats with error', {
     }).register('echo', function echo(req, res, h, b) {
         res.sendError('ProtocolError', 'bad request!');
     });
-    server.statTags = server.options.statTags = {
-        app: 'server',
-        host: os.hostname()
-    };
     server.on('stat', function onStat(stat) {
         stats.push(stat);
     });
@@ -365,7 +403,9 @@ allocCluster.test('emits response stats with error', {
                 'host-port': serverHost,
                 'peer-host-port': clientHost,
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
            }
         }, {
             name: 'inbound.request.size',
@@ -376,7 +416,9 @@ allocCluster.test('emits response stats with error', {
                 service: 'server',
                 endpoint: 'echo',
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'connections.bytes-recvd',
@@ -386,7 +428,9 @@ allocCluster.test('emits response stats with error', {
                 'host-port': serverHost,
                 'peer-host-port': clientHost,
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'inbound.calls.recvd',
@@ -397,7 +441,9 @@ allocCluster.test('emits response stats with error', {
                 service: 'server',
                 endpoint: 'echo',
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'inbound.calls.system-errors',
@@ -409,7 +455,9 @@ allocCluster.test('emits response stats with error', {
                 endpoint: 'echo',
                 type: 'ProtocolError',
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'inbound.calls.latency',
@@ -420,7 +468,9 @@ allocCluster.test('emits response stats with error', {
                 service: 'server',
                 endpoint: 'echo',
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }]);
 
