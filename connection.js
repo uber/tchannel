@@ -412,6 +412,8 @@ TChannelConnection.prototype.onSocketError = function onSocketError(err) {
 
 TChannelConnection.prototype.buildOutRequest = function buildOutRequest(options) {
     var self = this;
+
+    // TODO: ensure that options has a real constructor
     options.logger = self.logger;
     options.random = self.random;
     options.timers = self.timers;
