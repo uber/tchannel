@@ -10,6 +10,10 @@ torch-relay-bench:
 	node index.js --relay --torch relay --torchFile ./flame.raw --torchTime 10 \
 		-- --relay --skipPing -s 4096
 
+flame-torch-relay-bench:
+	node index.js --relay --torch relay --torchFile ./flame.html --torchTime 10 --torchType flame \
+		-- --relay --skipPing -s 4096
+
 # torch-trace-bench:
 # 	node index.js --trace --relay --torch server --torchFile ./flame.raw \
 # 		-- --skipPing -s 4096
