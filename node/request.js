@@ -65,6 +65,7 @@ function TChannelRequest(channel, options) {
     self.headers = self.options.headers || {}; // so that as-foo can punch req.headers.X
     self.options.headers = self.headers; // for passing to peer.request(opts) later
 
+    self.endpoint = null;
     self.arg1 = null;
     self.arg2 = null;
     self.arg3 = null;
@@ -144,6 +145,8 @@ TChannelRequest.prototype.choosePeer = function choosePeer() {
 
 TChannelRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     var self = this;
+
+    self.endpoint = String(arg1);
     self.arg1 = arg1;
     self.arg2 = arg2;
     self.arg3 = arg3;
