@@ -104,7 +104,7 @@ allocCluster.test('emits connection stats with failure', {
     client.channelStatsd = new TChannelStatsd(client, statsd);
     var subClient = client.makeSubChannel({
         serviceName: 'reservoir',
-        peers: ['localhost:4040']
+        peers: ['localhost:9999']
     });
     subClient.request({
         serviceName: 'reservoir',
@@ -114,7 +114,7 @@ allocCluster.test('emits connection stats with failure', {
     });
 
     client.waitForIdentified({
-        host: 'localhost:4040'
+        host: 'localhost:9999'
     }, onIdentified);
 
     function onIdentified(err) {
