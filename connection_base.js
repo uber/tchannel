@@ -134,17 +134,42 @@ TChannelConnectionBase.prototype.onReqError = function onReqError(req, err) {
 
 TChannelConnectionBase.prototype.runHandler = function runHandler(req) {
     var self = this;
-    self.channel.inboundCallsRecvdStat.increment(1, {
-        'calling-service': req.headers.cn,
-        'service': req.serviceName,
-        'endpoint': String(req.arg1)
-    });
+
+    self.channel.emitFastStat(self.channel.buildStat(
+        'inbound.calls.recvd',
+        'counter',
+        1,
+        new InboundCallsRecvdTags(
+            req.headers.cn,
+            req.serviceName,
+            req.endpoint
+        )
+    ));
+
+    // self.channel.inboundCallsRecvdStat.increment(1, {
+    //     'calling-service': req.headers.cn,
+    //     'service': req.serviceName,
+    //     'endpoint': String(req.arg1)
+    // });
 
     self.channel.handler.handleRequest(req, buildResponse);
     function buildResponse(options) {
         return self.buildResponse(req, options);
     }
 };
+
+function InboundCallsRecvdTags(cn, serviceName, endpoint) {
+    var self = this;
+
+    self.app = null;
+    self.host = null;
+    self.cluster = null;
+    self.version = null;
+
+    self['calling-service'] = cn;
+    self.service = serviceName;
+    self.endpoint = endpoint;
+}
 
 TChannelConnectionBase.prototype.buildResponse = function buildResponse(req, options) {
     var self = this;

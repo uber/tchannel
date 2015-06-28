@@ -50,6 +50,7 @@ function TChannelInRequest(id, options) {
     self.retryFlags = options.retryFlags || null;
     self.streamed = false;
     self.arg1 = emptyBuffer;
+    self.endpoint = null;
     self.arg2 = emptyBuffer;
     self.arg3 = emptyBuffer;
     self.connection = options.connection;
@@ -100,6 +101,7 @@ TChannelInRequest.prototype.handleFrame = function handleFrame(parts) {
             'un-streamed argument defragmentation is not implemented'));
     }
     self.arg1 = parts[0] || emptyBuffer;
+    self.endpoint = String(self.arg1);
     self.arg2 = parts[1] || emptyBuffer;
     self.arg3 = parts[2] || emptyBuffer;
     if (self.span) self.span.name = String(self.arg1);
