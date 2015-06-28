@@ -68,20 +68,7 @@ function TChannelOutRequest(id, options) {
 
     if (options.tracer && !self.forwardTrace) {
         // new span with new ids
-        self.span = options.tracer.setupNewSpan({
-            outgoing: true,
-            parentSpan: options.parent && options.parent.span,
-            hasNoParent: options.hasNoParent,
-            spanid: null,
-            traceid: null,
-            parentid: null,
-            flags: options.trace ? 1 : 0,
-            remoteName: self.remoteAddr,
-            serviceName: self.serviceName,
-            name: '' // fill this in later
-        });
-
-        self.tracing = self.span.getTracing();
+        self.setupTracing(options);
     } else {
         self.span = null;
     }
@@ -97,6 +84,25 @@ function TChannelOutRequest(id, options) {
 inherits(TChannelOutRequest, EventEmitter);
 
 TChannelOutRequest.prototype.type = 'tchannel.outgoing-request';
+
+TChannelOutRequest.prototype.setupTracing = function setupTracing(options) {
+    var self = this;
+
+    self.span = options.tracer.setupNewSpan({
+        outgoing: true,
+        parentSpan: options.parent && options.parent.span,
+        hasNoParent: options.hasNoParent,
+        spanid: null,
+        traceid: null,
+        parentid: null,
+        flags: options.trace ? 1 : 0,
+        remoteName: self.remoteAddr,
+        serviceName: self.serviceName,
+        name: '' // fill this in later
+    });
+
+    self.tracing = self.span.getTracing();
+};
 
 TChannelOutRequest.prototype._sendCallRequest = function _sendCallRequest(args, isLast) {
     var self = this;
