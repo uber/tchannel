@@ -113,7 +113,7 @@ RelayRequest.prototype.createOutResponse = function createOutResponse(options) {
             remoteAddr: self.inreq.remoteAddr,
             id: self.inreq.id
         });
-        return;
+        return null;
     }
 
     // It is possible that the inreq gets reaped with a timeout
@@ -129,11 +129,12 @@ RelayRequest.prototype.createOutResponse = function createOutResponse(options) {
             inRemoteAddr: self.inreq.remoteAddr,
             inSocketRemoteAddr: self.inreq.connection.socketRemoteAddr
         });
-        return;
+        return null;
     }
 
     self.outres = self.buildRes(options);
     self.outres.finishEvent.on(emitFinish);
+
     return self.outres;
 
     function emitFinish() {
