@@ -297,7 +297,9 @@ function next(i, j, done) {
     if (j >= multiplicity) return next(i+1, 0, done);
     var test = tests[i].copy();
     test.run(function () {
-        next(i, j+1, done);
+        setTimeout(function delayNext() {
+            next(i, j+1, done);
+        }, 1000);
     });
 }
 
