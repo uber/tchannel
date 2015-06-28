@@ -78,9 +78,9 @@ allocCluster.test('emits stats', {
             type: 'counter',
             value: 1,
             tags: {
-                'target-service': 'server',
+                targetService: 'server',
                 service: 'client',
-                'target-endpoint': 'echo',
+                targetEndpoint: 'echo',
                 app: 'client',
                 cluster: '',
                 version: '',
