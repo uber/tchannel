@@ -155,14 +155,14 @@ TChannelConnectionBase.prototype.runHandler = function runHandler(req) {
 function InboundCallsRecvdTags(cn, serviceName, endpoint) {
     var self = this;
 
-    self.app = null;
-    self.host = null;
-    self.cluster = null;
-    self.version = null;
+    self.app = '';
+    self.host = '';
+    self.cluster = '';
+    self.version = '';
 
     self['calling-service'] = cn;
     self.service = serviceName;
-    self.endpoint = endpoint;
+    self.endpoint = endpoint || '';
 }
 
 TChannelConnectionBase.prototype.buildResponse = function buildResponse(req, options) {
