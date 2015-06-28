@@ -127,9 +127,13 @@ TChannelOutRequest.prototype.onError = function onError(err, self) {
 };
 
 TChannelOutRequest.prototype.onResponse = function onResponse(res, self) {
-    if (!self.end) self.end = self.timers.now();
+    if (!self.end) {
+        self.end = self.timers.now();
+    }
+
     self.res = res;
     self.res.span = self.span;
+
     self.emitPerAttemptLatency();
     self.emitPerAttemptResponseStat(res);
 
@@ -192,69 +196,161 @@ function emitResponseStat(res) {
     var self = this;
 
     if (res.ok) {
-        self.channel.outboundCallsSuccessStat.increment(1, {
-            'target-service': self.serviceName,
-            'service': self.headers.cn,
-            // TODO should always be buffer
-            'target-endpoint': self.endpoint
-        });
+        self.channel.emitFastStat(self.channel.buildStat(
+            'outbound.calls.success',
+            'counter',
+            1,
+            new OutboundCallsSuccessTags(
+                self.serviceName,
+                self.headers.cn,
+                self.endpoint
+            )
+        ));
     } else {
-        self.channel.outboundCallsAppErrorsStat.increment(1, {
-            'target-service': self.serviceName,
-            'service': self.headers.cn,
-            // TODO should always be buffer
-            'target-endpoint': self.endpoint,
-            // TODO define transport header
-            // for application error type
-            'type': 'unknown'
-        });
+        self.channel.emitFastStat(self.channel.buildStat(
+            'outbound.calls.app-errors',
+            'counter',
+            1,
+            new OutboundCallsAppErrorsTags(
+                self.serviceName,
+                self.headers.cn,
+                self.endpoint,
+                'unknown'
+            )
+        ));
     }
 };
+
+function OutboundCallsAppErrorsTags(serviceName, cn, endpoint, type) {
+    var self = this;
+
+    self.app = '';
+    self.host = '';
+    self.cluster = '';
+    self.version = '';
+
+    self.targetService = serviceName;
+    self.service = cn;
+    self.targetEndpoint = endpoint;
+    self.type = type;
+}
+
+function OutboundCallsSuccessTags(serviceName, cn, endpoint) {
+    var self = this;
+
+    self.app = '';
+    self.host = '';
+    self.cluster = '';
+    self.version = '';
+
+    self.targetService = serviceName;
+    self.service = cn;
+    self.targetEndpoint = endpoint;
+}
 
 TChannelOutRequest.prototype.emitPerAttemptResponseStat =
 function emitPerAttemptResponseStat(res) {
     var self = this;
 
     if (!res.ok) {
-        self.channel.outboundCallsPerAttemptAppErrorsStat.increment(1, {
-            'target-service': self.serviceName,
-            'service': self.headers.cn,
-            // TODO should always be buffer
-            'target-endpoint': self.endpoint,
-            // TODO define transport header
-            // for application error type
-            'type': 'unknown',
-            'retry-count': self.retryCount
-        });
+        self.channel.emitFastStat(self.channel.buildStat(
+            'outbound.calls.per-attempt.app-errors',
+            'counter',
+            1,
+            new OutboundCallsPerAttemptAppErrorsTags(
+                self.serviceName,
+                self.headers.cn,
+                self.endpoint,
+                'unknown',
+                self.retryCount
+            )
+        ));
     }
 };
+
+function OutboundCallsPerAttemptAppErrorsTags(
+    serviceName, cn, endpoint, type, retryCount
+) {
+    var self = this;
+
+    self.app = '';
+    self.host = '';
+    self.cluster = '';
+    self.version = '';
+
+    self.targetService = serviceName;
+    self.service = cn;
+    self.targetEndpoint = endpoint;
+    self.type = type;
+    self.retryCount = retryCount;
+}
 
 TChannelOutRequest.prototype.emitPerAttemptLatency =
 function emitPerAttemptLatency() {
     var self = this;
 
     var latency = self.end - self.start;
-    self.channel.outboundCallsPerAttemptLatencyStat.add(latency, {
-        'target-service': self.serviceName,
-        'service': self.headers.cn,
-        // TODO should always be buffer
-        'target-endpoint': self.endpoint,
-        'peer': self.remoteAddr,
-        'retry-count': self.retryCount
-    });
+
+    self.channel.emitFastStat(self.channel.buildStat(
+        'outbound.calls.per-attempt-latency',
+        'timing',
+        latency,
+        new OutboundCallsPerAttemptLatencyTags(
+            self.serviceName,
+            self.headers.cn,
+            self.endpoint,
+            self.remoteAddr,
+            self.retryCount
+        )
+    ));
 };
+
+function OutboundCallsPerAttemptLatencyTags(
+    serviceName, cn, endpoint, remoteAddr, retryCount
+) {
+    var self = this;
+
+    self.app = '';
+    self.host = '';
+    self.cluster = '';
+    self.version = '';
+
+    self.targetService = serviceName;
+    self.service = cn;
+    self.targetEndpoint = endpoint;
+    self.peer = remoteAddr;
+    self.retryCount = retryCount;
+}
 
 TChannelOutRequest.prototype.emitLatency = function emitLatency() {
     var self = this;
 
     var latency = self.end - self.start;
-    self.channel.outboundCallsLatencyStat.add(latency, {
-        'target-service': self.serviceName,
-        'service': self.headers.cn,
-        // TODO should always be buffer
-        'target-endpoint': self.endpoint
-    });
+
+    self.channel.emitFastStat(self.channel.buildStat(
+        'outbound.calls.latency',
+        'timing',
+        latency,
+        new OutboundCallsLatencyTags(
+            self.serviceName,
+            self.headers.cn,
+            self.endpoint
+        )
+    ));
 };
+
+function OutboundCallsLatencyTags(serviceName, cn, endpoint) {
+    var self = this;
+
+    self.app = '';
+    self.host = '';
+    self.cluster = '';
+    self.version = '';
+
+    self.targetService = serviceName;
+    self.service = cn;
+    self.targetEndpoint = endpoint;
+}
 
 TChannelOutRequest.prototype.emitError = function emitError(err) {
     var self = this;

@@ -78,17 +78,17 @@ function TChannel(options) {
     self.requestEvent = self.defineEvent('request');
 
     self.outboundCallsSentStat = self.defineCounter('outbound.calls.sent');
-    self.outboundCallsSuccessStat = self.defineCounter('outbound.calls.success');
+    // self.outboundCallsSuccessStat = self.defineCounter('outbound.calls.success');
     self.outboundCallsSystemErrorsStat = self.defineCounter('outbound.calls.system-errors');
     self.outboundCallsPerAttemptSystemErrorsStat = self.defineCounter('outbound.calls.per-attempt.system-errors');
     self.outboundCallsOperationalErrorsStat = self.defineCounter('outbound.calls.operational-errors');
     self.outboundCallsPerAttemptOperationalErrorsStat = self.defineCounter('outbound.calls.per-attempt.operational-errors');
-    self.outboundCallsAppErrorsStat = self.defineCounter('outbound.calls.app-errors');
-    self.outboundCallsPerAttemptAppErrorsStat = self.defineCounter('outbound.calls.per-attempt.app-errors');
+    // self.outboundCallsAppErrorsStat = self.defineCounter('outbound.calls.app-errors');
+    // self.outboundCallsPerAttemptAppErrorsStat = self.defineCounter('outbound.calls.per-attempt.app-errors');
     self.outboundCallsRetriesStat = self.defineCounter('outbound.calls.retries');
     self.outboundResponseSizeStat = self.defineCounter('outbound.response.size');
-    self.outboundCallsLatencyStat = self.defineTiming('outbound.calls.latency');
-    self.outboundCallsPerAttemptLatencyStat = self.defineTiming('outbound.calls.per-attempt-latency');
+    // self.outboundCallsLatencyStat = self.defineTiming('outbound.calls.latency');
+    // self.outboundCallsPerAttemptLatencyStat = self.defineTiming('outbound.calls.per-attempt-latency');
 
     self.inboundCallsSuccessStat = self.defineCounter('inbound.calls.success');
     self.inboundCallsSystemErrorsStat = self.defineCounter('inbound.calls.system-errors');
