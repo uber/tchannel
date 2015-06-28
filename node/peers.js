@@ -198,7 +198,10 @@ TChannelPeers.prototype.choosePeer = function choosePeer(req, options) {
     /*eslint complexity: [2, 15]*/
     var self = this;
 
-    if (!options) options = {};
+    if (!options) {
+        options = {};
+    }
+
     var hosts = null;
     if (options.host) {
         return self.add(options.host);
@@ -208,13 +211,18 @@ TChannelPeers.prototype.choosePeer = function choosePeer(req, options) {
             hosts.push(self.selfPeer.hostPort);
         }
     }
-    if (!hosts || !hosts.length) return null;
+
+    if (!hosts || !hosts.length) {
+        return null;
+    }
 
     var threshold = options.peerScoreThreshold;
-    if (threshold === undefined) threshold = self.options.peerScoreThreshold;
-    if (threshold === undefined) threshold = 0;
+    if (threshold === undefined) {
+        threshold = self.options.peerScoreThreshold || 0;
+    }
 
-    var selectedPeer = null, selectedScore = 0;
+    var selectedPeer = null;
+    var selectedScore = 0;
     for (var i = 0; i < hosts.length; i++) {
         var hostPort = hosts[i];
         var peer = self.add(hostPort);
