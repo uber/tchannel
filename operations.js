@@ -46,8 +46,8 @@ function Operations(opts) {
         out: []
     };
     self.requests = {
-        in: {},
-        out: {}
+        in: Object.create(null),
+        out: Object.create(null)
     };
     self.pending = {
         in: 0,
