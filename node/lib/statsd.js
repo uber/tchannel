@@ -189,7 +189,7 @@ function getKey(stat) {
         // inbound
         case 'inbound.calls.recvd':
             return prefix + '.' +
-                clean(stat.tags['calling-service'], 'calling-service') + '.' +
+                clean(stat.tags.callingService, 'calling-service') + '.' +
                 clean(stat.tags.service, 'service') + '.' +
                 clean(stat.tags.endpoint, 'endpoint');
 
