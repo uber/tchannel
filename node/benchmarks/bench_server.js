@@ -64,7 +64,7 @@ var serverChan = server.makeSubChannel({
     serviceName: 'benchmark'
 });
 
-server.listen(4040, '127.0.0.1');
+server.listen(7040, '127.0.0.1');
 
 var keys = {};
 
