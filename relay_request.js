@@ -48,9 +48,12 @@ RelayRequest.prototype.createOutRequest = function createOutRequest(host) {
         return;
     }
 
-    self.peer = self.channel.peers.choosePeer(null, {
-        host: host
-    });
+    if (host) {
+        self.peer = self.channel.peers.add(host);
+    } else {
+        self.peer = self.channel.peers.choosePeer(null);
+    }
+
     if (!self.peer) {
         self.onError(errors.NoPeerAvailable());
         return;
@@ -72,9 +75,11 @@ RelayRequest.prototype.onIdentified = function onIdentified(err1) {
     }
 
     var elapsed = self.channel.timers.now() - self.inreq.start;
-    self.outreq = self.peer.request({
+    // TODO use a type for this literal
+    self.outreq = self.channel.request({
+        host: self.peer.hostPort,
         streamed: self.inreq.streamed,
-        timeout: self.inreq.ttl - elapsed,
+        timeout: self.inreq.timeout - elapsed,
         parent: self.inreq,
         tracing: self.inreq.tracing,
         forwardTrace: true,

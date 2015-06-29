@@ -45,11 +45,7 @@ inherits(TChannelSelfConnection, TChannelConnectionBase);
 TChannelSelfConnection.prototype.buildOutRequest = function buildOutRequest(options) {
     var self = this;
     var id = self.idCount++;
-    if (!options) options = {};
-    options.logger = self.logger;
-    options.random = self.random;
-    options.timers = self.timers;
-    options.tracer = self.tracer;
+
     options.hostPort = self.channel.hostPort;
     var outreq;
     if (options.streamed) {

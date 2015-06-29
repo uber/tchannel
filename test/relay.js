@@ -88,7 +88,7 @@ allocCluster.test('relay respects ttl', {
     });
     destChan.register('echoTTL', function echoTTL(req, res) {
         res.headers.as = 'raw';
-        res.sendOk(null, String(req.ttl));
+        res.sendOk(null, String(req.timeout));
     });
 
     var sourceChan = source.makeSubChannel({

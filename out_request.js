@@ -27,10 +27,11 @@ var parallel = require('run-parallel');
 
 var errors = require('./errors');
 var States = require('./reqres_states');
+var TChannelRequest = require('./request.js');
 
 function TChannelOutRequest(id, options) {
-    options = options || {};
     var self = this;
+
     EventEmitter.call(self);
     self.errorEvent = self.defineEvent('error');
     self.responseEvent = self.defineEvent('response');
@@ -52,7 +53,7 @@ function TChannelOutRequest(id, options) {
     self.remoteAddr = options.remoteAddr;
     self.state = States.Initial;
     self.id = id || 0;
-    self.ttl = options.ttl || 0;
+    self.timeout = options.timeout || TChannelRequest.defaultTimeout;
     self.tracing = options.tracing || null;
     self.serviceName = options.serviceName || '';
     self.headers = options.headers || {};
@@ -561,7 +562,7 @@ TChannelOutRequest.prototype.checkTimeout = function checkTimeout() {
     if (!self.timedOut) {
         var now = self.timers.now();
         var elapsed = now - self.start;
-        if (elapsed > self.ttl) {
+        if (elapsed > self.timeout) {
             self.end = now;
             self.timedOut = true;
             process.nextTick(function deferOutReqTimeoutErrorEmit() {
@@ -569,7 +570,7 @@ TChannelOutRequest.prototype.checkTimeout = function checkTimeout() {
                     id: self.id,
                     start: self.start,
                     elapsed: elapsed,
-                    timeout: self.ttl
+                    timeout: self.timeout
                 }));
             });
         }
