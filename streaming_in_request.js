@@ -35,6 +35,7 @@ function StreamingInRequest(id, options) {
     self.arg1 = self._argstream.arg1;
     self.arg2 = self._argstream.arg2;
     self.arg3 = self._argstream.arg3;
+
     self._argstream.errorEvent.on(passError);
     self._argstream.finishEvent.on(onFinish);
 
@@ -43,7 +44,7 @@ function StreamingInRequest(id, options) {
     }
 
     function onFinish() {
-        self.finishEvent.emit(self);
+        self.emitFinish();
     }
 }
 
