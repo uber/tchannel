@@ -93,6 +93,7 @@ class TestServer(object):
         self.timeout = timeout or self.TIMEOUT
         self.thread = None
         self.ready = False
+        self.io_loop = None
 
     def expect_call(self, endpoint, scheme=None, **kwargs):
         if scheme is not None:
@@ -123,16 +124,16 @@ class TestServer(object):
             pass
 
     def serve(self):
-        io_loop = tornado.ioloop.IOLoop()
-        io_loop.make_current()
+        self.io_loop = tornado.ioloop.IOLoop()
+        self.io_loop.make_current()
 
         self.tchannel.listen()
         self.ready = True
-        io_loop.start()
+        self.io_loop.start()
 
     def stop(self):
         self.shutdown()
         self.thread.join()
 
     def shutdown(self):
-        tornado.ioloop.IOLoop.current().stop()
+        self.io_loop.stop()

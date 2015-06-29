@@ -41,6 +41,3 @@ def test_sync_client_should_get_raw_response(tchannel_server):
 
     assert response.header == ""
     assert response.body == "OK"
-
-
-
