@@ -28,7 +28,6 @@ var errors = require('./errors');
 var States = require('./reqres_states');
 var Operations = require('./operations');
 
-var DEFAULT_OUTGOING_REQ_TIMEOUT = 100;
 var CONNECTION_BASE_IDENTIFIER = 0;
 
 function TChannelConnectionBase(channel, direction, socketRemoteAddr) {
@@ -73,27 +72,20 @@ function TChannelConnectionBase(channel, direction, socketRemoteAddr) {
 inherits(TChannelConnectionBase, EventEmitter);
 
 // create a request
-TChannelConnectionBase.prototype.request = function connBaseRequest(options) {
+TChannelConnectionBase.prototype.request =
+function connBaseRequest(options) {
     var self = this;
-    if (!options) options = {};
 
     assert(self.remoteName, 'cannot make request unless identified');
     options.remoteAddr = self.remoteName;
-
-    options.channel = self.channel;
 
     // TODO: use this to protect against >4Mi outstanding messages edge case
     // (e.g. zombie operation bug, incredible throughput, or simply very long
     // timeout
     // assert(!self.requests.out[id], 'duplicate frame id in flight');
-    // TODO: provide some sort of channel default for "service"
-    // TODO: generate tracing if empty?
-    // TODO: refactor callers
-    options.checksumType = options.checksum;
 
-    // TODO: better default, support for dynamic
-    options.ttl = options.timeout || DEFAULT_OUTGOING_REQ_TIMEOUT;
-    options.tracer = self.tracer;
+    // options.checksumType = options.checksum;
+
     var req = self.buildOutRequest(options);
 
     return self.ops.addOutReq(req);

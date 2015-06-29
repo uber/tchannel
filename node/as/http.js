@@ -166,29 +166,31 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
     // - driving peer selection manually therefore
     // TODO: more http state machine integration
 
-    var treq;
     var options = tchannel.requestOptions({
         streamed: true,
         hasNoParent: true
     });
-    var peer = tchannel.peers.choosePeer(null, options);
+    var peer = tchannel.peers.choosePeer(null);
     if (!peer) {
         hres.writeHead(503, 'Service Unavailable: no tchannel peer');
         hres.end(); // TODO: error content
         return null;
     } else {
         // TODO: observable
-        if (!peer.isConnected()) {
-            peer.connect().on('identified', function onIdentified() {
-                treq = peer.request(options);
-                self.sendRequest(treq, hreq, forwarded);
-            });
-        } else {
-            treq = peer.request(options);
-            self.sendRequest(treq, hreq, forwarded);
+        peer.waitForIdentified(onIdentified);
+        return null;
+    }
+
+    function onIdentified(err) {
+        if (err) {
+            hres.writeHead(500, 'Connection failure');
+            hres.end();
+            return null;
         }
 
-        return null;
+        options.host = peer.hostPort;
+        var treq = tchannel.request(options);
+        self.sendRequest(treq, hreq, forwarded);
     }
 
     function forwarded(err, head, body) {
