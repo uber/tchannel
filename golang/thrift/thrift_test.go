@@ -22,7 +22,6 @@ package thrift_test
 
 import (
 	"errors"
-	"fmt"
 	"net"
 	"testing"
 	"time"
@@ -93,13 +92,12 @@ func TestThriftError(t *testing.T) {
 	})
 }
 
-// TODO(prashant): Complete test for unexpected errors.
-func testUnknownError(t *testing.T) {
+func TestUnknownError(t *testing.T) {
 	withSetup(t, func(ctx context.Context, args testArgs) {
 		args.s1.On("Simple", ctxArg()).Return(errors.New("unexpected err"))
 		got := args.c1.Simple(ctx)
 		require.Error(t, got)
-		fmt.Println("Err: %v", got)
+		require.Equal(t, tchannel.NewSystemError(tchannel.ErrCodeUnexpected, "unexpected err"), got)
 	})
 }
 

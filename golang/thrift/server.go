@@ -81,8 +81,9 @@ func (s *Server) handle(ctx context.Context, handler TChanServer, method string,
 	protocol := thrift.NewTBinaryProtocolTransport(&readWriterTransport{Reader: reader})
 	success, resp, err := handler.Handle(ctx, method, protocol)
 	if err != nil {
-		// TODO(prashant): Send an error frame for any unexpected errors.
-		log.Fatalf("Send error frame for unexpected error: %v", err)
+		reader.Close()
+		call.Response().SendSystemError(err)
+		return nil
 	}
 	if err := reader.Close(); err != nil {
 		return err
