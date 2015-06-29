@@ -273,8 +273,8 @@ func (ch *Channel) Logger() Logger {
 
 // Closed returns whether this channel has been closed with .Close()
 func (ch *Channel) Closed() bool {
-	ch.mutable.mut.Lock()
-	defer ch.mutable.mut.Unlock()
+	ch.mutable.mut.RLock()
+	defer ch.mutable.mut.RUnlock()
 	return ch.mutable.closed
 }
 
