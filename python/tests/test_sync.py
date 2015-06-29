@@ -26,26 +26,21 @@ from tchannel.sync import TChannelSyncClient
 
 
 @pytest.mark.sync
-def test_sync_client_should_get_response(tchannel_server):
+def test_sync_client_should_get_raw_response(tchannel_server):
 
-    # @todo this needs to start ioloop in seperate thread
-    #  endpoint = 'health'
-    # else this test will get a ioloop already started error
-    # tchannel_server.expect_call(endpoint).and_write(
-    #     headers=endpoint,
-    #     body="healthy"
-    # )
-    # hostport = 'localhost:%d' % tchannel_server.port
+    endpoint = 'health'
+    tchannel_server.expect_call(endpoint).and_write(
+        headers="",
+        body="OK"
+    )
+    hostport = 'localhost:%d' % tchannel_server.port
 
-    # the following will work with examples/
     client = TChannelSyncClient('test-client')
-    request = client.request('localhost:8888')
-    response = request.send('hi', None, "")
-    # assert response.header == ""
-    # assert response.body == "hi"
+    request = client.request(hostport)
+    response = request.send(endpoint, None, "")
 
-    import ipdb; ipdb.set_trace()
+    assert response.header == ""
+    assert response.body == "OK"
 
-    assert True
 
 

@@ -75,7 +75,7 @@ class TChannelSyncClient(object):
         :param service_threshold:
             If ``hostport`` was not specified, this specifies the score
             threshold at or below which peers will be ignored.
-        :returns:
+        :returns SyncClientOperation:
             An object with a ``send(arg1, arg2, arg3)`` operation.
         """
         operation = self.async_client.request(*args, **kwargs)
@@ -109,7 +109,7 @@ class SyncClientOperation(object):
         :param arg3:
             String containing the contents of arg3. If None, an empty string
             is used.
-        :return:
+        :return Response:
             Response from the peer.
         """
         arg1 = arg1 or ''

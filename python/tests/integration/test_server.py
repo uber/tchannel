@@ -125,7 +125,7 @@ class TestServer(object):
     def serve(self):
         io_loop = tornado.ioloop.IOLoop()
         io_loop.make_current()
-        
+
         self.tchannel.listen()
         self.ready = True
         io_loop.start()
