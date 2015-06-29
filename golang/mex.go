@@ -123,7 +123,7 @@ type messageExchangeSet struct {
 	log       Logger
 	name      string
 	exchanges map[uint32]*messageExchange
-	mut       sync.Mutex
+	mut       sync.RWMutex
 }
 
 // newExchange creates and adds a new message exchange to this set
@@ -177,9 +177,9 @@ func (mexset *messageExchangeSet) removeExchange(msgID uint32) {
 func (mexset *messageExchangeSet) forwardPeerFrame(frame *Frame) error {
 	mexset.log.Debugf("forwarding %s %s", mexset.name, frame.Header)
 
-	mexset.mut.Lock()
+	mexset.mut.RLock()
 	mex := mexset.exchanges[frame.Header.ID]
-	mexset.mut.Unlock()
+	mexset.mut.RUnlock()
 
 	if mex == nil {
 		// This is ok since the exchange might have expired or been cancelled
