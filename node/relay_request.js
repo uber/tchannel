@@ -22,10 +22,8 @@
 
 var errors = require('./errors');
 
-function RelayRequest(channel, inreq, buildRes, onfinish) {
+function RelayRequest(channel, inreq, buildRes) {
     var self = this;
-
-    self.onfinish = onfinish;
 
     self.channel = channel;
     self.inreq = inreq;
@@ -132,13 +130,8 @@ RelayRequest.prototype.createOutResponse = function createOutResponse(options) {
     }
 
     self.outres = self.buildRes(options);
-    self.outres.finishEvent.on(emitFinish);
 
     return self.outres;
-
-    function emitFinish() {
-        self.onfinish();
-    }
 };
 
 RelayRequest.prototype.onResponse = function onResponse(res) {
