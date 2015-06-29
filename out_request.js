@@ -65,10 +65,11 @@ function TChannelOutRequest(id, options) {
     self.end = 0;
     self.streamed = false;
     self.arg1 = null;
-    self.endpoint = null;
+    self.endpoint = '';
     self.arg2 = null;
     self.arg3 = null;
     self.span = null;
+    self.tracing = null;
     self.err = null;
     self.res = null;
     self.timedOut = false;
