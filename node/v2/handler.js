@@ -926,29 +926,43 @@ TChannelV2Handler.prototype.buildOutResponse = function buildOutResponse(req, op
 
 TChannelV2Handler.prototype.buildInRequest = function buildInRequest(reqFrame) {
     var self = this;
-    var retryFlags = v2.parseRetryFlags(reqFrame.body.headers.re);
-    var opts = {
-        logger: self.logger,
-        random: self.random,
-        channel: self.connection.channel,
-        timers: self.timers,
-        tracer: self.tracer,
-        timeout: reqFrame.body.ttl || SERVER_TIMEOUT_DEFAULT,
-        tracing: reqFrame.body.tracing,
-        serviceName: reqFrame.body.service,
-        headers: reqFrame.body.headers,
-        retryFlags: retryFlags,
-        checksum: new v2.Checksum(reqFrame.body.csum.type),
-        streamed: reqFrame.body.flags & v2.CallFlags.Fragment,
-        hostPort: self.hostPort, // needed for tracing
-        connection: self.connection
-    };
-    if (opts.streamed) {
+    var opts = new InRequestOptions(
+        self.connection.channel,
+        reqFrame.body.ttl || SERVER_TIMEOUT_DEFAULT,
+        reqFrame.body.tracing,
+        reqFrame.body.service,
+        reqFrame.body.headers,
+        new v2.Checksum(reqFrame.body.csum.type),
+        v2.parseRetryFlags(reqFrame.body.headers.re),
+        self.connection,
+        self.hostPort,
+        self.tracer
+    );
+
+    if (reqFrame.body.flags & v2.CallFlags.Fragment) {
         return new StreamingInRequest(reqFrame.id, opts);
     } else {
         return new InRequest(reqFrame.id, opts);
     }
 };
+
+function InRequestOptions(
+    channel, timeout, tracing, serviceName, headers, checksum,
+    retryFlags, connection, hostPort, tracer
+) {
+    var self = this;
+
+    self.channel = channel;
+    self.timeout = timeout;
+    self.tracing = tracing;
+    self.serviceName = serviceName;
+    self.headers = headers;
+    self.checksum = checksum;
+    self.retryFlags = retryFlags;
+    self.connection = connection;
+    self.hostPort = hostPort;
+    self.tracer = tracer;
+}
 
 TChannelV2Handler.prototype.buildInResponse = function buildInResponse(resFrame) {
     var self = this;
