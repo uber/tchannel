@@ -20,6 +20,8 @@
 
 'use strict';
 
+module.exports = TChannelRequest;
+
 var assert = require('assert');
 var EventEmitter = require('./lib/event_emitter');
 var inherits = require('util').inherits;
@@ -351,5 +353,3 @@ TChannelRequest.prototype.maybeAppRetry = function maybeAppRetry(res) {
         }
     }
 };
-
-module.exports = TChannelRequest;

@@ -29,6 +29,7 @@ var net = require('net');
 var TChannelConnection = require('./connection');
 var errors = require('./errors');
 var states = require('./states');
+var Request = require('./request');
 
 var DEFAULT_REPORT_INTERVAL = 1000;
 
@@ -225,6 +226,7 @@ TChannelPeer.prototype.request = function peerRequest(options) {
     var self = this;
 
     options.peerState = self.state;
+    options.timeout = options.timeout || Request.defaultTimeout;
     return self.connect().request(options);
 };
 
