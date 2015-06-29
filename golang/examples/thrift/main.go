@@ -27,16 +27,14 @@ import (
 	"log"
 	"net"
 	"os"
-	"reflect"
 	"runtime"
 	"strings"
 	"time"
 
-	"golang.org/x/net/context"
-
 	tchannel "github.com/uber/tchannel/golang"
 	gen "github.com/uber/tchannel/golang/examples/thrift/gen-go/test"
-	tthrift "github.com/uber/tchannel/golang/thrift"
+	"github.com/uber/tchannel/golang/thrift"
+	"golang.org/x/net/context"
 )
 
 func main() {
@@ -49,20 +47,11 @@ func main() {
 		log.Fatalf("setupServer failed: %v", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-
-	opts := tthrift.TChanOutboundOptions{
-		Context:          ctx,
-		Dst:              listener.Addr().String(),
-		HyperbahnService: "server",
-	}
-
-	if err := runClient1(opts); err != nil {
+	if err := runClient1("server", listener.Addr()); err != nil {
 		log.Fatalf("runClient1 failed: %v", err)
 	}
 
-	if err := runClient2(opts); err != nil {
+	if err := runClient2("server", listener.Addr()); err != nil {
 		log.Fatalf("runClient2 failed: %v", err)
 	}
 
@@ -83,53 +72,50 @@ func setupServer() (net.Listener, error) {
 		return nil, err
 	}
 
-	server := tthrift.NewServer(tchan)
-
-	fh := &firstHandler{}
-	server.Register("First", reflect.TypeOf(fh), gen.NewFirstProcessor(&firstHandler{}))
-
-	sh := &secondHandler{}
-	server.Register("Second", reflect.TypeOf(sh), gen.NewSecondProcessor(&secondHandler{}))
+	server := thrift.NewServer(tchan)
+	server.Register(gen.NewTChanFirstServer(&firstHandler{}))
+	server.Register(gen.NewTChanSecondServer(&secondHandler{}))
 
 	// Serve will set the local peer info, and start accepting sockets in a separate goroutine.
 	tchan.Serve(listener)
 	return listener, nil
 }
 
-func runClient1(opts tthrift.TChanOutboundOptions) error {
+func runClient1(hyperbahnService string, addr net.Addr) error {
 	tchan, err := tchannel.NewChannel("client1", optsFor("client1"))
 	if err != nil {
 		return err
 	}
-	opts.ThriftService = "First"
-	protocol := tthrift.NewTChanOutbound(tchan, opts)
+	tchan.Peers().Add(addr.String())
+	tclient := thrift.NewClient(tchan, hyperbahnService, nil)
+	client := gen.NewTChanFirstClient(tclient)
 
-	client := gen.NewFirstClientProtocol(nil, protocol, protocol)
 	go func() {
 		for {
-			res, err := client.Echo("Hi")
+			ctx, _ := context.WithTimeout(context.Background(), time.Second)
+			res, err := client.Echo(ctx, "Hi")
 			log.Println("Echo(Hi) = ", res, ", err: ", err)
-			client.OneWay()
-			log.Println("AppError = ", client.AppError())
+			log.Println("AppError = ", client.AppError(ctx))
 			time.Sleep(100 * time.Millisecond)
 		}
 	}()
 	return nil
 }
 
-func runClient2(opts tthrift.TChanOutboundOptions) error {
+func runClient2(hyperbahnService string, addr net.Addr) error {
 	tchan, err := tchannel.NewChannel("client2", optsFor("client2"))
 	if err != nil {
 		return err
 	}
+	tchan.Peers().Add(addr.String())
+	tclient := thrift.NewClient(tchan, hyperbahnService, nil)
+	client := gen.NewTChanSecondClient(tclient)
 
-	opts.ThriftService = "Second"
-	protocol := tthrift.NewTChanOutbound(tchan, opts)
-
-	client := gen.NewSecondClientProtocol(nil, protocol, protocol)
 	go func() {
 		for {
-			client.Test()
+			ctx, _ := context.WithTimeout(context.Background(), time.Second)
+
+			client.Test(ctx)
 			time.Sleep(100 * time.Millisecond)
 		}
 	}()
@@ -157,29 +143,29 @@ func printStack() {
 
 type firstHandler struct{}
 
-func (h *firstHandler) Healthcheck() (*gen.HealthCheckRes, error) {
+func (h *firstHandler) Healthcheck(ctx thrift.Context) (*gen.HealthCheckRes, error) {
 	log.Printf("first: HealthCheck()\n")
 	return &gen.HealthCheckRes{true, "OK"}, nil
 }
 
-func (h *firstHandler) Echo(msg string) (r string, err error) {
+func (h *firstHandler) Echo(ctx thrift.Context, msg string) (r string, err error) {
 	log.Printf("first: Echo(%v)\n", msg)
 	return msg, nil
 }
 
-func (h *firstHandler) AppError() error {
+func (h *firstHandler) AppError(ctx thrift.Context) error {
 	log.Printf("first: AppError()\n")
 	return errors.New("app error")
 }
 
-func (h *firstHandler) OneWay() error {
+func (h *firstHandler) OneWay(ctx thrift.Context) error {
 	log.Printf("first: OneWay()\n")
 	return errors.New("OneWay error...won't be seen by client")
 }
 
 type secondHandler struct{}
 
-func (h *secondHandler) Test() error {
+func (h *secondHandler) Test(ctx thrift.Context) error {
 	log.Println("secondHandler: Test()")
 	return nil
 }
