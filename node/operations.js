@@ -254,13 +254,14 @@ function _onTimeoutCheck() {
     self._checkTimeout(self.requests.in, 'in');
 
     var now = self.timers.now();
+    var tombstones = [];
     for (var i = 0; i < self.tombstones.out.length; i++) {
         var tombstone = self.tombstones.out[i];
-        if (now >= tombstone.timeout) {
-            self.tombstones.out.splice(i, 1);
-            i--;
+        if (now < tombstone.timeout) {
+            tombstones.push(tombstone);
         }
     }
+    self.tombstones.out = tombstones;
 
     self.startTimeoutTimer();
 };
