@@ -47,10 +47,16 @@ var TChannelConnection = require('./connection');
 var TChannelPeers = require('./peers');
 var TChannelServices = require('./services');
 var TChannelStatsd = require('./lib/statsd');
+var RetryFlags = require('./retry-flags.js');
 
 var TracingAgent = require('./trace/agent');
 
 var CONN_STALE_PERIOD = 1500;
+var DEFAULT_RETRY_FLAGS = new RetryFlags(
+    /*never:*/ false,
+    /*onConnectionError*/ true,
+    /*onTimeout*/ false
+);
 
 function StatTags(statTags) {
     var self = this;
@@ -487,29 +493,26 @@ function RequestOptions(channel, opts) {
     var self = this;
 
     self.channel = channel;
-    self.services = channel.services;
-    self.logger = channel.logger;
-    self.random = channel.random;
-    self.timers = channel.timers;
-    self.tracer = channel.tracer;
 
     self.host = opts.host || '';
     self.streamed = opts.streamed || false;
-    self.headers = new RequestOptionsHeaders(opts.headers);
     self.timeout = opts.timeout || 0;
     self.retryLimit = opts.retryLimit || 0;
     self.trackPending = opts.trackPending || false;
     self.serviceName = opts.serviceName || '';
-    self.shouldApplicationRetry = opts.shouldApplicationRetry;
     self.checksumType = opts.checksumType || null;
-    self.parent = opts.parent || null;
     self.hasNoParent = opts.hasNoParent || false;
-    self.tracing = opts.tracing || null;
     self.forwardTrace = opts.forwardTrace || false;
     self.trace = typeof opts.trace === 'boolean' ? opts.trace : true;
-    self.retryFlags = opts.retryFlags || null;
+    self.retryFlags = opts.retryFlags || DEFAULT_RETRY_FLAGS;
+    self.shouldApplicationRetry = opts.shouldApplicationRetry || null;
+    self.parent = opts.parent || null;
+    self.tracing = opts.tracing || null;
 
-    self.retryCount = null;
+    // TODO optimize?
+    self.headers = opts.headers || new RequestHeaders();
+
+    self.retryCount = 0;
     self.logical = false;
     self.peerState = null;
     self.remoteAddr = null;
@@ -517,21 +520,12 @@ function RequestOptions(channel, opts) {
     self.checksum = null;
 }
 
-function RequestOptionsHeaders(headers) {
+function RequestHeaders() {
     var self = this;
 
-    self.cn = headers ? headers.cn : '';
-    self.re = headers ? headers.re : '';
-    self.as = headers ? headers.as : '';
-
-    if (headers) {
-        var keys = Object.keys(headers);
-        for (var i = 0; i < keys.length; i++) {
-            var headerKey = keys[i];
-
-            self[headerKey] = headers[headerKey];
-        }
-    }
+    self.cn = '';
+    self.as = '';
+    self.re = '';
 }
 
 TChannel.prototype._request = function _request(opts) {

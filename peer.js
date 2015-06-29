@@ -225,24 +225,7 @@ TChannelPeer.prototype.request = function peerRequest(options) {
     var self = this;
 
     options.peerState = self.state;
-
-    var req = self.connect().request(options);
-
-    // TODO remove this and push it down into OutRequest
-    self.state.onRequest(req);
-
-    req.errorEvent.on(onError);
-    req.responseEvent.on(onResponse);
-
-    function onError(err) {
-        self.state.onRequestError(err);
-    }
-
-    function onResponse(res) {
-        self.state.onRequestResponse(req);
-    }
-
-    return req;
+    return self.connect().request(options);
 };
 
 TChannelPeer.prototype.addConnection = function addConnection(conn) {

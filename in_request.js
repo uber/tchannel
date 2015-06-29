@@ -35,9 +35,9 @@ function TChannelInRequest(id, options) {
     self.errorEvent = self.defineEvent('error');
     self.finishEvent = self.defineEvent('finish');
 
-    self.logger = options.logger;
-    self.random = options.random;
-    self.timers = options.timers;
+    self.logger = options.channel.logger;
+    self.random = options.channel.random;
+    self.timers = options.channel.timers;
 
     self.state = States.Initial;
     self.id = id || 0;

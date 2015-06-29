@@ -30,6 +30,7 @@ var States = require('./reqres_states');
 var TChannelRequest = require('./request.js');
 
 function TChannelOutRequest(id, options) {
+    /*max-statements: [2, 50]*/
     var self = this;
 
     EventEmitter.call(self);
@@ -38,21 +39,16 @@ function TChannelOutRequest(id, options) {
     self.finishEvent = self.defineEvent('finish');
 
     assert(options.channel, 'channel required');
+    assert(id, 'id is required');
 
-    self.logger = options.logger;
-    self.random = options.random;
-    self.timers = options.timers;
-    self.retryCount = options.retryCount;
-    self.channel = options.channel;
-    self.logical = !!options.logical;
-    self.parent = options.parent;
-    self.hasNoParent = options.hasNoParent;
+    self.peerState = options.peerState || null;
+    self.retryCount = options.retryCount || 0;
+    self.channel = options.channel || null;
+    self.logical = options.logical || false;
+    self.parent = options.parent || null;
+    self.hasNoParent = options.hasNoParent || false;
 
-    self.start = 0;
-    self.end = 0;
-    self.remoteAddr = options.remoteAddr;
-    self.state = States.Initial;
-    self.id = id || 0;
+    self.remoteAddr = options.remoteAddr || '';
     self.timeout = options.timeout || TChannelRequest.defaultTimeout;
     self.tracing = options.tracing || null;
     self.serviceName = options.serviceName || '';
@@ -61,25 +57,27 @@ function TChannelOutRequest(id, options) {
     self.checksum = options.checksum || null;
     self.forwardTrace = options.forwardTrace || false;
 
+    // All self requests have id 0
+    self.id = id;
+    self.state = States.Initial;
+    self.start = 0;
+    self.end = 0;
     self.streamed = false;
     self.arg1 = null;
     self.endpoint = null;
     self.arg2 = null;
     self.arg3 = null;
-
-    if (options.tracer && !self.forwardTrace) {
-        // new span with new ids
-        self.setupTracing(options);
-    } else {
-        self.span = null;
-    }
-
+    self.span = null;
     self.err = null;
     self.res = null;
     self.timedOut = false;
 
-    self.errorEvent.on(self.onError);
-    self.responseEvent.on(self.onResponse);
+    if (options.channel.tracer && !self.forwardTrace) {
+        // new span with new ids
+        self.setupTracing(options);
+    }
+
+    self.peerState.onRequest(self);
 }
 
 inherits(TChannelOutRequest, EventEmitter);
@@ -89,7 +87,7 @@ TChannelOutRequest.prototype.type = 'tchannel.outgoing-request';
 TChannelOutRequest.prototype.setupTracing = function setupTracing(options) {
     var self = this;
 
-    self.span = options.tracer.setupNewSpan({
+    self.span = options.channel.tracer.setupNewSpan({
         outgoing: true,
         parentSpan: options.parent && options.parent.span,
         hasNoParent: options.hasNoParent,
@@ -119,35 +117,6 @@ TChannelOutRequest.prototype._sendCallRequestCont = function _sendCallRequestCon
         className: self.constructor.name,
         methodName: '_sendCallRequestCont'
     });
-};
-
-TChannelOutRequest.prototype.onError = function onError(err, self) {
-    if (!self.end) self.end = self.timers.now();
-    self.err = err;
-    self.emitPerAttemptLatency();
-    self.emitPerAttemptErrorStat(err);
-
-    // if (self.logical === false) {
-    //     self.emitErrorStat(err);
-    //     self.emitLatency();
-    // }
-};
-
-TChannelOutRequest.prototype.onResponse = function onResponse(res, self) {
-    if (!self.end) {
-        self.end = self.timers.now();
-    }
-
-    self.res = res;
-    self.res.span = self.span;
-
-    self.emitPerAttemptLatency();
-    self.emitPerAttemptResponseStat(res);
-
-    // if (self.logical === false) {
-    //     self.emitResponseStat(res);
-    //     self.emitLatency();
-    // }
 };
 
 TChannelOutRequest.prototype.emitPerAttemptErrorStat =
@@ -362,11 +331,31 @@ function OutboundCallsLatencyTags(serviceName, cn, endpoint) {
 TChannelOutRequest.prototype.emitError = function emitError(err) {
     var self = this;
 
+    if (!self.end) {
+        self.end = self.channel.timers.now();
+    }
+
+    self.err = err;
+    self.emitPerAttemptLatency();
+    self.emitPerAttemptErrorStat(err);
+    self.peerState.onRequestError(err);
+
     self.errorEvent.emit(self, err);
 };
 
 TChannelOutRequest.prototype.emitResponse = function emitResponse(res) {
     var self = this;
+
+    self.peerState.onRequestResponse(self);
+    if (!self.end) {
+        self.end = self.channel.timers.now();
+    }
+
+    self.res = res;
+    self.res.span = self.span;
+
+    self.emitPerAttemptLatency();
+    self.emitPerAttemptResponseStat(res);
 
     self.responseEvent.emit(self, res);
 };
@@ -398,7 +387,7 @@ TChannelOutRequest.prototype.sendCallRequestFrame = function sendCallRequestFram
     var self = this;
     switch (self.state) {
         case States.Initial:
-            self.start = self.timers.now();
+            self.start = self.channel.timers.now();
             if (self.span) {
                 self.span.annotate('cs');
             }
@@ -560,7 +549,7 @@ TChannelOutRequest.prototype.hookupCallback = function hookupCallback(callback) 
 TChannelOutRequest.prototype.checkTimeout = function checkTimeout() {
     var self = this;
     if (!self.timedOut) {
-        var now = self.timers.now();
+        var now = self.channel.timers.now();
         var elapsed = now - self.start;
         if (elapsed > self.timeout) {
             self.end = now;

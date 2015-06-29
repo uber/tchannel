@@ -82,6 +82,7 @@ RelayRequest.prototype.onIdentified = function onIdentified(err1) {
         timeout: self.inreq.timeout - elapsed,
         parent: self.inreq,
         tracing: self.inreq.tracing,
+        checksum: self.inreq.checksum,
         forwardTrace: true,
         serviceName: self.inreq.serviceName,
         headers: self.inreq.headers,
