@@ -196,16 +196,7 @@ function emitResponseStat(res) {
     var self = this;
 
     if (res.ok) {
-        self.channel.emitFastStat(self.channel.buildStat(
-            'outbound.calls.success',
-            'counter',
-            1,
-            new OutboundCallsSuccessTags(
-                self.serviceName,
-                self.headers.cn,
-                self.endpoint
-            )
-        ));
+        emitOutboundCallsSuccess(self);
     } else {
         self.channel.emitFastStat(self.channel.buildStat(
             'outbound.calls.app-errors',
@@ -220,6 +211,19 @@ function emitResponseStat(res) {
         ));
     }
 };
+
+function emitOutboundCallsSuccess(request) {
+    request.channel.emitFastStat(request.channel.buildStat(
+        'outbound.calls.success',
+        'counter',
+        1,
+        new OutboundCallsSuccessTags(
+            request.serviceName,
+            request.headers.cn,
+            request.endpoint
+        )
+    ));
+}
 
 function OutboundCallsAppErrorsTags(serviceName, cn, endpoint, type) {
     var self = this;
@@ -265,6 +269,9 @@ function emitPerAttemptResponseStat(res) {
                 self.retryCount
             )
         ));
+    // Only emit success if peer-to-peer request or relay
+    } else if (self.logical === false) {
+        emitOutboundCallsSuccess(self);
     }
 };
 
