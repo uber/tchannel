@@ -56,7 +56,6 @@ class TChannelSyncClient(object):
         :param process_name:
             Name of the calling process. Used for logging purposes only.
         """
-        self.io_loop = ioloop.IOLoop.current()
         self.async_client = async.TChannel(
             name,
             hostport=glossary.EPHEMERAL_HOSTPORT,
