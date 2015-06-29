@@ -52,7 +52,7 @@ function StreamingOutResponse(id, options) {
     }
 
     function onFinish() {
-        self.finishEvent.emit(self);
+        self.emitFinish();
     }
 }
 
@@ -76,7 +76,7 @@ StreamingOutResponse.prototype.sendError = function sendError(codeString, messag
         self.arg2.end();
         self.arg3.end();
         self._sendError(codeString, message);
-        self.finishEvent.emit(self);
+        self.emitFinish();
     }
 };
 
