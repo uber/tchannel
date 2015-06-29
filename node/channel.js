@@ -134,10 +134,6 @@ function TChannel(options) {
         self.options.statsd = null;
     }
 
-    self.requestDefaults = extend({
-        timeout: TChannelRequest.defaultTimeout
-    }, self.options.requestDefaults);
-
     self.logger = self.options.logger || nullLogger;
     self.random = self.options.random || globalRandom;
     self.timers = self.options.timers || globalTimers;
@@ -207,10 +203,6 @@ function TChannel(options) {
             serviceName: self.options.serviceNameOverwrite,
             reporter: self.options.traceReporter
         });
-
-        if (self.requestDefaults.trace !== false) {
-            self.requestDefaults.trace = true;
-        }
     }
 
     // lazily created by .getServer (usually from .listen)
@@ -219,6 +211,9 @@ function TChannel(options) {
 
     self.TChannelAsThrift = TChannelAsThrift;
     self.TChannelAsJSON = TChannelAsJSON;
+
+    self.requestDefaults = self.options.requestDefaults ?
+        new RequestDefaults(self.options.requestDefaults) : null;
 }
 inherits(TChannel, StatEmitter);
 
@@ -439,6 +434,14 @@ TChannel.prototype.address = function address() {
     }
 };
 
+/*
+    Build a new opts
+    Copy all props from defaults over.
+    Build a new opts.headers
+    Copy all headers from defaults.headers over
+    For each key in per request options; assign
+    For each key in per request headers; assign
+*/
 TChannel.prototype.requestOptions = function requestOptions(options) {
     var self = this;
     var prop;
@@ -486,15 +489,102 @@ function waitForIdentified(options, callback) {
     }
 };
 
+/*
+    Build a new opts
+    Copy all props from defaults over.
+    Build a new opts.headers
+    Copy all headers from defaults.headers over
+    For each key in per request options; assign
+    For each key in per request headers; assign
+*/
+TChannel.prototype.fastRequestDefaults =
+function fastRequestDefaults(reqOpts) {
+    var self = this;
+
+    var defaults = self.requestDefaults;
+    if (!defaults) {
+        return;
+    }
+
+    if (defaults.timeout && !reqOpts.timeout) {
+        reqOpts.timeout = defaults.timeout;
+    }
+    if (defaults.retryLimit && !reqOpts.retryLimit) {
+        reqOpts.retryLimit = defaults.retryLimit;
+    }
+    if (defaults.serviceName && !reqOpts.serviceName) {
+        reqOpts.serviceName = defaults.serviceName;
+    }
+    if (defaults._trackPendingSpecified && !reqOpts._trackPendingSpecified) {
+        reqOpts.trackPending = defaults.trackPending;
+    }
+    if (defaults._checkSumTypeSpecified && reqOpts.checksumType === null) {
+        reqOpts.checksumType = defaults.checksumType;
+    }
+    if (defaults._hasNoParentSpecified && !reqOpts._hasNoParentSpecified) {
+        reqOpts.hasNoParent = defaults.hasNoParent;
+    }
+    if (defaults._traceSpecified && !reqOpts._traceSpecified) {
+        reqOpts.trace = defaults.trace;
+    }
+    if (defaults.retryFlags && !reqOpts._retryFlagsSpecified) {
+        reqOpts.retryFlags = defaults.retryFlags;
+    }
+    if (defaults.shouldApplicationRetry &&
+        !reqOpts.shouldApplicationRetry
+    ) {
+        reqOpts.shouldApplicationRetry = defaults.shouldApplicationRetry;
+    }
+
+    if (defaults.headers) {
+        // jshint forin:false
+        for (var key in defaults.headers) {
+            if (!reqOpts.headers[key]) {
+                reqOpts.headers[key] = defaults.headers[key];
+            }
+        }
+        // jshint forin:true
+    }
+};
+
+function RequestDefaults(reqDefaults) {
+    var self = this;
+
+    self.timeout = reqDefaults.timeout || 0;
+    self.retryLimit = reqDefaults.retryLimit || 0;
+    self.serviceName = reqDefaults.serviceName || '';
+
+    self._trackPendingSpecified = typeof reqDefaults.trackPending === 'boolean';
+    self.trackPending = reqDefaults.trackPending;
+
+    self._checkSumTypeSpecified = typeof reqDefaults.checksumType === 'number';
+    self.checksumType = reqDefaults.checksumType || 0;
+
+    self._hasNoParentSpecified = typeof reqDefaults.hasNoParent === 'boolean';
+    self.hasNoParent = reqDefaults.hasNoParent || false;
+
+    self._traceSpecified = typeof reqDefaults.trace === 'boolean';
+    self.trace = reqDefaults.trace || false;
+
+    self.retryFlags = reqDefaults.retryFlags || null;
+    self.shouldApplicationRetry = reqDefaults.shouldApplicationRetry || null;
+
+    self.headers = reqDefaults.headers;
+}
+
 TChannel.prototype.request = function channelRequest(options) {
     var self = this;
 
-    var opts = self.requestOptions(options);
+    options = options || {};
+    var opts = new RequestOptions(self, options);
 
-    return self._request(new RequestOptions(self, opts));
+    self.fastRequestDefaults(opts);
+
+    return self._request(opts);
 };
 
 function RequestOptions(channel, opts) {
+    /*eslint max-complexity: [2, 30]*/
     var self = this;
 
     self.channel = channel;
@@ -503,12 +593,16 @@ function RequestOptions(channel, opts) {
     self.streamed = opts.streamed || false;
     self.timeout = opts.timeout || 0;
     self.retryLimit = opts.retryLimit || 0;
-    self.trackPending = opts.trackPending || false;
     self.serviceName = opts.serviceName || '';
+    self._trackPendingSpecified = typeof opts.trackPending === 'boolean';
+    self.trackPending = opts.trackPending || false;
     self.checksumType = opts.checksumType || null;
+    self._hasNoParentSpecified = typeof opts.hasNoParent === 'boolean';
     self.hasNoParent = opts.hasNoParent || false;
     self.forwardTrace = opts.forwardTrace || false;
-    self.trace = typeof opts.trace === 'boolean' ? opts.trace : true;
+    self._traceSpecified = typeof opts.trace === 'boolean';
+    self.trace = self._traceSpecified ? opts.trace : true;
+    self._retryFlagsSpecified = !!opts.retryFlags;
     self.retryFlags = opts.retryFlags || DEFAULT_RETRY_FLAGS;
     self.shouldApplicationRetry = opts.shouldApplicationRetry || null;
     self.parent = opts.parent || null;
