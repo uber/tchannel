@@ -86,7 +86,6 @@ allocCluster.test('emits stats on response ok', {
             return assert.end(err);
         }
         assert.ok(res.ok, 'res should be ok');
-        console.log(statsd._buffer._elements);
         assert.deepEqual(statsd._buffer._elements, [{
             type: 'c',
             name: 'tchannel.connections.accepted.' + clientHost,

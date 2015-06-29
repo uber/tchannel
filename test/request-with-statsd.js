@@ -221,13 +221,13 @@ allocCluster.test('emits stats on p2p call success', {
             type: 'c',
             name: 'tchannel.outbound.request.size.inPipe.reservoir.Reservoir--get',
             value: null,
-            delta: 108,
+            delta: 109,
             time: null
         }, {
             type: 'c',
             name: 'tchannel.connections.bytes-sent.localhost',
             value: null,
-            delta: 108,
+            delta: 109,
             time: null
         }, {
             type: 'c',
