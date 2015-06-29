@@ -255,15 +255,12 @@ TChannelConnection.prototype.handlePingResponse = function handlePingResponse(re
 
 TChannelConnection.prototype.handleReadFrame = function handleReadFrame(frame) {
     var self = this;
+
     if (!self.closing) {
         self.ops.lastTimeoutTime = 0;
     }
-    self.handler.handleFrame(frame, handledFrame);
-    function handledFrame(err) {
-        if (err) {
-            self.onHandlerError(err);
-        }
-    }
+
+    self.handler.handleFrame(frame);
 };
 
 TChannelConnection.prototype.onCallResponse = function onCallResponse(res) {
