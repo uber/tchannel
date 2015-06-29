@@ -59,8 +59,6 @@ function TChannelOutResponse(id, options) {
 
     self.codeString = null;
     self.message = null;
-
-    self.finishEvent.on(self.onFinish);
 }
 
 inherits(TChannelOutResponse, EventEmitter);
@@ -89,29 +87,6 @@ TChannelOutResponse.prototype._sendError = function _sendError(codeString, messa
         className: self.constructor.name,
         methodName: '_sendError'
     });
-};
-
-TChannelOutResponse.prototype.onFinish = function onFinish(_arg, self) {
-    if (!self.end) {
-        self.end = self.timers.now();
-    }
-
-    var latency = self.end - self.inreq.start;
-
-    self.channel.emitFastStat(self.channel.buildStat(
-        'inbound.calls.latency',
-        'timing',
-        latency,
-        new InboundCallsLatencyTags(
-            self.inreq.headers.cn,
-            self.inreq.serviceName,
-            self.inreq.endpoint
-        )
-    ));
-
-    if (self.span) {
-        self.spanEvent.emit(self, self.span);
-    }
 };
 
 function InboundCallsLatencyTags(cn, serviceName, endpoint) {
@@ -236,8 +211,35 @@ TChannelOutResponse.prototype.sendError = function sendError(codeString, message
             'type': self.codeString
         });
         self._sendError(codeString, message);
-        self.finishEvent.emit(self);
+        self.emitFinish();
     }
+};
+
+TChannelOutResponse.prototype.emitFinish = function emitFinish() {
+    var self = this;
+
+    if (!self.end) {
+        self.end = self.timers.now();
+    }
+
+    var latency = self.end - self.inreq.start;
+
+    self.channel.emitFastStat(self.channel.buildStat(
+        'inbound.calls.latency',
+        'timing',
+        latency,
+        new InboundCallsLatencyTags(
+            self.inreq.headers.cn,
+            self.inreq.serviceName,
+            self.inreq.endpoint
+        )
+    ));
+
+    if (self.span) {
+        self.spanEvent.emit(self, self.span);
+    }
+
+    self.finishEvent.emit(self);
 };
 
 TChannelOutResponse.prototype.setOk = function setOk(ok) {
@@ -305,7 +307,7 @@ TChannelOutResponse.prototype.send = function send(res1, res2) {
     }
 
     self.sendCallResponseFrame([self.arg1, res1, res2], true);
-    self.finishEvent.emit(self);
+    self.emitFinish();
 
     return self;
 };
