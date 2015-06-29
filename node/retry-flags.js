@@ -20,33 +20,12 @@
 
 'use strict';
 
-var allocCluster = require('./lib/alloc-cluster.js');
+module.exports = RetryFlags;
 
-allocCluster.test('ping with a remote connection', 2, function t(cluster, assert) {
-    var client = cluster.channels[0];
-    var server = cluster.channels[1];
-    var peer = client.peers.add(server.hostPort);
-    var conn = peer.connect();
-    conn.pingResponseEvent.on(function onResponse(res) {
-        assert.equals(res.id, conn.handler.lastSentFrameId,
-            'validate ping response id');
-        server.close();
-        assert.end();
-    });
+function RetryFlags(never, onConnectionError, onTimeout) {
+    var self = this;
 
-    conn.ping();
-});
-
-allocCluster.test('ping with a self connection', 1, function t(cluster, assert) {
-    var server = cluster.channels[0];
-    var peer = server.peers.add(server.hostPort);
-    var conn = peer.connect();
-    conn.pingResponseEvent.on(function onResponse(res) {
-        assert.equals(res.id, conn.idCount - 1,
-            'validate ping response id');
-        server.close();
-        assert.end();
-    });
-
-    conn.ping();
-});
+    self.never = never;
+    self.onConnectionError = onConnectionError;
+    self.onTimeout = onTimeout;
+}

@@ -226,8 +226,12 @@ function _waitForIdentified(conn, callback) {
 
 TChannelPeer.prototype.request = function peerRequest(options) {
     var self = this;
+
+    options.peerState = self.state;
+
     var req = self.connect().request(options);
 
+    // TODO remove this and push it down into OutRequest
     self.state.onRequest(req);
 
     req.errorEvent.on(onError);

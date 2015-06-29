@@ -75,7 +75,6 @@ function TChannel(options) {
     self.errorEvent = self.defineEvent('error');
     self.listeningEvent = self.defineEvent('listening');
     self.connectionEvent = self.defineEvent('connection');
-    self.requestEvent = self.defineEvent('request');
 
     // self.outboundCallsSentStat = self.defineCounter('outbound.calls.sent');
     // self.outboundCallsSuccessStat = self.defineCounter('outbound.calls.success');
@@ -377,7 +376,7 @@ TChannel.prototype.makeSubChannel = function makeSubChannel(options) {
 
     // Subchannels should not have tracers; all tracing goes
     // through the top channel.
-    chan.tracer = null;
+    chan.tracer = self.tracer;
 
     if (self.hostPort) {
         chan.hostPort = self.hostPort;
@@ -484,26 +483,93 @@ function waitForIdentified(options, callback) {
 TChannel.prototype.request = function channelRequest(options) {
     var self = this;
 
-    assert(!self.destroyed, 'cannot request() to destroyed tchannel');
     var opts = self.requestOptions(options);
 
+    return self._request(new RequestOptions(self, opts));
+};
+
+function RequestOptions(channel, opts) {
+    var self = this;
+
+    self.channel = channel;
+    self.services = channel.services;
+    self.logger = channel.logger;
+    self.random = channel.random;
+    self.timers = channel.timers;
+    self.tracer = channel.tracer;
+
+    self.host = opts.host || '';
+    self.streamed = opts.streamed || false;
+    self.headers = new RequestOptionsHeaders(opts.headers);
+    self.timeout = opts.timeout || 0;
+    self.retryLimit = opts.retryLimit || 0;
+    self.trackPending = opts.trackPending || false;
+    self.serviceName = opts.serviceName || '';
+    self.shouldApplicationRetry = opts.shouldApplicationRetry;
+    self.checksumType = opts.checksumType || null;
+    self.parent = opts.parent || null;
+    self.hasNoParent = opts.hasNoParent || false;
+    self.tracing = opts.tracing || null;
+    self.forwardTrace = opts.forwardTrace || false;
+    self.trace = typeof opts.trace === 'boolean' ? opts.trace : true;
+    self.retryFlags = opts.retryFlags || null;
+
+    self.retryCount = null;
+    self.logical = false;
+    self.peerState = null;
+    self.remoteAddr = null;
+    self.hostPort = null;
+    self.checksum = null;
+}
+
+function RequestOptionsHeaders(headers) {
+    var self = this;
+
+    self.cn = headers ? headers.cn : '';
+    self.re = headers ? headers.re : '';
+    self.as = headers ? headers.as : '';
+
+    if (headers) {
+        var keys = Object.keys(headers);
+        for (var i = 0; i < keys.length; i++) {
+            var headerKey = keys[i];
+
+            self[headerKey] = headers[headerKey];
+        }
+    }
+}
+
+TChannel.prototype._request = function _request(opts) {
+    /*eslint max-statements: [2, 25]*/
+    var self = this;
+
+    assert(!self.destroyed, 'cannot request() to destroyed tchannel');
     if (!self.topChannel) {
         throw errors.TopLevelRequestError();
     }
 
     var req = null;
+    // retries are only between hosts
     if (opts.peer) {
         opts.retryCount = 0;
         req = opts.peer.request(opts);
-    } else if (opts.host || // retries are only between hosts
-        opts.streamed // streaming retries not yet implemented
-    ) {
+    } else if (opts.host) {
         opts.retryCount = 0;
-        req = self.peers.request(null, opts);
+        req = self.peers.add(opts.host).request(opts);
+    // streaming retries not yet implemented
+    } else if (opts.streamed) {
+        opts.retryCount = 0;
+
+        var peer = self.peers.choosePeer();
+        if (!peer) {
+            // TODO: operational error?
+            throw errors.NoPeerAvailable();
+        }
+        req = peer.request(opts);
     } else {
-        req = new TChannelRequest(self, opts);
+        req = new TChannelRequest(opts);
     }
-    self.requestEvent.emit(self, req);
+
     return req;
 };
 

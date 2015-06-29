@@ -588,11 +588,13 @@ function sendCallRequestFrame(req, flags, args) {
         return;
     }
     var reqBody = new v2.CallRequest(
-        flags, req.ttl, req.tracing, req.serviceName, req.headers,
+        flags, req.timeout, req.tracing, req.serviceName, req.headers,
         req.checksum.type, args
     );
 
-    self.verifyCallRequestFrame(req);
+    if (!self.verifyCallRequestFrame(req, args)) {
+        return;
+    }
 
     var result = self._sendCallBodies(req.id, reqBody, null);
     req.checksum = result.checksum;
@@ -622,7 +624,7 @@ function sendCallRequestFrame(req, flags, args) {
 };
 
 TChannelV2Handler.prototype.verifyCallRequestFrame =
-function verifyCallRequestFrame(req) {
+function verifyCallRequestFrame(req, args) {
     var self = this;
 
     var message;
@@ -656,6 +658,8 @@ function verifyCallRequestFrame(req) {
             socketRemoteAddr: self.connection.socketRemoteAddr
         });
     }
+
+    return true;
 };
 
 function OutboundRequestSizeTags(serviceName, cn, endpoint) {
@@ -886,12 +890,14 @@ TChannelV2Handler.prototype.sendErrorFrame = function sendErrorFrame(r, codeStri
 TChannelV2Handler.prototype.buildOutRequest = function buildOutRequest(options) {
     var self = this;
     var id = self.nextFrameId();
-    if (options.checksumType === undefined || options.checksumType === null) {
+
+    if (options.checksumType === null) {
         options.checksumType = v2.Checksum.Types.CRC32C;
     }
+
     options.checksum = new v2.Checksum(options.checksumType);
-    if (!options.headers) options.headers = {};
     options.headers.re = v2.encodeRetryFlags(options.retryFlags);
+
     if (options.streamed) {
         return new StreamingOutRequest(self, id, options);
     } else {

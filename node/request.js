@@ -26,29 +26,32 @@ var inherits = require('util').inherits;
 
 var TChannelOutRequest = require('./out_request.js');
 var errors = require('./errors');
+var RetryFlags = require('./retry-flags.js');
 
-function TChannelRequest(channel, options) {
-    options = options || {};
-    assert(!options.streamed, "streaming request federation not implemented");
+function TChannelRequest(options) {
+    /*eslint max-statements: [2, 40]*/
+    assert(!options.streamed, 'streaming request federation not implemented');
+
     var self = this;
+
     EventEmitter.call(self);
     self.errorEvent = self.defineEvent('error');
     self.responseEvent = self.defineEvent('response');
 
-    self.channel = channel;
-    self.services = self.channel.services;
-    self.logger = self.channel.logger;
-    self.random = self.channel.random;
-    self.timers = self.channel.timers;
+    self.channel = options.channel;
+    self.services = options.services;
+    self.logger = options.logger;
+    self.random = options.random;
+    self.timers = options.timers;
 
     self.options = options;
 
     if (!self.options.retryFlags) {
-        self.options.retryFlags = {
-            never: false,
-            onConnectionError: true,
-            onTimeout: false
-        };
+        self.options.retryFlags = new RetryFlags(
+            /*never:*/ false,
+            /*onConnectionError*/ true,
+            /*onTimeout*/ false
+        );
     }
 
     self.triedRemoteAddrs = {};
@@ -66,8 +69,8 @@ function TChannelRequest(channel, options) {
     self.trackPending = self.options.trackPending || false;
 
     self.serviceName = options.serviceName || '';
-    self.headers = self.options.headers || {}; // so that as-foo can punch req.headers.X
-    self.options.headers = self.headers; // for passing to peer.request(opts) later
+    // so that as-foo can punch req.headers.X
+    self.headers = self.options.headers;
 
     self.endpoint = null;
     self.arg1 = null;
@@ -79,7 +82,6 @@ function TChannelRequest(channel, options) {
 }
 
 inherits(TChannelRequest, EventEmitter);
-
 
 TChannelRequest.defaultRetryLimit = 5;
 TChannelRequest.defaultTimeout = 100;
@@ -144,7 +146,7 @@ TChannelRequest.prototype.hookupCallback = function hookupCallback(callback) {
 
 TChannelRequest.prototype.choosePeer = function choosePeer() {
     var self = this;
-    return self.channel.peers.choosePeer(self, self.options);
+    return self.channel.peers.choosePeer(self);
 };
 
 TChannelRequest.prototype.send = function send(arg1, arg2, arg3, callback) {

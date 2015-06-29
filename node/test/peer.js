@@ -54,7 +54,10 @@ allocCluster.test('peer should use the identified connection', {
         peer.addConnection(conn);
         assert.doesNotThrow(
             function noThrow() {
-                peer.request({hasNoParent: true});
+                subClient.request({
+                    host: peer.hostPort,
+                    hasNoParent: true
+                });
             },
             'should use the identified connection'
         );
