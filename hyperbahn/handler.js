@@ -251,7 +251,6 @@ function sendRelayAdvertise(opts, callback) {
             }
 
             var codeName = Errors.classify(err);
-
             if (attempts <= self.maxRelayAdAttempts && err &&
                 (
                     codeName === 'NetworkError' ||
@@ -260,18 +259,35 @@ function sendRelayAdvertise(opts, callback) {
             ) {
                 setTimeout(tryRequest, self.relayAdRetryTime);
             } else {
-                var logger = self.channel.logger;
-                logger.error('Could not send relay advertise', {
-                    exitNode: opts.hostPort,
-                    services: opts.services,
-                    error: err,
-                    codeName: codeName,
-                    responseBody: response && response.body
-                });
+                self.logError(err, opts, response);
 
                 callback(null, null);
             }
         }
+    }
+};
+
+HyperbahnHandler.prototype.logError =
+function logError(err, opts, response) {
+    var self = this;
+
+    var codeName = Errors.classify(err);
+    var logger = self.channel.logger;
+
+    var logOptions = {
+        exitNode: opts.hostPort,
+        services: opts.services,
+        error: err,
+        codeName: codeName,
+        responseBody: response && response.body
+    };
+
+    if (codeName === 'NetworkError' ||
+        codeName === 'Timeout'
+    ) {
+        logger.warn('Relay advertise failed with expected err', logOptions);
+    } else {
+        logger.error('Relay advertise failed with unexpected err', logOptions);
     }
 };
 
