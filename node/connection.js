@@ -334,7 +334,7 @@ TChannelConnection.prototype.onCallError = function onCallError(err) {
             return;
         }
 
-        req.errorEvent.emit(req, err);
+        req.emitError(err);
     }
 };
 
@@ -537,7 +537,7 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
             err = errors.TChannelConnectionResetError(err, info);
         }
 
-        req.errorEvent.emit(req, err);
+        req.emitError(err);
     });
 
     self.ops.clear();

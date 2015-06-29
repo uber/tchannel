@@ -26,7 +26,6 @@ var inherits = require('util').inherits;
 
 var TChannelOutRequest = require('./out_request.js');
 var errors = require('./errors');
-var RetryFlags = require('./retry-flags.js');
 
 function TChannelRequest(options) {
     /*eslint max-statements: [2, 40]*/
@@ -39,20 +38,8 @@ function TChannelRequest(options) {
     self.responseEvent = self.defineEvent('response');
 
     self.channel = options.channel;
-    self.services = options.services;
-    self.logger = options.logger;
-    self.random = options.random;
-    self.timers = options.timers;
 
     self.options = options;
-
-    if (!self.options.retryFlags) {
-        self.options.retryFlags = new RetryFlags(
-            /*never:*/ false,
-            /*onConnectionError*/ true,
-            /*onTimeout*/ false
-        );
-    }
 
     self.triedRemoteAddrs = {};
     self.outReqs = [];
@@ -86,25 +73,25 @@ TChannelRequest.prototype.type = 'tchannel.request';
 
 TChannelRequest.prototype.emitError = function emitError(err) {
     var self = this;
-    if (!self.end) self.end = self.timers.now();
+    if (!self.end) self.end = self.channel.timers.now();
     self.err = err;
 
     TChannelOutRequest.prototype.emitErrorStat.call(self, err);
     TChannelOutRequest.prototype.emitLatency.call(self);
 
-    self.services.onRequestError(self);
+    self.channel.services.onRequestError(self);
     self.errorEvent.emit(self, err);
 };
 
 TChannelRequest.prototype.emitResponse = function emitResponse(res) {
     var self = this;
-    if (!self.end) self.end = self.timers.now();
+    if (!self.end) self.end = self.channel.timers.now();
     self.res = res;
 
     TChannelOutRequest.prototype.emitResponseStat.call(self, res);
     TChannelOutRequest.prototype.emitLatency.call(self);
 
-    self.services.onRequestResponse(self);
+    self.channel.services.onRequestResponse(self);
     self.responseEvent.emit(self, res);
 };
 
@@ -155,12 +142,12 @@ TChannelRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     if (callback) {
         self.hookupCallback(callback);
     }
-    self.start = self.timers.now();
+    self.start = self.channel.timers.now();
     self.resendSanity = self.limit + 1;
 
     TChannelOutRequest.prototype.emitOutboundCallsSent.call(self);
 
-    self.services.onRequest(self);
+    self.channel.services.onRequest(self);
     self.resend();
 };
 
@@ -273,7 +260,7 @@ TChannelRequest.prototype.deferResend = function deferResend() {
 
 TChannelRequest.prototype.checkPending = function checkPending() {
     var self = this;
-    var err = self.services.errorIfExceedsMaxPending(self);
+    var err = self.channel.services.errorIfExceedsMaxPending(self);
     if (err) {
         self.emitError(err);
         return true;
@@ -283,7 +270,7 @@ TChannelRequest.prototype.checkPending = function checkPending() {
 
 TChannelRequest.prototype.checkTimeout = function checkTimeout(err, res) {
     var self = this;
-    var now = self.timers.now();
+    var now = self.channel.timers.now();
     self.elapsed = now - self.start;
     if (self.elapsed < self.timeout) return false;
     if (err) {
@@ -337,7 +324,7 @@ TChannelRequest.prototype.shouldRetryError = function shouldRetryError(err) {
                 return !!self.options.retryFlags.onConnectionError;
 
             default:
-                self.logger.error('unknown error type in request retry', {
+                self.channel.logger.error('unknown error type in request retry', {
                     error: err
                 });
                 return true;
