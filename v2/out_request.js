@@ -32,6 +32,7 @@ var errors = require('../errors');
 function V2OutRequest(handler, id, options) {
     var self = this;
     OutRequest.call(self, id, options);
+
     self.handler = handler;
 }
 
@@ -40,6 +41,7 @@ inherits(V2OutRequest, OutRequest);
 function V2StreamingOutRequest(handler, id, options) {
     var self = this;
     StreamingOutRequest.call(self, id, options);
+
     self.handler = handler;
 }
 
@@ -50,14 +52,18 @@ V2StreamingOutRequest.prototype._sendCallRequest =
 function _sendCallRequest(args, isLast) {
     var self = this;
     var flags = 0;
-    if (!isLast) flags |= CallFlags.Fragment;
+    if (!isLast) {
+        flags |= CallFlags.Fragment;
+    }
+
     if (args && args[0] && args[0].length > v2.CallRequest.MaxArg1Size) {
         self.errorEvent.emit(self, errors.Arg1OverLengthLimit({
                 length: '0x' + args[0].length.toString(16),
                 limit: '0x' + v2.CallRequest.MaxArg1Size.toString(16)
         }));
-        return;
+        return false;
     }
+
     self.handler.sendCallRequestFrame(self, flags, args);
 };
 
@@ -66,7 +72,10 @@ V2StreamingOutRequest.prototype._sendCallRequestCont =
 function _sendCallRequestCont(args, isLast) {
     var self = this;
     var flags = 0;
-    if (!isLast) flags |= CallFlags.Fragment;
+    if (!isLast) {
+        flags |= CallFlags.Fragment;
+    }
+
     self.handler.sendCallRequestContFrame(self, flags, args);
 };
 

@@ -25,6 +25,7 @@ module.exports.VERSION = 2;
 var Types = {};
 module.exports.Types = Types;
 
+var RetryFlags = require('../retry-flags.js');
 var Frame = require('./frame');
 
 module.exports.CallFlags = require('./call_flags');
@@ -90,14 +91,6 @@ module.exports.parseRetryFlags = function parseRetryFlags(val) {
         never, onConnectionError, onTimeout
     );
 };
-
-function RetryFlags(never, onConnectionError, onTimeout) {
-    var self = this;
-
-    self.never = never;
-    self.onConnectionError = onConnectionError;
-    self.onTimeout = onTimeout;
-}
 
 module.exports.encodeRetryFlags = function encodeRetryFlags(retryFlags) {
     if (!retryFlags) return '';
