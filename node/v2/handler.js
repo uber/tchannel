@@ -894,9 +894,12 @@ TChannelV2Handler.prototype.buildOutRequest = function buildOutRequest(options) 
     if (options.checksumType === null) {
         options.checksumType = v2.Checksum.Types.CRC32C;
     }
-
-    options.checksum = new v2.Checksum(options.checksumType);
-    options.headers.re = v2.encodeRetryFlags(options.retryFlags);
+    if (!options.checksum) {
+        options.checksum = new v2.Checksum(options.checksumType);
+    }
+    if (!options.headers.re) {
+        options.headers.re = v2.encodeRetryFlags(options.retryFlags);
+    }
 
     if (options.streamed) {
         return new StreamingOutRequest(self, id, options);
@@ -925,6 +928,7 @@ TChannelV2Handler.prototype.buildInRequest = function buildInRequest(reqFrame) {
     var opts = {
         logger: self.logger,
         random: self.random,
+        channel: self.connection.channel,
         timers: self.timers,
         tracer: self.tracer,
         timeout: reqFrame.body.ttl || SERVER_TIMEOUT_DEFAULT,
