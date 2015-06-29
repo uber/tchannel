@@ -497,7 +497,7 @@ TChannel.prototype.fastRequestDefaults =
 function fastRequestDefaults(reqOpts) {
     var self = this;
 
-    var defaults = self.requestDefaults
+    var defaults = self.requestDefaults;
     if (!defaults) {
         return;
     }
@@ -533,11 +533,13 @@ function fastRequestDefaults(reqOpts) {
     }
 
     if (defaults.headers) {
+        // jshint forin:false
         for (var key in defaults.headers) {
             if (!reqOpts.headers[key]) {
                 reqOpts.headers[key] = defaults.headers[key];
             }
         }
+        // jshint forin:true
     }
 };
 

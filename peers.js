@@ -24,7 +24,6 @@ var assert = require('assert');
 var inherits = require('util').inherits;
 var EventEmitter = require('./lib/event_emitter');
 
-var errors = require('./errors');
 var TChannelPeer = require('./peer');
 var TChannelSelfPeer = require('./self_peer');
 
