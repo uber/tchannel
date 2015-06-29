@@ -41,7 +41,7 @@ function TChannelInRequest(id, options) {
 
     self.state = States.Initial;
     self.id = id || 0;
-    self.ttl = options.ttl || 0;
+    self.timeout = options.timeout || 0;
     self.tracing = options.tracing || null;
     self.serviceName = options.serviceName || '';
     self.remoteAddr = null;
@@ -123,7 +123,7 @@ TChannelInRequest.prototype.checkTimeout = function checkTimeout() {
     var self = this;
     if (!self.timedOut) {
         var elapsed = self.timers.now() - self.start;
-        if (elapsed > self.ttl) {
+        if (elapsed > self.timeout) {
             self.timedOut = true;
             // TODO: send an error frame response?
             // TODO: emit error on self.res instead / in additon to?
@@ -133,7 +133,7 @@ TChannelInRequest.prototype.checkTimeout = function checkTimeout() {
                     id: self.id,
                     start: self.start,
                     elapsed: elapsed,
-                    timeout: self.ttl
+                    timeout: self.timeout
                 }));
             });
         }
