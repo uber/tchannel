@@ -24,7 +24,6 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"reflect"
 	"strings"
 
 	"github.com/apache/thrift/lib/go/thrift"
@@ -47,20 +46,9 @@ func NewServer(tchan *tchannel.Channel) *Server {
 	}
 }
 
-// Register registers the given processor's methods as handlers with this server.
-// E.g., a processor 'myProcessor' with methods 'foo' and 'bar' will be registered
-// under the operations 'myProcessor::foo' and 'myProcessor::bar'.
-func (s *Server) Register(thriftName string, processorInterface reflect.Type, processor thrift.TProcessor) {
-	handler := &Handler{processor}
-	for i := 0; i < processorInterface.NumMethod(); i++ {
-		methodName := processorInterface.Method(i).Name
-		s.Channel.Register(handler, thriftName+"::"+methodName)
-	}
-}
-
-// RegisterV2 registers the given TChanServer to be called on any incoming call for its' services.
+// Register registers the given TChanServer to be called on any incoming call for its' services.
 // TODO(prashant): Replace Register call with this call.
-func (s *Server) RegisterV2(svr TChanServer) {
+func (s *Server) Register(svr TChanServer) {
 	service := svr.Service()
 	s.handlers[service] = svr
 	for _, m := range svr.Methods() {
@@ -133,20 +121,5 @@ func (s *Server) Handle(ctx context.Context, call *tchannel.InboundCall) {
 
 	if err := s.handle(ctx, handler, method, call); err != nil {
 		s.onError(err)
-	}
-}
-
-// Handler wraps the tchannel.Handler interface around the Thrift processor.
-type Handler struct {
-	processor thrift.TProcessor
-}
-
-// Handle takes a tchannel call request and handles it using the Thrift processor with
-// a tchannel protocol.
-func (h *Handler) Handle(ctx context.Context, call *tchannel.InboundCall) {
-	protocol := NewTChannelInbound(call)
-	_, err := h.processor.Process(protocol, protocol)
-	if err != nil {
-		// TODO(prashant): Separate application errors from tchannel errors and log tchannel errors.
 	}
 }

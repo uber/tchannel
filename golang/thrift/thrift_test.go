@@ -1,4 +1,4 @@
-package thrift
+package thrift_test
 
 // Copyright (c) 2015 Uber Technologies, Inc.
 
@@ -22,33 +22,36 @@ package thrift
 
 import (
 	"errors"
+	"fmt"
 	"net"
-	"reflect"
-	"sync"
 	"testing"
 	"time"
 
-	"golang.org/x/net/context"
+	// Test is in a separate package to avoid circular dependencies.
+	. "github.com/uber/tchannel/golang/thrift"
 
-	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	tchannel "github.com/uber/tchannel/golang"
-	"github.com/uber/tchannel/golang/testutils"
 	gen "github.com/uber/tchannel/golang/thrift/gen-go/test"
 	"github.com/uber/tchannel/golang/thrift/mocks"
+	"golang.org/x/net/context"
 )
 
 // Generate the service mocks using go generate.
-//go:generate mockery -name SimpleService
-//go:generate mockery -name SecondService
+//go:generate mockery -name TChanSimpleService
+//go:generate mockery -name TChanSecondService
 
 type testArgs struct {
-	s1 *mocks.SimpleService
-	s2 *mocks.SecondService
-	c1 *gen.SimpleServiceClient
-	c2 *gen.SecondServiceClient
+	s1 *mocks.TChanSimpleService
+	s2 *mocks.TChanSecondService
+	c1 gen.TChanSimpleService
+	c2 gen.TChanSecondService
+}
+
+func ctxArg() mock.AnythingOfTypeArgument {
+	return mock.AnythingOfType("*context.valueCtx")
 }
 
 func TestThriftArgs(t *testing.T) {
@@ -64,8 +67,8 @@ func TestThriftArgs(t *testing.T) {
 			I3: 105,
 		}
 
-		args.s1.On("Call", arg).Return(ret, nil)
-		got, err := args.c1.Call(arg)
+		args.s1.On("Call", ctxArg(), arg).Return(ret, nil)
+		got, err := args.c1.Call(ctx, arg)
 		require.NoError(t, err)
 		assert.Equal(t, ret, got)
 	})
@@ -73,55 +76,40 @@ func TestThriftArgs(t *testing.T) {
 
 func TestRequest(t *testing.T) {
 	withSetup(t, func(ctx context.Context, args testArgs) {
-		args.s1.On("Simple").Return(nil)
-		require.NoError(t, args.c1.Simple())
+		args.s1.On("Simple", ctxArg()).Return(nil)
+		require.NoError(t, args.c1.Simple(ctx))
 	})
 }
 
-func TestRequestError(t *testing.T) {
+func TestThriftError(t *testing.T) {
+	thriftErr := &gen.SimpleErr{
+		Message: "this is the error",
+	}
 	withSetup(t, func(ctx context.Context, args testArgs) {
-		args.s1.On("Simple").Return(errors.New("simple_err"))
-		got := args.c1.Simple()
+		args.s1.On("Simple", ctxArg()).Return(thriftErr)
+		got := args.c1.Simple(ctx)
 		require.Error(t, got)
-		require.Contains(t, got.Error(), "simple_err")
-		_, ok := got.(thrift.TApplicationException)
-		require.True(t, ok)
+		require.Equal(t, thriftErr, got)
 	})
 }
 
-func TestOneWay(t *testing.T) {
+// TODO(prashant): Complete test for unexpected errors.
+func testUnknownError(t *testing.T) {
 	withSetup(t, func(ctx context.Context, args testArgs) {
-		var wg sync.WaitGroup
-		wg.Add(2)
-
-		onDone := func(_ mock.Arguments) {
-			wg.Done()
-		}
-
-		args.s1.On("OneWay").
-			Return(nil).
-			Run(onDone)
-		require.NoError(t, args.c1.OneWay())
-
-		// One way methods do not propagate any information (even on error)
-		args.s1.On("OneWay").
-			Return(errors.New("err")).
-			Run(onDone)
-		require.NoError(t, args.c1.OneWay())
-
-		// Since the client returns immediately, we need to wait to
-		// make sure the server was actually called.
-		require.True(t, testutils.WaitWG(&wg, time.Second))
+		args.s1.On("Simple", ctxArg()).Return(errors.New("unexpected err"))
+		got := args.c1.Simple(ctx)
+		require.Error(t, got)
+		fmt.Println("Err: %v", got)
 	})
 }
 
 func TestMultiple(t *testing.T) {
 	withSetup(t, func(ctx context.Context, args testArgs) {
-		args.s1.On("Simple").Return(nil)
-		args.s2.On("Echo", "test1").Return("test2", nil)
+		args.s1.On("Simple", ctxArg()).Return(nil)
+		args.s2.On("Echo", ctxArg(), "test1").Return("test2", nil)
 
-		require.NoError(t, args.c1.Simple())
-		res, err := args.c2.Echo("test1")
+		require.NoError(t, args.c1.Simple(ctx))
+		res, err := args.c2.Echo(ctx, "test1")
 		require.NoError(t, err)
 		require.Equal(t, "test2", res)
 	})
@@ -129,8 +117,8 @@ func TestMultiple(t *testing.T) {
 
 func withSetup(t *testing.T, f func(ctx context.Context, args testArgs)) {
 	args := testArgs{
-		s1: new(mocks.SimpleService),
-		s2: new(mocks.SecondService),
+		s1: new(mocks.TChanSimpleService),
+		s2: new(mocks.TChanSecondService),
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
@@ -142,7 +130,7 @@ func withSetup(t *testing.T, f func(ctx context.Context, args testArgs)) {
 	defer tchan.Close()
 
 	// Get client1
-	args.c1, args.c2, err = getClients(ctx, listener.Addr().String())
+	args.c1, args.c2, err = getClients(listener.Addr().String())
 	require.NoError(t, err)
 
 	f(ctx, args)
@@ -151,7 +139,7 @@ func withSetup(t *testing.T, f func(ctx context.Context, args testArgs)) {
 	args.s2.AssertExpectations(t)
 }
 
-func setupServer(h *mocks.SimpleService, sh *mocks.SecondService) (*tchannel.Channel, net.Listener, error) {
+func setupServer(h *mocks.TChanSimpleService, sh *mocks.TChanSecondService) (*tchannel.Channel, net.Listener, error) {
 	tchan, err := tchannel.NewChannel("service", nil)
 	if err != nil {
 		return nil, nil, err
@@ -163,14 +151,14 @@ func setupServer(h *mocks.SimpleService, sh *mocks.SecondService) (*tchannel.Cha
 	}
 
 	server := NewServer(tchan)
-	server.Register("SimpleService", reflect.TypeOf(h), gen.NewSimpleServiceProcessor(h))
-	server.Register("SecondService", reflect.TypeOf(sh), gen.NewSecondServiceProcessor(sh))
+	server.Register(gen.NewTChanSimpleServiceServer(h))
+	server.Register(gen.NewTChanSecondServiceServer(sh))
 
 	tchan.Serve(listener)
 	return tchan, listener, nil
 }
 
-func getClients(ctx context.Context, dst string) (*gen.SimpleServiceClient, *gen.SecondServiceClient, error) {
+func getClients(dst string) (gen.TChanSimpleService, gen.TChanSecondService, error) {
 	tchan, err := tchannel.NewChannel("client", &tchannel.ChannelOptions{
 		Logger: tchannel.SimpleLogger,
 	})
@@ -178,18 +166,10 @@ func getClients(ctx context.Context, dst string) (*gen.SimpleServiceClient, *gen
 		return nil, nil, err
 	}
 
-	opts := TChanOutboundOptions{
-		Context:          ctx,
-		Dst:              dst,
-		HyperbahnService: "service",
-		ThriftService:    "SimpleService",
-	}
-	protocol := NewTChanOutbound(tchan, opts)
-	simpleClient := gen.NewSimpleServiceClientProtocol(nil, protocol, protocol)
+	tchan.Peers().Add(dst)
+	client := NewClient(tchan, "service", nil)
 
-	opts.ThriftService = "SecondService"
-	protocol = NewTChanOutbound(tchan, opts)
-	secondClient := gen.NewSecondServiceClientProtocol(nil, protocol, protocol)
-
+	simpleClient := gen.NewTChanSimpleServiceClient(client)
+	secondClient := gen.NewTChanSecondServiceClient(client)
 	return simpleClient, secondClient, nil
 }
