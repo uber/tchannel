@@ -20,6 +20,8 @@
 
 'use strict';
 
+module.exports = TChannelOutRequest;
+
 var assert = require('assert');
 var EventEmitter = require('./lib/event_emitter');
 var inherits = require('util').inherits;
@@ -27,7 +29,6 @@ var parallel = require('run-parallel');
 
 var errors = require('./errors');
 var States = require('./reqres_states');
-var TChannelRequest = require('./request.js');
 
 function TChannelOutRequest(id, options) {
     /*max-statements: [2, 50]*/
@@ -49,7 +50,7 @@ function TChannelOutRequest(id, options) {
     self.hasNoParent = options.hasNoParent || false;
 
     self.remoteAddr = options.remoteAddr || '';
-    self.timeout = options.timeout || TChannelRequest.defaultTimeout;
+    self.timeout = options.timeout || 0;
     self.tracing = options.tracing || null;
     self.serviceName = options.serviceName || '';
     self.headers = options.headers || {};
@@ -574,5 +575,3 @@ TChannelOutRequest.prototype.checkTimeout = function checkTimeout() {
     }
     return self.timedOut;
 };
-
-module.exports = TChannelOutRequest;

@@ -39,6 +39,8 @@ var errors = require('../errors');
 
 var SERVER_TIMEOUT_DEFAULT = 100;
 
+/* jshint maxparams:10 */
+
 module.exports = TChannelV2Handler;
 
 function TChannelV2Handler(options) {
