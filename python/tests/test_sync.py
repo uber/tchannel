@@ -25,7 +25,7 @@ import pytest
 from tchannel.sync import TChannelSyncClient
 
 
-@pytest.mark.sync
+@pytest.mark.integration
 def test_sync_client_should_get_raw_response(tchannel_server):
 
     endpoint = 'health'
