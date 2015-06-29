@@ -35,7 +35,7 @@ function TChannelSelfConnection(channel) {
     }
     var self = this;
     TChannelConnectionBase.call(self, channel, 'in', channel.hostPort);
-    self.idCount = 0;
+    self.idCount = 1;
 
     // populate the remoteName as self
     self.remoteName = channel.hostPort;
@@ -47,6 +47,7 @@ TChannelSelfConnection.prototype.buildOutRequest = function buildOutRequest(opti
     var id = self.idCount++;
 
     options.hostPort = self.channel.hostPort;
+
     var outreq;
     if (options.streamed) {
         outreq = new StreamingOutRequest(self, id, options);
