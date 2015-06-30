@@ -1,10 +1,16 @@
 Changelog for tchannel.py
 =========================
 
-0.8.5 (unreleased)
+0.8.6 (unreleased)
 ------------------
 
 - No changes yet.
+
+
+0.8.5 (2015-06-30)
+------------------
+
+- Added port parameter for tchannel listen api.
 
 
 0.8.4 (2015-06-17)
