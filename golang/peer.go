@@ -111,6 +111,10 @@ func (p *Peer) getActive() []*Connection {
 // GetConnection returns an active connection to this peer. If no active connections
 // are found, it will create a new outbound connection and return it.
 func (p *Peer) GetConnection(ctx context.Context) (*Connection, error) {
+	if p.channel.Closed() {
+		return nil, ErrChannelClosed
+	}
+
 	// TODO(prashant): Should we clear inactive connections.
 	activeConns := p.getActive()
 
@@ -163,7 +167,6 @@ func (p *Peer) Connect(ctx context.Context) (*Connection, error) {
 // BeginCall starts a new call to this specific peer, returning an OutboundCall that can
 // be used to write the arguments of the call.
 func (p *Peer) BeginCall(ctx context.Context, serviceName string, operationName string, callOptions *CallOptions) (*OutboundCall, error) {
-
 	conn, err := p.GetConnection(ctx)
 	if err != nil {
 		return nil, err

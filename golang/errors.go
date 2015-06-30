@@ -85,6 +85,9 @@ var (
 
 	// ErrTimeoutRequired is a SystemError indicating that timeouts must be specified.
 	ErrTimeoutRequired = NewSystemError(ErrCodeBadRequest, "timeout required")
+
+	// ErrChannelClosed is a SystemError indicating that the channel has been closed.
+	ErrChannelClosed = NewSystemError(ErrCodeDeclined, "closed channel cannot make calls")
 )
 
 // A SystemError is a system-level error, containing an error code and message
