@@ -10,17 +10,146 @@ import (
 
 // Interfaces for the service and client for the services defined in the IDL.
 
+type TChanFirst interface {
+	AppError(ctx thrift.Context) error
+	Echo(ctx thrift.Context, msg string) (string, error)
+	Healthcheck(ctx thrift.Context) (*HealthCheckRes, error)
+}
+
 type TChanSecond interface {
 	Test(ctx thrift.Context) error
 }
 
-type TChanFirst interface {
-	Echo(ctx thrift.Context, msg string) (string, error)
-	Healthcheck(ctx thrift.Context) (*HealthCheckRes, error)
-	AppError(ctx thrift.Context) error
+// Implementation of a client and service handler.
+
+type tchanFirstClient struct {
+	client thrift.TChanClient
 }
 
-// Implementation of a client and service handler.
+func NewTChanFirstClient(client thrift.TChanClient) TChanFirst {
+	return &tchanFirstClient{client: client}
+}
+
+func (c *tchanFirstClient) AppError(ctx thrift.Context) error {
+	var resp AppErrorResult
+	args := AppErrorArgs{}
+	success, err := c.client.Call(ctx, "First", "AppError", &args, &resp)
+	if err == nil && !success {
+	}
+
+	return err
+}
+
+func (c *tchanFirstClient) Echo(ctx thrift.Context, msg string) (string, error) {
+	var resp EchoResult
+	args := EchoArgs{
+		Msg: msg,
+	}
+	success, err := c.client.Call(ctx, "First", "Echo", &args, &resp)
+	if err == nil && !success {
+	}
+
+	return resp.GetSuccess(), err
+}
+
+func (c *tchanFirstClient) Healthcheck(ctx thrift.Context) (*HealthCheckRes, error) {
+	var resp HealthcheckResult
+	args := HealthcheckArgs{}
+	success, err := c.client.Call(ctx, "First", "Healthcheck", &args, &resp)
+	if err == nil && !success {
+	}
+
+	return resp.GetSuccess(), err
+}
+
+type tchanFirstServer struct {
+	handler TChanFirst
+}
+
+func NewTChanFirstServer(handler TChanFirst) thrift.TChanServer {
+	return &tchanFirstServer{handler}
+}
+
+func (s *tchanFirstServer) Service() string {
+	return "First"
+}
+
+func (s *tchanFirstServer) Methods() []string {
+	return []string{
+		"AppError",
+		"Echo",
+		"Healthcheck",
+	}
+}
+
+func (s *tchanFirstServer) Handle(ctx thrift.Context, methodName string, protocol athrift.TProtocol) (bool, athrift.TStruct, error) {
+	switch methodName {
+	case "AppError":
+		return s.handleAppError(ctx, protocol)
+	case "Echo":
+		return s.handleEcho(ctx, protocol)
+	case "Healthcheck":
+		return s.handleHealthcheck(ctx, protocol)
+	default:
+		return false, nil, fmt.Errorf("method %v not found in service %v", methodName, s.Service())
+	}
+}
+
+func (s *tchanFirstServer) handleAppError(ctx thrift.Context, protocol athrift.TProtocol) (bool, athrift.TStruct, error) {
+	var req AppErrorArgs
+	var res AppErrorResult
+
+	if err := req.Read(protocol); err != nil {
+		return false, nil, err
+	}
+
+	err :=
+		s.handler.AppError(ctx)
+
+	if err != nil {
+		return false, nil, err
+	}
+
+	return err == nil, &res, nil
+}
+
+func (s *tchanFirstServer) handleEcho(ctx thrift.Context, protocol athrift.TProtocol) (bool, athrift.TStruct, error) {
+	var req EchoArgs
+	var res EchoResult
+
+	if err := req.Read(protocol); err != nil {
+		return false, nil, err
+	}
+
+	r, err :=
+		s.handler.Echo(ctx, req.Msg)
+
+	if err != nil {
+		return false, nil, err
+	}
+	res.Success = &r
+
+	return err == nil, &res, nil
+}
+
+func (s *tchanFirstServer) handleHealthcheck(ctx thrift.Context, protocol athrift.TProtocol) (bool, athrift.TStruct, error) {
+	var req HealthcheckArgs
+	var res HealthcheckResult
+
+	if err := req.Read(protocol); err != nil {
+		return false, nil, err
+	}
+
+	r, err :=
+		s.handler.Healthcheck(ctx)
+
+	if err != nil {
+		return false, nil, err
+	}
+	res.Success = r
+
+	return err == nil, &res, nil
+}
 
 type tchanSecondClient struct {
 	client thrift.TChanClient
@@ -81,133 +210,6 @@ func (s *tchanSecondServer) handleTest(ctx thrift.Context, protocol athrift.TPro
 	if err != nil {
 		return false, nil, err
 	}
-
-	return err == nil, &res, nil
-}
-
-type tchanFirstClient struct {
-	client thrift.TChanClient
-}
-
-func NewTChanFirstClient(client thrift.TChanClient) TChanFirst {
-	return &tchanFirstClient{client: client}
-}
-
-func (c *tchanFirstClient) Echo(ctx thrift.Context, msg string) (string, error) {
-	var resp EchoResult
-	args := EchoArgs{
-		Msg: msg,
-	}
-	success, err := c.client.Call(ctx, "First", "Echo", &args, &resp)
-	if err == nil && !success {
-	}
-
-	return resp.GetSuccess(), err
-}
-func (c *tchanFirstClient) Healthcheck(ctx thrift.Context) (*HealthCheckRes, error) {
-	var resp HealthcheckResult
-	args := HealthcheckArgs{}
-	success, err := c.client.Call(ctx, "First", "Healthcheck", &args, &resp)
-	if err == nil && !success {
-	}
-
-	return resp.GetSuccess(), err
-}
-func (c *tchanFirstClient) AppError(ctx thrift.Context) error {
-	var resp AppErrorResult
-	args := AppErrorArgs{}
-	success, err := c.client.Call(ctx, "First", "AppError", &args, &resp)
-	if err == nil && !success {
-	}
-
-	return err
-}
-
-type tchanFirstServer struct {
-	handler TChanFirst
-}
-
-func NewTChanFirstServer(handler TChanFirst) thrift.TChanServer {
-	return &tchanFirstServer{handler}
-}
-
-func (s *tchanFirstServer) Service() string {
-	return "First"
-}
-
-func (s *tchanFirstServer) Methods() []string {
-	return []string{
-		"Echo",
-		"Healthcheck",
-		"AppError",
-	}
-}
-
-func (s *tchanFirstServer) Handle(ctx thrift.Context, methodName string, protocol athrift.TProtocol) (bool, athrift.TStruct, error) {
-	switch methodName {
-	case "Echo":
-		return s.handleEcho(ctx, protocol)
-	case "Healthcheck":
-		return s.handleHealthcheck(ctx, protocol)
-	case "AppError":
-		return s.handleAppError(ctx, protocol)
-	default:
-		return false, nil, fmt.Errorf("method %v not found in service %v", methodName, s.Service())
-	}
-}
-
-func (s *tchanFirstServer) handleAppError(ctx thrift.Context, protocol athrift.TProtocol) (bool, athrift.TStruct, error) {
-	var req AppErrorArgs
-	var res AppErrorResult
-
-	if err := req.Read(protocol); err != nil {
-		return false, nil, err
-	}
-
-	err :=
-		s.handler.AppError(ctx)
-
-	if err != nil {
-		return false, nil, err
-	}
-
-	return err == nil, &res, nil
-}
-
-func (s *tchanFirstServer) handleEcho(ctx thrift.Context, protocol athrift.TProtocol) (bool, athrift.TStruct, error) {
-	var req EchoArgs
-	var res EchoResult
-
-	if err := req.Read(protocol); err != nil {
-		return false, nil, err
-	}
-
-	r, err :=
-		s.handler.Echo(ctx, req.Msg)
-
-	if err != nil {
-		return false, nil, err
-	}
-	res.Success = &r
-
-	return err == nil, &res, nil
-}
-
-func (s *tchanFirstServer) handleHealthcheck(ctx thrift.Context, protocol athrift.TProtocol) (bool, athrift.TStruct, error) {
-	var req HealthcheckArgs
-	var res HealthcheckResult
-
-	if err := req.Read(protocol); err != nil {
-		return false, nil, err
-	}
-
-	r, err :=
-		s.handler.Healthcheck(ctx)
-
-	if err != nil {
-		return false, nil, err
-	}
-	res.Success = r
 
 	return err == nil, &res, nil
 }

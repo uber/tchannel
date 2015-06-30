@@ -10,16 +10,82 @@ import (
 
 // Interfaces for the service and client for the services defined in the IDL.
 
+type TChanSecondService interface {
+	Echo(ctx thrift.Context, arg string) (string, error)
+}
+
 type TChanSimpleService interface {
 	Call(ctx thrift.Context, arg *Data) (*Data, error)
 	Simple(ctx thrift.Context) error
 }
 
-type TChanSecondService interface {
-	Echo(ctx thrift.Context, arg string) (string, error)
+// Implementation of a client and service handler.
+
+type tchanSecondServiceClient struct {
+	client thrift.TChanClient
 }
 
-// Implementation of a client and service handler.
+func NewTChanSecondServiceClient(client thrift.TChanClient) TChanSecondService {
+	return &tchanSecondServiceClient{client: client}
+}
+
+func (c *tchanSecondServiceClient) Echo(ctx thrift.Context, arg string) (string, error) {
+	var resp EchoResult
+	args := EchoArgs{
+		Arg: arg,
+	}
+	success, err := c.client.Call(ctx, "SecondService", "Echo", &args, &resp)
+	if err == nil && !success {
+	}
+
+	return resp.GetSuccess(), err
+}
+
+type tchanSecondServiceServer struct {
+	handler TChanSecondService
+}
+
+func NewTChanSecondServiceServer(handler TChanSecondService) thrift.TChanServer {
+	return &tchanSecondServiceServer{handler}
+}
+
+func (s *tchanSecondServiceServer) Service() string {
+	return "SecondService"
+}
+
+func (s *tchanSecondServiceServer) Methods() []string {
+	return []string{
+		"Echo",
+	}
+}
+
+func (s *tchanSecondServiceServer) Handle(ctx thrift.Context, methodName string, protocol athrift.TProtocol) (bool, athrift.TStruct, error) {
+	switch methodName {
+	case "Echo":
+		return s.handleEcho(ctx, protocol)
+	default:
+		return false, nil, fmt.Errorf("method %v not found in service %v", methodName, s.Service())
+	}
+}
+
+func (s *tchanSecondServiceServer) handleEcho(ctx thrift.Context, protocol athrift.TProtocol) (bool, athrift.TStruct, error) {
+	var req EchoArgs
+	var res EchoResult
+
+	if err := req.Read(protocol); err != nil {
+		return false, nil, err
+	}
+
+	r, err :=
+		s.handler.Echo(ctx, req.Arg)
+
+	if err != nil {
+		return false, nil, err
+	}
+	res.Success = &r
+
+	return err == nil, &res, nil
+}
 
 type tchanSimpleServiceClient struct {
 	client thrift.TChanClient
@@ -40,6 +106,7 @@ func (c *tchanSimpleServiceClient) Call(ctx thrift.Context, arg *Data) (*Data, e
 
 	return resp.GetSuccess(), err
 }
+
 func (c *tchanSimpleServiceClient) Simple(ctx thrift.Context) error {
 	var resp SimpleResult
 	args := SimpleArgs{}
@@ -121,72 +188,6 @@ func (s *tchanSimpleServiceServer) handleSimple(ctx thrift.Context, protocol ath
 			return false, nil, err
 		}
 	}
-
-	return err == nil, &res, nil
-}
-
-type tchanSecondServiceClient struct {
-	client thrift.TChanClient
-}
-
-func NewTChanSecondServiceClient(client thrift.TChanClient) TChanSecondService {
-	return &tchanSecondServiceClient{client: client}
-}
-
-func (c *tchanSecondServiceClient) Echo(ctx thrift.Context, arg string) (string, error) {
-	var resp EchoResult
-	args := EchoArgs{
-		Arg: arg,
-	}
-	success, err := c.client.Call(ctx, "SecondService", "Echo", &args, &resp)
-	if err == nil && !success {
-	}
-
-	return resp.GetSuccess(), err
-}
-
-type tchanSecondServiceServer struct {
-	handler TChanSecondService
-}
-
-func NewTChanSecondServiceServer(handler TChanSecondService) thrift.TChanServer {
-	return &tchanSecondServiceServer{handler}
-}
-
-func (s *tchanSecondServiceServer) Service() string {
-	return "SecondService"
-}
-
-func (s *tchanSecondServiceServer) Methods() []string {
-	return []string{
-		"Echo",
-	}
-}
-
-func (s *tchanSecondServiceServer) Handle(ctx thrift.Context, methodName string, protocol athrift.TProtocol) (bool, athrift.TStruct, error) {
-	switch methodName {
-	case "Echo":
-		return s.handleEcho(ctx, protocol)
-	default:
-		return false, nil, fmt.Errorf("method %v not found in service %v", methodName, s.Service())
-	}
-}
-
-func (s *tchanSecondServiceServer) handleEcho(ctx thrift.Context, protocol athrift.TProtocol) (bool, athrift.TStruct, error) {
-	var req EchoArgs
-	var res EchoResult
-
-	if err := req.Read(protocol); err != nil {
-		return false, nil, err
-	}
-
-	r, err :=
-		s.handler.Echo(ctx, req.Arg)
-
-	if err != nil {
-		return false, nil, err
-	}
-	res.Success = &r
 
 	return err == nil, &res, nil
 }
