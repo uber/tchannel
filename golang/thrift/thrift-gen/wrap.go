@@ -22,6 +22,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/samuel/go-thrift/parser"
@@ -49,6 +50,12 @@ func checkExtends(allServices map[string]*parser.Service, service *parser.Servic
 	return checkExtends(allServices, service, baseService.Extends)
 }
 
+type byServiceName []*Service
+
+func (l byServiceName) Len() int           { return len(l) }
+func (l byServiceName) Less(i, j int) bool { return l[i].Service.Name < l[j].Service.Name }
+func (l byServiceName) Swap(i, j int)      { l[i], l[j] = l[j], l[i] }
+
 func wrapServices(v *parser.Thrift) ([]*Service, error) {
 	var services []*Service
 	state := NewState(v)
@@ -62,6 +69,8 @@ func wrapServices(v *parser.Thrift) ([]*Service, error) {
 
 		services = append(services, &Service{s, state})
 	}
+
+	sort.Sort(byServiceName(services))
 	return services, nil
 }
 
@@ -102,12 +111,19 @@ func (s *Service) ServerConstructor() string {
 	return "NewTChan" + goPublicName(s.Name) + "Server"
 }
 
+type byMethodName []*Method
+
+func (l byMethodName) Len() int           { return len(l) }
+func (l byMethodName) Less(i, j int) bool { return l[i].Method.Name < l[j].Method.Name }
+func (l byMethodName) Swap(i, j int)      { l[i], l[j] = l[j], l[i] }
+
 // Methods returns the methods defined on this service.
 func (s *Service) Methods() []*Method {
 	var methods []*Method
 	for _, m := range s.Service.Methods {
 		methods = append(methods, &Method{m, s.state})
 	}
+	sort.Sort(byMethodName(methods))
 	return methods
 }
 

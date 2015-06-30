@@ -27,6 +27,7 @@ package main
 import (
 	"bytes"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os/exec"
@@ -45,10 +46,6 @@ var (
 
 	nlSpaceNL = regexp.MustCompile(`\n[ \t]+\n`)
 )
-
-var funcs = map[string]interface{}{
-	"contextType": contextType,
-}
 
 // TemplateData is the data passed to the template that generates code.
 type TemplateData struct {
@@ -76,30 +73,46 @@ func main() {
 		log.Fatalf("Could not parse .thrift file: %v", err)
 	}
 
-	goTmpl := template.Must(template.New("thrift-gen").Funcs(funcs).ParseFiles("services.tmpl"))
+	goTmpl := parseTemplate()
 	for filename, v := range parsed {
-		wrappedServices, err := wrapServices(v)
-		if err != nil {
-			log.Fatalf("Service parsing error: %v", err)
+		if err := generateCode(goTmpl, packageName(filename), v); err != nil {
+			log.Fatal(err)
 		}
-
-		buf := &bytes.Buffer{}
-		td := TemplateData{
-			Package:  packageName(filename),
-			Services: wrappedServices,
-		}
-		if err := goTmpl.ExecuteTemplate(buf, "services.tmpl", td); err != nil {
-			log.Fatalf("err: %v", err)
-		}
-
-		generated := cleanGeneratedCode(buf.Bytes())
-		if err := ioutil.WriteFile(*outputFile, generated, 0666); err != nil {
-			log.Fatalf("Could not write output file %s: %v", *outputFile, err)
-		}
-
-		// Run gofmt on the file (ignore any errors)
-		exec.Command("gofmt", "-w", *outputFile).Run()
+		// TODO(prashant): Support multiple files / includes etc?
+		return
 	}
+}
+
+func parseTemplate() *template.Template {
+	funcs := map[string]interface{}{
+		"contextType": contextType,
+	}
+	return template.Must(template.New("thrift-gen").Funcs(funcs).Parse(serviceTmpl))
+}
+
+func generateCode(tmpl *template.Template, pkg string, parsed *parser.Thrift) error {
+	wrappedServices, err := wrapServices(parsed)
+	if err != nil {
+		log.Fatalf("Service parsing error: %v", err)
+	}
+
+	buf := &bytes.Buffer{}
+	td := TemplateData{
+		Package:  pkg,
+		Services: wrappedServices,
+	}
+	if err := tmpl.Execute(buf, td); err != nil {
+		return fmt.Errorf("failed to execute template: %v", err)
+	}
+
+	generated := cleanGeneratedCode(buf.Bytes())
+	if err := ioutil.WriteFile(*outputFile, generated, 0666); err != nil {
+		return fmt.Errorf("cannot write output file %s: %v", *outputFile, err)
+	}
+
+	// Run gofmt on the file (ignore any errors)
+	exec.Command("gofmt", "-w", *outputFile).Run()
+	return nil
 }
 
 func packageName(fullPath string) string {
