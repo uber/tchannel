@@ -59,28 +59,36 @@ func main() {
 		log.Fatalf("Please specify an inputFile")
 	}
 
-	if *generateThrift {
-		if outFile, err := runThrift(*inputFile); err != nil {
-			log.Fatalf("Could not generate thrift output: %v", err)
-		} else if *outputFile == "" {
-			*outputFile = outFile
+	if err := processFile(*generateThrift, *inputFile, *outputFile); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func processFile(generateThrift bool, inputFile string, outputFile string) error {
+	if generateThrift {
+		if outFile, err := runThrift(inputFile); err != nil {
+			return fmt.Errorf("Could not generate thrift output: %v", err)
+		} else if outputFile == "" {
+			outputFile = outFile
 		}
 	}
 
 	parser := &parser.Parser{}
-	parsed, _, err := parser.ParseFile(*inputFile)
+	parsed, _, err := parser.ParseFile(inputFile)
 	if err != nil {
-		log.Fatalf("Could not parse .thrift file: %v", err)
+		return fmt.Errorf("Could not parse .thrift file: %v", err)
 	}
 
 	goTmpl := parseTemplate()
 	for filename, v := range parsed {
-		if err := generateCode(goTmpl, packageName(filename), v); err != nil {
-			log.Fatal(err)
+		if err := generateCode(outputFile, goTmpl, packageName(filename), v); err != nil {
+			return err
 		}
 		// TODO(prashant): Support multiple files / includes etc?
-		return
+		return nil
 	}
+
+	return nil
 }
 
 func parseTemplate() *template.Template {
@@ -90,7 +98,7 @@ func parseTemplate() *template.Template {
 	return template.Must(template.New("thrift-gen").Funcs(funcs).Parse(serviceTmpl))
 }
 
-func generateCode(tmpl *template.Template, pkg string, parsed *parser.Thrift) error {
+func generateCode(outputFile string, tmpl *template.Template, pkg string, parsed *parser.Thrift) error {
 	wrappedServices, err := wrapServices(parsed)
 	if err != nil {
 		log.Fatalf("Service parsing error: %v", err)
@@ -106,12 +114,12 @@ func generateCode(tmpl *template.Template, pkg string, parsed *parser.Thrift) er
 	}
 
 	generated := cleanGeneratedCode(buf.Bytes())
-	if err := ioutil.WriteFile(*outputFile, generated, 0666); err != nil {
-		return fmt.Errorf("cannot write output file %s: %v", *outputFile, err)
+	if err := ioutil.WriteFile(outputFile, generated, 0666); err != nil {
+		return fmt.Errorf("cannot write output file %s: %v", outputFile, err)
 	}
 
 	// Run gofmt on the file (ignore any errors)
-	exec.Command("gofmt", "-w", *outputFile).Run()
+	exec.Command("gofmt", "-w", outputFile).Run()
 	return nil
 }
 

@@ -88,18 +88,15 @@ func runTest(t *testing.T, thriftFile string) error {
 
 	// Run generate.sh for the given directory
 	t.Logf("runTest in %v", tempDir)
-	cmd := exec.Command("./generate.sh", thriftFile)
-	if output, err := cmd.CombinedOutput(); err != nil {
-		t.Errorf("Process failed. Output = \n%v\n", string(output))
-		return fmt.Errorf("generate failed")
+	if err := processFile(true /* generateThrift */, thriftFile, ""); err != nil {
+		return fmt.Errorf("processFile(%s) failed: %v", thriftFile, err)
 	}
 
 	// If the generate is successful, run go build in the directory.
-	cmd = exec.Command("go", "build", ".")
+	cmd := exec.Command("go", "build", ".")
 	cmd.Dir = filepath.Join(tempDir, "gen-go", "test")
 	if output, err := cmd.CombinedOutput(); err != nil {
-		t.Errorf("Build failed. Output = \n%v\n", string(output))
-		return fmt.Errorf("build failed")
+		return fmt.Errorf("Build failed. Output = \n%v\n", string(output))
 	}
 
 	// Only delete the temp directory on success.
