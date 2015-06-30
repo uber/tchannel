@@ -177,7 +177,7 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
     if (!peer) {
         hres.writeHead(503, 'Service Unavailable: no tchannel peer');
         hres.end(); // TODO: error content
-        callback(errors.NoPeerAvailable);
+        callback(errors.NoPeerAvailable());
         return null;
     } else {
         // TODO: observable
