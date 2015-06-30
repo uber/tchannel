@@ -145,7 +145,11 @@ func checkEmptyExchangesConns(connections []*Connection) string {
 }
 
 func TestFramesReleased(t *testing.T) {
-	testutils.SetTimeout(t, time.Second*100)
+	if testing.Short() {
+		return
+	}
+
+	testutils.SetTimeout(t, time.Second*10)
 	const (
 		requestsPerGoroutine = 10
 		numGoroutines        = 10
