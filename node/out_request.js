@@ -69,7 +69,6 @@ function TChannelOutRequest(id, options) {
     self.arg2 = null;
     self.arg3 = null;
     self.span = null;
-    self.tracing = null;
     self.err = null;
     self.res = null;
     self.timedOut = false;
