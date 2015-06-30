@@ -39,8 +39,9 @@ import (
 )
 
 var (
-	inputFile  = flag.String("inputFile", "", "The .thrift file to generate a client for")
-	outputFile = flag.String("outputFile", "out.go", "The output file to generate go code to")
+	generateThrift = flag.Bool("generateThrift", false, "Whether to generate all Thrift go code")
+	inputFile      = flag.String("inputFile", "", "The .thrift file to generate a client for")
+	outputFile     = flag.String("outputFile", "", "The output file to generate go code to")
 
 	nlSpaceNL = regexp.MustCompile(`\n[ \t]+\n`)
 )
@@ -57,6 +58,17 @@ type TemplateData struct {
 
 func main() {
 	flag.Parse()
+	if *inputFile == "" {
+		log.Fatalf("Please specify an inputFile")
+	}
+
+	if *generateThrift {
+		if outFile, err := runThrift(*inputFile); err != nil {
+			log.Fatalf("Could not generate thrift output: %v", err)
+		} else if *outputFile == "" {
+			*outputFile = outFile
+		}
+	}
 
 	parser := &parser.Parser{}
 	parsed, _, err := parser.ParseFile(*inputFile)
