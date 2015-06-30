@@ -162,13 +162,13 @@ function logMissingOutRequest(id, context) {
     }
 
     // context is err or res
-    if (context.originalId) {
+    if (context && context.originalId) {
         context = {
             error: context,
             id: context.originalId,
             info: 'got error frame for unknown id'
         };
-    } else if (context.id) {
+    } else if (context && context.id) {
         context = {
             responseId: context.id,
             code: context.code,
