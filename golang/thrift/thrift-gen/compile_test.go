@@ -68,14 +68,13 @@ func copyFile(src, dst string) error {
 	return err
 }
 
+// setupDirectory creates a temporary directory and copies the Thrift file into that directory.
 func setupDirectory(thriftFile string) (string, string, error) {
-	// Create a temporary directory
 	tempDir, err := ioutil.TempDir("", "thrift-gen")
 	if err != nil {
 		return "", "", err
 	}
 
-	// Copy the .thrift file to the directory
 	outFile := filepath.Join(tempDir, "test.thrift")
 	return tempDir, outFile, copyFile(thriftFile, outFile)
 }
@@ -86,13 +85,13 @@ func runTest(t *testing.T, thriftFile string) error {
 		return err
 	}
 
-	// Run generate.sh for the given directory
+	// Generate code from the Thrift file.
 	t.Logf("runTest in %v", tempDir)
 	if err := processFile(true /* generateThrift */, thriftFile, ""); err != nil {
 		return fmt.Errorf("processFile(%s) failed: %v", thriftFile, err)
 	}
 
-	// If the generate is successful, run go build in the directory.
+	// Run go build to ensure that the generated code builds.
 	cmd := exec.Command("go", "build", ".")
 	cmd.Dir = filepath.Join(tempDir, "gen-go", "test")
 	if output, err := cmd.CombinedOutput(); err != nil {
