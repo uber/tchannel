@@ -93,12 +93,19 @@ func main() {
 }
 
 func get(client keyvalue.TChanKeyValue, key string) {
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	ctx = tchannel.NewRootContext(ctx)
 
 	val, err := client.Get(ctx, key)
 	if err != nil {
-		log.Printf("Get %v got err: %v", key, err)
+		switch err := err.(type) {
+		case *keyvalue.InvalidKey:
+			log.Printf("Get %v failed: invalid key", key)
+		case *keyvalue.KeyNotFound:
+			log.Printf("Get %v failed: key not found", key)
+		default:
+			log.Printf("Get %v failed unexpectedly: %v", key, err)
+		}
 		return
 	}
 
@@ -106,11 +113,16 @@ func get(client keyvalue.TChanKeyValue, key string) {
 }
 
 func set(client keyvalue.TChanKeyValue, key, value string) {
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*90)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	ctx = tchannel.NewRootContext(ctx)
 
 	if err := client.Set(ctx, key, value); err != nil {
-		log.Printf("Set %v:%v got err: %v", key, value, err)
+		switch err := err.(type) {
+		case *keyvalue.InvalidKey:
+			log.Printf("Set %v failed: invalid key", key)
+		default:
+			log.Printf("Set %v:%v failed unexpectedly: %#v", key, value, err)
+		}
 		return
 	}
 
@@ -118,13 +130,18 @@ func set(client keyvalue.TChanKeyValue, key, value string) {
 }
 
 func clear(adminClient keyvalue.TChanAdmin) {
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*90)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	ctx = tchannel.NewRootContext(ctx)
 
 	if err := adminClient.ClearAll(ctx); err != nil {
-		log.Printf("ClearAll failed: %v", err)
+		switch err := err.(type) {
+		case *keyvalue.NotAuthorized:
+			log.Printf("You are not authorized to perform this operation")
+		default:
+			log.Printf("ClearAll failed unexpectedly: %v", err)
+		}
 		return
 	}
 
-	log.Printf("ClearAll succeeded")
+	log.Printf("ClearAll completed, all keys cleared")
 }

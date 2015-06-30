@@ -21,11 +21,12 @@ package main
 // THE SOFTWARE.
 
 import (
-	"fmt"
 	"log"
 	"math/rand"
 	"os"
 	"sync"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/uber/tchannel/golang"
 	"github.com/uber/tchannel/golang/examples/keyvalue/gen-go/keyvalue"
@@ -45,11 +46,11 @@ func main() {
 	}
 	ch.ListenAndServe(ip.String() + ":12345")
 
-	// Create the handler for KeyValue service,
+	// Register both the KeyValue and Admin services.
 	h := newKVHandler()
 	server := thrift.NewServer(ch)
-	server.RegisterV2(keyvalue.NewTChanKeyValueServer(h))
-	server.RegisterV2(keyvalue.NewTChanAdminServer(h))
+	server.Register(keyvalue.NewTChanKeyValueServer(h))
+	server.Register(keyvalue.NewTChanAdminServer(h))
 
 	config := hyperbahn.Configuration{InitialNodes: os.Args[1:]}
 	if len(config.InitialNodes) == 0 {
@@ -77,6 +78,10 @@ func newKVHandler() *kvHandler {
 
 // Get returns the value stored for the given key.
 func (h *kvHandler) Get(ctx thrift.Context, key string) (string, error) {
+	if err := isValidKey(key); err != nil {
+		return "", err
+	}
+
 	h.mut.RLock()
 	defer h.mut.RUnlock()
 
@@ -89,8 +94,10 @@ func (h *kvHandler) Get(ctx thrift.Context, key string) (string, error) {
 
 // Set sets the value for a given key.
 func (h *kvHandler) Set(ctx thrift.Context, key, value string) error {
-	deadline, ok := ctx.Deadline()
-	fmt.Println("Set ", key, value, "Deadline", ok, deadline)
+	if err := isValidKey(key); err != nil {
+		return err
+	}
+
 	h.mut.Lock()
 	defer h.mut.Unlock()
 
@@ -105,8 +112,7 @@ func (h *kvHandler) HealthCheck(ctx thrift.Context) (string, error) {
 
 // ClearAll clears all the keys.
 func (h *kvHandler) ClearAll(ctx thrift.Context) error {
-	// TODO(prashant): Check if the user is allowed from headers in the context.
-	if rand.Intn(2) == 1 {
+	if isAdmin(ctx) {
 		return &keyvalue.NotAuthorized{}
 	}
 
@@ -115,4 +121,17 @@ func (h *kvHandler) ClearAll(ctx thrift.Context) error {
 
 	h.vals = make(map[string]string)
 	return nil
+}
+
+func isValidKey(key string) error {
+	r, _ := utf8.DecodeRuneInString(key)
+	if !unicode.IsLetter(r) {
+		return &keyvalue.InvalidKey{}
+	}
+	return nil
+}
+
+func isAdmin(ctx thrift.Context) bool {
+	// TODO(prashant): Check if the user is allowed from headers in the context.
+	return rand.Intn(2) == 1
 }

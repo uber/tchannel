@@ -106,6 +106,9 @@ func (p *KeyValueClient) recvGet() (value string, err error) {
 	if result.NotFound != nil {
 		err = result.NotFound
 		return
+	} else if result.InvalidKey != nil {
+		err = result.InvalidKey
+		return
 	}
 	value = result.GetSuccess()
 	return
@@ -178,6 +181,10 @@ func (p *KeyValueClient) recvSet() (err error) {
 	if err = iprot.ReadMessageEnd(); err != nil {
 		return
 	}
+	if result.InvalidKey != nil {
+		err = result.InvalidKey
+		return
+	}
 	return
 }
 
@@ -216,6 +223,8 @@ func (p *keyValueProcessorGet) Process(seqId int32, iprot, oprot thrift.TProtoco
 		switch v := err2.(type) {
 		case *KeyNotFound:
 			result.NotFound = v
+		case *InvalidKey:
+			result.InvalidKey = v
 		default:
 			x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing Get: "+err2.Error())
 			oprot.WriteMessageBegin("Get", thrift.EXCEPTION, seqId)
@@ -265,12 +274,17 @@ func (p *keyValueProcessorSet) Process(seqId int32, iprot, oprot thrift.TProtoco
 	result := SetResult{}
 	var err2 error
 	if err2 = p.handler.Set(args.Key, args.Value); err2 != nil {
-		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing Set: "+err2.Error())
-		oprot.WriteMessageBegin("Set", thrift.EXCEPTION, seqId)
-		x.Write(oprot)
-		oprot.WriteMessageEnd()
-		oprot.Flush()
-		return true, err2
+		switch v := err2.(type) {
+		case *InvalidKey:
+			result.InvalidKey = v
+		default:
+			x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing Set: "+err2.Error())
+			oprot.WriteMessageBegin("Set", thrift.EXCEPTION, seqId)
+			x.Write(oprot)
+			oprot.WriteMessageEnd()
+			oprot.Flush()
+			return true, err2
+		}
 	}
 	if err2 = oprot.WriteMessageBegin("Set", thrift.REPLY, seqId); err2 != nil {
 		err = err2
@@ -381,8 +395,9 @@ func (p *GetArgs) String() string {
 }
 
 type GetResult struct {
-	Success  *string      `thrift:"success,0" json:"success"`
-	NotFound *KeyNotFound `thrift:"notFound,1" json:"notFound"`
+	Success    *string      `thrift:"success,0" json:"success"`
+	NotFound   *KeyNotFound `thrift:"notFound,1" json:"notFound"`
+	InvalidKey *InvalidKey  `thrift:"invalidKey,2" json:"invalidKey"`
 }
 
 func NewGetResult() *GetResult {
@@ -406,12 +421,25 @@ func (p *GetResult) GetNotFound() *KeyNotFound {
 	}
 	return p.NotFound
 }
+
+var GetResult_InvalidKey_DEFAULT *InvalidKey
+
+func (p *GetResult) GetInvalidKey() *InvalidKey {
+	if !p.IsSetInvalidKey() {
+		return GetResult_InvalidKey_DEFAULT
+	}
+	return p.InvalidKey
+}
 func (p *GetResult) IsSetSuccess() bool {
 	return p.Success != nil
 }
 
 func (p *GetResult) IsSetNotFound() bool {
 	return p.NotFound != nil
+}
+
+func (p *GetResult) IsSetInvalidKey() bool {
+	return p.InvalidKey != nil
 }
 
 func (p *GetResult) Read(iprot thrift.TProtocol) error {
@@ -433,6 +461,10 @@ func (p *GetResult) Read(iprot thrift.TProtocol) error {
 			}
 		case 1:
 			if err := p.ReadField1(iprot); err != nil {
+				return err
+			}
+		case 2:
+			if err := p.ReadField2(iprot); err != nil {
 				return err
 			}
 		default:
@@ -467,6 +499,14 @@ func (p *GetResult) ReadField1(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *GetResult) ReadField2(iprot thrift.TProtocol) error {
+	p.InvalidKey = &InvalidKey{}
+	if err := p.InvalidKey.Read(iprot); err != nil {
+		return fmt.Errorf("%T error reading struct: %s", p.InvalidKey, err)
+	}
+	return nil
+}
+
 func (p *GetResult) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("Get_result"); err != nil {
 		return fmt.Errorf("%T write struct begin error: %s", p, err)
@@ -475,6 +515,9 @@ func (p *GetResult) Write(oprot thrift.TProtocol) error {
 		return err
 	}
 	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField2(oprot); err != nil {
 		return err
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
@@ -511,6 +554,21 @@ func (p *GetResult) writeField1(oprot thrift.TProtocol) (err error) {
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
 			return fmt.Errorf("%T write field end error 1:notFound: %s", p, err)
+		}
+	}
+	return err
+}
+
+func (p *GetResult) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetInvalidKey() {
+		if err := oprot.WriteFieldBegin("invalidKey", thrift.STRUCT, 2); err != nil {
+			return fmt.Errorf("%T write field begin error 2:invalidKey: %s", p, err)
+		}
+		if err := p.InvalidKey.Write(oprot); err != nil {
+			return fmt.Errorf("%T error writing struct: %s", p.InvalidKey, err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return fmt.Errorf("%T write field end error 2:invalidKey: %s", p, err)
 		}
 	}
 	return err
@@ -646,10 +704,23 @@ func (p *SetArgs) String() string {
 }
 
 type SetResult struct {
+	InvalidKey *InvalidKey `thrift:"invalidKey,1" json:"invalidKey"`
 }
 
 func NewSetResult() *SetResult {
 	return &SetResult{}
+}
+
+var SetResult_InvalidKey_DEFAULT *InvalidKey
+
+func (p *SetResult) GetInvalidKey() *InvalidKey {
+	if !p.IsSetInvalidKey() {
+		return SetResult_InvalidKey_DEFAULT
+	}
+	return p.InvalidKey
+}
+func (p *SetResult) IsSetInvalidKey() bool {
+	return p.InvalidKey != nil
 }
 
 func (p *SetResult) Read(iprot thrift.TProtocol) error {
@@ -664,8 +735,15 @@ func (p *SetResult) Read(iprot thrift.TProtocol) error {
 		if fieldTypeId == thrift.STOP {
 			break
 		}
-		if err := iprot.Skip(fieldTypeId); err != nil {
-			return err
+		switch fieldId {
+		case 1:
+			if err := p.ReadField1(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
 		}
 		if err := iprot.ReadFieldEnd(); err != nil {
 			return err
@@ -677,9 +755,20 @@ func (p *SetResult) Read(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *SetResult) ReadField1(iprot thrift.TProtocol) error {
+	p.InvalidKey = &InvalidKey{}
+	if err := p.InvalidKey.Read(iprot); err != nil {
+		return fmt.Errorf("%T error reading struct: %s", p.InvalidKey, err)
+	}
+	return nil
+}
+
 func (p *SetResult) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("Set_result"); err != nil {
 		return fmt.Errorf("%T write struct begin error: %s", p, err)
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
 		return fmt.Errorf("write field stop error: %s", err)
@@ -688,6 +777,21 @@ func (p *SetResult) Write(oprot thrift.TProtocol) error {
 		return fmt.Errorf("write struct stop error: %s", err)
 	}
 	return nil
+}
+
+func (p *SetResult) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetInvalidKey() {
+		if err := oprot.WriteFieldBegin("invalidKey", thrift.STRUCT, 1); err != nil {
+			return fmt.Errorf("%T write field begin error 1:invalidKey: %s", p, err)
+		}
+		if err := p.InvalidKey.Write(oprot); err != nil {
+			return fmt.Errorf("%T error writing struct: %s", p.InvalidKey, err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return fmt.Errorf("%T write field end error 1:invalidKey: %s", p, err)
+		}
+	}
+	return err
 }
 
 func (p *SetResult) String() string {

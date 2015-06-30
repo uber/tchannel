@@ -101,8 +101,9 @@ func (s *tchanAdminServer) handleHealthCheck(ctx thrift.Context, protocol athrif
 
 	if err != nil {
 		return false, nil, err
+	} else {
+		res.Success = &r
 	}
-	res.Success = &r
 
 	return err == nil, &res, nil
 }
@@ -125,6 +126,7 @@ func (s *tchanAdminServer) handleClearAll(ctx thrift.Context, protocol athrift.T
 		default:
 			return false, nil, err
 		}
+	} else {
 	}
 
 	return err == nil, &res, nil
@@ -146,6 +148,9 @@ func (c *tchanKeyValueClient) Get(ctx thrift.Context, key string) (string, error
 	success, err := c.client.Call(ctx, "KeyValue", "Get", &args, &resp)
 	if err == nil && !success {
 		if e := resp.NotFound; e != nil {
+			err = e
+		}
+		if e := resp.InvalidKey; e != nil {
 			err = e
 		}
 	}
@@ -171,6 +176,9 @@ func (c *tchanKeyValueClient) Set(ctx thrift.Context, key string, value string) 
 	}
 	success, err := c.client.Call(ctx, "KeyValue", "Set", &args, &resp)
 	if err == nil && !success {
+		if e := resp.InvalidKey; e != nil {
+			err = e
+		}
 	}
 
 	return err
@@ -224,11 +232,14 @@ func (s *tchanKeyValueServer) handleGet(ctx thrift.Context, protocol athrift.TPr
 		switch v := err.(type) {
 		case *KeyNotFound:
 			res.NotFound = v
+		case *InvalidKey:
+			res.InvalidKey = v
 		default:
 			return false, nil, err
 		}
+	} else {
+		res.Success = &r
 	}
-	res.Success = &r
 
 	return err == nil, &res, nil
 }
@@ -246,8 +257,9 @@ func (s *tchanKeyValueServer) handleHealthCheck(ctx thrift.Context, protocol ath
 
 	if err != nil {
 		return false, nil, err
+	} else {
+		res.Success = &r
 	}
-	res.Success = &r
 
 	return err == nil, &res, nil
 }
@@ -264,7 +276,13 @@ func (s *tchanKeyValueServer) handleSet(ctx thrift.Context, protocol athrift.TPr
 		s.handler.Set(ctx, req.Key, req.Value)
 
 	if err != nil {
-		return false, nil, err
+		switch v := err.(type) {
+		case *InvalidKey:
+			res.InvalidKey = v
+		default:
+			return false, nil, err
+		}
+	} else {
 	}
 
 	return err == nil, &res, nil
@@ -328,8 +346,9 @@ func (s *tchanBaseServiceServer) handleHealthCheck(ctx thrift.Context, protocol 
 
 	if err != nil {
 		return false, nil, err
+	} else {
+		res.Success = &r
 	}
-	res.Success = &r
 
 	return err == nil, &res, nil
 }

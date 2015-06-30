@@ -108,6 +108,62 @@ func (p *KeyNotFound) Error() string {
 	return p.String()
 }
 
+type InvalidKey struct {
+}
+
+func NewInvalidKey() *InvalidKey {
+	return &InvalidKey{}
+}
+
+func (p *InvalidKey) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return fmt.Errorf("%T read error: %s", p, err)
+	}
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return fmt.Errorf("%T field %d read error: %s", p, fieldId, err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		if err := iprot.Skip(fieldTypeId); err != nil {
+			return err
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return fmt.Errorf("%T read struct end error: %s", p, err)
+	}
+	return nil
+}
+
+func (p *InvalidKey) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("InvalidKey"); err != nil {
+		return fmt.Errorf("%T write struct begin error: %s", p, err)
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return fmt.Errorf("write field stop error: %s", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return fmt.Errorf("write struct stop error: %s", err)
+	}
+	return nil
+}
+
+func (p *InvalidKey) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("InvalidKey(%+v)", *p)
+}
+
+func (p *InvalidKey) Error() string {
+	return p.String()
+}
+
 type NotAuthorized struct {
 }
 
