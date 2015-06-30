@@ -188,12 +188,18 @@ class TChannel(object):
                                   retry=retry,
                                   **kwargs)
 
-    def listen(self):
+    def listen(self, port=None):
         """Start listening for incoming connections.
 
         A request handler must have already been specified with
         ``TChannel.host``.
+
+        :param port: the port that tchannel listens on
         """
+        if port:
+            assert not self._port, "Port has already been set."
+            self._port = int(port)
+
         assert self._handler, "Call .host with a RequestHandler first"
         server = TChannelServer(self)
 
