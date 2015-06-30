@@ -10,6 +10,10 @@
 			"Rev": "211b82de11c3c5bb83f669a95373b3ea6601d666"
 		},
 		{
+			"ImportPath": "github.com/samuel/go-thrift/parser",
+			"Rev": "cc9ca8d18368623fde7aaf35a8a6a32feafd7f51"
+		},
+		{
 			"ImportPath": "github.com/stretchr/objx",
 			"Rev": "cbeaeb16a013161a98496fad62933b1d21786672"
 		},
