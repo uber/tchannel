@@ -38,6 +38,11 @@ func deleteRemote(dir string) error {
 }
 
 func runThrift(inFile string) (string, error) {
+	inFile, err := filepath.Abs(inFile)
+	if err != nil {
+		return "", err
+	}
+
 	dir, filename := filepath.Split(inFile)
 	baseName := strings.TrimSuffix(filename, filepath.Ext(filename))
 	genDir := filepath.Join(dir, "gen-go")
