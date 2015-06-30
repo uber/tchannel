@@ -138,10 +138,11 @@ func (s *{{ .ServerStruct }}) Handle(ctx {{ contextType }}, methodName string, p
 			{{ else }}
 				return false, nil, err
 			{{ end }}
-		}
-		{{ if .HasReturn }}
-		res.Success = {{ .WrapResult "r" }}
+		} else {
+    {{ if .HasReturn }}
+		  res.Success = {{ .WrapResult "r" }}
 		{{ end }}
+    }
 
 		return err == nil, &res, nil
 	}
