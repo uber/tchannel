@@ -62,5 +62,6 @@ require('./max-call-overhead.js');
 require('./non-zero-ttl.js');
 require('./examples.js');
 require('./busy.js');
+require('./ephemeral-client.js');
 
 require('./hyperbahn/')(HyperbahnCluster);

@@ -105,6 +105,10 @@ TChannelConnection.prototype.setupSocket = function setupSocket() {
         }));
 
         if (self.ephemeral) {
+            var peer = self.channel.peers.get(self.socketRemoteAddr);
+            if (peer) {
+                peer.close(noop);
+            }
             self.channel.peers.delete(self.socketRemoteAddr);
         }
     }
@@ -113,6 +117,8 @@ TChannelConnection.prototype.setupSocket = function setupSocket() {
         self.onSocketError(err);
     }
 };
+
+function noop() {}
 
 TChannelConnection.prototype.setupHandler = function setupHandler() {
     var self = this;
