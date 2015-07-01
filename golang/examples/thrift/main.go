@@ -92,10 +92,12 @@ func runClient1(hyperbahnService string, addr net.Addr) error {
 
 	go func() {
 		for {
-			ctx, _ := context.WithTimeout(context.Background(), time.Second)
+			tctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			ctx := thrift.WrapContext(tctx)
 			res, err := client.Echo(ctx, "Hi")
 			log.Println("Echo(Hi) = ", res, ", err: ", err)
 			log.Println("AppError = ", client.AppError(ctx))
+			cancel()
 			time.Sleep(100 * time.Millisecond)
 		}
 	}()
@@ -113,9 +115,11 @@ func runClient2(hyperbahnService string, addr net.Addr) error {
 
 	go func() {
 		for {
-			ctx, _ := context.WithTimeout(context.Background(), time.Second)
+			tctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			ctx := thrift.WrapContext(tctx)
 
 			client.Test(ctx)
+			cancel()
 			time.Sleep(100 * time.Millisecond)
 		}
 	}()

@@ -93,8 +93,8 @@ func main() {
 }
 
 func get(client keyvalue.TChanKeyValue, key string) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	ctx = tchannel.NewRootContext(ctx)
+	ctx, cancel := createContext()
+	defer cancel()
 
 	val, err := client.Get(ctx, key)
 	if err != nil {
@@ -113,8 +113,8 @@ func get(client keyvalue.TChanKeyValue, key string) {
 }
 
 func set(client keyvalue.TChanKeyValue, key, value string) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	ctx = tchannel.NewRootContext(ctx)
+	ctx, cancel := createContext()
+	defer cancel()
 
 	if err := client.Set(ctx, key, value); err != nil {
 		switch err := err.(type) {
@@ -130,8 +130,8 @@ func set(client keyvalue.TChanKeyValue, key, value string) {
 }
 
 func clear(adminClient keyvalue.TChanAdmin) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	ctx = tchannel.NewRootContext(ctx)
+	ctx, cancel := createContext()
+	defer cancel()
 
 	if err := adminClient.ClearAll(ctx); err != nil {
 		switch err := err.(type) {
@@ -144,4 +144,10 @@ func clear(adminClient keyvalue.TChanAdmin) {
 	}
 
 	log.Printf("ClearAll completed, all keys cleared")
+}
+
+func createContext() (thrift.Context, func()) {
+	tctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx := thrift.WrapContext(tchannel.NewRootContext(tctx))
+	return ctx, cancel
 }
