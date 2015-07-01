@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/uber/tchannel/golang"
-	"golang.org/x/net/context"
 )
 
 // Client manages Hyperbahn connections and registrations.
@@ -98,36 +97,5 @@ func (c *Client) Advertise() error {
 	}
 	c.opts.Handler.On(Advertised)
 	go c.advertiseLoop()
-	return nil
-}
-
-// TODO(prashant): Move the JSON call logic to a common tchannel location.
-func makeJSONCall(ctx context.Context, sc *tchannel.SubChannel, operation string, arg interface{}, resp interface{}) error {
-	call, err := sc.BeginCall(ctx, operation, &tchannel.CallOptions{
-		Format: tchannel.JSON,
-	})
-	if err != nil {
-		return err
-	}
-
-	if err := tchannel.NewArgWriter(call.Arg2Writer()).Write(nil); err != nil {
-		return err
-	}
-	if err := tchannel.NewArgWriter(call.Arg3Writer()).WriteJSON(arg); err != nil {
-		return err
-	}
-
-	// Call Arg2Reader before application error.
-	var arg2 []byte
-	if err := tchannel.NewArgReader(call.Response().Arg2Reader()).Read(&arg2); err != nil {
-		return err
-	}
-	if call.Response().ApplicationError() {
-		return ErrAppError
-	}
-	if err := tchannel.NewArgReader(call.Response().Arg3Reader()).ReadJSON(resp); err != nil {
-		return err
-	}
-
 	return nil
 }
