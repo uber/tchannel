@@ -85,10 +85,15 @@ TChannelConnection.prototype.setupSocket = function setupSocket() {
     var self = this;
 
     self.socket.setNoDelay(true);
+    // TODO: stream the data with backpressure
+    // when you add data event listener you go into
+    // a deoptimized mode and you have lost all
+    // backpressure on the stream
     self.socket.on('data', onSocketChunk);
     self.socket.on('close', onSocketClose);
     self.socket.on('error', onSocketError);
 
+    // TODO: move to method for function optimization
     function onSocketChunk(chunk) {
         var err = self.mach.handleChunk(chunk);
         if (err) {
@@ -96,6 +101,7 @@ TChannelConnection.prototype.setupSocket = function setupSocket() {
         }
     }
 
+    // TODO: move to method for function optimization
     function onSocketClose() {
         self.resetAll(errors.SocketClosedError({
             reason: 'remote closed',
@@ -261,6 +267,7 @@ TChannelConnection.prototype.handleReadFrame = function handleReadFrame(frame) {
     }
     self.handler.handleFrame(frame, handledFrame);
     function handledFrame(err) {
+        // TODO: move if check to onHandlerError
         if (err) self.onHandlerError(err);
     }
 };
@@ -291,6 +298,7 @@ TChannelConnection.prototype.onCallResponse = function onCallResponse(res) {
 
     req.emitResponse(res);
 
+    // TODO: move to method
     function popOutReq() {
         if (called) {
             return;

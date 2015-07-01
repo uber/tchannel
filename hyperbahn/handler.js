@@ -218,6 +218,7 @@ function sendRelayAdvertise(opts, callback) {
 
     tryRequest();
 
+    // TODO: move functions out to methods
     function tryRequest() {
         attempts++;
 
