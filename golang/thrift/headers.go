@@ -2,26 +2,41 @@ package thrift
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
+
+	"github.com/uber/tchannel/golang/typed"
 )
 
 // TODO(prashant): Refactor tchannel/typed so we can reuse it here.
 
 func writeHeaders(w io.Writer, headers map[string]string) error {
-	var err error
-	writeBinary := func(data interface{}) {
-		if err != nil {
-			return
-		}
-		err = binary.Write(w, binary.BigEndian, data)
-	}
-	writeBinary(uint16(len(headers)))
+	// Calculate the size of the buffer that we need.
+	size := 2
 	for k, v := range headers {
-		writeBinary(uint16(len(k)))
-		writeBinary([]byte(k))
-		writeBinary(uint16(len(v)))
-		writeBinary([]byte(v))
+		size += 4 /* size of key/value lengths */
+		size += len(k) + len(v)
 	}
+
+	buf := make([]byte, size)
+	writeBuffer := typed.NewWriteBuffer(buf)
+	writeBuffer.WriteUint16(uint16(len(headers)))
+	for k, v := range headers {
+		writeBuffer.WriteLen16String(k)
+		writeBuffer.WriteLen16String(v)
+	}
+
+	if err := writeBuffer.Err(); err != nil {
+		return err
+	}
+
+	// Safety check to ensure the bytes written calculation is correct.
+	if writeBuffer.BytesWritten() != size {
+		return fmt.Errorf("writeHeaders size calculation wrong, expected to write %v bytes, only wrote %v bytes",
+			size, writeBuffer.BytesWritten())
+	}
+
+	_, err := writeBuffer.FlushTo(w)
 	return err
 }
 
