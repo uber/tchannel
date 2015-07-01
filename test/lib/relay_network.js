@@ -46,13 +46,18 @@ function RelayNetwork(options) {
     self.serviceNames = options.serviceNames || ['alice', 'bob', 'charlie'];
     self.kValue = options.kValue || 2;
     self.createCircuits = options.createCircuits || noop;
-    self.clusterOptions = options.cluster || {};
+    self.clusterOptions = options.clusterOptions || {};
+
+    self.timers = options.timers;
+    if (self.timers) {
+        self.clusterOptions.timers = self.timers;
+    }
 
     self.numPeers = self.numRelays + self.serviceNames.length * self.numInstancesPerService;
     self.clusterOptions.numPeers = self.numPeers;
     self.cluster = null;
 
-    // The topology gets mutate by all the fake egress nodes to get consensus
+    // The topology gets mutated by all the fake egress nodes to get consensus
     self.topology = null;
     self.relayChannels = null;
     self.serviceChannels = null;
@@ -150,7 +155,7 @@ RelayNetwork.prototype.setCluster = function setCluster(cluster) {
             statsd: statsd,
             egressNodes: egressNodes,
             circuits: self.createCircuits({
-                timers: relayChannel.timers,
+                timers: self.timers,
                 random: null,
                 period: null,
                 maxErrorRate: null,
