@@ -16,6 +16,7 @@ setup(
         'tornado>=4.0,<5.0',
         'toro>=0.8,<0.9',
         'threadloop',
+        'futures',
     ],
     entry_points={
         'console_scripts': [
