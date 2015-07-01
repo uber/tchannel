@@ -22,8 +22,52 @@ package thrift
 
 import "golang.org/x/net/context"
 
-// Context represents the context for a single call.
-// TODO(prashant): Allow setting application headers on the context.
+// Context is a Thrift Context which contains request and response headers.
 type Context interface {
 	context.Context
+
+	// Headers returns the call request headers.
+	Headers() map[string]string
+
+	// ResponseHeaders returns the call response headers.
+	ResponseHeaders() map[string]string
+
+	// SetResponseHeaders sets the given response headers on the context.
+	SetResponseHeaders(map[string]string)
+}
+
+type thriftCtx struct {
+	context.Context
+	reqHeaders  map[string]string
+	respHeaders map[string]string
+}
+
+// Headers gets application headers out of the context.
+func (c *thriftCtx) Headers() map[string]string {
+	return c.reqHeaders
+}
+
+// ResponseHeaders returns the response headers.
+func (c *thriftCtx) ResponseHeaders() map[string]string {
+	return c.respHeaders
+}
+
+// SetResponseHeaders sets the response headers.
+func (c *thriftCtx) SetResponseHeaders(headers map[string]string) {
+	c.respHeaders = headers
+}
+
+// WrapContext returns a Context that can be used to make JSON calls.
+func WrapContext(ctx context.Context) Context {
+	return &thriftCtx{
+		Context: ctx,
+	}
+}
+
+// WithHeaders returns a Context that can be used to make a call with request headers.
+func WithHeaders(ctx context.Context, headers map[string]string) Context {
+	return &thriftCtx{
+		Context:    ctx,
+		reqHeaders: headers,
+	}
 }
