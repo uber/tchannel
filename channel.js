@@ -480,6 +480,7 @@ function waitForIdentified(options, callback) {
 
 TChannel.prototype.request = function channelRequest(options) {
     var self = this;
+
     assert(!self.destroyed, 'cannot request() to destroyed tchannel');
     var opts = self.requestOptions(options);
 
@@ -488,7 +489,10 @@ TChannel.prototype.request = function channelRequest(options) {
     }
 
     var req = null;
-    if (opts.host || // retries are only between hosts
+    if (opts.peer) {
+        opts.retryCount = 0;
+        req = opts.peer.request(opts);
+    } else if (opts.host || // retries are only between hosts
         opts.streamed // streaming retries not yet implemented
     ) {
         opts.retryCount = 0;
