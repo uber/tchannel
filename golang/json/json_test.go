@@ -138,3 +138,34 @@ func TestForwardChain(t *testing.T) {
 		}
 	}
 }
+
+func TestEmptyRequestHeader(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	ch, err := tchannel.NewChannel("server", nil)
+	require.NoError(t, err)
+	require.NoError(t, ch.ListenAndServe("127.0.0.1:0"))
+
+	handler := func(ctx Context, _ *struct{}) (*struct{}, error) {
+		assert.Equal(t, nil, ctx.Headers())
+		return nil, nil
+	}
+	onError := func(ctx context.Context, err error) {
+		t.Errorf("onError: %v", err)
+	}
+	require.NoError(t, Register(ch, map[string]interface{}{"handle": handler}, onError))
+
+	call, err := ch.BeginCall(ctx, ch.PeerInfo().HostPort, "server", "handle", &tchannel.CallOptions{
+		Format: tchannel.JSON,
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, tchannel.NewArgWriter(call.Arg2Writer()).Write(nil))
+	require.NoError(t, tchannel.NewArgWriter(call.Arg3Writer()).WriteJSON(nil))
+
+	resp := call.Response()
+	var data interface{}
+	require.NoError(t, tchannel.NewArgReader(resp.Arg2Reader()).ReadJSON(&data))
+	require.NoError(t, tchannel.NewArgReader(resp.Arg3Reader()).ReadJSON(&data))
+}

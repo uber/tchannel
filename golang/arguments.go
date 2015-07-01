@@ -21,6 +21,7 @@ package tchannel
 // THE SOFTWARE.
 
 import (
+	"bufio"
 	"encoding/json"
 	"io"
 	"io/ioutil"
@@ -60,7 +61,17 @@ func (r *ArgReader) Read(bs *[]byte) error {
 // ReadJSON deserializes JSON from the underlying reader into data.
 func (r *ArgReader) ReadJSON(data interface{}) error {
 	return r.read(func() error {
-		d := json.NewDecoder(r.reader)
+		// TChannel allows for 0 length values (not valid JSON), so we use a bufio.Reader
+		// to check whether data is of 0 length.
+		reader := bufio.NewReader(r.reader)
+		if _, err := reader.Peek(1); err == io.EOF {
+			// If the data is 0 length, then we don't try to read anything.
+			return nil
+		} else if err != nil {
+			return err
+		}
+
+		d := json.NewDecoder(reader)
 		return d.Decode(data)
 	})
 }
