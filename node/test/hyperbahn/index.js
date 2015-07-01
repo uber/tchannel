@@ -23,6 +23,7 @@
 require('./constructor.js');
 require('./todo.js');
 require('./sub-channel.js');
+require('./kill-switch.js');
 
 module.exports = runTests;
 
@@ -37,5 +38,4 @@ function runTests(HyperbahnCluster) {
 
     require('./hyperbahn-down.js')(HyperbahnCluster);
     require('./hyperbahn-times-out.js')(HyperbahnCluster);
-    require('./kill-switch.js');
 }

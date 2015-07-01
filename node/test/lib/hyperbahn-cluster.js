@@ -90,6 +90,7 @@ HyperbahnCluster.prototype.bootstrap = function bootstrap(cb) {
         self.apps = relayNetwork.relayChannels.map(function p(channel, index) {
             return HyperbahnApp({
                 relayChannel: channel,
+                serviceProxy: channel.handler,
                 egressNodes: relayNetwork.egressNodesForRelay[index]
             });
         });
@@ -135,21 +136,24 @@ function HyperbahnApp(opts) {
 
     var self = this;
 
-    self.relayChannel = opts.relayChannel;
-    self.egressNodes = opts.egressNodes;
-    self.hostPort = self.relayChannel.hostPort;
+    self._relayChannel = opts.relayChannel;
+    self._egressNodes = opts.egressNodes;
+    self.hostPort = opts.relayChannel.hostPort;
+    self.clients = {
+        serviceProxy: opts.serviceProxy
+    };
 }
 
 HyperbahnApp.prototype.exitsFor = function exitsFor(serviceName) {
     var self = this;
 
-    return self.egressNodes.exitsFor(serviceName);
+    return self._egressNodes.exitsFor(serviceName);
 };
 
 HyperbahnApp.prototype.destroy = function destroy() {
     var self = this;
 
-    self.relayChannel.close();
+    self._relayChannel.close();
 };
 
 function HyperbahnRemote(opts) {
