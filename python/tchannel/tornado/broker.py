@@ -64,7 +64,7 @@ class ArgSchemeBroker(object):
         return handler(req, resp, proxy)
 
     @tornado.gen.coroutine
-    def send(self, client, endpoint, header, body, traceflag=False):
+    def send(self, client, endpoint, header, body, **kwargs):
         try:
             if not isinstance(header, Stream):
                 raw_header = self.arg_scheme.serialize_header(header)
@@ -80,11 +80,11 @@ class ArgSchemeBroker(object):
             raise TChannelError(e.message)
 
         resp = yield client.send(
-            arg1=endpoint,
-            arg2=raw_header,
-            arg3=raw_body,
-            traceflag=traceflag,
+            endpoint,
+            raw_header,
+            raw_body,
             headers={'as': self.arg_scheme.type()},
+            **kwargs
         )
 
         resp.scheme = self.arg_scheme
