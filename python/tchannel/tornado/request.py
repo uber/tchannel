@@ -52,6 +52,7 @@ class Request(object):
         checksum=None,
         argstreams=None,
         scheme=None,
+        endpoint=None,
     ):
         self.flags = flags
         self.ttl = ttl
@@ -65,7 +66,6 @@ class Request(object):
         self.id = id
         self.headers = headers or {}
         self.state = StreamState.init
-        self.endpoint = ""
         self.scheme = scheme
 
         self.is_streaming_request = self._is_streaming_request()
@@ -75,6 +75,8 @@ class Request(object):
                 self.argstreams[1].clone(),
                 self.argstreams[2].clone(),
             ]
+
+        self.endpoint = endpoint or ""
 
     def rewind(self, id=None):
         self.id = id

@@ -316,6 +316,7 @@ class TornadoConnection(object):
             payload=payload
         )
         body = frame.frame_rw.write(f, BytesIO()).getvalue()
+
         return self.connection.write(body)
 
     def close(self):
@@ -553,7 +554,6 @@ class StreamConnection(TornadoConnection):
         except TChannelError as e:
             # raise by tchannel intentionally
             log.info("Stop Outgoing Streams because of error: %s", e.message)
-            pass
 
     @tornado.gen.coroutine
     def post_response(self, response):
@@ -572,13 +572,6 @@ class StreamConnection(TornadoConnection):
     @tornado.gen.coroutine
     def stream_request(self, request):
         """send the given request and response is not required"""
-
-        # event: send_request
-        self.tchannel.event_emitter.fire(
-            EventType.before_send_request,
-            request,
-        )
-
         try:
             request.close_argstreams()
             yield self._stream(request, self.request_message_factory)
@@ -618,21 +611,19 @@ class StreamConnection(TornadoConnection):
         return response_future
 
     def adapt_result(self, f, request, response_future):
+        if not response_future.running():
+            return
+
         if f.exception():
             protocol_exception = f.exception()
             protocol_exception.tracing = request.tracing
             response_future.set_exception(protocol_exception)
-            # event: after_receive_protocol_error
-            self.tchannel.event_emitter.fire(
-                EventType.after_receive_error,
-                protocol_exception,
-            )
+
         else:
             response = f.result()
             response.tracing = request.tracing
             response_future.set_result(response)
-            # event: after_receive_response
-            self.tchannel.event_emitter.fire(
-                EventType.after_receive_response,
-                response,
-            )
+
+    def remove_outstanding_request(self, request):
+        """Remove request from pending request list"""
+        self._outstanding.pop(request.id, None)
