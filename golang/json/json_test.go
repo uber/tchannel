@@ -32,11 +32,11 @@ type testHandler struct {
 }
 
 func (h *testHandler) forward(ctx Context, args *ForwardArgs) (*Res, error) {
-	headerVal := ctx.Headers()["header"]
-	ctx.SetResponseHeaders(map[string]string{"headerResponse": headerVal + "-resp"})
+	headerVal := ctx.Headers().(string)
+	ctx.SetResponseHeaders(headerVal + "-resp")
 	h.calls = append(h.calls, "forward-"+headerVal)
 
-	ctx = WithHeaders(ctx, map[string]string{"header": args.HeaderVal})
+	ctx = WithHeaders(ctx, args.HeaderVal)
 	res := &Res{}
 
 	if args.Method == "forward" {
@@ -44,7 +44,7 @@ func (h *testHandler) forward(ctx Context, args *ForwardArgs) (*Res, error) {
 			h.t.Errorf("forward->forward Call failed: %v", err)
 			return nil, err
 		}
-		assert.Equal(h.t, map[string]string{"headerResponse": args.HeaderVal + "-resp"}, ctx.ResponseHeaders())
+		assert.Equal(h.t, args.HeaderVal+"-resp", ctx.ResponseHeaders())
 		return res, nil
 	}
 
@@ -57,7 +57,7 @@ func (h *testHandler) forward(ctx Context, args *ForwardArgs) (*Res, error) {
 }
 
 func (h *testHandler) leaf(ctx Context, _ *struct{}) (*Res, error) {
-	headerVal := ctx.Headers()["header"]
+	headerVal := ctx.Headers().(string)
 	h.calls = append(h.calls, "leaf-"+headerVal)
 	return &Res{"leaf called!"}, nil
 }
@@ -102,7 +102,7 @@ func TestForwardChain(t *testing.T) {
 	curArg.Method = "leaf"
 
 	expectedCalls := map[string][]string{
-		"serv1": {"forward-", "forward-3", "forward-6", "forward-9"},
+		"serv1": {"forward-initial", "forward-3", "forward-6", "forward-9"},
 		"serv2": {"forward-1", "forward-4", "forward-7", "forward-10"},
 		"serv3": {"forward-2", "forward-5", "forward-8", "leaf-11"},
 	}
@@ -127,7 +127,7 @@ func TestForwardChain(t *testing.T) {
 
 	tctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	ctx := NewContext(tctx)
+	ctx := WithHeaders(tctx, "initial")
 
 	sc := servers["serv3"].channel.GetSubChannel("serv1")
 	resp := &Res{}

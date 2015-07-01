@@ -8,33 +8,33 @@ type Context interface {
 	context.Context
 
 	// Headers returns the call request headers.
-	Headers() map[string]string
+	Headers() interface{}
 
 	// ResponseHeaders returns the call response headers.
-	ResponseHeaders() map[string]string
+	ResponseHeaders() interface{}
 
 	// SetResponseHeaders sets the given response headers on the context.
-	SetResponseHeaders(headers map[string]string)
+	SetResponseHeaders(headers interface{})
 }
 
 type jsonCtx struct {
 	context.Context
-	reqHeaders  map[string]string
-	respHeaders map[string]string
+	reqHeaders  interface{}
+	respHeaders interface{}
 }
 
 // GetHeaders gets application headers out of the context.
-func (c *jsonCtx) Headers() map[string]string {
+func (c *jsonCtx) Headers() interface{} {
 	return c.reqHeaders
 }
 
 // ResponseHeaders returns the response headers.
-func (c *jsonCtx) ResponseHeaders() map[string]string {
+func (c *jsonCtx) ResponseHeaders() interface{} {
 	return c.respHeaders
 }
 
 // SetResponseHeaders sets the response headers.
-func (c *jsonCtx) SetResponseHeaders(headers map[string]string) {
+func (c *jsonCtx) SetResponseHeaders(headers interface{}) {
 	c.respHeaders = headers
 }
 
@@ -46,7 +46,7 @@ func NewContext(ctx context.Context) Context {
 }
 
 // WithHeaders returns a Context that can be used to make a call with request headers.
-func WithHeaders(ctx context.Context, headers map[string]string) Context {
+func WithHeaders(ctx context.Context, headers interface{}) Context {
 	return &jsonCtx{
 		Context:    ctx,
 		reqHeaders: headers,
