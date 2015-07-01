@@ -580,3 +580,18 @@ module.exports.classify = function classify(err) {
             return null;
     }
 };
+
+var symptoms = {
+    'BadRequest': false, // not an indicator of bad health
+    'Cancelled': false, // not an indicator of bad health
+    'Timeout': true, // TODO throttle
+    'Busy': true, // TODO throttle
+    'Declined': true,
+    'UnexpectedError': true,
+    'NetworkError': true,
+    'FatalProtocolError': true
+};
+
+module.exports.isUnhealthy = function isUnhealthy(code) {
+    return symptoms[code];
+};
