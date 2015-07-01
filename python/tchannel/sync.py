@@ -22,8 +22,8 @@ from __future__ import absolute_import
 
 from collections import namedtuple
 
+from threadloop import ThreadLoop
 from tornado import gen
-from tornado import ioloop
 
 from . import glossary
 from . import tornado as async
@@ -63,6 +63,8 @@ class TChannelSyncClient(object):
             known_peers=known_peers,
             trace=trace
         )
+        self.threadloop = ThreadLoop()
+        self.threadloop.start()
 
     def request(self, *args, **kwargs):
         """Initiate a new request to a peer.
@@ -79,7 +81,7 @@ class TChannelSyncClient(object):
             An object with a ``send(arg1, arg2, arg3)`` operation.
         """
         operation = self.async_client.request(*args, **kwargs)
-        operation = SyncClientOperation(operation)
+        operation = SyncClientOperation(operation, self.threadloop)
 
         return operation
 
@@ -93,9 +95,11 @@ class SyncClientOperation(object):
     uses a temporary ioloop to make the request synchronously.
     """
 
-    def __init__(self, operation):
+    def __init__(self, operation, threadloop):
         assert operation, "operation is required"
+        assert threadloop, "threadloop.ThreadLoop is required"
         self.operation = operation
+        self.threadloop = threadloop
 
     def send(self, arg1, arg2, arg3):
         """Send the given triple over the wire.
@@ -109,8 +113,8 @@ class SyncClientOperation(object):
         :param arg3:
             String containing the contents of arg3. If None, an empty string
             is used.
-        :return Response:
-            Response from the peer.
+        :return concurrent.futures.Future:
+            Future response from the peer.
         """
         arg1 = arg1 or ''
         arg2 = arg2 or ''
@@ -118,6 +122,7 @@ class SyncClientOperation(object):
 
         @gen.coroutine
         def make_request():
+
             response = yield self.operation.send(arg1, arg2, arg3)
 
             header = yield response.get_header()
@@ -127,7 +132,9 @@ class SyncClientOperation(object):
 
             raise gen.Return(result)
 
-        return ioloop.IOLoop.current().run_sync(make_request)
+        future = self.threadloop.submit(make_request)
+
+        return future
 
 
 Response = namedtuple('Response', 'header, body')

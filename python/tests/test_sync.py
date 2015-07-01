@@ -37,7 +37,9 @@ def test_sync_client_should_get_raw_response(tchannel_server):
 
     client = TChannelSyncClient('test-client')
     request = client.request(hostport)
-    response = request.send(endpoint, None, "")
+
+    future = request.send(endpoint, None, "")
+    response = future.result()
 
     assert response.header == ""
     assert response.body == "OK"
