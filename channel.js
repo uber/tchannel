@@ -602,6 +602,7 @@ function RequestOptions(channel, opts) {
     self.shouldApplicationRetry = opts.shouldApplicationRetry || null;
     self.parent = opts.parent || null;
     self.tracing = opts.tracing || null;
+    self.peer = opts.peer || null;
 
     // TODO optimize?
     self.headers = opts.headers || new RequestHeaders();
@@ -633,7 +634,10 @@ TChannel.prototype._request = function _request(opts) {
 
     var req = null;
     // retries are only between hosts
-    if (opts.host) {
+    if (opts.peer) {
+        opts.retryCount = 0;
+        req = opts.peer.request(opts);
+    } else if (opts.host) {
         opts.retryCount = 0;
         req = self.peers.add(opts.host).request(opts);
     // streaming retries not yet implemented
