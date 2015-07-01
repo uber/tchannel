@@ -72,9 +72,8 @@ type adResponse struct {
 }
 
 func (c *Client) sendAdvertise() error {
-	tctx, cancel := context.WithTimeout(context.Background(), c.opts.Timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), c.opts.Timeout)
 	defer cancel()
-	ctx := json.NewContext(tctx)
 
 	sc := c.tchan.GetSubChannel(hyperbahnServiceName)
 	arg := &adRequest{
@@ -86,7 +85,7 @@ func (c *Client) sendAdvertise() error {
 	var resp adResponse
 	c.opts.Handler.On(SendAdvertise)
 
-	if err := json.CallSC(ctx, sc, "ad", arg, &resp); err != nil {
+	if err := json.CallSC(json.WrapContext(ctx), sc, "ad", arg, &resp); err != nil {
 		return err
 	}
 

@@ -21,7 +21,6 @@ package hyperbahn
 // THE SOFTWARE.
 
 import (
-	"errors"
 	"time"
 
 	"github.com/uber/tchannel/golang"
@@ -54,10 +53,6 @@ type ClientOptions struct {
 	Handler      Handler
 	FailStrategy FailStrategy
 }
-
-// ErrAppError is returned if there was an application error during registration.
-// TODO(prashant): Check if there is more information returned that we can use.
-var ErrAppError = errors.New("app error")
 
 // NewClient creates a new Hyperbahn client using the given channel.
 // config is the environment-specific configuration for Hyperbahn such as the list of initial nodes.

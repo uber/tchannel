@@ -3,7 +3,6 @@ package json
 import "golang.org/x/net/context"
 
 // Context is a JSON Context which contains request and response headers.
-// TODO(prashant): Merge common Context functionality with Thrift Context.
 type Context interface {
 	context.Context
 
@@ -23,7 +22,7 @@ type jsonCtx struct {
 	respHeaders interface{}
 }
 
-// GetHeaders gets application headers out of the context.
+// Headers gets application headers out of the context.
 func (c *jsonCtx) Headers() interface{} {
 	return c.reqHeaders
 }
@@ -38,8 +37,8 @@ func (c *jsonCtx) SetResponseHeaders(headers interface{}) {
 	c.respHeaders = headers
 }
 
-// NewContext returns a Context that can be used to make JSON calls.
-func NewContext(ctx context.Context) Context {
+// WrapContext returns a Context that can be used to make JSON calls.
+func WrapContext(ctx context.Context) Context {
 	return &jsonCtx{
 		Context: ctx,
 	}
