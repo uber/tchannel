@@ -36,8 +36,11 @@ import (
 	"github.com/uber/tchannel/golang/thrift"
 )
 
+var curUser = "anonymous"
+
 func printHelp() {
-	fmt.Printf("Usage:\n get [key]\n set [key] [value]\n")
+	fmt.Println("Usage:\n get [key]\n set [key] [value]")
+	fmt.Println(" user [newUser]\n clearAll")
 }
 
 func main() {
@@ -82,6 +85,12 @@ func main() {
 				break
 			}
 			set(client, parts[1], parts[2])
+		case "user":
+			if len(parts) < 2 {
+				printHelp()
+				break
+			}
+			curUser = parts[1]
 		case "clearAll":
 			clear(adminClient)
 		default:
@@ -126,7 +135,7 @@ func set(client keyvalue.TChanKeyValue, key, value string) {
 		return
 	}
 
-	log.Printf("Set %v:%v succeeded", key, value)
+	log.Printf("Set %v:%v succeeded with headers: %v", key, value, ctx.ResponseHeaders())
 }
 
 func clear(adminClient keyvalue.TChanAdmin) {
@@ -148,6 +157,6 @@ func clear(adminClient keyvalue.TChanAdmin) {
 
 func createContext() (thrift.Context, func()) {
 	tctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	ctx := thrift.WrapContext(tchannel.NewRootContext(tctx))
+	ctx := thrift.WithHeaders(tchannel.NewRootContext(tctx), map[string]string{"user": curUser})
 	return ctx, cancel
 }

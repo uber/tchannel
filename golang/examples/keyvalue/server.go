@@ -21,8 +21,8 @@ package main
 // THE SOFTWARE.
 
 import (
+	"fmt"
 	"log"
-	"math/rand"
 	"os"
 	"sync"
 	"unicode"
@@ -102,6 +102,8 @@ func (h *kvHandler) Set(ctx thrift.Context, key, value string) error {
 	defer h.mut.Unlock()
 
 	h.vals[key] = value
+	// Example of how to use response headers. Normally, these values should be passed via result structs.
+	ctx.SetResponseHeaders(map[string]string{"count": fmt.Sprint(len(h.vals))})
 	return nil
 }
 
@@ -112,7 +114,7 @@ func (h *kvHandler) HealthCheck(ctx thrift.Context) (string, error) {
 
 // ClearAll clears all the keys.
 func (h *kvHandler) ClearAll(ctx thrift.Context) error {
-	if isAdmin(ctx) {
+	if !isAdmin(ctx) {
 		return &keyvalue.NotAuthorized{}
 	}
 
@@ -132,6 +134,5 @@ func isValidKey(key string) error {
 }
 
 func isAdmin(ctx thrift.Context) bool {
-	// TODO(prashant): Check if the user is allowed from headers in the context.
-	return rand.Intn(2) == 1
+	return ctx.Headers()["user"] == "admin"
 }
