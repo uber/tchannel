@@ -246,7 +246,6 @@ TChannelConnection.prototype.onWriteError = function onWriteError(err) {
 TChannelConnection.prototype.onHandlerError = function onHandlerError(err) {
     var self = this;
     self.resetAll(err);
-    // resetAll() does not close the socket
 };
 
 TChannelConnection.prototype.handlePingResponse = function handlePingResponse(resFrame) {
@@ -439,9 +438,13 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
 
     err = err || errors.TChannelConnectionCloseError();
 
-    if (self.closing) return;
+    if (self.closing) {
+        return;
+    }
+
     self.closing = true;
     self.closeError = err;
+    self.socket.destroy();
     self.closeEvent.emit(self, err);
 
     var requests = self.ops.getRequests();
@@ -541,7 +544,6 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
     });
 
     self.ops.clear();
-    self.socket.destroy();
 };
 
 module.exports = TChannelConnection;
