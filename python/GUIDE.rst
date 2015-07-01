@@ -53,13 +53,13 @@ Create a `Thrift <https://thrift.apache.org/>`_ file under
     }
 
     service KeyValue {
-        string Get(
+        string get(
             1: string key,
         ) throws (
             1: NotFoundError notFound,
         )
 
-        string Set(
+        string set(
             1: string key,
             2: string value,
         )
@@ -67,22 +67,18 @@ Create a `Thrift <https://thrift.apache.org/>`_ file under
 
 \
 This defines a service named ``KeyValue`` with two functions:
-    - ``Get``: a function which takes one string parameter, and returns a string.
-    - ``Set``: a void function that takes in two parameters.
+    - ``get``: a function which takes one string parameter, and returns a string.
+    - ``set``: a void function that takes in two parameters.
 
 Once you have defined your service, generate corresponding Thrift types by
 running the following:
 
 .. code-block:: bash
 
-    $ thrift --gen py:tornado,new_style,dynamic,slots,utf8strings \
+    $ thrift --gen py:new_style,dynamic,slots,utf8strings \
         -out keyvalue thrift/service.thrift
 
 This generates client- and server-side code to interact with your service.
-
-**NOTE:** The ``--gen`` option is **very important**, because we're going to be
-building our service on `Tornado <http://www.tornadoweb.org/en/stable/>`_, and we
-don't want to be using blocking code!
 
 You may want to verify that your thrift code was generated successfully:
 
@@ -260,7 +256,7 @@ Debugging
 
 Let's spin up the service and make a request to it through Hyperbahn. Python
 provides ``tcurl.py`` script, but we need to use the `Node
-version <https://github.com/uber/tcurl>`_) for now since it has Thrift support.
+version <https://github.com/uber/tcurl>`_ for now since it has Thrift support.
 
 .. code-block:: bash
 
@@ -286,6 +282,7 @@ Let's make a client call from Python in ``keyvalue/client.py``:
 
     from service import KeyValue
 
+    KeyValueClient = client_for('keyvalue-server', KeyValue)
 
     @gen.coroutine
     def run():
@@ -294,9 +291,7 @@ Let's make a client call from Python in ``keyvalue/client.py``:
         app = TChannel(app_name)
         app.advertise(['localhost:23000'], app_name)
 
-        client_class = client_for('keyvalue-server', KeyValue)
-
-        client = client_class(app)
+        client = KeyValueClient(app)
 
         yield client.Set("foo", "bar")
 
