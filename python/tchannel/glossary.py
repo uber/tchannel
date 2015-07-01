@@ -27,3 +27,8 @@ MAX_MESSAGE_ID = 0xfffffffe
 DEFAULT_TTL = 1000  # ms
 MAX_ATTEMPT_TIMES = 3
 RETRY_DELAY = 0.3  # 300 ms
+
+# Autobahn recognizes this hotport as ephemeral,
+# Hostport used by TChannel peers that are ephemeral and don't expect incoming
+# connections.
+EPHEMERAL_HOSTPORT = '0.0.0.0:0'

@@ -22,10 +22,24 @@ from __future__ import absolute_import
 
 import pytest
 
-from tests.integration.test_server import TestServer
+from tchannel.sync import TChannelSyncClient
 
 
-@pytest.yield_fixture
-def tchannel_server(random_open_port):
-    with TestServer(random_open_port) as server:
-        yield server
+@pytest.mark.integration
+def test_sync_client_should_get_raw_response(tchannel_server):
+
+    endpoint = 'health'
+    tchannel_server.expect_call(endpoint).and_write(
+        headers="",
+        body="OK"
+    )
+    hostport = 'localhost:%d' % tchannel_server.port
+
+    client = TChannelSyncClient('test-client')
+    request = client.request(hostport)
+
+    future = request.send(endpoint, None, "")
+    response = future.result()
+
+    assert response.header == ""
+    assert response.body == "OK"
