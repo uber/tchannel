@@ -202,9 +202,14 @@ function waitForIdentified(callback) {
     } else if (conn.remoteName) {
         callback(null);
     } else {
-        conn.closeEvent.on(onConnectionClose);
-        conn.identifiedEvent.on(onIdentified);
+        self._waitForIdentified(conn, callback);
     }
+};
+
+TChannelPeer.prototype._waitForIdentified =
+function _waitForIdentified(conn, callback) {
+    conn.closeEvent.on(onConnectionClose);
+    conn.identifiedEvent.on(onIdentified);
 
     function onConnectionClose(err) {
         conn.closeEvent.removeListener(onConnectionClose);
