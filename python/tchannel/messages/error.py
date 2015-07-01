@@ -60,6 +60,7 @@ class ErrorMessage(BaseMessage):
         ErrorCode.unexpected: 'unexpected',
         ErrorCode.bad_request: 'bad request',
         ErrorCode.network_error: 'network error',
+        ErrorCode.unhealthy: 'unhealthy error',
         ErrorCode.fatal: 'fatal protocol error'
     }
 

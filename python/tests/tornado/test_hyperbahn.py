@@ -18,7 +18,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from mock import patch
 import pytest
 
 from tchannel.errors import ConnectionClosedError
@@ -61,6 +60,5 @@ def test_request():
 def test_register():
     channel = TChannel(name='test')
 
-    with patch('tchannel.tornado.hyperbahn.log') as mock_logger:
+    with pytest.raises(ConnectionClosedError):
         yield hyperbahn.advertise(channel, 'foo', ['127.0.0.1:23000'])
-    assert mock_logger.error.called

@@ -23,6 +23,9 @@ from __future__ import absolute_import
 import json
 import logging
 
+from ..errors import ProtocolError
+from ..errors import TimeoutError
+
 import tornado.gen
 import tornado.ioloop
 
@@ -86,7 +89,7 @@ def advertise(tchannel, service, routers):
                 headers={'as': 'json'},
                 attempt_times=1,
             )
-        except Exception as e:
+        except (ProtocolError, TimeoutError) as e:
             attempt_counter += 1
             log.error('Failed to register with Hyperbahn: %s', e)
         else:
@@ -95,14 +98,14 @@ def advertise(tchannel, service, routers):
                 log.error('Failed to register with Hyperbahn: %s', response)
             else:
                 attempt_counter = 0
-        finally:
-            delay_time = DEFAULT_ERROR_RETRY_TIMES[
-                min(attempt_counter, len(DEFAULT_ERROR_RETRY_TIMES) - 1)
-            ]
-            tornado.ioloop.IOLoop.current().call_later(
-                delay=delay_time,
-                callback=lambda: _register(attempt_counter),
-            )
+
+        delay_time = DEFAULT_ERROR_RETRY_TIMES[
+            min(attempt_counter, len(DEFAULT_ERROR_RETRY_TIMES) - 1)
+        ]
+        tornado.ioloop.IOLoop.current().call_later(
+            delay=delay_time,
+            callback=lambda: _register(attempt_counter),
+        )
 
     return _register()
 
