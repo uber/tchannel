@@ -31,7 +31,9 @@ allocCluster.test('healthy state stays healthy', {
     channelOptions: {
         timers: MockTimers(Date.now()),
         random: winning,
-        initialPeerState: States.HealthyState
+        peerOptions: {
+            initialState: States.HealthyState
+        }
     },
 }, function t(cluster, assert) {
     var one = cluster.channels[0];
@@ -244,7 +246,9 @@ function testSetup(desc, options, testFunc) {
         channelOptions: {
             timers: MockTimers(Date.now()),
             random: winning,
-            initialPeerState: options.initialPeerState || States.HealthyState,
+            peerOptions: {
+                initialState: options.initialPeerState || States.HealthyState
+            },
             requestDefaults: {
                 headers: {
                     as: 'raw',

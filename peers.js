@@ -22,6 +22,7 @@
 
 var assert = require('assert');
 var inherits = require('util').inherits;
+var extend = require('xtend');
 var EventEmitter = require('./lib/event_emitter');
 
 var errors = require('./errors');
@@ -39,7 +40,7 @@ function TChannelPeers(channel, options) {
     self.channel = channel;
     self.logger = self.channel.logger;
     self.options = options || {};
-    self.initialPeerState = self.options.initialPeerState;
+    self.peerOptions = self.options.peerOptions || {};
     self._map = Object.create(null);
     self.selfPeer = null;
 }
@@ -91,8 +92,7 @@ TChannelPeers.prototype.add = function add(hostPort, options) {
         if (self.channel.topChannel) {
             peer = self.channel.topChannel.peers.add(hostPort, options);
         } else {
-            options = options || {};
-            options.initialState = self.initialPeerState;
+            options = options || extend({}, self.peerOptions);
             peer = TChannelPeer(self.channel, hostPort, options);
             self.allocPeerEvent.emit(self, peer);
         }
