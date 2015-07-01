@@ -442,6 +442,8 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
 
     self.ops.destroy();
 
+    err = err || errors.TChannelConnectionCloseError();
+
     if (self.closing) return;
     self.closing = true;
     self.closeError = err;

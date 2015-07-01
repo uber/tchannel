@@ -198,24 +198,19 @@ function waitForIdentified(callback) {
     var conn = self.connect();
 
     if (conn.closing) {
-        onConnectionClose(conn.closeError);
+        callback(conn.closeError);
+    } else if (conn.remoteName) {
+        callback(null);
     } else {
         conn.closeEvent.on(onConnectionClose);
-
-        // conn.handler is a self peer detection
-        if (!conn.remoteName) {
-            conn.identifiedEvent.on(onIdentified);
-            return;
-        } else {
-            onIdentified();
-        }
+        conn.identifiedEvent.on(onIdentified);
     }
 
     function onConnectionClose(err) {
         conn.closeEvent.removeListener(onConnectionClose);
         conn.identifiedEvent.removeListener(onIdentified);
 
-        callback(err || errors.TChannelConnectionCloseError());
+        callback(err);
     }
 
     function onIdentified() {
