@@ -22,6 +22,7 @@ from __future__ import absolute_import
 
 import json
 import logging
+import random
 
 from ..errors import ProtocolError
 from ..errors import TimeoutError
@@ -31,20 +32,16 @@ import tornado.ioloop
 
 from .response import StatusCode
 
-DEFAULT_ERROR_RETRY_TIMES = [  # seconds
-    0.2,  # One fast retry
-
-    1,  # Fibonacci backoff
-    1,
-    2,
-    3,
-    5,
-    8,
-
-    10,  # Max timeout at 10 sec
-]
+DEFAULT_EXPO_BASE = 1.4  # try this first
+DEFAULT_MAX_DELAY = 10  # sec
+DEFAULT_MAX_ACCTEMPT = 7  # pow(1.4, 8) > 10
 
 log = logging.getLogger('tchannel')
+
+
+def fuzz(x):
+    tmp = pow(DEFAULT_EXPO_BASE, x) / 2.0
+    return tmp + random.random() * tmp
 
 
 def advertise(tchannel, service, routers):
@@ -99,9 +96,8 @@ def advertise(tchannel, service, routers):
             else:
                 attempt_counter = 0
 
-        delay_time = DEFAULT_ERROR_RETRY_TIMES[
-            min(attempt_counter, len(DEFAULT_ERROR_RETRY_TIMES) - 1)
-        ]
+        delay_time = min(DEFAULT_MAX_DELAY, fuzz(attempt_counter))
+        attempt_counter = min(attempt_counter, DEFAULT_MAX_ACCTEMPT)
         tornado.ioloop.IOLoop.current().call_later(
             delay=delay_time,
             callback=lambda: _register(attempt_counter),
