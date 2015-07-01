@@ -216,7 +216,6 @@ function sendProtocolError(type, err) {
         }, 'ProtocolError', protocolError.message);
 
         self.resetAll(protocolError);
-        self.socket.destroy();
     } else if (type === 'write') {
         protocolError = errors.TChannelWriteProtocolError(err, {
             remoteName: self.remoteName,
@@ -226,7 +225,6 @@ function sendProtocolError(type, err) {
 
         // TODO: what if you have a write error in a call req cont frame
         self.resetAll(protocolError);
-        self.socket.destroy();
     }
 };
 
@@ -237,7 +235,6 @@ TChannelConnection.prototype.onTimedOut = function onTimedOut(err) {
         hostPort: self.channel.hostPort
     });
     self.resetAll(err);
-    self.socket.destroy();
 };
 
 TChannelConnection.prototype.onWriteError = function onWriteError(err) {
@@ -249,8 +246,6 @@ TChannelConnection.prototype.onWriteError = function onWriteError(err) {
 TChannelConnection.prototype.onHandlerError = function onHandlerError(err) {
     var self = this;
     self.resetAll(err);
-    // resetAll() does not close the socket
-    self.socket.destroy();
 };
 
 TChannelConnection.prototype.handlePingResponse = function handlePingResponse(resFrame) {
@@ -401,7 +396,6 @@ TChannelConnection.prototype.close = function close(callback) {
     } else {
         self.socket.once('close', callback);
         self.resetAll(errors.LocalSocketCloseError());
-        self.socket.destroy();
     }
 };
 
@@ -449,9 +443,15 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
 
     self.ops.destroy();
 
-    if (self.closing) return;
+    err = err || errors.TChannelConnectionCloseError();
+
+    if (self.closing) {
+        return;
+    }
+
     self.closing = true;
     self.closeError = err;
+    self.socket.destroy();
     self.closeEvent.emit(self, err);
 
     var requests = self.ops.getRequests();
