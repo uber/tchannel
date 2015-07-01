@@ -136,8 +136,8 @@ function HyperbahnApp(opts) {
 
     var self = this;
 
-    self.__relayChannel = opts.relayChannel;
-    self.__egressNodes = opts.egressNodes;
+    self._relayChannel = opts.relayChannel;
+    self._egressNodes = opts.egressNodes;
     self.hostPort = opts.relayChannel.hostPort;
     self.clients = {
         serviceProxy: opts.serviceProxy
@@ -147,13 +147,13 @@ function HyperbahnApp(opts) {
 HyperbahnApp.prototype.exitsFor = function exitsFor(serviceName) {
     var self = this;
 
-    return self.__egressNodes.exitsFor(serviceName);
+    return self._egressNodes.exitsFor(serviceName);
 };
 
 HyperbahnApp.prototype.destroy = function destroy() {
     var self = this;
 
-    self.__relayChannel.close();
+    self._relayChannel.close();
 };
 
 function HyperbahnRemote(opts) {
