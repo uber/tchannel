@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel/golang"
+	"github.com/uber/tchannel/golang/json"
 	"github.com/uber/tchannel/golang/testutils"
 	"golang.org/x/net/context"
 )
@@ -44,8 +45,8 @@ func advertiseHandler(t *testing.T, f func(req adRequest) (adResponse, error)) t
 		response, err := f(req)
 		if err != nil {
 			resp.SetApplicationError()
-			require.NoError(t, tchannel.NewArgWriter(resp.Arg2Writer()).Write([]byte("")))
-			require.NoError(t, tchannel.NewArgWriter(resp.Arg3Writer()).Write([]byte("false")))
+			require.NoError(t, tchannel.NewArgWriter(resp.Arg2Writer()).Write(nil))
+			require.NoError(t, tchannel.NewArgWriter(resp.Arg3Writer()).Write(nil))
 			return
 		}
 		require.NoError(t, tchannel.NewArgWriter(resp.Arg2Writer()).Write(nil))
@@ -158,6 +159,8 @@ func TestAdvertiseSuccess(t *testing.T) {
 	})
 }
 
+var advertiseErr = make(json.ErrApplication)
+
 func TestRetryTemporaryFailure(t *testing.T) {
 	runRetryTest(t, func(r *retryTest) {
 		r.mock.On("On", SendAdvertise).Return().
@@ -171,7 +174,7 @@ func TestRetryTemporaryFailure(t *testing.T) {
 		require.True(t, s1 <= advertiseInterval+fuzzInterval)
 
 		// When registrations fail, it retries after a short connection and triggers OnError.
-		r.mock.On("OnError", ErrAdvertiseFailed{true, ErrAppError}).Return(nil).Times(3)
+		r.mock.On("OnError", ErrAdvertiseFailed{true, advertiseErr}).Return(nil).Times(3)
 		for i := 0; i < 3; i++ {
 			r.sleepBlock <- struct{}{}
 			r.setAdvertiseFailure()
@@ -211,8 +214,10 @@ func TestRetryFailure(t *testing.T) {
 		// maxRegistrationFailures - 1 OnError WithRetry=True
 		// 1 OnError WithRetry=False
 		noRetryFail := make(chan struct{})
-		r.mock.On("OnError", ErrAdvertiseFailed{true, ErrAppError}).Return(nil).Times(maxAdvertiseFailures - 1)
-		r.mock.On("OnError", ErrAdvertiseFailed{false, ErrAppError}).Return(nil).Run(func(_ mock.Arguments) {
+		r.mock.On("OnError", ErrAdvertiseFailed{true, advertiseErr}).
+			Return(nil).Times(maxAdvertiseFailures - 1)
+		r.mock.On("OnError", ErrAdvertiseFailed{false, advertiseErr}).
+			Return(nil).Run(func(_ mock.Arguments) {
 			noRetryFail <- struct{}{}
 		}).Once()
 		for i := 0; i < maxAdvertiseFailures-1; i++ {

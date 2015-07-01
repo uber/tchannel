@@ -1,7 +1,8 @@
 GODEPS := $(shell pwd)/Godeps/_workspace
 OLDGOPATH := $(GOPATH)
 PATH := $(GODEPS)/bin:$(PATH)
-PKGS := . ./hyperbahn ./thrift ./typed ./examples/hello/server ./examples/hello/client ./examples/ping ./examples/thrift ./examples/hyperbahn/echo-server
+EXAMPLES=./examples/hello/server ./examples/hello/client ./examples/ping ./examples/thrift ./examples/hyperbahn/echo-server
+PKGS := . ./json ./hyperbahn ./thrift ./typed $(EXAMPLES)
 BUILD := ./build
 SRCS := $(foreach pkg,$(PKGS),$(wildcard $(pkg)/*.go))
 export GOPATH = $(GODEPS):$(OLDGOPATH)

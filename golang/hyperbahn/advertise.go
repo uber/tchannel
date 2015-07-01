@@ -25,6 +25,7 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/uber/tchannel/golang/json"
 	"golang.org/x/net/context"
 )
 
@@ -83,7 +84,8 @@ func (c *Client) sendAdvertise() error {
 	}
 	var resp adResponse
 	c.opts.Handler.On(SendAdvertise)
-	if err := makeJSONCall(ctx, sc, "ad", arg, &resp); err != nil {
+
+	if err := json.CallSC(json.WrapContext(ctx), sc, "ad", arg, &resp); err != nil {
 		return err
 	}
 
