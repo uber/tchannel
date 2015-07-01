@@ -10,7 +10,7 @@ Changelog for tchannel.py
 0.8.5 (2015-06-30)
 ------------------
 
-- Added port parameter for tchannel listen api.
+- Add port parameter for `TChannel.listen`.
 
 
 0.8.4 (2015-06-17)
@@ -23,15 +23,15 @@ Changelog for tchannel.py
 0.8.3 (2015-06-15)
 ------------------
 
-- Added 'as' attr into response header
+- Add `as` attribute to the response header.
 
 
 0.8.2 (2015-06-11)
 ------------------
 
-- Fixed callable traceflag being propagated to the serializer.
-- Fixed circular imports.
-- Fixed TimeoutError retry logic.
+- Fix callable `traceflag` being propagated to the serializer.
+- Fix circular imports.
+- Fix `TimeoutError` retry logic.
 
 
 0.8.1 (2015-06-10)
