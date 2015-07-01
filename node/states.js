@@ -42,27 +42,19 @@ module.exports.LockedUnhealthyState = LockedUnhealthyState;
  * - channel.random
  */
 
-var symptoms = {
-    'BadRequest': false, // not an indicator of bad health
-    'Cancelled': false, // not an indicator of bad health
-    'Timeout': true, // TODO throttle
-    'Busy': true, // TODO throttle
-    'Declined': true,
-    'UnexpectedError': true,
-    'NetworkError': true,
-    'FatalProtocolError': true
-};
-
 function State() {
 }
 
 State.prototype.onRequest = function onRequest(/* req */) {
 };
 
-State.prototype.onRequestResponse = function onRequestResponse(/* req */) {
+State.prototype.onRequestHealthy = function onRequestHealthy(/* req */) {
 };
 
 State.prototype.onRequestError = function onRequestError(err) {
+};
+
+State.prototype.onRequestUnhealthy = function onRequestUnhealthy() {
 };
 
 State.prototype.close = function close(callback) {
@@ -78,9 +70,9 @@ function HealthyState(options) {
     self.period = options.period || 1000; // ms
     self.start = self.timers.now();
     self.maxErrorRate = options.maxErrorRate || 0.5;
-    self.okCount = 0;
-    self.notOkCount = 0;
-    self.totalReqs = 0;
+    self.healthyCount = 0;
+    self.unhealthyCount = 0;
+    self.totalRequests = 0;
     self.minRequests = typeof options.minRequests === 'number' ?
         options.minRequests : 5;
 }
@@ -91,7 +83,7 @@ HealthyState.prototype.type = 'tchannel.healthy';
 
 HealthyState.prototype.toString = function healthyToString() {
     var self = this;
-    return format('[Healthy %s ok %s err]', self.okCount, self.notOkCount);
+    return format('[Healthy %s healthy %s unhealthy]', self.healthyCount, self.unhealthyCount);
 };
 
 HealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
@@ -99,38 +91,44 @@ HealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
     var now = self.timers.now();
     // At the conclusion of a period
     if (now - self.start >= self.period) {
-        var totalCount = self.okCount + self.notOkCount;
+        var totalCount = self.healthyCount + self.unhealthyCount;
 
-        // Transition to unhealthy state if the success rate dips below the
-        // acceptable threshold.
-        if (self.notOkCount / totalCount > self.maxErrorRate &&
-            self.totalReqs > self.minRequests
+        // Transition to unhealthy state if the healthy request rate dips below
+        // the acceptable threshold.
+        if (self.unhealthyCount / totalCount > self.maxErrorRate &&
+            self.totalRequests > self.minRequests
         ) {
             self.stateMachine.setState(UnhealthyState);
             return 0;
         }
         // Alternatley, start a new monitoring period.
         self.start = self.timers.now();
-        self.okCount = 0;
-        self.notOkCount = 0;
+        self.healthyCount = 0;
+        self.unhealthyCount = 0;
     }
     return self.stateMachine.shouldRequest(req, options);
 };
 
-HealthyState.prototype.onRequestResponse = function onRequestResponse(/* req */) {
+HealthyState.prototype.onRequestHealthy = function onRequestHealthy(/* req */) {
     var self = this;
-    self.okCount++;
-    self.totalReqs++;
+    self.healthyCount++;
+    self.totalRequests++;
 };
 
 HealthyState.prototype.onRequestError = function onRequestError(err) {
     var self = this;
 
-    self.totalReqs++;
+    self.totalRequests++;
     var codeString = errors.classify(err);
-    if (symptoms[codeString]) {
-        self.notOkCount++;
+    if (errors.isUnhealthy(codeString)) {
+        self.unhealthyCount++;
     }
+};
+
+HealthyState.prototype.onRequestUnhealthy = function onRequestUnhealthy() {
+    var self = this;
+    self.totalRequests++;
+    self.unhealthyCount++;
 };
 
 function UnhealthyState(options) {
@@ -142,7 +140,7 @@ function UnhealthyState(options) {
     self.minResponseCount = options.probation || 5;
     self.period = options.period || 1000;
     self.start = self.timers.now();
-    self.successCount = 0;
+    self.healthyCount = 0;
     self.triedThisPeriod = true;
 }
 
@@ -152,7 +150,7 @@ UnhealthyState.prototype.type = 'tchannel.unhealthy';
 
 UnhealthyState.prototype.toString = function healthyToString() {
     var self = this;
-    return format('[Unhealthy %s ok]', self.successCount);
+    return format('[Unhealthy %s consecutive healthy requests]', self.healthyCount);
 };
 
 UnhealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
@@ -178,10 +176,10 @@ UnhealthyState.prototype.onRequest = function onRequest(/* req */) {
     self.triedThisPeriod = true;
 };
 
-UnhealthyState.prototype.onRequestResponse = function onRequestResponse(/* req */) {
+UnhealthyState.prototype.onRequestHealthy = function onRequestHealthy(/* req */) {
     var self = this;
-    self.successCount++;
-    if (self.successCount > self.minResponseCount) {
+    self.healthyCount++;
+    if (self.healthyCount > self.minResponseCount) {
         self.stateMachine.setState(HealthyState);
     }
 };
@@ -189,9 +187,16 @@ UnhealthyState.prototype.onRequestResponse = function onRequestResponse(/* req *
 UnhealthyState.prototype.onRequestError = function onRequestError(err) {
     var self = this;
     var codeString = errors.classify(err);
-    if (symptoms[codeString]) {
-        self.successCount = 0;
+    if (errors.isUnhealthy(codeString)) {
+        self.healthyCount = 0;
+    } else {
+        self.onRequestHealthy();
     }
+};
+
+UnhealthyState.prototype.onRequestUnhealthy = function onRequestUnhealthy() {
+    var self = this;
+    self.healthyCount = 0;
 };
 
 function LockedHealthyState(options) {

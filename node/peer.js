@@ -239,7 +239,7 @@ TChannelPeer.prototype.request = function peerRequest(options) {
     }
 
     function onResponse(res) {
-        self.state.onRequestResponse(req);
+        self.state.onRequestHealthy(req);
     }
 
     return req;
