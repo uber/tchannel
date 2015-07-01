@@ -54,6 +54,10 @@ func main() {
 	}
 	hyperbahn.NewClient(ch, config, nil)
 
+	thriftClient := thrift.NewClient(ch, "keyvalue", nil)
+	client := keyvalue.NewTChanKeyValueClient(thriftClient)
+	adminClient := keyvalue.NewTChanAdminClient(thriftClient)
+
 	// Read commands from the command line and execute them.
 	scanner := bufio.NewScanner(os.Stdin)
 	printHelp()
@@ -71,13 +75,15 @@ func main() {
 				printHelp()
 				break
 			}
-			get(ch, parts[1])
+			get(client, parts[1])
 		case "set":
 			if len(parts) < 3 {
 				printHelp()
 				break
 			}
-			set(ch, parts[1], parts[2])
+			set(client, parts[1], parts[2])
+		case "clearAll":
+			clear(adminClient)
 		default:
 			log.Printf("Unsupported command %q\n", parts[0])
 		}
@@ -86,34 +92,56 @@ func main() {
 	scanner.Text()
 }
 
-func getClient(ch *tchannel.Channel) *keyvalue.KeyValueClient {
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
-
+func get(client keyvalue.TChanKeyValue, key string) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	ctx = tchannel.NewRootContext(ctx)
-	protocol := thrift.NewTChanOutbound(ch, thrift.TChanOutboundOptions{
-		Context:          ctx,
-		HyperbahnService: "keyvalue",
-		ThriftService:    "KeyValue",
-	})
-	client := keyvalue.NewKeyValueClientProtocol(nil, protocol, protocol)
-	return client
-}
 
-func get(ch *tchannel.Channel, key string) {
-	client := getClient(ch)
-	val, err := client.Get(key)
+	val, err := client.Get(ctx, key)
 	if err != nil {
-		log.Printf("Get %v got err: %v", key, err)
+		switch err := err.(type) {
+		case *keyvalue.InvalidKey:
+			log.Printf("Get %v failed: invalid key", key)
+		case *keyvalue.KeyNotFound:
+			log.Printf("Get %v failed: key not found", key)
+		default:
+			log.Printf("Get %v failed unexpectedly: %v", key, err)
+		}
 		return
 	}
 
 	log.Printf("Get %v: %v", key, val)
 }
 
-func set(ch *tchannel.Channel, key, value string) {
-	client := getClient(ch)
-	if err := client.Set(key, value); err != nil {
-		log.Printf("Set %v:%v got err: %v", key, value, err)
+func set(client keyvalue.TChanKeyValue, key, value string) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx = tchannel.NewRootContext(ctx)
+
+	if err := client.Set(ctx, key, value); err != nil {
+		switch err := err.(type) {
+		case *keyvalue.InvalidKey:
+			log.Printf("Set %v failed: invalid key", key)
+		default:
+			log.Printf("Set %v:%v failed unexpectedly: %#v", key, value, err)
+		}
+		return
 	}
+
 	log.Printf("Set %v:%v succeeded", key, value)
+}
+
+func clear(adminClient keyvalue.TChanAdmin) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx = tchannel.NewRootContext(ctx)
+
+	if err := adminClient.ClearAll(ctx); err != nil {
+		switch err := err.(type) {
+		case *keyvalue.NotAuthorized:
+			log.Printf("You are not authorized to perform this operation")
+		default:
+			log.Printf("ClearAll failed unexpectedly: %v", err)
+		}
+		return
+	}
+
+	log.Printf("ClearAll completed, all keys cleared")
 }

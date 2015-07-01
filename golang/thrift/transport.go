@@ -27,25 +27,25 @@ import (
 )
 
 // readerWriterTransport is a transport that reads and writes from the underlying Reader/Writer.
-type readerWriterTransport struct {
+type readWriterTransport struct {
 	io.Writer
 	io.Reader
 }
 
-func (t *readerWriterTransport) Open() error {
+func (t *readWriterTransport) Open() error {
 	return nil
 }
 
-func (t *readerWriterTransport) Flush() error {
+func (t *readWriterTransport) Flush() error {
 	return nil
 }
 
-func (t *readerWriterTransport) IsOpen() bool {
+func (t *readWriterTransport) IsOpen() bool {
 	return true
 }
 
-func (t *readerWriterTransport) Close() error {
+func (t *readWriterTransport) Close() error {
 	return nil
 }
 
-var _ thrift.TTransport = &readerWriterTransport{}
+var _ thrift.TTransport = &readWriterTransport{}

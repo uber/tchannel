@@ -22,19 +22,25 @@ package thrift
 
 import "github.com/apache/thrift/lib/go/thrift"
 
-// protocol is the common functionality for inProtocol and outProtocol.
-type protocol struct {
-	thrift.TProtocol
+// This file defines interfaces that are used or exposed by thrift-gen generated code.
+// TChanClient is used by the generated code to make outgoing requests.
+// TChanServer is exposed by the generated code, and is called on incoming requests.
 
-	// transport is the underlying transport that the TProtocol will write to.
-	// The actual readers/writers are set from the tchannel WriteTo/ReadFrom calls.
-	transport *readerWriterTransport
+// TChanClient abstracts calling a Thrift endpoint, and is used by the generated client code.
+type TChanClient interface {
+	// Call should be passed the method to call and the request/response Thrift structs.
+	Call(ctx Context, serviceName, methodName string, req, resp thrift.TStruct) (success bool, err error)
 }
 
-func newProtocol() *protocol {
-	transport := &readerWriterTransport{}
-	return &protocol{
-		TProtocol: thrift.NewTBinaryProtocolTransport(transport),
-		transport: transport,
-	}
+// TChanServer abstracts handling of an RPC that is implemented by the generated server code.
+type TChanServer interface {
+	// Handle should read the request from the given reqReader, and return the response struct.
+	// The arguments returned are success, result struct, unexpected error
+	Handle(ctx Context, methodName string, protocol thrift.TProtocol) (success bool, resp thrift.TStruct, err error)
+
+	// Service returns the service name.
+	Service() string
+
+	// Methods returns the method names handled by this server.
+	Methods() []string
 }

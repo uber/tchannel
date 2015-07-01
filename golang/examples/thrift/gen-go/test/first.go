@@ -20,7 +20,6 @@ type First interface {
 	Echo(msg string) (r string, err error)
 	Healthcheck() (r *HealthCheckRes, err error)
 	AppError() (err error)
-	OneWay() (err error)
 }
 
 type FirstClient struct {
@@ -247,33 +246,6 @@ func (p *FirstClient) recvAppError() (err error) {
 	return
 }
 
-func (p *FirstClient) OneWay() (err error) {
-	if err = p.sendOneWay(); err != nil {
-		return
-	}
-	return
-}
-
-func (p *FirstClient) sendOneWay() (err error) {
-	oprot := p.OutputProtocol
-	if oprot == nil {
-		oprot = p.ProtocolFactory.GetProtocol(p.Transport)
-		p.OutputProtocol = oprot
-	}
-	p.SeqId++
-	if err = oprot.WriteMessageBegin("OneWay", thrift.ONEWAY, p.SeqId); err != nil {
-		return
-	}
-	args := OneWayArgs{}
-	if err = args.Write(oprot); err != nil {
-		return
-	}
-	if err = oprot.WriteMessageEnd(); err != nil {
-		return
-	}
-	return oprot.Flush()
-}
-
 type FirstProcessor struct {
 	processorMap map[string]thrift.TProcessorFunction
 	handler      First
@@ -298,7 +270,6 @@ func NewFirstProcessor(handler First) *FirstProcessor {
 	self6.processorMap["Echo"] = &firstProcessorEcho{handler: handler}
 	self6.processorMap["Healthcheck"] = &firstProcessorHealthcheck{handler: handler}
 	self6.processorMap["AppError"] = &firstProcessorAppError{handler: handler}
-	self6.processorMap["OneWay"] = &firstProcessorOneWay{handler: handler}
 	return self6
 }
 
@@ -460,25 +431,6 @@ func (p *firstProcessorAppError) Process(seqId int32, iprot, oprot thrift.TProto
 		return
 	}
 	return true, err
-}
-
-type firstProcessorOneWay struct {
-	handler First
-}
-
-func (p *firstProcessorOneWay) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := OneWayArgs{}
-	if err = args.Read(iprot); err != nil {
-		iprot.ReadMessageEnd()
-		return false, err
-	}
-
-	iprot.ReadMessageEnd()
-	var err2 error
-	if err2 = p.handler.OneWay(); err2 != nil {
-		return true, err2
-	}
-	return true, nil
 }
 
 // HELPER FUNCTIONS AND STRUCTURES
@@ -922,56 +874,4 @@ func (p *AppErrorResult) String() string {
 		return "<nil>"
 	}
 	return fmt.Sprintf("AppErrorResult(%+v)", *p)
-}
-
-type OneWayArgs struct {
-}
-
-func NewOneWayArgs() *OneWayArgs {
-	return &OneWayArgs{}
-}
-
-func (p *OneWayArgs) Read(iprot thrift.TProtocol) error {
-	if _, err := iprot.ReadStructBegin(); err != nil {
-		return fmt.Errorf("%T read error: %s", p, err)
-	}
-	for {
-		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
-		if err != nil {
-			return fmt.Errorf("%T field %d read error: %s", p, fieldId, err)
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-		if err := iprot.Skip(fieldTypeId); err != nil {
-			return err
-		}
-		if err := iprot.ReadFieldEnd(); err != nil {
-			return err
-		}
-	}
-	if err := iprot.ReadStructEnd(); err != nil {
-		return fmt.Errorf("%T read struct end error: %s", p, err)
-	}
-	return nil
-}
-
-func (p *OneWayArgs) Write(oprot thrift.TProtocol) error {
-	if err := oprot.WriteStructBegin("OneWay_args"); err != nil {
-		return fmt.Errorf("%T write struct begin error: %s", p, err)
-	}
-	if err := oprot.WriteFieldStop(); err != nil {
-		return fmt.Errorf("write field stop error: %s", err)
-	}
-	if err := oprot.WriteStructEnd(); err != nil {
-		return fmt.Errorf("write struct stop error: %s", err)
-	}
-	return nil
-}
-
-func (p *OneWayArgs) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("OneWayArgs(%+v)", *p)
 }

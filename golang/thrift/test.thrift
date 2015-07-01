@@ -4,10 +4,13 @@ struct Data {
   3: i32 i3
 }
 
+exception SimpleErr {
+  1: string message
+}
+
 service SimpleService {
   Data Call(1: Data arg)
-  void Simple()
-  oneway void OneWay()
+  void Simple() throws (1: SimpleErr simpleErr)
 }
 
 service SecondService {

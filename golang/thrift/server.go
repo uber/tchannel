@@ -21,45 +21,114 @@ package thrift
 // THE SOFTWARE.
 
 import (
-	"reflect"
+	"io"
+	"io/ioutil"
+	"log"
+	"strings"
+	"sync"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	tchannel "github.com/uber/tchannel/golang"
 	"golang.org/x/net/context"
 )
 
-// Server is a Thrift over TChannel server.
+// Server handles incoming TChannel calls and forwards them to the matching TChanServer.
 type Server struct {
 	*tchannel.Channel
+
+	mut      sync.RWMutex
+	handlers map[string]TChanServer
 }
 
 // NewServer returns a server that can serve thrift services over TChannel.
 func NewServer(tchan *tchannel.Channel) *Server {
-	return &Server{tchan}
-}
-
-// Register registers the given processor's methods as handlers with this server.
-// E.g., a processor 'myProcessor' with methods 'foo' and 'bar' will be registered
-// under the operations 'myProcessor::foo' and 'myProcessor::bar'.
-func (s *Server) Register(thriftName string, processorInterface reflect.Type, processor thrift.TProcessor) {
-	handler := &Handler{processor}
-	for i := 0; i < processorInterface.NumMethod(); i++ {
-		methodName := processorInterface.Method(i).Name
-		s.Channel.Register(handler, thriftName+"::"+methodName)
+	return &Server{
+		Channel:  tchan,
+		handlers: make(map[string]TChanServer),
 	}
 }
 
-// Handler wraps the tchannel.Handler interface around the Thrift processor.
-type Handler struct {
-	processor thrift.TProcessor
+// Register registers the given TChanServer to be called on any incoming call for its' services.
+// TODO(prashant): Replace Register call with this call.
+func (s *Server) Register(svr TChanServer) {
+	service := svr.Service()
+
+	s.mut.Lock()
+	s.handlers[service] = svr
+	s.mut.Unlock()
+
+	for _, m := range svr.Methods() {
+		s.Channel.Register(s, service+"::"+m)
+	}
 }
 
-// Handle takes a tchannel call request and handles it using the Thrift processor with
-// a tchannel protocol.
-func (h *Handler) Handle(ctx context.Context, call *tchannel.InboundCall) {
-	protocol := NewTChannelInbound(call)
-	_, err := h.processor.Process(protocol, protocol)
+func (s *Server) onError(err error) {
+	// TODO(prashant): Expose incoming call errors through options for NewServer.
+	log.Fatalf("Server hit error on incoming call: %v", err)
+}
+
+func (s *Server) handle(ctx context.Context, handler TChanServer, method string, call *tchannel.InboundCall) error {
+	reader, err := call.Arg2Reader()
 	if err != nil {
-		// TODO(prashant): Separate application errors from tchannel errors and log tchannel errors.
+		return err
+	}
+
+	// TODO(prashant): Read application headers.
+	io.Copy(ioutil.Discard, reader)
+	if err := reader.Close(); err != nil {
+		return err
+	}
+
+	reader, err = call.Arg3Reader()
+	if err != nil {
+		return err
+	}
+
+	protocol := thrift.NewTBinaryProtocolTransport(&readWriterTransport{Reader: reader})
+	success, resp, err := handler.Handle(ctx, method, protocol)
+	if err != nil {
+		reader.Close()
+		call.Response().SendSystemError(err)
+		return nil
+	}
+	if err := reader.Close(); err != nil {
+		return err
+	}
+
+	if !success {
+		call.Response().SetApplicationError()
+	}
+	// TODO(prashant): Write application headers.
+	if err := tchannel.NewArgWriter(call.Response().Arg2Writer()).Write([]byte{0, 0}); err != nil {
+		return err
+	}
+
+	writer, err := call.Response().Arg3Writer()
+	protocol = thrift.NewTBinaryProtocolTransport(&readWriterTransport{Writer: writer})
+	resp.Write(protocol)
+	if err := writer.Close(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Handle handles an incoming TChannel call and forwards it to the correct handler.
+func (s *Server) Handle(ctx context.Context, call *tchannel.InboundCall) {
+	parts := strings.Split(string(call.Operation()), "::")
+	if len(parts) != 2 {
+		log.Fatalf("Handle got call for %v which does not match the expected call format", parts)
+	}
+
+	service, method := parts[0], parts[1]
+	s.mut.RLock()
+	handler, ok := s.handlers[service]
+	s.mut.RUnlock()
+	if !ok {
+		log.Fatalf("Handle got call for service %v which is not registered", service)
+	}
+
+	if err := s.handle(ctx, handler, method, call); err != nil {
+		s.onError(err)
 	}
 }

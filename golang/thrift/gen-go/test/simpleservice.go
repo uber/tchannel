@@ -19,7 +19,6 @@ type SimpleService interface {
 	//  - Arg
 	Call(arg *Data) (r *Data, err error)
 	Simple() (err error)
-	OneWay() (err error)
 }
 
 type SimpleServiceClient struct {
@@ -178,34 +177,11 @@ func (p *SimpleServiceClient) recvSimple() (err error) {
 	if err = iprot.ReadMessageEnd(); err != nil {
 		return
 	}
-	return
-}
-
-func (p *SimpleServiceClient) OneWay() (err error) {
-	if err = p.sendOneWay(); err != nil {
+	if result.SimpleErr != nil {
+		err = result.SimpleErr
 		return
 	}
 	return
-}
-
-func (p *SimpleServiceClient) sendOneWay() (err error) {
-	oprot := p.OutputProtocol
-	if oprot == nil {
-		oprot = p.ProtocolFactory.GetProtocol(p.Transport)
-		p.OutputProtocol = oprot
-	}
-	p.SeqId++
-	if err = oprot.WriteMessageBegin("OneWay", thrift.ONEWAY, p.SeqId); err != nil {
-		return
-	}
-	args := OneWayArgs{}
-	if err = args.Write(oprot); err != nil {
-		return
-	}
-	if err = oprot.WriteMessageEnd(); err != nil {
-		return
-	}
-	return oprot.Flush()
 }
 
 type SimpleServiceProcessor struct {
@@ -231,7 +207,6 @@ func NewSimpleServiceProcessor(handler SimpleService) *SimpleServiceProcessor {
 	self4 := &SimpleServiceProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
 	self4.processorMap["Call"] = &simpleServiceProcessorCall{handler: handler}
 	self4.processorMap["Simple"] = &simpleServiceProcessorSimple{handler: handler}
-	self4.processorMap["OneWay"] = &simpleServiceProcessorOneWay{handler: handler}
 	return self4
 }
 
@@ -322,12 +297,17 @@ func (p *simpleServiceProcessorSimple) Process(seqId int32, iprot, oprot thrift.
 	result := SimpleResult{}
 	var err2 error
 	if err2 = p.handler.Simple(); err2 != nil {
-		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing Simple: "+err2.Error())
-		oprot.WriteMessageBegin("Simple", thrift.EXCEPTION, seqId)
-		x.Write(oprot)
-		oprot.WriteMessageEnd()
-		oprot.Flush()
-		return true, err2
+		switch v := err2.(type) {
+		case *SimpleErr:
+			result.SimpleErr = v
+		default:
+			x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing Simple: "+err2.Error())
+			oprot.WriteMessageBegin("Simple", thrift.EXCEPTION, seqId)
+			x.Write(oprot)
+			oprot.WriteMessageEnd()
+			oprot.Flush()
+			return true, err2
+		}
 	}
 	if err2 = oprot.WriteMessageBegin("Simple", thrift.REPLY, seqId); err2 != nil {
 		err = err2
@@ -345,25 +325,6 @@ func (p *simpleServiceProcessorSimple) Process(seqId int32, iprot, oprot thrift.
 		return
 	}
 	return true, err
-}
-
-type simpleServiceProcessorOneWay struct {
-	handler SimpleService
-}
-
-func (p *simpleServiceProcessorOneWay) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := OneWayArgs{}
-	if err = args.Read(iprot); err != nil {
-		iprot.ReadMessageEnd()
-		return false, err
-	}
-
-	iprot.ReadMessageEnd()
-	var err2 error
-	if err2 = p.handler.OneWay(); err2 != nil {
-		return true, err2
-	}
-	return true, nil
 }
 
 // HELPER FUNCTIONS AND STRUCTURES
@@ -615,10 +576,23 @@ func (p *SimpleArgs) String() string {
 }
 
 type SimpleResult struct {
+	SimpleErr *SimpleErr `thrift:"simpleErr,1" json:"simpleErr"`
 }
 
 func NewSimpleResult() *SimpleResult {
 	return &SimpleResult{}
+}
+
+var SimpleResult_SimpleErr_DEFAULT *SimpleErr
+
+func (p *SimpleResult) GetSimpleErr() *SimpleErr {
+	if !p.IsSetSimpleErr() {
+		return SimpleResult_SimpleErr_DEFAULT
+	}
+	return p.SimpleErr
+}
+func (p *SimpleResult) IsSetSimpleErr() bool {
+	return p.SimpleErr != nil
 }
 
 func (p *SimpleResult) Read(iprot thrift.TProtocol) error {
@@ -633,8 +607,15 @@ func (p *SimpleResult) Read(iprot thrift.TProtocol) error {
 		if fieldTypeId == thrift.STOP {
 			break
 		}
-		if err := iprot.Skip(fieldTypeId); err != nil {
-			return err
+		switch fieldId {
+		case 1:
+			if err := p.ReadField1(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
 		}
 		if err := iprot.ReadFieldEnd(); err != nil {
 			return err
@@ -642,6 +623,14 @@ func (p *SimpleResult) Read(iprot thrift.TProtocol) error {
 	}
 	if err := iprot.ReadStructEnd(); err != nil {
 		return fmt.Errorf("%T read struct end error: %s", p, err)
+	}
+	return nil
+}
+
+func (p *SimpleResult) ReadField1(iprot thrift.TProtocol) error {
+	p.SimpleErr = &SimpleErr{}
+	if err := p.SimpleErr.Read(iprot); err != nil {
+		return fmt.Errorf("%T error reading struct: %s", p.SimpleErr, err)
 	}
 	return nil
 }
@@ -650,6 +639,9 @@ func (p *SimpleResult) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("Simple_result"); err != nil {
 		return fmt.Errorf("%T write struct begin error: %s", p, err)
 	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
 	if err := oprot.WriteFieldStop(); err != nil {
 		return fmt.Errorf("write field stop error: %s", err)
 	}
@@ -657,6 +649,21 @@ func (p *SimpleResult) Write(oprot thrift.TProtocol) error {
 		return fmt.Errorf("write struct stop error: %s", err)
 	}
 	return nil
+}
+
+func (p *SimpleResult) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSimpleErr() {
+		if err := oprot.WriteFieldBegin("simpleErr", thrift.STRUCT, 1); err != nil {
+			return fmt.Errorf("%T write field begin error 1:simpleErr: %s", p, err)
+		}
+		if err := p.SimpleErr.Write(oprot); err != nil {
+			return fmt.Errorf("%T error writing struct: %s", p.SimpleErr, err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return fmt.Errorf("%T write field end error 1:simpleErr: %s", p, err)
+		}
+	}
+	return err
 }
 
 func (p *SimpleResult) String() string {
@@ -664,56 +671,4 @@ func (p *SimpleResult) String() string {
 		return "<nil>"
 	}
 	return fmt.Sprintf("SimpleResult(%+v)", *p)
-}
-
-type OneWayArgs struct {
-}
-
-func NewOneWayArgs() *OneWayArgs {
-	return &OneWayArgs{}
-}
-
-func (p *OneWayArgs) Read(iprot thrift.TProtocol) error {
-	if _, err := iprot.ReadStructBegin(); err != nil {
-		return fmt.Errorf("%T read error: %s", p, err)
-	}
-	for {
-		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
-		if err != nil {
-			return fmt.Errorf("%T field %d read error: %s", p, fieldId, err)
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-		if err := iprot.Skip(fieldTypeId); err != nil {
-			return err
-		}
-		if err := iprot.ReadFieldEnd(); err != nil {
-			return err
-		}
-	}
-	if err := iprot.ReadStructEnd(); err != nil {
-		return fmt.Errorf("%T read struct end error: %s", p, err)
-	}
-	return nil
-}
-
-func (p *OneWayArgs) Write(oprot thrift.TProtocol) error {
-	if err := oprot.WriteStructBegin("OneWay_args"); err != nil {
-		return fmt.Errorf("%T write struct begin error: %s", p, err)
-	}
-	if err := oprot.WriteFieldStop(); err != nil {
-		return fmt.Errorf("write field stop error: %s", err)
-	}
-	if err := oprot.WriteStructEnd(); err != nil {
-		return fmt.Errorf("write struct stop error: %s", err)
-	}
-	return nil
-}
-
-func (p *OneWayArgs) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("OneWayArgs(%+v)", *p)
 }

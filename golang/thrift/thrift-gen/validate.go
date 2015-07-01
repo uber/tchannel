@@ -1,3 +1,5 @@
+package main
+
 // Copyright (c) 2015 Uber Technologies, Inc.
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -18,27 +20,30 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-/*
-Package thrift adds support to use Thrift services over TChannel.
+import (
+	"fmt"
 
-To start listening to a Thrift service using TChannel, create the channel,
-and register the service using:
-  server := thrift.NewServer(tchan)
-  server.Register(gen.NewTChan[SERVICE]Server(handler)
+	"github.com/samuel/go-thrift/parser"
+)
 
-  // Any number of services can be registered on the same Thrift server.
-  server.Register(gen.NewTChan[SERVICE2]Server(handler)
+// Validate validates that the given spec is supported by thrift-gen.
+func Validate(svc *parser.Service) error {
+	for _, m := range svc.Methods {
+		if err := validateMethod(svc, m); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
-To use a Thrift client use the generated TChan client:
-  thriftClient := thrift.NewClient(ch, "hyperbahnService", nil)
-  client := gen.NewTChan[SERVICE]Client(thriftClient)
-
-  // Any number of service clients can be made using the same Thrift client.
-  client2 := gen.NewTChan[SERVICE2]Client(thriftClient)
-
-This client can be used similar to a standard Thrift client, except a Context
-is passed with options (such as timeout).
-
-TODO(prashant): Add and document header support.
-*/
-package thrift
+func validateMethod(svc *parser.Service, m *parser.Method) error {
+	if m.Oneway {
+		return fmt.Errorf("oneway methods are not supported: %s.%v", svc.Name, m.Name)
+	}
+	for _, arg := range m.Arguments {
+		if arg.Optional {
+			return fmt.Errorf("service methods cannot contain optional arguments: %v.%v:%v", svc.Name, m.Name, arg.Name)
+		}
+	}
+	return nil
+}

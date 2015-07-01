@@ -15,6 +15,8 @@ var _ = fmt.Printf
 var _ = bytes.Equal
 
 type KeyValue interface {
+	BaseService
+
 	// Parameters:
 	//  - Key
 	Get(key string) (r string, err error)
@@ -25,29 +27,15 @@ type KeyValue interface {
 }
 
 type KeyValueClient struct {
-	Transport       thrift.TTransport
-	ProtocolFactory thrift.TProtocolFactory
-	InputProtocol   thrift.TProtocol
-	OutputProtocol  thrift.TProtocol
-	SeqId           int32
+	*BaseServiceClient
 }
 
 func NewKeyValueClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *KeyValueClient {
-	return &KeyValueClient{Transport: t,
-		ProtocolFactory: f,
-		InputProtocol:   f.GetProtocol(t),
-		OutputProtocol:  f.GetProtocol(t),
-		SeqId:           0,
-	}
+	return &KeyValueClient{BaseServiceClient: NewBaseServiceClientFactory(t, f)}
 }
 
 func NewKeyValueClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *KeyValueClient {
-	return &KeyValueClient{Transport: t,
-		ProtocolFactory: nil,
-		InputProtocol:   iprot,
-		OutputProtocol:  oprot,
-		SeqId:           0,
-	}
+	return &KeyValueClient{BaseServiceClient: NewBaseServiceClientProtocol(t, iprot, oprot)}
 }
 
 // Parameters:
@@ -92,16 +80,16 @@ func (p *KeyValueClient) recvGet() (value string, err error) {
 		return
 	}
 	if mTypeId == thrift.EXCEPTION {
-		error0 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
-		var error1 error
-		error1, err = error0.Read(iprot)
+		error4 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
+		var error5 error
+		error5, err = error4.Read(iprot)
 		if err != nil {
 			return
 		}
 		if err = iprot.ReadMessageEnd(); err != nil {
 			return
 		}
-		err = error1
+		err = error5
 		return
 	}
 	if p.SeqId != seqId {
@@ -113,6 +101,13 @@ func (p *KeyValueClient) recvGet() (value string, err error) {
 		return
 	}
 	if err = iprot.ReadMessageEnd(); err != nil {
+		return
+	}
+	if result.NotFound != nil {
+		err = result.NotFound
+		return
+	} else if result.InvalidKey != nil {
+		err = result.InvalidKey
 		return
 	}
 	value = result.GetSuccess()
@@ -163,16 +158,16 @@ func (p *KeyValueClient) recvSet() (err error) {
 		return
 	}
 	if mTypeId == thrift.EXCEPTION {
-		error2 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
-		var error3 error
-		error3, err = error2.Read(iprot)
+		error6 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
+		var error7 error
+		error7, err = error6.Read(iprot)
 		if err != nil {
 			return
 		}
 		if err = iprot.ReadMessageEnd(); err != nil {
 			return
 		}
-		err = error3
+		err = error7
 		return
 	}
 	if p.SeqId != seqId {
@@ -186,52 +181,22 @@ func (p *KeyValueClient) recvSet() (err error) {
 	if err = iprot.ReadMessageEnd(); err != nil {
 		return
 	}
+	if result.InvalidKey != nil {
+		err = result.InvalidKey
+		return
+	}
 	return
 }
 
 type KeyValueProcessor struct {
-	processorMap map[string]thrift.TProcessorFunction
-	handler      KeyValue
-}
-
-func (p *KeyValueProcessor) AddToProcessorMap(key string, processor thrift.TProcessorFunction) {
-	p.processorMap[key] = processor
-}
-
-func (p *KeyValueProcessor) GetProcessorFunction(key string) (processor thrift.TProcessorFunction, ok bool) {
-	processor, ok = p.processorMap[key]
-	return processor, ok
-}
-
-func (p *KeyValueProcessor) ProcessorMap() map[string]thrift.TProcessorFunction {
-	return p.processorMap
+	*BaseServiceProcessor
 }
 
 func NewKeyValueProcessor(handler KeyValue) *KeyValueProcessor {
-
-	self4 := &KeyValueProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
-	self4.processorMap["Get"] = &keyValueProcessorGet{handler: handler}
-	self4.processorMap["Set"] = &keyValueProcessorSet{handler: handler}
-	return self4
-}
-
-func (p *KeyValueProcessor) Process(iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	name, _, seqId, err := iprot.ReadMessageBegin()
-	if err != nil {
-		return false, err
-	}
-	if processor, ok := p.GetProcessorFunction(name); ok {
-		return processor.Process(seqId, iprot, oprot)
-	}
-	iprot.Skip(thrift.STRUCT)
-	iprot.ReadMessageEnd()
-	x5 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
-	oprot.WriteMessageBegin(name, thrift.EXCEPTION, seqId)
-	x5.Write(oprot)
-	oprot.WriteMessageEnd()
-	oprot.Flush()
-	return false, x5
-
+	self8 := &KeyValueProcessor{NewBaseServiceProcessor(handler)}
+	self8.AddToProcessorMap("Get", &keyValueProcessorGet{handler: handler})
+	self8.AddToProcessorMap("Set", &keyValueProcessorSet{handler: handler})
+	return self8
 }
 
 type keyValueProcessorGet struct {
@@ -255,12 +220,19 @@ func (p *keyValueProcessorGet) Process(seqId int32, iprot, oprot thrift.TProtoco
 	var retval string
 	var err2 error
 	if retval, err2 = p.handler.Get(args.Key); err2 != nil {
-		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing Get: "+err2.Error())
-		oprot.WriteMessageBegin("Get", thrift.EXCEPTION, seqId)
-		x.Write(oprot)
-		oprot.WriteMessageEnd()
-		oprot.Flush()
-		return true, err2
+		switch v := err2.(type) {
+		case *KeyNotFound:
+			result.NotFound = v
+		case *InvalidKey:
+			result.InvalidKey = v
+		default:
+			x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing Get: "+err2.Error())
+			oprot.WriteMessageBegin("Get", thrift.EXCEPTION, seqId)
+			x.Write(oprot)
+			oprot.WriteMessageEnd()
+			oprot.Flush()
+			return true, err2
+		}
 	} else {
 		result.Success = &retval
 	}
@@ -302,12 +274,17 @@ func (p *keyValueProcessorSet) Process(seqId int32, iprot, oprot thrift.TProtoco
 	result := SetResult{}
 	var err2 error
 	if err2 = p.handler.Set(args.Key, args.Value); err2 != nil {
-		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing Set: "+err2.Error())
-		oprot.WriteMessageBegin("Set", thrift.EXCEPTION, seqId)
-		x.Write(oprot)
-		oprot.WriteMessageEnd()
-		oprot.Flush()
-		return true, err2
+		switch v := err2.(type) {
+		case *InvalidKey:
+			result.InvalidKey = v
+		default:
+			x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing Set: "+err2.Error())
+			oprot.WriteMessageBegin("Set", thrift.EXCEPTION, seqId)
+			x.Write(oprot)
+			oprot.WriteMessageEnd()
+			oprot.Flush()
+			return true, err2
+		}
 	}
 	if err2 = oprot.WriteMessageBegin("Set", thrift.REPLY, seqId); err2 != nil {
 		err = err2
@@ -418,7 +395,9 @@ func (p *GetArgs) String() string {
 }
 
 type GetResult struct {
-	Success *string `thrift:"success,0" json:"success"`
+	Success    *string      `thrift:"success,0" json:"success"`
+	NotFound   *KeyNotFound `thrift:"notFound,1" json:"notFound"`
+	InvalidKey *InvalidKey  `thrift:"invalidKey,2" json:"invalidKey"`
 }
 
 func NewGetResult() *GetResult {
@@ -433,8 +412,34 @@ func (p *GetResult) GetSuccess() string {
 	}
 	return *p.Success
 }
+
+var GetResult_NotFound_DEFAULT *KeyNotFound
+
+func (p *GetResult) GetNotFound() *KeyNotFound {
+	if !p.IsSetNotFound() {
+		return GetResult_NotFound_DEFAULT
+	}
+	return p.NotFound
+}
+
+var GetResult_InvalidKey_DEFAULT *InvalidKey
+
+func (p *GetResult) GetInvalidKey() *InvalidKey {
+	if !p.IsSetInvalidKey() {
+		return GetResult_InvalidKey_DEFAULT
+	}
+	return p.InvalidKey
+}
 func (p *GetResult) IsSetSuccess() bool {
 	return p.Success != nil
+}
+
+func (p *GetResult) IsSetNotFound() bool {
+	return p.NotFound != nil
+}
+
+func (p *GetResult) IsSetInvalidKey() bool {
+	return p.InvalidKey != nil
 }
 
 func (p *GetResult) Read(iprot thrift.TProtocol) error {
@@ -452,6 +457,14 @@ func (p *GetResult) Read(iprot thrift.TProtocol) error {
 		switch fieldId {
 		case 0:
 			if err := p.ReadField0(iprot); err != nil {
+				return err
+			}
+		case 1:
+			if err := p.ReadField1(iprot); err != nil {
+				return err
+			}
+		case 2:
+			if err := p.ReadField2(iprot); err != nil {
 				return err
 			}
 		default:
@@ -478,11 +491,33 @@ func (p *GetResult) ReadField0(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *GetResult) ReadField1(iprot thrift.TProtocol) error {
+	p.NotFound = &KeyNotFound{}
+	if err := p.NotFound.Read(iprot); err != nil {
+		return fmt.Errorf("%T error reading struct: %s", p.NotFound, err)
+	}
+	return nil
+}
+
+func (p *GetResult) ReadField2(iprot thrift.TProtocol) error {
+	p.InvalidKey = &InvalidKey{}
+	if err := p.InvalidKey.Read(iprot); err != nil {
+		return fmt.Errorf("%T error reading struct: %s", p.InvalidKey, err)
+	}
+	return nil
+}
+
 func (p *GetResult) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("Get_result"); err != nil {
 		return fmt.Errorf("%T write struct begin error: %s", p, err)
 	}
 	if err := p.writeField0(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField2(oprot); err != nil {
 		return err
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
@@ -504,6 +539,36 @@ func (p *GetResult) writeField0(oprot thrift.TProtocol) (err error) {
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
 			return fmt.Errorf("%T write field end error 0:success: %s", p, err)
+		}
+	}
+	return err
+}
+
+func (p *GetResult) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetNotFound() {
+		if err := oprot.WriteFieldBegin("notFound", thrift.STRUCT, 1); err != nil {
+			return fmt.Errorf("%T write field begin error 1:notFound: %s", p, err)
+		}
+		if err := p.NotFound.Write(oprot); err != nil {
+			return fmt.Errorf("%T error writing struct: %s", p.NotFound, err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return fmt.Errorf("%T write field end error 1:notFound: %s", p, err)
+		}
+	}
+	return err
+}
+
+func (p *GetResult) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetInvalidKey() {
+		if err := oprot.WriteFieldBegin("invalidKey", thrift.STRUCT, 2); err != nil {
+			return fmt.Errorf("%T write field begin error 2:invalidKey: %s", p, err)
+		}
+		if err := p.InvalidKey.Write(oprot); err != nil {
+			return fmt.Errorf("%T error writing struct: %s", p.InvalidKey, err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return fmt.Errorf("%T write field end error 2:invalidKey: %s", p, err)
 		}
 	}
 	return err
@@ -639,10 +704,23 @@ func (p *SetArgs) String() string {
 }
 
 type SetResult struct {
+	InvalidKey *InvalidKey `thrift:"invalidKey,1" json:"invalidKey"`
 }
 
 func NewSetResult() *SetResult {
 	return &SetResult{}
+}
+
+var SetResult_InvalidKey_DEFAULT *InvalidKey
+
+func (p *SetResult) GetInvalidKey() *InvalidKey {
+	if !p.IsSetInvalidKey() {
+		return SetResult_InvalidKey_DEFAULT
+	}
+	return p.InvalidKey
+}
+func (p *SetResult) IsSetInvalidKey() bool {
+	return p.InvalidKey != nil
 }
 
 func (p *SetResult) Read(iprot thrift.TProtocol) error {
@@ -657,8 +735,15 @@ func (p *SetResult) Read(iprot thrift.TProtocol) error {
 		if fieldTypeId == thrift.STOP {
 			break
 		}
-		if err := iprot.Skip(fieldTypeId); err != nil {
-			return err
+		switch fieldId {
+		case 1:
+			if err := p.ReadField1(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
 		}
 		if err := iprot.ReadFieldEnd(); err != nil {
 			return err
@@ -670,9 +755,20 @@ func (p *SetResult) Read(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *SetResult) ReadField1(iprot thrift.TProtocol) error {
+	p.InvalidKey = &InvalidKey{}
+	if err := p.InvalidKey.Read(iprot); err != nil {
+		return fmt.Errorf("%T error reading struct: %s", p.InvalidKey, err)
+	}
+	return nil
+}
+
 func (p *SetResult) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("Set_result"); err != nil {
 		return fmt.Errorf("%T write struct begin error: %s", p, err)
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
 		return fmt.Errorf("write field stop error: %s", err)
@@ -681,6 +777,21 @@ func (p *SetResult) Write(oprot thrift.TProtocol) error {
 		return fmt.Errorf("write struct stop error: %s", err)
 	}
 	return nil
+}
+
+func (p *SetResult) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetInvalidKey() {
+		if err := oprot.WriteFieldBegin("invalidKey", thrift.STRUCT, 1); err != nil {
+			return fmt.Errorf("%T write field begin error 1:invalidKey: %s", p, err)
+		}
+		if err := p.InvalidKey.Write(oprot); err != nil {
+			return fmt.Errorf("%T error writing struct: %s", p.InvalidKey, err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return fmt.Errorf("%T write field end error 1:invalidKey: %s", p, err)
+		}
+	}
+	return err
 }
 
 func (p *SetResult) String() string {
