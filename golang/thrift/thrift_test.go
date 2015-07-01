@@ -50,11 +50,11 @@ type testArgs struct {
 }
 
 func ctxArg() mock.AnythingOfTypeArgument {
-	return mock.AnythingOfType("*context.valueCtx")
+	return mock.AnythingOfType("*thrift.thriftCtx")
 }
 
 func TestThriftArgs(t *testing.T) {
-	withSetup(t, func(ctx context.Context, args testArgs) {
+	withSetup(t, func(ctx Context, args testArgs) {
 		arg := &gen.Data{
 			B1: true,
 			S2: "str",
@@ -74,7 +74,7 @@ func TestThriftArgs(t *testing.T) {
 }
 
 func TestRequest(t *testing.T) {
-	withSetup(t, func(ctx context.Context, args testArgs) {
+	withSetup(t, func(ctx Context, args testArgs) {
 		args.s1.On("Simple", ctxArg()).Return(nil)
 		require.NoError(t, args.c1.Simple(ctx))
 	})
@@ -84,7 +84,7 @@ func TestThriftError(t *testing.T) {
 	thriftErr := &gen.SimpleErr{
 		Message: "this is the error",
 	}
-	withSetup(t, func(ctx context.Context, args testArgs) {
+	withSetup(t, func(ctx Context, args testArgs) {
 		args.s1.On("Simple", ctxArg()).Return(thriftErr)
 		got := args.c1.Simple(ctx)
 		require.Error(t, got)
@@ -93,7 +93,7 @@ func TestThriftError(t *testing.T) {
 }
 
 func TestUnknownError(t *testing.T) {
-	withSetup(t, func(ctx context.Context, args testArgs) {
+	withSetup(t, func(ctx Context, args testArgs) {
 		args.s1.On("Simple", ctxArg()).Return(errors.New("unexpected err"))
 		got := args.c1.Simple(ctx)
 		require.Error(t, got)
@@ -102,7 +102,7 @@ func TestUnknownError(t *testing.T) {
 }
 
 func TestMultiple(t *testing.T) {
-	withSetup(t, func(ctx context.Context, args testArgs) {
+	withSetup(t, func(ctx Context, args testArgs) {
 		args.s1.On("Simple", ctxArg()).Return(nil)
 		args.s2.On("Echo", ctxArg(), "test1").Return("test2", nil)
 
@@ -113,7 +113,24 @@ func TestMultiple(t *testing.T) {
 	})
 }
 
-func withSetup(t *testing.T, f func(ctx context.Context, args testArgs)) {
+func TestHeaders(t *testing.T) {
+	reqHeaders := map[string]string{"header1": "value1", "header2": "value2"}
+	respHeaders := map[string]string{"resp1": "value1-resp", "resp2": "value2-resp"}
+
+	withSetup(t, func(ctx Context, args testArgs) {
+		args.s1.On("Simple", ctxArg()).Return(nil).Run(func(args mock.Arguments) {
+			ctx := args.Get(0).(Context)
+			assert.Equal(t, reqHeaders, ctx.Headers(), "request headers mismatch")
+			ctx.SetResponseHeaders(respHeaders)
+		})
+
+		ctx = WithHeaders(ctx, reqHeaders)
+		require.NoError(t, args.c1.Simple(ctx))
+		assert.Equal(t, respHeaders, ctx.ResponseHeaders(), "response headers mismatch")
+	})
+}
+
+func withSetup(t *testing.T, f func(ctx Context, args testArgs)) {
 	args := testArgs{
 		s1: new(mocks.TChanSimpleService),
 		s2: new(mocks.TChanSecondService),
@@ -131,7 +148,7 @@ func withSetup(t *testing.T, f func(ctx context.Context, args testArgs)) {
 	args.c1, args.c2, err = getClients(listener.Addr().String())
 	require.NoError(t, err)
 
-	f(ctx, args)
+	f(WrapContext(ctx), args)
 
 	args.s1.AssertExpectations(t)
 	args.s2.AssertExpectations(t)

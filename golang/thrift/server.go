@@ -21,8 +21,6 @@ package thrift
 // THE SOFTWARE.
 
 import (
-	"io"
-	"io/ioutil"
 	"log"
 	"strings"
 	"sync"
@@ -67,14 +65,15 @@ func (s *Server) onError(err error) {
 	log.Fatalf("Server hit error on incoming call: %v", err)
 }
 
-func (s *Server) handle(ctx context.Context, handler TChanServer, method string, call *tchannel.InboundCall) error {
+func (s *Server) handle(origCtx context.Context, handler TChanServer, method string, call *tchannel.InboundCall) error {
 	reader, err := call.Arg2Reader()
 	if err != nil {
 		return err
 	}
-
-	// TODO(prashant): Read application headers.
-	io.Copy(ioutil.Discard, reader)
+	headers, err := readHeaders(reader)
+	if err != nil {
+		return err
+	}
 	if err := reader.Close(); err != nil {
 		return err
 	}
@@ -84,6 +83,7 @@ func (s *Server) handle(ctx context.Context, handler TChanServer, method string,
 		return err
 	}
 
+	ctx := WithHeaders(origCtx, headers)
 	protocol := thrift.NewTBinaryProtocolTransport(&readWriterTransport{Reader: reader})
 	success, resp, err := handler.Handle(ctx, method, protocol)
 	if err != nil {
@@ -98,12 +98,20 @@ func (s *Server) handle(ctx context.Context, handler TChanServer, method string,
 	if !success {
 		call.Response().SetApplicationError()
 	}
-	// TODO(prashant): Write application headers.
-	if err := tchannel.NewArgWriter(call.Response().Arg2Writer()).Write([]byte{0, 0}); err != nil {
+
+	writer, err := call.Response().Arg2Writer()
+	if err != nil {
 		return err
 	}
 
-	writer, err := call.Response().Arg3Writer()
+	if err := writeHeaders(writer, ctx.ResponseHeaders()); err != nil {
+		return err
+	}
+	if err := writer.Close(); err != nil {
+		return err
+	}
+
+	writer, err = call.Response().Arg3Writer()
 	protocol = thrift.NewTBinaryProtocolTransport(&readWriterTransport{Writer: writer})
 	resp.Write(protocol)
 	if err := writer.Close(); err != nil {

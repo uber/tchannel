@@ -201,8 +201,44 @@ val, err := client.Get(ctx, "hello")
 You must pass a context when making method calls which passes the deadline, and in future, additional context such as application headers. A simple root context is:
 ```go
 ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-ctx = tchannel.NewRootContext(ctx)
+ctx = thrift.NewContext(tchannel.NewRootContext(ctx))
 ```
+
+## Headers
+
+Thrift + TChannel allows clients to send headers (a list of string key/value pairs) and servers can add response headers to any response.
+
+In Go, headers are attached to a context
+before a call is made using [WithHeaders](http://godoc.org/github.com/uber/tchannel/golang/thrift#WithHeaders):
+```go
+headers := map[string]string{"user": "prashant"}
+
+tctx, cancel := context.WithTimeout(context.Background(), time.Second)
+ctx = thrift.WithHeaders(tchannel.NewRootContext(ctx), headers)
+```
+
+The server can read these headers using [Headers](http://godoc.org/github.com/uber/tchannel/golang/thrift#Context) and can set additional response headers using `SetResponseHeaders`:
+```go
+func (h *kvHandler) ClearAll(ctx thrift.Context) {
+  headers := ctx.Headers()
+  // Application logic
+  respHeaders := map[string]string{
+    "count": 10,
+  }
+  ctx.SetResponseHeaders(respHeaders)
+}
+```
+
+The client can read the response headers by calling `ctx.ResponseHeaders()` on the same context that was passed when making the call:
+
+```go
+ctx := thrift.WithHeaders(tchannel.NewRootContext(ctx), headers)
+err := adminClient.ClearAll()
+// check error
+responseHeaders := ctx.ResponseHeaders()
+```
+
+Headers should not be used to pass arguments to the method - the Thrift request/response structs should be used for this.
 
 ## Limitations & Upcoming Changes
 

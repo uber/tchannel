@@ -21,9 +21,6 @@ package thrift
 // THE SOFTWARE.
 
 import (
-	"io"
-	"io/ioutil"
-
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/uber/tchannel/golang"
 )
@@ -58,9 +55,9 @@ func (c *client) Call(ctx Context, serviceName, methodName string, req, resp thr
 	if err != nil {
 		return false, err
 	}
-
-	// TODO(prashant): Get headers our of the context and write them here.
-	writer.Write([]byte{0, 0})
+	if err := writeHeaders(writer, ctx.Headers()); err != nil {
+		return false, err
+	}
 	if err := writer.Close(); err != nil {
 		return false, err
 	}
@@ -83,8 +80,11 @@ func (c *client) Call(ctx Context, serviceName, methodName string, req, resp thr
 		return false, err
 	}
 
-	// TODO(prashant): Read application headers and put them in the context?
-	io.Copy(ioutil.Discard, reader)
+	headers, err := readHeaders(reader)
+	if err != nil {
+		return false, err
+	}
+	ctx.SetResponseHeaders(headers)
 	if err := reader.Close(); err != nil {
 		return false, err
 	}
