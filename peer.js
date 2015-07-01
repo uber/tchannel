@@ -212,11 +212,15 @@ function waitForIdentified(callback) {
 
     function onConnectionClose(err) {
         conn.closeEvent.removeListener(onConnectionClose);
+        conn.identifiedEvent.removeListener(onIdentified);
+
         callback(err || errors.TChannelConnectionCloseError());
     }
 
     function onIdentified() {
         conn.closeEvent.removeListener(onConnectionClose);
+        conn.identifiedEvent.removeListener(onIdentified);
+
         callback(null);
     }
 };
