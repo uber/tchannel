@@ -1,15 +1,14 @@
 package thrift
 
 import (
-	"encoding/binary"
 	"fmt"
 	"io"
+	"io/ioutil"
 
 	"github.com/uber/tchannel/golang/typed"
 )
 
-// TODO(prashant): Refactor tchannel/typed so we can reuse it here.
-
+// TODO(prashant): Use a small buffer and then flush it when it's full.
 func writeHeaders(w io.Writer, headers map[string]string) error {
 	// Calculate the size of the buffer that we need.
 	size := 2
@@ -40,40 +39,24 @@ func writeHeaders(w io.Writer, headers map[string]string) error {
 	return err
 }
 
+// TODO(prashant): Allow typed.ReadBuffer to read directly from the reader.
 func readHeaders(r io.Reader) (map[string]string, error) {
-	var err error
-
-	readUInt16 := func() uint16 {
-		if err != nil {
-			return 0
-		}
-		var data uint16
-		err = binary.Read(r, binary.BigEndian, &data)
-		return data
-	}
-
-	readString := func(length uint16) []byte {
-		if err != nil || length == 0 {
-			return nil
-		}
-		data := make([]byte, length)
-		_, err = io.ReadFull(r, data)
-		return data
-	}
-
-	headerLen := readUInt16()
-	if headerLen == 0 {
+	bs, err := ioutil.ReadAll(r)
+	if err != nil {
 		return nil, err
 	}
 
-	headers := make(map[string]string)
-	for i := uint16(0); i < headerLen; i++ {
-		klen := readUInt16()
-		k := readString(klen)
-		vlen := readUInt16()
-		v := readString(vlen)
-		headers[string(k)] = string(v)
+	buffer := typed.NewReadBuffer(bs)
+	numHeaders := buffer.ReadUint16()
+	if numHeaders == 0 {
+		return nil, nil
 	}
 
-	return headers, err
+	headers := make(map[string]string)
+	for i := 0; i < int(numHeaders); i++ {
+		k := buffer.ReadLen16String()
+		v := buffer.ReadLen16String()
+		headers[k] = v
+	}
+	return headers, buffer.Err()
 }
