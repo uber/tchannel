@@ -25,6 +25,7 @@ import (
 	"io/ioutil"
 	"log"
 	"strings"
+	"sync"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	tchannel "github.com/uber/tchannel/golang"
@@ -35,6 +36,7 @@ import (
 type Server struct {
 	*tchannel.Channel
 
+	mut      sync.RWMutex
 	handlers map[string]TChanServer
 }
 
@@ -50,7 +52,11 @@ func NewServer(tchan *tchannel.Channel) *Server {
 // TODO(prashant): Replace Register call with this call.
 func (s *Server) Register(svr TChanServer) {
 	service := svr.Service()
+
+	s.mut.Lock()
 	s.handlers[service] = svr
+	s.mut.Unlock()
+
 	for _, m := range svr.Methods() {
 		s.Channel.Register(s, service+"::"+m)
 	}
@@ -115,7 +121,9 @@ func (s *Server) Handle(ctx context.Context, call *tchannel.InboundCall) {
 	}
 
 	service, method := parts[0], parts[1]
+	s.mut.RLock()
 	handler, ok := s.handlers[service]
+	s.mut.RUnlock()
 	if !ok {
 		log.Fatalf("Handle got call for service %v which is not registered", service)
 	}
