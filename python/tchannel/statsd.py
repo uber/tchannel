@@ -19,12 +19,12 @@
 # THE SOFTWARE.
 
 from __future__ import absolute_import
+
 import re
 
 from .event import EventHook
 from .messages.error import ErrorMessage
 from .tornado.response import StatusCode
-
 
 WILDCHAR_REXP = re.compile(r'[{}/\\:\s.]+')
 

@@ -30,7 +30,6 @@ from ..messages.common import StreamState
 from .stream import InMemStream
 from .util import get_arg
 
-
 StatusCode = enum(
     'StatusCode',
     ok=0x00,

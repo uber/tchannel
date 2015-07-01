@@ -26,10 +26,20 @@ import logging
 import tornado.gen
 import tornado.ioloop
 
-from ..messages.error import ErrorCode
+from .response import StatusCode
 
-DEFAULT_TTL = 60  # seconds
+DEFAULT_ERROR_RETRY_TIMES = [  # seconds
+    0.2,  # One fast retry
 
+    1,  # Fibonacci backoff
+    1,
+    2,
+    3,
+    5,
+    8,
+
+    10,  # Max timeout at 10 sec
+]
 
 log = logging.getLogger('tchannel')
 
@@ -59,31 +69,40 @@ def advertise(tchannel, service, routers):
         tchannel.peers.get(router)
 
     @tornado.gen.coroutine
-    def _register():
-        response = yield tchannel.request(service='hyperbahn').send(
-            arg1='ad',  # advertise
-            arg2='',
-            arg3=json.dumps({
-                'services': [
-                    {
-                        'serviceName': service,
-                        'cost': 0,
-                    }
-                ]
-            }),
-            headers={'as': 'json'},
-        )
+    def _register(attempt_counter=0):
 
-        if response.code not in ErrorCode:
-            # re-register every ``DEFAULT_TTL`` seconds
-            tornado.ioloop.IOLoop.current().call_later(
-                delay=DEFAULT_TTL,
-                callback=_register,
+        try:
+            response = yield tchannel.request(service='hyperbahn').send(
+                arg1='ad',  # advertise
+                arg2='',
+                arg3=json.dumps({
+                    'services': [
+                        {
+                            'serviceName': service,
+                            'cost': 0,
+                        }
+                    ]
+                }),
+                headers={'as': 'json'},
+                attempt_times=1,
             )
-            raise tornado.gen.Return(response)
+        except Exception as e:
+            attempt_counter += 1
+            log.error('Failed to register with Hyperbahn: %s', e)
         else:
-            log.error('Failed to register with Hyperbahn: %s', response)
-            raise NotImplementedError  # TODO figure out behavior here
+            if response.code != StatusCode.ok:
+                attempt_counter += 1
+                log.error('Failed to register with Hyperbahn: %s', response)
+            else:
+                attempt_counter = 0
+        finally:
+            delay_time = DEFAULT_ERROR_RETRY_TIMES[
+                min(attempt_counter, len(DEFAULT_ERROR_RETRY_TIMES) - 1)
+            ]
+            tornado.ioloop.IOLoop.current().call_later(
+                delay=delay_time,
+                callback=lambda: _register(attempt_counter),
+            )
 
     return _register()
 

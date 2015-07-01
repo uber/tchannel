@@ -26,7 +26,6 @@ from ..enum import enum
 from .base import BaseMessage
 from .types import Types
 
-
 ErrorCode = enum(
     'ErrorCode',
     timeout=0x01,
