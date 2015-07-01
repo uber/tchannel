@@ -466,8 +466,8 @@ class PeerClientOperation(object):
 
     @gen.coroutine
     def send(self, arg1, arg2, arg3,
-             traceflag=None,
              headers=None,
+             traceflag=None,
              attempt_times=MAX_ATTEMPT_TIMES,
              ttl=DEFAULT_TTL,
              retry_delay=RETRY_DELAY):
@@ -482,12 +482,12 @@ class PeerClientOperation(object):
         :param arg3:
             String or Stream containing the contents of arg3. If None, an empty
             stream is used.
-        :param traceflag:
-            Flag is for tracing.
         :param headers:
             Headers will be put int he message as protocol header.
+        :param traceflag:
+            Flag is for tracing.
         :param attempt_times:
-            Maximum number of attempts to send the message.
+           Maximum number of attempts to send the message.
         :param ttl:
             Timeout for each request (ms).
         :param retry_delay:
