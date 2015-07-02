@@ -115,7 +115,7 @@ def test_retry_on_error_fail():
                 headers={
                     're': RetryType.CONNECTION_ERROR_AND_TIMEOUT
                 },
-                ttl=1,
+                ttl=0,
                 attempt_times=3,
                 retry_delay=0.01,
             )
