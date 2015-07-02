@@ -36,7 +36,7 @@ endif
 
 test_server:
 	# TODO: use ${TEST_LOG_FILE}
-	./env/bin/python test_server.py --host ${TEST_HOST} --port ${TEST_PORT}
+	./env/bin/python examples/tchannel_server.py --host ${TEST_HOST} --port ${TEST_PORT}
 
 test: clean
 	$(pytest) $(test_args)
