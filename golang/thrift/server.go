@@ -34,6 +34,7 @@ import (
 type Server struct {
 	*tchannel.Channel
 
+	log      tchannel.Logger
 	mut      sync.RWMutex
 	handlers map[string]TChanServer
 }
@@ -42,6 +43,7 @@ type Server struct {
 func NewServer(tchan *tchannel.Channel) *Server {
 	return &Server{
 		Channel:  tchan,
+		log:      tchan.Logger(),
 		handlers: make(map[string]TChanServer),
 	}
 }
@@ -62,7 +64,7 @@ func (s *Server) Register(svr TChanServer) {
 
 func (s *Server) onError(err error) {
 	// TODO(prashant): Expose incoming call errors through options for NewServer.
-	log.Fatalf("Server hit error on incoming call: %v", err)
+	s.log.Errorf("thrift Server error: %v", err)
 }
 
 func (s *Server) handle(origCtx context.Context, handler TChanServer, method string, call *tchannel.InboundCall) error {
