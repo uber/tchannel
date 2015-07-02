@@ -53,6 +53,9 @@ type ChannelOptions struct {
 
 	// The reporter to use for reporting stats for this channel.
 	StatsReporter StatsReporter
+
+	// Trace reporter to use for this channel.
+	TraceReporter TraceReporter
 }
 
 // A Channel is a bi-directional connection to the peering and routing network.
@@ -89,6 +92,11 @@ func NewChannel(serviceName string, opts *ChannelOptions) (*Channel, error) {
 	logger := opts.Logger
 	if logger == nil {
 		logger = NullLogger
+	}
+
+	traceReporter := opts.TraceReporter
+	if traceReporter == nil {
+		traceReporter = NullReporter
 	}
 
 	processName := opts.ProcessName
