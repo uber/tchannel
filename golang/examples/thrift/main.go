@@ -34,7 +34,6 @@ import (
 	tchannel "github.com/uber/tchannel/golang"
 	gen "github.com/uber/tchannel/golang/examples/thrift/gen-go/test"
 	"github.com/uber/tchannel/golang/thrift"
-	"golang.org/x/net/context"
 )
 
 func main() {
@@ -92,8 +91,7 @@ func runClient1(hyperbahnService string, addr net.Addr) error {
 
 	go func() {
 		for {
-			tctx, cancel := context.WithTimeout(context.Background(), time.Second)
-			ctx := thrift.WrapContext(tctx)
+			ctx, cancel := thrift.NewContext(time.Second)
 			res, err := client.Echo(ctx, "Hi")
 			log.Println("Echo(Hi) = ", res, ", err: ", err)
 			log.Println("AppError = ", client.AppError(ctx))
@@ -115,9 +113,7 @@ func runClient2(hyperbahnService string, addr net.Addr) error {
 
 	go func() {
 		for {
-			tctx, cancel := context.WithTimeout(context.Background(), time.Second)
-			ctx := thrift.WrapContext(tctx)
-
+			ctx, cancel := thrift.NewContext(time.Second)
 			client.Test(ctx)
 			cancel()
 			time.Sleep(100 * time.Millisecond)

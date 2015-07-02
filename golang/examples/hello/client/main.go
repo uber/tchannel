@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/uber/tchannel/golang"
-	"golang.org/x/net/context"
 )
 
 var log = tchannel.SimpleLogger
@@ -72,7 +71,7 @@ func main() {
 		log.Fatalf("Could not create client channel: %v\n", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(*timeout))
+	ctx, cancel := tchannel.NewContext(time.Second * time.Duration(*timeout))
 	defer cancel()
 
 	call, err := ch.BeginCall(ctx, *peerAddr, *serviceName, *operationName, nil)

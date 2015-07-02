@@ -94,7 +94,7 @@ func main() {
 	}
 
 	// Make a call to ourselves, with a timeout of 10s
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	ctx, cancel := tchannel.NewContext(time.Second * 10)
 	defer cancel()
 
 	call, err := client.BeginCall(ctx, "127.0.0.1:10500", "PingService", "ping", nil)

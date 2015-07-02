@@ -35,7 +35,6 @@ import (
 	tchannel "github.com/uber/tchannel/golang"
 	gen "github.com/uber/tchannel/golang/thrift/gen-go/test"
 	"github.com/uber/tchannel/golang/thrift/mocks"
-	"golang.org/x/net/context"
 )
 
 // Generate the service mocks using go generate.
@@ -136,7 +135,7 @@ func withSetup(t *testing.T, f func(ctx Context, args testArgs)) {
 		s2: new(mocks.TChanSecondService),
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	ctx, cancel := NewContext(time.Second * 10)
 	defer cancel()
 
 	// Start server
@@ -148,7 +147,7 @@ func withSetup(t *testing.T, f func(ctx Context, args testArgs)) {
 	args.c1, args.c2, err = getClients(listener.Addr().String())
 	require.NoError(t, err)
 
-	f(WrapContext(ctx), args)
+	f(ctx, args)
 
 	args.s1.AssertExpectations(t)
 	args.s2.AssertExpectations(t)

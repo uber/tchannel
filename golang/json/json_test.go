@@ -144,9 +144,9 @@ func TestForwardChain(t *testing.T) {
 		s.handler.peer = s.channel.Peers().Add(servers[s.otherPeer].channel.PeerInfo().HostPort)
 	}
 
-	tctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := NewContext(time.Second)
 	defer cancel()
-	ctx := WithHeaders(tctx, "initial")
+	ctx = WithHeaders(ctx, "initial")
 
 	sc := servers["serv3"].channel.GetSubChannel("serv1")
 	resp := &Res{}
@@ -159,7 +159,7 @@ func TestForwardChain(t *testing.T) {
 }
 
 func TestEmptyRequestHeader(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := NewContext(time.Second)
 	defer cancel()
 
 	ch, err := tchannel.NewChannel("server", nil)

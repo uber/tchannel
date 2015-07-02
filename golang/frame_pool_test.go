@@ -127,7 +127,6 @@ func getConnections(ch *Channel) []*Connection {
 }
 
 func checkEmptyExchanges(c *Connection) string {
-	fmt.Println("Connection %p has %v %v", c, len(c.outbound.exchanges), len(c.inbound.exchanges))
 	if exchangesLeft := len(c.outbound.exchanges) + len(c.inbound.exchanges); exchangesLeft > 0 {
 		return fmt.Sprintf("connection %p had %v leftover exchanges", c, exchangesLeft)
 	}
@@ -181,7 +180,7 @@ func TestFramesReleased(t *testing.T) {
 		defer clientCh.Close()
 
 		// Create an active connection that can be shared by the goroutines by calling Ping.
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		ctx, cancel := NewContext(time.Second)
 		defer cancel()
 		require.NoError(t, clientCh.Ping(ctx, hostPort))
 
@@ -193,7 +192,7 @@ func TestFramesReleased(t *testing.T) {
 		var wg sync.WaitGroup
 		worker := func() {
 			for i := 0; i < requestsPerGoroutine; i++ {
-				ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+				ctx, cancel := NewContext(time.Second * 5)
 				defer cancel()
 
 				require.NoError(t, clientCh.Ping(ctx, hostPort))

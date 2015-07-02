@@ -48,8 +48,7 @@ func (c *Connection) handleCallReq(frame *Frame) bool {
 	}
 
 	c.log.Debugf("span=%s", callReq.Tracing)
-	ctx, cancel := context.WithTimeout(context.Background(), callReq.TimeToLive)
-	ctx = context.WithValue(ctx, tracingKey, &callReq.Tracing)
+	ctx, cancel := newIncomingContext(callReq.TimeToLive, &callReq.Tracing)
 
 	mex, err := c.inbound.newExchange(ctx, c.framePool, callReq.messageType(), frame.Header.ID, 512)
 	if err != nil {

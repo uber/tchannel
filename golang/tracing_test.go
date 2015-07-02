@@ -113,7 +113,7 @@ func TestTracingPropagates(t *testing.T) {
 		ch.Register(HandlerFunc(srv1), "call1")
 		ch.Register(HandlerFunc(srv2), "call2")
 
-		ctx, cancel := context.WithTimeout(NewRootContext(context.Background()), 5*time.Second)
+		ctx, cancel := NewContext(time.Second)
 		defer cancel()
 
 		headers := map[string]string{}
