@@ -28,8 +28,6 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/net/context"
-
 	"github.com/uber/tchannel/golang"
 	"github.com/uber/tchannel/golang/examples/keyvalue/gen-go/keyvalue"
 	"github.com/uber/tchannel/golang/hyperbahn"
@@ -156,7 +154,7 @@ func clear(adminClient keyvalue.TChanAdmin) {
 }
 
 func createContext() (thrift.Context, func()) {
-	tctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	ctx := thrift.WithHeaders(tchannel.NewRootContext(tctx), map[string]string{"user": curUser})
+	ctx, cancel := thrift.NewContext(time.Second)
+	ctx = thrift.WithHeaders(ctx, map[string]string{"user": curUser})
 	return ctx, cancel
 }

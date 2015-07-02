@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/context"
 )
 
 type channelState struct {
@@ -37,7 +36,9 @@ type channelState struct {
 }
 
 func makeCall(ch *Channel, hostPort, service string) error {
-	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := NewContext(time.Second)
+	defer cancel()
+
 	_, _, _, err := sendRecv(ctx, ch, hostPort, service, "test", nil, nil)
 	return err
 }

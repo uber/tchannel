@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"github.com/uber/tchannel/golang/json"
-	"golang.org/x/net/context"
 )
 
 const (
@@ -72,7 +71,7 @@ type adResponse struct {
 }
 
 func (c *Client) sendAdvertise() error {
-	ctx, cancel := context.WithTimeout(context.Background(), c.opts.Timeout)
+	ctx, cancel := json.NewContext(c.opts.Timeout)
 	defer cancel()
 
 	sc := c.tchan.GetSubChannel(hyperbahnServiceName)
@@ -85,7 +84,7 @@ func (c *Client) sendAdvertise() error {
 	var resp adResponse
 	c.opts.Handler.On(SendAdvertise)
 
-	if err := json.CallSC(json.WrapContext(ctx), sc, "ad", arg, &resp); err != nil {
+	if err := json.CallSC(ctx, sc, "ad", arg, &resp); err != nil {
 		return err
 	}
 

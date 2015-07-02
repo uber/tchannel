@@ -103,11 +103,6 @@ func (s Span) NewChildSpan() *Span {
 	}
 }
 
-// NewRootContext creates a new root context for making outbound calls
-func NewRootContext(ctx context.Context) context.Context {
-	return context.WithValue(ctx, tracingKey, NewRootSpan())
-}
-
 // CurrentSpan returns the Span value for the provided Context
 func CurrentSpan(ctx context.Context) *Span {
 	if span := ctx.Value(tracingKey); span != nil {

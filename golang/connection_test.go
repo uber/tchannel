@@ -78,7 +78,7 @@ func TestRoundTrip(t *testing.T) {
 		echoSaver := &echoSaver{}
 		ch.Register(testHandlerFunc(t, echoSaver.echo), "ping")
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		ctx, cancel := NewContext(time.Second * 5)
 		defer cancel()
 
 		call, err := ch.BeginCall(ctx, hostPort, "Capture", "ping", &CallOptions{Format: JSON})
@@ -106,7 +106,7 @@ func TestDefaultFormat(t *testing.T) {
 		echoSaver := &echoSaver{}
 		ch.Register(testHandlerFunc(t, echoSaver.echo), "ping")
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		ctx, cancel := NewContext(time.Second * 5)
 		defer cancel()
 
 		arg2, arg3, resp, err := sendRecv(ctx, ch, hostPort, "Capture", "ping", testArg2, testArg3)
@@ -121,7 +121,7 @@ func TestDefaultFormat(t *testing.T) {
 }
 
 func TestReuseConnection(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	ctx, cancel := NewContext(time.Second * 5)
 	defer cancel()
 
 	withTestChannel(t, "s1", func(ch1 *Channel, hostPort1 string) {
@@ -168,7 +168,7 @@ func TestReuseConnection(t *testing.T) {
 
 func TestPing(t *testing.T) {
 	withTestChannel(t, "ping-host", func(ch *Channel, hostPort string) {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		ctx, cancel := NewContext(time.Second * 5)
 		defer cancel()
 
 		opts := &ChannelOptions{
@@ -183,7 +183,7 @@ func TestPing(t *testing.T) {
 
 func TestBadRequest(t *testing.T) {
 	withTestChannel(t, "svc", func(ch *Channel, hostPort string) {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		ctx, cancel := NewContext(time.Second * 5)
 		defer cancel()
 
 		_, _, _, err := sendRecv(ctx, ch, hostPort, "Nowhere", "Noone", []byte("Headers"), []byte("Body"))
@@ -196,9 +196,7 @@ func TestNoTimeout(t *testing.T) {
 	withTestChannel(t, "svc", func(ch *Channel, hostPort string) {
 		ch.Register(testHandlerFunc(t, (&echoSaver{}).echo), "Echo")
 
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
+		ctx := context.Background()
 		_, _, _, err := sendRecv(ctx, ch, hostPort, "svc", "Echo", []byte("Headers"), []byte("Body"))
 		require.NotNil(t, err)
 		assert.Equal(t, ErrTimeoutRequired, err)
@@ -209,7 +207,7 @@ func TestServerBusy(t *testing.T) {
 	withTestChannel(t, testServiceName, func(ch *Channel, hostPort string) {
 		ch.Register(testHandlerFunc(t, serverBusy), "busy")
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		ctx, cancel := NewContext(time.Second * 5)
 		defer cancel()
 
 		_, _, _, err := sendRecv(ctx, ch, hostPort, testServiceName, "busy", []byte("Arg2"), []byte("Arg3"))
@@ -222,7 +220,7 @@ func TestTimeout(t *testing.T) {
 	withTestChannel(t, testServiceName, func(ch *Channel, hostPort string) {
 		ch.Register(testHandlerFunc(t, timeout), "timeout")
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
+		ctx, cancel := NewContext(time.Millisecond * 100)
 		defer cancel()
 
 		_, _, _, err := sendRecv(ctx, ch, hostPort, "TestService", "timeout", []byte("Arg2"), []byte("Arg3"))
@@ -246,7 +244,7 @@ func TestFragmentation(t *testing.T) {
 			arg3[i] = byte('A' + (i % 10))
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+		ctx, cancel := NewContext(time.Second * 10)
 		defer cancel()
 
 		respArg2, respArg3, _, err := sendRecv(ctx, ch, hostPort, testServiceName, "echo", arg2, arg3)

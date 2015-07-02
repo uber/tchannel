@@ -20,7 +20,12 @@ package json
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import "golang.org/x/net/context"
+import (
+	"time"
+
+	"github.com/uber/tchannel/golang"
+	"golang.org/x/net/context"
+)
 
 // Context is a JSON Context which contains request and response headers.
 type Context interface {
@@ -57,11 +62,12 @@ func (c *jsonCtx) SetResponseHeaders(headers interface{}) {
 	c.respHeaders = headers
 }
 
-// WrapContext returns a Context that can be used to make JSON calls.
-func WrapContext(ctx context.Context) Context {
+// NewContext returns a Context that can be used to make JSON calls.
+func NewContext(timeout time.Duration) (Context, context.CancelFunc) {
+	tctx, cancel := tchannel.NewContext(timeout)
 	return &jsonCtx{
-		Context: ctx,
-	}
+		Context: tctx,
+	}, cancel
 }
 
 // WithHeaders returns a Context that can be used to make a call with request headers.
