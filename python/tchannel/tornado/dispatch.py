@@ -74,6 +74,7 @@ class RequestDispatcher(BaseRequestHandler):
 
         # event: receive_request
         request.tracing.name = request.endpoint
+
         connection.tchannel.event_emitter.fire(
             EventType.before_receive_request,
             request,
@@ -120,6 +121,8 @@ class RequestDispatcher(BaseRequestHandler):
                 response.id,
             )
 
+        raise gen.Return(response)
+
     def route(self, rule, helper=None):
         """See ``register`` for documentation."""
 
@@ -163,6 +166,10 @@ class RequestDispatcher(BaseRequestHandler):
         # Dispatcher but only handles serialization.
         if not broker:
             broker = self.default_broker
+
+        if rule is None:
+            self.endpoints.default_factory = lambda: handler
+            return
 
         broker.register(rule, handler)
 
