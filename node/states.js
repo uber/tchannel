@@ -48,13 +48,13 @@ function State() {
 State.prototype.onRequest = function onRequest(/* req */) {
 };
 
-State.prototype.onRequestHealthy = function onRequestHealthy(/* req */) {
-};
-
-State.prototype.onRequestError = function onRequestError(err) {
+State.prototype.onRequestHealthy = function onRequestHealthy() {
 };
 
 State.prototype.onRequestUnhealthy = function onRequestUnhealthy() {
+};
+
+State.prototype.onRequestError = function onRequestError(err) {
 };
 
 State.prototype.close = function close(callback) {
@@ -109,10 +109,16 @@ HealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
     return self.nextHandler.shouldRequest(req, options);
 };
 
-HealthyState.prototype.onRequestHealthy = function onRequestHealthy(/* req */) {
+HealthyState.prototype.onRequestHealthy = function onRequestHealthy() {
     var self = this;
     self.healthyCount++;
     self.totalRequests++;
+};
+
+HealthyState.prototype.onRequestUnhealthy = function onRequestUnhealthy() {
+    var self = this;
+    self.totalRequests++;
+    self.unhealthyCount++;
 };
 
 HealthyState.prototype.onRequestError = function onRequestError(err) {
@@ -125,12 +131,6 @@ HealthyState.prototype.onRequestError = function onRequestError(err) {
     } else {
         self.healthyCount++;
     }
-};
-
-HealthyState.prototype.onRequestUnhealthy = function onRequestUnhealthy() {
-    var self = this;
-    self.totalRequests++;
-    self.unhealthyCount++;
 };
 
 function UnhealthyState(options) {
@@ -178,12 +178,17 @@ UnhealthyState.prototype.onRequest = function onRequest(/* req */) {
     self.triedThisPeriod = true;
 };
 
-UnhealthyState.prototype.onRequestHealthy = function onRequestHealthy(/* req */) {
+UnhealthyState.prototype.onRequestHealthy = function onRequestHealthy() {
     var self = this;
     self.healthyCount++;
     if (self.healthyCount > self.minResponseCount) {
         self.stateMachine.setState(HealthyState);
     }
+};
+
+UnhealthyState.prototype.onRequestUnhealthy = function onRequestUnhealthy() {
+    var self = this;
+    self.healthyCount = 0;
 };
 
 UnhealthyState.prototype.onRequestError = function onRequestError(err) {
@@ -194,11 +199,6 @@ UnhealthyState.prototype.onRequestError = function onRequestError(err) {
     } else {
         self.onRequestHealthy();
     }
-};
-
-UnhealthyState.prototype.onRequestUnhealthy = function onRequestUnhealthy() {
-    var self = this;
-    self.healthyCount = 0;
 };
 
 function LockedHealthyState(options) {
