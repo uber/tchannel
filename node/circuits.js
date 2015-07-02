@@ -220,7 +220,7 @@ Circuit.prototype.monitorRequest = function monitorRequest(req, buildRes, nextHa
     return nextHandler.handleRequest(req, monitorBuildRes);
 };
 
-Circuit.prototype.monitorResponse function monitorResponse(res) {
+Circuit.prototype.monitorResponse = function monitorResponse(res) {
     var self = this;
 
     res.errorEvent.on(onError);
@@ -237,7 +237,7 @@ Circuit.prototype.monitorResponse function monitorResponse(res) {
         if (errors.isUnhealthy(res.codeString)) {
             self.state.onRequestUnhealthy();
         } else {
-            self.state.onRequestHealthy(req);
+            self.state.onRequestHealthy();
         }
     }
 };
