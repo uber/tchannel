@@ -46,13 +46,18 @@ function RelayNetwork(options) {
     self.serviceNames = options.serviceNames || ['alice', 'bob', 'charlie'];
     self.kValue = options.kValue || 2;
     self.createCircuits = options.createCircuits || noop;
-    self.clusterOptions = options.cluster || {};
+    self.clusterOptions = options.cluster || options.clusterOptions || {};
+
+    self.timers = options.timers;
+    if (self.timers) {
+        self.clusterOptions.timers = self.timers;
+    }
 
     self.numPeers = self.numRelays + self.serviceNames.length * self.numInstancesPerService;
     self.clusterOptions.numPeers = self.numPeers;
     self.cluster = null;
 
-    // The topology gets mutate by all the fake egress nodes to get consensus
+    // The topology gets mutated by all the fake egress nodes to get consensus
     self.topology = null;
     self.relayChannels = null;
     self.serviceChannels = null;
@@ -150,7 +155,8 @@ RelayNetwork.prototype.setCluster = function setCluster(cluster) {
             statsd: statsd,
             egressNodes: egressNodes,
             circuits: self.createCircuits({
-                timers: relayChannel.timers,
+                egressNodes: egressNodes,
+                timers: self.timers,
                 random: null,
                 period: null,
                 maxErrorRate: null,
@@ -199,9 +205,11 @@ RelayNetwork.prototype.setCluster = function setCluster(cluster) {
                         cn: serviceName
                     },
                     hasNoParent: true
-                },
-                peers: self.topology[serviceName] // TODO this really ought to be linked directly to the root peers
+                }
             });
+            // The subchannel's peers are linked to the peer list as managed by
+            // incoming connections from the relays.
+            subChannel.peers = channel.peers;
 
             // Set up server
             var endpointHandler = new EndpointHandler(serviceName);
@@ -265,6 +273,70 @@ RelayNetwork.prototype.connectServices = function connectServices(callback) {
     }
 
     return parallel(plans, callback);
+};
+
+RelayNetwork.prototype.register = function (arg1, handler) {
+    var self = this;
+    self.forEachSubChannel(function registerHanlder(subChannel) {
+        subChannel.handler.register(arg1, handler);
+    });
+};
+
+RelayNetwork.prototype.registerEchoHandlers = function () {
+    var self = this;
+    self.register('echo', function echo(req, res, arg1, arg2) {
+        res.sendOk(arg1, arg2);
+    });
+};
+
+RelayNetwork.prototype.send = function (options, arg1,  arg2, arg3, callback) {
+    var self = this;
+    var callerChannel = self.subChannelsByName[options.callerName][options.callerIndex || 0];
+    callerChannel.request({
+        serviceName: options.serviceName,
+        headers: {
+            as: 'raw',
+            cn: options.callerName
+        },
+        hasNoParent: true
+    }).send(arg1, arg2, arg3, callback);
+};
+
+RelayNetwork.prototype.exercise = function (count, delay, eachRequest, eachResponse, callback) {
+    var self = this;
+
+    function tick(count, delay, callback) {
+
+        eachRequest(onResponse);
+
+        function onResponse(err, res, arg2, arg3) {
+            self.timers.advance(delay);
+            if (eachResponse) {
+                eachResponse(err, res, arg2, arg3);
+            }
+            if (count) {
+                tick(count - 1, delay, callback);
+            } else {
+                callback();
+            }
+        }
+    }
+
+    tick(count, delay, callback);
+};
+
+RelayNetwork.prototype.getCircuit = function (relayIndex, callerName, serviceName, endpointName) {
+    var self = this;
+    var serviceDispatchHandler = self.relayChannels[relayIndex].handler;
+    var circuits = serviceDispatchHandler.circuits;
+    return circuits.getCircuit(callerName, serviceName, endpointName);
+};
+
+RelayNetwork.prototype.getCircuitTuples = function (relayIndex) {
+    var self = this;
+    var serviceDispatchHandler = self.relayChannels[relayIndex].handler;
+    var circuits = serviceDispatchHandler.circuits;
+    return circuits.getCircuitTuples();
 };
 
 module.exports = RelayNetwork;
