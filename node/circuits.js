@@ -127,7 +127,7 @@ Circuits.prototype.getCircuit = function getCircuit(callerName, serviceName, end
     var self = this;
     var circuits = self.circuitsByServiceName['$' + serviceName];
     if (!circuits) {
-        circuits = new EndpointCircuits(self);
+        circuits = new ServiceCircuits(self);
         self.circuitsByServiceName['$' + serviceName] = circuits;
     }
     return circuits.getCircuit(callerName, serviceName, endpointName);
@@ -151,8 +151,8 @@ Circuits.prototype.handleRequest = function handleRequest(req, buildRes, nextHan
     if (!serviceName) {
         return buildRes().sendError('BadRequest', 'All requests must have a service name');
     }
-    return req.withArg1(function withArg1(endpointName) {
-        var circuit = self.getCircuit(callerName, serviceName, endpointName);
+    return req.withArg1(function withArg1() {
+        var circuit = self.getCircuit(callerName, serviceName, String(req.arg1));
         return circuit.handleRequest(req, buildRes, nextHandler);
     });
 };
