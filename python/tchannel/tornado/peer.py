@@ -468,9 +468,9 @@ class PeerClientOperation(object):
     def send(self, arg1, arg2, arg3,
              headers=None,
              traceflag=None,
-             attempt_times=MAX_ATTEMPT_TIMES,
-             ttl=DEFAULT_TTL,
-             retry_delay=RETRY_DELAY):
+             attempt_times=None,
+             ttl=None,
+             retry_delay=None):
         """Make a request to the Peer.
 
         :param arg1:
@@ -501,6 +501,9 @@ class PeerClientOperation(object):
             maybe_stream(arg1), maybe_stream(arg2), maybe_stream(arg3)
         )
 
+        attempt_times = attempt_times or MAX_ATTEMPT_TIMES
+        ttl = ttl or DEFAULT_TTL
+        retry_delay = retry_delay or RETRY_DELAY
         # hack to get endpoint from arg_1 for trace name
         arg1.close()
         endpoint = yield read_full(arg1)
