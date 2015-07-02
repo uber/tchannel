@@ -47,7 +47,7 @@ class ZipkinTraceHook(EventHook):
             # to dst. By default it writes to stdout
             self.tracer = DebugTracer(dst)
 
-    def before_send_request(self, request):
+    def before_send_request_per_attempt(self, request, retry_count):
         if not request.tracing.traceflags:
             return
 
@@ -79,7 +79,7 @@ class ZipkinTraceHook(EventHook):
         response.tracing.annotations.append(ann)
         self.tracer.record([(response.tracing, response.tracing.annotations)])
 
-    def after_receive_system_error(self, request, error):
+    def after_receive_system_error_per_attempt(self, request, error):
         if not error.tracing.traceflags:
             return
 

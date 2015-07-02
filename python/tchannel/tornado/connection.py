@@ -618,7 +618,6 @@ class StreamConnection(TornadoConnection):
             protocol_exception = f.exception()
             protocol_exception.tracing = request.tracing
             response_future.set_exception(protocol_exception)
-
         else:
             response = f.result()
             response.tracing = request.tracing

@@ -19,6 +19,7 @@
 # THE SOFTWARE.
 
 from __future__ import absolute_import
+import time
 import re
 
 from .event import EventHook
@@ -38,12 +39,24 @@ class StatsdHook(EventHook):
         :param statsd: instance of `StatsD <https://github.com/etsy/statsd>`
         """
         self._statsd = statsd
+        self.outbound_attempt = {}
 
     def before_send_request(self, request):
         statsd_name = "tchannel.outbound.calls.sent"
         key = common_prefix(statsd_name, request)
 
         self._statsd.count(key, 1)
+
+    def before_send_request_per_attempt(self, request, retry_count):
+        statsd_name = "tchannel.outbound.calls.retries"
+        retry_count += 1
+        key = common_prefix(statsd_name, request) + '.' + str(retry_count)
+
+        self._statsd.count(key, 1)
+
+        # record outbound call start time and retry_count
+        self.outbound_attempt[request.tracing.span_id] = (time.time(),
+                                                          retry_count)
 
     def after_receive_response(self, request, response):
         if response.code == StatusCode.ok:
@@ -53,6 +66,7 @@ class StatsdHook(EventHook):
         key = common_prefix(statsd_name, request)
 
         self._statsd.count(key, 1)
+        self.outbound_latency_per_attempt(request)
 
     def after_receive_system_error(self, request, error):
         statsd_name = "tchannel.outbound.calls.system-errors"
@@ -71,6 +85,7 @@ class StatsdHook(EventHook):
         )
 
         self._statsd.count(key, 1)
+        self.outbound_latency_per_attempt(request)
 
     def on_operational_error_per_attempt(self, request, error):
         statsd_name = "tchannel.outbound.calls.per-attempt.operational-errors"
@@ -80,6 +95,7 @@ class StatsdHook(EventHook):
         )
 
         self._statsd.count(key, 1)
+        self.outbound_latency_per_attempt(request)
 
     def on_operational_error(self, request, error):
         statsd_name = "tchannel.outbound.calls.operational-errors"
@@ -90,6 +106,19 @@ class StatsdHook(EventHook):
         )
 
         self._statsd.count(key, 1)
+
+    def outbound_latency_per_attempt(self, request):
+        if request.tracing.span_id not in self.outbound_attempt:
+            return
+        (start_time, retry_count) = self.outbound_attempt.pop(
+            request.tracing.span_id)
+
+        latency_statsd_name = "tchannel.outbound.calls.per-attempt.latency"
+        key = common_prefix(latency_statsd_name, request) + '.' + str(
+            retry_count)
+        elapsed = (time.time() - start_time) * 1000.0
+
+        self._statsd.timing(key, elapsed)
 
 
 def extract_metadata(request):

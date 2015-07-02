@@ -581,12 +581,6 @@ class PeerClientOperation(object):
             raise
 
         log.debug("Got response %s", response)
-        # event: after_receive_response
-        self.peer.tchannel.event_emitter.fire(
-            EventType.after_receive_response,
-            request,
-            response,
-        )
 
         raise gen.Return(response)
 
@@ -607,7 +601,19 @@ class PeerClientOperation(object):
         # mac number of times to retry 3.
         for num_of_attempt in range(attempt_times):
             try:
+                # event: before_send_request_per_attempt
+                self.peer.tchannel.event_emitter.fire(
+                    EventType.before_send_request_per_attempt,
+                    request,
+                    num_of_attempt,
+                )
                 response = yield self._send(connection, request)
+                # event: after_receive_response
+                self.peer.tchannel.event_emitter.fire(
+                    EventType.after_receive_response,
+                    request,
+                    response,
+                )
                 break
             except ProtocolError as protocol_error:
                 # event: after_receive_protocol_error_per_attempt
