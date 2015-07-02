@@ -306,7 +306,8 @@ module.exports.RequestTimeoutError = TypedError({
     id: null,
     start: null,
     elapsed: null,
-    timeout: null
+    timeout: null,
+    logical: false
 });
 
 module.exports.ResponseAlreadyDone = TypedError({

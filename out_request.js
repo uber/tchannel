@@ -438,7 +438,8 @@ TChannelOutRequest.prototype.checkTimeout = function checkTimeout() {
                     id: self.id,
                     start: self.start,
                     elapsed: elapsed,
-                    timeout: self.ttl
+                    timeout: self.ttl,
+                    logical: self.logical
                 }));
             });
         }
