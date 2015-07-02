@@ -12,7 +12,7 @@ You'll need to `go get` the following:
 * github.com/uber/tchannel/golang
 * github.com/uber/tchannel/golang/hyperbahn
 * github.com/uber/tchannel/golang/thrift
-* github.com/uber/tchannel/golang/thrift-gen
+* github.com/uber/tchannel/golang/thrift/thrift-gen
 
 Use [Godep](https://github.com/tools/godep) to manage dependencies, as the API is still in development and will change.
 
