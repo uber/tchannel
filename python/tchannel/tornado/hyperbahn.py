@@ -34,12 +34,17 @@ from .response import StatusCode
 
 DEFAULT_EXPO_BASE = 1.4  # try this first
 DEFAULT_MAX_DELAY = 10  # sec
-DEFAULT_MAX_ACCTEMPT = 7  # pow(1.4, 8) > 10
+DEFAULT_MAX_ATTEMPT = 7  # pow(1.4, 8) > 10
 
 log = logging.getLogger('tchannel')
 
 
 def fuzz(x):
+    """Calculate the delay time by using exponential method and fuzz.
+
+    :param x: exponent value
+    :return: delay time in second
+    """
     tmp = pow(DEFAULT_EXPO_BASE, x) / 2.0
     return tmp + random.random() * tmp
 
@@ -97,7 +102,7 @@ def advertise(tchannel, service, routers):
                 attempt_counter = 0
 
         delay_time = min(DEFAULT_MAX_DELAY, fuzz(attempt_counter))
-        attempt_counter = min(attempt_counter, DEFAULT_MAX_ACCTEMPT)
+        attempt_counter = min(attempt_counter, DEFAULT_MAX_ATTEMPT)
         tornado.ioloop.IOLoop.current().call_later(
             delay=delay_time,
             callback=lambda: _register(attempt_counter),
