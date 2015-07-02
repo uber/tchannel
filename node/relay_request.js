@@ -46,6 +46,12 @@ RelayRequest.prototype.createOutRequest = function createOutRequest(host) {
         return;
     }
 
+    if (self.peer) {
+        self.logger.error('createOutRequest: overwritting peers', {
+            hostPort: self.peer.hostPort
+        });
+    }
+
     if (host) {
         self.peer = self.channel.peers.add(host);
     } else {
@@ -70,6 +76,30 @@ RelayRequest.prototype.onIdentified = function onIdentified(err1) {
     if (err1) {
         self.onError(err1);
         return;
+    }
+
+    var identified = false;
+    var closing = false;
+    for (var i = 0; i < self.peer.connections.length; i++) {
+        if (self.peer.connections[i].remoteName) {
+            identified = true;
+            closing = self.peer.connections[i].closing;
+            if (!closing) break;
+        }
+    }
+
+    if (!identified) {
+        // we get the problem
+        self.logger.error('onIdentified called on no connection identified', {
+            hostPort: self.peer.hostPort
+        });
+    }
+
+    if (closing) {
+        // most likely
+        self.logger.error('onIdentified called on connection closing', {
+            hostPort: self.peer.hostPort
+        });
     }
 
     var elapsed = self.channel.timers.now() - self.inreq.start;
