@@ -417,6 +417,74 @@ RelayNetwork.test('recovers after five successes', aliceAndBob, function t(netwo
     }
 });
 
+RelayNetwork.test('does not recover when successes are non-consecutive', aliceAndBob, function t(network, assert) {
+
+    var count = 0;
+
+    var circuit = network.getCircuit(0, 'alice', 'bob', 'call');
+
+    network.register('call', function (req, res) {
+        count++;
+        if (count > 20 && count % 4 !== 0) {
+            console.log(network.timers.now(), 'ok', circuit.state.type);
+            res.headers.as = 'raw';
+            res.sendOk('tiny head', 'HUGE BODY');
+        } else {
+            console.log(network.timers.now(), 'nok', circuit.state.type);
+            res.sendError('UnexpectedError', 'it wasn\'t me');
+        }
+    });
+
+    network.exercise(100, 200, eachRequest, null, onCompletion);
+
+    function eachRequest(callback) {
+        network.send({
+            callerName: 'alice',
+            serviceName: 'bob'
+        }, 'call', 'tiny head', 'HUGE BODY', callback);
+    }
+
+    function onCompletion(err) {
+        if (err) return assert.end(err);
+        assert.equals(circuit.state.type, 'tchannel.unhealthy');
+        assert.end();
+    }
+});
+
+RelayNetwork.test('recovers when failure is periodic but infrequent', aliceAndBob, function t(network, assert) {
+
+    var count = 0;
+
+    var circuit = network.getCircuit(0, 'alice', 'bob', 'call');
+
+    network.register('call', function (req, res) {
+        count++;
+        if (count > 20 && count % 8 !== 0) {
+            console.log(network.timers.now(), 'ok', circuit.state.type);
+            res.headers.as = 'raw';
+            res.sendOk('tiny head', 'HUGE BODY');
+        } else {
+            console.log(network.timers.now(), 'nok', circuit.state.type);
+            res.sendError('UnexpectedError', 'it wasn\'t me');
+        }
+    });
+
+    network.exercise(100, 200, eachRequest, null, onCompletion);
+
+    function eachRequest(callback) {
+        network.send({
+            callerName: 'alice',
+            serviceName: 'bob'
+        }, 'call', 'tiny head', 'HUGE BODY', callback);
+    }
+
+    function onCompletion(err) {
+        if (err) return assert.end(err);
+        assert.equals(circuit.state.type, 'tchannel.healthy');
+        assert.end();
+    }
+});
+
 function runInterferenceScenario(network, errorCaller, errorService, errorEndpoint, assert) {
 
     network.register('respond', function (req, res) {
