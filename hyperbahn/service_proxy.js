@@ -192,11 +192,7 @@ function updateServiceChannels() {
     }
 
     if (self.circuits) {
-        self.circuits.updateServices(managesService);
-    }
-
-    function managesService(serviceName) {
-        return self.egressNodes.isExitFor(serviceName);
+        self.circuits.updateServices();
     }
 };
 

@@ -155,6 +155,7 @@ RelayNetwork.prototype.setCluster = function setCluster(cluster) {
             statsd: statsd,
             egressNodes: egressNodes,
             circuits: self.createCircuits({
+                egressNodes: egressNodes,
                 timers: self.timers,
                 random: null,
                 period: null,
