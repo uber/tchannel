@@ -76,6 +76,14 @@ EndpointCircuits.prototype.getCircuit = function getCircuit(callerName, serviceN
     return circuit;
 };
 
+EndpointCircuits.prototype.getCircuitTuples = function () {
+    var self = this;
+    return Object.keys(self.circuitsByEndpointName).map(function (endpointName) {
+        var circuit = self.circuitsByEndpointName[endpointName];
+        return [circuit.callerName, circuit.serviceName, circuit.endpointName];
+    });
+};
+
 function ServiceCircuits(root) {
     var self = this;
     self.root = root;
@@ -90,6 +98,14 @@ ServiceCircuits.prototype.getCircuit = function getCircuit(callerName, serviceNa
         self.circuitsByCallerName['$' + callerName] = circuits;
     }
     return circuits.getCircuit(callerName, serviceName, endpointName);
+};
+
+ServiceCircuits.prototype.getCircuitTuples = function getCircuitTuples() {
+    var self = this;
+    var circuits = Object.keys(self.circuitsByCallerName).map(function (callerName) {
+        return self.circuitsByCallerName[callerName].getCircuitTuples();
+    });
+    return Array.prototype.concat.apply([], circuits);
 };
 
 function Circuits(options) {
@@ -115,6 +131,14 @@ Circuits.prototype.getCircuit = function getCircuit(callerName, serviceName, end
         self.circuitsByServiceName['$' + serviceName] = circuits;
     }
     return circuits.getCircuit(callerName, serviceName, endpointName);
+};
+
+Circuits.prototype.getCircuitTuples = function getCircuitTuples() {
+    var self = this;
+    var circuits = Object.keys(self.circuitsByServiceName).map(function (serviceName) {
+        return self.circuitsByServiceName[serviceName].getCircuitTuples();
+    });
+    return Array.prototype.concat.apply([], circuits);
 };
 
 Circuits.prototype.handleRequest = function handleRequest(req, buildRes, nextHandler) {
