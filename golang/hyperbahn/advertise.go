@@ -32,13 +32,13 @@ const (
 	// maxAdvertiseFailures is the number of consecutive advertise failures after
 	// which we give up and trigger an OnError event.
 	maxAdvertiseFailures = 5
-	// advertiseInterval is the (approximate) time interval between advertisements.
-	// The interval is fuzzed to fuzzAmount.
-	advertiseInterval = 10 * time.Second
-	// advertiseRetryInterval is the duration to wait on advertise failures before retrying.
+	// advertiseInterval is the base time interval between advertisements.
+	advertiseInterval = 50 * time.Second
+	// advertiseFuzzInterval is the maximum fuzz period to add to advertiseInterval.
+	advertiseFuzzInterval = 20 * time.Second
+	// advertiseRetryInterval is the unfuzzed base duration to wait before retry on the first
+	// advertise failure. Successive retries will use 2 * previous base duration.
 	advertiseRetryInterval = 1 * time.Second
-	// fuzzInterval is used to fuzz the interval between advertisements.
-	fuzzInterval = 10 * time.Second
 )
 
 // timeSleep is a variable for stubbing in unit tests.
@@ -91,16 +91,21 @@ func (c *Client) sendAdvertise() error {
 	return nil
 }
 
+// fuzzInterval returns a fuzzed version of the interval based on FullJitter as described here:
+// http://www.awsarchitectureblog.com/2015/03/backoff.html
+func fuzzInterval(interval time.Duration) time.Duration {
+	return time.Duration(rand.Int63n(int64(interval)))
+}
+
+// fuzzedAdvertiseInterval returns the time to sleep between successful advertisements.
 func (c *Client) fuzzedAdvertiseInterval() time.Duration {
-	// fuzz is a random value between -fuzzInterval and fuzzInterval
-	fuzz := time.Duration(rand.Int63n(int64(fuzzInterval)*2)) - fuzzInterval
-	return advertiseInterval + fuzz
+	return advertiseInterval + fuzzInterval(advertiseFuzzInterval)
 }
 
 // advertiseLoop readvertises the service approximately every minute (with some fuzzing).
 func (c *Client) advertiseLoop() {
 	sleepFor := c.fuzzedAdvertiseInterval()
-	consecutiveFailures := 0
+	consecutiveFailures := uint8(0)
 
 	for {
 		timeSleep(sleepFor)
@@ -115,7 +120,7 @@ func (c *Client) advertiseLoop() {
 				return
 			}
 			c.opts.Handler.OnError(ErrAdvertiseFailed{Cause: err, WillRetry: true})
-			sleepFor = advertiseRetryInterval
+			sleepFor = fuzzInterval(advertiseRetryInterval * time.Duration(1<<consecutiveFailures))
 		} else {
 			c.opts.Handler.On(Readvertised)
 			sleepFor = c.fuzzedAdvertiseInterval()
