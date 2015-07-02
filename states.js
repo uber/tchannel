@@ -25,10 +25,23 @@ var inherits = require('util').inherits;
 
 var errors = require('./errors');
 
+module.exports.StateOptions = StateOptions;
 module.exports.HealthyState = HealthyState;
 module.exports.UnhealthyState = UnhealthyState;
 module.exports.LockedHealthyState = LockedHealthyState;
 module.exports.LockedUnhealthyState = LockedUnhealthyState;
+
+function StateOptions(stateMachine, options) {
+    options = options || {};
+    this.stateMachine = stateMachine;
+    this.nextHandler = options.nextHandler;
+    this.timers = options.timers;
+    this.random = options.random;
+    this.period = options.period;
+    this.maxErrorRate = options.maxErrorRate;
+    this.minimumRequests = options.minimumRequests;
+    this.probation = options.probation;
+}
 
 /*
  * Collectively, the health states receive additional options through the peer
