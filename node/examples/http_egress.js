@@ -62,7 +62,10 @@ httpServer.listen(argv.httpPort, argv.bind, onHTTPListening);
 var svcChan = tchan.makeSubChannel({
     serviceName: serviceName,
     requestDefaults: {
-        serviceName: serviceName
+        serviceName: serviceName,
+        headers: {
+            cn: 'examples/http_ingress'
+        }
     }
 });
 
@@ -84,5 +87,5 @@ function onHTTPListening() {
 }
 
 function onHTTPRequest(hreq, hres) {
-    asHTTP.forwardToTChannel(svcChan, hreq, hres);
+    asHTTP.forwardToTChannel(svcChan, hreq, hres, {}, function() { return true; });
 }
