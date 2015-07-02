@@ -21,7 +21,7 @@
 "use strict";
 
 var inherits = require('util').inherits;
-var States = require('./states');
+var states = require('./states');
 var EventEmitter = require('./lib/event_emitter');
 var StateMachine = require('./state_machine');
 var errors = require('./errors');
@@ -57,8 +57,7 @@ EndpointCircuits.prototype.getCircuit = function getCircuit(callerName, serviceN
         circuit = new Circuit(callerName, serviceName, endpointName);
         circuit.shouldRequestOptions = self.root.shouldRequestOptions;
         var stateOptions = self.root.stateOptions;
-        circuit.stateOptions = {
-            stateMachine: circuit,
+        circuit.stateOptions = new states.StateOptions(circuit, {
             nextHandler: stateOptions.nextHandler,
             timers: stateOptions.timers,
             random: stateOptions.random,
@@ -66,8 +65,8 @@ EndpointCircuits.prototype.getCircuit = function getCircuit(callerName, serviceN
             maxErrorRate: stateOptions.maxErrorRate,
             minRequests: stateOptions.minRequests,
             probation: stateOptions.probation
-        };
-        circuit.setState(States.HealthyState);
+        });
+        circuit.setState(states.HealthyState);
         self.circuitsByEndpointName['$' + endpointName] = circuit;
     }
     return circuit;
