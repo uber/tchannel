@@ -53,3 +53,54 @@ def print_arg(request, index):
                 print chunk
     except Exception:
         pass
+
+
+def chain(iterable, func):
+    """Apply an asynchronous function to a list of items in order.
+
+    Where previously you would write
+
+    .. code-block:: python
+
+        @gen.coroutine
+        def foo():
+            for thing in things:
+                yield async_operation(thing)
+
+    You can instead write:
+
+    .. code-block:: python
+
+        future = chain(things, async_operation)
+
+    This is most useful in coroutine that are called frequently, as this is
+    significantly faster.
+
+    Returns a future that resolves when all of the given futures have
+    completed.
+
+    If any future raises an exception, the remainder of the chain will not be
+    processed, and the exception is propagated to the returned future.
+    """
+
+    all_done_future = tornado.concurrent.Future()
+
+    generator = iter(iterable)
+
+    def handle(future):
+        if future.exception():
+            all_done_future.set_exc_info(future.exc_info())
+        else:
+            go()
+
+    def go():
+        try:
+            arg = generator.next()
+        except StopIteration:
+            all_done_future.set_result(None)
+        else:
+            func(arg).add_done_callback(handle)
+
+    go()
+
+    return all_done_future
