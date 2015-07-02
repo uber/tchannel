@@ -1,5 +1,7 @@
 # TChannel
 
+[![GoDoc](https://godoc.org/github.com/uber/tchannel/golang?status.svg)](https://godoc.org/github.com/uber/tchannel/golang)
+
 network multiplexing and framing protocol for RPC
 
 ## Stability: experimental
