@@ -72,7 +72,7 @@ var traceRelayProc;
 if (argv.relay || argv.trace) {
     setTimeout(startRelayServers, 500);
 } else {
-    startBench();
+    setTimeout(startBench, 500);
 }
 
 function startRelayServers() {
