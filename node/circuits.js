@@ -121,6 +121,7 @@ function Circuits(options) {
         probation: options.probation
     };
     self.shouldRequestOptions = {};
+    self.egressNodes = options.egressNodes;
 }
 
 Circuits.prototype.getCircuit = function getCircuit(callerName, serviceName, endpointName) {
@@ -159,12 +160,12 @@ Circuits.prototype.handleRequest = function handleRequest(req, buildRes, nextHan
 
 // Called upon membership change to collect services that the corresponding
 // exit node is no longer responsible for.
-Circuits.prototype.updateServices = function updateServices(managesService) {
+Circuits.prototype.updateServices = function updateServices() {
     var self = this;
     var serviceNames = Object.keys(self.circuitsByServiceName);
     for (var index = 0; index < serviceNames.length; index++) {
         var serviceName = serviceNames[index];
-        if (!managesService(serviceName)) {
+        if (!self.egressNodes.isExitFor(serviceName)) {
             delete self.circuitsByServiceName[serviceName];
         }
     }
