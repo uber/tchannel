@@ -64,7 +64,14 @@ class ArgSchemeBroker(object):
         return handler(req, resp, proxy)
 
     @tornado.gen.coroutine
-    def send(self, client, endpoint, header, body, **kwargs):
+    def send(self, client, endpoint, header, body, traceflag=None,
+             attempt_times=None, ttl=None,
+             retry_delay=None):
+        """Serialize and deserialize header and body into certain format
+            based on arg scheme.
+        See parameters definitions in
+            :func:`tchannel.tornado.peer.PeerClientOperation.send`
+        """
         try:
             if not isinstance(header, Stream):
                 raw_header = self.arg_scheme.serialize_header(header)
@@ -84,7 +91,10 @@ class ArgSchemeBroker(object):
             raw_header,
             raw_body,
             headers={'as': self.arg_scheme.type()},
-            **kwargs
+            traceflag=traceflag,
+            attempt_times=attempt_times,
+            ttl=ttl,
+            retry_delay=retry_delay,
         )
 
         resp.scheme = self.arg_scheme
