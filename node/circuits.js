@@ -54,10 +54,7 @@ EndpointCircuits.prototype.getCircuit = function getCircuit(callerName, serviceN
     var self = this;
     var circuit = self.circuitsByEndpointName['$' + endpointName];
     if (!circuit) {
-        circuit = new Circuit();
-        circuit.callerName = callerName;
-        circuit.serviceName = serviceName;
-        circuit.endpointName = endpointName;
+        circuit = new Circuit(callerName, serviceName, endpointName);
         circuit.shouldRequestOptions = self.root.shouldRequestOptions;
         var stateOptions = self.root.stateOptions;
         circuit.stateOptions = {
@@ -154,7 +151,7 @@ Circuits.prototype.handleRequest = function handleRequest(req, buildRes, nextHan
     // Default the caller name.
     // All callers that fail to specifiy a cn share a circuit for each sn:en
     // and fail together.
-    var callerName = req.headers.cn || 'yunocn';
+    var callerName = req.headers.cn || 'no-cn';
     var serviceName = req.serviceName;
     if (!serviceName) {
         return buildRes().sendError('BadRequest', 'All requests must have a service name');
@@ -178,17 +175,16 @@ Circuits.prototype.updateServices = function updateServices() {
     }
 };
 
-function Circuit() {
+function Circuit(callerName, serviceName, endpointName) {
     var self = this;
-    self.circuitName = null;
-    self.callerName = null;
-    self.serviceName = null;
-    self.endpointName = null;
-    self.shouldRequestOptions = null;
-    self.stateOptions = null;
     StateMachine.call(self);
     EventEmitter.call(self);
     self.stateChangedEvent = self.defineEvent('stateChanged');
+    self.callerName = callerName || 'no-cn';
+    self.serviceName = serviceName;
+    self.endpointName = endpointName;
+    self.shouldRequestOptions = null;
+    self.stateOptions = null;
 }
 
 inherits(Circuit, EventEmitter);
