@@ -14,9 +14,10 @@ flame-torch-relay-bench:
 	node index.js --relay --torch relay --torchFile ./flame.html --torchTime 10 --torchType flame \
 		-- --relay --skipPing -s 4096,16384 -p 1000,10000,20000
 
-# torch-trace-bench:
-# 	node index.js --trace --relay --torch server --torchFile ./flame.raw \
-# 		-- --skipPing -s 4096
+torch-trace-bench:
+	node index.js --trace --relay --torch server --torchFile ./flame.raw \
+		--torchTime 10 \
+ 		-- --skipPing --relay --trace -s 4096
 
 create-flame:
 	stackcollapse-stap.pl ./flame.raw > ./flame.folded

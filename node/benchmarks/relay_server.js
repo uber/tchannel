@@ -38,6 +38,8 @@ if (argv.type === 'bench-relay') {
     process.title = 'nodejs-benchmarks-relay_bench_server';
 } else if (argv.type === 'trace-relay') {
     process.title = 'nodejs-benchmarks-relay_trace_server';
+} else if (argv.type === 'trace-relay-client') {
+    process.title = 'nodejs-benchmarks-relay_trace_client';
 }
 
 RelayServer(argv);
@@ -55,16 +57,19 @@ function RelayServer(opts) {
     assert(opts.tracePort, 'tracePort required');
     assert(opts.traceRelayPort, 'traceRelayPort required');
     assert(
-        opts.type === 'bench-relay' || opts.type === 'trace-relay',
+        opts.type === 'bench-relay' || opts.type === 'trace-relay' || opts.type === 'trace-relay-client',
         'a valid type required'
     );
     assert('trace' in opts, 'trace is a required options');
     assert('debug' in opts, 'debug is a required options');
 
+    assert('traceRelayClientPort' in opts, 'traceRelayClientPort is a required option');
+
     var benchHostPort = '127.0.0.1:' + opts.benchPort;
     var benchRelayHostPort = '127.0.0.1:' + opts.benchRelayPort;
     var traceHostPort = '127.0.0.1:' + opts.tracePort;
     var traceRelayHostPort = '127.0.0.1:' + opts.traceRelayPort;
+    var traceRelayClientHostPort = '127.0.0.1:' + opts.traceRelayClientPort;
 
     self.relay = TChannel({
         statTags: {
@@ -79,7 +84,8 @@ function RelayServer(opts) {
         egressNodes: FakeEgressNodes({
             hostPort: opts.type === 'bench-relay' ?
                 benchRelayHostPort : opts.type === 'trace-relay' ?
-                traceRelayHostPort : null,
+                traceRelayHostPort : opts.type === 'trace-relay-client' ?
+                    traceRelayHostPort : null,
             topology: {
                 'benchmark': [benchRelayHostPort],
                 'tcollector': [traceRelayHostPort]
@@ -87,6 +93,7 @@ function RelayServer(opts) {
         })
     });
 
+/*
     self.tcollectorChannel = TChannel({
         trace: false,
         statsd: NullStatsd(),
@@ -103,7 +110,9 @@ function RelayServer(opts) {
         logger: self.relay.logger,
         callerName: opts.type
     });
+    */
 
+/*
     if (opts.trace) {
         self.relay.tracer.reporter = function report(span) {
             self.reporter.report(span, {
@@ -111,6 +120,7 @@ function RelayServer(opts) {
             });
         };
     }
+    */
 
     if (opts.type === 'bench-relay') {
         self.relay.handler.createServiceChannel('benchmark');
@@ -118,6 +128,9 @@ function RelayServer(opts) {
     } else if (opts.type === 'trace-relay') {
         self.relay.handler.createServiceChannel('tcollector');
         self.relay.listen(opts.traceRelayPort, '127.0.0.1', onListen);
+    } else if (opts.type === 'trace-relay-client') {
+        self.relay.handler.createServiceChannel('tcollector');
+        self.relay.listen(opts.traceRelayClientPort, '127.0.0.1', onListen);
     }
 
     function onListen() {
@@ -129,6 +142,11 @@ function RelayServer(opts) {
             );
             peer.connect();
         } else if (opts.type === 'trace-relay') {
+            peer = self.relay.handler.getServicePeer(
+                'tcollector', traceHostPort
+            );
+            peer.connect();
+        } else if (opts.type === 'trace-relay-client') {
             peer = self.relay.handler.getServicePeer(
                 'tcollector', traceHostPort
             );

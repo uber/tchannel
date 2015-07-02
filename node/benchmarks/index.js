@@ -69,11 +69,12 @@ if (argv.trace) {
 
 var benchRelayProc;
 var traceRelayProc;
+var traceRelayClientProc;
 
 if (argv.relay || argv.trace) {
     setTimeout(startRelayServers, 500);
 } else {
-    startBench();
+    setTimeout(startBench, 500);
 }
 
 function startRelayServers() {
@@ -82,6 +83,7 @@ function startRelayServers() {
         '--tracePort', '7039',
         '--benchRelayPort', '7038',
         '--traceRelayPort', '7037',
+        '--traceRelayClientPort', '7036',
         '--type', 'bench-relay',
         argv.trace ? '--trace' : '--no-trace',
         argv.debug ? '--debug' : '--no-debug'
@@ -95,6 +97,7 @@ function startRelayServers() {
             '--tracePort', '7039',
             '--benchRelayPort', '7038',
             '--traceRelayPort', '7037',
+            '--traceRelayClientPort', '7036',
             '--type', 'trace-relay',
             argv.trace ? '--trace' : '--no-trace',
             argv.debug ? '--debug' : '--no-debug'
@@ -103,11 +106,27 @@ function startRelayServers() {
         traceRelayProc.stderr.pipe(process.stderr);
     }
 
+    if (argv.trace) {
+        traceRelayClientProc = run(relay, [
+            '--benchPort', '7040',
+            '--tracePort', '7039',
+            '--benchRelayPort', '7038',
+            '--traceRelayPort', '7037',
+            '--traceRelayClientPort', '7036',
+            '--type', 'trace-relay-client',
+            argv.trace ? '--trace' : '--no-trace',
+            argv.debug ? '--debug' : '--no-debug'
+        ]);
+        traceRelayClientProc.stdout.pipe(process.stderr);
+        traceRelayClientProc.stderr.pipe(process.stderr);
+    }
+
     setTimeout(startBench, 500);
 }
 
 function startBench() {
     var benchProc = run(bench, argv['--']);
+    process.stderr.setMaxListeners(100);
     benchProc.stderr.pipe(process.stderr);
 
     benchProc.stdout
@@ -183,6 +202,9 @@ function startBench() {
         }
         if (benchRelayProc) {
             benchRelayProc.kill();
+        }
+        if (traceRelayClientProc) {
+            traceRelayClientProc.kill();
         }
     });
 }

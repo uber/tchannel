@@ -68,7 +68,7 @@ if (argv.relay) {
 }
 
 if (argv.trace) {
-    TRACE_SERVER = '127.0.0.1:7037';
+    TRACE_SERVER = '127.0.0.1:7036';
 }
 
 // -- test harness
