@@ -84,11 +84,9 @@ module.exports.parseRetryFlags = function parseRetryFlags(val) {
     val = val || 'c';
     var never = val.indexOf('n') > -1;
     var onConnectionError = !never && val.indexOf('c') > -1;
-    var onTimeout = !never && val.indexOf('t') > -1;
     return {
         never: never,
-        onConnectionError: onConnectionError,
-        onTimeout: onTimeout
+        onConnectionError: onConnectionError
     };
 };
 
@@ -99,7 +97,6 @@ module.exports.encodeRetryFlags = function encodeRetryFlags(retryFlags) {
         re += 'n';
     } else {
         if (retryFlags.onConnectionError) re += 'c';
-        if (retryFlags.onTimeout) re += 't';
     }
     return re;
 };

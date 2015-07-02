@@ -120,3 +120,223 @@ allocCluster.test('requests will timeout', {
         // do not call cb();
     }
 });
+
+allocCluster.test('requests will timeout per attempt', {
+    numPeers: 2,
+    channelOptions: {
+        timers: timers
+    }
+}, function t(cluster, assert) {
+    var one = cluster.channels[0];
+    var two = cluster.channels[1];
+    var sub = one.makeSubChannel({
+        serviceName: 'server'
+    });
+
+    sub.register('/normal-proxy', normalProxy);
+    sub.register('/timeout', timeout);
+
+    var twoSub = two.makeSubChannel({
+        serviceName: 'server',
+        peers: [one.hostPort]
+    });
+
+    twoSub
+        .request({
+            serviceName: 'server',
+            hasNoParent: true,
+            headers: {
+                'as': 'raw',
+                cn: 'wat'
+            },
+            timeout: 1000
+        })
+        .send('/normal-proxy', 'h', 'b', onResp);
+
+    function onResp(err, res, arg2, arg3) {
+        assert.ifError(err);
+
+        assert.equal(String(arg2), 'h');
+        assert.equal(String(arg3), 'b');
+
+        twoSub
+            .request({
+                serviceName: 'server',
+                hasNoParent: true,
+                headers: {
+                    'as': 'raw',
+                    cn: 'wat'
+                },
+                timeout: 3000,
+                timeoutPerAttempt: 1000,
+                retryLimit: 1
+            })
+            .send('/timeout', 'h', 'b', onTimeout);
+
+        var twoConn = two.peers.get(one.hostPort).connections[0];
+
+        var adv = Math.max(1001, (
+            twoConn.options.timeoutCheckInterval +
+            (twoConn.options.timeoutFuzz / 2) + 1
+        ));
+
+        // timers module has weird semantics
+        // TODO: less magic
+        var newTime = timers.now() + adv;
+        timers.now = function now() {
+            return newTime;
+        };
+
+        timers.advance(adv);
+    }
+
+    function onTimeout(err) {
+        assert.equal(err && err.type, 'tchannel.request.timeout', 'expected timeout error');
+        assert.ok(err && err.logical, 'the timeout should be from logical request');
+        cluster.assertCleanState(assert, {
+            channels: [{
+                peers: [{
+                    connections: [
+                        {direction: 'in', inReqs: 0, outReqs: 0}
+                    ]
+                }]
+            }, {
+                peers: [{
+                    connections: [
+                        {direction: 'out', inReqs: 0, outReqs: 0}
+                    ]
+                }]
+            }]
+        });
+        assert.end();
+    }
+
+    function normalProxy(req, res, arg2, arg3) {
+        res.headers.as = 'raw';
+        res.sendOk(arg2, arg3);
+    }
+    function timeout(/* head, body, hostInfo, cb */) {
+        // do not call cb();
+    }
+});
+
+allocCluster.test('requests can succeed after timeout per attempt', {
+    numPeers: 3,
+    channelOptions: {
+        timers: timers
+    }
+}, function t(cluster, assert) {
+    var one = cluster.channels[0];
+    var two = cluster.channels[1];
+    var three = cluster.channels[2];
+    var sub = one.makeSubChannel({
+        serviceName: 'server'
+    });
+    var sub3 = three.makeSubChannel({
+        serviceName: 'server'
+    });
+
+    sub.register('/normal-proxy', normalProxy);
+    sub.register('/timeout', timeout);
+    sub3.register('/normal-proxy', normalProxy);
+    sub3.register('/timeout', timeout);
+
+    var twoSub = two.makeSubChannel({
+        serviceName: 'server',
+        peers: [
+            one.hostPort,
+            three.hostPort
+        ]
+    });
+
+    twoSub
+        .request({
+            serviceName: 'server',
+            hasNoParent: true,
+            headers: {
+                'as': 'raw',
+                cn: 'wat'
+            },
+            timeout: 1000
+        })
+        .send('/normal-proxy', 'h', 'b', onResp);
+
+    var req;
+    function onResp(err, res, arg2, arg3) {
+        assert.ifError(err);
+
+        assert.equal(String(arg2), 'h');
+        assert.equal(String(arg3), 'b');
+
+        req = twoSub
+            .request({
+                serviceName: 'server',
+                hasNoParent: true,
+                headers: {
+                    'as': 'raw',
+                    cn: 'wat'
+                },
+                timeout: 3000,
+                timeoutPerAttempt: 1000,
+                retryLimit: 2
+            });
+        req.send('/timeout', 'h', 'b', done);
+    }
+
+    function done(err, res, arg2, arg3) {
+        assert.ifError(err);
+
+        assert.equal(String(arg2), 'h');
+        assert.equal(String(arg3), 'b');
+        assert.equal(req.outReqs[0].err && req.outReqs[0].err.type, 'tchannel.request.timeout', 'expected timeout error');
+        assert.ok(req.outReqs[0].err && req.outReqs[0].err.logical, 'the timeout should be from logical request');
+
+        cluster.assertCleanState(assert, {
+            channels: [{
+                peers: [{
+                    connections: [
+                        {direction: 'in', inReqs: 0, outReqs: 0}
+                    ]
+                }]
+            }, {
+                peers: [{
+                    connections: [
+                        {direction: 'out', inReqs: 0, outReqs: 0}
+                    ]
+                }, {
+                    connections: [
+                        {direction: 'out', inReqs: 0, outReqs: 0}
+                    ]
+                }]
+            }, {
+                peers: [{
+                    connections: [
+                        {direction: 'in', inReqs: 0, outReqs: 0}
+                    ]
+                }]
+            },]
+        });
+        assert.end();
+    }
+
+    function normalProxy(req, res, arg2, arg3) {
+        res.headers.as = 'raw';
+        res.sendOk(arg2, arg3);
+    }
+    var count = 0;
+    function timeout(req, res, arg2, arg3) {
+        count++;
+        if (count === 2) {
+            res.headers.as = 'raw';
+            res.sendOk(arg2, arg3);
+        } else {
+            var adv = 1001;
+            var newTime = timers.now() + adv;
+            timers.now = function now() {
+                return newTime;
+            };
+
+            timers.advance(adv);
+        }
+    }
+});

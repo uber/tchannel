@@ -317,26 +317,12 @@ allocCluster.test('retryFlags work', {
     });
 
     series([
-
-        function defaultToNotRetryingTimeout(next) {
-            var req = chan.request({
-                hasNoParent: true,
-                timeout: 100
-            });
-            req.send('foo', '', 'hi', function done(err, res, arg2, arg3) {
-                assert.equal(req.outReqs.length, 1, 'expected 1 tries');
-                assert.equal(err && err.type, 'tchannel.timeout', 'expected timeout error');
-                next();
-            });
-        },
-
         function canRetryTimeout(next) {
             var req = chan.request({
                 hasNoParent: true,
                 retryFlags: {
                     never: false,
-                    onConnectionError: true,
-                    onTimeout: true
+                    onConnectionError: true
                 }
             });
             req.send('foo', '', 'hi', function done(err, res, arg2, arg3) {
@@ -356,25 +342,7 @@ allocCluster.test('retryFlags work', {
 
                 next();
             });
-        },
-
-        function canOptOutFully(next) {
-            var req = chan.request({
-                hasNoParent: true,
-                timeout: 100,
-                retryFlags: {
-                    never: true,
-                    onConnectionError: false,
-                    onTimeout: false
-                }
-            });
-            req.send('foo', '', 'hi', function done(err, res, arg2, arg3) {
-                assert.equal(req.outReqs.length, 1, 'expected 1 tries');
-                assert.equal(err && err.type, 'tchannel.busy', 'expected busy error');
-                next();
-            });
         }
-
     ], finish);
 
     function finish(err) {
