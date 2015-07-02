@@ -46,7 +46,7 @@ function RelayNetwork(options) {
     self.serviceNames = options.serviceNames || ['alice', 'bob', 'charlie'];
     self.kValue = options.kValue || 2;
     self.createCircuits = options.createCircuits || noop;
-    self.clusterOptions = options.clusterOptions || {};
+    self.clusterOptions = options.cluster || options.clusterOptions || {};
 
     self.timers = options.timers;
     if (self.timers) {
