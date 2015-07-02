@@ -43,8 +43,6 @@ def say_ok(request, response, proxy):
 
 @tornado.gen.coroutine
 def echo(request, response, proxy):
-    print "echo"
-    yield tornado.gen.sleep(1)
     # stream args right back to request side
     response.set_header_s(request.get_header_s())
     response.set_body_s(request.get_body_s())
