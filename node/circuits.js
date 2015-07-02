@@ -202,25 +202,7 @@ Circuit.prototype.monitorRequest = function monitorRequest(req, buildRes, nextHa
 
     function monitorBuildRes(options) {
         var res = buildRes(options);
-
-        res.errorEvent.on(onError);
-        res.finishEvent.on(onFinish);
-
-        function onError(err) {
-            self.state.onRequestError(err);
-        }
-
-        function onFinish() {
-            // TODO distingiush res.ok?
-            // note that incoming requests do not have responseEvent and clear out
-            // their response upon finish.
-            if (errors.isUnhealthy(res.codeString)) {
-                self.state.onRequestUnhealthy();
-            } else {
-                self.state.onRequestHealthy(req);
-            }
-        }
-
+        self.monitorResponse(res);
         return res;
     }
 
@@ -229,6 +211,28 @@ Circuit.prototype.monitorRequest = function monitorRequest(req, buildRes, nextHa
     }
 
     return nextHandler.handleRequest(req, monitorBuildRes);
+};
+
+Circuit.prototype.monitorResponse = function monitorResponse(res) {
+    var self = this;
+
+    res.errorEvent.on(onError);
+    res.finishEvent.on(onFinish);
+
+    function onError(err) {
+        self.state.onRequestError(err);
+    }
+
+    function onFinish() {
+        // TODO distingiush res.ok?
+        // note that incoming requests do not have responseEvent and clear out
+        // their response upon finish.
+        if (errors.isUnhealthy(res.codeString)) {
+            self.state.onRequestUnhealthy();
+        } else {
+            self.state.onRequestHealthy();
+        }
+    }
 };
 
 module.exports = Circuits;
