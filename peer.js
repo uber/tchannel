@@ -51,16 +51,15 @@ function TChannelPeer(channel, hostPort, options) {
     self.connections = [];
     self.random = self.channel.random;
 
-    self.stateOptions = {
+    self.stateOptions = new states.StateOptions(self, {
         timers: self.channel.timers,
         random: self.channel.random,
         period: self.options.period,
         maxErrorRate: self.options.maxErrorRate,
         minimumRequests: self.options.minimumRequests,
         probation: self.options.probation,
-        stateMachine: self,
         nextHandler: self
-    };
+    });
 
     if (self.options.initialState) {
         self.setState(self.options.initialState);

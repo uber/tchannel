@@ -25,10 +25,35 @@ var inherits = require('util').inherits;
 
 var errors = require('./errors');
 
+module.exports.StateOptions = StateOptions;
 module.exports.HealthyState = HealthyState;
 module.exports.UnhealthyState = UnhealthyState;
 module.exports.LockedHealthyState = LockedHealthyState;
 module.exports.LockedUnhealthyState = LockedUnhealthyState;
+
+function StateOptions(stateMachine, options) {
+    options = options || {};
+    // for setState changes
+    this.stateMachine = stateMachine;
+    // for downstream shouldRequest, used differently in Peer and Circuit.
+    this.nextHandler = options.nextHandler;
+    // for mocking tests
+    this.timers = options.timers;
+    this.random = options.random;
+    // the number of miliseconds that healthy and unhealthy requests are
+    // tracked between state reevaluation.
+    this.period = options.period;
+    // when healthy, the minimum number of requests during a period to trigger
+    // state reevaluation.
+    this.minimumRequests = options.minimumRequests;
+    // when healthy, the failure rate for a period that will trigger a
+    // transition to unhealthy.
+    this.maxErrorRate = options.maxErrorRate;
+    // when unhealthy, allow one request per period. this is the number of
+    // consecutive periods that must have 100% healthy responses to trigger a
+    // switch back to healthy.
+    this.probation = options.probation;
+}
 
 /*
  * Collectively, the health states receive additional options through the peer
