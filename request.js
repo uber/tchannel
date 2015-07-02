@@ -46,13 +46,17 @@ function TChannelRequest(channel, options) {
     if (!self.options.retryFlags) {
         self.options.retryFlags = {
             never: false,
-            onConnectionError: true
+            onConnectionError: true,
+            onTimeout: false
         };
     }
 
     self.triedRemoteAddrs = {};
     self.outReqs = [];
     self.timeout = self.options.timeout || TChannelRequest.defaultTimeout;
+    if (self.options.timeoutPerAttempt) {
+        self.options.retryFlags.onTimeout = true;
+    }
     self.timeoutPerAttempt = self.options.timeoutPerAttempt || self.timeout;
     self.limit = self.options.retryLimit || TChannelRequest.defaultRetryLimit;
     self.start = 0;
@@ -334,7 +338,7 @@ TChannelRequest.prototype.shouldRetryError = function shouldRetryError(err) {
                 return true;
 
             case 'Timeout':
-                return true;
+                return !!self.options.retryFlags.onTimeout;
 
             case 'NetworkError':
             case 'ProtocolError':
