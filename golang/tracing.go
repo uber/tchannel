@@ -61,10 +61,7 @@ func (s *Span) write(w *typed.WriteBuffer) error {
 	return w.Err()
 }
 
-const (
-	tracingFlagEnabled byte = 0x01
-	tracingKey              = "tracing"
-)
+const tracingFlagEnabled byte = 0x01
 
 // NewRootSpan creates a new top-level Span for a call-graph within the provided context
 func NewRootSpan() *Span {
@@ -105,7 +102,7 @@ func (s Span) NewChildSpan() *Span {
 
 // CurrentSpan returns the Span value for the provided Context
 func CurrentSpan(ctx context.Context) *Span {
-	if span := ctx.Value(tracingKey); span != nil {
+	if span := ctx.Value(contextKeyTracing); span != nil {
 		return span.(*Span)
 	}
 
