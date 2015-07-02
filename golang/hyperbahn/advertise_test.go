@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel/golang"
@@ -146,8 +147,7 @@ func TestAdvertiseSuccess(t *testing.T) {
 		r.mock.On("On", Readvertised).Return().Times(10)
 		for i := 0; i < 10; i++ {
 			s1 := <-r.sleepArgs
-			require.True(t, s1 >= advertiseInterval-fuzzInterval)
-			require.True(t, s1 <= advertiseInterval+fuzzInterval)
+			checkAdvertiseInterval(t, s1)
 			r.sleepBlock <- struct{}{}
 
 			r.setAdvertiseSuccess()
@@ -170,8 +170,7 @@ func TestRetryTemporaryFailure(t *testing.T) {
 		require.NoError(t, r.client.Advertise())
 
 		s1 := <-r.sleepArgs
-		require.True(t, s1 >= advertiseInterval-fuzzInterval)
-		require.True(t, s1 <= advertiseInterval+fuzzInterval)
+		checkAdvertiseInterval(t, s1)
 
 		// When registrations fail, it retries after a short connection and triggers OnError.
 		r.mock.On("OnError", ErrAdvertiseFailed{true, advertiseErr}).Return(nil).Times(3)
@@ -180,7 +179,7 @@ func TestRetryTemporaryFailure(t *testing.T) {
 			r.setAdvertiseFailure()
 
 			s1 := <-r.sleepArgs
-			require.True(t, s1 == advertiseRetryInterval)
+			checkRetryInterval(t, s1, i+1 /* retryNum */)
 		}
 
 		// If the retry suceeds, then it goes back to normal.
@@ -191,8 +190,7 @@ func TestRetryTemporaryFailure(t *testing.T) {
 			r.setAdvertiseSuccess()
 
 			s1 := <-r.sleepArgs
-			require.True(t, s1 >= advertiseInterval-fuzzInterval)
-			require.True(t, s1 <= advertiseInterval+fuzzInterval)
+			checkAdvertiseInterval(t, s1)
 		}
 	})
 }
@@ -207,8 +205,7 @@ func TestRetryFailure(t *testing.T) {
 		require.NoError(t, r.client.Advertise())
 
 		s1 := <-r.sleepArgs
-		require.True(t, s1 >= advertiseInterval-fuzzInterval)
-		require.True(t, s1 <= advertiseInterval+fuzzInterval)
+		checkAdvertiseInterval(t, s1)
 
 		// When retries fail maxRegistrationFailures times, we receive:
 		// maxRegistrationFailures - 1 OnError WithRetry=True
@@ -225,7 +222,7 @@ func TestRetryFailure(t *testing.T) {
 			r.setAdvertiseFailure()
 
 			s1 := <-r.sleepArgs
-			require.True(t, s1 == advertiseRetryInterval)
+			checkRetryInterval(t, s1, i+1 /* retryNum */)
 		}
 
 		r.sleepBlock <- struct{}{}
@@ -234,6 +231,19 @@ func TestRetryFailure(t *testing.T) {
 		// Wait for the handler to be called and the mock expectation to be recorded.
 		<-noRetryFail
 	})
+}
+
+func checkAdvertiseInterval(t *testing.T, sleptFor time.Duration) {
+	assert.True(t, sleptFor >= advertiseInterval,
+		"advertise interval should be > advertiseInterval")
+	assert.True(t, sleptFor < advertiseInterval+advertiseFuzzInterval,
+		"advertise interval should be < advertiseInterval + advertiseFuzzInterval")
+}
+
+func checkRetryInterval(t *testing.T, sleptFor time.Duration, retryNum int) {
+	maxRetryInterval := advertiseRetryInterval * time.Duration(1<<uint8(retryNum))
+	assert.True(t, sleptFor < maxRetryInterval,
+		"retry #%v slept for %v, should sleep for less than %v", retryNum, sleptFor, maxRetryInterval)
 }
 
 func configFor(node string) Configuration {
