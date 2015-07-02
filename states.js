@@ -122,6 +122,8 @@ HealthyState.prototype.onRequestError = function onRequestError(err) {
     var codeString = errors.classify(err);
     if (errors.isUnhealthy(codeString)) {
         self.unhealthyCount++;
+    } else {
+        self.healthyCount++;
     }
 };
 
