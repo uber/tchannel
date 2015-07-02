@@ -52,6 +52,8 @@ class RequestDispatcher(BaseRequestHandler):
             response.write('hello world')
     """
 
+    FALLBACK = object()
+
     def __init__(self):
         super(RequestDispatcher, self).__init__()
         self.default_broker = ArgSchemeBroker()
@@ -145,9 +147,9 @@ class RequestDispatcher(BaseRequestHandler):
             Name of the endpoint. Incoming Call Requests must have this as
             ``arg1`` to dispatch to this handler.
 
-            If ``None`` is specified as a rule, the given handler will be used
-            as the 'fallback' handler when requests don't match any registered
-            rules.
+            If ``RequestHandler.FALLBACK`` is specified as a rule, the given
+            handler will be used as the 'fallback' handler when requests don't
+            match any registered rules.
 
         :param handler:
             A function that gets called with ``Request``, ``Response``, and
@@ -167,7 +169,7 @@ class RequestDispatcher(BaseRequestHandler):
         if not broker:
             broker = self.default_broker
 
-        if rule is None:
+        if rule is self.FALLBACK:
             self.endpoints.default_factory = lambda: handler
             return
 

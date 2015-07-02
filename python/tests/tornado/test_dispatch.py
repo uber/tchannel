@@ -75,7 +75,7 @@ def test_custom_fallback_behavior(dispatcher, req, connection):
     def handler(req, response, proxy):
         response.write_body('bar')
 
-    dispatcher.register(None, handler)
+    dispatcher.register(dispatcher.FALLBACK, handler)
     response = yield dispatcher.handle_call(req, connection)
     body = yield response.get_body()
     assert body == 'bar'
