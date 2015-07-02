@@ -54,11 +54,3 @@ def test_request():
             arg3='boo',
             headers={'as': 'qux'},
         )
-
-
-@pytest.mark.gen_test
-def test_register():
-    channel = TChannel(name='test')
-
-    with pytest.raises(ConnectionClosedError):
-        yield hyperbahn.advertise(channel, 'foo', ['127.0.0.1:23000'])

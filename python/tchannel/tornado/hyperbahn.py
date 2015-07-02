@@ -39,16 +39,6 @@ DEFAULT_MAX_ATTEMPT = 7  # pow(1.4, 8) > 10
 log = logging.getLogger('tchannel')
 
 
-def fuzz(x):
-    """Calculate the delay time by using exponential method and fuzz.
-
-    :param x: exponent value
-    :return: delay time in second
-    """
-    tmp = pow(DEFAULT_EXPO_BASE, x) / 2.0
-    return tmp + random.random() * tmp
-
-
 def advertise(tchannel, service, routers):
     """Advertise the given TChannel to Hyperbahn using the given name.
 
@@ -101,14 +91,19 @@ def advertise(tchannel, service, routers):
             else:
                 attempt_counter = 0
 
-        delay_time = min(DEFAULT_MAX_DELAY, fuzz(attempt_counter))
+        delay_time = random.uniform(
+            0, min(DEFAULT_MAX_DELAY, DEFAULT_EXPO_BASE ** attempt_counter)
+        )
+
         attempt_counter = min(attempt_counter, DEFAULT_MAX_ATTEMPT)
         tornado.ioloop.IOLoop.current().call_later(
             delay=delay_time,
             callback=lambda: _register(attempt_counter),
         )
 
-    return _register()
-
+    tornado.ioloop.IOLoop.current().call_later(
+        delay=0,
+        callback=lambda: _register(0),
+    )
 
 advertize = advertise  # just in case
