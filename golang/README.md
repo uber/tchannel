@@ -8,13 +8,18 @@ network multiplexing and framing protocol for RPC
 
 NOTE: `master:golang` is **not yet stable**
 
-## Getting started
+## Thrift + TChannel Integration
 
-Get Mercurial and Golang from your package manager of choice.
+If you want to use Thrift+TChannel, you will want to read [this guide](guide/Thrift_Hyperbahn.md).
+
+## Getting Started
+
+Get Go from your package manager of choice or follow the [official installation instructions](https://golang.org/doc/install).
 
 ```bash
-brew install hg
-brew install golang
+brew install go
+
+# This will be your GOPATH where all Go code will live.
 mkdir -p ~/golang/src
 ```
 
@@ -22,10 +27,10 @@ Set up your environment for your shell of choice.
 
 ```bash
 export GOPATH="${HOME}/golang"
-export PATH="${PATH}":"${GOPATH}"/bin
+export PATH="${PATH}":"${GOPATH}/bin"
 ```
 
-TChannel uses godep to manage dependencies.  To get started:
+TChannel uses [godep](https://github.com/tools/godep) to manage dependencies.  To get started:
 
 ```bash
 go get github.com/uber/tchannel/golang
@@ -34,6 +39,22 @@ cd $GOPATH/src/github.com/uber/tchannel/golang
 godep restore
 make
 ```
+### Examples
+
+Simple examples are included which demonstrate the TChannel API and features.
+
+
+#### PingPong
+```bash
+./build/examples/ping/pong
+```
+
+This example creates a client and server channel.  The server channel registers a PingService
+with a ping operation, which takes request Headers and a Ping body and returns the
+same Headers along with a Pong body.  The client sends a ping request to the server
+
+Note that every instance is bidirectional, so the same channel can be used for both sending
+and receiving requests to peers.  New connections are initiated on demand.
 
 #### HelloWorld
 
@@ -42,26 +63,14 @@ cd build/examples/hello
 ./server
 ```
 
-Note host:port then run client.
-
 ```bash
 cd build/examples/hello
 ./client
 ```
 
-
-#### PingPong
-```bash
-./build/examples/ping/pong
-```
-
-This examples creates a client and server channel.  The server channel registers a PingService
-with a ping operation, which takes request Headers and a Ping body and returns the
-same Headers along with a Pong body.  The client sends a ping request to the server
-
-Note that every instance is bidirectional, so the same channel can be used for both sending
-and receiving requests to peers.  New connections are initiated on demand.
-
+This example uses separate binaries for the server and client channel. The server registers
+a `HelloService` with a single method `echo`. This method replies with the same arguments
+it receives. The client sends 'hello' 'world' and receives the same reply from the server.
 
 ## Overview
 
@@ -105,6 +114,8 @@ change in the future.
  - [server](examples/hello/server/main.go)
  - [client](examples/hello/client/main.go)
  - [ping](examples/ping/main.go)
+ - [keyvalue](examples/keyvalue)
+ - [thrift](examples/thrift)
 
 ## Tests
 
@@ -113,5 +124,6 @@ change in the future.
 ## Contributors
 
  - mmihic
+ - prashantv
 
 ## MIT Licenced
