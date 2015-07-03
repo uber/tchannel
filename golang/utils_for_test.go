@@ -105,6 +105,7 @@ type rawHandler interface {
 
 // rawArgs parses the arguments from an incoming call req.
 type rawArgs struct {
+	Caller    string
 	Format    Format
 	Operation string
 	Arg2      []byte
@@ -113,6 +114,7 @@ type rawArgs struct {
 
 // rawRes represents the response to an incoming call req.
 type rawRes struct {
+	SystemErr error
 	// IsErr is used to set an application error on the underlying call res.
 	IsErr bool
 	Arg2  []byte
@@ -123,6 +125,7 @@ type rawRes struct {
 func AsRaw(handler rawHandler) Handler {
 	return HandlerFunc(func(ctx context.Context, call *InboundCall) {
 		var args rawArgs
+		args.Caller = call.CallerName()
 		args.Format = call.Format()
 		args.Operation = string(call.Operation())
 		if err := NewArgReader(call.Arg2Reader()).Read(&args.Arg2); err != nil {
@@ -144,6 +147,12 @@ func AsRaw(handler rawHandler) Handler {
 			}
 		}
 
+		if resp.SystemErr != nil {
+			if err := response.SendSystemError(resp.SystemErr); err != nil {
+				handler.OnError(ctx, err)
+			}
+			return
+		}
 		if resp.IsErr {
 			if err := response.SetApplicationError(); err != nil {
 				handler.OnError(ctx, err)
