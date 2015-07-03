@@ -32,7 +32,6 @@ function TChannelInResponse(id, options) {
     var self = this;
     EventEmitter.call(self);
     self.errorEvent = self.defineEvent('error');
-    self.spanEvent = self.defineEvent('span');
     self.finishEvent = self.defineEvent('finish');
 
     self.logger = options.logger;
