@@ -605,7 +605,6 @@ class PeerClientOperation(object):
                 self.peer.tchannel.event_emitter.fire(
                     EventType.before_send_request_per_attempt,
                     request,
-                    num_of_attempt,
                 )
                 response = yield self._send(connection, request)
                 # event: after_receive_response

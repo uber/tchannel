@@ -63,11 +63,11 @@ class EventHook(object):
 
     """
     def before_send_request(self, request):
-        """Called before any request initiated by the service."""
+        """Called before each request is sent."""
         pass
 
     def before_send_request_per_attempt(self, request, retry_count):
-        """Called before sending each request for each attempt."""
+        """Called before each attempt to send the request."""
         pass
 
     def after_send_request(self, request):
