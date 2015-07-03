@@ -46,6 +46,10 @@ type testHandler struct {
 	caller string
 }
 
+func newTestHandler(t *testing.T) *testHandler {
+	return &testHandler{t: t}
+}
+
 func (h *testHandler) Handle(ctx context.Context, args *rawArgs) (*rawRes, error) {
 	h.format = args.Format
 	h.caller = args.Caller
@@ -78,7 +82,7 @@ func (h *testHandler) OnError(ctx context.Context, err error) {
 
 func TestRoundTrip(t *testing.T) {
 	withTestChannel(t, "Capture", func(ch *Channel, hostPort string) {
-		handler := &testHandler{t: t}
+		handler := newTestHandler(t)
 		ch.Register(AsRaw(handler), "echo")
 
 		ctx, cancel := NewContext(time.Second * 5)
@@ -106,7 +110,7 @@ func TestRoundTrip(t *testing.T) {
 
 func TestDefaultFormat(t *testing.T) {
 	withTestChannel(t, "Capture", func(ch *Channel, hostPort string) {
-		handler := &testHandler{t: t}
+		handler := newTestHandler(t)
 		ch.Register(AsRaw(handler), "echo")
 
 		ctx, cancel := NewContext(time.Second * 5)
@@ -129,8 +133,8 @@ func TestReuseConnection(t *testing.T) {
 
 	withTestChannel(t, "s1", func(ch1 *Channel, hostPort1 string) {
 		withTestChannel(t, "s2", func(ch2 *Channel, hostPort2 string) {
-			ch1.Register(AsRaw(&testHandler{t: t}), "echo")
-			ch2.Register(AsRaw(&testHandler{t: t}), "echo")
+			ch1.Register(AsRaw(newTestHandler(t)), "echo")
+			ch2.Register(AsRaw(newTestHandler(t)), "echo")
 
 			// We need the servers to have their peers set before making outgoing calls
 			// for the outgoing calls to contain the correct peerInfo.
@@ -197,7 +201,7 @@ func TestBadRequest(t *testing.T) {
 
 func TestNoTimeout(t *testing.T) {
 	withTestChannel(t, "svc", func(ch *Channel, hostPort string) {
-		ch.Register(AsRaw(&testHandler{t: t}), "Echo")
+		ch.Register(AsRaw(newTestHandler(t)), "Echo")
 
 		ctx := context.Background()
 		_, _, _, err := sendRecv(ctx, ch, hostPort, "svc", "Echo", []byte("Headers"), []byte("Body"))
@@ -208,7 +212,7 @@ func TestNoTimeout(t *testing.T) {
 
 func TestServerBusy(t *testing.T) {
 	withTestChannel(t, testServiceName, func(ch *Channel, hostPort string) {
-		ch.Register(AsRaw(&testHandler{t: t}), "busy")
+		ch.Register(AsRaw(newTestHandler(t)), "busy")
 
 		ctx, cancel := NewContext(time.Second * 5)
 		defer cancel()
@@ -221,7 +225,7 @@ func TestServerBusy(t *testing.T) {
 
 func TestTimeout(t *testing.T) {
 	withTestChannel(t, testServiceName, func(ch *Channel, hostPort string) {
-		ch.Register(AsRaw(&testHandler{t: t}), "timeout")
+		ch.Register(AsRaw(newTestHandler(t)), "timeout")
 
 		ctx, cancel := NewContext(time.Millisecond * 100)
 		defer cancel()
@@ -235,7 +239,7 @@ func TestTimeout(t *testing.T) {
 
 func TestFragmentation(t *testing.T) {
 	withTestChannel(t, testServiceName, func(ch *Channel, hostPort string) {
-		ch.Register(AsRaw(&testHandler{t: t}), "echo")
+		ch.Register(AsRaw(newTestHandler(t)), "echo")
 
 		arg2 := make([]byte, MaxFramePayloadSize*2)
 		for i := 0; i < len(arg2); i++ {
