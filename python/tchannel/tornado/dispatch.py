@@ -20,6 +20,8 @@
 
 from __future__ import absolute_import
 
+from collections import defaultdict
+
 import tornado
 import tornado.gen
 from tornado import gen
@@ -45,15 +47,17 @@ class RequestDispatcher(BaseRequestHandler):
 
         handler = # ...
 
-        @hanlder.route('myMethod')
-        def myMethod(request, response, opts):
+        @handler.route('my_method')
+        def my_method(request, response, proxy):
             response.write('hello world')
     """
+
+    FALLBACK = object()
 
     def __init__(self):
         super(RequestDispatcher, self).__init__()
         self.default_broker = ArgSchemeBroker()
-        self.endpoints = {}
+        self.endpoints = defaultdict(lambda: self.not_found)
 
     @tornado.gen.coroutine
     def handle_call(self, request, connection):
@@ -65,63 +69,61 @@ class RequestDispatcher(BaseRequestHandler):
         # request.endpoint. The original argstream[0] is no longer valid. If
         # user still tries read from it, it will return empty.
         chunk = yield request.argstreams[0].read()
+
         while chunk:
             request.endpoint += chunk
             chunk = yield request.argstreams[0].read()
 
         # event: receive_request
         request.tracing.name = request.endpoint
+
         connection.tchannel.event_emitter.fire(
             EventType.before_receive_request,
             request,
         )
 
-        endpoint = self.endpoints.get(request.endpoint, None)
-        if endpoint is None:
+        endpoint = self.endpoints[request.endpoint]
+
+        response = Response(
+            id=request.id,
+            checksum=request.checksum,
+            tracing=request.tracing,
+            connection=connection,
+            headers={'as': request.headers.get('as', 'raw')},
+        )
+
+        connection.post_response(response)
+
+        try:
+            yield gen.maybe_future(
+                endpoint(
+                    request,
+                    response,
+                    TChannelProxy(
+                        connection.tchannel,
+                        request.tracing,
+                    ),
+                )
+            )
+            response.flush()
+        except (InvalidMessageError, InvalidEndpointError) as e:
+            response.set_exception(e)
+            connection.request_message_factory.remove_buffer(response.id)
             connection.send_error(
                 ErrorCode.bad_request,
-                "Endpoint '%s' for service '%s' is not defined" % (
-                    request.endpoint, request.service),
-                request.id)
-        else:
-            response = Response(
-                id=request.id,
-                checksum=request.checksum,
-                tracing=request.tracing,
-                connection=connection,
-                headers={'as': request.headers.get('as', 'raw')},
+                e.message,
+                response.id,
+            )
+        except Exception as e:
+            response.set_exception(TChannelError(e.message))
+            connection.request_message_factory.remove_buffer(response.id)
+            connection.send_error(
+                ErrorCode.unexpected,
+                "An unexpected error has occurred from the handler",
+                response.id,
             )
 
-            connection.post_response(response)
-
-            try:
-                yield gen.maybe_future(
-                    endpoint(
-                        request,
-                        response,
-                        TChannelProxy(
-                            connection.tchannel,
-                            request.tracing,
-                        ),
-                    )
-                )
-                response.flush()
-            except (InvalidMessageError, InvalidEndpointError) as e:
-                response.set_exception(e)
-                connection.request_message_factory.remove_buffer(response.id)
-                connection.send_error(
-                    ErrorCode.bad_request,
-                    e.message,
-                    response.id,
-                )
-            except Exception as e:
-                response.set_exception(TChannelError(e.message))
-                connection.request_message_factory.remove_buffer(response.id)
-                connection.send_error(
-                    ErrorCode.unexpected,
-                    "An unexpected error has occurred from the handler",
-                    response.id,
-                )
+        raise gen.Return(response)
 
     def route(self, rule, helper=None):
         """See ``register`` for documentation."""
@@ -137,18 +139,22 @@ class RequestDispatcher(BaseRequestHandler):
 
         .. code-block:: python
 
-            def handler(request, response, proxy):
-                proxy.request(serviceName).send(...) # send outgoing request
+            @dispatcher.register('is_healthy')
+            def check_health(request, response, proxy):
                 # ...
-
-            handler.register('is_healthy', handler, foo='bar')
 
         :param rule:
             Name of the endpoint. Incoming Call Requests must have this as
             ``arg1`` to dispatch to this handler.
+
+            If ``RequestHandler.FALLBACK`` is specified as a rule, the given
+            handler will be used as the 'fallback' handler when requests don't
+            match any registered rules.
+
         :param handler:
             A function that gets called with ``Request``, ``Response``, and
             the ``proxy``.
+
         :param broker:
             Broker injects customized serializer and deserializer into
             request/response object.
@@ -156,13 +162,30 @@ class RequestDispatcher(BaseRequestHandler):
             broker==None means it registers as raw handle. It deals with raw
             buffer in the request/response.
         """
-        assert rule, "rule must not be None"
         assert handler, "handler must not be None"
+
+        # TODO: Get rid of this Broker thing!! It has the same interface as the
+        # Dispatcher but only handles serialization.
         if not broker:
             broker = self.default_broker
 
+        if rule is self.FALLBACK:
+            self.endpoints.default_factory = lambda: handler
+            return
+
         broker.register(rule, handler)
+
         self.endpoints[rule] = broker.handle_call
+
+    @staticmethod
+    def not_found(request, response, proxy):
+        """Default behavior for requests to unrecognized endpoints."""
+        raise InvalidEndpointError(
+            "Endpoint '%s' for service '%s' is not defined" % (
+                request.endpoint,
+                request.service,
+            ),
+        )
 
 
 class TChannelProxy(object):
