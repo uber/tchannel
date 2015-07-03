@@ -105,20 +105,22 @@ type OnActiveHandler func(c *Connection)
 
 // Connection represents a connection to a remote peer.
 type Connection struct {
-	log            Logger
-	checksumType   ChecksumType
-	framePool      FramePool
-	conn           net.Conn
-	localPeerInfo  LocalPeerInfo
-	remotePeerInfo PeerInfo
-	sendCh         chan *Frame
-	state          connectionState
-	stateMut       sync.RWMutex
-	inbound        messageExchangeSet
-	outbound       messageExchangeSet
-	handlers       *handlerMap
-	nextMessageID  uint32
-	onActive       OnActiveHandler
+	log             Logger
+	statsReporter   StatsReporter
+	checksumType    ChecksumType
+	framePool       FramePool
+	conn            net.Conn
+	localPeerInfo   LocalPeerInfo
+	remotePeerInfo  PeerInfo
+	sendCh          chan *Frame
+	state           connectionState
+	stateMut        sync.RWMutex
+	inbound         messageExchangeSet
+	outbound        messageExchangeSet
+	handlers        *handlerMap
+	nextMessageID   uint32
+	onActive        OnActiveHandler
+	commonStatsTags map[string]string
 }
 
 // nextConnID gives an ID for each connection for debugging purposes.
@@ -153,25 +155,22 @@ const (
 )
 
 // Creates a new Connection around an outbound connection initiated to a peer
-func newOutboundConnection(hostPort string, handlers *handlerMap, log Logger, peerInfo LocalPeerInfo,
-	opts *ConnectionOptions) (*Connection, error) {
+func (ch *Channel) newOutboundConnection(hostPort string, opts *ConnectionOptions) (*Connection, error) {
 	conn, err := net.Dial("tcp", hostPort)
 	if err != nil {
 		return nil, err
 	}
 
-	return newConnection(conn, connectionWaitingToSendInitReq, handlers, peerInfo, log, nil, opts), nil
+	return ch.newConnection(conn, connectionWaitingToSendInitReq, nil, opts), nil
 }
 
 // Creates a new Connection based on an incoming connection from a peer
-func newInboundConnection(conn net.Conn, handlers *handlerMap, peerInfo LocalPeerInfo, log Logger,
-	onActive OnActiveHandler, opts *ConnectionOptions) (*Connection, error) {
-	return newConnection(conn, connectionWaitingToRecvInitReq, handlers, peerInfo, log, onActive, opts), nil
+func (ch *Channel) newInboundConnection(conn net.Conn, onActive OnActiveHandler, opts *ConnectionOptions) (*Connection, error) {
+	return ch.newConnection(conn, connectionWaitingToRecvInitReq, onActive, opts), nil
 }
 
 // Creates a new connection in a given initial state
-func newConnection(conn net.Conn, initialState connectionState, handlers *handlerMap, peerInfo LocalPeerInfo,
-	log Logger, onActive OnActiveHandler, opts *ConnectionOptions) *Connection {
+func (ch *Channel) newConnection(conn net.Conn, initialState connectionState, onActive OnActiveHandler, opts *ConnectionOptions) *Connection {
 	if opts == nil {
 		opts = &ConnectionOptions{}
 	}
@@ -197,11 +196,13 @@ func newConnection(conn net.Conn, initialState connectionState, handlers *handle
 	}
 
 	connID := atomic.AddUint32(&nextConnID, 1)
-	log = PrefixedLogger(fmt.Sprintf("C%v ", connID), log)
+	log := PrefixedLogger(fmt.Sprintf("C%v ", connID), ch.log)
+	peerInfo := ch.PeerInfo()
 	log.Debugf("created for %v (%v) local: %v remote: %v",
 		peerInfo.ServiceName, peerInfo.ProcessName, conn.LocalAddr(), conn.RemoteAddr())
 	c := &Connection{
 		log:           log,
+		statsReporter: ch.statsReporter,
 		conn:          conn,
 		framePool:     framePool,
 		state:         initialState,
@@ -218,8 +219,9 @@ func newConnection(conn net.Conn, initialState connectionState, handlers *handle
 			log:       log,
 			exchanges: make(map[uint32]*messageExchange),
 		},
-		handlers: handlers,
-		onActive: onActive,
+		handlers:        ch.handlers,
+		onActive:        onActive,
+		commonStatsTags: ch.commonStatsTags,
 	}
 
 	go c.readFrames()

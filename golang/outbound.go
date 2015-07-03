@@ -76,6 +76,8 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string, callOpti
 		Service:    serviceName,
 		TimeToLive: timeToLive,
 	}
+	call.statsReporter = c.statsReporter
+	call.createStatsTags(c.commonStatsTags)
 	call.log = PrefixedLogger(fmt.Sprintf("Out%v-Call ", requestID), c.log)
 
 	// TODO(mmihic): It'd be nice to do this without an fptr
@@ -107,6 +109,8 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string, callOpti
 		return new(callResContinue)
 	}
 	response.contents = newFragmentingReader(response)
+	response.statsReporter = call.statsReporter
+	response.commonStatsTags = call.commonStatsTags
 	call.response = response
 	return call, nil
 }
@@ -138,8 +142,10 @@ func (c *Connection) handleCallResContinue(frame *Frame) bool {
 type OutboundCall struct {
 	reqResWriter
 
-	callReq  callReq
-	response *OutboundCallResponse
+	callReq         callReq
+	response        *OutboundCallResponse
+	statsReporter   StatsReporter
+	commonStatsTags map[string]string
 }
 
 // Response provides access to the call's response object, which can be used to
@@ -148,8 +154,24 @@ func (call *OutboundCall) Response() *OutboundCallResponse {
 	return call.response
 }
 
+// createStatsTags creates the common stats tags, if they are not already created.
+func (call *OutboundCall) createStatsTags(connectionTags map[string]string) {
+	call.commonStatsTags = map[string]string{
+		"target-service": call.callReq.Service,
+	}
+	for k, v := range connectionTags {
+		call.commonStatsTags[k] = v
+	}
+}
+
 // writeOperation writes the operation (arg1) to the call
 func (call *OutboundCall) writeOperation(operation []byte) error {
+	// TODO(prashant): Should operation become part of BeginCall so this can use Format directly.
+	if call.callReq.Headers[ArgScheme] != HTTP.String() {
+		call.commonStatsTags["target-endpoint"] = string(operation)
+	}
+
+	call.statsReporter.IncCounter("outbound.calls.send", call.commonStatsTags, 1)
 	return NewArgWriter(call.arg1Writer()).Write(operation)
 }
 
@@ -171,7 +193,9 @@ func (call *OutboundCall) doneSending() {}
 type OutboundCallResponse struct {
 	reqResReader
 
-	callRes callRes
+	callRes         callRes
+	statsReporter   StatsReporter
+	commonStatsTags map[string]string
 }
 
 // ApplicationError returns true if the call resulted in an application level error
@@ -233,5 +257,12 @@ func (c *Connection) handleError(frame *Frame) {
 // doneReading shuts down the message exchange for this call.
 // For outgoing calls, the last message is reading the call response.
 func (response *OutboundCallResponse) doneReading() {
+	if response.ApplicationError() {
+		// TODO(prashant): Figure out how to add "type" to tags, which TChannel does not know about.
+		response.statsReporter.IncCounter("outbound.calls.app-errors", response.commonStatsTags, 1)
+	} else {
+		response.statsReporter.IncCounter("outbound.calls.successful", response.commonStatsTags, 1)
+	}
+
 	response.mex.shutdown()
 }

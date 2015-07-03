@@ -50,6 +50,9 @@ type ChannelOptions struct {
 
 	// The logger to use for this channel
 	Logger Logger
+
+	// The reporter to use for reporting stats for this channel.
+	StatsReporter StatsReporter
 }
 
 // A Channel is a bi-directional connection to the peering and routing network.
@@ -59,6 +62,8 @@ type ChannelOptions struct {
 // TODO(prashant): Shutdown all subchannels + peers when channel is closed.
 type Channel struct {
 	log               Logger
+	commonStatsTags   map[string]string
+	statsReporter     StatsReporter
 	connectionOptions ConnectionOptions
 	handlers          *handlerMap
 	peers             *PeerList
@@ -91,9 +96,15 @@ func NewChannel(serviceName string, opts *ChannelOptions) (*Channel, error) {
 		processName = fmt.Sprintf("%s[%d]", filepath.Base(os.Args[0]), os.Getpid())
 	}
 
+	statsReporter := opts.StatsReporter
+	if statsReporter == nil {
+		statsReporter = NullStatsReporter
+	}
+
 	ch := &Channel{
 		connectionOptions: opts.DefaultConnectionOptions,
 		log:               logger,
+		statsReporter:     statsReporter,
 		handlers:          &handlerMap{},
 	}
 	ch.mutable.peerInfo = LocalPeerInfo{
@@ -105,6 +116,7 @@ func NewChannel(serviceName string, opts *ChannelOptions) (*Channel, error) {
 	}
 	ch.mutable.subChannels = make(map[string]*SubChannel)
 	ch.peers = newPeerList(ch)
+	ch.createCommonStats()
 	return ch, nil
 }
 
@@ -162,6 +174,20 @@ func (ch *Channel) PeerInfo() LocalPeerInfo {
 	defer ch.mutable.mut.RUnlock()
 
 	return ch.mutable.peerInfo
+}
+
+func (ch *Channel) createCommonStats() {
+	ch.commonStatsTags = map[string]string{
+		"app":     ch.mutable.peerInfo.ProcessName,
+		"service": ch.mutable.peerInfo.ServiceName,
+	}
+	host, err := os.Hostname()
+	if err != nil {
+		ch.log.Infof("channel failed to get host: %v", err)
+		return
+	}
+	ch.commonStatsTags["host"] = host
+	// TODO(prashant): Allow user to pass extra tags (such as cluster, version).
 }
 
 func (ch *Channel) registerNewSubChannel(serviceName string) *SubChannel {
@@ -245,7 +271,7 @@ func (ch *Channel) serve() {
 			p := ch.peers.GetOrAdd(c.remotePeerInfo.HostPort)
 			p.AddConnection(c)
 		}
-		_, err = newInboundConnection(netConn, ch.handlers, ch.PeerInfo(), ch.log, onActive, &ch.connectionOptions)
+		_, err = ch.newInboundConnection(netConn, onActive, &ch.connectionOptions)
 		if err != nil {
 			// Server is getting overloaded - begin rejecting new connections
 			ch.log.Errorf("could not create new TChannelConnection for incoming conn: %v", err)
