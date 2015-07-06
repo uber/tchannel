@@ -70,6 +70,60 @@ allocCluster.test('send relay requests', {
     });
 });
 
+allocCluster.test('send relay with tiny timeout', {
+    numPeers: 2
+}, function t(cluster, assert) {
+    var one = cluster.channels[0];
+    var two = cluster.channels[1];
+
+    var oneToTwo = one.makeSubChannel({
+        serviceName: 'two',
+        peers: [two.hostPort]
+    });
+    oneToTwo.handler = new RelayHandler(oneToTwo);
+
+    var twoSvc = two.makeSubChannel({
+        serviceName: 'two'
+    });
+    twoSvc.register('echo', echo);
+
+    var client = TChannel({
+        logger: one.logger
+    });
+    var twoClient = client.makeSubChannel({
+        serviceName: 'two',
+        peers: [one.hostPort],
+        requestDefaults: {
+            serviceName: 'two',
+            headers: {
+                as: 'raw',
+                cn: 'wat'
+            }
+        }
+    });
+
+    twoClient.waitForIdentified({
+        host: one.hostPort
+    }, onIdentified);
+
+    function onIdentified(err1) {
+        assert.ifError(err1);
+
+        twoClient.request({
+            hasNoParent: true,
+            host: one.hostPort,
+            timeout: 1
+        }).send('echo', 'foo', 'bar', function done(err2, res, arg2, arg3) {
+            assert.ifError(err2, 'no unexpected error');
+            assert.equal(String(arg2), 'foo', 'expected arg2');
+            assert.equal(String(arg3), 'bar', 'expected arg3');
+
+            client.close();
+            assert.end();
+        });
+    }
+});
+
 allocCluster.test('relay respects ttl', {
     numPeers: 3
 }, function t(cluster, assert) {
