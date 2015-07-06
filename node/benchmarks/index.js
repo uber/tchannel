@@ -30,6 +30,7 @@ var util = require('util');
 var process = require('process');
 var console = require('console');
 var setTimeout = require('timers').setTimeout;
+var assert = require('assert');
 
 var server = path.join(__dirname, 'bench_server.js');
 var relay = path.join(__dirname, 'relay_server.js');
@@ -55,7 +56,7 @@ function run(script, args) {
 
 var serverProc = run(server, [
     argv.trace ? '--trace' : '--no-trace',
-    '--traceRelayHostPort', '127.0.0.1:4037'
+    '--traceRelayHostPort', '127.0.0.1:7037'
 ]);
 serverProc.stdout.pipe(process.stderr);
 serverProc.stderr.pipe(process.stderr);
@@ -77,10 +78,10 @@ if (argv.relay || argv.trace) {
 
 function startRelayServers() {
     benchRelayProc = run(relay, [
-        '--benchPort', '4040',
-        '--tracePort', '4039',
-        '--benchRelayPort', '4038',
-        '--traceRelayPort', '4037',
+        '--benchPort', '7040',
+        '--tracePort', '7039',
+        '--benchRelayPort', '7038',
+        '--traceRelayPort', '7037',
         '--type', 'bench-relay',
         argv.trace ? '--trace' : '--no-trace',
         argv.debug ? '--debug' : '--no-debug'
@@ -90,10 +91,10 @@ function startRelayServers() {
 
     if (argv.trace) {
         traceRelayProc = run(relay, [
-            '--benchPort', '4040',
-            '--tracePort', '4039',
-            '--benchRelayPort', '4038',
-            '--traceRelayPort', '4037',
+            '--benchPort', '7040',
+            '--tracePort', '7039',
+            '--benchRelayPort', '7038',
+            '--traceRelayPort', '7037',
             '--type', 'trace-relay',
             argv.trace ? '--trace' : '--no-trace',
             argv.debug ? '--debug' : '--no-debug'
@@ -133,7 +134,46 @@ function startBench() {
             .pipe(fs.createWriteStream(argv.output, {encoding: 'utf8'}));
     }
 
+    if (argv.torch) {
+        assert(argv.torch === 'client' ||
+               argv.torch === 'relay' ||
+               argv.torch === 'server',
+               'Torch flag must be client or relay'
+        );
+        assert(argv.torchFile, 'torchFile needed');
+
+        var torchPid;
+        var torchFile = argv.torchFile;
+        var torchTime = argv.torchTime || '30';
+        var torchDelay = argv.torchDelay || 10 * 1000;
+        var torchType = argv.torchType || 'raw';
+
+        if (argv.torch === 'relay') {
+            torchPid = benchRelayProc.pid;
+        } else if (argv.torch === 'client') {
+            torchPid = benchProc.pid;
+        } else if (argv.torch === 'server') {
+            torchPid = serverProc.pid;
+        }
+
+        setTimeout(function delayTorching() {
+            var torchProc = childProcess.spawn('sudo', [
+                'torch', torchPid, torchType, torchTime
+            ]);
+            torchProc.stdout.pipe(
+                fs.createWriteStream(torchFile)
+            );
+            torchProc.stderr.pipe(process.stderr);
+            console.error('starting flaming');
+
+            torchProc.once('close', function onTorchClose() {
+                console.error('finished flaming');
+            });
+        }, torchDelay);
+    }
+
     benchProc.once('close', function onClose() {
+        console.error('benchmark finished');
         serverProc.kill();
         if (traceProc) {
             traceProc.kill();
