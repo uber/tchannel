@@ -426,11 +426,9 @@ RelayNetwork.test('does not recover when successes are non-consecutive', aliceAn
     network.register('call', function (req, res) {
         count++;
         if (count > 20 && count % 4 !== 0) {
-            console.log(network.timers.now(), 'ok', circuit.state.type);
             res.headers.as = 'raw';
             res.sendOk('tiny head', 'HUGE BODY');
         } else {
-            console.log(network.timers.now(), 'nok', circuit.state.type);
             res.sendError('UnexpectedError', 'it wasn\'t me');
         }
     });
@@ -460,11 +458,9 @@ RelayNetwork.test('recovers when failure is periodic but infrequent', aliceAndBo
     network.register('call', function (req, res) {
         count++;
         if (count > 20 && count % 8 !== 0) {
-            console.log(network.timers.now(), 'ok', circuit.state.type);
             res.headers.as = 'raw';
             res.sendOk('tiny head', 'HUGE BODY');
         } else {
-            console.log(network.timers.now(), 'nok', circuit.state.type);
             res.sendError('UnexpectedError', 'it wasn\'t me');
         }
     });
