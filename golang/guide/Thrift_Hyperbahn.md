@@ -116,6 +116,7 @@ type TChanKeyValue interface {
 ```
 Create an instance of your handler type, and then create a [thrift.Server](http://godoc.org/github.com/uber/tchannel/golang/thrift#NewServer) and [register](http://godoc.org/github.com/uber/tchannel/golang/thrift#Server.Register) your Thrift handler. You can register multiple Thrift services on the same `thrift.Server`.
 
+Each handler method is run in a new goroutine and so must be thread-safe.
 Your handler methods can return two types of errors:
  * Errors declared in the Thrift file (e.g. `KeyNotFound`).
  * Unexpected errors.
