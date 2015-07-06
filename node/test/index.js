@@ -64,5 +64,6 @@ require('./non-zero-ttl.js');
 require('./examples.js');
 require('./busy.js');
 require('./ephemeral-client.js');
+require('./relay-to-dead.js');
 
 require('./hyperbahn/')(HyperbahnCluster);
