@@ -21,6 +21,7 @@ package tchannel_test
 // THE SOFTWARE.
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -28,6 +29,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/uber/tchannel/golang/json"
 	"github.com/uber/tchannel/golang/testutils"
 	"golang.org/x/net/context"
 )
@@ -41,94 +43,60 @@ type TracingResponse struct {
 	Child    *TracingResponse
 }
 
-type Headers map[string]string
+type traceHandler struct {
+	ch *Channel
+	t  *testing.T
+}
+
+func (h *traceHandler) call1(ctx json.Context, req *TracingRequest) (*TracingResponse, error) {
+	span := CurrentSpan(ctx)
+	if span == nil {
+		return nil, fmt.Errorf("tracing not found")
+	}
+
+	sc := h.ch.Peers().GetOrAdd(h.ch.PeerInfo().HostPort)
+	resp := &TracingResponse{}
+	require.NoError(h.t, json.CallPeer(ctx, sc, h.ch.PeerInfo().ServiceName, "call2", nil, resp))
+
+	return &TracingResponse{
+		TraceID:  span.TraceID(),
+		SpanID:   span.SpanID(),
+		ParentID: span.ParentID(),
+		Child:    resp,
+	}, nil
+}
+
+func (h *traceHandler) call2(ctx json.Context, req *TracingRequest) (*TracingResponse, error) {
+	span := CurrentSpan(ctx)
+	if span == nil {
+		return nil, fmt.Errorf("tracing not found")
+	}
+
+	return &TracingResponse{
+		SpanID:   span.SpanID(),
+		TraceID:  span.TraceID(),
+		ParentID: span.ParentID(),
+	}, nil
+}
+
+func (h *traceHandler) onError(ctx context.Context, err error) {
+	h.t.Errorf("onError %v", err)
+}
 
 func TestTracingPropagates(t *testing.T) {
 	require.Nil(t, testutils.WithServer(nil, func(ch *Channel, hostPort string) {
-		srv1 := func(ctx context.Context, incall *InboundCall) {
-			headers := Headers{}
+		handler := &traceHandler{t: t, ch: ch}
+		json.Register(ch, map[string]interface{}{
+			"call1": handler.call1,
+			"call2": handler.call2,
+		}, handler.onError)
 
-			var request TracingRequest
-			if err := NewArgReader(incall.Arg2Reader()).ReadJSON(&headers); err != nil {
-				return
-			}
-
-			if err := NewArgReader(incall.Arg3Reader()).ReadJSON(&request); err != nil {
-				return
-			}
-
-			span := CurrentSpan(ctx)
-
-			var childRequest TracingRequest
-			var childResponse TracingResponse
-
-			outcall, err := ch.BeginCall(ctx, hostPort, testServiceName, "call2", nil)
-			if err != nil {
-				incall.Response().SendSystemError(err)
-				return
-			}
-
-			if err := NewArgWriter(outcall.Arg2Writer()).WriteJSON(headers); err != nil {
-				incall.Response().SendSystemError(err)
-				return
-			}
-
-			if err := NewArgWriter(outcall.Arg3Writer()).WriteJSON(childRequest); err != nil {
-				incall.Response().SendSystemError(err)
-				return
-			}
-
-			if err := NewArgReader(outcall.Response().Arg2Reader()).ReadJSON(&headers); err != nil {
-				incall.Response().SendSystemError(err)
-				return
-			}
-
-			if err := NewArgReader(outcall.Response().Arg3Reader()).ReadJSON(&childResponse); err != nil {
-				incall.Response().SendSystemError(err)
-				return
-			}
-
-			response := TracingResponse{
-				TraceID: span.TraceID(),
-				SpanID:  span.SpanID(),
-				Child:   &childResponse,
-			}
-
-			NewArgWriter(incall.Response().Arg2Writer()).WriteJSON(headers)
-			NewArgWriter(incall.Response().Arg3Writer()).WriteJSON(response)
-		}
-
-		srv2 := func(ctx context.Context, call *InboundCall) {
-			span := CurrentSpan(ctx)
-			if span == nil {
-				call.Response().SendSystemError(NewSystemError(ErrCodeUnexpected, "tracing not found"))
-				return
-			}
-
-			NewArgWriter(call.Response().Arg2Writer()).WriteJSON(Headers{})
-			NewArgWriter(call.Response().Arg3Writer()).WriteJSON(TracingResponse{
-				SpanID:   span.SpanID(),
-				TraceID:  span.TraceID(),
-				ParentID: span.ParentID(),
-			})
-		}
-
-		ch.Register(HandlerFunc(srv1), "call1")
-		ch.Register(HandlerFunc(srv2), "call2")
-
-		ctx, cancel := NewContext(time.Second)
+		ctx, cancel := json.NewContext(time.Second)
 		defer cancel()
 
-		headers := map[string]string{}
-		var request TracingRequest
+		peer := ch.Peers().GetOrAdd(ch.PeerInfo().HostPort)
 		var response TracingResponse
-
-		call, err := ch.BeginCall(ctx, hostPort, testServiceName, "call1", nil)
-		require.NoError(t, err)
-		require.NoError(t, NewArgWriter(call.Arg2Writer()).WriteJSON(headers))
-		require.NoError(t, NewArgWriter(call.Arg3Writer()).WriteJSON(&request))
-		require.NoError(t, NewArgReader(call.Response().Arg2Reader()).ReadJSON(&headers))
-		require.NoError(t, NewArgReader(call.Response().Arg3Reader()).ReadJSON(&response))
+		require.NoError(t, json.CallPeer(ctx, peer, ch.PeerInfo().ServiceName, "call1", nil, &response))
 
 		clientSpan := CurrentSpan(ctx)
 		require.NotNil(t, clientSpan)
