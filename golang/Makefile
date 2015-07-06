@@ -3,6 +3,7 @@ OLDGOPATH := $(GOPATH)
 PATH := $(GODEPS)/bin:$(PATH)
 EXAMPLES=./examples/hello/server ./examples/hello/client ./examples/ping ./examples/thrift ./examples/hyperbahn/echo-server
 PKGS := . ./json ./hyperbahn ./thrift ./typed $(EXAMPLES)
+TEST_PKGS := $(addprefix github.com/uber/tchannel/golang/,$(PKGS))
 BUILD := ./build
 SRCS := $(foreach pkg,$(PKGS),$(wildcard $(pkg)/*.go))
 export GOPATH = $(GODEPS):$(OLDGOPATH)
@@ -39,7 +40,7 @@ test_ci: test
 
 test: clean setup
 	echo Testing packages:
-	go test $(PKGS) $(TEST_ARG) -parallel=4
+	go test $(TEST_PKGS) $(TEST_ARG) -parallel=4
 
 benchmark: clean setup
 	echo Running benchmarks:
