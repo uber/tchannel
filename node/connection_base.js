@@ -39,7 +39,6 @@ function TChannelConnectionBase(channel, direction, socketRemoteAddr) {
     EventEmitter.call(self);
     self.errorEvent = self.defineEvent('error');
     self.timedOutEvent = self.defineEvent('timedOut');
-    self.spanEvent = self.defineEvent('span');
     self.pingResponseEvent = self.defineEvent('pingResonse');
 
     self.closing = false;
@@ -165,11 +164,13 @@ TChannelConnectionBase.prototype.buildResponse = function buildResponse(req, opt
     req.res = self.buildOutResponse(req, options);
     req.res.errorEvent.on(onError);
     req.res.finishEvent.on(opDone);
-    req.res.spanEvent.on(handleSpanFromRes);
+    if (!req.forwardTrace) {
+        req.res.spanEvent.on(handleSpanFromRes);
+    }
     return req.res;
 
     function handleSpanFromRes(span) {
-        self.spanEvent.emit(self, span);
+        self.channel.tracer.report(span);
     }
 
     function opDone() {

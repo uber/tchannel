@@ -308,13 +308,8 @@ TChannelPeer.prototype.makeOutConnection = function makeOutConnection(socket) {
     var self = this;
     var chan = self.channel.topChannel || self.channel;
     var conn = new TChannelConnection(chan, socket, 'out', self.hostPort);
-    conn.spanEvent.on(handleSpanFromConn);
     self.allocConnectionEvent.emit(self, conn);
     return conn;
-
-    function handleSpanFromConn(span) {
-        chan.tracer.report(span);
-    }
 };
 
 TChannelPeer.prototype.outPendingWeightedRandom = function outPendingWeightedRandom() {
