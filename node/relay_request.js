@@ -76,9 +76,10 @@ RelayRequest.prototype.onIdentified = function onIdentified(err1) {
     }
 
     var elapsed = self.channel.timers.now() - self.inreq.start;
+    var timeout = Math.max(self.inreq.ttl - elapsed, 1);
     self.outreq = self.peer.request({
         streamed: self.inreq.streamed,
-        timeout: self.inreq.ttl - elapsed,
+        timeout: timeout,
         parent: self.inreq,
         tracing: self.inreq.tracing,
         forwardTrace: true,
