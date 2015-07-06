@@ -72,12 +72,14 @@ EndpointCircuits.prototype.getCircuit = function getCircuit(callerName, serviceN
     return circuit;
 };
 
-EndpointCircuits.prototype.getCircuitTuples = function () {
+EndpointCircuits.prototype.collectCircuitTuples = function collectCircuitTuples(tuples) {
     var self = this;
-    return Object.keys(self.circuitsByEndpointName).map(function (endpointName) {
+    var endpointNames = Object.keys(self.circuitsByEndpointName);
+    for (var index = 0; index < endpointNames.length; index++) {
+        var endpointName = endpointNames[index];
         var circuit = self.circuitsByEndpointName[endpointName];
-        return [circuit.callerName, circuit.serviceName, circuit.endpointName];
-    });
+        tuples.push([circuit.callerName, circuit.serviceName, circuit.endpointName]);
+    }
 };
 
 function ServiceCircuits(root) {
@@ -96,12 +98,14 @@ ServiceCircuits.prototype.getCircuit = function getCircuit(callerName, serviceNa
     return circuits.getCircuit(callerName, serviceName, endpointName);
 };
 
-ServiceCircuits.prototype.getCircuitTuples = function getCircuitTuples() {
+ServiceCircuits.prototype.collectCircuitTuples = function collectCircuitTuples(tuples) {
     var self = this;
-    var circuits = Object.keys(self.circuitsByCallerName).map(function (callerName) {
-        return self.circuitsByCallerName[callerName].getCircuitTuples();
-    });
-    return Array.prototype.concat.apply([], circuits);
+    var callerNames = Object.keys(self.circuitsByCallerName);
+    for (var index = 0; index < callerNames.length; index++) {
+        var callerName = callerNames[index];
+        var circuit = self.circuitsByCallerName[callerName];
+        circuit.collectCircuitTuples(tuples);
+    }
 };
 
 function Circuits(options) {
@@ -132,10 +136,13 @@ Circuits.prototype.getCircuit = function getCircuit(callerName, serviceName, end
 
 Circuits.prototype.getCircuitTuples = function getCircuitTuples() {
     var self = this;
-    var circuits = Object.keys(self.circuitsByServiceName).map(function (serviceName) {
-        return self.circuitsByServiceName[serviceName].getCircuitTuples();
-    });
-    return Array.prototype.concat.apply([], circuits);
+    var tuples = [];
+    var serviceNames = Object.keys(self.circuitsByServiceName);
+    for (var index = 0; index < serviceNames.length; index++) {
+        var serviceName = serviceNames[index];
+        self.circuitsByServiceName[serviceName].collectCircuitTuples(tuples);
+    }
+    return tuples;
 };
 
 Circuits.prototype.handleRequest = function handleRequest(req, buildRes, nextHandler) {
