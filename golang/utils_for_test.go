@@ -44,6 +44,9 @@ type testChannelOpts struct {
 	// EnableLog defaults to false.
 	EnableLog bool
 
+	// StatsReporter specifies the StatsReporter to use.
+	StatsReporter StatsReporter
+
 	// DefaultConnectionOptions specifies the channel's default connection options.
 	DefaultConnectionOptions ConnectionOptions
 }
@@ -81,6 +84,7 @@ func withServerChannel(opts *testChannelOpts, f func(ch *Channel, hostPort strin
 		ProcessName: processName,
 		Logger:      logger,
 		DefaultConnectionOptions: opts.DefaultConnectionOptions,
+		StatsReporter:            opts.StatsReporter,
 	})
 	if err != nil {
 		return fmt.Errorf("NewChannel failed: %v", err)
