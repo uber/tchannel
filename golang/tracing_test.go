@@ -93,13 +93,18 @@ func TestTracingPropagates(t *testing.T) {
 
 		clientSpan := CurrentSpan(ctx)
 		require.NotNil(t, clientSpan)
+		assert.Equal(t, uint64(0), clientSpan.ParentID())
 
+		assert.Equal(t, uint64(0), clientSpan.ParentID())
+		assert.NotEqual(t, uint64(0), clientSpan.TraceID())
 		assert.Equal(t, clientSpan.TraceID(), response.TraceID)
 		assert.Equal(t, clientSpan.SpanID(), response.ParentID)
+		assert.Equal(t, response.TraceID, response.SpanID, "traceID = spanID for root span")
 
 		nestedResponse := response.Child
 		require.NotNil(t, nestedResponse)
 		assert.Equal(t, clientSpan.TraceID(), nestedResponse.TraceID)
 		assert.Equal(t, response.SpanID, nestedResponse.ParentID)
+		assert.NotEqual(t, response.SpanID, nestedResponse.SpanID)
 	}))
 }

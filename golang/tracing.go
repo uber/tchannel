@@ -92,12 +92,17 @@ func (s Span) TracingEnabled() bool { return (s.flags & tracingFlagEnabled) == t
 
 // NewChildSpan begins a new child span in the provided Context
 func (s Span) NewChildSpan() *Span {
-	return &Span{
+	childSpan := &Span{
 		traceID:  s.traceID,
 		parentID: s.spanID,
-		spanID:   uint64(rng.Int63()),
 		flags:    s.flags,
 	}
+	if s.spanID == 0 {
+		childSpan.spanID = childSpan.traceID
+	} else {
+		childSpan.spanID = uint64(rng.Int63())
+	}
+	return childSpan
 }
 
 // CurrentSpan returns the Span value for the provided Context
