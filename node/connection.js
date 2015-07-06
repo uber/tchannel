@@ -520,7 +520,8 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
         self.errorEvent.emit(self, err);
     } else if (
         err.type !== 'tchannel.socket-closed' &&
-        err.type !== 'tchannel.socket-local-closed'
+        err.type !== 'tchannel.socket-local-closed' &&
+        (err.type !== 'tchannel.socket' && err.code !== 'ECONNREFUSED')
     ) {
         logInfo.error = extend(err);
         logInfo.error.message = err.message;
