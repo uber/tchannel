@@ -26,7 +26,7 @@ var EventEmitter = require('./lib/event_emitter');
 var StateMachine = require('./state_machine');
 var errors = require('./errors');
 
-// The each circuit uses the circuits collection as the "nextHandler" for
+// Each circuit uses the circuits collection as the "nextHandler" for
 // "shouldRequest" to consult.  Peers use this hook to weight peers both by
 // healthy and other factors, but the circuit only needs to know about health
 // before forwarding.
@@ -39,9 +39,9 @@ AlwaysShouldRequestHandler.prototype.shouldRequest = function shouldRequest() {
 
 var alwaysShouldRequestHandler = new AlwaysShouldRequestHandler();
 
-//  circuit = circuits
-//      .circuitsByServiceName[serviceName]
-//      .circuitsByCallerName[callerName]
+//  circuit = circuits                        := Circuits
+//      .circuitsByServiceName[serviceName]   := ServiceCircuits
+//      .circuitsByCallerName[callerName]     := EndpointCircuits
 //      .circuitsByEndpointName[endpointName]
 
 function EndpointCircuits(root) {
