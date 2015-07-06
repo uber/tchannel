@@ -155,7 +155,7 @@ The `handlerFn` takes five arguments, `(ctx, req, head, body, cb(err, response))
     object that is serialized as a thrift struct to arg3.
     If `response.ok` is false then this must be an error that
     is serialized as a thrift exception to  arg3.
- - `response.typeName` if you response with `response.ok` set as
+ - `response.typeName` if you respond with `response.ok` set as
     `false` you must specify a `typeName` to determine how
     the exception will be serialized. This `typeName` must match
     the name of your exception in the thrift specification
