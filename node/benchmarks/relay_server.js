@@ -104,13 +104,13 @@ function RelayServer(opts) {
         callerName: opts.type
     });
 
-    if (opts.trace) {
-        self.relay.tracer.reporter = function report(span) {
-            self.reporter.report(span, {
-                timeout: 10 * 1000
-            });
-        };
-    }
+    // if (opts.trace) {
+    //     self.relay.tracer.reporter = function report(span) {
+    //         self.reporter.report(span, {
+    //             timeout: 10 * 1000
+    //         });
+    //     };
+    // }
 
     if (opts.type === 'bench-relay') {
         self.relay.handler.createServiceChannel('benchmark');

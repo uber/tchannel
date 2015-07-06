@@ -10,6 +10,7 @@
     "check-benchmark": "node benchmarks -- -r 10",
     "take-benchmark": "./benchmarks/take.sh",
     "take-relay-benchmark": "./benchmarks/take_relay.sh",
+    "take-trace-benchmark": "./benchmarks/take_trace.sh",
     "cover": "istanbul cover --report html --print none test/index.js -- --color | faucet && istanbul report text && istanbul check-coverage",
     "check-cover": "istanbul check-coverage",
     "view-cover": "opn coverage/index.html",

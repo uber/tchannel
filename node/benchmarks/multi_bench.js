@@ -62,13 +62,13 @@ var DESTINATION_SERVER;
 var TRACE_SERVER;
 
 if (argv.relay) {
-    DESTINATION_SERVER = '127.0.0.1:4038';
+    DESTINATION_SERVER = '127.0.0.1:7038';
 } else {
-    DESTINATION_SERVER = '127.0.0.1:4040';
+    DESTINATION_SERVER = '127.0.0.1:7040';
 }
 
 if (argv.trace) {
-    TRACE_SERVER = '127.0.0.1:4037';
+    TRACE_SERVER = '127.0.0.1:7037';
 }
 
 // -- test harness
@@ -120,7 +120,7 @@ Test.prototype.run = function (callback) {
 
 Test.prototype.newClient = function (id, callback) {
     var self = this;
-    var port = 4041 + id;
+    var port = 7041 + id;
     var clientChan = TChannel({
         statTags: {
             app: 'my-client'
@@ -158,6 +158,7 @@ Test.prototype.newClient = function (id, callback) {
             .request({
                 serviceName: 'benchmark',
                 hasNoParent: true,
+                timeout: 30 * 1000,
                 headers: {
                     as: 'raw',
                     cn: 'multi_bench'
@@ -215,7 +216,7 @@ Test.prototype.sendNext = function () {
         .request({
             serviceName: 'benchmark',
             hasNoParent: true,
-            timeout: 10000,
+            timeout: 30000,
             headers: {
                 as: 'raw',
                 cn: 'multi_bench',
@@ -255,9 +256,11 @@ Test.prototype.printStats = function () {
 
 var tests = [];
 
-argv.pipeline.forEach(function each(pipeline) {
-    tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: pipeline}));
-});
+if (!argv.skipPing) {
+    argv.pipeline.forEach(function each(pipeline) {
+        tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: pipeline}));
+    });
+}
 
 var randBytes = new LCGStream({
     seed: 1234,
@@ -294,7 +297,9 @@ function next(i, j, done) {
     if (j >= multiplicity) return next(i+1, 0, done);
     var test = tests[i].copy();
     test.run(function () {
-        next(i, j+1, done);
+        setTimeout(function delayNext() {
+            next(i, j+1, done);
+        }, 1000);
     });
 }
 
