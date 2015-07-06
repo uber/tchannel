@@ -27,45 +27,44 @@ from tchannel import errors
 from tchannel.thrift import client_for as thrift_client_for
 from tchannel.tornado import TChannel
 
-from .util import get_service_module
 
-
-@pytest.yield_fixture
-def service(tmpdir):
-    with get_service_module(tmpdir, True) as m:
-        yield m
-
-
-def mk_client(service, port, trace=False):
+def mk_client(thrift_service, port, trace=False):
     tchannel = TChannel(name='test')
     hostport = "localhost:%d" % port
-    return thrift_client_for("service", service)(tchannel, hostport, trace)
+
+    return thrift_client_for(
+        "service",
+        thrift_service
+    )(tchannel, hostport, trace)
 
 
 @pytest.mark.gen_test
-def test_call(tchannel_server, service):
+def test_call(tchannel_server, thrift_service):
     tchannel_server.expect_call(
-        service,
+        thrift_service,
         'thrift',
         method='putItem',
     ).and_result(None)
 
-    client = mk_client(service, tchannel_server.port)
+    client = mk_client(thrift_service, tchannel_server.port)
     yield client.putItem(
-        service.Item(key="foo", value=service.Value(stringValue='bar')),
+        thrift_service.Item(
+            key="foo",
+            value=thrift_service.Value(stringValue='bar')
+        ),
         True
     )
 
 
 @pytest.mark.gen_test
-def test_protocol_error(tchannel_server, service):
+def test_protocol_error(tchannel_server, thrift_service):
     tchannel_server.expect_call(
-        service,
+        thrift_service,
         'thrift',
         method='getItem',
     ).and_raise(ValueError("I was not defined in the IDL"))
 
-    client = mk_client(service, tchannel_server.port, trace=False)
+    client = mk_client(thrift_service, tchannel_server.port, trace=False)
     with pytest.raises(errors.ProtocolError):
         with patch(
             'tchannel.zipkin.tracers.TChannelZipkinTracer.record',
@@ -77,21 +76,21 @@ def test_protocol_error(tchannel_server, service):
 
 
 @pytest.mark.gen_test
-def test_thrift_exception(tchannel_server, service):
+def test_thrift_exception(tchannel_server, thrift_service):
     tchannel_server.expect_call(
-        service,
+        thrift_service,
         'thrift',
         method='getItem',
-    ).and_raise(service.ItemDoesNotExist("stahp"))
+    ).and_raise(thrift_service.ItemDoesNotExist("stahp"))
 
-    client = mk_client(service, tchannel_server.port, trace=True)
+    client = mk_client(thrift_service, tchannel_server.port, trace=True)
 
     with patch(
         'tchannel.zipkin.tracers.TChannelZipkinTracer.record',
         autospec=True,
     ) as mock_trace_record:
         with (
-            pytest.raises(service.ItemDoesNotExist)
+            pytest.raises(thrift_service.ItemDoesNotExist)
         ) as excinfo:
             yield client.getItem("foo")
 
@@ -100,12 +99,12 @@ def test_thrift_exception(tchannel_server, service):
 
 
 @pytest.mark.gen_test
-def test_false_result(service):
+def test_false_result(thrift_service):
     # Verify that we aren't treating False as None.
 
     app = TChannel(name='app')
 
-    @app.register(service)
+    @app.register(thrift_service)
     def healthy(request, response, body):
         return False
 

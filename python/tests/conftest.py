@@ -25,6 +25,7 @@ import socket
 import pytest
 
 from tests.integration.test_server import TestServer
+from .util import get_thrift_service_module
 
 
 class _MockConnection(object):
@@ -61,3 +62,9 @@ def random_open_port():
 def tchannel_server(random_open_port):
     with TestServer(random_open_port) as server:
         yield server
+
+
+@pytest.yield_fixture
+def thrift_service(tmpdir):
+    with get_thrift_service_module(tmpdir, True) as m:
+        yield m
