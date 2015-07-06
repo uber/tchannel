@@ -119,7 +119,7 @@ request to send to.
     is an object with three fields; `ok`, `head` and `body`.
  - `response.ok` is the `ok` field from the call response.
  - `response.head` is an object with string key value pairs that is parsed from arg2
- - `response.body` is an an object or error that we parsed from a thrift struct. If the response is ok then its a struct; if the response is not
+ - `response.body` is an object or error that we parsed from a thrift struct. If the response is ok then it's a struct; if the response is not
  ok then it's an error object.
 
 ### `tchannelThrift.register(tchannel, arg1, ctx, handlerFn)`
