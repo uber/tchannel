@@ -34,7 +34,9 @@ import (
 	"golang.org/x/net/context"
 )
 
-type TracingRequest struct{}
+type TracingRequest struct {
+	ForwardCount int
+}
 
 type TracingResponse struct {
 	TraceID  uint64
@@ -48,34 +50,24 @@ type traceHandler struct {
 	t  *testing.T
 }
 
-func (h *traceHandler) call1(ctx json.Context, req *TracingRequest) (*TracingResponse, error) {
+func (h *traceHandler) call(ctx json.Context, req *TracingRequest) (*TracingResponse, error) {
 	span := CurrentSpan(ctx)
 	if span == nil {
 		return nil, fmt.Errorf("tracing not found")
 	}
 
-	sc := h.ch.Peers().GetOrAdd(h.ch.PeerInfo().HostPort)
-	resp := &TracingResponse{}
-	require.NoError(h.t, json.CallPeer(ctx, sc, h.ch.PeerInfo().ServiceName, "call2", nil, resp))
-
-	return &TracingResponse{
-		TraceID:  span.TraceID(),
-		SpanID:   span.SpanID(),
-		ParentID: span.ParentID(),
-		Child:    resp,
-	}, nil
-}
-
-func (h *traceHandler) call2(ctx json.Context, req *TracingRequest) (*TracingResponse, error) {
-	span := CurrentSpan(ctx)
-	if span == nil {
-		return nil, fmt.Errorf("tracing not found")
+	var childResp *TracingResponse
+	if req.ForwardCount > 0 {
+		sc := h.ch.Peers().GetOrAdd(h.ch.PeerInfo().HostPort)
+		childResp = new(TracingResponse)
+		require.NoError(h.t, json.CallPeer(ctx, sc, h.ch.PeerInfo().ServiceName, "call", nil, childResp))
 	}
 
 	return &TracingResponse{
-		SpanID:   span.SpanID(),
 		TraceID:  span.TraceID(),
+		SpanID:   span.SpanID(),
 		ParentID: span.ParentID(),
+		Child:    childResp,
 	}, nil
 }
 
@@ -87,8 +79,7 @@ func TestTracingPropagates(t *testing.T) {
 	require.Nil(t, testutils.WithServer(nil, func(ch *Channel, hostPort string) {
 		handler := &traceHandler{t: t, ch: ch}
 		json.Register(ch, map[string]interface{}{
-			"call1": handler.call1,
-			"call2": handler.call2,
+			"call": handler.call,
 		}, handler.onError)
 
 		ctx, cancel := json.NewContext(time.Second)
@@ -96,7 +87,9 @@ func TestTracingPropagates(t *testing.T) {
 
 		peer := ch.Peers().GetOrAdd(ch.PeerInfo().HostPort)
 		var response TracingResponse
-		require.NoError(t, json.CallPeer(ctx, peer, ch.PeerInfo().ServiceName, "call1", nil, &response))
+		require.NoError(t, json.CallPeer(ctx, peer, ch.PeerInfo().ServiceName, "call", &TracingRequest{
+			ForwardCount: 1,
+		}, &response))
 
 		clientSpan := CurrentSpan(ctx)
 		require.NotNil(t, clientSpan)
