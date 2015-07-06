@@ -25,8 +25,8 @@ from collections import namedtuple
 from threadloop import ThreadLoop
 from tornado import gen
 
-from . import glossary
-from . import tornado as async
+from tchannel import glossary
+from tchannel import tornado as async
 
 
 class TChannelSyncClient(object):
