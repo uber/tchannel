@@ -36,6 +36,8 @@ RelayHandler.prototype.handleRequest = function handleRequest(req, buildRes) {
     var reqKey = getReqKey(req);
     var rereq = self.reqs[reqKey];
 
+    req.forwardTrace = true;
+
     if (rereq) {
         self.channel.logger.error('relay request already exists for incoming request', {
             inReqId: req.id,
