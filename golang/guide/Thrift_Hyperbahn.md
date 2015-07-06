@@ -216,7 +216,7 @@ before a call is made using [WithHeaders](http://godoc.org/github.com/uber/tchan
 ```go
 headers := map[string]string{"user": "prashant"}
 
-ctx, cancel := thrift.NewContext(ime.Second)
+ctx, cancel := thrift.NewContext(time.Second)
 ctx = thrift.WithHeaders(ctx)
 ```
 
@@ -235,7 +235,7 @@ func (h *kvHandler) ClearAll(ctx thrift.Context) {
 The client can read the response headers by calling `ctx.ResponseHeaders()` on the same context that was passed when making the call:
 
 ```go
-ctx := thrift.WithHeaders(tchannel.NewRootContext(ctx), headers)
+ctx := thrift.WithHeaders(thrift.NewContext(time.Second), headers)
 err := adminClient.ClearAll()
 // check error
 responseHeaders := ctx.ResponseHeaders()
