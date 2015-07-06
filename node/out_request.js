@@ -119,11 +119,6 @@ TChannelOutRequest.prototype.onError = function onError(err, self) {
     self.err = err;
     self.emitPerAttemptLatency();
     self.emitPerAttemptErrorStat(err);
-
-    // if (self.logical === false) {
-    //     self.emitErrorStat(err);
-    //     self.emitLatency();
-    // }
 };
 
 TChannelOutRequest.prototype.onResponse = function onResponse(res, self) {
@@ -136,11 +131,6 @@ TChannelOutRequest.prototype.onResponse = function onResponse(res, self) {
 
     self.emitPerAttemptLatency();
     self.emitPerAttemptResponseStat(res);
-
-    // if (self.logical === false) {
-    //     self.emitResponseStat(res);
-    //     self.emitLatency();
-    // }
 };
 
 TChannelOutRequest.prototype.emitPerAttemptErrorStat =
