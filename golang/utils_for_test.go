@@ -1,7 +1,7 @@
 package tchannel
 
-// This file contains test setup logic, and is named with a _test.go suffix to
-// ensure it's only compiled with tests.
+// This file contains functions for tests to access internal tchannel state.
+// Since it has a _test.go suffix, it is only compiled with tests in this package.
 
 // Copyright (c) 2015 Uber Technologies, Inc.
 
@@ -24,152 +24,22 @@ package tchannel
 // THE SOFTWARE.
 
 import (
-	"flag"
-	"fmt"
 	"net"
-
-	"golang.org/x/net/context"
 )
 
-var connectionLog = flag.Bool("connectionLog", false, "Enables connection logging in tests")
-
-// testChannelOpts contains options to create a test channel using WithTes
-type testChannelOpts struct {
-	// ServiceName defaults to "testServer"
-	ServiceName string
-
-	// ProcessName defaults to ServiceName + "-[port]"
-	ProcessName string
-
-	// EnableLog defaults to false.
-	EnableLog bool
-
-	// StatsReporter specifies the StatsReporter to use.
-	StatsReporter StatsReporter
-
-	// DefaultConnectionOptions specifies the channel's default connection options.
-	DefaultConnectionOptions ConnectionOptions
+// OutboundConnection returns the underlying connection for an outbound call.
+func OutboundConnection(call *OutboundCall) (*Connection, net.Conn) {
+	conn := call.conn
+	return conn, conn.conn
 }
 
-func defaultString(v string, defaultValue string) string {
-	if v == "" {
-		return defaultValue
-	}
-	return v
-}
-
-// withServerChannel sets up a TChannel for tests and runs the given function with the channel.
-func withServerChannel(opts *testChannelOpts, f func(ch *Channel, hostPort string)) error {
-	if opts == nil {
-		opts = &testChannelOpts{}
-	}
-
-	l, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		return fmt.Errorf("failed to listen: %v", err)
-	}
-	_, port, err := net.SplitHostPort(l.Addr().String())
-	if err != nil {
-		return fmt.Errorf("could not get listening port from %v: %v", l.Addr().String(), err)
-	}
-	serviceName := defaultString(opts.ServiceName, "testServer")
-	processName := defaultString(opts.ProcessName, serviceName+"-"+port)
-
-	var logger Logger
-	if opts.EnableLog || *connectionLog {
-		logger = SimpleLogger
-	}
-
-	ch, err := NewChannel(serviceName, &ChannelOptions{
-		ProcessName: processName,
-		Logger:      logger,
-		DefaultConnectionOptions: opts.DefaultConnectionOptions,
-		StatsReporter:            opts.StatsReporter,
-	})
-	if err != nil {
-		return fmt.Errorf("NewChannel failed: %v", err)
-	}
-
-	if err := ch.Serve(l); err != nil {
-		return fmt.Errorf("Serve failed: %v", err)
-	}
-	f(ch, l.Addr().String())
-	ch.Close()
-	return nil
-}
-
-// rawHandler is the interface for a raw handler.
-// TODO(prashant): Make Raw/JSON handlers that can be used by external users.
-type rawHandler interface {
-	// Handle is called on incoming calls, and contains all the arguments.
-	// If an error is returned, it will set ApplicationError Arg3 will be the error string.
-	Handle(ctx context.Context, args *rawArgs) (*rawRes, error)
-	OnError(ctx context.Context, err error)
-}
-
-// rawArgs parses the arguments from an incoming call req.
-type rawArgs struct {
-	Caller    string
-	Format    Format
-	Operation string
-	Arg2      []byte
-	Arg3      []byte
-}
-
-// rawRes represents the response to an incoming call req.
-type rawRes struct {
-	SystemErr error
-	// IsErr is used to set an application error on the underlying call res.
-	IsErr bool
-	Arg2  []byte
-	Arg3  []byte
-}
-
-// AsRaw wraps a RawHandler as a Handler that can be passed to Register.
-func AsRaw(handler rawHandler) Handler {
-	return HandlerFunc(func(ctx context.Context, call *InboundCall) {
-		var args rawArgs
-		args.Caller = call.CallerName()
-		args.Format = call.Format()
-		args.Operation = string(call.Operation())
-		if err := NewArgReader(call.Arg2Reader()).Read(&args.Arg2); err != nil {
-			handler.OnError(ctx, err)
-			return
+// GetConnections returns all connections for a channel.
+func GetConnections(ch *Channel) []*Connection {
+	var connections []*Connection
+	for _, p := range ch.peers.peers {
+		for _, c := range p.connections {
+			connections = append(connections, c)
 		}
-		if err := NewArgReader(call.Arg3Reader()).Read(&args.Arg3); err != nil {
-			handler.OnError(ctx, err)
-			return
-		}
-
-		resp, err := handler.Handle(ctx, &args)
-		response := call.Response()
-		if err != nil {
-			resp = &rawRes{
-				IsErr: true,
-				Arg2:  nil,
-				Arg3:  []byte(err.Error()),
-			}
-		}
-
-		if resp.SystemErr != nil {
-			if err := response.SendSystemError(resp.SystemErr); err != nil {
-				handler.OnError(ctx, err)
-			}
-			return
-		}
-		if resp.IsErr {
-			if err := response.SetApplicationError(); err != nil {
-				handler.OnError(ctx, err)
-				return
-			}
-		}
-		if err := NewArgWriter(response.Arg2Writer()).Write(resp.Arg2); err != nil {
-			handler.OnError(ctx, err)
-			return
-		}
-		if err := NewArgWriter(response.Arg3Writer()).Write(resp.Arg3); err != nil {
-			handler.OnError(ctx, err)
-			return
-		}
-	})
+	}
+	return connections
 }

@@ -1,4 +1,7 @@
-package tchannel
+package tchannel_test
+
+// This file contains functions for tests to access internal tchannel state.
+// Since it has a _test.go suffix, it is only compiled with tests in this package.
 
 // Copyright (c) 2015 Uber Technologies, Inc.
 
@@ -22,16 +25,17 @@ package tchannel
 
 import (
 	"bytes"
-	"fmt"
 	"math/rand"
-	"runtime"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	. "github.com/uber/tchannel/golang"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/uber/tchannel/golang/raw"
 	"github.com/uber/tchannel/golang/testutils"
 	"golang.org/x/net/context"
 )
@@ -44,99 +48,17 @@ func (s *swapper) OnError(ctx context.Context, err error) {
 	s.t.Errorf("OnError: %v", err)
 }
 
-func (*swapper) Handle(ctx context.Context, args *rawArgs) (*rawRes, error) {
-	return &rawRes{
+func (*swapper) Handle(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+	return &raw.Res{
 		Arg2: args.Arg3,
 		Arg3: args.Arg2,
 	}, nil
 }
 
-type recordingFramePool struct {
-	mut         sync.Mutex
-	allocations map[*Frame]string
-	badRelease  []string
-}
-
-func newRecordingFramePool() *recordingFramePool {
-	return &recordingFramePool{
-		allocations: make(map[*Frame]string),
-	}
-}
-
-func recordStack() string {
-	buf := make([]byte, 4096)
-	runtime.Stack(buf, false)
-	return string(buf)
-}
-
-func (p *recordingFramePool) Get() *Frame {
-	p.mut.Lock()
-	defer p.mut.Unlock()
-	frame := NewFrame(MaxFramePayloadSize)
-	p.allocations[frame] = recordStack()
-	return frame
-}
-
-func zeroOut(bs []byte) {
-	for i := range bs {
-		bs[i] = 0
-	}
-}
-
-func (p *recordingFramePool) Release(f *Frame) {
-	// Make sure the payload is not used after this point by clearing the frame.
-	zeroOut(f.Payload)
-	f.Payload = nil
-	zeroOut(f.buffer)
-	f.buffer = nil
-	zeroOut(f.headerBuffer)
-	f.headerBuffer = nil
-	f.Header = FrameHeader{}
-
-	p.mut.Lock()
-	defer p.mut.Unlock()
-
-	if _, ok := p.allocations[f]; !ok {
-		p.badRelease = append(p.badRelease, "bad Release at "+recordStack())
-		return
-	}
-
-	delete(p.allocations, f)
-}
-
-func (p *recordingFramePool) CheckEmpty() (int, string) {
-	p.mut.Lock()
-	defer p.mut.Unlock()
-
-	var badCalls []string
-	badCalls = append(badCalls, p.badRelease...)
-	for f, s := range p.allocations {
-		badCalls = append(badCalls, fmt.Sprintf("frame %p: %v not released, get from: %v", f, f.Header, s))
-	}
-	return len(p.allocations), strings.Join(badCalls, "\n")
-}
-
-func getConnections(ch *Channel) []*Connection {
-	var connections []*Connection
-	for _, p := range ch.peers.peers {
-		for _, c := range p.connections {
-			connections = append(connections, c)
-		}
-	}
-	return connections
-}
-
-func checkEmptyExchanges(c *Connection) string {
-	if exchangesLeft := len(c.outbound.exchanges) + len(c.inbound.exchanges); exchangesLeft > 0 {
-		return fmt.Sprintf("connection %p had %v leftover exchanges", c, exchangesLeft)
-	}
-	return ""
-}
-
 func checkEmptyExchangesConns(connections []*Connection) string {
 	var errors []string
 	for _, c := range connections {
-		if v := checkEmptyExchanges(c); v != "" {
+		if v := CheckEmptyExchanges(c); v != "" {
 			errors = append(errors, v)
 		}
 	}
@@ -166,14 +88,14 @@ func TestFramesReleased(t *testing.T) {
 	}
 
 	var connections []*Connection
-	pool := newRecordingFramePool()
-	require.NoError(t, withServerChannel(&testChannelOpts{
+	pool := NewRecordingFramePool()
+	require.NoError(t, testutils.WithServer(&testutils.ChannelOpts{
 		ServiceName: "swap-server",
 		DefaultConnectionOptions: ConnectionOptions{
 			FramePool: pool,
 		},
 	}, func(serverCh *Channel, hostPort string) {
-		serverCh.Register(AsRaw(&swapper{t}), "swap")
+		serverCh.Register(raw.Wrap(&swapper{t}), "swap")
 
 		clientCh, err := NewChannel("swap-client", nil)
 		require.NoError(t, err)
@@ -200,7 +122,7 @@ func TestFramesReleased(t *testing.T) {
 				argSize := rand.Intn(maxRandArg)
 				arg2 := generateArg(argSize)
 				arg3 := generateArg(argSize)
-				resArg2, resArg3, _, err := sendRecv(ctx, clientCh, hostPort, "swap-server", "swap", arg2, arg3)
+				resArg2, resArg3, _, err := raw.Call(ctx, clientCh, hostPort, "swap-server", "swap", arg2, arg3)
 				if !assert.NoError(t, err, "error during sendRecv") {
 					continue
 				}
@@ -223,8 +145,8 @@ func TestFramesReleased(t *testing.T) {
 
 		wg.Wait()
 
-		connections = append(connections, getConnections(serverCh)...)
-		connections = append(connections, getConnections(clientCh)...)
+		connections = append(connections, GetConnections(serverCh)...)
+		connections = append(connections, GetConnections(clientCh)...)
 	}))
 
 	// Wait a few milliseconds for the closing of channels to take effect.
