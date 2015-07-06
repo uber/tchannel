@@ -1,4 +1,4 @@
-package tchannel
+package tchannel_test
 
 // Copyright (c) 2015 Uber Technologies, Inc.
 
@@ -26,7 +26,11 @@ import (
 	"testing"
 	"time"
 
+	. "github.com/uber/tchannel/golang"
+
 	"github.com/stretchr/testify/assert"
+	"github.com/uber/tchannel/golang/raw"
+	"github.com/uber/tchannel/golang/testutils"
 )
 
 type channelState struct {
@@ -39,7 +43,7 @@ func makeCall(ch *Channel, hostPort, service string) error {
 	ctx, cancel := NewContext(time.Second)
 	defer cancel()
 
-	_, _, _, err := sendRecv(ctx, ch, hostPort, service, "test", nil, nil)
+	_, _, _, err := raw.Call(ctx, ch, hostPort, service, "test", nil, nil)
 	return err
 }
 
@@ -57,8 +61,8 @@ func TestClose(t *testing.T) {
 	// Start numHandlers servers, and don't close the connections till they are signalled.
 	for i := 0; i < numHandlers; i++ {
 		go func() {
-			assert.NoError(t, withServerChannel(nil, func(ch *Channel, hostPort string) {
-				ch.Register(AsRaw(handler), "test")
+			assert.NoError(t, testutils.WithServer(nil, func(ch *Channel, hostPort string) {
+				ch.Register(raw.Wrap(handler), "test")
 
 				chState := &channelState{
 					ch:      ch,

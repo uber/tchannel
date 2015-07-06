@@ -1,4 +1,4 @@
-package tchannel
+package tchannel_test
 
 // Copyright (c) 2015 Uber Technologies, Inc.
 
@@ -24,8 +24,11 @@ import (
 	"testing"
 	"time"
 
+	. "github.com/uber/tchannel/golang"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/uber/tchannel/golang/testutils"
 	"golang.org/x/net/context"
 )
 
@@ -41,7 +44,7 @@ type TracingResponse struct {
 type Headers map[string]string
 
 func TestTracingPropagates(t *testing.T) {
-	withTestChannel(t, testServiceName, func(ch *Channel, hostPort string) {
+	require.Nil(t, testutils.WithServer(nil, func(ch *Channel, hostPort string) {
 		srv1 := func(ctx context.Context, incall *InboundCall) {
 			headers := Headers{}
 
@@ -137,5 +140,5 @@ func TestTracingPropagates(t *testing.T) {
 		require.NotNil(t, nestedResponse)
 		assert.Equal(t, clientSpan.TraceID(), nestedResponse.TraceID)
 		assert.Equal(t, response.SpanID, nestedResponse.ParentID)
-	})
+	}))
 }

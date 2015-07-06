@@ -1,4 +1,4 @@
-package tchannel
+package tchannel_test
 
 import (
 	"fmt"
