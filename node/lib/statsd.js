@@ -20,6 +20,8 @@
 
 'use strict';
 
+var LENGTH_ARRAYS = {};
+
 function TChannelStatsd(channel, statsd) {
     if (!(this instanceof TChannelStatsd)) {
         return new TChannelStatsd(channel, statsd);
@@ -28,7 +30,8 @@ function TChannelStatsd(channel, statsd) {
     var self = this;
     self.statsd = statsd;
     self.channel = channel;
-    self.channel.on('stat', onStat);
+
+    self.channel.statEvent.on(onStat);
 
     function onStat(stat) {
         self.onStat(stat);
@@ -36,53 +39,88 @@ function TChannelStatsd(channel, statsd) {
 }
 
 function clean(str, field) {
+    var copy;
+
     if (!str) {
-        return 'no-' + field;
-    } else {
-        // TODO generalize
-        return str
-            .replace(/:/g, '-')
-            .replace(/\//g, '-')
-            .replace(/\./g, '-')
-            .replace(/{|}/g, '-');
+        return field;
     }
+
+    copy = LENGTH_ARRAYS[str.length];
+    if (!copy) {
+        copy = LENGTH_ARRAYS[str.length] = [];
+    }
+
+    for (var i = 0; i < str.length; i++) {
+        var char = str[i];
+
+        if (char === ':' ||
+            char === '/' ||
+            char === '.' ||
+            char === '{' ||
+            char === '}'
+        ) {
+            copy[i] = '-';
+        } else {
+            copy[i] = char;
+        }
+    }
+
+    return copy.join('');
 }
 
 function cleanHostPort(str, field) {
+    var copy;
+
     if (!str) {
-        return 'no-' + field;
-    } else {
-        // assuming ipv4
-        return str
-            .split(':')[0]
-            .replace(/\//g, '-')
-            .replace(/\./g, '-')
-            .replace(/{|}/g, '-');
+        return field;
     }
+
+    var length = str.indexOf(':');
+
+    copy = LENGTH_ARRAYS[length];
+    if (!copy) {
+        copy = LENGTH_ARRAYS[length] = [];
+    }
+    for (var i = 0; i < length; i++) {
+        var char = str[i];
+
+        if (char === '/' ||
+            char === '.' ||
+            char === '{' ||
+            char === '}'
+        ) {
+            copy[i] = '-';
+        } else {
+            copy[i] = char;
+        }
+    }
+
+    return copy.join('');
 }
 
-function getKey(common, stat) {
-    var prefix = 'tchannel' + '.' + stat.name;
+function getKey(stat) {
+    /*eslint complexity: [2, 50]*/
+    var prefix = 'tchannel.' + stat.name;
     switch (stat.name) {
         // outbound
         case 'outbound.calls.sent':
             return prefix + '.' +
                 clean(stat.tags.service, 'service') + '.' +
                 clean(stat.tags['target-service'], 'target-service') + '.' +
-                clean(stat.tags['target-endpoint'], 'endpoint');
+                clean(stat.tags['target-endpoint'], 'no-endpoint');
 
         case 'outbound.calls.success':
             return prefix + '.' +
                 clean(stat.tags.service, 'service') + '.' +
                 clean(stat.tags['target-service'], 'target-service') + '.' +
-                clean(stat.tags['target-endpoint'], 'endpoint');
+                clean(stat.tags['target-endpoint'], 'no-endpoint');
 
         case 'outbound.calls.system-errors':
             return prefix + '.' +
                 clean(stat.tags.service, 'service') + '.' +
                 clean(stat.tags['target-service'], 'target-service') + '.' +
                 clean(stat.tags['target-endpoint'], 'endpoint') + '.' +
-                clean(stat.tags.type, 'type');
+                clean(stat.tags.type, 'no-type');
 
         case 'outbound.calls.per-attempt.system-errors':
             return prefix + '.' +
@@ -97,7 +135,7 @@ function getKey(common, stat) {
                 clean(stat.tags.service, 'service') + '.' +
                 clean(stat.tags['target-service'], 'target-service') + '.' +
                 clean(stat.tags['target-endpoint'], 'endpoint') + '.' +
-                clean(stat.tags.type, 'type');
+                clean(stat.tags.type, 'no-type');
 
         case 'outbound.calls.per-attempt.operational-errors':
             return prefix + '.' +
@@ -112,7 +150,7 @@ function getKey(common, stat) {
                 clean(stat.tags.service, 'service') + '.' +
                 clean(stat.tags['target-service'], 'target-service') + '.' +
                 clean(stat.tags['target-endpoint'], 'endpoint') + '.' +
-                clean(stat.tags.type, 'type');
+                clean(stat.tags.type, 'no-type');
 
         case 'outbound.calls.per-attempt.app-errors':
             return prefix + '.' +
@@ -133,19 +171,19 @@ function getKey(common, stat) {
             return prefix + '.' +
                 clean(stat.tags.service, 'service') + '.' +
                 clean(stat.tags['target-service'], 'target-service') + '.' +
-                clean(stat.tags['target-endpoint'], 'endpoint');
+                clean(stat.tags['target-endpoint'], 'no-endpoint');
 
         case 'outbound.response.size':
             return prefix + '.' +
                 clean(stat.tags.service, 'service') + '.' +
                 clean(stat.tags['target-service'], 'target-service') + '.' +
-                clean(stat.tags['target-endpoint'], 'endpoint');
+                clean(stat.tags['target-endpoint'], 'no-endpoint');
 
         case 'outbound.calls.latency':
             return prefix + '.' +
                 clean(stat.tags.service, 'service') + '.' +
                 clean(stat.tags['target-service'], 'target-service') + '.' +
-                clean(stat.tags['target-endpoint'], 'endpoint');
+                clean(stat.tags['target-endpoint'], 'no-endpoint');
 
         case 'outbound.calls.per-attempt-latency':
             return prefix + '.' +
@@ -159,39 +197,39 @@ function getKey(common, stat) {
             return prefix + '.' +
                 clean(stat.tags['calling-service'], 'calling-service') + '.' +
                 clean(stat.tags.service, 'service') + '.' +
-                clean(stat.tags.endpoint, 'endpoint');
+                clean(stat.tags.endpoint, 'no-endpoint');
 
         case 'inbound.calls.success':
             return prefix + '.' +
                 clean(stat.tags['calling-service'], 'calling-service') + '.' +
                 clean(stat.tags.service, 'service') + '.' +
-                clean(stat.tags.endpoint, 'endpoint');
+                clean(stat.tags.endpoint, 'no-endpoint');
 
         case 'inbound.calls.system-errors':
             return prefix + '.' +
                 clean(stat.tags['calling-service'], 'calling-service') + '.' +
                 clean(stat.tags.service, 'service') + '.' +
                 clean(stat.tags.endpoint, 'endpoint') + '.' +
-                clean(stat.tags.type, 'type');
+                clean(stat.tags.type, 'no-type');
 
         case 'inbound.calls.app-errors':
             return prefix + '.' +
                 clean(stat.tags['calling-service'], 'calling-service') + '.' +
                 clean(stat.tags.service, 'service') + '.' +
                 clean(stat.tags.endpoint, 'endpoint') + '.' +
-                clean(stat.tags.type, 'type');
+                clean(stat.tags.type, 'no-type');
 
         case 'inbound.request.size':
             return prefix + '.' +
                 clean(stat.tags['calling-service'], 'calling-service') + '.' +
                 clean(stat.tags.service, 'service') + '.' +
-                clean(stat.tags.endpoint, 'endpoint');
+                clean(stat.tags.endpoint, 'no-endpoint');
 
         case 'inbound.response.size':
             return prefix + '.' +
                 clean(stat.tags['calling-service'], 'calling-service') + '.' +
                 clean(stat.tags.service, 'service') + '.' +
-                clean(stat.tags.endpoint, 'endpoint');
+                clean(stat.tags.endpoint, 'no-endpoint');
 
         case 'inbound.protocol-errors':
             return prefix + '.' +
@@ -201,46 +239,46 @@ function getKey(common, stat) {
             return prefix + '.' +
                 clean(stat.tags['calling-service'], 'calling-service') + '.' +
                 clean(stat.tags.service, 'service') + '.' +
-                clean(stat.tags.endpoint, 'endpoint');
+                clean(stat.tags.endpoint, 'no-endpoint');
 
         // connection
         case 'connections.active':
             return prefix + '.' +
-                cleanHostPort(stat.tags['peer-host-port'], 'peer-host-port');
+                cleanHostPort(stat.tags['peer-host-port'], 'no-peer-host-port');
 
         case 'connections.initiated':
             return prefix + '.' +
-                cleanHostPort(stat.tags['peer-host-port'], 'peer-host-port');
+                cleanHostPort(stat.tags['peer-host-port'], 'no-peer-host-port');
 
         case 'connections.connect-errors':
             return prefix + '.' +
-                cleanHostPort(stat.tags['peer-host-port'], 'peer-host-port');
+                cleanHostPort(stat.tags['peer-host-port'], 'no-peer-host-port');
 
         case 'connections.accepted':
             return prefix + '.' +
-                cleanHostPort(stat.tags['peer-host-port'], 'peer-host-port');
+                cleanHostPort(stat.tags['peer-host-port'], 'no-peer-host-port');
 
         case 'connections.accept-errors':
             return prefix + '.' +
-                cleanHostPort(stat.tags['host-port'], 'host-port');
+                cleanHostPort(stat.tags['host-port'], 'no-host-port');
 
         case 'connections.errors':
             return prefix + '.' +
-                cleanHostPort(stat.tags['peer-host-port'], 'peer-host-port') + '.' +
-                clean(stat.tags.type, 'type');
+                cleanHostPort(stat.tags['peer-host-port'], 'no-peer-host-port') + '.' +
+                clean(stat.tags.type, 'no-type');
 
         case 'connections.closed':
             return prefix + '.' +
-                cleanHostPort(stat.tags['peer-host-port'], 'peer-host-port') + '.' +
-                clean(stat.tags.reason, 'reason');
+                cleanHostPort(stat.tags['peer-host-port'], 'no-peer-host-port') + '.' +
+                clean(stat.tags.reason, 'no-reason');
 
         case 'connections.bytes-sent':
             return prefix + '.' +
-                cleanHostPort(stat.tags['peer-host-port'], 'peer-host-port');
+                cleanHostPort(stat.tags['peer-host-port'], 'no-peer-host-port');
 
         case 'connections.bytes-recvd':
             return prefix + '.' +
-                cleanHostPort(stat.tags['peer-host-port'], 'peer-host-port');
+                cleanHostPort(stat.tags['peer-host-port'], 'no-peer-host-port');
 
         // other types
         default:
@@ -250,7 +288,9 @@ function getKey(common, stat) {
 
 TChannelStatsd.prototype.onStat = function onStat(stat) {
     var self = this;
-    var key = getKey(self.channel.statTags, stat);
+
+    var key = getKey(stat);
+
     switch (stat.type) {
         case 'counter':
             return self.statsd.increment(key, stat.value);
