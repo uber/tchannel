@@ -1,7 +1,7 @@
 GODEPS := $(shell pwd)/Godeps/_workspace
 OLDGOPATH := $(GOPATH)
 PATH := $(GODEPS)/bin:$(PATH)
-EXAMPLES=./examples/hello/server ./examples/hello/client ./examples/ping ./examples/thrift ./examples/hyperbahn/echo-server
+EXAMPLES=./examples/bench/server ./examples/bench/client ./examples/hello/server ./examples/hello/client ./examples/ping ./examples/thrift ./examples/hyperbahn/echo-server
 PKGS := . ./json ./hyperbahn ./thrift ./typed $(EXAMPLES)
 TEST_PKGS := $(addprefix github.com/uber/tchannel/golang/,$(PKGS))
 BUILD := ./build
