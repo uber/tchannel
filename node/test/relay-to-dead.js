@@ -87,7 +87,7 @@ allocCluster.test('relaying to init timeout server', {
 
                 deadServer.close();
                 assert.end();
-            }, 200);
+            }, 300);
         }
     }
 });
