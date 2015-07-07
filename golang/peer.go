@@ -2,6 +2,7 @@ package tchannel
 
 import (
 	"errors"
+	"math/rand"
 	"sync"
 
 	"golang.org/x/net/context"
@@ -14,14 +15,15 @@ var ErrInvalidConnectionState = errors.New("connection is in an invalid state")
 type PeerList struct {
 	channel *Channel
 
-	mut   sync.RWMutex // mut protects peers.
-	peers map[string]*Peer
+	mut             sync.RWMutex // mut protects peers.
+	peersByHostPort map[string]*Peer
+	peers           []*Peer
 }
 
 func newPeerList(channel *Channel) *PeerList {
 	return &PeerList{
-		channel: channel,
-		peers:   make(map[string]*Peer),
+		channel:         channel,
+		peersByHostPort: make(map[string]*Peer),
 	}
 }
 
@@ -30,13 +32,18 @@ func (l *PeerList) Add(hostPort string) *Peer {
 	l.mut.Lock()
 	defer l.mut.Unlock()
 
-	if p, ok := l.peers[hostPort]; ok {
+	if p, ok := l.peersByHostPort[hostPort]; ok {
 		return p
 	}
 
 	p := newPeer(l.channel, hostPort)
-	l.peers[hostPort] = p
+	l.peersByHostPort[hostPort] = p
+	l.peers = append(l.peers, p)
 	return p
+}
+
+func randPeer(peers []*Peer) *Peer {
+	return peers[rand.Intn(len(peers))]
 }
 
 // Get returns a peer from the peer list, or nil if none can be found.
@@ -44,17 +51,17 @@ func (l *PeerList) Get() *Peer {
 	l.mut.RLock()
 	defer l.mut.RUnlock()
 
-	for _, p := range l.peers {
-		// TODO(prashant): Actually use random, not just return the first peer.
-		return p
+	if len(l.peers) == 0 {
+		return nil
 	}
-	return nil
+
+	return randPeer(l.peers)
 }
 
 // GetOrAdd returns a peer for the given hostPort, creating one if it doesn't yet exist.
 func (l *PeerList) GetOrAdd(hostPort string) *Peer {
 	l.mut.RLock()
-	if p, ok := l.peers[hostPort]; ok {
+	if p, ok := l.peersByHostPort[hostPort]; ok {
 		l.mut.RUnlock()
 		return p
 	}
@@ -94,7 +101,8 @@ func (p *Peer) HostPort() string {
 	return p.hostPort
 }
 
-// cleanStale cleans up any stale (e.g. dead) connections.
+// getActive returns a list of active connections.
+// TODO(prashant): Should we clear inactive connections?
 func (p *Peer) getActive() []*Connection {
 	p.mut.RLock()
 	defer p.mut.RUnlock()
@@ -108,6 +116,10 @@ func (p *Peer) getActive() []*Connection {
 	return active
 }
 
+func randConn(conns []*Connection) *Connection {
+	return conns[rand.Intn(len(conns))]
+}
+
 // GetConnection returns an active connection to this peer. If no active connections
 // are found, it will create a new outbound connection and return it.
 func (p *Peer) GetConnection(ctx context.Context) (*Connection, error) {
@@ -115,12 +127,9 @@ func (p *Peer) GetConnection(ctx context.Context) (*Connection, error) {
 		return nil, ErrChannelClosed
 	}
 
-	// TODO(prashant): Should we clear inactive connections.
-	activeConns := p.getActive()
-
 	// TODO(prashant): Use some sort of scoring to pick a connection.
-	if len(activeConns) > 0 {
-		return activeConns[0], nil
+	if activeConns := p.getActive(); len(activeConns) > 0 {
+		return randConn(activeConns), nil
 	}
 
 	// No active connections, make a new outgoing connection.
