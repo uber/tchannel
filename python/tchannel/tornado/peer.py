@@ -572,13 +572,13 @@ class PeerClientOperation(object):
                     )
                 )
 
-                # event: send_request
+                # event: before_send_request
                 self.peer.tchannel.event_emitter.fire(
                     EventType.before_send_request, request,
                 )
                 response = yield self._send(connection, request)
 
-                # event: receive_response
+                # event: after_receive_response
                 self.peer.tchannel.event_emitter.fire(
                     EventType.after_receive_response, request, response,
                 )
@@ -605,12 +605,11 @@ class PeerClientOperation(object):
 
         raise gen.Return(response)
 
-    @gen.coroutine
-    def _send(self, connection, req):
+    @staticmethod
+    def _send(connection, req):
         response_future = connection.send_request(req)
         with timeout(response_future, req.ttl):
-            response = yield response_future
-        raise gen.Return(response)
+            return response_future
 
     def prepare_next_request(self, blacklist):
         # find new peer

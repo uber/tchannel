@@ -38,7 +38,6 @@ from tchannel.transport_header import RetryType
 
 @tornado.gen.coroutine
 def handler_error(request, response, proxy):
-    yield tornado.gen.sleep(0.0001)
     response.connection.send_error(
         ErrorCode.busy,
         "retry",

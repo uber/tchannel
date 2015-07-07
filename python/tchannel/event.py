@@ -100,7 +100,7 @@ class EventHook(object):
         pass
 
     def on_outbound_error(self, request, err):
-        """Called after an operational error happens per request."""
+        """Called after an error happens for outbound request."""
         pass
 
 
