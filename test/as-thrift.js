@@ -60,6 +60,35 @@ allocCluster.test('send and receiving an ok', {
     });
 });
 
+allocCluster.test('send and receiving an big request', {
+    numPeers: 2
+}, function t(cluster, assert) {
+    var tchannelAsThrift = makeTChannelThriftServer(cluster, {
+        okResponse: true
+    });
+
+    var client = cluster.channels[1].subChannels.server;
+
+    var largeList = [];
+    for (var i = 0; i < 10 * 1000; i++) {
+        largeList.push('abcdefgh');
+    }
+
+    tchannelAsThrift.send(client.request({
+        serviceName: 'server',
+        hasNoParent: true
+    }), 'Chamber::echo_big', null, {
+        value: largeList
+    }, function onResponse(err, res) {
+        assert.ifError(err);
+
+        assert.ok(res.ok);
+        assert.equal(res.headers.as, 'thrift');
+        assert.equal(res.body, 10 * 1000);
+        assert.end();
+    });
+});
+
 allocCluster.test('sending using request()', {
     numPeers: 2
 }, function t(cluster, assert) {
@@ -343,8 +372,17 @@ function makeTChannelThriftServer(cluster, opts) {
         channel: cluster.channels[1].subChannels.server
     });
     tchannelAsThrift.register(server, 'Chamber::echo', options, fn);
+    tchannelAsThrift.register(server, 'Chamber::echo_big', options, echoBig);
 
     return tchannelAsThrift;
+
+    function echoBig(opts, req, head, body, cb) {
+        return cb(null, {
+            ok: true,
+            head: null,
+            body: body.value.length
+        });
+    }
 
     function okHandler(opts, req, head, body, cb) {
         return cb(null, {
