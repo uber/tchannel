@@ -88,7 +88,9 @@ func (c *Connection) handleCallReq(frame *Frame) bool {
 	call.log = PrefixedLogger(fmt.Sprintf("In%v-Call ", callReq.ID()), c.log)
 	call.messageForFragment = func(initial bool) message { return new(callReqContinue) }
 	call.contents = newFragmentingReader(call)
+	call.statsReporter = c.statsReporter
 
+	call.createStatsTags(c.commonStatsTags)
 	setResponseHeaders(call.headers, response.headers)
 	go c.dispatchInbound(call)
 	return false
@@ -105,6 +107,16 @@ func (c *Connection) handleCallReqContinue(frame *Frame) bool {
 	return false
 }
 
+// createStatsTags creates the common stats tags, if they are not already created.
+func (call *InboundCall) createStatsTags(connectionTags map[string]string) {
+	call.commonStatsTags = map[string]string{
+		"calling-service": call.CallerName(),
+	}
+	for k, v := range connectionTags {
+		call.commonStatsTags[k] = v
+	}
+}
+
 // dispatchInbound ispatches an inbound call to the appropriate handler
 func (c *Connection) dispatchInbound(call *InboundCall) {
 	c.log.Debugf("Received incoming call for %s from %s", call.ServiceName(), c.remotePeerInfo)
@@ -113,6 +125,9 @@ func (c *Connection) dispatchInbound(call *InboundCall) {
 		c.log.Errorf("Could not read operation from %s: %v", c.remotePeerInfo, err)
 		return
 	}
+
+	call.commonStatsTags["endpoint"] = string(call.operation)
+	call.statsReporter.IncCounter("inbound.calls.recvd", call.commonStatsTags, 1)
 
 	// NB(mmihic): Don't cast operation name to string here - this will
 	// create a copy of the byte array, where as aliasing to string in the
@@ -134,11 +149,13 @@ func (c *Connection) dispatchInbound(call *InboundCall) {
 type InboundCall struct {
 	reqResReader
 
-	response    *InboundCallResponse
-	serviceName string
-	operation   []byte
-	headers     callHeaders
-	span        Span
+	response        *InboundCallResponse
+	serviceName     string
+	operation       []byte
+	headers         callHeaders
+	span            Span
+	statsReporter   StatsReporter
+	commonStatsTags map[string]string
 }
 
 // ServiceName returns the name of the service being called
@@ -200,6 +217,8 @@ type InboundCallResponse struct {
 	applicationError bool
 	headers          callHeaders
 	span             Span
+	statsReporter    StatsReporter
+	commonStatsTags  map[string]string
 }
 
 // SendSystemError returns a system error response to the peer.  The call is considered

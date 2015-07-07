@@ -32,39 +32,62 @@ import (
 	"github.com/uber/tchannel/golang/testutils"
 )
 
-func TestStatsCalls(t *testing.T) {
-	statsReporter := newRecordingStatsReporter()
-	testOpts := &testutils.ChannelOpts{
-		StatsReporter: statsReporter,
+func tagsForOutboundCall(serverCh *Channel, clientCh *Channel, operation string) map[string]string {
+	host, _ := os.Hostname()
+	return map[string]string{
+		"app":             clientCh.PeerInfo().ProcessName,
+		"host":            host,
+		"service":         clientCh.PeerInfo().ServiceName,
+		"target-service":  serverCh.PeerInfo().ServiceName,
+		"target-endpoint": operation,
 	}
-	require.NoError(t, testutils.WithServer(testOpts, func(ch *Channel, hostPort string) {
-		ch.Register(raw.Wrap(newTestHandler(t)), "echo")
+}
+
+func tagsForInboundCall(serverCh *Channel, clientCh *Channel, operation string) map[string]string {
+	host, _ := os.Hostname()
+	return map[string]string{
+		"app":             serverCh.PeerInfo().ProcessName,
+		"host":            host,
+		"service":         serverCh.PeerInfo().ServiceName,
+		"calling-service": clientCh.PeerInfo().ServiceName,
+		"endpoint":        operation,
+	}
+}
+
+func TestStatsCalls(t *testing.T) {
+	serverStats := newRecordingStatsReporter()
+	serverOpts := &testutils.ChannelOpts{
+		StatsReporter: serverStats,
+	}
+	require.NoError(t, testutils.WithServer(serverOpts, func(serverCh *Channel, hostPort string) {
+		serverCh.Register(raw.Wrap(newTestHandler(t)), "echo")
+		clientStats := newRecordingStatsReporter()
+		ch, err := testutils.NewClient(&testutils.ChannelOpts{StatsReporter: clientStats})
+		require.NoError(t, err)
 
 		ctx, cancel := NewContext(time.Second * 5)
 		defer cancel()
 
-		_, _, _, err := raw.Call(ctx, ch, hostPort, testServiceName, "echo", []byte("Headers"), []byte("Body"))
+		_, _, _, err = raw.Call(ctx, ch, hostPort, testServiceName, "echo", []byte("Headers"), []byte("Body"))
 		require.NoError(t, err)
 
 		_, _, _, err = raw.Call(ctx, ch, hostPort, testServiceName, "error", nil, nil)
 		require.Error(t, err)
 
-		host, err := os.Hostname()
-		require.Nil(t, err)
-
-		expectedTags := map[string]string{
-			"app":             ch.PeerInfo().ProcessName,
-			"host":            host,
-			"service":         ch.PeerInfo().ServiceName,
-			"target-service":  ch.PeerInfo().ServiceName,
-			"target-endpoint": "echo",
-		}
-		statsReporter.Expected.IncCounter("outbound.calls.send", expectedTags, 1)
-		statsReporter.Expected.IncCounter("outbound.calls.successful", expectedTags, 1)
-		expectedTags["target-endpoint"] = "error"
-		statsReporter.Expected.IncCounter("outbound.calls.send", expectedTags, 1)
+		outboundTags := tagsForOutboundCall(serverCh, ch, "echo")
+		clientStats.Expected.IncCounter("outbound.calls.send", outboundTags, 1)
+		clientStats.Expected.IncCounter("outbound.calls.successful", outboundTags, 1)
+		outboundTags["target-endpoint"] = "error"
+		clientStats.Expected.IncCounter("outbound.calls.send", outboundTags, 1)
 		// TODO(prashant): Make the following stat work too.
 		// statsReporter.Expected.IncCounter("outbound.calls.app-errors", expectedTags, 1)
-		statsReporter.ValidateCounters(t)
+
+		inboundTags := tagsForInboundCall(serverCh, ch, "echo")
+		serverStats.Expected.IncCounter("inbound.calls.recvd", inboundTags, 1)
+		inboundTags["endpoint"] = "error"
+		serverStats.Expected.IncCounter("inbound.calls.recvd", inboundTags, 1)
+
+		clientStats.ValidateCounters(t)
+		serverStats.ValidateCounters(t)
 	}))
 }
