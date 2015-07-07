@@ -2,14 +2,18 @@ package tchannel
 
 import (
 	"errors"
-	"math/rand"
 	"sync"
+	"time"
 
 	"golang.org/x/net/context"
 )
 
-// ErrInvalidConnectionState indicates that the connection is not in a valid state.
-var ErrInvalidConnectionState = errors.New("connection is in an invalid state")
+var (
+	// ErrInvalidConnectionState indicates that the connection is not in a valid state.
+	ErrInvalidConnectionState = errors.New("connection is in an invalid state")
+
+	peerRng = NewRand(time.Now().UnixNano())
+)
 
 // PeerList maintains a list of Peers.
 type PeerList struct {
@@ -43,7 +47,7 @@ func (l *PeerList) Add(hostPort string) *Peer {
 }
 
 func randPeer(peers []*Peer) *Peer {
-	return peers[rand.Intn(len(peers))]
+	return peers[peerRng.Intn(len(peers))]
 }
 
 // Get returns a peer from the peer list, or nil if none can be found.
@@ -117,7 +121,7 @@ func (p *Peer) getActive() []*Connection {
 }
 
 func randConn(conns []*Connection) *Connection {
-	return conns[rand.Intn(len(conns))]
+	return conns[peerRng.Intn(len(conns))]
 }
 
 // GetConnection returns an active connection to this peer. If no active connections

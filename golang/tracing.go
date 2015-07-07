@@ -22,18 +22,13 @@ package tchannel
 
 import (
 	"fmt"
-	"math/rand"
-	"sync"
 	"time"
 
 	"github.com/uber/tchannel/golang/typed"
 	"golang.org/x/net/context"
 )
 
-var (
-	rng    = rand.New(rand.NewSource(time.Now().UnixNano()))
-	rngMut sync.Mutex // protects rng
-)
+var traceRng = NewRand(time.Now().UnixNano())
 
 // Span represents Zipkin-style span
 type Span struct {
@@ -65,16 +60,9 @@ func (s *Span) write(w *typed.WriteBuffer) error {
 
 const tracingFlagEnabled byte = 0x01
 
-// randUint64 returns a random uint64.
-func randUint64() uint64 {
-	rngMut.Lock()
-	defer rngMut.Unlock()
-	return uint64(rng.Int63())
-}
-
 // NewRootSpan creates a new top-level Span for a call-graph within the provided context
 func NewRootSpan() *Span {
-	return &Span{traceID: randUint64()}
+	return &Span{traceID: uint64(traceRng.Int63())}
 }
 
 // TraceID returns the trace id for the entire call graph of requests. Established at the outermost
@@ -109,7 +97,7 @@ func (s Span) NewChildSpan() *Span {
 	if s.spanID == 0 {
 		childSpan.spanID = childSpan.traceID
 	} else {
-		childSpan.spanID = randUint64()
+		childSpan.spanID = uint64(traceRng.Int63())
 	}
 	return childSpan
 }
