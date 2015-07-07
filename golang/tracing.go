@@ -23,6 +23,7 @@ package tchannel
 import (
 	"fmt"
 	"math/rand"
+	"sync"
 	"time"
 
 	"github.com/uber/tchannel/golang/typed"
@@ -30,7 +31,8 @@ import (
 )
 
 var (
-	rng = rand.New(rand.NewSource(time.Now().UnixNano()))
+	rng    = rand.New(rand.NewSource(time.Now().UnixNano()))
+	rngMut sync.Mutex // protects rng
 )
 
 // Span represents Zipkin-style span
@@ -63,9 +65,16 @@ func (s *Span) write(w *typed.WriteBuffer) error {
 
 const tracingFlagEnabled byte = 0x01
 
+// randUint64 returns a random uint64.
+func randUint64() uint64 {
+	rngMut.Lock()
+	defer rngMut.Unlock()
+	return uint64(rng.Int63())
+}
+
 // NewRootSpan creates a new top-level Span for a call-graph within the provided context
 func NewRootSpan() *Span {
-	return &Span{traceID: uint64(rng.Int63())}
+	return &Span{traceID: randUint64()}
 }
 
 // TraceID returns the trace id for the entire call graph of requests. Established at the outermost
@@ -92,12 +101,17 @@ func (s Span) TracingEnabled() bool { return (s.flags & tracingFlagEnabled) == t
 
 // NewChildSpan begins a new child span in the provided Context
 func (s Span) NewChildSpan() *Span {
-	return &Span{
+	childSpan := &Span{
 		traceID:  s.traceID,
 		parentID: s.spanID,
-		spanID:   uint64(rng.Int63()),
 		flags:    s.flags,
 	}
+	if s.spanID == 0 {
+		childSpan.spanID = childSpan.traceID
+	} else {
+		childSpan.spanID = randUint64()
+	}
+	return childSpan
 }
 
 // CurrentSpan returns the Span value for the provided Context
