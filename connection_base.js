@@ -21,7 +21,6 @@
 'use strict';
 
 var assert = require('assert');
-var extend = require('xtend');
 var inherits = require('util').inherits;
 var EventEmitter = require('./lib/event_emitter');
 
@@ -217,7 +216,7 @@ function captureResponseSpans(res) {
     function handleSpanFromRes(span) {
         self.handleSpanFromRes(span);
     }
-}
+};
 
 function isStringOrBuffer(x) {
     return typeof x === 'string' || Buffer.isBuffer(x);
