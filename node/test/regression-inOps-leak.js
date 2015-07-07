@@ -20,6 +20,8 @@
 
 'use strict';
 
+var setTimeout = require('timers').setTimeout;
+
 var allocCluster = require('./lib/alloc-cluster.js');
 
 allocCluster.test('does not leak inOps', {
@@ -64,31 +66,27 @@ allocCluster.test('does not leak inOps', {
             'expected timeout error'
         );
 
-        var expectedInReqs =
-            type === 'tchannel.request.timeout' ? 1 :
-            type === 'tchannel.timeout' ? 0 :
-            -1;
-
-        // Why??
-        // one.peers.get(two.hostPort).connections[0].onTimeoutCheck();
-        cluster.assertCleanState(assert, {
-            channels: [{
-                peers: [{
-                    connections: [{
-                        direction: 'in',
-                        inReqs: expectedInReqs,
-                        outReqs: 0
+        // Force the server to reap in operations
+        setTimeout(function checkState() {
+            cluster.assertCleanState(assert, {
+                channels: [{
+                    peers: [{
+                        connections: [{
+                            direction: 'in',
+                            inReqs: 0,
+                            outReqs: 0
+                        }]
+                    }]
+                }, {
+                    peers: [{
+                        connections: [
+                            {direction: 'out', inReqs: 0, outReqs: 0}
+                        ]
                     }]
                 }]
-            }, {
-                peers: [{
-                    connections: [
-                        {direction: 'out', inReqs: 0, outReqs: 0}
-                    ]
-                }]
-            }]
-        });
-        assert.end();
+            });
+            assert.end();
+        }, 150);
     }
 
     function timeout() {
