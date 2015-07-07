@@ -20,8 +20,62 @@
 
 from __future__ import absolute_import
 
+from contextlib import contextmanager
 from os import urandom
+from textwrap import dedent
+
+import pytest
+
+try:
+    from sh import thrift
+except ImportError:
+    thrift = None
 
 
 def big_arg(kilobytes=64 * 5):
     return urandom(1024 * kilobytes)
+
+
+@contextmanager
+def get_thrift_service_module(root, tornado=False):
+    if not thrift:
+        pytest.skip('Thrift is not installed.')
+
+    thrift_file = root.join('service.thrift')
+    thrift_file.write(dedent("""
+        union Value {
+            1: string stringValue
+            2: i32 integerValue
+        }
+
+        struct Item {
+            1: string key
+            2: Value value
+        }
+
+        exception ItemAlreadyExists {
+            1: Item item
+        }
+
+        exception ItemDoesNotExist {
+            1: string key
+        }
+
+        service Service {
+            // oneway void putItemAsync(1: Item item);
+            // TODO: oneway not yet supported
+
+            void putItem(1: Item item, 2: bool failIfPresent)
+                 throws (1: ItemAlreadyExists alreadyExists);
+            Item getItem(1: string key)
+                 throws (1: ItemDoesNotExist doesNotExist);
+
+            bool healthy();
+        }
+    """))
+    with root.as_cwd():
+        options = 'py:new_style,utf8strings,dynamic'
+        if tornado:
+            options += ',tornado'
+        thrift('-out', '.', '--gen', options, str(thrift_file))
+        yield root.join('service', 'Service.py').pyimport()

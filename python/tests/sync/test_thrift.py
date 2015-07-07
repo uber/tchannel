@@ -20,51 +20,39 @@
 
 from __future__ import absolute_import
 
-import socket
-
 import pytest
 
-from tests.integration.test_server import TestServer
-from .util import get_thrift_service_module
-
-
-class _MockConnection(object):
-    def __init__(self):
-        self.buff = bytearray()
-        self.remote_host = "0.0.0.0"
-        self.remote_host_port = "0"
-
-    def write(self, payload, callback=None):
-        self.buff.extend(payload)
-
-    def getvalue(self):
-        return self.buff
+from tchannel.sync import TChannelSyncClient
+from tchannel.sync.thrift import client_for
 
 
 @pytest.fixture
-def connection():
-    """Make a mock connection."""
-    return _MockConnection()
+def thrift_sync_client(tchannel_server, thrift_service):
+
+    ServiceClient = client_for("service", thrift_service)
+
+    tchannel_sync = TChannelSyncClient('test-client')
+    hostport = 'localhost:%d' % tchannel_server.port
+
+    thrift_sync_client = ServiceClient(tchannel_sync, hostport=hostport)
+
+    return thrift_sync_client
 
 
-@pytest.fixture
-def random_open_port():
-    """Find and return a random open TCP port."""
-    sock = socket.socket(socket.AF_INET)
-    try:
-        sock.bind(('', 0))
-        return sock.getsockname()[1]
-    finally:
-        sock.close()
+@pytest.mark.integration
+def test_call(tchannel_server, thrift_sync_client, thrift_service):
 
+    expected = thrift_service.Item(
+        key='foo', value=thrift_service.Value(integerValue=42)
+    )
 
-@pytest.yield_fixture
-def tchannel_server(random_open_port):
-    with TestServer(random_open_port) as server:
-        yield server
+    tchannel_server.expect_call(
+        thrift_service,
+        'thrift',
+        method='getItem',
+    ).and_result(expected)
 
+    future = thrift_sync_client.getItem('foo')
+    result = future.result()
 
-@pytest.yield_fixture
-def thrift_service(tmpdir):
-    with get_thrift_service_module(tmpdir, True) as m:
-        yield m
+    assert expected == result
