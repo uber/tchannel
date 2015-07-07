@@ -283,10 +283,10 @@ TChannelPeer.prototype.addConnection = function addConnection(conn) {
 
 TChannelPeer.prototype.removeConnection = function removeConnection(conn) {
     var self = this;
-    var list = self.connections;
-    var index = list ? list.indexOf(conn) : -1;
+
+    var index = self.connections ? self.connections.indexOf(conn) : -1;
     if (index !== -1) {
-        return list.splice(index, 1)[0];
+        return self.connections.splice(index, 1)[0];
     } else {
         return null;
     }
