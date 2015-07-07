@@ -101,7 +101,6 @@ def test_zipkin_trace(trace_server):
         if trace:
             traces.append(json.loads(trace))
 
-    print traces
     trace_id = traces[0][0][u'trace_id']
     for trace in traces:
         assert trace_id == trace[0][u'trace_id']
