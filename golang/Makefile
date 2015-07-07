@@ -62,11 +62,13 @@ thrift_example: thrift_gen
 
 examples: clean setup thrift_example
 	echo Building examples...
-	mkdir -p $(BUILD)/examples/hello $(BUILD)/examples/ping
+	mkdir -p $(BUILD)/examples/hello $(BUILD)/examples/ping $(BUILD)/examples/bench
 	go build -o $(BUILD)/examples/hello/server ./examples/hello/server
 	go build -o $(BUILD)/examples/hello/client ./examples/hello/client
 	go build -o $(BUILD)/examples/ping/pong    ./examples/ping/main.go
 	go build -o $(BUILD)/examples/hyperbahn/echo-server    ./examples/hyperbahn/echo-server/main.go
+	go build -o $(BUILD)/examples/bench/server ./examples/bench/server
+	go build -o $(BUILD)/examples/bench/client ./examples/bench/client
 
 thrift_gen:
 	cd examples/thrift && thrift -r --gen go:thrift_import=github.com/apache/thrift/lib/go/thrift test.thrift
