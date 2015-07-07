@@ -1,7 +1,7 @@
 project := tchannel
 
 flake8 := flake8
-pytest := PYTHONDONTWRITEBYTECODE=1 py.test --tb short \
+pytest := PYTHONDONTWRITEBYTECODE=1 py.test -s --tb short \
 	--cov-config .coveragerc --cov $(project) \
 	--async-test-timeout=1 --timeout=30 tests
 
