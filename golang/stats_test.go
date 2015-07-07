@@ -76,7 +76,7 @@ func TestStatsCalls(t *testing.T) {
 
 		outboundTags := tagsForOutboundCall(serverCh, ch, "echo")
 		clientStats.Expected.IncCounter("outbound.calls.send", outboundTags, 1)
-		clientStats.Expected.IncCounter("outbound.calls.successful", outboundTags, 1)
+		clientStats.Expected.IncCounter("outbound.calls.success", outboundTags, 1)
 		outboundTags["target-endpoint"] = "error"
 		clientStats.Expected.IncCounter("outbound.calls.send", outboundTags, 1)
 		// TODO(prashant): Make the following stat work too.

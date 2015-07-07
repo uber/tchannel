@@ -261,7 +261,7 @@ func (response *OutboundCallResponse) doneReading() {
 		// TODO(prashant): Figure out how to add "type" to tags, which TChannel does not know about.
 		response.statsReporter.IncCounter("outbound.calls.app-errors", response.commonStatsTags, 1)
 	} else {
-		response.statsReporter.IncCounter("outbound.calls.successful", response.commonStatsTags, 1)
+		response.statsReporter.IncCounter("outbound.calls.success", response.commonStatsTags, 1)
 	}
 
 	response.mex.shutdown()
