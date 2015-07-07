@@ -40,6 +40,7 @@ var TChannelRequest = require('./request');
 var TChannelServiceNameHandler = require('./service-name-handler');
 var errors = require('./errors');
 
+var Stat = require('./lib/stat.js');
 var TChannelAsThrift = require('./as/thrift');
 var TChannelAsJSON = require('./as/json');
 var TChannelConnection = require('./connection');
@@ -50,6 +51,15 @@ var TChannelStatsd = require('./lib/statsd');
 var TracingAgent = require('./trace/agent');
 
 var CONN_STALE_PERIOD = 1500;
+
+function StatTags(statTags) {
+    var self = this;
+
+    self.app = statTags.app || '';
+    self.host = statTags.host || '';
+    self.cluster = statTags.cluster || '';
+    self.version = statTags.version || '';
+}
 
 // TODO restore spying
 // var Spy = require('./v2/spy');
@@ -67,30 +77,28 @@ function TChannel(options) {
     self.connectionEvent = self.defineEvent('connection');
     self.requestEvent = self.defineEvent('request');
 
-    self.outboundCallsSentStat = self.defineCounter('outbound.calls.sent');
-    self.outboundCallsSuccessStat = self.defineCounter('outbound.calls.success');
+    // self.outboundCallsSentStat = self.defineCounter('outbound.calls.sent');
+    // self.outboundCallsSuccessStat = self.defineCounter('outbound.calls.success');
     self.outboundCallsSystemErrorsStat = self.defineCounter('outbound.calls.system-errors');
     self.outboundCallsPerAttemptSystemErrorsStat = self.defineCounter('outbound.calls.per-attempt.system-errors');
     self.outboundCallsOperationalErrorsStat = self.defineCounter('outbound.calls.operational-errors');
     self.outboundCallsPerAttemptOperationalErrorsStat = self.defineCounter('outbound.calls.per-attempt.operational-errors');
-    self.outboundCallsAppErrorsStat = self.defineCounter('outbound.calls.app-errors');
-    self.outboundCallsPerAttemptAppErrorsStat = self.defineCounter('outbound.calls.per-attempt.app-errors');
+    // self.outboundCallsAppErrorsStat = self.defineCounter('outbound.calls.app-errors');
+    // self.outboundCallsPerAttemptAppErrorsStat = self.defineCounter('outbound.calls.per-attempt.app-errors');
     self.outboundCallsRetriesStat = self.defineCounter('outbound.calls.retries');
-    self.outboundRequestSizeStat = self.defineCounter('outbound.request.size');
-    self.outboundResponseSizeStat = self.defineCounter('outbound.response.size');
-    self.outboundCallsLatencyStat = self.defineTiming('outbound.calls.latency');
-    self.outboundCallsPerAttemptLatencyStat = self.defineTiming('outbound.calls.per-attempt-latency');
+    // self.outboundResponseSizeStat = self.defineCounter('outbound.response.size');
+    // self.outboundCallsLatencyStat = self.defineTiming('outbound.calls.latency');
+    // self.outboundCallsPerAttemptLatencyStat = self.defineTiming('outbound.calls.per-attempt-latency');
 
-    self.inboundCallsRecvdStat = self.defineCounter('inbound.calls.recvd');
-    self.inboundCallsSuccessStat = self.defineCounter('inbound.calls.success');
+    // self.inboundCallsSuccessStat = self.defineCounter('inbound.calls.success');
     self.inboundCallsSystemErrorsStat = self.defineCounter('inbound.calls.system-errors');
-    self.inboundCallsAppErrorsStat = self.defineCounter('inbound.calls.app-errors');
+    // self.inboundCallsAppErrorsStat = self.defineCounter('inbound.calls.app-errors');
     // self.inboundCallsCancelsRequestedStat = self.defineCounter('inbound.cancels.requested');
     // self.inboundCallsCancelsHonoredStat = self.defineCounter('inbound.cancels.honored');
-    self.inboundRequestSizeStat = self.defineCounter('inbound.request.size');
-    self.inboundResponseSizeStat = self.defineCounter('inbound.response.size');
+    // self.inboundRequestSizeStat = self.defineCounter('inbound.request.size');
+    // self.inboundResponseSizeStat = self.defineCounter('inbound.response.size');
     self.inboundProtocolErrorsStat = self.defineCounter('inbound.protocol-errors');
-    self.inboundCallsLatencyStat = self.defineTiming('inbound.calls.latency');
+    // self.inboundCallsLatencyStat = self.defineTiming('inbound.calls.latency');
 
     self.connectionsActiveStat = self.defineGauge('connections.active');
     self.connectionsInitiatedStat = self.defineCounter('connections.initiated');
@@ -99,8 +107,7 @@ function TChannel(options) {
     self.connectionsAcceptedErrorsStat = self.defineCounter('connections.accept-errors');
     self.connectionsErrorsStat = self.defineCounter('connections.errors');
     self.connectionsClosedStat = self.defineCounter('connections.closed');
-    self.connectionsBytesSentStat = self.defineCounter('connections.bytes-sent');
-    self.connectionsBytesRcvdStat = self.defineCounter('connections.bytes-recvd');
+    // self.connectionsBytesRcvdStat = self.defineCounter('connections.bytes-recvd');
 
     self.options = extend({
         timeoutCheckInterval: 100,
@@ -114,7 +121,7 @@ function TChannel(options) {
     // required: 'app'
     // optional: 'host', 'cluster', 'version'
     assert(!self.options.statTags || self.options.statTags.app, 'the stats must have the "app" tag');
-    self.statTags = self.options.statTags || {};
+    self.statTags = new StatTags(self.options.statTags || {});
 
     self.statsd = self.options.statsd;
     if (self.statsd) {
@@ -355,6 +362,7 @@ TChannel.prototype.makeSubChannel = function makeSubChannel(options) {
         }
     }
     var chan = TChannel(opts);
+
     chan.topChannel = self;
     if (options.peers) {
         for (i = 0; i < options.peers.length; i++) {
@@ -547,6 +555,30 @@ TChannel.prototype.close = function close(callback) {
                 callback();
             }
         }
+    }
+};
+
+TChannel.prototype.buildStat =
+function buildStat(name, type, value, tags) {
+    var self = this;
+
+    tags.app = self.statTags.app;
+    tags.host = self.statTags.host;
+    tags.cluster = self.statTags.cluster;
+    tags.version = self.statTags.version;
+
+    return new Stat(
+        name, type, value, tags
+    );
+};
+
+TChannel.prototype.emitFastStat = function emitFastStat(stat) {
+    var self = this;
+
+    if (self.topChannel) {
+        self.topChannel.statEvent.emit(self, stat);
+    } else {
+        self.statEvent.emit(self, stat);
     }
 };
 

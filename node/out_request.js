@@ -62,6 +62,7 @@ function TChannelOutRequest(id, options) {
 
     self.streamed = false;
     self.arg1 = null;
+    self.endpoint = null;
     self.arg2 = null;
     self.arg3 = null;
 
@@ -118,24 +119,18 @@ TChannelOutRequest.prototype.onError = function onError(err, self) {
     self.err = err;
     self.emitPerAttemptLatency();
     self.emitPerAttemptErrorStat(err);
-
-    if (self.logical === false) {
-        self.emitErrorStat(err);
-        self.emitLatency();
-    }
 };
 
 TChannelOutRequest.prototype.onResponse = function onResponse(res, self) {
-    if (!self.end) self.end = self.timers.now();
+    if (!self.end) {
+        self.end = self.timers.now();
+    }
+
     self.res = res;
     self.res.span = self.span;
+
     self.emitPerAttemptLatency();
     self.emitPerAttemptResponseStat(res);
-
-    if (self.logical === false) {
-        self.emitResponseStat(res);
-        self.emitLatency();
-    }
 };
 
 TChannelOutRequest.prototype.emitPerAttemptErrorStat =
@@ -147,7 +142,7 @@ function emitPerAttemptErrorStat(err) {
             'target-service': self.serviceName,
             'service': self.headers.cn,
             // TODO should always be buffer
-            'target-endpoint': String(self.arg1),
+            'target-endpoint': self.endpoint,
             'type': err.codeName,
             'retry-count': self.retryCount
         });
@@ -156,7 +151,7 @@ function emitPerAttemptErrorStat(err) {
             'target-service': self.serviceName,
             'service': self.headers.cn,
             // TODO should always be buffer
-            'target-endpoint': String(self.arg1),
+            'target-endpoint': self.endpoint,
             'type': err.type || 'unknown',
             'retry-count': self.retryCounts
         });
@@ -172,7 +167,7 @@ function emitErrorStat(err) {
             'target-service': self.serviceName,
             'service': self.headers.cn,
             // TODO should always be buffer
-            'target-endpoint': String(self.arg1),
+            'target-endpoint': self.endpoint,
             'type': err.codeName
         });
     } else {
@@ -180,7 +175,7 @@ function emitErrorStat(err) {
             'target-service': self.serviceName,
             'service': self.headers.cn,
             // TODO should always be buffer
-            'target-endpoint': String(self.arg1),
+            'target-endpoint': self.endpoint,
             'type': err.type || 'unknown'
         });
     }
@@ -191,69 +186,168 @@ function emitResponseStat(res) {
     var self = this;
 
     if (res.ok) {
-        self.channel.outboundCallsSuccessStat.increment(1, {
-            'target-service': self.serviceName,
-            'service': self.headers.cn,
-            // TODO should always be buffer
-            'target-endpoint': String(self.arg1)
-        });
+        emitOutboundCallsSuccess(self);
     } else {
-        self.channel.outboundCallsAppErrorsStat.increment(1, {
-            'target-service': self.serviceName,
-            'service': self.headers.cn,
-            // TODO should always be buffer
-            'target-endpoint': String(self.arg1),
-            // TODO define transport header
-            // for application error type
-            'type': 'unknown'
-        });
+        self.channel.emitFastStat(self.channel.buildStat(
+            'outbound.calls.app-errors',
+            'counter',
+            1,
+            new OutboundCallsAppErrorsTags(
+                self.serviceName,
+                self.headers.cn,
+                self.endpoint,
+                'unknown'
+            )
+        ));
     }
 };
+
+function emitOutboundCallsSuccess(request) {
+    request.channel.emitFastStat(request.channel.buildStat(
+        'outbound.calls.success',
+        'counter',
+        1,
+        new OutboundCallsSuccessTags(
+            request.serviceName,
+            request.headers.cn,
+            request.endpoint
+        )
+    ));
+}
+
+function OutboundCallsAppErrorsTags(serviceName, cn, endpoint, type) {
+    var self = this;
+
+    self.app = '';
+    self.host = '';
+    self.cluster = '';
+    self.version = '';
+
+    self.targetService = serviceName;
+    self.service = cn;
+    self.targetEndpoint = endpoint;
+    self.type = type;
+}
+
+function OutboundCallsSuccessTags(serviceName, cn, endpoint) {
+    var self = this;
+
+    self.app = '';
+    self.host = '';
+    self.cluster = '';
+    self.version = '';
+
+    self.targetService = serviceName;
+    self.service = cn;
+    self.targetEndpoint = endpoint;
+}
 
 TChannelOutRequest.prototype.emitPerAttemptResponseStat =
 function emitPerAttemptResponseStat(res) {
     var self = this;
 
     if (!res.ok) {
-        self.channel.outboundCallsPerAttemptAppErrorsStat.increment(1, {
-            'target-service': self.serviceName,
-            'service': self.headers.cn,
-            // TODO should always be buffer
-            'target-endpoint': String(self.arg1),
-            // TODO define transport header
-            // for application error type
-            'type': 'unknown',
-            'retry-count': self.retryCount
-        });
+        self.channel.emitFastStat(self.channel.buildStat(
+            'outbound.calls.per-attempt.app-errors',
+            'counter',
+            1,
+            new OutboundCallsPerAttemptAppErrorsTags(
+                self.serviceName,
+                self.headers.cn,
+                self.endpoint,
+                'unknown',
+                self.retryCount
+            )
+        ));
+    // Only emit success if peer-to-peer request or relay
+    } else if (self.logical === false) {
+        emitOutboundCallsSuccess(self);
     }
 };
+
+function OutboundCallsPerAttemptAppErrorsTags(
+    serviceName, cn, endpoint, type, retryCount
+) {
+    var self = this;
+
+    self.app = '';
+    self.host = '';
+    self.cluster = '';
+    self.version = '';
+
+    self.targetService = serviceName;
+    self.service = cn;
+    self.targetEndpoint = endpoint;
+    self.type = type;
+    self.retryCount = retryCount;
+}
 
 TChannelOutRequest.prototype.emitPerAttemptLatency =
 function emitPerAttemptLatency() {
     var self = this;
 
     var latency = self.end - self.start;
-    self.channel.outboundCallsPerAttemptLatencyStat.add(latency, {
-        'target-service': self.serviceName,
-        'service': self.headers.cn,
-        // TODO should always be buffer
-        'target-endpoint': String(self.arg1),
-        'peer': self.remoteAddr,
-        'retry-count': self.retryCount
-    });
+
+    self.channel.emitFastStat(self.channel.buildStat(
+        'outbound.calls.per-attempt-latency',
+        'timing',
+        latency,
+        new OutboundCallsPerAttemptLatencyTags(
+            self.serviceName,
+            self.headers.cn,
+            self.endpoint,
+            self.remoteAddr,
+            self.retryCount
+        )
+    ));
 };
+
+function OutboundCallsPerAttemptLatencyTags(
+    serviceName, cn, endpoint, remoteAddr, retryCount
+) {
+    var self = this;
+
+    self.app = '';
+    self.host = '';
+    self.cluster = '';
+    self.version = '';
+
+    self.targetService = serviceName;
+    self.service = cn;
+    self.targetEndpoint = endpoint;
+    self.peer = remoteAddr;
+    self.retryCount = retryCount;
+}
 
 TChannelOutRequest.prototype.emitLatency = function emitLatency() {
     var self = this;
 
     var latency = self.end - self.start;
-    self.channel.outboundCallsLatencyStat.add(latency, {
-        'target-service': self.serviceName,
-        'service': self.headers.cn,
-        // TODO should always be buffer
-        'target-endpoint': String(self.arg1)
-    });
+
+    self.channel.emitFastStat(self.channel.buildStat(
+        'outbound.calls.latency',
+        'timing',
+        latency,
+        new OutboundCallsLatencyTags(
+            self.serviceName,
+            self.headers.cn,
+            self.endpoint
+        )
+    ));
 };
+
+function OutboundCallsLatencyTags(serviceName, cn, endpoint) {
+    var self = this;
+
+    self.app = '';
+    self.host = '';
+    self.cluster = '';
+    self.version = '';
+
+    self.targetService = serviceName;
+    self.service = cn;
+    self.targetEndpoint = endpoint;
+}
 
 TChannelOutRequest.prototype.emitError = function emitError(err) {
     var self = this;
@@ -340,25 +434,22 @@ TChannelOutRequest.prototype.sendCallRequestContFrame = function sendCallRequest
 TChannelOutRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     var self = this;
 
-    var endpoint = String(arg1);
+    self.endpoint = String(arg1);
 
     if (self.span) {
-        self.span.name = endpoint;
+        self.span.name = self.endpoint;
 
         self.span.annotateBinary('as', self.headers.as);
         self.span.annotateBinary('cn', self.headers.cn);
     }
 
     if (self.logical === false && self.retryCount === 0) {
-        self.channel.outboundCallsSentStat.increment(1, {
-            'target-service': self.serviceName,
-            'service': self.headers.cn,
-            // TODO should always be buffer
-            'target-endpoint': endpoint
-        });
+        self.emitOutboundCallsSent();
     }
 
-    if (callback) self.hookupCallback(callback);
+    if (callback) {
+        self.hookupCallback(callback);
+    }
 
     self.arg1 = arg1;
     self.arg2 = arg2;
@@ -369,7 +460,37 @@ TChannelOutRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     return self;
 };
 
-TChannelOutRequest.prototype.hookupStreamCallback = function hookupCallback(callback) {
+TChannelOutRequest.prototype.emitOutboundCallsSent =
+function emitOutboundCallsSent() {
+    var self = this;
+
+    self.channel.emitFastStat(self.channel.buildStat(
+        'outbound.calls.sent',
+        'counter',
+        1,
+        new OutboundCallsSentTags(
+            self.serviceName,
+            self.headers.cn,
+            self.endpoint
+        )
+    ));
+};
+
+function OutboundCallsSentTags(serviceName, cn, endpoint) {
+    var self = this;
+
+    self.app = '';
+    self.host = '';
+    self.cluster = '';
+    self.version = '';
+
+    self.targetService = serviceName;
+    self.service = cn;
+    self.targetEndpoint = endpoint;
+}
+
+TChannelOutRequest.prototype.hookupStreamCallback =
+function hookupCallback(callback) {
     var self = this;
     var called = false;
 

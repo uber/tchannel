@@ -25,7 +25,13 @@ var os = require('os');
 var allocCluster = require('./lib/alloc-cluster.js');
 
 allocCluster.test('emits response stats with ok', {
-    numPeers: 2
+    numPeers: 2,
+    channelOptions: {
+        statTags: {
+            app: 'server',
+            host: os.hostname()
+        }
+    }
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
     var client = cluster.channels[1];
@@ -42,10 +48,6 @@ allocCluster.test('emits response stats with ok', {
         res.headers.as = 'raw';
         res.sendOk(h, b);
     });
-    server.statTags = server.options.statTags = {
-        app: 'server',
-        host: os.hostname()
-    };
     server.on('stat', function onStat(stat) {
         stats.push(stat);
     });
@@ -83,82 +85,98 @@ allocCluster.test('emits response stats with ok', {
                 'host-port': serverHost,
                 'peer-host-port': clientHost,
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
            }
         }, {
             name: 'inbound.request.size',
             type: 'counter',
             value: 93,
             tags: {
-                'calling-service': 'client',
+                callingService: 'client',
                 service: 'server',
                 endpoint: 'echo',
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'connections.bytes-recvd',
             type: 'counter',
             value: 93,
             tags: {
-                'host-port': serverHost,
-                'peer-host-port': clientHost,
+                hostPort: serverHost,
+                peerHostPort: clientHost,
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'inbound.calls.recvd',
             type: 'counter',
             value: 1,
             tags: {
-                'calling-service': 'client',
+                callingService: 'client',
                 service: 'server',
                 endpoint: 'echo',
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'inbound.calls.success',
             type: 'counter',
             value: 1,
             tags: {
-                'calling-service': 'client',
+                callingService: 'client',
                 service: 'server',
                 endpoint: 'echo',
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'outbound.response.size',
             type: 'counter',
             value: 64,
             tags: { 
-                'target-service': 'server',
+                targetService: 'server',
                 service: 'client',
-                'target-endpoint': 'echo',
+                targetEndpoint: 'echo',
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'connections.bytes-sent',
             type: 'counter',
             value: 64,
             tags: {
-                'host-port': serverHost,
-                'peer-host-port': clientHost,
+                hostPort: serverHost,
+                peerHostPort: clientHost,
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'inbound.calls.latency',
             type: 'timing',
             value: stats[7].value,
             tags: {
-                'calling-service': 'client',
+                callingService: 'client',
                 service: 'server',
                 endpoint: 'echo',
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }]);
 
@@ -167,7 +185,13 @@ allocCluster.test('emits response stats with ok', {
 });
 
 allocCluster.test('emits response stats with not ok', {
-    numPeers: 2
+    numPeers: 2,
+    channelOptions: {
+        statTags: {
+            app: 'server',
+            host: os.hostname()
+        }
+    }
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
     var client = cluster.channels[1];
@@ -184,10 +208,6 @@ allocCluster.test('emits response stats with not ok', {
         res.headers.as = 'raw';
         res.sendNotOk('failure', 'busy');
     });
-    server.statTags = server.options.statTags = {
-        app: 'server',
-        host: os.hostname()
-    };
     server.on('stat', function onStat(stat) {
         stats.push(stat);
     });
@@ -225,83 +245,99 @@ allocCluster.test('emits response stats with not ok', {
                 'host-port': serverHost,
                 'peer-host-port': clientHost,
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
            }
         }, {
             name: 'inbound.request.size',
             type: 'counter',
             value: 93,
             tags: {
-                'calling-service': 'client',
+                callingService: 'client',
                 service: 'server',
                 endpoint: 'echo',
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'connections.bytes-recvd',
             type: 'counter',
             value: 93,
             tags: {
-                'host-port': serverHost,
-                'peer-host-port': clientHost,
+                hostPort: serverHost,
+                peerHostPort: clientHost,
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'inbound.calls.recvd',
             type: 'counter',
             value: 1,
             tags: {
-                'calling-service': 'client',
+                callingService: 'client',
                 service: 'server',
                 endpoint: 'echo',
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'inbound.calls.app-errors',
             type: 'counter',
             value: 1,
             tags: {
-                'calling-service': 'client',
+                callingService: 'client',
                 service: 'server',
                 endpoint: 'echo',
                 type: 'unknown',
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'outbound.response.size',
             type: 'counter',
             value: 73,
             tags: {
-                'target-service': 'server',
+                targetService: 'server',
                 service: 'client',
-                'target-endpoint': 'echo',
+                targetEndpoint: 'echo',
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'connections.bytes-sent',
             type: 'counter',
             value: 73,
             tags: {
-                'host-port': serverHost,
-                'peer-host-port': clientHost,
+                hostPort: serverHost,
+                peerHostPort: clientHost,
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'inbound.calls.latency',
             type: 'timing',
             value: stats[7].value,
             tags: {
-                'calling-service': 'client',
+                callingService: 'client',
                 service: 'server',
                 endpoint: 'echo',
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }]);
 
@@ -310,7 +346,13 @@ allocCluster.test('emits response stats with not ok', {
 });
 
 allocCluster.test('emits response stats with error', {
-    numPeers: 2
+    numPeers: 2,
+    channelOptions: {
+        statTags: {
+            app: 'server',
+            host: os.hostname()
+        }
+    }
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
     var client = cluster.channels[1];
@@ -326,10 +368,6 @@ allocCluster.test('emits response stats with error', {
     }).register('echo', function echo(req, res, h, b) {
         res.sendError('ProtocolError', 'bad request!');
     });
-    server.statTags = server.options.statTags = {
-        app: 'server',
-        host: os.hostname()
-    };
     server.on('stat', function onStat(stat) {
         stats.push(stat);
     });
@@ -365,39 +403,47 @@ allocCluster.test('emits response stats with error', {
                 'host-port': serverHost,
                 'peer-host-port': clientHost,
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
            }
         }, {
             name: 'inbound.request.size',
             type: 'counter',
             value: 93,
             tags: {
-                'calling-service': 'client',
+                callingService: 'client',
                 service: 'server',
                 endpoint: 'echo',
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'connections.bytes-recvd',
             type: 'counter',
             value: 93,
             tags: {
-                'host-port': serverHost,
-                'peer-host-port': clientHost,
+                hostPort: serverHost,
+                peerHostPort: clientHost,
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'inbound.calls.recvd',
             type: 'counter',
             value: 1,
             tags: {
-                'calling-service': 'client',
+                callingService: 'client',
                 service: 'server',
                 endpoint: 'echo',
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'inbound.calls.system-errors',
@@ -409,18 +455,22 @@ allocCluster.test('emits response stats with error', {
                 endpoint: 'echo',
                 type: 'ProtocolError',
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }, {
             name: 'inbound.calls.latency',
             type: 'timing',
             value: stats[5].value,
             tags: {
-                'calling-service': 'client',
+                callingService: 'client',
                 service: 'server',
                 endpoint: 'echo',
                 app: 'server',
-                host: os.hostname()
+                host: os.hostname(),
+                cluster: '',
+                version: ''
             }
         }]);
 

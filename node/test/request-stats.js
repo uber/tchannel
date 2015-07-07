@@ -25,7 +25,13 @@ var os = require('os');
 var allocCluster = require('./lib/alloc-cluster.js');
 
 allocCluster.test('emits stats', {
-    numPeers: 2
+    numPeers: 2,
+    channelOptions: {
+        statTags: {
+            app: 'client',
+            host: os.hostname()
+        }
+    }
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
     var client = cluster.channels[1];
@@ -40,10 +46,6 @@ allocCluster.test('emits stats', {
         res.sendOk(h, b);
     });
 
-    client.statTags = client.options.statTags = {
-        app: 'client',
-        host: os.hostname()
-    };
     var clientChan = client.makeSubChannel({
         serviceName: 'server',
         peers: [server.hostPort],
@@ -76,10 +78,12 @@ allocCluster.test('emits stats', {
             type: 'counter',
             value: 1,
             tags: {
-                'target-service': 'server',
+                targetService: 'server',
                 service: 'client',
-                'target-endpoint': 'echo',
+                targetEndpoint: 'echo',
                 app: 'client',
+                cluster: '',
+                version: '',
                 host: os.hostname()
             }
         }, {
@@ -90,6 +94,8 @@ allocCluster.test('emits stats', {
                 'host-port': clientHost,
                 'peer-host-port': serverHost,
                 app: 'client',
+                cluster: '',
+                version: '',
                 host: os.hostname()
             }
         }, {
@@ -97,9 +103,11 @@ allocCluster.test('emits stats', {
             type: 'counter',
             value: 93,
             tags: {
-                'target-service': 'server',
+                targetService: 'server',
                 service: 'client',
-                'target-endpoint': 'echo',
+                cluster: '',
+                version: '',
+                targetEndpoint: 'echo',
                 app: 'client',
                 host: os.hostname()
             }
@@ -108,9 +116,11 @@ allocCluster.test('emits stats', {
             type: 'counter',
             value: 93,
             tags: {
-                'host-port': clientHost,
-                'peer-host-port': serverHost,
+                hostPort: clientHost,
+                peerHostPort: serverHost,
                 app: 'client',
+                cluster: '',
+                version: '',
                 host: os.hostname()
             }
         }, {
@@ -118,10 +128,12 @@ allocCluster.test('emits stats', {
             type: 'counter',
             value: 64,
             tags: {
-                'calling-service': 'client',
+                callingService: 'client',
                 service: 'server',
                 endpoint: 'echo',
                 app: 'client',
+                cluster: '',
+                version: '',
                 host: os.hostname()
             }
         }, {
@@ -129,9 +141,11 @@ allocCluster.test('emits stats', {
             type: 'counter',
             value: 64,
             tags: {
-                'host-port': clientHost,
-                'peer-host-port': serverHost,
+                hostPort: clientHost,
+                peerHostPort: serverHost,
                 app: 'client',
+                cluster: '',
+                version: '',
                 host: os.hostname()
             }
         }, {
@@ -139,12 +153,14 @@ allocCluster.test('emits stats', {
             type: 'timing',
             value: stats[6].value,
             tags: {
-                'target-service': 'server',
+                targetService: 'server',
                 service: 'client',
-                'target-endpoint': 'echo',
+                targetEndpoint: 'echo',
                 peer: server.hostPort,
-                'retry-count': 0,
+                retryCount: 0,
                 app: 'client',
+                cluster: '',
+                version: '',
                 host: os.hostname()
             }
         }, {
@@ -152,10 +168,12 @@ allocCluster.test('emits stats', {
             type: 'counter',
             value: 1,
             tags: {
-                'target-service': 'server',
+                targetService: 'server',
                 service: 'client',
-                'target-endpoint': 'echo',
+                targetEndpoint: 'echo',
                 app: 'client',
+                cluster: '',
+                version: '',
                 host: os.hostname()
             }
         }, {
@@ -163,10 +181,12 @@ allocCluster.test('emits stats', {
             type: 'timing',
             value: stats[8].value,
             tags: {
-                'target-service': 'server',
+                targetService: 'server',
                 service: 'client',
-                'target-endpoint': 'echo',
+                targetEndpoint: 'echo',
                 app: 'client',
+                cluster: '',
+                version: '',
                 host: os.hostname()
             }
         }]);

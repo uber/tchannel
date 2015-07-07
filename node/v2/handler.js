@@ -186,9 +186,71 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
         return callback(errors.CallReqBeforeInitReqError());
     }
 
-    var err;
     var req = self.buildInRequest(reqFrame);
 
+    if (self.incomingRequestInvalid(reqFrame, req)) {
+        return callback(null);
+    }
+
+    self._handleCallFrame(req, reqFrame, callRequestFrameHandled);
+
+    var channel = self.connection.channel;
+    channel.emitFastStat(channel.buildStat(
+        'inbound.request.size',
+        'counter',
+        reqFrame.size,
+        new InboundRequestSizeTags(
+            req.headers.cn,
+            req.serviceName,
+            req.endpoint
+        )
+    ));
+
+    channel.emitFastStat(channel.buildStat(
+        'connections.bytes-recvd',
+        'counter',
+        reqFrame.size,
+        new ConnectionsBytesRcvdTags(
+            channel.hostPort || '0.0.0.0:0',
+            self.connection.socketRemoteAddr
+        )
+    ));
+
+    function callRequestFrameHandled(err) {
+        self.callRequestFrameHandled(req, err, callback);
+    }
+};
+
+function InboundRequestSizeTags(cn, serviceName, endpoint) {
+    var self = this;
+
+    self.app = null;
+    self.host = null;
+    self.cluster = null;
+    self.version = null;
+
+    self.callingService = cn;
+    self.service = serviceName;
+    self.endpoint = endpoint;
+}
+
+function ConnectionsBytesRcvdTags(hostPort, peerHostPort) {
+    var self = this;
+
+    self.app = null;
+    self.host = null;
+    self.cluster = null;
+    self.version = null;
+
+    self.hostPort = hostPort;
+    self.peerHostPort = peerHostPort;
+}
+
+TChannelV2Handler.prototype.incomingRequestInvalid =
+function incomingRequestInvalid(reqFrame, req) {
+    var self = this;
+
+    var err;
     if (!reqFrame.body ||
         !reqFrame.body.headers ||
         !reqFrame.body.headers.as
@@ -201,7 +263,7 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
             self.sendErrorFrame(
                 req.res, 'ProtocolError', err.message
             );
-            return callback();
+            return true;
         } else {
             self.logger.warn('Expected "as" header for incoming req', {
                 arg1: String(reqFrame.body.args[0]),
@@ -221,7 +283,7 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
             err = errors.CnHeaderRequired();
             req.res = self.buildOutResponse(req);
             self.sendErrorFrame(req.res, 'ProtocolError', err.message);
-            return callback();
+            return true;
         } else {
             self.logger.warn('Expected "cn" header for incoming req', {
                 arg1: String(reqFrame.body.args[0]),
@@ -231,26 +293,14 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
             });
         }
     }
+
     if (reqFrame.body.args && reqFrame.body.args[0] &&
         reqFrame.body.args[0].length > v2.CallRequest.MaxArg1Size) {
         req.res = self.buildOutResponse(req);
         self.sendErrorFrame(req.res, 'BadRequest',
             'arg1 exceeds the max size of 0x' +
             v2.CallRequest.MaxArg1Size.toString(16));
-        return callback();
-    }
-    self._handleCallFrame(req, reqFrame, callRequestFrameHandled);
-    self.connection.channel.inboundRequestSizeStat.increment(reqFrame.size, {
-        'calling-service': req.headers.cn,
-        'service': req.serviceName,
-        'endpoint': String(req.arg1)
-    });
-    self.connection.channel.connectionsBytesRcvdStat.increment(reqFrame.size, {
-        'host-port': self.connection.channel.hostPort || '0.0.0.0:0',
-        'peer-host-port': self.connection.socketRemoteAddr
-    });
-    function callRequestFrameHandled(err) {
-        self.callRequestFrameHandled(req, err, callback);
+        return true;
     }
 };
 
@@ -271,6 +321,60 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
     }
     var res = self.buildInResponse(resFrame);
 
+    if (!self.checkValidCallResponse(resFrame, callback)) {
+        return null;
+    }
+
+    var req = self.connection.ops.getOutReq(res.id);
+
+    var channel = self.connection.channel;
+
+    channel.emitFastStat(channel.buildStat(
+        'inbound.response.size',
+        'counter',
+        resFrame.size,
+        new InboundResponseSizeTags(
+            req ? req.headers.cn : '',
+            req ? req.serviceName : '',
+            req ? req.endpoint : ''
+        )
+    ));
+
+    channel.emitFastStat(channel.buildStat(
+        'connections.bytes-recvd',
+        'counter',
+        resFrame.size,
+        new ConnectionsBytesRcvdTags(
+            channel.hostPort || '0.0.0.0:0',
+            self.connection.socketRemoteAddr
+        )
+    ));
+
+    res.remoteAddr = self.remoteName;
+    self._handleCallFrame(res, resFrame, callResponseFrameHandled);
+
+    function callResponseFrameHandled(err) {
+        self.callResponseFrameHandled(res, err, callback);
+    }
+};
+
+function InboundResponseSizeTags(cn, serviceName, endpoint) {
+    var self = this;
+
+    self.app = null;
+    self.host = null;
+    self.cluster = null;
+    self.version = null;
+
+    self.callingService = cn;
+    self.service = serviceName;
+    self.endpoint = endpoint;
+}
+
+TChannelV2Handler.prototype.checkValidCallResponse =
+function checkValidCallResponse(resFrame, callback) {
+    var self = this;
+
     if (!resFrame.body ||
         !resFrame.body.headers ||
         !resFrame.body.headers.as
@@ -279,7 +383,8 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
             var err = errors.AsHeaderRequired({
                 frame: 'response'
             });
-            return callback(err);
+            callback(err);
+            return false;
         } else {
             self.logger.warn('Expected "as" for incoming response', {
                 code: resFrame.body.code,
@@ -292,28 +397,14 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
 
     if (resFrame.body.args && resFrame.body.args[0] &&
         resFrame.body.args[0].length > v2.CallResponse.MaxArg1Size) {
-        return callback(errors.Arg1OverLengthLimit({
+        callback(errors.Arg1OverLengthLimit({
                 length: '0x' + resFrame.body.args[0].length.toString(16),
                 limit: '0x' + v2.CallResponse.MaxArg1Size.toString(16)
         }));
+        return false;
     }
 
-    var req = self.connection.ops.getOutReq(res.id);
-    self.connection.channel.inboundResponseSizeStat.increment(resFrame.size, {
-        'calling-service': !req ? null : req.headers.cn,
-        'service': !req ? null : req.serviceName,
-        'endpoint': !req ? null : String(req.arg1)
-    });
-    self.connection.channel.connectionsBytesRcvdStat.increment(resFrame.size, {
-        'host-port': self.connection.channel.hostPort || '0.0.0.0:0',
-        'peer-host-port': self.connection.socketRemoteAddr
-    });
-
-    res.remoteAddr = self.remoteName;
-    self._handleCallFrame(res, resFrame, callResponseFrameHandled);
-    function callResponseFrameHandled(err) {
-        self.callResponseFrameHandled(res, err, callback);
-    }
+    return true;
 };
 
 TChannelV2Handler.prototype.callResponseFrameHandled = function callResponseFrameHandled(res, err, callback) {
@@ -345,15 +436,29 @@ TChannelV2Handler.prototype.handleCallRequestCont = function handleCallRequestCo
     }
 
     self._handleCallFrame(req, reqFrame, callback);
-    self.connection.channel.inboundRequestSizeStat.increment(reqFrame.size, {
-        'calling-service': req.headers.cn,
-        'service': req.serviceName,
-        'endpoint': String(req.arg1)
-    });
-    self.connection.channel.connectionsBytesRcvdStat.increment(reqFrame.size, {
-        'host-port': self.connection.channel.hostPort || '0.0.0.0:0',
-        'peer-host-port': self.connection.socketRemoteAddr
-    });
+    
+    var channel = self.connection.channel;
+    channel.emitFastStat(channel.buildStat(
+        'inbound.request.size',
+        'counter',
+        reqFrame.size,
+        new InboundRequestSizeTags(
+            req.headers.cn,
+            req.serviceName,
+            req.endpoint
+        )
+    ));
+
+    channel.emitFastStat(channel.buildStat(
+        'connections.bytes-recvd',
+        'counter',
+        reqFrame.size,
+        new ConnectionsBytesRcvdTags(
+            channel.hostPort || '0.0.0.0:0',
+            self.connection.socketRemoteAddr
+        )
+    ));
+
 };
 
 TChannelV2Handler.prototype.handleCallResponseCont = function handleCallResponseCont(resFrame, callback) {
@@ -368,15 +473,28 @@ TChannelV2Handler.prototype.handleCallResponseCont = function handleCallResponse
     }
 
     var req = self.connection.ops.getOutReq(res.id);
-    self.connection.channel.inboundResponseSizeStat.increment(resFrame.size, {
-        'calling-service': !req ? null : req.headers.cn,
-        'service': !req ? null : req.serviceName,
-        'endpoint': !req ? null : String(req.arg1)
-    });
-    self.connection.channel.connectionsBytesRcvdStat.increment(resFrame.size, {
-        'host-port': self.connection.channel.hostPort || '0.0.0.0:0',
-        'peer-host-port': self.connection.socketRemoteAddr
-    });
+    var channel = self.connection.channel;
+
+    channel.emitFastStat(channel.buildStat(
+        'inbound.response.size',
+        'counter',
+        resFrame.size,
+        new InboundResponseSizeTags(
+            req ? req.headers.cn : '',
+            req ? req.serviceName : '',
+            req ? req.endpoint : ''
+        )
+    ));
+
+    channel.emitFastStat(channel.buildStat(
+        'connections.bytes-recvd',
+        'counter',
+        resFrame.size,
+        new ConnectionsBytesRcvdTags(
+            channel.hostPort || '0.0.0.0:0',
+            self.connection.socketRemoteAddr
+        )
+    ));
 
     self._handleCallFrame(res, resFrame, callback);
 };
@@ -482,7 +600,8 @@ TChannelV2Handler.prototype.sendInitResponse = function sendInitResponse(reqFram
     self.pushFrame(resFrame);
 };
 
-TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame(req, flags, args) {
+TChannelV2Handler.prototype.sendCallRequestFrame =
+function sendCallRequestFrame(req, flags, args) {
     var self = this;
     if (self.remoteName === null) {
         self.errorEvent.emit(self, errors.SendCallReqBeforeIdentifiedError());
@@ -490,17 +609,52 @@ TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame
     }
     var reqBody = new v2.CallRequest(
         flags, req.ttl, req.tracing, req.serviceName, req.headers,
-        req.checksum.type, args);
-    var message;
+        req.checksum.type, args
+    );
 
+    self.verifyCallRequestFrame(req);
+
+    var result = self._sendCallBodies(req.id, reqBody, null);
+    req.checksum = result.checksum;
+
+    var channel = self.connection.channel;
+
+    channel.emitFastStat(channel.buildStat(
+        'outbound.request.size',
+        'counter',
+        result.size,
+        new OutboundRequestSizeTags(
+            req.serviceName,
+            req.headers.cn,
+            req.endpoint
+        )
+    ));
+
+    channel.emitFastStat(channel.buildStat(
+        'connections.bytes-sent',
+        'counter',
+        result.size,
+        new ConnectionsBytesSentTags(
+            channel.hostPort || '0.0.0.0:0',
+            self.connection.socketRemoteAddr
+        )
+    ));
+};
+
+TChannelV2Handler.prototype.verifyCallRequestFrame =
+function verifyCallRequestFrame(req) {
+    var self = this;
+
+    var message;
     if (self.requireAs) {
         message = 'Expected the "as" transport header to be set for request\n' +
-            'Got request for ' + req.serviceName + ' ' + String(args[0]) + ' without as header';
+            'Got request for ' + req.serviceName + ' ' + req.endpoint +
+            ' without as header';
 
         assert(req.headers && req.headers.as, message);
     } else if (!req.headers || !req.headers.as) {
         self.logger.error('Expected "as" header to be set for request', {
-            arg1: String(args[0]),
+            arg1: req.endpoint,
             callerName: req.headers && req.headers.cn,
             remoteName: self.remoteName,
             serviceName: req.serviceName,
@@ -510,30 +664,44 @@ TChannelV2Handler.prototype.sendCallRequestFrame = function sendCallRequestFrame
 
     if (self.requireCn) {
         message = 'Expected the "cn" transport header to be set for request\n' +
-            'Got request for ' + req.serviceName + ' ' + String(args[0]) + ' without cn header';
+            'Got request for ' + req.serviceName + ' ' + req.endpoint +
+            ' without cn header';
 
         assert(req.headers && req.headers.cn, message);
     } else if (!req.headers || !req.headers.cn) {
         self.logger.error('Expected "cn" header to be set for request', {
-            arg1: String(args[0]),
+            arg1: req.endpoint,
             remoteName: self.remoteName,
             serviceName: req.serviceName,
             socketRemoteAddr: self.connection.socketRemoteAddr
         });
     }
-
-    var result = self._sendCallBodies(req.id, reqBody, null);
-    req.checksum = result.checksum;
-    self.connection.channel.outboundRequestSizeStat.increment(result.size, {
-        'target-service': req.serviceName,
-        'service': req.headers.cn,
-        'target-endpoint': String(args[0])
-    });
-    self.connection.channel.connectionsBytesSentStat.increment(result.size, {
-        'host-port': self.connection.channel.hostPort || '0.0.0.0:0',
-        'peer-host-port': self.connection.socketRemoteAddr
-    });
 };
+
+function OutboundRequestSizeTags(serviceName, cn, endpoint) {
+    var self = this;
+
+    self.app = null;
+    self.host = null;
+    self.cluster = null;
+    self.version = null;
+
+    self.targetService = serviceName;
+    self.service = cn;
+    self.targetEndpoint = endpoint;
+}
+
+function ConnectionsBytesSentTags(hostPort, peer) {
+    var self = this;
+
+    self.app = null;
+    self.host = null;
+    self.cluster = null;
+    self.version = null;
+
+    self.hostPort = hostPort;
+    self.peerHostPort = peer;
+}
 
 TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFrame(res, flags, args) {
     var self = this;
@@ -541,35 +709,70 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
         self.errorEvent.emit(self, errors.SendCallResBeforeIdentifiedError());
         return;
     }
+
     var code = res.ok ? v2.CallResponse.Codes.OK : v2.CallResponse.Codes.Error;
     var resBody = new v2.CallResponse(
         flags, code, res.tracing, res.headers,
         res.checksum.type, args);
+
+    self.validateCallResponseFrame(res);
+
+    var result = self._sendCallBodies(res.id, resBody, null);
+    res.checksum = result.checksum;
+
+    var channel = self.connection.channel;
+
+    var req = res.inreq;
+    channel.emitFastStat(channel.buildStat(
+        'outbound.response.size',
+        'counter',
+        result.size,
+        new OutboundResponseSizeTags(
+            req.serviceName,
+            req.headers.cn,
+            req.endpoint
+        )
+    ));
+
+    channel.emitFastStat(channel.buildStat(
+        'connections.bytes-sent',
+        'counter',
+        result.size,
+        new ConnectionsBytesSentTags(
+            channel.hostPort || '0.0.0.0:0',
+            self.connection.socketRemoteAddr
+        )
+    ));
+};
+
+function OutboundResponseSizeTags(serviceName, cn, endpoint) {
+    var self = this;
+
+    self.app = null;
+    self.host = null;
+    self.cluster = null;
+    self.version = null;
+
+    self.targetService = serviceName;
+    self.service = cn;
+    self.targetEndpoint = endpoint;
+}
+
+TChannelV2Handler.prototype.validateCallResponseFrame =
+function validateCallResponseFrame(res) {
+    var self = this;
 
     if (self.requireAs) {
         assert(res.headers && res.headers.as,
             'Expected the "as" transport header to be set for response');
     } else if (!res.headers || !res.headers.as) {
         self.logger.error('Expected "as" header to be set for response', {
-            code: code,
+            code: res.code,
             remoteName: self.remoteName,
-            arg1: String(args[0]),
+            arg1: self.inreq.endpoint,
             socketRemoteAddr: self.connection.socketRemoteAddr
         });
     }
-
-    var result = self._sendCallBodies(res.id, resBody, null);
-    res.checksum = result.checksum;
-    var req = self.connection.ops.getInReq(res.id);
-    self.connection.channel.outboundResponseSizeStat.increment(result.size, {
-        'target-service': !req ? null : req.serviceName,
-        'service': !req ? null : req.headers.cn,
-        'target-endpoint': !req ? null : String(req.arg1)
-    });
-    self.connection.channel.connectionsBytesSentStat.increment(result.size, {
-        'host-port': self.connection.channel.hostPort || '0.0.0.0:0',
-        'peer-host-port': self.connection.socketRemoteAddr
-    });
 };
 
 TChannelV2Handler.prototype.sendCallRequestContFrame = function sendCallRequestContFrame(req, flags, args) {
@@ -583,15 +786,28 @@ TChannelV2Handler.prototype.sendCallRequestContFrame = function sendCallRequestC
     req.checksum = result.checksum;
 
     var req0 = self.connection.ops.getOutReq(req.id);
-    self.connection.channel.outboundRequestSizeStat.increment(result.size, {
-        'target-service': !req0 ? null : req0.serviceName,
-        'service': !req0 ? null : req0.headers.cn,
-        'target-endpoint': !req0 ? null : String(req0.arg1)
-    });
-    self.connection.channel.connectionsBytesSentStat.increment(result.size, {
-        'host-port': self.connection.channel.hostPort || '0.0.0.0:0',
-        'peer-host-port': self.connection.socketRemoteAddr
-    });
+
+    var channel = self.connection.channel;
+    channel.emitFastStat(channel.buildStat(
+        'outbound.request.size',
+        'counter',
+        result.size,
+        new OutboundRequestSizeTags(
+            req0 ? req0.serviceName : '',
+            req0 ? req0.headers.cn : '',
+            req0 ? req.endpoint : ''
+        )
+    ));
+
+    channel.emitFastStat(channel.buildStat(
+        'connections.bytes-sent',
+        'counter',
+        result.size,
+        new ConnectionsBytesSentTags(
+            channel.hostPort || '0.0.0.0:0',
+            self.connection.socketRemoteAddr
+        )
+    ));
 };
 
 TChannelV2Handler.prototype.sendCallResponseContFrame = function sendCallResponseContFrame(res, flags, args) {
@@ -603,16 +819,30 @@ TChannelV2Handler.prototype.sendCallResponseContFrame = function sendCallRespons
     var resBody = new v2.CallResponseCont(flags, res.checksum.type, args);
     var result = self._sendCallBodies(res.id, resBody, res.checksum);
     res.checksum = result.checksum;
-    var req = self.connection.ops.getInReq(res.id);
-    self.connection.channel.outboundResponseSizeStat.increment(result.size, {
-        'target-service': !req ? null : req.serviceName,
-        'service': !req ? null : req.headers.cn,
-        'target-endpoint': !req ? null : String(req.arg1)
-    });
-    self.connection.channel.connectionsBytesSentStat.increment(result.size, {
-        'host-port': self.connection.channel.hostPort || '0.0.0.0:0',
-        'peer-host-port': self.connection.socketRemoteAddr
-    });
+
+    var req = res.inreq;
+    var channel = self.connection.channel;
+
+    channel.emitFastStat(channel.buildStat(
+        'outbound.response.size',
+        'counter',
+        result.size,
+        new OutboundResponseSizeTags(
+            req.serviceName,
+            req.headers.cn,
+            req.endpoint
+        )
+    ));
+
+    channel.emitFastStat(channel.buildStat(
+        'connections.bytes-sent',
+        'counter',
+        result.size,
+        new ConnectionsBytesSentTags(
+            channel.hostPort || '0.0.0.0:0',
+            self.connection.socketRemoteAddr
+        )
+    ));
 };
 
 TChannelV2Handler.prototype._sendCallBodies = function _sendCallBodies(id, body, checksum) {
@@ -622,14 +852,25 @@ TChannelV2Handler.prototype._sendCallBodies = function _sendCallBodies(id, body,
     var size = 0;
     // jshint boss:true
     do {
-        if (checksum) body.csum = checksum;
+        if (checksum) {
+            body.csum = checksum;
+        }
+
         frame = new v2.Frame(id, body);
         self.pushFrame(frame);
         size += frame.size;
         checksum = body.csum;
     } while (body = body.cont);
-    return {checksum: checksum, size: size};
+
+    return new CallBodiesResult(checksum, size);
 };
+
+function CallBodiesResult(checksum, size) {
+    var self = this;
+
+    self.checksum = checksum;
+    self.size = size;
+}
 
 TChannelV2Handler.prototype.sendPingRequest = function sendPingRequest() {
     var self = this;

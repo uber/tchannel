@@ -103,157 +103,91 @@ function getKey(stat) {
     var prefix = 'tchannel.' + stat.name;
     switch (stat.name) {
         // outbound
-        case 'outbound.calls.sent':
-            return prefix + '.' +
-                clean(stat.tags.service, 'service') + '.' +
-                clean(stat.tags['target-service'], 'target-service') + '.' +
-                clean(stat.tags['target-endpoint'], 'no-endpoint');
-
         case 'outbound.calls.success':
+        case 'outbound.calls.latency':
+        case 'outbound.response.size':
+        case 'outbound.calls.sent':
+        case 'outbound.request.size':
             return prefix + '.' +
-                clean(stat.tags.service, 'service') + '.' +
-                clean(stat.tags['target-service'], 'target-service') + '.' +
-                clean(stat.tags['target-endpoint'], 'no-endpoint');
-
-        case 'outbound.calls.system-errors':
-            return prefix + '.' +
-                clean(stat.tags.service, 'service') + '.' +
-                clean(stat.tags['target-service'], 'target-service') + '.' +
-                clean(stat.tags['target-endpoint'], 'endpoint') + '.' +
-                clean(stat.tags.type, 'no-type');
-
-        case 'outbound.calls.per-attempt.system-errors':
-            return prefix + '.' +
-                clean(stat.tags.service, 'service') + '.' +
-                clean(stat.tags['target-service'], 'target-service') + '.' +
-                clean(stat.tags['target-endpoint'], 'endpoint') + '.' +
-                clean(stat.tags.type, 'type') + '.' +
-                stat.tags['retry-count'];
-
-        case 'outbound.calls.operational-errors':
-            return prefix + '.' +
-                clean(stat.tags.service, 'service') + '.' +
-                clean(stat.tags['target-service'], 'target-service') + '.' +
-                clean(stat.tags['target-endpoint'], 'endpoint') + '.' +
-                clean(stat.tags.type, 'no-type');
-
-        case 'outbound.calls.per-attempt.operational-errors':
-            return prefix + '.' +
-                clean(stat.tags.service, 'service') + '.' +
-                clean(stat.tags['target-service'], 'target-service') + '.' +
-                clean(stat.tags['target-endpoint'], 'endpoint') + '.' +
-                clean(stat.tags.type, 'type') + '.' +
-                stat.tags['retry-count'];
+                clean(stat.tags.service, 'no-service') + '.' +
+                clean(stat.tags.targetService, 'no-target-service') + '.' +
+                clean(stat.tags.targetEndpoint, 'no-endpoint');
 
         case 'outbound.calls.app-errors':
             return prefix + '.' +
-                clean(stat.tags.service, 'service') + '.' +
-                clean(stat.tags['target-service'], 'target-service') + '.' +
-                clean(stat.tags['target-endpoint'], 'endpoint') + '.' +
+                clean(stat.tags.service, 'no-service') + '.' +
+                clean(stat.tags.targetService, 'no-target-service') + '.' +
+                clean(stat.tags.targetEndpoint, 'no-endpoint') + '.' +
                 clean(stat.tags.type, 'no-type');
+
+        case 'outbound.calls.system-errors':
+        case 'outbound.calls.operational-errors':
+            return prefix + '.' +
+                clean(stat.tags.service, 'no-service') + '.' +
+                clean(stat.tags['target-service'], 'no-target-service') + '.' +
+                clean(stat.tags['target-endpoint'], 'no-endpoint') + '.' +
+                clean(stat.tags.type, 'no-type');
+
+        case 'outbound.calls.per-attempt.system-errors':
+        case 'outbound.calls.per-attempt.operational-errors':
+            return prefix + '.' +
+                clean(stat.tags.service, 'no-service') + '.' +
+                clean(stat.tags['target-service'], 'no-target-service') + '.' +
+                clean(stat.tags['target-endpoint'], 'no-endpoint') + '.' +
+                clean(stat.tags.type, 'no-type') + '.' +
+                stat.tags['retry-count'];
 
         case 'outbound.calls.per-attempt.app-errors':
             return prefix + '.' +
-                clean(stat.tags.service, 'service') + '.' +
-                clean(stat.tags['target-service'], 'target-service') + '.' +
-                clean(stat.tags['target-endpoint'], 'endpoint') + '.' +
-                clean(stat.tags.type, 'type') + '.' +
-                stat.tags['retry-count'];
+                clean(stat.tags.service, 'no-service') + '.' +
+                clean(stat.tags.targetService, 'no-target-service') + '.' +
+                clean(stat.tags.targetEndpoint, 'no-endpoint') + '.' +
+                clean(stat.tags.type, 'no-type') + '.' +
+                stat.tags.retryCount;
 
         case 'outbound.calls.retries':
             return prefix + '.' +
-                clean(stat.tags.service, 'service') + '.' +
-                clean(stat.tags['target-service'], 'target-service') + '.' +
-                clean(stat.tags['target-endpoint'], 'endpoint') + '.' +
+                clean(stat.tags.service, 'no-service') + '.' +
+                clean(stat.tags['target-service'], 'no-target-service') + '.' +
+                clean(stat.tags['target-endpoint'], 'no-endpoint') + '.' +
                 stat.tags['retry-count'];
-
-        case 'outbound.request.size':
-            return prefix + '.' +
-                clean(stat.tags.service, 'service') + '.' +
-                clean(stat.tags['target-service'], 'target-service') + '.' +
-                clean(stat.tags['target-endpoint'], 'no-endpoint');
-
-        case 'outbound.response.size':
-            return prefix + '.' +
-                clean(stat.tags.service, 'service') + '.' +
-                clean(stat.tags['target-service'], 'target-service') + '.' +
-                clean(stat.tags['target-endpoint'], 'no-endpoint');
-
-        case 'outbound.calls.latency':
-            return prefix + '.' +
-                clean(stat.tags.service, 'service') + '.' +
-                clean(stat.tags['target-service'], 'target-service') + '.' +
-                clean(stat.tags['target-endpoint'], 'no-endpoint');
 
         case 'outbound.calls.per-attempt-latency':
             return prefix + '.' +
-                clean(stat.tags.service, 'service') + '.' +
-                clean(stat.tags['target-service'], 'target-service') + '.' +
-                clean(stat.tags['target-endpoint'], 'endpoint') + '.' +
-                stat.tags['retry-count'];
+                clean(stat.tags.service, 'no-service') + '.' +
+                clean(stat.tags.targetService, 'no-target-service') + '.' +
+                clean(stat.tags.targetEndpoint, 'no-endpoint') + '.' +
+                stat.tags.retryCount;
 
         // inbound
         case 'inbound.calls.recvd':
-            return prefix + '.' +
-                clean(stat.tags['calling-service'], 'calling-service') + '.' +
-                clean(stat.tags.service, 'service') + '.' +
-                clean(stat.tags.endpoint, 'no-endpoint');
-
+        case 'inbound.request.size':
+        case 'inbound.response.size':
         case 'inbound.calls.success':
+        case 'inbound.calls.latency':
             return prefix + '.' +
-                clean(stat.tags['calling-service'], 'calling-service') + '.' +
-                clean(stat.tags.service, 'service') + '.' +
+                clean(stat.tags.callingService, 'no-calling-service') + '.' +
+                clean(stat.tags.service, 'no-service') + '.' +
                 clean(stat.tags.endpoint, 'no-endpoint');
-
-        case 'inbound.calls.system-errors':
-            return prefix + '.' +
-                clean(stat.tags['calling-service'], 'calling-service') + '.' +
-                clean(stat.tags.service, 'service') + '.' +
-                clean(stat.tags.endpoint, 'endpoint') + '.' +
-                clean(stat.tags.type, 'no-type');
 
         case 'inbound.calls.app-errors':
             return prefix + '.' +
-                clean(stat.tags['calling-service'], 'calling-service') + '.' +
-                clean(stat.tags.service, 'service') + '.' +
-                clean(stat.tags.endpoint, 'endpoint') + '.' +
+                clean(stat.tags.callingService, 'no-calling-service') + '.' +
+                clean(stat.tags.service, 'no-service') + '.' +
+                clean(stat.tags.endpoint, 'no-endpoint') + '.' +
                 clean(stat.tags.type, 'no-type');
 
-        case 'inbound.request.size':
+        case 'inbound.calls.system-errors':
             return prefix + '.' +
-                clean(stat.tags['calling-service'], 'calling-service') + '.' +
-                clean(stat.tags.service, 'service') + '.' +
-                clean(stat.tags.endpoint, 'no-endpoint');
-
-        case 'inbound.response.size':
-            return prefix + '.' +
-                clean(stat.tags['calling-service'], 'calling-service') + '.' +
-                clean(stat.tags.service, 'service') + '.' +
-                clean(stat.tags.endpoint, 'no-endpoint');
+                clean(stat.tags['calling-service'], 'no-calling-service') + '.' +
+                clean(stat.tags.service, 'no-service') + '.' +
+                clean(stat.tags.endpoint, 'no-endpoint') + '.' +
+                clean(stat.tags.type, 'no-type');
 
         case 'inbound.protocol-errors':
-            return prefix + '.' +
-                cleanHostPort(stat.tags['peer-host-port'], 'peer-host-port');
-
-        case 'inbound.calls.latency':
-            return prefix + '.' +
-                clean(stat.tags['calling-service'], 'calling-service') + '.' +
-                clean(stat.tags.service, 'service') + '.' +
-                clean(stat.tags.endpoint, 'no-endpoint');
-
-        // connection
         case 'connections.active':
-            return prefix + '.' +
-                cleanHostPort(stat.tags['peer-host-port'], 'no-peer-host-port');
-
         case 'connections.initiated':
-            return prefix + '.' +
-                cleanHostPort(stat.tags['peer-host-port'], 'no-peer-host-port');
-
         case 'connections.connect-errors':
-            return prefix + '.' +
-                cleanHostPort(stat.tags['peer-host-port'], 'no-peer-host-port');
-
         case 'connections.accepted':
             return prefix + '.' +
                 cleanHostPort(stat.tags['peer-host-port'], 'no-peer-host-port');
@@ -273,12 +207,9 @@ function getKey(stat) {
                 clean(stat.tags.reason, 'no-reason');
 
         case 'connections.bytes-sent':
-            return prefix + '.' +
-                cleanHostPort(stat.tags['peer-host-port'], 'no-peer-host-port');
-
         case 'connections.bytes-recvd':
             return prefix + '.' +
-                cleanHostPort(stat.tags['peer-host-port'], 'no-peer-host-port');
+                cleanHostPort(stat.tags.peerHostPort, 'no-peer-host-port');
 
         // other types
         default:
@@ -291,22 +222,17 @@ TChannelStatsd.prototype.onStat = function onStat(stat) {
 
     var key = getKey(stat);
 
-    switch (stat.type) {
-        case 'counter':
-            return self.statsd.increment(key, stat.value);
-
-        case 'gauge':
-            return self.statsd.gauge(key, stat.value);
-
-        case 'timing':
-            return self.statsd.timing(key, stat.value);
-
-        default:
-            self.channel.logger.error('Trying to emit an invalid stat object', {
-                statType: stat.type,
-                statName: stat.name
-            });
-            break;
+    if (stat.type === 'counter') {
+        return self.statsd.increment(key, stat.value);
+    } else if (stat.type === 'gauge') {
+        return self.statsd.gauge(key, stat.value);
+    } else if (stat.type === 'timing') {
+        return self.statsd.timing(key, stat.value);
+    } else {
+        self.channel.logger.error('Trying to emit an invalid stat object', {
+            statType: stat.type,
+            statName: stat.name
+        });
     }
 };
 
