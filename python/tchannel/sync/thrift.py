@@ -26,6 +26,44 @@ from tchannel.thrift.client import client_for as async_client_for
 
 
 def client_for(service, service_module, thrift_service_name=None):
+    """Build a sync client class for the given Thrift service.
+
+    The generated class accepts a TChannelSyncClient and an optional
+    hostport as initialization arguments.
+
+    Given ``CommentService`` defined in ``comment.thrift`` and registered
+    with Hyperbahn under the name "comment", here's how this might be used:
+
+    .. code-block:: python
+
+        from tchannel.sync import TChannelSyncClient
+        from tchannel.sync.thrift import client_for
+
+        from comment import CommentService
+
+        CommentServiceClient = client_for('comment', CommentService)
+
+        tchannel_sync = TChannelSyncClient('my-service')
+        comment_client = CommentServiceClient(tchannel_sync)
+
+        future = comment_client.postComment(
+            articleId,
+            CommendService.Comment("hi")
+        )
+        result = future.result()
+
+    :param service:
+        Name of the HyperBahn service being called.
+    :param service_module:
+        The Thrift-generated module for that service. This usually has
+        the same name as definied for the service in the IDL.
+    :param thrift_service_name:
+        If the Thrift service has a different name than its module, use
+        this parameter to specify it.
+    :returns:
+        An Thrift-like class, ready to be instantiated and used
+        with TChannelSyncClient.
+    """
     assert service_module, 'service_module is required'
     service = service or ''  # may be blank for non-hyperbahn use cases
     if not thrift_service_name:
@@ -64,8 +102,20 @@ def client_for(service, service_module, thrift_service_name=None):
 
 
 def generate_method(method_name):
+    """Generate a method for a given Thrift service.
+
+    Uses the provided TChannelSyncClient's threadloop in order
+    to convert RPC calls to concurrent.futures
+
+    :param method_name: Method being called.
+    :return: A method that invokes the RPC using TChannelSyncClient
+    """
 
     def send(self, *args, **kwargs):
+        """Forward RPC call to TChannelSyncClient
+
+        :return concurrent.futures.Future:
+        """
         return self.threadloop.submit(
             getattr(self.async_thrift, method_name), *args, **kwargs
         )
