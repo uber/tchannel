@@ -79,7 +79,7 @@ class ZipkinTraceHook(EventHook):
         response.tracing.annotations.append(ann)
         self.tracer.record([(response.tracing, response.tracing.annotations)])
 
-    def after_receive_system_error(self, request, error):
+    def after_receive_error(self, request, error):
         if not error.tracing.traceflags:
             return
 
@@ -87,7 +87,7 @@ class ZipkinTraceHook(EventHook):
         error.tracing.annotations.append(ann)
         self.tracer.record([(error.tracing, error.tracing.annotations)])
 
-    def after_send_system_error(self, error):
+    def after_send_error(self, error):
         if not error.tracing.traceflags:
             return
 

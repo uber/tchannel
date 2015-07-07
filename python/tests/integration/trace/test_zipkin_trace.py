@@ -88,7 +88,10 @@ def test_zipkin_trace(trace_server):
     response = yield tchannel.request(hostport).send(InMemStream(endpoint),
                                                      InMemStream(hostport),
                                                      InMemStream(),
-                                                     traceflag=True)
+                                                     traceflag=True,
+                                                     ttl=4,
+                                                     attempt_times=3,
+                                                     retry_delay=0.0001,)
     header = yield response.get_header()
     body = yield response.get_body()
     assert header == "from handler1"
@@ -98,6 +101,7 @@ def test_zipkin_trace(trace_server):
         if trace:
             traces.append(json.loads(trace))
 
+    print traces
     trace_id = traces[0][0][u'trace_id']
     for trace in traces:
         assert trace_id == trace[0][u'trace_id']

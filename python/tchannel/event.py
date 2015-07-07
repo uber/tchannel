@@ -40,11 +40,9 @@ EventType = enum(
     after_receive_request=0x21,
     before_receive_response=0x30,
     after_receive_response=0x31,
-    after_receive_system_error=0x40,
-    after_receive_system_error_per_attempt=0x41,
-    after_send_system_error=0x42,
-    on_operational_error=0x50,
-    on_operational_error_per_attempt=0x51,
+    after_receive_error_response=0x40,
+    after_send_error_response=0x41,
+    on_outbound_error=0x50,
 )
 
 
@@ -93,24 +91,16 @@ class EventHook(object):
         """Called after a ``CALL_RESP`` message is read."""
         pass
 
-    def after_receive_system_error(self, request, err):
+    def after_receive_error_response(self, request, err):
         """Called after a ``error`` message is read."""
         pass
 
-    def after_send_system_error(self, err):
+    def after_send_error_response(self, err):
         """Called after a ``error`` message is sent."""
         pass
 
-    def after_receive_system_error_per_attempt(self, request, err):
-        """Called after a ``error`` message is read for each attempt."""
-        pass
-
-    def on_operational_error(self, request, err):
+    def on_outbound_error(self, request, err):
         """Called after an operational error happens per request."""
-        pass
-
-    def on_operational_error_per_attempt(self, request, err):
-        """Called after an operational error happens for each attempt."""
         pass
 
 

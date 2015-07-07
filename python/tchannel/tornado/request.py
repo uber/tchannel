@@ -67,27 +67,11 @@ class Request(object):
         self.headers = headers or {}
         self.state = StreamState.init
         self.scheme = scheme
-
-        self.is_streaming_request = self._is_streaming_request()
-        if not self.is_streaming_request:
-            self._copy_argstreams = [
-                self.argstreams[0].clone(),
-                self.argstreams[1].clone(),
-                self.argstreams[2].clone(),
-            ]
-
+        self._is_streaming_request = self.is_streaming_request(
+            self.argstreams[1],
+            self.argstreams[2],
+        )
         self.endpoint = endpoint or ""
-
-    def rewind(self, id=None):
-        self.id = id
-        if not self.is_streaming_request:
-            self.argstreams = [
-                self._copy_argstreams[0].clone(),
-                self._copy_argstreams[1].clone(),
-                self._copy_argstreams[2].clone(),
-            ]
-        self.state = StreamState.init
-        self.tracing = Trace()
 
     @property
     def arg_scheme(self):
@@ -144,10 +128,9 @@ class Request(object):
         """
         return self.argstreams[2]
 
-    def _is_streaming_request(self):
+    @staticmethod
+    def is_streaming_request(arg2, arg3):
         """check request is stream request or not"""
-        arg2 = self.argstreams[1]
-        arg3 = self.argstreams[2]
         return not (isinstance(arg2, InMemStream) and
                     isinstance(arg3, InMemStream) and
                     ((arg2.auto_close and arg3.auto_close) or (
@@ -161,7 +144,7 @@ class Request(object):
             ProtocolException that returns from Server
         """
 
-        if self.is_streaming_request:
+        if self._is_streaming_request:
             # not retry for streaming request
             return False
 

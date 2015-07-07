@@ -73,7 +73,6 @@ def advertise(tchannel, service, routers):
             }),
             headers={'as': 'json'},
         )
-
         if response.code not in ErrorCode:
             # re-register every ``DEFAULT_TTL`` seconds
             tornado.ioloop.IOLoop.current().call_later(

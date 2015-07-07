@@ -54,7 +54,7 @@ class StatsdHook(EventHook):
 
         self._statsd.count(key, 1)
 
-    def after_receive_system_error(self, request, error):
+    def after_receive_error_response(self, request, error):
         statsd_name = "tchannel.outbound.calls.system-errors"
         prefix = common_prefix(statsd_name, request)
         key = prefix + '.' + clean(
@@ -63,25 +63,7 @@ class StatsdHook(EventHook):
 
         self._statsd.count(key, 1)
 
-    def after_receive_system_error_per_attempt(self, request, error):
-        statsd_name = "tchannel.outbound.calls.per-attempt.system-errors"
-        prefix = common_prefix(statsd_name, request)
-        key = prefix + '.' + clean(
-            ErrorMessage.ERROR_CODES.get(error.code, None), 'type'
-        )
-
-        self._statsd.count(key, 1)
-
-    def on_operational_error_per_attempt(self, request, error):
-        statsd_name = "tchannel.outbound.calls.per-attempt.operational-errors"
-        prefix = common_prefix(statsd_name, request)
-        key = prefix + '.' + clean(
-            ErrorMessage.ERROR_CODES.get(error.code, None), 'type'
-        )
-
-        self._statsd.count(key, 1)
-
-    def on_operational_error(self, request, error):
+    def on_outbound_error(self, request, error):
         statsd_name = "tchannel.outbound.calls.operational-errors"
 
         prefix = common_prefix(statsd_name, request)
