@@ -45,15 +45,17 @@ type Res struct {
 }
 
 type testHandler struct {
-	calls []string
-	peer  *tchannel.Peer
-	t     *testing.T
+	calls   []string
+	callers []string
+	peer    *tchannel.Peer
+	t       *testing.T
 }
 
 func (h *testHandler) forward(ctx Context, args *ForwardArgs) (*Res, error) {
 	headerVal := ctx.Headers().(string)
 	ctx.SetResponseHeaders(headerVal + "-resp")
 	h.calls = append(h.calls, "forward-"+headerVal)
+	h.callers = append(h.callers, tchannel.CurrentCall(ctx).CallerName())
 
 	ctx = WithHeaders(ctx, args.HeaderVal)
 	res := &Res{}
@@ -78,6 +80,7 @@ func (h *testHandler) forward(ctx Context, args *ForwardArgs) (*Res, error) {
 func (h *testHandler) leaf(ctx Context, _ *struct{}) (*Res, error) {
 	headerVal := ctx.Headers().(string)
 	h.calls = append(h.calls, "leaf-"+headerVal)
+	h.callers = append(h.callers, tchannel.CurrentCall(ctx).CallerName())
 	return &Res{"leaf called!"}, nil
 }
 
@@ -120,10 +123,22 @@ func TestForwardChain(t *testing.T) {
 	curArg.HeaderVal = "11"
 	curArg.Method = "leaf"
 
-	expectedCalls := map[string][]string{
-		"serv1": {"forward-initial", "forward-3", "forward-6", "forward-9"},
-		"serv2": {"forward-1", "forward-4", "forward-7", "forward-10"},
-		"serv3": {"forward-2", "forward-5", "forward-8", "leaf-11"},
+	expectedCalls := map[string]struct {
+		calls   []string
+		callers []string
+	}{
+		"serv1": {
+			calls:   []string{"forward-initial", "forward-3", "forward-6", "forward-9"},
+			callers: []string{"serv3", "serv3", "serv3", "serv3"},
+		},
+		"serv2": {
+			calls:   []string{"forward-1", "forward-4", "forward-7", "forward-10"},
+			callers: []string{"serv1", "serv1", "serv1", "serv1"},
+		},
+		"serv3": {
+			calls:   []string{"forward-2", "forward-5", "forward-8", "leaf-11"},
+			callers: []string{"serv2", "serv2", "serv2", "serv2"},
+		},
 	}
 
 	// Use the above data to setup the test and ensure the calls are made as expected.
@@ -147,13 +162,15 @@ func TestForwardChain(t *testing.T) {
 	ctx, cancel := NewContext(time.Second)
 	defer cancel()
 	ctx = WithHeaders(ctx, "initial")
+	assert.Nil(t, tchannel.CurrentCall(ctx))
 
 	sc := servers["serv3"].channel.GetSubChannel("serv1")
 	resp := &Res{}
 	if assert.NoError(t, CallSC(ctx, sc, "forward", rootArg, resp)) {
 		assert.Equal(t, "leaf called!", resp.Result)
-		for s, calls := range expectedCalls {
-			assert.Equal(t, calls, servers[s].handler.calls)
+		for s, expected := range expectedCalls {
+			assert.Equal(t, expected.calls, servers[s].handler.calls, "wrong calls for %v", s)
+			assert.Equal(t, expected.callers, servers[s].handler.callers, "wrong callers for %v", s)
 		}
 	}
 }

@@ -48,7 +48,8 @@ func (c *Connection) handleCallReq(frame *Frame) bool {
 	}
 
 	c.log.Debugf("span=%s", callReq.Tracing)
-	ctx, cancel := newIncomingContext(callReq.TimeToLive, &callReq.Tracing)
+	call := new(InboundCall)
+	ctx, cancel := newIncomingContext(call, callReq.TimeToLive, &callReq.Tracing)
 
 	mex, err := c.inbound.newExchange(ctx, c.framePool, callReq.messageType(), frame.Header.ID, 512)
 	if err != nil {
@@ -78,7 +79,6 @@ func (c *Connection) handleCallReq(frame *Frame) bool {
 		return new(callResContinue)
 	}
 
-	call := new(InboundCall)
 	call.mex = mex
 	call.initialFragment = initialFragment
 	call.serviceName = string(callReq.Service)

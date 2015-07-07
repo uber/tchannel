@@ -56,6 +56,7 @@ func newTestHandler(t *testing.T) *testHandler {
 func (h *testHandler) Handle(ctx context.Context, args *raw.Args) (*raw.Res, error) {
 	h.format = args.Format
 	h.caller = args.Caller
+	assert.Equal(h.t, args.Caller, CurrentCall(ctx).CallerName())
 
 	switch args.Operation {
 	case "timeout":
