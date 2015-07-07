@@ -5,7 +5,7 @@ Changelog for tchannel.py
 ------------------
 
 - Allow custom handlers for unrecognized endpoints.
-
+- Released `tchannel.sync.TChannelSyncClient` and `tchannel.sync.thrift.client_for`.
 
 0.8.5 (2015-06-30)
 ------------------
