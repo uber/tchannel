@@ -53,6 +53,8 @@ function RelayNetwork(options) {
         self.clusterOptions.timers = self.timers;
     }
 
+    self.servicePurgePeriod = options.servicePurgePeriod;
+
     self.numPeers = self.numRelays + self.serviceNames.length * self.numInstancesPerService;
     self.clusterOptions.numPeers = self.numPeers;
     self.cluster = null;
@@ -91,7 +93,9 @@ RelayNetwork.prototype.bootstrap = function bootstrap(cb) {
 
 RelayNetwork.prototype.close = function close(cb) {
     var self = this;
-
+    self.relayChannels.forEach(function (relayChannel) {
+        relayChannel.handler.close();
+    });
     self.cluster.destroy();
     cb();
 };
@@ -154,6 +158,7 @@ RelayNetwork.prototype.setCluster = function setCluster(cluster) {
             logger: self.cluster.logger,
             statsd: statsd,
             egressNodes: egressNodes,
+            servicePurgePeriod: self.servicePurgePeriod,
             circuits: self.createCircuits({
                 egressNodes: egressNodes,
                 timers: self.timers,
@@ -179,6 +184,7 @@ RelayNetwork.prototype.setCluster = function setCluster(cluster) {
                 serviceObj.serviceName, serviceObj.hostPort
             );
             peer.connect();
+            relayChannel.handler.updateServiceTimestamp(serviceObj.serviceName);
         };
         hyperbahnChannel.handler = hyperbahnHandler;
 
