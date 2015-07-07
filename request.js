@@ -69,6 +69,7 @@ function TChannelRequest(channel, options) {
     self.headers = self.options.headers || {}; // so that as-foo can punch req.headers.X
     self.options.headers = self.headers; // for passing to peer.request(opts) later
 
+    self.endpoint = null;
     self.arg1 = null;
     self.arg2 = null;
     self.arg3 = null;
@@ -148,6 +149,8 @@ TChannelRequest.prototype.choosePeer = function choosePeer() {
 
 TChannelRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     var self = this;
+
+    self.endpoint = String(arg1);
     self.arg1 = arg1;
     self.arg2 = arg2;
     self.arg3 = arg3;
@@ -157,12 +160,7 @@ TChannelRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     self.start = self.timers.now();
     self.resendSanity = self.limit + 1;
 
-    self.channel.outboundCallsSentStat.increment(1, {
-        'target-service': self.serviceName,
-        'service': self.headers.cn,
-        // TODO should always be buffer
-        'target-endpoint': String(self.arg1)
-    });
+    TChannelOutRequest.prototype.emitOutboundCallsSent.call(self);
 
     self.services.onRequest(self);
     self.resend();
