@@ -25,7 +25,6 @@ var RelayRequest = require('./relay_request');
 function RelayHandler(channel) {
     var self = this;
     self.channel = channel;
-    self.reqs = {};
 }
 
 RelayHandler.prototype.type = 'tchannel.relay-handler';
@@ -33,44 +32,25 @@ RelayHandler.prototype.type = 'tchannel.relay-handler';
 RelayHandler.prototype.handleRequest = function handleRequest(req, buildRes) {
     var self = this;
 
-    var reqKey = getReqKey(req);
-    var rereq = self.reqs[reqKey];
+    // TODO add this back in a performant way ??
+    // if (rereq) {
+    //     self.channel.logger.error('relay request already exists for incoming request', {
+    //         inReqId: req.id,
+    //         priorInResId: rereq.inres && rereq.inres.id,
+    //         priorOutResId: rereq.outres && rereq.outres.id,
+    //         priorOutReqId: rereq.outreq && rereq.outreq.id
+    //         // TODO more context, like outreq remote addr
+    //     });
+    //     buildRes().sendError(
+    //         'UnexpectedError', 'request id exists in relay handler'
+    //     );
+    //     return;
+    // }
 
     req.forwardTrace = true;
+    var rereq = new RelayRequest(self.channel, req, buildRes);
 
-    if (rereq) {
-        self.channel.logger.error('relay request already exists for incoming request', {
-            inReqId: req.id,
-            priorInResId: rereq.inres && rereq.inres.id,
-            priorOutResId: rereq.outres && rereq.outres.id,
-            priorOutReqId: rereq.outreq && rereq.outreq.id
-            // TODO more context, like outreq remote addr
-        });
-        buildRes().sendError(
-            'UnexpectedError', 'request id exists in relay handler'
-        );
-        return;
-    }
-
-    rereq = new RelayRequest(self.channel, req, buildRes);
-
-    self.reqs[reqKey] = rereq;
-    rereq.finishEvent.on(rereqFinished);
     rereq.createOutRequest();
-
-    function rereqFinished() {
-        self.clearRequest(reqKey);
-    }
 };
-
-RelayHandler.prototype.clearRequest = function clearRequest(reqKey) {
-    var self = this;
-
-    delete self.reqs[reqKey];
-};
-
-function getReqKey(req) {
-    return req.connection.guid + '~' + req.id;
-}
 
 module.exports = RelayHandler;

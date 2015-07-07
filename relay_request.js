@@ -20,15 +20,10 @@
 
 'use strict';
 
-var inherits = require('util').inherits;
-
-var EventEmitter = require('./lib/event_emitter');
 var errors = require('./errors');
 
 function RelayRequest(channel, inreq, buildRes) {
     var self = this;
-    EventEmitter.call(self);
-    self.finishEvent = self.defineEvent('finish');
 
     self.channel = channel;
     self.inreq = inreq;
@@ -38,7 +33,6 @@ function RelayRequest(channel, inreq, buildRes) {
     self.buildRes = buildRes;
     self.peer = null;
 }
-inherits(RelayRequest, EventEmitter);
 
 RelayRequest.prototype.createOutRequest = function createOutRequest(host) {
     var self = this;
@@ -52,9 +46,16 @@ RelayRequest.prototype.createOutRequest = function createOutRequest(host) {
         return;
     }
 
+    if (self.peer) {
+        self.logger.error('createOutRequest: overwritting peers', {
+            hostPort: self.peer.hostPort
+        });
+    }
+
     self.peer = self.channel.peers.choosePeer(null, {
         host: host
     });
+
     if (!self.peer) {
         self.onError(errors.NoPeerAvailable());
         return;
@@ -75,9 +76,34 @@ RelayRequest.prototype.onIdentified = function onIdentified(err1) {
         return;
     }
 
+    var identified = false;
+    var closing = false;
+    for (var i = 0; i < self.peer.connections.length; i++) {
+        if (self.peer.connections[i].remoteName) {
+            identified = true;
+            closing = self.peer.connections[i].closing;
+            if (!closing) break;
+        }
+    }
+
+    if (!identified) {
+        // we get the problem
+        self.logger.error('onIdentified called on no connection identified', {
+            hostPort: self.peer.hostPort
+        });
+    }
+
+    if (closing) {
+        // most likely
+        self.logger.error('onIdentified called on connection closing', {
+            hostPort: self.peer.hostPort
+        });
+    }
+
     var elapsed = self.channel.timers.now() - self.inreq.start;
     var timeout = Math.max(self.inreq.ttl - elapsed, 1);
     self.outreq = self.peer.request({
+        peer: self.peer,
         streamed: self.inreq.streamed,
         timeout: timeout,
         parent: self.inreq,
@@ -116,7 +142,7 @@ RelayRequest.prototype.createOutResponse = function createOutResponse(options) {
             remoteAddr: self.inreq.remoteAddr,
             id: self.inreq.id
         });
-        return;
+        return null;
     }
 
     // It is possible that the inreq gets reaped with a timeout
@@ -132,16 +158,12 @@ RelayRequest.prototype.createOutResponse = function createOutResponse(options) {
             inRemoteAddr: self.inreq.remoteAddr,
             inSocketRemoteAddr: self.inreq.connection.socketRemoteAddr
         });
-        return;
+        return null;
     }
 
     self.outres = self.buildRes(options);
-    self.outres.finishEvent.on(emitFinish);
-    return self.outres;
 
-    function emitFinish() {
-        self.finishEvent.emit(self);
-    }
+    return self.outres;
 };
 
 RelayRequest.prototype.onResponse = function onResponse(res) {
