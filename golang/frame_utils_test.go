@@ -40,6 +40,11 @@ func NewRecordingFramePool() *RecordingFramePool {
 }
 
 func CheckEmptyExchanges(c *Connection) string {
+	c.inbound.mut.RLock()
+	c.outbound.mut.RLock()
+	defer c.inbound.mut.RUnlock()
+	defer c.outbound.mut.RUnlock()
+
 	if exchangesLeft := len(c.outbound.exchanges) + len(c.inbound.exchanges); exchangesLeft > 0 {
 		return fmt.Sprintf("connection %p had %v leftover exchanges", c, exchangesLeft)
 	}

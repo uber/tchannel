@@ -45,6 +45,7 @@ var (
 
 type testHandler struct {
 	t      *testing.T
+	mut    sync.Mutex
 	format Format
 	caller string
 }
@@ -54,8 +55,11 @@ func newTestHandler(t *testing.T) *testHandler {
 }
 
 func (h *testHandler) Handle(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+	h.mut.Lock()
 	h.format = args.Format
 	h.caller = args.Caller
+	h.mut.Unlock()
+
 	assert.Equal(h.t, args.Caller, CurrentCall(ctx).CallerName())
 
 	switch args.Operation {

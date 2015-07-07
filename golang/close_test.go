@@ -56,10 +56,12 @@ func TestClose(t *testing.T) {
 	const numHandlers = 5
 	handler := &swapper{t}
 	var lock sync.RWMutex
+	var wg sync.WaitGroup
 	var channels []*channelState
 
 	// Start numHandlers servers, and don't close the connections till they are signalled.
 	for i := 0; i < numHandlers; i++ {
+		wg.Add(1)
 		go func() {
 			assert.NoError(t, testutils.WithServer(nil, func(ch *Channel, hostPort string) {
 				ch.Register(raw.Wrap(handler), "test")
@@ -72,6 +74,7 @@ func TestClose(t *testing.T) {
 				lock.Lock()
 				channels = append(channels, chState)
 				lock.Unlock()
+				wg.Done()
 
 				// Wait for a close signal.
 				<-chState.closeCh
@@ -84,7 +87,8 @@ func TestClose(t *testing.T) {
 		}()
 	}
 
-	time.Sleep(time.Millisecond * 100)
+	// Wait till all the channels have been registered.
+	wg.Wait()
 
 	// Start goroutines to make calls until the test has ended.
 	testEnded := make(chan struct{})
@@ -99,14 +103,15 @@ func TestClose(t *testing.T) {
 				}
 
 				// Get 2 random channels and make a call from one to the other.
+				lock.RLock()
 				chState1 := channels[rand.Intn(len(channels))]
 				chState2 := channels[rand.Intn(len(channels))]
 				if chState1 == chState2 {
+					lock.RUnlock()
 					continue
 				}
 
 				// Grab a read lock to make sure channels aren't closed while we call.
-				lock.RLock()
 				ch1Closed := chState1.closed
 				ch2Closed := chState2.closed
 				err := makeCall(chState1.ch, chState2.ch.PeerInfo().HostPort, chState2.ch.PeerInfo().ServiceName)

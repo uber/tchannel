@@ -231,7 +231,12 @@ func (ch *Channel) newConnection(conn net.Conn, initialState connectionState, on
 
 // IsActive returns whether this connection is in an active state.
 func (c *Connection) IsActive() bool {
-	return c.state == connectionActive
+	var isActive bool
+	c.withStateRLock(func() error {
+		isActive = (c.state == connectionActive)
+		return nil
+	})
+	return isActive
 }
 
 func (c *Connection) callOnActive() {
