@@ -430,19 +430,13 @@ TChannelConnection.prototype.buildOutRequest = function buildOutRequest(options)
 
 TChannelConnection.prototype.buildOutResponse = function buildOutResponse(req, options) {
     var self = this;
-    var opts = {
-        logger: self.logger,
-        random: self.random,
-        timers: self.timers
-    };
-    if (options) {
-        // jshint forin:false
-        for (var prop in options) {
-            opts[prop] = options[prop];
-        }
-        // jshint forin:true
-    }
-    return self.handler.buildOutResponse(req, opts);
+
+    options = options || {};
+    options.logger = self.logger;
+    options.random = self.random;
+    options.timers = self.timers;
+
+    return self.handler.buildOutResponse(req, options);
 };
 
 // this connection is completely broken, and is going away
