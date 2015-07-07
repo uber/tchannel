@@ -34,4 +34,5 @@ service Chamber {
         1: NoEchoError noEcho
         2: NoEchoTypedError noEchoTyped
     )
+    i32 echo_big(0: required list<string> value)
 }
