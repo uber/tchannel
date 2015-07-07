@@ -39,7 +39,7 @@ allocCluster.test('relaying to init timeout server', {
 
         var client = cluster.channels[0];
         var relay = cluster.channels[1];
-        relay.initTimeout = 200;
+        relay.initTimeout = 250;
 
         var relayChan = relay.makeSubChannel({
             serviceName: 'dead-service',
@@ -61,7 +61,7 @@ allocCluster.test('relaying to init timeout server', {
 
         clientChan.request({
             hasNoParent: true,
-            timeout: 100
+            timeout: 50
         }).send('echo', '', '', onResponse);
 
         function onResponse(err) {
@@ -87,7 +87,7 @@ allocCluster.test('relaying to init timeout server', {
 
                 deadServer.close();
                 assert.end();
-            }, 200);
+            }, 350);
         }
     }
 });
