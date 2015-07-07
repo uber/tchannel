@@ -101,9 +101,6 @@ def advertise(tchannel, service, routers):
             callback=lambda: _register(attempt_counter),
         )
 
-    tornado.ioloop.IOLoop.current().call_later(
-        delay=0,
-        callback=lambda: _register(0),
-    )
+    tornado.ioloop.IOLoop.current().add_callback(callback=lambda: _register(0))
 
 advertize = advertise  # just in case

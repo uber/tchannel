@@ -5,14 +5,14 @@ Changelog for tchannel.py
 ------------------
 
 - Use threadloop 0.3.* to fix main thread not exiting when `tchannel.sync.TChannelSyncClient` is used.
+- Support exponential backoff in tchannel advertise method.
 
 
-0.9.0 (2015-07-07)
+0.9.0
 ------------------
 
 - Allow custom handlers for unrecognized endpoints.
 - Released `tchannel.sync.TChannelSyncClient` and `tchannel.sync.thrift.client_for`.
-- Support exponential backoff in tchannel advertise method.
 
 
 0.8.5 (2015-06-30)
