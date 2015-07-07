@@ -44,6 +44,7 @@ from ..messages.error import ErrorMessage
 from ..messages.types import Types
 from .message_factory import MessageFactory
 from .message_factory import build_protocol_exception
+from .util import chain
 
 try:
     import tornado.queues as queues  # included in 4.2
@@ -275,7 +276,6 @@ class TornadoConnection(object):
         self.write(message)
         return future
 
-    @tornado.gen.coroutine
     def write(self, message):
         """Writes the given message up the wire.
 
@@ -294,8 +294,8 @@ class TornadoConnection(object):
             message_factory = self.response_message_factory
 
         fragments = message_factory.fragment(message)
-        for fragment in fragments:
-            yield self._write(fragment)
+
+        return chain(fragments, self._write)
 
     def _write(self, message):
         """Writes the given message up the wire.
