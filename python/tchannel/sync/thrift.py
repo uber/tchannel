@@ -26,7 +26,7 @@ from tchannel.thrift.client import client_for as async_client_for
 
 
 def client_for(service, service_module, thrift_service_name=None):
-    """Build a sync client class for the given Thrift service.
+    """Build a synchronous client class for the given Thrift service.
 
     The generated class accepts a TChannelSyncClient and an optional
     hostport as initialization arguments.
@@ -48,12 +48,12 @@ def client_for(service, service_module, thrift_service_name=None):
 
         future = comment_client.postComment(
             articleId,
-            CommendService.Comment("hi")
+            CommentService.Comment("hi")
         )
         result = future.result()
 
     :param service:
-        Name of the HyperBahn service being called.
+        Name of the Hyperbahn service being called.
     :param service_module:
         The Thrift-generated module for that service. This usually has
         the same name as definied for the service in the IDL.

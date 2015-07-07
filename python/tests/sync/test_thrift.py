@@ -41,6 +41,7 @@ def thrift_sync_client(tchannel_server, thrift_service):
 
 @pytest.mark.integration
 def test_call(tchannel_server, thrift_sync_client, thrift_service):
+
     expected = thrift_service.Item(
         key='foo', value=thrift_service.Value(integerValue=42)
     )
