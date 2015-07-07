@@ -358,6 +358,21 @@ function advertise(opts) {
     }
 };
 
+HyperbahnClient.prototype.unadvertise =
+function unadvertise() {
+    var self = this;
+    if (self.state !== States.ADVERTISED) {
+        return;
+    }
+
+    self.destroy();
+    self.latestAdvertisementResult = null;
+    self.state = States.UNADVERTISED;
+    self.tchannel.close(function onClose() {
+        self.emit('unadvertised');
+    });
+};
+
 HyperbahnClient.prototype.getErrorRetryTime = function getErrorRetryTime() {
     var self = this;
 
@@ -392,7 +407,12 @@ function advertiseAgain(delay) {
 
 // ## destroy
 HyperbahnClient.prototype.destroy = function destroy() {
-    this._destroyed = true;
+    var self = this;
+    if (self._destroyed) {
+        return;
+    }
+
+    self._destroyed = true;
     timers.clearTimeout(this._advertisementTimer);
     timers.clearTimeout(this.advertisementTimeoutTimer);
 };
