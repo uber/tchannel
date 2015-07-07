@@ -70,7 +70,7 @@ func TestFramesReleased(t *testing.T) {
 		return
 	}
 
-	testutils.SetTimeout(t, time.Second*10)
+	defer testutils.SetTimeout(t, 10*time.Second)()
 	const (
 		requestsPerGoroutine = 10
 		numGoroutines        = 10

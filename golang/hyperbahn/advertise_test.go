@@ -111,7 +111,7 @@ func (r *retryTest) setAdvertiseFailure() {
 
 func runRetryTest(t *testing.T, f func(r *retryTest)) {
 	r := &retryTest{}
-	testutils.SetTimeout(t, time.Second)
+	defer testutils.SetTimeout(t, time.Second)()
 	r.setup()
 	defer testutils.ResetSleepStub(&timeSleep)
 
