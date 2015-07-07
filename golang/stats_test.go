@@ -60,7 +60,10 @@ func TestStatsCalls(t *testing.T) {
 		StatsReporter: serverStats,
 	}
 	require.NoError(t, testutils.WithServer(serverOpts, func(serverCh *Channel, hostPort string) {
-		serverCh.Register(raw.Wrap(newTestHandler(t)), "echo")
+		handler := raw.Wrap(newTestHandler(t))
+		serverCh.Register(handler, "echo")
+		serverCh.Register(handler, "app-error")
+
 		clientStats := newRecordingStatsReporter()
 		ch, err := testutils.NewClient(&testutils.ChannelOpts{StatsReporter: clientStats})
 		require.NoError(t, err)
@@ -71,21 +74,23 @@ func TestStatsCalls(t *testing.T) {
 		_, _, _, err = raw.Call(ctx, ch, hostPort, testServiceName, "echo", []byte("Headers"), []byte("Body"))
 		require.NoError(t, err)
 
-		_, _, _, err = raw.Call(ctx, ch, hostPort, testServiceName, "error", nil, nil)
-		require.Error(t, err)
+		_, _, resp, err := raw.Call(ctx, ch, hostPort, testServiceName, "app-error", nil, nil)
+		require.NoError(t, err)
+		require.True(t, resp.ApplicationError(), "expected application error")
 
 		outboundTags := tagsForOutboundCall(serverCh, ch, "echo")
 		clientStats.Expected.IncCounter("outbound.calls.send", outboundTags, 1)
 		clientStats.Expected.IncCounter("outbound.calls.success", outboundTags, 1)
-		outboundTags["target-endpoint"] = "error"
+		outboundTags["target-endpoint"] = "app-error"
 		clientStats.Expected.IncCounter("outbound.calls.send", outboundTags, 1)
-		// TODO(prashant): Make the following stat work too.
-		// statsReporter.Expected.IncCounter("outbound.calls.app-errors", expectedTags, 1)
+		clientStats.Expected.IncCounter("outbound.calls.app-errors", outboundTags, 1)
 
 		inboundTags := tagsForInboundCall(serverCh, ch, "echo")
 		serverStats.Expected.IncCounter("inbound.calls.recvd", inboundTags, 1)
-		inboundTags["endpoint"] = "error"
+		serverStats.Expected.IncCounter("inbound.calls.success", inboundTags, 1)
+		inboundTags["endpoint"] = "app-error"
 		serverStats.Expected.IncCounter("inbound.calls.recvd", inboundTags, 1)
+		serverStats.Expected.IncCounter("inbound.calls.app-errors", inboundTags, 1)
 
 		clientStats.ValidateCounters(t)
 		serverStats.ValidateCounters(t)

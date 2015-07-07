@@ -89,8 +89,11 @@ func (c *Connection) handleCallReq(frame *Frame) bool {
 	call.messageForFragment = func(initial bool) message { return new(callReqContinue) }
 	call.contents = newFragmentingReader(call)
 	call.statsReporter = c.statsReporter
-
 	call.createStatsTags(c.commonStatsTags)
+
+	response.statsReporter = c.statsReporter
+	response.commonStatsTags = call.commonStatsTags
+
 	setResponseHeaders(call.headers, response.headers)
 	go c.dispatchInbound(call)
 	return false
@@ -282,5 +285,10 @@ func (response *InboundCallResponse) Arg3Writer() (io.WriteCloser, error) {
 // doneSending shuts down the message exchange for this call.
 // For incoming calls, the last message is sending the call response.
 func (response *InboundCallResponse) doneSending() {
+	if response.applicationError {
+		response.statsReporter.IncCounter("inbound.calls.app-errors", response.commonStatsTags, 1)
+	} else {
+		response.statsReporter.IncCounter("inbound.calls.success", response.commonStatsTags, 1)
+	}
 	response.mex.shutdown()
 }
