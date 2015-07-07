@@ -18,6 +18,8 @@ var (
 	hostPort      = flag.String("hostPort", "localhost:12345", "listening socket of the bench server")
 	numGoroutines = flag.Int("numGo", 1, "The number of goroutines to spawn")
 	numOSThreads  = flag.Int("numThreads", 1, "The number of OS threads to use (sets GOMAXPROCS)")
+	setBlockSize  = flag.Int("setBlockSize", 4096, "The size in bytes of the data being set")
+	getToSetRatio = flag.Int("getToSetRatio", 1, "The number of Gets to do per Set call")
 
 	// counter tracks the total number of requests completed in the past second.
 	counter int64
@@ -40,7 +42,8 @@ func main() {
 		go worker(ch)
 	}
 
-	log.Printf("Config: %v workers on %v threads", *numGoroutines, *numOSThreads)
+	log.Printf("Config: %v workers on %v threads, setBlockSize %v, getToSetRatio %v",
+		*numGoroutines, *numOSThreads, *setBlockSize, *getToSetRatio)
 	requestCountReporter()
 }
 
@@ -53,18 +56,21 @@ func requestCountReporter() {
 }
 
 func worker(ch *tchannel.Channel) {
-	data := make([]byte, 4096)
+	data := make([]byte, *setBlockSize)
 	for {
 		if err := setRequest(ch, "key", string(data)); err != nil {
 			log.Fatalf("set failed: %v", err)
 			continue
 		}
 		atomic.AddInt64(&counter, 1)
-		_, err := getRequest(ch, "key")
-		if err != nil {
-			log.Fatalf("get failed: %v", err)
+
+		for i := 0; i < *getToSetRatio; i++ {
+			_, err := getRequest(ch, "key")
+			if err != nil {
+				log.Fatalf("get failed: %v", err)
+			}
+			atomic.AddInt64(&counter, 1)
 		}
-		atomic.AddInt64(&counter, 1)
 	}
 }
 
