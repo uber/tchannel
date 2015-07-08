@@ -39,13 +39,14 @@ assert(argv.traceRelayHostPort, 'traceRelayHostPort needed');
 assert(argv.port, 'port needed');
 assert(argv.instances, 'instances needed');
 
-function BenchServer() {
+function BenchServer(port) {
     if (!(this instanceof BenchServer)) {
-        return new BenchServer();
+        return new BenchServer(port);
     }
 
     var self = this;
 
+    self.port = port;
     self.server = TChannel({
         statTags: {
             app: 'my-server'
@@ -120,10 +121,10 @@ BenchServer.prototype.registerEndpoints = function registerEndpoints() {
 BenchServer.prototype.listen = function listen() {
     var self = this;
 
-    self.server.listen(argv.port, '127.0.0.1');
+    self.server.listen(self.port, '127.0.0.1');
 };
 
-var benchServer = BenchServer();
+var benchServer = BenchServer(argv.port);
 benchServer.listen();
 
 // setInterval(function () {
