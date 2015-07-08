@@ -500,7 +500,6 @@ class PeerClientOperation(object):
         arg1, arg2, arg3 = (
             maybe_stream(arg1), maybe_stream(arg2), maybe_stream(arg3)
         )
-        assert attempt_times != 0
         attempt_times = attempt_times or MAX_ATTEMPT_TIMES
         ttl = ttl or DEFAULT_TTL
         retry_delay = retry_delay or RETRY_DELAY
@@ -545,6 +544,7 @@ class PeerClientOperation(object):
                          trace_id, parent_span_id, traceflag,
                          ttl, attempt_times, retry_delay):
         # black list to record all used peers, so they aren't chosen again.
+        assert attempt_times
         blacklist = set()
         response = None
         peer = self.peer
