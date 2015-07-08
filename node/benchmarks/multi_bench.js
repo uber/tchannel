@@ -64,7 +64,7 @@ var TRACE_SERVER;
 if (argv.relay) {
     DESTINATION_SERVER = '127.0.0.1:7038';
 } else {
-    DESTINATION_SERVER = '127.0.0.1:7040';
+    DESTINATION_SERVER = '127.0.0.1:' + argv.benchPort;
 }
 
 if (argv.trace) {
