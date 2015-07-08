@@ -17,6 +17,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
+import tornado
 
 import pytest
 
@@ -54,3 +55,19 @@ def test_request():
             arg3='boo',
             headers={'as': 'qux'},
         )
+
+
+@pytest.mark.gen_test
+def test_advertise(tchannel_server):
+    endpoint = b'ad'
+
+    @tornado.gen.coroutine
+    def execution(request, response):
+        body = yield response.get_body()
+        assert body['services']['serviceName'] == 'test'
+        assert body['services']['cost'] == 0
+    tchannel_server.expect_call(endpoint, 'json').execution = execution
+    channel = TChannel(name='test')
+    hyperbahn.advertise(channel,
+                        'test', ['localhost:'+str(tchannel_server.port)]
+                        )
