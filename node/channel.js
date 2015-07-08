@@ -474,8 +474,11 @@ TChannel.prototype.requestOptions = function requestOptions(options) {
 TChannel.prototype.waitForIdentified =
 function waitForIdentified(options, callback) {
     var self = this;
-
-    self.peers.waitForIdentified(options, callback);
+    if (self.destroyed) {
+        callback(errors.TChannelDestroyedError());
+    } else {
+        self.peers.waitForIdentified(options, callback);
+    }
 };
 
 TChannel.prototype.request = function channelRequest(options) {
