@@ -96,9 +96,9 @@ function runTests(HyperbahnCluster) {
         var start = Date.now();
 
         var gap = {
-            0: [0, 10],
-            1: [200, 225],
-            2: [1200, 1250]
+            0: [0, 25],
+            1: [200, 250],
+            2: [1200, 1300]
         };
 
         client.on('error', onError);
