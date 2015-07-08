@@ -39,6 +39,8 @@ assert(argv.traceRelayHostPort, 'traceRelayHostPort needed');
 assert(argv.port, 'port needed');
 assert(argv.instances, 'instances needed');
 
+var INSTANCES = parseInt(argv.instances, 10);
+
 function BenchServer(port) {
     if (!(this instanceof BenchServer)) {
         return new BenchServer(port);
@@ -124,8 +126,12 @@ BenchServer.prototype.listen = function listen() {
     self.server.listen(self.port, '127.0.0.1');
 };
 
-var benchServer = BenchServer(argv.port);
-benchServer.listen();
+for (var i = 0; i < INSTANCES; i++) {
+    var port = parseInt(argv.port, 10) + i;
+
+    var benchServer = BenchServer(port);
+    benchServer.listen();
+}
 
 // setInterval(function () {
 //  Object.keys(keys).forEach(function (key) {
