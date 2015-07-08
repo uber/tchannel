@@ -342,7 +342,7 @@ TChannelConnection.prototype.onCallError = function onCallError(err) {
             return;
         }
 
-        req.errorEvent.emit(req, err);
+        req.emitError(err);
     }
 };
 
@@ -424,10 +424,6 @@ TChannelConnection.prototype.onSocketError = function onSocketError(err) {
 TChannelConnection.prototype.buildOutRequest = function buildOutRequest(options) {
     var self = this;
 
-    // TODO: ensure that options has a real constructor
-    options.logger = self.logger;
-    options.random = self.random;
-    options.timers = self.timers;
     return self.handler.buildOutRequest(options);
 };
 
@@ -554,7 +550,7 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
             err = errors.TChannelConnectionResetError(err, info);
         }
 
-        req.errorEvent.emit(req, err);
+        req.emitError(err);
     });
 
     self.ops.clear();

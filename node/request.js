@@ -20,42 +20,39 @@
 
 'use strict';
 
+module.exports = TChannelRequest;
+
 var assert = require('assert');
 var EventEmitter = require('./lib/event_emitter');
 var inherits = require('util').inherits;
 
 var TChannelOutRequest = require('./out_request.js');
+var RetryFlags = require('./retry-flags.js');
 var errors = require('./errors');
 
-function TChannelRequest(channel, options) {
-    options = options || {};
-    assert(!options.streamed, "streaming request federation not implemented");
+function TChannelRequest(options) {
+    /*eslint max-statements: [2, 40]*/
+    assert(!options.streamed, 'streaming request federation not implemented');
+
     var self = this;
+
     EventEmitter.call(self);
     self.errorEvent = self.defineEvent('error');
     self.responseEvent = self.defineEvent('response');
 
-    self.channel = channel;
-    self.services = self.channel.services;
-    self.logger = self.channel.logger;
-    self.random = self.channel.random;
-    self.timers = self.channel.timers;
+    self.channel = options.channel;
 
     self.options = options;
-
-    if (!self.options.retryFlags) {
-        self.options.retryFlags = {
-            never: false,
-            onConnectionError: true,
-            onTimeout: false
-        };
-    }
 
     self.triedRemoteAddrs = {};
     self.outReqs = [];
     self.timeout = self.options.timeout || TChannelRequest.defaultTimeout;
     if (self.options.timeoutPerAttempt) {
-        self.options.retryFlags.onTimeout = true;
+        self.options.retryFlags = new RetryFlags(
+            self.options.retryFlags.never,
+            self.options.retryFlags.onConnectionError,
+            true
+        );
     }
     self.timeoutPerAttempt = self.options.timeoutPerAttempt || self.timeout;
     self.limit = self.options.retryLimit || TChannelRequest.defaultRetryLimit;
@@ -66,8 +63,8 @@ function TChannelRequest(channel, options) {
     self.trackPending = self.options.trackPending || false;
 
     self.serviceName = options.serviceName || '';
-    self.headers = self.options.headers || {}; // so that as-foo can punch req.headers.X
-    self.options.headers = self.headers; // for passing to peer.request(opts) later
+    // so that as-foo can punch req.headers.X
+    self.headers = self.options.headers;
 
     self.endpoint = null;
     self.arg1 = null;
@@ -80,7 +77,6 @@ function TChannelRequest(channel, options) {
 
 inherits(TChannelRequest, EventEmitter);
 
-
 TChannelRequest.defaultRetryLimit = 5;
 TChannelRequest.defaultTimeout = 100;
 
@@ -88,25 +84,25 @@ TChannelRequest.prototype.type = 'tchannel.request';
 
 TChannelRequest.prototype.emitError = function emitError(err) {
     var self = this;
-    if (!self.end) self.end = self.timers.now();
+    if (!self.end) self.end = self.channel.timers.now();
     self.err = err;
 
     TChannelOutRequest.prototype.emitErrorStat.call(self, err);
     TChannelOutRequest.prototype.emitLatency.call(self);
 
-    self.services.onRequestError(self);
+    self.channel.services.onRequestError(self);
     self.errorEvent.emit(self, err);
 };
 
 TChannelRequest.prototype.emitResponse = function emitResponse(res) {
     var self = this;
-    if (!self.end) self.end = self.timers.now();
+    if (!self.end) self.end = self.channel.timers.now();
     self.res = res;
 
     TChannelOutRequest.prototype.emitResponseStat.call(self, res);
     TChannelOutRequest.prototype.emitLatency.call(self);
 
-    self.services.onRequestResponse(self);
+    self.channel.services.onRequestResponse(self);
     self.responseEvent.emit(self, res);
 };
 
@@ -144,7 +140,7 @@ TChannelRequest.prototype.hookupCallback = function hookupCallback(callback) {
 
 TChannelRequest.prototype.choosePeer = function choosePeer() {
     var self = this;
-    return self.channel.peers.choosePeer(self, self.options);
+    return self.channel.peers.choosePeer(self);
 };
 
 TChannelRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
@@ -157,12 +153,12 @@ TChannelRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     if (callback) {
         self.hookupCallback(callback);
     }
-    self.start = self.timers.now();
+    self.start = self.channel.timers.now();
     self.resendSanity = self.limit + 1;
 
     TChannelOutRequest.prototype.emitOutboundCallsSent.call(self);
 
-    self.services.onRequest(self);
+    self.channel.services.onRequest(self);
     self.resend();
 };
 
@@ -279,7 +275,7 @@ TChannelRequest.prototype.deferResend = function deferResend() {
 
 TChannelRequest.prototype.checkPending = function checkPending() {
     var self = this;
-    var err = self.services.errorIfExceedsMaxPending(self);
+    var err = self.channel.services.errorIfExceedsMaxPending(self);
     if (err) {
         self.emitError(err);
         return true;
@@ -289,7 +285,7 @@ TChannelRequest.prototype.checkPending = function checkPending() {
 
 TChannelRequest.prototype.checkTimeout = function checkTimeout(err, res) {
     var self = this;
-    var now = self.timers.now();
+    var now = self.channel.timers.now();
     self.elapsed = now - self.start;
     if (self.elapsed < self.timeout) return false;
 
@@ -344,7 +340,7 @@ TChannelRequest.prototype.shouldRetryError = function shouldRetryError(err) {
                 return !!self.options.retryFlags.onConnectionError;
 
             default:
-                self.logger.error('unknown error type in request retry', {
+                self.channel.logger.error('unknown error type in request retry', {
                     error: err
                 });
                 return true;
@@ -371,5 +367,3 @@ TChannelRequest.prototype.maybeAppRetry = function maybeAppRetry(res) {
         }
     }
 };
-
-module.exports = TChannelRequest;
