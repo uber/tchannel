@@ -361,10 +361,6 @@ function advertise(opts) {
 HyperbahnClient.prototype.unadvertise =
 function unadvertise() {
     var self = this;
-    if (self.state !== States.ADVERTISED) {
-        return;
-    }
-
     self.destroy();
     self.latestAdvertisementResult = null;
     self.state = States.UNADVERTISED;
