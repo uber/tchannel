@@ -98,6 +98,7 @@ function RelayServer(opts) {
         null;
 
     self.type = opts.type;
+    self.instances = opts.instances;
 
     self.relay.handler.createServiceChannel(self.serviceName);
     self.relay.listen(self.port, '127.0.0.1', onListen);
@@ -111,10 +112,13 @@ RelayServer.prototype.connect = function connect() {
     var self = this;
 
     var basePort = parseInt(self.targetPort, 10);
-    var targetHostPort = '127.0.0.1:' + basePort;
 
-    var peer = self.relay.handler.getServicePeer(
-        self.serviceName, targetHostPort
-    );
-    peer.connect();
+    for (var i = 0; i < self.instances; i++) {
+        var targetHostPort = '127.0.0.1:' + (basePort + i);
+
+        var peer = self.relay.handler.getServicePeer(
+            self.serviceName, targetHostPort
+        );
+        peer.connect();
+    }
 };
