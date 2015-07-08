@@ -554,6 +554,7 @@ class PeerClientOperation(object):
                 connection = yield peer.connect()
                 request = Request(
                     service=self.service,
+                    # TODO streaming is broken, FIX it.
                     argstreams=[
                         InMemStream(endpoint), arg2.clone(), arg3.clone()
                     ],
