@@ -26,7 +26,6 @@ var process = require('process');
 var assert = require('assert');
 
 var TChannel = require('../channel.js');
-var Reporter = require('../tcollector/reporter.js');
 var ServiceProxy = require('../hyperbahn/service_proxy.js');
 var FakeEgressNodes = require('../test/lib/fake-egress-nodes.js');
 
@@ -89,31 +88,6 @@ function RelayServer(opts) {
             }
         })
     });
-
-    self.tcollectorChannel = TChannel({
-        trace: false,
-        statsd: NullStatsd(),
-        logger: self.relay.logger,
-        statTags: {
-            app: 'relay-server'
-        }
-    });
-    self.reporter = Reporter({
-        channel: self.tcollectorChannel.makeSubChannel({
-            serviceName: 'tcollector',
-            peers: [traceRelayHostPort]
-        }),
-        logger: self.relay.logger,
-        callerName: opts.type
-    });
-
-    // if (opts.trace) {
-    //     self.relay.tracer.reporter = function report(span) {
-    //         self.reporter.report(span, {
-    //             timeout: 10 * 1000
-    //         });
-    //     };
-    // }
 
     if (opts.type === 'bench-relay') {
         self.relay.handler.createServiceChannel('benchmark');
