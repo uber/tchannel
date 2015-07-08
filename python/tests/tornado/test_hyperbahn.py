@@ -17,13 +17,13 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-import tornado
-
 import pytest
+import tornado
 
 from tchannel.errors import ConnectionClosedError
 from tchannel.tornado import TChannel
 from tchannel.tornado import hyperbahn
+from tornado.concurrent import Future
 
 
 def test_new_client_establishes_peers():
@@ -61,13 +61,18 @@ def test_request():
 def test_advertise(tchannel_server):
     endpoint = b'ad'
 
+    f = Future()
+
     @tornado.gen.coroutine
     def execution(request, response):
-        body = yield response.get_body()
-        assert body['services']['serviceName'] == 'test'
-        assert body['services']['cost'] == 0
-    tchannel_server.expect_call(endpoint, 'json').execution = execution
+        body = yield request.get_body()
+        f.set_result(body)
+
+    tchannel_server.expect_call(endpoint, 'json').execute = execution
     channel = TChannel(name='test')
     hyperbahn.advertise(channel,
                         'test', ['localhost:'+str(tchannel_server.port)]
                         )
+
+    result = yield f
+    assert result == {'services': [{'serviceName': 'test', 'cost': 0}]}
