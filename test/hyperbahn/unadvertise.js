@@ -35,7 +35,7 @@ if (require.main === module) {
 function runTests(HyperbahnCluster) {
     HyperbahnCluster.test('advertise and forward', {
         size: 5,
-        servicePurgePeriod: 10
+        servicePurgePeriod: 50
     }, function t(cluster, assert) {
         var steve = cluster.remotes.steve;
         var bob = cluster.remotes.bob;
@@ -49,9 +49,10 @@ function runTests(HyperbahnCluster) {
             callerName: 'forward-test',
             hostPortList: cluster.hostPortList,
             tchannel: steve.channel,
-            advertiseInterval: 5,
+            advertiseInterval: 2,
             logger: DebugLogtron('hyperbahnClient')
         });
+
         steveHyperbahnClient.once('advertised', onAdvertised);
         steveHyperbahnClient.advertise();
 
@@ -61,7 +62,7 @@ function runTests(HyperbahnCluster) {
                     timeout: 5000,
                     serviceName: steve.serviceName
                 }), 'echo', null, 'oh hi lol', onForwarded);
-            }, 15);
+            }, 55);
         }
 
         function onForwarded(err, resp) {
@@ -75,7 +76,7 @@ function runTests(HyperbahnCluster) {
 
     HyperbahnCluster.test('advertise, unadvertise and forward', {
         size: 5,
-        servicePurgePeriod: 5
+        servicePurgePeriod: 50
     }, function t(cluster, assert) {
         var steve = cluster.remotes.steve;
         var bob = cluster.remotes.bob;
@@ -102,7 +103,6 @@ function runTests(HyperbahnCluster) {
 
         var fwdreq;
         function onUnadvertised() {
-            steve.channel.close();
             assert.equal(steveHyperbahnClient.latestAdvertisementResult, null, 'latestAdvertisementResult is null');
             assert.equal(steveHyperbahnClient.state, 'UNADVERTISED', 'state should be UNADVERTISED');
 
@@ -112,7 +112,7 @@ function runTests(HyperbahnCluster) {
                     serviceName: steve.serviceName
                 });
                 tchannelJSON.send(fwdreq, 'echo', null, 'oh hi lol', onForwarded);
-            }, 10);
+            }, 100);
         }
 
         function onForwarded(err, resp) {
