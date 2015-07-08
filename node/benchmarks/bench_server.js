@@ -25,7 +25,10 @@ process.title = 'nodejs-benchmarks-bench_server';
 
 var parseArgs = require('minimist');
 var assert = require('assert');
-var NullStatsd = require('uber-statsd-client/null');
+var Statsd = require('uber-statsd-client');
+
+var Reporter = require('../tcollector/reporter.js');
+var TChannel = require('../channel');
 
 var argv = parseArgs(process.argv.slice(2), {
     boolean: ['trace']
@@ -33,64 +36,95 @@ var argv = parseArgs(process.argv.slice(2), {
 
 assert('trace' in argv, 'trace option needed');
 assert(argv.traceRelayHostPort, 'traceRelayHostPort needed');
+assert(argv.port, 'port needed');
+assert(argv.instances, 'instances needed');
 
-var Reporter = require('../tcollector/reporter.js');
-var TChannel = require('../channel');
-var server = TChannel({
-    statTags: {
-        app: 'my-server'
-    },
-    trace: true,
-    statsd: NullStatsd()
-});
+function BenchServer() {
+    if (!(this instanceof BenchServer)) {
+        return new BenchServer();
+    }
 
-var reporter = Reporter({
-    channel: server.makeSubChannel({
-        serviceName: 'tcollector',
-        peers: [argv.traceRelayHostPort]
-    }),
-    logger: server.logger,
-    callerName: 'my-server'
-});
-if (argv.trace) {
-    server.tracer.reporter = function report(span) {
+    var self = this;
+
+    self.server = TChannel({
+        statTags: {
+            app: 'my-server'
+        },
+        trace: true,
+        statsd: new Statsd({
+            host: '127.0.0.1',
+            port: 7036
+        })
+    });
+
+    if (argv.trace) {
+        self.setupReporter();
+    }
+
+    self.serverChan = self.server.makeSubChannel({
+        serviceName: 'benchmark'
+    });
+
+    self.keys = {};
+
+    self.registerEndpoints();
+}
+
+BenchServer.prototype.setupReporter = function setupReporter() {
+    var self = this;
+
+    var reporter = Reporter({
+        channel: self.server.makeSubChannel({
+            serviceName: 'tcollector',
+            peers: [argv.traceRelayHostPort]
+        }),
+        logger: self.server.logger,
+        callerName: 'my-server'
+    });
+
+    self.server.tracer.reporter = function report(span) {
         reporter.report(span, {
             timeout: 10 * 1000
         });
     };
-}
+};
 
-var serverChan = server.makeSubChannel({
-    serviceName: 'benchmark'
-});
+BenchServer.prototype.registerEndpoints = function registerEndpoints() {
+    var self = this;
 
-server.listen(7040, '127.0.0.1');
+    self.serverChan.register('ping', function onPing(req, res) {
+        res.headers.as = 'raw';
+        res.sendOk('pong', null);
+    });
 
-var keys = {};
+    self.serverChan.register('set', function onSet(req, res, arg2, arg3) {
+        var key = arg2.toString('utf8');
+        var val = arg3.toString('utf8');
+        self.keys[key] = val;
+        res.headers.as = 'raw';
+        res.sendOk('ok', 'really ok');
+    });
 
-serverChan.register('ping', function onPing(req, res) {
-    res.headers.as = 'raw';
-    res.sendOk('pong', null);
-});
+    self.serverChan.register('get', function onGet(req, res, arg2, arg3) {
+        var key = arg2.toString('utf8');
+        res.headers.as = 'raw';
+        if (self.keys[key] !== undefined) {
+            var val = self.keys[key];
+            res.sendOk(val.length.toString(10), val);
+        } else {
+            res.sendNotOk('key not found', key);
+        }
+    });
+};
 
-serverChan.register('set', function onSet(req, res, arg2, arg3) {
-    var key = arg2.toString('utf8');
-    var val = arg3.toString('utf8');
-    keys[key] = val;
-    res.headers.as = 'raw';
-    res.sendOk('ok', 'really ok');
-});
+BenchServer.prototype.listen = function listen() {
+    var self = this;
 
-serverChan.register('get', function onGet(req, res, arg2, arg3) {
-    var key = arg2.toString('utf8');
-    res.headers.as = 'raw';
-    if (keys[key] !== undefined) {
-        var val = keys[key];
-        res.sendOk(val.length.toString(10), val);
-    } else {
-        res.sendNotOk('key not found', key);
-    }
-});
+    self.server.listen(argv.port, '127.0.0.1');
+};
+
+var benchServer = BenchServer();
+benchServer.listen();
 
 // setInterval(function () {
 //  Object.keys(keys).forEach(function (key) {
