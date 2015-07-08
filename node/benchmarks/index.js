@@ -54,9 +54,18 @@ function run(script, args) {
     return child;
 }
 
+var SERVER_PORT = 7100;
+var TRACE_SERVER_PORT = 7039;
+var RELAY_SERVER_PORT = 7038;
+var RELAY_TRACE_PORT = 7037;
+var STATSD_PORT = 7036;
+var INSTANCE_COUNT = 72;
+
 var serverProc = run(server, [
     argv.trace ? '--trace' : '--no-trace',
-    '--traceRelayHostPort', '127.0.0.1:7037'
+    '--traceRelayHostPort', '127.0.0.1:' + RELAY_TRACE_PORT,
+    '--port', String(SERVER_PORT),
+    '--instances', String(INSTANCE_COUNT)
 ]);
 serverProc.stdout.pipe(process.stderr);
 serverProc.stderr.pipe(process.stderr);
@@ -78,10 +87,10 @@ if (argv.relay || argv.trace) {
 
 function startRelayServers() {
     benchRelayProc = run(relay, [
-        '--benchPort', '7040',
-        '--tracePort', '7039',
-        '--benchRelayPort', '7038',
-        '--traceRelayPort', '7037',
+        '--benchPort', String(SERVER_PORT),
+        '--tracePort', String(TRACE_SERVER_PORT),
+        '--benchRelayPort', String(RELAY_SERVER_PORT),
+        '--traceRelayPort', String(RELAY_TRACE_PORT),
         '--type', 'bench-relay',
         argv.trace ? '--trace' : '--no-trace',
         argv.debug ? '--debug' : '--no-debug'
@@ -91,10 +100,10 @@ function startRelayServers() {
 
     if (argv.trace) {
         traceRelayProc = run(relay, [
-            '--benchPort', '7040',
-            '--tracePort', '7039',
-            '--benchRelayPort', '7038',
-            '--traceRelayPort', '7037',
+            '--benchPort', String(SERVER_PORT),
+            '--tracePort', String(TRACE_SERVER_PORT),
+            '--benchRelayPort', String(RELAY_SERVER_PORT),
+            '--traceRelayPort', String(RELAY_TRACE_PORT),
             '--type', 'trace-relay',
             argv.trace ? '--trace' : '--no-trace',
             argv.debug ? '--debug' : '--no-debug'
@@ -107,7 +116,11 @@ function startRelayServers() {
 }
 
 function startBench() {
-    var benchProc = run(bench, argv['--']);
+    var args = argv['--'];
+    args = args.concat([
+        '--benchPort', String(SERVER_PORT)
+    ]);
+    var benchProc = run(bench, args);
     benchProc.stderr.pipe(process.stderr);
 
     benchProc.stdout
