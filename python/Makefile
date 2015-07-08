@@ -42,7 +42,7 @@ test: clean
 	$(pytest) $(test_args)
 
 test_ci: clean
-	tox -e $(TOX_ENV)
+	tox -e $(TOX_ENV) -- --reruns=2
 
 testhtml: clean
 	$(pytest) $(html_report) && open htmlcov/index.html
