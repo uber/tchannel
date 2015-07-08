@@ -29,44 +29,38 @@ var States = require('./reqres_states');
 var emptyBuffer = Buffer(0);
 
 function TChannelInRequest(id, options) {
-    options = options || {};
     var self = this;
+
     EventEmitter.call(self);
     self.errorEvent = self.defineEvent('error');
     self.finishEvent = self.defineEvent('finish');
+    self.channel = options.channel;
 
-    self.logger = options.logger;
-    self.random = options.random;
-    self.timers = options.timers;
-
-    self.state = States.Initial;
-    self.id = id || 0;
-    self.ttl = options.ttl || 0;
+    self.ttl = options.timeout || 0;
     self.tracing = options.tracing || null;
     self.serviceName = options.serviceName || '';
-    self.remoteAddr = null;
     self.headers = options.headers || {};
     self.checksum = options.checksum || null;
     self.retryFlags = options.retryFlags || null;
+    self.connection = options.connection || null;
+
+    self.state = States.Initial;
+    self.id = id || 0;
+    self.remoteAddr = null;
     self.streamed = false;
     self.arg1 = emptyBuffer;
     self.endpoint = null;
     self.arg2 = emptyBuffer;
     self.arg3 = emptyBuffer;
-    self.connection = options.connection;
     self.forwardTrace = false;
-
-    if (options.tracer) {
-        self.setupTracing(options);
-    } else {
-        self.span = null;
-    }
-
-    self.start = self.timers.now();
+    self.span = null;
+    self.start = self.channel.timers.now();
     self.timedOut = false;
     self.res = null;
 
-    self.finishEvent.on(self.onFinish);
+    if (options.tracer) {
+        self.setupTracing(options);
+    }
 }
 
 inherits(TChannelInRequest, EventEmitter);
@@ -95,10 +89,6 @@ TChannelInRequest.prototype.setupTracing = function setupTracing(options) {
     self.span.annotate('sr');
 };
 
-TChannelInRequest.prototype.onFinish = function onFinish(_arg, self) {
-    self.state = States.Done;
-};
-
 TChannelInRequest.prototype.handleFrame = function handleFrame(parts) {
     var self = this;
     if (!parts) {
@@ -109,20 +99,30 @@ TChannelInRequest.prototype.handleFrame = function handleFrame(parts) {
         self.errorEvent.emit(self, new Error(
             'un-streamed argument defragmentation is not implemented'));
     }
+
     self.arg1 = parts[0] || emptyBuffer;
     self.endpoint = String(self.arg1);
     self.arg2 = parts[1] || emptyBuffer;
     self.arg3 = parts[2] || emptyBuffer;
+
     if (self.span) {
         self.span.name = self.endpoint;
     }
+
+    self.emitFinish();
+};
+
+TChannelInRequest.prototype.emitFinish = function emitFinish() {
+    var self = this;
+
+    self.state = States.Done;
     self.finishEvent.emit(self);
 };
 
 TChannelInRequest.prototype.checkTimeout = function checkTimeout() {
     var self = this;
     if (!self.timedOut) {
-        var elapsed = self.timers.now() - self.start;
+        var elapsed = self.channel.timers.now() - self.start;
         if (elapsed > self.ttl) {
             self.timedOut = true;
             // TODO: send an error frame response?
