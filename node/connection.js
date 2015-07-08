@@ -251,7 +251,10 @@ TChannelConnection.prototype.onWriteError = function onWriteError(err) {
 
 TChannelConnection.prototype.onHandlerError = function onHandlerError(err) {
     var self = this;
-    self.resetAll(err);
+
+    if (err) {
+        self.resetAll(err);
+    }
 };
 
 TChannelConnection.prototype.handlePingResponse = function handlePingResponse(resFrame) {
@@ -273,14 +276,11 @@ TChannelConnection.prototype.handleReadFrame = function handleReadFrame(frame) {
 TChannelConnection.prototype.onCallResponse = function onCallResponse(res) {
     var self = this;
 
-    var called = false;
     var req = self.ops.getOutReq(res.id);
-
     if (res.state === States.Done || res.state === States.Error) {
-        popOutReq();
+        self.popOutReq(res);
     } else {
-        res.errorEvent.on(popOutReq);
-        res.finishEvent.on(popOutReq);
+        self.popOutReqLater(res);
     }
 
     if (!req) {
@@ -295,6 +295,15 @@ TChannelConnection.prototype.onCallResponse = function onCallResponse(res) {
     }
 
     req.emitResponse(res);
+};
+
+TChannelConnection.prototype.popOutReqLater =
+function popOutReqLater(res) {
+    var self = this;
+    var called = false;
+
+    res.errorEvent.on(popOutReq);
+    res.finishEvent.on(popOutReq);
 
     // TODO: move to method
     function popOutReq() {
@@ -303,15 +312,15 @@ TChannelConnection.prototype.onCallResponse = function onCallResponse(res) {
         }
 
         called = true;
-
-        self.ops.popOutReq(res.id, {
-            responseId: res.id,
-            code: res.code,
-            arg1: Buffer.isBuffer(res.arg1) ?
-                String(res.arg1) : 'streamed-arg1',
-            info: 'got call response for unknown id'
-        });
+        self.popOutReq(res);
     }
+};
+
+TChannelConnection.prototype.popOutReq =
+function popOutReq(res) {
+    var self = this;
+
+    self.ops.popOutReq(res.id, res);
 };
 
 TChannelConnection.prototype.ping = function ping() {
@@ -328,11 +337,7 @@ TChannelConnection.prototype.onCallError = function onCallError(err) {
         req.res.errorEvent.emit(req.res, err);
     } else {
         // Only popOutReq if there is no call response object yet
-        req = self.ops.popOutReq(err.originalId, {
-            error: err,
-            id: err.originalId,
-            info: 'got error frame for unknown id'
-        });
+        req = self.ops.popOutReq(err.originalId, err);
         if (!req) {
             return;
         }
