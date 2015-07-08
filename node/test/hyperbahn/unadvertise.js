@@ -34,7 +34,8 @@ if (require.main === module) {
 
 function runTests(HyperbahnCluster) {
     HyperbahnCluster.test('advertise and forward', {
-        size: 5
+        size: 5,
+        servicePurgePeriod: 10
     }, function t(cluster, assert) {
         var steve = cluster.remotes.steve;
         var bob = cluster.remotes.bob;
@@ -48,18 +49,19 @@ function runTests(HyperbahnCluster) {
             callerName: 'forward-test',
             hostPortList: cluster.hostPortList,
             tchannel: steve.channel,
+            advertiseInterval: 5,
             logger: DebugLogtron('hyperbahnClient')
         });
         steveHyperbahnClient.once('advertised', onAdvertised);
         steveHyperbahnClient.advertise();
 
         function onAdvertised() {
-            bob.clientChannel.timers.setTimeout(function onSend() {
+            setTimeout(function onSend() {
                 tchannelJSON.send(bob.clientChannel.request({
                     timeout: 5000,
                     serviceName: steve.serviceName
                 }), 'echo', null, 'oh hi lol', onForwarded);
-            }, 2);
+            }, 15);
         }
 
         function onForwarded(err, resp) {
@@ -73,8 +75,7 @@ function runTests(HyperbahnCluster) {
 
     HyperbahnCluster.test('advertise, unadvertise and forward', {
         size: 5,
-        // timers: timers,
-        servicePurgePeriod: 10
+        servicePurgePeriod: 5
     }, function t(cluster, assert) {
         var steve = cluster.remotes.steve;
         var bob = cluster.remotes.bob;
@@ -105,13 +106,13 @@ function runTests(HyperbahnCluster) {
             assert.equal(steveHyperbahnClient.latestAdvertisementResult, null, 'latestAdvertisementResult is null');
             assert.equal(steveHyperbahnClient.state, 'UNADVERTISED', 'state should be UNADVERTISED');
 
-            bob.clientChannel.timers.setTimeout(function onSend() {
+            setTimeout(function onSend() {
                 fwdreq = bob.clientChannel.request({
                     timeout: 5000,
                     serviceName: steve.serviceName
                 });
                 tchannelJSON.send(fwdreq, 'echo', null, 'oh hi lol', onForwarded);
-            }, 5);
+            }, 10);
         }
 
         function onForwarded(err, resp) {

@@ -51,7 +51,7 @@ function ServiceDispatchHandler(options) {
     self.circuits = options.circuits;
     self.servicePurgePeriod = options.servicePurgePeriod ||
         SERVICE_PURGE_PERIOD;
-    self.exitServices = {};
+    self.exitServices = Object.create(null);
     self.purgeServices();
 
     self.egressNodes.on('membershipChanged', onMembershipChanged);
@@ -210,9 +210,13 @@ function purgeServices() {
     );
 };
 
-ServiceDispatchHandler.prototype.updateServiceTimestamp =
-function updateServiceTimestamp(serviceName) {
+ServiceDispatchHandler.prototype.refreshServicePeer =
+function refreshServicePeer(serviceName, hostPort) {
     var self = this;
+
+    var peer = self.getServicePeer(serviceName, hostPort);
+    peer.connect();
+
     var time = self.channel.timers.now();
     self.exitServices[serviceName] = time;
 };
@@ -359,8 +363,8 @@ function unblock(cn, serviceName) {
     }
 };
 
-ServiceDispatchHandler.prototype.close =
-function close() {
+ServiceDispatchHandler.prototype.destroy =
+function destroy() {
     var self = this;
     self.channel.timers.clearTimeout(self.servicePurgeTimer);
 };
