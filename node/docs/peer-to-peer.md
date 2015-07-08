@@ -39,4 +39,4 @@ a direct request to that concrete host.
 This request is a non-retryable request.
 
 All other documentation for `request()` can be found in the
-[sub-channel document](./sub-channel.md)
+[sub-channel document](./sub-channels.md)
