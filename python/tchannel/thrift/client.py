@@ -22,6 +22,7 @@ from __future__ import absolute_import
 
 import inspect
 from collections import namedtuple
+from tchannel.tornado.response import StatusCode
 
 from thrift import Thrift
 from tornado import gen
@@ -165,11 +166,12 @@ def generate_method(service_module, service_name, method_name):
             # void return type and no exceptions allowed
             raise gen.Return(None)
 
-        for exc_spec in result_spec[1:]:
-            # May have failed with an exception
-            exc = getattr(call_result, exc_spec[2])
-            if exc is not None:
-                raise exc
+        if response.code == StatusCode.error:
+            for exc_spec in result_spec[1:]:
+                # May have failed with an exception
+                exc = getattr(call_result, exc_spec[2])
+                if exc is not None:
+                    raise exc
 
         if result_spec[0]:
             # Non-void return type. Return the result.

@@ -22,6 +22,7 @@ from __future__ import absolute_import
 
 import sys
 from collections import namedtuple
+from tchannel.tornado.response import StatusCode
 
 from tornado import gen
 
@@ -116,6 +117,7 @@ def build_handler(result_type, f):
                 # function.
                 res.write_result(result)
 
+        response.code = res.code
         response.write_header(res.headers)
         response.write_body(res.result)
     return handler
@@ -128,12 +130,13 @@ ThriftRequest = namedtuple('ThriftRequest', 'headers args')
 class ThriftResponse(object):
     """Represents a response to a Thrift call."""
 
-    __slots__ = ('headers', 'result', 'finished')
+    __slots__ = ('headers', 'result', 'finished', 'code')
 
     def __init__(self, result=None):
         self.headers = {}
         self.result = result
         self.finished = False
+        self.code = StatusCode.ok
 
     def write_header(self, name, value):
         """Add a header to be written in the response."""
@@ -167,7 +170,7 @@ class ThriftResponse(object):
         """
         exc_info = exc_info or sys.exc_info()
         exc = exc_info[1]
-
+        self.code = StatusCode.error
         for spec in self.result.thrift_spec[1:]:
             if spec and isinstance(exc, spec[3][0]):
                 assert not self.finished, "Already sent a response"
