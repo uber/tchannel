@@ -368,9 +368,7 @@ function unadvertise() {
     self.destroy();
     self.latestAdvertisementResult = null;
     self.state = States.UNADVERTISED;
-    self.tchannel.close(function onClose() {
-        self.emit('unadvertised');
-    });
+    self.emit('unadvertised');
 };
 
 HyperbahnClient.prototype.getErrorRetryTime = function getErrorRetryTime() {

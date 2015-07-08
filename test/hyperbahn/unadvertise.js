@@ -101,6 +101,7 @@ function runTests(HyperbahnCluster) {
 
         var fwdreq;
         function onUnadvertised() {
+            steve.channel.close();
             assert.equal(steveHyperbahnClient.latestAdvertisementResult, null, 'latestAdvertisementResult is null');
             assert.equal(steveHyperbahnClient.state, 'UNADVERTISED', 'state should be UNADVERTISED');
 
