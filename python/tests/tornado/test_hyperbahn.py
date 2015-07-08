@@ -17,13 +17,13 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
+import mock
 import pytest
 import tornado
 
 from tchannel.errors import ConnectionClosedError
 from tchannel.tornado import TChannel
 from tchannel.tornado import hyperbahn
-from tornado.concurrent import Future
 
 
 def test_new_client_establishes_peers():
@@ -48,6 +48,7 @@ def test_request():
     hyperbahn.advertise(channel, 'foo', ['127.0.0.1:23000'])
 
     # Just want to make sure all the plumbing fits together.
+
     with pytest.raises(ConnectionClosedError):
         yield channel.request(service='bar').send(
             arg1='baz',
@@ -58,21 +59,26 @@ def test_request():
 
 
 @pytest.mark.gen_test
-def test_advertise(tchannel_server):
-    endpoint = b'ad'
+def test_advertise():
+    server = TChannel(name="test_server")
 
-    f = Future()
-
+    @server.register('ad', 'json')
     @tornado.gen.coroutine
-    def execution(request, response):
+    def ad(request, response, proxy):
         body = yield request.get_body()
-        f.set_result(body)
+        response.write_body(body)
 
-    tchannel_server.expect_call(endpoint, 'json').execute = execution
+    server.listen()
     channel = TChannel(name='test')
-    hyperbahn.advertise(channel,
-                        'test', ['localhost:'+str(tchannel_server.port)]
-                        )
 
-    result = yield f
-    assert result == {'services': [{'serviceName': 'test', 'cost': 0}]}
+    with mock.patch(
+        'tchannel.tornado.hyperbahn._regular_advertise'
+    ) as mock_regular_advertise:
+        response = yield hyperbahn.advertise(
+            channel,
+            'test', [server.hostport]
+        )
+
+    result = yield response.get_body()
+    assert mock_regular_advertise.called
+    assert result == '{"services": [{"serviceName": "test", "cost": 0}]}'
