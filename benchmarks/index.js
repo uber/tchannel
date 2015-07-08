@@ -96,6 +96,7 @@ function startRelayServers() {
         '--benchRelayPort', String(RELAY_SERVER_PORT),
         '--traceRelayPort', String(RELAY_TRACE_PORT),
         '--type', 'bench-relay',
+        '--instances', String(INSTANCE_COUNT),
         argv.trace ? '--trace' : '--no-trace',
         argv.debug ? '--debug' : '--no-debug'
     ]);
@@ -109,6 +110,7 @@ function startRelayServers() {
             '--benchRelayPort', String(RELAY_SERVER_PORT),
             '--traceRelayPort', String(RELAY_TRACE_PORT),
             '--type', 'trace-relay',
+            '--instances', String(INSTANCE_COUNT),
             argv.trace ? '--trace' : '--no-trace',
             argv.debug ? '--debug' : '--no-debug'
         ]);
