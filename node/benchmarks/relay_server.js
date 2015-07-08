@@ -60,9 +60,7 @@ function RelayServer(opts) {
     assert('trace' in opts, 'trace is a required options');
     assert('debug' in opts, 'debug is a required options');
 
-    var benchHostPort = '127.0.0.1:' + opts.benchPort;
     var benchRelayHostPort = '127.0.0.1:' + opts.benchRelayPort;
-    var traceHostPort = '127.0.0.1:' + opts.tracePort;
     var traceRelayHostPort = '127.0.0.1:' + opts.traceRelayPort;
 
     self.relay = TChannel({
@@ -89,27 +87,34 @@ function RelayServer(opts) {
         })
     });
 
-    if (opts.type === 'bench-relay') {
-        self.relay.handler.createServiceChannel('benchmark');
-        self.relay.listen(opts.benchRelayPort, '127.0.0.1', onListen);
-    } else if (opts.type === 'trace-relay') {
-        self.relay.handler.createServiceChannel('tcollector');
-        self.relay.listen(opts.traceRelayPort, '127.0.0.1', onListen);
-    }
+    self.serviceName = opts.type === 'bench-relay' ? 'benchmark' :
+        opts.type === 'trace-relay' ? 'tcollector' :
+        'unknown';
+    self.port = opts.type === 'bench-relay' ? opts.benchRelayPort :
+        opts.type === 'trace-relay' ? opts.traceRelayPort :
+        null;
+    self.targetPort = opts.type === 'bench-relay' ? opts.benchPort :
+        opts.type === 'trace-relay' ? opts.tracePort :
+        null;
+
+    self.type = opts.type;
+
+    self.relay.handler.createServiceChannel(self.serviceName);
+    self.relay.listen(self.port, '127.0.0.1', onListen);
 
     function onListen() {
-        var peer;
-
-        if (opts.type === 'bench-relay') {
-            peer = self.relay.handler.getServicePeer(
-                'benchmark', benchHostPort
-            );
-            peer.connect();
-        } else if (opts.type === 'trace-relay') {
-            peer = self.relay.handler.getServicePeer(
-                'tcollector', traceHostPort
-            );
-            peer.connect();
-        }
+        self.connect();
     }
 }
+
+RelayServer.prototype.connect = function connect() {
+    var self = this;
+
+    var basePort = parseInt(self.targetPort, 10);
+    var targetHostPort = '127.0.0.1:' + basePort;
+
+    var peer = self.relay.handler.getServicePeer(
+        self.serviceName, targetHostPort
+    );
+    peer.connect();
+};
