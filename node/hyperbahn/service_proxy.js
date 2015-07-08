@@ -27,6 +27,7 @@ var util = require('util');
 var ServiceHealthProxy = require('./service_health_proxy');
 
 var DEFAULT_LOG_GRACE_PERIOD = 5 * 60 * 1000;
+var SERVICE_PURGE_PERIOD = 5 * 60 * 1000;
 
 function ServiceDispatchHandler(options) {
     if (!(this instanceof ServiceDispatchHandler)) {
@@ -48,6 +49,10 @@ function ServiceDispatchHandler(options) {
     self.permissionsCache = options.permissionsCache;
     self.serviceReqDefaults = options.serviceReqDefaults || {};
     self.circuits = options.circuits;
+    self.servicePurgePeriod = options.servicePurgePeriod ||
+        SERVICE_PURGE_PERIOD;
+    self.exitServices = Object.create(null);
+    self.purgeServices();
 
     self.egressNodes.on('membershipChanged', onMembershipChanged);
 
@@ -177,6 +182,43 @@ function createServiceChannel(serviceName) {
     svcchan.handler = handler;
 
     return svcchan;
+};
+
+ServiceDispatchHandler.prototype.purgeServices =
+function purgeServices() {
+    var self = this;
+
+    var time = self.channel.timers.now();
+    var keys = Object.keys(self.exitServices);
+    for (var i = 0; i < keys.length; i++) {
+        var serviceName = keys[i];
+        if (time - self.exitServices[serviceName] > self.servicePurgePeriod) {
+            delete self.exitServices[serviceName];
+            var chan = self.channel.subChannels[serviceName];
+            if (chan) {
+                chan.close();
+                delete self.channel.subChannels[serviceName];
+            }
+        }
+    }
+
+    self.servicePurgeTimer = self.channel.timers.setTimeout(
+        function purgeServices() {
+            self.purgeServices();
+        },
+        self.servicePurgePeriod
+    );
+};
+
+ServiceDispatchHandler.prototype.refreshServicePeer =
+function refreshServicePeer(serviceName, hostPort) {
+    var self = this;
+
+    var peer = self.getServicePeer(serviceName, hostPort);
+    peer.connect();
+
+    var time = self.channel.timers.now();
+    self.exitServices[serviceName] = time;
 };
 
 ServiceDispatchHandler.prototype.updateServiceChannels =
@@ -319,6 +361,12 @@ function unblock(cn, serviceName) {
     if (Object.keys(self.blockingTable).length === 0) {
         self.blockingTable = null;
     }
+};
+
+ServiceDispatchHandler.prototype.destroy =
+function destroy() {
+    var self = this;
+    self.channel.timers.clearTimeout(self.servicePurgeTimer);
 };
 
 // TODO Consider sharding by hostPort and indexing exit exitNodes by hostPort.

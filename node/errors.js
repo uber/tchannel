@@ -375,6 +375,11 @@ module.exports.TChannelConnectionResetError = WrappedError({
     message: 'tchannel: {causeMessage}'
 });
 
+module.exports.TChannelDestroyedError = TypedError({
+    type: 'tchannel.destroyed',
+    message: 'the channel is destroyed'
+});
+
 module.exports.TChannelListenError = WrappedError({
     type: 'tchannel.server.listen-failed',
     message: 'tchannel: {origMessage}',
@@ -552,6 +557,7 @@ module.exports.classify = function classify(err) {
 
         case 'tchannel.connection.close':
         case 'tchannel.connection.reset':
+        case 'tchannel.destroyed':
         case 'tchannel.socket':
         case 'tchannel.socket-closed':
         case 'tchannel.socket-local-closed':

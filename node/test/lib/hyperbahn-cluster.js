@@ -60,7 +60,9 @@ function HyperbahnCluster(options) {
         numInstancesPerService: 1,
         kValue: 5,
         serviceNames: ['bob', 'steve', 'mary'],
-        clusterOptions: options.cluster || options.clusterOptions
+        clusterOptions: options.cluster || options.clusterOptions,
+        timers: options.timers,
+        servicePurgePeriod: options.servicePurgePeriod
     });
 
     self.remotes = {};
