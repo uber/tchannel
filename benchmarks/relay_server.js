@@ -20,7 +20,7 @@
 
 'use strict';
 
-var NullStatsd = require('uber-statsd-client/null');
+var Statsd = require('uber-statsd-client');
 var parseArgs = require('minimist');
 var process = require('process');
 var assert = require('assert');
@@ -72,7 +72,10 @@ function RelayServer(opts) {
         },
         logger: opts.debug ? require('debug-logtron')('relay') : null,
         trace: false,
-        statsd: NullStatsd()
+        statsd: new Statsd({
+            host: '127.0.0.1',
+            port: 7036
+        })
     });
     self.relay.handler = ServiceProxy({
         channel: self.relay,

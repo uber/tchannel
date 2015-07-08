@@ -31,6 +31,7 @@ var process = require('process');
 var console = require('console');
 var setTimeout = require('timers').setTimeout;
 var assert = require('assert');
+var dgram = require('dgram');
 
 var server = path.join(__dirname, 'bench_server.js');
 var relay = path.join(__dirname, 'relay_server.js');
@@ -60,6 +61,9 @@ var RELAY_SERVER_PORT = 7038;
 var RELAY_TRACE_PORT = 7037;
 var STATSD_PORT = 7036;
 var INSTANCE_COUNT = 72;
+
+var statsdServer = dgram.createSocket('udp4');
+statsdServer.bind(STATSD_PORT);
 
 var serverProc = run(server, [
     argv.trace ? '--trace' : '--no-trace',
@@ -197,6 +201,7 @@ function startBench() {
         if (benchRelayProc) {
             benchRelayProc.kill();
         }
+        statsdServer.close();
     });
 }
 
