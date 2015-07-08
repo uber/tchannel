@@ -94,7 +94,7 @@ RelayNetwork.prototype.bootstrap = function bootstrap(cb) {
 RelayNetwork.prototype.close = function close(cb) {
     var self = this;
     self.relayChannels.forEach(function (relayChannel) {
-        relayChannel.handler.close();
+        relayChannel.handler.destroy();
     });
     self.cluster.destroy();
     cb();
@@ -180,11 +180,7 @@ RelayNetwork.prototype.setCluster = function setCluster(cluster) {
         });
         hyperbahnHandler.advertise =
         function advertise(serviceObj) {
-            var peer = relayChannel.handler.getServicePeer(
-                serviceObj.serviceName, serviceObj.hostPort
-            );
-            peer.connect();
-            relayChannel.handler.updateServiceTimestamp(serviceObj.serviceName);
+            relayChannel.handler.refreshServicePeer(serviceObj.serviceName, serviceObj.hostPort);
         };
         hyperbahnChannel.handler = hyperbahnHandler;
 
