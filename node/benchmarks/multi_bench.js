@@ -21,7 +21,7 @@
 'use strict';
 
 var async = require('async');
-var NullStatsd = require('uber-statsd-client/null');
+var Statsd = require('uber-statsd-client');
 var metrics = require('metrics');
 var parseArgs = require('minimist');
 var process = require('process');
@@ -126,7 +126,10 @@ Test.prototype.newClient = function (id, callback) {
             app: 'my-client'
         },
         trace: true,
-        statsd: NullStatsd()
+        statsd: new Statsd({
+            host: '127.0.0.1',
+            port: 7036
+        })
     });
     if (argv.trace) {
         var reporter = Reporter({
