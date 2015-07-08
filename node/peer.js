@@ -29,6 +29,7 @@ var net = require('net');
 var TChannelConnection = require('./connection');
 var errors = require('./errors');
 var states = require('./states');
+var Request = require('./request');
 
 var DEFAULT_REPORT_INTERVAL = 1000;
 
@@ -226,22 +227,10 @@ function _waitForIdentified(conn, callback) {
 
 TChannelPeer.prototype.request = function peerRequest(options) {
     var self = this;
-    var req = self.connect().request(options);
 
-    self.state.onRequest(req);
-
-    req.errorEvent.on(onError);
-    req.responseEvent.on(onResponse);
-
-    function onError(err) {
-        self.state.onRequestError(err);
-    }
-
-    function onResponse(res) {
-        self.state.onRequestHealthy(req);
-    }
-
-    return req;
+    options.peerState = self.state;
+    options.timeout = options.timeout || Request.defaultTimeout;
+    return self.connect().request(options);
 };
 
 TChannelPeer.prototype.addConnection = function addConnection(conn) {

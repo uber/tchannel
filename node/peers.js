@@ -25,7 +25,6 @@ var inherits = require('util').inherits;
 var extend = require('xtend');
 var EventEmitter = require('./lib/event_emitter');
 
-var errors = require('./errors');
 var TChannelPeer = require('./peer');
 var TChannelSelfPeer = require('./self_peer');
 
@@ -41,6 +40,7 @@ function TChannelPeers(channel, options) {
     self.logger = self.channel.logger;
     self.options = options || {};
     self.peerOptions = self.options.peerOptions || {};
+    self.peerScoreThreshold = self.options.peerScoreThreshold || 0;
     self._map = Object.create(null);
     self._keys = [];
     self.selfPeer = null;
@@ -187,36 +187,17 @@ function waitForIdentified(options, callback) {
     peer.waitForIdentified(callback);
 };
 
-TChannelPeers.prototype.request = function peersRequest(req, options) {
-    var self = this;
-    var peer = self.choosePeer(req, options);
-    if (!peer) throw errors.NoPeerAvailable(); // TODO: operational error?
-    return peer.request(options);
-};
-
-TChannelPeers.prototype.choosePeer = function choosePeer(req, options) {
+TChannelPeers.prototype.choosePeer =
+function choosePeer(req) {
     /*eslint complexity: [2, 15]*/
     var self = this;
 
-    if (!options) {
-        options = {};
-    }
-
-    var hosts = null;
-    if (options.host) {
-        return self.add(options.host);
-    } else {
-        hosts = self._keys;
-    }
-
+    var hosts = self._keys;
     if (!hosts || !hosts.length) {
         return null;
     }
 
-    var threshold = options.peerScoreThreshold;
-    if (threshold === undefined) {
-        threshold = self.options.peerScoreThreshold || 0;
-    }
+    var threshold = self.peerScoreThreshold;
 
     var selectedPeer = null;
     var selectedScore = 0;
@@ -224,7 +205,7 @@ TChannelPeers.prototype.choosePeer = function choosePeer(req, options) {
         var hostPort = hosts[i];
         var peer = self._map[hostPort];
         if (!req || !req.triedRemoteAddrs[hostPort]) {
-            var score = peer.state.shouldRequest(req, options);
+            var score = peer.state.shouldRequest(req);
             var want = score > threshold &&
                        (selectedPeer === null || score > selectedScore);
             if (want) {

@@ -42,14 +42,18 @@ allocCluster.test('request() with zero timeout', {
         var peer = subTwo.peers.add(one.hostPort);
         var conn = peer.connect();
 
+        // fff magic test
         var req = conn.buildOutRequest({
             channel: conn.channel,
             remoteAddr: conn.remoteName,
-            ttl: 0,
+            peerState: peer.state,
+            timeout: 0,
             tracer: conn.tracer,
             serviceName: 'server',
             host: one.hostPort,
             hasNoParent: true,
+            checksumType: null,
+            timers: conn.channel.timers,
             headers: {
                 'as': 'raw',
                 'cn': 'wat'
@@ -103,10 +107,13 @@ allocCluster.test('request() with zero timeout', {
         var req = conn.buildOutRequest({
             channel: conn.channel,
             remoteAddr: conn.remoteName,
-            ttl: -10,
+            peerState: peer.state,
+            timeout: -10,
             tracer: conn.tracer,
             serviceName: 'server',
             host: one.hostPort,
+            checksumType: null,
+            timers: conn.channel.timers,
             hasNoParent: true,
             headers: {
                 'as': 'raw',

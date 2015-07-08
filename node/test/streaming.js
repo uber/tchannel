@@ -64,11 +64,16 @@ var Cases = [
 allocCluster.test('streaming echo w/ streaming callback', 2, function t(cluster, assert) {
     var one = cluster.channels[0];
     var two = cluster.channels[1];
+    var twoSub = two.makeSubChannel({
+        serviceName: 'wat'
+    });
+
     var hostOne = cluster.hosts[0];
     one.handler = echoHandler();
     async.parallel(Cases.map(function eachTestCase(testCase) {
         testCase = extend({
             channel: two,
+            subChannel: twoSub,
             opts: {host: hostOne},
         }, testCase);
         return partsTest(testCase, assert);
@@ -100,13 +105,16 @@ function partsTest(testCase, assert) {
             hasNoParent: true
         }, testCase.opts);
 
-        var peer = testCase.channel.peers.choosePeer(null, options);
-        var conn = peer.connect();
-        options.headers = options.headers || {};
-        options.headers.as = 'raw';
-        options.headers.cn = 'wat';
-        conn.on('identified', function onId() {
-            var req = conn.request(options);
+        var peer = testCase.channel.peers.add(options.host);
+
+        peer.waitForIdentified(function onId() {
+            options.headers = options.headers || {};
+            options.headers.as = 'raw';
+            options.headers.cn = 'wat';
+            options.host = peer.hostPort;
+
+            var req = testCase.subChannel.request(options);
+
             var resultReady = Ready();
             req.hookupCallback(resultReady.signal);
             req.arg1.end(testCase.op);

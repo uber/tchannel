@@ -39,6 +39,8 @@ var errors = require('../errors');
 
 var SERVER_TIMEOUT_DEFAULT = 100;
 
+/* jshint maxparams:10 */
+
 module.exports = TChannelV2Handler;
 
 function TChannelV2Handler(options) {
@@ -588,11 +590,13 @@ function sendCallRequestFrame(req, flags, args) {
         return;
     }
     var reqBody = new v2.CallRequest(
-        flags, req.ttl, req.tracing, req.serviceName, req.headers,
+        flags, req.timeout, req.tracing, req.serviceName, req.headers,
         req.checksum.type, args
     );
 
-    self.verifyCallRequestFrame(req);
+    if (!self.verifyCallRequestFrame(req, args)) {
+        return;
+    }
 
     var result = self._sendCallBodies(req.id, reqBody, null);
     req.checksum = result.checksum;
@@ -622,7 +626,7 @@ function sendCallRequestFrame(req, flags, args) {
 };
 
 TChannelV2Handler.prototype.verifyCallRequestFrame =
-function verifyCallRequestFrame(req) {
+function verifyCallRequestFrame(req, args) {
     var self = this;
 
     var message;
@@ -656,6 +660,8 @@ function verifyCallRequestFrame(req) {
             socketRemoteAddr: self.connection.socketRemoteAddr
         });
     }
+
+    return true;
 };
 
 function OutboundRequestSizeTags(serviceName, cn, endpoint) {
@@ -886,12 +892,17 @@ TChannelV2Handler.prototype.sendErrorFrame = function sendErrorFrame(r, codeStri
 TChannelV2Handler.prototype.buildOutRequest = function buildOutRequest(options) {
     var self = this;
     var id = self.nextFrameId();
-    if (options.checksumType === undefined || options.checksumType === null) {
+
+    if (options.checksumType === null) {
         options.checksumType = v2.Checksum.Types.CRC32C;
     }
-    options.checksum = new v2.Checksum(options.checksumType);
-    if (!options.headers) options.headers = {};
-    options.headers.re = v2.encodeRetryFlags(options.retryFlags);
+    if (!options.checksum) {
+        options.checksum = new v2.Checksum(options.checksumType);
+    }
+    if (!options.headers.re) {
+        options.headers.re = v2.encodeRetryFlags(options.retryFlags);
+    }
+
     if (options.streamed) {
         return new StreamingOutRequest(self, id, options);
     } else {
@@ -915,28 +926,43 @@ TChannelV2Handler.prototype.buildOutResponse = function buildOutResponse(req, op
 
 TChannelV2Handler.prototype.buildInRequest = function buildInRequest(reqFrame) {
     var self = this;
-    var retryFlags = v2.parseRetryFlags(reqFrame.body.headers.re);
-    var opts = {
-        logger: self.logger,
-        random: self.random,
-        timers: self.timers,
-        tracer: self.tracer,
-        ttl: reqFrame.body.ttl || SERVER_TIMEOUT_DEFAULT,
-        tracing: reqFrame.body.tracing,
-        serviceName: reqFrame.body.service,
-        headers: reqFrame.body.headers,
-        retryFlags: retryFlags,
-        checksum: new v2.Checksum(reqFrame.body.csum.type),
-        streamed: reqFrame.body.flags & v2.CallFlags.Fragment,
-        hostPort: self.hostPort, // needed for tracing
-        connection: self.connection
-    };
-    if (opts.streamed) {
+    var opts = new InRequestOptions(
+        self.connection.channel,
+        reqFrame.body.ttl || SERVER_TIMEOUT_DEFAULT,
+        reqFrame.body.tracing,
+        reqFrame.body.service,
+        reqFrame.body.headers,
+        new v2.Checksum(reqFrame.body.csum.type),
+        v2.parseRetryFlags(reqFrame.body.headers.re),
+        self.connection,
+        self.hostPort,
+        self.tracer
+    );
+
+    if (reqFrame.body.flags & v2.CallFlags.Fragment) {
         return new StreamingInRequest(reqFrame.id, opts);
     } else {
         return new InRequest(reqFrame.id, opts);
     }
 };
+
+function InRequestOptions(
+    channel, timeout, tracing, serviceName, headers, checksum,
+    retryFlags, connection, hostPort, tracer
+) {
+    var self = this;
+
+    self.channel = channel;
+    self.timeout = timeout;
+    self.tracing = tracing;
+    self.serviceName = serviceName;
+    self.headers = headers;
+    self.checksum = checksum;
+    self.retryFlags = retryFlags;
+    self.connection = connection;
+    self.hostPort = hostPort;
+    self.tracer = tracer;
+}
 
 TChannelV2Handler.prototype.buildInResponse = function buildInResponse(resFrame) {
     var self = this;
