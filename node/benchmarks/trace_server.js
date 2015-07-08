@@ -23,7 +23,7 @@
 var process = require('process');
 process.title = 'nodejs-benchmarks-trace_server';
 
-var NullStatsd = require('uber-statsd-client/null');
+var Statsd = require('uber-statsd-client');
 var Buffer = require('buffer').Buffer;
 
 var TChannel = require('../channel');
@@ -32,7 +32,10 @@ var server = TChannel({
         app: 'tcollector'
     },
     trace: false,
-    statsd: NullStatsd()
+    statsd: new Statsd({
+        host: '127.0.0.1',
+        port: 7036
+    })
 });
 
 var tcollectorChan = server.makeSubChannel({
