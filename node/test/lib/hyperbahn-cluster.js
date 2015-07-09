@@ -58,11 +58,15 @@ function HyperbahnCluster(options) {
     self.relayNetwork = RelayNetwork({
         numRelays: self.size,
         numInstancesPerService: 1,
-        kValue: 5,
+        kValue: options.kValue || 5,
         serviceNames: ['bob', 'steve', 'mary'],
         clusterOptions: options.cluster || options.clusterOptions,
         timers: options.timers,
-        servicePurgePeriod: options.servicePurgePeriod
+        servicePurgePeriod: options.servicePurgePeriod,
+        qpsLimits: options.qpsLimits,
+        totalQpsLimit: options.totalQpsLimit,
+        defaultServiceQpsLimit: options.defaultServiceQpsLimit,
+        rateLimitingBuckets: options.rateLimitingBuckets
     });
 
     self.remotes = {};
