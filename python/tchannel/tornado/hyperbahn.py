@@ -106,8 +106,7 @@ def _first_advertise(tchannel, service):
                 attempt_counter += 1
                 log.error('Failed to register with Hyperbahn: %s', response)
             else:
-                attempt_counter = 0
-                log.info('Successfully register with Hyperbahn')
+                log.info('Successfully registered with Hyperbahn')
                 raise tornado.gen.Return(response)
 
         (attempt_counter, delay_time) = _prepare_next_ad(attempt_counter)

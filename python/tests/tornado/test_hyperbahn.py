@@ -72,13 +72,14 @@ def test_advertise():
     channel = TChannel(name='test')
 
     with mock.patch(
-        'tchannel.tornado.hyperbahn._regular_advertise'
+        'tchannel.tornado.hyperbahn._regular_advertise',
+        autospec=True,
     ) as mock_regular_advertise:
         response = yield hyperbahn.advertise(
             channel,
             'test', [server.hostport]
         )
 
-    result = yield response.get_body()
-    assert mock_regular_advertise.called
-    assert result == '{"services": [{"serviceName": "test", "cost": 0}]}'
+        result = yield response.get_body()
+        assert mock_regular_advertise.called
+        assert result == '{"services": [{"serviceName": "test", "cost": 0}]}'
