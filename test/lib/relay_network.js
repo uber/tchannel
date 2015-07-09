@@ -55,6 +55,11 @@ function RelayNetwork(options) {
 
     self.servicePurgePeriod = options.servicePurgePeriod;
 
+    self.qpsLimits = options.qpsLimits;
+    self.totalQpsLimit = options.totalQpsLimit;
+    self.defaultServiceQpsLimit = options.defaultServiceQpsLimit;
+    self.rateLimitingBuckets = options.rateLimitingBuckets;
+
     self.numPeers = self.numRelays + self.serviceNames.length * self.numInstancesPerService;
     self.clusterOptions.numPeers = self.numPeers;
     self.cluster = null;
@@ -159,6 +164,10 @@ RelayNetwork.prototype.setCluster = function setCluster(cluster) {
             statsd: statsd,
             egressNodes: egressNodes,
             servicePurgePeriod: self.servicePurgePeriod,
+            qpsLimits: self.qpsLimits,
+            totalQpsLimit: self.totalQpsLimit,
+            defaultServiceQpsLimit: self.defaultServiceQpsLimit,
+            rateLimitingBuckets: self.rateLimitingBuckets,
             circuits: self.createCircuits({
                 egressNodes: egressNodes,
                 timers: self.timers,

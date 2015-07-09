@@ -49,8 +49,19 @@ inherits(FakeEgressNodes, EventEmitter);
 
 FakeEgressNodes.prototype.isExitFor = function isExitFor(serviceName) {
     var self = this;
+    var hostPorts = self.topology[serviceName];
 
-    return self.topology[serviceName].indexOf(self.hostPort) >= 0;
+    // A random service; pick k random things
+    if (!hostPorts) {
+        hostPorts = self.getRandomNodes(serviceName);
+    }
+
+    return hostPorts.indexOf(self.hostPort) >= 0;
+};
+
+FakeEgressNodes.prototype.kValueFor = function kValueFor(serviceName) {
+    var self = this;
+    return self.kValue;
 };
 
 FakeEgressNodes.prototype.getRandomNodes =
