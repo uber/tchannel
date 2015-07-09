@@ -35,7 +35,7 @@ script:
   - make -C $SUBDIR test_ci
 
 after_success:
-  - coveralls
+  - cd $SUBDIR && coveralls -v
 
 #
 # cache dependencies and directories
