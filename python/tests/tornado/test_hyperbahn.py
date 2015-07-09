@@ -17,7 +17,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-import mock
 import pytest
 import tornado
 
@@ -71,15 +70,9 @@ def test_advertise():
     server.listen()
     channel = TChannel(name='test')
 
-    with mock.patch(
-        'tchannel.tornado.hyperbahn._regular_advertise',
-        autospec=True,
-    ) as mock_regular_advertise:
-        response = yield hyperbahn.advertise(
-            channel,
-            'test', [server.hostport]
-        )
-
-        result = yield response.get_body()
-        assert mock_regular_advertise.called
-        assert result == '{"services": [{"serviceName": "test", "cost": 0}]}'
+    response = yield hyperbahn.advertise(
+        channel,
+        'test', [server.hostport]
+    )
+    result = yield response.get_body()
+    assert result == '{"services": [{"serviceName": "test", "cost": 0}]}'

@@ -96,6 +96,11 @@ class InvalidErrorCodeError(TChannelError):
         self.code = code
 
 
+class AdvertiseError(TChannelError):
+    """Represent advertise failure exception"""
+    pass
+
+
 class TChannelApplicationError(TChannelError):
     """The remote application returned an exception.
 

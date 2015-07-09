@@ -23,12 +23,12 @@ from __future__ import absolute_import
 import json
 import logging
 import random
+import time
 
 import tornado.gen
 import tornado.ioloop
 
-from tchannel.tornado.timeout import timeout
-
+from ..errors import AdvertiseError
 from ..errors import ProtocolError
 from ..errors import TimeoutError
 from .response import StatusCode
@@ -36,27 +36,10 @@ from .response import StatusCode
 DEFAULT_EXPO_BASE = 1.4  # try this first
 DEFAULT_MAX_DELAY = 10  # sec
 DEFAULT_MAX_ATTEMPT = 7  # pow(1.4, 8) > 10
-DEFAULT_DELAY = 60  # sec delay time for successful advertise
+DEFAULT_DELAY = 60 * 1000  # ms delay time for successful advertise
 DEFAULT_FIRST_ADVERTISE_TIME = 30  # sec
 
 log = logging.getLogger('tchannel')
-
-
-def _advertise(tchannel, service):
-    return tchannel.request(service='hyperbahn').send(
-        arg1='ad',  # advertise
-        arg2='',
-        arg3=json.dumps({
-            'services': [
-                {
-                    'serviceName': service,
-                    'cost': 0,
-                }
-            ]
-        }),
-        headers={'as': 'json'},
-        attempt_times=1,
-    )
 
 
 def _prepare_next_ad(attempt_counter):
@@ -71,48 +54,57 @@ def _prepare_next_ad(attempt_counter):
 
 
 @tornado.gen.coroutine
-def _regular_advertise(tchannel, service, attempt_counter=0):
+def _advertise(tchannel, service):
+    response = None
     try:
-        response = yield _advertise(tchannel, service)
+        response = yield tchannel.request(service='hyperbahn').send(
+            arg1='ad',  # advertise
+            arg2='',
+            arg3=json.dumps({
+                'services': [
+                    {
+                        'serviceName': service,
+                        'cost': 0,
+                    }
+                ]
+            }),
+            headers={'as': 'json'},
+            attempt_times=1,
+        )
     except (ProtocolError, TimeoutError) as e:
-        attempt_counter += 1
         log.error('Failed to register with Hyperbahn: %s', e)
     else:
         if response.code != StatusCode.ok:
-            attempt_counter += 1
             log.error('Failed to register with Hyperbahn: %s', response)
         else:
-            attempt_counter = 0
             log.info('Successfully register with Hyperbahn')
 
-    (attempt_counter, delay_time) = _prepare_next_ad(attempt_counter)
-    tornado.ioloop.IOLoop.current().call_later(
-        delay=delay_time,
-        callback=lambda: _regular_advertise(tchannel, service, attempt_counter)
-    )
+    raise tornado.gen.Return(response)
 
 
 @tornado.gen.coroutine
-def _first_advertise(tchannel, service):
+def _exponential_backoff_advertise(tchannel, service, timeout=None):
+    # first advertise rule apply here.
     attempt_counter = 0
+    start = time.time()
     while True:
-        try:
-            response = yield _advertise(tchannel, service)
-        except (ProtocolError, TimeoutError) as e:
-            attempt_counter += 1
-            log.error('Failed to register with Hyperbahn: %s', e)
-        else:
-            if response.code != StatusCode.ok:
-                attempt_counter += 1
-                log.error('Failed to register with Hyperbahn: %s', response)
-            else:
-                log.info('Successfully registered with Hyperbahn')
-                raise tornado.gen.Return(response)
+        if timeout and time.time() - start > 30000:
+            raise AdvertiseError("Failed to register with Hyperbahn.")
 
+        response = yield _advertise(
+            tchannel,
+            service,
+        )
+        if response is not None and response.code is StatusCode.ok:
+            break
+        attempt_counter += 1
         (attempt_counter, delay_time) = _prepare_next_ad(attempt_counter)
         yield tornado.gen.sleep(delay_time)
 
+    raise tornado.gen.Return(response)
 
+
+@tornado.gen.coroutine
 def advertise(tchannel, service, routers):
     """Advertise the given TChannel to Hyperbahn using the given name.
 
@@ -137,16 +129,18 @@ def advertise(tchannel, service, routers):
         # TChannel already knows about some of the routers.
         tchannel.peers.get(router)
 
-    ad_future = _first_advertise(tchannel, service)
+    result = yield _exponential_backoff_advertise(
+        tchannel, service, timeout=DEFAULT_FIRST_ADVERTISE_TIME
+    )
 
-    def first_ad_callback(f):
-        if f.exception():
-            log.error('Failed to register with Hyperbahn forever.')
-        else:
-            _regular_advertise(tchannel, service)
+    advertise_loop = tornado.ioloop.PeriodicCallback(
+        lambda f: _exponential_backoff_advertise(
+            tchannel, service, timeout=None
+        ),
+        DEFAULT_DELAY,
+    )
+    advertise_loop.start()
 
-    with timeout(ad_future, DEFAULT_FIRST_ADVERTISE_TIME):
-        ad_future.add_done_callback(lambda f: first_ad_callback(f))
-        return ad_future
+    raise tornado.gen.Return(result)
 
 advertize = advertise  # just in case
