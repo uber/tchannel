@@ -82,10 +82,12 @@ function TChannelPeer(channel, hostPort, options) {
         }
 
         var count = self.countConnections('out');
-        self.channel.connectionsActiveStat.update(count, {
-            'host-port': self.channel.hostPort,
-            'peer-host-port': self.hostPort
-        });
+        if (self.channel.emitConnectionMetrics) {
+            self.channel.connectionsActiveStat.update(count, {
+                'host-port': self.channel.hostPort,
+                'peer-host-port': self.hostPort
+            });
+        }
 
         self.reportTimer = self.stateOptions.timers.setTimeout(
             onReport, self.reportInterval
