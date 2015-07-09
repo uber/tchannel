@@ -259,6 +259,101 @@ allocCluster.test('emits stats on p2p call success', {
     }
 });
 
+allocCluster.test('emits stats with no connection metrics', {
+    numPeers: 2,
+    channelOptions: {
+        timers: timers,
+        emitConnectionMetrics: false
+    }
+}, function t(cluster, assert) {
+    var server = cluster.channels[0];
+    var client = cluster.channels[1];
+    var statsd = nullStatsd(9);
+
+    server.makeSubChannel({
+        serviceName: 'reservoir'
+    }).register('Reservoir::get', function get(req, res, h, b) {
+        timers.setTimeout(function onSend() {
+            res.headers.as = 'raw';
+            res.sendOk(h, b);
+        }, 500);
+        timers.advance(500);
+    });
+
+    client.statTags = client.options.statTags = {
+        app: 'pool',
+        host: os.hostname(),
+        cluster: 'c0',
+        version: '1.0'
+    };
+    client.channelStatsd = new TChannelStatsd(client, statsd);
+    var clientChan = client.makeSubChannel({
+        serviceName: 'reservoir',
+        peers: [server.hostPort],
+        requestDefaults: {
+            headers: {
+                as: 'raw',
+                cn: 'wat'
+            },
+            timeout: 1000
+        }
+    });
+
+    clientChan.request({
+        serviceName: 'reservoir',
+        hasNoParent: true,
+        headers: {
+            cn: 'inPipe'
+        }
+    }).send('Reservoir::get', 'ton', '20', onResponse);
+
+    function onResponse(err, res, arg2, arg3) {
+        if (err) {
+            return assert.end(err);
+        }
+        assert.ok(res.ok, 'res should be ok');
+        assert.deepEqual(statsd._buffer._elements, [{
+            type: 'c',
+            name: 'tchannel.outbound.calls.sent.inPipe.reservoir.Reservoir--get',
+            value: null,
+            delta: 1,
+            time: null
+        }, {
+            type: 'c',
+            name: 'tchannel.outbound.request.size.inPipe.reservoir.Reservoir--get',
+            value: null,
+            delta: 109,
+            time: null
+        }, {
+            type: 'c',
+            name: 'tchannel.inbound.response.size.inPipe.reservoir.Reservoir--get',
+            value: null,
+            delta: 67,
+            time: null
+        }, {
+            type: 'ms',
+            name: 'tchannel.outbound.calls.per-attempt-latency.inPipe.reservoir.Reservoir--get.0',
+            value: null,
+            delta: null,
+            time: 500
+        }, {
+            type: 'c',
+            name: 'tchannel.outbound.calls.success.inPipe.reservoir.Reservoir--get',
+            value: null,
+            delta: 1,
+            time: null
+        }, {
+            type: 'ms',
+            name: 'tchannel.outbound.calls.latency.inPipe.reservoir.Reservoir--get',
+            value: null,
+            delta: null,
+            time: 500
+        }], 'stats keys/values as expected');
+
+        assert.end();
+    }
+});
+
 allocCluster.test('emits stats on call failure', {
     numPeers: 2,
     channelOptions: {

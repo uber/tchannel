@@ -140,6 +140,9 @@ function TChannel(options) {
     self.initTimeout = self.options.initTimeout || 2000;
     self.requireAs = self.options.requireAs;
     self.requireCn = self.options.requireCn;
+    self.emitConnectionMetrics =
+        typeof self.options.emitConnectionMetrics === 'boolean' ?
+        self.options.emitConnectionMetrics : true;
 
     // Filled in by the listen call:
     self.host = null;

@@ -42,15 +42,19 @@ function TChannelConnection(channel, socket, direction, socketRemoteAddr) {
     self.identifiedEvent = self.defineEvent('identified');
 
     if (direction === 'out') {
-        self.channel.connectionsInitiatedStat.increment(1, {
-            'host-port': self.channel.hostPort || '0.0.0.0:0',
-            'peer-host-port': socketRemoteAddr
-        });
+        if (self.channel.emitConnectionMetrics) {
+            self.channel.connectionsInitiatedStat.increment(1, {
+                'host-port': self.channel.hostPort || '0.0.0.0:0',
+                'peer-host-port': socketRemoteAddr
+            });
+        }
     } else {
-        self.channel.connectionsAcceptedStat.increment(1, {
-            'host-port': self.channel.hostPort,
-            'peer-host-port': socketRemoteAddr
-        });
+        if (self.channel.emitConnectionMetrics) {
+            self.channel.connectionsAcceptedStat.increment(1, {
+                'host-port': self.channel.hostPort,
+                'peer-host-port': socketRemoteAddr
+            });
+        }
     }
 
     self.socket = socket;
@@ -467,7 +471,7 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
         err = new Error('unknown connection reset'); // TODO typed error
     }
 
-    if (!self.remoteName) {
+    if (!self.remoteName && self.channel.emitConnectionMetrics) {
         if (self.direction === 'out') {
             self.channel.connectionsConnectErrorsStat.increment(1, {
                 'host-port': self.channel.hostPort || '0.0.0.0:0',
@@ -479,7 +483,7 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
                 'peer-host-port': self.socketRemoteAddr
             });
         }
-    } else {
+    } else if (self.channel.emitConnectionMetrics) {
         if (err.type !== 'tchannel.socket-local-closed') {
             self.channel.connectionsErrorsStat.increment(1, {
                 'host-port': self.channel.hostPort || '0.0.0.0:0',
