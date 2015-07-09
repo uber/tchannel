@@ -268,9 +268,6 @@ allocCluster.test('emits stats with no connection metrics', {
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
     var client = cluster.channels[1];
-    var serverHost = cluster.hosts[0]
-        .split(':')[0]
-        .replace(/\./g, '-');
     var statsd = nullStatsd(9);
 
     server.makeSubChannel({
@@ -318,12 +315,6 @@ allocCluster.test('emits stats with no connection metrics', {
         assert.deepEqual(statsd._buffer._elements, [{
             type: 'c',
             name: 'tchannel.outbound.calls.sent.inPipe.reservoir.Reservoir--get',
-            value: null,
-            delta: 1,
-            time: null
-        }, {
-            type: 'c',
-            name: 'tchannel.connections.initiated.' + serverHost,
             value: null,
             delta: 1,
             time: null
