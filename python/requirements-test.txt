@@ -36,3 +36,5 @@ zest.releaser
 
 # for debugging
 ipdb
+
+coveralls
