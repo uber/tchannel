@@ -24,6 +24,7 @@ var assert = require('assert');
 var RelayHandler = require('../relay_handler');
 var EventEmitter = require('../lib/event_emitter');
 var util = require('util');
+var RateLimiting = require('./rate_limiting');
 var ServiceHealthProxy = require('./service_health_proxy');
 
 var DEFAULT_LOG_GRACE_PERIOD = 5 * 60 * 1000;
@@ -53,6 +54,14 @@ function ServiceDispatchHandler(options) {
         SERVICE_PURGE_PERIOD;
     self.exitServices = Object.create(null);
     self.purgeServices();
+    self.rateLimiting = new RateLimiting({
+        serviceDispatchHandler: self,
+        timers: self.channel.timers,
+        qpsLimits: options.qpsLimits,
+        totalQpsLimit: options.totalQpsLimit,
+        defaultServiceQpsLimit: options.defaultServiceQpsLimit,
+        buckets: options.rateLimitingBuckets
+    });
 
     self.egressNodes.on('membershipChanged', onMembershipChanged);
 
@@ -81,6 +90,10 @@ function handleRequest(req, buildRes) {
 
     if (self.isBlocked(req.headers && req.headers.cn, req.serviceName)) {
         req.connection.ops.popInReq(req.id);
+        return;
+    }
+
+    if (self.rateLimiting.handleRequest(req, buildRes)) {
         return;
     }
 
@@ -248,6 +261,7 @@ function updateServiceChannel(svcchan) {
     } else if (!isExit) {
         if (svcchan.serviceProxyMode === 'exit') {
             self.changeToForward(exitNodes, svcchan);
+            self.rateLimiting.removeCounter(svcchan.serviceName);
         } else {
             self.updateExitNodes(exitNodes, svcchan);
         }
@@ -367,6 +381,7 @@ ServiceDispatchHandler.prototype.destroy =
 function destroy() {
     var self = this;
     self.channel.timers.clearTimeout(self.servicePurgeTimer);
+    self.rateLimiting.destroy();
 };
 
 // TODO Consider sharding by hostPort and indexing exit exitNodes by hostPort.
