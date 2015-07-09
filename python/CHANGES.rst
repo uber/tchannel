@@ -1,11 +1,18 @@
 Changelog for tchannel.py
 =========================
 
-0.8.6 (unreleased)
+0.9.1 (2015-07-09)
+------------------
+
+- Use threadloop 0.3.* to fix main thread not exiting when `tchannel.sync.TChannelSyncClient` is used.
+
+
+0.9.0 (2015-07-07)
 ------------------
 
 - Allow custom handlers for unrecognized endpoints.
 - Released `tchannel.sync.TChannelSyncClient` and `tchannel.sync.thrift.client_for`.
+
 
 0.8.5 (2015-06-30)
 ------------------

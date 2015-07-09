@@ -3,7 +3,7 @@ from setuptools import find_packages, setup
 
 setup(
     name='tchannel',
-    version='0.9.0',
+    version='0.9.1',
     author='Abhinav Gupta, Aiden Scandella, Bryce Lampe, Grayson Koonce, Junchao Wu',
     author_email='dev@uber.com',
     description='Network multiplexing and framing protocol for RPC',
@@ -15,7 +15,7 @@ setup(
         'crcmod',
         'tornado>=4.0,<5.0',
         'toro>=0.8,<0.9',
-        'threadloop',
+        'threadloop>=0.3,<0.4',
         'futures',
     ],
     entry_points={
