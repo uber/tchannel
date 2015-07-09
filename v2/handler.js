@@ -220,15 +220,17 @@ function emitBytesRecvd(frame) {
     var self = this;
 
     var channel = self.connection.channel;
-    channel.emitFastStat(channel.buildStat(
-        'connections.bytes-recvd',
-        'counter',
-        frame.size,
-        new ConnectionsBytesRcvdTags(
-            channel.hostPort || '0.0.0.0:0',
-            self.connection.socketRemoteAddr
-        )
-    ));
+    if (channel.emitConnectionMetrics) {
+        channel.emitFastStat(channel.buildStat(
+            'connections.bytes-recvd',
+            'counter',
+            frame.size,
+            new ConnectionsBytesRcvdTags(
+                channel.hostPort || '0.0.0.0:0',
+                self.connection.socketRemoteAddr
+            )
+        ));
+    }
 };
 
 function InboundRequestSizeTags(cn, serviceName, endpoint) {
@@ -604,15 +606,17 @@ function emitBytesSent(result) {
     var self = this;
 
     var channel = self.connection.channel;
-    channel.emitFastStat(channel.buildStat(
-        'connections.bytes-sent',
-        'counter',
-        result.size,
-        new ConnectionsBytesSentTags(
-            channel.hostPort || '0.0.0.0:0',
-            self.connection.socketRemoteAddr
-        )
-    ));
+    if (channel.emitConnectionMetrics) {
+        channel.emitFastStat(channel.buildStat(
+            'connections.bytes-sent',
+            'counter',
+            result.size,
+            new ConnectionsBytesSentTags(
+                channel.hostPort || '0.0.0.0:0',
+                self.connection.socketRemoteAddr
+            )
+        ));
+    }
 };
 
 TChannelV2Handler.prototype.verifyCallRequestFrame =
