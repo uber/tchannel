@@ -38,7 +38,6 @@ from tchannel.transport_header import RetryType
 
 @tornado.gen.coroutine
 def handler_error(request, response, proxy):
-    yield tornado.gen.sleep(0.01)
     response.connection.send_error(
         ErrorCode.busy,
         "retry",
@@ -88,7 +87,7 @@ def test_retry_timeout():
                 headers={
                     're': RetryType.CONNECTION_ERROR_AND_TIMEOUT
                 },
-                ttl=0.005,
+                ttl=0.00001,
                 attempt_times=3,
                 retry_delay=0.01,
             )
@@ -115,9 +114,9 @@ def test_retry_on_error_fail():
                 headers={
                     're': RetryType.CONNECTION_ERROR_AND_TIMEOUT
                 },
-                ttl=0.02,
+                ttl=0.04,
                 attempt_times=3,
-                retry_delay=0.01,
+                retry_delay=0.0001,
             )
 
         assert mock_should_retry_on_error.called
@@ -152,7 +151,7 @@ def test_retry_on_error_success():
             headers={
                 're': RetryType.CONNECTION_ERROR_AND_TIMEOUT,
             },
-            ttl=0.01,
+            ttl=1,
             attempt_times=3,
             retry_delay=0.01,
         )

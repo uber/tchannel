@@ -88,7 +88,10 @@ def test_zipkin_trace(trace_server):
     response = yield tchannel.request(hostport).send(InMemStream(endpoint),
                                                      InMemStream(hostport),
                                                      InMemStream(),
-                                                     traceflag=True)
+                                                     traceflag=True,
+                                                     ttl=4,
+                                                     attempt_times=3,
+                                                     retry_delay=0.0001,)
     header = yield response.get_header()
     body = yield response.get_body()
     assert header == "from handler1"
