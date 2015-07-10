@@ -23,6 +23,7 @@
 var assert = require('assert');
 var inherits = require('util').inherits;
 var EventEmitter = require('./lib/event_emitter');
+var v2 = require('./v2');
 
 var errors = require('./errors');
 var States = require('./reqres_states');
@@ -121,6 +122,33 @@ TChannelConnectionBase.prototype.onReqError = function onReqError(req, err) {
         var errName = err.name || err.constructor.name;
         req.res.sendError('UnexpectedError', errName + ': ' + err.message);
     }
+};
+
+TChannelConnectionBase.prototype.handleCallLazily = function handleCallLazily(frame) {
+    var self = this;
+    var op = null;
+
+    switch (frame.type) {
+        case v2.Types.CallRequest:
+            return self.channel.handler.handleLazily &&
+                   self.channel.handler.handleLazily(self, frame);
+        case v2.Types.CallResponse:
+        case v2.Types.CallResponseCont:
+        case v2.Types.ErrorResponse:
+            op = self.ops.getOutReq(frame.id);
+            break;
+        case v2.Types.CallRequestCont:
+            op = self.ops.getInReq(frame.id);
+            break;
+        default:
+            return false;
+    }
+
+    if (!op || !op.handleFrameLazily) {
+        return false;
+    }
+    op.handleFrameLazily(frame);
+    return true;
 };
 
 TChannelConnectionBase.prototype.runHandler = function runHandler(req) {

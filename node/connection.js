@@ -68,7 +68,8 @@ function TChannelConnection(channel, socket, direction, socketRemoteAddr) {
         requireAs: self.channel.requireAs,
         requireCn: self.channel.requireCn,
         tracer: self.tracer,
-        connection: self
+        connection: self,
+        handleCallLazily: handleCallLazily
     };
     // jshint forin:false
     for (var prop in self.options) {
@@ -82,6 +83,10 @@ function TChannelConnection(channel, socket, direction, socketRemoteAddr) {
     self.setupSocket();
     self.setupHandler();
     self.start();
+
+    function handleCallLazily(frame) {
+        return self.handleCallLazily(frame);
+    }
 }
 inherits(TChannelConnection, TChannelConnectionBase);
 
