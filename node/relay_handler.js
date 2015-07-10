@@ -241,9 +241,23 @@ RelayRequest.prototype.onError = function onError(err) {
     // TODO: stat in some cases, e.g. declined / peer not available
 };
 
-RelayRequest.prototype.logError = function logError(err, codeName) {
+RelayRequest.prototype.extendLogInfo = function extendLogInfo(info) {
     var self = this;
+    info.outRemoteAddr = self.outreq && self.outreq.remoteAddr;
+    info.inRemoteAddr = self.inreq.remoteAddr;
+    info.serviceName = self.inreq.serviceName;
+    info.outArg1 = String(self.inreq.arg1);
+    return info;
+};
 
+RelayRequest.prototype.logError = function relayRequestLogError(err, codeName) {
+    var self = this;
+    logError(self.channel.logger, err, codeName, function extendLogInfo(info) {
+        return self.extendLogInfo(info);
+    });
+};
+
+function logError(logger, err, codeName, extendLogInfo) {
     var level;
     switch (codeName) {
         case 'ProtocolError':
@@ -269,15 +283,10 @@ RelayRequest.prototype.logError = function logError(err, codeName) {
         level = 'warn';
     }
 
-    var logger = self.channel.logger;
-    var logOptions = {
+    var logOptions = extendLogInfo({
         error: err,
-        isErrorFrame: err.isErrorFrame,
-        outRemoteAddr: self.outreq && self.outreq.remoteAddr,
-        inRemoteAddr: self.inreq.remoteAddr,
-        serviceName: self.inreq.serviceName,
-        outArg1: String(self.inreq.arg1)
-    };
+        isErrorFrame: err.isErrorFrame
+    });
 
     if (err.isErrorFrame) {
         if (level === 'warn') {
@@ -294,4 +303,4 @@ RelayRequest.prototype.logError = function logError(err, codeName) {
             logger.info('expected error while forwarding', logOptions);
         }
     }
-};
+}
