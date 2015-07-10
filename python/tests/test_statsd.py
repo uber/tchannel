@@ -55,6 +55,23 @@ def test_before_send_request(statsd_hook, request):
     )
 
 
+def before_send_request_per_attempt(statsd_hook, request):
+    statsd_hook.before_send_request_per_attempt(request, 0)
+    statsd_hook._statsd.count.assert_called_with(
+        "tchannel.outbound.calls.retries.no-service.test.endpoint1", 1
+    )
+
+
+def test_outbound_latency(statsd_hook, request):
+    statsd_hook.before_send_request_per_attempt(request)
+    response = Response(code=StatusCode.error)
+    statsd_hook.after_receive_response(request, response)
+    kargs = statsd_hook._statsd.timing.call_args
+    assert kargs[0][0] == "tchannel.outbound.calls.per-attempt.latency." + (
+        "no-service.test.endpoint1"
+    )
+
+
 def test_after_receive_response(statsd_hook, request):
     response = Response(code=StatusCode.ok)
     statsd_hook.after_receive_response(request, response)

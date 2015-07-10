@@ -33,6 +33,7 @@ log = logging.getLogger('tchannel')
 EventType = enum(
     'EventType',
     before_send_request=0x00,
+    before_send_request_per_attempt=0x02,
     after_send_request=0x01,
     before_send_response=0x10,
     after_send_response=0x11,
@@ -62,7 +63,11 @@ class EventHook(object):
 
     """
     def before_send_request(self, request):
-        """Called before any part of a ``CALL_REQ`` message is sent."""
+        """Called before each request is sent."""
+        pass
+
+    def before_send_request_per_attempt(self, request, retry_count):
+        """Called before each attempt to send the request."""
         pass
 
     def after_send_request(self, request):
