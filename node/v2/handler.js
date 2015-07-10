@@ -69,6 +69,7 @@ function TChannelV2Handler(options) {
     self.hostPort = self.options.hostPort;
     self.processName = self.options.processName;
     self.connection = self.options.connection;
+    self.handleCallLazily = self.options.handleCallLazily || null;
     self.remoteName = null; // filled in by identify message
     self.lastSentFrameId = 0;
     // TODO: GC these... maybe that's up to TChannel itself wrt ops
@@ -116,6 +117,25 @@ TChannelV2Handler.prototype.nextFrameId = function nextFrameId() {
 };
 
 TChannelV2Handler.prototype.handleFrameLazily = function handleFrameLazily(frame) {
+    var self = this;
+
+    switch (frame.type) {
+        // TODO: make some type handlers lazy?
+        // case v2.Types.InitRequest:
+        // case v2.Types.InitResponse:
+        // case v2.Types.Cancel:
+        // case v2.Types.Claim:
+        // case v2.Types.PingRequest:
+        // case v2.Types.PingResponse:
+
+        case v2.Types.CallRequest:
+        case v2.Types.CallResponse:
+        case v2.Types.CallRequestCont:
+        case v2.Types.CallResponseCont:
+        case v2.Types.ErrorResponse:
+            return self.handleCallLazily && self.handleCallLazily(frame);
+    }
+
     return false;
 };
 
