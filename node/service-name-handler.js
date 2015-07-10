@@ -42,6 +42,30 @@ function TChannelServiceNameHandler(options) {
 
 TChannelServiceNameHandler.prototype.type = 'tchannel.service-name-handler';
 
+TChannelServiceNameHandler.prototype.handleLazily = function handleLazily(conn, reqFrame) {
+    var self = this;
+
+    var res = reqFrame.bodyRW.lazy.readService(reqFrame);
+    if (res.err) {
+        // TODO: some way to indicate error directly
+        return false;
+    }
+
+    var serviceName = res.value;
+    if (!serviceName) {
+        // TODO: some way to indicate error directly
+        return false;
+    }
+
+    var chan = self.channel.subChannels[serviceName];
+
+    if (chan && chan.handler.handleLazily) {
+        return chan.handler.handleLazily(conn, reqFrame);
+    } else {
+        return false;
+    }
+};
+
 TChannelServiceNameHandler.prototype.handleRequest = function handleRequest(req, buildRes) {
     var self = this;
 
