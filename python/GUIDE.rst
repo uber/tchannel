@@ -46,7 +46,7 @@ Create a `Thrift <https://thrift.apache.org/>`_ file under
     $ cat thrift/service.thrift
 
 
-.. code-block:: thrift
+.. code-block:: idl
 
     exception NotFoundError {
         1: string key,
@@ -67,8 +67,11 @@ Create a `Thrift <https://thrift.apache.org/>`_ file under
 
 \
 This defines a service named ``KeyValue`` with two functions:
-    - ``get``: a function which takes one string parameter, and returns a string.
-    - ``set``: a void function that takes in two parameters.
+
+``get``
+    a function which takes one string parameter, and returns a string.
+``set``
+    a void function that takes in two parameters.
 
 Once you have defined your service, generate corresponding Thrift types by
 running the following:
@@ -96,6 +99,7 @@ will register handlers against. Open up ``keyvalue/server.py`` and write
 something like this:
 
 .. code-block:: python
+
     from __future__ import absolute_import
 
     from tornado import ioloop
@@ -222,6 +226,23 @@ The `tchannel` object contains context about the current request (such as
 Zipkin tracing information) and should be used to make requests to other
 TChannel services. (Note that this API may change in the future.)
 
+~~~~~~~~~~~~~~~~~
+Transport Headers
+~~~~~~~~~~~~~~~~~
+
+In addition to the call arguments and headers, the ``request`` object also
+provides some additional information about the current request under the
+``request.transport`` object:
+
+``transport.flags``
+    Request flags used by the protocol for fragmentation and streaming.
+``transport.ttl``
+    The time (in milliseconds) within which the caller expects a response.
+``transport.headers``
+    Protocol level headers for the request. For more information on transport
+    headers check the
+    `Transport Headers <../docs/protocol.md#transport-headers>`_ section of the
+    protocol document.
 
 ---------
 Hyperbahn

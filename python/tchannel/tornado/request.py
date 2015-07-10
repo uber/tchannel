@@ -20,6 +20,8 @@
 
 from __future__ import absolute_import
 
+from collections import namedtuple
+
 import tornado
 import tornado.gen
 
@@ -183,3 +185,19 @@ class Request(object):
             return retry_flag is not RetryType.TIMEOUT
         else:
             return False
+
+
+class TransportMetadata(
+    namedtuple('_Metadata', 'flags ttl service id headers')
+):
+    """A read-only representation of the metadata contained in the Request."""
+
+    @classmethod
+    def from_request(cls, request):
+        return cls(
+            flags=request.flags,
+            ttl=request.ttl,
+            service=request.service,
+            id=request.id,
+            headers=request.headers,
+        )
