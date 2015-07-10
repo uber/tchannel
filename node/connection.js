@@ -220,7 +220,7 @@ function sendProtocolError(type, err) {
         });
 
         self.handler.sendErrorFrame({
-            id: protocolError.frameId || 0xFFFFFFFF
+            id: protocolError.frameId || v2.Frame.NullId
         }, 'ProtocolError', protocolError.message);
 
         self.resetAll(protocolError);
