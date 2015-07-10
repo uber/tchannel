@@ -35,11 +35,11 @@ type ArgReader struct {
 
 // NewArgReader wraps the result of calling ArgXReader to provide a simpler
 // interface for reading arguments.
-func NewArgReader(reader io.ReadCloser, err error) *ArgReader {
-	return &ArgReader{reader, err}
+func NewArgReader(reader io.ReadCloser, err error) ArgReader {
+	return ArgReader{reader, err}
 }
 
-func (r *ArgReader) read(f func() error) error {
+func (r ArgReader) read(f func() error) error {
 	if r.err != nil {
 		return r.err
 	}
@@ -50,7 +50,7 @@ func (r *ArgReader) read(f func() error) error {
 }
 
 // Read reads from the reader into the byte slice.
-func (r *ArgReader) Read(bs *[]byte) error {
+func (r ArgReader) Read(bs *[]byte) error {
 	return r.read(func() error {
 		var err error
 		*bs, err = ioutil.ReadAll(r.reader)
@@ -59,7 +59,7 @@ func (r *ArgReader) Read(bs *[]byte) error {
 }
 
 // ReadJSON deserializes JSON from the underlying reader into data.
-func (r *ArgReader) ReadJSON(data interface{}) error {
+func (r ArgReader) ReadJSON(data interface{}) error {
 	return r.read(func() error {
 		// TChannel allows for 0 length values (not valid JSON), so we use a bufio.Reader
 		// to check whether data is of 0 length.
@@ -84,11 +84,11 @@ type ArgWriter struct {
 
 // NewArgWriter wraps the result of calling ArgXWriter to provider a simpler
 // interface for writing arguments.
-func NewArgWriter(writer io.WriteCloser, err error) *ArgWriter {
-	return &ArgWriter{writer, err}
+func NewArgWriter(writer io.WriteCloser, err error) ArgWriter {
+	return ArgWriter{writer, err}
 }
 
-func (w *ArgWriter) write(f func() error) error {
+func (w ArgWriter) write(f func() error) error {
 	if w.err != nil {
 		return w.err
 	}
@@ -101,7 +101,7 @@ func (w *ArgWriter) write(f func() error) error {
 }
 
 // Write writes the given bytes to the underlying writer.
-func (w *ArgWriter) Write(bs []byte) error {
+func (w ArgWriter) Write(bs []byte) error {
 	return w.write(func() error {
 		_, err := w.writer.Write(bs)
 		return err
@@ -109,7 +109,7 @@ func (w *ArgWriter) Write(bs []byte) error {
 }
 
 // WriteJSON writes the given object as JSON.
-func (w *ArgWriter) WriteJSON(data interface{}) error {
+func (w ArgWriter) WriteJSON(data interface{}) error {
 	return w.write(func() error {
 		e := json.NewEncoder(w.writer)
 		return e.Encode(data)
