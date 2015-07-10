@@ -49,8 +49,8 @@ class Response(object):
         self,
         connection=None,
         id=None,
-        flags=FlagsType.none,
-        code=0,
+        flags=None,
+        code=None,
         tracing=None,
         headers=None,
         checksum=None,
@@ -58,8 +58,8 @@ class Response(object):
         scheme=None,
     ):
 
-        self.flags = flags or StatusCode.ok
-        self.code = code
+        self.flags = flags or FlagsType.none
+        self.code = code or StatusCode.ok
         self.tracing = tracing
         self.checksum = checksum
         # argstreams is a list of InMemStream/PipeStream objects

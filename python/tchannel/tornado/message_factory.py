@@ -153,7 +153,7 @@ class MessageFactory(object):
         if response.state == StreamState.init:
             message = CallResponseMessage(
                 flags=response.flags,
-                # code=response.code,
+                code=response.code,
                 tracing=Tracing(response.tracing.span_id,
                                 response.tracing.parent_span_id,
                                 response.tracing.trace_id,
@@ -249,7 +249,7 @@ class MessageFactory(object):
         # TODO decide what to pass to Response from message
         res = Response(
             flags=message.flags,
-            # code=message.code,
+            code=message.code,
             headers=message.headers,
             checksum=message.checksum,
             argstreams=args,
