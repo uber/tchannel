@@ -71,3 +71,18 @@ func TestJSONInputOutput(t *testing.T) {
 	assert.Equal(t, "Foo", outObj.Name)
 	assert.Equal(t, 20756, outObj.Value)
 }
+
+func BenchmarkArgReaderWriter(b *testing.B) {
+	obj := testObject{Name: "Foo", Value: 20756}
+	outObj := testObject{}
+
+	for i := 0; i < b.N; i++ {
+		writer := newWriter()
+		NewArgWriter(writer, nil).WriteJSON(obj)
+		reader := newReader(writer.Bytes())
+		NewArgReader(reader, nil).ReadJSON(&outObj)
+	}
+
+	b.StopTimer()
+	assert.Equal(b, obj, outObj)
+}
