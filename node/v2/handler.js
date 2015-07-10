@@ -115,8 +115,24 @@ TChannelV2Handler.prototype.nextFrameId = function nextFrameId() {
     return self.lastSentFrameId;
 };
 
+TChannelV2Handler.prototype.handleFrameLazily = function handleFrameLazily(frame) {
+    return false;
+};
+
 TChannelV2Handler.prototype.handleFrame = function handleFrame(frame) {
     var self = this;
+
+    if (frame.isLazy) {
+        if (self.handleFrameLazily(frame)) {
+            return;
+        }
+
+        var res = frame.readBody();
+        if (res.err) {
+            return self.errorEvent.emit(res.err);
+        }
+    }
+
     switch (frame.body.type) {
         case v2.Types.InitRequest:
             return self.handleInitRequest(frame);
