@@ -19,7 +19,7 @@ Network multiplexing and framing protocol for RPC
 
 - [tchannel-node](https://github.com/uber/tchannel/tree/master/node) TChannel
   peer library for Node.js
-- [tchannel-python](https://github.com/uber/tchannel/tree/master/python)
+- [tchannel-python](https://github.com/uber/tchannel-python)
   TChannel peer library for Python
 - [tchannel-golang](https://github.com/uber/tchannel/tree/master/golang)
   TChannel peer library for Go
