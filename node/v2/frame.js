@@ -31,6 +31,7 @@ module.exports = Frame;
 
 function Frame(id, body) {
     var self = this;
+    self.isLazy = false;
     self.size = 0;
     self.type = (body && body.type) || 0;
     if (id === null || id === undefined) {
