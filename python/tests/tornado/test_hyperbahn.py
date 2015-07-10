@@ -75,4 +75,7 @@ def test_advertise():
         'test', [server.hostport]
     )
     result = yield response.get_body()
-    assert result == '{"services": [{"serviceName": "test", "cost": 0}]}'
+    assert (
+        result == '{"services": [{"serviceName": "test", "cost": 0}]}' or
+        result == '{"services": [{"cost": 0, "serviceName": "test"}]}'
+    )

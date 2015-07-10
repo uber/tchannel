@@ -91,10 +91,7 @@ def _exponential_backoff_advertise(tchannel, service, timeout=None):
         if timeout and time.time() - start > 30000:
             raise AdvertiseError("Failed to register with Hyperbahn.")
 
-        response = yield _advertise(
-            tchannel,
-            service,
-        )
+        response = yield _advertise(tchannel, service)
         if response is not None and response.code is StatusCode.ok:
             break
         attempt_counter += 1
