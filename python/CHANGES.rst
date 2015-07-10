@@ -1,12 +1,18 @@
 Changelog for tchannel.py
 =========================
 
-0.9.2 (unreleased)
-------------------
+0.10.1 (unreleased)
+-------------------
 
-- Add exponential backoff to `TChannel.advertise`
 
-  
+0.10.0 (2015-07-10)
+-------------------
+
+- Add exponential backoff to ``TChannel.advertise``.
+- Make transport metadata available under ``request.transport`` on the
+  server-side.
+
+
 0.9.1 (2015-07-09)
 ------------------
 

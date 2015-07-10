@@ -22,11 +22,12 @@ from __future__ import absolute_import
 
 import sys
 from collections import namedtuple
-from tchannel.tornado.response import StatusCode
 
 from tornado import gen
 
 from tchannel.tornado.broker import ArgSchemeBroker
+from tchannel.tornado.request import TransportMetadata
+from tchannel.tornado.response import StatusCode
 
 from .scheme import ThriftArgScheme
 
@@ -95,11 +96,7 @@ def register(dispatcher, service_module, handler, method=None, service=None):
 def build_handler(result_type, f):
     @gen.coroutine
     def handler(request, response, tchannel):
-        call_headers = yield request.get_header()
-        call_args = yield request.get_body()
-
-        # TODO: does request need to include message ID
-        req = ThriftRequest(call_headers, call_args)
+        req = yield ThriftRequest._from_raw_request(request)
         res = ThriftResponse(result_type())
         try:
             # TODO: It would be nice if we could wait until write_result was
@@ -123,8 +120,45 @@ def build_handler(result_type, f):
     return handler
 
 
-# Contains the different request parameters for a Thrift call.
-ThriftRequest = namedtuple('ThriftRequest', 'headers args')
+class ThriftRequest(namedtuple('_Request', 'headers args transport')):
+    """Represents a Thrift call request.
+
+    Makes the following attributes available:
+
+    ``headers``
+        The application-level headers passed in for this request.
+
+    ``args``
+        An object containing the parameters for the Thrift call. The object's
+        attributes will have the same name as the parameters defined in the
+        Thrift IDL.
+
+    ``transport``
+        Provides access to the transport metadata. Among other things, this
+        includes,
+
+        ``headers``
+            The transport-level headers
+        ``ttl``
+            TTL for this request in milliseconds. The caller expects a
+            response within this period. If this time is exceeded, the timeout
+            may kick in at the call site or in the forwarding layer.
+    """
+
+    @classmethod
+    @gen.coroutine
+    def _from_raw_request(cls, request):
+        call_headers = yield request.get_header()
+        call_args = yield request.get_body()
+        transport_metadata = TransportMetadata.from_request(request)
+
+        raise gen.Return(
+            cls(
+                headers=call_headers,
+                args=call_args,
+                transport=transport_metadata,
+            )
+        )
 
 
 class ThriftResponse(object):
