@@ -91,10 +91,17 @@ class FakeResult(object):
 
 @pytest.mark.gen_test
 def test_build_handler():
+
     def call(treq, tres, tchan):
+        assert treq.transport.headers == {
+            'as': 'thrift', 'cn': 'test_caller'
+        }
+
+        tres.write_header('foo', 'baar')
         return "world"
 
-    response_body = mock.Mock(spec=InMemStream)
+    response_header = InMemStream()
+    response_body = InMemStream()
 
     req = Request(
         argstreams=[
@@ -103,13 +110,14 @@ def test_build_handler():
             InMemStream('\00'),  # empty struct
         ],
         scheme=ThriftArgScheme(FakeResult),
+        headers={'cn': 'test_caller', 'as': 'thrift'},
     )
     req.close_argstreams()
 
     res = Response(
         argstreams=[
             InMemStream(),
-            InMemStream(),
+            response_header,
             response_body,
         ],
         scheme=ThriftArgScheme(FakeResult),
@@ -119,15 +127,25 @@ def test_build_handler():
     handler = build_handler(FakeResult, call)
     yield handler(req, res, tchannel)
 
-    response_body.write.assert_called_once_with(
-        bytearray([
-            0x0b,                    # field type = TType.STRING
-            0x00, 0x00,              # field ID = 0
-            0x00, 0x00, 0x00, 0x05,  # string length = 5
-        ] + list("world") + [
-            0x00,                    # end struct
-        ])
+    serialized_headers = yield response_header.read()
+    assert serialized_headers == bytearray(
+        [
+            0x00, 0x01,  # num headers = 1
+            0x00, 0x03,  # strlen('foo') = 3
+        ] + list('foo') + [
+            0x00, 0x04,  # strlen('baar') = 4
+        ] + list('baar')
     )
+
+    serialized_body = yield response_body.read()
+    assert serialized_body == bytearray([
+        0x0b,                    # field type = TType.STRING
+        0x00, 0x00,              # field ID = 0
+        0x00, 0x00, 0x00, 0x05,  # string length = 5
+    ] + list("world") + [
+        0x00,                    # end struct
+    ])
+
     assert 0 == res.status_code
 
 
