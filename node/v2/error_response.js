@@ -167,4 +167,10 @@ ErrorResponse.RW = bufrw.Struct(ErrorResponse, [
     }}},
 ]);
 
+ErrorResponse.RW.lazy = {};
+
+ErrorResponse.RW.lazy.isFrameTerminal = function isFrameTerminal() {
+    return true;
+};
+
 module.exports = ErrorResponse;
