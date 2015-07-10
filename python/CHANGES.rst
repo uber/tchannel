@@ -1,6 +1,12 @@
 Changelog for tchannel.py
 =========================
 
+0.9.2 (unreleased)
+------------------
+
+- Add exponential backoff to `TChannel.advertise`
+
+  
 0.9.1 (2015-07-09)
 ------------------
 

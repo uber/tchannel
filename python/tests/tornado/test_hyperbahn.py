@@ -17,8 +17,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-
 import pytest
+import tornado
 
 from tchannel.errors import ConnectionClosedError
 from tchannel.tornado import TChannel
@@ -47,6 +47,7 @@ def test_request():
     hyperbahn.advertise(channel, 'foo', ['127.0.0.1:23000'])
 
     # Just want to make sure all the plumbing fits together.
+
     with pytest.raises(ConnectionClosedError):
         yield channel.request(service='bar').send(
             arg1='baz',
@@ -57,8 +58,24 @@ def test_request():
 
 
 @pytest.mark.gen_test
-def test_register():
+def test_advertise():
+    server = TChannel(name="test_server")
+
+    @server.register('ad', 'json')
+    @tornado.gen.coroutine
+    def ad(request, response, proxy):
+        body = yield request.get_body()
+        response.write_body(body)
+
+    server.listen()
     channel = TChannel(name='test')
 
-    with pytest.raises(ConnectionClosedError):
-        yield hyperbahn.advertise(channel, 'foo', ['127.0.0.1:23000'])
+    response = yield hyperbahn.advertise(
+        channel,
+        'test', [server.hostport]
+    )
+    result = yield response.get_body()
+    assert (
+        result == '{"services": [{"serviceName": "test", "cost": 0}]}' or
+        result == '{"services": [{"cost": 0, "serviceName": "test"}]}'
+    )

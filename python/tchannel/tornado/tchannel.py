@@ -32,7 +32,6 @@ import tornado.iostream
 import tornado.tcpserver
 from tornado.netutil import bind_sockets
 
-
 from . import hyperbahn
 from .. import scheme
 from ..enum import enum
@@ -45,6 +44,7 @@ from .broker import ArgSchemeBroker
 from .connection import StreamConnection
 from .dispatch import RequestDispatcher
 from .peer import PeerGroup
+
 log = logging.getLogger('tchannel')
 
 

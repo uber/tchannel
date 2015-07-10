@@ -26,7 +26,6 @@ from ..enum import enum
 from .base import BaseMessage
 from .types import Types
 
-
 ErrorCode = enum(
     'ErrorCode',
     timeout=0x01,
@@ -61,6 +60,7 @@ class ErrorMessage(BaseMessage):
         ErrorCode.unexpected: 'unexpected',
         ErrorCode.bad_request: 'bad request',
         ErrorCode.network_error: 'network error',
+        ErrorCode.unhealthy: 'unhealthy error',
         ErrorCode.fatal: 'fatal protocol error'
     }
 
