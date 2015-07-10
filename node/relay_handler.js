@@ -126,6 +126,7 @@ function LazyRelayInReq(conn, peer, reqFrame) {
 
 LazyRelayInReq.prototype.extendLogInfo = function extendLogInfo(info) {
     var self = this;
+    // TODO: y u no request id? tracing id?
     info.outRemoteAddr = self.outreq && self.outreq.remoteAddr;
     info.inRemoteAddr = self.remoteAddr;
 
@@ -480,6 +481,7 @@ RelayRequest.prototype.onError = function onError(err) {
 
 RelayRequest.prototype.extendLogInfo = function extendLogInfo(info) {
     var self = this;
+    // TODO: y u no request id? tracing id?
     info.outRemoteAddr = self.outreq && self.outreq.remoteAddr;
     info.inRemoteAddr = self.inreq.remoteAddr;
     info.serviceName = self.inreq.serviceName;

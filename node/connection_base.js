@@ -94,7 +94,7 @@ function connBaseRequest(options) {
 
 TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(req) {
     var self = this;
-    
+
     self.ops.addInReq(req);
 
     req.remoteAddr = self.remoteName;
