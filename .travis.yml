@@ -16,11 +16,6 @@ language: python
 env:
   - SUBDIR=node
   - SUBDIR=golang
-  - SUBDIR=python TOX_ENV=py27
-  #- SUBDIR=python TOX_ENV=pypy
-  #- SUBDIR=python TOX_ENV=py34
-  - SUBDIR=python TOX_ENV=cover
-  - SUBDIR=python TOX_ENV=flake8
 
 before_install:
   - nvm install 0.10
