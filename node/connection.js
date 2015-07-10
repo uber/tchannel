@@ -78,7 +78,8 @@ function TChannelConnection(channel, socket, direction, socketRemoteAddr) {
     // jshint forin:true
     self.handler = new v2.Handler(opts);
 
-    self.mach = ReadMachine(bufrw.UInt16BE, v2.Frame.RW);
+    self.mach = ReadMachine(bufrw.UInt16BE, v2.LazyFrame.RW);
+    // TODO: evaluate leaving this always lazy vs eager for endpoints
 
     self.setupSocket();
     self.setupHandler();
