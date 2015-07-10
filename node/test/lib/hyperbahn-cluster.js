@@ -63,10 +63,10 @@ function HyperbahnCluster(options) {
         clusterOptions: options.cluster || options.clusterOptions,
         timers: options.timers,
         servicePurgePeriod: options.servicePurgePeriod,
-        qpsLimits: options.qpsLimits,
-        totalQpsLimit: options.totalQpsLimit,
-        defaultServiceQpsLimit: options.defaultServiceQpsLimit,
-        rateLimitingBuckets: options.rateLimitingBuckets
+        rpsLimitForServiceName: options.rpsLimitForServiceName,
+        totalRpsLimit: options.totalRpsLimit,
+        defaultServiceRpsLimit: options.defaultServiceRpsLimit,
+        rateLimiterBuckets: options.rateLimiterBuckets
     });
 
     self.remotes = {};

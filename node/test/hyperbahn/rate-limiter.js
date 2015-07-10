@@ -54,12 +54,10 @@ function wait(done) {
 }
 
 function runTests(HyperbahnCluster) {
-    var TOTAL_QPS = '~~TotalQPS++';
-
-    HyperbahnCluster.test('qps counter works', {
+    HyperbahnCluster.test('rps counter works', {
         size: 1,
         timers: timers,
-        rateLimitingBuckets: 2
+        rateLimiterBuckets: 2
     }, function t(cluster, assert) {
         var steve = cluster.remotes.steve;
         var bob = cluster.remotes.bob;
@@ -86,9 +84,9 @@ function runTests(HyperbahnCluster) {
                 send.bind(null, opts),
                 function check(done) {
                     cluster.relayNetwork.relayChannels.forEach(function (relayChannel, index) {
-                        assert.equals(relayChannel.handler.rateLimiting.counters[TOTAL_QPS].qps, 6, 'total request');
-                        assert.equals(relayChannel.handler.rateLimiting.counters.steve.qps, 3, 'request for steve');
-                        assert.equals(relayChannel.handler.rateLimiting.counters.tcollector.qps, 3, 'request for tcollector');
+                        assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 6, 'total request');
+                        assert.equals(relayChannel.handler.rateLimiter.counters.steve.rps, 3, 'request for steve');
+                        assert.equals(relayChannel.handler.rateLimiter.counters.tcollector.rps, 3, 'request for tcollector');
                     });
                     done();
                 }
@@ -99,10 +97,10 @@ function runTests(HyperbahnCluster) {
         }
     });
 
-    HyperbahnCluster.test('qps counter works in 1.5 seconds', {
+    HyperbahnCluster.test('rps counter works in 1.5 seconds', {
         size: 1,
         timers: timers,
-        rateLimitingBuckets: 2
+        rateLimiterBuckets: 2
     }, function t(cluster, assert) {
         var steve = cluster.remotes.steve;
         var bob = cluster.remotes.bob;
@@ -131,9 +129,9 @@ function runTests(HyperbahnCluster) {
                 send.bind(null, opts),
                 function check1(done) {
                     cluster.relayNetwork.relayChannels.forEach(function (relayChannel, index) {
-                        assert.equals(relayChannel.handler.rateLimiting.counters[TOTAL_QPS].qps, 6, 'check1: total request');
-                        assert.equals(relayChannel.handler.rateLimiting.counters.steve.qps, 3, 'check1: request for steve');
-                        assert.equals(relayChannel.handler.rateLimiting.counters.tcollector.qps, 3, 'check1: request for tcollector');
+                        assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 6, 'check1: total request');
+                        assert.equals(relayChannel.handler.rateLimiter.counters.steve.rps, 3, 'check1: request for steve');
+                        assert.equals(relayChannel.handler.rateLimiter.counters.tcollector.rps, 3, 'check1: request for tcollector');
                     });
                     done();
                 },
@@ -141,9 +139,9 @@ function runTests(HyperbahnCluster) {
                 send.bind(null, opts),
                 function check2(done) {
                     cluster.relayNetwork.relayChannels.forEach(function (relayChannel, index) {
-                        assert.equals(relayChannel.handler.rateLimiting.counters[TOTAL_QPS].qps, 4, 'check2: total request');
-                        assert.equals(relayChannel.handler.rateLimiting.counters.steve.qps, 2, 'check2: request for steve');
-                        assert.equals(relayChannel.handler.rateLimiting.counters.tcollector.qps, 2, 'check2: request for tcollector');
+                        assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 4, 'check2: total request');
+                        assert.equals(relayChannel.handler.rateLimiter.counters.steve.rps, 2, 'check2: request for steve');
+                        assert.equals(relayChannel.handler.rateLimiter.counters.tcollector.rps, 2, 'check2: request for tcollector');
                     });
                     done();
                 }
@@ -157,9 +155,9 @@ function runTests(HyperbahnCluster) {
     HyperbahnCluster.test('service rate limiting works', {
         size: 1,
         kValue: 2,
-        rateLimitingBuckets: 2,
-        qpsLimits: {
-            steve: 2 * 2 // 2 per node  
+        rateLimiterBuckets: 2,
+        rpsLimitForServiceName: {
+            steve: 2
         }
     }, function t(cluster, assert) {
         var steve = cluster.remotes.steve;
@@ -195,7 +193,7 @@ function runTests(HyperbahnCluster) {
                     }), 'echo', null, 'hello', function onResponse(err, res) {
 
                         assert.ok(err && err.type === 'tchannel.busy' &&
-                            err.message === 'steve is rate limited by 2 qps',
+                            err.message === 'steve is rate limited',
                             'should be rate limited');
                         done();
                     });
@@ -211,8 +209,8 @@ function runTests(HyperbahnCluster) {
         size: 1,
         timers: timers,
         kValue: 1,
-        rateLimitingBuckets: 2,
-        totalQpsLimit: 2
+        rateLimiterBuckets: 2,
+        totalRpsLimit: 2
     }, function t(cluster, assert) {
         var steve = cluster.remotes.steve;
         var bob = cluster.remotes.bob;
@@ -246,7 +244,7 @@ function runTests(HyperbahnCluster) {
                         serviceName: steve.serviceName
                     }), 'echo', null, 'hello', function onResponse(err, res) {
                         assert.ok(err && err.type === 'tchannel.busy' &&
-                            err.message === 'hyperbahn node is rate limited by the total rate 2 qps',
+                            err.message === 'hyperbahn node is rate limited by its total rps',
                             'should be rate limited');
                         done();
                     });
