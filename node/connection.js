@@ -425,6 +425,11 @@ TChannelConnection.prototype.onSocketError = function onSocketError(err) {
     }
 };
 
+TChannelConnection.prototype.nextFrameId = function nextFrameId() {
+    var self = this;
+    return self.handler.nextFrameId();
+};
+
 TChannelConnection.prototype.buildOutRequest = function buildOutRequest(options) {
     var self = this;
 
