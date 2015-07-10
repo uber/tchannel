@@ -21,17 +21,46 @@ package testutils
 // THE SOFTWARE.
 
 import (
+	"fmt"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 )
 
-// SetTimeout is used to fail tests after a timeout.
-// This should be used in tests which may block forever (e.g. due to channels).
-func SetTimeout(t *testing.T, timeout time.Duration) {
+// getCallerName returns the test name that called this function.
+// It traverses the stack to find the function name directly after a testing.* call.
+func getCallerName() string {
+	pc := make([]uintptr, 10)
+	n := runtime.Callers(2, pc)
+	for i := n; i > 0; i-- {
+		fname := runtime.FuncForPC(pc[i-1]).Name()
+		if strings.HasPrefix(fname, "testing.") {
+			return runtime.FuncForPC(pc[i-2]).Name()
+		}
+	}
+	return "unknown"
+}
+
+// SetTimeout is used to fail tests after a timeout. It returns a function that should be
+// run once the test is complete. The standard way is to use defer, e.g.
+// defer SetTimeout(t, time.Second)()
+func SetTimeout(t *testing.T, timeout time.Duration) func() {
+	caller := getCallerName()
+	c := make(chan struct{})
+
 	go func() {
-		time.Sleep(timeout)
-		t.Logf("Test timed out after " + timeout.String())
-		// Unfortunately, tests cannot be failed from new goroutines, so use a panic.
-		panic("Test timed out after " + timeout.String())
+		select {
+		case <-c:
+			// Test is complete, don't need to do anything.
+		case <-time.After(timeout):
+			t.Logf("Test %s timed out after %v", caller, timeout)
+			// Unfortunately, tests cannot be failed from new goroutines, so use a panic.
+			panic(fmt.Errorf("Test %s timed out after %v", caller, timeout))
+		}
 	}()
+
+	return func() {
+		c <- struct{}{}
+	}
 }
