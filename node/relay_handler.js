@@ -34,6 +34,38 @@ function RelayHandler(channel, circuits) {
 
 RelayHandler.prototype.type = 'tchannel.relay-handler';
 
+RelayHandler.prototype.handleLazily = function handleLazily(conn, reqFrame) {
+    var self = this;
+
+    var peer = self.channel.peers.choosePeer(null);
+    if (self.circuits) {
+        throw new Error('not implemented');
+    }
+    if (!peer) {
+        onError(errors.NoPeerAvailable());
+    } else {
+        var rereq = conn.ops.addInReq(new LazyRelayInReq(conn, peer, reqFrame));
+        rereq.createOutRequest();
+    }
+    return true;
+
+    function onError(err) {
+        var codeName = errors.classify(err) || 'UnexpectedError';
+        // TODO: provide a conn api for this rather than reach directly into handler
+        conn.handler.sendErrorFrame({
+            id: reqFrame.id
+        }, codeName, err.message);
+        logError(self.channel.logger, err, codeName, extendErrorLogInfo);
+        // TODO: stat in some cases, e.g. declined / peer not available
+    }
+
+    function extendErrorLogInfo(info) {
+        info.inRemoteAddr = conn.remoteName;
+        info.serviceName = reqFrame.bodyRW.lazy.readService(reqFrame);
+        return info;
+    }
+};
+
 RelayHandler.prototype.handleRequest = function handleRequest(req, buildRes) {
     var self = this;
 
@@ -86,6 +118,221 @@ RelayHandler.prototype._handleRequest = function _handleRequest(req, buildRes) {
 
     var rereq = new RelayRequest(self.channel, peer, req, buildRes);
     rereq.createOutRequest();
+};
+
+// TODO: lazy reqs
+// - timeout check methods
+
+function LazyRelayInReq(conn, peer, reqFrame) {
+    var self = this;
+
+    var res = reqFrame.bodyRW.lazy.readTTL(reqFrame);
+    // TODO: such res.err
+
+    self.start = conn.timers.now();
+    self.remoteAddr = conn.remoteName;
+    self.conn = conn;
+    self.peer = peer;
+    self.outreq = null;
+    self.reqFrame = reqFrame;
+    self.id = self.reqFrame.id;
+    self.timeout = res.value;
+    self.timedOut = false;
+}
+
+LazyRelayInReq.prototype.extendLogInfo = function extendLogInfo(info) {
+    var self = this;
+    info.outRemoteAddr = self.outreq && self.outreq.remoteAddr;
+    info.inRemoteAddr = self.remoteAddr;
+
+    if (self.reqFrame) {
+        // TODO: maybe stash eagerly on inreq from constructor? maybe cache the
+        // rw through a memo on the frame (de-dupe read here and in service
+        // dispatch)?
+        var res = self.reqFrame.bodyRW.lazy.readService(self.reqFrame);
+        if (!res.err) {
+            info.serviceName = res.value;
+        }
+        // TODO: useful enough to implement a lazy reader for arg1?
+        // info.outArg1 = String(self.arg1);
+    }
+
+    return info;
+};
+
+LazyRelayInReq.prototype.logError = function relayRequestlogError(err, codeName) {
+    var self = this;
+    logError(self.conn.logger, err, codeName, function extendLogInfo(info) {
+        return self.extendLogInfo(info);
+    });
+};
+
+LazyRelayInReq.prototype.checkTimeout = function checkTimeout() {
+    var self = this;
+    if (!self.timedOut) {
+        var elapsed = self.conn.timers.now() - self.start;
+        if (elapsed > self.timeout) {
+            self.timedOut = true;
+            // TODO: cancel any outreq?
+            self.onError(errors.RequestTimeoutError({
+                id: self.id,
+                start: self.start,
+                elapsed: elapsed,
+                timeout: self.timeout
+            }));
+            // TODO: observability hook for state machines
+        }
+    }
+    return self.timedOut;
+};
+
+LazyRelayInReq.prototype.createOutRequest = function createOutRequest() {
+    var self = this;
+
+    if (self.outreq) {
+        self.conn.logger.warn('relay request already started', {
+            // TODO: better context
+            remoteAddr: self.remoteAddr,
+            id: self.id
+        });
+        return;
+    }
+
+    self.peer.waitForIdentified(onIdentified);
+
+    function onIdentified(err) {
+        self.onIdentified(err);
+    }
+};
+
+LazyRelayInReq.prototype.onIdentified = function onIdentified(err) {
+    var self = this;
+
+    if (err) {
+        self.onError(err);
+        return;
+    }
+
+    var conn = chooseRelayPeerConnection(self.peer);
+    if (!conn.remoteName) {
+        // we get the problem
+        self.logger.error('onIdentified called on no connection identified', {
+            hostPort: self.peer.hostPort
+        });
+    }
+    if (conn.closing) {
+        // most likely
+        self.logger.error('onIdentified called on connection closing', {
+            hostPort: self.peer.hostPort
+        });
+    }
+
+    self.outreq = conn.ops.addOutReq(new LazyRelayOutReq(conn, self));
+
+    self.handleFrameLazily(self.reqFrame);
+    self.reqFrame = null;
+};
+
+LazyRelayInReq.prototype.onError = function onError(err) {
+    var self = this;
+
+    // TODO: stat in some cases, e.g. declined / peer not available
+    var codeName = errors.classify(err) || 'UnexpectedError';
+    // TODO: provide a conn api for this rather than reach directly into handler
+    self.conn.handler.sendErrorFrame({
+        id: self.id
+    }, codeName, err.message);
+    self.logError(err, codeName);
+};
+
+LazyRelayInReq.prototype.handleFrameLazily = function handleFrameLazily(frame) {
+    var self = this;
+    // frame.type will be one of:
+    // - v2.Types.CallRequest
+    // - v2.Types.CallRequestCont
+    frame.setId(self.outreq.id);
+    self.outreq.conn.socket.write(frame.buffer);
+    // TODO: need any state change on first terminal frame?
+};
+
+function LazyRelayOutReq(conn, inreq) {
+    var self = this;
+
+    self.start = conn.timers.now();
+    self.remoetAddr = conn.remoteName;
+    self.conn = conn;
+    self.inreq = inreq;
+    self.id = self.conn.nextFrameId();
+    self.timeout = 0;
+    self.timedOut = false;
+
+    var elapsed = self.start - self.inreq.start;
+    self.timeout = Math.max(self.inreq.timeout - elapsed, 1);
+    self.inreq.reqFrame.bodyRW.lazy.writeTTL(self.timeout, self.inreq.reqFrame);
+    // TODO: such res.err?
+}
+
+LazyRelayOutReq.prototype.extendLogInfo = function extendLogInfo(info) {
+    var self = this;
+    return self.inreq.extendLogInfo(info);
+};
+
+LazyRelayOutReq.prototype.logError = function relayRequestlogError(err, codeName) {
+    var self = this;
+    logError(self.conn.logger, err, codeName, function extendLogInfo(info) {
+        return self.inreq.extendLogInfo(info);
+    });
+};
+
+LazyRelayOutReq.prototype.checkTimeout = function checkTimeout() {
+    var self = this;
+    if (!self.timedOut) {
+        var elapsed = self.conn.timers.now() - self.start;
+        if (elapsed > self.timeout) {
+            self.timedOut = true;
+            // TODO: send cancel?
+            self.emitError(errors.RequestTimeoutError({
+                id: self.id,
+                start: self.start,
+                elapsed: elapsed,
+                timeout: self.timeout
+            }));
+        }
+    }
+    return self.timedOut;
+};
+
+LazyRelayOutReq.prototype.emitError = function emitError(err) {
+    var self = this;
+    self.inreq.onError(err);
+    // TODO: observability hook for state machines
+};
+
+LazyRelayOutReq.prototype.handleFrameLazily = function handleFrameLazily(frame) {
+    var self = this;
+    // frame.type will be one of:
+    // - v2.Types.CallResponse
+    // - v2.Types.CallResponseCont
+    // - v2.Types.ErrorResponse
+    frame.setId(self.inreq.id);
+    self.inreq.conn.socket.write(frame.buffer);
+
+    if (isFrameTerminal(frame)) {
+        self.conn.ops.popOutReq(self.id, {
+            info: 'lazy relay request (pop out)',
+            inRequestAddr: self.inreq.remoteAddr,
+            inRequestId: self.inreq.id,
+            outRequestAddr: self.remoteAddr,
+            outRequestId: self.id
+        });
+        self.inreq.conn.ops.popInReq(self.inreq.id, {
+            info: 'lazy relay request (pop in)',
+            inRequestAddr: self.inreq.remoteAddr,
+            inRequestId: self.inreq.id,
+            outRequestAddr: self.remoteAddr,
+            outRequestId: self.id
+        });
+    }
 };
 
 function RelayRequest(channel, peer, inreq, buildRes) {
@@ -337,4 +584,11 @@ function chooseRelayPeerConnection(peer) {
         if (conn.remoteName && !conn.closing) break;
     }
     return conn;
+}
+
+function isFrameTerminal(frame) {
+    var lazy = frame.bodyRW.lazy;
+    return lazy &&
+           lazy.isFrameTerminal &&
+           lazy.isFrameTerminal(frame);
 }
