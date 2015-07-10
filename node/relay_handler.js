@@ -50,12 +50,33 @@ RelayHandler.prototype.handleRequest = function handleRequest(req, buildRes) {
     // }
 
     req.forwardTrace = true;
-    var rereq = new RelayRequest(self.channel, req, buildRes);
+
+    var peer = self.channel.peers.choosePeer(null);
+    if (!peer) {
+        onError(errors.NoPeerAvailable());
+        return;
+    }
+
+    var rereq = new RelayRequest(self.channel, peer, req, buildRes);
 
     rereq.createOutRequest();
+
+    function onError(err) {
+        var codeName = errors.classify(err) || 'UnexpectedError';
+        buildRes().sendError(codeName, err.message);
+        logError(self.channel.logger, err, codeName, extendErrorLogInfo);
+        // TODO: stat in some cases, e.g. declined / peer not available
+    }
+
+    function extendErrorLogInfo(info) {
+        info.inRemoteAddr = req.remoteAddr;
+        info.serviceName = req.serviceName;
+        info.outArg1 = String(req.arg1);
+        return info;
+    }
 };
 
-function RelayRequest(channel, inreq, buildRes) {
+function RelayRequest(channel, peer, inreq, buildRes) {
     var self = this;
 
     self.channel = channel;
@@ -64,10 +85,10 @@ function RelayRequest(channel, inreq, buildRes) {
     self.outres = null;
     self.outreq = null;
     self.buildRes = buildRes;
-    self.peer = null;
+    self.peer = peer;
 }
 
-RelayRequest.prototype.createOutRequest = function createOutRequest(host) {
+RelayRequest.prototype.createOutRequest = function createOutRequest() {
     var self = this;
 
     if (self.outreq) {
@@ -76,23 +97,6 @@ RelayRequest.prototype.createOutRequest = function createOutRequest(host) {
             remoteAddr: self.inreq.remoteAddr,
             id: self.inreq.id
         });
-        return;
-    }
-
-    if (self.peer) {
-        self.logger.error('createOutRequest: overwritting peers', {
-            hostPort: self.peer.hostPort
-        });
-    }
-
-    if (host) {
-        self.peer = self.channel.peers.add(host);
-    } else {
-        self.peer = self.channel.peers.choosePeer(null);
-    }
-
-    if (!self.peer) {
-        self.onError(errors.NoPeerAvailable());
         return;
     }
 
