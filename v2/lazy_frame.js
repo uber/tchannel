@@ -36,6 +36,7 @@ function LazyFrame(size, type, id, buffer) {
     self.id = id;
     self.buffer = buffer;
 
+    self.body = null;
     self.bodyRW = null;
 }
 
@@ -44,6 +45,26 @@ LazyFrame.RW = bufrw.Base(lazyFrameLength, readLazyFrameFrom, writeLazyFrameInto
 
 LazyFrame.TypeOffset = 2;
 LazyFrame.IdOffset = 2 + 1 + 1;
+LazyFrame.BodyOffset = Frame.Overhead;
+
+LazyFrame.prototype.readBody = function readBody() {
+    var self = this;
+    if (self.body) {
+        return bufrw.ReadResult.just(self.body);
+    }
+
+    if (!self.buffer) {
+        // TODO: typed error
+        return bufrw.ReadResult.error(new Error('no buffer to read from'));
+    }
+
+    var res = self.bodyRW.readFrom(self.buffer, LazyFrame.BodyOffset);
+    if (!res.err) {
+        self.body = res.value;
+    }
+
+    return res;
+};
 
 function lazyFrameLength(lazyFrame) {
     return bufrw.LengthResult.just(lazyFrame.size);
