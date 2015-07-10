@@ -33,6 +33,7 @@ doubles
 
 # for releases
 zest.releaser
+twine
 
 # for debugging
 ipdb
