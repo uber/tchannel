@@ -93,6 +93,33 @@ util.inherits(ServiceDispatchHandler, EventEmitter);
 
 ServiceDispatchHandler.prototype.type = 'tchannel.hyperbahn.service-dispatch-handler';
 
+ServiceDispatchHandler.prototype.handleLazily = function handleLazily(conn, reqFrame) {
+    var self = this;
+
+    var res = reqFrame.bodyRW.lazy.readService(reqFrame);
+    if (res.err) {
+        // TODO: some way to indicate error directly
+        return false;
+    }
+
+    var serviceName = res.value;
+    if (!serviceName) {
+        // TODO: some way to indicate error directly
+        return false;
+    }
+
+    var chan = self.channel.subChannels[serviceName];
+    if (!chan) {
+        chan = self.getOrCreateServiceChannel(serviceName);
+    }
+
+    if (chan.handler.handleLazily) {
+        return chan.handler.handleLazily(conn, reqFrame);
+    } else {
+        return false;
+    }
+};
+
 ServiceDispatchHandler.prototype.handleRequest =
 function handleRequest(req, buildRes) {
     /* eslint max-statements:[2,20] */
