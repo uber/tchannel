@@ -40,5 +40,5 @@ function runTests(HyperbahnCluster) {
     require('./hyperbahn-down.js')(HyperbahnCluster);
     require('./hyperbahn-times-out.js')(HyperbahnCluster);
 
-    require('./rate-limiting.js')(HyperbahnCluster);
+    require('./rate-limiter.js')(HyperbahnCluster);
 }
