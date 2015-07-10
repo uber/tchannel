@@ -43,14 +43,11 @@ log = logging.getLogger('tchannel')
 
 
 def _prepare_next_ad(attempt_counter):
-    if attempt_counter:
-        delay_time = random.uniform(
-            0, min(DEFAULT_MAX_DELAY, DEFAULT_EXPO_BASE ** attempt_counter)
-        )
-    else:
-        delay_time = DEFAULT_DELAY
+    delay_time = random.uniform(
+        0, min(DEFAULT_MAX_DELAY, DEFAULT_EXPO_BASE ** attempt_counter)
+    )
     attempt_counter = min(attempt_counter, DEFAULT_MAX_ATTEMPT)
-    return (attempt_counter, delay_time)
+    return attempt_counter, delay_time
 
 
 @tornado.gen.coroutine
@@ -83,19 +80,23 @@ def _advertise(tchannel, service):
 
 
 @tornado.gen.coroutine
-def _exponential_backoff_advertise(tchannel, service, timeout=None):
+def _advertise_with_backoff(tchannel, service, timeout=None):
     # first advertise rule apply here.
     attempt_counter = 0
     start = time.time()
+
     while True:
         if timeout and time.time() - start > 30000:
             raise AdvertiseError("Failed to register with Hyperbahn.")
 
         response = yield _advertise(tchannel, service)
+
         if response is not None and response.code is StatusCode.ok:
             break
+
         attempt_counter += 1
-        (attempt_counter, delay_time) = _prepare_next_ad(attempt_counter)
+        attempt_counter, delay_time = _prepare_next_ad(attempt_counter)
+
         yield tornado.gen.sleep(delay_time)
 
     raise tornado.gen.Return(response)
@@ -126,12 +127,12 @@ def advertise(tchannel, service, routers):
         # TChannel already knows about some of the routers.
         tchannel.peers.get(router)
 
-    result = yield _exponential_backoff_advertise(
+    result = yield _advertise_with_backoff(
         tchannel, service, timeout=DEFAULT_FIRST_ADVERTISE_TIME
     )
 
     advertise_loop = tornado.ioloop.PeriodicCallback(
-        lambda f: _exponential_backoff_advertise(
+        lambda f: _advertise_with_backoff(
             tchannel, service, timeout=None
         ),
         DEFAULT_DELAY,
