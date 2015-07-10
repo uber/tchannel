@@ -148,24 +148,14 @@ RelayRequest.prototype.createOutRequest = function createOutRequest(host) {
 RelayRequest.prototype.onIdentified = function onIdentified() {
     var self = this;
 
-    var identified = false;
-    var closing = false;
-    for (var i = 0; i < self.peer.connections.length; i++) {
-        if (self.peer.connections[i].remoteName) {
-            identified = true;
-            closing = self.peer.connections[i].closing;
-            if (!closing) break;
-        }
-    }
-
-    if (!identified) {
+    var conn = chooseRelayPeerConnection(self.peer);
+    if (!conn.remoteName) {
         // we get the problem
         self.logger.error('onIdentified called on no connection identified', {
             hostPort: self.peer.hostPort
         });
     }
-
-    if (closing) {
+    if (conn.closing) {
         // most likely
         self.logger.error('onIdentified called on connection closing', {
             hostPort: self.peer.hostPort
@@ -346,4 +336,13 @@ function errorLogLevel(err, codeName) {
         default:
             return 'error';
     }
+}
+
+function chooseRelayPeerConnection(peer) {
+    var conn = null;
+    for (var i = 0; i < peer.connections.length; i++) {
+        conn = peer.connections[i];
+        if (conn.remoteName && !conn.closing) break;
+    }
+    return conn;
 }
