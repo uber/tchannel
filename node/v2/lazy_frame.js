@@ -20,6 +20,7 @@
 
 'use strict';
 
+var assert = require('assert');
 var bufrw = require('bufrw');
 var errors = require('../errors');
 
@@ -46,6 +47,13 @@ LazyFrame.RW = bufrw.Base(lazyFrameLength, readLazyFrameFrom, writeLazyFrameInto
 LazyFrame.TypeOffset = 2;
 LazyFrame.IdOffset = 2 + 1 + 1;
 LazyFrame.BodyOffset = Frame.Overhead;
+
+LazyFrame.prototype.setId = function setId(id) {
+    var self = this;
+    assert.ok(self.buffer, 'must have a buffer supplied');
+    self.id = id;
+    self.buffer.writeUInt32BE(self.id, LazyFrame.IdOffset);
+};
 
 LazyFrame.prototype.readBody = function readBody() {
     var self = this;
