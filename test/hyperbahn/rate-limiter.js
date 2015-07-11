@@ -84,7 +84,7 @@ function runTests(HyperbahnCluster) {
                 send.bind(null, opts),
                 function check(done) {
                     cluster.relayNetwork.relayChannels.forEach(function (relayChannel, index) {
-                        assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 6, 'total request');
+                        assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 7, 'total request');
                         assert.equals(relayChannel.handler.rateLimiter.counters.steve.rps, 3, 'request for steve');
                         assert.equals(relayChannel.handler.rateLimiter.counters.tcollector.rps, 3, 'request for tcollector');
                     });
@@ -129,7 +129,7 @@ function runTests(HyperbahnCluster) {
                 send.bind(null, opts),
                 function check1(done) {
                     cluster.relayNetwork.relayChannels.forEach(function (relayChannel, index) {
-                        assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 6, 'check1: total request');
+                        assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 7, 'check1: total request');
                         assert.equals(relayChannel.handler.rateLimiter.counters.steve.rps, 3, 'check1: request for steve');
                         assert.equals(relayChannel.handler.rateLimiter.counters.tcollector.rps, 3, 'check1: request for tcollector');
                     });
@@ -191,9 +191,8 @@ function runTests(HyperbahnCluster) {
                         timeout: 5000,
                         serviceName: steve.serviceName
                     }), 'echo', null, 'hello', function onResponse(err, res) {
-
                         assert.ok(err && err.type === 'tchannel.busy' &&
-                            err.message === 'steve is rate limited',
+                            err.message === 'steve is rate-limited by the rps of 2',
                             'should be rate limited');
                         done();
                     });
@@ -206,7 +205,7 @@ function runTests(HyperbahnCluster) {
     });
 
     HyperbahnCluster.test('total rate limiting works', {
-        size: 1,
+        size: 5,
         timers: timers,
         kValue: 1,
         rateLimiterBuckets: 2,
@@ -244,7 +243,7 @@ function runTests(HyperbahnCluster) {
                         serviceName: steve.serviceName
                     }), 'echo', null, 'hello', function onResponse(err, res) {
                         assert.ok(err && err.type === 'tchannel.busy' &&
-                            err.message === 'hyperbahn node is rate limited by its total rps',
+                            err.message === 'hyperbahn node is rate-limited by the total rps of 2',
                             'should be rate limited');
                         done();
                     });

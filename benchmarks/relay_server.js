@@ -76,6 +76,8 @@ function RelayServer(opts) {
     });
     self.relay.handler = ServiceProxy({
         channel: self.relay,
+        totalRpsLimit: 30000,
+        defaultServiceRpsLimit: 30000,
         egressNodes: FakeEgressNodes({
             hostPort: opts.type === 'bench-relay' ?
                 benchRelayHostPort : opts.type === 'trace-relay' ?
