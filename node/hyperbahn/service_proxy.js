@@ -55,6 +55,7 @@ function ServiceDispatchHandler(options) {
     self.purgeServices();
 
     self.egressNodes.on('membershipChanged', onMembershipChanged);
+    self.outRelayRequests = {};
 
     function onMembershipChanged() {
         self.updateServiceChannels();
@@ -64,6 +65,126 @@ function ServiceDispatchHandler(options) {
 util.inherits(ServiceDispatchHandler, EventEmitter);
 
 ServiceDispatchHandler.prototype.type = 'tchannel.hyperbahn.service-dispatch-handler';
+
+ServiceDispatchHandler.prototype.forwardFrame =
+function forwardFrame(conn, buffer, type) {
+    var self = this;
+
+    // 4 cases
+    if (type === 0x03) {
+        self.forwardCallReq(conn, buffer);
+    } else if (type === 0x04) {
+        self.forwardCallRes(conn, buffer);
+    } else if (type === 0x13) {
+        self.forwardCallReqCont(conn, buffer);
+    } else if (type === 0x14) {
+        self.forwardCallResCont(conn, buffer);
+    } else if (type === 0xff) {
+        self.forwardErrorFrame(conn, buffer);
+    }
+};
+
+ServiceDispatchHandler.prototype.forwardCallReq =
+function forwardCallReq(conn, buffer) {
+    var self = this;
+
+    var serviceLength = buffer.readUInt8(46);
+    var serviceName = buffer.toString('utf8', 47, 47 + serviceLength);
+
+    var chan = self.channel.subChannels[serviceName];
+    assert(chan, 'channel must always exist');
+
+    var forwardReq = new ForwardOutReq(
+        self, conn, buffer, serviceName, chan
+    );
+    forwardReq.forwardRequest();
+};
+
+function ForwardOutReq(handler, conn, buffer, serviceName, subChannel) {
+    var self = this;
+
+    self.serviceDispatchHandler = handler;
+    self.buffer = buffer;
+    self.serviceName = serviceName;
+    self.subChannel = subChannel;
+    self.incomingConnection = conn;
+
+    self.inId = buffer.readUInt32BE(4);
+    self.outId = null;
+    self.peer = null;
+    self.forwardConn = null;
+}
+
+ForwardOutReq.prototype.forwardRequest = function forwardRequest() {
+    var self = this;
+
+    self.peer = self.subChannel.peers.choosePeer();
+    assert(self.peer, 'peer must exist');
+
+    self.peer.waitForIdentified(onIdentified);
+
+    function onIdentified(err) {
+        self.onIdentified(err);
+    }
+};
+
+function chooseRelayPeerConnection(peer) {
+    var conn = null;
+    for (var i = 0; i < peer.connections.length; i++) {
+        conn = peer.connections[i];
+        if (conn.remoteName && !conn.closing) {
+            break;
+        }
+    }
+    return conn;
+}
+
+ForwardOutReq.prototype.onIdentified = function onIdentified(err) {
+    var self = this;
+
+    assert(!err, 'cannot fail identification');
+    self.forwardConn = chooseRelayPeerConnection(self.peer);
+
+    self.outId = self.forwardConn.nextFrameId();
+    self.serviceDispatchHandler.outRelayRequests[
+        self.forwardConn.guid + String(self.outId)
+    ] = self;
+
+    self.buffer.writeUInt32BE(self.outId, 4);
+    self.forwardConn.socket.write(self.buffer);
+};
+
+ServiceDispatchHandler.prototype.forwardCallRes =
+function forwardCallRes(conn, buffer) {
+    var self = this;
+
+    var frameId = buffer.readUInt32BE(4);
+    var reqKey = conn.guid + String(frameId);
+
+    var relayOutReq = self.outRelayRequests[reqKey];
+    assert(relayOutReq, 'relay out req must always exist');
+
+    delete self.outRelayRequests[reqKey];
+    buffer.writeUInt32BE(relayOutReq.inId, 4);
+
+    relayOutReq.incomingConnection.socket.write(buffer);
+};
+
+ServiceDispatchHandler.prototype.forwardCallReqCont =
+function forwardCallReqCont(conn, buffer) {
+    throw new Error('Not Implemented');
+};
+
+ServiceDispatchHandler.prototype.forwardCallResCont =
+function forwardCallResCont(conn, buffer) {
+    throw new Error('Not Implemented');
+};
+
+ServiceDispatchHandler.prototype.forwardErrorFrame =
+function forwardErrorFrame(conn, buffer) {
+    console.log('you wat m8', buffer.toString());
+    throw new Error('Not Implemented');
+};
 
 ServiceDispatchHandler.prototype.handleRequest =
 function handleRequest(req, buildRes) {
