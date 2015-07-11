@@ -317,17 +317,16 @@ function _checkTimeout(ops, direction) {
             if (direction === 'out') {
                 var now = self.timers.now();
                 if (self.lastTimeoutTime &&
-                    now > self.lastTimeoutTime + self.connectionStalePeriod
-                ) {
-                    var err = errors.ConnectionStaleTimeoutError({
-                        lastTimeoutTime: self.lastTimeoutTime
-                    });
-                    self.connection.timedOutEvent
-                        .emit(self, err);
+                    now > self.lastTimeoutTime + self.connectionStalePeriod) {
+                    self.connection.timedOutEvent.emit(self,
+                        errors.ConnectionStaleTimeoutError({
+                            lastTimeoutTime: self.lastTimeoutTime
+                        }));
+                    // TODO: shouldn't we update
+                    // self.lastTimeoutTime = self.timers.now();
                 } else if (!self.lastTimeoutTime) {
                     self.lastTimeoutTime = self.timers.now();
                 }
-                
             }
             // else
             //     req.res.sendError // XXX may need to build
