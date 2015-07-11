@@ -1,12 +1,10 @@
-package com.uber.tchannel.;
+package com.uber.tchannel;
 
 import com.uber.example.UnixTime;
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 
 public class ClientHandler extends ChannelHandlerAdapter {
-    
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -15,13 +13,10 @@ public class ClientHandler extends ChannelHandlerAdapter {
         ctx.close();
     }
 
-
-
-
-
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         cause.printStackTrace();
         ctx.close();
     }
+
 }
