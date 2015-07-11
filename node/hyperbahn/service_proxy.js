@@ -59,7 +59,7 @@ function ServiceDispatchHandler(options) {
         rpsLimitForServiceName: options.rpsLimitForServiceName,
         totalRpsLimit: options.totalRpsLimit,
         defaultServiceRpsLimit: options.defaultServiceRpsLimit,
-        buckets: options.rateLimiterBuckets
+        numOfBuckets: options.rateLimiterBuckets
     });
 
     self.egressNodes.on('membershipChanged', onMembershipChanged);
@@ -93,23 +93,30 @@ function handleRequest(req, buildRes) {
     }
 
     // apply rate limiter
-    if (req.serviceName !== 'hyperbahn') {
-        var isExitNode = self.isExitFor(req.serviceName);
-        self.rateLimiter.incrementTotalCounter();
-        if (isExitNode) {
-            self.rateLimiter.incrementServiceCounter(req.serviceName);
-        }
+    var isExitNode = self.isExitFor(req.serviceName);
+    self.rateLimiter.incrementTotalCounter();
+    if (isExitNode) {
+        self.rateLimiter.incrementServiceCounter(req.serviceName);
+    }
 
-        if (self.rateLimiter.shouldRateLimitTotalRequest()) {
-            buildRes().sendError('Busy', 'hyperbahn node is rate limited by its total rps');
-            return;
-        }
+    if (self.rateLimiter.shouldRateLimitTotalRequest()) {
+        var totalLimit = self.rateLimiter.totalRequestCounter.rpsLimit;
+        self.logger.info('hyperbahn node is rate-limited by the total rps limit', {
+            rpsLimit: totalLimit
+        });
+        buildRes().sendError('Busy', 'hyperbahn node is rate-limited by the total rps of ' + totalLimit);
+        return;
+    }
 
-        // check RPS for service limit
-        if (isExitNode && self.rateLimiter.shouldRateLimitService(req.serviceName)) {
-            buildRes().sendError('Busy', req.serviceName + ' is rate limited');
-            return;
-        }
+    // check RPS for service limit
+    if (isExitNode && self.rateLimiter.shouldRateLimitService(req.serviceName)) {
+        var serviceLimit = self.rateLimiter.rpsLimitForServiceName[req.serviceName];
+        self.logger.info('hyperbahn service is rate-limited by the service rps limit', {
+            serviceName: req.serviceName,
+            rpsLimit: serviceLimit
+        });
+        buildRes().sendError('Busy', req.serviceName + ' is rate-limited by the rps of ' + serviceLimit);
+        return;
     }
 
     var chan = self.channel.subChannels[req.serviceName];
@@ -226,6 +233,7 @@ function purgeServices() {
             if (chan) {
                 chan.close();
                 delete self.channel.subChannels[serviceName];
+                self.rateLimiter.removeServiceCounter(serviceName);
             }
         }
     }
@@ -276,7 +284,6 @@ function updateServiceChannel(svcchan) {
     } else if (!isExit) {
         if (svcchan.serviceProxyMode === 'exit') {
             self.changeToForward(exitNodes, svcchan);
-            self.rateLimiter.removeServiceCounter(svcchan.serviceName);
         } else {
             self.updateExitNodes(exitNodes, svcchan);
         }

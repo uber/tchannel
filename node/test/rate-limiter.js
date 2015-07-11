@@ -47,7 +47,7 @@ function wait(done) {
 test('rps counter works', function (assert) {
     var rateLimiter = RateLimiter ({
         timers: timers,
-        buckets: 2
+        numOfBuckets: 2
     });
 
     rateLimiter.incrementServiceCounter('steve');
@@ -71,7 +71,7 @@ test('rps counter works', function (assert) {
 test('rps counter works in 1.5 seconds', function (assert) {
     var rateLimiter = RateLimiter ({
         timers: timers,
-        buckets: 2
+        numOfBuckets: 2
     });
 
     series([
@@ -92,18 +92,19 @@ test('rps counter works in 1.5 seconds', function (assert) {
             assert.equals(rateLimiter.counters.steve.rps, 2, 'check2: request for steve');
             assert.equals(rateLimiter.counters.bob.rps, 1, 'check2: request for bob');
             done();
-        }], function done() {
-            if (!rateLimiter.destroyed) {
-                rateLimiter.destroy();
-                assert.end();
-            }
+        }
+    ], function done() {
+        if (!rateLimiter.destroyed) {
+            rateLimiter.destroy();
+            assert.end();
+        }
     });
 });
 
 test('remove counter works', function (assert) {
     var rateLimiter = RateLimiter ({
         timers: timers,
-        buckets: 2
+        numOfBuckets: 2
     });
 
     rateLimiter.incrementServiceCounter('steve');
@@ -129,7 +130,7 @@ test('remove counter works', function (assert) {
 test('rate limit works', function (assert) {
     var rateLimiter = RateLimiter ({
         timers: timers,
-        buckets: 2,
+        numOfBuckets: 2,
         rpsLimitForServiceName: {
             steve: 2
         },

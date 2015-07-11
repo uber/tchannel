@@ -22,9 +22,50 @@
 
 var assert = require('assert');
 
-var DEFAULT_SERVICE_RPS_LIMIT = 5000;
-var DEFAULT_TOTAL_RPS_LIMIT = 20000;
-var DEFAULT_BUCKETS = 20;
+var DEFAULT_SERVICE_RPS_LIMIT = 100;
+var DEFAULT_TOTAL_RPS_LIMIT = 1000;
+var DEFAULT_BUCKET_NUMBER = 20;
+
+function RateLimiterCounter(options) {
+    if (!(this instanceof RateLimiterCounter)) {
+        return new RateLimiterCounter(options);
+    }
+
+    var self = this;
+    self.index = 0;
+    self.rps = 0;
+    self.numOfBuckets = options.numOfBuckets;
+    self.buckets = [];
+    self.buckets.length = self.numOfBuckets;
+
+    // self.buckets is read/written in refresh,
+    // where read is always after write on a bucket.
+    self.buckets[0] = 0;
+    self.rpsLimit = options.rpsLimit;
+}
+
+RateLimiterCounter.prototype.refresh =
+function refresh() {
+    var self = this;
+
+    // update the sliding window
+    var next = (self.index + 1) % self.numOfBuckets;
+    if (self.buckets[next]) {
+        // offset the bucket being moved out
+        self.rps -= self.buckets[next];
+    }
+
+    assert(self.rps >= 0, 'rps should always be larger equal to 0');
+    self.index = next;
+    self.buckets[self.index] = 0;
+};
+
+RateLimiterCounter.prototype.increment =
+function increment() {
+    var self = this;
+    self.buckets[self.index] += 1;
+    self.rps += 1;
+};
 
 function RateLimiter(options) {
     if (!(this instanceof RateLimiter)) {
@@ -34,16 +75,19 @@ function RateLimiter(options) {
 
     self.timers = options.timers;
 
-    self.buckets = options.buckets || DEFAULT_BUCKETS;
-    assert(self.buckets > 0 && self.buckets <= 1000, 'counter buckets should between (0 1000]');
+    self.numOfBuckets = options.numOfBuckets || DEFAULT_BUCKET_NUMBER;
+    assert(self.numOfBuckets > 0 && self.numOfBuckets <= 1000, 'counter numOfBuckets should between (0 1000]');
 
     self.defaultServiceRpsLimit = options.defaultServiceRpsLimit || DEFAULT_SERVICE_RPS_LIMIT;
     self.totalRpsLimit = options.totalRpsLimit || DEFAULT_TOTAL_RPS_LIMIT;
     self.rpsLimitForServiceName = options.rpsLimitForServiceName || Object.create(null);
     self.counters = Object.create(null);
-    self.totalRequestCounter = self.createCounter(self.totalRpsLimit);
+    self.totalRequestCounter = RateLimiterCounter({
+            numOfBuckets: self.numOfBuckets,
+            rpsLimit: self.totalRpsLimit
+        });
 
-    self.refreshDelay = 1000 / self.buckets;
+    self.refreshDelay = 1000 / self.numOfBuckets;
     self.refresh();
 
     self.destroyed = false;
@@ -55,11 +99,11 @@ RateLimiter.prototype.refresh =
 function refresh() {
     var self = this;
 
-    self.udpateCounter(self.totalRequestCounter);
+    self.totalRequestCounter.refresh();
 
     var serviceNames = Object.keys(self.counters);
     for (var i = 0; i < serviceNames.length; i++) {
-        self.udpateCounter(self.counters[serviceNames[i]]);
+        self.counters[serviceNames[i]].refresh();
     }
 
     self.refreshTimer = self.timers.setTimeout(
@@ -68,46 +112,6 @@ function refresh() {
         },
         self.refreshDelay
     );
-};
-
-RateLimiter.prototype.udpateCounter =
-function udpateCounter(counter) {
-    var self = this;
-
-    // update the sliding window
-    var next = (counter.index + 1) % self.buckets;
-    if (counter.buckets[next]) {
-        // offset the bucket being moved out
-        counter.rps -= counter.buckets[next];
-    }
-
-    assert(counter.rps >= 0, 'rps should always be larger equal to 0');
-    counter.index = next;
-    counter.buckets[counter.index] = 0;
-};
-
-RateLimiter.prototype.createCounter =
-function createCounter(rpsLimit) {
-    var self = this;
-
-    var counter = Object.create(null);
-    counter.index = 0;
-    counter.rps = 0;
-    counter.buckets = [];
-    counter.buckets.length = self.buckets;
-    // counter.buckets is read/written in udpateCounter,
-    // where read is always after write on a bucket.
-    counter.buckets[0] = 0;
-    counter.rpsLimit = rpsLimit;
-
-    // if (serviceName === TOTAL_QPS) {
-    //     counter.rpsLimit = self.totalRpsLimit;
-    // } else {
-    //     var limit = self.rpsLimitForServiceName[serviceName] || self.defaultServiceRpsLimit;
-    //     counter.rpsLimit = limit / self.egressNodes.kValueFor(serviceName);
-    // }
-
-    return counter;
 };
 
 RateLimiter.prototype.removeServiceCounter =
@@ -128,20 +132,21 @@ function incrementServiceCounter(serviceName) {
     // creating a new service counter
     if (!counter) {
         var limit = self.rpsLimitForServiceName[serviceName] || self.defaultServiceRpsLimit;
-        counter = self.createCounter(limit);
+        counter = RateLimiterCounter({
+            numOfBuckets: self.numOfBuckets,
+            rpsLimit: limit
+        });
         self.counters[serviceName] = counter;
     }
 
     // increment the service counter
-    counter.buckets[counter.index] += 1;
-    counter.rps += 1;
+    counter.increment();
 };
 
 RateLimiter.prototype.incrementTotalCounter =
 function incrementTotalCounter() {
     var self = this;
-    self.totalRequestCounter.buckets[self.totalRequestCounter.index] += 1;
-    self.totalRequestCounter.rps += 1;
+    self.totalRequestCounter.increment();
 };
 
 RateLimiter.prototype.shouldRateLimitService =
