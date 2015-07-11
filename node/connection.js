@@ -534,14 +534,11 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
             return;
         }
 
-        var info = {
+        var info = req.extendLogInfo({
             socketRemoteAddr: self.socketRemoteAddr,
             direction: self.direction,
-            remoteName: self.remoteName,
-            reqRemoteAddr: req.remoteAddr,
-            serviceName: req.serviceName,
-            outArg1: String(req.arg1)
-        };
+            remoteName: self.remoteName
+        });
 
         var reqErr = err;
         if (reqErr.type === 'tchannel.socket-local-closed') {

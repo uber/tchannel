@@ -353,6 +353,14 @@ TChannelOutRequest.prototype.emitError = function emitError(err) {
     self.errorEvent.emit(self, err);
 };
 
+TChannelOutRequest.prototype.extendLogInfo = function extendLogInfo(info) {
+    var self = this;
+    info.reqRemoteAddr = self.remoteAddr;
+    info.serviceName = self.serviceName;
+    info.outArg1 = String(self.arg1);
+    return info;
+};
+
 TChannelOutRequest.prototype.emitResponse = function emitResponse(res) {
     var self = this;
 
