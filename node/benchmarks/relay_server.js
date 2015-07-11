@@ -75,6 +75,7 @@ function RelayServer(opts) {
             port: 7036
         })
     });
+    self.relay.inPlaceRelay = true;
     self.relay.handler = ServiceProxy({
         channel: self.relay,
         egressNodes: FakeEgressNodes({

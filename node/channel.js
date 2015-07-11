@@ -143,6 +143,7 @@ function TChannel(options) {
     self.emitConnectionMetrics =
         typeof self.options.emitConnectionMetrics === 'boolean' ?
         self.options.emitConnectionMetrics : true;
+    self.inPlaceRelay = self.options.inPlaceRelay;
 
     // Filled in by the listen call:
     self.host = null;
