@@ -28,7 +28,7 @@ public class Server {
                     .childHandler(new ChannelInitializer<SocketChannel>() { // (4)
                         @Override
                         public void initChannel(SocketChannel ch) throws Exception {
-                            ch.pipeline().addLast(new TChannel());
+                            ch.pipeline().addLast(new FrameDecoder());
                         }
                     })
                     .option(ChannelOption.SO_BACKLOG, 128)          // (5)
@@ -54,6 +54,8 @@ public class Server {
         } else {
             port = 8080;
         }
+        System.out.println(String.format("Starting server on port: %d", port));
         new Server(port).run();
+        System.out.println("Stopping server...");
     }
 }
