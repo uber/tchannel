@@ -63,6 +63,7 @@ function BenchmarkRunner(opts) {
     self.traceProc = null;
     self.benchProcs = [];
     self.benchCounter = 0;
+    self.fileStream = null;
 }
 
 BenchmarkRunner.prototype.start = function start() {
@@ -98,6 +99,8 @@ BenchmarkRunner.prototype.start = function start() {
     }
 
     function startClient() {
+        self.openFileStream();
+
         if (self.opts.multiProc) {
             self.startClient(CLIENT_PORT);
             self.startClient(CLIENT_PORT + 200);
@@ -163,6 +166,17 @@ function startRelay(type) {
     relayProc.stderr.pipe(process.stderr);
 };
 
+BenchmarkRunner.prototype.openFileStream =
+function openFileStream() {
+    var self = this;
+
+    if (self.opts.output) {
+        self.fileStream = fs.createWriteStream(self.opts.output, {
+            encoding: 'utf8'
+        });
+    }
+};
+
 BenchmarkRunner.prototype.startClient =
 function startClient(clientPort) {
     var self = this;
@@ -198,14 +212,11 @@ function startClient(clientPort) {
                     result.rate.toFixed(2) : 'NaN', 8
                 )
             ));
-        });
 
-    if (self.opts.output) {
-        benchProc.stdout
-            .pipe(fs.createWriteStream(self.opts.output, {
-                encoding: 'utf8'
-            }));
-    }
+            if (self.fileStream) {
+                self.fileStream.write(JSON.stringify(result) + '\n');
+            }
+        });
 
     benchProc.once('close', function onClose() {
         if (--self.benchCounter === 0) {
@@ -223,6 +234,10 @@ BenchmarkRunner.prototype.close = function close() {
     }
     if (self.traceProc) {
         self.traceProc.kill();
+    }
+
+    if (self.fileStream) {
+        self.fileStream.end();
     }
 
     for (i = 0; i < self.relayProcs.length; i++) {
