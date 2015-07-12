@@ -38,6 +38,8 @@ var relay = path.join(__dirname, 'relay_server.js');
 var trace = path.join(__dirname, 'trace_server.js');
 var bench = path.join(__dirname, 'multi_bench.js');
 
+process.stderr.setMaxListeners(Infinity);
+
 var SERVER_PORT = 7100;
 var TRACE_SERVER_PORT = 7039;
 var RELAY_SERVER_PORT = 7038;
@@ -68,12 +70,12 @@ BenchmarkRunner.prototype.start = function start() {
 
     self.startStatsd();
 
-    if (!self.opts.multiProc) {
-        self.startServer(SERVER_PORT, INSTANCE_COUNT);
-    } else {
+    if (self.opts.multiProc) {
         self.startServer(SERVER_PORT, 24);
         self.startServer(SERVER_PORT + 24, 24);
         self.startServer(SERVER_PORT + 48, 24);
+    } else {
+        self.startServer(SERVER_PORT, INSTANCE_COUNT);
     }
 
     if (self.opts.trace) {
@@ -96,7 +98,13 @@ BenchmarkRunner.prototype.start = function start() {
     }
 
     function startClient() {
-        self.startClient(CLIENT_PORT);
+        if (self.opts.multiProc) {
+            self.startClient(CLIENT_PORT);
+            self.startClient(CLIENT_PORT + 200);
+            self.startClient(CLIENT_PORT + 300);
+        } else {
+            self.startClient(CLIENT_PORT);
+        }
 
         if (self.opts.torch) {
             self.startTorch();
@@ -159,21 +167,25 @@ BenchmarkRunner.prototype.startClient =
 function startClient(clientPort) {
     var self = this;
 
+    self.benchCounter++;
+
     var args = self.opts['--'];
     args = args.concat([
         '--benchPort', String(SERVER_PORT),
-        '--clientPort', String(clientPort)
+        '--clientPort', String(clientPort),
+        '--instanceNumber', String(self.benchCounter)
     ]);
     var benchProc = run(bench, args);
     self.benchProcs.push(benchProc);
-    self.benchCounter++;
+
     benchProc.stderr.pipe(process.stderr);
 
     benchProc.stdout
         .pipe(ldj.parse())
         .on('data', function onChunk(result) {
             console.log(util.format(
-                '%s, %s/%s min/max/avg/p95: %s/%s/%s/%s %sms total, %s ops/sec',
+                '%s: %s, %s/%s min/max/avg/p95: %s/%s/%s/%s %sms total, %s ops/sec',
+                String(result.instanceNumber),
                 lpad(result.descr, 13),
                 lpad(result.pipeline, 5),
                 result.numClients,
