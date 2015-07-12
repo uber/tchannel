@@ -244,6 +244,7 @@ Test.prototype.sendNext = function () {
 Test.prototype.getStats = function () {
     var obj = this.commandLatency.printObj();
     obj.descr = this.args.descr;
+    obj.instanceNumber = argv.instanceNumber;
     obj.pipeline = this.args.pipeline;
     obj.numClients = this.clientsReady;
     obj.elapsed = Date.now() - this.testStart;
