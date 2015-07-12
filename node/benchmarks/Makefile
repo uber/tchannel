@@ -7,7 +7,7 @@ torch-server-bench:
 		-- --relay --skipPing -s 4096,16384 -p 1000,10000,20000
 
 torch-relay-bench:
-	node index.js --relay --torch relay --torchFile ./flame.raw --torchTime 10 \
+	node index.js --multiProc --relay --torch relay --torchFile ./flame.raw --torchTime 10 \
 		-- --relay --skipPing -s 4096,16384 -p 1000,10000,20000
 
 flame-torch-relay-bench:
