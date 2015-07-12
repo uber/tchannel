@@ -370,9 +370,7 @@ TChannel.prototype.makeSubChannel = function makeSubChannel(options) {
     if (options.peers) {
         for (i = 0; i < options.peers.length; i++) {
             if (typeof options.peers[i] === 'string') {
-                chan.peers.addPeer(self.peers.add(options.peers[i]));
-            } else {
-                chan.peers.addPeer(options.peers[i]);
+                chan.peers.add(options.peers[i]);
             }
         }
     }
