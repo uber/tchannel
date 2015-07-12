@@ -34,8 +34,8 @@ We use RPS (Request Per Second) to quantify the request rate. At any point of ti
 RPS is the total number of requests processed in the past second. There are various
 ways of counting RPS. We use a sliding window to maintain the RPS counter. As shown below,
 if we divide a second into five buckets, each bucket contains the number of requests during
-that 20ms slot. When time goes on the window moves forward such that the oldest bucket is
-discarded and the new bucket added. In this example, when time moves forward 20ms, the RPS
+that 200ms slot. When time goes on the window moves forward such that the oldest bucket is
+discarded and the new bucket added. In this example, when time moves forward 200ms, the RPS
 changes from 19 to 16. It is straitfoward to infer that the more buckets used, the more
 accurate the counter will be. In implementation, a circular array should be used to simulate
 the infinite span of time.
