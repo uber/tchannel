@@ -44,6 +44,7 @@ var RELAY_SERVER_PORT = 7038;
 var RELAY_TRACE_PORT = 7037;
 var STATSD_PORT = 7036;
 var INSTANCE_COUNT = 72;
+var CLIENT_PORT = 7041;
 
 function BenchmarkRunner(opts) {
     if (!(this instanceof BenchmarkRunner)) {
@@ -58,7 +59,8 @@ function BenchmarkRunner(opts) {
     self.statsdServer = null;
     self.serverProcs = [];
     self.traceProc = null;
-    self.benchProc = null;
+    self.benchProcs = [];
+    self.benchCounter = 0;
 }
 
 BenchmarkRunner.prototype.start = function start() {
@@ -94,7 +96,7 @@ BenchmarkRunner.prototype.start = function start() {
     }
 
     function startClient() {
-        self.startClient();
+        self.startClient(CLIENT_PORT);
 
         if (self.opts.torch) {
             self.startTorch();
@@ -154,17 +156,20 @@ function startRelay(type) {
 };
 
 BenchmarkRunner.prototype.startClient =
-function startClient() {
+function startClient(clientPort) {
     var self = this;
 
     var args = self.opts['--'];
     args = args.concat([
-        '--benchPort', String(SERVER_PORT)
+        '--benchPort', String(SERVER_PORT),
+        '--clientPort', String(clientPort)
     ]);
-    self.benchProc = run(bench, args);
-    self.benchProc.stderr.pipe(process.stderr);
+    var benchProc = run(bench, args);
+    self.benchProcs.push(benchProc);
+    self.benchCounter++;
+    benchProc.stderr.pipe(process.stderr);
 
-    self.benchProc.stdout
+    benchProc.stdout
         .pipe(ldj.parse())
         .on('data', function onChunk(result) {
             console.log(util.format(
@@ -184,14 +189,16 @@ function startClient() {
         });
 
     if (self.opts.output) {
-        self.benchProc.stdout
+        benchProc.stdout
             .pipe(fs.createWriteStream(self.opts.output, {
                 encoding: 'utf8'
             }));
     }
 
-    self.benchProc.once('close', function onClose() {
-        self.close();
+    benchProc.once('close', function onClose() {
+        if (--self.benchCounter === 0) {
+            self.close();
+        }
     });
 };
 

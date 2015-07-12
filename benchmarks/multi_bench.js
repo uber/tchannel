@@ -60,6 +60,7 @@ argv.sizes = parseIntList(argv.sizes);
 
 var DESTINATION_SERVER;
 var TRACE_SERVER;
+var CLIENT_PORT = argv.clientPort;
 
 if (argv.relay) {
     DESTINATION_SERVER = '127.0.0.1:7038';
@@ -120,7 +121,7 @@ Test.prototype.run = function (callback) {
 
 Test.prototype.newClient = function (id, callback) {
     var self = this;
-    var port = 7041 + id;
+    var port = CLIENT_PORT + id
     var clientChan = TChannel({
         statTags: {
             app: 'my-client'
