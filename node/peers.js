@@ -191,6 +191,12 @@ function choosePeer(req) {
         return null;
     }
 
+    var rand = Math.floor(Math.random() * hosts.length);
+    var randPeer = self._map[hosts[rand]];
+    if (randPeer.state.shouldRequest(req) >= 0.4) {
+        return randPeer;
+    }
+
     var threshold = self.peerScoreThreshold;
 
     var selectedPeer = null;
