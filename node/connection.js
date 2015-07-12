@@ -23,12 +23,14 @@
 var assert = require('assert');
 var bufrw = require('bufrw');
 var extend = require('xtend');
+var HackedReadMachine = require('./lib/hacked_read_machine');
 var ReadMachine = require('bufrw/stream/read_machine');
 var inherits = require('util').inherits;
 
 var v2 = require('./v2');
 var errors = require('./errors');
 var States = require('./reqres_states');
+var fromBufferResult = require('bufrw/interface').fromBufferResult;
 
 var TChannelConnectionBase = require('./connection_base');
 
@@ -77,7 +79,11 @@ function TChannelConnection(channel, socket, direction, socketRemoteAddr) {
     // jshint forin:true
     self.handler = new v2.Handler(opts);
 
-    self.mach = ReadMachine(bufrw.UInt16BE, v2.Frame.RW);
+    if (self.channel.inPlaceRelay) {
+        self.mach = HackedReadMachine(bufrw.UInt16BE);
+    } else {
+        self.mach = ReadMachine(bufrw.UInt16BE, v2.Frame.RW);
+    }
 
     self.setupSocket();
     self.setupHandler();
@@ -130,14 +136,57 @@ TChannelConnection.prototype.setupSocket = function setupSocket() {
 
 function noop() {}
 
+TChannelConnection.prototype.setupInPlaceRelay =
+function setupInPlaceRelay() {
+    var self = this;
+
+    self.mach.emit = handleFrameBuffer;
+
+    function handleFrameBuffer(buffer) {
+        self.handleFrameBuffer(buffer);
+    }
+};
+
+TChannelConnection.prototype.handleFrameBuffer =
+function handleFrameBuffer(buffer) {
+    var self = this;
+
+    var handler = self.channel.handler;
+    var type = buffer.readUInt8(2);
+
+    // Only forward call req & call res
+    if (type === 0x03 || type === 0x04 ||
+        type === 0x13 || type === 0x14 ||
+        type === 0xff
+    ) {
+        handler.forwardFrame(self, buffer, type);
+    } else {
+        var res = fromBufferResult(v2.Frame.RW, buffer, 0);
+        if (res.err) {
+            return self.emit('error', res.err);
+        }
+        self.handleReadFrame(res.value);
+    }
+};
+
+TChannelConnection.prototype.nextFrameId = function nextFrameId() {
+    var self = this;
+
+    return self.handler.nextFrameId();
+};
+
 TChannelConnection.prototype.setupHandler = function setupHandler() {
     var self = this;
+
+    if (self.channel.inPlaceRelay) {
+        self.setupInPlaceRelay();
+    } else {
+        self.mach.emit = handleReadFrame;
+    }
 
     self.handler.write = function write(buf, done) {
         self.socket.write(buf, null, done);
     };
-
-    self.mach.emit = handleReadFrame;
 
     self.handler.writeErrorEvent.on(onWriteError);
     self.handler.errorEvent.on(onHandlerError);
