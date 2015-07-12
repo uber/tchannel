@@ -217,11 +217,6 @@ function startClient(clientPort) {
                 self.fileStream.write(JSON.stringify(result) + '\n');
             }
         })
-        .on('end', function onEnd() {
-            if (self.fileStream) {
-                self.fileStream.end();
-            }
-        });
 
     benchProc.once('close', function onClose() {
         if (--self.benchCounter === 0) {
@@ -240,6 +235,8 @@ BenchmarkRunner.prototype.close = function close() {
     if (self.traceProc) {
         self.traceProc.kill();
     }
+
+    self.fileStream.end();
 
     for (i = 0; i < self.relayProcs.length; i++) {
         self.relayProcs[i].kill();
