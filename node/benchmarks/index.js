@@ -38,23 +38,6 @@ var relay = path.join(__dirname, 'relay_server.js');
 var trace = path.join(__dirname, 'trace_server.js');
 var bench = path.join(__dirname, 'multi_bench.js');
 
-var argv = parseArgs(process.argv.slice(2), {
-    '--': true,
-    alias: {
-        o: 'output'
-    },
-    boolean: ['relay', 'trace', 'debug']
-});
-
-function run(script, args) {
-    var name = script.replace(/\.js$/, '');
-    args = args ? args.slice(0) : [];
-    args.unshift(script);
-    var child = childProcess.spawn(process.execPath, args);
-    console.error('running', name, child.pid);
-    return child;
-}
-
 var SERVER_PORT = 7100;
 var TRACE_SERVER_PORT = 7039;
 var RELAY_SERVER_PORT = 7038;
@@ -62,74 +45,117 @@ var RELAY_TRACE_PORT = 7037;
 var STATSD_PORT = 7036;
 var INSTANCE_COUNT = 72;
 
-var statsdServer = dgram.createSocket('udp4');
-statsdServer.bind(STATSD_PORT);
+function BenchmarkRunner(opts) {
+    if (!(this instanceof BenchmarkRunner)) {
+        return new BenchmarkRunner(opts);
+    }
 
-var serverProc = run(server, [
-    argv.trace ? '--trace' : '--no-trace',
-    '--traceRelayHostPort', '127.0.0.1:' + RELAY_TRACE_PORT,
-    '--port', String(SERVER_PORT),
-    '--instances', String(INSTANCE_COUNT)
-]);
-serverProc.stdout.pipe(process.stderr);
-serverProc.stderr.pipe(process.stderr);
+    var self = this;
 
-if (argv.trace) {
-    var traceProc = run(trace);
-    traceProc.stdout.pipe(process.stderr);
-    traceProc.stderr.pipe(process.stdout);
+    self.opts = opts;
+
+    self.relayProcs = [];
+    self.statsdServer = null;
+    self.serverProc = null;
+    self.traceProc = null;
+    self.benchProc = null;
 }
 
-var benchRelayProc;
-var traceRelayProc;
+BenchmarkRunner.prototype.start = function start() {
+    var self = this;
 
-if (argv.relay || argv.trace) {
-    setTimeout(startRelayServers, 500);
-} else {
-    setTimeout(startBench, 500);
-}
+    self.startStatsd();
+    self.startServer();
 
-function startRelayServers() {
-    benchRelayProc = run(relay, [
+    if (self.opts.trace) {
+        self.startTraceServer();
+    }
+
+    if (self.opts.relay || self.opts.trace) {
+        setTimeout(startRelayServers, 500);
+    } else {
+        setTimeout(startClient, 500);
+    }
+
+    function startRelayServers() {
+        self.startRelay('bench-relay');
+        if (self.opts.trace) {
+            self.startRelay('trace-relay');
+        }
+
+        setTimeout(startClient, 500);
+    }
+
+    function startClient() {
+        self.startClient();
+
+        if (self.opts.torch) {
+            self.startTorch();
+        }
+    }
+};
+
+BenchmarkRunner.prototype.startStatsd = function startStatsd() {
+    var self = this;
+
+    self.statsdServer = dgram.createSocket('udp4');
+    self.statsdServer.bind(STATSD_PORT);
+};
+
+BenchmarkRunner.prototype.startServer = function startServer() {
+    var self = this;
+
+    self.serverProc = run(server, [
+        self.opts.trace ? '--trace' : '--no-trace',
+        '--traceRelayHostPort', '127.0.0.1:' + RELAY_TRACE_PORT,
+        '--port', String(SERVER_PORT),
+        '--instances', String(INSTANCE_COUNT)
+    ]);
+    self.serverProc.stdout.pipe(process.stderr);
+    self.serverProc.stderr.pipe(process.stderr);
+};
+
+BenchmarkRunner.prototype.startTraceServer =
+function startTraceServer() {
+    var self = this;
+
+    self.traceProc = run(trace);
+    self.traceProc.stdout.pipe(process.stderr);
+    self.traceProc.stderr.pipe(process.stdout);
+};
+
+BenchmarkRunner.prototype.startRelay =
+function startRelay(type) {
+    var self = this;
+
+    // type = 'bench-relay'
+    var relayProc = run(relay, [
         '--benchPort', String(SERVER_PORT),
         '--tracePort', String(TRACE_SERVER_PORT),
         '--benchRelayPort', String(RELAY_SERVER_PORT),
         '--traceRelayPort', String(RELAY_TRACE_PORT),
-        '--type', 'bench-relay',
+        '--type', type,
         '--instances', String(INSTANCE_COUNT),
-        argv.trace ? '--trace' : '--no-trace',
-        argv.debug ? '--debug' : '--no-debug'
+        self.opts.trace ? '--trace' : '--no-trace',
+        self.opts.debug ? '--debug' : '--no-debug'
     ]);
-    benchRelayProc.stdout.pipe(process.stderr);
-    benchRelayProc.stderr.pipe(process.stderr);
+    self.relayProcs.push(relayProc);
+    relayProc.stdout.pipe(process.stderr);
+    relayProc.stderr.pipe(process.stderr);
+};
 
-    if (argv.trace) {
-        traceRelayProc = run(relay, [
-            '--benchPort', String(SERVER_PORT),
-            '--tracePort', String(TRACE_SERVER_PORT),
-            '--benchRelayPort', String(RELAY_SERVER_PORT),
-            '--traceRelayPort', String(RELAY_TRACE_PORT),
-            '--type', 'trace-relay',
-            '--instances', String(INSTANCE_COUNT),
-            argv.trace ? '--trace' : '--no-trace',
-            argv.debug ? '--debug' : '--no-debug'
-        ]);
-        traceRelayProc.stdout.pipe(process.stderr);
-        traceRelayProc.stderr.pipe(process.stderr);
-    }
+BenchmarkRunner.prototype.startClient =
+function startClient() {
+    var self = this;
 
-    setTimeout(startBench, 500);
-}
-
-function startBench() {
-    var args = argv['--'];
+    var args = self.opts['--'];
     args = args.concat([
         '--benchPort', String(SERVER_PORT)
     ]);
-    var benchProc = run(bench, args);
-    benchProc.stderr.pipe(process.stderr);
+    self.benchProc = run(bench, args);
+    self.benchProc.stderr.pipe(process.stderr);
 
-    benchProc.stdout
+    self.benchProc.stdout
         .pipe(ldj.parse())
         .on('data', function onChunk(result) {
             console.log(util.format(
@@ -148,63 +174,84 @@ function startBench() {
             ));
         });
 
-    if (argv.output) {
-        benchProc.stdout
-            .pipe(fs.createWriteStream(argv.output, {encoding: 'utf8'}));
+    if (self.opts.output) {
+        self.benchProc.stdout
+            .pipe(fs.createWriteStream(self.opts.output, {
+                encoding: 'utf8'
+            }));
     }
 
-    if (argv.torch) {
-        assert(argv.torch === 'client' ||
-               argv.torch === 'relay' ||
-               argv.torch === 'server',
-               'Torch flag must be client or relay'
-        );
-        assert(argv.torchFile, 'torchFile needed');
-
-        var torchPid;
-        var torchFile = argv.torchFile;
-        var torchTime = argv.torchTime || '30';
-        var torchDelay = argv.torchDelay || 10 * 1000;
-        var torchType = argv.torchType || 'raw';
-
-        if (argv.torch === 'relay') {
-            torchPid = benchRelayProc.pid;
-        } else if (argv.torch === 'client') {
-            torchPid = benchProc.pid;
-        } else if (argv.torch === 'server') {
-            torchPid = serverProc.pid;
-        }
-
-        setTimeout(function delayTorching() {
-            var torchProc = childProcess.spawn('sudo', [
-                'torch', torchPid, torchType, torchTime
-            ]);
-            torchProc.stdout.pipe(
-                fs.createWriteStream(torchFile)
-            );
-            torchProc.stderr.pipe(process.stderr);
-            console.error('starting flaming');
-
-            torchProc.once('close', function onTorchClose() {
-                console.error('finished flaming');
-            });
-        }, torchDelay);
-    }
-
-    benchProc.once('close', function onClose() {
-        console.error('benchmark finished');
-        serverProc.kill();
-        if (traceProc) {
-            traceProc.kill();
-        }
-        if (traceRelayProc) {
-            traceRelayProc.kill();
-        }
-        if (benchRelayProc) {
-            benchRelayProc.kill();
-        }
-        statsdServer.close();
+    self.benchProc.once('close', function onClose() {
+        self.close();
     });
+};
+
+BenchmarkRunner.prototype.close = function close() {
+    var self = this;
+
+    console.error('benchmark finished');
+    self.serverProc.kill();
+    if (self.traceProc) {
+        self.traceProc.kill();
+    }
+
+    for (var i = 0; i < self.relayProcs.length; i++) {
+        self.relayProcs[i].kill();
+    }
+
+    self.statsdServer.close();
+};
+
+BenchmarkRunner.prototype.startTorch = function startTorch() {
+    var self = this;
+
+    assert(self.opts.torch === 'client' ||
+           self.opts.torch === 'relay' ||
+           self.opts.torch === 'server',
+           'Torch flag must be client or relay'
+    );
+    assert(self.opts.torchFile, 'torchFile needed');
+
+    var torchPid;
+    var torchFile = self.opts.torchFile;
+    var torchTime = self.opts.torchTime || '30';
+    var torchDelay = self.opts.torchDelay || 10 * 1000;
+    var torchType = self.opts.torchType || 'raw';
+
+    if (self.opts.torch === 'relay') {
+        torchPid = self.relayProcs[0].pid;
+    } else if (self.opts.torch === 'client') {
+        torchPid = self.benchProc.pid;
+    } else if (self.opts.torch === 'server') {
+        torchPid = self.serverProc.pid;
+    }
+
+    setTimeout(function delayTorching() {
+        var torchProc = childProcess.spawn('sudo', [
+            'torch', torchPid, torchType, torchTime
+        ]);
+        torchProc.stdout.pipe(
+            fs.createWriteStream(torchFile)
+        );
+        torchProc.stderr.pipe(process.stderr);
+        console.error('starting flaming');
+
+        torchProc.once('close', function onTorchClose() {
+            console.error('finished flaming');
+        });
+    }, torchDelay);
+};
+
+if (require.main === module) {
+    var argv = parseArgs(process.argv.slice(2), {
+        '--': true,
+        alias: {
+            o: 'output'
+        },
+        boolean: ['relay', 'trace', 'debug']
+    });
+    var runner = BenchmarkRunner(argv);
+    runner.start();
 }
 
 function lpad(input, len, chr) {
@@ -215,4 +262,13 @@ function lpad(input, len, chr) {
         str = chr + str;
     }
     return str;
+}
+
+function run(script, args) {
+    var name = script.replace(/\.js$/, '');
+    args = args ? args.slice(0) : [];
+    args.unshift(script);
+    var child = childProcess.spawn(process.execPath, args);
+    console.error('running', name, child.pid);
+    return child;
 }
