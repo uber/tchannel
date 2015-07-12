@@ -236,7 +236,9 @@ BenchmarkRunner.prototype.close = function close() {
         self.traceProc.kill();
     }
 
-    self.fileStream.end();
+    if (self.fileStream) {
+        self.fileStream.end();
+    }
 
     for (i = 0; i < self.relayProcs.length; i++) {
         self.relayProcs[i].kill();
