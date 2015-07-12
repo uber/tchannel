@@ -126,6 +126,7 @@ Test.prototype.newClient = function (id, callback) {
         statTags: {
             app: 'my-client'
         },
+        emitConnectionMetrics: false,
         trace: true,
         statsd: new Statsd({
             host: '127.0.0.1',

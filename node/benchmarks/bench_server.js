@@ -53,6 +53,7 @@ function BenchServer(port) {
         statTags: {
             app: 'my-server'
         },
+        emitConnectionMetrics: false,
         trace: true,
         statsd: new Statsd({
             host: '127.0.0.1',
