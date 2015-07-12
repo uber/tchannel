@@ -248,6 +248,7 @@ Test.prototype.getStats = function () {
     obj.pipeline = this.args.pipeline;
     obj.numClients = this.clientsReady;
     obj.elapsed = Date.now() - this.testStart;
+    obj.numRequests = numRequests;
     obj.rate = numRequests / (obj.elapsed / 1000);
     return obj;
 };
