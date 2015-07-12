@@ -24,6 +24,7 @@ var assert = require('assert');
 var inherits = require('util').inherits;
 var extend = require('xtend');
 var EventEmitter = require('./lib/event_emitter');
+var ScoredMaxHeap = require('./scored_max_heap');
 
 var TChannelPeer = require('./peer');
 var TChannelSelfPeer = require('./self_peer');
@@ -43,10 +44,24 @@ function TChannelPeers(channel, options) {
     self.peerScoreThreshold = self.options.peerScoreThreshold || 0;
     self._map = Object.create(null);
     self._keys = [];
+    self._heap = new ScoredMaxHeap();
     self.selfPeer = null;
 }
 
 inherits(TChannelPeers, EventEmitter);
+
+// TODO: need to drive out of band rescoring (probably timer driven from one
+// timer on the root channel)
+
+TChannelPeers.prototype.rescore = function rescore() {
+    var self = this;
+    for (var i = 0; i < self._heap.items.length; i++) {
+        var peer = self._heap.items[i];
+        var score = peer.state.shouldRequest();
+        self._heap.scores[i] = score;
+    }
+    self._heap.heapify();
+};
 
 TChannelPeers.prototype.close = function close(callback) {
     var self = this;
@@ -97,8 +112,11 @@ TChannelPeers.prototype.add = function add(hostPort, options) {
             peer = TChannelPeer(self.channel, hostPort, options);
             self.allocPeerEvent.emit(self, peer);
         }
+
+        var score = peer.state.shouldRequest();
         self._map[hostPort] = peer;
         self._keys.push(hostPort);
+        self._heap.push(peer, score);
     }
     return peer;
 };
@@ -108,8 +126,10 @@ TChannelPeers.prototype.addPeer = function addPeer(peer) {
     assert(peer instanceof TChannelPeer, 'invalid peer');
     assert(!self._map[peer.hostPort], 'peer already defined');
     if (peer.hostPort !== self.channel.hostPort) {
+        var score = peer.state.shouldRequest();
         self._map[peer.hostPort] = peer;
         self._keys.push(peer.hostPort);
+        self._heap.push(peer, score);
     }
 };
 
@@ -152,6 +172,7 @@ TChannelPeers.prototype.clear = function clear() {
     }
     self._map = Object.create(null);
     self._keys = [];
+    self._heap = new ScoredMaxHeap();
     return vals;
 };
 
@@ -172,7 +193,9 @@ TChannelPeers.prototype.delete = function del(hostPort) {
     }
     delete self._map[hostPort];
     var index = self._keys.indexOf(hostPort);
-    self._keys.splice(index, 1);
+    self._keys.splice(index, 1); // TODO: such splice
+    var heapIndex = self._heap.items.indexOf(peer);
+    self._heap.remove(heapIndex);
 
     return peer;
 };
@@ -199,22 +222,25 @@ function choosePeer(req) {
 
     var threshold = self.peerScoreThreshold;
 
-    var selectedPeer = null;
-    var selectedScore = 0;
-    for (var i = 0; i < hosts.length; i++) {
-        var hostPort = hosts[i];
-        var peer = self._map[hostPort];
-        if (!req || !req.triedRemoteAddrs[hostPort]) {
-            var score = peer.state.shouldRequest(req);
-            var want = score > threshold &&
-                       (selectedPeer === null || score > selectedScore);
-            if (want) {
-                selectedPeer = peer;
-                selectedScore = score;
-            }
-        }
+    if (self._heap.scores[0] <= threshold) { // TODO: why inclusive?
+        return null;
     }
-    return selectedPeer;
+
+    var peer = self._heap.items[0];
+    // TODO: this could be deferred:
+    // - store a pendingRescore bit
+    // - set a next tick to rescore and clear bit
+    // - if asked to choose a peer while pendingRescore is still set, take the
+    //   hit and rescore then (do not clear bit)
+    //
+    // However such cleverness might just slow down the throughput of a very
+    // busy server rather than help.
+
+    var score = peer.state.shouldRequest();
+    self._heap.scores[0] = score;
+    self._heap.siftdown(0);
+
+    return peer;
 };
 
 module.exports = TChannelPeers;
