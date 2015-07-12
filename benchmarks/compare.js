@@ -169,7 +169,7 @@ function combineSamples(sample) {
                     };
                 } else {
                     results[k].numRequests += statObj.numRequests;
-                    results[k].elapsed = Math.max(
+                    results[k].elapsed = Math.min(
                         results[k].elapsed, statObj.elapsed
                     );
                     results[k].rate = results[k].numRequests / (results[k].elapsed / 1000)
