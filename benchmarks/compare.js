@@ -126,27 +126,80 @@ function descStats(sample) {
 }
 
 function readSamples(files, callback) {
-    parallel(files.map(function(file) {
-        return function(done) {
+    parallel(files.map(function forEachFile(file) {
+        return function thunk(done) {
             var sample = {};
             fs.createReadStream(file)
                 .pipe(ldj.parse())
                 .on('data', storeResultInto(sample))
                 .on('error', finish)
                 .on('end', finish);
+
             function finish(err) {
+                sample = combineSamples(sample);
+
                 done(err, sample);
             }
         };
     }), callback);
 }
 
+function combineSamples(sample) {
+    var keys = Object.keys(sample);
+
+    // For each type of test
+    for (var i = 0; i < keys.length; i++) {
+        var instancesData = sample[keys[i]];
+        var results = [];
+
+        // For each child process
+        var subKeys = Object.keys(instancesData);
+        for (var j = 0; j < subKeys.length; j++) {
+            var value = instancesData[subKeys[j]];
+
+            // For each run of that test
+            for (var k = 0; k < value.length; k++) {
+                var statObj = value[k];
+
+                if (!results[k]) {
+                    results[k] = {
+                        numRequests: statObj.numRequests,
+                        elapsed: statObj.elapsed,
+                        rate: statObj.numRequests / (statObj.elapsed / 1000)
+                    };
+                } else {
+                    results[k].numRequests += statObj.numRequests;
+                    results[k].elapsed = Math.max(
+                        results[k].elapsed, statObj.elapsed
+                    );
+                    results[k].rate = results[k].numRequests / (results[k].elapsed / 1000)
+                }
+            }
+        }
+
+        sample[keys[i]] = results;
+    }
+
+    return sample;
+}
+
 function storeResultInto(sample) {
     return function storeResult(result) {
-        var key = util.format('%s, %s/%s', result.descr, result.pipeline, result.numClients);
+        var key = util.format('%s, %s/%s',
+            result.descr, result.pipeline, result.numClients
+        );
+
         var results = sample[key];
-        if (!results) results = sample[key] = [];
-        results.push(result);
+        if (!results) {
+            results = sample[key] = {};
+        }
+
+        var instanceArray = results[result.instanceNumber];
+        if (!instanceArray) {
+            instanceArray = results[result.instanceNumber] = [];
+        }
+
+        instanceArray.push(result);
     };
 }
 
