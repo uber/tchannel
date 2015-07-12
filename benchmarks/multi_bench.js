@@ -121,7 +121,7 @@ Test.prototype.run = function (callback) {
 
 Test.prototype.newClient = function (id, callback) {
     var self = this;
-    var port = CLIENT_PORT + id
+    var port = CLIENT_PORT + id;
     var clientChan = TChannel({
         statTags: {
             app: 'my-client'
