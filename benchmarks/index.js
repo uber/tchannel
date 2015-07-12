@@ -56,7 +56,7 @@ function BenchmarkRunner(opts) {
 
     self.relayProcs = [];
     self.statsdServer = null;
-    self.serverProc = null;
+    self.serverProcs = [];
     self.traceProc = null;
     self.benchProc = null;
 }
@@ -65,7 +65,7 @@ BenchmarkRunner.prototype.start = function start() {
     var self = this;
 
     self.startStatsd();
-    self.startServer();
+    self.startServer(SERVER_PORT, INSTANCE_COUNT);
 
     if (self.opts.trace) {
         self.startTraceServer();
@@ -102,17 +102,19 @@ BenchmarkRunner.prototype.startStatsd = function startStatsd() {
     self.statsdServer.bind(STATSD_PORT);
 };
 
-BenchmarkRunner.prototype.startServer = function startServer() {
+BenchmarkRunner.prototype.startServer =
+function startServer(serverPort, instances) {
     var self = this;
 
-    self.serverProc = run(server, [
+    var serverProc = run(server, [
         self.opts.trace ? '--trace' : '--no-trace',
         '--traceRelayHostPort', '127.0.0.1:' + RELAY_TRACE_PORT,
-        '--port', String(SERVER_PORT),
-        '--instances', String(INSTANCE_COUNT)
+        '--port', String(serverPort),
+        '--instances', String(instances)
     ]);
-    self.serverProc.stdout.pipe(process.stderr);
-    self.serverProc.stderr.pipe(process.stderr);
+    self.serverProcs.push(serverProc);
+    serverProc.stdout.pipe(process.stderr);
+    serverProc.stderr.pipe(process.stderr);
 };
 
 BenchmarkRunner.prototype.startTraceServer =
@@ -190,12 +192,14 @@ BenchmarkRunner.prototype.close = function close() {
     var self = this;
 
     console.error('benchmark finished');
-    self.serverProc.kill();
+    for (var i = 0; i < self.serverProcs.length; i++) {
+        self.serverProcs[i].kill();
+    }
     if (self.traceProc) {
         self.traceProc.kill();
     }
 
-    for (var i = 0; i < self.relayProcs.length; i++) {
+    for (i = 0; i < self.relayProcs.length; i++) {
         self.relayProcs[i].kill();
     }
 
