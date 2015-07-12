@@ -65,7 +65,14 @@ BenchmarkRunner.prototype.start = function start() {
     var self = this;
 
     self.startStatsd();
-    self.startServer(SERVER_PORT, INSTANCE_COUNT);
+
+    if (!self.opts.multiProc) {
+        self.startServer(SERVER_PORT, INSTANCE_COUNT);
+    } else {
+        self.startServer(SERVER_PORT, 24);
+        self.startServer(SERVER_PORT + 24, 24);
+        self.startServer(SERVER_PORT + 48, 24);
+    }
 
     if (self.opts.trace) {
         self.startTraceServer();
