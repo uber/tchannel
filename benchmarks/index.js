@@ -216,7 +216,7 @@ function startClient(clientPort) {
             if (self.fileStream) {
                 self.fileStream.write(JSON.stringify(result) + '\n');
             }
-        })
+        });
 
     benchProc.once('close', function onClose() {
         if (--self.benchCounter === 0) {
