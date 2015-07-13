@@ -27,6 +27,12 @@ func NewContext(timeout time.Duration) (context.Context, context.CancelFunc) {
 	return ctx, cancel
 }
 
+// WrapContextForTest returns a copy of the given Context that is associated with the call.
+// This should be used in units test only.
+func WrapContextForTest(ctx context.Context, call IncomingCall) context.Context {
+	return context.WithValue(ctx, contextKeyCall, call)
+}
+
 // newIncomingContext creates a new context for an incoming call with the given span.
 func newIncomingContext(call IncomingCall, timeout time.Duration, span *Span) (context.Context, context.CancelFunc) {
 	tctx, cancel := context.WithTimeout(context.Background(), timeout)

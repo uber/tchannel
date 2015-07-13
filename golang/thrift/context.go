@@ -70,6 +70,13 @@ func NewContext(timeout time.Duration) (Context, context.CancelFunc) {
 	}, cancel
 }
 
+// Wrap returns a Thrift Context that wraps around a Context
+func Wrap(ctx context.Context) Context {
+	return &thriftCtx{
+		Context: ctx,
+	}
+}
+
 // WithHeaders returns a Context that can be used to make a call with request headers.
 func WithHeaders(ctx context.Context, headers map[string]string) Context {
 	return &thriftCtx{
