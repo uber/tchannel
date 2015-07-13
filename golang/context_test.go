@@ -24,7 +24,7 @@ func TestWrapContextForTest(t *testing.T) {
 	ctx, cancel := NewContext(time.Second)
 	defer cancel()
 	actual := WrapContextForTest(ctx, call)
-	assert.Equal(t, call, actual.Value(contextKeyCall), "Incorrect call object returned.")
+	assert.Equal(t, call, CurrentCall(actual), "Incorrect call object returned.")
 }
 
 func TestCurrentCallWithNilResult(t *testing.T) {

@@ -70,12 +70,10 @@ func NewContext(timeout time.Duration) (Context, context.CancelFunc) {
 	}, cancel
 }
 
-// WrapContextForTest returns a Context that is associated with the call.
-// This should be used in units test only.
-func WrapContextForTest(ctx context.Context, call tchannel.IncomingCall) Context {
-	tctx := tchannel.WrapContextForTest(ctx, call)
+// Wrap returns a Thrift Context that wraps around a Context
+func Wrap(ctx context.Context) Context {
 	return &thriftCtx{
-		Context: tctx,
+		Context: ctx,
 	}
 }
 

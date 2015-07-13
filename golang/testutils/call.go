@@ -34,6 +34,6 @@ func (f *FakeIncomingCall) CallerName() string {
 	return f.callerName
 }
 
-func CreateIncomingCall(callerName string) tchannel.IncomingCall {
+func NewIncomingCall(callerName string) tchannel.IncomingCall {
 	return &FakeIncomingCall{callerName: callerName}
 }
