@@ -17,4 +17,14 @@ public class TFrame {
         this.size = FRAME_HEADER_LENGTH + payload.length;
     }
 
+    @Override
+    public String toString() {
+        return String.format(
+                "<TFrame size=%d type=0x%d id=%d payload=%s>",
+                this.size,
+                this.type,
+                this.id,
+                new String(this.payload)
+        );
+    }
 }
