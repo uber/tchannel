@@ -18,6 +18,7 @@ public class ClientHandler extends ChannelHandlerAdapter {
         TFrame frame = (TFrame) msg;
         System.out.println(frame);
         ctx.close();
+
     }
 
     @Override

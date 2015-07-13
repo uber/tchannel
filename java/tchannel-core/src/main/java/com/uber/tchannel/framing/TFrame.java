@@ -10,7 +10,8 @@ public class TFrame {
     public final long id;
     public final byte[] payload;
 
-    public TFrame(byte type, long id, byte[] payload){
+
+    public TFrame(byte type, long id, byte[] payload) {
         this.type = type;
         this.id = id;
         this.payload = payload;

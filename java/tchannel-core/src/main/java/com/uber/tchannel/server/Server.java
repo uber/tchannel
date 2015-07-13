@@ -12,8 +12,20 @@ import io.netty.handler.logging.LoggingHandler;
 public class Server {
     private int port;
 
-    public Server(int port){
+    public Server(int port) {
         this.port = port;
+    }
+
+    public static void main(String[] args) throws Exception {
+        int port;
+        if (args.length > 0) {
+            port = Integer.parseInt(args[0]);
+        } else {
+            port = 8888;
+        }
+        System.out.println(String.format("Starting server on port: %d", port));
+        new Server(port).run();
+        System.out.println("Stopping server...");
     }
 
     public void run() throws Exception {
@@ -36,17 +48,5 @@ public class Server {
             workerGroup.shutdownGracefully();
             bossGroup.shutdownGracefully();
         }
-    }
-
-    public static void main(String[] args) throws Exception {
-        int port;
-        if (args.length > 0) {
-            port = Integer.parseInt(args[0]);
-        } else {
-            port = 8888;
-        }
-        System.out.println(String.format("Starting server on port: %d", port));
-        new Server(port).run();
-        System.out.println("Stopping server...");
     }
 }

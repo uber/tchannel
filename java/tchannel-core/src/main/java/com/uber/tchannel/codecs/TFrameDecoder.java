@@ -11,6 +11,7 @@ public class TFrameDecoder extends MessageToMessageDecoder<ByteBuf> {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf msg, List<Object> out) throws Exception {
+
         // size:2
         int size = msg.readUnsignedShort();
 
@@ -30,7 +31,8 @@ public class TFrameDecoder extends MessageToMessageDecoder<ByteBuf> {
         byte[] payload = new byte[size - TFrame.FRAME_HEADER_LENGTH];
         msg.readBytes(payload);
 
-        out.add(new TFrame(type, id,payload));
+        out.add(new TFrame(type, id, payload));
+
     }
 
 }

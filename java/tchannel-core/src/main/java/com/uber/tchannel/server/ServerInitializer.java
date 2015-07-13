@@ -9,7 +9,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 
 public class ServerInitializer extends ChannelInitializer<SocketChannel> {
-    @Override 
+    @Override
     public void initChannel(SocketChannel ch) throws Exception {
         // Encoders
         ch.pipeline().addLast("TFrameEncoder", new TFrameEncoder());
