@@ -61,6 +61,7 @@ function ServiceDispatchHandler(options) {
         defaultServiceRpsLimit: options.defaultServiceRpsLimit,
         numOfBuckets: options.rateLimiterBuckets
     });
+    self.rateLimiterEnabled = options.rateLimiterEnabled;
 
     self.egressNodes.on('membershipChanged', onMembershipChanged);
 
@@ -92,6 +93,24 @@ function handleRequest(req, buildRes) {
         return;
     }
 
+    if (self.rateLimiterEnabled && self.rateLimit(req, buildRes)) {
+        return;
+    }
+
+    var chan = self.channel.subChannels[req.serviceName];
+    if (chan) {
+        // Temporary hack. Need to set json by default because
+        // we want to upgrade without breaking ncar
+        chan.handler.handleRequest(req, buildRes);
+    } else {
+        self.handleDefault(req, buildRes);
+    }
+};
+
+ServiceDispatchHandler.prototype.rateLimit =
+function rateLimit(req, buildRes) {
+    var self = this;
+
     // apply rate limiter
     var isExitNode = self.isExitFor(req.serviceName);
     self.rateLimiter.incrementTotalCounter();
@@ -105,7 +124,7 @@ function handleRequest(req, buildRes) {
             rpsLimit: totalLimit
         });
         buildRes().sendError('Busy', 'hyperbahn node is rate-limited by the total rps of ' + totalLimit);
-        return;
+        return true;
     }
 
     // check RPS for service limit
@@ -116,17 +135,10 @@ function handleRequest(req, buildRes) {
             rpsLimit: serviceLimit
         });
         buildRes().sendError('Busy', req.serviceName + ' is rate-limited by the rps of ' + serviceLimit);
-        return;
+        return true;
     }
 
-    var chan = self.channel.subChannels[req.serviceName];
-    if (chan) {
-        // Temporary hack. Need to set json by default because
-        // we want to upgrade without breaking ncar
-        chan.handler.handleRequest(req, buildRes);
-    } else {
-        self.handleDefault(req, buildRes);
-    }
+    return false;
 };
 
 ServiceDispatchHandler.prototype.handleDefault =

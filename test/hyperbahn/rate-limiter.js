@@ -57,7 +57,8 @@ function runTests(HyperbahnCluster) {
     HyperbahnCluster.test('rps counter works', {
         size: 1,
         timers: timers,
-        rateLimiterBuckets: 2
+        rateLimiterBuckets: 2,
+        rateLimiterEnabled: true
     }, function t(cluster, assert) {
         var steve = cluster.remotes.steve;
         var bob = cluster.remotes.bob;
@@ -100,7 +101,8 @@ function runTests(HyperbahnCluster) {
     HyperbahnCluster.test('rps counter works in 1.5 seconds', {
         size: 1,
         timers: timers,
-        rateLimiterBuckets: 2
+        rateLimiterBuckets: 2,
+        rateLimiterEnabled: true
     }, function t(cluster, assert) {
         var steve = cluster.remotes.steve;
         var bob = cluster.remotes.bob;
@@ -156,6 +158,7 @@ function runTests(HyperbahnCluster) {
         size: 1,
         kValue: 2,
         rateLimiterBuckets: 2,
+        rateLimiterEnabled: true,
         rpsLimitForServiceName: {
             steve: 2
         }
@@ -209,7 +212,8 @@ function runTests(HyperbahnCluster) {
         timers: timers,
         kValue: 1,
         rateLimiterBuckets: 2,
-        totalRpsLimit: 2
+        totalRpsLimit: 2,
+        rateLimiterEnabled: true
     }, function t(cluster, assert) {
         var steve = cluster.remotes.steve;
         var bob = cluster.remotes.bob;
