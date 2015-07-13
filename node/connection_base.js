@@ -67,7 +67,7 @@ function TChannelConnectionBase(channel, direction, socketRemoteAddr) {
     self.guid = ++CONNECTION_BASE_IDENTIFIER + '~';
 
     self.tracer = self.channel.tracer;
-    self.ops.startTimeoutTimer();
+    // self.ops.startTimeoutTimer();
 }
 inherits(TChannelConnectionBase, EventEmitter);
 
