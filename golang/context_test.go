@@ -1,45 +1,35 @@
-package tchannel_test
+package tchannel
 
 import (
 	"testing"
 	"time"
 
-	. "github.com/uber/tchannel/golang"
-
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/context"
 )
 
 type mockIncomingCall struct {
 	callerName string
 }
 
-func (mic *mockIncomingCall) CallerName() string {
-	return mic.callerName
+func (m *mockIncomingCall) CallerName() string {
+	return m.callerName
 }
 
 var (
-	cn   = "hello"
-	key1 = "foo"
-	key2 = "bar"
+	cn = "hello"
 )
 
-func TestCurrentCallWithMatchingKey(t *testing.T) {
-	expected := mockIncomingCall{callerName: cn}
+func TestWrapContextForTest(t *testing.T) {
+	call := &mockIncomingCall{callerName: cn}
 	ctx, cancel := NewContext(time.Second)
 	defer cancel()
-	ctx = context.WithValue(ctx, key1, &expected)
-
-	actual := CurrentCallWithKey(ctx, key1)
-
-	assert.Equal(t, &expected, actual)
+	actual := WrapContextForTest(ctx, call)
+	assert.Equal(t, call, actual.Value(contextKeyCall), "Incorrect call object returned.")
 }
 
-func TestCurrentCallWithoutMatchingKey(t *testing.T) {
-	expected := mockIncomingCall{callerName: cn}
+func TestCurrentCallWithNilResult(t *testing.T) {
 	ctx, cancel := NewContext(time.Second)
 	defer cancel()
-	ctx = context.WithValue(ctx, key1, &expected)
-
-	assert.Nil(t, CurrentCallWithKey(ctx, key2))
+	call := CurrentCall(ctx)
+	assert.Nil(t, call, "Should return nil.")
 }
