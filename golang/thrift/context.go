@@ -70,6 +70,15 @@ func NewContext(timeout time.Duration) (Context, context.CancelFunc) {
 	}, cancel
 }
 
+// WrapContextForTest returns a Context that is associated with the call.
+// This should be used in units test only.
+func WrapContextForTest(ctx context.Context, call tchannel.IncomingCall) Context {
+	tctx := tchannel.WrapContextForTest(ctx, call)
+	return &thriftCtx{
+		Context: tctx,
+	}
+}
+
 // WithHeaders returns a Context that can be used to make a call with request headers.
 func WithHeaders(ctx context.Context, headers map[string]string) Context {
 	return &thriftCtx{
