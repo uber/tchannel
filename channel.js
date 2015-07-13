@@ -159,7 +159,7 @@ function TChannel(options) {
     }
 
     // populated by makeSubChannel
-    self.topChannel = null;
+    self.topChannel = self.options.topChannel || null;
     self.subChannels = self.serviceName ? null : {};
 
     // how to handle incoming requests
@@ -364,9 +364,10 @@ TChannel.prototype.makeSubChannel = function makeSubChannel(options) {
                 opts[keys[i]] = options[keys[i]];
         }
     }
+
+    opts.topChannel = self;
     var chan = TChannel(opts);
 
-    chan.topChannel = self;
     if (options.peers) {
         for (i = 0; i < options.peers.length; i++) {
             if (typeof options.peers[i] === 'string') {
