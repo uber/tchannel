@@ -65,5 +65,6 @@ require('./examples.js');
 require('./busy.js');
 require('./ephemeral-client.js');
 require('./relay-to-dead.js');
+require('./rate-limiter.js');
 
 require('./hyperbahn/')(HyperbahnCluster);

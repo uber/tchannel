@@ -1,0 +1,160 @@
+// Copyright (c) 2015 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+'use strict';
+var test = require('tape');
+var TimeMock = require('time-mock');
+var timers = TimeMock(Date.now());
+var series = require('run-series');
+var RateLimiter = require('../rate_limiter.js');
+
+function increment(rateLimiter, steve, bob, done) {
+    if (steve) {
+        rateLimiter.incrementTotalCounter();
+        rateLimiter.incrementServiceCounter('steve');
+    }
+
+    if (bob) {
+        rateLimiter.incrementTotalCounter();
+        rateLimiter.incrementServiceCounter('bob');
+    }
+
+    done();
+}
+
+function wait(done) {
+    timers.setTimeout(done, 500);
+    timers.advance(500);
+}
+
+test('rps counter works', function (assert) {
+    var rateLimiter = RateLimiter ({
+        timers: timers,
+        numOfBuckets: 2
+    });
+
+    rateLimiter.incrementServiceCounter('steve');
+    rateLimiter.incrementTotalCounter();
+    rateLimiter.incrementServiceCounter('steve');
+    rateLimiter.incrementTotalCounter();
+    rateLimiter.incrementServiceCounter('steve');
+    rateLimiter.incrementTotalCounter();
+    rateLimiter.incrementServiceCounter('bob');
+    rateLimiter.incrementTotalCounter();
+    rateLimiter.incrementServiceCounter('bob');
+    rateLimiter.incrementTotalCounter();
+    assert.equals(rateLimiter.totalRequestCounter.rps, 5, 'total request');
+    assert.equals(rateLimiter.counters.steve.rps, 3, 'request for steve');
+    assert.equals(rateLimiter.counters.bob.rps, 2, 'request for bob');
+
+    rateLimiter.destroy();
+    assert.end();
+});
+
+test('rps counter works in 1.5 seconds', function (assert) {
+    var rateLimiter = RateLimiter ({
+        timers: timers,
+        numOfBuckets: 2
+    });
+
+    series([
+        increment.bind(null, rateLimiter, 'steve', 'bob'),
+        increment.bind(null, rateLimiter, 'steve', 'bob'),
+        wait,
+        increment.bind(null, rateLimiter, 'steve', null),
+        function check1(done) {
+            assert.equals(rateLimiter.totalRequestCounter.rps, 5, 'check1: total request');
+            assert.equals(rateLimiter.counters.steve.rps, 3, 'check1: request for steve');
+            assert.equals(rateLimiter.counters.bob.rps, 2, 'check1: request for bob');
+            done();
+        },
+        wait,
+        increment.bind(null, rateLimiter, 'steve', 'bob'),
+        function check2(done) {
+            assert.equals(rateLimiter.totalRequestCounter.rps, 3, 'check2: total request');
+            assert.equals(rateLimiter.counters.steve.rps, 2, 'check2: request for steve');
+            assert.equals(rateLimiter.counters.bob.rps, 1, 'check2: request for bob');
+            done();
+        }
+    ], function done() {
+        if (!rateLimiter.destroyed) {
+            rateLimiter.destroy();
+            assert.end();
+        }
+    });
+});
+
+test('remove counter works', function (assert) {
+    var rateLimiter = RateLimiter ({
+        timers: timers,
+        numOfBuckets: 2
+    });
+
+    rateLimiter.incrementServiceCounter('steve');
+    rateLimiter.incrementTotalCounter();
+    rateLimiter.incrementServiceCounter('steve');
+    rateLimiter.incrementTotalCounter();
+    rateLimiter.incrementServiceCounter('steve');
+    rateLimiter.incrementTotalCounter();
+    rateLimiter.incrementServiceCounter('bob');
+    rateLimiter.incrementTotalCounter();
+    rateLimiter.incrementServiceCounter('bob');
+    rateLimiter.incrementTotalCounter();
+    rateLimiter.removeServiceCounter('steve');
+
+    assert.equals(rateLimiter.totalRequestCounter.rps, 5, 'total request');
+    assert.ok(!rateLimiter.counters.steve, 'steve should be removed');
+    assert.equals(rateLimiter.counters.bob.rps, 2, 'request for bob');
+
+    rateLimiter.destroy();
+    assert.end();
+});
+
+test('rate limit works', function (assert) {
+    var rateLimiter = RateLimiter ({
+        timers: timers,
+        numOfBuckets: 2,
+        rpsLimitForServiceName: {
+            steve: 2
+        },
+        totalRpsLimit: 3
+    });
+
+    rateLimiter.incrementServiceCounter('steve');
+    rateLimiter.incrementTotalCounter();
+    rateLimiter.incrementServiceCounter('steve');
+    rateLimiter.incrementTotalCounter();
+    rateLimiter.incrementServiceCounter('steve');
+    rateLimiter.incrementTotalCounter();
+    rateLimiter.incrementServiceCounter('bob');
+    rateLimiter.incrementTotalCounter();
+    rateLimiter.incrementServiceCounter('bob');
+    rateLimiter.incrementTotalCounter();
+    assert.equals(rateLimiter.totalRequestCounter.rps, 5, 'total request');
+    assert.equals(rateLimiter.counters.steve.rps, 3, 'request for steve');
+    assert.equals(rateLimiter.counters.bob.rps, 2, 'request for bob');
+
+    assert.ok(rateLimiter.shouldRateLimitTotalRequest(), 'should rate limit total request');
+    assert.ok(rateLimiter.shouldRateLimitService('steve'), 'should rate limit steve');
+    assert.ok(!rateLimiter.shouldRateLimitService('bob'), 'should not rate limit bob');
+
+    rateLimiter.destroy();
+    assert.end();
+});
