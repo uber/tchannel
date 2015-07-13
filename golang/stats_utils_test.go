@@ -109,7 +109,7 @@ func (r *recordingStatsReporter) RecordTimer(name string, tags map[string]string
 
 func (r *recordingStatsReporter) Validate(t *testing.T) {
 	assert.Equal(t, keysMap(r.Expected.Values), keysMap(r.Values),
-		"Values have different keys")
+		"Metric keys are different")
 	for counterKey, counter := range r.Values {
 		expectedCounter, ok := r.Expected.Values[counterKey]
 		if !ok {
@@ -117,7 +117,7 @@ func (r *recordingStatsReporter) Validate(t *testing.T) {
 		}
 
 		assert.Equal(t, keysMap(expectedCounter), keysMap(counter),
-			"Counter %v have different reported tags", counterKey)
+			"Metric %v has different reported tags", counterKey)
 		for tags, stat := range counter {
 			expectedStat, ok := expectedCounter[tags]
 			if !ok {
@@ -125,7 +125,7 @@ func (r *recordingStatsReporter) Validate(t *testing.T) {
 			}
 
 			assert.Equal(t, expectedStat.count, stat.count,
-				"counter %v with tags %v has mismatched value", counterKey, tags)
+				"Metric %v with tags %v has mismatched value", counterKey, tags)
 		}
 	}
 }
