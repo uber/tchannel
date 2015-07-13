@@ -55,7 +55,7 @@ public class Server {
         if (args.length > 0) {
             port = Integer.parseInt(args[0]);
         } else {
-            port = 8080;
+            port = 8888;
         }
         System.out.println(String.format("Starting server on port: %d", port));
         new Server(port).run();

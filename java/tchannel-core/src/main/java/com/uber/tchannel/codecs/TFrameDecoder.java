@@ -2,7 +2,6 @@ package com.uber.tchannel.codecs;
 
 import com.uber.tchannel.framing.TFrame;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
 
@@ -28,10 +27,10 @@ public class TFrameDecoder extends MessageToMessageDecoder<ByteBuf> {
         msg.skipBytes(8);
 
         // payload:16+
-        ByteBuf payloadBuf = Unpooled.buffer(size - TFrame.FRAME_HEADER_LENGTH);
-        msg.readBytes(payloadBuf);
+        byte[] payload = new byte[size - TFrame.FRAME_HEADER_LENGTH];
+        msg.readBytes(payload);
 
-        out.add(new TFrame(type, id, payloadBuf.array()));
+        out.add(new TFrame(type, id,payload));
     }
 
 }

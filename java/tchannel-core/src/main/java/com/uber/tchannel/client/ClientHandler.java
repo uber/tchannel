@@ -1,6 +1,6 @@
 package com.uber.tchannel.client;
 
-import com.uber.example.UnixTime;
+import com.uber.tchannel.framing.TFrame;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 
@@ -8,8 +8,8 @@ public class ClientHandler extends ChannelHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        UnixTime m = (UnixTime) msg;
-        System.out.println(m);
+        TFrame frame = (TFrame) msg;
+        System.out.println(frame);
         ctx.close();
     }
 

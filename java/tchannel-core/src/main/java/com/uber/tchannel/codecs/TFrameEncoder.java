@@ -7,12 +7,12 @@ import io.netty.handler.codec.MessageToByteEncoder;
 
 public class TFrameEncoder extends MessageToByteEncoder<TFrame> {
     @Override
-    protected void encode(ChannelHandlerContext ctx, TFrame TFrame, ByteBuf out) throws Exception {
-        out.writeShort(TFrame.size)
-                .writeByte(TFrame.type)
+    protected void encode(ChannelHandlerContext ctx, TFrame frame, ByteBuf out) throws Exception {
+        out.writeShort(frame.size)
+                .writeByte(frame.type)
                 .writeZero(1)
-                .writeInt((int) TFrame.id)
+                .writeInt((int) frame.id)
                 .writeZero(8)
-                .writeBytes(TFrame.payload);
+                .writeBytes(frame.payload);
     }
 }
