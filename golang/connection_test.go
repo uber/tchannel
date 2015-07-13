@@ -22,7 +22,6 @@ package tchannel_test
 
 import (
 	"errors"
-	"os"
 	"sync"
 	"testing"
 	"time"
@@ -262,42 +261,5 @@ func TestFragmentation(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, arg2, respArg2)
 		assert.Equal(t, arg3, respArg3)
-	}))
-}
-
-func TestStatsCalls(t *testing.T) {
-	statsReporter := newRecordingStatsReporter()
-	testOpts := &testutils.ChannelOpts{
-		StatsReporter: statsReporter,
-	}
-	require.NoError(t, testutils.WithServer(testOpts, func(ch *Channel, hostPort string) {
-		ch.Register(raw.Wrap(newTestHandler(t)), "echo")
-
-		ctx, cancel := NewContext(time.Second * 5)
-		defer cancel()
-
-		_, _, _, err := raw.Call(ctx, ch, hostPort, testServiceName, "echo", []byte("Headers"), []byte("Body"))
-		require.NoError(t, err)
-
-		_, _, _, err = raw.Call(ctx, ch, hostPort, testServiceName, "error", nil, nil)
-		require.Error(t, err)
-
-		host, err := os.Hostname()
-		require.Nil(t, err)
-
-		expectedTags := map[string]string{
-			"app":             ch.PeerInfo().ProcessName,
-			"host":            host,
-			"service":         ch.PeerInfo().ServiceName,
-			"target-service":  ch.PeerInfo().ServiceName,
-			"target-endpoint": "echo",
-		}
-		statsReporter.Expected.IncCounter("outbound.calls.send", expectedTags, 1)
-		statsReporter.Expected.IncCounter("outbound.calls.successful", expectedTags, 1)
-		expectedTags["target-endpoint"] = "error"
-		statsReporter.Expected.IncCounter("outbound.calls.send", expectedTags, 1)
-		// TODO(prashant): Make the following stat work too.
-		// statsReporter.Expected.IncCounter("outbound.calls.app-errors", expectedTags, 1)
-		statsReporter.ValidateCounters(t)
 	}))
 }

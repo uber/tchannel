@@ -21,9 +21,14 @@ package raw
 // THE SOFTWARE.
 
 import (
+	"errors"
+
 	"github.com/uber/tchannel/golang"
 	"golang.org/x/net/context"
 )
+
+// ErrAppError is returned if the application sets an error response.
+var ErrAppError = errors.New("application error")
 
 // WriteArgs writes the given arguments to the call, and returns the response args.
 func WriteArgs(call *tchannel.OutboundCall, arg2, arg3 []byte) ([]byte, []byte, *tchannel.OutboundCallResponse, error) {
