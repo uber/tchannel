@@ -24,6 +24,7 @@ var assert = require('assert');
 var RelayHandler = require('../relay_handler');
 var EventEmitter = require('../lib/event_emitter');
 var util = require('util');
+var RateLimiter = require('../rate_limiter');
 var ServiceHealthProxy = require('./service_health_proxy');
 
 var DEFAULT_LOG_GRACE_PERIOD = 5 * 60 * 1000;
@@ -53,6 +54,14 @@ function ServiceDispatchHandler(options) {
         SERVICE_PURGE_PERIOD;
     self.exitServices = Object.create(null);
     self.purgeServices();
+    self.rateLimiter = new RateLimiter({
+        timers: self.channel.timers,
+        rpsLimitForServiceName: options.rpsLimitForServiceName,
+        totalRpsLimit: options.totalRpsLimit,
+        defaultServiceRpsLimit: options.defaultServiceRpsLimit,
+        numOfBuckets: options.rateLimiterBuckets
+    });
+    self.rateLimiterEnabled = options.rateLimiterEnabled;
 
     self.egressNodes.on('membershipChanged', onMembershipChanged);
 
@@ -84,6 +93,10 @@ function handleRequest(req, buildRes) {
         return;
     }
 
+    if (self.rateLimiterEnabled && self.rateLimit(req, buildRes)) {
+        return;
+    }
+
     var chan = self.channel.subChannels[req.serviceName];
     if (chan) {
         // Temporary hack. Need to set json by default because
@@ -92,6 +105,40 @@ function handleRequest(req, buildRes) {
     } else {
         self.handleDefault(req, buildRes);
     }
+};
+
+ServiceDispatchHandler.prototype.rateLimit =
+function rateLimit(req, buildRes) {
+    var self = this;
+
+    // apply rate limiter
+    var isExitNode = self.isExitFor(req.serviceName);
+    self.rateLimiter.incrementTotalCounter();
+    if (isExitNode) {
+        self.rateLimiter.incrementServiceCounter(req.serviceName);
+    }
+
+    if (self.rateLimiter.shouldRateLimitTotalRequest()) {
+        var totalLimit = self.rateLimiter.totalRequestCounter.rpsLimit;
+        self.logger.info('hyperbahn node is rate-limited by the total rps limit', {
+            rpsLimit: totalLimit
+        });
+        buildRes().sendError('Busy', 'hyperbahn node is rate-limited by the total rps of ' + totalLimit);
+        return true;
+    }
+
+    // check RPS for service limit
+    if (isExitNode && self.rateLimiter.shouldRateLimitService(req.serviceName)) {
+        var serviceLimit = self.rateLimiter.rpsLimitForServiceName[req.serviceName];
+        self.logger.info('hyperbahn service is rate-limited by the service rps limit', {
+            serviceName: req.serviceName,
+            rpsLimit: serviceLimit
+        });
+        buildRes().sendError('Busy', req.serviceName + ' is rate-limited by the rps of ' + serviceLimit);
+        return true;
+    }
+
+    return false;
 };
 
 ServiceDispatchHandler.prototype.handleDefault =
@@ -198,6 +245,7 @@ function purgeServices() {
             if (chan) {
                 chan.close();
                 delete self.channel.subChannels[serviceName];
+                self.rateLimiter.removeServiceCounter(serviceName);
             }
         }
     }
@@ -363,10 +411,24 @@ function unblock(cn, serviceName) {
     }
 };
 
+ServiceDispatchHandler.prototype.isExitFor =
+function isExitFor(serviceName) {
+    var self = this;
+
+    // faster check than calls into ringpop
+    var chan = self.channel.subChannels[serviceName];
+    if (!chan) {
+        return self.egressNodes.isExitFor(serviceName);
+    }
+
+    return chan.serviceProxyMode === 'exit';
+};
+
 ServiceDispatchHandler.prototype.destroy =
 function destroy() {
     var self = this;
     self.channel.timers.clearTimeout(self.servicePurgeTimer);
+    self.rateLimiter.destroy();
 };
 
 // TODO Consider sharding by hostPort and indexing exit exitNodes by hostPort.
