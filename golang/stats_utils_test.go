@@ -35,12 +35,16 @@ import (
 )
 
 type statsValue struct {
+	// count is the counter value if this metric is a counter.
 	count int64
+
+	// timers is the list of timer values if this metrics is a timer.
+	timers []time.Duration
 }
 
 type recordingStatsReporter struct {
-	// Counters is a map from the counterName -> map[tagMapAsString]*statsValue
-	Counters map[string]map[string]*statsValue
+	// Values is a map from the metricName -> map[tagMapAsString]*statsValue
+	Values map[string]map[string]*statsValue
 
 	// Expected stores expected counter values.
 	Expected *recordingStatsReporter
@@ -48,9 +52,9 @@ type recordingStatsReporter struct {
 
 func newRecordingStatsReporter() *recordingStatsReporter {
 	return &recordingStatsReporter{
-		Counters: make(map[string]map[string]*statsValue),
+		Values: make(map[string]map[string]*statsValue),
 		Expected: &recordingStatsReporter{
-			Counters: make(map[string]map[string]*statsValue),
+			Values: make(map[string]map[string]*statsValue),
 		},
 	}
 }
@@ -76,11 +80,11 @@ func tagsToString(tags map[string]string) string {
 	return strings.Join(vals, ", ")
 }
 
-func (r *recordingStatsReporter) IncCounter(name string, tags map[string]string, value int64) {
-	tagMap, ok := r.Counters[name]
+func (r *recordingStatsReporter) getStat(name string, tags map[string]string) *statsValue {
+	tagMap, ok := r.Values[name]
 	if !ok {
 		tagMap = make(map[string]*statsValue)
-		r.Counters[name] = tagMap
+		r.Values[name] = tagMap
 	}
 
 	tagStr := tagsToString(tags)
@@ -90,14 +94,24 @@ func (r *recordingStatsReporter) IncCounter(name string, tags map[string]string,
 		tagMap[tagStr] = statVal
 	}
 
+	return statVal
+}
+
+func (r *recordingStatsReporter) IncCounter(name string, tags map[string]string, value int64) {
+	statVal := r.getStat(name, tags)
 	statVal.count += value
 }
 
-func (r *recordingStatsReporter) ValidateCounters(t *testing.T) {
-	assert.Equal(t, keysMap(r.Expected.Counters), keysMap(r.Counters),
-		"Counters have different keys")
-	for counterKey, counter := range r.Counters {
-		expectedCounter, ok := r.Expected.Counters[counterKey]
+func (r *recordingStatsReporter) RecordTimer(name string, tags map[string]string, d time.Duration) {
+	statVal := r.getStat(name, tags)
+	statVal.timers = append(statVal.timers, d)
+}
+
+func (r *recordingStatsReporter) Validate(t *testing.T) {
+	assert.Equal(t, keysMap(r.Expected.Values), keysMap(r.Values),
+		"Values have different keys")
+	for counterKey, counter := range r.Values {
+		expectedCounter, ok := r.Expected.Values[counterKey]
 		if !ok {
 			continue
 		}
@@ -116,5 +130,4 @@ func (r *recordingStatsReporter) ValidateCounters(t *testing.T) {
 	}
 }
 
-func (r *recordingStatsReporter) UpdateGauge(name string, tags map[string]string, value int64)     {}
-func (r *recordingStatsReporter) RecordTimer(name string, tags map[string]string, d time.Duration) {}
+func (r *recordingStatsReporter) UpdateGauge(name string, tags map[string]string, value int64) {}

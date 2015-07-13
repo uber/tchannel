@@ -55,6 +55,22 @@ func tagsForInboundCall(serverCh *Channel, clientCh *Channel, operation string) 
 }
 
 func TestStatsCalls(t *testing.T) {
+	testutils.SetTimeout(t, time.Second)
+
+	initialTime := time.Date(2015, 2, 1, 10, 10, 0, 0, time.UTC)
+	nowFn := testutils.NowStub(GetTimeNow(), initialTime)
+	defer testutils.ResetNowStub(GetTimeNow())
+
+	// time.Now will be called in this order for each call:
+	// sender records time they started sending
+	// receiver records time the request is sent to application
+	// receiver calculates application handler latency
+	// sender records call latency
+	// So expected times are going to be:
+	// Inbound latency: 50
+	// Outbound latency: 150
+	nowFn(50 * time.Millisecond)
+
 	serverStats := newRecordingStatsReporter()
 	serverOpts := &testutils.ChannelOpts{
 		StatsReporter: serverStats,
@@ -81,18 +97,22 @@ func TestStatsCalls(t *testing.T) {
 		outboundTags := tagsForOutboundCall(serverCh, ch, "echo")
 		clientStats.Expected.IncCounter("outbound.calls.send", outboundTags, 1)
 		clientStats.Expected.IncCounter("outbound.calls.success", outboundTags, 1)
+		clientStats.Expected.RecordTimer("outbound.calls.latency", outboundTags, 150*time.Millisecond)
 		outboundTags["target-endpoint"] = "app-error"
 		clientStats.Expected.IncCounter("outbound.calls.send", outboundTags, 1)
 		clientStats.Expected.IncCounter("outbound.calls.app-errors", outboundTags, 1)
+		clientStats.Expected.RecordTimer("outbound.calls.latency", outboundTags, 150*time.Millisecond)
 
 		inboundTags := tagsForInboundCall(serverCh, ch, "echo")
 		serverStats.Expected.IncCounter("inbound.calls.recvd", inboundTags, 1)
 		serverStats.Expected.IncCounter("inbound.calls.success", inboundTags, 1)
+		serverStats.Expected.RecordTimer("inbound.calls.latency", inboundTags, 50*time.Millisecond)
 		inboundTags["endpoint"] = "app-error"
 		serverStats.Expected.IncCounter("inbound.calls.recvd", inboundTags, 1)
 		serverStats.Expected.IncCounter("inbound.calls.app-errors", inboundTags, 1)
+		serverStats.Expected.RecordTimer("inbound.calls.latency", inboundTags, 50*time.Millisecond)
 
-		clientStats.ValidateCounters(t)
-		serverStats.ValidateCounters(t)
+		clientStats.Validate(t)
+		serverStats.Validate(t)
 	}))
 }
