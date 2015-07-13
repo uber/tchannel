@@ -36,7 +36,6 @@ function RateLimiterCounter(options) {
     self.rps = 0;
     self.numOfBuckets = options.numOfBuckets;
     self.buckets = [];
-    self.buckets.length = self.numOfBuckets;
 
     // self.buckets is read/written in refresh,
     // where read is always after write on a bucket.
