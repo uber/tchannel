@@ -25,6 +25,7 @@ package tchannel
 
 import (
 	"net"
+	"time"
 )
 
 // OutboundConnection returns the underlying connection for an outbound call.
@@ -42,4 +43,9 @@ func GetConnections(ch *Channel) []*Connection {
 		}
 	}
 	return connections
+}
+
+// GetTimeNow returns the variable pointing to time.Now for stubbing.
+func GetTimeNow() *func() time.Time {
+	return &timeNow
 }
