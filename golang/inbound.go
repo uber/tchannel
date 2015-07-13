@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"time"
 
 	"golang.org/x/net/context"
 )
@@ -131,6 +132,7 @@ func (c *Connection) dispatchInbound(call *InboundCall) {
 
 	call.commonStatsTags["endpoint"] = string(call.operation)
 	call.statsReporter.IncCounter("inbound.calls.recvd", call.commonStatsTags, 1)
+	call.response.calledAt = timeNow()
 
 	// NB(mmihic): Don't cast operation name to string here - this will
 	// create a copy of the byte array, where as aliasing to string in the
@@ -216,7 +218,9 @@ func (call *InboundCall) doneReading() {}
 type InboundCallResponse struct {
 	reqResWriter
 
-	cancel           context.CancelFunc
+	cancel context.CancelFunc
+	// calledAt is the time the inbound call was routed to the application.
+	calledAt         time.Time
 	applicationError bool
 	headers          callHeaders
 	span             Span
@@ -290,5 +294,8 @@ func (response *InboundCallResponse) doneSending() {
 	} else {
 		response.statsReporter.IncCounter("inbound.calls.success", response.commonStatsTags, 1)
 	}
+	latency := timeNow().Sub(response.calledAt)
+	response.statsReporter.RecordTimer("inbound.calls.latency", response.commonStatsTags, latency)
+
 	response.mex.shutdown()
 }

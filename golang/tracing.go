@@ -28,7 +28,12 @@ import (
 	"golang.org/x/net/context"
 )
 
-var traceRng = NewRand(time.Now().UnixNano())
+var (
+	// timeNow is a variable for stubbing in unit tests.
+	timeNow = time.Now
+	// traceRng is a thread-safe random number generator for generating trace IDs.
+	traceRng = NewRand(time.Now().UnixNano())
+)
 
 // Span represents Zipkin-style span
 type Span struct {
