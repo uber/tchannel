@@ -232,7 +232,7 @@ var search = clusterSearch.ClusterIsolateSearch(extend({
     setupClient: function setupClient(cluster, callback) {
         cluster.testRawClient = cluster.client.makeSubChannel({
             peers: cluster.client.peers.values().map(function h(p) {
-                return p.hostPort
+                return p.hostPort;
             }),
             serviceName: 'test_as_raw',
             requestDefaults: {
