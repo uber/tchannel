@@ -22,7 +22,7 @@
 
 require('./frame.js');
 require('./init.js');
-require('./checksum.js');
+// require('./checksum.js');
 require('./header.js');
 require('./tracing.js');
 require('./call.js');

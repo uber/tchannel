@@ -89,10 +89,10 @@ function writeCallReqContInto(body, buffer, offset) {
     return res;
 }
 
-CallRequestCont.prototype.verifyChecksum = function verifyChecksum(prior) {
-    var self = this;
-    return self.csum.verify(self.args, prior);
-};
+// CallRequestCont.prototype.verifyChecksum = function verifyChecksum(prior) {
+//     var self = this;
+//     return self.csum.verify(self.args, prior);
+// };
 
 // flags:1 csumtype:1 (csum:4){0,1} (arg~2)+
 function CallResponseCont(flags, csum, args) {
@@ -158,10 +158,10 @@ function writeCallResContInto(body, buffer, offset) {
     return res;
 }
 
-CallResponseCont.prototype.verifyChecksum = function verifyChecksum(prior) {
-    var self = this;
-    return self.csum.verify(self.args, prior);
-};
+// CallResponseCont.prototype.verifyChecksum = function verifyChecksum(prior) {
+//     var self = this;
+//     return self.csum.verify(self.args, prior);
+// };
 
 module.exports.RequestCont = CallRequestCont;
 module.exports.ResponseCont = CallResponseCont;

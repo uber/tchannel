@@ -34,6 +34,7 @@ var States = require('../reqres_states');
 var StreamingInRequest = require('../streaming_in_request');
 var StreamingInResponse = require('../streaming_in_response');
 
+var Checksum = require('./checksum');
 var v2 = require('./index');
 var errors = require('../errors');
 
@@ -514,7 +515,9 @@ TChannelV2Handler.prototype._handleCallFrame = function _handleCallFrame(r, fram
         return false;
     }
 
-    var err = frame.body.verifyChecksum(checksum.val);
+    var csum = frame.body.csum;
+    var err = Checksum.verify(csum, frame.body.args, checksum.val);
+
     if (err) {
         self.errorEvent.emit(self, err); // TODO wrap context
         return false;

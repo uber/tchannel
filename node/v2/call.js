@@ -186,10 +186,10 @@ function writeCallReqInto(body, buffer, offset) {
     return res;
 }
 
-CallRequest.prototype.verifyChecksum = function verifyChecksum() {
-    var self = this;
-    return self.csum.verify(self.args);
-};
+// CallRequest.prototype.verifyChecksum = function verifyChecksum() {
+//     var self = this;
+//     return self.csum.verify(self.args);
+// };
 
 // flags:1 code:1 tracing:24 traceflags:1 nh:1 (hk~1 hv~1){nh} csumtype:1 (csum:4){0,1} (arg~2)*
 function CallResponse(flags, code, tracing, headers, csum, args) {
@@ -305,7 +305,7 @@ function writeCallResInto(body, buffer, offset) {
     return res;
 }
 
-CallResponse.prototype.verifyChecksum = function verifyChecksum() {
-    var self = this;
-    return self.csum.verify(self.args);
-};
+// CallResponse.prototype.verifyChecksum = function verifyChecksum() {
+//     var self = this;
+//     return self.csum.verify(self.args);
+// };
