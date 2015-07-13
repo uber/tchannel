@@ -43,12 +43,7 @@ func newIncomingContext(call IncomingCall, timeout time.Duration, span *Span) (c
 
 // CurrentCall returns the current incoming call, or nil if this is not an incoming call context.
 func CurrentCall(ctx context.Context) IncomingCall {
-	return CurrentCallWithKey(ctx, contextKeyCall)
-}
-
-// CurrentCall given a key, returns the current incoming call, or nil if this is not an incoming call context.
-func CurrentCallWithKey(ctx context.Context, key interface{}) IncomingCall {
-	if v := ctx.Value(key); v != nil {
+	if v := ctx.Value(contextKeyCall); v != nil {
 		return v.(IncomingCall)
 	}
 	return nil
