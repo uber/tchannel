@@ -1,4 +1,4 @@
-package com.uber.tchannel;
+package com.uber.tchannel.client;
 
 import com.uber.example.UnixTime;
 import io.netty.channel.ChannelHandlerAdapter;

@@ -1,5 +1,6 @@
-package com.uber.tchannel;
+package com.uber.tchannel.client;
 
+import com.uber.tchannel.codecs.TFrameDecoder;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -23,7 +24,7 @@ public class Client {
             b.handler(new ChannelInitializer<SocketChannel>() {
                 @Override
                 public void initChannel(SocketChannel ch) throws Exception {
-                    ch.pipeline().addLast(new FrameDecoder());
+                    ch.pipeline().addLast("FrameDecode", new TFrameDecoder());
                 }
             });
 

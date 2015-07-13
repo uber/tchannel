@@ -1,5 +1,6 @@
-package com.uber.tchannel;
+package com.uber.tchannel.client;
 
+import com.uber.tchannel.framing.TFrame;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerAdapter;
@@ -9,7 +10,7 @@ public class ServerHandler extends ChannelHandlerAdapter {
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
-        ChannelFuture f = ctx.writeAndFlush(new Frame(16,(byte)0x01, 42, new byte[]{}));
+        ChannelFuture f = ctx.writeAndFlush(new TFrame(Byte.MAX_VALUE, Integer.MAX_VALUE, "Hello, World!".getBytes()));
         f.addListener(ChannelFutureListener.CLOSE);
     }
 
@@ -18,4 +19,5 @@ public class ServerHandler extends ChannelHandlerAdapter {
         cause.printStackTrace();
         ctx.close();
     }
+
 }
