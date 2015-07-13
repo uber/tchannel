@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestWrapContextForTest(t *testing.T) {
+func TestWrapContext(t *testing.T) {
 	ctx, cancel := NewContext(time.Second)
 	defer cancel()
 	actual := Wrap(ctx)
