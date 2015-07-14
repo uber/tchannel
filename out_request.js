@@ -562,16 +562,18 @@ TChannelOutRequest.prototype.checkTimeout = function checkTimeout() {
         if (elapsed > self.timeout) {
             self.end = now;
             self.timedOut = true;
-            process.nextTick(function deferOutReqTimeoutErrorEmit() {
-                self.emitError(errors.RequestTimeoutError({
-                    id: self.id,
-                    start: self.start,
-                    elapsed: elapsed,
-                    logical: self.logical,
-                    timeout: self.timeout
-                }));
-            });
+            process.nextTick(deferOutReqTimeoutErrorEmit);
         }
     }
     return self.timedOut;
+
+    function deferOutReqTimeoutErrorEmit() {
+        self.emitError(errors.RequestTimeoutError({
+            id: self.id,
+            start: self.start,
+            elapsed: elapsed,
+            logical: self.logical,
+            timeout: self.timeout
+        }));
+    }
 };
