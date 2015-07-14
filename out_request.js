@@ -59,6 +59,7 @@ function TChannelOutRequest(id, options) {
     self.forwardTrace = options.forwardTrace || false;
 
     // All self requests have id 0
+    self.operations = null;
     self.id = id;
     self.state = States.Initial;
     self.start = 0;
