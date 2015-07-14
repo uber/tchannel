@@ -34,10 +34,10 @@ var (
 )
 
 // verifyHandler ensures that the given t is a function with the following signature:
-// func(context.Context, *ArgType)(*ResType, error)
+// func(json.Context, *ArgType)(*ResType, error)
 func verifyHandler(t reflect.Type) error {
 	if t.NumIn() != 2 || t.NumOut() != 2 {
-		return fmt.Errorf("handler should be of format func(context.Context, *ArgType) (*ResType, error)")
+		return fmt.Errorf("handler should be of format func(json.Context, *ArgType) (*ResType, error)")
 	}
 
 	isStructPtr := func(t reflect.Type) bool {
@@ -45,7 +45,7 @@ func verifyHandler(t reflect.Type) error {
 	}
 
 	if t.In(0) != typeOfContext {
-		return fmt.Errorf("arg0 should be of type context.Context")
+		return fmt.Errorf("arg0 should be of type json.Context")
 	}
 	if !isStructPtr(t.In(1)) {
 		return fmt.Errorf("arg1 should be a pointer to an args struct")
