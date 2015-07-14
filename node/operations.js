@@ -56,9 +56,10 @@ function Operations(opts) {
     self.lastTimeoutTime = 0;
 }
 
-function OperationTombstone(id, time, timeout) {
+function OperationTombstone(operations, id, time, timeout) {
     var self = this;
 
+    self.operations = operations;
     self.id = id;
     self.time = time;
     self.timeout = timeout;
@@ -155,7 +156,7 @@ Operations.prototype.popOutReq = function popOutReq(id, context) {
 
     var now = self.timers.now();
     var timeout = TOMBSTONE_TTL_OFFSET + req.timeout;
-    var tombstone = new OperationTombstone(req.id, now, timeout);
+    var tombstone = new OperationTombstone(self, req.id, now, timeout);
     self.pending.out--;
 
     self.tombstones.out.push(tombstone);
