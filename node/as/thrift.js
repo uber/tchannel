@@ -176,7 +176,7 @@ TChannelAsThrift.prototype.send =
 function send(request, endpoint, outHead, outBody, callback) {
     var self = this;
 
-    self.logger = self.logger || request.logger;
+    self.logger = self.logger || request.channel.logger;
 
     assert(typeof endpoint === 'string', 'send requires endpoint');
     assert(typeof request.serviceName === 'string' &&

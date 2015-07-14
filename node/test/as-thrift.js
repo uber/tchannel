@@ -294,6 +294,43 @@ allocCluster.test('sending without as header', {
     }
 });
 
+allocCluster.test('logger set correctly in send and register functions', {
+    numPeers: 2
+}, function t(cluster, assert) {
+    var tchannelAsThrift = makeTChannelThriftServer(cluster, {
+        okResponse: true
+    });
+    var client = cluster.channels[1].subChannels.server;
+    tchannelAsThrift.logger = undefined;
+
+    function okHandler(opts, req, head, body, cb) {
+        return cb(null, {
+            ok: true,
+            head: head,
+            body: body.value
+        });
+    }
+
+    tchannelAsThrift.register(client, 'Chamber::echo', {
+        value: 10
+    }, okHandler);
+    assert.equal(tchannelAsThrift.logger, client.logger);
+
+    var request = client.request({
+        serviceName: 'server',
+        hasNoParent: true
+    });
+
+    tchannelAsThrift.logger = undefined;
+    tchannelAsThrift.send(request, 'Chamber::echo', null, {
+        value: 10
+    }, function onResponse(err, res) {
+        assert.ifError(err);
+        assert.equal(tchannelAsThrift.logger, request.channel.logger);
+        assert.end();
+    });
+});
+
 allocCluster.test('send without required fields', {
     numPeers: 2
 }, function t(cluster, assert) {
