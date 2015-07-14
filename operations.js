@@ -148,7 +148,7 @@ Operations.prototype.popOutReq = function popOutReq(id, context) {
 
     var now = self.timers.now();
     var timeout = TOMBSTONE_TTL_OFFSET + req.timeout + self._getTimeoutFuzz();
-    var tombstone = new OperationTombstone(req.id, now, now + timeout);
+    var tombstone = new OperationTombstone(req.id, now, timeout);
     self.pending.out--;
 
     self.tombstones.out.push(tombstone);
@@ -295,7 +295,7 @@ function _onTimeoutCheck() {
     var tombstones = [];
     for (var i = 0; i < self.tombstones.out.length; i++) {
         var tombstone = self.tombstones.out[i];
-        if (now < tombstone.timeout) {
+        if (now < (tombstone.time + tombstone.timeout)) {
             tombstones.push(tombstone);
         }
     }
