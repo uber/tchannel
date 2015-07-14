@@ -48,6 +48,7 @@ var TChannelPeers = require('./peers');
 var TChannelServices = require('./services');
 var TChannelStatsd = require('./lib/statsd');
 var RetryFlags = require('./retry-flags.js');
+var TimeHeap = require('./time_heap');
 
 var TracingAgent = require('./trace/agent');
 
@@ -161,6 +162,21 @@ function TChannel(options) {
     // populated by makeSubChannel
     self.topChannel = self.options.topChannel || null;
     self.subChannels = self.serviceName ? null : {};
+
+    // for processing operation timeouts
+    self.timeHeap = self.options.timeHeap || new TimeHeap({
+        timers: self.timers,
+        // TODO: do we still need/want fuzzing?
+        minTimeout: fuzzedMinTimeout
+    });
+
+    function fuzzedMinTimeout() {
+        var fuzz = self.options.timeoutFuzz;
+        if (fuzz) {
+            fuzz = Math.floor(fuzz * (self.random() - 0.5));
+        }
+        return self.options.timeoutCheckInterval + fuzz;
+    }
 
     // how to handle incoming requests
     if (!self.options.handler) {
@@ -366,6 +382,7 @@ TChannel.prototype.makeSubChannel = function makeSubChannel(options) {
     }
 
     opts.topChannel = self;
+    opts.timeHeap = self.timeHeap;
     var chan = TChannel(opts);
 
     if (options.peers) {
