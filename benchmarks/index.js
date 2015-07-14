@@ -126,6 +126,10 @@ BenchmarkRunner.prototype.startServer =
 function startServer(serverPort, instances) {
     var self = this;
 
+    if (self.opts.goServer) {
+      return self.startGoServer(serverPort, instances);
+    }
+
     var serverProc = run(server, [
         self.opts.trace ? '--trace' : '--no-trace',
         '--traceRelayHostPort', '127.0.0.1:' + RELAY_TRACE_PORT,
@@ -134,6 +138,20 @@ function startServer(serverPort, instances) {
         '--pingOverhead', 'norm:10,5',
         '--setOverhead', 'norm:200,20',
         '--getOverhead', 'norm:100,10'
+    ]);
+    self.serverProcs.push(serverProc);
+    serverProc.stdout.pipe(process.stderr);
+    serverProc.stderr.pipe(process.stderr);
+};
+
+BenchmarkRunner.prototype.startGoServer =
+function startGoServer(serverPort, instances) {
+    var self = this;
+
+    var serverProc = runExternal("../../golang/build/examples/bench/server", [
+      "--host", "localhost",
+      "--port", String(serverPort),
+      "--instances", String(instances),
     ]);
     self.serverProcs.push(serverProc);
     serverProc.stdout.pipe(process.stderr);
@@ -310,6 +328,12 @@ function lpad(input, len, chr) {
         str = chr + str;
     }
     return str;
+}
+
+function runExternal(runner, args) {
+  var child = childProcess.spawn(runner, args);
+  console.error('running', runner, child.pid);
+  return child;
 }
 
 function run(script, args) {
