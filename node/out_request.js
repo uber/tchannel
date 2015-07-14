@@ -34,13 +34,14 @@ function TChannelOutRequest(id, options) {
     /*max-statements: [2, 50]*/
     var self = this;
 
+    options = options || {channel: {}};
     EventEmitter.call(self);
     self.errorEvent = self.defineEvent('error');
     self.responseEvent = self.defineEvent('response');
     self.finishEvent = self.defineEvent('finish');
 
-    assert(options.channel, 'channel required');
-    assert(id, 'id is required');
+    // assert(options.channel, 'channel required');
+    // assert(id, 'id is required');
 
     self.peerState = options.peerState || null;
     self.retryCount = options.retryCount || 0;
@@ -78,7 +79,9 @@ function TChannelOutRequest(id, options) {
         self.setupTracing(options);
     }
 
-    self.peerState.onRequest(self);
+    if (self.peerState) {
+        self.peerState.onRequest(self);
+    }
 }
 
 inherits(TChannelOutRequest, EventEmitter);

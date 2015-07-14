@@ -898,7 +898,7 @@ TChannelV2Handler.prototype.buildOutRequest = function buildOutRequest(options) 
     if (options.streamed) {
         return new StreamingOutRequest(self, id, options);
     } else {
-        return new OutRequest(self, id, options);
+        return OutRequest.create(self, id, options);
     }
 };
 
