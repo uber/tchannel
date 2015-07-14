@@ -23,8 +23,17 @@
 var errors = require('./errors');
 
 function RelayRequest(channel, inreq, buildRes) {
-    var self = this;
+    if (!(this instanceof RelayRequest)) {
+        return relayRequestPool.allocate(channel, inreq, buildRes);
+        // return new RelayRequest(channel, inreq, buildRes);
+    }
 
+    var self = this;
+    self.setup(channel, inreq, buildRes);
+}
+
+RelayRequest.prototype.setup = function setup(channel, inreq, buildRes) {
+    var self = this;
     self.channel = channel;
     self.inreq = inreq;
     self.inres = null;
@@ -32,7 +41,18 @@ function RelayRequest(channel, inreq, buildRes) {
     self.outreq = null;
     self.buildRes = buildRes;
     self.peer = null;
-}
+};
+
+RelayRequest.prototype.clear = function clear() {
+    var self = this;
+    self.channel = null;
+    self.inreq = null;
+    self.buildRes = null;
+    self.inres = null;
+    self.outres = null;
+    self.outreq = null;
+    self.peer = null;
+};
 
 RelayRequest.prototype.createOutRequest = function createOutRequest(host) {
     var self = this;
@@ -131,10 +151,12 @@ RelayRequest.prototype.onIdentified = function onIdentified(err1) {
 
     function onResponse(res) {
         self.onResponse(res);
+        relayRequestPool.release(self);
     }
 
     function onError(err2) {
         self.onError(err2);
+        relayRequestPool.release(self);
     }
 };
 
@@ -262,6 +284,18 @@ RelayRequest.prototype.logError = function logError(err, codeName) {
         }
     }
 };
+
+var relayRequestPool = require('./lib/object_pool')({
+    name: 'RelayRequest',
+    staticPoolSize: 1000,
+    maxPoolSize: 1000,
+    // staticPoolSize: 0,
+    // maxPoolSize: 0,
+    create: function createRelayRequest(channel, inreq, buildRes) {
+        var obj = new RelayRequest(channel, inreq, buildRes);
+        return obj;
+    }
+});
 
 module.exports = RelayRequest;
 
