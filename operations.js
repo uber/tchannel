@@ -121,6 +121,7 @@ Operations.prototype.getInReq = function getInReq(id) {
 Operations.prototype.addOutReq = function addOutReq(req) {
     var self = this;
 
+    req.operations = self;
     self.requests.out[req.id] = req;
     self.pending.out++;
 
@@ -130,6 +131,7 @@ Operations.prototype.addOutReq = function addOutReq(req) {
 Operations.prototype.addInReq = function addInReq(req) {
     var self = this;
 
+    req.operations = self;
     self.requests.in[req.id] = req;
     self.pending.in++;
 
