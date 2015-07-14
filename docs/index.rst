@@ -20,5 +20,5 @@ The protocol is currently implemented in:
    cirtcuit-breaking
    http
    json
-   metrics
    thrift
+   metrics
