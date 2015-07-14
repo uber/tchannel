@@ -299,7 +299,8 @@ allocCluster.test('request().send() to self', 1, function t(cluster, assert) {
         reqHead: 'head1', reqBody: 'msg1',
         resHead: 'head1', resBody: 'msg1',
         opts: {
-            host: one.hostPort
+            host: one.hostPort,
+            serviceName: 'one'
         }
     },
     {
@@ -308,7 +309,8 @@ allocCluster.test('request().send() to self', 1, function t(cluster, assert) {
         resHead: 'head2', resBody: 'msg2',
         resOk: false,
         opts: {
-            host: one.hostPort
+            host: one.hostPort,
+            serviceName: 'one'
         }
     }].map(function eachTestCase(testCase) {
         testCase = extend({
@@ -348,6 +350,7 @@ allocCluster.test('send to self', {
     });
 
     subOne.request({
+        host: one.hostPort,
         serviceName: 'one'
     }).send('foo', '', '', onResponse);
 
@@ -426,6 +429,7 @@ allocCluster.test('self send() with error frame', 1, function t(cluster, assert)
     function cancelCase(callback) {
         subOne.request({
             host: one.hostPort,
+            serviceName: 'one',
             hasNoParent: true,
             headers: {
                 'as': 'raw',
@@ -452,6 +456,7 @@ allocCluster.test('self send() with error frame', 1, function t(cluster, assert)
     function unhealthyCase(callback) {
         subOne.request({
             host: one.hostPort,
+            serviceName: 'one',
             hasNoParent: true,
             headers: {
                 'as': 'raw',
