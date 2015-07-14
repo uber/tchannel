@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
@@ -16,19 +17,22 @@ import (
 var hostPort = flag.String("hostPort", "localhost:12345", "listening socket for the server")
 
 func main() {
+	flag.Parse()
+
 	// Sets up a listener for pprof.
 	go func() {
 		log.Println(http.ListenAndServe("localhost:6060", nil))
 	}()
 
-	ch, err := tchannel.NewChannel("bench-server", &tchannel.ChannelOptions{
-		ProcessName: "bench-server",
+	ch, err := tchannel.NewChannel("benchmark", &tchannel.ChannelOptions{
+		ProcessName: "benchmark",
 	})
 	if err != nil {
 		log.Fatalf("NewChannel failed: %v", err)
 	}
 
 	handler := raw.Wrap(&kvHandler{vals: make(map[string]string)})
+	ch.Register(handler, "ping")
 	ch.Register(handler, "get")
 	ch.Register(handler, "set")
 
@@ -61,6 +65,12 @@ func (h *kvHandler) WithLock(write bool, f func()) {
 	}
 }
 
+func (h *kvHandler) Ping(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+	return &raw.Res{
+		Arg2: []byte("pong"),
+	}, nil
+}
+
 func (h *kvHandler) Get(ctx context.Context, args *raw.Args) (*raw.Res, error) {
 	var arg3 []byte
 	h.WithLock(false /* write */, func() {
@@ -68,6 +78,7 @@ func (h *kvHandler) Get(ctx context.Context, args *raw.Args) (*raw.Res, error) {
 	})
 
 	return &raw.Res{
+		Arg2: []byte(fmt.Sprint(len(arg3))),
 		Arg3: arg3,
 	}, nil
 }
@@ -76,11 +87,16 @@ func (h *kvHandler) Set(ctx context.Context, args *raw.Args) (*raw.Res, error) {
 	h.WithLock(true /* write */, func() {
 		h.vals[string(args.Arg2)] = string(args.Arg3)
 	})
-	return &raw.Res{}, nil
+	return &raw.Res{
+		Arg2: []byte("ok"),
+		Arg3: []byte("really ok"),
+	}, nil
 }
 
 func (h *kvHandler) Handle(ctx context.Context, args *raw.Args) (*raw.Res, error) {
 	switch args.Operation {
+	case "ping":
+		return h.Ping(ctx, args)
 	case "get":
 		return h.Get(ctx, args)
 	case "put":
