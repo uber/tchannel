@@ -128,17 +128,19 @@ TChannelInRequest.prototype.checkTimeout = function checkTimeout() {
             // TODO: send an error frame response?
             // TODO: emit error on self.res instead / in additon to?
             // TODO: should cancel any pending handler
-            process.nextTick(function deferInReqTimeoutErrorEmit() {
-                self.errorEvent.emit(self, errors.RequestTimeoutError({
-                    id: self.id,
-                    start: self.start,
-                    elapsed: elapsed,
-                    timeout: self.timeout
-                }));
-            });
+            process.nextTick(deferInReqTimeoutErrorEmit);
         }
     }
     return self.timedOut;
+
+    function deferInReqTimeoutErrorEmit() {
+        self.errorEvent.emit(self, errors.RequestTimeoutError({
+            id: self.id,
+            start: self.start,
+            elapsed: elapsed,
+            timeout: self.timeout
+        }));
+    }
 };
 
 TChannelInRequest.prototype.withArg1 = function withArg1(callback) {
