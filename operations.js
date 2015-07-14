@@ -147,13 +147,11 @@ Operations.prototype.popOutReq = function popOutReq(id, context) {
     delete self.requests.out[id];
 
     var now = self.timers.now();
-    var timeout = now + TOMBSTONE_TTL_OFFSET + req.timeout +
-        self._getTimeoutFuzz();
-
-    self.tombstones.out.push(new OperationTombstone(
-        req.id, self.timers.now(), timeout
-    ));
+    var timeout = TOMBSTONE_TTL_OFFSET + req.timeout + self._getTimeoutFuzz();
+    var tombstone = new OperationTombstone(req.id, now, now + timeout);
     self.pending.out--;
+
+    self.tombstones.out.push(tombstone);
 
     return req;
 };
