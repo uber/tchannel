@@ -61,6 +61,9 @@ var globalTimers = {
  * - pop any expired times, and defer a call to their .onTimeout
  * - push the new item and its expiration time onto the heap
  * - set a timer if there is none or the newly added item is the next to expire
+ *
+ * TODO: shrink array if end is << array.length/2 (trigger in pop and/or a
+ * sweep on an interval)
  */
 
 function TimeHeap(options) {
@@ -73,6 +76,7 @@ function TimeHeap(options) {
     self.expired = [];
     self.lastTime = self.timers.now();
     self.timer = null;
+    self.end = 0;
 }
 
 TimeHeap.prototype.clear = function clear() {
@@ -134,7 +138,7 @@ TimeHeap.prototype.onTimeout = function onTimeout(now) {
 
     self.timer = null;
     self.drainExpired(now);
-    if (self.array.length) {
+    if (self.end) {
         self.setNextTimer(now);
     }
 };
@@ -142,7 +146,7 @@ TimeHeap.prototype.onTimeout = function onTimeout(now) {
 TimeHeap.prototype.drainExpired = function drainExpired(now) {
     var self = this;
 
-    while (self.array.length && self.array[0].expireTime <= now) {
+    while (self.end && self.array[0].expireTime <= now) {
         var item = self.pop();
         if (item) {
             self.expired.push(item);
@@ -169,33 +173,33 @@ TimeHeap.prototype.callExpiredTimeouts = function callExpiredTimeouts(now) {
 TimeHeap.prototype.push = function push(item, expireTime) {
     var self = this;
 
-    var i = self.array.length;
-    var el = new TimeHeapElement();
+    var i = self.end;
+    if (i >= self.array.length) {
+        i = self.array.length;
+        self.array.push(new TimeHeapElement());
+    }
+    var el = self.array[i];
     el.expireTime = expireTime;
     el.item = item;
-    self.array.push(el);
+    self.end = i + 1;
     return self.siftup(i);
 };
 
 TimeHeap.prototype.pop = function pop() {
     var self = this;
 
-    if (!self.array.length) {
+    if (!self.end) {
         return null;
     }
 
-    var el;
-    var item = null;
-    if (self.array.length === 1) {
-        el = self.array.pop();
-        item = el.item;
-        return item;
-    }
-
-    el = self.array[0];
-    item = el.item;
-    self.array[0] = self.array.pop();
+    var el = self.array[0];
+    self.end--;
+    self.swap(0, self.end);
     self.siftdown(0);
+
+    var item = el.item;
+    el.expireTime = 0;
+    el.item = null;
     return item;
 };
 
@@ -205,9 +209,9 @@ TimeHeap.prototype.siftdown = function siftdown(i) {
     while (true) {
         var left = (2 * i) + 1;
         var right = left + 1;
-        if (left < self.array.length &&
+        if (left < self.end &&
             self.array[left].expireTime < self.array[i].expireTime) {
-            if (right < self.array.length &&
+            if (right < self.end &&
                 self.array[right].expireTime < self.array[left].expireTime) {
                 self.swap(i, right);
                 i = right;
@@ -215,7 +219,7 @@ TimeHeap.prototype.siftdown = function siftdown(i) {
                 self.swap(i, left);
                 i = left;
             }
-        } else if (right < self.array.length &&
+        } else if (right < self.end &&
                    self.array[right].expireTime < self.array[i].expireTime) {
             self.swap(i, right);
             i = right;
