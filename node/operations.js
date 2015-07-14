@@ -42,9 +42,6 @@ function Operations(opts) {
     self.timer = null;
     self.destroyed = false;
 
-    self.tombstones = {
-        out: []
-    };
     self.requests = {
         in: Object.create(null),
         out: Object.create(null)
@@ -59,11 +56,20 @@ function Operations(opts) {
 function OperationTombstone(operations, id, time, timeout) {
     var self = this;
 
+    self.isTombstone = true;
     self.operations = operations;
     self.id = id;
     self.time = time;
     self.timeout = timeout;
 }
+
+OperationTombstone.prototype.onTimeout = function onTimeout(now) {
+    var self = this;
+
+    if (self.operations.requests.out[self.id] === self) {
+        delete self.operations.requests.out[self.id];
+    }
+};
 
 Operations.prototype.checkLastTimeoutTime = function checkLastTimeoutTime(now) {
     var self = this;
@@ -109,7 +115,12 @@ Operations.prototype.getPending = function getPending() {
 Operations.prototype.getOutReq = function getOutReq(id) {
     var self = this;
 
-    return self.requests.out[id];
+    var req = self.requests.out[id] || null;
+    if (req && req.isTombstone) {
+        return null;
+    } else {
+        return req;
+    }
 };
 
 Operations.prototype.getInReq = function getInReq(id) {
@@ -147,14 +158,9 @@ Operations.prototype.popOutReq = function popOutReq(id, context) {
 
     var req = self.requests.out[id];
     if (!req) {
-        var tombstones = self.tombstones.out;
-        for (var i = 0; i < tombstones.length; i++) {
-            if (tombstones[i].id === id) {
-                // If this id has been timed out then just return
-                return null;
-            }
-        }
         self.logMissingOutRequest(id, context);
+        return null;
+    } else if (req.isTombstone) {
         return null;
     }
 
@@ -163,14 +169,14 @@ Operations.prototype.popOutReq = function popOutReq(id, context) {
         req.timeHeapHandle = null;
     }
 
-    delete self.requests.out[id];
-
     var now = self.timers.now();
     var timeout = TOMBSTONE_TTL_OFFSET + req.timeout;
     var tombstone = new OperationTombstone(self, req.id, now, timeout);
+    req.operations = null;
+    self.requests.out[id] = tombstone;
     self.pending.out--;
 
-    self.tombstones.out.push(tombstone);
+    self.connection.channel.timeHeap.update(tombstone, now);
 
     return req;
 };
@@ -229,7 +235,6 @@ Operations.prototype.clear = function clear() {
 
     self.pending.in = 0;
     self.pending.out = 0;
-    self.tombstones.out = [];
 };
 
 Operations.prototype.destroy = function destroy() {
@@ -289,16 +294,6 @@ function _onTimeoutCheck() {
 
     self._checkTimeout(self.requests.out, 'out');
     self._checkTimeout(self.requests.in, 'in');
-
-    var now = self.timers.now();
-    var tombstones = [];
-    for (var i = 0; i < self.tombstones.out.length; i++) {
-        var tombstone = self.tombstones.out[i];
-        if (now < (tombstone.time + tombstone.timeout)) {
-            tombstones.push(tombstone);
-        }
-    }
-    self.tombstones.out = tombstones;
 
     self.startTimeoutTimer();
 };
