@@ -72,7 +72,7 @@ Operations.prototype.checkLastTimeoutTime = function checkLastTimeoutTime(now) {
         var err = errors.ConnectionStaleTimeoutError({
             lastTimeoutTime: self.lastTimeoutTime
         });
-        self.connection.timedOutEvent.emit(self, err);
+        self.connection.timedOutEvent.emit(self.connection, err);
         // TODO: y u no:
         // self.lastTimeoutTime = now;
     } else if (!self.lastTimeoutTime) {
@@ -281,7 +281,7 @@ function _onTimeoutCheck() {
         var elapsed = self.timers.now() - self.startTime;
         if (elapsed >= self.initTimeout) {
             self.connection.timedOutEvent
-                .emit(self, errors.ConnectionTimeoutError({
+                .emit(self.connection, errors.ConnectionTimeoutError({
                     start: self.startTime,
                     elapsed: elapsed,
                     timeout: self.initTimeout
