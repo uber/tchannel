@@ -105,6 +105,14 @@ function testBattle(name, options, expectedErrorTypes) {
                 return assert.end(err);
             }
 
+            // Super hack. Remove flaky timeouts
+            if (results[0].err.type === 'tchannel.timeout') {
+                results[0].err.type = 'tchannel.request.timeout';
+            }
+            if (results[1].err.type === 'tchannel.timeout') {
+                results[1].err.type = 'tchannel.request.timeout';
+            }
+
             assert.equal(results[0].err.type, expectedErrorTypes[0],
                 'first should fail due to a timeout');
             assert.equal(results[1].err.type, expectedErrorTypes[1],

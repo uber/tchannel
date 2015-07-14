@@ -32,14 +32,11 @@ function Operations(opts) {
     self.timers = opts.timers;
     self.logger = opts.logger;
     self.random = opts.random;
-    self.timeoutCheckInterval = opts.timeoutCheckInterval;
-    self.timeoutFuzz = opts.timeoutFuzz;
     self.initTimeout = opts.initTimeout;
     self.connectionStalePeriod = opts.connectionStalePeriod;
 
     self.connection = opts.connection;
     self.startTime = self.timers.now();
-    self.timer = null;
     self.destroyed = false;
 
     self.tombstones = {
@@ -63,19 +60,6 @@ function OperationTombstone(id, time, timeout) {
     self.time = time;
     self.timeout = timeout;
 }
-
-Operations.prototype.startTimeoutTimer =
-function startTimeoutTimer() {
-    var self = this;
-
-    self.timer = self.timers.setTimeout(
-        onChannelTimeout, self._getTimeoutDelay()
-    );
-
-    function onChannelTimeout() {
-        self._onTimeoutCheck();
-    }
-};
 
 Operations.prototype.getRequests = function getRequests() {
     var self = this;
@@ -131,8 +115,7 @@ Operations.prototype.popOutReq = function popOutReq(id, context) {
     delete self.requests.out[id];
 
     var now = self.timers.now();
-    var timeout = now + TOMBSTONE_TTL_OFFSET + req.timeout +
-        self._getTimeoutFuzz();
+    var timeout = now + TOMBSTONE_TTL_OFFSET + req.timeout;
 
     self.tombstones.out.push(new OperationTombstone(
         req.id, self.timers.now(), timeout
@@ -223,32 +206,6 @@ Operations.prototype.destroy = function destroy() {
     var self = this;
 
     self.destroyed = true;
-
-    if (self.timer) {
-        self.timers.clearTimeout(self.timer);
-        self.timer = null;
-    }
-};
-
-// timeout check runs every timeoutCheckInterval +/- some random fuzz. Range is from
-//   base - fuzz/2 to base + fuzz/2
-Operations.prototype._getTimeoutDelay =
-function _getTimeoutDelay() {
-    var self = this;
-
-    return self.timeoutCheckInterval + self._getTimeoutFuzz();
-};
-
-Operations.prototype._getTimeoutFuzz =
-function _getTimeoutFuzz() {
-    var self = this;
-
-    var fuzz = self.timeoutFuzz;
-    if (!fuzz) {
-        return 0;
-    }
-
-    return Math.round(Math.floor(self.random() * fuzz)) - (fuzz / 2);
 };
 
 // If the connection has some success and some timeouts, we should probably leave it up,
@@ -287,7 +244,7 @@ function _onTimeoutCheck() {
     }
     self.tombstones.out = tombstones;
 
-    self.startTimeoutTimer();
+    // self.startTimeoutTimer();
 };
 
 Operations.prototype._checkTimeout =

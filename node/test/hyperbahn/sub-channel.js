@@ -41,6 +41,7 @@ test('getting client subChannel without serviceName', function t(assert) {
         client.getClientChannel({});
     }, /must pass serviceName/);
 
+    client.tchannel.close();
     assert.end();
 });
 
@@ -58,6 +59,7 @@ test('getting a client subChannel', function t(assert) {
 
     assert.equal(subChannel.topChannel, client.tchannel);
 
+    client.tchannel.close();
     assert.end();
 });
 
@@ -78,5 +80,6 @@ test('double getting a client subChannel', function t(assert) {
 
     assert.equal(subChannel1, subChannel2);
 
+    client.tchannel.close();
     assert.end();
 });

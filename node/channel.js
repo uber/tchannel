@@ -217,8 +217,84 @@ function TChannel(options) {
 
     self.requestDefaults = self.options.requestDefaults ?
         new RequestDefaults(self.options.requestDefaults) : null;
+
+    self.timeoutCheckInterval = self.options.timeoutCheckInterval;
+    self.timeoutFuzz = self.options.timeoutFuzz;
+    self.operationsTimer = null;
+
+    if (self.topChannel === null) {
+        self.startTimeoutTimer();
+    }
 }
 inherits(TChannel, StatEmitter);
+
+TChannel.prototype.startTimeoutTimer =
+function startTimeoutTimer() {
+    var self = this;
+
+    self.operationsTimer = self.timers.setTimeout(
+        onChannelTimeout, self._getTimeoutDelay()
+    );
+
+    function onChannelTimeout() {
+        self._onTimeoutCheck();
+    }
+};
+
+TChannel.prototype._onTimeoutCheck = function _onTimeoutCheck() {
+    var self = this;
+    var conn;
+
+    if (self.serverConnections) {
+        var connKeys = Object.keys(self.serverConnections);
+
+        for (var i = 0; i < connKeys.length; i++) {
+            conn = self.serverConnections[connKeys[i]];
+            conn.ops._onTimeoutCheck();
+        }
+    }
+
+    var peers = self.peers.values();
+    for (var j = 0; j < peers.length; j++) {
+        var peer = peers[j];
+
+        for (var k = 0; k < peer.connections.length; k++) {
+            conn = peer.connections[k];
+            conn.ops._onTimeoutCheck();
+        }
+    }
+
+    if (self.peers.selfPeer) {
+        var selfPeer = self.peers.selfPeer;
+        for (var l = 0; l < selfPeer.connections.length; l++) {
+            conn = selfPeer.connections[l];
+            conn.ops._onTimeoutCheck();
+        }
+    }
+
+    self.startTimeoutTimer();
+};
+
+// timeout check runs every timeoutCheckInterval +/- some random fuzz. Range is from
+//   base - fuzz/2 to base + fuzz/2
+TChannel.prototype._getTimeoutDelay =
+function _getTimeoutDelay() {
+    var self = this;
+
+    return self.timeoutCheckInterval + self._getTimeoutFuzz();
+};
+
+TChannel.prototype._getTimeoutFuzz =
+function _getTimeoutFuzz() {
+    var self = this;
+
+    var fuzz = self.timeoutFuzz;
+    if (!fuzz) {
+        return 0;
+    }
+
+    return Math.round(Math.floor(self.random() * fuzz)) - (fuzz / 2);
+};
 
 TChannel.prototype.getServer = function getServer() {
     var self = this;
@@ -586,7 +662,7 @@ TChannel.prototype.request = function channelRequest(options) {
 };
 
 function RequestOptions(channel, opts) {
-    /*eslint max-complexity: [2, 30]*/
+    /*eslint complexity: [2, 30]*/
     var self = this;
 
     self.channel = channel;
@@ -670,6 +746,11 @@ TChannel.prototype.close = function close(callback) {
     var self = this;
     assert(!self.destroyed, 'TChannel double close');
     self.destroyed = true;
+
+    if (self.operationsTimer) {
+        self.timers.clearTimeout(self.operationsTimer);
+        self.operationsTimer = null;
+    }
 
     var counter = 1;
 
