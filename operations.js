@@ -147,7 +147,7 @@ Operations.prototype.popOutReq = function popOutReq(id, context) {
     delete self.requests.out[id];
 
     var now = self.timers.now();
-    var timeout = TOMBSTONE_TTL_OFFSET + req.timeout + self._getTimeoutFuzz();
+    var timeout = TOMBSTONE_TTL_OFFSET + req.timeout;
     var tombstone = new OperationTombstone(req.id, now, timeout);
     self.pending.out--;
 
