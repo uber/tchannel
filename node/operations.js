@@ -32,15 +32,10 @@ function Operations(opts) {
     self.timers = opts.timers;
     self.logger = opts.logger;
     self.random = opts.random;
-    self.timeoutCheckInterval = opts.timeoutCheckInterval;
-    self.timeoutFuzz = opts.timeoutFuzz;
-    self.initTimeout = opts.initTimeout;
     self.connectionStalePeriod = opts.connectionStalePeriod;
 
     self.connection = opts.connection;
-    self.startTime = self.timers.now();
-    self.timer = null;
-    self.destroyed = false;
+    self.destroyed = false; // TODO need this?
 
     self.requests = {
         in: Object.create(null),
@@ -84,19 +79,6 @@ Operations.prototype.checkLastTimeoutTime = function checkLastTimeoutTime(now) {
         // self.lastTimeoutTime = now;
     } else if (!self.lastTimeoutTime) {
         self.lastTimeoutTime = now;
-    }
-};
-
-Operations.prototype.startTimeoutTimer =
-function startTimeoutTimer() {
-    var self = this;
-
-    self.timer = self.timers.setTimeout(
-        onChannelTimeout, self._getTimeoutDelay()
-    );
-
-    function onChannelTimeout() {
-        self._onTimeoutCheck();
     }
 };
 
@@ -241,49 +223,12 @@ Operations.prototype.destroy = function destroy() {
     var self = this;
 
     self.destroyed = true;
-
-    if (self.timer) {
-        self.timers.clearTimeout(self.timer);
-        self.timer = null;
-    }
 };
 
-// timeout check runs every timeoutCheckInterval +/- some random fuzz. Range is from
-//   base - fuzz/2 to base + fuzz/2
-Operations.prototype._getTimeoutDelay =
-function _getTimeoutDelay() {
+Operations.prototype._sweepOps = function _sweepOps(ops, direction) {
+    // TODO: call this some how, some time(s)
     var self = this;
 
-    return self.timeoutCheckInterval + self._getTimeoutFuzz();
-};
-
-Operations.prototype._getTimeoutFuzz =
-function _getTimeoutFuzz() {
-    var self = this;
-
-    var fuzz = self.timeoutFuzz;
-    if (!fuzz) {
-        return 0;
-    }
-
-    return Math.round(Math.floor(self.random() * fuzz)) - (fuzz / 2);
-};
-
-// If the connection has some success and some timeouts, we should probably leave it up,
-// but if everything is timing out, then we should kill the connection.
-Operations.prototype._onTimeoutCheck =
-function _onTimeoutCheck() {
-    var self = this;
-    if (self.destroyed) {
-        return;
-    }
-
-    self.startTimeoutTimer();
-};
-
-Operations.prototype._checkTimeout =
-function _checkTimeout(ops, direction) {
-    var self = this;
     var opKeys = Object.keys(ops);
     for (var i = 0; i < opKeys.length; i++) {
         var id = opKeys[i];
