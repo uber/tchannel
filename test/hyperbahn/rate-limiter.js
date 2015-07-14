@@ -85,7 +85,7 @@ function runTests(HyperbahnCluster) {
                 send.bind(null, opts),
                 function check(done) {
                     cluster.relayNetwork.relayChannels.forEach(function (relayChannel, index) {
-                        assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 7, 'total request');
+                        assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 8, 'total request');
                         assert.equals(relayChannel.handler.rateLimiter.counters.steve.rps, 3, 'request for steve');
                         assert.equals(relayChannel.handler.rateLimiter.counters.tcollector.rps, 3, 'request for tcollector');
                     });
@@ -131,7 +131,7 @@ function runTests(HyperbahnCluster) {
                 send.bind(null, opts),
                 function check1(done) {
                     cluster.relayNetwork.relayChannels.forEach(function (relayChannel, index) {
-                        assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 7, 'check1: total request');
+                        assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 8, 'check1: total request');
                         assert.equals(relayChannel.handler.rateLimiter.counters.steve.rps, 3, 'check1: request for steve');
                         assert.equals(relayChannel.handler.rateLimiter.counters.tcollector.rps, 3, 'check1: request for tcollector');
                     });
@@ -212,7 +212,7 @@ function runTests(HyperbahnCluster) {
         timers: timers,
         kValue: 1,
         rateLimiterBuckets: 2,
-        totalRpsLimit: 2,
+        totalRpsLimit: 3,
         rateLimiterEnabled: true
     }, function t(cluster, assert) {
         var steve = cluster.remotes.steve;
@@ -247,7 +247,7 @@ function runTests(HyperbahnCluster) {
                         serviceName: steve.serviceName
                     }), 'echo', null, 'hello', function onResponse(err, res) {
                         assert.ok(err && err.type === 'tchannel.busy' &&
-                            err.message === 'hyperbahn node is rate-limited by the total rps of 2',
+                            err.message === 'hyperbahn node is rate-limited by the total rps of 3',
                             'should be rate limited');
                         done();
                     });
