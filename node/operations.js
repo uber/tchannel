@@ -302,14 +302,14 @@ function _checkTimeout(ops, direction) {
     var opKeys = Object.keys(ops);
     for (var i = 0; i < opKeys.length; i++) {
         var id = opKeys[i];
-        var req = ops[id];
-        if (req === undefined) {
-            self.logger.warn('unexpected undefined request', {
+        var op = ops[id];
+        if (op === undefined) {
+            self.logger.warn('unexpected undefined operation', {
                 direction: direction,
                 id: id
             });
-        } else if (req.timedOut) {
-            self.logger.warn('lingering timed-out request', {
+        } else if (op.timedOut) {
+            self.logger.warn('lingering timed-out operation', {
                 direction: direction,
                 id: id
             });
@@ -319,12 +319,12 @@ function _checkTimeout(ops, direction) {
             } else if (direction === 'out') {
                 self.popOutReq(id);
             }
-        } else if (req.checkTimeout()) {
+        } else if (op.checkTimeout()) {
             if (direction === 'out') {
                 self.checkLastTimeoutTime(self.timers.now());
             }
             // else
-            //     req.res.sendError // XXX may need to build
+            //     op.res.sendError // XXX may need to build
             if (direction === 'in') {
                 self.popInReq(id);
             } else if (direction === 'out') {
