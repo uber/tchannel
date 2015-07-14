@@ -560,14 +560,23 @@ TChannelOutRequest.prototype.checkTimeout = function checkTimeout() {
         var now = self.channel.timers.now();
         var elapsed = now - self.start;
         if (elapsed > self.timeout) {
-            self.end = now;
             self.timedOut = true;
-            process.nextTick(deferOutReqTimeoutErrorEmit);
+            self.onTimeout(now);
         }
     }
     return self.timedOut;
+};
+
+TChannelOutRequest.prototype.onTimeout = function onTimeout(now) {
+    var self = this;
+
+    if (!self.res || self.res.state === States.Initial) {
+        self.end = now;
+        process.nextTick(deferOutReqTimeoutErrorEmit);
+    }
 
     function deferOutReqTimeoutErrorEmit() {
+        var elapsed = now - self.start;
         self.emitError(errors.RequestTimeoutError({
             id: self.id,
             start: self.start,
