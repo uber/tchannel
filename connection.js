@@ -357,6 +357,10 @@ TChannelConnection.prototype.start = function start() {
         self.handler.initRequestEvent.on(onInIdentified);
     }
 
+    var now = self.timers.now();
+    var initOp = new InitOperation(self, now, self.channel.initTimeout);
+    self.channel.timeHeap.update(initOp, now);
+
     function onOutIdentified(init) {
         self.onOutIdentified(init);
     }
@@ -558,6 +562,31 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
     });
 
     self.ops.clear();
+};
+
+function InitOperation(connection, time, timeout) {
+    var self = this;
+
+    self.connection = connection;
+    self.time = time;
+    self.timeout = timeout;
+}
+
+InitOperation.prototype.onTimeout = function onTimeout(now) {
+    var self = this;
+
+    // noop if identify succeeded
+    if (self.connection.remoteName) {
+        return;
+    }
+
+    var elapsed = now - self.time;
+    var err = errors.ConnectionTimeoutError({
+        start: self.time,
+        elapsed: elapsed,
+        timeout: self.timeout
+    });
+    self.connection.timedOutEvent.emit(self.connection, err);
 };
 
 module.exports = TChannelConnection;

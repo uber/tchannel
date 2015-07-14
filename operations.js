@@ -278,20 +278,6 @@ function _onTimeoutCheck() {
         return;
     }
 
-    var isInitialized = self.connection.remoteName;
-    if (!isInitialized) {
-        var elapsed = self.timers.now() - self.startTime;
-        if (elapsed >= self.initTimeout) {
-            self.connection.timedOutEvent
-                .emit(self.connection, errors.ConnectionTimeoutError({
-                    start: self.startTime,
-                    elapsed: elapsed,
-                    timeout: self.initTimeout
-                }));
-            return;
-        }
-    }
-
     self._checkTimeout(self.requests.out, 'out');
     self._checkTimeout(self.requests.in, 'in');
 
