@@ -46,6 +46,7 @@ function TChannelInRequest(id, options) {
 
     self.state = States.Initial;
     self.operations = null;
+    self.timeHeapHandle = null;
     self.id = id || 0;
     self.remoteAddr = null;
     self.streamed = false;
@@ -120,19 +121,6 @@ TChannelInRequest.prototype.emitFinish = function emitFinish() {
     self.finishEvent.emit(self);
 };
 
-TChannelInRequest.prototype.checkTimeout = function checkTimeout() {
-    var self = this;
-    if (!self.timedOut) {
-        var now = self.channel.timers.now();
-        var elapsed = now - self.start;
-        if (elapsed > self.timeout) {
-            self.timedOut  = true;
-            self.onTimeout(now);
-        }
-    }
-    return self.timedOut;
-};
-
 TChannelInRequest.prototype.onTimeout = function onTimeout(now) {
     var self = this;
 
@@ -140,6 +128,10 @@ TChannelInRequest.prototype.onTimeout = function onTimeout(now) {
         // TODO: send an error frame response?
         // TODO: emit error on self.res instead / in addition to?
         // TODO: should cancel any pending handler
+        self.timedOut = true;
+        if (self.operations) {
+            self.operations.popInReq(self.id);
+        }
         process.nextTick(deferInReqTimeoutErrorEmit);
     }
 
