@@ -64,6 +64,22 @@ function OperationTombstone(id, time, timeout) {
     self.timeout = timeout;
 }
 
+Operations.prototype.checkLastTimeoutTime = function checkLastTimeoutTime(now) {
+    var self = this;
+
+    if (self.lastTimeoutTime &&
+        now > self.lastTimeoutTime + self.connectionStalePeriod) {
+        var err = errors.ConnectionStaleTimeoutError({
+            lastTimeoutTime: self.lastTimeoutTime
+        });
+        self.connection.timedOutEvent.emit(self, err);
+        // TODO: y u no:
+        // self.lastTimeoutTime = now;
+    } else if (!self.lastTimeoutTime) {
+        self.lastTimeoutTime = now;
+    }
+};
+
 Operations.prototype.startTimeoutTimer =
 function startTimeoutTimer() {
     var self = this;
@@ -315,19 +331,7 @@ function _checkTimeout(ops, direction) {
             }
         } else if (req.checkTimeout()) {
             if (direction === 'out') {
-                var now = self.timers.now();
-                if (self.lastTimeoutTime &&
-                    now > self.lastTimeoutTime + self.connectionStalePeriod
-                ) {
-                    var err = errors.ConnectionStaleTimeoutError({
-                        lastTimeoutTime: self.lastTimeoutTime
-                    });
-                    self.connection.timedOutEvent
-                        .emit(self, err);
-                } else if (!self.lastTimeoutTime) {
-                    self.lastTimeoutTime = self.timers.now();
-                }
-                
+                self.checkLastTimeoutTime(self.timers.now());
             }
             // else
             //     req.res.sendError // XXX may need to build
