@@ -135,6 +135,8 @@ Operations.prototype.addInReq = function addInReq(req) {
     self.requests.in[req.id] = req;
     self.pending.in++;
 
+    req.timeHeapHandle = self.connection.channel.timeHeap.update(req);
+
     return req;
 };
 
@@ -202,6 +204,11 @@ Operations.prototype.popInReq = function popInReq(id) {
     if (!req) {
         // TODO warn ?
         return null;
+    }
+
+    if (req.timeHeapHandle) {
+        req.timeHeapHandle.cancel();
+        req.timeHeapHandle = null;
     }
 
     delete self.requests.in[id];
@@ -312,17 +319,9 @@ function _checkTimeout(ops, direction) {
             } else if (direction === 'out') {
                 self.popOutReq(id);
             }
-        } else if (op.checkTimeout()) {
-            if (direction === 'out') {
-                self.checkLastTimeoutTime(self.timers.now());
-            }
-            // else
-            //     op.res.sendError // XXX may need to build
-            if (direction === 'in') {
-                self.popInReq(id);
-            } else if (direction === 'out') {
-                self.popOutReq(id);
-            }
+        } else if (direction === 'out' && op.checkTimeout()) {
+            self.checkLastTimeoutTime(self.timers.now());
+            self.popOutReq(id);
         }
     }
 };
