@@ -56,13 +56,30 @@ function Operations(opts) {
     self.lastTimeoutTime = 0;
 }
 
-function OperationTombstone(id, time, timeout) {
+function OperationTombstone(operations, id, time, timeout) {
     var self = this;
 
+    self.operations = operations;
     self.id = id;
     self.time = time;
     self.timeout = timeout;
 }
+
+Operations.prototype.checkLastTimeoutTime = function checkLastTimeoutTime(now) {
+    var self = this;
+
+    if (self.lastTimeoutTime &&
+        now > self.lastTimeoutTime + self.connectionStalePeriod) {
+        var err = errors.ConnectionStaleTimeoutError({
+            lastTimeoutTime: self.lastTimeoutTime
+        });
+        self.connection.timedOutEvent.emit(self.connection, err);
+        // TODO: y u no:
+        // self.lastTimeoutTime = now;
+    } else if (!self.lastTimeoutTime) {
+        self.lastTimeoutTime = now;
+    }
+};
 
 Operations.prototype.startTimeoutTimer =
 function startTimeoutTimer() {
@@ -104,6 +121,7 @@ Operations.prototype.getInReq = function getInReq(id) {
 Operations.prototype.addOutReq = function addOutReq(req) {
     var self = this;
 
+    req.operations = self;
     self.requests.out[req.id] = req;
     self.pending.out++;
 
@@ -113,6 +131,7 @@ Operations.prototype.addOutReq = function addOutReq(req) {
 Operations.prototype.addInReq = function addInReq(req) {
     var self = this;
 
+    req.operations = self;
     self.requests.in[req.id] = req;
     self.pending.in++;
 
@@ -124,6 +143,13 @@ Operations.prototype.popOutReq = function popOutReq(id, context) {
 
     var req = self.requests.out[id];
     if (!req) {
+        var tombstones = self.tombstones.out;
+        for (var i = 0; i < tombstones.length; i++) {
+            if (tombstones[i].id === id) {
+                // If this id has been timed out then just return
+                return null;
+            }
+        }
         self.logMissingOutRequest(id, context);
         return null;
     }
@@ -131,13 +157,11 @@ Operations.prototype.popOutReq = function popOutReq(id, context) {
     delete self.requests.out[id];
 
     var now = self.timers.now();
-    var timeout = now + TOMBSTONE_TTL_OFFSET + req.timeout +
-        self._getTimeoutFuzz();
-
-    self.tombstones.out.push(new OperationTombstone(
-        req.id, self.timers.now(), timeout
-    ));
+    var timeout = TOMBSTONE_TTL_OFFSET + req.timeout;
+    var tombstone = new OperationTombstone(self, req.id, now, timeout);
     self.pending.out--;
+
+    self.tombstones.out.push(tombstone);
 
     return req;
 };
@@ -145,21 +169,6 @@ Operations.prototype.popOutReq = function popOutReq(id, context) {
 Operations.prototype.logMissingOutRequest =
 function logMissingOutRequest(id, context) {
     var self = this;
-
-    var tombstones = self.tombstones.out;
-    var isStale = false;
-
-    for (var i = 0; i < tombstones.length; i++) {
-        if (tombstones[i].id === id) {
-            isStale = true;
-            break;
-        }
-    }
-
-    // If this id has been timed out then just return
-    if (isStale) {
-        return null;
-    }
 
     // context is err or res
     if (context && context.originalId) {
@@ -265,7 +274,7 @@ function _onTimeoutCheck() {
         var elapsed = self.timers.now() - self.startTime;
         if (elapsed >= self.initTimeout) {
             self.connection.timedOutEvent
-                .emit(self, errors.ConnectionTimeoutError({
+                .emit(self.connection, errors.ConnectionTimeoutError({
                     start: self.startTime,
                     elapsed: elapsed,
                     timeout: self.initTimeout
@@ -281,7 +290,7 @@ function _onTimeoutCheck() {
     var tombstones = [];
     for (var i = 0; i < self.tombstones.out.length; i++) {
         var tombstone = self.tombstones.out[i];
-        if (now < tombstone.timeout) {
+        if (now < (tombstone.time + tombstone.timeout)) {
             tombstones.push(tombstone);
         }
     }
@@ -296,14 +305,14 @@ function _checkTimeout(ops, direction) {
     var opKeys = Object.keys(ops);
     for (var i = 0; i < opKeys.length; i++) {
         var id = opKeys[i];
-        var req = ops[id];
-        if (req === undefined) {
-            self.logger.warn('unexpected undefined request', {
+        var op = ops[id];
+        if (op === undefined) {
+            self.logger.warn('unexpected undefined operation', {
                 direction: direction,
                 id: id
             });
-        } else if (req.timedOut) {
-            self.logger.warn('lingering timed-out request', {
+        } else if (op.timedOut) {
+            self.logger.warn('lingering timed-out operation', {
                 direction: direction,
                 id: id
             });
@@ -313,24 +322,12 @@ function _checkTimeout(ops, direction) {
             } else if (direction === 'out') {
                 self.popOutReq(id);
             }
-        } else if (req.checkTimeout()) {
+        } else if (op.checkTimeout()) {
             if (direction === 'out') {
-                var now = self.timers.now();
-                if (self.lastTimeoutTime &&
-                    now > self.lastTimeoutTime + self.connectionStalePeriod
-                ) {
-                    var err = errors.ConnectionStaleTimeoutError({
-                        lastTimeoutTime: self.lastTimeoutTime
-                    });
-                    self.connection.timedOutEvent
-                        .emit(self, err);
-                } else if (!self.lastTimeoutTime) {
-                    self.lastTimeoutTime = self.timers.now();
-                }
-                
+                self.checkLastTimeoutTime(self.timers.now());
             }
             // else
-            //     req.res.sendError // XXX may need to build
+            //     op.res.sendError // XXX may need to build
             if (direction === 'in') {
                 self.popInReq(id);
             } else if (direction === 'out') {

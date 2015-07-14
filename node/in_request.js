@@ -45,6 +45,7 @@ function TChannelInRequest(id, options) {
     self.connection = options.connection || null;
 
     self.state = States.Initial;
+    self.operations = null;
     self.id = id || 0;
     self.remoteAddr = null;
     self.streamed = false;
@@ -122,23 +123,35 @@ TChannelInRequest.prototype.emitFinish = function emitFinish() {
 TChannelInRequest.prototype.checkTimeout = function checkTimeout() {
     var self = this;
     if (!self.timedOut) {
-        var elapsed = self.channel.timers.now() - self.start;
+        var now = self.channel.timers.now();
+        var elapsed = now - self.start;
         if (elapsed > self.timeout) {
-            self.timedOut = true;
-            // TODO: send an error frame response?
-            // TODO: emit error on self.res instead / in additon to?
-            // TODO: should cancel any pending handler
-            process.nextTick(function deferInReqTimeoutErrorEmit() {
-                self.errorEvent.emit(self, errors.RequestTimeoutError({
-                    id: self.id,
-                    start: self.start,
-                    elapsed: elapsed,
-                    timeout: self.timeout
-                }));
-            });
+            self.timedOut  = true;
+            self.onTimeout(now);
         }
     }
     return self.timedOut;
+};
+
+TChannelInRequest.prototype.onTimeout = function onTimeout(now) {
+    var self = this;
+
+    if (!self.res || self.res.state === States.Initial) {
+        // TODO: send an error frame response?
+        // TODO: emit error on self.res instead / in addition to?
+        // TODO: should cancel any pending handler
+        process.nextTick(deferInReqTimeoutErrorEmit);
+    }
+
+    function deferInReqTimeoutErrorEmit() {
+        var elapsed = now - self.start;
+        self.errorEvent.emit(self, errors.RequestTimeoutError({
+            id: self.id,
+            start: self.start,
+            elapsed: elapsed,
+            timeout: self.timeout
+        }));
+    }
 };
 
 TChannelInRequest.prototype.withArg1 = function withArg1(callback) {

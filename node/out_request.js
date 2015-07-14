@@ -59,6 +59,7 @@ function TChannelOutRequest(id, options) {
     self.forwardTrace = options.forwardTrace || false;
 
     // All self requests have id 0
+    self.operations = null;
     self.id = id;
     self.state = States.Initial;
     self.start = 0;
@@ -560,18 +561,29 @@ TChannelOutRequest.prototype.checkTimeout = function checkTimeout() {
         var now = self.channel.timers.now();
         var elapsed = now - self.start;
         if (elapsed > self.timeout) {
-            self.end = now;
             self.timedOut = true;
-            process.nextTick(function deferOutReqTimeoutErrorEmit() {
-                self.emitError(errors.RequestTimeoutError({
-                    id: self.id,
-                    start: self.start,
-                    elapsed: elapsed,
-                    logical: self.logical,
-                    timeout: self.timeout
-                }));
-            });
+            self.onTimeout(now);
         }
     }
     return self.timedOut;
+};
+
+TChannelOutRequest.prototype.onTimeout = function onTimeout(now) {
+    var self = this;
+
+    if (!self.res || self.res.state === States.Initial) {
+        self.end = now;
+        process.nextTick(deferOutReqTimeoutErrorEmit);
+    }
+
+    function deferOutReqTimeoutErrorEmit() {
+        var elapsed = now - self.start;
+        self.emitError(errors.RequestTimeoutError({
+            id: self.id,
+            start: self.start,
+            elapsed: elapsed,
+            logical: self.logical,
+            timeout: self.timeout
+        }));
+    }
 };
