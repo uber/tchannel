@@ -35,7 +35,7 @@ import (
 )
 
 type statsValue struct {
-	count int
+	count int64
 }
 
 type recordingStatsReporter struct {
@@ -76,7 +76,7 @@ func tagsToString(tags map[string]string) string {
 	return strings.Join(vals, ", ")
 }
 
-func (r *recordingStatsReporter) IncCounter(name string, tags map[string]string, value int) {
+func (r *recordingStatsReporter) IncCounter(name string, tags map[string]string, value int64) {
 	tagMap, ok := r.Counters[name]
 	if !ok {
 		tagMap = make(map[string]*statsValue)
@@ -116,5 +116,5 @@ func (r *recordingStatsReporter) ValidateCounters(t *testing.T) {
 	}
 }
 
-func (r *recordingStatsReporter) UpdateGauge(name string, tags map[string]string, value int)       {}
+func (r *recordingStatsReporter) UpdateGauge(name string, tags map[string]string, value int64)     {}
 func (r *recordingStatsReporter) RecordTimer(name string, tags map[string]string, d time.Duration) {}

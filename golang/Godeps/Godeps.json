@@ -10,6 +10,11 @@
 			"Rev": "211b82de11c3c5bb83f669a95373b3ea6601d666"
 		},
 		{
+			"ImportPath": "github.com/cactus/go-statsd-client/statsd",
+			"Comment": "v2.0.1",
+			"Rev": "e2d8818d10f59a279d5a97778c1c4ecdbcd5c9df"
+		},
+		{
 			"ImportPath": "github.com/samuel/go-thrift/parser",
 			"Rev": "cc9ca8d18368623fde7aaf35a8a6a32feafd7f51"
 		},

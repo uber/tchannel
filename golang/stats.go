@@ -27,8 +27,8 @@ import (
 
 // StatsReporter is the the interface used to report stats.
 type StatsReporter interface {
-	IncCounter(name string, tags map[string]string, value int)
-	UpdateGauge(name string, tags map[string]string, value int)
+	IncCounter(name string, tags map[string]string, value int64)
+	UpdateGauge(name string, tags map[string]string, value int64)
 	RecordTimer(name string, tags map[string]string, d time.Duration)
 }
 
@@ -37,8 +37,8 @@ var NullStatsReporter StatsReporter = nullStatsReporter{}
 
 type nullStatsReporter struct{}
 
-func (nullStatsReporter) IncCounter(name string, tags map[string]string, value int)        {}
-func (nullStatsReporter) UpdateGauge(name string, tags map[string]string, value int)       {}
+func (nullStatsReporter) IncCounter(name string, tags map[string]string, value int64)      {}
+func (nullStatsReporter) UpdateGauge(name string, tags map[string]string, value int64)     {}
 func (nullStatsReporter) RecordTimer(name string, tags map[string]string, d time.Duration) {}
 
 // SimpleStatsReporter is a stats reporter that reports stats to the log.
@@ -48,11 +48,11 @@ type simpleStatsReporter struct {
 	commonTags map[string]string
 }
 
-func (simpleStatsReporter) IncCounter(name string, tags map[string]string, value int) {
+func (simpleStatsReporter) IncCounter(name string, tags map[string]string, value int64) {
 	log.Printf("Stats: IncCounter(%v, %v) +%v", name, tags, value)
 }
 
-func (simpleStatsReporter) UpdateGauge(name string, tags map[string]string, value int) {
+func (simpleStatsReporter) UpdateGauge(name string, tags map[string]string, value int64) {
 	log.Printf("Stats: UpdateGauge(%v, %v) = %v", name, tags, value)
 }
 
