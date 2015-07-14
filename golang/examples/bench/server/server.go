@@ -14,7 +14,11 @@ import (
 	"golang.org/x/net/context"
 )
 
-var hostPort = flag.String("hostPort", "localhost:12345", "listening socket for the server")
+var (
+	flagHost      = flag.String("host", "localhost", "The hostname to listen on")
+	flagPort      = flag.Int("port", 12345, "The base port to listen on")
+	flagInstances = flag.Int("instances", 1, "The number of instances to start")
+)
 
 func main() {
 	flag.Parse()
@@ -24,11 +28,23 @@ func main() {
 		log.Println(http.ListenAndServe("localhost:6060", nil))
 	}()
 
+	for i := 0; i < *flagInstances; i++ {
+		if err := setupServer(*flagHost, *flagPort, i); err != nil {
+			log.Fatalf("setupServer %v failed: %v", i, err)
+		}
+	}
+
+	// Listen indefinitely.
+	select {}
+}
+
+func setupServer(host string, basePort, instanceNum int) error {
+	hostPort := fmt.Sprintf("%s:%v", host, basePort+instanceNum)
 	ch, err := tchannel.NewChannel("benchmark", &tchannel.ChannelOptions{
-		ProcessName: "benchmark",
+		ProcessName: fmt.Sprintf("benchmark-%v", instanceNum),
 	})
 	if err != nil {
-		log.Fatalf("NewChannel failed: %v", err)
+		return fmt.Errorf("NewChannel failed: %v", err)
 	}
 
 	handler := raw.Wrap(&kvHandler{vals: make(map[string]string)})
@@ -36,12 +52,11 @@ func main() {
 	ch.Register(handler, "get")
 	ch.Register(handler, "set")
 
-	if err := ch.ListenAndServe(*hostPort); err != nil {
-		log.Fatalf("ListenAndServe failed: %v", err)
+	if err := ch.ListenAndServe(hostPort); err != nil {
+		return fmt.Errorf("ListenAndServe failed: %v", err)
 	}
 
-	// Listen indefinitely.
-	select {}
+	return nil
 }
 
 type kvHandler struct {
