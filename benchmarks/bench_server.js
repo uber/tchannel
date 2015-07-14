@@ -54,6 +54,7 @@ function BenchServer(port) {
             app: 'my-server'
         },
         trace: true,
+        emitConnectionMetrics: false,
         statsd: new Statsd({
             host: '127.0.0.1',
             port: 7036
