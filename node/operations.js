@@ -125,6 +125,8 @@ Operations.prototype.addOutReq = function addOutReq(req) {
     self.requests.out[req.id] = req;
     self.pending.out++;
 
+    req.timeHeapHandle = self.connection.channel.timeHeap.update(req);
+
     return req;
 };
 
@@ -154,6 +156,11 @@ Operations.prototype.popOutReq = function popOutReq(id, context) {
         }
         self.logMissingOutRequest(id, context);
         return null;
+    }
+
+    if (req.timeHeapHandle) {
+        req.timeHeapHandle.cancel();
+        req.timeHeapHandle = null;
     }
 
     delete self.requests.out[id];
@@ -319,9 +326,6 @@ function _checkTimeout(ops, direction) {
             } else if (direction === 'out') {
                 self.popOutReq(id);
             }
-        } else if (direction === 'out' && op.checkTimeout()) {
-            self.checkLastTimeoutTime(self.timers.now());
-            self.popOutReq(id);
         }
     }
 };
