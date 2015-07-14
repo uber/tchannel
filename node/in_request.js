@@ -45,6 +45,7 @@ function TChannelInRequest(id, options) {
     self.connection = options.connection || null;
 
     self.state = States.Initial;
+    self.operations = null;
     self.id = id || 0;
     self.remoteAddr = null;
     self.streamed = false;
