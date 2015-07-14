@@ -206,11 +206,6 @@ Operations.prototype.destroy = function destroy() {
     var self = this;
 
     self.destroyed = true;
-
-    // if (self.timer) {
-    //     self.timers.clearTimeout(self.timer);
-    //     self.timer = null;
-    // }
 };
 
 // If the connection has some success and some timeouts, we should probably leave it up,
