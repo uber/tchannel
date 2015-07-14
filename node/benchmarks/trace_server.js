@@ -31,6 +31,7 @@ var server = TChannel({
     statTags: {
         app: 'tcollector'
     },
+    emitConnectionMetrics: false,
     trace: false,
     statsd: new Statsd({
         host: '127.0.0.1',
