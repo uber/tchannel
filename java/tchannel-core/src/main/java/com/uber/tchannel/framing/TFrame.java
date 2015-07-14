@@ -1,5 +1,7 @@
 package com.uber.tchannel.framing;
 
+import com.uber.tchannel.messages.MessageType;
+
 public class TFrame {
 
     public static final int MAX_FRAME_LENGTH = 65536;
@@ -10,12 +12,15 @@ public class TFrame {
     public final long id;
     public final byte[] payload;
 
-
     public TFrame(byte type, long id, byte[] payload) {
         this.type = type;
         this.id = id;
         this.payload = payload;
         this.size = FRAME_HEADER_LENGTH + payload.length;
+    }
+
+    public TFrame(MessageType messageType, long id, byte[] payload) {
+        this(messageType.type, id, payload);
     }
 
     @Override

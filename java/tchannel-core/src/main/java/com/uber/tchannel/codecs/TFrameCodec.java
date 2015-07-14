@@ -3,11 +3,23 @@ package com.uber.tchannel.codecs;
 import com.uber.tchannel.framing.TFrame;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToMessageDecoder;
+import io.netty.handler.codec.ByteToMessageCodec;
 
 import java.util.List;
 
-public class TFrameDecoder extends MessageToMessageDecoder<ByteBuf> {
+/**
+ * Created by wjs on 7/13/15.
+ */
+public class TFrameCodec extends ByteToMessageCodec<TFrame> {
+    @Override
+    protected void encode(ChannelHandlerContext ctx, TFrame frame, ByteBuf out) throws Exception {
+        out.writeShort(frame.size)
+                .writeByte(frame.type)
+                .writeZero(1)
+                .writeInt((int) frame.id)
+                .writeZero(8)
+                .writeBytes(frame.payload);
+    }
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf msg, List<Object> out) throws Exception {
@@ -34,5 +46,4 @@ public class TFrameDecoder extends MessageToMessageDecoder<ByteBuf> {
         out.add(new TFrame(type, id, payload));
 
     }
-
 }

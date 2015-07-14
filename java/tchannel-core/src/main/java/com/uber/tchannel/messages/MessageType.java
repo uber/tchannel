@@ -4,18 +4,24 @@ import java.util.Optional;
 
 public enum MessageType {
 
-    InitRequest((byte) 0x01);
+    InitRequest((byte) 0x01),
+    InitResponse((byte) 0x02),
+    Error((byte) 0xff);
 
-    private final byte type;
+    public final byte type;
 
     MessageType(byte type) {
         this.type = type;
     }
 
-    public Optional<MessageType> forValue(byte value) {
+    public static Optional<MessageType> forValue(byte value) {
         switch (value) {
-            case 0x01:
+            case (byte) 0x01:
                 return Optional.of(InitRequest);
+            case (byte) 0x02:
+                return Optional.of(InitResponse);
+            case (byte) 0xff:
+                return Optional.of(Error);
             default:
                 return Optional.empty();
         }

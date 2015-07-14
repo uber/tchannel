@@ -1,6 +1,6 @@
 package com.uber.tchannel.client;
 
-import com.uber.tchannel.framing.TFrame;
+import com.uber.tchannel.messages.InitRequest;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 
@@ -8,17 +8,17 @@ public class ClientHandler extends ChannelHandlerAdapter {
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        TFrame frame = new TFrame((byte) 0x1, 42, "Hi?".getBytes());
-        System.out.println(frame);
-        ctx.writeAndFlush(frame);
+
+        InitRequest initRequest = new InitRequest(42, InitRequest.DEFAULT_VERSION, "0.0.0.0:0", "test-process");
+        System.out.println(initRequest);
+        ctx.writeAndFlush(initRequest);
     }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        TFrame frame = (TFrame) msg;
-        System.out.println(frame);
+        InitRequest initRequest = (InitRequest) msg;
+        System.out.println(initRequest);
         ctx.close();
-
     }
 
     @Override

@@ -1,6 +1,6 @@
 package com.uber.tchannel.server;
 
-import com.uber.tchannel.framing.TFrame;
+import com.uber.tchannel.messages.InitRequest;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerAdapter;
@@ -10,9 +10,9 @@ public class ServerHandler extends ChannelHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        TFrame frame = (TFrame) msg;
-        System.out.println(frame);
-        ChannelFuture f = ctx.writeAndFlush(frame);
+        InitRequest initRequest = (InitRequest) msg;
+        System.out.println(initRequest);
+        ChannelFuture f = ctx.writeAndFlush(initRequest);
         f.addListener(ChannelFutureListener.CLOSE);
     }
 
