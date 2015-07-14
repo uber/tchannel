@@ -23,13 +23,19 @@
 var bufrw = require('bufrw');
 var errors = require('../errors');
 
+Frame.Types = {};
+module.exports = Frame;
+module.exports.create = createFrame;
 var Types = require('./index.js').Types;
 
 /* jshint maxparams:5 */
 
-module.exports = Frame;
-
 function Frame(id, body) {
+    var self = this;
+    self.setup(id, body);
+}
+
+Frame.prototype.setup = function setup(id, body) {
     var self = this;
     self.size = 0;
     self.type = (body && body.type) || 0;
@@ -39,7 +45,15 @@ function Frame(id, body) {
         self.id = id;
     }
     self.body = body;
-}
+};
+
+Frame.prototype.clear = function clear() {
+    var self = this;
+    self.size = 0;
+    self.type = 0;
+    self.id = 0;
+    self.body = null;
+};
 
 Frame.Overhead = 0x10;
 Frame.MaxSize = 0xffff;
@@ -49,6 +63,27 @@ Frame.NullId = 0xffffffff;
 
 // size:2: type:1 reserved:1 id:4 reserved:8 ...
 Frame.RW = bufrw.Base(frameLength, readFrameFrom, writeFrameInto);
+
+var framePool = require('../lib/object_pool')({
+    name: 'Frame',
+    // staticPoolSize: 10,
+    // maxPoolSize: 10,
+    staticPoolSize: 0,
+    maxPoolSize: 0,
+    create: function createFrame(id, body) {
+        var obj = new Frame(id, body);
+        return obj;
+    }
+});
+
+function createFrame(id, body) {
+    return framePool.allocate(id, body);
+}
+
+Frame.prototype.release = function release() {
+    var self = this;
+    framePool.release(self);
+};
 
 function frameLength(frame) {
     var body = frame.body;
@@ -69,7 +104,7 @@ function frameLength(frame) {
 }
 
 function readFrameFrom(buffer, offset) {
-    var frame = new Frame();
+    var frame = createFrame();
 
     var res;
 
@@ -174,4 +209,3 @@ Frame.prototype.toBuffer = function toBuffer() {
     return bufrw.toBuffer(Frame.RW, self);
 };
 
-Frame.Types = {};
