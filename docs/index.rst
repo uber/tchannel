@@ -4,7 +4,6 @@ TChannel
 TChannel is a network multiplexing and framing protocol for RPC.
 
 The protocol is currently implemented in:
-
  * `Go`_
  * `Node`_
  * `Python`_
@@ -16,7 +15,6 @@ The protocol is currently implemented in:
 
 
 .. toctree::
-
    :maxdepth: 2
 
    protocol
