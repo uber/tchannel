@@ -63,6 +63,7 @@ function HyperbahnCluster(options) {
         clusterOptions: options.cluster || options.clusterOptions,
         timers: options.timers,
         servicePurgePeriod: options.servicePurgePeriod,
+        exemptServices: options.exemptServices,
         rpsLimitForServiceName: options.rpsLimitForServiceName,
         totalRpsLimit: options.totalRpsLimit,
         defaultServiceRpsLimit: options.defaultServiceRpsLimit,
@@ -134,6 +135,17 @@ HyperbahnCluster.prototype.close = function close(cb) {
 
     self.dummyCluster.destroy();
     self.relayNetwork.close(cb);
+};
+
+HyperbahnCluster.prototype.getRelayChannels =
+function getRelayChannels() {
+    var self = this;
+    var channels = [];
+    for (var i = 0; i < self.apps.length; i++) {
+        channels.push(self.apps[i]._relayChannel);
+    }
+
+    return channels;
 };
 
 function HyperbahnApp(opts) {

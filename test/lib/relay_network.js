@@ -55,6 +55,7 @@ function RelayNetwork(options) {
 
     self.servicePurgePeriod = options.servicePurgePeriod;
 
+    self.exemptServices = options.exemptServices;
     self.rpsLimitForServiceName = options.rpsLimitForServiceName;
     self.totalRpsLimit = options.totalRpsLimit;
     self.defaultServiceRpsLimit = options.defaultServiceRpsLimit;
@@ -165,6 +166,7 @@ RelayNetwork.prototype.setCluster = function setCluster(cluster) {
             statsd: statsd,
             egressNodes: egressNodes,
             servicePurgePeriod: self.servicePurgePeriod,
+            exemptServices: self.exemptServices,
             rpsLimitForServiceName: self.rpsLimitForServiceName,
             totalRpsLimit: self.totalRpsLimit,
             defaultServiceRpsLimit: self.defaultServiceRpsLimit,

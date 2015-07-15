@@ -80,6 +80,7 @@ function RateLimiter(options) {
     self.defaultServiceRpsLimit = options.defaultServiceRpsLimit || DEFAULT_SERVICE_RPS_LIMIT;
     self.totalRpsLimit = options.totalRpsLimit || DEFAULT_TOTAL_RPS_LIMIT;
     self.rpsLimitForServiceName = options.rpsLimitForServiceName || Object.create(null);
+    self.exemptServices = options.exemptServices || [];
     self.counters = Object.create(null);
     self.totalRequestCounter = RateLimiterCounter({
             numOfBuckets: self.numOfBuckets,
@@ -126,6 +127,10 @@ function incrementServiceCounter(serviceName) {
 
     assert(serviceName, 'incrementServiceCounter requires the serviceName');
 
+    if (self.exemptServices.indexOf(serviceName) !== -1) {
+        return;
+    }
+
     // if this is an existing service counter
     counter = self.counters[serviceName];
     // creating a new service counter
@@ -143,14 +148,19 @@ function incrementServiceCounter(serviceName) {
 };
 
 RateLimiter.prototype.incrementTotalCounter =
-function incrementTotalCounter() {
+function incrementTotalCounter(serviceName) {
     var self = this;
-    self.totalRequestCounter.increment();
+    if (!serviceName || self.exemptServices.indexOf(serviceName) === -1) {
+        self.totalRequestCounter.increment();
+    }
 };
 
 RateLimiter.prototype.shouldRateLimitService =
 function shouldRateLimitService(serviceName) {
     var self = this;
+    if (self.exemptServices.indexOf(serviceName) !== -1) {
+        return false;
+    }
     var counter = self.counters[serviceName];
     assert(counter, 'cannot find counter for ' + serviceName);
     return counter.rps > counter.rpsLimit;
