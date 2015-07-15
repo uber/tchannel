@@ -93,26 +93,26 @@ allocCluster.test('sending OK OK', {
             var record1 = lines[0];
             var record2 = lines[1];
 
-            var err1 = record1.fields.error;
-            var err2 = record2.fields.error;
+            var err1 = record1.meta.error;
+            var err2 = record2.meta.error;
 
-            assert.equal(record2.fields.state, 'Done');
-            assert.equal(record2.fields.msg,
+            assert.equal(record2.meta.state, 'Done');
+            assert.equal(record2.msg,
                 'outgoing response has an error');
-            assert.equal(record1.fields.arg1, 'DoubleResponse::method');
+            assert.equal(record1.meta.arg1, 'DoubleResponse::method');
             assert.equal(err1.method, 'setOk');
             assert.equal(err1.type, 'tchannel.response-already-started');
             assert.equal(err1.ok, true);
-            assert.equal(record1.fields.ok, true);
+            assert.equal(record1.meta.ok, true);
 
-            assert.equal(record2.fields.state, 'Done');
-            assert.equal(record2.fields.msg,
+            assert.equal(record2.meta.state, 'Done');
+            assert.equal(record2.msg,
                 'outgoing response has an error');
-            assert.equal(record2.fields.arg1, 'DoubleResponse::method');
+            assert.equal(record2.meta.arg1, 'DoubleResponse::method');
             assert.equal(err2.method, 'sendCallResponseFrame');
             assert.equal(err2.type, 'tchannel.response-already-done');
             assert.ok(err2.arg3.indexOf('foobar') >= 0);
-            assert.ok(record2.fields.arg3.indexOf('foobar') >= 0);
+            assert.ok(record2.meta.arg3.indexOf('foobar') >= 0);
 
             assert.end();
         }, 100);
@@ -151,26 +151,26 @@ allocCluster.test('sending OK NOT_OK', {
             var record1 = lines[0];
             var record2 = lines[1];
 
-            var err1 = record1.fields.error;
-            var err2 = record2.fields.error;
+            var err1 = record1.meta.error;
+            var err2 = record2.meta.error;
 
-            assert.equal(record2.fields.state, 'Done');
-            assert.equal(record2.fields.msg,
+            assert.equal(record2.meta.state, 'Done');
+            assert.equal(record2.msg,
                 'outgoing response has an error');
-            assert.equal(record1.fields.arg1, 'DoubleResponse::method');
+            assert.equal(record1.meta.arg1, 'DoubleResponse::method');
             assert.equal(err1.method, 'setOk');
             assert.equal(err1.type, 'tchannel.response-already-started');
             assert.equal(err1.ok, false);
-            assert.equal(record1.fields.ok, true);
+            assert.equal(record1.meta.ok, true);
 
-            assert.equal(record2.fields.state, 'Done');
-            assert.equal(record2.fields.msg,
+            assert.equal(record2.meta.state, 'Done');
+            assert.equal(record2.msg,
                 'outgoing response has an error');
-            assert.equal(record2.fields.arg1, 'DoubleResponse::method');
+            assert.equal(record2.meta.arg1, 'DoubleResponse::method');
             assert.equal(err2.method, 'sendCallResponseFrame');
             assert.equal(err2.type, 'tchannel.response-already-done');
             assert.ok(err2.arg3.indexOf('foobar') >= 0);
-            assert.ok(record2.fields.arg3.indexOf('foobar') >= 0);
+            assert.ok(record2.meta.arg3.indexOf('foobar') >= 0);
 
             assert.end();
         }, 100);
@@ -213,19 +213,19 @@ allocCluster.test('sending OK ERROR_FRAME', {
             var record1 = lines[0];
             var record2 = lines[1];
 
-            var err1 = record1.fields.error;
-            var err2 = record2.fields.error;
+            var err1 = record1.meta.error;
+            var err2 = record2.meta.error;
 
-            assert.equal(record1.fields.msg,
+            assert.equal(record1.msg,
                 'Got unexpected error in handler');
-            assert.equal(record1.fields.endpoint, 'DoubleResponse::method');
+            assert.equal(record1.meta.endpoint, 'DoubleResponse::method');
             assert.equal(err1.message, 'Error: foobar');
 
-            assert.equal(record2.fields.state, 'Done');
-            assert.equal(record2.fields.msg,
+            assert.equal(record2.meta.state, 'Done');
+            assert.equal(record2.msg,
                 'outgoing response has an error');
-            assert.equal(record2.fields.arg1, 'DoubleResponse::method');
-            assert.ok(record2.fields.arg3.indexOf('foobar') >= 0);
+            assert.equal(record2.meta.arg1, 'DoubleResponse::method');
+            assert.ok(record2.meta.arg3.indexOf('foobar') >= 0);
             assert.equal(err2.method, 'sendError');
             assert.equal(err2.type, 'tchannel.response-already-done');
             assert.equal(err2.codeString, 'UnexpectedError');
@@ -268,26 +268,26 @@ allocCluster.test('sending NOT_OK OK', {
             var record1 = lines[0];
             var record2 = lines[1];
 
-            var err1 = record1.fields.error;
-            var err2 = record2.fields.error;
+            var err1 = record1.meta.error;
+            var err2 = record2.meta.error;
 
-            assert.equal(record2.fields.state, 'Done');
-            assert.equal(record2.fields.msg,
+            assert.equal(record2.meta.state, 'Done');
+            assert.equal(record2.msg,
                 'outgoing response has an error');
-            assert.equal(record1.fields.arg1, 'DoubleResponse::method');
+            assert.equal(record1.meta.arg1, 'DoubleResponse::method');
             assert.equal(err1.method, 'setOk');
             assert.equal(err1.type, 'tchannel.response-already-started');
             assert.equal(err1.ok, true);
-            assert.equal(record1.fields.ok, false);
+            assert.equal(record1.meta.ok, false);
 
-            assert.equal(record2.fields.state, 'Done');
-            assert.equal(record2.fields.msg,
+            assert.equal(record2.meta.state, 'Done');
+            assert.equal(record2.msg,
                 'outgoing response has an error');
-            assert.equal(record2.fields.arg1, 'DoubleResponse::method');
+            assert.equal(record2.meta.arg1, 'DoubleResponse::method');
             assert.equal(err2.method, 'sendCallResponseFrame');
             assert.equal(err2.type, 'tchannel.response-already-done');
             assert.ok(err2.arg3.indexOf('foobar') >= 0);
-            assert.ok(record2.fields.arg3.indexOf('foobar') >= 0);
+            assert.ok(record2.meta.arg3.indexOf('foobar') >= 0);
 
             assert.end();
         }, 100);
@@ -326,26 +326,26 @@ allocCluster.test('sending NOT_OK NOT_OK', {
             var record1 = lines[0];
             var record2 = lines[1];
 
-            var err1 = record1.fields.error;
-            var err2 = record2.fields.error;
+            var err1 = record1.meta.error;
+            var err2 = record2.meta.error;
 
-            assert.equal(record2.fields.state, 'Done');
-            assert.equal(record2.fields.msg,
+            assert.equal(record2.meta.state, 'Done');
+            assert.equal(record2.msg,
                 'outgoing response has an error');
-            assert.equal(record1.fields.arg1, 'DoubleResponse::method');
+            assert.equal(record1.meta.arg1, 'DoubleResponse::method');
             assert.equal(err1.method, 'setOk');
             assert.equal(err1.type, 'tchannel.response-already-started');
             assert.equal(err1.ok, false);
-            assert.equal(record1.fields.ok, false);
+            assert.equal(record1.meta.ok, false);
 
-            assert.equal(record2.fields.state, 'Done');
-            assert.equal(record2.fields.msg,
+            assert.equal(record2.meta.state, 'Done');
+            assert.equal(record2.msg,
                 'outgoing response has an error');
-            assert.equal(record2.fields.arg1, 'DoubleResponse::method');
+            assert.equal(record2.meta.arg1, 'DoubleResponse::method');
             assert.equal(err2.method, 'sendCallResponseFrame');
             assert.equal(err2.type, 'tchannel.response-already-done');
             assert.ok(err2.arg3.indexOf('foobar') >= 0);
-            assert.ok(record2.fields.arg3.indexOf('foobar') >= 0);
+            assert.ok(record2.meta.arg3.indexOf('foobar') >= 0);
 
             assert.end();
         }, 100);
@@ -388,19 +388,19 @@ allocCluster.test('sending NOT_OK ERROR_FRAME', {
             var record1 = lines[0];
             var record2 = lines[1];
 
-            var err1 = record1.fields.error;
-            var err2 = record2.fields.error;
+            var err1 = record1.meta.error;
+            var err2 = record2.meta.error;
 
-            assert.equal(record1.fields.msg,
+            assert.equal(record1.msg,
                 'Got unexpected error in handler');
-            assert.equal(record1.fields.endpoint, 'DoubleResponse::method');
+            assert.equal(record1.meta.endpoint, 'DoubleResponse::method');
             assert.equal(err1.message, 'Error: foobar');
 
-            assert.equal(record2.fields.state, 'Done');
-            assert.equal(record2.fields.msg,
+            assert.equal(record2.meta.state, 'Done');
+            assert.equal(record2.msg,
                 'outgoing response has an error');
-            assert.equal(record2.fields.arg1, 'DoubleResponse::method');
-            assert.ok(record2.fields.arg3.indexOf('foobar') >= 0);
+            assert.equal(record2.meta.arg1, 'DoubleResponse::method');
+            assert.ok(record2.meta.arg3.indexOf('foobar') >= 0);
             assert.equal(err2.method, 'sendError');
             assert.equal(err2.type, 'tchannel.response-already-done');
             assert.equal(err2.codeString, 'UnexpectedError');
@@ -448,31 +448,31 @@ allocCluster.test('sending ERROR_FRAME OK', {
             var record2 = lines[1];
             var record3 = lines[2];
 
-            var err1 = record1.fields.error;
-            var err2 = record2.fields.error;
-            var err3 = record3.fields.error;
+            var err1 = record1.meta.error;
+            var err2 = record2.meta.error;
+            var err3 = record3.meta.error;
 
-            assert.equal(record1.fields.msg,
+            assert.equal(record1.msg,
                 'Got unexpected error in handler');
-            assert.equal(record1.fields.endpoint, 'DoubleResponse::method');
+            assert.equal(record1.meta.endpoint, 'DoubleResponse::method');
             assert.equal(err1.message, 'Error: foobar');
 
-            assert.equal(record2.fields.msg,
+            assert.equal(record2.msg,
                 'outgoing response has an error');
-            assert.equal(record2.fields.state, 'Error');
-            assert.equal(record2.fields.arg1, 'DoubleResponse::method');
-            assert.equal(record2.fields.codeString, 'UnexpectedError');
-            assert.equal(record2.fields.errMessage, 'Unexpected Error');
+            assert.equal(record2.meta.state, 'Error');
+            assert.equal(record2.meta.arg1, 'DoubleResponse::method');
+            assert.equal(record2.meta.codeString, 'UnexpectedError');
+            assert.equal(record2.meta.errMessage, 'Unexpected Error');
             assert.equal(err2.method, 'setOk');
             assert.equal(err2.ok, true);
             assert.equal(err2.type, 'tchannel.response-already-started');
 
-            assert.equal(record3.fields.msg,
+            assert.equal(record3.msg,
                 'outgoing response has an error');
-            assert.equal(record3.fields.state, 'Error');
-            assert.equal(record3.fields.arg1, 'DoubleResponse::method');
-            assert.equal(record3.fields.codeString, 'UnexpectedError');
-            assert.equal(record3.fields.errMessage, 'Unexpected Error');
+            assert.equal(record3.meta.state, 'Error');
+            assert.equal(record3.meta.arg1, 'DoubleResponse::method');
+            assert.equal(record3.meta.codeString, 'UnexpectedError');
+            assert.equal(record3.meta.errMessage, 'Unexpected Error');
             assert.equal(err3.method, 'sendCallResponseFrame');
             assert.equal(err3.type, 'tchannel.response-already-done');
             assert.ok(err3.arg3.indexOf('foobar') >= 0);
@@ -519,31 +519,31 @@ allocCluster.test('sending ERROR_FRAME NOT_OK', {
             var record2 = lines[1];
             var record3 = lines[2];
 
-            var err1 = record1.fields.error;
-            var err2 = record2.fields.error;
-            var err3 = record3.fields.error;
+            var err1 = record1.meta.error;
+            var err2 = record2.meta.error;
+            var err3 = record3.meta.error;
 
-            assert.equal(record1.fields.msg,
+            assert.equal(record1.msg,
                 'Got unexpected error in handler');
-            assert.equal(record1.fields.endpoint, 'DoubleResponse::method');
+            assert.equal(record1.meta.endpoint, 'DoubleResponse::method');
             assert.equal(err1.message, 'Error: foobar');
 
-            assert.equal(record2.fields.msg,
+            assert.equal(record2.msg,
                 'outgoing response has an error');
-            assert.equal(record2.fields.state, 'Error');
-            assert.equal(record2.fields.arg1, 'DoubleResponse::method');
-            assert.equal(record2.fields.codeString, 'UnexpectedError');
-            assert.equal(record2.fields.errMessage, 'Unexpected Error');
+            assert.equal(record2.meta.state, 'Error');
+            assert.equal(record2.meta.arg1, 'DoubleResponse::method');
+            assert.equal(record2.meta.codeString, 'UnexpectedError');
+            assert.equal(record2.meta.errMessage, 'Unexpected Error');
             assert.equal(err2.method, 'setOk');
             assert.equal(err2.ok, false);
             assert.equal(err2.type, 'tchannel.response-already-started');
 
-            assert.equal(record3.fields.msg,
+            assert.equal(record3.msg,
                 'outgoing response has an error');
-            assert.equal(record3.fields.state, 'Error');
-            assert.equal(record3.fields.arg1, 'DoubleResponse::method');
-            assert.equal(record3.fields.codeString, 'UnexpectedError');
-            assert.equal(record3.fields.errMessage, 'Unexpected Error');
+            assert.equal(record3.meta.state, 'Error');
+            assert.equal(record3.meta.arg1, 'DoubleResponse::method');
+            assert.equal(record3.meta.codeString, 'UnexpectedError');
+            assert.equal(record3.meta.errMessage, 'Unexpected Error');
             assert.equal(err3.method, 'sendCallResponseFrame');
             assert.equal(err3.type, 'tchannel.response-already-done');
             assert.ok(err3.arg3.indexOf('foobar') >= 0);
@@ -590,26 +590,26 @@ allocCluster.test('sending ERROR_FRAME ERROR_FRAME', {
             var record2 = lines[1];
             var record3 = lines[2];
 
-            var err1 = record1.fields.error;
-            var err2 = record2.fields.error;
-            var err3 = record3.fields.error;
+            var err1 = record1.meta.error;
+            var err2 = record2.meta.error;
+            var err3 = record3.meta.error;
 
-            assert.equal(record1.fields.msg,
+            assert.equal(record1.msg,
                 'Got unexpected error in handler');
-            assert.equal(record1.fields.endpoint, 'DoubleResponse::method');
+            assert.equal(record1.meta.endpoint, 'DoubleResponse::method');
             assert.equal(err1.message, 'Error: foobar');
 
-            assert.equal(record2.fields.msg,
+            assert.equal(record2.msg,
                 'Got unexpected error in handler');
-            assert.equal(record2.fields.endpoint, 'DoubleResponse::method');
+            assert.equal(record2.meta.endpoint, 'DoubleResponse::method');
             assert.equal(err2.message, 'Error: foobar');
 
-            assert.equal(record3.fields.state, 'Error');
-            assert.equal(record3.fields.msg,
+            assert.equal(record3.meta.state, 'Error');
+            assert.equal(record3.msg,
                 'outgoing response has an error');
-            assert.equal(record3.fields.arg1, 'DoubleResponse::method');
-            assert.equal(record3.fields.codeString, 'UnexpectedError');
-            assert.equal(record3.fields.errMessage, 'Unexpected Error');
+            assert.equal(record3.meta.arg1, 'DoubleResponse::method');
+            assert.equal(record3.meta.codeString, 'UnexpectedError');
+            assert.equal(record3.meta.errMessage, 'Unexpected Error');
             assert.equal(err3.method, 'sendError');
             assert.equal(err3.type, 'tchannel.response-already-done');
             assert.equal(err3.codeString, 'UnexpectedError');
@@ -651,24 +651,24 @@ allocCluster.test('sending INTERNAL_TIMEOUT OK', {
             var record1 = lines[0];
             var record2 = lines[1];
 
-            var err1 = record1.fields.error;
-            var err2 = record2.fields.error;
+            var err1 = record1.meta.error;
+            var err2 = record2.meta.error;
 
-            assert.equal(record2.fields.state, 'Error');
-            assert.equal(record2.fields.msg,
+            assert.equal(record2.meta.state, 'Error');
+            assert.equal(record2.msg,
                 'error for timed out outgoing response');
-            assert.equal(record1.fields.arg1, 'DoubleResponse::method');
-            assert.equal(record1.fields.ok, true);
-            assert.equal(record1.fields.codeString, 'Timeout');
+            assert.equal(record1.meta.arg1, 'DoubleResponse::method');
+            assert.equal(record1.meta.ok, true);
+            assert.equal(record1.meta.codeString, 'Timeout');
             assert.equal(err1.method, 'setOk');
             assert.equal(err1.type, 'tchannel.response-already-started');
             assert.equal(err1.ok, true);
 
-            assert.equal(record2.fields.state, 'Error');
-            assert.equal(record2.fields.msg,
+            assert.equal(record2.meta.state, 'Error');
+            assert.equal(record2.msg,
                 'error for timed out outgoing response');
-            assert.equal(record2.fields.arg1, 'DoubleResponse::method');
-            assert.equal(record2.fields.codeString, 'Timeout');
+            assert.equal(record2.meta.arg1, 'DoubleResponse::method');
+            assert.equal(record2.meta.codeString, 'Timeout');
             assert.equal(err2.method, 'sendCallResponseFrame');
             assert.equal(err2.type, 'tchannel.response-already-done');
             assert.ok(err2.arg3.indexOf('foobar') >= 0);
@@ -709,24 +709,24 @@ allocCluster.test('sending INTERNAL_TIMEOUT NOT_OK', {
             var record1 = lines[0];
             var record2 = lines[1];
 
-            var err1 = record1.fields.error;
-            var err2 = record2.fields.error;
+            var err1 = record1.meta.error;
+            var err2 = record2.meta.error;
 
-            assert.equal(record2.fields.state, 'Error');
-            assert.equal(record2.fields.msg,
+            assert.equal(record2.meta.state, 'Error');
+            assert.equal(record2.msg,
                 'error for timed out outgoing response');
-            assert.equal(record1.fields.arg1, 'DoubleResponse::method');
-            assert.equal(record1.fields.ok, true);
-            assert.equal(record1.fields.codeString, 'Timeout');
+            assert.equal(record1.meta.arg1, 'DoubleResponse::method');
+            assert.equal(record1.meta.ok, true);
+            assert.equal(record1.meta.codeString, 'Timeout');
             assert.equal(err1.method, 'setOk');
             assert.equal(err1.type, 'tchannel.response-already-started');
             assert.equal(err1.ok, false);
 
-            assert.equal(record2.fields.state, 'Error');
-            assert.equal(record2.fields.msg,
+            assert.equal(record2.meta.state, 'Error');
+            assert.equal(record2.msg,
                 'error for timed out outgoing response');
-            assert.equal(record2.fields.arg1, 'DoubleResponse::method');
-            assert.equal(record2.fields.codeString, 'Timeout');
+            assert.equal(record2.meta.arg1, 'DoubleResponse::method');
+            assert.equal(record2.meta.codeString, 'Timeout');
             assert.equal(err2.method, 'sendCallResponseFrame');
             assert.equal(err2.type, 'tchannel.response-already-done');
             assert.ok(err2.arg3.indexOf('foobar') >= 0);
@@ -771,20 +771,20 @@ allocCluster.test('sending INTERNAL_TIMEOUT ERROR_FRAME', {
             var record1 = lines[0];
             var record2 = lines[1];
 
-            var err1 = record1.fields.error;
-            var err2 = record2.fields.error;
+            var err1 = record1.meta.error;
+            var err2 = record2.meta.error;
 
-            assert.equal(record1.fields.msg,
+            assert.equal(record1.msg,
                 'Got unexpected error in handler');
-            assert.equal(record1.fields.endpoint, 'DoubleResponse::method');
+            assert.equal(record1.meta.endpoint, 'DoubleResponse::method');
             assert.equal(err1.message, 'Error: foobar');
 
-            assert.equal(record2.fields.state, 'Error');
-            assert.equal(record2.fields.msg,
+            assert.equal(record2.meta.state, 'Error');
+            assert.equal(record2.msg,
                 'error for timed out outgoing response');
-            assert.equal(record2.fields.arg1, 'DoubleResponse::method');
-            assert.equal(record2.fields.ok, true);
-            assert.equal(record2.fields.codeString, 'Timeout');
+            assert.equal(record2.meta.arg1, 'DoubleResponse::method');
+            assert.equal(record2.meta.ok, true);
+            assert.equal(record2.meta.codeString, 'Timeout');
             assert.equal(err2.method, 'sendError');
             assert.equal(err2.type, 'tchannel.response-already-done');
             assert.equal(err2.codeString, 'UnexpectedError');
