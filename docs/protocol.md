@@ -1,26 +1,83 @@
-# TChannel v2
+# Specification
 
-## Design goals
+## Introduction
 
-- Easy to implement in multiple languages, especially JS and Python
-- High performance forwarding path. Intermediaries can make a forwarding
-  decision quickly.
-- Request / response model with out of order responses. Slow requests will not
-  block subsequent faster requests at head of line.
+### Problem Statement
+
+TChannel was developed at Uber during a period of explosive growth in its
+[service oriented architecture][soa]. Services living in a large, distributed
+system like this usually encounter similar classes of problems, such as:
+
+ - Service discovery -- how do I discover *and consume* the services around me?
+
+ - Fault tolerance -- how can I best insulate myself from failures outside of
+   my control?
+
+ - [Dapper][dapper]-style tracing -- how can I identify and monitor bottlenecks
+   across the entire system?
+
+[soa]: https://en.wikipedia.org/wiki/Service-oriented_architecture "SOA"
+[dapper]: http://research.google.com/pubs/pub36356.html "Dapper"
+
+### Design Goals
+
+TChannel aims to solve these problems by providing a protocol for clients and
+servers, with an *intelligent routing mesh* (referred to as *Hyperbahn*)
+connecting the two.
+
+Consider those [SOA][soa] problems again:
+
+ - Service discovery: All producers and consumers register themselves with the
+   routing mesh. Consumers access producers only by their name; no need to know
+   about hosts or ports.
+
+ - Fault tolerance: The routing mesh tracks things like failure rates and
+   [SLA][sla] violations. It can intelligently detect unhealthy hosts and
+   remove them from the pool of available hosts.
+
+ - Request tracing: Built into the protocol as a first class citizen.
+
+[sla]: https://en.wikipedia.org/wiki/Service-level_agreement "SLA"
+
+By consolidating logic *between* producers and consumers, this also allows us
+to push core features to our entire SOA without requiring applications to
+update libraries.
+
+Additionally, when developing this protocol and routing mesh, we had the
+following goals in mind:
+
+- The protocol must be easy to implement in multiple languages, especially
+  Javascript, Python, and Go. We do not want to restrict ourselves to one
+  language.
+
+- Async behavior is fundamental. We follow a traditional request / response
+  model with out of order responses; slow requests must not block subsequent,
+  faster requests at the head of the line.
+
 - Large requests/responses may/must be broken into fragments to be sent
-  progressively.
-- Optional checksums
-- Can be used to transport multiple protocols between endpoints, e.g. HTTP+JSON
-  and Thrift.
+  progressively (i.e., "streaming" requests are supported).
 
-## Why not finagle-mux?
+- The protocol can be used with multiple transports, e.g. JSON and Thrift,
+  although Thrift is preferred for its [IDL][idl].
 
-The Finagle system developed by Twitter was a big inspiration for this
-protocol, specifically finagle-mux. However, there are several additional
-features we want out of this system that will require changes. Also, there is
-only one implementation of finagle-mux, which is in Scala. At Uber we'll need
-to implement at least a node and python version of this protocol, and a Go and
-JVM version are likely to follow after.
+- The routing mesh needs a high-performance forwarding path. Intermediaries
+  must be able to make a forwarding decision quickly.
+
+- Optional checksums for request/reponse integrity.
+
+[idl]: https://thrift.apache.org/docs/idl "IDL"
+
+### Why not finagle-mux?
+
+The [Finagle][finagle] system developed by Twitter was a big inspiration for
+this protocol, specifically [finagle-mux][mux]. However, there are several
+additional features we want out of this system that will require changes. Also,
+there is only one implementation of finagle-mux, which is in Scala. At Uber
+we'll need to implement at least a node and Python version of this protocol,
+and a Go and JVM version are likely to follow after.
+
+[finagle]: https://twitter.github.io/finagle/ "Finagle"
+[mux]: http://twitter.github.io/finagle/guide/Protocols.html#mux "Finagle Mux"
 
 ## Field Length Conventions
 
@@ -197,7 +254,9 @@ The length of the payload is frame `size` - 16.
 
 Full details on each payload body follow below.
 
-## Payload: init req (type 0x01)
+## Payloads
+
+### init req (type 0x01)
 
 Schema:
 ```
@@ -209,12 +268,12 @@ negotiate a common protocol version and describe the service names on both
 ends. In the future, we will likely use this to negotiate authentication and
 authorization between services.
 
-### version
+#### version
 
 `version` is a 16 bit number. The currently specified protocol version is 2. If
 new versions are required, this is where a common version can be negotiated.
 
-### headers
+#### headers
 
 There are a variable number of key/value pairs. For version 2, the following
 are required:
@@ -233,7 +292,7 @@ receiving implementations to use the results of `getpeername(2)` or equivalent A
 identify this connection. It also tells receivers that this address is not valid beyond this
 connection, so it should not be forwarded to other nodes.
 
-## Payload: init res (type 0x02)
+### init res (type 0x02)
 
 Schema:
 ```
@@ -244,7 +303,7 @@ The initiator requests a version number, and the server responds with the
 actual version that will be used for the rest of this connection. The
 name/values are the same, but identify the server.
 
-## Payload: call req (type 0x03)
+### call req (type 0x03)
 
 Schema:
 ```
@@ -266,7 +325,7 @@ of the args triple.
 A "call req" may be fragmented across multiple frames. If so, the first frame
 is a "call req", and all subsequent frames are "call req continue" frames.
 
-### flags:1
+#### flags:1
 
 Used to control fragmentation. Valid flags:
 
@@ -277,7 +336,7 @@ flag   | description
 If the fragments flag isn't set, then this is the only/last frame for this
 message id.
 
-### ttl:4
+#### ttl:4
 
 Time To Live in milliseconds. Intermediaries should decrement this as
 appropriate when making dependent requests. Since all numbers are unsigned the
@@ -285,23 +344,23 @@ ttl can never be less than 0. Care should be taken when decrementing ttl to
 make sure it doesn't go below 0. Requests should never be sent with ttl of 0.
 If the ttl expires an error response should be generated.
 
-### tracing:25
+#### tracing:25
 
 Tracing payload, see tracing section.
-### service~1
+#### service~1
 
 UTF-8 string identifying the destination service to which this request should be
 routed.
 
-### nh:1 (hk~1 hv~1){nh}
+#### nh:1 (hk~1 hv~1){nh}
 
 Transport headers described below in the "Transport Headers" section.
 
-### csumtype:1 (csum:4){0,1}
+#### csumtype:1 (csum:4){0,1}
 
 Checksum described below in the "checksums" section.
 
-### arg1~2 arg2~2 arg3~2
+#### arg1~2 arg2~2 arg3~2
 
 The meaning of the three args depends on the systems on each end. The format of
 arg1, arg2, and arg3 is unspecified at the transport level. These are opaque
@@ -313,7 +372,7 @@ Future versions will likely allow callers to specify specific service instances
 on which to run this request, or a mechanism to route a certain percentage of
 all traffic to a subset of instances for canary analysis.
 
-## Payload: call res (0x04)
+### call res (0x04)
 
 Schema:
 ```
@@ -334,7 +393,7 @@ The size of `arg1` is at most 16KiB.
 
 Headers described below in the "Transport Headers" section.
 
-### code:1
+#### code:1
 
 Response code:
 
@@ -348,7 +407,7 @@ Non-zero code does not imply anything about whether this request should be retri
 Implementations should implement unix-style zero / non-zero logic to be future
 safe to other "not ok" codes.
 
-## Payload: cancel (0xC0)
+### cancel (0xC0)
 
 Schema:
 ```
@@ -373,7 +432,7 @@ cancelled. We also need to be able to handle duplicated responses for similar
 reasons. The edges of this network need to implement their own de-duping
 strategy if necessary.
 
-## Payload: call req continue (type 0x13)
+### call req continue (type 0x13)
 
 Schema:
 ```
@@ -385,7 +444,7 @@ below.
 
 "flags" has the same definition as in "call req": to control fragmentation.
 
-## Payload: call res continue (type 0x14)
+### call res continue (type 0x14)
 
 Schema:
 ```
@@ -397,7 +456,7 @@ below.
 
 "flags" has the same definition as in "call req": to control fragmentation.
 
-## Payload: claim (0xC1)
+### claim (0xC1)
 
 Schema:
 ```
@@ -427,7 +486,7 @@ The relevant section starts on page 39. A video of this talk is here:
 
 http://youtu.be/C_PxVdQmfpk?t=26m45s
 
-## Payload: ping req (0xD0)
+### ping req (0xD0)
 
 Used to verify that the protocol is functioning correctly over a connection.
 The receiving side will send back a "ping res" message, but this is not
@@ -437,7 +496,7 @@ validation checks are desired, these can be implemented at a higher level with
 
 This message type has no body.
 
-## Payload: ping res (0xD1)
+### ping res (0xD1)
 
 Always sent in response to a "ping req". Sending this does not necessarily mean
 the service is "healthy." It only validates connectivity and basic protocol
@@ -445,7 +504,7 @@ functionality.
 
 This message type has no body.
 
-## Payload: error (0xFF)
+### error (0xFF)
 
 Schema:
 ```
@@ -457,7 +516,7 @@ unable to invoke the requested RPC for some reason. Application errors do not
 go here. Application errors are sent with "call res" messages and application
 specific exception data in the args.
 
-### code:1
+#### code:1
 
 code   | name                 | description
 -------|----------------------|------------
@@ -472,12 +531,12 @@ code   | name                 | description
 `0x08` | unhealthy            | A relay on the network declined to forward the request to an unhealthy node, do not retry.
 `0xFF` | fatal protocol error | Connection will close after this frame. message ID of this frame should be `0xFFFFFFFF`.
 
-### id:4
+#### id:4
 
 Message id of the original request that triggered this error, or `0xFFFFFFFF` if
 no message id is available.
 
-### message~2
+#### message~2
 
 A human readable string not intended to be shown to the user. This is something
 that goes into error logs to help engineers in the future debug code they've
