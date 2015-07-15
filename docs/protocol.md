@@ -5,8 +5,8 @@
 ### Problem Statement
 
 TChannel was developed at Uber during a period of explosive growth in its
-[service oriented architecture][soa]. Services living in a large, distributed
-system like this usually encounter similar classes of problems, such as:
+[SOA][soa] ecosystem. Services living in a large distributed system like this
+usually encounter similar classes of problems. Those problems often include:
 
  - Service discovery -- how do I discover *and consume* the services around me?
 
@@ -22,7 +22,7 @@ system like this usually encounter similar classes of problems, such as:
 ### Design Goals
 
 TChannel aims to solve these problems by providing a protocol for clients and
-servers, with an *intelligent routing mesh* (referred to as *Hyperbahn*)
+servers with an *intelligent routing mesh* (referred to as *Hyperbahn*)
 connecting the two.
 
 Consider those [SOA][soa] problems again:
@@ -39,11 +39,11 @@ Consider those [SOA][soa] problems again:
 
 [sla]: https://en.wikipedia.org/wiki/Service-level_agreement "SLA"
 
-By consolidating logic *between* producers and consumers, this also allows us
-to push core features to our entire SOA without requiring applications to
-update libraries.
+Consolidating logic *between* producers and consumers also allows us to push
+core features to our entire SOA without requiring applications to update
+libraries.
 
-Additionally, when developing this protocol and routing mesh, we had the
+Additionally, when developing this protocol and routing mesh we had the
 following goals in mind:
 
 - The protocol must be easy to implement in multiple languages, especially
@@ -57,8 +57,9 @@ following goals in mind:
 - Large requests/responses may/must be broken into fragments to be sent
   progressively (i.e., "streaming" requests are supported).
 
-- The protocol can be used with multiple transports, e.g. JSON and Thrift,
-  although Thrift is preferred for its [IDL][idl].
+- TChannel can be used with arbitrary serialization schemes, e.g. JSON and
+  Thrift, although Thrift is preferred for its [IDL][idl], type-safety, and
+  validation guarantees.
 
 - The routing mesh needs a high-performance forwarding path. Intermediaries
   must be able to make a forwarding decision quickly.
@@ -66,18 +67,6 @@ following goals in mind:
 - Optional checksums for request/reponse integrity.
 
 [idl]: https://thrift.apache.org/docs/idl "IDL"
-
-### Why not finagle-mux?
-
-The [Finagle][finagle] system developed by Twitter was a big inspiration for
-this protocol, specifically [finagle-mux][mux]. However, there are several
-additional features we want out of this system that will require changes. Also,
-there is only one implementation of finagle-mux, which is in Scala. At Uber
-we'll need to implement at least a node and Python version of this protocol,
-and a Go and JVM version are likely to follow after.
-
-[finagle]: https://twitter.github.io/finagle/ "Finagle"
-[mux]: http://twitter.github.io/finagle/guide/Protocols.html#mux "Finagle Mux"
 
 ## Field Length Conventions
 
