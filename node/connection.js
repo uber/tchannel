@@ -68,12 +68,10 @@ function TChannelConnection(channel, socket, direction, socketRemoteAddr) {
         requireAs: self.channel.requireAs,
         requireCn: self.channel.requireCn,
         tracer: self.tracer,
+        processName: self.options.processName,
         connection: self
     };
-    // jshint forin:false
-    for (var prop in self.options) {
-        opts[prop] = self.options[prop];
-    }
+
     // jshint forin:true
     self.handler = new v2.Handler(opts);
 
