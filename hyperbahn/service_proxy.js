@@ -57,6 +57,7 @@ function ServiceDispatchHandler(options) {
     self.rateLimiter = new RateLimiter({
         timers: self.channel.timers,
         rpsLimitForServiceName: options.rpsLimitForServiceName,
+        exemptServices: options.exemptServices,
         totalRpsLimit: options.totalRpsLimit,
         defaultServiceRpsLimit: options.defaultServiceRpsLimit,
         numOfBuckets: options.rateLimiterBuckets
@@ -113,7 +114,7 @@ function rateLimit(req, buildRes) {
 
     // apply rate limiter
     var isExitNode = self.isExitFor(req.serviceName);
-    self.rateLimiter.incrementTotalCounter();
+    self.rateLimiter.incrementTotalCounter(req.serviceName);
     if (isExitNode) {
         self.rateLimiter.incrementServiceCounter(req.serviceName);
     }
