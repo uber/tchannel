@@ -29,15 +29,29 @@ var Statsd = require('uber-statsd-client');
 
 var Reporter = require('../tcollector/reporter.js');
 var TChannel = require('../channel');
+var RandomSample = require('./random_sample.js');
 
 var argv = parseArgs(process.argv.slice(2), {
-    boolean: ['trace']
+    boolean: ['trace'],
+    default: {
+        pingOverhead: 'none',
+        setOverhead: 'none',
+        getOverhead: 'none'
+    }
 });
 
-assert('trace' in argv, 'trace option needed');
-assert(argv.traceRelayHostPort, 'traceRelayHostPort needed');
 assert(argv.port, 'port needed');
 assert(argv.instances, 'instances needed');
+
+var overhead = {};
+overhead.ping = parseOverhead(argv.pingOverhead);
+overhead.set = parseOverhead(argv.setOverhead);
+overhead.get = parseOverhead(argv.getOverhead);
+
+assert('trace' in argv, 'trace option needed');
+if (argv.trace) {
+    assert(argv.traceRelayHostPort, 'traceRelayHostPort needed');
+}
 
 var INSTANCES = parseInt(argv.instances, 10);
 
@@ -96,20 +110,34 @@ BenchServer.prototype.setupReporter = function setupReporter() {
 BenchServer.prototype.registerEndpoints = function registerEndpoints() {
     var self = this;
 
-    self.serverChan.register('ping', function onPing(req, res) {
+    if (overhead.ping) {
+        onPing = withDelay(onPing, overhead.ping);
+    }
+    if (overhead.set) {
+        onSet = withDelay(onSet, overhead.set);
+    }
+    if (overhead.get) {
+        onGet = withDelay(onGet, overhead.get);
+    }
+
+    self.serverChan.register('ping', onPing);
+    self.serverChan.register('set', onSet);
+    self.serverChan.register('get', onGet);
+
+    function onPing(req, res) {
         res.headers.as = 'raw';
         res.sendOk('pong', null);
-    });
+    }
 
-    self.serverChan.register('set', function onSet(req, res, arg2, arg3) {
+    function onSet(req, res, arg2, arg3) {
         var key = arg2.toString('utf8');
         var val = arg3.toString('utf8');
         self.keys[key] = val;
         res.headers.as = 'raw';
         res.sendOk('ok', 'really ok');
-    });
+    }
 
-    self.serverChan.register('get', function onGet(req, res, arg2, arg3) {
+    function onGet(req, res, arg2, arg3) {
         var key = arg2.toString('utf8');
         res.headers.as = 'raw';
         if (self.keys[key] !== undefined) {
@@ -118,7 +146,7 @@ BenchServer.prototype.registerEndpoints = function registerEndpoints() {
         } else {
             res.sendNotOk('key not found', key);
         }
-    });
+    }
 };
 
 BenchServer.prototype.listen = function listen() {
@@ -132,6 +160,26 @@ for (var i = 0; i < INSTANCES; i++) {
 
     var benchServer = BenchServer(port);
     benchServer.listen();
+}
+
+function parseOverhead(str) {
+    if (str === 'none') {
+        return null;
+    } else {
+        return RandomSample.fromString(str);
+    }
+}
+
+function withDelay(handler, delay) {
+    return delayedHandler;
+
+    function delayedHandler(req, res, arg2, arg3) {
+        var t = delay();
+        setTimeout(runHandler, t);
+        function runHandler() {
+            handler(req, res, arg2, arg3);
+        }
+    }
 }
 
 // setInterval(function () {
