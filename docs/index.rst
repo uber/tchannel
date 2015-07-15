@@ -14,6 +14,7 @@ The protocol is currently implemented in:
 .. _Python: http://tchannel.readthedocs.org/projects/tchannel-python/en/latest/
 
 .. toctree::
+   :caption: Table of Contents
    :maxdepth: 2
 
    protocol
