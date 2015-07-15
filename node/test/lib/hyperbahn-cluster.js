@@ -63,12 +63,12 @@ function HyperbahnCluster(options) {
         clusterOptions: options.cluster || options.clusterOptions,
         timers: options.timers,
         servicePurgePeriod: options.servicePurgePeriod,
-        exemptServices: options.exemptServices,
-        rpsLimitForServiceName: options.rpsLimitForServiceName,
-        totalRpsLimit: options.totalRpsLimit,
-        defaultServiceRpsLimit: options.defaultServiceRpsLimit,
-        rateLimiterBuckets: options.rateLimiterBuckets,
-        rateLimiterEnabled: options.rateLimiterEnabled
+        exemptServices: readSeedConfig(options.seedConfig, 'rateLimiting.exemptServices'),
+        rpsLimitForServiceName: readSeedConfig(options.seedConfig, 'rateLimiting.rpsLimitForServiceName'),
+        totalRpsLimit: readSeedConfig(options.seedConfig, 'rateLimiting.totalRpsLimit'),
+        defaultServiceRpsLimit: readSeedConfig(options.seedConfig, 'rateLimiting.defaultServiceRpsLimit'),
+        rateLimiterBuckets: readSeedConfig(options.seedConfig, 'rateLimiting.rateLimiterBuckets'),
+        rateLimiterEnabled: readSeedConfig(options.seedConfig, 'rateLimiting.enabled'),
     });
 
     self.remotes = {};
@@ -193,4 +193,21 @@ function HyperbahnRemote(opts) {
         res.headers.as = 'raw';
         res.sendOk(String(a), String(b));
     }
+}
+
+function readSeedConfig(config, key) {
+    if (!config || !key) {
+        return undefined;
+    }
+
+    var levels = key.split('.');
+    var value = config;
+    for (var i = 0; i < levels.length; i++) {
+        value = value[levels[i]];
+        if (!value) {
+            return undefined;
+        }
+    }
+
+    return value;
 }
