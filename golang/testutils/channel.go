@@ -81,32 +81,42 @@ func getChannelOptions(opts *ChannelOpts, processName string) *tchannel.ChannelO
 
 // WithServer sets up a TChannel that is listening and runs the given function with the channel.
 func WithServer(opts *ChannelOpts, f func(ch *tchannel.Channel, hostPort string)) error {
+	ch, err := NewServer(opts)
+	if err != nil {
+		return err
+	}
+	f(ch, ch.PeerInfo().HostPort)
+	ch.Close()
+	return nil
+}
+
+// NewServer creates a TChannel that is listening and returns the channel.
+func NewServer(opts *ChannelOpts) (*tchannel.Channel, error) {
 	if opts == nil {
 		opts = &ChannelOpts{}
 	}
 
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
-		return fmt.Errorf("failed to listen: %v", err)
+		return nil, fmt.Errorf("failed to listen: %v", err)
 	}
 	_, port, err := net.SplitHostPort(l.Addr().String())
 	if err != nil {
-		return fmt.Errorf("could not get listening port from %v: %v", l.Addr().String(), err)
+		return nil, fmt.Errorf("could not get listening port from %v: %v", l.Addr().String(), err)
 	}
 
 	serviceName := defaultString(opts.ServiceName, DefaultServerName)
 	processName := defaultString(opts.ProcessName, serviceName+"-"+port)
 	ch, err := tchannel.NewChannel(serviceName, getChannelOptions(opts, processName))
 	if err != nil {
-		return fmt.Errorf("NewChannel failed: %v", err)
+		return nil, fmt.Errorf("NewChannel failed: %v", err)
 	}
 
 	if err := ch.Serve(l); err != nil {
-		return fmt.Errorf("Serve failed: %v", err)
+		return nil, fmt.Errorf("Serve failed: %v", err)
 	}
-	f(ch, l.Addr().String())
-	ch.Close()
-	return nil
+
+	return ch, nil
 }
 
 var totalClients uint32
