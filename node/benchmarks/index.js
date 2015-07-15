@@ -266,9 +266,9 @@ BenchmarkRunner.prototype.startTorch = function startTorch() {
     if (self.opts.torch === 'relay') {
         torchPid = self.relayProcs[0].pid;
     } else if (self.opts.torch === 'client') {
-        torchPid = self.benchProc.pid;
+        torchPid = self.benchProcs[0].pid;
     } else if (self.opts.torch === 'server') {
-        torchPid = self.serverProc.pid;
+        torchPid = self.serverProcs[0].pid;
     }
 
     setTimeout(function delayTorching() {
