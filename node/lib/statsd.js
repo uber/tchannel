@@ -20,7 +20,9 @@
 
 'use strict';
 
-var LENGTH_ARRAYS = {};
+var Cleaner = require('./statsd-clean');
+var clean = Cleaner.clean;
+var cleanHostPort = Cleaner.cleanHostPort;
 
 function TChannelStatsd(channel, statsd) {
     if (!(this instanceof TChannelStatsd)) {
@@ -36,66 +38,6 @@ function TChannelStatsd(channel, statsd) {
     function onStat(stat) {
         self.onStat(stat);
     }
-}
-
-function clean(str, field) {
-    var copy;
-
-    if (!str) {
-        return field;
-    }
-
-    copy = LENGTH_ARRAYS[str.length];
-    if (!copy) {
-        copy = LENGTH_ARRAYS[str.length] = [];
-    }
-
-    for (var i = 0; i < str.length; i++) {
-        var char = str[i];
-
-        if (char === ':' ||
-            char === '/' ||
-            char === '.' ||
-            char === '{' ||
-            char === '}'
-        ) {
-            copy[i] = '-';
-        } else {
-            copy[i] = char;
-        }
-    }
-
-    return copy.join('');
-}
-
-function cleanHostPort(str, field) {
-    var copy;
-
-    if (!str) {
-        return field;
-    }
-
-    var length = str.indexOf(':');
-
-    copy = LENGTH_ARRAYS[length];
-    if (!copy) {
-        copy = LENGTH_ARRAYS[length] = [];
-    }
-    for (var i = 0; i < length; i++) {
-        var char = str[i];
-
-        if (char === '/' ||
-            char === '.' ||
-            char === '{' ||
-            char === '}'
-        ) {
-            copy[i] = '-';
-        } else {
-            copy[i] = char;
-        }
-    }
-
-    return copy.join('');
 }
 
 function getKey(stat) {
