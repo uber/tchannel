@@ -130,7 +130,10 @@ function startServer(serverPort, instances) {
         self.opts.trace ? '--trace' : '--no-trace',
         '--traceRelayHostPort', '127.0.0.1:' + RELAY_TRACE_PORT,
         '--port', String(serverPort),
-        '--instances', String(instances)
+        '--instances', String(instances),
+        '--pingOverhead', 'norm:10,5',
+        '--setOverhead', 'norm:200,20',
+        '--getOverhead', 'norm:100,10'
     ]);
     self.serverProcs.push(serverProc);
     serverProc.stdout.pipe(process.stderr);
