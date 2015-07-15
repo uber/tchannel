@@ -44,7 +44,8 @@ allocCluster.test('send relay requests', {
     twoSvc.register('echo', echo);
 
     var client = TChannel({
-        logger: one.logger
+        logger: one.logger,
+        timeoutFuzz: 0
     });
     var twoClient = client.makeSubChannel({
         serviceName: 'two',
@@ -88,7 +89,8 @@ allocCluster.test('send relay with tiny timeout', {
     twoSvc.register('echo', echo);
 
     var client = TChannel({
-        logger: one.logger
+        logger: one.logger,
+        timeoutFuzz: 0
     });
     var twoClient = client.makeSubChannel({
         serviceName: 'two',
@@ -112,7 +114,7 @@ allocCluster.test('send relay with tiny timeout', {
         twoClient.request({
             hasNoParent: true,
             host: one.hostPort,
-            timeout: 1
+            timeout: 5
         }).send('echo', 'foo', 'bar', function done(err2, res, arg2, arg3) {
             assert.ifError(err2, 'no unexpected error');
             assert.equal(String(arg2), 'foo', 'expected arg2');
@@ -205,7 +207,8 @@ allocCluster.test('relay an error frame', {
     twoSvc.register('decline', declineError);
 
     var client = TChannel({
-        logger: one.logger
+        logger: one.logger,
+        timeoutFuzz: 0
     });
     var twoClient = client.makeSubChannel({
         serviceName: 'two',
