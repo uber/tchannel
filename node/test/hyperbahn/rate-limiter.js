@@ -58,7 +58,11 @@ function runTests(HyperbahnCluster) {
         size: 1,
         timers: timers,
         rateLimiterBuckets: 2,
-        rateLimiterEnabled: true
+        rateLimiterEnabled: true,
+        exemptServices: [
+            'hyperbahn',
+            'ringpop'
+        ]
     }, function t(cluster, assert) {
         var steve = cluster.remotes.steve;
         var bob = cluster.remotes.bob;
@@ -84,8 +88,9 @@ function runTests(HyperbahnCluster) {
                 send.bind(null, opts),
                 send.bind(null, opts),
                 function check(done) {
-                    cluster.relayNetwork.relayChannels.forEach(function (relayChannel, index) {
-                        assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 8, 'total request');
+                    cluster.apps.forEach(function (app) {
+                        var relayChannel = app.clients.tchannel;
+                        assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 6, 'total request');
                         assert.equals(relayChannel.handler.rateLimiter.counters.steve.rps, 3, 'request for steve');
                         assert.equals(relayChannel.handler.rateLimiter.counters.tcollector.rps, 3, 'request for tcollector');
                     });
@@ -102,7 +107,11 @@ function runTests(HyperbahnCluster) {
         size: 1,
         timers: timers,
         rateLimiterBuckets: 2,
-        rateLimiterEnabled: true
+        rateLimiterEnabled: true,
+        exemptServices: [
+            'hyperbahn',
+            'ringpop'
+        ]
     }, function t(cluster, assert) {
         var steve = cluster.remotes.steve;
         var bob = cluster.remotes.bob;
@@ -130,8 +139,9 @@ function runTests(HyperbahnCluster) {
                 wait,
                 send.bind(null, opts),
                 function check1(done) {
-                    cluster.relayNetwork.relayChannels.forEach(function (relayChannel, index) {
-                        assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 8, 'check1: total request');
+                    cluster.apps.forEach(function (app) {
+                        var relayChannel = app.clients.tchannel;
+                        assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 6, 'check1: total request');
                         assert.equals(relayChannel.handler.rateLimiter.counters.steve.rps, 3, 'check1: request for steve');
                         assert.equals(relayChannel.handler.rateLimiter.counters.tcollector.rps, 3, 'check1: request for tcollector');
                     });
@@ -140,7 +150,8 @@ function runTests(HyperbahnCluster) {
                 wait,
                 send.bind(null, opts),
                 function check2(done) {
-                    cluster.relayNetwork.relayChannels.forEach(function (relayChannel, index) {
+                    cluster.apps.forEach(function (app) {
+                        var relayChannel = app.clients.tchannel;
                         assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 4, 'check2: total request');
                         assert.equals(relayChannel.handler.rateLimiter.counters.steve.rps, 2, 'check2: request for steve');
                         assert.equals(relayChannel.handler.rateLimiter.counters.tcollector.rps, 2, 'check2: request for tcollector');
@@ -161,7 +172,11 @@ function runTests(HyperbahnCluster) {
         rateLimiterEnabled: true,
         rpsLimitForServiceName: {
             steve: 2
-        }
+        },
+        exemptServices: [
+            'hyperbahn',
+            'ringpop'
+        ]
     }, function t(cluster, assert) {
         var steve = cluster.remotes.steve;
         var bob = cluster.remotes.bob;
@@ -212,8 +227,13 @@ function runTests(HyperbahnCluster) {
         timers: timers,
         kValue: 1,
         rateLimiterBuckets: 2,
-        totalRpsLimit: 3,
-        rateLimiterEnabled: true
+        totalRpsLimit: 2,
+        rateLimiterEnabled: true,
+        exemptServices: [
+            'hyperbahn',
+            'ringpop',
+            'tcollector'
+        ]
     }, function t(cluster, assert) {
         var steve = cluster.remotes.steve;
         var bob = cluster.remotes.bob;
@@ -237,6 +257,7 @@ function runTests(HyperbahnCluster) {
             };
             series([
                 send.bind(null, opts),
+                send.bind(null, opts),
                 wait,
                 function sendError(done) {
                     var tchannelJSON = TChannelJSON({
@@ -247,7 +268,7 @@ function runTests(HyperbahnCluster) {
                         serviceName: steve.serviceName
                     }), 'echo', null, 'hello', function onResponse(err, res) {
                         assert.ok(err && err.type === 'tchannel.busy' &&
-                            err.message === 'hyperbahn node is rate-limited by the total rps of 3',
+                            err.message === 'hyperbahn node is rate-limited by the total rps of 2',
                             'should be rate limited');
                         done();
                     });

@@ -63,6 +63,7 @@ function HyperbahnCluster(options) {
         clusterOptions: options.cluster || options.clusterOptions,
         timers: options.timers,
         servicePurgePeriod: options.servicePurgePeriod,
+        exemptServices: options.exemptServices,
         rpsLimitForServiceName: options.rpsLimitForServiceName,
         totalRpsLimit: options.totalRpsLimit,
         defaultServiceRpsLimit: options.defaultServiceRpsLimit,
@@ -147,6 +148,7 @@ function HyperbahnApp(opts) {
     self._egressNodes = opts.egressNodes;
     self.hostPort = opts.relayChannel.hostPort;
     self.clients = {
+        tchannel: opts.relayChannel,
         serviceProxy: opts.serviceProxy
     };
 }
