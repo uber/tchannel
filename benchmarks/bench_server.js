@@ -99,20 +99,24 @@ BenchServer.prototype.setupReporter = function setupReporter() {
 BenchServer.prototype.registerEndpoints = function registerEndpoints() {
     var self = this;
 
-    self.serverChan.register('ping', function onPing(req, res) {
+    self.serverChan.register('ping', onPing);
+    self.serverChan.register('set', onSet);
+    self.serverChan.register('get', onGet);
+
+    function onPing(req, res) {
         res.headers.as = 'raw';
         res.sendOk('pong', null);
-    });
+    }
 
-    self.serverChan.register('set', function onSet(req, res, arg2, arg3) {
+    function onSet(req, res, arg2, arg3) {
         var key = arg2.toString('utf8');
         var val = arg3.toString('utf8');
         self.keys[key] = val;
         res.headers.as = 'raw';
         res.sendOk('ok', 'really ok');
-    });
+    }
 
-    self.serverChan.register('get', function onGet(req, res, arg2, arg3) {
+    function onGet(req, res, arg2, arg3) {
         var key = arg2.toString('utf8');
         res.headers.as = 'raw';
         if (self.keys[key] !== undefined) {
@@ -121,7 +125,7 @@ BenchServer.prototype.registerEndpoints = function registerEndpoints() {
         } else {
             res.sendNotOk('key not found', key);
         }
-    });
+    }
 };
 
 BenchServer.prototype.listen = function listen() {
