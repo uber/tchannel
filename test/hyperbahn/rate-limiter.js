@@ -88,7 +88,8 @@ function runTests(HyperbahnCluster) {
                 send.bind(null, opts),
                 send.bind(null, opts),
                 function check(done) {
-                    cluster.getRelayChannels().forEach(function (relayChannel) {
+                    cluster.apps.forEach(function (app) {
+                        var relayChannel = app.clients.tchannel;
                         assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 6, 'total request');
                         assert.equals(relayChannel.handler.rateLimiter.counters.steve.rps, 3, 'request for steve');
                         assert.equals(relayChannel.handler.rateLimiter.counters.tcollector.rps, 3, 'request for tcollector');
@@ -138,7 +139,8 @@ function runTests(HyperbahnCluster) {
                 wait,
                 send.bind(null, opts),
                 function check1(done) {
-                    cluster.getRelayChannels().forEach(function (relayChannel) {
+                    cluster.apps.forEach(function (app) {
+                        var relayChannel = app.clients.tchannel;
                         assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 6, 'check1: total request');
                         assert.equals(relayChannel.handler.rateLimiter.counters.steve.rps, 3, 'check1: request for steve');
                         assert.equals(relayChannel.handler.rateLimiter.counters.tcollector.rps, 3, 'check1: request for tcollector');
@@ -148,7 +150,8 @@ function runTests(HyperbahnCluster) {
                 wait,
                 send.bind(null, opts),
                 function check2(done) {
-                    cluster.getRelayChannels().forEach(function (relayChannel) {
+                    cluster.apps.forEach(function (app) {
+                        var relayChannel = app.clients.tchannel;
                         assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 4, 'check2: total request');
                         assert.equals(relayChannel.handler.rateLimiter.counters.steve.rps, 2, 'check2: request for steve');
                         assert.equals(relayChannel.handler.rateLimiter.counters.tcollector.rps, 2, 'check2: request for tcollector');

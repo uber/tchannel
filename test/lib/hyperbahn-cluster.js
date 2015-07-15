@@ -137,17 +137,6 @@ HyperbahnCluster.prototype.close = function close(cb) {
     self.relayNetwork.close(cb);
 };
 
-HyperbahnCluster.prototype.getRelayChannels =
-function getRelayChannels() {
-    var self = this;
-    var channels = [];
-    for (var i = 0; i < self.apps.length; i++) {
-        channels.push(self.apps[i]._relayChannel);
-    }
-
-    return channels;
-};
-
 function HyperbahnApp(opts) {
     if (!(this instanceof HyperbahnApp)) {
         return new HyperbahnApp(opts);
@@ -159,6 +148,7 @@ function HyperbahnApp(opts) {
     self._egressNodes = opts.egressNodes;
     self.hostPort = opts.relayChannel.hostPort;
     self.clients = {
+        tchannel: opts.relayChannel,
         serviceProxy: opts.serviceProxy
     };
 }
