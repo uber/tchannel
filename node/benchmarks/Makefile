@@ -32,18 +32,18 @@ top-benchmark:
 take:
 	node index.js -o $$(git rev-parse --short HEAD).json -- \
 		-m 5 -s 4,4096,16384 -p 1000,10000,20000
-	ln -sf $$(git rev-parse --short HEAD).json $$(git symbolic-ref HEAD | basename).json
+	ln -sf $$(git rev-parse --short HEAD).json $$(basename $$(git symbolic-ref HEAD)).json
 
 take_relay:
 	node index.js --relay -o relay-$$(git rev-parse --short HEAD).json \
 		-- --relay --skipPing -s 4096,16384 -p 1000,10000,20000
-	ln -sf relay-$$(git rev-parse --short HEAD).json relay-$$(git symbolic-ref HEAD | basename).json
+	ln -sf relay-$$(git rev-parse --short HEAD).json relay-$$(basename $$(git symbolic-ref HEAD)).json
 
 take_trace:
 	# Cannot take --trace flag to multi_bench due to timeout+OOM.
 	# Cannot take 20k concurrency as it totally falls over
 	node index.js --relay --trace -o trace-$$(git rev-parse --short HEAD).json \
 		-- --relay -m 5 -c 10 -s 4096,16384 -p 1000,10000
-	ln -sf trace-$$(git rev-parse --short HEAD).json trace-$$(git symbolic-ref HEAD | basename).json
+	ln -sf trace-$$(git rev-parse --short HEAD).json trace-$$(basename $$(git symbolic-ref HEAD)).json
 
 .PHONY: kill-dead-benchmarks top-benchmark take take_relay take_trace
