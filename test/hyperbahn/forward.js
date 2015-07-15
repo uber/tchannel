@@ -36,7 +36,6 @@ function runTests(HyperbahnCluster) {
         size: 5,
         namedRemotes: ['august']
     }, function t(cluster, assert) {
-        console.log('wtf', cluster.namedRemotes);
         var steve = cluster.remotes.steve;
         var august = cluster.namedRemotes[0];
 
