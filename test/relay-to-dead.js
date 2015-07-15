@@ -80,10 +80,10 @@ allocCluster.test('relaying to init timeout server', {
             setTimeout(function onTimeout() {
                 var logs = cluster.logger.items();
                 assert.equal(
-                    logs[0].fields.msg, 'destroying socket from timeouts'
+                    logs[0].msg, 'destroying socket from timeouts'
                 );
-                assert.equal(logs[1].fields.msg, 'resetting connection');
-                assert.equal(logs[2].fields.msg, 'Got a connection error');
+                assert.equal(logs[1].msg, 'resetting connection');
+                assert.equal(logs[2].msg, 'Got a connection error');
 
                 deadServer.close();
                 assert.end();
