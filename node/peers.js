@@ -74,6 +74,29 @@ TChannelPeers.prototype.close = function close(callback) {
     }
 };
 
+TChannelPeers.prototype.sanitySweep = function sanitySweep() {
+    var self = this;
+
+    var i = 0;
+    var conn = null;
+
+    if (self.selfPeer) {
+        for (i = 0; i < self.selfPeer.connections.length; i++) {
+            conn = self.selfPeer.connections[i];
+            conn.ops.sanitySweep();
+        }
+    }
+
+    var peers = self.values();
+    for (i = 0; i < peers.length; i++) {
+        var peer = peers[i];
+        for (var j = 0; j < peer.connections.length; j++) {
+            conn = peer.connections[j];
+            conn.ops.sanitySweep();
+        }
+    }
+};
+
 TChannelPeers.prototype.get = function get(hostPort) {
     var self = this;
     return self._map[hostPort] || null;
