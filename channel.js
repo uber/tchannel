@@ -53,6 +53,7 @@ var TimeHeap = require('./time_heap');
 var TracingAgent = require('./trace/agent');
 
 var CONN_STALE_PERIOD = 1500;
+var SANITY_PERIOD = 10 * 1000;
 var DEFAULT_RETRY_FLAGS = new RetryFlags(
     /*never:*/ false,
     /*onConnectionError*/ true,
@@ -233,6 +234,13 @@ function TChannel(options) {
 
     self.requestDefaults = self.options.requestDefaults ?
         new RequestDefaults(self.options.requestDefaults) : null;
+
+    self.sanityTimer = self.timers.setTimeout(doSanitySweep, SANITY_PERIOD);
+    function doSanitySweep() {
+        self.sanityTimer = null;
+        self.sanitySweep();
+        self.sanityTimer = self.timers.setTimeout(doSanitySweep, SANITY_PERIOD);
+    }
 }
 inherits(TChannel, StatEmitter);
 
@@ -690,6 +698,11 @@ TChannel.prototype.close = function close(callback) {
 
     var counter = 1;
 
+    if (self.sanityTimer) {
+        self.timers.clearTimeout(self.sanityTimer);
+        self.sanityTimer = null;
+    }
+
     if (self.serverSocket) {
         ++counter;
         if (self.serverSocket.address()) {
@@ -780,6 +793,20 @@ TChannel.prototype.emitStat = function emitStat(stat) {
     if (self.topChannel) {
         self.topChannel.statEvent.emit(self, stat);
     }
+};
+
+TChannel.prototype.sanitySweep = function sanitySweep() {
+    var self = this;
+
+    if (self.serverConnections) {
+        var incomingConns = Object.keys(self.serverConnections);
+        for (var i = 0; i < incomingConns.length; i++) {
+            var conn = self.serverConnections[incomingConns[i]];
+            conn.ops.sanitySweep();
+        }
+    }
+
+    self.peers.sanitySweep();
 };
 
 module.exports = TChannel;

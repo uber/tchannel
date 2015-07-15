@@ -225,8 +225,14 @@ Operations.prototype.destroy = function destroy() {
     self.destroyed = true;
 };
 
+Operations.prototype.sanitySweep = function sanitySweep() {
+    var self = this;
+
+    self._sweepOps(self.requests.in, 'in');
+    self._sweepOps(self.requests.out, 'out');
+};
+
 Operations.prototype._sweepOps = function _sweepOps(ops, direction) {
-    // TODO: call this some how, some time(s)
     var self = this;
 
     var opKeys = Object.keys(ops);
