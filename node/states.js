@@ -105,6 +105,8 @@ function HealthyState(options) {
 inherits(HealthyState, State);
 
 HealthyState.prototype.type = 'tchannel.healthy';
+HealthyState.prototype.healthy = true;
+HealthyState.prototype.locked = false;
 
 HealthyState.prototype.toString = function healthyToString() {
     var self = this;
@@ -174,6 +176,8 @@ function UnhealthyState(options) {
 inherits(UnhealthyState, State);
 
 UnhealthyState.prototype.type = 'tchannel.unhealthy';
+UnhealthyState.prototype.healthy = false;
+UnhealthyState.prototype.locked = false;
 
 UnhealthyState.prototype.toString = function healthyToString() {
     var self = this;
@@ -234,6 +238,8 @@ function LockedHealthyState(options) {
 inherits(LockedHealthyState, State);
 
 LockedHealthyState.prototype.type = 'tchannel.healthy-locked';
+LockedHealthyState.prototype.healthy = true;
+LockedHealthyState.prototype.locked = true;
 
 LockedHealthyState.prototype.toString = function lockedHealthyToString() {
     return '[Healthy state (locked)]';
@@ -252,6 +258,8 @@ function LockedUnhealthyState(options) {
 inherits(LockedUnhealthyState, State);
 
 LockedUnhealthyState.prototype.type = 'tchannel.unhealthy-locked';
+LockedUnhealthyState.prototype.healthy = false;
+LockedUnhealthyState.prototype.locked = true;
 
 LockedUnhealthyState.prototype.toString = function lockedUnhealthyToString() {
     return '[Unhealthy state (locked)]';

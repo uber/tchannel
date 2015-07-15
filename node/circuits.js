@@ -39,9 +39,16 @@ AlwaysShouldRequestHandler.prototype.shouldRequest = function shouldRequest() {
 
 var alwaysShouldRequestHandler = new AlwaysShouldRequestHandler();
 
-//  circuit = circuits                        := Circuits
-//      .circuitsByServiceName[serviceName]   := ServiceCircuits
-//      .circuitsByCallerName[callerName]     := EndpointCircuits
+function CircuitStateChange(circuit, oldState, state) {
+    var self = this;
+    self.circuit = circuit;
+    self.oldState = oldState;
+    self.state = state;
+}
+
+//  circuit = circuits                        : Circuits
+//      .circuitsByServiceName[serviceName]   : ServiceCircuits
+//      .circuitsByCallerName[callerName]     : EndpointCircuits
 //      .circuitsByEndpointName[endpointName]
 
 function EndpointCircuits(root) {
@@ -65,6 +72,9 @@ EndpointCircuits.prototype.getCircuit = function getCircuit(callerName, serviceN
             maxErrorRate: stateOptions.maxErrorRate,
             minRequests: stateOptions.minRequests,
             probation: stateOptions.probation
+        });
+        circuit.stateChangedEvent.on(function circuitStateChanged(states) {
+            self.root.emitCircuitStateChange(circuit, states);
         });
         circuit.setState(states.HealthyState);
         self.circuitsByEndpointName['$' + endpointName] = circuit;
@@ -110,6 +120,8 @@ ServiceCircuits.prototype.collectCircuitTuples = function collectCircuitTuples(t
 
 function Circuits(options) {
     var self = this;
+    EventEmitter.call(self);
+    self.circuitStateChangeEvent = self.defineEvent('circuitStateChange');
     self.circuitsByServiceName = {};
     self.stateOptions = {
         nextHandler: alwaysShouldRequestHandler,
@@ -123,6 +135,8 @@ function Circuits(options) {
     self.shouldRequestOptions = {};
     self.egressNodes = options.egressNodes;
 }
+
+inherits(Circuits, EventEmitter);
 
 Circuits.prototype.getCircuit = function getCircuit(callerName, serviceName, endpointName) {
     var self = this;
@@ -174,10 +188,18 @@ Circuits.prototype.updateServices = function updateServices() {
     }
 };
 
+Circuits.prototype.emitCircuitStateChange = function (circuit, states) {
+    var self = this;
+    self.circuitStateChangeEvent.emit(
+        self.root,
+        new CircuitStateChange(circuit, states[0], states[1])
+    );
+};
+
 function Circuit(callerName, serviceName, endpointName) {
     var self = this;
-    StateMachine.call(self);
     EventEmitter.call(self);
+    StateMachine.call(self);
     self.stateChangedEvent = self.defineEvent('stateChanged');
     self.callerName = callerName || 'no-cn';
     self.serviceName = serviceName;
