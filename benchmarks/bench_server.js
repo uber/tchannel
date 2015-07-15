@@ -34,10 +34,13 @@ var argv = parseArgs(process.argv.slice(2), {
     boolean: ['trace']
 });
 
-assert('trace' in argv, 'trace option needed');
-assert(argv.traceRelayHostPort, 'traceRelayHostPort needed');
 assert(argv.port, 'port needed');
 assert(argv.instances, 'instances needed');
+
+assert('trace' in argv, 'trace option needed');
+if (argv.trace) {
+    assert(argv.traceRelayHostPort, 'traceRelayHostPort needed');
+}
 
 var INSTANCES = parseInt(argv.instances, 10);
 
