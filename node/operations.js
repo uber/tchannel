@@ -278,8 +278,6 @@ function _onTimeoutCheck() {
         return;
     }
 
-    self._checkTimeout(self.requests.out, 'out');
-
     self.startTimeoutTimer();
 };
 
