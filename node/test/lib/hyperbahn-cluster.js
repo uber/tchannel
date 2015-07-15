@@ -35,15 +35,23 @@ module.exports = HyperbahnCluster;
     hyperbahn cluster for sharing tests between tchannel
     and hyperbahn.
 
+    options: {
+        size: Number,
+        namedRemotes: Array<String>
+    }
+
     cluster: {
         remotes: {
-            steve: TChannel,
-            bob: TChannel
+            steve: HyperbahnRemote,
+            bob: HyperbahnRemote
         },
+        namedRemotes: Array<HyperbahnRemote>,
         logger: Logger,
         hostPortList: Array<String>,
         apps: Array<HyperbahnApps>
     }
+
+    cluster.bootstrap(cb)
 
 */
 function HyperbahnCluster(options) {
@@ -53,13 +61,19 @@ function HyperbahnCluster(options) {
 
     var self = this;
 
-    self.size = options.size;
+    self.size = options.size || 2;
+    self.namedRemotesConfig = options.namedRemotes || [];
+
+    var serviceNames = [].concat(
+        ['bob', 'steve', 'mary'],
+        self.namedRemotesConfig
+    );
 
     self.relayNetwork = RelayNetwork({
         numRelays: self.size,
         numInstancesPerService: 1,
         kValue: options.kValue || 5,
-        serviceNames: ['bob', 'steve', 'mary'],
+        serviceNames: serviceNames,
         clusterOptions: options.cluster || options.clusterOptions,
         timers: options.timers,
         servicePurgePeriod: options.servicePurgePeriod,
@@ -71,6 +85,7 @@ function HyperbahnCluster(options) {
     });
 
     self.remotes = {};
+    self.namedRemotes = [];
     self.apps = null;
     self.logger = null;
     self.hostPortList = null;
@@ -110,6 +125,15 @@ HyperbahnCluster.prototype.bootstrap = function bootstrap(cb) {
             subChannel: relayNetwork.subChannelsByName.bob[0],
             hostPortList: self.hostPortList
         });
+
+        for (var i = 0; i < self.namedRemotesConfig.length; i++) {
+            var serviceName = self.namedRemotesConfig[i];
+
+            self.namedRemotes[i] = HyperbahnRemote({
+                subChannel: relayNetwork.subChannelsByName[serviceName][0],
+                hostPortList: self.hostPortList
+            });
+        }
 
         allocCluster({
             numPeers: 2

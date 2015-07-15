@@ -33,10 +33,12 @@ if (require.main === module) {
 
 function runTests(HyperbahnCluster) {
     HyperbahnCluster.test('advertise and forward', {
-        size: 5
+        size: 5,
+        namedRemotes: ['august']
     }, function t(cluster, assert) {
+        console.log('wtf', cluster.namedRemotes);
         var steve = cluster.remotes.steve;
-        var bob = cluster.remotes.bob;
+        var august = cluster.namedRemotes[0];
 
         var tchannelJSON = TChannelJSON({
             logger: cluster.logger
@@ -60,7 +62,7 @@ function runTests(HyperbahnCluster) {
 
             assert.equal(typeof result.body.connectionCount, 'number');
 
-            tchannelJSON.send(bob.clientChannel.request({
+            tchannelJSON.send(august.clientChannel.request({
                 timeout: 5000,
                 serviceName: steve.serviceName
             }), 'echo', null, 'oh hi lol', onForwarded);
