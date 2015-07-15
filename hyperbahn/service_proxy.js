@@ -23,6 +23,7 @@
 var assert = require('assert');
 var RelayHandler = require('../relay_handler');
 var EventEmitter = require('../lib/event_emitter');
+var clean = require('../lib/statsd-clean').clean;
 var util = require('util');
 var RateLimiter = require('../rate_limiter');
 var ServiceHealthProxy = require('./service_health_proxy');
@@ -65,6 +66,14 @@ function ServiceDispatchHandler(options) {
     self.rateLimiterEnabled = options.rateLimiterEnabled;
 
     self.egressNodes.on('membershipChanged', onMembershipChanged);
+
+    if (self.circuits) {
+        self.circuits.circuitStateChangeEvent.on(onCircuitStateChange);
+    }
+
+    function onCircuitStateChange(stateChange) {
+        self.handleCircuitStateChange(stateChange);
+    }
 
     function onMembershipChanged() {
         self.updateServiceChannels();
@@ -423,6 +432,63 @@ function isExitFor(serviceName) {
     }
 
     return chan.serviceProxyMode === 'exit';
+};
+
+ServiceDispatchHandler.prototype.handleCircuitStateChange =
+function handleCircuitStateChange(change) {
+    var self = this;
+
+    var circuit = change.circuit;
+    var oldState = change.oldState;
+    var state = change.state;
+
+    if (oldState && oldState.healthy !== state.healthy) {
+        // unhealthy -> healthy
+        if (state.healthy) {
+            self.statsd.increment('circuits.healthy.total', 1);
+            self.statsd.increment(
+                'circuits.healthy.by-caller.' +
+                    clean(circuit.callerName) + '.' +
+                    clean(circuit.serviceName) + '.' +
+                    clean(circuit.endpointName),
+                1
+            );
+            self.statsd.increment(
+                'circuits.healthy.by-service.' +
+                    clean(circuit.serviceName) + '.' +
+                    clean(circuit.callerName) + '.' +
+                    clean(circuit.endpointName),
+                1
+            );
+            self.logger.info('circuit returned to good health', {
+                callerName: circuit.callerName,
+                serviceName: circuit.serviceName,
+                endpointName: circuit.endpointName
+            });
+        // healthy -> unhealthy
+        } else {
+            self.statsd.increment('circuits.unhealthy.total', 1);
+            self.statsd.increment(
+                'circuits.unhealthy.by-caller.' +
+                    clean(circuit.callerName) + '.' +
+                    clean(circuit.serviceName) + '.' +
+                    clean(circuit.endpointName),
+                1
+            );
+            self.statsd.increment(
+                'circuits.unhealthy.by-service.' +
+                    clean(circuit.serviceName) + '.' +
+                    clean(circuit.callerName) + '.' +
+                    clean(circuit.endpointName),
+                1
+            );
+            self.logger.warn('circuit became unhealthy', {
+                callerName: circuit.callerName,
+                serviceName: circuit.serviceName,
+                endpointName: circuit.endpointName
+            });
+        }
+    }
 };
 
 ServiceDispatchHandler.prototype.destroy =
