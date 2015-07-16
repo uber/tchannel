@@ -5,9 +5,14 @@ TChannel is a network multiplexing and framing protocol for RPC.
 
 The protocol is currently implemented in:
 
- * `Go`_
- * `Node`_
- * `Python`_
+ * Go
+    * `Guide <go-guide.html>`__
+    * `API Documentation <http://godoc.org/github.com/uber/tchannel/golang>`__
+ * Node
+    * `Guide <node-guide.html>`__
+ * Python
+    * `Guide <projects/tchannel-python/en/latest/guide.html>`__
+    * `API Documenation <projects/tchannel-python>`__
 
 .. _Go: http://godoc.org/github.com/uber/tchannel/golang
 .. _Node: https://github.com/uber/tchannel
