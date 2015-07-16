@@ -35,7 +35,7 @@ function send(opts, done) {
         logger: opts.logger
     });
     tchannelJSON.send(opts.bob.clientChannel.request({
-        timeout: 5000,
+        timeout: 500,
         serviceName: opts.steve.serviceName
     }), 'echo', null, 'hello', function onResponse(err, res) {
         if (err) {
