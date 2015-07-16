@@ -12,8 +12,8 @@ The protocol is currently implemented in:
     * `Guide <node-guide.html>`__
     * `API Documentation <https://www.npmjs.com/package/tchannel>`__
  * Python
-    * `Guide <projects/tchannel-python/en/latest/guide.html>`__
-    * `API Documenation <projects/tchannel-python>`__
+    * `Guide <http://tchannel.readthedocs.org/projects/tchannel-python/en/latest/guide.html>`__
+    * `API Documenation <http://tchannel.readthedocs.org/projects/tchannel-python>`__
 
 .. _Go: http://godoc.org/github.com/uber/tchannel/golang
 .. _Node: https://github.com/uber/tchannel
