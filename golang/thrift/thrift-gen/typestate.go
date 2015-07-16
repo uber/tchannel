@@ -34,13 +34,14 @@ func (s *State) isResultPointer(thriftType *parser.Type) bool {
 
 // goType returns the Go type name for the given thrift type.
 func (s *State) goType(thriftType *parser.Type) string {
-	if thriftType.Name == "list" {
+	switch thriftType.Name {
+	case "binary":
+		return "[]byte"
+	case "list":
 		return "[]" + s.goType(thriftType.ValueType)
-	}
-	if thriftType.Name == "set" {
+	case "set":
 		return "map[" + s.goType(thriftType.ValueType) + "]bool"
-	}
-	if thriftType.Name == "map" {
+	case "map":
 		return "map[" + s.goType(thriftType.KeyType) + "]" + s.goType(thriftType.ValueType)
 	}
 
