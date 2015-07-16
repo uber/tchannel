@@ -1,7 +1,4 @@
-package tchannel
-
-// This file contains functions for tests to access internal tchannel state.
-// Since it has a _test.go suffix, it is only compiled with tests in this package.
+package testutils
 
 // Copyright (c) 2015 Uber Technologies, Inc.
 
@@ -23,29 +20,24 @@ package tchannel
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import (
-	"net"
-	"time"
-)
+import "time"
 
-// OutboundConnection returns the underlying connection for an outbound call.
-func OutboundConnection(call *OutboundCall) (*Connection, net.Conn) {
-	conn := call.conn
-	return conn, conn.conn
-}
-
-// GetConnections returns all connections for a channel.
-func GetConnections(ch *Channel) []*Connection {
-	var connections []*Connection
-	for _, p := range ch.peers.peers {
-		for _, c := range p.connections {
-			connections = append(connections, c)
-		}
+// NowStub replaces a function variable to time.Now with a function that
+// allows the return values to be controller by the caller.
+// The rerturned function is used to control the increment amount between calls.
+func NowStub(funcVar *func() time.Time, initial time.Time) func(time.Duration) {
+	cur := initial
+	var addAmt time.Duration
+	*funcVar = func() time.Time {
+		cur = cur.Add(addAmt)
+		return cur
 	}
-	return connections
+	return func(d time.Duration) {
+		addAmt = d
+	}
 }
 
-// GetTimeNow returns the variable pointing to time.Now for stubbing.
-func GetTimeNow() *func() time.Time {
-	return &timeNow
+// ResetNowStub resets a Now stub.
+func ResetNowStub(funcVar *func() time.Time) {
+	*funcVar = time.Now
 }

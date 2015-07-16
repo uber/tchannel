@@ -99,6 +99,7 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string, callOpti
 	}
 
 	response := new(OutboundCallResponse)
+	response.startedAt = timeNow()
 	response.mex = mex
 	response.log = PrefixedLogger(fmt.Sprintf("Out%v-Response ", requestID), c.log)
 	response.messageForFragment = func(initial bool) message {
@@ -193,7 +194,10 @@ func (call *OutboundCall) doneSending() {}
 type OutboundCallResponse struct {
 	reqResReader
 
-	callRes         callRes
+	callRes callRes
+
+	// startedAt is the time at which the outbound call was started.
+	startedAt       time.Time
 	statsReporter   StatsReporter
 	commonStatsTags map[string]string
 }
@@ -263,6 +267,8 @@ func (response *OutboundCallResponse) doneReading() {
 	} else {
 		response.statsReporter.IncCounter("outbound.calls.success", response.commonStatsTags, 1)
 	}
+	latency := timeNow().Sub(response.startedAt)
+	response.statsReporter.RecordTimer("outbound.calls.latency", response.commonStatsTags, latency)
 
 	response.mex.shutdown()
 }
