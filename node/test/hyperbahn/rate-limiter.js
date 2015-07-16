@@ -70,6 +70,7 @@ function runTests(HyperbahnCluster) {
         var bob = cluster.remotes.bob;
 
         var steveHyperbahnClient = new HyperbahnClient({
+            reportTracing: false,
             serviceName: steve.serviceName,
             callerName: 'forward-test',
             hostPortList: cluster.hostPortList,
@@ -92,9 +93,8 @@ function runTests(HyperbahnCluster) {
                 function check(done) {
                     cluster.apps.forEach(function (app) {
                         var relayChannel = app.clients.tchannel;
-                        assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 6, 'total request');
+                        assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 3, 'total request');
                         assert.equals(relayChannel.handler.rateLimiter.counters.steve.rps, 3, 'request for steve');
-                        assert.equals(relayChannel.handler.rateLimiter.counters.tcollector.rps, 3, 'request for tcollector');
                     });
                     done();
                 }
@@ -122,6 +122,7 @@ function runTests(HyperbahnCluster) {
         var bob = cluster.remotes.bob;
 
         var steveHyperbahnClient = new HyperbahnClient({
+            reportTracing: false,
             serviceName: steve.serviceName,
             callerName: 'forward-test',
             hostPortList: cluster.hostPortList,
@@ -147,9 +148,8 @@ function runTests(HyperbahnCluster) {
                     cluster.apps.forEach(function (app) {
                         var relayChannel = app.clients.tchannel;
                         var rateLimiter = relayChannel.handler.rateLimiter;
-                        assert.equals(rateLimiter.totalRequestCounter.rps, 6, 'check1: total request');
+                        assert.equals(rateLimiter.totalRequestCounter.rps, 3, 'check1: total request');
                         assert.equals(rateLimiter.counters.steve.rps, 3, 'check1: request for steve');
-                        assert.equals(rateLimiter.counters.tcollector.rps, 3, 'check1: request for tcollector');
                     });
                     done();
                 },
@@ -160,9 +160,8 @@ function runTests(HyperbahnCluster) {
                     cluster.apps.forEach(function (app) {
                         var relayChannel = app.clients.tchannel;
                         var rateLimiter = relayChannel.handler.rateLimiter;
-                        assert.equals(rateLimiter.totalRequestCounter.rps, 4, 'check2: total request');
+                        assert.equals(rateLimiter.totalRequestCounter.rps, 2, 'check2: total request');
                         assert.equals(rateLimiter.counters.steve.rps, 2, 'check2: request for steve');
-                        assert.equals(rateLimiter.counters.tcollector.rps, 2, 'check2: request for tcollector');
                     });
                     done();
                 }
@@ -194,6 +193,7 @@ function runTests(HyperbahnCluster) {
         var bob = cluster.remotes.bob;
 
         var steveHyperbahnClient = new HyperbahnClient({
+            reportTracing: false,
             serviceName: steve.serviceName,
             callerName: 'forward-test',
             hostPortList: cluster.hostPortList,
@@ -244,8 +244,7 @@ function runTests(HyperbahnCluster) {
                 'totalRpsLimit': 2,
                 'exemptServices': [
                     'hyperbahn',
-                    'ringpop',
-                    'tcollector'
+                    'ringpop'
                 ]
             }
         }
@@ -254,6 +253,7 @@ function runTests(HyperbahnCluster) {
         var bob = cluster.remotes.bob;
 
         var steveHyperbahnClient = new HyperbahnClient({
+            reportTracing: false,
             serviceName: steve.serviceName,
             callerName: 'forward-test',
             hostPortList: cluster.hostPortList,
