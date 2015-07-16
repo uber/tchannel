@@ -32,19 +32,11 @@ function Operations(opts) {
     self.timers = opts.timers;
     self.logger = opts.logger;
     self.random = opts.random;
-    self.timeoutCheckInterval = opts.timeoutCheckInterval;
-    self.timeoutFuzz = opts.timeoutFuzz;
-    self.initTimeout = opts.initTimeout;
     self.connectionStalePeriod = opts.connectionStalePeriod;
 
     self.connection = opts.connection;
-    self.startTime = self.timers.now();
-    self.timer = null;
-    self.destroyed = false;
+    self.destroyed = false; // TODO need this?
 
-    self.tombstones = {
-        out: []
-    };
     self.requests = {
         in: Object.create(null),
         out: Object.create(null)
@@ -59,11 +51,20 @@ function Operations(opts) {
 function OperationTombstone(operations, id, time, timeout) {
     var self = this;
 
+    self.isTombstone = true;
     self.operations = operations;
     self.id = id;
     self.time = time;
     self.timeout = timeout;
 }
+
+OperationTombstone.prototype.onTimeout = function onTimeout(now) {
+    var self = this;
+
+    if (self.operations.requests.out[self.id] === self) {
+        delete self.operations.requests.out[self.id];
+    }
+};
 
 Operations.prototype.checkLastTimeoutTime = function checkLastTimeoutTime(now) {
     var self = this;
@@ -78,19 +79,6 @@ Operations.prototype.checkLastTimeoutTime = function checkLastTimeoutTime(now) {
         // self.lastTimeoutTime = now;
     } else if (!self.lastTimeoutTime) {
         self.lastTimeoutTime = now;
-    }
-};
-
-Operations.prototype.startTimeoutTimer =
-function startTimeoutTimer() {
-    var self = this;
-
-    self.timer = self.timers.setTimeout(
-        onChannelTimeout, self._getTimeoutDelay()
-    );
-
-    function onChannelTimeout() {
-        self._onTimeoutCheck();
     }
 };
 
@@ -109,7 +97,12 @@ Operations.prototype.getPending = function getPending() {
 Operations.prototype.getOutReq = function getOutReq(id) {
     var self = this;
 
-    return self.requests.out[id];
+    var req = self.requests.out[id] || null;
+    if (req && req.isTombstone) {
+        return null;
+    } else {
+        return req;
+    }
 };
 
 Operations.prototype.getInReq = function getInReq(id) {
@@ -125,6 +118,8 @@ Operations.prototype.addOutReq = function addOutReq(req) {
     self.requests.out[req.id] = req;
     self.pending.out++;
 
+    req.timeHeapHandle = self.connection.channel.timeHeap.update(req);
+
     return req;
 };
 
@@ -135,6 +130,8 @@ Operations.prototype.addInReq = function addInReq(req) {
     self.requests.in[req.id] = req;
     self.pending.in++;
 
+    req.timeHeapHandle = self.connection.channel.timeHeap.update(req);
+
     return req;
 };
 
@@ -143,25 +140,25 @@ Operations.prototype.popOutReq = function popOutReq(id, context) {
 
     var req = self.requests.out[id];
     if (!req) {
-        var tombstones = self.tombstones.out;
-        for (var i = 0; i < tombstones.length; i++) {
-            if (tombstones[i].id === id) {
-                // If this id has been timed out then just return
-                return null;
-            }
-        }
         self.logMissingOutRequest(id, context);
+        return null;
+    } else if (req.isTombstone) {
         return null;
     }
 
-    delete self.requests.out[id];
+    if (req.timeHeapHandle) {
+        req.timeHeapHandle.cancel();
+        req.timeHeapHandle = null;
+    }
 
     var now = self.timers.now();
     var timeout = TOMBSTONE_TTL_OFFSET + req.timeout;
     var tombstone = new OperationTombstone(self, req.id, now, timeout);
+    req.operations = null;
+    self.requests.out[id] = tombstone;
     self.pending.out--;
 
-    self.tombstones.out.push(tombstone);
+    self.connection.channel.timeHeap.update(tombstone, now);
 
     return req;
 };
@@ -204,20 +201,15 @@ Operations.prototype.popInReq = function popInReq(id) {
         return null;
     }
 
+    if (req.timeHeapHandle) {
+        req.timeHeapHandle.cancel();
+        req.timeHeapHandle = null;
+    }
+
     delete self.requests.in[id];
     self.pending.in--;
 
     return req;
-};
-
-Operations.prototype.removeReq = function removeReq(id) {
-    var self = this;
-
-    if (id in self.requests.in) {
-        delete self.requests.in[id];
-    } else if (id in self.requests.out) {
-        delete self.requests.out[id];
-    }
 };
 
 Operations.prototype.clear = function clear() {
@@ -225,83 +217,24 @@ Operations.prototype.clear = function clear() {
 
     self.pending.in = 0;
     self.pending.out = 0;
-    self.tombstones.out = [];
 };
 
 Operations.prototype.destroy = function destroy() {
     var self = this;
 
     self.destroyed = true;
-
-    if (self.timer) {
-        self.timers.clearTimeout(self.timer);
-        self.timer = null;
-    }
 };
 
-// timeout check runs every timeoutCheckInterval +/- some random fuzz. Range is from
-//   base - fuzz/2 to base + fuzz/2
-Operations.prototype._getTimeoutDelay =
-function _getTimeoutDelay() {
+Operations.prototype.sanitySweep = function sanitySweep() {
     var self = this;
 
-    return self.timeoutCheckInterval + self._getTimeoutFuzz();
+    self._sweepOps(self.requests.in, 'in');
+    self._sweepOps(self.requests.out, 'out');
 };
 
-Operations.prototype._getTimeoutFuzz =
-function _getTimeoutFuzz() {
+Operations.prototype._sweepOps = function _sweepOps(ops, direction) {
     var self = this;
 
-    var fuzz = self.timeoutFuzz;
-    if (!fuzz) {
-        return 0;
-    }
-
-    return Math.round(Math.floor(self.random() * fuzz)) - (fuzz / 2);
-};
-
-// If the connection has some success and some timeouts, we should probably leave it up,
-// but if everything is timing out, then we should kill the connection.
-Operations.prototype._onTimeoutCheck =
-function _onTimeoutCheck() {
-    var self = this;
-    if (self.destroyed) {
-        return;
-    }
-
-    var isInitialized = self.connection.remoteName;
-    if (!isInitialized) {
-        var elapsed = self.timers.now() - self.startTime;
-        if (elapsed >= self.initTimeout) {
-            self.connection.timedOutEvent
-                .emit(self.connection, errors.ConnectionTimeoutError({
-                    start: self.startTime,
-                    elapsed: elapsed,
-                    timeout: self.initTimeout
-                }));
-            return;
-        }
-    }
-
-    self._checkTimeout(self.requests.out, 'out');
-    self._checkTimeout(self.requests.in, 'in');
-
-    var now = self.timers.now();
-    var tombstones = [];
-    for (var i = 0; i < self.tombstones.out.length; i++) {
-        var tombstone = self.tombstones.out[i];
-        if (now < (tombstone.time + tombstone.timeout)) {
-            tombstones.push(tombstone);
-        }
-    }
-    self.tombstones.out = tombstones;
-
-    self.startTimeoutTimer();
-};
-
-Operations.prototype._checkTimeout =
-function _checkTimeout(ops, direction) {
-    var self = this;
     var opKeys = Object.keys(ops);
     for (var i = 0; i < opKeys.length; i++) {
         var id = opKeys[i];
@@ -317,17 +250,6 @@ function _checkTimeout(ops, direction) {
                 id: id
             });
 
-            if (direction === 'in') {
-                self.popInReq(id);
-            } else if (direction === 'out') {
-                self.popOutReq(id);
-            }
-        } else if (op.checkTimeout()) {
-            if (direction === 'out') {
-                self.checkLastTimeoutTime(self.timers.now());
-            }
-            // else
-            //     op.res.sendError // XXX may need to build
             if (direction === 'in') {
                 self.popInReq(id);
             } else if (direction === 'out') {
