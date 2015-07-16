@@ -10,6 +10,7 @@ The protocol is currently implemented in:
     * `API Documentation <http://godoc.org/github.com/uber/tchannel/golang>`__
  * Node
     * `Guide <node-guide.html>`__
+    * `API Documentation <https://www.npmjs.com/package/tchannel>`__
  * Python
     * `Guide <projects/tchannel-python/en/latest/guide.html>`__
     * `API Documenation <projects/tchannel-python>`__
