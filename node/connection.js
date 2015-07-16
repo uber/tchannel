@@ -359,13 +359,15 @@ TChannelConnection.prototype.start = function start() {
 
     var now = self.timers.now();
     var initOp = new InitOperation(self, now, self.channel.initTimeout);
-    self.channel.timeHeap.update(initOp, now);
+    var initTo = self.channel.timeHeap.update(initOp, now);
 
     function onOutIdentified(init) {
+        initTo.cancel();
         self.onOutIdentified(init);
     }
 
     function onInIdentified(init) {
+        initTo.cancel();
         self.onInIdentified(init);
     }
 };
