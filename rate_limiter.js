@@ -167,9 +167,13 @@ function shouldRateLimitService(serviceName) {
 };
 
 RateLimiter.prototype.shouldRateLimitTotalRequest =
-function shouldRateLimitTotalRequest() {
+function shouldRateLimitTotalRequest(serviceName) {
     var self = this;
-    return self.totalRequestCounter.rps > self.totalRequestCounter.rpsLimit;
+    if (!serviceName || self.exemptServices.indexOf(serviceName) === -1) {
+        return self.totalRequestCounter.rps > self.totalRequestCounter.rpsLimit;
+    } else {
+        return false;
+    }
 };
 
 RateLimiter.prototype.destroy =

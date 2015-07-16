@@ -38,6 +38,10 @@ function send(opts, done) {
         timeout: 500,
         serviceName: opts.steve.serviceName
     }), 'echo', null, 'hello', function onResponse(err, res) {
+        if (opts.errOk) {
+            err = null;
+        }
+
         if (err) {
             opts.assert.end(err);
         }
@@ -285,6 +289,74 @@ function runTests(HyperbahnCluster) {
                         assert.ok(err && err.type === 'tchannel.busy' &&
                             err.message === 'hyperbahn node is rate-limited by the total rps of 2',
                             'should be rate limited');
+                        done();
+                    });
+                }
+            ], function done() {
+                steveHyperbahnClient.destroy();
+                assert.end();
+            });
+        }
+    });
+
+    HyperbahnCluster.test('service exempt works', {
+        size: 1,
+        kValue: 1,
+        seedConfig: {
+            'rateLimiting': {
+                'enabled': true,
+                'rateLimiterBuckets': 2,
+                'totalRpsLimit': 2,
+                'exemptServices': [
+                    'hyperbahn',
+                    'ringpop',
+                    'bob'
+                ]
+            }
+        }
+    }, function t(cluster, assert) {
+        var steve = cluster.remotes.steve;
+        var bob = cluster.remotes.bob;
+
+        var steveHyperbahnClient = new HyperbahnClient({
+            reportTracing: false,
+            serviceName: steve.serviceName,
+            callerName: 'forward-test',
+            hostPortList: cluster.hostPortList,
+            tchannel: steve.channel,
+            logger: DebugLogtron('hyperbahnClient')
+        });
+        steveHyperbahnClient.once('advertised', onAdvertised);
+        steveHyperbahnClient.advertise();
+
+        function onAdvertised() {
+            var opts = {
+                logger: cluster.logger,
+                bob: bob,
+                steve: steve,
+                assert: assert
+            };
+            var opts2 = {
+                logger: cluster.logger,
+                bob: bob,
+                steve: steve,
+                assert: assert,
+                errOk: true
+            };
+            series([
+                send.bind(null, opts),
+                send.bind(null, opts),
+                send.bind(null, opts2),
+                function sendLast(done) {
+                    var tchannelJSON = TChannelJSON({
+                        logger: cluster.logger
+                    });
+                    tchannelJSON.send(steve.clientChannel.request({
+                        timeout: 5000,
+                        serviceName: bob.serviceName
+                    }), 'echo', null, 'hello', function onResponse(err, res) {
+                        assert.ok(!err, 'should be no error');
+                        assert.equals(res.body, 'hello', 'body should be "hello"');
                         done();
                     });
                 }
