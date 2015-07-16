@@ -35,7 +35,7 @@ function send(opts, done) {
         logger: opts.logger
     });
     tchannelJSON.send(opts.bob.clientChannel.request({
-        timeout: 5000,
+        timeout: 500,
         serviceName: opts.steve.serviceName
     }), 'echo', null, 'hello', function onResponse(err, res) {
         if (err) {
@@ -46,8 +46,10 @@ function send(opts, done) {
     });
 }
 
-function wait(done) {
-    setTimeout(done, 500);
+function waitFor(t) {
+    return function wait(done) {
+        setTimeout(done, 500);
+    };
 }
 
 function runTests(HyperbahnCluster) {
@@ -68,6 +70,7 @@ function runTests(HyperbahnCluster) {
         var bob = cluster.remotes.bob;
 
         var steveHyperbahnClient = new HyperbahnClient({
+            reportTracing: false,
             serviceName: steve.serviceName,
             callerName: 'forward-test',
             hostPortList: cluster.hostPortList,
@@ -90,9 +93,8 @@ function runTests(HyperbahnCluster) {
                 function check(done) {
                     cluster.apps.forEach(function (app) {
                         var relayChannel = app.clients.tchannel;
-                        assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 6, 'total request');
+                        assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 3, 'total request');
                         assert.equals(relayChannel.handler.rateLimiter.counters.steve.rps, 3, 'request for steve');
-                        assert.equals(relayChannel.handler.rateLimiter.counters.tcollector.rps, 3, 'request for tcollector');
                     });
                     done();
                 }
@@ -120,6 +122,7 @@ function runTests(HyperbahnCluster) {
         var bob = cluster.remotes.bob;
 
         var steveHyperbahnClient = new HyperbahnClient({
+            reportTracing: false,
             serviceName: steve.serviceName,
             callerName: 'forward-test',
             hostPortList: cluster.hostPortList,
@@ -139,25 +142,26 @@ function runTests(HyperbahnCluster) {
             series([
                 send.bind(null, opts),
                 send.bind(null, opts),
-                wait,
+                waitFor(500),
                 send.bind(null, opts),
                 function check1(done) {
                     cluster.apps.forEach(function (app) {
                         var relayChannel = app.clients.tchannel;
-                        assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 6, 'check1: total request');
-                        assert.equals(relayChannel.handler.rateLimiter.counters.steve.rps, 3, 'check1: request for steve');
-                        assert.equals(relayChannel.handler.rateLimiter.counters.tcollector.rps, 3, 'check1: request for tcollector');
+                        var rateLimiter = relayChannel.handler.rateLimiter;
+                        assert.equals(rateLimiter.totalRequestCounter.rps, 3, 'check1: total request');
+                        assert.equals(rateLimiter.counters.steve.rps, 3, 'check1: request for steve');
                     });
                     done();
                 },
-                wait,
+
+                waitFor(500),
                 send.bind(null, opts),
                 function check2(done) {
                     cluster.apps.forEach(function (app) {
                         var relayChannel = app.clients.tchannel;
-                        assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 4, 'check2: total request');
-                        assert.equals(relayChannel.handler.rateLimiter.counters.steve.rps, 2, 'check2: request for steve');
-                        assert.equals(relayChannel.handler.rateLimiter.counters.tcollector.rps, 2, 'check2: request for tcollector');
+                        var rateLimiter = relayChannel.handler.rateLimiter;
+                        assert.equals(rateLimiter.totalRequestCounter.rps, 2, 'check2: total request');
+                        assert.equals(rateLimiter.counters.steve.rps, 2, 'check2: request for steve');
                     });
                     done();
                 }
@@ -189,6 +193,7 @@ function runTests(HyperbahnCluster) {
         var bob = cluster.remotes.bob;
 
         var steveHyperbahnClient = new HyperbahnClient({
+            reportTracing: false,
             serviceName: steve.serviceName,
             callerName: 'forward-test',
             hostPortList: cluster.hostPortList,
@@ -239,8 +244,7 @@ function runTests(HyperbahnCluster) {
                 'totalRpsLimit': 2,
                 'exemptServices': [
                     'hyperbahn',
-                    'ringpop',
-                    'tcollector'
+                    'ringpop'
                 ]
             }
         }
@@ -249,6 +253,7 @@ function runTests(HyperbahnCluster) {
         var bob = cluster.remotes.bob;
 
         var steveHyperbahnClient = new HyperbahnClient({
+            reportTracing: false,
             serviceName: steve.serviceName,
             callerName: 'forward-test',
             hostPortList: cluster.hostPortList,
@@ -268,7 +273,7 @@ function runTests(HyperbahnCluster) {
             series([
                 send.bind(null, opts),
                 send.bind(null, opts),
-                wait,
+                waitFor(500),
                 function sendError(done) {
                     var tchannelJSON = TChannelJSON({
                         logger: cluster.logger
