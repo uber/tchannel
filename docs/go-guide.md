@@ -1,0 +1,1 @@
+../golang/guide/Thrift_Hyperbahn.md
