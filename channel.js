@@ -48,10 +48,12 @@ var TChannelPeers = require('./peers');
 var TChannelServices = require('./services');
 var TChannelStatsd = require('./lib/statsd');
 var RetryFlags = require('./retry-flags.js');
+var TimeHeap = require('./time_heap');
 
 var TracingAgent = require('./trace/agent');
 
 var CONN_STALE_PERIOD = 1500;
+var SANITY_PERIOD = 10 * 1000;
 var DEFAULT_RETRY_FLAGS = new RetryFlags(
     /*never:*/ false,
     /*onConnectionError*/ true,
@@ -162,6 +164,21 @@ function TChannel(options) {
     self.topChannel = self.options.topChannel || null;
     self.subChannels = self.serviceName ? null : {};
 
+    // for processing operation timeouts
+    self.timeHeap = self.options.timeHeap || new TimeHeap({
+        timers: self.timers,
+        // TODO: do we still need/want fuzzing?
+        minTimeout: fuzzedMinTimeout
+    });
+
+    function fuzzedMinTimeout() {
+        var fuzz = self.options.timeoutFuzz;
+        if (fuzz) {
+            fuzz = Math.floor(fuzz * (self.random() - 0.5));
+        }
+        return self.options.timeoutCheckInterval + fuzz;
+    }
+
     // how to handle incoming requests
     if (!self.options.handler) {
         if (!self.serviceName) {
@@ -217,6 +234,13 @@ function TChannel(options) {
 
     self.requestDefaults = self.options.requestDefaults ?
         new RequestDefaults(self.options.requestDefaults) : null;
+
+    self.sanityTimer = self.timers.setTimeout(doSanitySweep, SANITY_PERIOD);
+    function doSanitySweep() {
+        self.sanityTimer = null;
+        self.sanitySweep();
+        self.sanityTimer = self.timers.setTimeout(doSanitySweep, SANITY_PERIOD);
+    }
 }
 inherits(TChannel, StatEmitter);
 
@@ -366,6 +390,7 @@ TChannel.prototype.makeSubChannel = function makeSubChannel(options) {
     }
 
     opts.topChannel = self;
+    opts.timeHeap = self.timeHeap;
     var chan = TChannel(opts);
 
     if (options.peers) {
@@ -673,6 +698,11 @@ TChannel.prototype.close = function close(callback) {
 
     var counter = 1;
 
+    if (self.sanityTimer) {
+        self.timers.clearTimeout(self.sanityTimer);
+        self.sanityTimer = null;
+    }
+
     if (self.serverSocket) {
         ++counter;
         if (self.serverSocket.address()) {
@@ -763,6 +793,20 @@ TChannel.prototype.emitStat = function emitStat(stat) {
     if (self.topChannel) {
         self.topChannel.statEvent.emit(self, stat);
     }
+};
+
+TChannel.prototype.sanitySweep = function sanitySweep() {
+    var self = this;
+
+    if (self.serverConnections) {
+        var incomingConns = Object.keys(self.serverConnections);
+        for (var i = 0; i < incomingConns.length; i++) {
+            var conn = self.serverConnections[incomingConns[i]];
+            conn.ops.sanitySweep();
+        }
+    }
+
+    self.peers.sanitySweep();
 };
 
 module.exports = TChannel;

@@ -357,11 +357,17 @@ TChannelConnection.prototype.start = function start() {
         self.handler.initRequestEvent.on(onInIdentified);
     }
 
+    var now = self.timers.now();
+    var initOp = new InitOperation(self, now, self.channel.initTimeout);
+    var initTo = self.channel.timeHeap.update(initOp, now);
+
     function onOutIdentified(init) {
+        initTo.cancel();
         self.onOutIdentified(init);
     }
 
     function onInIdentified(init) {
+        initTo.cancel();
         self.onInIdentified(init);
     }
 };
@@ -528,15 +534,17 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
     //   own outgoing work, which is hard to cancel. By setting this.closing, we make sure
     //   that once they do finish that their callback will swallow the response.
     inOpKeys.forEach(function eachInOp(id) {
+        self.ops.popInReq(id);
         // TODO: support canceling pending handlers
-        self.ops.removeReq(id);
         // TODO report or handle or log errors or something
     });
 
     // for all outgoing requests, forward the triggering error to the user callback
     outOpKeys.forEach(function eachOutOp(id) {
-        var req = requests.out[id];
-        self.ops.removeReq(id);
+        var req = self.ops.popOutReq(id);
+        if (!req) {
+            return;
+        }
 
         var info = {
             socketRemoteAddr: self.socketRemoteAddr,
@@ -556,6 +564,31 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
     });
 
     self.ops.clear();
+};
+
+function InitOperation(connection, time, timeout) {
+    var self = this;
+
+    self.connection = connection;
+    self.time = time;
+    self.timeout = timeout;
+}
+
+InitOperation.prototype.onTimeout = function onTimeout(now) {
+    var self = this;
+
+    // noop if identify succeeded
+    if (self.connection.remoteName) {
+        return;
+    }
+
+    var elapsed = now - self.time;
+    var err = errors.ConnectionTimeoutError({
+        start: self.time,
+        elapsed: elapsed,
+        timeout: self.timeout
+    });
+    self.connection.timedOutEvent.emit(self.connection, err);
 };
 
 module.exports = TChannelConnection;

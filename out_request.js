@@ -60,6 +60,7 @@ function TChannelOutRequest(id, options) {
 
     // All self requests have id 0
     self.operations = null;
+    self.timeHeapHandle = null;
     self.id = id;
     self.state = States.Initial;
     self.start = 0;
@@ -555,24 +556,16 @@ TChannelOutRequest.prototype.hookupCallback = function hookupCallback(callback) 
     return self;
 };
 
-TChannelOutRequest.prototype.checkTimeout = function checkTimeout() {
-    var self = this;
-    if (!self.timedOut) {
-        var now = self.channel.timers.now();
-        var elapsed = now - self.start;
-        if (elapsed > self.timeout) {
-            self.timedOut = true;
-            self.onTimeout(now);
-        }
-    }
-    return self.timedOut;
-};
-
 TChannelOutRequest.prototype.onTimeout = function onTimeout(now) {
     var self = this;
 
     if (!self.res || self.res.state === States.Initial) {
         self.end = now;
+        self.timedOut = true;
+        if (self.operations) {
+            self.operations.checkLastTimeoutTime(now);
+            self.operations.popOutReq(self.id);
+        }
         process.nextTick(deferOutReqTimeoutErrorEmit);
     }
 
