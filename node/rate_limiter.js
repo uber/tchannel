@@ -83,9 +83,9 @@ function RateLimiter(options) {
     self.exemptServices = options.exemptServices || [];
     self.counters = Object.create(null);
     self.totalRequestCounter = RateLimiterCounter({
-            numOfBuckets: self.numOfBuckets,
-            rpsLimit: self.totalRpsLimit
-        });
+        numOfBuckets: self.numOfBuckets,
+        rpsLimit: self.totalRpsLimit
+    });
 
     self.refreshDelay = 1000 / self.numOfBuckets;
     self.refresh();
