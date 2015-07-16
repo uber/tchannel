@@ -18,10 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+process.title = 'nodejs-benchmarks-multi-bench';
+
 var TChannel = require("../index"),
     metrics = require("metrics"),
     num_clients = parseInt(process.argv[2], 10) || 5,
-    num_requests = 20000,
+    num_requests = 500000,
     tests = [],
     versions_logged = false,
     client_options = {
@@ -175,67 +177,67 @@ var small_buf_set = new Buffer(small_str_set);
 var large_str_set = JSON.stringify(['foo_rand000000000001', large_str]);
 var large_buf_set = new Buffer(large_str_set);
 
-tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: 1}));
-tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: 50}));
-tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: 200}));
+// tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: 1}));
+// tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: 50}));
+// tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: 200}));
 tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: 20000}));
-tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: 1}));
-tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: 50}));
-tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: 200}));
+// tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: 1}));
+// tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: 50}));
+// tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: 200}));
 tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: 20000}));
 
-tests.push(new Test({descr: "SET small str", command: "set", args: small_str_set, pipeline: 1}));
-tests.push(new Test({descr: "SET small str", command: "set", args: small_str_set, pipeline: 50}));
-tests.push(new Test({descr: "SET small str", command: "set", args: small_str_set, pipeline: 200}));
+// tests.push(new Test({descr: "SET small str", command: "set", args: small_str_set, pipeline: 1}));
+// tests.push(new Test({descr: "SET small str", command: "set", args: small_str_set, pipeline: 50}));
+// tests.push(new Test({descr: "SET small str", command: "set", args: small_str_set, pipeline: 200}));
 tests.push(new Test({descr: "SET small str", command: "set", args: small_str_set, pipeline: 20000}));
-tests.push(new Test({descr: "SET small str", command: "set", args: small_str_set, pipeline: 1}));
-tests.push(new Test({descr: "SET small str", command: "set", args: small_str_set, pipeline: 50}));
-tests.push(new Test({descr: "SET small str", command: "set", args: small_str_set, pipeline: 200}));
+// tests.push(new Test({descr: "SET small str", command: "set", args: small_str_set, pipeline: 1}));
+// tests.push(new Test({descr: "SET small str", command: "set", args: small_str_set, pipeline: 50}));
+// tests.push(new Test({descr: "SET small str", command: "set", args: small_str_set, pipeline: 200}));
 tests.push(new Test({descr: "SET small str", command: "set", args: small_str_set, pipeline: 20000}));
 
-tests.push(new Test({descr: "SET small buf", command: "set", args: small_buf_set, pipeline: 1}));
-tests.push(new Test({descr: "SET small buf", command: "set", args: small_buf_set, pipeline: 50}));
-tests.push(new Test({descr: "SET small buf", command: "set", args: small_buf_set, pipeline: 200}));
+// tests.push(new Test({descr: "SET small buf", command: "set", args: small_buf_set, pipeline: 1}));
+// tests.push(new Test({descr: "SET small buf", command: "set", args: small_buf_set, pipeline: 50}));
+// tests.push(new Test({descr: "SET small buf", command: "set", args: small_buf_set, pipeline: 200}));
 tests.push(new Test({descr: "SET small buf", command: "set", args: small_buf_set, pipeline: 20000}));
-tests.push(new Test({descr: "SET small buf", command: "set", args: small_buf_set, pipeline: 1}));
-tests.push(new Test({descr: "SET small buf", command: "set", args: small_buf_set, pipeline: 50}));
-tests.push(new Test({descr: "SET small buf", command: "set", args: small_buf_set, pipeline: 200}));
+// tests.push(new Test({descr: "SET small buf", command: "set", args: small_buf_set, pipeline: 1}));
+// tests.push(new Test({descr: "SET small buf", command: "set", args: small_buf_set, pipeline: 50}));
+// tests.push(new Test({descr: "SET small buf", command: "set", args: small_buf_set, pipeline: 200}));
 tests.push(new Test({descr: "SET small buf", command: "set", args: small_buf_set, pipeline: 20000}));
 
-tests.push(new Test({descr: "GET small str", command: "get", args: "foo_rand000000000000", pipeline: 1}));
-tests.push(new Test({descr: "GET small str", command: "get", args: "foo_rand000000000000", pipeline: 50}));
-tests.push(new Test({descr: "GET small str", command: "get", args: "foo_rand000000000000", pipeline: 200}));
+// tests.push(new Test({descr: "GET small str", command: "get", args: "foo_rand000000000000", pipeline: 1}));
+// tests.push(new Test({descr: "GET small str", command: "get", args: "foo_rand000000000000", pipeline: 50}));
+// tests.push(new Test({descr: "GET small str", command: "get", args: "foo_rand000000000000", pipeline: 200}));
 tests.push(new Test({descr: "GET small str", command: "get", args: "foo_rand000000000000", pipeline: 20000}));
-tests.push(new Test({descr: "GET small str", command: "get", args: "foo_rand000000000000", pipeline: 1}));
-tests.push(new Test({descr: "GET small str", command: "get", args: "foo_rand000000000000", pipeline: 50}));
-tests.push(new Test({descr: "GET small str", command: "get", args: "foo_rand000000000000", pipeline: 200}));
+// tests.push(new Test({descr: "GET small str", command: "get", args: "foo_rand000000000000", pipeline: 1}));
+// tests.push(new Test({descr: "GET small str", command: "get", args: "foo_rand000000000000", pipeline: 50}));
+// tests.push(new Test({descr: "GET small str", command: "get", args: "foo_rand000000000000", pipeline: 200}));
 tests.push(new Test({descr: "GET small str", command: "get", args: "foo_rand000000000000", pipeline: 20000}));
 
-tests.push(new Test({descr: "SET large str", command: "set", args: large_str_set, pipeline: 1}));
-tests.push(new Test({descr: "SET large str", command: "set", args: large_str_set, pipeline: 50}));
-tests.push(new Test({descr: "SET large str", command: "set", args: large_str_set, pipeline: 200}));
+// tests.push(new Test({descr: "SET large str", command: "set", args: large_str_set, pipeline: 1}));
+// tests.push(new Test({descr: "SET large str", command: "set", args: large_str_set, pipeline: 50}));
+// tests.push(new Test({descr: "SET large str", command: "set", args: large_str_set, pipeline: 200}));
 tests.push(new Test({descr: "SET large str", command: "set", args: large_str_set, pipeline: 20000}));
-tests.push(new Test({descr: "SET large str", command: "set", args: large_str_set, pipeline: 1}));
-tests.push(new Test({descr: "SET large str", command: "set", args: large_str_set, pipeline: 50}));
-tests.push(new Test({descr: "SET large str", command: "set", args: large_str_set, pipeline: 200}));
+// tests.push(new Test({descr: "SET large str", command: "set", args: large_str_set, pipeline: 1}));
+// tests.push(new Test({descr: "SET large str", command: "set", args: large_str_set, pipeline: 50}));
+// tests.push(new Test({descr: "SET large str", command: "set", args: large_str_set, pipeline: 200}));
 tests.push(new Test({descr: "SET large str", command: "set", args: large_str_set, pipeline: 20000}));
 
-tests.push(new Test({descr: "SET large buf", command: "set", args: large_buf_set, pipeline: 1}));
-tests.push(new Test({descr: "SET large buf", command: "set", args: large_buf_set, pipeline: 50}));
-tests.push(new Test({descr: "SET large buf", command: "set", args: large_buf_set, pipeline: 200}));
+// tests.push(new Test({descr: "SET large buf", command: "set", args: large_buf_set, pipeline: 1}));
+// tests.push(new Test({descr: "SET large buf", command: "set", args: large_buf_set, pipeline: 50}));
+// tests.push(new Test({descr: "SET large buf", command: "set", args: large_buf_set, pipeline: 200}));
 tests.push(new Test({descr: "SET large buf", command: "set", args: large_buf_set, pipeline: 20000}));
-tests.push(new Test({descr: "SET large buf", command: "set", args: large_buf_set, pipeline: 1}));
-tests.push(new Test({descr: "SET large buf", command: "set", args: large_buf_set, pipeline: 50}));
-tests.push(new Test({descr: "SET large buf", command: "set", args: large_buf_set, pipeline: 200}));
+// tests.push(new Test({descr: "SET large buf", command: "set", args: large_buf_set, pipeline: 1}));
+// tests.push(new Test({descr: "SET large buf", command: "set", args: large_buf_set, pipeline: 50}));
+// tests.push(new Test({descr: "SET large buf", command: "set", args: large_buf_set, pipeline: 200}));
 tests.push(new Test({descr: "SET large buf", command: "set", args: large_buf_set, pipeline: 20000}));
 
-tests.push(new Test({descr: "GET large str", command: "get", args: 'foo_rand000000000001', pipeline: 1}));
-tests.push(new Test({descr: "GET large str", command: "get", args: 'foo_rand000000000001', pipeline: 50}));
-tests.push(new Test({descr: "GET large str", command: "get", args: 'foo_rand000000000001', pipeline: 200}));
+// tests.push(new Test({descr: "GET large str", command: "get", args: 'foo_rand000000000001', pipeline: 1}));
+// tests.push(new Test({descr: "GET large str", command: "get", args: 'foo_rand000000000001', pipeline: 50}));
+// tests.push(new Test({descr: "GET large str", command: "get", args: 'foo_rand000000000001', pipeline: 200}));
 tests.push(new Test({descr: "GET large str", command: "get", args: 'foo_rand000000000001', pipeline: 20000}));
-tests.push(new Test({descr: "GET large str", command: "get", args: 'foo_rand000000000001', pipeline: 1}));
-tests.push(new Test({descr: "GET large str", command: "get", args: 'foo_rand000000000001', pipeline: 50}));
-tests.push(new Test({descr: "GET large str", command: "get", args: 'foo_rand000000000001', pipeline: 200}));
+// tests.push(new Test({descr: "GET large str", command: "get", args: 'foo_rand000000000001', pipeline: 1}));
+// tests.push(new Test({descr: "GET large str", command: "get", args: 'foo_rand000000000001', pipeline: 50}));
+// tests.push(new Test({descr: "GET large str", command: "get", args: 'foo_rand000000000001', pipeline: 200}));
 tests.push(new Test({descr: "GET large str", command: "get", args: 'foo_rand000000000001', pipeline: 20000}));
 
 
