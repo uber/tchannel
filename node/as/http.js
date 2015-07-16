@@ -309,6 +309,12 @@ AsHTTPHandler.prototype.handleRequest = function handleRequest(req, buildRespons
         handle();
     }
 
+    var sent = false;
+    req.errorEvent.on(onError);
+    function onError() {
+        sent = true;
+    }
+
     function handle() {
         var hres = { // TODO: explicate type
             head: new HTTPResArg2(200, 'Ok'),
@@ -320,12 +326,16 @@ AsHTTPHandler.prototype.handleRequest = function handleRequest(req, buildRespons
     }
 
     function sendResponse(hres) {
-        self.asHTTP.sendResponse(buildResponse, hres, sendError);
+        if (!sent) {
+            sent = true;
+            self.asHTTP.sendResponse(buildResponse, hres, sendError);
+        }
     }
 
     function sendError(err) {
-        if (err) {
+        if (!sent) {
             // TODO: map type?
+            sent = true;
             buildResponse().sendError('UnexpectedError', err.message);
         }
     }

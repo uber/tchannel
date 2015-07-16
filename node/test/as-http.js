@@ -79,6 +79,37 @@ allocHTTPTest('as/http can bridge a service', {
     ], assert.end);
 });
 
+allocHTTPTest('as/http can handle a timeout', {
+    onServiceRequest: handleTestHTTPTimeout,
+    expectedEgressError: {
+        type: 'tchannel.request.timeout',
+        name: 'TchannelRequestTimeoutError'
+    }
+}, function t(cluster, assert) {
+    parallel([
+        cluster.sendRequest.thunk({
+            method: 'GET',
+            path: '/such/stuff',
+        }, {
+            statusCode: 500,
+            body: 'null'
+        }, function callback(err) {
+            assert.error(err);
+            assert.end();
+        }),
+    ]);
+});
+
+
+function handleTestHTTPTimeout(hreq, hres) {
+    setTimeout(
+        function onTimeout() {
+            hres.end();
+        },
+        200
+    );
+}
+
 function handleTestHTTPRequest(hreq, hres) {
     var statusCode = 200;
     var statusMessage = 'Ok';
@@ -196,9 +227,17 @@ function allocHTTPBridge(opts) {
             hreq,
             hres,
             {},
-            function nocallback(err){
-                if (err) throw err;
-            });
+            onEgressComplete);
+    }
+
+    function onEgressComplete(err) {
+        if (opts.expectedEgressError) {
+            var expected = opts.expectedEgressError;
+            opts.assert.equal(err.type, expected.type);
+            opts.assert.equal(err.name, expected.name);
+            return;
+        }
+        opts.assert.error(err);
     }
 
     function destroy(callback) {
@@ -236,29 +275,22 @@ function testRequester(assert, baseOptions) {
         if (!options.port) throw new Error('no port specified');
 
         var buf = PassThrough();
-        var called = false;
         req.on('error', onError);
         if (body) req.write(body);
         req.end();
 
         function onError(err) {
-            if (!called) {
-                called = true;
-                callback(err);
-            }
+            callback(err);
         }
 
         function onResponse(res) {
-            if (!called) {
-                called = true;
-                assert.equal(res.statusCode, expected.statusCode, 'expected status code');
+            assert.equal(res.statusCode, expected.statusCode, 'expected status code');
 
-                // TODO: >= 0.12
-                // assert.equal(res.statusMessage, expected.statusMessage, 'expected status message');
+            // TODO: >= 0.12
+            // assert.equal(res.statusMessage, expected.statusMessage, 'expected status message');
 
-                res.on('end', onEnd);
-                res.pipe(buf);
-            }
+            res.on('end', onEnd);
+            res.pipe(buf);
         }
 
         function onEnd() {
