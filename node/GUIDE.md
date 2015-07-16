@@ -4,11 +4,33 @@ This guide will show you how to write a server and client.
 
 The code matching this guide is [here](./examples/keyvalue/).
 
+## Table of contents
+
+  - [Dependencies](#dependencies)
+  - [Defining your service](#defining-your-service)
+  - [Writing a tchannel server](#writing-a-tchannel-server)
+    - [Creating a tchannel](#creating-a-tchannel)
+    - [Creating and registering your handlers](#creating-and-registering-your-handlers)
+    - [Testing your server with tcurl](#testing-your-server-with-tcurl)
+    - [Looking at your service with tcap](#looking-at-your-service-with-tcap)
+    - [Setting up hyperbahn](#setting-up-hyperbahn)
+    - [Registering with hyperbahn](#registering-with-hyperbahn)
+    - [Testing against hyperbahn](#testing-against-hyperbahn)
+  - [Writing a tchannel client](#writing-a-tchannel-client)
+    - [Creating a tchannel](#creating-a-tchannel-1)
+    - [Creating a hyperbahn client](#creating-a-hyperbahn-client)
+    - [Making outgoing call requests using the tchannelThrift codec](#making-outgoing-call-requests-using-the-tchannelthrift-codec)
+  - [Getting started with a real service](#getting-started-with-a-real-service)
+
 ## Dependencies
 
 Make sure you have `node` and `npm` installed. To get started
 create an empty project with `npm init` and run
 `npm install tchannel --save`.
+
+You will also need to run a Hyperbahn ring locally. How to setup
+hyperbahn is out of scope for this document but hopefully you
+can find instructions elsewhere.
 
 ## Defining your service
 
@@ -110,6 +132,38 @@ function put(context, req, head, body, cb) {
 }
 ```
 
+### Testing your server with tcurl
+
+You can test your server by making a call using
+[tcurl](https://github.com/uber/tcurl)
+
+To install tcurl, please run `npm install tcurl -g`
+
+```sh
+tcurl -p 127.0.0.1:4040 -t [DIR-TO-THRIFT] keyvalue KeyValue::put_v1 -3 '{"key":"hello","value":"world"}'
+tcurl -p 127.0.0.1:4040 -t [DIR-TO-THRIFT] keyvalue KeyValue::get_v1 -3 '{"key":"hello"}'
+```
+
+Make sure you that you have a folder containing the thrift definition.
+The thrift file should be called `keyvalue.thrift`.
+
+### Looking at your service with tcap
+
+You can see what's actually happening by using
+[tcap](https:/github.com/uber/tcap) the tchannel network introspection tool.
+
+To install tcap, please run `npm install tcap -g`
+
+```sh
+sudo tcap -p 4040 -i eth0 -i en0 -i lo -s keyvalue
+tcurl -p 127.0.0.1:4040 -t [DIR-TO-THRIFT] keyvalue KeyValue::put_v1 -3 '{"key":"hello","value":"world"}'
+```
+
+### Setting up hyperbahn
+
+You need to setup hyperbahn locally. Hopefully you have documentation
+on how to set a local hyperbahn up.
+
 ### Registering with hyperbahn
 
 Create a Hyperbahn client using [`HyperbahnClient(opts)`](./docs/hyperbahn.md#var-hyperbahnclient--hyperbahnclientoptions).
@@ -135,14 +189,16 @@ function onAdvertised() {
 }
 ```
 
-### Local testing
+### Testing against hyperbahn
 
 Your service is now available on hyperbahn. You can test this by
 making a call using [tcurl](https://github.com/uber/tcurl)
 
+To install tcurl, please run `npm install tcurl -g`
+
 ```sh
-node tcurl.js -p [HYPERBAHN-HOSTPORT] -t [DIR-TO-THRIFT] keyvalue KeyValue::put_v1 -3 '{"key":"hello","value":"world"}'
-node tcurl.js -p [HYPERBAHN-HOSTPORT] -t [DIR-TO-THRIFT] keyvalue KeyValue::get_v1 -3 '{"key":"hello"}'
+tcurl -p [HYPERBAHN-HOSTPORT] -t [DIR-TO-THRIFT] keyvalue KeyValue::put_v1 -3 '{"key":"hello","value":"world"}'
+tcurl -p [HYPERBAHN-HOSTPORT] -t [DIR-TO-THRIFT] keyvalue KeyValue::get_v1 -3 '{"key":"hello"}'
 ```
 
 Make sure to replace `[HYPERBAHN-HOSTPORT]` with one of the
@@ -151,6 +207,13 @@ where the thrift files are stored.
 
 Your service can be accessed over Hyperbahn + TChannel from any
 language.
+
+You can also see the traffic flowing through hyperbahn using
+tcap
+
+```sh
+sudo tcap -p 21301 -i lo
+```
 
 ## Writing a tchannel client
 
@@ -228,3 +291,12 @@ keyThrift.request({
     });
 });
 ```
+
+## Getting started with a real service
+
+Now that you've followed the guide it's recommended that you 
+use the scaffolder for getting a real service up and running.
+
+You can https://github.com/Raynos/tchannel-gen to scaffold out
+a new service and this will include all of the bootstrapping,
+ringpop and testing infrastructure as well as example tests.
