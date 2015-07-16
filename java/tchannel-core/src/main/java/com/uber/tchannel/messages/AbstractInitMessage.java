@@ -9,8 +9,8 @@ public abstract class AbstractInitMessage extends AbstractMessage {
     public final String hostPort;
     public final String processName;
 
-    public AbstractInitMessage(long id, int version, String hostPort, String processName) {
-        super(id);
+    public AbstractInitMessage(long id, MessageType messageType, int version, String hostPort, String processName) {
+        super(id, messageType);
         this.version = version;
         this.hostPort = hostPort;
         this.processName = processName;
@@ -23,7 +23,7 @@ public abstract class AbstractInitMessage extends AbstractMessage {
         return String.format(
                 "<%s id=%d version=%d hostPort=%s processName=%s>",
                 this.getClass().getCanonicalName(),
-                this.id,
+                this.getId(),
                 this.version,
                 this.hostPort,
                 this.processName

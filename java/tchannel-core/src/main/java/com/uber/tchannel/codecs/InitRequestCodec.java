@@ -40,7 +40,7 @@ public class InitRequestCodec extends MessageToMessageCodec<TFrame, InitRequest>
         headers.put(InitRequest.PROCESS_NAME_KEY, req.processName);
         HeaderCodec.encodeHeader(headers, payload);
 
-        TFrame frame = new TFrame(req.getMessageType(), req.id, payload.array());
+        TFrame frame = new TFrame(req.getMessageType(), req.getId(), payload.array());
         out.add(frame);
     }
 }

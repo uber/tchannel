@@ -27,7 +27,7 @@ public class TestInitRequestCodec {
         channel.writeInbound(channel.readOutbound());
 
         InitRequest newInitReq = channel.readInbound();
-        assertEquals(newInitReq.id, initReq.id);
+        assertEquals(newInitReq.getId(), initReq.getId());
         assertEquals(newInitReq.version, initReq.version);
         assertEquals(newInitReq.hostPort, initReq.hostPort);
         assertEquals(newInitReq.processName, initReq.processName);

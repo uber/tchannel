@@ -5,7 +5,7 @@ public class InitRequest extends AbstractInitMessage {
     private final MessageType messageType = MessageType.InitRequest;
 
     public InitRequest(long id, int version, String hostPort, String processName) {
-        super(id, version, hostPort, processName);
+        super(id, MessageType.InitRequest, version, hostPort, processName);
     }
 
     @Override

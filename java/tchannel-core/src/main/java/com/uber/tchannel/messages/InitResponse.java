@@ -5,7 +5,7 @@ public class InitResponse extends AbstractInitMessage {
     private final MessageType messageType = MessageType.InitResponse;
 
     public InitResponse(long id, int version, String hostPort, String processName) {
-        super(id, version, hostPort, processName);
+        super(id, MessageType.InitResponse, version, hostPort, processName);
     }
 
     @Override
