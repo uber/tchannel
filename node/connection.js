@@ -528,15 +528,17 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
     //   own outgoing work, which is hard to cancel. By setting this.closing, we make sure
     //   that once they do finish that their callback will swallow the response.
     inOpKeys.forEach(function eachInOp(id) {
+        self.ops.popInReq(id);
         // TODO: support canceling pending handlers
-        self.ops.removeReq(id);
         // TODO report or handle or log errors or something
     });
 
     // for all outgoing requests, forward the triggering error to the user callback
     outOpKeys.forEach(function eachOutOp(id) {
-        var req = requests.out[id];
-        self.ops.removeReq(id);
+        var req = self.ops.popOutReq(id);
+        if (!req) {
+            return;
+        }
 
         var info = {
             socketRemoteAddr: self.socketRemoteAddr,
