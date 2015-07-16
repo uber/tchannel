@@ -4,6 +4,24 @@ This guide will show you how to write a server and client.
 
 The code matching this guide is [here](./examples/keyvalue/).
 
+## Table of contents
+
+  - [Dependencies](#dependencies)
+  - [Defining your service](#defining-your-service)
+  - [Writing a tchannel server](#writing-a-tchannel-server)
+    - [Creating a tchannel](#creating-a-tchannel)
+    - [Creating and registering your handlers](#creating-and-registering-your-handlers)
+    - [Testing your server with tcurl](#testing-your-server-with-tcurl)
+    - [Looking at your service with tcap](#looking-at-your-service-with-tcap)
+    - [Setting up hyperbahn](#setting-up-hyperbahn)
+    - [Registering with hyperbahn](#registering-with-hyperbahn)
+    - [Testing against hyperbahn](#testing-against-hyperbahn)
+  - [Writing a tchannel client](#writing-a-tchannel-client)
+    - [Creating a tchannel](#creating-a-tchannel-1)
+    - [Creating a hyperbahn client](#creating-a-hyperbahn-client)
+    - [Making outgoing call requests using the tchannelThrift codec](#making-outgoing-call-requests-using-the-tchannelthrift-codec)
+  - [Getting started with a real service](#getting-started-with-a-real-service)
+
 ## Dependencies
 
 Make sure you have `node` and `npm` installed. To get started
