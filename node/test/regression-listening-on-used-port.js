@@ -48,6 +48,7 @@ test('listening on a used port', function t(assert) {
         assert.notEqual(-1, err.origMessage
             .indexOf('listen EADDRINUSE'));
 
+        server.close();
         otherServer.close();
         assert.end();
     }

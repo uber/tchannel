@@ -288,7 +288,9 @@ TestSearch.prototype.reportResult = function reportResult(res, assert) {
         }
     } else {
         if (res.passed) {
-            assert.pass(self.describeState(res.state));
+            if (!self.options.silentPass) {
+                assert.pass(self.describeState(res.state));
+            }
         } else {
             for (i = 0; i < res.results.length; i++) {
                 assert.emit('result', res.results[i]);
@@ -297,7 +299,12 @@ TestSearch.prototype.reportResult = function reportResult(res, assert) {
     }
 };
 
-TestSearch.prototype.report = function report(/* assert */) {
+TestSearch.prototype.report = function report(assert) {
+    var self = this;
+
+    if (self.options.silentPass && !self.fail) {
+        assert.pass('all ' + self.pass + ' cases passed');
+    }
 };
 
 TestSearch.prototype.run = function run(assert, options, callback) {

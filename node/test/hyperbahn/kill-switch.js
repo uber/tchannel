@@ -49,6 +49,7 @@ test('set cn/service', function t(assert) {
     assert.notOk(proxy.isBlocked('c', 's'), 'shouldn\'t have set c/s');
 
     proxy.destroy();
+    proxy.channel.close();
     assert.end();
 });
 
@@ -85,5 +86,6 @@ test('clear cn/service', function t(assert) {
     assert.equals(proxy.blockingTable, null, 'blocking table should be cleared');
 
     proxy.destroy();
+    proxy.channel.close();
     assert.end();
 });
