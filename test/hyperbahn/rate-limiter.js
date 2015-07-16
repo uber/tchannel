@@ -46,8 +46,10 @@ function send(opts, done) {
     });
 }
 
-function wait(done) {
-    setTimeout(done, 500);
+function waitFor(t) {
+    return function wait(done) {
+        setTimeout(done, 500);
+    };
 }
 
 function runTests(HyperbahnCluster) {
@@ -139,7 +141,7 @@ function runTests(HyperbahnCluster) {
             series([
                 send.bind(null, opts),
                 send.bind(null, opts),
-                wait,
+                waitFor(500),
                 send.bind(null, opts),
                 function check1(done) {
                     cluster.apps.forEach(function (app) {
@@ -151,7 +153,8 @@ function runTests(HyperbahnCluster) {
                     });
                     done();
                 },
-                wait,
+
+                waitFor(500),
                 send.bind(null, opts),
                 function check2(done) {
                     cluster.apps.forEach(function (app) {
@@ -270,7 +273,7 @@ function runTests(HyperbahnCluster) {
             series([
                 send.bind(null, opts),
                 send.bind(null, opts),
-                wait,
+                waitFor(500),
                 function sendError(done) {
                     var tchannelJSON = TChannelJSON({
                         logger: cluster.logger
