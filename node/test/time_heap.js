@@ -23,13 +23,14 @@
 var test = require('tape');
 var util = require('util');
 var TimeMock = require('time-mock');
+var TestSearch = require('./lib/test_search');
 
 var TimeHeap = require('../time_heap');
 
-permute([1, 2, 3, 4, 5, 6, 7], testWithTimes);
+test('TimeHeap works for all 7-permutations', function t(assert) {
 
-function testWithTimes(times) {
-    test('TimeHeap Works for: ' + times, function t(assert) {
+    function testWithTimes(state, assert) {
+        var times = state.perm;
         var items = createTestTimeoutItems(times);
 
         var timers = TimeMock(1);
@@ -61,8 +62,37 @@ function testWithTimes(times) {
         }
 
         assert.end();
+    }
+
+    var perms = [];
+    permute([1, 2, 3, 4, 5, 6, 7], function each(perm) {
+        perms.push(perm);
     });
-}
+
+    (new TestSearch({
+        silentPass: true,
+        first: true,
+
+        init: function init() {
+            this.frontier.push({
+                permId: 0,
+                perm: perms[0]
+            });
+        },
+
+        next: function next(state, _emit) {
+            var nextPermId = state.permId + 1;
+            if (nextPermId < perms.length) {
+                _emit({
+                    permId: nextPermId,
+                    perm: perms[nextPermId]
+                });
+            }
+        },
+
+        test: testWithTimes
+    })).run(assert);
+});
 
 function TestTimeoutItem(t, name) {
     var self = this;
