@@ -28,3 +28,6 @@ The protocol is currently implemented in:
    json
    thrift
    metrics
+   Go Guide <go-guide>
+   Node Guide <node-guide>
+   Python Guide <http://tchannel.readthedocs.org/projects/tchannel-python/en/latest/guide.html>
