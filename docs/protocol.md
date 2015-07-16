@@ -143,7 +143,7 @@ A1 sends "call req" (type 0x03) to R1:
 4. set the ttl to the maximum allowable time for this request. If a response
    cannot be sent within this time, downstream nodes will cancel the request.
 5. A1 doesn't need any headers, so defaults are used
-6. a "call req" body is generated with service\_name "service B", application
+6. a "call req" body is generated with service "service B", application
    payload args, and checksum
 
 R1 receives "call req" from A1, sends "call req" (0x03) to B1:
