@@ -144,9 +144,10 @@ function runTests(HyperbahnCluster) {
                 function check1(done) {
                     cluster.apps.forEach(function (app) {
                         var relayChannel = app.clients.tchannel;
-                        assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 6, 'check1: total request');
-                        assert.equals(relayChannel.handler.rateLimiter.counters.steve.rps, 3, 'check1: request for steve');
-                        assert.equals(relayChannel.handler.rateLimiter.counters.tcollector.rps, 3, 'check1: request for tcollector');
+                        var rateLimiter = relayChannel.handler.rateLimiter;
+                        assert.equals(rateLimiter.totalRequestCounter.rps, 6, 'check1: total request');
+                        assert.equals(rateLimiter.counters.steve.rps, 3, 'check1: request for steve');
+                        assert.equals(rateLimiter.counters.tcollector.rps, 3, 'check1: request for tcollector');
                     });
                     done();
                 },
@@ -155,9 +156,10 @@ function runTests(HyperbahnCluster) {
                 function check2(done) {
                     cluster.apps.forEach(function (app) {
                         var relayChannel = app.clients.tchannel;
-                        assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 4, 'check2: total request');
-                        assert.equals(relayChannel.handler.rateLimiter.counters.steve.rps, 2, 'check2: request for steve');
-                        assert.equals(relayChannel.handler.rateLimiter.counters.tcollector.rps, 2, 'check2: request for tcollector');
+                        var rateLimiter = relayChannel.handler.rateLimiter;
+                        assert.equals(rateLimiter.totalRequestCounter.rps, 4, 'check2: total request');
+                        assert.equals(rateLimiter.counters.steve.rps, 2, 'check2: request for steve');
+                        assert.equals(rateLimiter.counters.tcollector.rps, 2, 'check2: request for tcollector');
                     });
                     done();
                 }
