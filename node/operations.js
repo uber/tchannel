@@ -210,16 +210,6 @@ Operations.prototype.popInReq = function popInReq(id) {
     return req;
 };
 
-Operations.prototype.removeReq = function removeReq(id) {
-    var self = this;
-
-    if (id in self.requests.in) {
-        delete self.requests.in[id];
-    } else if (id in self.requests.out) {
-        delete self.requests.out[id];
-    }
-};
-
 Operations.prototype.clear = function clear() {
     var self = this;
 
