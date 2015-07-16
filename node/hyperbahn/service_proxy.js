@@ -128,7 +128,7 @@ function rateLimit(req, buildRes) {
         self.rateLimiter.incrementServiceCounter(req.serviceName);
     }
 
-    if (self.rateLimiter.shouldRateLimitTotalRequest()) {
+    if (self.rateLimiter.shouldRateLimitTotalRequest(req.serviceName)) {
         var totalLimit = self.rateLimiter.totalRequestCounter.rpsLimit;
         self.logger.info('hyperbahn node is rate-limited by the total rps limit', {
             rpsLimit: totalLimit
