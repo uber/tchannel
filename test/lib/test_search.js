@@ -295,6 +295,9 @@ TestSearch.prototype.reportResult = function reportResult(res, assert) {
             for (i = 0; i < res.results.length; i++) {
                 assert.emit('result', res.results[i]);
             }
+            if (self.options.first) {
+                self.stop();
+            }
         }
     }
 };
