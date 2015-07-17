@@ -225,7 +225,11 @@ function TChannel(options) {
         });
     }
 
-    self.traceSample = self.options.traceSample || 0.01; // sample 1% by default
+    if (typeof self.options.traceSample === 'number') {
+        self.traceSample = self.options.traceSample;
+    } else {
+        self.traceSample = 0.01;
+    }
 
     // lazily created by .getServer (usually from .listen)
     self.serverSocket = null;
