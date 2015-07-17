@@ -40,6 +40,7 @@ function TChannelPeer(channel, hostPort, options) {
     var self = this;
     EventEmitter.call(self);
     StateMachine.call(self);
+
     self.stateChangedEvent = self.defineEvent('stateChanged');
     self.allocConnectionEvent = self.defineEvent('allocConnection');
 
@@ -47,19 +48,20 @@ function TChannelPeer(channel, hostPort, options) {
 
     self.channel = channel;
     self.logger = self.channel.logger;
+    self.timers = self.channel.timers;
+    self.random = self.channel.random;
     self.options = options || {};
     self.hostPort = hostPort;
     self.connections = [];
-    self.random = self.channel.random;
 
     self.stateOptions = new states.StateOptions(self, {
-        timers: self.channel.timers,
-        random: self.channel.random,
+        timers: self.timers,
+        random: self.random,
         period: self.options.period,
         maxErrorRate: self.options.maxErrorRate,
         minimumRequests: self.options.minimumRequests,
         probation: self.options.probation,
-        nextHandler: self
+        nextHandler: new PreferOutgoingHandler(self)
     });
 
     if (self.options.initialState) {
@@ -71,7 +73,7 @@ function TChannelPeer(channel, hostPort, options) {
 
     self.reportInterval = self.options.reportInterval || DEFAULT_REPORT_INTERVAL;
     if (self.reportInterval > 0) {
-        self.reportTimer = self.stateOptions.timers.setTimeout(
+        self.reportTimer = self.timers.setTimeout(
             onReport, self.reportInterval
         );
     }
@@ -89,7 +91,7 @@ function TChannelPeer(channel, hostPort, options) {
             });
         }
 
-        self.reportTimer = self.stateOptions.timers.setTimeout(
+        self.reportTimer = self.timers.setTimeout(
             onReport, self.reportInterval
         );
     }
@@ -99,6 +101,7 @@ inherits(TChannelPeer, EventEmitter);
 
 TChannelPeer.prototype.isConnected = function isConnected(direction, identified) {
     var self = this;
+
     if (identified === undefined) identified = true;
     for (var i = 0; i < self.connections.length; i++) {
         var conn = self.connections[i];
@@ -110,13 +113,15 @@ TChannelPeer.prototype.isConnected = function isConnected(direction, identified)
             return true;
         }
     }
+
     return false;
 };
 
 TChannelPeer.prototype.close = function close(callback) {
     var self = this;
+
     if (self.reportTimer) {
-        self.stateOptions.timers.clearTimeout(self.reportTimer);
+        self.timers.clearTimeout(self.reportTimer);
         self.reportTimer = null;
     }
 
@@ -275,12 +280,14 @@ TChannelPeer.prototype.addConnection = function addConnection(conn) {
 TChannelPeer.prototype.removeConnection = function removeConnection(conn) {
     var self = this;
 
+    var ret = null;
+
     var index = self.connections ? self.connections.indexOf(conn) : -1;
     if (index !== -1) {
-        return self.connections.splice(index, 1)[0];
-    } else {
-        return null;
+        ret = self.connections.splice(index, 1)[0];
     }
+
+    return ret;
 };
 
 TChannelPeer.prototype.makeOutSocket = function makeOutSocket() {
@@ -333,21 +340,28 @@ TChannelPeer.prototype.countOutPending = function countOutPending() {
     return pending;
 };
 
-// Consulted depending on the peer state
-TChannelPeer.prototype.shouldRequest = function shouldRequest() {
+function PreferOutgoingHandler(peer) {
     var self = this;
+
+    self.peer = peer;
+}
+
+// Consulted depending on the peer state
+PreferOutgoingHandler.prototype.shouldRequest = function shouldRequest() {
+    var self = this;
+
     // space:
     //   [0.1, 0.2)  unconnected peers
     //   [0.2, 0.3)  incoming connections
     //   [0.3, 0.4)  new outgoing connections
     //   [0.4, 1.0)  identified outgoing connections
-    var inconn = self.getInConnection();
-    var outconn = self.getOutConnection();
-    var random = self.outPendingWeightedRandom();
+    var inconn = self.peer.getInConnection();
+    var outconn = self.peer.getOutConnection();
+    var random = self.peer.outPendingWeightedRandom();
     if (!inconn && !outconn) {
         return 0.1 + random * 0.1;
     } else if (!outconn || outconn.direction !== 'out') {
-        self.connect();
+        self.peer.connect();
         return 0.2 + random * 0.1;
     } else if (outconn.remoteName === null) {
         return 0.3 + random * 0.1;
