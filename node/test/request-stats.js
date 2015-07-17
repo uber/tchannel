@@ -71,6 +71,8 @@ allocCluster.test('emits stats', {
     }).send('echo', 'a', 'b', onResponse);
 
     function onResponse(err, res, arg2, arg3) {
+        client.flushStats();
+
         assert.ifError(err);
         assert.ok(res.ok);
         assert.deepEqual(stats, [{

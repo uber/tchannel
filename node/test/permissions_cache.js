@@ -60,6 +60,8 @@ allocCluster.test('permissionsCache: counts service request counts', {
             return assert.end(err);
         }
 
+        server.flushStats();
+
         assert.ok(cache.lru.keys().indexOf('client_server') >= 0);
         assert.end();
         cache.clearBuckets();

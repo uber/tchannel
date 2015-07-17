@@ -75,6 +75,9 @@ allocCluster.test('emits response stats with ok', {
         if (err) {
             return assert.end(err);
         }
+
+        server.flushStats();
+
         assert.ok(res.ok, 'res should be ok');
         assert.deepEqual(stats, [{
             name: 'connections.accepted',
@@ -235,6 +238,9 @@ allocCluster.test('emits response stats with not ok', {
         if (err) {
             return assert.end(err);
         }
+
+        server.flushStats();
+
         assert.equal(res.ok, false, 'res should be not ok');
         assert.deepEqual(stats, [{
             name: 'connections.accepted',
@@ -392,6 +398,8 @@ allocCluster.test('emits response stats with error', {
     }).send('echo', 'c', 'd', onResponse);
 
     function onResponse(err, res, arg2, arg3) {
+        server.flushStats();
+        
         assert.notEqual(err, null, 'err should not be null');
         assert.equal(res, null, 'res should be null');
         assert.deepEqual(stats, [{

@@ -85,6 +85,9 @@ allocCluster.test('emits stats on response ok', {
         if (err) {
             return assert.end(err);
         }
+
+        server.flushStats();
+
         assert.ok(res.ok, 'res should be ok');
         assert.deepEqual(statsd._buffer._elements, [{
             type: 'c',
@@ -197,6 +200,9 @@ allocCluster.test('emits stats on response not ok', {
         if (err) {
             return assert.end(err);
         }
+
+        server.flushStats();
+
         assert.equal(res.ok, false, 'res should be not ok');
         assert.deepEqual(statsd._buffer._elements, [{
             type: 'c',
@@ -304,6 +310,8 @@ allocCluster.test('emits stats on response error', {
     }).send('Reservoir::get', 'ton', '20', onResponse);
 
     function onResponse(err, res, arg2, arg3) {
+        server.flushStats();
+
         assert.notEqual(err, null, 'err should not be null');
         assert.equal(res, null, 'res should be null');
         assert.deepEqual(statsd._buffer._elements, [{

@@ -54,6 +54,7 @@ var TracingAgent = require('./trace/agent');
 
 var CONN_STALE_PERIOD = 1500;
 var SANITY_PERIOD = 10 * 1000;
+var STAT_EMIT_PERIOD = 100;
 var DEFAULT_RETRY_FLAGS = new RetryFlags(
     /*never:*/ false,
     /*onConnectionError*/ true,
@@ -238,11 +239,14 @@ function TChannel(options) {
     self.TChannelAsThrift = TChannelAsThrift;
     self.TChannelAsJSON = TChannelAsJSON;
 
+    self.statsQueue = [];
+
     self.requestDefaults = self.options.requestDefaults ?
         new RequestDefaults(self.options.requestDefaults) : null;
 
     if (!self.topChannel) {
         self.sanityTimer = self.timers.setTimeout(doSanitySweep, SANITY_PERIOD);
+        self.flushStats();
     }
 
     function doSanitySweep() {
@@ -276,6 +280,27 @@ TChannel.prototype.getServer = function getServer() {
 
     function onServerSocketError(err) {
         self.onServerSocketError(err);
+    }
+};
+
+TChannel.prototype.flushStats = function flushStats() {
+    var self = this;
+
+    if (self.batchStatTimer) {
+        self.timers.clearTimeout(self.batchStatTimer);
+    }
+
+    for (var i = 0; i < self.statsQueue.length; i++) {
+        self.statEvent.emit(self, self.statsQueue[i]);
+    }
+    self.statsQueue = [];
+
+    self.batchStatTimer = self.timers.setTimeout(
+        flushStatsRecur, STAT_EMIT_PERIOD
+    );
+
+    function flushStatsRecur() {
+        self.flushStats();
     }
 };
 
@@ -631,7 +656,7 @@ TChannel.prototype.request = function channelRequest(options) {
 };
 
 function RequestOptions(channel, opts) {
-    /*eslint max-complexity: [2, 30]*/
+    /*eslint complexity: [2, 30]*/
     var self = this;
 
     self.channel = channel;
@@ -753,7 +778,9 @@ TChannel.prototype.close = function close(callback) {
     }
 
     if (!self.topChannel) {
+        self.flushStats();
         self.timeHeap.clear();
+        self.timers.clearTimeout(self.batchStatTimer);
     }
 
     self.peers.close(onClose);
@@ -795,9 +822,9 @@ TChannel.prototype.emitFastStat = function emitFastStat(stat) {
     var self = this;
 
     if (self.topChannel) {
-        self.topChannel.statEvent.emit(self, stat);
+        self.topChannel.emitFastStat(stat);
     } else {
-        self.statEvent.emit(self, stat);
+        self.statsQueue.push(stat);
     }
 };
 
@@ -812,10 +839,10 @@ TChannel.prototype.emitStat = function emitStat(stat) {
         localTags[commonKeys[i]] = commonTags[commonKeys[i]];
     }
 
-    self.statEvent.emit(self, stat);
-
     if (self.topChannel) {
-        self.topChannel.statEvent.emit(self, stat);
+        self.topChannel.emitFastStat(stat);
+    } else {
+        self.statsQueue.push(stat);
     }
 };
 
