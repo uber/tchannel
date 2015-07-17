@@ -124,9 +124,15 @@ RelayRequest.prototype.onIdentified = function onIdentified(err1) {
 
     if (self.outreq.streamed) {
         // TODO: frame-at-a-time rather than re-streaming?
-        self.inreq.arg1.pipe(self.outreq.arg1);
-        self.inreq.arg2.pipe(self.outreq.arg2);
-        self.inreq.arg3.pipe(self.outreq.arg3);
+
+        var arg1 = self.inreq.arg1;
+        if (arg1.buf) {
+            arg1 = arg1.buf;
+        }
+
+        self.outreq.sendStreams(
+            arg1, self.inreq.arg2, self.inreq.arg3
+        );
     } else {
         self.outreq.send(self.inreq.arg1, self.inreq.arg2, self.inreq.arg3);
     }
