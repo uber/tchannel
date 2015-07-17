@@ -44,7 +44,8 @@ var Stat = require('./lib/stat.js');
 var TChannelAsThrift = require('./as/thrift');
 var TChannelAsJSON = require('./as/json');
 var TChannelConnection = require('./connection');
-var TChannelPeers = require('./peers');
+var TChannelRootPeers = require('./root_peers');
+var TChannelSubPeers = require('./sub_peers');
 var TChannelServices = require('./services');
 var TChannelStatsd = require('./lib/statsd');
 var RetryFlags = require('./retry-flags.js');
@@ -197,7 +198,12 @@ function TChannel(options) {
     // populated by:
     // - manually api (.peers.add etc)
     // - incoming connections on any listening socket
-    self.peers = TChannelPeers(self, self.options);
+
+    if (!self.topChannel) {
+        self.peers = TChannelRootPeers(self, self.options);
+    } else {
+        self.peers = TChannelSubPeers(self, self.options);
+    }
 
     // For tracking the number of pending requests to any service
     self.services = new TChannelServices();
