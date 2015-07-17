@@ -349,6 +349,7 @@ function PreferOutgoingHandler(peer) {
     var self = this;
 
     self.peer = peer;
+    self.lastQOS = self.getQOS();
 }
 
 PreferOutgoingHandler.prototype.getQOS = function getQOS() {
@@ -379,6 +380,9 @@ PreferOutgoingHandler.prototype.shouldRequest = function shouldRequest() {
     //   [0.4, 1.0)  identified outgoing connections
     var random = self.peer.outPendingWeightedRandom();
     var qos = self.getQOS();
+    if (self.lastQOS !== qos) {
+        self.lastQOS = qos;
+    }
     switch (qos) {
         case QOS_UNCONNECTED:
             return 0.1 + random * 0.1;
