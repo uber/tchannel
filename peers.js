@@ -20,7 +20,6 @@
 
 'use strict';
 
-var assert = require('assert');
 var inherits = require('util').inherits;
 var extend = require('xtend');
 var EventEmitter = require('./lib/event_emitter');
@@ -192,16 +191,6 @@ TChannelPeers.prototype.delete = function del(hostPort) {
     self._keys.splice(index, 1);
 
     return peer;
-};
-
-TChannelPeers.prototype.waitForIdentified =
-function waitForIdentified(options, callback) {
-    var self = this;
-
-    assert(typeof options.host === 'string', 'options.host is required');
-
-    var peer = self.add(options.host);
-    peer.waitForIdentified(callback);
 };
 
 TChannelPeers.prototype.choosePeer =
