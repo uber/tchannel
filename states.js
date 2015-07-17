@@ -92,6 +92,17 @@ State.prototype.close = function close(callback) {
     callback(null);
 };
 
+State.prototype.shouldRequest = function shouldRequest(req, options) {
+    var self = this;
+
+    var now = self.timers.now();
+    if (self.willCallNextHandler(now)) {
+        return self.nextHandler.shouldRequest(req, options);
+    } else {
+        return 0;
+    }
+};
+
 function HealthyState(options) {
     var self = this;
     State.call(self, options);
@@ -117,9 +128,8 @@ HealthyState.prototype.toString = function healthyToString() {
     return format('[Healthy %s healthy %s unhealthy]', self.healthyCount, self.unhealthyCount);
 };
 
-HealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
+HealthyState.prototype.willCallNextHandler = function willCallNextHandler(now) {
     var self = this;
-    var now = self.timers.now();
 
     // At the conclusion of a period
     if (now - self.start >= self.period) {
@@ -130,7 +140,7 @@ HealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
         if (self.unhealthyCount / totalCount > self.maxErrorRate &&
             self.totalRequests > self.minRequests) {
             self.stateMachine.setState(UnhealthyState);
-            return 0;
+            return false;
         }
 
         // Alternately, start a new monitoring period.
@@ -139,7 +149,7 @@ HealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
         self.unhealthyCount = 0;
     }
 
-    return self.nextHandler.shouldRequest(req, options);
+    return true;
 };
 
 HealthyState.prototype.onRequestHealthy = function onRequestHealthy() {
@@ -188,9 +198,8 @@ UnhealthyState.prototype.toString = function healthyToString() {
     return format('[Unhealthy %s consecutive healthy requests]', self.healthyCount);
 };
 
-UnhealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
+UnhealthyState.prototype.willCallNextHandler = function willCallNextHandler(now) {
     var self = this;
-    var now = self.timers.now();
 
     // Start a new period if the previous has concluded
     if (now - self.start >= self.period) {
@@ -199,11 +208,7 @@ UnhealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
     }
 
     // Allow one trial per period
-    if (self.triedThisPeriod) {
-        return 0;
-    }
-
-    return self.nextHandler.shouldRequest(req, options);
+    return !self.triedThisPeriod;
 };
 
 UnhealthyState.prototype.onRequest = function onRequest(/* req */) {
@@ -255,6 +260,10 @@ LockedHealthyState.prototype.toString = function lockedHealthyToString() {
     return '[Healthy state (locked)]';
 };
 
+LockedHealthyState.prototype.willCallNextHandler = function willCallNextHandler() {
+    return true;
+};
+
 LockedHealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
     var self = this;
 
@@ -275,6 +284,10 @@ LockedUnhealthyState.prototype.locked = true;
 
 LockedUnhealthyState.prototype.toString = function lockedUnhealthyToString() {
     return '[Unhealthy state (locked)]';
+};
+
+LockedUnhealthyState.prototype.willCallNextHandler = function willCallNextHandler() {
+    return false;
 };
 
 LockedUnhealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
