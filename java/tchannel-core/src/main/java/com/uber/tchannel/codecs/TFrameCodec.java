@@ -7,10 +7,8 @@ import io.netty.handler.codec.ByteToMessageCodec;
 
 import java.util.List;
 
-/**
- * Created by wjs on 7/13/15.
- */
 public class TFrameCodec extends ByteToMessageCodec<TFrame> {
+
     @Override
     protected void encode(ChannelHandlerContext ctx, TFrame frame, ByteBuf out) throws Exception {
         out.writeShort(frame.size)
