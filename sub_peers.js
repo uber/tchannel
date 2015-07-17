@@ -23,6 +23,7 @@
 var inherits = require('util').inherits;
 
 var TChannelPeersBase = require('./peers_base.js');
+var PeerHeap = require('./peer_heap.js');
 
 function TChannelSubPeers(channel, options) {
     if (!(this instanceof TChannelSubPeers)) {
@@ -32,6 +33,7 @@ function TChannelSubPeers(channel, options) {
     TChannelPeersBase.call(self, channel, options);
 
     self.peerScoreThreshold = self.options.peerScoreThreshold || 0;
+    self._heap = new PeerHeap();
 }
 
 inherits(TChannelSubPeers, TChannelPeersBase);
@@ -63,6 +65,9 @@ TChannelSubPeers.prototype.add = function add(hostPort, options) {
     self._map[hostPort] = peer;
     self._keys.push(hostPort);
 
+    var el = self._heap.add(peer);
+    peer.heapElements.push(el);
+
     return peer;
 };
 
@@ -71,6 +76,7 @@ TChannelSubPeers.prototype.clear = function clear() {
 
     self._map = Object.create(null);
     self._keys = [];
+    self._heap.clear();
 };
 
 TChannelSubPeers.prototype._delete = function _del(peer) {
@@ -79,35 +85,35 @@ TChannelSubPeers.prototype._delete = function _del(peer) {
     delete self._map[peer.hostPort];
     var index = self._keys.indexOf(peer.hostPort);
     popout(self._keys, index);
+
+    for (var i = 0; i < peer.heapElements.length; i++) {
+        var el = peer.heapElements[i];
+        if (el.heap === self._heap) {
+            el.heap.remove(el.index);
+            popout(peer.heapElements, i);
+            break;
+        }
+    }
 };
 
 TChannelSubPeers.prototype.choosePeer = function choosePeer(req) {
-    /*eslint complexity: [2, 15]*/
     var self = this;
 
-    var hosts = self._keys;
-    if (!hosts || !hosts.length) {
-        return null;
+    if (req && req.triedRemoteAddrs) {
+        return self._choosePeerSkipTried(req);
+    } else {
+        return self._heap.choose(self.peerScoreThreshold);
     }
+};
 
-    var threshold = self.peerScoreThreshold;
+TChannelSubPeers.prototype._choosePeerSkipTried = function _choosePeerSkipTried(req) {
+    var self = this;
 
-    var selectedPeer = null;
-    var selectedScore = 0;
-    for (var i = 0; i < hosts.length; i++) {
-        var hostPort = hosts[i];
-        var peer = self._map[hostPort];
-        if (!req || !req.triedRemoteAddrs[hostPort]) {
-            var score = peer.state.shouldRequest(req);
-            var want = score > threshold &&
-                       (selectedPeer === null || score > selectedScore);
-            if (want) {
-                selectedPeer = peer;
-                selectedScore = score;
-            }
-        }
+    return self._heap.choose(self.peerScoreThreshold, filterTriedPeers);
+
+    function filterTriedPeers(peer) {
+        return !req.triedRemoteAddrs[peer.hostPort];
     }
-    return selectedPeer;
 };
 
 function popout(array, i) {
