@@ -160,8 +160,7 @@ TChannelPeers.prototype.entries = function entries() {
 
 TChannelPeers.prototype.clear = function clear() {
     var self = this;
-    var keys = self.keys();
-    var vals = new Array(keys.length);
+
     if (self.channel.subChannels) {
         var names = Object.keys(self.channel.subChannels);
         for (var i = 0; i < names.length; i++) {
@@ -172,7 +171,6 @@ TChannelPeers.prototype.clear = function clear() {
     }
     self._map = Object.create(null);
     self._keys = [];
-    return vals;
 };
 
 TChannelPeers.prototype.delete = function del(hostPort) {
