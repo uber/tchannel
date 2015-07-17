@@ -67,7 +67,13 @@ function StateOptions(stateMachine, options) {
  * - channel.random
  */
 
-function State() {
+function State(options) {
+    var self = this;
+
+    self.stateMachine = options.stateMachine;
+    self.nextHandler = options.nextHandler;
+    self.timers = options.timers;
+    self.random = options.random;
 }
 
 State.prototype.onRequest = function onRequest(/* req */) {
@@ -88,10 +94,8 @@ State.prototype.close = function close(callback) {
 
 function HealthyState(options) {
     var self = this;
-    self.stateMachine = options.stateMachine;
-    self.nextHandler = options.nextHandler;
-    self.timers = options.timers;
-    self.random = options.random;
+    State.call(self, options);
+
     self.period = options.period || 1000; // ms
     self.start = self.timers.now();
     self.maxErrorRate = options.maxErrorRate || 0.5;
@@ -162,10 +166,8 @@ HealthyState.prototype.onRequestError = function onRequestError(err) {
 
 function UnhealthyState(options) {
     var self = this;
-    self.stateMachine = options.stateMachine;
-    self.nextHandler = options.nextHandler;
-    self.timers = options.timers;
-    self.random = options.random;
+    State.call(self, options);
+
     self.minResponseCount = options.probation || 5;
     self.period = options.period || 1000;
     self.start = self.timers.now();
@@ -232,7 +234,8 @@ UnhealthyState.prototype.onRequestError = function onRequestError(err) {
 
 function LockedHealthyState(options) {
     var self = this;
-    self.nextHandler = options.nextHandler;
+
+    State.call(self, options);
 }
 
 inherits(LockedHealthyState, State);
@@ -252,7 +255,8 @@ LockedHealthyState.prototype.shouldRequest = function shouldRequest(req, options
 
 function LockedUnhealthyState(options) {
     var self = this;
-    self.nextHandler = options.nextHandler;
+
+    State.call(self, options);
 }
 
 inherits(LockedUnhealthyState, State);
