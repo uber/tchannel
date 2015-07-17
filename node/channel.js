@@ -613,10 +613,12 @@ TChannel.prototype.request = function channelRequest(options) {
 
     options = options || {};
 
-    if (options.hasNoParent && (Math.random() < self.traceSample)) {
-        options.trace = true;
-    } else {
-        options.trace = false;
+    if (options.hasNoParent) {
+        if (Math.random() < self.traceSample) {
+            options.trace = true;
+        } else {
+            options.trace = false;
+        }
     }
 
     var opts = new RequestOptions(self, options);
