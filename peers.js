@@ -200,6 +200,10 @@ function choosePeer(req) {
     /*eslint complexity: [2, 15]*/
     var self = this;
 
+    if (!self.channel.topChannel) {
+        return null;
+    }
+
     var hosts = self._keys;
     if (!hosts || !hosts.length) {
         return null;
