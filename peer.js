@@ -340,11 +340,33 @@ TChannelPeer.prototype.countOutPending = function countOutPending() {
     return pending;
 };
 
+var QOS_UNCONNECTED = 0;
+var QOS_ONLY_INCOMING = 1;
+var QOS_FRESH_OUTGOING = 2;
+var QOS_READY_OUTGOING = 3;
+
 function PreferOutgoingHandler(peer) {
     var self = this;
 
     self.peer = peer;
 }
+
+PreferOutgoingHandler.prototype.getQOS = function getQOS() {
+    var self = this;
+
+    var inconn = self.peer.getInConnection();
+    var outconn = self.peer.getOutConnection();
+
+    if (!inconn && !outconn) {
+        return QOS_UNCONNECTED;
+    } else if (!outconn || outconn.direction !== 'out') {
+        return QOS_ONLY_INCOMING;
+    } else if (outconn.remoteName === null) {
+        return QOS_FRESH_OUTGOING;
+    } else {
+        return QOS_READY_OUTGOING;
+    }
+};
 
 // Consulted depending on the peer state
 PreferOutgoingHandler.prototype.shouldRequest = function shouldRequest() {
@@ -355,18 +377,18 @@ PreferOutgoingHandler.prototype.shouldRequest = function shouldRequest() {
     //   [0.2, 0.3)  incoming connections
     //   [0.3, 0.4)  new outgoing connections
     //   [0.4, 1.0)  identified outgoing connections
-    var inconn = self.peer.getInConnection();
-    var outconn = self.peer.getOutConnection();
     var random = self.peer.outPendingWeightedRandom();
-    if (!inconn && !outconn) {
-        return 0.1 + random * 0.1;
-    } else if (!outconn || outconn.direction !== 'out') {
-        self.peer.connect();
-        return 0.2 + random * 0.1;
-    } else if (outconn.remoteName === null) {
-        return 0.3 + random * 0.1;
-    } else {
-        return 0.4 + random * 0.6;
+    var qos = self.getQOS();
+    switch (qos) {
+        case QOS_UNCONNECTED:
+            return 0.1 + random * 0.1;
+        case QOS_ONLY_INCOMING:
+            self.peer.connect();
+            return 0.2 + random * 0.1;
+        case QOS_FRESH_OUTGOING:
+            return 0.3 + random * 0.1;
+        case QOS_READY_OUTGOING:
+            return 0.4 + random * 0.6;
     }
 };
 
