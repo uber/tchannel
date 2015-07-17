@@ -117,34 +117,50 @@ TChannelV2Handler.prototype.nextFrameId = function nextFrameId() {
 
 TChannelV2Handler.prototype.handleFrame = function handleFrame(frame) {
     var self = this;
+    var res;
     switch (frame.body.type) {
         case v2.Types.InitRequest:
-            return self.handleInitRequest(frame);
+            res = self.handleInitRequest(frame);
+            break;
         case v2.Types.InitResponse:
-            return self.handleInitResponse(frame);
+            res = self.handleInitResponse(frame);
+            break;
         case v2.Types.CallRequest:
-            return self.handleCallRequest(frame);
+            res = self.handleCallRequest(frame);
+            break;
         case v2.Types.CallResponse:
-            return self.handleCallResponse(frame);
+            res = self.handleCallResponse(frame);
+            break;
         case v2.Types.Cancel:
-            return self.handleCancel(frame);
+            res = self.handleCancel(frame);
+            break;
         case v2.Types.CallRequestCont:
-            return self.handleCallRequestCont(frame);
+            res = self.handleCallRequestCont(frame);
+            break;
         case v2.Types.CallResponseCont:
-            return self.handleCallResponseCont(frame);
+            res = self.handleCallResponseCont(frame);
+            break;
         case v2.Types.Claim:
-            return self.handleClaim(frame);
+            res = self.handleClaim(frame);
+            break;
         case v2.Types.PingRequest:
-            return self.handlePingRequest(frame);
+            res = self.handlePingRequest(frame);
+            break;
         case v2.Types.PingResponse:
-            return self.handlePingResponse(frame);
+            res = self.handlePingResponse(frame);
+            break;
         case v2.Types.ErrorResponse:
-            return self.handleError(frame);
+            res = self.handleError(frame);
+            break;
         default:
-            return self.errorEvent.emit(self, errors.TChannelUnhandledFrameTypeError({
+            res = self.errorEvent.emit(self, errors.TChannelUnhandledFrameTypeError({
                 typeCode: frame.body.type
             }));
+            break;
     }
+
+    frame.release();
+    return res;
 };
 
 TChannelV2Handler.prototype.handleInitRequest = function handleInitRequest(reqFrame) {
@@ -547,8 +563,9 @@ TChannelV2Handler.prototype.sendInitRequest = function sendInitRequest() {
         process_name: processName
         /* jshint camelcase:true */
     });
-    var reqFrame = new v2.Frame(id, body);
+    var reqFrame = v2.Frame.create(id, body);
     self.pushFrame(reqFrame);
+    reqFrame.release();
 };
 
 TChannelV2Handler.prototype.sendInitResponse = function sendInitResponse(reqFrame) {
@@ -562,8 +579,9 @@ TChannelV2Handler.prototype.sendInitResponse = function sendInitResponse(reqFram
         process_name: processName
         /* jshint camelcase:true */
     });
-    var resFrame = new v2.Frame(id, body);
+    var resFrame = v2.Frame.create(id, body);
     self.pushFrame(resFrame);
+    resFrame.release();
 };
 
 TChannelV2Handler.prototype.sendCallRequestFrame =
@@ -812,10 +830,11 @@ TChannelV2Handler.prototype._sendCallBodies = function _sendCallBodies(id, body,
             body.csum = checksum;
         }
 
-        frame = new v2.Frame(id, body);
+        frame = v2.Frame.create(id, body);
         self.pushFrame(frame);
         size += frame.size;
         checksum = body.csum;
+        frame.release();
     } while (body = body.cont);
 
     return new CallBodiesResult(checksum, size);
@@ -832,16 +851,18 @@ TChannelV2Handler.prototype.sendPingRequest = function sendPingRequest() {
     var self = this;
     var id = self.nextFrameId();
     var body = new v2.PingRequest();
-    var reqFrame = new v2.Frame(id, body);
+    var reqFrame = v2.Frame.create(id, body);
     self.pushFrame(reqFrame);
+    reqFrame.release();
     return id;
 };
 
 TChannelV2Handler.prototype.sendPingReponse = function sendPingReponse(res) {
     var self = this;
     var body = new v2.PingResponse();
-    var resFrame = new v2.Frame(res.id, body);
+    var resFrame = v2.Frame.create(res.id, body);
     self.pushFrame(resFrame);
+    resFrame.release();
 };
 
 TChannelV2Handler.prototype.sendErrorFrame = function sendErrorFrame(r, codeString, message) {
@@ -855,8 +876,9 @@ TChannelV2Handler.prototype.sendErrorFrame = function sendErrorFrame(r, codeStri
         message = 'UNKNOWN CODE(' + codeString + '): ' + message;
     }
     var errBody = new v2.ErrorResponse(code, r.tracing, message);
-    var errFrame = new v2.Frame(r.id, errBody);
+    var errFrame = v2.Frame.create(r.id, errBody);
     self.pushFrame(errFrame);
+    errFrame.release();
 };
 
 TChannelV2Handler.prototype.buildOutRequest = function buildOutRequest(options) {
@@ -876,7 +898,7 @@ TChannelV2Handler.prototype.buildOutRequest = function buildOutRequest(options) 
     if (options.streamed) {
         return new StreamingOutRequest(self, id, options);
     } else {
-        return new OutRequest(self, id, options);
+        return OutRequest.create(self, id, options);
     }
 };
 

@@ -48,7 +48,7 @@ RelayHandler.prototype.handleRequest = function handleRequest(req, buildRes) {
     // }
 
     req.forwardTrace = true;
-    var rereq = new RelayRequest(self.channel, req, buildRes);
+    var rereq = RelayRequest(self.channel, req, buildRes);
 
     rereq.createOutRequest();
 };

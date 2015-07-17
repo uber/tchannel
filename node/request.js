@@ -92,6 +92,10 @@ TChannelRequest.prototype.emitError = function emitError(err) {
 
     self.channel.services.onRequestError(self);
     self.errorEvent.emit(self, err);
+
+    for (var i = 0; i < self.outReqs.length; i++) {
+        self.outReqs[i].release();
+    }
 };
 
 TChannelRequest.prototype.emitResponse = function emitResponse(res) {
@@ -104,6 +108,10 @@ TChannelRequest.prototype.emitResponse = function emitResponse(res) {
 
     self.channel.services.onRequestResponse(self);
     self.responseEvent.emit(self, res);
+
+    for (var i = 0; i < self.outReqs.length; i++) {
+        self.outReqs[i].release();
+    }
 };
 
 TChannelRequest.prototype.hookupStreamCallback = function hookupCallback(callback) {

@@ -35,6 +35,9 @@ function SelfOutRequest(conn, id, options) {
 }
 inherits(SelfOutRequest, OutRequest);
 
+SelfOutRequest.prototype.release = function release() {
+};
+
 function SelfStreamingOutRequest(conn, id, options) {
     var self = this;
     OutRequest.call(self, id, options);
