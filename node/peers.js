@@ -20,7 +20,6 @@
 
 'use strict';
 
-var assert = require('assert');
 var inherits = require('util').inherits;
 var extend = require('xtend');
 var EventEmitter = require('./lib/event_emitter');
@@ -106,27 +105,31 @@ TChannelPeers.prototype.add = function add(hostPort, options) {
     /*eslint max-statements: [2, 25]*/
     var self = this;
     var peer = self._map[hostPort];
-    if (!peer) {
-        var topChannel = self.channel.topChannel || self.channel;
-
-        if (hostPort === topChannel.hostPort) {
-            if (!topChannel.peers.selfPeer) {
-                topChannel.peers.selfPeer = TChannelSelfPeer(topChannel);
-            }
-
-            return topChannel.peers.selfPeer;
-        }
-
-        if (self.channel.topChannel) {
-            peer = self.channel.topChannel.peers.add(hostPort, options);
-        } else {
-            options = options || extend({}, self.peerOptions);
-            peer = TChannelPeer(self.channel, hostPort, options);
-            self.allocPeerEvent.emit(self, peer);
-        }
-        self._map[hostPort] = peer;
-        self._keys.push(hostPort);
+    if (peer) {
+        return peer;
     }
+
+    var topChannel = self.channel.topChannel || self.channel;
+
+    if (hostPort === topChannel.hostPort) {
+        if (!topChannel.peers.selfPeer) {
+            topChannel.peers.selfPeer = TChannelSelfPeer(topChannel);
+        }
+
+        return topChannel.peers.selfPeer;
+    }
+
+    if (self.channel.topChannel) {
+        peer = self.channel.topChannel.peers.add(hostPort, options);
+    } else {
+        options = options || extend({}, self.peerOptions);
+        peer = TChannelPeer(self.channel, hostPort, options);
+        self.allocPeerEvent.emit(self, peer);
+    }
+
+    self._map[hostPort] = peer;
+    self._keys.push(hostPort);
+
     return peer;
 };
 
@@ -157,8 +160,7 @@ TChannelPeers.prototype.entries = function entries() {
 
 TChannelPeers.prototype.clear = function clear() {
     var self = this;
-    var keys = self.keys();
-    var vals = new Array(keys.length);
+
     if (self.channel.subChannels) {
         var names = Object.keys(self.channel.subChannels);
         for (var i = 0; i < names.length; i++) {
@@ -169,7 +171,6 @@ TChannelPeers.prototype.clear = function clear() {
     }
     self._map = Object.create(null);
     self._keys = [];
-    return vals;
 };
 
 TChannelPeers.prototype.delete = function del(hostPort) {
@@ -194,20 +195,14 @@ TChannelPeers.prototype.delete = function del(hostPort) {
     return peer;
 };
 
-TChannelPeers.prototype.waitForIdentified =
-function waitForIdentified(options, callback) {
-    var self = this;
-
-    assert(typeof options.host === 'string', 'options.host is required');
-
-    var peer = self.add(options.host);
-    peer.waitForIdentified(callback);
-};
-
 TChannelPeers.prototype.choosePeer =
 function choosePeer(req) {
     /*eslint complexity: [2, 15]*/
     var self = this;
+
+    if (!self.channel.topChannel) {
+        return null;
+    }
 
     var hosts = self._keys;
     if (!hosts || !hosts.length) {
