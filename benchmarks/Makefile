@@ -19,7 +19,7 @@ flame-torch-relay-bench:
 # 		-- --skipPing -s 4096
 
 create-flame:
-	stackcollapse-stap.pl ./flame.raw > ./flame.folded
+	stackcollapse-stap.pl ./flame.raw | tr -d "\0" > ./flame.folded
 	flamegraph.pl ./flame.folded > ./flame.svg
 	google-chrome ./flame.svg
 
