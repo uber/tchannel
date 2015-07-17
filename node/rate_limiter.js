@@ -79,7 +79,7 @@ function RateLimiter(options) {
 
     self.defaultServiceRpsLimit = options.defaultServiceRpsLimit || DEFAULT_SERVICE_RPS_LIMIT;
     self.totalRpsLimit = options.totalRpsLimit;
-    if (!self.totalRpsLimit && self.totalRpsLimit !== 0) {
+    if (typeof self.totalRpsLimit !== 'number') {
         self.totalRpsLimit = DEFAULT_TOTAL_RPS_LIMIT;
     }
     self.rpsLimitForServiceName = options.rpsLimitForServiceName || Object.create(null);
@@ -156,7 +156,7 @@ function incrementServiceCounter(serviceName) {
     // creating a new service counter
     if (!counter) {
         var limit = self.rpsLimitForServiceName[serviceName];
-        if (!limit && limit !== 0) {
+        if (typeof limit !== 'number') {
             limit = self.defaultServiceRpsLimit;
         }
         counter = RateLimiterCounter({
