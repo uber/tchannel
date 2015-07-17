@@ -78,7 +78,7 @@ TChannelSubPeers.prototype._delete = function _del(peer) {
 
     delete self._map[peer.hostPort];
     var index = self._keys.indexOf(peer.hostPort);
-    self._keys.splice(index, 1); // TODO: such splice
+    popout(self._keys, index);
 };
 
 TChannelSubPeers.prototype.choosePeer = function choosePeer(req) {
@@ -109,5 +109,19 @@ TChannelSubPeers.prototype.choosePeer = function choosePeer(req) {
     }
     return selectedPeer;
 };
+
+function popout(array, i) {
+    if (!array.length) {
+        return;
+    }
+
+    var j = array.length - 1;
+    if (i !== j) {
+        var tmp = array[i];
+        array[i] = array[j];
+        array[j] = tmp;
+    }
+    array.pop();
+}
 
 module.exports = TChannelSubPeers;
