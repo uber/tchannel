@@ -276,12 +276,14 @@ TChannelPeer.prototype.addConnection = function addConnection(conn) {
 TChannelPeer.prototype.removeConnection = function removeConnection(conn) {
     var self = this;
 
+    var ret = null;
+
     var index = self.connections ? self.connections.indexOf(conn) : -1;
     if (index !== -1) {
-        return self.connections.splice(index, 1)[0];
-    } else {
-        return null;
+        ret = self.connections.splice(index, 1)[0];
     }
+
+    return ret;
 };
 
 TChannelPeer.prototype.makeOutSocket = function makeOutSocket() {
