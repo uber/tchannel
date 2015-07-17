@@ -23,7 +23,7 @@
 var bufrw = require('bufrw');
 var Checksum = require('./checksum');
 var ArgsRW = require('./args');
-var argsrw = ArgsRW(bufrw.buf2);
+var argsrw = ArgsRW();
 
 // flags:1 csumtype:1 (csum:4){0,1} (arg~2)+
 function CallRequestCont(flags, csum, args) {
