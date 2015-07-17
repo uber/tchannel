@@ -120,6 +120,7 @@ HealthyState.prototype.toString = function healthyToString() {
 HealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
     var self = this;
     var now = self.timers.now();
+
     // At the conclusion of a period
     if (now - self.start >= self.period) {
         var totalCount = self.healthyCount + self.unhealthyCount;
@@ -132,11 +133,13 @@ HealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
             self.stateMachine.setState(UnhealthyState);
             return 0;
         }
-        // Alternatley, start a new monitoring period.
-        self.start = self.timers.now();
+
+        // Alternately, start a new monitoring period.
+        self.start = now;
         self.healthyCount = 0;
         self.unhealthyCount = 0;
     }
+
     return self.nextHandler.shouldRequest(req, options);
 };
 
@@ -188,11 +191,11 @@ UnhealthyState.prototype.toString = function healthyToString() {
 
 UnhealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
     var self = this;
+    var now = self.timers.now();
 
     // Start a new period if the previous has concluded
-    var now = self.timers.now();
     if (now - self.start >= self.period) {
-        self.start = self.timers.now();
+        self.start = now;
         self.triedThisPeriod = false;
     }
 
