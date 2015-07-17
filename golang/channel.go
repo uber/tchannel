@@ -247,9 +247,10 @@ func (ch *Channel) Register(h Handler, operationName string) {
 // PeerInfo returns the current peer info for the channel
 func (ch *Channel) PeerInfo() LocalPeerInfo {
 	ch.mutable.mut.RLock()
-	defer ch.mutable.mut.RUnlock()
+	peerInfo := ch.mutable.peerInfo
+	ch.mutable.mut.RUnlock()
 
-	return ch.mutable.peerInfo
+	return peerInfo
 }
 
 func (ch *Channel) createCommonStats() {

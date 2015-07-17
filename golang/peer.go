@@ -73,13 +73,16 @@ func randPeer(peers []*Peer) *Peer {
 // Get returns a peer from the peer list, or nil if none can be found.
 func (l *PeerList) Get() *Peer {
 	l.mut.RLock()
-	defer l.mut.RUnlock()
 
 	if len(l.peers) == 0 {
+		l.mut.RUnlock()
 		return nil
 	}
 
-	return randPeer(l.peers)
+	peer := randPeer(l.peers)
+	l.mut.RUnlock()
+
+	return peer
 }
 
 // GetOrAdd returns a peer for the given hostPort, creating one if it doesn't yet exist.
@@ -141,7 +144,6 @@ func (p *Peer) HostPort() string {
 // TODO(prashant): Should we clear inactive connections?
 func (p *Peer) getActive() []*Connection {
 	p.mut.RLock()
-	defer p.mut.RUnlock()
 
 	var active []*Connection
 	for _, c := range p.connections {
@@ -149,6 +151,8 @@ func (p *Peer) getActive() []*Connection {
 			active = append(active, c)
 		}
 	}
+
+	p.mut.RUnlock()
 	return active
 }
 

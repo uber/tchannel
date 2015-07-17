@@ -69,7 +69,8 @@ func (hmap *handlerMap) register(h Handler, serviceName, operation string) {
 // for the reason that operation is []byte instead of a string
 func (hmap *handlerMap) find(serviceName string, operation []byte) Handler {
 	hmap.mut.RLock()
-	defer hmap.mut.RUnlock()
+	handler := hmap.handlers[serviceName][string(operation)]
+	hmap.mut.RUnlock()
 
-	return hmap.handlers[serviceName][string(operation)]
+	return handler
 }
