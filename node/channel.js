@@ -735,6 +735,10 @@ TChannel.prototype.close = function close(callback) {
         });
     }
 
+    if (!self.topChannel) {
+        self.timeHeap.clear();
+    }
+
     self.peers.close(onClose);
 
     function closeServerSocket() {
