@@ -227,6 +227,7 @@ function StreamArg(options) {
     PassThrough.call(self, options);
     self.started = false;
     self.onValueReady = self.onValueReady.bind(self);
+    self.buf = null;
 }
 inherits(StreamArg, PassThrough);
 
@@ -259,6 +260,7 @@ function bufferStreamData(stream, callback) {
         stream.removeListener('error', finish);
         stream.removeListener('end', finish);
         var buf = Buffer.concat(parts);
+        stream.buf = buf;
         if (err === undefined) err = null;
         callback(err, buf);
     }
