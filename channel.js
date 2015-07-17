@@ -521,7 +521,9 @@ function waitForIdentified(options, callback) {
     if (self.destroyed) {
         callback(errors.TChannelDestroyedError());
     } else {
-        self.peers.waitForIdentified(options, callback);
+        assert(typeof options.host === 'string', 'options.host is required');
+        var peer = self.peers.add(options.host);
+        peer.waitForIdentified(callback);
     }
 };
 
