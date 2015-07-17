@@ -105,27 +105,31 @@ TChannelPeers.prototype.add = function add(hostPort, options) {
     /*eslint max-statements: [2, 25]*/
     var self = this;
     var peer = self._map[hostPort];
-    if (!peer) {
-        var topChannel = self.channel.topChannel || self.channel;
-
-        if (hostPort === topChannel.hostPort) {
-            if (!topChannel.peers.selfPeer) {
-                topChannel.peers.selfPeer = TChannelSelfPeer(topChannel);
-            }
-
-            return topChannel.peers.selfPeer;
-        }
-
-        if (self.channel.topChannel) {
-            peer = self.channel.topChannel.peers.add(hostPort, options);
-        } else {
-            options = options || extend({}, self.peerOptions);
-            peer = TChannelPeer(self.channel, hostPort, options);
-            self.allocPeerEvent.emit(self, peer);
-        }
-        self._map[hostPort] = peer;
-        self._keys.push(hostPort);
+    if (peer) {
+        return peer;
     }
+
+    var topChannel = self.channel.topChannel || self.channel;
+
+    if (hostPort === topChannel.hostPort) {
+        if (!topChannel.peers.selfPeer) {
+            topChannel.peers.selfPeer = TChannelSelfPeer(topChannel);
+        }
+
+        return topChannel.peers.selfPeer;
+    }
+
+    if (self.channel.topChannel) {
+        peer = self.channel.topChannel.peers.add(hostPort, options);
+    } else {
+        options = options || extend({}, self.peerOptions);
+        peer = TChannelPeer(self.channel, hostPort, options);
+        self.allocPeerEvent.emit(self, peer);
+    }
+
+    self._map[hostPort] = peer;
+    self._keys.push(hostPort);
+
     return peer;
 };
 
