@@ -342,7 +342,9 @@ function changeToForward(exitNodes, svcchan) {
     svcchan.peers.clear();
     // TODO: transmit prior known registration data to new owner(s) to
     // speed convergence / deal with transitions better:
-    //     var oldPeers = svcchan.peers.clear();
+    //     var oldHostPorts = svcchan.peers.keys();
+    //     var oldPeers = svcchan.peers.values();
+    //     svcchan.peers.clear();
     //     ... send rpc to new exit nodes
     var exitNames = Object.keys(exitNodes);
     for (var i = 0; i < exitNames.length; i++) {
