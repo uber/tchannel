@@ -235,7 +235,10 @@ function TChannel(options) {
     self.requestDefaults = self.options.requestDefaults ?
         new RequestDefaults(self.options.requestDefaults) : null;
 
-    self.sanityTimer = self.timers.setTimeout(doSanitySweep, SANITY_PERIOD);
+    if (!self.topChannel) {
+        self.sanityTimer = self.timers.setTimeout(doSanitySweep, SANITY_PERIOD);
+    }
+
     function doSanitySweep() {
         self.sanityTimer = null;
         self.sanitySweep();
