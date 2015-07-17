@@ -74,9 +74,9 @@ Operations.prototype.checkLastTimeoutTime = function checkLastTimeoutTime(now) {
         var err = errors.ConnectionStaleTimeoutError({
             lastTimeoutTime: self.lastTimeoutTime
         });
-        self.connection.timedOutEvent.emit(self.connection, err);
-        // TODO: y u no:
-        // self.lastTimeoutTime = now;
+        process.nextTick(function opCheckLastTimedout() {
+            self.connection.timedOutEvent.emit(self.connection, err);
+        });
     } else if (!self.lastTimeoutTime) {
         self.lastTimeoutTime = now;
     }
