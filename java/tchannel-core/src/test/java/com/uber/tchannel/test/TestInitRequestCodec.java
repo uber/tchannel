@@ -1,6 +1,6 @@
 package com.uber.tchannel.test;
 
-import com.uber.tchannel.codecs.InitRequestCodec;
+import com.uber.tchannel.codecs.InitMessageCodec;
 import com.uber.tchannel.codecs.TFrameCodec;
 import com.uber.tchannel.framing.TFrame;
 import com.uber.tchannel.messages.InitRequest;
@@ -18,7 +18,7 @@ public class TestInitRequestCodec {
         EmbeddedChannel channel = new EmbeddedChannel(
                 new LengthFieldBasedFrameDecoder(TFrame.MAX_FRAME_LENGTH, 0, 2, -2, 0, true),
                 new TFrameCodec(),
-                new InitRequestCodec()
+                new InitMessageCodec()
         );
 
         InitRequest initReq = new InitRequest(42, InitRequest.DEFAULT_VERSION, "0.0.0.0:0", "test-process");

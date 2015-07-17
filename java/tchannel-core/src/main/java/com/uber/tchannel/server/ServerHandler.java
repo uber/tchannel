@@ -7,7 +7,11 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 public class ServerHandler extends ChannelHandlerAdapter {
+
+    private final AtomicLong counter = new AtomicLong(0);
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -15,8 +19,8 @@ public class ServerHandler extends ChannelHandlerAdapter {
         System.out.println(initRequest);
 
         InitResponse initResponse = new InitResponse(
-                initRequest.getId(),
-                100,
+                this.counter.incrementAndGet(),
+                initRequest.version,
                 initRequest.hostPort,
                 initRequest.processName
         );

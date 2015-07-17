@@ -20,7 +20,7 @@ public class TFrame {
     }
 
     public TFrame(MessageType messageType, long id, byte[] payload) {
-        this(messageType.type, id, payload);
+        this(messageType.byteValue(), id, payload);
     }
 
     @Override

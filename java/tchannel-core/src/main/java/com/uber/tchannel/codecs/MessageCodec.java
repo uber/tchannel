@@ -1,27 +1,31 @@
 package com.uber.tchannel.codecs;
 
 import com.uber.tchannel.framing.TFrame;
-import com.uber.tchannel.messages.AbstractMessage;
-import com.uber.tchannel.messages.InitRequest;
-import com.uber.tchannel.messages.MessageType;
+import com.uber.tchannel.messages.*;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageCodec;
 
 import java.util.List;
 
-public class MessageCodec extends MessageToMessageCodec<TFrame, AbstractMessage> {
+public class MessageCodec extends MessageToMessageCodec<TFrame, Message> {
 
-    private final InitRequestCodec initRequestCodec = new InitRequestCodec();
+    private final InitMessageCodec initMessageCodec = new InitMessageCodec();
+    private final PingMessageCodec pingMessageCodec = new PingMessageCodec();
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, AbstractMessage msg, List<Object> out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, Message msg, List<Object> out) throws Exception {
         switch (msg.getMessageType()) {
             case InitRequest:
-                this.initRequestCodec.encode(ctx, (InitRequest) msg, out);
+                this.initMessageCodec.encode(ctx, (InitRequest) msg, out);
                 break;
             case InitResponse:
+                this.initMessageCodec.encode(ctx, (InitResponse) msg, out);
                 break;
-            case Error:
+            case PingRequest:
+                this.pingMessageCodec.encode(ctx, (PingRequest) msg, out);
+                break;
+            case PingResponse:
+                this.pingMessageCodec.encode(ctx, (PingResponse) msg, out);
                 break;
             default:
                 throw new Exception(String.format("Unknown MessageType: %s", msg.getMessageType()));
@@ -31,14 +35,19 @@ public class MessageCodec extends MessageToMessageCodec<TFrame, AbstractMessage>
 
     @Override
     protected void decode(ChannelHandlerContext ctx, TFrame frame, List<Object> out) throws Exception {
-        MessageType type = MessageType.forValue(frame.type).orElse(MessageType.Error);
+        MessageType type = MessageType.fromByte(frame.type).orElse(MessageType.None);
         switch (type) {
             case InitRequest:
-                this.initRequestCodec.decode(ctx, frame, out);
+                this.initMessageCodec.decode(ctx, frame, out);
                 break;
             case InitResponse:
+                this.initMessageCodec.decode(ctx, frame, out);
                 break;
-            case Error:
+            case PingRequest:
+                this.pingMessageCodec.decode(ctx, frame, out);
+                break;
+            case PingResponse:
+                this.pingMessageCodec.decode(ctx, frame, out);
                 break;
             default:
                 throw new Exception(String.format("Unknown MessageType: %s", type));
