@@ -128,8 +128,7 @@ HealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
         // Transition to unhealthy state if the healthy request rate dips below
         // the acceptable threshold.
         if (self.unhealthyCount / totalCount > self.maxErrorRate &&
-            self.totalRequests > self.minRequests
-        ) {
+            self.totalRequests > self.minRequests) {
             self.stateMachine.setState(UnhealthyState);
             return 0;
         }
@@ -209,11 +208,13 @@ UnhealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
 
 UnhealthyState.prototype.onRequest = function onRequest(/* req */) {
     var self = this;
+
     self.triedThisPeriod = true;
 };
 
 UnhealthyState.prototype.onRequestHealthy = function onRequestHealthy() {
     var self = this;
+
     self.healthyCount++;
     if (self.healthyCount > self.minResponseCount) {
         self.stateMachine.setState(HealthyState);
@@ -222,17 +223,20 @@ UnhealthyState.prototype.onRequestHealthy = function onRequestHealthy() {
 
 UnhealthyState.prototype.onRequestUnhealthy = function onRequestUnhealthy() {
     var self = this;
+
     self.healthyCount = 0;
 };
 
 UnhealthyState.prototype.onRequestError = function onRequestError(err) {
     var self = this;
+
     var codeString = errors.classify(err);
-    if (errors.isUnhealthy(codeString)) {
-        self.healthyCount = 0;
-    } else {
+    if (!errors.isUnhealthy(codeString)) {
         self.onRequestHealthy();
+        return;
     }
+
+    self.healthyCount = 0;
 };
 
 function LockedHealthyState(options) {
@@ -253,6 +257,7 @@ LockedHealthyState.prototype.toString = function lockedHealthyToString() {
 
 LockedHealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
     var self = this;
+
     return self.nextHandler.shouldRequest(req, options);
 };
 
