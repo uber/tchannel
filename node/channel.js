@@ -225,6 +225,8 @@ function TChannel(options) {
         });
     }
 
+    self.traceSample = self.options.traceSample || 0.01; // sample 1% by default
+
     // lazily created by .getServer (usually from .listen)
     self.serverSocket = null;
     self.serverConnections = null;
@@ -606,6 +608,13 @@ TChannel.prototype.request = function channelRequest(options) {
     var self = this;
 
     options = options || {};
+
+    if (options.hasNoParent && (Math.random() < self.traceSample)) {
+        options.trace = true;
+    } else {
+        options.trace = false;
+    }
+
     var opts = new RequestOptions(self, options);
 
     self.fastRequestDefaults(opts);
