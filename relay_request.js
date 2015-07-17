@@ -32,6 +32,8 @@ function RelayRequest(channel, inreq, buildRes) {
     self.outreq = null;
     self.buildRes = buildRes;
     self.peer = null;
+
+    self.error = null;
 }
 
 RelayRequest.prototype.createOutRequest = function createOutRequest(host) {
@@ -144,7 +146,9 @@ RelayRequest.prototype.createOutResponse = function createOutResponse(options) {
         self.channel.logger.warn('relay request already responded', {
             // TODO: better context
             remoteAddr: self.inreq.remoteAddr,
-            id: self.inreq.id
+            id: self.inreq.id,
+            options: options,
+            error: self.error
         });
         return null;
     }
@@ -200,6 +204,9 @@ RelayRequest.prototype.onResponse = function onResponse(res) {
 
 RelayRequest.prototype.onError = function onError(err) {
     var self = this;
+
+    self.error = err;
+
     if (!self.createOutResponse()) return;
     var codeName = errors.classify(err) || 'UnexpectedError';
 
