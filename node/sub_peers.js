@@ -21,50 +21,29 @@
 'use strict';
 
 var inherits = require('util').inherits;
-var extend = require('xtend');
 
 var TChannelPeersBase = require('./peers_base.js');
-var TChannelPeer = require('./peer');
-var TChannelSelfPeer = require('./self_peer');
 
-function TChannelPeers(channel, options) {
-    if (!(this instanceof TChannelPeers)) {
-        return new TChannelPeers(channel, options);
+function TChannelSubPeers(channel, options) {
+    if (!(this instanceof TChannelSubPeers)) {
+        return new TChannelSubPeers(channel, options);
     }
     var self = this;
     TChannelPeersBase.call(self, channel, options);
 
-    self.allocPeerEvent = self.defineEvent('allocPeer');
-    self.peerOptions = self.options.peerOptions || {};
     self.peerScoreThreshold = self.options.peerScoreThreshold || 0;
-    self.selfPeer = null;
 }
 
-inherits(TChannelPeers, TChannelPeersBase);
+inherits(TChannelSubPeers, TChannelPeersBase);
 
-TChannelPeers.prototype.close = function close(callback) {
+TChannelSubPeers.prototype.close = function close(callback) {
     var self = this;
 
     var peers = self.values();
-    if (self.selfPeer) {
-        peers.push(self.selfPeer);
-    }
     TChannelPeersBase.prototype.close.call(self, peers, callback);
 };
 
-TChannelPeers.prototype.sanitySweep = function sanitySweep() {
-    var self = this;
-
-    if (self.selfPeer) {
-        for (var i = 0; i < self.selfPeer.connections.length; i++) {
-            var conn = self.selfPeer.connections[i];
-            conn.ops.sanitySweep();
-        }
-    }
-    TChannelPeersBase.prototype.sanitySweep.call(self);
-};
-
-TChannelPeers.prototype.add = function add(hostPort, options) {
+TChannelSubPeers.prototype.add = function add(hostPort, options) {
     /*eslint max-statements: [2, 25]*/
     var self = this;
 
@@ -73,23 +52,13 @@ TChannelPeers.prototype.add = function add(hostPort, options) {
         return peer;
     }
 
-    var topChannel = self.channel.topChannel || self.channel;
+    var topChannel = self.channel.topChannel;
 
     if (hostPort === topChannel.hostPort) {
-        if (!topChannel.peers.selfPeer) {
-            topChannel.peers.selfPeer = TChannelSelfPeer(topChannel);
-        }
-
-        return topChannel.peers.selfPeer;
+        return topChannel.peers.getSelfPeer();
     }
 
-    if (self.channel.topChannel) {
-        peer = self.channel.topChannel.peers.add(hostPort, options);
-    } else {
-        options = options || extend({}, self.peerOptions);
-        peer = TChannelPeer(self.channel, hostPort, options);
-        self.allocPeerEvent.emit(self, peer);
-    }
+    peer = topChannel.peers.add(hostPort, options);
 
     self._map[hostPort] = peer;
     self._keys.push(hostPort);
@@ -97,43 +66,24 @@ TChannelPeers.prototype.add = function add(hostPort, options) {
     return peer;
 };
 
-TChannelPeers.prototype.clear = function clear() {
+TChannelSubPeers.prototype.clear = function clear() {
     var self = this;
 
-    if (self.channel.subChannels) {
-        var names = Object.keys(self.channel.subChannels);
-        for (var i = 0; i < names.length; i++) {
-            var subChannel = self.channel.subChannels[names[i]];
-            subChannel.peers._map = Object.create(null);
-            subChannel.peers._keys = [];
-        }
-    }
     self._map = Object.create(null);
     self._keys = [];
 };
 
-TChannelPeers.prototype._delete = function _del(peer) {
+TChannelSubPeers.prototype._delete = function _del(peer) {
     var self = this;
 
-    if (self.channel.subChannels) {
-        var names = Object.keys(self.channel.subChannels);
-        for (var i = 0; i < names.length; i++) {
-            var subChannel = self.channel.subChannels[names[i]];
-            subChannel.peers.delete(peer.hostPort);
-        }
-    }
     delete self._map[peer.hostPort];
     var index = self._keys.indexOf(peer.hostPort);
-    self._keys.splice(index, 1);
+    self._keys.splice(index, 1); // TODO: such splice
 };
 
-TChannelPeers.prototype.choosePeer = function choosePeer(req) {
+TChannelSubPeers.prototype.choosePeer = function choosePeer(req) {
     /*eslint complexity: [2, 15]*/
     var self = this;
-
-    if (!self.channel.topChannel) {
-        return null;
-    }
 
     var hosts = self._keys;
     if (!hosts || !hosts.length) {
@@ -160,4 +110,4 @@ TChannelPeers.prototype.choosePeer = function choosePeer(req) {
     return selectedPeer;
 };
 
-module.exports = TChannelPeers;
+module.exports = TChannelSubPeers;
