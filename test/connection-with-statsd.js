@@ -120,6 +120,7 @@ allocCluster.test('emits connection stats with failure', {
     function onIdentified(err) {
         assert.notEqual(err, null, 'should be an error');
         process.nextTick(function next() {
+            client.flushStats();
             assert.deepEqual(statsd._buffer._elements, [{
                 type: 'c',
                 name: 'tchannel.connections.initiated.' + hostKey,
