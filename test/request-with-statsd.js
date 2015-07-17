@@ -82,6 +82,9 @@ allocCluster.test('emits stats on call success', {
         if (err) {
             return assert.end(err);
         }
+
+        client.flushStats();
+
         assert.ok(res.ok, 'res should be ok');
         assert.deepEqual(statsd._buffer._elements, [{
             type: 'c',
@@ -204,6 +207,9 @@ allocCluster.test('emits stats on p2p call success', {
         if (err) {
             return assert.end(err);
         }
+
+        client.flushStats();
+
         assert.ok(res.ok, 'res should be ok');
         assert.deepEqual(statsd._buffer._elements, [{
             type: 'c',
@@ -311,6 +317,9 @@ allocCluster.test('emits stats with no connection metrics', {
         if (err) {
             return assert.end(err);
         }
+
+        client.flushStats();
+
         assert.ok(res.ok, 'res should be ok');
         assert.deepEqual(statsd._buffer._elements, [{
             type: 'c',
@@ -408,6 +417,9 @@ allocCluster.test('emits stats on call failure', {
         if (err) {
             return assert.end(err);
         }
+
+        client.flushStats();
+
         assert.ok(res.ok === false, 'res should be not ok');
         assert.deepEqual(statsd._buffer._elements, [{
             type: 'c',
