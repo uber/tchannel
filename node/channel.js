@@ -225,6 +225,12 @@ function TChannel(options) {
         });
     }
 
+    if (typeof self.options.traceSample === 'number') {
+        self.traceSample = self.options.traceSample;
+    } else {
+        self.traceSample = 0.01;
+    }
+
     // lazily created by .getServer (usually from .listen)
     self.serverSocket = null;
     self.serverConnections = null;
@@ -606,6 +612,15 @@ TChannel.prototype.request = function channelRequest(options) {
     var self = this;
 
     options = options || {};
+
+    if (options.hasNoParent) {
+        if (Math.random() < self.traceSample) {
+            options.trace = true;
+        } else {
+            options.trace = false;
+        }
+    }
+
     var opts = new RequestOptions(self, options);
 
     self.fastRequestDefaults(opts);
