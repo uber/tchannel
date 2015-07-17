@@ -84,8 +84,10 @@ TimeHeap.prototype.clear = function clear() {
 
     self.timers.clearTimeout(self.timer);
     self.array = [];
+    self.expired = [];
     self.timer = null;
     self.lastTime = self.timers.now();
+    self.end = 0;
 };
 
 TimeHeap.prototype.getNextTimeout = function getNextTimeout(now) {
