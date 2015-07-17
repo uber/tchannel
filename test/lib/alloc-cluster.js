@@ -51,7 +51,8 @@ function allocCluster(opts) {
     };
     var channelOptions = extend({
         logger: logger,
-        timeoutFuzz: 0
+        timeoutFuzz: 0,
+        traceSample: 1
     }, opts.channelOptions || opts);
 
     for (var i = 0; i < opts.numPeers; i++) {

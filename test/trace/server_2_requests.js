@@ -41,6 +41,7 @@ test('server 2 requests tracing test', function (assert) {
     var subservice = new TChannel({
         logger: logger,
         traceReporter: traceReporter,
+        traceSample: 1,
         trace: true
     });
     var subChan = subservice.makeSubChannel({
@@ -50,6 +51,7 @@ test('server 2 requests tracing test', function (assert) {
     var server = new TChannel({
         logger: logger,
         traceReporter: traceReporter,
+        traceSample: 1,
         trace: true
     });
     var serverChan = server.makeSubChannel({
@@ -63,6 +65,7 @@ test('server 2 requests tracing test', function (assert) {
     var client = new TChannel({
         logger: logger,
         traceReporter: traceReporter,
+        traceSample: 1,
         trace: true
     });
     var clientChan = client.makeSubChannel({
