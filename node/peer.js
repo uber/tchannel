@@ -54,6 +54,7 @@ function TChannelPeer(channel, hostPort, options) {
     self.hostPort = hostPort;
     self.connections = [];
     self.pendingIdentified = 0;
+    self.heapElements = [];
 
     self.stateOptions = new states.StateOptions(self, {
         timeHeap: self.channel.timeHeap,
@@ -100,6 +101,20 @@ function TChannelPeer(channel, hostPort, options) {
 }
 
 inherits(TChannelPeer, EventEmitter);
+
+TChannelPeer.prototype.invalidateScore = function invalidateScore() {
+    var self = this;
+
+    if (!self.heapElements.length) {
+        return;
+    }
+
+    var score = self.state.shouldRequest();
+    for (var i = 0; i < self.heapElements.length; i++) {
+        var el = self.heapElements[i];
+        el.rescore(score);
+    }
+};
 
 TChannelPeer.prototype.isConnected = function isConnected(direction, identified) {
     var self = this;
@@ -263,7 +278,20 @@ TChannelPeer.prototype.addConnection = function addConnection(conn) {
     }
     conn.errorEvent.on(onConnectionError);
     conn.closeEvent.on(onConnectionClose);
+
+    self._maybeInvalidateScore();
+    if (!conn.remoteName) {
+        // TODO: could optimize if nextHandler had a way of saying "would a new
+        // identified connection change your QOS?"
+        conn.identifiedEvent.on(onIdentified);
+    }
+
     return conn;
+
+    function onIdentified() {
+        conn.identifiedEvent.removeListener(onIdentified);
+        self._maybeInvalidateScore();
+    }
 
     function onConnectionError(err) {
         removeConnection(err);
@@ -276,6 +304,7 @@ TChannelPeer.prototype.addConnection = function addConnection(conn) {
     function removeConnection(err) {
         conn.closeEvent.removeListener(onConnectionClose);
         conn.errorEvent.removeListener(onConnectionError);
+        conn.identifiedEvent.removeListener(onIdentified);
         if (err) {
             var loggerInfo = {
                 error: err,
@@ -305,6 +334,8 @@ TChannelPeer.prototype.removeConnection = function removeConnection(conn) {
     if (index !== -1) {
         ret = self.connections.splice(index, 1)[0];
     }
+
+    self._maybeInvalidateScore();
 
     return ret;
 };
@@ -357,6 +388,25 @@ TChannelPeer.prototype.countOutPending = function countOutPending() {
         pending += connPending.out;
     }
     return pending;
+};
+
+// TODO: on connection #shouldRequest impacting event
+// - on identified
+
+// Called on connection change event
+TChannelPeer.prototype._maybeInvalidateScore = function _maybeInvalidateScore() {
+    var self = this;
+
+    if (!self.state.willCallNextHandler()) {
+        return;
+    }
+
+    var nextHandler = self.state.nextHandler;
+    if (nextHandler.getQOS() === nextHandler.lastQOS) {
+        return;
+    }
+
+    self.invalidateScore();
 };
 
 var QOS_UNCONNECTED = 0;
