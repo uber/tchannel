@@ -40,6 +40,7 @@ function TChannelPeer(channel, hostPort, options) {
     var self = this;
     EventEmitter.call(self);
     StateMachine.call(self);
+
     self.stateChangedEvent = self.defineEvent('stateChanged');
     self.allocConnectionEvent = self.defineEvent('allocConnection');
 
@@ -100,6 +101,7 @@ inherits(TChannelPeer, EventEmitter);
 
 TChannelPeer.prototype.isConnected = function isConnected(direction, identified) {
     var self = this;
+
     if (identified === undefined) identified = true;
     for (var i = 0; i < self.connections.length; i++) {
         var conn = self.connections[i];
@@ -111,11 +113,13 @@ TChannelPeer.prototype.isConnected = function isConnected(direction, identified)
             return true;
         }
     }
+
     return false;
 };
 
 TChannelPeer.prototype.close = function close(callback) {
     var self = this;
+
     if (self.reportTimer) {
         self.timers.clearTimeout(self.reportTimer);
         self.reportTimer = null;
