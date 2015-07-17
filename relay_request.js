@@ -32,6 +32,8 @@ function RelayRequest(channel, inreq, buildRes) {
     self.outreq = null;
     self.buildRes = buildRes;
     self.peer = null;
+
+    self.error = null;
 }
 
 RelayRequest.prototype.createOutRequest = function createOutRequest(host) {
@@ -122,9 +124,15 @@ RelayRequest.prototype.onIdentified = function onIdentified(err1) {
 
     if (self.outreq.streamed) {
         // TODO: frame-at-a-time rather than re-streaming?
-        self.inreq.arg1.pipe(self.outreq.arg1);
-        self.inreq.arg2.pipe(self.outreq.arg2);
-        self.inreq.arg3.pipe(self.outreq.arg3);
+
+        var arg1 = self.inreq.arg1;
+        if (arg1.buf) {
+            arg1 = arg1.buf;
+        }
+
+        self.outreq.sendStreams(
+            arg1, self.inreq.arg2, self.inreq.arg3
+        );
     } else {
         self.outreq.send(self.inreq.arg1, self.inreq.arg2, self.inreq.arg3);
     }
@@ -144,7 +152,9 @@ RelayRequest.prototype.createOutResponse = function createOutResponse(options) {
         self.channel.logger.warn('relay request already responded', {
             // TODO: better context
             remoteAddr: self.inreq.remoteAddr,
-            id: self.inreq.id
+            id: self.inreq.id,
+            options: options,
+            error: self.error
         });
         return null;
     }
@@ -200,6 +210,9 @@ RelayRequest.prototype.onResponse = function onResponse(res) {
 
 RelayRequest.prototype.onError = function onError(err) {
     var self = this;
+
+    self.error = err;
+
     if (!self.createOutResponse()) return;
     var codeName = errors.classify(err) || 'UnexpectedError';
 
