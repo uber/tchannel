@@ -60,7 +60,7 @@ function TChannelPeer(channel, hostPort, options) {
         maxErrorRate: self.options.maxErrorRate,
         minimumRequests: self.options.minimumRequests,
         probation: self.options.probation,
-        nextHandler: self
+        nextHandler: new PreferOutgoingHandler(self)
     });
 
     if (self.options.initialState) {
@@ -336,21 +336,28 @@ TChannelPeer.prototype.countOutPending = function countOutPending() {
     return pending;
 };
 
-// Consulted depending on the peer state
-TChannelPeer.prototype.shouldRequest = function shouldRequest() {
+function PreferOutgoingHandler(peer) {
     var self = this;
+
+    self.peer = peer;
+}
+
+// Consulted depending on the peer state
+PreferOutgoingHandler.prototype.shouldRequest = function shouldRequest() {
+    var self = this;
+
     // space:
     //   [0.1, 0.2)  unconnected peers
     //   [0.2, 0.3)  incoming connections
     //   [0.3, 0.4)  new outgoing connections
     //   [0.4, 1.0)  identified outgoing connections
-    var inconn = self.getInConnection();
-    var outconn = self.getOutConnection();
-    var random = self.outPendingWeightedRandom();
+    var inconn = self.peer.getInConnection();
+    var outconn = self.peer.getOutConnection();
+    var random = self.peer.outPendingWeightedRandom();
     if (!inconn && !outconn) {
         return 0.1 + random * 0.1;
     } else if (!outconn || outconn.direction !== 'out') {
-        self.connect();
+        self.peer.connect();
         return 0.2 + random * 0.1;
     } else if (outconn.remoteName === null) {
         return 0.3 + random * 0.1;
