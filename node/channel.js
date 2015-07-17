@@ -235,7 +235,10 @@ function TChannel(options) {
     self.requestDefaults = self.options.requestDefaults ?
         new RequestDefaults(self.options.requestDefaults) : null;
 
-    self.sanityTimer = self.timers.setTimeout(doSanitySweep, SANITY_PERIOD);
+    if (!self.topChannel) {
+        self.sanityTimer = self.timers.setTimeout(doSanitySweep, SANITY_PERIOD);
+    }
+
     function doSanitySweep() {
         self.sanityTimer = null;
         self.sanitySweep();
@@ -730,6 +733,10 @@ TChannel.prototype.close = function close(callback) {
                 svcchan.close(onClose);
             }
         });
+    }
+
+    if (!self.topChannel) {
+        self.timeHeap.clear();
     }
 
     self.peers.close(onClose);
