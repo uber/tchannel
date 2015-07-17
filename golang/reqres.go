@@ -145,8 +145,6 @@ func (w *reqResWriter) flushFragment(fragment *writableFragment) error {
 		return w.failed(w.mex.ctx.Err())
 	case w.conn.sendCh <- frame:
 		return nil
-	default:
-		return w.failed(ErrSendBufferFull)
 	}
 }
 
