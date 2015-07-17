@@ -47,14 +47,15 @@ function TChannelPeer(channel, hostPort, options) {
 
     self.channel = channel;
     self.logger = self.channel.logger;
+    self.timers = self.channel.timers;
+    self.random = self.channel.random;
     self.options = options || {};
     self.hostPort = hostPort;
     self.connections = [];
-    self.random = self.channel.random;
 
     self.stateOptions = new states.StateOptions(self, {
-        timers: self.channel.timers,
-        random: self.channel.random,
+        timers: self.timers,
+        random: self.random,
         period: self.options.period,
         maxErrorRate: self.options.maxErrorRate,
         minimumRequests: self.options.minimumRequests,
@@ -71,7 +72,7 @@ function TChannelPeer(channel, hostPort, options) {
 
     self.reportInterval = self.options.reportInterval || DEFAULT_REPORT_INTERVAL;
     if (self.reportInterval > 0) {
-        self.reportTimer = self.stateOptions.timers.setTimeout(
+        self.reportTimer = self.timers.setTimeout(
             onReport, self.reportInterval
         );
     }
@@ -89,7 +90,7 @@ function TChannelPeer(channel, hostPort, options) {
             });
         }
 
-        self.reportTimer = self.stateOptions.timers.setTimeout(
+        self.reportTimer = self.timers.setTimeout(
             onReport, self.reportInterval
         );
     }
@@ -116,7 +117,7 @@ TChannelPeer.prototype.isConnected = function isConnected(direction, identified)
 TChannelPeer.prototype.close = function close(callback) {
     var self = this;
     if (self.reportTimer) {
-        self.stateOptions.timers.clearTimeout(self.reportTimer);
+        self.timers.clearTimeout(self.reportTimer);
         self.reportTimer = null;
     }
 
