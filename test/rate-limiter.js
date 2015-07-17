@@ -154,11 +154,38 @@ test('rate exempt service works', function (assert) {
     increment(rateLimiter, 'steve', 'bob');
     increment(rateLimiter, 'steve', 'bob');
 
-    console.log(rateLimiter.counters.bob.rps);
-
     assert.ok(!rateLimiter.shouldRateLimitTotalRequest('steve'), 'should not rate limit steve');
     assert.ok(!rateLimiter.shouldRateLimitService('steve'), 'should not rate limit steve');
     assert.ok(rateLimiter.shouldRateLimitTotalRequest('bob'), 'should rate limit bob');
+
+    rateLimiter.destroy();
+    assert.end();
+});
+
+test('rate exempt service works', function (assert) {
+    var rateLimiter = RateLimiter ({
+        timers: timers,
+        totalRpsLimit: 2,
+        rpsLimitForServiceName: {
+            steve: 2,
+            bob: 2
+        },
+    });
+
+    increment(rateLimiter, 'steve', 'bob');
+    increment(rateLimiter, 'steve', 'bob');
+    increment(rateLimiter, 'steve', 'bob');
+
+    assert.ok(rateLimiter.shouldRateLimitTotalRequest(), 'should rate limit total');
+    assert.ok(rateLimiter.shouldRateLimitService('steve'), 'should rate limit steve');
+    assert.ok(rateLimiter.shouldRateLimitService('bob'), 'should rate limit bob');
+
+    rateLimiter.updateTotalLimit(10);
+    rateLimiter.updateServiceLimit('steve', 10);
+
+    assert.ok(!rateLimiter.shouldRateLimitTotalRequest(), 'should not rate limit total');
+    assert.ok(!rateLimiter.shouldRateLimitService('steve'), 'should not rate limit steve');
+    assert.ok(rateLimiter.shouldRateLimitService('bob'), 'should rate limit bob');
 
     rateLimiter.destroy();
     assert.end();
