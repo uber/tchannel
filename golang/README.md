@@ -56,21 +56,15 @@ same Headers along with a Pong body.  The client sends a ping request to the ser
 Note that every instance is bidirectional, so the same channel can be used for both sending
 and receiving requests to peers.  New connections are initiated on demand.
 
-#### HelloWorld
 
+#### KeyValue
 ```bash
-cd build/examples/hello
-./server
+./build/examples/keyvalue/server
+./build/examples/keyvalue/client
 ```
 
-```bash
-cd build/examples/hello
-./client
-```
-
-This example uses separate binaries for the server and client channel. The server registers
-a `HelloService` with a single method `echo`. This method replies with the same arguments
-it receives. The client sends 'hello' 'world' and receives the same reply from the server.
+This example exposes a simple keyvalue service over TChannel using the Thrift protocol.
+The client has an interactive CLI that can be used to make calls to the server.
 
 ## Overview
 
