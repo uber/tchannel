@@ -640,17 +640,16 @@ TChannel.prototype.request = function channelRequest(options) {
 
     options = options || {};
 
-    if (options.hasNoParent) {
+    var opts = new RequestOptions(self, options);
+    self.fastRequestDefaults(opts);
+
+    if (opts.trace && opts.hasNoParent) {
         if (Math.random() < self.traceSample) {
-            options.trace = true;
+            opts.trace = true;
         } else {
-            options.trace = false;
+            opts.trace = false;
         }
     }
-
-    var opts = new RequestOptions(self, options);
-
-    self.fastRequestDefaults(opts);
 
     return self._request(opts);
 };
