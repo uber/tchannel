@@ -33,6 +33,9 @@ var (
 	typeOfContext = reflect.TypeOf((*Context)(nil)).Elem()
 )
 
+// Handlers is the map from operation names to handlers.
+type Handlers map[string]interface{}
+
 // verifyHandler ensures that the given t is a function with the following signature:
 // func(json.Context, *ArgType)(*ResType, error)
 func verifyHandler(t reflect.Type) error {
