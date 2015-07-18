@@ -67,7 +67,7 @@ server.listen(4040, '127.0.0.1', function onListen() {
 
     clientChan.request({
         serviceName: 'server',
-        timeout: 1000
+        timeout: 1500
     }).send('func1', 'arg 1', 'arg 2', function onResp(err, res, arg2, arg3) {
         if (err) {
             finish(err);
