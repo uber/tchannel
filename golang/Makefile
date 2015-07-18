@@ -1,7 +1,7 @@
 GODEPS := $(shell pwd)/Godeps/_workspace
 OLDGOPATH := $(GOPATH)
 PATH := $(GODEPS)/bin:$(PATH)
-EXAMPLES=./examples/bench/server ./examples/bench/client ./examples/hello/server ./examples/hello/client ./examples/ping ./examples/thrift ./examples/hyperbahn/echo-server
+EXAMPLES=./examples/bench/server ./examples/bench/client ./examples/ping ./examples/thrift ./examples/hyperbahn/echo-server
 PKGS := . ./json ./hyperbahn ./thrift ./typed $(EXAMPLES)
 TEST_PKGS := $(addprefix github.com/uber/tchannel/golang/,$(PKGS))
 BUILD := ./build
@@ -62,9 +62,7 @@ thrift_example: thrift_gen
 
 examples: clean setup thrift_example
 	echo Building examples...
-	mkdir -p $(BUILD)/examples/hello $(BUILD)/examples/ping $(BUILD)/examples/bench
-	go build -o $(BUILD)/examples/hello/server ./examples/hello/server
-	go build -o $(BUILD)/examples/hello/client ./examples/hello/client
+	mkdir -p $(BUILD)/examples/ping $(BUILD)/examples/bench
 	go build -o $(BUILD)/examples/ping/pong    ./examples/ping/main.go
 	go build -o $(BUILD)/examples/hyperbahn/echo-server    ./examples/hyperbahn/echo-server/main.go
 	go build -o $(BUILD)/examples/bench/server ./examples/bench/server

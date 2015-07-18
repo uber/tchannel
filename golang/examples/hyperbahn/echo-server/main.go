@@ -29,6 +29,7 @@ import (
 
 	"github.com/uber/tchannel/golang"
 	"github.com/uber/tchannel/golang/hyperbahn"
+	"github.com/uber/tchannel/golang/raw"
 	"golang.org/x/net/context"
 )
 
@@ -49,7 +50,7 @@ func main() {
 	}
 	log.Printf("Listening on %v", l.Addr())
 
-	tchan.Register(handler{}, "echo")
+	tchan.Register(raw.Wrap(handler{}), "echo")
 	tchan.Serve(l)
 
 	if len(os.Args[1:]) == 0 {
@@ -82,24 +83,13 @@ func (eventHandler) OnError(err error) {
 
 type handler struct{}
 
-func (handler) Handle(ctx context.Context, call *tchannel.InboundCall) {
-	var arg2 []byte
-	if err := tchannel.NewArgReader(call.Arg2Reader()).Read(&arg2); err != nil {
-		log.Printf("Read arg2 failed: %v\n", err)
-	}
+func (handler) OnError(ctx context.Context, err error) {
+	log.Fatalf("OnError: %v", err)
+}
 
-	var arg3 []byte
-	if err := tchannel.NewArgReader(call.Arg3Reader()).Read(&arg3); err != nil {
-		log.Printf("Read arg2 failed: %v\n", err)
-	}
-
-	resp := call.Response()
-	if err := tchannel.NewArgWriter(resp.Arg2Writer()).Write(arg2); err != nil {
-		log.Printf("Write arg2 failed: %v", arg2)
-	}
-
-	if err := tchannel.NewArgWriter(resp.Arg3Writer()).Write(arg3); err != nil {
-		log.Printf("Write arg3 failed: %v", arg3)
-	}
-
+func (handler) Handle(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+	return &raw.Res{
+		Arg2: args.Arg2,
+		Arg3: args.Arg3,
+	}, nil
 }

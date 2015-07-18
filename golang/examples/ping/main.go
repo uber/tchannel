@@ -24,45 +24,30 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/uber/tchannel/golang"
 	"golang.org/x/net/context"
+
+	"github.com/uber/tchannel/golang"
+	"github.com/uber/tchannel/golang/json"
 )
 
 var log = tchannel.SimpleLogger
 
-type Headers map[string]string
-
+// Ping is the ping request type.
 type Ping struct {
 	Message string `json:"message"`
 }
 
+// Pong is the ping response type.
 type Pong Ping
 
-func pingHandler(ctx context.Context, call *tchannel.InboundCall) {
-	var headers Headers
+func pingHandler(ctx json.Context, ping *Ping) (*Pong, error) {
+	return &Pong{
+		Message: fmt.Sprintf("ping %v", ping),
+	}, nil
+}
 
-	var inArg2 []byte
-	if err := tchannel.NewArgReader(call.Arg2Reader()).Read(&inArg2); err != nil {
-		log.Errorf("Could not read headers from client: %v", err)
-		return
-	}
-
-	var inArg3 []byte
-	if err := tchannel.NewArgReader(call.Arg3Reader()).Read(&inArg3); err != nil {
-		log.Errorf("Could not read body from client: %v", err)
-		return
-	}
-
-	if err := tchannel.NewArgWriter(call.Response().Arg2Writer()).WriteJSON(headers); err != nil {
-		log.Errorf("Could not echo response headers to client: %v", err)
-		return
-	}
-
-	pong := Pong{Message: fmt.Sprintf("ping %s", inArg3)}
-	if err := tchannel.NewArgWriter(call.Response().Arg3Writer()).WriteJSON(pong); err != nil {
-		log.Errorf("Could not write response body to client: %v", err)
-		return
-	}
+func onError(ctx context.Context, err error) {
+	log.Fatalf("onError: %v", err)
 }
 
 func listenAndHandle(s *tchannel.Channel, hostPort string) {
@@ -82,7 +67,9 @@ func main() {
 	}
 
 	// Register a handler for the ping message on the PingService
-	ch.Register(tchannel.HandlerFunc(pingHandler), "ping")
+	json.Register(ch, json.Handlers{
+		"ping": pingHandler,
+	}, onError)
 
 	// Listen for incoming requests
 	listenAndHandle(ch, "127.0.0.1:10500")
@@ -94,30 +81,13 @@ func main() {
 	}
 
 	// Make a call to ourselves, with a timeout of 10s
-	ctx, cancel := tchannel.NewContext(time.Second * 10)
+	ctx, cancel := json.NewContext(time.Second * 10)
 	defer cancel()
 
-	call, err := client.BeginCall(ctx, "127.0.0.1:10500", "PingService", "ping", nil)
-	if err != nil {
-		log.Fatalf("Could not begin call to local ping service: %v", err)
-	}
-
-	if err := tchannel.NewArgWriter(call.Arg2Writer()).WriteJSON(Headers{}); err != nil {
-		log.Fatalf("Could not write headers: %v", err)
-	}
-
-	if err := tchannel.NewArgWriter(call.Arg3Writer()).WriteJSON(Ping{"Hello World!"}); err != nil {
-		log.Fatalf("Could not write ping: %v", err)
-	}
-
-	var responseHeaders Headers
-	if err := tchannel.NewArgReader(call.Response().Arg2Reader()).ReadJSON(&responseHeaders); err != nil {
-		log.Fatalf("Could not read response headers: %v", err)
-	}
-
+	peer := client.Peers().Add(ch.PeerInfo().HostPort)
 	var pong Pong
-	if err := tchannel.NewArgReader(call.Response().Arg3Reader()).ReadJSON(&pong); err != nil {
-		log.Fatalf("Could not read response pong: %v", err)
+	if err := json.CallPeer(ctx, peer, "PingService", "ping", &Ping{"Hello World"}, &pong); err != nil {
+		log.Fatalf("json.Call failed: %v", err)
 	}
 
 	log.Infof("Received pong: %s", pong.Message)
