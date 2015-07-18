@@ -63,5 +63,4 @@ DEV_BRANCH=$DEV_BRANCH make -C node update_dev
 git tag -a -m "Tag $tag" $tag $DEV_BRANCH
 git push origin master dev_node --tags
 git checkout dev_node
-cd ..
 npm publish
