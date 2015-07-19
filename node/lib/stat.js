@@ -20,12 +20,247 @@
 
 'use strict';
 
-function Stat(name, type, value, tags) {
+module.exports = {
+    BaseStat: BaseStat,
+    InboundCallsRecvdTags: InboundCallsRecvdTags,
+    OutboundCallsSuccessTags: OutboundCallsSuccessTags,
+    OutboundCallsLatencyTags: OutboundCallsLatencyTags,
+    OutboundCallsSentTags: OutboundCallsSentTags,
+    OutboundCallsAppErrorsTags: OutboundCallsAppErrorsTags,
+    OutboundCallsPerAttemptLatencyTags: OutboundCallsPerAttemptLatencyTags,
+    OutboundCallsPerAttemptAppErrorsTags: OutboundCallsPerAttemptAppErrorsTags,
+    InboundCallsLatencyTags: InboundCallsLatencyTags,
+    InboundCallsSuccessTags: InboundCallsSuccessTags,
+    InboundCallsAppErrorsTags: InboundCallsAppErrorsTags,
+    InboundRequestSizeTags: InboundRequestSizeTags,
+    ConnectionsBytesRcvdTags: ConnectionsBytesRcvdTags,
+    InboundResponseSizeTags: InboundResponseSizeTags,
+    OutboundRequestSizeTags: OutboundRequestSizeTags,
+    ConnectionsBytesSentTags: ConnectionsBytesSentTags,
+    OutboundResponseSizeTags: OutboundResponseSizeTags
+};
+
+function BaseStat(name, type, value, tags) {
     var self = this;
+
     self.name = name;
     self.type = type;
     self.value = value;
     self.tags = tags || {};
 }
 
-module.exports = Stat;
+function InboundCallsRecvdTags(cn, serviceName, endpoint) {
+    var self = this;
+
+    self.app = null;
+    self.host = null;
+    self.cluster = null;
+    self.version = null;
+
+    self.callingService = cn || '';
+    self.service = serviceName;
+    self.endpoint = endpoint;
+}
+
+function OutboundCallsAppErrorsTags(serviceName, cn, endpoint, type) {
+    var self = this;
+
+    self.app = '';
+    self.host = '';
+    self.cluster = '';
+    self.version = '';
+
+    self.targetService = serviceName;
+    self.service = cn;
+    self.targetEndpoint = endpoint;
+    self.type = type;
+}
+
+function OutboundCallsSuccessTags(serviceName, cn, endpoint) {
+    var self = this;
+
+    self.app = '';
+    self.host = '';
+    self.cluster = '';
+    self.version = '';
+
+    self.targetService = serviceName;
+    self.service = cn;
+    self.targetEndpoint = endpoint;
+}
+
+function OutboundCallsPerAttemptAppErrorsTags(
+    serviceName, cn, endpoint, type, retryCount
+) {
+    var self = this;
+
+    self.app = '';
+    self.host = '';
+    self.cluster = '';
+    self.version = '';
+
+    self.targetService = serviceName;
+    self.service = cn;
+    self.targetEndpoint = endpoint;
+    self.type = type;
+    self.retryCount = retryCount;
+}
+
+function OutboundCallsPerAttemptLatencyTags(
+    serviceName, cn, endpoint, remoteAddr, retryCount
+) {
+    var self = this;
+
+    self.app = '';
+    self.host = '';
+    self.cluster = '';
+    self.version = '';
+
+    self.targetService = serviceName;
+    self.service = cn;
+    self.targetEndpoint = endpoint;
+    self.peer = remoteAddr;
+    self.retryCount = retryCount;
+}
+
+function OutboundCallsLatencyTags(serviceName, cn, endpoint) {
+    var self = this;
+
+    self.app = '';
+    self.host = '';
+    self.cluster = '';
+    self.version = '';
+
+    self.targetService = serviceName;
+    self.service = cn;
+    self.targetEndpoint = endpoint;
+}
+
+function OutboundCallsSentTags(serviceName, cn, endpoint) {
+    var self = this;
+
+    self.app = '';
+    self.host = '';
+    self.cluster = '';
+    self.version = '';
+
+    self.targetService = serviceName;
+    self.service = cn;
+    self.targetEndpoint = endpoint;
+}
+
+function InboundCallsLatencyTags(cn, serviceName, endpoint) {
+    var self = this;
+
+    self.app = '';
+    self.host = '';
+    self.cluster = '';
+    self.version = '';
+
+    self.callingService = cn;
+    self.service = serviceName;
+    self.endpoint = endpoint;
+}
+
+function InboundCallsSuccessTags(cn, serviceName, endpoint) {
+    var self = this;
+
+    self.app = '';
+    self.host = '';
+    self.cluster = '';
+    self.version = '';
+
+    self.callingService = cn;
+    self.service = serviceName;
+    self.endpoint = endpoint;
+}
+
+function InboundCallsAppErrorsTags(cn, serviceName, endpoint, type) {
+    var self = this;
+
+    self.app = '';
+    self.host = '';
+    self.cluster = '';
+    self.version = '';
+
+    self.callingService = cn;
+    self.service = serviceName;
+    self.endpoint = endpoint;
+    self.type = type;
+}
+
+function InboundRequestSizeTags(cn, serviceName, endpoint) {
+    var self = this;
+
+    self.app = null;
+    self.host = null;
+    self.cluster = null;
+    self.version = null;
+
+    self.callingService = cn;
+    self.service = serviceName;
+    self.endpoint = endpoint;
+}
+
+function ConnectionsBytesRcvdTags(hostPort, peerHostPort) {
+    var self = this;
+
+    self.app = null;
+    self.host = null;
+    self.cluster = null;
+    self.version = null;
+
+    self.hostPort = hostPort;
+    self.peerHostPort = peerHostPort;
+}
+
+function InboundResponseSizeTags(cn, serviceName, endpoint) {
+    var self = this;
+
+    self.app = null;
+    self.host = null;
+    self.cluster = null;
+    self.version = null;
+
+    self.callingService = cn;
+    self.service = serviceName;
+    self.endpoint = endpoint;
+}
+
+function OutboundRequestSizeTags(serviceName, cn, endpoint) {
+    var self = this;
+
+    self.app = null;
+    self.host = null;
+    self.cluster = null;
+    self.version = null;
+
+    self.targetService = serviceName;
+    self.service = cn;
+    self.targetEndpoint = endpoint;
+}
+
+function ConnectionsBytesSentTags(hostPort, peer) {
+    var self = this;
+
+    self.app = null;
+    self.host = null;
+    self.cluster = null;
+    self.version = null;
+
+    self.hostPort = hostPort;
+    self.peerHostPort = peer;
+}
+
+function OutboundResponseSizeTags(serviceName, cn, endpoint) {
+    var self = this;
+
+    self.app = null;
+    self.host = null;
+    self.cluster = null;
+    self.version = null;
+
+    self.targetService = serviceName;
+    self.service = cn;
+    self.targetEndpoint = endpoint;
+}
