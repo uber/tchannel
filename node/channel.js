@@ -685,6 +685,7 @@ function RequestOptions(channel, opts) {
     self.tracing = opts.tracing || null;
     self.peer = opts.peer || null;
     self.timeoutPerAttempt = opts.timeoutPerAttempt || 0;
+    self.checksum = opts.checksum || null;
 
     // TODO optimize?
     self.headers = opts.headers || new RequestHeaders();
@@ -694,7 +695,6 @@ function RequestOptions(channel, opts) {
     self.peerState = null;
     self.remoteAddr = null;
     self.hostPort = null;
-    self.checksum = null;
 }
 
 function RequestHeaders() {
