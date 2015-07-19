@@ -72,6 +72,7 @@ function RelayServer(opts) {
         trace: false,
         statsd: new Statsd({
             host: '127.0.0.1',
+            unsafeIPOnly: true,
             port: 7036
         })
     });
