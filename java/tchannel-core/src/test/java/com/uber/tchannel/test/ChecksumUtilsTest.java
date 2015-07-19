@@ -10,7 +10,7 @@ import java.util.List;
 import static org.junit.Assert.assertTrue;
 
 public class ChecksumUtilsTest {
-    
+
     @Test
     public void testVerifyAcceptNoChecksum() throws Exception {
         assertTrue(ChecksumUtils.verifyChecksum(Fixtures.callRequestWithId(0)));

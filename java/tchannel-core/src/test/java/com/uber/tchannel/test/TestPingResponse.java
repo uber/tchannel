@@ -1,7 +1,7 @@
 package com.uber.tchannel.test;
 
 import com.uber.tchannel.codecs.MessageCodec;
-import com.uber.tchannel.codecs.PingHandler;
+import com.uber.tchannel.handlers.PingHandler;
 import com.uber.tchannel.framing.TFrame;
 import com.uber.tchannel.messages.MessageType;
 import io.netty.channel.embedded.EmbeddedChannel;
