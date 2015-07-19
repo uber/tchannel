@@ -42,27 +42,19 @@ function TChannelStatsd(channel, statsd) {
 }
 
 function getKey(stat) {
-    /*eslint complexity: [2, 50]*/
     var prefix = stat.name;
+
+    if (stat.tags.toStatKey) {
+        return stat.tags.toStatKey(prefix);
+    }
+
+    return getSlowKey(stat, prefix);
+}
+
+function getSlowKey(stat, prefix) {
+    /*eslint complexity: [2, 30]*/
     switch (prefix) {
         // outbound
-        case 'tchannel.outbound.calls.success':
-        case 'tchannel.outbound.calls.latency':
-        case 'tchannel.outbound.response.size':
-        case 'tchannel.outbound.calls.sent':
-        case 'tchannel.outbound.request.size':
-            return prefix + '.' +
-                clean(stat.tags.service, 'no-service') + '.' +
-                clean(stat.tags.targetService, 'no-target-service') + '.' +
-                clean(stat.tags.targetEndpoint, 'no-endpoint');
-
-        case 'tchannel.outbound.calls.app-errors':
-            return prefix + '.' +
-                clean(stat.tags.service, 'no-service') + '.' +
-                clean(stat.tags.targetService, 'no-target-service') + '.' +
-                clean(stat.tags.targetEndpoint, 'no-endpoint') + '.' +
-                clean(stat.tags.type, 'no-type');
-
         case 'tchannel.outbound.calls.system-errors':
         case 'tchannel.outbound.calls.operational-errors':
             return prefix + '.' +
@@ -80,14 +72,6 @@ function getKey(stat) {
                 clean(stat.tags.type, 'no-type') + '.' +
                 stat.tags['retry-count'];
 
-        case 'tchannel.outbound.calls.per-attempt.app-errors':
-            return prefix + '.' +
-                clean(stat.tags.service, 'no-service') + '.' +
-                clean(stat.tags.targetService, 'no-target-service') + '.' +
-                clean(stat.tags.targetEndpoint, 'no-endpoint') + '.' +
-                clean(stat.tags.type, 'no-type') + '.' +
-                stat.tags.retryCount;
-
         case 'tchannel.outbound.calls.retries':
             return prefix + '.' +
                 clean(stat.tags.service, 'no-service') + '.' +
@@ -95,31 +79,7 @@ function getKey(stat) {
                 clean(stat.tags['target-endpoint'], 'no-endpoint') + '.' +
                 stat.tags['retry-count'];
 
-        case 'tchannel.outbound.calls.per-attempt-latency':
-            return prefix + '.' +
-                clean(stat.tags.service, 'no-service') + '.' +
-                clean(stat.tags.targetService, 'no-target-service') + '.' +
-                clean(stat.tags.targetEndpoint, 'no-endpoint') + '.' +
-                stat.tags.retryCount;
-
         // inbound
-        case 'tchannel.inbound.calls.recvd':
-        case 'tchannel.inbound.request.size':
-        case 'tchannel.inbound.response.size':
-        case 'tchannel.inbound.calls.success':
-        case 'tchannel.inbound.calls.latency':
-            return prefix + '.' +
-                clean(stat.tags.callingService, 'no-calling-service') + '.' +
-                clean(stat.tags.service, 'no-service') + '.' +
-                clean(stat.tags.endpoint, 'no-endpoint');
-
-        case 'tchannel.inbound.calls.app-errors':
-            return prefix + '.' +
-                clean(stat.tags.callingService, 'no-calling-service') + '.' +
-                clean(stat.tags.service, 'no-service') + '.' +
-                clean(stat.tags.endpoint, 'no-endpoint') + '.' +
-                clean(stat.tags.type, 'no-type');
-
         case 'tchannel.inbound.calls.system-errors':
             return prefix + '.' +
                 clean(stat.tags['calling-service'], 'no-calling-service') + '.' +
@@ -148,11 +108,6 @@ function getKey(stat) {
             return prefix + '.' +
                 cleanHostPort(stat.tags['peer-host-port'], 'no-peer-host-port') + '.' +
                 clean(stat.tags.reason, 'no-reason');
-
-        case 'tchannel.connections.bytes-sent':
-        case 'tchannel.connections.bytes-recvd':
-            return prefix + '.' +
-                cleanHostPort(stat.tags.peerHostPort, 'no-peer-host-port');
 
         // other types
         default:
