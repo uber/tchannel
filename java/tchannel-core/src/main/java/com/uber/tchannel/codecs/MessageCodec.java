@@ -7,13 +7,13 @@ import io.netty.handler.codec.MessageToMessageCodec;
 
 import java.util.List;
 
-public class MessageCodec extends MessageToMessageCodec<TFrame, Message> {
+public class MessageCodec extends MessageToMessageCodec<TFrame, AbstractMessage> {
 
     private final InitMessageCodec initMessageCodec = new InitMessageCodec();
     private final PingMessageCodec pingMessageCodec = new PingMessageCodec();
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, Message msg, List<Object> out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, AbstractMessage msg, List<Object> out) throws Exception {
         switch (msg.getMessageType()) {
             case InitRequest:
                 this.initMessageCodec.encode(ctx, (InitRequest) msg, out);

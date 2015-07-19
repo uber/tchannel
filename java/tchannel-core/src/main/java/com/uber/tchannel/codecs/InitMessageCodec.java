@@ -1,7 +1,7 @@
 package com.uber.tchannel.codecs;
 
 import com.uber.tchannel.framing.TFrame;
-import com.uber.tchannel.messages.InitMessage;
+import com.uber.tchannel.messages.AbstractInitMessage;
 import com.uber.tchannel.messages.InitRequest;
 import com.uber.tchannel.messages.InitResponse;
 import com.uber.tchannel.messages.MessageType;
@@ -15,18 +15,17 @@ import java.util.List;
 import java.util.Map;
 
 
-public class InitMessageCodec extends MessageToMessageCodec<TFrame, InitMessage> {
+public class InitMessageCodec extends MessageToMessageCodec<TFrame, AbstractInitMessage> {
     @Override
-    protected void encode(ChannelHandlerContext ctx, InitMessage msg, List<Object> out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, AbstractInitMessage msg, List<Object> out) throws Exception {
 
         ByteBuf payload = Unpooled.buffer();
         payload.writeShort(msg.version);
-        payload.writeShort(2);
 
         Map<String, String> headers = new HashMap<String, String>();
-        headers.put(InitMessage.HOST_PORT_KEY, msg.hostPort);
-        headers.put(InitMessage.PROCESS_NAME_KEY, msg.processName);
-        HeaderUtils.encodeHeader(headers, payload);
+        headers.put(AbstractInitMessage.HOST_PORT_KEY, msg.hostPort);
+        headers.put(AbstractInitMessage.PROCESS_NAME_KEY, msg.processName);
+        CodecUtils.encodeHeaders(headers, payload);
 
         TFrame frame = new TFrame(msg.getMessageType(), msg.getId(), payload.array());
         out.add(frame);
@@ -37,15 +36,14 @@ public class InitMessageCodec extends MessageToMessageCodec<TFrame, InitMessage>
         ByteBuf payload = Unpooled.wrappedBuffer(frame.payload);
 
         int version = payload.readUnsignedShort();
-        int numHeaders = payload.readUnsignedShort();
 
-        Map<String, String> headers = HeaderUtils.decodeHeader(numHeaders, payload);
-        String hostPort = headers.get(InitMessage.HOST_PORT_KEY);
-        String processName = headers.get(InitMessage.PROCESS_NAME_KEY);
+        Map<String, String> headers = CodecUtils.decodeHeaders(payload);
+        String hostPort = headers.get(AbstractInitMessage.HOST_PORT_KEY);
+        String processName = headers.get(AbstractInitMessage.PROCESS_NAME_KEY);
 
         MessageType type = MessageType.fromByte(frame.type).orElse(MessageType.None);
 
-        InitMessage msg;
+        AbstractInitMessage msg;
         if (type == MessageType.InitRequest) {
             out.add(new InitRequest(frame.id, version, hostPort, processName));
         } else if (type == MessageType.InitResponse) {

@@ -7,9 +7,9 @@ import io.netty.handler.codec.MessageToMessageCodec;
 
 import java.util.List;
 
-public class PingMessageCodec extends MessageToMessageCodec<TFrame, PingMessage> {
+public class PingMessageCodec extends MessageToMessageCodec<TFrame, AbstractPingMessage> {
     @Override
-    protected void encode(ChannelHandlerContext ctx, PingMessage msg, List<Object> out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, AbstractPingMessage msg, List<Object> out) throws Exception {
         out.add(new TFrame(msg.getMessageType(), msg.getId(), new byte[]{}));
     }
 
@@ -17,7 +17,7 @@ public class PingMessageCodec extends MessageToMessageCodec<TFrame, PingMessage>
     protected void decode(ChannelHandlerContext ctx, TFrame frame, List<Object> out) throws Exception {
         MessageType type = MessageType.fromByte(frame.type).orElse(MessageType.None);
 
-        InitMessage msg;
+        AbstractInitMessage msg;
         if (type == MessageType.PingRequest) {
             out.add(new PingRequest(frame.id));
         } else if (type == MessageType.PingResponse) {
