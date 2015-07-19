@@ -1,6 +1,6 @@
 package com.uber.tchannel.messages;
 
-public class Cancel extends Message {
+public class Cancel extends AbstractMessage {
 
     private final long ttl;
     private final byte[] tracing;

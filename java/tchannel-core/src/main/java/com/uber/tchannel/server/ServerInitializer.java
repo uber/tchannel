@@ -2,7 +2,9 @@ package com.uber.tchannel.server;
 
 
 import com.uber.tchannel.codecs.MessageCodec;
-import com.uber.tchannel.codecs.PingHandler;
+import com.uber.tchannel.handlers.ChecksumHandler;
+import com.uber.tchannel.handlers.MessageMultiplexer;
+import com.uber.tchannel.handlers.PingHandler;
 import com.uber.tchannel.codecs.TFrameCodec;
 import com.uber.tchannel.framing.TFrame;
 import io.netty.channel.ChannelInitializer;
@@ -16,6 +18,8 @@ public class ServerInitializer extends ChannelInitializer<SocketChannel> {
         ch.pipeline().addLast("TFrameCodec", new TFrameCodec());
         ch.pipeline().addLast("MessageCodec", new MessageCodec());
         ch.pipeline().addLast("PingHandler", new PingHandler());
+        ch.pipeline().addLast("MessageMultiplexer", new MessageMultiplexer());
+        ch.pipeline().addLast("ChecksumHandler", new ChecksumHandler());
         ch.pipeline().addLast("ServerHandler", new ServerHandler());
     }
 }

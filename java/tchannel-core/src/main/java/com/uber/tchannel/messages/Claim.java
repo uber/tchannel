@@ -1,6 +1,6 @@
 package com.uber.tchannel.messages;
 
-public class Claim extends Message {
+public class Claim extends AbstractMessage {
 
     private final long ttl;
     private final byte[] tracing;

@@ -1,6 +1,6 @@
 package com.uber.tchannel.messages;
 
-public abstract class InitMessage extends Message {
+public abstract class AbstractInitMessage extends AbstractMessage {
     public static final int DEFAULT_VERSION = 2;
     public static final String HOST_PORT_KEY = "host_port";
     public static final String PROCESS_NAME_KEY = "process_name";
@@ -9,7 +9,7 @@ public abstract class InitMessage extends Message {
     public final String hostPort;
     public final String processName;
 
-    public InitMessage(long id, MessageType messageType, int version, String hostPort, String processName) {
+    public AbstractInitMessage(long id, MessageType messageType, int version, String hostPort, String processName) {
         super(id, messageType);
         this.version = version;
         this.hostPort = hostPort;

@@ -24,7 +24,7 @@ public enum MessageType {
         this.type = type;
     }
 
-    public static Optional<com.uber.tchannel.messages.MessageType> fromByte(byte value) {
+    public static Optional<MessageType> fromByte(byte value) {
         switch (value) {
             case (byte) 0x01:
                 return Optional.of(InitRequest);
