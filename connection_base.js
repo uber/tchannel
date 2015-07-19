@@ -23,6 +23,7 @@
 var assert = require('assert');
 var inherits = require('util').inherits;
 var EventEmitter = require('./lib/event_emitter');
+var stat = require('./lib/stat.js');
 
 var errors = require('./errors');
 var States = require('./reqres_states');
@@ -127,7 +128,7 @@ TChannelConnectionBase.prototype.runHandler = function runHandler(req) {
         'inbound.calls.recvd',
         'counter',
         1,
-        new InboundCallsRecvdTags(
+        new stat.InboundCallsRecvdTags(
             req.headers.cn,
             req.serviceName,
             req.endpoint
@@ -139,19 +140,6 @@ TChannelConnectionBase.prototype.runHandler = function runHandler(req) {
         return self.buildResponse(req, options || {});
     }
 };
-
-function InboundCallsRecvdTags(cn, serviceName, endpoint) {
-    var self = this;
-
-    self.app = null;
-    self.host = null;
-    self.cluster = null;
-    self.version = null;
-
-    self.callingService = cn || '';
-    self.service = serviceName;
-    self.endpoint = endpoint;
-}
 
 TChannelConnectionBase.prototype.buildResponse =
 function buildResponse(req, options) {

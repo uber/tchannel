@@ -40,7 +40,7 @@ var TChannelRequest = require('./request');
 var TChannelServiceNameHandler = require('./service-name-handler');
 var errors = require('./errors');
 
-var Stat = require('./lib/stat.js');
+var BaseStat = require('./lib/stat.js').BaseStat;
 var TChannelAsThrift = require('./as/thrift');
 var TChannelAsJSON = require('./as/json');
 var TChannelConnection = require('./connection');
@@ -812,7 +812,7 @@ function buildStat(name, type, value, tags) {
     tags.cluster = self.statTags.cluster;
     tags.version = self.statTags.version;
 
-    return new Stat(
+    return new BaseStat(
         name, type, value, tags
     );
 };

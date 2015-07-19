@@ -21,6 +21,7 @@
 'use strict';
 
 var EventEmitter = require('./lib/event_emitter');
+var stat = require('./lib/stat');
 var inherits = require('util').inherits;
 
 var errors = require('./errors');
@@ -88,19 +89,6 @@ TChannelOutResponse.prototype._sendError = function _sendError(codeString, messa
         methodName: '_sendError'
     });
 };
-
-function InboundCallsLatencyTags(cn, serviceName, endpoint) {
-    var self = this;
-
-    self.app = '';
-    self.host = '';
-    self.cluster = '';
-    self.version = '';
-
-    self.callingService = cn;
-    self.service = serviceName;
-    self.endpoint = endpoint;
-}
 
 TChannelOutResponse.prototype.sendParts = function sendParts(parts, isLast) {
     var self = this;
@@ -228,7 +216,7 @@ TChannelOutResponse.prototype.emitFinish = function emitFinish() {
         'inbound.calls.latency',
         'timing',
         latency,
-        new InboundCallsLatencyTags(
+        new stat.InboundCallsLatencyTags(
             self.inreq.headers.cn,
             self.inreq.serviceName,
             self.inreq.endpoint
@@ -285,7 +273,7 @@ TChannelOutResponse.prototype.send = function send(res1, res2) {
             'inbound.calls.success',
             'counter',
             1,
-            new InboundCallsSuccessTags(
+            new stat.InboundCallsSuccessTags(
                 self.inreq.headers.cn,
                 self.inreq.serviceName,
                 self.inreq.endpoint
@@ -297,7 +285,7 @@ TChannelOutResponse.prototype.send = function send(res1, res2) {
             'inbound.calls.app-errors',
             'counter',
             1,
-            new InboundCallsAppErrorsTags(
+            new stat.InboundCallsAppErrorsTags(
                 self.inreq.headers.cn,
                 self.inreq.serviceName,
                 self.inreq.endpoint,
@@ -311,32 +299,5 @@ TChannelOutResponse.prototype.send = function send(res1, res2) {
 
     return self;
 };
-
-function InboundCallsSuccessTags(cn, serviceName, endpoint) {
-    var self = this;
-
-    self.app = '';
-    self.host = '';
-    self.cluster = '';
-    self.version = '';
-
-    self.callingService = cn;
-    self.service = serviceName;
-    self.endpoint = endpoint;
-}
-
-function InboundCallsAppErrorsTags(cn, serviceName, endpoint, type) {
-    var self = this;
-
-    self.app = '';
-    self.host = '';
-    self.cluster = '';
-    self.version = '';
-
-    self.callingService = cn;
-    self.service = serviceName;
-    self.endpoint = endpoint;
-    self.type = type;
-}
 
 module.exports = TChannelOutResponse;
