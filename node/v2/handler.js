@@ -203,7 +203,7 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
 
     var channel = self.connection.channel;
     channel.emitFastStat(channel.buildStat(
-        'inbound.request.size',
+        'tchannel.inbound.request.size',
         'counter',
         reqFrame.size,
         new stat.InboundRequestSizeTags(
@@ -223,7 +223,7 @@ function emitBytesRecvd(frame) {
     var channel = self.connection.channel;
     if (channel.emitConnectionMetrics) {
         channel.emitFastStat(channel.buildStat(
-            'connections.bytes-recvd',
+            'tchannel.connections.bytes-recvd',
             'counter',
             frame.size,
             new stat.ConnectionsBytesRcvdTags(
@@ -308,7 +308,7 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
     var channel = self.connection.channel;
 
     channel.emitFastStat(channel.buildStat(
-        'inbound.response.size',
+        'tchannel.inbound.response.size',
         'counter',
         resFrame.size,
         new stat.InboundResponseSizeTags(
@@ -389,7 +389,7 @@ TChannelV2Handler.prototype.handleCallRequestCont = function handleCallRequestCo
     
     var channel = self.connection.channel;
     channel.emitFastStat(channel.buildStat(
-        'inbound.request.size',
+        'tchannel.inbound.request.size',
         'counter',
         reqFrame.size,
         new stat.InboundRequestSizeTags(
@@ -417,7 +417,7 @@ TChannelV2Handler.prototype.handleCallResponseCont = function handleCallResponse
     var channel = self.connection.channel;
 
     channel.emitFastStat(channel.buildStat(
-        'inbound.response.size',
+        'tchannel.inbound.response.size',
         'counter',
         resFrame.size,
         new stat.InboundResponseSizeTags(
@@ -553,7 +553,7 @@ function sendCallRequestFrame(req, flags, args) {
     var channel = self.connection.channel;
 
     channel.emitFastStat(channel.buildStat(
-        'outbound.request.size',
+        'tchannel.outbound.request.size',
         'counter',
         result.size,
         new stat.OutboundRequestSizeTags(
@@ -573,7 +573,7 @@ function emitBytesSent(result) {
     var channel = self.connection.channel;
     if (channel.emitConnectionMetrics) {
         channel.emitFastStat(channel.buildStat(
-            'connections.bytes-sent',
+            'tchannel.connections.bytes-sent',
             'counter',
             result.size,
             new stat.ConnectionsBytesSentTags(
@@ -644,7 +644,7 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
 
     var req = res.inreq;
     channel.emitFastStat(channel.buildStat(
-        'outbound.response.size',
+        'tchannel.outbound.response.size',
         'counter',
         result.size,
         new stat.OutboundResponseSizeTags(
@@ -688,7 +688,7 @@ TChannelV2Handler.prototype.sendCallRequestContFrame = function sendCallRequestC
 
     var channel = self.connection.channel;
     channel.emitFastStat(channel.buildStat(
-        'outbound.request.size',
+        'tchannel.outbound.request.size',
         'counter',
         result.size,
         new stat.OutboundRequestSizeTags(
@@ -715,7 +715,7 @@ TChannelV2Handler.prototype.sendCallResponseContFrame = function sendCallRespons
     var channel = self.connection.channel;
 
     channel.emitFastStat(channel.buildStat(
-        'outbound.response.size',
+        'tchannel.outbound.response.size',
         'counter',
         result.size,
         new stat.OutboundResponseSizeTags(

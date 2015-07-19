@@ -125,7 +125,7 @@ TChannelConnectionBase.prototype.runHandler = function runHandler(req) {
     var self = this;
 
     self.channel.emitFastStat(self.channel.buildStat(
-        'inbound.calls.recvd',
+        'tchannel.inbound.calls.recvd',
         'counter',
         1,
         new stat.InboundCallsRecvdTags(

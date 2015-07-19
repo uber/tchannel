@@ -30,6 +30,7 @@ function TChannelStatsd(channel, statsd) {
     }
 
     var self = this;
+
     self.statsd = statsd;
     self.channel = channel;
 
@@ -42,36 +43,36 @@ function TChannelStatsd(channel, statsd) {
 
 function getKey(stat) {
     /*eslint complexity: [2, 50]*/
-    var prefix = 'tchannel.' + stat.name;
-    switch (stat.name) {
+    var prefix = stat.name;
+    switch (prefix) {
         // outbound
-        case 'outbound.calls.success':
-        case 'outbound.calls.latency':
-        case 'outbound.response.size':
-        case 'outbound.calls.sent':
-        case 'outbound.request.size':
+        case 'tchannel.outbound.calls.success':
+        case 'tchannel.outbound.calls.latency':
+        case 'tchannel.outbound.response.size':
+        case 'tchannel.outbound.calls.sent':
+        case 'tchannel.outbound.request.size':
             return prefix + '.' +
                 clean(stat.tags.service, 'no-service') + '.' +
                 clean(stat.tags.targetService, 'no-target-service') + '.' +
                 clean(stat.tags.targetEndpoint, 'no-endpoint');
 
-        case 'outbound.calls.app-errors':
+        case 'tchannel.outbound.calls.app-errors':
             return prefix + '.' +
                 clean(stat.tags.service, 'no-service') + '.' +
                 clean(stat.tags.targetService, 'no-target-service') + '.' +
                 clean(stat.tags.targetEndpoint, 'no-endpoint') + '.' +
                 clean(stat.tags.type, 'no-type');
 
-        case 'outbound.calls.system-errors':
-        case 'outbound.calls.operational-errors':
+        case 'tchannel.outbound.calls.system-errors':
+        case 'tchannel.outbound.calls.operational-errors':
             return prefix + '.' +
                 clean(stat.tags.service, 'no-service') + '.' +
                 clean(stat.tags['target-service'], 'no-target-service') + '.' +
                 clean(stat.tags['target-endpoint'], 'no-endpoint') + '.' +
                 clean(stat.tags.type, 'no-type');
 
-        case 'outbound.calls.per-attempt.system-errors':
-        case 'outbound.calls.per-attempt.operational-errors':
+        case 'tchannel.outbound.calls.per-attempt.system-errors':
+        case 'tchannel.outbound.calls.per-attempt.operational-errors':
             return prefix + '.' +
                 clean(stat.tags.service, 'no-service') + '.' +
                 clean(stat.tags['target-service'], 'no-target-service') + '.' +
@@ -79,7 +80,7 @@ function getKey(stat) {
                 clean(stat.tags.type, 'no-type') + '.' +
                 stat.tags['retry-count'];
 
-        case 'outbound.calls.per-attempt.app-errors':
+        case 'tchannel.outbound.calls.per-attempt.app-errors':
             return prefix + '.' +
                 clean(stat.tags.service, 'no-service') + '.' +
                 clean(stat.tags.targetService, 'no-target-service') + '.' +
@@ -87,14 +88,14 @@ function getKey(stat) {
                 clean(stat.tags.type, 'no-type') + '.' +
                 stat.tags.retryCount;
 
-        case 'outbound.calls.retries':
+        case 'tchannel.outbound.calls.retries':
             return prefix + '.' +
                 clean(stat.tags.service, 'no-service') + '.' +
                 clean(stat.tags['target-service'], 'no-target-service') + '.' +
                 clean(stat.tags['target-endpoint'], 'no-endpoint') + '.' +
                 stat.tags['retry-count'];
 
-        case 'outbound.calls.per-attempt-latency':
+        case 'tchannel.outbound.calls.per-attempt-latency':
             return prefix + '.' +
                 clean(stat.tags.service, 'no-service') + '.' +
                 clean(stat.tags.targetService, 'no-target-service') + '.' +
@@ -102,54 +103,54 @@ function getKey(stat) {
                 stat.tags.retryCount;
 
         // inbound
-        case 'inbound.calls.recvd':
-        case 'inbound.request.size':
-        case 'inbound.response.size':
-        case 'inbound.calls.success':
-        case 'inbound.calls.latency':
+        case 'tchannel.inbound.calls.recvd':
+        case 'tchannel.inbound.request.size':
+        case 'tchannel.inbound.response.size':
+        case 'tchannel.inbound.calls.success':
+        case 'tchannel.inbound.calls.latency':
             return prefix + '.' +
                 clean(stat.tags.callingService, 'no-calling-service') + '.' +
                 clean(stat.tags.service, 'no-service') + '.' +
                 clean(stat.tags.endpoint, 'no-endpoint');
 
-        case 'inbound.calls.app-errors':
+        case 'tchannel.inbound.calls.app-errors':
             return prefix + '.' +
                 clean(stat.tags.callingService, 'no-calling-service') + '.' +
                 clean(stat.tags.service, 'no-service') + '.' +
                 clean(stat.tags.endpoint, 'no-endpoint') + '.' +
                 clean(stat.tags.type, 'no-type');
 
-        case 'inbound.calls.system-errors':
+        case 'tchannel.inbound.calls.system-errors':
             return prefix + '.' +
                 clean(stat.tags['calling-service'], 'no-calling-service') + '.' +
                 clean(stat.tags.service, 'no-service') + '.' +
                 clean(stat.tags.endpoint, 'no-endpoint') + '.' +
                 clean(stat.tags.type, 'no-type');
 
-        case 'inbound.protocol-errors':
-        case 'connections.active':
-        case 'connections.initiated':
-        case 'connections.connect-errors':
-        case 'connections.accepted':
+        case 'tchannel.inbound.protocol-errors':
+        case 'tchannel.connections.active':
+        case 'tchannel.connections.initiated':
+        case 'tchannel.connections.connect-errors':
+        case 'tchannel.connections.accepted':
             return prefix + '.' +
                 cleanHostPort(stat.tags['peer-host-port'], 'no-peer-host-port');
 
-        case 'connections.accept-errors':
+        case 'tchannel.connections.accept-errors':
             return prefix + '.' +
                 cleanHostPort(stat.tags['host-port'], 'no-host-port');
 
-        case 'connections.errors':
+        case 'tchannel.connections.errors':
             return prefix + '.' +
                 cleanHostPort(stat.tags['peer-host-port'], 'no-peer-host-port') + '.' +
                 clean(stat.tags.type, 'no-type');
 
-        case 'connections.closed':
+        case 'tchannel.connections.closed':
             return prefix + '.' +
                 cleanHostPort(stat.tags['peer-host-port'], 'no-peer-host-port') + '.' +
                 clean(stat.tags.reason, 'no-reason');
 
-        case 'connections.bytes-sent':
-        case 'connections.bytes-recvd':
+        case 'tchannel.connections.bytes-sent':
+        case 'tchannel.connections.bytes-recvd':
             return prefix + '.' +
                 cleanHostPort(stat.tags.peerHostPort, 'no-peer-host-port');
 
