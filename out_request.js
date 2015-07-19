@@ -179,7 +179,7 @@ function emitResponseStat(res) {
         emitOutboundCallsSuccess(self);
     } else {
         self.channel.emitFastStat(self.channel.buildStat(
-            'outbound.calls.app-errors',
+            'tchannel.outbound.calls.app-errors',
             'counter',
             1,
             new stat.OutboundCallsAppErrorsTags(
@@ -194,7 +194,7 @@ function emitResponseStat(res) {
 
 function emitOutboundCallsSuccess(request) {
     request.channel.emitFastStat(request.channel.buildStat(
-        'outbound.calls.success',
+        'tchannel.outbound.calls.success',
         'counter',
         1,
         new stat.OutboundCallsSuccessTags(
@@ -213,7 +213,7 @@ function emitPerAttemptResponseStat(res) {
 
     if (!res.ok) {
         self.channel.emitFastStat(self.channel.buildStat(
-            'outbound.calls.per-attempt.app-errors',
+            'tchannel.outbound.calls.per-attempt.app-errors',
             'counter',
             1,
             new stat.OutboundCallsPerAttemptAppErrorsTags(
@@ -238,7 +238,7 @@ function emitPerAttemptLatency() {
     var latency = self.end - self.start;
 
     self.channel.emitFastStat(self.channel.buildStat(
-        'outbound.calls.per-attempt-latency',
+        'tchannel.outbound.calls.per-attempt-latency',
         'timing',
         latency,
         new stat.OutboundCallsPerAttemptLatencyTags(
@@ -257,7 +257,7 @@ TChannelOutRequest.prototype.emitLatency = function emitLatency() {
     var latency = self.end - self.start;
 
     self.channel.emitFastStat(self.channel.buildStat(
-        'outbound.calls.latency',
+        'tchannel.outbound.calls.latency',
         'timing',
         latency,
         new stat.OutboundCallsLatencyTags(
@@ -404,7 +404,7 @@ function emitOutboundCallsSent() {
     var self = this;
 
     self.channel.emitFastStat(self.channel.buildStat(
-        'outbound.calls.sent',
+        'tchannel.outbound.calls.sent',
         'counter',
         1,
         new stat.OutboundCallsSentTags(

@@ -213,7 +213,7 @@ TChannelOutResponse.prototype.emitFinish = function emitFinish() {
     var latency = self.end - self.inreq.start;
 
     self.channel.emitFastStat(self.channel.buildStat(
-        'inbound.calls.latency',
+        'tchannel.inbound.calls.latency',
         'timing',
         latency,
         new stat.InboundCallsLatencyTags(
@@ -270,7 +270,7 @@ TChannelOutResponse.prototype.send = function send(res1, res2) {
 
     if (self.ok) {
         self.channel.emitFastStat(self.channel.buildStat(
-            'inbound.calls.success',
+            'tchannel.inbound.calls.success',
             'counter',
             1,
             new stat.InboundCallsSuccessTags(
@@ -282,7 +282,7 @@ TChannelOutResponse.prototype.send = function send(res1, res2) {
     } else {
         // TODO: add outResponse.setErrorType()
         self.channel.emitFastStat(self.channel.buildStat(
-            'inbound.calls.app-errors',
+            'tchannel.inbound.calls.app-errors',
             'counter',
             1,
             new stat.InboundCallsAppErrorsTags(

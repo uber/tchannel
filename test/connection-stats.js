@@ -70,7 +70,7 @@ allocCluster.test('emits connection stats with success', {
         client.close();
         server.close();
         assert.deepEqual(stats, [{
-            name: 'connections.initiated',
+            name: 'tchannel.connections.initiated',
             type: 'counter',
             value: 1,
             tags:
@@ -81,7 +81,7 @@ allocCluster.test('emits connection stats with success', {
                 host: os.hostname()
            }
         }, {
-            name: 'connections.closed',
+            name: 'tchannel.connections.closed',
             type: 'counter',
             value: 1,
             tags:
@@ -136,7 +136,7 @@ allocCluster.test('emits connection stats with failure', {
         process.nextTick(function next() {
             client.flushStats();
             assert.deepEqual(stats, [{
-                name: 'connections.initiated',
+                name: 'tchannel.connections.initiated',
                 type: 'counter',
                 value: 1,
                 tags:
@@ -147,7 +147,7 @@ allocCluster.test('emits connection stats with failure', {
                     host: os.hostname()
                }
             }, {
-                name: 'connections.connect-errors',
+                name: 'tchannel.connections.connect-errors',
                 type: 'counter',
                 value: 1,
                 tags:
@@ -213,7 +213,7 @@ allocCluster.test('emits active connections', {
         server.close();
         process.nextTick(function next() {
             assert.deepEqual(stats, [{
-                name: 'connections.initiated',
+                name: 'tchannel.connections.initiated',
                 type: 'counter',
                 value: 1,
                 tags:
@@ -224,7 +224,7 @@ allocCluster.test('emits active connections', {
                     host: os.hostname()
                }
             }, {
-                name: 'connections.active',
+                name: 'tchannel.connections.active',
                 type: 'gauge',
                 value: 1,
                 tags:
@@ -235,7 +235,7 @@ allocCluster.test('emits active connections', {
                     host: os.hostname()
                }
             }, {
-                name: 'connections.closed',
+                name: 'tchannel.connections.closed',
                 type: 'counter',
                 value: 1,
                 tags:
