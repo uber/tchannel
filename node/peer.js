@@ -53,6 +53,7 @@ function TChannelPeer(channel, hostPort, options) {
     self.options = options || {};
     self.hostPort = hostPort;
     self.connections = [];
+    self.pendingIdentified = 0;
 
     self.stateOptions = new states.StateOptions(self, {
         timers: self.timers,
@@ -214,10 +215,14 @@ function waitForIdentified(callback) {
 
 TChannelPeer.prototype._waitForIdentified =
 function _waitForIdentified(conn, callback) {
+    var self = this;
+
+    self.pendingIdentified++;
     conn.closeEvent.on(onConnectionClose);
     conn.identifiedEvent.on(onIdentified);
 
     function onConnectionClose(err) {
+        self.pendingIdentified = 0;
         conn.closeEvent.removeListener(onConnectionClose);
         conn.identifiedEvent.removeListener(onIdentified);
 
@@ -225,6 +230,7 @@ function _waitForIdentified(conn, callback) {
     }
 
     function onIdentified() {
+        self.pendingIdentified = 0;
         conn.closeEvent.removeListener(onConnectionClose);
         conn.identifiedEvent.removeListener(onIdentified);
 
@@ -325,7 +331,7 @@ TChannelPeer.prototype.outPendingWeightedRandom = function outPendingWeightedRan
     // TODO review weighted reservoir sampling:
     // http://arxiv.org/pdf/1012.0256.pdf
     var self = this;
-    var pending = self.countOutPending();
+    var pending = self.pendingIdentified + self.countOutPending();
     return Math.pow(self.random(), 1 + pending);
 };
 
