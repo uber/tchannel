@@ -26,6 +26,7 @@ function RelayRequest(channel, inreq, buildRes) {
     var self = this;
 
     self.channel = channel;
+    self.logger = self.channel.logger;
     self.inreq = inreq;
     self.inres = null;
     self.outres = null;
@@ -40,7 +41,7 @@ RelayRequest.prototype.createOutRequest = function createOutRequest(host) {
     var self = this;
 
     if (self.outreq) {
-        self.channel.logger.warn('relay request already started', {
+        self.logger.warn('relay request already started', {
             // TODO: better context
             remoteAddr: self.inreq.remoteAddr,
             id: self.inreq.id
@@ -149,7 +150,7 @@ RelayRequest.prototype.onIdentified = function onIdentified(err1) {
 RelayRequest.prototype.createOutResponse = function createOutResponse(options) {
     var self = this;
     if (self.outres) {
-        self.channel.logger.warn('relay request already responded', {
+        self.logger.warn('relay request already responded', {
             // TODO: better context
             remoteAddr: self.inreq.remoteAddr,
             id: self.inreq.id,
@@ -163,7 +164,7 @@ RelayRequest.prototype.createOutResponse = function createOutResponse(options) {
     // It is also possible that the out request gets repead with a timeout
     // Both the in & out req try to create an outgoing response
     if (self.inreq.res && self.inreq.res.codeString === 'Timeout') {
-        self.channel.logger.debug('relay: in request already timed out', {
+        self.logger.debug('relay: in request already timed out', {
             codeString: self.inreq.res.codeString,
             responseMessage: self.inreq.res.message,
             serviceName: self.outreq && self.outreq.serviceName,
@@ -184,7 +185,7 @@ RelayRequest.prototype.onResponse = function onResponse(res) {
     var self = this;
 
     if (self.inres) {
-        self.channel.logger.warn('relay request got more than one response callback', {
+        self.logger.warn('relay request got more than one response callback', {
             // TODO: better context
             remoteAddr: res.remoteAddr,
             id: res.id
@@ -226,7 +227,6 @@ RelayRequest.prototype.logError = function logError(err, codeName) {
 
     var level = errorLogLevel(err, codeName);
 
-    var logger = self.channel.logger;
     var logOptions = {
         error: err,
         isErrorFrame: err.isErrorFrame,
@@ -238,16 +238,16 @@ RelayRequest.prototype.logError = function logError(err, codeName) {
 
     if (err.isErrorFrame) {
         if (level === 'warn') {
-            logger.warn('forwarding error frame', logOptions);
+            self.logger.warn('forwarding error frame', logOptions);
         } else if (level === 'info') {
-            logger.info('forwarding expected error frame', logOptions);
+            self.logger.info('forwarding expected error frame', logOptions);
         }
     } else if (level === 'error') {
-        logger.error('unexpected error while forwarding', logOptions);
+        self.logger.error('unexpected error while forwarding', logOptions);
     } else if (level === 'warn') {
-        logger.warn('error while forwarding', logOptions);
+        self.logger.warn('error while forwarding', logOptions);
     } else if (level === 'info') {
-        logger.info('expected error while forwarding', logOptions);
+        self.logger.info('expected error while forwarding', logOptions);
     }
 };
 
