@@ -2,6 +2,7 @@ package com.uber.tchannel.codecs;
 
 import com.uber.tchannel.framing.TFrame;
 import com.uber.tchannel.messages.CallRequest;
+import com.uber.tchannel.messages.MessageType;
 import com.uber.tchannel.tracing.Trace;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -28,10 +29,12 @@ public class CallRequestCodec extends MessageToMessageCodec<TFrame, CallRequest>
         String service = CodecUtils.decodeSmallString(payload);
         Map<String, String> headers = CodecUtils.decodeSmallHeaders(payload);
         byte checksumType = payload.readByte();
+
         int checksum = 0;
-        if (!(checksumType == (byte) 0x00)) {
+        if (checksumType != MessageType.None.byteValue()) {
             checksum = payload.readInt();
         }
+
         byte[] arg1 = CodecUtils.decodeArg(payload);
         byte[] arg2 = CodecUtils.decodeArg(payload);
         byte[] arg3 = CodecUtils.decodeArg(payload);

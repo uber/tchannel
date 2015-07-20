@@ -6,11 +6,11 @@ import io.netty.handler.codec.MessageToMessageCodec;
 
 import java.util.*;
 
-public class MessageMultiplexer extends MessageToMessageCodec<AbstractMessage, FullMessage> {
+public class MessageMultiplexer extends MessageToMessageCodec<AbstractCallMessage, FullMessage> {
 
-    private final Map<Long, Queue<AbstractMessage>> messageMap = new HashMap<Long, Queue<AbstractMessage>>();
+    private final Map<Long, Queue<AbstractCallMessage>> messageMap = new HashMap<Long, Queue<AbstractCallMessage>>();
 
-    public Map<Long, Queue<AbstractMessage>> getMessageMap() {
+    public Map<Long, Queue<AbstractCallMessage>> getMessageMap() {
         return this.messageMap;
     }
 
@@ -19,9 +19,9 @@ public class MessageMultiplexer extends MessageToMessageCodec<AbstractMessage, F
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, AbstractMessage msg, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, AbstractCallMessage msg, List<Object> out) throws Exception {
 
-        this.messageMap.putIfAbsent(msg.getId(), new LinkedList<AbstractMessage>());
+        this.messageMap.putIfAbsent(msg.getId(), new LinkedList<AbstractCallMessage>());
         this.messageMap.get(msg.getId()).add(msg);
 
     }

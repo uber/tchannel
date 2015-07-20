@@ -6,6 +6,8 @@ import java.util.Map;
 
 public class CallRequest extends AbstractCallMessage {
 
+    private static final byte MORE_FRAGMENTS_TO_FOLLOW_MASK = (byte) 0x01;
+
     private final long ttl;
     private final String service;
 
