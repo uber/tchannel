@@ -27,42 +27,34 @@ var TChannel = require('../channel');
 allocCluster.test('request retries', {
     numPeers: 4
 }, function t(cluster, assert) {
-    var random = randSeq([
-        1.0, 0.1, 0.1, 0.1, // .request, chan 1 wins
-        1.0,                // chan 1 declines
-             1.0, 0.1, 0.1, // .request, chan 2 wins (1 is skipped)
-        0.25,               // chan 2 too busy
-                  1.0, 0.1, // .request, chan 3 wins (1-2 are skipped)
-        0.1,                // chan 3 unexpected error
-                       0.1, // .request, chan 4 wins (only one left)
-        0.0                 // success!
-    ]);
+    // chan 1 declines
+    cluster.channels[0]
+        .makeSubChannel({serviceName: 'tristan'})
+        .register('foo', declineFoo);
 
-    cluster.channels.forEach(function each(server, i) {
-        var n = i + 1;
-        var chan = server.makeSubChannel({
-            serviceName: 'tristan'
-        });
-        chan.register('foo', function foo(req, res, arg2, arg3) {
-            var rand = random();
-            if (rand >= 0.5) {
-                res.sendError('Declined', 'magic 8-ball says no');
-            } else if (rand >= 0.25) {
-                res.sendError('Busy', "can't talk");
-            } else if (rand) {
-                res.sendError('UnexpectedError', 'wat');
-            } else {
-                var str = String(arg3);
-                str = str.toUpperCase();
-                res.headers.as = 'raw';
-                res.sendOk('served by ' + n, str);
-            }
-        });
-    });
+    // chan 2 too busy
+    cluster.channels[1]
+        .makeSubChannel({serviceName: 'tristan'})
+        .register('foo', busyFoo);
+
+    // chan 3 unexpected error
+    cluster.channels[2]
+        .makeSubChannel({serviceName: 'tristan'})
+        .register('foo', unexpectedErrorFoo);
+
+    // success!
+    cluster.channels[3]
+        .makeSubChannel({serviceName: 'tristan'})
+        .register('foo', servedByFoo(4));
 
     var client = TChannel({
         timeoutFuzz: 0,
-        random: random
+        random: randSeq([
+            1.0, 0.1, 0.1, 0.1, // .request, chan 1 wins
+                 1.0, 0.1, 0.1, // .request, chan 2 wins (1 is skipped)
+                      1.0, 0.1, // .request, chan 3 wins (1-2 are skipped)
+                           0.1  // .request, chan 4 wins (only one left)
+        ])
     });
     var chan = client.makeSubChannel({
         serviceName: 'tristan',
@@ -149,33 +141,24 @@ allocCluster.test('request retries', {
 });
 
 allocCluster.test('request application retries', {
-    numPeers: 4
+    numPeers: 2
 }, function t(cluster, assert) {
-    var random = randSeq([
-        1.0, 0.1, 0.1, 0.1, // .request, chan 1 wins
-        1.0,                // chan 1 has applicatino error
-             1.0, 0.1, 0.1, // .request, chan 2 wins (1 is skipped)
-        0.0                 // "success"!
-    ]);
+    // chan 1 returns retryable application error
+    cluster.channels[0]
+        .makeSubChannel({serviceName: 'tristan'})
+        .register('foo', fooLolError);
 
-    cluster.channels.forEach(function each(server, i) {
-        var chan = server.makeSubChannel({
-            serviceName: 'tristan'
-        });
-        chan.register('foo', function foo(req, res, arg2, arg3) {
-            var rand = random();
-            res.headers.as = 'raw';
-            if (rand) {
-                res.sendNotOk('meh', 'lol');
-            } else {
-                res.sendNotOk('no', 'stop');
-            }
-        });
-    });
+    // chan 2 returns non-retryable application error
+    cluster.channels[1]
+        .makeSubChannel({serviceName: 'tristan'})
+        .register('foo', fooStopError);
 
     var client = TChannel({
         timeoutFuzz: 0,
-        random: random
+        random: randSeq([
+            1.0, 0.1, 0.1, 0.1, // .request, chan 1 wins
+                 1.0, 0.1, 0.1  // .request, chan 2 wins (1 is skipped)
+        ])
     });
     var chan = client.makeSubChannel({
         serviceName: 'tristan',
@@ -266,43 +249,26 @@ allocCluster.test('request application retries', {
 allocCluster.test('retryFlags work', {
     numPeers: 2
 }, function t(cluster, assert) {
-    var random = randSeq([
-        1.0, 0.1, // .request, chan 1 wins
-        0.5,      // chan 1 timeout
+    cluster.channels[0]
+        .makeSubChannel({serviceName: 'tristan'})
+        .register('foo', handlerSeries([
+            fooTimeout, // chan 1 timeout
+            fooTimeout, // chan 1 timeout
+            busyFoo,    // chan 1 busy
+        ]));
 
-        1.0, 0.1, // .request, chan 1 wins
-        0.5,      // chan 1 timeout
-             1.0, // .request, chan 2 wins (1 is skipped)
-        0.0,      // success!
-
-        1.0, 0.1, // .request, chan 1 wins
-        0.9       // chan 1 busy
-
-    ]);
-
-    cluster.channels.forEach(function each(server, i) {
-        var n = i + 1;
-        var chan = server.makeSubChannel({
-            serviceName: 'tristan'
-        });
-        chan.register('foo', function foo(req, res, arg2, arg3) {
-            var rand = random();
-            res.headers.as = 'raw';
-            if (rand >= 0.9) {
-                res.sendError('Busy', 'nop');
-            } else if (rand >= 0.5) {
-                res.sendError('Timeout', 'no luck');
-            } else {
-                var str = String(arg3);
-                str = str.toUpperCase();
-                res.sendOk('served by ' + n, str);
-            }
-        });
-    });
+    cluster.channels[1]
+        .makeSubChannel({serviceName: 'tristan'})
+        .register('foo', servedByFoo(2));
 
     var client = TChannel({
         timeoutFuzz: 0,
-        random: random
+        random: randSeq([
+            1.0, 0.1, // .request, chan 1 wins
+            1.0, 0.1, // .request, chan 1 wins
+                 1.0, // .request, chan 2 wins (1 is skipped)
+            1.0, 0.1  // .request, chan 1 wins
+        ])
     });
     var chan = client.makeSubChannel({
         serviceName: 'tristan',
@@ -400,6 +366,51 @@ allocCluster.test('retryFlags work', {
         assert.end();
     }
 });
+
+function handlerSeries(handlers) {
+    var i = 0;
+    return seriesHandler;
+    function seriesHandler(req, res, arg2, arg3) {
+        var handler = handlers[i];
+        i = (i + 1) % handlers.length;
+        handler(req, res, arg2, arg3);
+    }
+}
+
+function fooTimeout(req, res, arg2, arg3) {
+    res.sendError('Timeout', 'no luck');
+}
+
+function declineFoo(req, res, arg2, arg3) {
+    res.sendError('Declined', 'magic 8-ball says no');
+}
+
+function busyFoo(req, res, arg2, arg3) {
+    res.sendError('Busy', "can't talk");
+}
+
+function unexpectedErrorFoo(req, res, arg2, arg3) {
+    res.sendError('UnexpectedError', 'wat');
+}
+
+function servedByFoo(name) {
+    return echoFoo;
+    function echoFoo(req, res, arg2, arg3) {
+        var str = String(arg3).toUpperCase();
+        res.headers.as = 'raw';
+        res.sendOk('served by ' + name, str);
+    }
+}
+
+function fooLolError(req, res, arg2, arg3) {
+    res.headers.as = 'raw';
+    res.sendNotOk('meh', 'lol');
+}
+
+function fooStopError(req, res, arg2, arg3) {
+    res.headers.as = 'raw';
+    res.sendNotOk('no', 'stop');
+}
 
 function randSeq(seq) {
     var i = 0;
