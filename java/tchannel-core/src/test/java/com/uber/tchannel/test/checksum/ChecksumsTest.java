@@ -1,7 +1,8 @@
-package com.uber.tchannel.test;
+package com.uber.tchannel.test.checksum;
 
 import com.uber.tchannel.checksum.Checksums;
 import com.uber.tchannel.messages.AbstractCallMessage;
+import com.uber.tchannel.test.Fixtures;
 import org.junit.Test;
 
 import java.util.LinkedList;

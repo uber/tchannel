@@ -42,8 +42,13 @@ public class Checksums {
                 f.update(msg.getArg2());
                 f.update(msg.getArg3());
                 checksum = f.getValue();
+                break;
+            case FarmhashFingerPrint32:
+            case NoChecksum:
+            case CRC32C:
             default:
                 checksum = 0;
+                break;
         }
 
         return checksum;

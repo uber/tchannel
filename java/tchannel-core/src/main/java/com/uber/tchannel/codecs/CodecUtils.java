@@ -17,8 +17,9 @@ public class CodecUtils {
     }
 
     public static void encodeString(String value, ByteBuf outBuf) {
-        outBuf.writeShort(value.length());
-        outBuf.writeBytes(value.getBytes());
+        byte[] raw = value.getBytes();
+        outBuf.writeShort(raw.length);
+        outBuf.writeBytes(raw);
     }
 
     public static String decodeSmallString(ByteBuf inBuf) {
@@ -29,8 +30,9 @@ public class CodecUtils {
     }
 
     public static void encodeSmallString(String value, ByteBuf outBuf) {
-        outBuf.writeByte(value.length());
-        outBuf.writeBytes(value.getBytes());
+        byte[] raw = value.getBytes();
+        outBuf.writeByte(raw.length);
+        outBuf.writeBytes(raw);
     }
 
     public static Map<String, String> decodeHeaders(ByteBuf inBuf) {
@@ -95,6 +97,13 @@ public class CodecUtils {
         return new Trace(spanId, parentId, traceId, traceFlags);
     }
 
+    public static void encodeTrace(Trace trace, ByteBuf outBuf) {
+        outBuf.writeLong(trace.spanId)
+                .writeLong(trace.parentId)
+                .writeLong(trace.traceId)
+                .writeByte(trace.traceFlags);
+    }
+
     public static byte[] decodeArg(ByteBuf inBuf) {
         int argLength = inBuf.readUnsignedShort();
         byte[] arg = new byte[argLength];
@@ -102,11 +111,9 @@ public class CodecUtils {
         return arg;
     }
 
-    public static void encodeTrace(Trace trace, ByteBuf outBuf) {
-        outBuf.writeLong(trace.spanId)
-                .writeLong(trace.parentId)
-                .writeLong(trace.traceId)
-                .writeByte(trace.traceFlags);
+    public static void encodeArg(byte[] arg, ByteBuf outBuf) {
+        outBuf.writeShort((short) arg.length);
+        outBuf.writeBytes(arg);
     }
 
 

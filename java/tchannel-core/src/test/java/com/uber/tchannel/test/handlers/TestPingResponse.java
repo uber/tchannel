@@ -1,4 +1,4 @@
-package com.uber.tchannel.test;
+package com.uber.tchannel.test.handlers;
 
 import com.uber.tchannel.codecs.MessageCodec;
 import com.uber.tchannel.handlers.PingHandler;

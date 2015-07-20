@@ -1,4 +1,4 @@
-package com.uber.tchannel.test;
+package com.uber.tchannel.test.codecs;
 
 import com.uber.tchannel.codecs.InitMessageCodec;
 import com.uber.tchannel.codecs.TFrameCodec;

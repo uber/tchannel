@@ -1,8 +1,9 @@
-package com.uber.tchannel.test;
+package com.uber.tchannel.test.handlers;
 
 
 import com.uber.tchannel.handlers.MessageMultiplexer;
-import com.uber.tchannel.messages.AbstractMessage;
+import com.uber.tchannel.messages.AbstractCallMessage;
+import com.uber.tchannel.test.Fixtures;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Test;
 
@@ -24,14 +25,14 @@ public class TestMessageMultiplexer {
         channel.writeInbound(Fixtures.callRequestWithId(0));
         channel.writeInbound(Fixtures.callRequestWithId(1));
 
-        Map<Long, Queue<AbstractMessage>> map = mux.getMessageMap();
+        Map<Long, Queue<AbstractCallMessage>> map = mux.getMessageMap();
         assertNotNull(map);
 
-        Queue<AbstractMessage> lst0 = map.get(0L);
+        Queue<AbstractCallMessage> lst0 = map.get(0L);
         assertNotNull(lst0);
         assertEquals(lst0.size(), 2);
 
-        Queue<AbstractMessage> lst1 = map.get(1L);
+        Queue<AbstractCallMessage> lst1 = map.get(1L);
         assertNotNull(lst1);
         assertEquals(lst1.size(), 1);
     }
