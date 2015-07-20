@@ -111,7 +111,7 @@ allocCluster.test('sending OK OK', {
             assert.equal(record2.meta.arg1, 'DoubleResponse::method');
             assert.equal(err2.method, 'sendCallResponseFrame');
             assert.equal(err2.type, 'tchannel.response-already-done');
-            assert.ok(err2.arg3.indexOf('foobar') >= 0);
+            assert.ok(err2.arg3 && err2.arg3.indexOf('foobar') >= 0);
             assert.ok(record2.meta.arg3.indexOf('foobar') >= 0);
 
             assert.end();
@@ -169,7 +169,7 @@ allocCluster.test('sending OK NOT_OK', {
             assert.equal(record2.meta.arg1, 'DoubleResponse::method');
             assert.equal(err2.method, 'sendCallResponseFrame');
             assert.equal(err2.type, 'tchannel.response-already-done');
-            assert.ok(err2.arg3.indexOf('foobar') >= 0);
+            assert.ok(err2.arg3 && err2.arg3.indexOf('foobar') >= 0);
             assert.ok(record2.meta.arg3.indexOf('foobar') >= 0);
 
             assert.end();
@@ -286,7 +286,7 @@ allocCluster.test('sending NOT_OK OK', {
             assert.equal(record2.meta.arg1, 'DoubleResponse::method');
             assert.equal(err2.method, 'sendCallResponseFrame');
             assert.equal(err2.type, 'tchannel.response-already-done');
-            assert.ok(err2.arg3.indexOf('foobar') >= 0);
+            assert.ok(err2.arg3 && err2.arg3.indexOf('foobar') >= 0);
             assert.ok(record2.meta.arg3.indexOf('foobar') >= 0);
 
             assert.end();
@@ -344,7 +344,7 @@ allocCluster.test('sending NOT_OK NOT_OK', {
             assert.equal(record2.meta.arg1, 'DoubleResponse::method');
             assert.equal(err2.method, 'sendCallResponseFrame');
             assert.equal(err2.type, 'tchannel.response-already-done');
-            assert.ok(err2.arg3.indexOf('foobar') >= 0);
+            assert.ok(err2.arg3 && err2.arg3.indexOf('foobar') >= 0);
             assert.ok(record2.meta.arg3.indexOf('foobar') >= 0);
 
             assert.end();
@@ -475,7 +475,7 @@ allocCluster.test('sending ERROR_FRAME OK', {
             assert.equal(record3.meta.errMessage, 'Unexpected Error');
             assert.equal(err3.method, 'sendCallResponseFrame');
             assert.equal(err3.type, 'tchannel.response-already-done');
-            assert.ok(err3.arg3.indexOf('foobar') >= 0);
+            assert.ok(err3.arg3 && err3.arg3.indexOf('foobar') >= 0);
 
             assert.end();
         }, 100);
@@ -546,7 +546,7 @@ allocCluster.test('sending ERROR_FRAME NOT_OK', {
             assert.equal(record3.meta.errMessage, 'Unexpected Error');
             assert.equal(err3.method, 'sendCallResponseFrame');
             assert.equal(err3.type, 'tchannel.response-already-done');
-            assert.ok(err3.arg3.indexOf('foobar') >= 0);
+            assert.ok(err3.arg3 && err3.arg3.indexOf('foobar') >= 0);
 
             assert.end();
         }, 100);
@@ -671,7 +671,7 @@ allocCluster.test('sending INTERNAL_TIMEOUT OK', {
             assert.equal(record2.meta.codeString, 'Timeout');
             assert.equal(err2.method, 'sendCallResponseFrame');
             assert.equal(err2.type, 'tchannel.response-already-done');
-            assert.ok(err2.arg3.indexOf('foobar') >= 0);
+            assert.ok(err2.arg3 && err2.arg3.indexOf('foobar') >= 0);
 
             assert.end();
         }, 500);
@@ -729,7 +729,7 @@ allocCluster.test('sending INTERNAL_TIMEOUT NOT_OK', {
             assert.equal(record2.meta.codeString, 'Timeout');
             assert.equal(err2.method, 'sendCallResponseFrame');
             assert.equal(err2.type, 'tchannel.response-already-done');
-            assert.ok(err2.arg3.indexOf('foobar') >= 0);
+            assert.ok(err2.arg3 && err2.arg3.indexOf('foobar') >= 0);
 
             assert.end();
         }, 500);
