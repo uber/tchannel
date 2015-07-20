@@ -110,9 +110,9 @@ allocCluster.test('request() with zero timeout', {
             tracer: conn.tracer,
             serviceName: 'server',
             host: one.hostPort,
+            hasNoParent: true,
             checksumType: null,
             timers: conn.channel.timers,
-            hasNoParent: true,
             headers: {
                 'as': 'raw',
                 'cn': 'wat'
