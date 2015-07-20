@@ -554,13 +554,15 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
             serviceName: req.serviceName,
             outArg1: String(req.arg1)
         };
-        if (err.type === 'tchannel.socket-local-closed') {
-            err = errors.TChannelLocalResetError(err, info);
+
+        var reqErr = err;
+        if (reqErr.type === 'tchannel.socket-local-closed') {
+            reqErr = errors.TChannelLocalResetError(reqErr, info);
         } else {
-            err = errors.TChannelConnectionResetError(err, info);
+            reqErr = errors.TChannelConnectionResetError(reqErr, info);
         }
 
-        req.emitError(err);
+        req.emitError(reqErr);
     });
 
     self.ops.clear();
