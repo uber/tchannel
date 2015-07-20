@@ -215,6 +215,11 @@ size to 64KiB to allow better interleaving of frames across a shared TCP
 connection. In order to handle most operations implementations will need to
 decode some part of the payload.
 
+### reserved:1
+
+Unused space for future protocol revisions, padded for read alignment, which
+may or may not help on modern Intel processors.
+
 ### id:4
 
 An identifier for this message that is chosen by the sender of a request. This
