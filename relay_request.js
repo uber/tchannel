@@ -246,14 +246,12 @@ RelayRequest.prototype.logError = function logError(err, codeName) {
         } else if (level === 'info') {
             logger.info('forwarding expected error frame', logOptions);
         }
-    } else {
-        if (level === 'error') {
-            logger.error('unexpected error while forwarding', logOptions);
-        } else if (level === 'warn') {
-            logger.warn('error while forwarding', logOptions);
-        } else if (level === 'info') {
-            logger.info('expected error while forwarding', logOptions);
-        }
+    } else if (level === 'error') {
+        logger.error('unexpected error while forwarding', logOptions);
+    } else if (level === 'warn') {
+        logger.warn('error while forwarding', logOptions);
+    } else if (level === 'info') {
+        logger.info('expected error while forwarding', logOptions);
     }
 };
 
