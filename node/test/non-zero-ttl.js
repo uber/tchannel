@@ -82,8 +82,6 @@ allocCluster.test('request() with zero timeout', {
     }
 });
 
-var allocCluster = require('./lib/alloc-cluster.js');
-
 allocCluster.test('request() with zero timeout', {
     numPeers: 2
 }, function t(cluster, assert) {
