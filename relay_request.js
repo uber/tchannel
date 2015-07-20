@@ -224,26 +224,7 @@ RelayRequest.prototype.onError = function onError(err) {
 RelayRequest.prototype.logError = function logError(err, codeName) {
     var self = this;
 
-    var level;
-    switch (codeName) {
-        case 'ProtocolError':
-        case 'UnexpectedError':
-            level = 'error';
-            break;
-
-        case 'NetworkError':
-        case 'Cancelled':
-        case 'Declined':
-        case 'Busy':
-            level = 'warn';
-            break;
-
-        case 'BadRequest':
-        case 'Timeout':
-            level = 'info';
-            break;
-
-    }
+    var level = errorLogLevel(err, codeName);
 
     if (level === 'error' && err.isErrorFrame) {
         level = 'warn';
@@ -276,5 +257,22 @@ RelayRequest.prototype.logError = function logError(err, codeName) {
     }
 };
 
-module.exports = RelayRequest;
+function errorLogLevel(err, codeName) {
+    switch (codeName) {
+        case 'ProtocolError':
+        case 'UnexpectedError':
+            return 'error';
 
+        case 'NetworkError':
+        case 'Cancelled':
+        case 'Declined':
+        case 'Busy':
+            return 'warn';
+
+        case 'BadRequest':
+        case 'Timeout':
+            return 'info';
+    }
+}
+
+module.exports = RelayRequest;
