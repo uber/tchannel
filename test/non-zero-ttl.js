@@ -73,6 +73,10 @@ allocCluster.test('request() with zero timeout', {
 
         assert.equal(resp, null);
 
+        process.nextTick(checkLog);
+    }
+
+    function checkLog() {
         assert.equal(cluster.logger.items().length, 1);
         var logLine = cluster.logger.items()[0];
         assert.equal(logLine.levelName, 'info');
@@ -132,6 +136,10 @@ allocCluster.test('request() with zero timeout', {
 
         assert.equal(resp, null);
 
+        process.nextTick(checkLog);
+    }
+
+    function checkLog() {
         assert.equal(cluster.logger.items().length, 1);
         var logLine = cluster.logger.items()[0];
         assert.equal(logLine.levelName, 'info');
