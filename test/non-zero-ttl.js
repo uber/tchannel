@@ -79,8 +79,8 @@ allocCluster.test('request() with zero timeout', {
     function checkLog() {
         assert.equal(cluster.logger.items().length, 1);
         var logLine = cluster.logger.items()[0];
-        assert.equal(logLine.levelName, 'info');
-        assert.equal(logLine.meta.error.type, 'tchannel.protocol.write-failed');
+        assert.equal(logLine && logLine.levelName, 'info');
+        assert.equal(logLine && logLine.meta.error.type, 'tchannel.protocol.write-failed');
 
         assert.end();
     }
@@ -142,8 +142,8 @@ allocCluster.test('request() with zero timeout', {
     function checkLog() {
         assert.equal(cluster.logger.items().length, 1);
         var logLine = cluster.logger.items()[0];
-        assert.equal(logLine.levelName, 'info');
-        assert.equal(logLine.meta.error.type, 'tchannel.protocol.write-failed');
+        assert.equal(logLine && logLine.levelName, 'info');
+        assert.equal(logLine && logLine.meta.error.type, 'tchannel.protocol.write-failed');
 
         assert.end();
     }
