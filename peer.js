@@ -214,21 +214,27 @@ function waitForIdentified(callback) {
 
 TChannelPeer.prototype._waitForIdentified =
 function _waitForIdentified(conn, callback) {
+    conn.errorEvent.on(onConnectionError);
     conn.closeEvent.on(onConnectionClose);
     conn.identifiedEvent.on(onIdentified);
 
-    function onConnectionClose(err) {
-        conn.closeEvent.removeListener(onConnectionClose);
-        conn.identifiedEvent.removeListener(onIdentified);
+    function onConnectionError(err) {
+        finish(err);
+    }
 
-        callback(err);
+    function onConnectionClose(err) {
+        finish(err);
     }
 
     function onIdentified() {
+        finish(null);
+    }
+
+    function finish(err) {
+        conn.errorEvent.removeListener(onConnectionError);
         conn.closeEvent.removeListener(onConnectionClose);
         conn.identifiedEvent.removeListener(onIdentified);
-
-        callback(null);
+        callback(err);
     }
 };
 
