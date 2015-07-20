@@ -23,6 +23,7 @@
 var series = require('run-series');
 var allocCluster = require('./lib/alloc-cluster');
 var TChannel = require('../channel');
+var randSeq = require('./lib/peer_score_random.js').randSeq;
 
 allocCluster.test('request retries', {
     numPeers: 4
@@ -54,7 +55,7 @@ allocCluster.test('request retries', {
                  1.0, 0.1, 0.1, // .request, chan 2 wins (1 is skipped)
                       1.0, 0.1, // .request, chan 3 wins (1-2 are skipped)
                            0.1  // .request, chan 4 wins (only one left)
-        ])
+        ], false /* NOTE: set true to print debug traces */)
     });
     var chan = client.makeSubChannel({
         serviceName: 'tristan',
@@ -158,7 +159,7 @@ allocCluster.test('request application retries', {
         random: randSeq([
             1.0, 0.1, 0.1, 0.1, // .request, chan 1 wins
                  1.0, 0.1, 0.1  // .request, chan 2 wins (1 is skipped)
-        ])
+        ], false /* NOTE: set true to print debug traces */)
     });
     var chan = client.makeSubChannel({
         serviceName: 'tristan',
@@ -268,7 +269,7 @@ allocCluster.test('retryFlags work', {
             1.0, 0.1, // .request, chan 1 wins
                  1.0, // .request, chan 2 wins (1 is skipped)
             1.0, 0.1  // .request, chan 1 wins
-        ])
+        ], false /* NOTE: set true to print debug traces */)
     });
     var chan = client.makeSubChannel({
         serviceName: 'tristan',
@@ -410,13 +411,4 @@ function fooLolError(req, res, arg2, arg3) {
 function fooStopError(req, res, arg2, arg3) {
     res.headers.as = 'raw';
     res.sendNotOk('no', 'stop');
-}
-
-function randSeq(seq) {
-    var i = 0;
-    return function random() {
-        var r = seq[i];
-        i = (i + 1) % seq.length;
-        return r;
-    };
 }
