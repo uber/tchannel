@@ -190,14 +190,25 @@ allocCluster.test('request().send() to a pool of servers', 4, function t(cluster
     var client = TChannel({
         timeoutFuzz: 0,
         random: randSeq([
-            1.0, 0.1, 0.1, 0.1, // .request, chan 1 wins
-            0.1, 1.0, 0.1, 0.1, // .request, chan 2 wins
-            0.1, 0.1, 1.0, 0.1, // .request, chan 3 wins
-            0.1, 0.1, 0.1, 1.0, // .request, chan 4 wins
-            1.0, 0.1, 0.1, 0.1, // .request, chan 1 wins
-            0.1, 1.0, 0.1, 0.1, // .request, chan 2 wins
-            0.1, 0.1, 1.0, 0.1, // .request, chan 3 wins
-            0.1, 0.1, 0.1, 1.0  // .request, chan 4 wins
+            0.0, 0.0, // chan 1: add peer, add conn
+            0.0, 0.0, // chan 2: add peer, add conn
+            0.0, 0.0, // chan 3: add peer, add conn
+            0.0, 0.0, // chan 4: add peer, add conn
+                      //
+            0.8,      // chan 1: onIdentified
+            0.7,      // chan 2: onIdentified
+            0.6,      // chan 3: onIdentified
+            0.5,      // chan 4: onIdentified
+                      //
+            0.4,      // chan 1 is top of heap, rescores to last
+            0.3,      // chan 2 is top of heap, rescores to last
+            0.2,      // chan 3 is top of heap, rescores to last
+            0.1,      // chan 4 is top of heap, rescores to last
+                      //
+            0.0,      // chan 1 is top of heap, rescores to last
+            0.0,      // chan 2 is top of heap, rescores to last
+            0.0,      // chan 3 is top of heap, rescores to last
+            0.0       // chan 4 is top of heap, rescores to last
         ], false /* NOTE: set true to print debug traces */)
     });
 
