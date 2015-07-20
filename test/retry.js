@@ -27,13 +27,6 @@ var TChannel = require('../channel');
 allocCluster.test('request retries', {
     numPeers: 4
 }, function t(cluster, assert) {
-    var random = randSeq([
-        1.0, 0.1, 0.1, 0.1, // .request, chan 1 wins
-             1.0, 0.1, 0.1, // .request, chan 2 wins (1 is skipped)
-                  1.0, 0.1, // .request, chan 3 wins (1-2 are skipped)
-                       0.1  // .request, chan 4 wins (only one left)
-    ]);
-
     // chan 1 declines
     cluster.channels[0]
         .makeSubChannel({serviceName: 'tristan'})
@@ -56,7 +49,12 @@ allocCluster.test('request retries', {
 
     var client = TChannel({
         timeoutFuzz: 0,
-        random: random
+        random: randSeq([
+            1.0, 0.1, 0.1, 0.1, // .request, chan 1 wins
+                 1.0, 0.1, 0.1, // .request, chan 2 wins (1 is skipped)
+                      1.0, 0.1, // .request, chan 3 wins (1-2 are skipped)
+                           0.1  // .request, chan 4 wins (only one left)
+        ])
     });
     var chan = client.makeSubChannel({
         serviceName: 'tristan',
@@ -145,11 +143,6 @@ allocCluster.test('request retries', {
 allocCluster.test('request application retries', {
     numPeers: 2
 }, function t(cluster, assert) {
-    var random = randSeq([
-        1.0, 0.1, 0.1, 0.1, // .request, chan 1 wins
-             1.0, 0.1, 0.1  // .request, chan 2 wins (1 is skipped)
-    ]);
-
     // chan 1 returns retryable application error
     cluster.channels[0]
         .makeSubChannel({serviceName: 'tristan'})
@@ -162,7 +155,10 @@ allocCluster.test('request application retries', {
 
     var client = TChannel({
         timeoutFuzz: 0,
-        random: random
+        random: randSeq([
+            1.0, 0.1, 0.1, 0.1, // .request, chan 1 wins
+                 1.0, 0.1, 0.1  // .request, chan 2 wins (1 is skipped)
+        ])
     });
     var chan = client.makeSubChannel({
         serviceName: 'tristan',
@@ -253,13 +249,6 @@ allocCluster.test('request application retries', {
 allocCluster.test('retryFlags work', {
     numPeers: 2
 }, function t(cluster, assert) {
-    var random = randSeq([
-        1.0, 0.1, // .request, chan 1 wins
-        1.0, 0.1, // .request, chan 1 wins
-             1.0, // .request, chan 2 wins (1 is skipped)
-        1.0, 0.1  // .request, chan 1 wins
-    ]);
-
     cluster.channels[0]
         .makeSubChannel({serviceName: 'tristan'})
         .register('foo', handlerSeries([
@@ -274,7 +263,12 @@ allocCluster.test('retryFlags work', {
 
     var client = TChannel({
         timeoutFuzz: 0,
-        random: random
+        random: randSeq([
+            1.0, 0.1, // .request, chan 1 wins
+            1.0, 0.1, // .request, chan 1 wins
+                 1.0, // .request, chan 2 wins (1 is skipped)
+            1.0, 0.1  // .request, chan 1 wins
+        ])
     });
     var chan = client.makeSubChannel({
         serviceName: 'tristan',
