@@ -226,10 +226,6 @@ RelayRequest.prototype.logError = function logError(err, codeName) {
 
     var level = errorLogLevel(err, codeName);
 
-    if (level === 'error' && err.isErrorFrame) {
-        level = 'warn';
-    }
-
     var logger = self.channel.logger;
     var logOptions = {
         error: err,
@@ -259,6 +255,9 @@ function errorLogLevel(err, codeName) {
     switch (codeName) {
         case 'ProtocolError':
         case 'UnexpectedError':
+            if (err.isErrorFrame) {
+                return 'warn';
+            }
             return 'error';
 
         case 'NetworkError':
