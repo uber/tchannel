@@ -161,9 +161,8 @@ function TChannel(options) {
         delete self.options.serviceName;
     }
 
-    // populated by makeSubChannel
     self.topChannel = self.options.topChannel || null;
-    self.subChannels = self.serviceName ? null : {};
+    self.subChannels = self.topChannel ? null : {};
 
     // for processing operation timeouts
     self.timeHeap = self.options.timeHeap || new TimeHeap({
