@@ -72,7 +72,7 @@ var frameParser = require('tchannel-parser');
 
 function readFrameFrom(buffer, offset) {
     var type = buffer.readUInt8(2);
-    if (type === 0x03 && true) {
+    if ((type === 0x03 || type === 0x04) && true) {
         var frame = frameParser(buffer);
         // if (!frame.args[1]) {
         //     frame.args[1] = new Buffer(0);
