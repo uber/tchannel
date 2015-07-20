@@ -268,6 +268,8 @@ TChannelPeer.prototype.addConnection = function addConnection(conn) {
     }
 
     function removeConnection(err) {
+        conn.closeEvent.removeListener(onConnectionClose);
+        conn.errorEvent.removeListener(onConnectionError);
         if (err) {
             var loggerInfo = {
                 error: err,
