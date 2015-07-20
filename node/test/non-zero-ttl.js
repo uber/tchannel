@@ -73,16 +73,18 @@ allocCluster.test('request() with zero timeout', {
 
         assert.equal(resp, null);
 
+        process.nextTick(checkLog);
+    }
+
+    function checkLog() {
         assert.equal(cluster.logger.items().length, 1);
         var logLine = cluster.logger.items()[0];
-        assert.equal(logLine.levelName, 'info');
-        assert.equal(logLine.meta.error.type, 'tchannel.protocol.write-failed');
+        assert.equal(logLine && logLine.levelName, 'info');
+        assert.equal(logLine && logLine.meta.error.type, 'tchannel.protocol.write-failed');
 
         assert.end();
     }
 });
-
-var allocCluster = require('./lib/alloc-cluster.js');
 
 allocCluster.test('request() with zero timeout', {
     numPeers: 2
@@ -112,9 +114,9 @@ allocCluster.test('request() with zero timeout', {
             tracer: conn.tracer,
             serviceName: 'server',
             host: one.hostPort,
+            hasNoParent: true,
             checksumType: null,
             timers: conn.channel.timers,
-            hasNoParent: true,
             headers: {
                 'as': 'raw',
                 'cn': 'wat'
@@ -134,10 +136,14 @@ allocCluster.test('request() with zero timeout', {
 
         assert.equal(resp, null);
 
+        process.nextTick(checkLog);
+    }
+
+    function checkLog() {
         assert.equal(cluster.logger.items().length, 1);
         var logLine = cluster.logger.items()[0];
-        assert.equal(logLine.levelName, 'info');
-        assert.equal(logLine.meta.error.type, 'tchannel.protocol.write-failed');
+        assert.equal(logLine && logLine.levelName, 'info');
+        assert.equal(logLine && logLine.meta.error.type, 'tchannel.protocol.write-failed');
 
         assert.end();
     }

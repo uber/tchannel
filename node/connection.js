@@ -463,7 +463,6 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
     self.closing = true;
     self.closeError = err;
     self.socket.destroy();
-    self.closeEvent.emit(self, err);
 
     var requests = self.ops.getRequests();
     var pending = self.ops.getPending();
@@ -514,22 +513,6 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
         outPending: pending.out
     };
 
-    var errorCodeName = errors.classify(err);
-
-    if (errorCodeName !== 'NetworkError' &&
-        errorCodeName !== 'ProtocolError'
-    ) {
-        self.logger.warn('resetting connection', logInfo);
-        self.errorEvent.emit(self, err);
-    } else if (
-        err.type !== 'tchannel.socket-closed' &&
-        err.type !== 'tchannel.socket-local-closed'
-    ) {
-        logInfo.error = extend(err);
-        logInfo.error.message = err.message;
-        self.logger.info('resetting connection', logInfo);
-    }
-
     // requests that we've received we can delete, but these reqs may have started their
     //   own outgoing work, which is hard to cancel. By setting this.closing, we make sure
     //   that once they do finish that their callback will swallow the response.
@@ -554,16 +537,35 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
             serviceName: req.serviceName,
             outArg1: String(req.arg1)
         };
-        if (err.type === 'tchannel.socket-local-closed') {
-            err = errors.TChannelLocalResetError(err, info);
+
+        var reqErr = err;
+        if (reqErr.type === 'tchannel.socket-local-closed') {
+            reqErr = errors.TChannelLocalResetError(reqErr, info);
         } else {
-            err = errors.TChannelConnectionResetError(err, info);
+            reqErr = errors.TChannelConnectionResetError(reqErr, info);
         }
 
-        req.emitError(err);
+        req.emitError(reqErr);
     });
 
     self.ops.clear();
+
+    var errorCodeName = errors.classify(err);
+    if (errorCodeName !== 'NetworkError' &&
+        errorCodeName !== 'ProtocolError'
+    ) {
+        self.logger.warn('resetting connection', logInfo);
+        self.errorEvent.emit(self, err);
+    } else if (
+        err.type !== 'tchannel.socket-closed' &&
+        err.type !== 'tchannel.socket-local-closed'
+    ) {
+        logInfo.error = extend(err);
+        logInfo.error.message = err.message;
+        self.logger.info('resetting connection', logInfo);
+    }
+
+    self.closeEvent.emit(self, err);
 };
 
 function InitOperation(connection, time, timeout) {

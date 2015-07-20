@@ -214,21 +214,27 @@ function waitForIdentified(callback) {
 
 TChannelPeer.prototype._waitForIdentified =
 function _waitForIdentified(conn, callback) {
+    conn.errorEvent.on(onConnectionError);
     conn.closeEvent.on(onConnectionClose);
     conn.identifiedEvent.on(onIdentified);
 
-    function onConnectionClose(err) {
-        conn.closeEvent.removeListener(onConnectionClose);
-        conn.identifiedEvent.removeListener(onIdentified);
+    function onConnectionError(err) {
+        finish(err);
+    }
 
-        callback(err);
+    function onConnectionClose(err) {
+        finish(err);
     }
 
     function onIdentified() {
+        finish(null);
+    }
+
+    function finish(err) {
+        conn.errorEvent.removeListener(onConnectionError);
         conn.closeEvent.removeListener(onConnectionClose);
         conn.identifiedEvent.removeListener(onIdentified);
-
-        callback(null);
+        callback(err);
     }
 };
 
@@ -254,25 +260,32 @@ TChannelPeer.prototype.addConnection = function addConnection(conn) {
     return conn;
 
     function onConnectionError(err) {
-        var codeName = errors.classify(err);
-
-        var loggerInfo = {
-            error: err,
-            direction: conn.direction,
-            remoteName: conn.remoteName,
-            socketRemoteAddr: conn.socketRemoteAddr
-        };
-
-        if (codeName === 'Timeout') {
-            self.logger.warn('Got a connection error', loggerInfo);
-        } else {
-            self.logger.error('Got an unexpected connection error', loggerInfo);
-        }
-
-        self.removeConnection(conn);
+        removeConnection(err);
     }
 
     function onConnectionClose() {
+        removeConnection(null);
+    }
+
+    function removeConnection(err) {
+        conn.closeEvent.removeListener(onConnectionClose);
+        conn.errorEvent.removeListener(onConnectionError);
+        if (err) {
+            var loggerInfo = {
+                error: err,
+                direction: conn.direction,
+                remoteName: conn.remoteName,
+                socketRemoteAddr: conn.socketRemoteAddr
+            };
+
+            var codeName = errors.classify(err);
+            if (codeName === 'Timeout') {
+                self.logger.warn('Got a connection error', loggerInfo);
+            } else {
+                self.logger.error('Got an unexpected connection error', loggerInfo);
+            }
+        }
+
         self.removeConnection(conn);
     }
 };
