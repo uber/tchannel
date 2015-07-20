@@ -269,6 +269,9 @@ function errorLogLevel(err, codeName) {
         case 'BadRequest':
         case 'Timeout':
             return 'info';
+
+        default:
+            return 'error';
     }
 }
 
