@@ -102,6 +102,12 @@ module.exports.ConnectionTimeoutError = TypedError({
     timeout: null
 });
 
+module.exports.CorruptWriteLazyFrame = TypedError({
+    type: 'tchannel.lazy-frame.write-corrupt',
+    message: 'could not serialize lazy frame due to {context}',
+    context: null
+});
+
 module.exports.DuplicateHeaderKeyError = TypedError({
     type: 'tchannel.duplicate-header-key',
     message: 'duplicate header key {key}',
@@ -581,6 +587,7 @@ module.exports.classify = function classify(err) {
         case 'tchannel.top-level-request':
         case 'tchannel.unimplemented-method':
         case 'tchannel.tracer.parent-required':
+        case 'tchannel.lazy-frame.write-corrupt':
             return 'UnexpectedError';
 
         default:

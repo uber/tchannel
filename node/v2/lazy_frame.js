@@ -73,8 +73,9 @@ function readLazyFrameFrom(buffer, offset) {
 
 function writeLazyFrameInto(lazyFrame, buffer, offset) {
     if (!lazyFrame.buffer) {
-        // TODO: typed error
-        return bufrw.WriteResult.error(new Error('unimplemented degenerate lazyFrame write'));
+        return bufrw.WriteResult.error(errors.CorruptWriteLazyFrame({
+            context: 'missing buffer'
+        }));
     }
 
     var remain = buffer.length - offset;
