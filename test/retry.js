@@ -87,26 +87,32 @@ allocCluster.test('request retries', {
         assert.equal(req.outReqs.length, 4, 'expected 4 tries');
 
         assert.equal(
+            req.outReqs[0] &&
             req.outReqs[0].err &&
             req.outReqs[0].err.type,
             'tchannel.declined',
             'expected first request to decline');
 
         assert.equal(
+            req.outReqs[1] &&
             req.outReqs[1].err &&
             req.outReqs[1].err.type,
             'tchannel.busy',
             'expected second request to bounce b/c busy');
 
         assert.equal(
+            req.outReqs[2] &&
             req.outReqs[2].err &&
             req.outReqs[2].err.type,
             'tchannel.unexpected',
             'expected second request to bounce w/ unexpected error');
 
-        assert.ok(req.outReqs[3].res, 'expected to have 4th response');
-        assert.deepEqual(req.outReqs[3].res.arg2, arg2, 'arg2 came form 4th response');
-        assert.deepEqual(req.outReqs[3].res.arg3, arg3, 'arg3 came form 4th response');
+        assert.ok(req.outReqs[3] &&
+                  req.outReqs[3].res, 'expected to have 4th response');
+        assert.deepEqual(req.outReqs[3] &&
+                         req.outReqs[3].res.arg2, arg2, 'arg2 came form 4th response');
+        assert.deepEqual(req.outReqs[3] &&
+                         req.outReqs[3].res.arg3, arg3, 'arg3 came form 4th response');
         assert.equal(String(arg2), 'served by 4', 'served by expected server');
         assert.equal(String(arg3), 'HI', 'got expected response');
 
