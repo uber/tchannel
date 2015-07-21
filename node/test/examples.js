@@ -99,6 +99,7 @@ test('running send_test.js', function t(assert) {
     function onChild(err, stdout, stderr) {
         assert.ifError(err);
         assert.equal(stderr, '');
+
         [
             'server got ping req from 127.0.0.1:',
             'func 3 starting response timer',
@@ -111,14 +112,13 @@ test('running send_test.js', function t(assert) {
             'func 3 starting response timer',
             'func 3 starting response timer',
             'func 3 responding now',
-            '3 slow res: err=request timed out after',
             '4 slow res: err=request timed out after',
             'func 3 responding now',
             'func 3 responding now'
         ].forEach(function each(str) {
             assert.ok(stdout.indexOf(
                 str
-            ) >= 0);
+            ) >= 0, 'expected to see ' + str);
         });
 
         assert.end();
