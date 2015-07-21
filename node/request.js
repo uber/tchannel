@@ -44,7 +44,7 @@ function TChannelRequest(options) {
 
     self.options = options;
 
-    self.triedRemoteAddrs = {};
+    self.triedRemoteAddrs = null;
     self.outReqs = [];
     self.timeout = self.options.timeout || TChannelRequest.defaultTimeout;
     if (self.options.timeoutPerAttempt) {
@@ -224,6 +224,9 @@ TChannelRequest.prototype.onIdentified = function onIdentified(peer) {
         });
     }
 
+    if (!self.triedRemoteAddrs) {
+        self.triedRemoteAddrs = {};
+    }
     self.triedRemoteAddrs[outReq.remoteAddr] =
         (self.triedRemoteAddrs[outReq.remoteAddr] || 0) + 1;
     outReq.responseEvent.on(onResponse);
