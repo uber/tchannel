@@ -27,14 +27,16 @@ var Frame = require('./frame.js');
 
 module.exports = LazyFrame;
 
-function LazyFrame() {
+function LazyFrame(size, type, id, buffer) {
     var self = this;
+
     self.isLazy = true;
-    self.size = Frame.Overhead;
-    self.type = 0;
-    self.id = Frame.NullId;
+    self.size = size;
+    self.type = type;
+    self.id = id;
+    self.buffer = buffer;
+
     self.bodyRW = null;
-    self.buffer = null;
 }
 
 // size:2 type:1 reserved:1 id:4 reserved:8 ...
@@ -49,24 +51,26 @@ function lazyFrameLength(lazyFrame) {
 
 function readLazyFrameFrom(buffer, offset) {
     var start = offset;
-    var lazyFrame = new LazyFrame();
 
     // size:2:
-    lazyFrame.size = buffer.readUInt16BE(offset);
-    offset += lazyFrame.size;
-    lazyFrame.buffer = buffer.slice(start, offset);
+    var size = buffer.readUInt16BE(offset);
+    offset += size;
+    var frameBuffer = buffer.slice(start, offset);
 
     // type:1
-    lazyFrame.type = lazyFrame.buffer.readUInt8(LazyFrame.TypeOffset);
+    var type = frameBuffer.readUInt8(LazyFrame.TypeOffset);
+
+    // id:4
+    var id = frameBuffer.readUInt32BE(LazyFrame.IdOffset);
+
+    var lazyFrame = new LazyFrame(size, type, id, frameBuffer);
     lazyFrame.bodyRW = Frame.Types[lazyFrame.type].RW;
+
     if (!lazyFrame.bodyRW) {
         return bufrw.ReadResult.error(errors.InvalidFrameTypeError({
             typeNumber: lazyFrame.type
         }), offset + LazyFrame.TypeOffset);
     }
-
-    // id:4
-    lazyFrame.id = lazyFrame.buffer.readUInt32BE(LazyFrame.IdOffset);
 
     return bufrw.ReadResult.just(offset, lazyFrame);
 }
