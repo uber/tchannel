@@ -243,6 +243,7 @@ HealthyState.prototype.onRequestUnhealthy = function onRequestUnhealthy() {
     var self = this;
     self.totalRequests++;
     self.unhealthyCount++;
+    self.checkPeriod(false, self.timers.now());
 };
 
 HealthyState.prototype.onRequestError = function onRequestError(err) {
@@ -255,6 +256,7 @@ HealthyState.prototype.onRequestError = function onRequestError(err) {
     } else {
         self.healthyCount++;
     }
+    self.checkPeriod(false, self.timers.now());
 };
 
 function UnhealthyState(options) {
@@ -301,6 +303,7 @@ UnhealthyState.prototype.onRequest = function onRequest(/* req */) {
     var self = this;
 
     self.triedThisPeriod = true;
+    self.checkPeriod(false, self.timers.now());
 };
 
 UnhealthyState.prototype.onRequestHealthy = function onRequestHealthy() {
