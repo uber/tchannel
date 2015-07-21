@@ -53,6 +53,7 @@ function ServiceDispatchHandler(options) {
     self.serviceReqDefaults = options.serviceReqDefaults || {};
 
     self.circuits = options.circuitsConfig && options.circuitsConfig.enabled ? new Circuits({
+        timeHeap: self.channel.timeHeap,
         timers: self.channel.timers,
         random: self.random,
         egressNodes: self.egressNodes,
