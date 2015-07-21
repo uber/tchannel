@@ -78,9 +78,10 @@ function RateLimiter(options) {
     assert(self.numOfBuckets > 0 && self.numOfBuckets <= 1000, 'counter numOfBuckets should between (0 1000]');
 
     self.defaultServiceRpsLimit = options.defaultServiceRpsLimit || DEFAULT_SERVICE_RPS_LIMIT;
+    self.defaultTotalRpsLimit = DEFAULT_TOTAL_RPS_LIMIT;
     self.totalRpsLimit = options.totalRpsLimit;
     if (typeof self.totalRpsLimit !== 'number') {
-        self.totalRpsLimit = DEFAULT_TOTAL_RPS_LIMIT;
+        self.totalRpsLimit = self.defaultTotalRpsLimit;
     }
     self.rpsLimitForServiceName = options.rpsLimitForServiceName || Object.create(null);
     self.exemptServices = options.exemptServices || [];
