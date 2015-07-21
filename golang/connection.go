@@ -342,9 +342,17 @@ func (c *Connection) handleInitReq(frame *Frame) {
 		return
 	}
 
-	c.remotePeerInfo.HostPort = req.initParams[InitParamHostPort]
-	c.remotePeerInfo.ProcessName = req.initParams[InitParamProcessName]
+	var ok bool
+	if c.remotePeerInfo.HostPort, ok = req.initParams[InitParamHostPort]; !ok {
+		c.protocolError(fmt.Errorf("Header %v is required", InitParamHostPort))
+		return
+	}
+	if c.remotePeerInfo.ProcessName, ok = req.initParams[InitParamProcessName]; !ok {
+		c.protocolError(fmt.Errorf("Header %v is required", InitParamProcessName))
+		return
+	}
 	if c.remotePeerInfo.IsEphemeral() {
+		// TODO(prashant): Add an IsEphemeral bool to the peer info.
 		c.remotePeerInfo.HostPort = c.conn.RemoteAddr().String()
 	}
 
