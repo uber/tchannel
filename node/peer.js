@@ -162,7 +162,13 @@ TChannelPeer.prototype.close = function close(callback) {
     }
 };
 
-TChannelPeer.prototype.setState = StateMachine.prototype.setState;
+TChannelPeer.prototype.setState = function setState(StateType) {
+    var self = this;
+
+    if (StateMachine.prototype.setState.call(self, StateType)) {
+        self.invalidateScore();
+    }
+};
 
 TChannelPeer.prototype.getInConnection = function getInConnection() {
     var self = this;
