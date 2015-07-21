@@ -264,7 +264,6 @@ func (c *callResContinue) write(w *typed.WriteBuffer) error { return nil }
 type errorMessage struct {
 	id      uint32
 	errCode SystemErrCode
-	tracing Span
 	message string
 }
 
@@ -272,14 +271,14 @@ func (m *errorMessage) ID() uint32               { return m.id }
 func (m *errorMessage) messageType() messageType { return messageTypeError }
 func (m *errorMessage) read(r *typed.ReadBuffer) error {
 	m.errCode = SystemErrCode(r.ReadByte())
-	m.tracing.read(r)
+	m.id = r.ReadUint32()
 	m.message = r.ReadLen16String()
 	return r.Err()
 }
 
 func (m *errorMessage) write(w *typed.WriteBuffer) error {
 	w.WriteByte(byte(m.errCode))
-	m.tracing.write(w)
+	w.WriteUint32(m.id)
 	w.WriteLen16String(m.message)
 	return w.Err()
 }

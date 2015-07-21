@@ -238,7 +238,6 @@ func (response *InboundCallResponse) SendSystemError(err error) error {
 	frame := response.conn.framePool.Get()
 	if err := frame.write(&errorMessage{
 		id:      response.mex.msgID,
-		tracing: response.span,
 		errCode: GetSystemErrorCode(err),
 		message: err.Error()}); err != nil {
 		// Nothing we can do here
