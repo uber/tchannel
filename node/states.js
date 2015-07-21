@@ -39,6 +39,7 @@ function StateOptions(stateMachine, options) {
     this.nextHandler = options.nextHandler;
     // for mocking tests
     this.timers = options.timers;
+    this.timeHeap = options.timeHeap;
     this.random = options.random;
     // the number of miliseconds that healthy and unhealthy requests are
     // tracked between state reevaluation.
@@ -73,6 +74,7 @@ function State(options) {
     self.stateMachine = options.stateMachine;
     self.nextHandler = options.nextHandler;
     self.timers = options.timers;
+    self.timeHeap = options.timeHeap;
     self.random = options.random;
 }
 
@@ -112,6 +114,8 @@ function PeriodicState(options) {
 
     self.period = options.period || 1000; // ms
     self.start = 0;
+    self.timeout = 0;
+    self.periodTimer = null;
 
     self.startNewPeriod(self.timers.now());
 }
@@ -121,7 +125,36 @@ PeriodicState.prototype.startNewPeriod = function startNewPeriod(now) {
     var self = this;
 
     self.start = now;
+    self.setPeriodTimer(self.period, now);
     self.onNewPeriod();
+};
+
+PeriodicState.prototype.onDeactivate = function onDeactivate() {
+    var self = this;
+
+    if (self.periodTimer) {
+        self.periodTimer.cancel();
+        self.periodTimer = null;
+    }
+};
+
+PeriodicState.prototype.setPeriodTimer = function setPeriodTimer(timeout, now) {
+    var self = this;
+
+    if (self.periodTimer) {
+        self.periodTimer.cancel();
+        self.periodTimer = null;
+    }
+
+    self.timeout = timeout;
+    self.periodTimer = self.timeHeap.update(self, now);
+};
+
+PeriodicState.prototype.onTimeout = function onTimeout() {
+    var self = this;
+
+    var now = self.timers.now();
+    self.checkPeriod(true, now);
 };
 
 PeriodicState.prototype.checkPeriod = function checkPeriod(inTimeout, now) {
@@ -131,6 +164,8 @@ PeriodicState.prototype.checkPeriod = function checkPeriod(inTimeout, now) {
     var remain = self.period - elapsed;
     if (remain <= 0) {
         self.startNewPeriod(now);
+    } else if (inTimeout) {
+        self.setPeriodTimer(remain, now);
     }
 };
 
