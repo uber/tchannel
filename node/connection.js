@@ -220,7 +220,7 @@ function sendProtocolError(type, err) {
         });
 
         self.handler.sendErrorFrame({
-            id: protocolError.frameId || 0xFFFFFFFF
+            id: protocolError.frameId || v2.Frame.NullId
         }, 'ProtocolError', protocolError.message);
 
         self.resetAll(protocolError);
@@ -429,6 +429,11 @@ TChannelConnection.prototype.onSocketError = function onSocketError(err) {
     }
 };
 
+TChannelConnection.prototype.nextFrameId = function nextFrameId() {
+    var self = this;
+    return self.handler.nextFrameId();
+};
+
 TChannelConnection.prototype.buildOutRequest = function buildOutRequest(options) {
     var self = this;
 
@@ -529,14 +534,11 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
             return;
         }
 
-        var info = {
+        var info = req.extendLogInfo({
             socketRemoteAddr: self.socketRemoteAddr,
             direction: self.direction,
-            remoteName: self.remoteName,
-            reqRemoteAddr: req.remoteAddr,
-            serviceName: req.serviceName,
-            outArg1: String(req.arg1)
-        };
+            remoteName: self.remoteName
+        });
 
         var reqErr = err;
         if (reqErr.type === 'tchannel.socket-local-closed') {
