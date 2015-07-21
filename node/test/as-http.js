@@ -90,21 +90,19 @@ allocHTTPTest('as/http can handle a timeout', {
         cluster.sendRequest.thunk({
             method: 'GET',
             path: '/such/stuff',
-        }, {
+        }, null, {
             statusCode: 500,
             body: 'null'
-        }, function callback(err) {
-            assert.error(err);
-            assert.end();
         }),
-    ]);
-});
 
+    ], assert.end);
+});
 
 function handleTestHTTPTimeout(hreq, hres) {
     setTimeout(
         function onTimeout() {
             hres.end();
+            hreq.connection.destroy();
         },
         200
     );
