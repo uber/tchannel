@@ -20,14 +20,15 @@
 
 'use strict';
 
+Frame.Types = {};
+module.exports = Frame;
+
 var bufrw = require('bufrw');
 var errors = require('../errors');
 
 var Types = require('./index.js').Types;
 
 /* jshint maxparams:5 */
-
-module.exports = Frame;
 
 function Frame(id, body) {
     var self = this;
@@ -174,5 +175,3 @@ Frame.prototype.toBuffer = function toBuffer() {
     var self = this;
     return bufrw.toBuffer(Frame.RW, self);
 };
-
-Frame.Types = {};
