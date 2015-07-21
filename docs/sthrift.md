@@ -4,23 +4,21 @@ Streaming Thrift
 Streaming Thrift allows requests or responses to be streamed over TChannel.
 
 Streaming Thrift will uses a separate `as` header: `sthrift`, and is based
-on the standard Thrift protocol, with the only exception being the encoding
-of arg3 in both the `call req` and `call res`.
+on the [standard Thrift arg scheme](thrift.md), with the only exception being
+ the encoding of arg3 in both the `call req` and `call res`.
+
+ Streaming Thrift methods have the following restrictions:
+  * If the request is streamed, the method IDL should only specify a single
+    argument which should be a struct.
+  * If the response is streamed, the return type of the method should be a
+    struct.
+  * Thrift exceptions must be returned before any streaming results have been
+    sent.
 
 The encoding of data for streaming arg3 is a 4 byte length-prefixed chunk:
 ```
 chunk~4 chunk~4 chunk~4 ...
 ```
-
-Each chunk is a Thrift encoded payload using TBinaryProtocol.
-There is no limit to the number of chunks that can be streamed.
-
-Streaming Thrift methods have the following restrictions:
- * If the request is streamed, the method IDL should only specify a single
-   argument. It is suggested that this argument is a struct.
- * Thrift exceptions must be returned before any streaming results have been
-   sent.
-
 
 Arguments
 ---------
