@@ -11,6 +11,7 @@ public class MessageCodec extends MessageToMessageCodec<TFrame, AbstractMessage>
 
     private final InitMessageCodec initMessageCodec = new InitMessageCodec();
     private final PingMessageCodec pingMessageCodec = new PingMessageCodec();
+    private final CallRequestCodec callRequestCodec = new CallRequestCodec();
 
     @Override
     protected void encode(ChannelHandlerContext ctx, AbstractMessage msg, List<Object> out) throws Exception {
@@ -26,6 +27,9 @@ public class MessageCodec extends MessageToMessageCodec<TFrame, AbstractMessage>
                 break;
             case PingResponse:
                 this.pingMessageCodec.encode(ctx, (PingResponse) msg, out);
+                break;
+            case CallRequest:
+                this.callRequestCodec.encode(ctx, (CallRequest) msg, out);
                 break;
             default:
                 throw new Exception(String.format("Unknown MessageType: %s", msg.getMessageType()));
@@ -48,6 +52,9 @@ public class MessageCodec extends MessageToMessageCodec<TFrame, AbstractMessage>
                 break;
             case PingResponse:
                 this.pingMessageCodec.decode(ctx, frame, out);
+                break;
+            case CallRequest:
+                this.callRequestCodec.decode(ctx, frame, out);
                 break;
             default:
                 throw new Exception(String.format("Unknown MessageType: %s", type));
