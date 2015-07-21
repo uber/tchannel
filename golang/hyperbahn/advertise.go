@@ -25,6 +25,7 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/uber/tchannel/golang"
 	"github.com/uber/tchannel/golang/json"
 )
 
@@ -73,6 +74,9 @@ type adResponse struct {
 func (c *Client) sendAdvertise() error {
 	ctx, cancel := json.NewContext(c.opts.Timeout)
 	defer cancel()
+
+	// Disable tracing on Hyperbahn advertise messages to avoid cascading failures (see #790).
+	tchannel.CurrentSpan(ctx).EnableTracing(false)
 
 	sc := c.tchan.GetSubChannel(hyperbahnServiceName)
 	arg := &adRequest{
