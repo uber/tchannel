@@ -20,16 +20,31 @@
 
 'use strict';
 
-require('./frame.js');
-require('./init.js');
-require('./checksum.js');
-require('./header.js');
-require('./tracing.js');
-require('./call.js');
-require('./cancel.js');
-require('./cont.js');
-require('./claim.js');
-require('./ping.js');
-require('./error_response.js');
-require('./args.js');
-require('./lazy_frame.js');
+var Buffer = require('buffer').Buffer;
+var test = require('tape');
+var testRW = require('bufrw/test_rw');
+
+var Frame = require('../../v2/frame.js');
+var LazyFrame = require('../../v2/lazy_frame.js');
+
+var Bytes = [
+    0x00, 0x15,             // size: 2
+    0x03,                   // type: 1
+    0x00,                   // reserved:1
+    0x00, 0x00, 0x00, 0x01, // id:4
+    0x00, 0x00, 0x00, 0x00, // reserved:4
+    0x00, 0x00, 0x00, 0x00, // reserved:4
+
+    0x04, 0x64, 0x6f, 0x67, 0x65 // junk bytes
+];
+var lazyFrame = new LazyFrame(
+    0x15, 0x03, 0x01,
+    new Buffer(Bytes)
+);
+lazyFrame.bodyRW = Frame.Types[0x03].RW;
+
+test('LazyFrame.RW: read/write', testRW.cases(LazyFrame.RW, [
+    [
+        lazyFrame, Bytes
+    ]
+]));
