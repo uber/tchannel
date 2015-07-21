@@ -73,3 +73,41 @@ TestBody.testWith('LazyFrame.readBody', function t(assert) {
 
     assert.end();
 });
+
+TestBody.testWith('LazyFrame.setId', function t(assert) {
+    var frame = LazyFrame.RW.readFrom(new Buffer([
+        0x00, 0x15,             // size: 2
+        0x00,                   // type: 1
+        0x00,                   // reserved:1
+        0x00, 0x00, 0x00, 0x01, // id:4
+        0x00, 0x00, 0x00, 0x00, // reserved:4
+        0x00, 0x00, 0x00, 0x00, // reserved:4
+
+        0x04, 0x64, 0x6f, 0x67, 0x65 // junk bytes
+    ]), 0).value;
+
+    assert.equal(frame.id, 0x01);
+
+    frame.setId(4);
+
+    assert.equal(frame.id, 0x04);
+
+    var buffer = new Buffer(frame.size);
+    LazyFrame.RW.writeInto(frame, buffer, 0);
+
+    assert.deepEqual(
+        buffer,
+        new Buffer([
+            0x00, 0x15,             // size: 2
+            0x00,                   // type: 1
+            0x00,                   // reserved:1
+            0x00, 0x00, 0x00, 0x04, // id:4
+            0x00, 0x00, 0x00, 0x00, // reserved:4
+            0x00, 0x00, 0x00, 0x00, // reserved:4
+
+            0x04, 0x64, 0x6f, 0x67, 0x65 // junk bytes
+        ])
+    );
+
+    assert.end();
+});
