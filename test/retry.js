@@ -20,6 +20,7 @@
 
 'use strict';
 
+var CountedReadySignal = require('ready-signal/counted');
 var series = require('run-series');
 var allocCluster = require('./lib/alloc-cluster');
 var TChannel = require('../channel');
@@ -68,42 +69,55 @@ allocCluster.test('request retries', {
             serviceName: 'tristan'
         }
     });
+    withConnectedClient(chan, cluster, onConnected);
 
-    var req = chan.request({
-        hasNoParent: true,
-        timeout: 100
-    });
-    req.send('foo', '', 'hi', function done(err, res, arg2, arg3) {
+    function onConnected() {
+        var req = chan.request({
+            hasNoParent: true,
+            timeout: 100
+        });
+        req.send('foo', '', 'hi', function done(err, res, arg2, arg3) {
+            onResponse(req, err, res, arg2, arg3);
+        });
+    }
+
+    function onResponse(req, err, res, arg2, arg3) {
         if (err) return finish(err);
 
         assert.equal(req.outReqs.length, 4, 'expected 4 tries');
 
         assert.equal(
+            req.outReqs[0] &&
             req.outReqs[0].err &&
             req.outReqs[0].err.type,
             'tchannel.declined',
             'expected first request to decline');
 
         assert.equal(
+            req.outReqs[1] &&
             req.outReqs[1].err &&
             req.outReqs[1].err.type,
             'tchannel.busy',
             'expected second request to bounce b/c busy');
 
         assert.equal(
+            req.outReqs[2] &&
             req.outReqs[2].err &&
             req.outReqs[2].err.type,
             'tchannel.unexpected',
-            'expected second request to bounce w/ unexpected error');
+            'expected third request to bounce w/ unexpected error');
 
-        assert.ok(req.outReqs[3].res, 'expected to have 4th response');
-        assert.deepEqual(req.outReqs[3].res.arg2, arg2, 'arg2 came form 4th response');
-        assert.deepEqual(req.outReqs[3].res.arg3, arg3, 'arg3 came form 4th response');
+        assert.ok(req.outReqs[3] &&
+                  req.outReqs[3].res, 'expected to have 4th response');
+        assert.deepEqual(req.outReqs[3] &&
+                         req.outReqs[3].res.arg2, arg2, 'arg2 came form 4th response');
+        assert.deepEqual(req.outReqs[3] &&
+                         req.outReqs[3].res.arg3, arg3, 'arg3 came form 4th response');
         assert.equal(String(arg2), 'served by 4', 'served by expected server');
         assert.equal(String(arg3), 'HI', 'got expected response');
 
         finish();
-    });
+    }
 
     function finish(err) {
         assert.ifError(err, 'no final error');
@@ -172,32 +186,20 @@ allocCluster.test('request application retries', {
             }
         }
     });
+    withConnectedClient(chan, cluster, onConnected);
 
-    var req = chan.request({
-        timeout: 100,
-        hasNoParent: true,
-        shouldApplicationRetry: function shouldApplicationRetry(req, res, retry, done) {
-            if (res.streamed) {
-                res.arg2.onValueReady(function arg2ready(err, arg2) {
-                    if (err) {
-                        done(err);
-                    } else {
-                        decideArg2(arg2);
-                    }
-                });
-            } else {
-                decideArg2(res.arg2);
-            }
-            function decideArg2(arg2) {
-                if (String(arg2) === 'meh') {
-                    retry();
-                } else {
-                    done();
-                }
-            }
-        }
-    });
-    req.send('foo', '', 'hi', function done(err, res, arg2, arg3) {
+    function onConnected() {
+        var req = chan.request({
+            timeout: 100,
+            hasNoParent: true,
+            shouldApplicationRetry: shouldApplicationRetry
+        });
+        req.send('foo', '', 'hi', function done(err, res, arg2, arg3) {
+            onResponse(req, err, res, arg2, arg3);
+        });
+    }
+
+    function onResponse(req, err, res, arg2, arg3) {
         if (err) return finish(err);
 
         assert.equal(req.outReqs.length, 2, 'expected 2 tries');
@@ -217,7 +219,28 @@ allocCluster.test('request application retries', {
         assert.equal(String(arg3), 'stop', 'got expected response');
 
         finish();
-    });
+    }
+
+    function shouldApplicationRetry(req, res, retry, done) {
+        if (res.streamed) {
+            res.arg2.onValueReady(function arg2ready(err, arg2) {
+                if (err) {
+                    done(err);
+                } else {
+                    decideArg2(arg2);
+                }
+            });
+        } else {
+            decideArg2(res.arg2);
+        }
+        function decideArg2(arg2) {
+            if (String(arg2) === 'meh') {
+                retry();
+            } else {
+                done();
+            }
+        }
+    }
 
     function finish(err) {
         assert.ifError(err, 'no final error');
@@ -411,4 +434,15 @@ function fooLolError(req, res, arg2, arg3) {
 function fooStopError(req, res, arg2, arg3) {
     res.headers.as = 'raw';
     res.sendNotOk('no', 'stop');
+}
+
+// TODO: useful to pull back into alloc-cluster?
+function withConnectedClient(chan, cluster, callback) {
+    var ready = CountedReadySignal(cluster.channels.length);
+    cluster.channels.forEach(function each(server, i) {
+        var peer = chan.peers.add(server.hostPort);
+        var conn = peer.connect(server.hostPort);
+        conn.on('identified', ready.signal);
+    });
+    ready(callback);
 }
