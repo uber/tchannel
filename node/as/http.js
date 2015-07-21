@@ -188,6 +188,7 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
         if (err) {
             hres.writeHead(500, 'Connection failure');
             hres.end();
+            callback(err);
             return null;
         }
 
