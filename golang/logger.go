@@ -49,58 +49,40 @@ type Logger interface {
 
 	// Debugf logs a message at debug priority
 	Debugf(msg string, args ...interface{})
+
+	// Fields returns the fields that this logger contains.
+	Fields() LogFields
+
+	// WithFields returns a logger with the current logger's fields and newFields.
+	// newFields will overwrite existing fields if the keys overlap.
+	WithFields(newFields LogFields) Logger
 }
 
-type prefixLogger struct {
-	prefix string
-	logger Logger
-}
-
-// PrefixedLogger returns a Logger that prefixes all logged messages with the given prefix.
-func PrefixedLogger(prefix string, logger Logger) Logger {
-	// If a prefix is already set, then append the given prefix to the existing prefix.
-	if pl, ok := logger.(*prefixLogger); ok {
-		prefix = pl.prefix + prefix
-		logger = pl.logger
-	}
-	return &prefixLogger{prefix, logger}
-}
-
-func (l *prefixLogger) Fatalf(msg string, args ...interface{}) {
-	l.logger.Fatalf(l.prefix+msg, args...)
-}
-
-func (l *prefixLogger) Errorf(msg string, args ...interface{}) {
-	l.logger.Errorf(l.prefix+msg, args...)
-}
-
-func (l *prefixLogger) Warnf(msg string, args ...interface{}) {
-	l.logger.Warnf(l.prefix+msg, args...)
-}
-
-func (l *prefixLogger) Infof(msg string, args ...interface{}) {
-	l.logger.Infof(l.prefix+msg, args...)
-}
-
-func (l *prefixLogger) Debugf(msg string, args ...interface{}) {
-	l.logger.Debugf(l.prefix+msg, args...)
-}
+// LogFields is the type used for additional information fields passed to the logger.
+type LogFields map[string]interface{}
 
 // NullLogger is a logger that emits nowhere
 var NullLogger Logger = nullLogger{}
 
 type nullLogger struct{}
 
-func (l nullLogger) Fatalf(msg string, arg ...interface{})  { os.Exit(1) }
-func (l nullLogger) Errorf(msg string, args ...interface{}) {}
-func (l nullLogger) Warnf(msg string, args ...interface{})  {}
-func (l nullLogger) Infof(msg string, args ...interface{})  {}
-func (l nullLogger) Debugf(msg string, args ...interface{}) {}
+func (nullLogger) Fatalf(msg string, arg ...interface{})  { os.Exit(1) }
+func (nullLogger) Errorf(msg string, args ...interface{}) {}
+func (nullLogger) Warnf(msg string, args ...interface{})  {}
+func (nullLogger) Infof(msg string, args ...interface{})  {}
+func (nullLogger) Debugf(msg string, args ...interface{}) {}
+func (nullLogger) Fields() LogFields                      { return nil }
+
+func (l nullLogger) WithFields(newFields LogFields) Logger {
+	return l
+}
 
 // SimpleLogger prints logging information to the console
 var SimpleLogger Logger = simpleLogger{}
 
-type simpleLogger struct{}
+type simpleLogger struct {
+	fields LogFields
+}
 
 const (
 	simpleLoggerStamp = "2006-01-02 15:04:05"
@@ -116,5 +98,19 @@ func (l simpleLogger) Warnf(msg string, args ...interface{})  { l.printfn("W", m
 func (l simpleLogger) Infof(msg string, args ...interface{})  { l.printfn("I", msg, args...) }
 func (l simpleLogger) Debugf(msg string, args ...interface{}) { l.printfn("D", msg, args...) }
 func (l simpleLogger) printfn(prefix, msg string, args ...interface{}) {
-	fmt.Printf("%s [%s] %s\n", time.Now().Format(simpleLoggerStamp), prefix, fmt.Sprintf(msg, args...))
+	fmt.Printf("%s [%s] %s tags: %v\n", time.Now().Format(simpleLoggerStamp), prefix, fmt.Sprintf(msg, args...), l.fields)
+}
+
+func (l simpleLogger) Fields() LogFields {
+	return l.fields
+}
+
+func (l simpleLogger) WithFields(newFields LogFields) Logger {
+	for k, v := range l.Fields() {
+		// newFields should be preferred when keys overlap.
+		if _, ok := newFields[k]; !ok {
+			newFields[k] = v
+		}
+	}
+	return simpleLogger{newFields}
 }
