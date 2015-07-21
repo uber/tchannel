@@ -76,6 +76,9 @@ function State(options) {
     self.random = options.random;
 }
 
+State.prototype.onDeactivate = function onDeactivate() {
+};
+
 State.prototype.onRequest = function onRequest(/* req */) {
 };
 
