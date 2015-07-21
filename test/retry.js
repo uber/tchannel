@@ -105,7 +105,7 @@ allocCluster.test('request retries', {
             req.outReqs[2].err &&
             req.outReqs[2].err.type,
             'tchannel.unexpected',
-            'expected second request to bounce w/ unexpected error');
+            'expected third request to bounce w/ unexpected error');
 
         assert.ok(req.outReqs[3] &&
                   req.outReqs[3].res, 'expected to have 4th response');
