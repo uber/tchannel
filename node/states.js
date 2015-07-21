@@ -103,12 +103,44 @@ State.prototype.shouldRequest = function shouldRequest(req, options) {
     }
 };
 
-function HealthyState(options) {
+function PeriodicState(options) {
     var self = this;
     State.call(self, options);
 
     self.period = options.period || 1000; // ms
-    self.start = self.timers.now();
+    self.start = 0;
+
+    self.startNewPeriod(self.timers.now());
+}
+inherits(PeriodicState, State);
+
+PeriodicState.prototype.startNewPeriod = function startNewPeriod(now) {
+    var self = this;
+
+    self.start = now;
+    self.onNewPeriod();
+};
+
+PeriodicState.prototype.checkPeriod = function checkPeriod(inTimeout, now) {
+    var self = this;
+
+    var elapsed = now - self.start;
+    var remain = self.period - elapsed;
+    if (remain <= 0) {
+        self.startNewPeriod(now);
+    }
+};
+
+PeriodicState.prototype.willCallNextHandler = function willCallNextHandler(now) {
+    var self = this;
+
+    self.checkPeriod(false, now);
+};
+
+function HealthyState(options) {
+    var self = this;
+    PeriodicState.call(self, options);
+
     self.maxErrorRate = options.maxErrorRate || 0.5;
     self.healthyCount = 0;
     self.unhealthyCount = 0;
@@ -117,7 +149,7 @@ function HealthyState(options) {
         options.minRequests : 5;
 }
 
-inherits(HealthyState, State);
+inherits(HealthyState, PeriodicState);
 
 HealthyState.prototype.type = 'tchannel.healthy';
 HealthyState.prototype.healthy = true;
@@ -131,25 +163,36 @@ HealthyState.prototype.toString = function healthyToString() {
 HealthyState.prototype.willCallNextHandler = function willCallNextHandler(now) {
     var self = this;
 
-    // At the conclusion of a period
-    if (now - self.start >= self.period) {
-        var totalCount = self.healthyCount + self.unhealthyCount;
+    self.checkPeriod(false, now);
 
+    // active unless .onNewPeriod transitioned
+    return self.stateMachine.state === self;
+};
+
+HealthyState.prototype.onNewPeriod = function onNewPeriod(now) {
+    var self = this;
+
+    var totalCount = self.healthyCount + self.unhealthyCount;
+
+    // TODO: could store on self for introspection, maybe call it
+    // "lastPeriodErrorRate"?; we could even keep a fixed size sample of error
+    // rates from periods and choose based on their differences (discrete
+    // derivative)...
+    var errorRate = self.unhealthyCount / totalCount;
+
+    if (errorRate > self.maxErrorRate &&
+        self.totalRequests > self.minRequests) {
         // Transition to unhealthy state if the healthy request rate dips below
         // the acceptable threshold.
-        if (self.unhealthyCount / totalCount > self.maxErrorRate &&
-            self.totalRequests > self.minRequests) {
-            self.stateMachine.setState(UnhealthyState);
-            return false;
-        }
-
-        // Alternately, start a new monitoring period.
-        self.start = now;
+        self.stateMachine.setState(UnhealthyState);
+        // TODO: useful to mark self dead somehow? for now we're just using "am
+        // I still the current state" logic coupled to the consuming
+        // stateMachine in .willCallNextHandler
+    } else {
+        // okay last period, reset counts for the new period
         self.healthyCount = 0;
         self.unhealthyCount = 0;
     }
-
-    return true;
 };
 
 HealthyState.prototype.onRequestHealthy = function onRequestHealthy() {
@@ -178,20 +221,24 @@ HealthyState.prototype.onRequestError = function onRequestError(err) {
 
 function UnhealthyState(options) {
     var self = this;
-    State.call(self, options);
+    PeriodicState.call(self, options);
 
     self.minResponseCount = options.probation || 5;
-    self.period = options.period || 1000;
-    self.start = self.timers.now();
     self.healthyCount = 0;
     self.triedThisPeriod = true;
 }
 
-inherits(UnhealthyState, State);
+inherits(UnhealthyState, PeriodicState);
 
 UnhealthyState.prototype.type = 'tchannel.unhealthy';
 UnhealthyState.prototype.healthy = false;
 UnhealthyState.prototype.locked = false;
+
+UnhealthyState.prototype.onNewPeriod = function onNewPeriod(now) {
+    var self = this;
+
+    self.triedThisPeriod = false;
+};
 
 UnhealthyState.prototype.toString = function healthyToString() {
     var self = this;
@@ -201,10 +248,11 @@ UnhealthyState.prototype.toString = function healthyToString() {
 UnhealthyState.prototype.willCallNextHandler = function willCallNextHandler(now) {
     var self = this;
 
-    // Start a new period if the previous has concluded
-    if (now - self.start >= self.period) {
-        self.start = now;
-        self.triedThisPeriod = false;
+    self.checkPeriod(false, now);
+
+    // if .checkPeriod transitioned us back to healthy, we're done
+    if (self.stateMachine.state !== self) {
+        return false;
     }
 
     // Allow one trial per period
