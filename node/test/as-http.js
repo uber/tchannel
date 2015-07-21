@@ -81,9 +81,10 @@ allocHTTPTest('as/http can bridge a service', {
 
 allocHTTPTest('as/http can handle a timeout', {
     onServiceRequest: handleTestHTTPTimeout,
-    expectedEgressError: {
-        type: 'tchannel.request.timeout',
-        name: 'TchannelRequestTimeoutError'
+    expectedEgressError: function assertError(assert, err) {
+        assert.ok(err.type === 'tchannel.request.timeout' ||
+            err.type === 'tchannel.timeout'
+        );
     }
 }, function t(cluster, assert) {
     parallel([
@@ -230,9 +231,13 @@ function allocHTTPBridge(opts) {
 
     function onEgressComplete(err) {
         if (opts.expectedEgressError) {
-            var expected = opts.expectedEgressError;
-            opts.assert.equal(err.type, expected.type);
-            opts.assert.equal(err.name, expected.name);
+            if (typeof opts.expectedEgressError === 'function') {
+                opts.expectedEgressError(opts.assert, err);
+            } else {
+                var expected = opts.expectedEgressError;
+                opts.assert.equal(err.type, expected.type);
+                opts.assert.equal(err.name, expected.name);
+            }
             return;
         }
         opts.assert.error(err);
