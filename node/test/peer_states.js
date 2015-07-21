@@ -252,6 +252,68 @@ testSetup('consecutive success during unhealthy periods restores health', {}, fu
 
 });
 
+testSetup('consecutive success (WITH PAUSES) during unhealthy periods restores health', {}, function t(cluster, assert) {
+    var peer = cluster.client.peers.get(cluster.hosts[1]);
+
+    var Steps = [
+        function failIt(done) {
+            parallel([
+                cluster.send('sad'),
+                cluster.send('sad')
+            ], done);
+        },
+
+        function checkIt(done) {
+            peer.channel.timers.advance(1000);
+            assert.equals(peer.state.shouldRequest(), 0.0, 'expected unhealthy score');
+            assert.equals(peer.state.type, 'tchannel.unhealthy', 'expected unhealthy');
+
+            done();
+        }
+    ];
+
+    [1, 2, 3, 4, 5].forEach(function each(trial) {Steps.push(
+
+        function checkBefore(done) {
+            peer.channel.timers.advance(1000);
+            assert.equals(peer.state.shouldRequest(), 1.0, 'expected probe score before try ' + trial);
+            assert.equals(peer.state.type, 'tchannel.unhealthy', 'unhealthy before try ' + trial);
+
+            done();
+        },
+
+        cluster.send('glad'),
+
+        function checkAfter(done) {
+            assert.equals(peer.state.shouldRequest(), 0.0, 'expected unhealthy score after try ' + trial);
+            assert.equals(peer.state.type, 'tchannel.unhealthy', 'unhealthy after try ' + trial);
+            peer.channel.timers.advance(2000);
+
+            done();
+        }
+
+    );});
+
+    Steps.push(
+        function fastForward(done) {
+            peer.channel.timers.advance(1000);
+            done();
+        },
+
+        cluster.send('glad'),
+        cluster.send('glad'),
+
+        function checkFinal(done) {
+            assert.equals(peer.state.shouldRequest(), 1.0, 'expected healthy score', 'expected healthy score');
+            assert.equals(peer.state.type, 'tchannel.healthy', 'probed back to health');
+
+            done();
+        });
+
+    series(Steps, assert.end);
+
+});
+
 function allocClusterOptions(options) {
     return {
         numPeers: 2,
