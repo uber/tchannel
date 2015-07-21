@@ -114,15 +114,16 @@ function Circuits(options) {
     EventEmitter.call(self);
     self.circuitStateChangeEvent = self.defineEvent('circuitStateChange');
     self.circuitsByServiceName = {};
+    self.config = options.config || {};
 
     self.stateOptions = new states.StateOptions(null, {
         timers: options.timers,
         random: options.random,
         nextHandler: alwaysShouldRequestHandler,
-        period: options.period,
-        maxErrorRate: options.maxErrorRate,
-        minRequests: options.minRequests,
-        probation: options.probation
+        period: self.config.period,
+        maxErrorRate: self.config.maxErrorRate,
+        minRequests: self.config.minRequests,
+        probation: self.config.probation
     });
     self.shouldRequestOptions = {};
     self.egressNodes = options.egressNodes;

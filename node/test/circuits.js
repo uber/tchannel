@@ -22,7 +22,6 @@
 
 var debugLogtron = require('debug-logtron');
 var RelayNetwork = require('./lib/relay_network.js');
-var Circuits = require('../circuits');
 var States = require('../states');
 var MockTimers = require('time-mock');
 var CountedReadySignal = require('ready-signal/counted');
@@ -40,11 +39,9 @@ var aliceAndBob = {
     numInstancesPerService: 1,
     numRelays: 1,
     kValue: 1,
-    createCircuits: function createCircuits(options) {
-        return new Circuits({
-            timers: options.timers,
-            period: 500
-        });
+    circuitsConfig: {
+        enabled: true,
+        period: 500
     }
 };
 
@@ -61,11 +58,9 @@ var aliceBobCharlie = {
     numInstancesPerService: 1,
     numRelays: 1,
     kValue: 1,
-    createCircuits: function createCircuits(options) {
-        return new Circuits({
-            timers: options.timers,
-            period: 500
-        });
+    circuitsConfig: {
+        enabled: true,
+        period: 500
     }
 };
 
