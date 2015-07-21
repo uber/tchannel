@@ -63,16 +63,7 @@ EndpointCircuits.prototype.getCircuit = function getCircuit(callerName, serviceN
     if (!circuit) {
         circuit = new Circuit(callerName, serviceName, endpointName);
         circuit.shouldRequestOptions = self.root.shouldRequestOptions;
-        var stateOptions = self.root.stateOptions;
-        circuit.stateOptions = new states.StateOptions(circuit, {
-            nextHandler: stateOptions.nextHandler,
-            timers: stateOptions.timers,
-            random: stateOptions.random,
-            period: stateOptions.period,
-            maxErrorRate: stateOptions.maxErrorRate,
-            minRequests: stateOptions.minRequests,
-            probation: stateOptions.probation
-        });
+        circuit.stateOptions = new states.StateOptions(circuit, self.root.stateOptions);
         circuit.stateChangedEvent.on(function circuitStateChanged(states) {
             self.root.emitCircuitStateChange(circuit, states);
         });
@@ -123,15 +114,17 @@ function Circuits(options) {
     EventEmitter.call(self);
     self.circuitStateChangeEvent = self.defineEvent('circuitStateChange');
     self.circuitsByServiceName = {};
-    self.stateOptions = {
-        nextHandler: alwaysShouldRequestHandler,
+    self.config = options.config || {};
+
+    self.stateOptions = new states.StateOptions(null, {
         timers: options.timers,
         random: options.random,
-        period: options.period,
-        maxErrorRate: options.maxErrorRate,
-        minRequests: options.minRequests,
-        probation: options.probation
-    };
+        nextHandler: alwaysShouldRequestHandler,
+        period: self.config.period,
+        maxErrorRate: self.config.maxErrorRate,
+        minRequests: self.config.minRequests,
+        probation: self.config.probation
+    });
     self.shouldRequestOptions = {};
     self.egressNodes = options.egressNodes;
 }
