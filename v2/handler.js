@@ -886,7 +886,9 @@ TChannelV2Handler.prototype.buildOutResponse = function buildOutResponse(req, op
     options.tracing = req.tracing;
     options.span = req.span;
     options.checksumType = req.checksum.type;
-    options.checksum = new v2.Checksum(req.checksum.type);
+    if (!options.checksum) {
+        options.checksum = new v2.Checksum(req.checksum.type);
+    }
     if (options.streamed) {
         return new StreamingOutResponse(self, req.id, options);
     } else {
