@@ -52,10 +52,25 @@ allocCluster.test('request retries', {
     var client = TChannel({
         timeoutFuzz: 0,
         random: randSeq([
-            1.0, 0.1, 0.1, 0.1, // .request, chan 1 wins
-                 1.0, 0.1, 0.1, // .request, chan 2 wins (1 is skipped)
-                      1.0, 0.1, // .request, chan 3 wins (1-2 are skipped)
-                           0.1  // .request, chan 4 wins (only one left)
+            0.0, // chan 1: add peer
+            0.0, // chan 2: add peer
+            0.0, // chan 3: add peer
+            0.0, // chan 4: add peer
+                 //
+            0.0, // chan 1: connect
+            0.0, // chan 2: connect
+            0.0, // chan 3: connect
+            0.0, // chan 4: connect
+                 //
+            1.0, // chan 1: identified
+            0.9, // chan 2: identified
+            0.8, // chan 3: identified
+            0.7, // chan 4: identified
+                 //
+            0.0, // top of heap is chan 1: rescore to last
+            0.0, // top of heap is chan 2: restore to last
+            0.0, // top of heap is chan 3: restore to last
+            0.0, // top of heap is chan 4: restore to last
         ], false /* NOTE: set true to print debug traces */)
     });
     var chan = client.makeSubChannel({
@@ -171,8 +186,17 @@ allocCluster.test('request application retries', {
     var client = TChannel({
         timeoutFuzz: 0,
         random: randSeq([
-            1.0, 0.1, 0.1, 0.1, // .request, chan 1 wins
-                 1.0, 0.1, 0.1  // .request, chan 2 wins (1 is skipped)
+            0.0, // chan 1: add peer
+            0.0, // chan 2: add peer
+                 //
+            0.0, // chan 1: connect
+            0.0, // chan 2: connect
+                 //
+            1.0, // chan 1: identified
+            0.9, // chan 2: identified
+                 //
+            0.0, // top of heap is chan 1: rescore to last
+            0.0, // top of heap is chan 2: restore to last
         ], false /* NOTE: set true to print debug traces */)
     });
     var chan = client.makeSubChannel({
@@ -288,10 +312,19 @@ allocCluster.test('retryFlags work', {
     var client = TChannel({
         timeoutFuzz: 0,
         random: randSeq([
-            1.0, 0.1, // .request, chan 1 wins
-            1.0, 0.1, // .request, chan 1 wins
-                 1.0, // .request, chan 2 wins (1 is skipped)
-            1.0, 0.1  // .request, chan 1 wins
+            0.0,  // chan 1: add peer
+            0.0,  // chan 2: add peer
+                  //
+            0.0,  // chan 1: connect
+            0.0,  // chan 2: connect
+                  //
+            1.0,  // chan 1: identified
+            0.9,  // chan 2: identified
+                  //
+            1.0,  // top of heap is chan 1: stays at top
+            1.0,  // top of heap is chan 1: stays at top
+            0.9,  // top of heap is chan 2: stays in place
+            1.0   // top of heap is chan 1: stays at top
         ], false /* NOTE: set true to print debug traces */)
     });
     var chan = client.makeSubChannel({

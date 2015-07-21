@@ -97,6 +97,14 @@ State.prototype.close = function close(callback) {
     callback(null);
 };
 
+State.prototype.invalidate = function invalidate() {
+    var self = this;
+
+    if (self.stateMachine.invalidateScore) {
+        self.stateMachine.invalidateScore();
+    }
+};
+
 State.prototype.shouldRequest = function shouldRequest(req, options) {
     var self = this;
 
@@ -277,7 +285,14 @@ UnhealthyState.prototype.locked = false;
 UnhealthyState.prototype.onNewPeriod = function onNewPeriod(now) {
     var self = this;
 
+    var triedLastPeriod = self.triedThisPeriod;
     self.triedThisPeriod = false;
+
+    if (triedLastPeriod) {
+        // score only changes if we had gone back to "closed" state, otherwise
+        // we simply are remaining "open" for a single probe
+        self.invalidate();
+    }
 };
 
 UnhealthyState.prototype.toString = function healthyToString() {
