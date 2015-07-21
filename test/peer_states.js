@@ -26,6 +26,18 @@ var MockTimers = require('time-mock');
 var allocCluster = require('./lib/alloc-cluster.js');
 var States = require('../states');
 
+function testSetup(desc, options, testFunc) {
+    allocCluster.test(desc, allocClusterOptions(options), function t(cluster, assert) {
+        runTest(testFunc, cluster, assert);
+    });
+}
+
+testSetup.only = function onlyTestSetup(desc, options, testFunc) {
+    allocCluster.test.only(desc, allocClusterOptions(options), function t(cluster, assert) {
+        runTest(testFunc, cluster, assert);
+    });
+};
+
 allocCluster.test('healthy state stays healthy', {
     numPeers: 2,
     channelOptions: {
@@ -240,8 +252,8 @@ testSetup('consecutive success during unhealthy periods restores health', {}, fu
 
 });
 
-function testSetup(desc, options, testFunc) {
-    allocCluster.test(desc, {
+function allocClusterOptions(options) {
+    return {
         numPeers: 2,
         channelOptions: {
             timers: MockTimers(Date.now()),
@@ -256,51 +268,53 @@ function testSetup(desc, options, testFunc) {
                 }
             }
         },
-    }, function t(cluster, assert) {
-        var one = cluster.channels[0];
-        var two = cluster.channels[1];
+    };
+}
 
-        var client = one.makeSubChannel({
-            serviceName: 'tiberius'
-        });
-        var service = two.makeSubChannel({
-            serviceName: 'tiberius'
-        });
-        var peer = client.peers.add(cluster.hosts[1]);
-        // manually set minRequests requirement to 0
-        peer.state.minRequests = 0;
-        service.register('glad', function(req, res) {
-            res.headers.as = 'raw';
-            res.sendOk('pool', 'party');
-        });
-        service.register('sad', function(req, res) {
-            res.sendError('UnexpectedError', '<sad trombone>');
-        });
+function runTest(testFunc, cluster, assert) {
+    var one = cluster.channels[0];
+    var two = cluster.channels[1];
 
-        cluster.client = client;
-        cluster.service = service;
-        cluster.send = function send(op) {
-            return function runSendTest(callback) {
-                client.request({
-                    serviceName: 'tiberius', 
-                    hasNoParent: true
-                }).send(op, '', '', onResult);
-                function onResult(err, res, arg2, arg3) {
-                    callback(null, {
-                        error: err,
-                        ok: res && res.ok,
-                        arg2: arg2,
-                        arg3: arg3
-                    });
-                }
-            };
+    var client = one.makeSubChannel({
+        serviceName: 'tiberius'
+    });
+    var service = two.makeSubChannel({
+        serviceName: 'tiberius'
+    });
+    var peer = client.peers.add(cluster.hosts[1]);
+    // manually set minRequests requirement to 0
+    peer.state.minRequests = 0;
+    service.register('glad', function(req, res) {
+        res.headers.as = 'raw';
+        res.sendOk('pool', 'party');
+    });
+    service.register('sad', function(req, res) {
+        res.sendError('UnexpectedError', '<sad trombone>');
+    });
+
+    cluster.client = client;
+    cluster.service = service;
+    cluster.send = function send(op) {
+        return function runSendTest(callback) {
+            client.request({
+                serviceName: 'tiberius', 
+                hasNoParent: true
+            }).send(op, '', '', onResult);
+            function onResult(err, res, arg2, arg3) {
+                callback(null, {
+                    error: err,
+                    ok: res && res.ok,
+                    arg2: arg2,
+                    arg3: arg3
+                });
+            }
         };
+    };
 
-        var conn = peer.connect();
-        conn.on('error', assert.end);
-        conn.on('identified', function gotId() {
-            testFunc(cluster, assert);
-        });
+    var conn = peer.connect();
+    conn.on('error', assert.end);
+    conn.on('identified', function gotId() {
+        testFunc(cluster, assert);
     });
 }
 
