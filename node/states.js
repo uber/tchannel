@@ -97,6 +97,14 @@ State.prototype.close = function close(callback) {
     callback(null);
 };
 
+State.prototype.invalidate = function invalidate() {
+    var self = this;
+
+    if (self.stateMachine.invalidateScore) {
+        self.stateMachine.invalidateScore();
+    }
+};
+
 State.prototype.shouldRequest = function shouldRequest(req, options) {
     var self = this;
 
