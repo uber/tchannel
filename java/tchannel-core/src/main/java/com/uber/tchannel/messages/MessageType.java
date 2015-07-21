@@ -15,8 +15,7 @@ public enum MessageType {
     Claim((byte) 0xc1),
     PingRequest((byte) 0xd0),
     PingResponse((byte) 0xd1),
-    Error((byte) 0xff),
-    None((byte) 0xfe);
+    Error((byte) 0xff);
 
     private final byte type;
 
