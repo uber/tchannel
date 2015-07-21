@@ -32,3 +32,4 @@ require('./claim.js');
 require('./ping.js');
 require('./error_response.js');
 require('./args.js');
+require('./lazy_frame.js');

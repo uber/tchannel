@@ -27,6 +27,7 @@ module.exports.Types = Types;
 
 var RetryFlags = require('../retry-flags.js');
 var Frame = require('./frame');
+var LazyFrame = require('./lazy_frame');
 
 module.exports.CallFlags = require('./call_flags');
 
@@ -80,6 +81,7 @@ module.exports.ErrorResponse = ErrorResponse;
 module.exports.Checksum = require('./checksum');
 
 module.exports.Frame = Frame;
+module.exports.LazyFrame = LazyFrame;
 
 module.exports.parseRetryFlags = function parseRetryFlags(val) {
     val = val || 'c';
