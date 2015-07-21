@@ -27,6 +27,7 @@ var allocCluster = require('./lib/alloc-cluster.js');
 var EndpointHandler = require('../endpoint-handler');
 var TChannel = require('../channel.js');
 var CountedReadySignal = require('ready-signal/counted');
+var randSeq = require('./lib/peer_score_random.js').randSeq;
 
 allocCluster.test('request().send() to a server', 2, function t(cluster, assert) {
     var one = cluster.channels[0];
@@ -197,7 +198,7 @@ allocCluster.test('request().send() to a pool of servers', 4, function t(cluster
             0.1, 1.0, 0.1, 0.1, // .request, chan 2 wins
             0.1, 0.1, 1.0, 0.1, // .request, chan 3 wins
             0.1, 0.1, 0.1, 1.0  // .request, chan 4 wins
-        ])
+        ], false /* NOTE: set true to print debug traces */)
     });
 
     var channel = client.makeSubChannel({
@@ -524,15 +525,6 @@ allocCluster.test('send() with requestDefaults', 2, function t(cluster, assert) 
         assert.end();
     }
 });
-
-function randSeq(seq) {
-    var i = 0;
-    return function random() {
-        var r = seq[i];
-        i = (i + 1) % seq.length;
-        return r;
-    };
-}
 
 function sendTest(testCase, assert) {
     return function runSendTest(callback) {
