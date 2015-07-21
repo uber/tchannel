@@ -34,18 +34,25 @@ function StateMachine() {
 
 StateMachine.prototype.setState = function setState(StateType) {
     var self = this;
+
     var currentType = self.state && self.state.type;
     if (currentType &&
         StateType.prototype.type &&
         StateType.prototype.type === currentType) {
-        return;
+        return null;
     }
+
     assert(self.stateOptions, 'state machine must have stateOptions');
     var state = new StateType(self.stateOptions);
     if (state && state.type === currentType) {
-        return;
+        return null;
     }
+
     var oldState = self.state;
     self.state = state;
+    if (oldState) {
+        oldState.onDeactivate();
+    }
     self.stateChangedEvent.emit(self, [oldState, state]);
+    return state;
 };

@@ -117,6 +117,7 @@ function Circuits(options) {
     self.config = options.config || {};
 
     self.stateOptions = new states.StateOptions(null, {
+        timeHeap: options.timeHeap,
         timers: options.timers,
         random: options.random,
         nextHandler: alwaysShouldRequestHandler,
