@@ -285,7 +285,14 @@ UnhealthyState.prototype.locked = false;
 UnhealthyState.prototype.onNewPeriod = function onNewPeriod(now) {
     var self = this;
 
+    var triedLastPeriod = self.triedThisPeriod;
     self.triedThisPeriod = false;
+
+    if (triedLastPeriod) {
+        // score only changes if we had gone back to "closed" state, otherwise
+        // we simply are remaining "open" for a single probe
+        self.invalidate();
+    }
 };
 
 UnhealthyState.prototype.toString = function healthyToString() {
