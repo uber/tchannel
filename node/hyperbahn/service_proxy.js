@@ -26,6 +26,7 @@ var EventEmitter = require('../lib/event_emitter');
 var clean = require('../lib/statsd-clean').clean;
 var util = require('util');
 var RateLimiter = require('../rate_limiter');
+var Circuits = require('../circuits');
 var ServiceHealthProxy = require('./service_health_proxy');
 
 var DEFAULT_LOG_GRACE_PERIOD = 5 * 60 * 1000;
@@ -50,7 +51,14 @@ function ServiceDispatchHandler(options) {
         DEFAULT_LOG_GRACE_PERIOD;
     self.permissionsCache = options.permissionsCache;
     self.serviceReqDefaults = options.serviceReqDefaults || {};
-    self.circuits = options.circuits;
+
+    self.circuits = options.circuitsConfig && options.circuitsConfig.enabled ? new Circuits({
+        timers: self.channel.timers,
+        random: self.random,
+        egressNodes: self.egressNodes,
+        config: options.circuitsConfig
+    }) : null;
+
     self.servicePurgePeriod = options.servicePurgePeriod ||
         SERVICE_PURGE_PERIOD;
     self.exitServices = Object.create(null);

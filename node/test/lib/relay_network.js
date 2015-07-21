@@ -31,9 +31,6 @@ var EndpointHandler = require('../../endpoint-handler.js');
 var ServiceProxy = require('../../hyperbahn/service_proxy.js');
 var HyperbahnHandler = require('../../hyperbahn/handler.js');
 
-function noop() {}
-
-
 function RelayNetwork(options) {
     if (!(this instanceof RelayNetwork)) {
         return new RelayNetwork(options);
@@ -45,7 +42,7 @@ function RelayNetwork(options) {
     self.numInstancesPerService = options.numInstancesPerService || 3;
     self.serviceNames = options.serviceNames || ['alice', 'bob', 'charlie'];
     self.kValue = options.kValue || 2;
-    self.createCircuits = options.createCircuits || noop;
+    self.circuitsConfig = options.circuitsConfig || {};
     self.clusterOptions = options.cluster || options.clusterOptions || {};
 
     self.timers = options.timers;
@@ -172,15 +169,7 @@ RelayNetwork.prototype.setCluster = function setCluster(cluster) {
             defaultServiceRpsLimit: self.defaultServiceRpsLimit,
             rateLimiterBuckets: self.rateLimiterBuckets,
             rateLimiterEnabled: self.rateLimiterEnabled,
-            circuits: self.createCircuits({
-                egressNodes: egressNodes,
-                timers: self.timers,
-                random: null,
-                period: null,
-                maxErrorRate: null,
-                minRequests: null,
-                probation: null
-            })
+            circuitsConfig: self.circuitsConfig
         });
 
         var hyperbahnChannel = relayChannel.makeSubChannel({
