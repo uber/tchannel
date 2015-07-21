@@ -24,6 +24,7 @@ var Buffer = require('buffer').Buffer;
 var test = require('tape');
 var testRW = require('bufrw/test_rw');
 
+var TestBody = require('./test_body.js');
 var Frame = require('../../v2/frame.js');
 var LazyFrame = require('../../v2/lazy_frame.js');
 
@@ -48,3 +49,27 @@ test('LazyFrame.RW: read/write', testRW.cases(LazyFrame.RW, [
         lazyFrame, Bytes
     ]
 ]));
+
+TestBody.testWith('LazyFrame.readBody', function t(assert) {
+    var frame = LazyFrame.RW.readFrom(new Buffer([
+        0x00, 0x15,             // size: 2
+        0x00,                   // type: 1
+        0x00,                   // reserved:1
+        0x00, 0x00, 0x00, 0x01, // id:4
+        0x00, 0x00, 0x00, 0x00, // reserved:4
+        0x00, 0x00, 0x00, 0x00, // reserved:4
+
+        0x04, 0x64, 0x6f, 0x67, 0x65 // junk bytes
+    ]), 0).value;
+
+    assert.equal(frame.type, 0x00);
+
+    var bodyRes = frame.readBody();
+    assert.ok(bodyRes.value);
+
+    assert.deepEqual(
+        bodyRes.value.payload, new Buffer([0x64, 0x6f, 0x67, 0x65])
+    );
+
+    assert.end();
+});
