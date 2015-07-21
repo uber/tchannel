@@ -273,4 +273,22 @@ The total number of bytes sent across all connections maintained between this pr
 The total number of bytes received across all connections maintained between this process and the peer.
 
 
+## Circuit Metrics
+
+Circuit state metrics are emitted by the Hyperbahn service proxy, not by
+TChannel directly, and come from the `circuitStateChange` event on the circuits
+instance.
+
+Circuit state changes, to unhealthy, and to healthy, are tracked both in
+aggregate and for each individual circuit.
+In lieu of support for tags, circuits are temporarily indexed both by caller
+name and service name.
+
+The pattern for circuit counter stats is:
+
+-   `circuits`
+-   `{healthy, unhealthy}`, and one of
+    -   `total`, or
+    -   `by-caller.$caller.$service.$endpoint`, or
+    -   `by-service.$service.$caller.$endpoint`
 
