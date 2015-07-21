@@ -106,15 +106,15 @@ public class CodecUtils {
 
     public static byte[] decodeArg(ByteBuf inBuf) {
         int argLength = inBuf.readUnsignedShort();
-        byte[] arg = new byte[argLength];
-        inBuf.readBytes(arg);
-        return arg;
+        byte[] outBytes = new byte[argLength];
+        inBuf.readBytes(outBytes);
+        return outBytes;
     }
+
 
     public static void encodeArg(byte[] arg, ByteBuf outBuf) {
         outBuf.writeShort((short) arg.length);
         outBuf.writeBytes(arg);
     }
-
 
 }

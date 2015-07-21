@@ -8,8 +8,9 @@ import java.util.zip.Adler32;
 
 public class Checksums {
     public static boolean verifyChecksum(AbstractCallMessage msg) {
-        return (calculateChecksum(msg) == msg.getChecksum());
+        return (calculateChecksum(msg) == msg.checksum);
     }
+
 
     public static boolean verifyChecksum(List<AbstractCallMessage> messageList) {
 
@@ -17,7 +18,7 @@ public class Checksums {
 
         for (AbstractCallMessage msg : messageList) {
             checksum = calculateChecksum(msg, checksum);
-            if (checksum != msg.getChecksum()) {
+            if (checksum != msg.checksum) {
                 return false;
             }
         }
@@ -25,22 +26,26 @@ public class Checksums {
         return true;
     }
 
-    private static long calculateChecksum(AbstractCallMessage msg) {
+    public static boolean verifyExistingChecksum(AbstractCallMessage msg, long checksum) {
+        return (msg.checksum == checksum);
+    }
+
+    public static long calculateChecksum(AbstractCallMessage msg) {
         return calculateChecksum(msg, 0L);
     }
 
-    private static long calculateChecksum(AbstractCallMessage msg, long digestSeed) {
+    public static long calculateChecksum(AbstractCallMessage msg, long digestSeed) {
 
         long checksum;
 
-        switch (ChecksumType.fromByte(msg.getChecksumType()).get()) {
+        switch (ChecksumType.fromByte(msg.checksumType).get()) {
 
             case Adler32:
                 Adler32 f = new Adler32();
                 f.update((int) digestSeed);
-                f.update(msg.getArg1());
-                f.update(msg.getArg2());
-                f.update(msg.getArg3());
+                f.update(msg.arg1);
+                f.update(msg.arg1);
+                f.update(msg.arg1);
                 checksum = f.getValue();
                 break;
             case FarmhashFingerPrint32:

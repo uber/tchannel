@@ -4,13 +4,14 @@ import com.uber.tchannel.messages.MessageType;
 
 public class TFrame {
 
+
     public static final int MAX_FRAME_LENGTH = 65536;
     public static final int FRAME_HEADER_LENGTH = 16;
 
     public final int size;
     public final byte type;
     public final long id;
-    public final byte[] payload;
+    public final byte[] payload; // TODO: payload should be a ByteBuf, and TFrame a ByteBufHolder
 
     public TFrame(byte type, long id, byte[] payload) {
         this.type = type;
