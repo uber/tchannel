@@ -462,7 +462,9 @@ PreferOutgoingHandler.prototype.shouldRequest = function shouldRequest() {
         case QOS_UNCONNECTED:
             return 0.1 + random * 0.1;
         case QOS_ONLY_INCOMING:
-            self.peer.connect();
+            if (!self.peer.channel.destroyed) {
+                self.peer.connect();
+            }
             return 0.2 + random * 0.1;
         case QOS_FRESH_OUTGOING:
             return 0.3 + random * 0.1;
