@@ -158,12 +158,11 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
 
     ].map(function eachTestCase(testCase) {
         testCase = extend({
-            channel: two.subChannels.server,
             opts: {
                 serviceName: 'server'
             }
         }, testCase);
-        return sendTest(testCase, assert);
+        return sendTest(two.subChannels.server, testCase, assert);
     }), function onResults(err) {
         if (err) return assert.end(err);
         cluster.assertCleanState(assert, {
@@ -251,9 +250,8 @@ allocCluster.test('request().send() to a pool of servers', 4, function t(cluster
               resHead: '', resBody: 'msg8 served by 4' },
 
         ].map(function eachTestCase(testCase) {
-            return sendTest(extend({
+            return sendTest(channel, extend({
                 logger: cluster.logger,
-                channel: channel
             }, testCase), assert);
         }), function onResults(err) {
             assert.ifError(err, 'no errors from sending');
@@ -313,10 +311,7 @@ allocCluster.test('request().send() to self', 1, function t(cluster, assert) {
             serviceName: 'one'
         }
     }].map(function eachTestCase(testCase) {
-        testCase = extend({
-            channel: subOne
-        }, testCase);
-        return sendTest(testCase, assert);
+        return sendTest(subOne, testCase, assert);
     }), function onResults(err) {
         assert.ifError(err, 'no errors from sending');
         cluster.assertCleanState(assert, {
@@ -534,7 +529,7 @@ function randSeq(seq) {
     };
 }
 
-function sendTest(testCase, assert) {
+function sendTest(channel, testCase, assert) {
     return function runSendTest(callback) {
         testCase.opts = testCase.opts || {};
         testCase.opts.hasNoParent = true;
@@ -543,7 +538,7 @@ function sendTest(testCase, assert) {
             cn: 'wat'
         };
 
-        testCase.channel
+        channel
             .request(testCase.opts)
             .send(testCase.op, testCase.reqHead, testCase.reqBody, onResult);
         function onResult(err, res, arg2, arg3) {
