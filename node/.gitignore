@@ -2,7 +2,7 @@ node_modules/
 TODO.md
 coverage/
 benchmarks/*.json
-node/node_modules/
+node/
 benchmarks/*.svg
 benchmarks/*.raw
 benchmarks/*.html
