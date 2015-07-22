@@ -598,23 +598,27 @@ function sendTest(channel, testCase, assert) {
         channel
             .request(testCase.opts)
             .send(testCase.op, testCase.reqHead, testCase.reqBody, onResult);
+
         function onResult(err, res, arg2, arg3) {
-            var head = arg2;
-            var body = arg3;
-            assert.ifError(err, testCase.name + ': no result error');
-            if (!err) {
-                assert.ok(typeof head === 'string' || Buffer.isBuffer(head), testCase.name + ': got head buffer or string');
-                assert.ok(typeof body === 'string' || Buffer.isBuffer(body), testCase.name + ': got body buffer or string');
-                assert.equal(head ? String(head) : head, testCase.resHead, testCase.name + ': expected head content');
-                assert.equal(body ? String(body) : body, testCase.resBody, testCase.name + ': expected body content');
-            }
-
-            if ('resOk' in testCase) {
-                assert.equal(res.ok, testCase.resOk,
-                    testCase.name + ': expected res ok');
-            }
-
+            check(err, res, arg2, arg3);
             callback();
         }
     };
+
+    function check(err, res, arg2, arg3) {
+        var head = arg2;
+        var body = arg3;
+        assert.ifError(err, testCase.name + ': no result error');
+        if (!err) {
+            assert.ok(typeof head === 'string' || Buffer.isBuffer(head), testCase.name + ': got head buffer or string');
+            assert.ok(typeof body === 'string' || Buffer.isBuffer(body), testCase.name + ': got body buffer or string');
+            assert.equal(head ? String(head) : head, testCase.resHead, testCase.name + ': expected head content');
+            assert.equal(body ? String(body) : body, testCase.resBody, testCase.name + ': expected body content');
+        }
+
+        if ('resOk' in testCase) {
+            assert.equal(res.ok, testCase.resOk,
+                testCase.name + ': expected res ok');
+        }
+    }
 }
