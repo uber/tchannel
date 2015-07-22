@@ -22,7 +22,6 @@
 
 var parallel = require('run-parallel');
 var Buffer = require('buffer').Buffer;
-var extend = require('xtend');
 var allocCluster = require('./lib/alloc-cluster.js');
 var EndpointHandler = require('../endpoint-handler');
 var TChannel = require('../channel.js');
@@ -47,11 +46,13 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
         res.sendOk(arg2, arg3);
     });
 
-    parallel([
-
+    parallelSendTest(two.subChannels.server, [
         {
             name: 'bufferOp',
             op: Buffer('foo'),
+            opts: {
+                serviceName: 'server'
+            },
             reqHead: null,
             reqBody: null,
             resHead: '',
@@ -61,6 +62,9 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
         {
             name: 'stringOp',
             op: 'foo',
+            opts: {
+                serviceName: 'server'
+            },
             reqHead: null,
             reqBody: null,
             resHead: '',
@@ -70,6 +74,9 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
         {
             name: 'bufferHead',
             op: 'foo',
+            opts: {
+                serviceName: 'server'
+            },
             reqHead: Buffer('abc'),
             reqBody: null,
             resHead: 'abc',
@@ -79,6 +86,9 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
         {
             name: 'stringHead',
             op: 'foo',
+            opts: {
+                serviceName: 'server'
+            },
             reqHead: 'abc',
             reqBody: null,
             resHead: 'abc',
@@ -88,6 +98,9 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
         {
             name: 'objectHead',
             op: 'foo',
+            opts: {
+                serviceName: 'server'
+            },
             reqHead: JSON.stringify({value: 'abc'}),
             reqBody: null,
             resHead: '{"value":"abc"}',
@@ -97,6 +110,9 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
         {
             name: 'nullHead',
             op: 'foo',
+            opts: {
+                serviceName: 'server'
+            },
             reqHead: null,
             reqBody: null,
             resHead: '',
@@ -106,6 +122,9 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
         {
             name: 'undefinedHead',
             op: 'foo',
+            opts: {
+                serviceName: 'server'
+            },
             reqHead: undefined,
             reqBody: null,
             resHead: '',
@@ -115,6 +134,9 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
         {
             name: 'bufferBody',
             op: 'foo',
+            opts: {
+                serviceName: 'server'
+            },
             reqHead: null,
             reqBody: Buffer('abc'),
             resHead: '',
@@ -124,6 +146,9 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
         {
             name: 'stringBody',
             op: 'foo',
+            opts: {
+                serviceName: 'server'
+            },
             reqHead: null,
             reqBody: 'abc',
             resHead: '',
@@ -133,6 +158,9 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
         {
             name: 'objectBody',
             op: 'foo',
+            opts: {
+                serviceName: 'server'
+            },
             reqHead: null,
             reqBody: JSON.stringify({value: 'abc'}),
             resHead: '',
@@ -142,6 +170,9 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
         {
             name: 'nullBody',
             op: 'foo',
+            opts: {
+                serviceName: 'server'
+            },
             reqHead: null,
             reqBody: null,
             resHead: '',
@@ -151,21 +182,18 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
         {
             name: 'undefinedBody',
             op: 'foo',
+            opts: {
+                serviceName: 'server'
+            },
             reqHead: null,
             reqBody: undefined,
             resHead: '',
             resBody: ''
         },
 
-    ].map(function eachTestCase(testCase) {
-        testCase = extend({
-            channel: two.subChannels.server,
-            opts: {
-                serviceName: 'server'
-            }
-        }, testCase);
-        return sendTest(testCase, assert);
-    }), function onResults(err) {
+    ], assert, onResults);
+
+    function onResults(err) {
         if (err) return assert.end(err);
         cluster.assertCleanState(assert, {
             channels: [{
@@ -183,7 +211,7 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
             }]
         });
         assert.end();
-    });
+    }
 });
 
 allocCluster.test('request().send() to a pool of servers', 4, function t(cluster, assert) {
@@ -234,55 +262,60 @@ allocCluster.test('request().send() to a pool of servers', 4, function t(cluster
     ready(testIt);
 
     function testIt() {
-        parallel([
+        parallelSendTest(channel, [
 
             { name: 'msg1', op: 'foo',
+              logger: cluster.logger,
               reqHead: '', reqBody: 'msg1',
               resHead: '', resBody: 'msg1 served by 1' },
             { name: 'msg2', op: 'foo',
+              logger: cluster.logger,
               reqHead: '', reqBody: 'msg2',
               resHead: '', resBody: 'msg2 served by 2' },
             { name: 'msg3', op: 'foo',
+              logger: cluster.logger,
               reqHead: '', reqBody: 'msg3',
               resHead: '', resBody: 'msg3 served by 3' },
             { name: 'msg4', op: 'foo',
+              logger: cluster.logger,
               reqHead: '', reqBody: 'msg4',
               resHead: '', resBody: 'msg4 served by 4' },
 
             { name: 'msg5', op: 'foo',
+              logger: cluster.logger,
               reqHead: '', reqBody: 'msg5',
               resHead: '', resBody: 'msg5 served by 1' },
             { name: 'msg6', op: 'foo',
+              logger: cluster.logger,
               reqHead: '', reqBody: 'msg6',
               resHead: '', resBody: 'msg6 served by 2' },
             { name: 'msg7', op: 'foo',
+              logger: cluster.logger,
               reqHead: '', reqBody: 'msg7',
               resHead: '', resBody: 'msg7 served by 3' },
             { name: 'msg8', op: 'foo',
+              logger: cluster.logger,
               reqHead: '', reqBody: 'msg8',
               resHead: '', resBody: 'msg8 served by 4' },
 
-        ].map(function eachTestCase(testCase) {
-            return sendTest(extend({
-                logger: cluster.logger,
-                channel: channel
-            }, testCase), assert);
-        }), function onResults(err) {
-            assert.ifError(err, 'no errors from sending');
-            cluster.assertCleanState(assert, {
-                channels: cluster.channels.map(function each() {
-                    return {
-                        peers: [{
-                            connections: [
-                                {direction: 'in', inReqs: 0, outReqs: 0}
-                            ]
-                        }]
-                    };
-                })
-            });
-            client.close();
-            assert.end();
+        ], assert, onResults);
+    }
+
+    function onResults(err) {
+        assert.ifError(err, 'no errors from sending');
+        cluster.assertCleanState(assert, {
+            channels: cluster.channels.map(function each() {
+                return {
+                    peers: [{
+                        connections: [
+                            {direction: 'in', inReqs: 0, outReqs: 0}
+                        ]
+                    }]
+                };
+            })
         });
+        client.close();
+        assert.end();
     }
 });
 
@@ -306,30 +339,29 @@ allocCluster.test('request().send() to self', 1, function t(cluster, assert) {
         res.sendNotOk(arg2, arg3);
     });
 
-    parallel([{
-        name: 'msg1', op: 'foo',
-        reqHead: 'head1', reqBody: 'msg1',
-        resHead: 'head1', resBody: 'msg1',
-        opts: {
-            host: one.hostPort,
-            serviceName: 'one'
+    parallelSendTest(subOne, [
+        {
+            name: 'msg1', op: 'foo',
+            reqHead: 'head1', reqBody: 'msg1',
+            resHead: 'head1', resBody: 'msg1',
+            opts: {
+                host: one.hostPort,
+                serviceName: 'one'
+            }
+        },
+        {
+            name: 'msg2', op: 'bar',
+            reqHead: 'head2', reqBody: 'msg2',
+            resHead: 'head2', resBody: 'msg2',
+            resOk: false,
+            opts: {
+                host: one.hostPort,
+                serviceName: 'one'
+            }
         }
-    },
-    {
-        name: 'msg2', op: 'bar',
-        reqHead: 'head2', reqBody: 'msg2',
-        resHead: 'head2', resBody: 'msg2',
-        resOk: false,
-        opts: {
-            host: one.hostPort,
-            serviceName: 'one'
-        }
-    }].map(function eachTestCase(testCase) {
-        testCase = extend({
-            channel: subOne
-        }, testCase);
-        return sendTest(testCase, assert);
-    }), function onResults(err) {
+    ], assert, onResults);
+
+    function onResults(err) {
         assert.ifError(err, 'no errors from sending');
         cluster.assertCleanState(assert, {
             channels: [{
@@ -337,7 +369,7 @@ allocCluster.test('request().send() to self', 1, function t(cluster, assert) {
             }]
         });
         assert.end();
-    });
+    }
 });
 
 allocCluster.test('send to self', {
@@ -537,7 +569,24 @@ allocCluster.test('send() with requestDefaults', 2, function t(cluster, assert) 
     }
 });
 
-function sendTest(testCase, assert) {
+function parallelSendTest(channel, testCases, assert, callback) {
+    var n = testCases.length;
+    for (var i = 0; i < testCases.length; i++) {
+        var sendCont = sendTest(channel, testCases[i], assert);
+        sendCont(onSendDone);
+    }
+
+    function onSendDone() {
+        --n;
+        if (n === 0) {
+            callback();
+        } else if (n < 0) {
+            assert.fail('got ' + Math.abs(n) + ' extra send callbacks');
+        }
+    }
+}
+
+function sendTest(channel, testCase, assert) {
     return function runSendTest(callback) {
         testCase.opts = testCase.opts || {};
         testCase.opts.hasNoParent = true;
@@ -546,7 +595,7 @@ function sendTest(testCase, assert) {
             cn: 'wat'
         };
 
-        testCase.channel
+        channel
             .request(testCase.opts)
             .send(testCase.op, testCase.reqHead, testCase.reqBody, onResult);
         function onResult(err, res, arg2, arg3) {
