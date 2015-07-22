@@ -22,17 +22,18 @@
 
 module.exports.PreferOutgoingHandler = PreferOutgoingHandler;
 
-var TIER_UNCONNECTED = 0;
-var TIER_ONLY_INCOMING = 1;
-var TIER_FRESH_OUTGOING = 2;
-var TIER_READY_OUTGOING = 3;
-
 function PreferOutgoingHandler(peer) {
     var self = this;
 
     self.peer = peer;
     self.lastTier = self.getTier();
 }
+
+
+PreferOutgoingHandler.UNCONNECTED = 0;
+PreferOutgoingHandler.ONLY_INCOMING = 1;
+PreferOutgoingHandler.FRESH_OUTGOING = 2;
+PreferOutgoingHandler.READY_OUTGOING = 3;
 
 PreferOutgoingHandler.prototype.getTier = function getTier() {
     var self = this;
@@ -41,13 +42,13 @@ PreferOutgoingHandler.prototype.getTier = function getTier() {
     var outconn = self.peer.getIdentifiedOutConnection();
 
     if (!inconn && !outconn) {
-        return TIER_UNCONNECTED;
+        return PreferOutgoingHandler.UNCONNECTED;
     } else if (!outconn || outconn.direction !== 'out') {
-        return TIER_ONLY_INCOMING;
+        return PreferOutgoingHandler.ONLY_INCOMING;
     } else if (outconn.remoteName === null) {
-        return TIER_FRESH_OUTGOING;
+        return PreferOutgoingHandler.FRESH_OUTGOING;
     } else {
-        return TIER_READY_OUTGOING;
+        return PreferOutgoingHandler.READY_OUTGOING;
     }
 };
 
@@ -61,16 +62,16 @@ PreferOutgoingHandler.prototype.getScore = function getScore() {
     var tier = self.getTier();
     self.lastTier = tier;
     switch (tier) {
-        case TIER_ONLY_INCOMING:
+        case PreferOutgoingHandler.ONLY_INCOMING:
             if (!self.peer.channel.destroyed) {
                 self.peer.connect(true);
             }
             /* falls through */
-        case TIER_UNCONNECTED:
+        case PreferOutgoingHandler.UNCONNECTED:
             /* falls through */
-        case TIER_FRESH_OUTGOING:
+        case PreferOutgoingHandler.FRESH_OUTGOING:
             return 0.1 + random * 0.3;
-        case TIER_READY_OUTGOING:
+        case PreferOutgoingHandler.READY_OUTGOING:
             return 0.4 + random * 0.6;
     }
 };
