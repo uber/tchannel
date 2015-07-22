@@ -53,13 +53,21 @@ type Logger interface {
 	// Fields returns the fields that this logger contains.
 	Fields() LogFields
 
+	// WithField returns a logger with the current logger's fields and newField.
+	WithField(newField LogField) Logger
+
 	// WithFields returns a logger with the current logger's fields and newFields.
-	// newFields will overwrite existing fields if the keys overlap.
 	WithFields(newFields LogFields) Logger
 }
 
-// LogFields is the type used for additional information fields passed to the logger.
-type LogFields map[string]interface{}
+// LogField is a single field of additional information passed to the logger.
+type LogField struct {
+	Key   string
+	Value interface{}
+}
+
+// LogFields is a list of LogFields used to pass additional information to the logger.
+type LogFields []LogField
 
 // NullLogger is a logger that emits nowhere
 var NullLogger Logger = nullLogger{}
@@ -73,9 +81,8 @@ func (nullLogger) Infof(msg string, args ...interface{})  {}
 func (nullLogger) Debugf(msg string, args ...interface{}) {}
 func (nullLogger) Fields() LogFields                      { return nil }
 
-func (l nullLogger) WithFields(newFields LogFields) Logger {
-	return l
-}
+func (l nullLogger) WithFields(_ LogFields) Logger { return l }
+func (l nullLogger) WithField(_ LogField) Logger   { return l }
 
 // SimpleLogger prints logging information to the console
 var SimpleLogger Logger = simpleLogger{}
@@ -105,12 +112,18 @@ func (l simpleLogger) Fields() LogFields {
 	return l.fields
 }
 
+func (l simpleLogger) WithField(newField LogField) Logger {
+	existingFields := l.Fields()
+	fields := make(LogFields, 0, len(existingFields)+1)
+	fields = append(fields, existingFields...)
+	fields = append(fields, newField)
+	return simpleLogger{fields}
+}
+
 func (l simpleLogger) WithFields(newFields LogFields) Logger {
-	for k, v := range l.Fields() {
-		// newFields should be preferred when keys overlap.
-		if _, ok := newFields[k]; !ok {
-			newFields[k] = v
-		}
-	}
-	return simpleLogger{newFields}
+	existingFields := l.Fields()
+	fields := make(LogFields, 0, len(existingFields)+1)
+	fields = append(fields, existingFields...)
+	fields = append(fields, newFields...)
+	return simpleLogger{fields}
 }

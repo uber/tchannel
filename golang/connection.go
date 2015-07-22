@@ -198,9 +198,9 @@ func (ch *Channel) newConnection(conn net.Conn, initialState connectionState, on
 
 	connID := atomic.AddUint32(&nextConnID, 1)
 	log := ch.log.WithFields(LogFields{
-		"connID":     connID,
-		"localPeer":  conn.LocalAddr(),
-		"remotePeer": conn.RemoteAddr(),
+		{"connID", connID},
+		{"localPeer", conn.LocalAddr()},
+		{"remotePeer", conn.RemoteAddr()},
 	})
 	peerInfo := ch.PeerInfo()
 	log.Debugf("created for %v (%v) local: %v remote: %v",
