@@ -28,6 +28,7 @@ var net = require('net');
 var TChannelConnection = require('./connection');
 var errors = require('./errors');
 var Request = require('./request');
+var PreferOutgoingHandler = require('./peer_score_strategies.js').PreferOutgoingHandler;
 
 var DEFAULT_REPORT_INTERVAL = 1000;
 
@@ -400,59 +401,6 @@ TChannelPeer.prototype._maybeInvalidateScore = function _maybeInvalidateScore() 
 TChannelPeer.prototype.getScore = function getScore() {
     var self = this;
     return self.handler.getScore();
-};
-
-var TIER_UNCONNECTED = 0;
-var TIER_ONLY_INCOMING = 1;
-var TIER_FRESH_OUTGOING = 2;
-var TIER_READY_OUTGOING = 3;
-
-function PreferOutgoingHandler(peer) {
-    var self = this;
-
-    self.peer = peer;
-    self.lastTier = self.getTier();
-}
-
-PreferOutgoingHandler.prototype.getTier = function getTier() {
-    var self = this;
-
-    var inconn = self.peer.getInConnection();
-    var outconn = self.peer.getIdentifiedOutConnection();
-
-    if (!inconn && !outconn) {
-        return TIER_UNCONNECTED;
-    } else if (!outconn || outconn.direction !== 'out') {
-        return TIER_ONLY_INCOMING;
-    } else if (outconn.remoteName === null) {
-        return TIER_FRESH_OUTGOING;
-    } else {
-        return TIER_READY_OUTGOING;
-    }
-};
-
-PreferOutgoingHandler.prototype.getScore = function getScore() {
-    var self = this;
-
-    // space:
-    //   [0.1, 0.4)  peers with no identified outgoing connection
-    //   [0.4, 1.0)  identified outgoing connections
-    var random = self.peer.outPendingWeightedRandom();
-    var qos = self.getTier();
-    self.lastTier = qos;
-    switch (qos) {
-        case TIER_ONLY_INCOMING:
-            if (!self.peer.channel.destroyed) {
-                self.peer.connect(true);
-            }
-            /* falls through */
-        case TIER_UNCONNECTED:
-            /* falls through */
-        case TIER_FRESH_OUTGOING:
-            return 0.1 + random * 0.3;
-        case TIER_READY_OUTGOING:
-            return 0.4 + random * 0.6;
-    }
 };
 
 module.exports = TChannelPeer;
