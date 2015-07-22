@@ -109,23 +109,24 @@ type OnActiveHandler func(c *Connection)
 
 // Connection represents a connection to a remote peer.
 type Connection struct {
-	log             Logger
-	statsReporter   StatsReporter
-	traceReporter   TraceReporter
-	checksumType    ChecksumType
-	framePool       FramePool
-	conn            net.Conn
-	localPeerInfo   LocalPeerInfo
-	remotePeerInfo  PeerInfo
-	sendCh          chan *Frame
-	state           connectionState
-	stateMut        sync.RWMutex
-	inbound         messageExchangeSet
-	outbound        messageExchangeSet
-	handlers        *handlerMap
-	nextMessageID   uint32
-	onActive        OnActiveHandler
-	commonStatsTags map[string]string
+	log                Logger
+	statsReporter      StatsReporter
+	traceReporter      TraceReporter
+	checksumType       ChecksumType
+	framePool          FramePool
+	conn               net.Conn
+	localPeerInfo      LocalPeerInfo
+	remotePeerInfo     PeerInfo
+	sendCh             chan *Frame
+	state              connectionState
+	stateMut           sync.RWMutex
+	inbound            messageExchangeSet
+	outbound           messageExchangeSet
+	handlers           *handlerMap
+	nextMessageID      uint32
+	onActive           OnActiveHandler
+	onCloseStateChange OnActiveHandler
+	commonStatsTags    map[string]string
 }
 
 // nextConnID gives an ID for each connection for debugging purposes.
@@ -250,6 +251,12 @@ func (c *Connection) IsActive() bool {
 
 func (c *Connection) callOnActive() {
 	if f := c.onActive; f != nil {
+		f(c)
+	}
+}
+
+func (c *Connection) callOnCloseStateChange() {
+	if f := c.onCloseStateChange; f != nil {
 		f(c)
 	}
 }
@@ -643,6 +650,9 @@ func (c *Connection) checkExchanges() {
 			return
 		}
 	}
+
+	// If the state was updated, call the onCloseStateChange event.
+	c.callOnCloseStateChange()
 }
 
 // Close starts a graceful Close which will first reject incoming calls, reject outgoing calls

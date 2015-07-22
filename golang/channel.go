@@ -316,13 +316,14 @@ func (ch *Channel) serve() {
 			ch.mutable.conns = append(ch.mutable.conns, c)
 			ch.mutable.mut.Unlock()
 		}
-		_, err = ch.newInboundConnection(netConn, onActive, &ch.connectionOptions)
+		c, err := ch.newInboundConnection(netConn, onActive, &ch.connectionOptions)
 		if err != nil {
 			// Server is getting overloaded - begin rejecting new connections
 			ch.log.Errorf("could not create new TChannelConnection for incoming conn: %v", err)
 			netConn.Close()
 			continue
 		}
+		c.onCloseStateChange = ch.ConnectionCloseStateChange
 	}
 }
 
@@ -361,6 +362,7 @@ func (ch *Channel) Connect(ctx context.Context, hostPort string, connectionOptio
 	if err != nil {
 		return nil, err
 	}
+	c.onCloseStateChange = ch.ConnectionCloseStateChange
 
 	if err := c.sendInit(ctx); err != nil {
 		return nil, err
@@ -380,6 +382,30 @@ func (ch *Channel) Connect(ctx context.Context, hostPort string, connectionOptio
 	ch.mutable.mut.Unlock()
 
 	return c, err
+}
+
+func (ch *Channel) ConnectionCloseStateChange(c *Connection) {
+	switch chState := ch.State(); chState {
+	case ChannelStartClose, ChannelInboundClosed:
+		ch.mutable.mut.RLock()
+		minState := connectionClosed
+		for _, c := range ch.mutable.conns {
+			if s := c.readState(); s < minState {
+				minState = s
+			}
+		}
+		ch.mutable.mut.RUnlock()
+
+		if minState >= connectionClosed {
+			ch.mutable.mut.Lock()
+			ch.mutable.state = ChannelClosed
+			ch.mutable.mut.Unlock()
+		} else if minState >= connectionInboundClosed && chState == ChannelStartClose {
+			ch.mutable.mut.Lock()
+			ch.mutable.state = ChannelInboundClosed
+			ch.mutable.mut.Unlock()
+		}
+	}
 }
 
 // Closed returns whether this channel has been closed with .Close()
