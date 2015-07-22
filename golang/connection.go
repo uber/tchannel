@@ -75,6 +75,9 @@ var (
 	// request through a connection which has not yet been initialized
 	ErrConnectionNotReady = errors.New("connection is not yet ready")
 
+	// errConnectionInvalidState is returned when the connection is in an unknown state.
+	errConnectionUnknownState = errors.New("connection is in an invalid state")
+
 	// ErrSendBufferFull is returned when a message cannot be sent to the
 	// peer because the frame sending buffer has become full.  Typically
 	// this indicates that the connection is stuck and writes have become
