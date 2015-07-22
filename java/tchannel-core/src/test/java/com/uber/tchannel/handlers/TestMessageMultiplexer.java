@@ -37,7 +37,7 @@ public class TestMessageMultiplexer {
         channel.writeInbound(Fixtures.callRequestContinueWithId(0));
         assertNull(map.get(0L));
 
-        CallRequest fullCallRequest = (CallRequest) channel.readInbound();
+        CallRequest fullCallRequest = channel.readInbound();
         assertArrayEquals(fullCallRequest.arg1, new byte[]{0x01, 0x01, 0x01});
         assertArrayEquals(fullCallRequest.arg2, new byte[]{0x02, 0x02, 0x02});
         assertArrayEquals(fullCallRequest.arg3, new byte[]{0x03, 0x03, 0x03});
@@ -64,10 +64,10 @@ public class TestMessageMultiplexer {
         channel.writeInbound(Fixtures.callRequestWithId(0));
         channel.writeInbound(Fixtures.callRequestWithId(0));
 
-        assertNotNull((CallRequest) channel.readInbound());
-        assertNotNull((CallRequest) channel.readInbound());
-        assertNotNull((CallRequest) channel.readInbound());
-        assertNull((CallRequest) channel.readInbound());
+        assertNotNull(channel.readInbound());
+        assertNotNull(channel.readInbound());
+        assertNotNull(channel.readInbound());
+        assertNull(channel.readInbound());
 
     }
 

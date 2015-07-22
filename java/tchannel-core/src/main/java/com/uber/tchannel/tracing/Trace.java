@@ -2,6 +2,7 @@ package com.uber.tchannel.tracing;
 
 public class Trace {
 
+    public static final int TRACING_HEADER_LENGTH = 25;
     private static final byte TRACING_ENABLED_MASK = (byte) 0x01;
 
     public final long spanId; // Unsigned

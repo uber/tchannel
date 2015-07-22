@@ -24,7 +24,7 @@ public class PingMessageCodecTest {
         channel.writeOutbound(pingRequest);
         channel.writeInbound(channel.readOutbound());
 
-        PingRequest newPingRequest = (PingRequest) channel.readInbound();
+        PingRequest newPingRequest = channel.readInbound();
         assertEquals(newPingRequest.getId(), pingRequest.getId());
 
     }

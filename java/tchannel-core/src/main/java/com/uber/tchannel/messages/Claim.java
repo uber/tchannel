@@ -1,11 +1,13 @@
 package com.uber.tchannel.messages;
 
+import com.uber.tchannel.tracing.Trace;
+
 public class Claim extends AbstractMessage {
 
-    private final long ttl;
-    private final byte[] tracing;
+    public final long ttl;
+    public final Trace tracing;
 
-    public Claim(long id, long ttl, byte[] tracing) {
+    public Claim(long id, long ttl, Trace tracing) {
         super(id, MessageType.Claim);
         this.ttl = ttl;
         this.tracing = tracing;
