@@ -449,9 +449,7 @@ PreferOutgoingHandler.prototype.shouldRequest = function shouldRequest() {
     var self = this;
 
     // space:
-    //   [0.1, 0.2)  unconnected peers
-    //   [0.2, 0.3)  incoming connections
-    //   [0.3, 0.4)  new outgoing connections
+    //   [0.1, 0.4)  peers with no identified outgoing connection
     //   [0.4, 1.0)  identified outgoing connections
     var random = self.peer.outPendingWeightedRandom();
     var qos = self.getQOS();
@@ -459,15 +457,15 @@ PreferOutgoingHandler.prototype.shouldRequest = function shouldRequest() {
         self.lastQOS = qos;
     }
     switch (qos) {
-        case QOS_UNCONNECTED:
-            return 0.1 + random * 0.1;
         case QOS_ONLY_INCOMING:
             if (!self.peer.channel.destroyed) {
                 self.peer.connect();
             }
-            return 0.2 + random * 0.1;
+            /* falls through */
+        case QOS_UNCONNECTED:
+            /* falls through */
         case QOS_FRESH_OUTGOING:
-            return 0.3 + random * 0.1;
+            return 0.1 + random * 0.3;
         case QOS_READY_OUTGOING:
             return 0.4 + random * 0.6;
     }
