@@ -172,9 +172,11 @@ PeriodicState.prototype.checkPeriod = function checkPeriod(inTimeout, now) {
     var remain = self.period - elapsed;
     if (remain <= 0) {
         self.startNewPeriod(now);
+        return true;
     } else if (inTimeout) {
         self.setPeriodTimer(remain, now);
     }
+    return false;
 };
 
 PeriodicState.prototype.willCallNextHandler = function willCallNextHandler(now) {
