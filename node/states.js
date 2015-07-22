@@ -111,6 +111,8 @@ State.prototype.shouldRequest = function shouldRequest(req, options) {
     var now = self.timers.now();
     if (self.willCallNextHandler(now)) {
         return self.nextHandler.shouldRequest(req, options);
+    } else if (self.stateMachine.state !== self) {
+        return self.stateMachine.state.shouldRequest(req, options);
     } else {
         return 0;
     }
