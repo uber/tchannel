@@ -197,6 +197,6 @@ func (p *Peer) Close() {
 	defer p.mut.RUnlock()
 
 	for _, c := range p.connections {
-		c.closeNetwork()
+		c.Close()
 	}
 }
