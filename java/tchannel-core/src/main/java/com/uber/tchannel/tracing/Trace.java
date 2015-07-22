@@ -7,7 +7,7 @@ public class Trace {
     public final long spanId; // Unsigned
     public final long parentId; // Unsigned
     public final long traceId; // Unsigned
-    public final byte traceFlags; // Unsigned
+    public final byte traceFlags;
 
     public Trace(long spanId, long parentId, long traceId, byte traceFlags) {
         this.spanId = spanId;

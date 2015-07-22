@@ -41,16 +41,15 @@ public class InitMessageCodec extends MessageToMessageCodec<TFrame, AbstractInit
         String hostPort = headers.get(AbstractInitMessage.HOST_PORT_KEY);
         String processName = headers.get(AbstractInitMessage.PROCESS_NAME_KEY);
 
-        MessageType type = MessageType.fromByte(frame.type).orElse(MessageType.None);
+        MessageType type = MessageType.fromByte(frame.type).get();
 
-        AbstractInitMessage msg;
-        if (type == MessageType.InitRequest) {
-            out.add(new InitRequest(frame.id, version, hostPort, processName));
-        } else if (type == MessageType.InitResponse) {
-            out.add(new InitResponse(frame.id, version, hostPort, processName));
-        } else {
-            throw new RuntimeException(String.format("Unexpected MessageType: %s", frame.type));
+        switch (type) {
+            case InitRequest:
+                out.add(new InitRequest(frame.id, version, hostPort, processName));
+            case InitResponse:
+                out.add(new InitResponse(frame.id, version, hostPort, processName));
         }
+
 
     }
 

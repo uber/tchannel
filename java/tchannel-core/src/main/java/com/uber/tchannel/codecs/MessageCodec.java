@@ -39,7 +39,7 @@ public class MessageCodec extends MessageToMessageCodec<TFrame, AbstractMessage>
 
     @Override
     protected void decode(ChannelHandlerContext ctx, TFrame frame, List<Object> out) throws Exception {
-        MessageType type = MessageType.fromByte(frame.type).orElse(MessageType.None);
+        MessageType type = MessageType.fromByte(frame.type).get();
         switch (type) {
             case InitRequest:
                 this.initMessageCodec.decode(ctx, frame, out);
