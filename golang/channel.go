@@ -422,7 +422,10 @@ func (ch *Channel) State() ChannelState {
 	return state
 }
 
-// Close closes the channel including all connections to any active peers.
+// Close starts a graceful Close for the channel. This does not happen immediately:
+// 1. This call closes the Listener and starts closing connections.
+// 2. When all incoming connections are drainged, the connection blocks new outgoing calls.
+// 3. When all connections are drainged, the channel's state is updated to Closed.
 func (ch *Channel) Close() {
 	ch.mutable.mut.Lock()
 

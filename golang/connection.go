@@ -658,6 +658,7 @@ func (c *Connection) checkExchanges() {
 // Close starts a graceful Close which will first reject incoming calls, reject outgoing calls
 // before finally marking the connection state as closed.
 func (c *Connection) Close() error {
+	c.log.Debugf("Connection Close")
 	// Update the state which will start blocking incoming calls.
 	if err := c.withStateLock(func() error {
 		if c.state != connectionActive {
