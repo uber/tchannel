@@ -45,8 +45,7 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
         res.sendOk(arg2, arg3);
     });
 
-    parallel([
-
+    parallelSendTest(two.subChannels.server, [
         {
             name: 'bufferOp',
             op: Buffer('foo'),
@@ -191,9 +190,7 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
             resBody: ''
         },
 
-    ].map(function eachTestCase(testCase) {
-        return sendTest(two.subChannels.server, testCase, assert);
-    }), onResults);
+    ], assert, onResults);
 
     function onResults(err) {
         if (err) return assert.end(err);
@@ -253,7 +250,7 @@ allocCluster.test('request().send() to a pool of servers', 4, function t(cluster
     ready(testIt);
 
     function testIt() {
-        parallel([
+        parallelSendTest(channel, [
 
             { name: 'msg1', op: 'foo',
               logger: cluster.logger,
@@ -289,9 +286,7 @@ allocCluster.test('request().send() to a pool of servers', 4, function t(cluster
               reqHead: '', reqBody: 'msg8',
               resHead: '', resBody: 'msg8 served by 4' },
 
-        ].map(function eachTestCase(testCase) {
-            return sendTest(channel, testCase, assert);
-        }), onResults);
+        ], assert, onResults);
     }
 
     function onResults(err) {
@@ -332,7 +327,7 @@ allocCluster.test('request().send() to self', 1, function t(cluster, assert) {
         res.sendNotOk(arg2, arg3);
     });
 
-    parallel([
+    parallelSendTest(subOne, [
         {
             name: 'msg1', op: 'foo',
             reqHead: 'head1', reqBody: 'msg1',
@@ -352,9 +347,7 @@ allocCluster.test('request().send() to self', 1, function t(cluster, assert) {
                 serviceName: 'one'
             }
         }
-    ].map(function eachTestCase(testCase) {
-        return sendTest(subOne, testCase, assert);
-    }), onResults);
+    ], assert, onResults);
 
     function onResults(err) {
         assert.ifError(err, 'no errors from sending');
@@ -571,6 +564,23 @@ function randSeq(seq) {
         i = (i + 1) % seq.length;
         return r;
     };
+}
+
+function parallelSendTest(channel, testCases, assert, callback) {
+    var n = testCases.length;
+    for (var i = 0; i < testCases.length; i++) {
+        var sendCont = sendTest(channel, testCases[i], assert);
+        sendCont(onSendDone);
+    }
+
+    function onSendDone() {
+        --n;
+        if (n === 0) {
+            callback();
+        } else if (n < 0) {
+            assert.fail('got ' + Math.abs(n) + ' extra send callbacks');
+        }
+    }
 }
 
 function sendTest(channel, testCase, assert) {
