@@ -26,6 +26,7 @@ import (
 	"net"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/uber/tchannel/golang/typed"
 	"golang.org/x/net/context"
@@ -337,13 +338,21 @@ func (c *Connection) handleInitReq(frame *Frame) {
 
 	if req.Version != CurrentProtocolVersion {
 		// TODO(mmihic): Send protocol error
-		c.connectionError(fmt.Errorf("Unsupported protocol version %d from peer", req.Version))
+		c.protocolError(fmt.Errorf("Unsupported protocol version %d from peer", req.Version))
 		return
 	}
 
-	c.remotePeerInfo.HostPort = req.initParams[InitParamHostPort]
-	c.remotePeerInfo.ProcessName = req.initParams[InitParamProcessName]
+	var ok bool
+	if c.remotePeerInfo.HostPort, ok = req.initParams[InitParamHostPort]; !ok {
+		c.protocolError(fmt.Errorf("Header %v is required", InitParamHostPort))
+		return
+	}
+	if c.remotePeerInfo.ProcessName, ok = req.initParams[InitParamProcessName]; !ok {
+		c.protocolError(fmt.Errorf("Header %v is required", InitParamProcessName))
+		return
+	}
 	if c.remotePeerInfo.IsEphemeral() {
+		// TODO(prashant): Add an IsEphemeral bool to the peer info.
 		c.remotePeerInfo.HostPort = c.conn.RemoteAddr().String()
 	}
 
@@ -487,8 +496,8 @@ func (c *Connection) NextMessageID() uint32 {
 	return atomic.AddUint32(&c.nextMessageID, 1)
 }
 
-// connectionError handles a connection level error
-func (c *Connection) connectionError(err error) error {
+// tryClose closes the connection if it is not closed.
+func (c *Connection) tryClose() {
 	doClose := false
 	c.withStateLock(func() error {
 		if c.state != connectionClosed {
@@ -501,8 +510,32 @@ func (c *Connection) connectionError(err error) error {
 	if doClose {
 		c.closeNetwork()
 	}
+}
+
+// connectionError handles a connection level error
+func (c *Connection) connectionError(err error) error {
+	c.tryClose()
 
 	return NewWrappedSystemError(ErrCodeNetwork, err)
+}
+
+func (c *Connection) protocolError(err error) error {
+	sysErr := NewWrappedSystemError(ErrCodeProtocol, err)
+	frame := c.framePool.Get()
+
+	// If the write fails, ignore it.
+	frame.write(&errorMessage{
+		id:      invalidMessageID,
+		errCode: sysErr.(SystemError).Code(),
+		message: err.Error(),
+	})
+	c.sendCh <- frame
+
+	// TODO(prashant): This is a huge hack, and should be removed once graceful Close is supported.
+	time.Sleep(100 * time.Millisecond)
+
+	c.tryClose()
+	return sysErr
 }
 
 // withStateLock performs an action with the connection state mutex locked
