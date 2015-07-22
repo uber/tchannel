@@ -623,6 +623,26 @@ func (c *Connection) writeFrames() {
 func (c *Connection) checkExchanges() {
 }
 
+// Close starts a graceful Close which will first reject incoming calls, reject outgoing calls
+// before finally marking the connection state as closed.
+func (c *Connection) Close() error {
+	// Update the state which will start blocking incoming calls.
+	if err := c.withStateLock(func() error {
+		if c.state != connectionActive {
+			return fmt.Errorf("connection must be Active to Close")
+		}
+		c.state = connectionStartClose
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	// Check all in-flight requests to see whether we can transition the Close state.
+	c.checkExchanges()
+
+	return nil
+}
+
 // closeNetwork closes the network connection and all network-related channels.
 // This should only be done in response to a fatal connection or protocol
 // error, or after all pending frames have been sent.
