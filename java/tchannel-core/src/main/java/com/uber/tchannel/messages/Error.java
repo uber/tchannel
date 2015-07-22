@@ -1,12 +1,14 @@
 package com.uber.tchannel.messages;
 
+import com.uber.tchannel.tracing.Trace;
+
 public class Error extends AbstractMessage {
 
-    private final byte code;
-    private final byte[] tracing;
-    private final String message;
+    public final byte code;
+    public final Trace tracing;
+    public final String message;
 
-    public Error(long id, byte code, byte[] tracing, String message) {
+    public Error(long id, byte code, Trace tracing, String message) {
         super(id, MessageType.Error);
         this.code = code;
         this.tracing = tracing;

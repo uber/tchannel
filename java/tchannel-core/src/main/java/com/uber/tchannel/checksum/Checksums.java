@@ -1,7 +1,6 @@
 package com.uber.tchannel.checksum;
 
 import com.uber.tchannel.messages.AbstractCallMessage;
-import com.uber.tchannel.messages.ChecksumType;
 
 import java.util.List;
 import java.util.zip.Adler32;

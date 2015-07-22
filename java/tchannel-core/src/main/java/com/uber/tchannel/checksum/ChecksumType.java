@@ -1,4 +1,4 @@
-package com.uber.tchannel.messages;
+package com.uber.tchannel.checksum;
 
 import java.util.Optional;
 
