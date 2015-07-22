@@ -63,7 +63,7 @@ func (c *Connection) handleCallReq(frame *Frame) bool {
 	response.contents = newFragmentingWriter(response, initialFragment.checksumType.New())
 	response.cancel = cancel
 	response.span = callReq.Tracing
-	response.log = c.log.WithFields(LogFields{"In-Response": callReq.ID()})
+	response.log = c.log.WithField(LogField{"In-Response", callReq.ID()})
 	response.headers = callHeaders{}
 	response.messageForFragment = func(initial bool) message {
 		if initial {
@@ -85,7 +85,7 @@ func (c *Connection) handleCallReq(frame *Frame) bool {
 	call.headers = callReq.Headers
 	call.span = callReq.Tracing
 	call.response = response
-	call.log = c.log.WithFields(LogFields{"In-Call": callReq.ID()})
+	call.log = c.log.WithField(LogField{"In-Call", callReq.ID()})
 	call.messageForFragment = func(initial bool) message { return new(callReqContinue) }
 	call.contents = newFragmentingReader(call)
 	call.statsReporter = c.statsReporter
