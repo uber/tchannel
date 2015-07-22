@@ -328,25 +328,27 @@ allocCluster.test('request().send() to self', 1, function t(cluster, assert) {
         res.sendNotOk(arg2, arg3);
     });
 
-    parallel([{
-        name: 'msg1', op: 'foo',
-        reqHead: 'head1', reqBody: 'msg1',
-        resHead: 'head1', resBody: 'msg1',
-        opts: {
-            host: one.hostPort,
-            serviceName: 'one'
+    parallel([
+        {
+            name: 'msg1', op: 'foo',
+            reqHead: 'head1', reqBody: 'msg1',
+            resHead: 'head1', resBody: 'msg1',
+            opts: {
+                host: one.hostPort,
+                serviceName: 'one'
+            }
+        },
+        {
+            name: 'msg2', op: 'bar',
+            reqHead: 'head2', reqBody: 'msg2',
+            resHead: 'head2', resBody: 'msg2',
+            resOk: false,
+            opts: {
+                host: one.hostPort,
+                serviceName: 'one'
+            }
         }
-    },
-    {
-        name: 'msg2', op: 'bar',
-        reqHead: 'head2', reqBody: 'msg2',
-        resHead: 'head2', resBody: 'msg2',
-        resOk: false,
-        opts: {
-            host: one.hostPort,
-            serviceName: 'one'
-        }
-    }].map(function eachTestCase(testCase) {
+    ].map(function eachTestCase(testCase) {
         return sendTest(subOne, testCase, assert);
     }), function onResults(err) {
         assert.ifError(err, 'no errors from sending');
