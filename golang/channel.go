@@ -103,6 +103,7 @@ type Channel struct {
 		peerInfo    LocalPeerInfo // May be ephemeral if this is a client only channel
 		l           net.Listener  // May be nil if this is a client only channel
 		subChannels map[string]*SubChannel
+		conns       []*Connection
 	}
 }
 
@@ -329,6 +330,24 @@ func (ch *Channel) Ping(ctx context.Context, hostPort string) error {
 // Logger returns the logger for this channel.
 func (ch *Channel) Logger() Logger {
 	return ch.log
+}
+
+// Connect connects the channel.
+func (ch *Channel) Connect(ctx context.Context, hostPort string, connectionOptions *ConnectionOptions) (*Connection, error) {
+	c, err := ch.newOutboundConnection(hostPort, connectionOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := c.sendInit(ctx); err != nil {
+		return nil, err
+	}
+
+	ch.mutable.mut.Lock()
+	ch.mutable.conns = append(ch.mutable.conns, c)
+	ch.mutable.mut.Unlock()
+
+	return c, err
 }
 
 // Closed returns whether this channel has been closed with .Close()

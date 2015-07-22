@@ -160,13 +160,8 @@ func (p *Peer) AddConnection(c *Connection) error {
 
 // Connect adds a new outbound connection to the peer.
 func (p *Peer) Connect(ctx context.Context) (*Connection, error) {
-	ch := p.channel
-	c, err := ch.newOutboundConnection(p.hostPort, &ch.connectionOptions)
+	c, err := p.channel.Connect(ctx, p.hostPort, &p.channel.connectionOptions)
 	if err != nil {
-		return nil, err
-	}
-
-	if err := c.sendInit(ctx); err != nil {
 		return nil, err
 	}
 
