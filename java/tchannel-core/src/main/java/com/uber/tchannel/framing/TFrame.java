@@ -1,6 +1,7 @@
 package com.uber.tchannel.framing;
 
 import com.uber.tchannel.messages.MessageType;
+import io.netty.buffer.ByteBuf;
 
 public class TFrame {
 
@@ -11,17 +12,18 @@ public class TFrame {
     public final int size;
     public final byte type;
     public final long id;
-    public final byte[] payload; // TODO: payload should be a ByteBuf, and TFrame a ByteBufHolder
+    public final ByteBuf payload;
 
-    public TFrame(byte type, long id, byte[] payload) {
+
+    public TFrame(int size, byte type, long id, ByteBuf payload) {
+        this.size = size;
         this.type = type;
         this.id = id;
         this.payload = payload;
-        this.size = FRAME_HEADER_LENGTH + payload.length;
     }
 
-    public TFrame(MessageType messageType, long id, byte[] payload) {
-        this(messageType.byteValue(), id, payload);
+    public TFrame(int size, MessageType messageType, long id, ByteBuf payload) {
+        this(size, messageType.byteValue(), id, payload);
     }
 
     @Override
@@ -31,7 +33,7 @@ public class TFrame {
                 this.size,
                 this.type,
                 this.id,
-                new String(this.payload)
+                this.payload
         );
     }
 }

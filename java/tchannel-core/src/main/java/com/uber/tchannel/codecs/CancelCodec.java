@@ -19,7 +19,7 @@ public class CancelCodec extends MessageToMessageCodec<TFrame, Cancel> {
         buffer.writeInt((int) msg.ttl);
         CodecUtils.encodeTrace(msg.tracing, buffer);
         CodecUtils.encodeString(msg.why, buffer);
-        TFrame frame = new TFrame(MessageType.Cancel, msg.getId(), buffer.array());
+        TFrame frame = new TFrame(buffer.writerIndex(), MessageType.Cancel, msg.getId(), buffer);
         out.add(frame);
 
     }

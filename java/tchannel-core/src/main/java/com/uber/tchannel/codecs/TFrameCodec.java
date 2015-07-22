@@ -11,7 +11,7 @@ public class TFrameCodec extends ByteToMessageCodec<TFrame> {
 
     @Override
     protected void encode(ChannelHandlerContext ctx, TFrame frame, ByteBuf out) throws Exception {
-        out.writeShort(frame.size)
+        out.writeShort(frame.size + TFrame.FRAME_HEADER_LENGTH)
                 .writeByte(frame.type)
                 .writeZero(1)
                 .writeInt((int) frame.id)
@@ -23,7 +23,7 @@ public class TFrameCodec extends ByteToMessageCodec<TFrame> {
     protected void decode(ChannelHandlerContext ctx, ByteBuf msg, List<Object> out) throws Exception {
 
         // size:2
-        int size = msg.readUnsignedShort();
+        int size = msg.readUnsignedShort() - TFrame.FRAME_HEADER_LENGTH;
 
         // type:1
         byte type = msg.readByte();
@@ -38,10 +38,10 @@ public class TFrameCodec extends ByteToMessageCodec<TFrame> {
         msg.skipBytes(8);
 
         // payload:16+
-        byte[] payload = new byte[size - TFrame.FRAME_HEADER_LENGTH];
-        msg.readBytes(payload);
+        ByteBuf payload = msg.readSlice(size);
+        payload.retain();
 
-        out.add(new TFrame(type, id, payload));
+        out.add(new TFrame(size, type, id, payload));
 
     }
 }

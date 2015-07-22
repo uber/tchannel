@@ -19,7 +19,7 @@ public class TestPingResponse {
                 new PingHandler()
         );
 
-        TFrame frame = new TFrame(MessageType.PingRequest.byteValue(), Integer.MAX_VALUE, new byte[]{});
+        TFrame frame = new TFrame(0, MessageType.PingRequest.byteValue(), Integer.MAX_VALUE, null);
 
         channel.writeInbound(frame);
         TFrame newFrame = channel.readOutbound();

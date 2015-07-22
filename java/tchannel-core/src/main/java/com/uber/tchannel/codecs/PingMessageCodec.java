@@ -13,7 +13,7 @@ import java.util.List;
 public class PingMessageCodec extends MessageToMessageCodec<TFrame, AbstractPingMessage> {
     @Override
     protected void encode(ChannelHandlerContext ctx, AbstractPingMessage msg, List<Object> out) throws Exception {
-        out.add(new TFrame(msg.getMessageType(), msg.getId(), new byte[]{}));
+        out.add(new TFrame(0, msg.getMessageType(), msg.getId(), null));
     }
 
     @Override
