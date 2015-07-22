@@ -109,6 +109,7 @@ type OnActiveHandler func(c *Connection)
 
 // Connection represents a connection to a remote peer.
 type Connection struct {
+	connID             uint32
 	log                Logger
 	statsReporter      StatsReporter
 	traceReporter      TraceReporter
@@ -213,6 +214,7 @@ func (ch *Channel) newConnection(conn net.Conn, initialState connectionState, on
 	log.Debugf("created for %v (%v) local: %v remote: %v",
 		peerInfo.ServiceName, peerInfo.ProcessName, conn.LocalAddr(), conn.RemoteAddr())
 	c := &Connection{
+		connID:        connID,
 		log:           log,
 		statsReporter: ch.statsReporter,
 		traceReporter: ch.traceReporter,
