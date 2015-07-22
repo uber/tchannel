@@ -520,6 +520,28 @@ func (c *Connection) tryClose() {
 	}
 }
 
+// SendSystemError sends an error frame for the given system error.
+func (c *Connection) SendSystemError(id uint32, err error) {
+	frame := c.framePool.Get()
+	if err := frame.write(&errorMessage{
+		id:      id,
+		errCode: GetSystemErrorCode(err),
+		message: err.Error()}); err != nil {
+
+		// This shouldn't happen - it means writing the errorMessage is broken.
+		c.log.Warnf("Could not create outbound frame to %s for %d: %v",
+			c.remotePeerInfo, id, err)
+		return
+	}
+
+	select {
+	case c.sendCh <- frame: // Good to go
+	default: // Nothing we can do here anyway
+		c.log.Warnf("Could not send error frame to %s for %d : %v",
+			c.remotePeerInfo, id, err)
+	}
+}
+
 // connectionError handles a connection level error
 func (c *Connection) connectionError(err error) error {
 	c.log.Debugf("connectionError: %v", err)
@@ -530,15 +552,7 @@ func (c *Connection) connectionError(err error) error {
 
 func (c *Connection) protocolError(err error) error {
 	sysErr := NewWrappedSystemError(ErrCodeProtocol, err)
-	frame := c.framePool.Get()
-
-	// If the write fails, ignore it.
-	frame.write(&errorMessage{
-		id:      invalidMessageID,
-		errCode: sysErr.(SystemError).Code(),
-		message: err.Error(),
-	})
-	c.sendCh <- frame
+	c.SendSystemError(invalidMessageID, sysErr)
 
 	// TODO(prashant): This is a huge hack, and should be removed once graceful Close is supported.
 	time.Sleep(100 * time.Millisecond)
