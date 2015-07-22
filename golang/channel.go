@@ -58,6 +58,30 @@ type ChannelOptions struct {
 	TraceReporter TraceReporter
 }
 
+// ChannelState is the state of a channel.
+type ChannelState int
+
+const (
+	// ChannelClient is a channel that can be used as a client.
+	ChannelClient ChannelState = iota + 1
+
+	// ChannelListening is a channel that is listening for new connnections.
+	ChannelListening
+
+	// ChannelStartClose is a channel that has received a Close request.
+	// The channel is no longer listening, and all new incoming connections are rejected.
+	ChannelStartClose
+
+	// ChannelInboundClosed is a channel that has drained all incoming connections, but may
+	// have outgoing connections. All incoming calls and new outgoing calls are rejected.
+	ChannelInboundClosed
+
+	// ChannelClosed is a channel that has closed completely.
+	ChannelClosed
+)
+
+//go:generate stringer -type=ChannelState
+
 // A Channel is a bi-directional connection to the peering and routing network.
 // Applications can use a Channel to make service calls to remote peers via
 // BeginCall, or to listen for incoming calls from peers.  Applications that
