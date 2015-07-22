@@ -655,20 +655,27 @@ func (c *Connection) checkExchanges() {
 		return err == nil
 	}
 
+	var updated bool
 	if c.readState() == connectionStartClose {
-		if c.inbound.count() > 0 || !moveState(connectionStartClose, connectionInboundClosed) {
+		if c.inbound.count() == 0 && moveState(connectionStartClose, connectionInboundClosed) {
+			updated = true
+		}
+		// If there was no update to the state, there's no more processing to do.
+		if !updated {
 			return
 		}
 	}
 
 	if c.readState() == connectionInboundClosed {
-		if c.outbound.count() > 0 || !moveState(connectionInboundClosed, connectionClosed) {
-			return
+		if c.outbound.count() == 0 && moveState(connectionInboundClosed, connectionClosed) {
+			updated = true
 		}
 	}
 
-	// If the state was updated, call the onCloseStateChange event.
-	c.callOnCloseStateChange()
+	if updated {
+		c.log.Debugf("checkExchanges updated connection state to %v", c.readState())
+		c.callOnCloseStateChange()
+	}
 }
 
 // Close starts a graceful Close which will first reject incoming calls, reject outgoing calls
