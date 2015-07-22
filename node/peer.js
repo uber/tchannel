@@ -351,22 +351,20 @@ PreferOutgoingHandler.prototype.shouldRequest = function shouldRequest() {
     var self = this;
 
     // space:
-    //   [0.1, 0.2)  unconnected peers
-    //   [0.2, 0.3)  incoming connections
-    //   [0.3, 0.4)  new outgoing connections
+    //   [0.1, 0.4)  peers with no identified outgoing connection
     //   [0.4, 1.0)  identified outgoing connections
     var inconn = self.peer.getInConnection();
     var outconn = self.peer.getOutConnection();
     var random = self.peer.outPendingWeightedRandom();
     if (!inconn && !outconn) {
-        return 0.1 + random * 0.1;
+        return 0.1 + random * 0.3;
     } else if (!outconn || outconn.direction !== 'out') {
         if (!self.peer.channel.destroyed) {
             self.peer.connect();
         }
-        return 0.2 + random * 0.1;
+        return 0.1 + random * 0.3;
     } else if (outconn.remoteName === null) {
-        return 0.3 + random * 0.1;
+        return 0.1 + random * 0.3;
     } else {
         return 0.4 + random * 0.6;
     }
