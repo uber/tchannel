@@ -193,7 +193,9 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
 
     ].map(function eachTestCase(testCase) {
         return sendTest(two.subChannels.server, testCase, assert);
-    }), function onResults(err) {
+    }), onResults);
+
+    function onResults(err) {
         if (err) return assert.end(err);
         cluster.assertCleanState(assert, {
             channels: [{
@@ -211,7 +213,7 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
             }]
         });
         assert.end();
-    });
+    }
 });
 
 allocCluster.test('request().send() to a pool of servers', 4, function t(cluster, assert) {
@@ -289,22 +291,24 @@ allocCluster.test('request().send() to a pool of servers', 4, function t(cluster
 
         ].map(function eachTestCase(testCase) {
             return sendTest(channel, testCase, assert);
-        }), function onResults(err) {
-            assert.ifError(err, 'no errors from sending');
-            cluster.assertCleanState(assert, {
-                channels: cluster.channels.map(function each() {
-                    return {
-                        peers: [{
-                            connections: [
-                                {direction: 'in', inReqs: 0, outReqs: 0}
-                            ]
-                        }]
-                    };
-                })
-            });
-            client.close();
-            assert.end();
+        }), onResults);
+    }
+
+    function onResults(err) {
+        assert.ifError(err, 'no errors from sending');
+        cluster.assertCleanState(assert, {
+            channels: cluster.channels.map(function each() {
+                return {
+                    peers: [{
+                        connections: [
+                            {direction: 'in', inReqs: 0, outReqs: 0}
+                        ]
+                    }]
+                };
+            })
         });
+        client.close();
+        assert.end();
     }
 });
 
@@ -350,7 +354,9 @@ allocCluster.test('request().send() to self', 1, function t(cluster, assert) {
         }
     ].map(function eachTestCase(testCase) {
         return sendTest(subOne, testCase, assert);
-    }), function onResults(err) {
+    }), onResults);
+
+    function onResults(err) {
         assert.ifError(err, 'no errors from sending');
         cluster.assertCleanState(assert, {
             channels: [{
@@ -358,7 +364,7 @@ allocCluster.test('request().send() to self', 1, function t(cluster, assert) {
             }]
         });
         assert.end();
-    });
+    }
 });
 
 allocCluster.test('send to self', {
