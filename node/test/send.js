@@ -307,6 +307,138 @@ allocCluster.test('request().send() to a pool of servers', 4, function t(cluster
     }
 });
 
+allocCluster.test('request().send() balances to un-identified peers', 4, function t(cluster, assert) {
+    var client = TChannel({
+        timeoutFuzz: 0,
+        random: function indifferent() {
+            return 0.5;
+        }
+    });
+
+    var clientChan = client.makeSubChannel({
+        serviceName: 'lol'
+    });
+
+    cluster.channels.forEach(function each(chan, i) {
+        var chanNum = i + 1;
+        chan.handler = EndpointHandler();
+        chan.handler.register('foo', function foo(req, res, arg2, arg3) {
+            res.headers.as = 'raw';
+            res.sendOk(arg2, arg3 + ' served by ' + chanNum);
+        });
+
+        clientChan.peers.add(chan.hostPort);
+    });
+
+    testIt();
+
+    function testIt() {
+        parallelSendTest(clientChan, [
+            { name: 'msg1', op: 'foo',
+              logger: cluster.logger,
+              reqHead: '', reqBody: 'msg1',
+              resHead: '', resBody: 'msg1 served by 1' },
+            { name: 'msg2', op: 'foo',
+              logger: cluster.logger,
+              reqHead: '', reqBody: 'msg2',
+              resHead: '', resBody: 'msg2 served by 2' },
+            { name: 'msg3', op: 'foo',
+              logger: cluster.logger,
+              reqHead: '', reqBody: 'msg3',
+              resHead: '', resBody: 'msg3 served by 3' },
+            { name: 'msg4', op: 'foo',
+              logger: cluster.logger,
+              reqHead: '', reqBody: 'msg4',
+              resHead: '', resBody: 'msg4 served by 4' },
+        ], assert, onResults);
+    }
+
+    function onResults(err) {
+        assert.ifError(err, 'no errors from sending');
+        cluster.assertCleanState(assert, {
+            channels: cluster.channels.map(function each() {
+                return {
+                    peers: [{
+                        connections: [
+                            {direction: 'in', inReqs: 0, outReqs: 0}
+                        ]
+                    }]
+                };
+            })
+        });
+        client.close();
+        assert.end();
+    }
+});
+
+allocCluster.test('request().send() balances to identified peers', 4, function t(cluster, assert) {
+    var client = TChannel({
+        timeoutFuzz: 0,
+        random: function indifferent() {
+            return 0.5;
+        }
+    });
+
+    var clientChan = client.makeSubChannel({
+        serviceName: 'lol'
+    });
+
+    var ready = CountedReadySignal(cluster.channels.length);
+
+    cluster.channels.forEach(function each(chan, i) {
+        var chanNum = i + 1;
+        chan.handler = EndpointHandler();
+        chan.handler.register('foo', function foo(req, res, arg2, arg3) {
+            res.headers.as = 'raw';
+            res.sendOk(arg2, arg3 + ' served by ' + chanNum);
+        });
+
+        var peer = clientChan.peers.add(chan.hostPort);
+        var conn = peer.connect(chan.hostPort);
+        conn.on('identified', ready.signal);
+    });
+
+    ready(testIt);
+
+    function testIt() {
+        parallelSendTest(clientChan, [
+            { name: 'msg5', op: 'foo',
+              logger: cluster.logger,
+              reqHead: '', reqBody: 'msg5',
+              resHead: '', resBody: 'msg5 served by 1' },
+            { name: 'msg6', op: 'foo',
+              logger: cluster.logger,
+              reqHead: '', reqBody: 'msg6',
+              resHead: '', resBody: 'msg6 served by 2' },
+            { name: 'msg7', op: 'foo',
+              logger: cluster.logger,
+              reqHead: '', reqBody: 'msg7',
+              resHead: '', resBody: 'msg7 served by 3' },
+            { name: 'msg8', op: 'foo',
+              logger: cluster.logger,
+              reqHead: '', reqBody: 'msg8',
+              resHead: '', resBody: 'msg8 served by 4' },
+        ], assert, onResults);
+    }
+
+    function onResults(err) {
+        assert.ifError(err, 'no errors from sending');
+        cluster.assertCleanState(assert, {
+            channels: cluster.channels.map(function each() {
+                return {
+                    peers: [{
+                        connections: [
+                            {direction: 'in', inReqs: 0, outReqs: 0}
+                        ]
+                    }]
+                };
+            })
+        });
+        client.close();
+        assert.end();
+    }
+});
+
 allocCluster.test('request().send() to self', 1, function t(cluster, assert) {
     var one = cluster.channels[0];
 
