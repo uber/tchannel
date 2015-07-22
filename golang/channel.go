@@ -33,7 +33,8 @@ import (
 )
 
 var (
-	errAlreadyListening = errors.New("channel already listening")
+	errAlreadyListening  = errors.New("channel already listening")
+	errInvalidStateForOp = errors.New("channel is in an invalid state for that operation")
 )
 
 const (
@@ -99,7 +100,7 @@ type Channel struct {
 	// mutable contains all the members of Channel which are mutable.
 	mutable struct {
 		mut         sync.RWMutex // protects members of the mutable struct.
-		closed      bool
+		state       ChannelState
 		peerInfo    LocalPeerInfo // May be ephemeral if this is a client only channel
 		l           net.Listener  // May be nil if this is a client only channel
 		subChannels map[string]*SubChannel
@@ -150,6 +151,7 @@ func NewChannel(serviceName string, opts *ChannelOptions) (*Channel, error) {
 		ServiceName: serviceName,
 	}
 	ch.mutable.subChannels = make(map[string]*SubChannel)
+	ch.mutable.state = ChannelClient
 	ch.peers = newPeerList(ch)
 	ch.createCommonStats()
 	return ch, nil
@@ -166,10 +168,14 @@ func (ch *Channel) Serve(l net.Listener) error {
 	if mutable.l != nil {
 		return errAlreadyListening
 	}
-
 	mutable.l = l
-	mutable.peerInfo.HostPort = l.Addr().String()
 
+	if mutable.state != ChannelClient {
+		return errInvalidStateForOp
+	}
+	mutable.state = ChannelListening
+
+	mutable.peerInfo.HostPort = l.Addr().String()
 	peerInfo := mutable.peerInfo
 	ch.log.Debugf("%v (%v) listening on %v", peerInfo.ProcessName, peerInfo.ServiceName, peerInfo.HostPort)
 	go ch.serve()
@@ -289,8 +295,8 @@ func (ch *Channel) serve() {
 				time.Sleep(acceptBackoff)
 				continue
 			} else {
-				// Only log an error if we are not shutdown.
-				if ch.Closed() {
+				// Only log an error if this didn't happen due to a Close.
+				if ch.State() >= ChannelStartClose {
 					return
 				}
 				ch.log.Fatalf("unrecoverable accept error: %v; closing server", err)
@@ -356,19 +362,27 @@ func (ch *Channel) Connect(ctx context.Context, hostPort string, connectionOptio
 
 // Closed returns whether this channel has been closed with .Close()
 func (ch *Channel) Closed() bool {
+	return ch.State() == ChannelClosed
+}
+
+// State returns the current channel state.
+func (ch *Channel) State() ChannelState {
 	ch.mutable.mut.RLock()
-	defer ch.mutable.mut.RUnlock()
-	return ch.mutable.closed
+	state := ch.mutable.state
+	ch.mutable.mut.RUnlock()
+
+	return state
 }
 
 // Close closes the channel including all connections to any active peers.
 func (ch *Channel) Close() {
 	ch.mutable.mut.Lock()
-	defer ch.mutable.mut.Unlock()
 
-	ch.mutable.closed = true
 	if ch.mutable.l != nil {
 		ch.mutable.l.Close()
 	}
+	ch.mutable.state = ChannelStartClose
+	ch.mutable.mut.Unlock()
+
 	ch.peers.Close()
 }
