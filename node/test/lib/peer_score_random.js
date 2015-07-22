@@ -20,6 +20,8 @@
 
 'use strict';
 
+var format = require('util').format;
+
 module.exports.debugShouldRequestStack = debugShouldRequestStack;
 module.exports.randSeq = randSeq;
 
@@ -44,6 +46,10 @@ function debugShouldRequestStack() {
             return match[1];
         })
         ;
+
+    elide('.shouldRequest(%s)', /\.shouldRequest$/, stackLines);
+    elide('.add(%s)', /\.add/, stackLines);
+
     return stackLines.join(' < ');
 }
 
@@ -58,4 +64,24 @@ function randSeq(seq, debug) {
         i = (i + 1) % seq.length;
         return r;
     };
+}
+
+function elide(fmt, pattern, array) {
+    for (var i = 0; i < array.length; i++) {
+        if (!pattern.test(array[i])) {
+            continue;
+        }
+        for (var j = i + 1; j < array.length; j++) {
+            if (!pattern.test(array[j])) {
+                break;
+            }
+        }
+        var gone = array.splice(i, j - i);
+        var rep = format(fmt, gone.map(replace).join(' < '));
+        array.splice(i, 0, [rep]);
+    }
+
+    function replace(str) {
+        return str.replace(pattern, '');
+    }
 }
