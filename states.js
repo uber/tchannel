@@ -300,6 +300,11 @@ UnhealthyState.prototype.locked = false;
 UnhealthyState.prototype.onNewPeriod = function onNewPeriod(now) {
     var self = this;
 
+    if (self.healthyCount >= self.minResponseCount) {
+        self.stateMachine.setState(HealthyState);
+        return;
+    }
+
     var triedLastPeriod = self.triedThisPeriod;
     self.triedThisPeriod = false;
 
