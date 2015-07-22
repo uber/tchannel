@@ -51,17 +51,6 @@ PeerHeap.prototype.choose = function choose(threshold, filter) {
         return null;
     }
 
-    // TODO: rescore could be deferred:
-    // - store a pendingRescore bit
-    // - set a next tick to rescore and clear bit
-    // - if asked to choose a peer while pendingRescore is still set, take the
-    //   hit and rescore then (do not clear bit)
-    //
-    // However such cleverness might just slow down the throughput of a very
-    // busy server rather than help.
-    el.score = el.peer.state.shouldRequest();
-    self.siftdown(0);
-
     return el.peer;
 
 };

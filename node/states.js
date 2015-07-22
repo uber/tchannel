@@ -111,6 +111,8 @@ State.prototype.shouldRequest = function shouldRequest(req, options) {
     var now = self.timers.now();
     if (self.willCallNextHandler(now)) {
         return self.nextHandler.shouldRequest(req, options);
+    } else if (self.stateMachine.state !== self) {
+        return self.stateMachine.state.shouldRequest(req, options);
     } else {
         return 0;
     }
@@ -172,9 +174,11 @@ PeriodicState.prototype.checkPeriod = function checkPeriod(inTimeout, now) {
     var remain = self.period - elapsed;
     if (remain <= 0) {
         self.startNewPeriod(now);
+        return true;
     } else if (inTimeout) {
         self.setPeriodTimer(remain, now);
     }
+    return false;
 };
 
 PeriodicState.prototype.willCallNextHandler = function willCallNextHandler(now) {
@@ -241,17 +245,26 @@ HealthyState.prototype.onNewPeriod = function onNewPeriod(now) {
     }
 };
 
+HealthyState.prototype.onRequest = function onRequest(/* req */) {
+    var self = this;
+
+    self.invalidate();
+};
+
 HealthyState.prototype.onRequestHealthy = function onRequestHealthy() {
     var self = this;
     self.healthyCount++;
     self.totalRequests++;
+    self.invalidate();
 };
 
 HealthyState.prototype.onRequestUnhealthy = function onRequestUnhealthy() {
     var self = this;
     self.totalRequests++;
     self.unhealthyCount++;
-    self.checkPeriod(false, self.timers.now());
+    if (!self.checkPeriod(false, self.timers.now())) {
+        self.invalidate();
+    }
 };
 
 HealthyState.prototype.onRequestError = function onRequestError(err) {
@@ -264,7 +277,9 @@ HealthyState.prototype.onRequestError = function onRequestError(err) {
     } else {
         self.healthyCount++;
     }
-    self.checkPeriod(false, self.timers.now());
+    if (!self.checkPeriod(false, self.timers.now())) {
+        self.invalidate();
+    }
 };
 
 function UnhealthyState(options) {
@@ -284,6 +299,11 @@ UnhealthyState.prototype.locked = false;
 
 UnhealthyState.prototype.onNewPeriod = function onNewPeriod(now) {
     var self = this;
+
+    if (self.healthyCount >= self.minResponseCount) {
+        self.stateMachine.setState(HealthyState);
+        return;
+    }
 
     var triedLastPeriod = self.triedThisPeriod;
     self.triedThisPeriod = false;
@@ -318,7 +338,9 @@ UnhealthyState.prototype.onRequest = function onRequest(/* req */) {
     var self = this;
 
     self.triedThisPeriod = true;
-    self.checkPeriod(false, self.timers.now());
+    if (!self.checkPeriod(false, self.timers.now())) {
+        self.invalidate();
+    }
 };
 
 UnhealthyState.prototype.onRequestHealthy = function onRequestHealthy() {
@@ -327,6 +349,8 @@ UnhealthyState.prototype.onRequestHealthy = function onRequestHealthy() {
     self.healthyCount++;
     if (self.healthyCount > self.minResponseCount) {
         self.stateMachine.setState(HealthyState);
+    } else {
+        self.invalidate();
     }
 };
 

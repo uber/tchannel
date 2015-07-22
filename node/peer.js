@@ -243,6 +243,7 @@ function _waitForIdentified(conn, callback) {
     conn.errorEvent.on(onConnectionError);
     conn.closeEvent.on(onConnectionClose);
     conn.identifiedEvent.on(onIdentified);
+    self.invalidateScore();
 
     function onConnectionError(err) {
         finish(err);
@@ -261,6 +262,7 @@ function _waitForIdentified(conn, callback) {
         conn.errorEvent.removeListener(onConnectionError);
         conn.closeEvent.removeListener(onConnectionClose);
         conn.identifiedEvent.removeListener(onIdentified);
+        self.invalidateScore();
         callback(err);
     }
 };
