@@ -53,7 +53,7 @@ function TChannelPeer(channel, hostPort, options) {
     self.connections = [];
     self.pendingIdentified = 0;
     self.heapElements = [];
-    self.handler = new PreferOutgoingHandler(self);
+    self.handler = null;
 
     self.reportInterval = self.options.reportInterval || DEFAULT_REPORT_INTERVAL;
     if (self.reportInterval > 0 && self.channel.emitConnectionMetrics) {
@@ -61,6 +61,8 @@ function TChannelPeer(channel, hostPort, options) {
             onReport, self.reportInterval
         );
     }
+
+    self.setScoreStrategy(PreferOutgoingHandler);
 
     function onReport() {
         if (!self.hostPort) {
@@ -82,6 +84,12 @@ function TChannelPeer(channel, hostPort, options) {
 }
 
 inherits(TChannelPeer, EventEmitter);
+
+TChannelPeer.prototype.setScoreStrategy = function setScoreStrategy(ScoreStrategy) {
+    var self = this;
+
+    self.handler = new ScoreStrategy(self);
+};
 
 TChannelPeer.prototype.invalidateScore = function invalidateScore() {
     var self = this;
