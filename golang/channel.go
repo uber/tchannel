@@ -400,11 +400,15 @@ func (ch *Channel) ConnectionCloseStateChange(c *Connection) {
 			ch.mutable.mut.Lock()
 			ch.mutable.state = ChannelClosed
 			ch.mutable.mut.Unlock()
+			chState = ChannelClosed
 		} else if minState >= connectionInboundClosed && chState == ChannelStartClose {
 			ch.mutable.mut.Lock()
 			ch.mutable.state = ChannelInboundClosed
 			ch.mutable.mut.Unlock()
+			chState = ChannelInboundClosed
 		}
+		c.log.Debugf("ConnectionCloseStateChange channel state = %v connection minState = %v",
+			chState, minState)
 	}
 }
 
