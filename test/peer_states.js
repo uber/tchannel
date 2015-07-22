@@ -52,7 +52,7 @@ allocCluster.test('healthy state stays healthy', {
     var peer = one.peers.add(cluster.hosts[1]);
 
     assert.equals(peer.state.type, 'tchannel.healthy', 'initially healthy');
-    assert.equals(peer.state.shouldRequest(), 0.2, 'got not connected score');
+    assert.equals(peer.state.shouldRequest(), 0.4, 'got not connected score');
     assert.equals(peer.state.type, 'tchannel.healthy', 'still healthy');
 
     var conn = peer.connect();
