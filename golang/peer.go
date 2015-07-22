@@ -147,7 +147,10 @@ func (p *Peer) GetConnection(ctx context.Context) (*Connection, error) {
 // AddConnection adds an active connection to the peer's connection list.
 // If a connection is not active, ErrInvalidConnectionState will be returned.
 func (p *Peer) AddConnection(c *Connection) error {
-	if !c.IsActive() {
+	switch c.readState() {
+	case connectionActive, connectionStartClose:
+		break
+	default:
 		return ErrInvalidConnectionState
 	}
 

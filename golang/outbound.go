@@ -30,19 +30,15 @@ import (
 
 // beginCall begins an outbound call on the connection
 func (c *Connection) beginCall(ctx context.Context, serviceName string, callOptions *CallOptions) (*OutboundCall, error) {
-	if err := c.withStateRLock(func() error {
-		switch c.state {
-		case connectionActive, connectionStartClose, connectionInboundClosed:
-			return nil
-		case connectionClosed:
-			return ErrConnectionClosed
-		case connectionWaitingToRecvInitReq, connectionWaitingToSendInitReq, connectionWaitingToRecvInitRes:
-			return ErrConnectionNotReady
-		}
-
-		return nil
-	}); err != nil {
-		return nil, err
+	switch c.readState() {
+	case connectionActive, connectionStartClose:
+		break
+	case connectionInboundClosed, connectionClosed:
+		return nil, ErrConnectionClosed
+	case connectionWaitingToRecvInitReq, connectionWaitingToSendInitReq, connectionWaitingToRecvInitRes:
+		return nil, ErrConnectionNotReady
+	default:
+		return nil, errConnectionUnknownState
 	}
 
 	deadline, ok := ctx.Deadline()

@@ -242,12 +242,7 @@ func (ch *Channel) newConnection(conn net.Conn, initialState connectionState, on
 
 // IsActive returns whether this connection is in an active state.
 func (c *Connection) IsActive() bool {
-	var isActive bool
-	c.withStateRLock(func() error {
-		isActive = (c.state == connectionActive)
-		return nil
-	})
-	return isActive
+	return c.readState() == connectionActive
 }
 
 func (c *Connection) callOnActive() {
@@ -270,7 +265,7 @@ func (c *Connection) sendInit(ctx context.Context) error {
 		case connectionActive, connectionWaitingToRecvInitRes:
 			return errConnectionAlreadyActive
 		default:
-			return fmt.Errorf("connection in unknown state %d", c.state)
+			return errConnectionUnknownState
 		}
 	})
 	if err != nil {
@@ -309,13 +304,6 @@ func (c *Connection) sendInit(ctx context.Context) error {
 // InitReq, and the InitReq is valid, send a corresponding InitRes and mark
 // ourselves as active
 func (c *Connection) handleInitReq(frame *Frame) {
-	if err := c.withStateRLock(func() error {
-		return nil
-	}); err != nil {
-		c.connectionError(err)
-		return
-	}
-
 	var req initReq
 	rbuf := typed.NewReadBuffer(frame.SizedPayload())
 	if err := req.read(rbuf); err != nil {
@@ -401,13 +389,9 @@ func (c *Connection) handlePingRes(frame *Frame) bool {
 
 // handlePingReq responds to the pingReq message with a pingRes.
 func (c *Connection) handlePingReq(frame *Frame) {
-	if err := c.withStateRLock(func() error {
-		if c.state != connectionActive {
-			return errors.New("cannot handle ping req")
-		}
-		return nil
-	}); err != nil {
-		c.protocolError(err)
+	if c.readState() != connectionActive {
+		c.protocolError(fmt.Errorf("connection state is not active"))
+		return
 	}
 
 	pingRes := &pingRes{id: frame.Header.ID}
@@ -419,26 +403,22 @@ func (c *Connection) handlePingReq(frame *Frame) {
 // Handles an incoming InitRes.  If we are waiting for the peer to send us an
 // InitRes, forward the InitRes to the waiting goroutine
 func (c *Connection) handleInitRes(frame *Frame) bool {
-	if err := c.withStateRLock(func() error {
-		switch c.state {
-		case connectionWaitingToRecvInitRes:
-			return nil
-		case connectionClosed, connectionStartClose, connectionInboundClosed:
-			return ErrConnectionClosed
-
-		case connectionActive:
-			return errConnectionAlreadyActive
-
-		case connectionWaitingToSendInitReq:
-			return ErrConnectionNotReady
-
-		case connectionWaitingToRecvInitReq:
-			return errConnectionWaitingOnPeerInit
-
-		default:
-			return fmt.Errorf("Connection in unknown state %d", c.state)
-		}
-	}); err != nil {
+	var err error
+	switch c.readState() {
+	case connectionWaitingToRecvInitRes:
+		err = nil
+	case connectionClosed, connectionStartClose, connectionInboundClosed:
+		err = ErrConnectionClosed
+	case connectionActive:
+		err = errConnectionAlreadyActive
+	case connectionWaitingToSendInitReq:
+		err = ErrConnectionNotReady
+	case connectionWaitingToRecvInitReq:
+		err = errConnectionWaitingOnPeerInit
+	default:
+		err = errConnectionUnknownState
+	}
+	if err != nil {
 		c.connectionError(err)
 		return true
 	}
@@ -565,12 +545,11 @@ func (c *Connection) withStateLock(f func() error) error {
 	return f()
 }
 
-// withStateRLock an action with the connection state mutex held in a read lock
-func (c *Connection) withStateRLock(f func() error) error {
+func (c *Connection) readState() connectionState {
 	c.stateMut.RLock()
-	defer c.stateMut.RUnlock()
-
-	return f()
+	state := c.state
+	c.stateMut.RUnlock()
+	return state
 }
 
 // readFrames is the loop that reads frames from the network connection and
