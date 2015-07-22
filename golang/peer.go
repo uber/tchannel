@@ -127,10 +127,6 @@ func randConn(conns []*Connection) *Connection {
 // GetConnection returns an active connection to this peer. If no active connections
 // are found, it will create a new outbound connection and return it.
 func (p *Peer) GetConnection(ctx context.Context) (*Connection, error) {
-	if p.channel.Closed() {
-		return nil, ErrChannelClosed
-	}
-
 	// TODO(prashant): Use some sort of scoring to pick a connection.
 	if activeConns := p.getActive(); len(activeConns) > 0 {
 		return randConn(activeConns), nil

@@ -344,6 +344,19 @@ func (ch *Channel) Logger() Logger {
 
 // Connect connects the channel.
 func (ch *Channel) Connect(ctx context.Context, hostPort string, connectionOptions *ConnectionOptions) (*Connection, error) {
+	var isStartClose bool
+	switch state := ch.State(); state {
+	case ChannelClient, ChannelListening:
+		break
+	case ChannelStartClose:
+		// We still allow outgoing connections during Close, but the connection has to immediately
+		// be Closed after opening
+		isStartClose = true
+	default:
+		ch.log.Debugf("Connect rejecting new connection as state is %v", state)
+		return nil, errInvalidStateForOp
+	}
+
 	c, err := ch.newOutboundConnection(hostPort, connectionOptions)
 	if err != nil {
 		return nil, err
@@ -351,6 +364,15 @@ func (ch *Channel) Connect(ctx context.Context, hostPort string, connectionOptio
 
 	if err := c.sendInit(ctx); err != nil {
 		return nil, err
+	}
+
+	if isStartClose {
+		// TODO(prashant): If Connect is called, but no outgoing calls are made, then this connection
+		// will block Close, as it will never get cleaned up.
+		c.withStateLock(func() error {
+			c.state = connectionStartClose
+			return nil
+		})
 	}
 
 	ch.mutable.mut.Lock()
