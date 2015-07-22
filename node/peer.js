@@ -28,7 +28,7 @@ var net = require('net');
 var TChannelConnection = require('./connection');
 var errors = require('./errors');
 var Request = require('./request');
-var PreferOutgoingHandler = require('./peer_score_strategies.js').PreferOutgoingHandler;
+var PreferOutgoing = require('./peer_score_strategies.js').PreferOutgoing;
 
 var DEFAULT_REPORT_INTERVAL = 1000;
 
@@ -62,7 +62,7 @@ function TChannelPeer(channel, hostPort, options) {
         );
     }
 
-    self.setScoreStrategy(PreferOutgoingHandler);
+    self.setScoreStrategy(PreferOutgoing);
 
     function onReport() {
         if (!self.hostPort) {
