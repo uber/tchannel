@@ -232,6 +232,8 @@ func (ch *Channel) newConnection(conn net.Conn, initialState connectionState, on
 		onActive:        onActive,
 		commonStatsTags: ch.commonStatsTags,
 	}
+	c.inbound.onRemoved = c.checkExchanges
+	c.outbound.onRemoved = c.checkExchanges
 
 	go c.readFrames()
 	go c.writeFrames()
@@ -633,6 +635,10 @@ func (c *Connection) writeFrames() {
 
 	// Close the network after we have sent the last frame
 	c.closeNetwork()
+}
+
+// inboundExchangeRemoved is called whenever an exchange is removed, and when Close is called.
+func (c *Connection) checkExchanges() {
 }
 
 // closeNetwork closes the network connection and all network-related channels.

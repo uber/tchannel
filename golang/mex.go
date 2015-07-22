@@ -124,6 +124,8 @@ func (mex *messageExchange) shutdown() {
 type messageExchangeSet struct {
 	log       Logger
 	name      string
+	onRemoved func()
+
 	exchanges map[uint32]*messageExchange
 	mut       sync.RWMutex
 }
@@ -169,9 +171,18 @@ func (mexset *messageExchangeSet) removeExchange(msgID uint32) {
 	mexset.log.Debugf("Removing %s message exchange %d", mexset.name, msgID)
 
 	mexset.mut.Lock()
-	defer mexset.mut.Unlock()
-
 	delete(mexset.exchanges, msgID)
+	mexset.mut.Unlock()
+
+	mexset.onRemoved()
+}
+
+func (mexset *messageExchangeSet) count() int {
+	mexset.mut.RLock()
+	count := len(mexset.exchanges)
+	mexset.mut.RUnlock()
+
+	return count
 }
 
 // forwardPeerFrame forwards a frame from the peer to the appropriate message
