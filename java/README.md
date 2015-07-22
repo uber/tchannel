@@ -8,10 +8,10 @@ A Java implementation of [TChannel](https://github.com/uber/tchannel).
 - Frame codecs
 - Message codecs
 - Checksumming
-- Message Multiplexing a.k.a. fragment aggregation
 
 ## In Progress
 - Tracing
+- Message Multiplexing a.k.a. fragment aggregation
 
 ## TODO
 - Final API design and implementation
