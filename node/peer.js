@@ -361,7 +361,9 @@ PreferOutgoingHandler.prototype.shouldRequest = function shouldRequest() {
     if (!inconn && !outconn) {
         return 0.1 + random * 0.1;
     } else if (!outconn || outconn.direction !== 'out') {
-        self.peer.connect();
+        if (!self.peer.channel.destroyed) {
+            self.peer.connect();
+        }
         return 0.2 + random * 0.1;
     } else if (outconn.remoteName === null) {
         return 0.3 + random * 0.1;
