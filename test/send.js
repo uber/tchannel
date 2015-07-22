@@ -319,6 +319,123 @@ allocCluster.test('request().send() to a pool of servers', 4, function t(cluster
     }
 });
 
+allocCluster.test('request().send() balances', 4, function t(cluster, assert) {
+    var client = TChannel({
+        timeoutFuzz: 0,
+        random: function indifferent() {
+            return 0.5;
+        }
+    });
+
+    var clientChan = client.makeSubChannel({
+        serviceName: 'lol'
+    });
+
+    cluster.channels.forEach(function each(chan, i) {
+        var chanNum = i + 1;
+        chan.handler = EndpointHandler();
+        chan.handler.register('foo', function foo(req, res, arg2, arg3) {
+            res.headers.as = 'raw';
+            res.sendOk(arg2, arg3 + ' served by ' + chanNum);
+        });
+
+        clientChan.peers.add(chan.hostPort);
+    });
+
+    var round = 0;
+    runBalanceTest(round, cluster, clientChan, assert, onRoundDone);
+
+    function onRoundDone(err) {
+        if (err) {
+            onResults(err);
+            return;
+        }
+
+        if (++round > 3) {
+            onResults();
+            return;
+        }
+
+        runBalanceTest(round, cluster, clientChan, assert, onRoundDone);
+    }
+
+    function onResults(err) {
+        assert.ifError(err, 'no errors from sending');
+        cluster.assertCleanState(assert, {
+            channels: cluster.channels.map(function each() {
+                return {
+                    peers: [{
+                        connections: [
+                            {direction: 'in', inReqs: 0, outReqs: 0}
+                        ]
+                    }]
+                };
+            })
+        });
+        client.close();
+        assert.end();
+    }
+});
+
+function balancedChecker(assert) {
+    var seen = {};
+
+    return checkBalancedServe;
+
+    function checkBalancedServe(testCase, err, res, arg2, arg3) {
+        assert.ifError(err, testCase.name + ': no result error');
+        if (!err) {
+            return;
+        }
+
+        var head = arg2 ? String(arg2) : arg2;
+        var body = arg3 ? String(arg3) : arg3;
+        assert.equal(head, '', testCase.name + ': expected head content');
+
+        var match = /served by (\d+)$/.exec(body);
+        if (!match) {
+            assert.fail(testCase.name + ': expected a matching body');
+            return;
+        }
+
+        var maxPrior = getMaxSeenCount();
+
+        var servedBy = match[1];
+        if (!seen[servedBy]) {
+            seen[servedBy] = 0;
+        }
+        var count = ++seen[servedBy];
+        var delta = count - maxPrior;
+        assert.equal(delta, 1, testCase.resBody, testCase.name + ': expected served balance');
+    }
+
+    function getMaxSeenCount() {
+        return Object.keys(seen).reduce(function max(count, key) {
+            return seen[key] > count ? seen[key] : count;
+        }, 0);
+    }
+}
+
+function runBalanceTest(roundNo, cluster, channel, assert, callback) {
+    var checkBalancedServe = balancedChecker(assert);
+    var testCases = [];
+
+    var n = 2 * cluster.channels.length;
+    for (var m = 1; m <= n; m++) {
+        var msgNum = n * roundNo + m;
+        testCases.push({
+            logger: cluster.logger,
+            name: 'msg' + msgNum,
+            op: 'foo',
+            reqHead: '',
+            reqBody: 'msg' + msgNum,
+            check: checkBalancedServe
+        });
+    }
+
+    parallelSendTest(channel, testCases, assert, callback);
+}
+
 allocCluster.test('request().send() to self', 1, function t(cluster, assert) {
     var one = cluster.channels[0];
 
