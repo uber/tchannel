@@ -600,7 +600,11 @@ function sendTest(channel, testCase, assert) {
             .send(testCase.op, testCase.reqHead, testCase.reqBody, onResult);
 
         function onResult(err, res, arg2, arg3) {
-            check(err, res, arg2, arg3);
+            if (testCase.check) {
+                testCase.check(testCase, err, res, arg2, arg3);
+            } else {
+                check(err, res, arg2, arg3);
+            }
             callback();
         }
     };
