@@ -20,39 +20,38 @@
 
 'use strict';
 
-module.exports.PreferOutgoingHandler = PreferOutgoingHandler;
+module.exports.PreferOutgoing = PreferOutgoing;
 
-function PreferOutgoingHandler(peer) {
+function PreferOutgoing(peer) {
     var self = this;
 
     self.peer = peer;
     self.lastTier = self.getTier();
 }
 
+PreferOutgoing.UNCONNECTED = 0;
+PreferOutgoing.ONLY_INCOMING = 1;
+PreferOutgoing.FRESH_OUTGOING = 2;
+PreferOutgoing.READY_OUTGOING = 3;
 
-PreferOutgoingHandler.UNCONNECTED = 0;
-PreferOutgoingHandler.ONLY_INCOMING = 1;
-PreferOutgoingHandler.FRESH_OUTGOING = 2;
-PreferOutgoingHandler.READY_OUTGOING = 3;
-
-PreferOutgoingHandler.prototype.getTier = function getTier() {
+PreferOutgoing.prototype.getTier = function getTier() {
     var self = this;
 
     var inconn = self.peer.getInConnection();
     var outconn = self.peer.getIdentifiedOutConnection();
 
     if (!inconn && !outconn) {
-        return PreferOutgoingHandler.UNCONNECTED;
+        return PreferOutgoing.UNCONNECTED;
     } else if (!outconn || outconn.direction !== 'out') {
-        return PreferOutgoingHandler.ONLY_INCOMING;
+        return PreferOutgoing.ONLY_INCOMING;
     } else if (outconn.remoteName === null) {
-        return PreferOutgoingHandler.FRESH_OUTGOING;
+        return PreferOutgoing.FRESH_OUTGOING;
     } else {
-        return PreferOutgoingHandler.READY_OUTGOING;
+        return PreferOutgoing.READY_OUTGOING;
     }
 };
 
-PreferOutgoingHandler.prototype.getScore = function getScore() {
+PreferOutgoing.prototype.getScore = function getScore() {
     var self = this;
 
     // space:
@@ -62,16 +61,16 @@ PreferOutgoingHandler.prototype.getScore = function getScore() {
     var tier = self.getTier();
     self.lastTier = tier;
     switch (tier) {
-        case PreferOutgoingHandler.ONLY_INCOMING:
+        case PreferOutgoing.ONLY_INCOMING:
             if (!self.peer.channel.destroyed) {
                 self.peer.connect(true);
             }
             /* falls through */
-        case PreferOutgoingHandler.UNCONNECTED:
+        case PreferOutgoing.UNCONNECTED:
             /* falls through */
-        case PreferOutgoingHandler.FRESH_OUTGOING:
+        case PreferOutgoing.FRESH_OUTGOING:
             return 0.1 + random * 0.3;
-        case PreferOutgoingHandler.READY_OUTGOING:
+        case PreferOutgoing.READY_OUTGOING:
             return 0.4 + random * 0.6;
     }
 };
