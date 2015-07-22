@@ -48,8 +48,10 @@ public class InitMessageCodec extends MessageToMessageCodec<TFrame, AbstractInit
         switch (type) {
             case InitRequest:
                 out.add(new InitRequest(frame.id, version, hostPort, processName));
+                break;
             case InitResponse:
                 out.add(new InitResponse(frame.id, version, hostPort, processName));
+                break;
         }
 
 

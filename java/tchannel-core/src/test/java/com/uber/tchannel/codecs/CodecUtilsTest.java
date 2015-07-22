@@ -1,4 +1,4 @@
-package com.uber.tchannel.test.codecs;
+package com.uber.tchannel.codecs;
 
 import com.uber.tchannel.codecs.CodecUtils;
 import com.uber.tchannel.tracing.Trace;
@@ -90,7 +90,6 @@ public class CodecUtilsTest {
         assertEquals(headers, newHeaders);
     }
 
-
     @Test
     public void testEncodeDecodeTrace() throws Exception {
 
@@ -102,13 +101,6 @@ public class CodecUtilsTest {
         assertEquals(trace.spanId, newTrace.spanId);
         assertEquals(trace.traceId, newTrace.traceId);
         assertEquals(trace.traceFlags, newTrace.traceFlags);
-
-    }
-
-    @Test
-    public void testEncodeDecodeArg() throws Exception {
-
-
 
     }
 

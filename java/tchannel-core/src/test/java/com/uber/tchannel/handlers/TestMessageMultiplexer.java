@@ -1,10 +1,9 @@
-package com.uber.tchannel.test.handlers;
+package com.uber.tchannel.handlers;
 
 
-import com.uber.tchannel.handlers.MessageMultiplexer;
 import com.uber.tchannel.messages.AbstractCallMessage;
 import com.uber.tchannel.messages.CallRequest;
-import com.uber.tchannel.test.Fixtures;
+import com.uber.tchannel.Fixtures;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Rule;
 import org.junit.Test;

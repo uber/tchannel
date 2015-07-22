@@ -1,4 +1,4 @@
-package com.uber.tchannel.test;
+package com.uber.tchannel;
 
 
 import com.uber.tchannel.messages.AbstractCallMessage;

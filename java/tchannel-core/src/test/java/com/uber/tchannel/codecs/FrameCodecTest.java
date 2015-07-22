@@ -1,4 +1,4 @@
-package com.uber.tchannel.test.codecs;
+package com.uber.tchannel.codecs;
 
 import com.uber.tchannel.codecs.TFrameCodec;
 import com.uber.tchannel.framing.TFrame;
@@ -12,7 +12,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 
-public class TestFrameCodec {
+public class FrameCodecTest {
 
     @Test
     public void shouldEncodeAndDecodeFrame() {

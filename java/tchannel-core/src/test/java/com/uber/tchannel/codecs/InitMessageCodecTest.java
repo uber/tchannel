@@ -1,7 +1,5 @@
-package com.uber.tchannel.test.codecs;
+package com.uber.tchannel.codecs;
 
-import com.uber.tchannel.codecs.InitMessageCodec;
-import com.uber.tchannel.codecs.TFrameCodec;
 import com.uber.tchannel.framing.TFrame;
 import com.uber.tchannel.messages.InitRequest;
 import com.uber.tchannel.messages.InitResponse;
@@ -11,7 +9,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
-public class TestInitMessageCodec {
+public class InitMessageCodecTest {
 
     @Test
     public void shouldEncodeAndDecodeInitRequest() {

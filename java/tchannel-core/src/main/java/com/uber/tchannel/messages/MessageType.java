@@ -44,7 +44,7 @@ public enum MessageType {
             case (byte) 0xd0:
                 return Optional.of(PingRequest);
             case (byte) 0xd1:
-                return Optional.of(PingRequest);
+                return Optional.of(PingResponse);
             case (byte) 0xff:
                 return Optional.of(Error);
             default:

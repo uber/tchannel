@@ -1,6 +1,5 @@
-package com.uber.tchannel.test.codecs;
+package com.uber.tchannel.codecs;
 
-import com.uber.tchannel.codecs.CancelCodec;
 import com.uber.tchannel.messages.Cancel;
 import com.uber.tchannel.tracing.Trace;
 import io.netty.channel.embedded.EmbeddedChannel;

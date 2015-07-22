@@ -5,6 +5,7 @@ import com.uber.tchannel.messages.AbstractPingMessage;
 import com.uber.tchannel.messages.MessageType;
 import com.uber.tchannel.messages.PingRequest;
 import com.uber.tchannel.messages.PingResponse;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageCodec;
 
@@ -13,7 +14,7 @@ import java.util.List;
 public class PingMessageCodec extends MessageToMessageCodec<TFrame, AbstractPingMessage> {
     @Override
     protected void encode(ChannelHandlerContext ctx, AbstractPingMessage msg, List<Object> out) throws Exception {
-        out.add(new TFrame(0, msg.getMessageType(), msg.getId(), null));
+        out.add(new TFrame(0, msg.getMessageType(), msg.getId(), Unpooled.EMPTY_BUFFER));
     }
 
     @Override
@@ -21,7 +22,6 @@ public class PingMessageCodec extends MessageToMessageCodec<TFrame, AbstractPing
         MessageType type = MessageType.fromByte(frame.type).get();
 
         switch (type) {
-
             case PingRequest:
                 out.add(new PingRequest(frame.id));
                 break;
