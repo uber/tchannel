@@ -619,8 +619,30 @@ func (c *Connection) writeFrames() {
 	c.closeNetwork()
 }
 
-// inboundExchangeRemoved is called whenever an exchange is removed, and when Close is called.
+// checkExchanges is called whenever an exchange is removed, and when Close is called.
 func (c *Connection) checkExchanges() {
+	moveState := func(fromState, toState connectionState) bool {
+		err := c.withStateLock(func() error {
+			if c.state != fromState {
+				return errors.New("")
+			}
+			c.state = toState
+			return nil
+		})
+		return err == nil
+	}
+
+	if c.readState() == connectionStartClose {
+		if c.inbound.count() > 0 || !moveState(connectionStartClose, connectionInboundClosed) {
+			return
+		}
+	}
+
+	if c.readState() == connectionInboundClosed {
+		if c.outbound.count() > 0 || !moveState(connectionInboundClosed, connectionClosed) {
+			return
+		}
+	}
 }
 
 // Close starts a graceful Close which will first reject incoming calls, reject outgoing calls
