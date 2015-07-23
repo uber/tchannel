@@ -525,6 +525,7 @@ func (c *Connection) tryClose() {
 
 // connectionError handles a connection level error
 func (c *Connection) connectionError(err error) error {
+	c.log.Debugf("connectionError: %v", err)
 	c.tryClose()
 
 	return NewWrappedSystemError(ErrCodeNetwork, err)
