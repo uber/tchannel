@@ -56,6 +56,7 @@ function OperationTombstone(operations, id, time, timeout) {
     self.id = id;
     self.time = time;
     self.timeout = timeout;
+    self.timeHeapHandle = null;
 }
 
 OperationTombstone.prototype.onTimeout = function onTimeout(now) {
@@ -64,6 +65,8 @@ OperationTombstone.prototype.onTimeout = function onTimeout(now) {
     if (self.operations.requests.out[self.id] === self) {
         delete self.operations.requests.out[self.id];
     }
+
+    self.timeHeapHandle = null;
 };
 
 Operations.prototype.checkLastTimeoutTime = function checkLastTimeoutTime(now) {
@@ -158,7 +161,7 @@ Operations.prototype.popOutReq = function popOutReq(id, context) {
     self.requests.out[id] = tombstone;
     self.pending.out--;
 
-    self.connection.channel.timeHeap.update(tombstone, now);
+    tombstone.timeHeapHandle = self.connection.channel.timeHeap.update(tombstone, now);
 
     return req;
 };
