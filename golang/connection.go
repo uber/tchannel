@@ -413,6 +413,17 @@ func (c *Connection) handlePingRes(frame *Frame) bool {
 
 // handlePingReq responds to the pingReq message with a pingRes.
 func (c *Connection) handlePingReq(frame *Frame) {
+	var state connectionState
+	if err := c.withStateRLock(func() error {
+		if c.state != connectionActive {
+			return errors.New("cannot handle ping req")
+		}
+		state = c.state
+		return nil
+	}); err != nil {
+		c.protocolError(err)
+	}
+
 	pingRes := &pingRes{id: frame.Header.ID}
 	if err := c.sendMessage(pingRes); err != nil {
 		c.connectionError(err)
