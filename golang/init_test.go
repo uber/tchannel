@@ -84,3 +84,44 @@ func TestUnexpectedInitReq(t *testing.T) {
 		assert.Equal(t, tt.expectedError.errCode, errMsg.errCode, "test %v got bad code", tt.name)
 	}
 }
+
+// TestHandleInitRes ensures that a Connection is ready to handle messages immediately
+// after receiving an InitRes.
+func TestHandleInitRes(t *testing.T) {
+	l, err := net.Listen("tcp", ":0")
+	require.NoError(t, err, "net.Listen failed")
+	listenerComplete := make(chan struct{})
+
+	go func() {
+		defer func() { listenerComplete <- struct{}{} }()
+		conn, err := l.Accept()
+		require.NoError(t, err, "l.Accept failed")
+		defer conn.Close()
+
+		f, err := readFrame(conn)
+		require.NoError(t, err, "readFrame failed")
+		assert.Equal(t, messageTypeInitReq, f.Header.messageType, "expected initReq message")
+
+		var msg initReq
+		require.NoError(t, f.read(&msg), "read frame into initMsg failed")
+		initRes := initRes{msg.initMessage}
+		initRes.initMessage.id = f.Header.ID
+		require.NoError(t, writeMessage(conn, &initRes), "write initRes failed")
+		require.NoError(t, writeMessage(conn, &pingReq{noBodyMsg{}, 10}), "write pingReq failed")
+
+		f, err = readFrame(conn)
+		require.NoError(t, err, "readFrame failed")
+		assert.Equal(t, messageTypePingRes, f.Header.messageType, "expected pingRes message")
+	}()
+
+	ch, err := NewChannel("test-svc", nil)
+	require.NoError(t, err, "NewClient failed")
+
+	ctx, cancel := NewContext(time.Second)
+	defer cancel()
+
+	_, err = ch.Peers().GetOrAdd(l.Addr().String()).GetConnection(ctx)
+	require.NoError(t, err, "GetConnection failed")
+
+	<-listenerComplete
+}

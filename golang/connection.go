@@ -290,30 +290,12 @@ func (c *Connection) sendInit(ctx context.Context) error {
 		return c.connectionError(err)
 	}
 
-	res := initRes{initMessage{id: initMsgID}}
+	res := initRes{}
 	err = c.recvMessage(ctx, &res, mex.recvCh)
 	if err != nil {
 		return c.connectionError(err)
 	}
 
-	if res.Version != CurrentProtocolVersion {
-		return c.connectionError(fmt.Errorf("Unsupported protocol version %d from peer", res.Version))
-	}
-
-	c.remotePeerInfo.HostPort = res.initParams[InitParamHostPort]
-	if c.remotePeerInfo.IsEphemeral() {
-		c.remotePeerInfo.HostPort = c.conn.RemoteAddr().String()
-	}
-	c.remotePeerInfo.ProcessName = res.initParams[InitParamProcessName]
-
-	c.withStateLock(func() error {
-		if c.state == connectionWaitingToRecvInitRes {
-			c.state = connectionActive
-		}
-		return nil
-	})
-
-	c.callOnActive()
 	return nil
 }
 
@@ -413,6 +395,15 @@ func (c *Connection) handlePingRes(frame *Frame) bool {
 
 // handlePingReq responds to the pingReq message with a pingRes.
 func (c *Connection) handlePingReq(frame *Frame) {
+	if err := c.withStateRLock(func() error {
+		if c.state != connectionActive {
+			return errors.New("cannot handle ping req")
+		}
+		return nil
+	}); err != nil {
+		c.protocolError(err)
+	}
+
 	pingRes := &pingRes{id: frame.Header.ID}
 	if err := c.sendMessage(pingRes); err != nil {
 		c.connectionError(err)
@@ -421,12 +412,6 @@ func (c *Connection) handlePingReq(frame *Frame) {
 
 // Handles an incoming InitRes.  If we are waiting for the peer to send us an
 // InitRes, forward the InitRes to the waiting goroutine
-
-// TODO(mmihic): There is a race condition here, in that the peer might start
-// sending us requests before the goroutine doing initialization has a chance
-// to process the InitRes.  We probably want to move the InitRes checking to
-// here (where it will run in the receiver goroutine and thus block new
-// incoming messages), and simply signal the init goroutine that we are done
 func (c *Connection) handleInitRes(frame *Frame) bool {
 	if err := c.withStateRLock(func() error {
 		switch c.state {
@@ -452,6 +437,33 @@ func (c *Connection) handleInitRes(frame *Frame) bool {
 		return true
 	}
 
+	res := initRes{initMessage{id: frame.Header.ID}}
+	if err := frame.read(&res); err != nil {
+		c.connectionError(fmt.Errorf("failed to read initRes from frame"))
+		return true
+	}
+
+	if res.Version != CurrentProtocolVersion {
+		c.protocolError(fmt.Errorf("unsupported protocol version %d from peer", res.Version))
+		return true
+	}
+
+	c.remotePeerInfo.HostPort = res.initParams[InitParamHostPort]
+	if c.remotePeerInfo.IsEphemeral() {
+		c.remotePeerInfo.HostPort = c.conn.RemoteAddr().String()
+	}
+	c.remotePeerInfo.ProcessName = res.initParams[InitParamProcessName]
+
+	c.withStateLock(func() error {
+		if c.state == connectionWaitingToRecvInitRes {
+			c.state = connectionActive
+		}
+		return nil
+	})
+	c.callOnActive()
+
+	// We forward the peer frame, as the other side is blocked waiting on this frame.
+	// Rather than add another mechanism, we use the mex to block the sender till we get initRes.
 	if err := c.outbound.forwardPeerFrame(frame); err != nil {
 		c.connectionError(errCannotHandleInitRes)
 		return true
@@ -514,6 +526,7 @@ func (c *Connection) tryClose() {
 
 // connectionError handles a connection level error
 func (c *Connection) connectionError(err error) error {
+	c.log.Debugf("connectionError: %v", err)
 	c.tryClose()
 
 	return NewWrappedSystemError(ErrCodeNetwork, err)
