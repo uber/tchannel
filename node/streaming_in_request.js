@@ -52,9 +52,13 @@ inherits(StreamingInRequest, InRequest);
 
 StreamingInRequest.prototype.type = 'tchannel.incoming-request.streaming';
 
-StreamingInRequest.prototype.handleFrame = function handleFrame(parts) {
+StreamingInRequest.prototype.handleFrame = function handleFrame(parts, isLast) {
     var self = this;
+
     self._argstream.handleFrame(parts);
+    if (isLast) {
+        self._argstream.handleFrame(null);
+    }
 };
 
 StreamingInRequest.prototype.withArg1 = function withArg1(callback) {
