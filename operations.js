@@ -52,6 +52,7 @@ function OperationTombstone(operations, id, time, timeout) {
     var self = this;
 
     self.isTombstone = true;
+    self.logger = operations.logger;
     self.operations = operations;
     self.id = id;
     self.time = time;
@@ -59,12 +60,40 @@ function OperationTombstone(operations, id, time, timeout) {
     self.timeHeapHandle = null;
 }
 
+OperationTombstone.prototype.extendLogInfo = function extendLogInfo(info) {
+    var self = this;
+
+    var conn = self.operations && self.operations.connection;
+
+    info.id = self.id;
+    info.tombstoneTime = self.time;
+    info.tombstoneTTL = self.timeout;
+    info.heapCanceled = self.timeHeapHandle && !self.timeHeapHandle.item;
+    info.heapExpireTime = self.timeHeapHandle && self.timeHeapHandle.expireTime;
+    info.heapAmItem = self.timeHeapHandle && self.timeHeapHandle.item === self;
+    info.hostPort = conn && conn.channel.hostPort;
+    info.socketRemoteAddr = conn && conn.socketRemoteAddr;
+    info.remoteName = conn && conn.remoteName;
+    info.connClosing = conn && conn.closing;
+
+    var other = self.operations && self.operations.requests.out[self.id];
+    if (self !== other) {
+        info.otherType = typeof other;
+        info.otherConstructorName = other && other.constructor && other.constructor.name;
+    }
+
+    return info;
+};
+
 OperationTombstone.prototype.onTimeout = function onTimeout(now) {
     var self = this;
 
     if (self.operations &&
         self.operations.requests.out[self.id] === self) {
         delete self.operations.requests.out[self.id];
+        self.operations = null;
+    } else {
+        self.logger.warn('mismatched expired operation tombstone', self.extendLogInfo({}));
         self.operations = null;
     }
 
