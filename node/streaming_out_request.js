@@ -25,13 +25,13 @@ var inherits = require('util').inherits;
 var OutArgStream = require('./argstream').OutArgStream;
 var pipelineStreams = require('./lib/pipeline_streams');
 var TChannelOutRequest = require('./out_request');
+var States = require('./reqres_states');
 
 function StreamingOutRequest(id, options) {
     var self = this;
     TChannelOutRequest.call(self, id, options);
     self.streamed = true;
     self._argstream = OutArgStream();
-    self.arg1 = self._argstream.arg1;
     self.arg2 = self._argstream.arg2;
     self.arg3 = self._argstream.arg3;
     self._argstream.errorEvent.on(passError);
@@ -45,6 +45,9 @@ function StreamingOutRequest(id, options) {
     function onFrame(tup) {
         var parts = tup[0];
         var isLast = tup[1];
+        if (self.state === States.Initial) {
+            parts.unshift(self.arg1);
+        }
         self.sendParts(parts, isLast);
     }
 
@@ -57,16 +60,20 @@ inherits(StreamingOutRequest, TChannelOutRequest);
 
 StreamingOutRequest.prototype.type = 'tchannel.outgoing-request.streaming';
 
+StreamingOutRequest.prototype.sendArg1 = function sendArg1(arg1) {
+    var self = this;
+
+    TChannelOutRequest.prototype.sendArg1.call(self, arg1);
+    self._argstream.deferFlushParts();
+};
+
 StreamingOutRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     var self = this;
 
+    self.sendArg1(arg1);
+
     if (callback) {
         self.hookupCallback(callback);
-    }
-
-    self.arg1.end(arg1);
-    if (self.span) {
-        self.span.name = String(arg1);
     }
 
     self.arg2.end(arg2);
@@ -78,13 +85,13 @@ StreamingOutRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
 StreamingOutRequest.prototype.sendStreams = function sendStreams(arg1, arg2, arg3, callback) {
     var self = this;
 
+    self.sendArg1(arg1);
+
     if (callback) {
         self.hookupStreamCallback(callback);
     }
 
-    pipelineStreams(
-        [arg1, arg2, arg3],
-        [self.arg1, self.arg2, self.arg3]);
+    pipelineStreams([arg2, arg3], [self.arg2, self.arg3]);
 
     return self;
 };

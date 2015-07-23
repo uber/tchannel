@@ -28,6 +28,8 @@ var errors = require('./errors');
 var States = require('./reqres_states');
 var InArgStream = require('./argstream').InArgStream;
 
+var emptyBuffer = Buffer(0);
+
 function StreamingInResponse(id, options) {
     options = options || {};
     var self = this;
@@ -35,7 +37,6 @@ function StreamingInResponse(id, options) {
 
     self.streamed = true;
     self._argstream = InArgStream();
-    self.arg1 = self._argstream.arg1;
     self.arg2 = self._argstream.arg2;
     self.arg3 = self._argstream.arg3;
     self._argstream.errorEvent.on(passError);
@@ -62,6 +63,7 @@ StreamingInResponse.prototype.handleFrame = function handleFrame(parts, isLast) 
             return errors.Arg1Fragmented();
         }
 
+        self.arg1 = parts.shift() || emptyBuffer;
         self.state = States.Streaming;
     } else if (self.state !== States.Streaming) {
         return errors.ArgStreamUnknownFrameHandlingStateError();
