@@ -59,7 +59,7 @@ allocCluster.test('end response with error frame', {
             streamed: true
         });
 
-        req.arg1.end('stream');
+        req.sendArg1('stream');
         req.arg2.end();
         req.arg3.end();
 
@@ -95,7 +95,6 @@ allocCluster.test('end response with error frame', {
         });
 
         res.headers.as = 'raw';
-        res.arg1.end();
         res.arg2.end();
 
         res.arg3.write('a message');

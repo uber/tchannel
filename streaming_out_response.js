@@ -34,7 +34,6 @@ function StreamingOutResponse(id, options) {
     OutResponse.call(self, id, options);
     self.streamed = true;
     self._argstream = OutArgStream();
-    self.arg1 = self._argstream.arg1;
     self.arg2 = self._argstream.arg2;
     self.arg3 = self._argstream.arg3;
     self._argstream.errorEvent.on(passError);
@@ -48,6 +47,9 @@ function StreamingOutResponse(id, options) {
     function onFrame(tup) {
         var parts = tup[0];
         var isLast = tup[1];
+        if (self.state === States.Initial) {
+            parts.unshift(self.arg1);
+        }
         self.sendParts(parts, isLast);
     }
 
@@ -72,7 +74,6 @@ StreamingOutResponse.prototype.sendError = function sendError(codeString, messag
         }
         self.state = States.Error;
         self._argstream.finished = true;
-        self.arg1.end();
         self.arg2.end();
         self.arg3.end();
         self._sendError(codeString, message);
@@ -90,7 +91,7 @@ StreamingOutResponse.prototype.setOk = function setOk(ok) {
     }
     self.ok = ok;
     self.code = ok ? 0 : 1; // TODO: too coupled to v2 specifics?
-    self.arg1.end();
+    self._argstream.deferFlushParts();
     return true;
 };
 

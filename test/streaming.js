@@ -103,7 +103,7 @@ function partsTest(testCase, assert) {
 
             var resultReady = Ready();
             req.hookupCallback(resultReady.signal);
-            req.arg1.end(testCase.op);
+            req.sendArg1(testCase.op);
 
             async.series({
                 sinkHead: sinkParts.bind(null, testCase.reqHead, req.arg2),
