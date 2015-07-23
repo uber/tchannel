@@ -24,7 +24,7 @@ create-flame:
 	google-chrome ./flame.svg
 
 kill-dead-benchmarks:
-	ps aux | pkill -f nodejs-benchmarks;
+	pkill -f nodejs-benchmarks;
 
 top-benchmark:
 	top -d1 -cp `pgrep -f nodejs-benchmarks | tr "\\n" "," | sed 's/,$$//'`;
