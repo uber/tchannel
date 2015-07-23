@@ -165,12 +165,12 @@ Circuits.prototype.handleRequest = function handleRequest(req, buildRes, nextHan
     var arg1 = String(req.arg1);
     var circuit = self.getCircuit(callerName, serviceName, arg1);
 
-    if (circuit.state.shouldRequest()) {
-        buildRes = circuit.monitorRequest(req, buildRes);
-        return nextHandler.handleRequest(req, buildRes);
-    } else {
+    if (!circuit.state.shouldRequest()) {
         return buildRes().sendError('Declined', 'Service is not healthy');
     }
+
+    buildRes = circuit.monitorRequest(req, buildRes);
+    return nextHandler.handleRequest(req, buildRes);
 };
 
 // Called upon membership change to collect services that the corresponding
