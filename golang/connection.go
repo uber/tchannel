@@ -132,7 +132,7 @@ type connectionState int
 
 const (
 	// Connection initiated by peer is waiting to recv init-req from peer
-	connectionWaitingToRecvInitReq connectionState = iota
+	connectionWaitingToRecvInitReq connectionState = iota + 1
 
 	// Connection initated by current process is waiting to send init-req to peer
 	connectionWaitingToSendInitReq
@@ -155,6 +155,8 @@ const (
 	// Connection is fully closed
 	connectionClosed
 )
+
+//go:generate stringer -type=connectionState
 
 // Creates a new Connection around an outbound connection initiated to a peer
 func (ch *Channel) newOutboundConnection(hostPort string, opts *ConnectionOptions) (*Connection, error) {
