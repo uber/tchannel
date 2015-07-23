@@ -68,14 +68,11 @@ test.skip('setup sanity', argSearchTest(function t(state, assert) {
 }));
 
 test('argstream', function t(assert) {
-    var verbose = true;
+    var verbose = false;
     if (module === require.main) {
         var argv = require('minimist', {
             boolean: {
                 verbose: true
-            },
-            default: {
-                verbose: verbose
             }
         })(process.argv.slice(2));
         verbose = argv.verbose;
