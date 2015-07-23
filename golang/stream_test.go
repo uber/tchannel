@@ -35,6 +35,14 @@ import (
 	"golang.org/x/net/context"
 )
 
+func makeRepeatedBytes(n byte) []byte {
+	data := make([]byte, int(n))
+	for i := byte(0); i < n; i++ {
+		data[i] = n
+	}
+	return data
+}
+
 // streamPartialHandler returns a streaming handler that has the following contract:
 // read a byte, write N bytes where N = the byte that was read.
 // The results are be written as soon as the byte is read.
@@ -69,6 +77,13 @@ func streamPartialHandler(t *testing.T) HandlerFunc {
 			return
 		}
 
+		// Flush arg3 which will force a frame with just arg2 to be sent.
+		// The test reads arg2 before arg3 has been sent.
+		if err := argWriter.Flush(); err != nil {
+			onError(fmt.Errorf("arg3 flush failed"))
+			return
+		}
+
 		arg3 := make([]byte, 1)
 		for {
 			n, err := argReader.Read(arg3)
@@ -84,11 +99,9 @@ func streamPartialHandler(t *testing.T) HandlerFunc {
 			}
 
 			// Write the number of bytes as specified by arg3[0]
-			for i := byte(0); i < arg3[0]; i++ {
-				if _, err := argWriter.Write(arg3); err != nil {
-					onError(fmt.Errorf("argWriter Write failed: %v", err))
-					return
-				}
+			if _, err := argWriter.Write(makeRepeatedBytes(arg3[0])); err != nil {
+				onError(fmt.Errorf("argWriter Write failed: %v", err))
+				return
 			}
 			if err := argWriter.Flush(); err != nil {
 				onError(fmt.Errorf("argWriter flush failed: %v", err))
@@ -123,6 +136,9 @@ func TestStreamPartialArg(t *testing.T) {
 		argWriter, err := call.Arg3Writer()
 		require.NoError(t, err, "Arg3Writer failed")
 
+		// Flush arg3 to force the call to start without any arg3.
+		require.NoError(t, argWriter.Flush(), "Arg3Writer flush failed")
+
 		// Write out to the stream, and expect to get data
 		response := call.Response()
 
@@ -142,11 +158,7 @@ func TestStreamPartialArg(t *testing.T) {
 			_, err = io.ReadFull(argReader, arg3)
 			require.NoError(t, err, "arg3 read failed")
 
-			expected := make([]byte, int(n))
-			for i := byte(0); i < n; i++ {
-				expected[i] = i
-			}
-			assert.Equal(t, expected, arg3, "arg3 result mismatch")
+			assert.Equal(t, makeRepeatedBytes(n), arg3, "arg3 result mismatch")
 		}
 
 		verifyBytes(0)
@@ -158,7 +170,6 @@ func TestStreamPartialArg(t *testing.T) {
 
 		// Once closed, we expect the reader to return EOF
 		n, err := io.Copy(ioutil.Discard, argReader)
-		assert.Equal(t, 0, n, "arg2 reader expected to EOF after arg3 writer is closed")
-		assert.Equal(t, io.EOF, err, "arg2 reader expected to EOF after arg3 writer is closed")
+		assert.Equal(t, int64(0), n, "arg2 reader expected to EOF after arg3 writer is closed")
 	}))
 }

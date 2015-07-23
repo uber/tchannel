@@ -223,22 +223,27 @@ func (w *fragmentingWriter) Write(b []byte) (int, error) {
 
 		// There was more data than fit into the fragment, so flush the current fragment,
 		// start a new fragment and chunk, and continue writing
-		w.curChunk.finish()
-		w.curFragment.finish(true)
-		if w.err = w.sender.flushFragment(w.curFragment); w.err != nil {
+		if w.err = w.Flush(); w.err != nil {
 			return totalWritten, w.err
 		}
 
-		if w.curFragment, w.err = w.sender.newFragment(false, w.checksum); w.err != nil {
-			return totalWritten, w.err
-		}
-
-		w.curChunk = newWritableChunk(w.checksum, w.curFragment.contents)
 		b = b[bytesWritten:]
 	}
 }
 
+// Flush flushes the current fragment, and starts a new fragment and chunk.
 func (w *fragmentingWriter) Flush() error {
+	w.curChunk.finish()
+	w.curFragment.finish(true)
+	if w.err = w.sender.flushFragment(w.curFragment); w.err != nil {
+		return w.err
+	}
+
+	if w.curFragment, w.err = w.sender.newFragment(false, w.checksum); w.err != nil {
+		return w.err
+	}
+
+	w.curChunk = newWritableChunk(w.checksum, w.curFragment.contents)
 	return nil
 }
 
