@@ -46,6 +46,7 @@ if [ "$1" == "" ]; then
 fi
 
 VERSION=$1
+NPM_TAG=$2
 node >node/package.json.new <<EOF
 var data = require("./node/package");
 data.version = "$VERSION";
@@ -60,7 +61,8 @@ git commit node/package.json -m "Cut $tag"
 
 DEV_BRANCH=$DEV_BRANCH make -C node update_dev
 
-git tag -a -m "Tag $tag" $tag $DEV_BRANCH
+git tag -a -m "Tag $tag" "$tag" "$DEV_BRANCH"
 git push origin master dev_node --tags
-git checkout dev_node
-npm publish
+git archive --format tgz dev_node >package.tgz
+npm publish package.tgz --tag "${NPM_TAG:-latest}"
+rm package.tgz
