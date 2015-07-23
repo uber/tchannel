@@ -105,14 +105,14 @@ State.prototype.invalidate = function invalidate() {
     }
 };
 
-State.prototype.shouldRequest = function shouldRequest(req, options) {
+State.prototype.shouldRequest = function shouldRequest() {
     var self = this;
 
     var now = self.timers.now();
     if (self.willCallNextHandler(now)) {
-        return self.nextHandler.shouldRequest(req, options);
+        return self.nextHandler.shouldRequest();
     } else if (self.stateMachine.state !== self) {
-        return self.stateMachine.state.shouldRequest(req, options);
+        return self.stateMachine.state.shouldRequest();
     } else {
         return 0;
     }
@@ -392,10 +392,10 @@ LockedHealthyState.prototype.willCallNextHandler = function willCallNextHandler(
     return true;
 };
 
-LockedHealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
+LockedHealthyState.prototype.shouldRequest = function shouldRequest() {
     var self = this;
 
-    return self.nextHandler.shouldRequest(req, options);
+    return self.nextHandler.shouldRequest();
 };
 
 function LockedUnhealthyState(options) {
@@ -418,6 +418,6 @@ LockedUnhealthyState.prototype.willCallNextHandler = function willCallNextHandle
     return false;
 };
 
-LockedUnhealthyState.prototype.shouldRequest = function shouldRequest(req, options) {
+LockedUnhealthyState.prototype.shouldRequest = function shouldRequest() {
     return 0;
 };

@@ -62,7 +62,6 @@ EndpointCircuits.prototype.getCircuit = function getCircuit(callerName, serviceN
     var circuit = self.circuitsByEndpointName['$' + endpointName];
     if (!circuit) {
         circuit = new Circuit(callerName, serviceName, endpointName);
-        circuit.shouldRequestOptions = self.root.shouldRequestOptions;
         circuit.stateOptions = new states.StateOptions(circuit, self.root.stateOptions);
         circuit.stateChangedEvent.on(function circuitStateChanged(states) {
             self.root.emitCircuitStateChange(circuit, states);
@@ -126,7 +125,6 @@ function Circuits(options) {
         minRequests: self.config.minRequests,
         probation: self.config.probation
     });
-    self.shouldRequestOptions = {};
     self.egressNodes = options.egressNodes;
 }
 
@@ -198,7 +196,6 @@ function Circuit(callerName, serviceName, endpointName) {
     self.callerName = callerName || 'no-cn';
     self.serviceName = serviceName;
     self.endpointName = endpointName;
-    self.shouldRequestOptions = null;
     self.stateOptions = null;
 }
 
@@ -208,7 +205,7 @@ Circuit.prototype.setState = StateMachine.prototype.setState;
 
 Circuit.prototype.handleRequest = function handleRequest(req, buildRes, nextHandler) {
     var self = this;
-    if (self.state.shouldRequest(req, self.shouldRequestOptions)) {
+    if (self.state.shouldRequest()) {
         return self.monitorRequest(req, buildRes, nextHandler);
     } else {
         return buildRes().sendError('Declined', 'Service is not healthy');
