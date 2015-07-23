@@ -221,9 +221,11 @@ function onResponseError(err, req) {
         arg1: String(req.arg1),
         ok: req.res.ok,
         type: req.res.type,
+        serviceName: req.serviceName,
         state: req.res.state === States.Done ? 'Done' :
             req.res.state === States.Error ? 'Error' :
-            'Unknown'
+            'Unknown',
+        socketRemoteAddr: self.socketRemoteAddr
     };
 
     if (req.res.state === States.Done) {
