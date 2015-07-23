@@ -95,8 +95,8 @@ TChannelInRequest.prototype.handleFrame = function handleFrame(parts, isLast) {
     var self = this;
 
     if (parts.length !== 3 || self.state !== States.Initial || !isLast) {
-        self.errorEvent.emit(self, new Error(
-            'un-streamed argument defragmentation is not implemented'));
+        // TODO: typed error
+        return new Error('un-streamed argument defragmentation is not implemented');
     }
 
     self.arg1 = parts[0] || emptyBuffer;
@@ -109,6 +109,8 @@ TChannelInRequest.prototype.handleFrame = function handleFrame(parts, isLast) {
     }
 
     self.emitFinish();
+
+    return null;
 };
 
 TChannelInRequest.prototype.emitFinish = function emitFinish() {
