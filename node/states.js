@@ -319,7 +319,7 @@ UnhealthyState.prototype.onNewPeriod = function onNewPeriod(now) {
         self.invalidate();
     }
 
-    return true;
+    return false;
 };
 
 UnhealthyState.prototype.toString = function healthyToString() {
@@ -358,6 +358,7 @@ UnhealthyState.prototype.onRequestHealthy = function onRequestHealthy() {
         self.stateMachine.setState(HealthyState);
     } else {
         self.invalidate();
+        self.checkPeriod(false, self.timers.now());
     }
 };
 
@@ -365,6 +366,7 @@ UnhealthyState.prototype.onRequestUnhealthy = function onRequestUnhealthy() {
     var self = this;
 
     self.healthyCount = 0;
+    self.checkPeriod(false, self.timers.now());
 };
 
 UnhealthyState.prototype.onRequestError = function onRequestError(err) {
