@@ -40,7 +40,7 @@ var TChannelRequest = require('./request');
 var TChannelServiceNameHandler = require('./service-name-handler');
 var errors = require('./errors');
 
-var Stat = require('./lib/stat.js');
+var BaseStat = require('./lib/stat.js').BaseStat;
 var TChannelAsThrift = require('./as/thrift');
 var TChannelAsJSON = require('./as/json');
 var TChannelConnection = require('./connection');
@@ -88,34 +88,34 @@ function TChannel(options) {
 
     // self.outboundCallsSentStat = self.defineCounter('outbound.calls.sent');
     // self.outboundCallsSuccessStat = self.defineCounter('outbound.calls.success');
-    self.outboundCallsSystemErrorsStat = self.defineCounter('outbound.calls.system-errors');
-    self.outboundCallsPerAttemptSystemErrorsStat = self.defineCounter('outbound.calls.per-attempt.system-errors');
-    self.outboundCallsOperationalErrorsStat = self.defineCounter('outbound.calls.operational-errors');
-    self.outboundCallsPerAttemptOperationalErrorsStat = self.defineCounter('outbound.calls.per-attempt.operational-errors');
+    self.outboundCallsSystemErrorsStat = self.defineCounter('tchannel.outbound.calls.system-errors');
+    self.outboundCallsPerAttemptSystemErrorsStat = self.defineCounter('tchannel.outbound.calls.per-attempt.system-errors');
+    self.outboundCallsOperationalErrorsStat = self.defineCounter('tchannel.outbound.calls.operational-errors');
+    self.outboundCallsPerAttemptOperationalErrorsStat = self.defineCounter('tchannel.outbound.calls.per-attempt.operational-errors');
     // self.outboundCallsAppErrorsStat = self.defineCounter('outbound.calls.app-errors');
     // self.outboundCallsPerAttemptAppErrorsStat = self.defineCounter('outbound.calls.per-attempt.app-errors');
-    self.outboundCallsRetriesStat = self.defineCounter('outbound.calls.retries');
+    self.outboundCallsRetriesStat = self.defineCounter('tchannel.outbound.calls.retries');
     // self.outboundResponseSizeStat = self.defineCounter('outbound.response.size');
     // self.outboundCallsLatencyStat = self.defineTiming('outbound.calls.latency');
     // self.outboundCallsPerAttemptLatencyStat = self.defineTiming('outbound.calls.per-attempt-latency');
 
     // self.inboundCallsSuccessStat = self.defineCounter('inbound.calls.success');
-    self.inboundCallsSystemErrorsStat = self.defineCounter('inbound.calls.system-errors');
+    self.inboundCallsSystemErrorsStat = self.defineCounter('tchannel.inbound.calls.system-errors');
     // self.inboundCallsAppErrorsStat = self.defineCounter('inbound.calls.app-errors');
     // self.inboundCallsCancelsRequestedStat = self.defineCounter('inbound.cancels.requested');
     // self.inboundCallsCancelsHonoredStat = self.defineCounter('inbound.cancels.honored');
     // self.inboundRequestSizeStat = self.defineCounter('inbound.request.size');
     // self.inboundResponseSizeStat = self.defineCounter('inbound.response.size');
-    self.inboundProtocolErrorsStat = self.defineCounter('inbound.protocol-errors');
+    self.inboundProtocolErrorsStat = self.defineCounter('tchannel.inbound.protocol-errors');
     // self.inboundCallsLatencyStat = self.defineTiming('inbound.calls.latency');
 
-    self.connectionsActiveStat = self.defineGauge('connections.active');
-    self.connectionsInitiatedStat = self.defineCounter('connections.initiated');
-    self.connectionsConnectErrorsStat = self.defineCounter('connections.connect-errors');
-    self.connectionsAcceptedStat = self.defineCounter('connections.accepted');
-    self.connectionsAcceptedErrorsStat = self.defineCounter('connections.accept-errors');
-    self.connectionsErrorsStat = self.defineCounter('connections.errors');
-    self.connectionsClosedStat = self.defineCounter('connections.closed');
+    self.connectionsActiveStat = self.defineGauge('tchannel.connections.active');
+    self.connectionsInitiatedStat = self.defineCounter('tchannel.connections.initiated');
+    self.connectionsConnectErrorsStat = self.defineCounter('tchannel.connections.connect-errors');
+    self.connectionsAcceptedStat = self.defineCounter('tchannel.connections.accepted');
+    self.connectionsAcceptedErrorsStat = self.defineCounter('tchannel.connections.accept-errors');
+    self.connectionsErrorsStat = self.defineCounter('tchannel.connections.errors');
+    self.connectionsClosedStat = self.defineCounter('tchannel.connections.closed');
     // self.connectionsBytesRcvdStat = self.defineCounter('connections.bytes-recvd');
 
     self.options = extend({
@@ -817,7 +817,7 @@ function buildStat(name, type, value, tags) {
     tags.cluster = self.statTags.cluster;
     tags.version = self.statTags.version;
 
-    return new Stat(
+    return new BaseStat(
         name, type, value, tags
     );
 };

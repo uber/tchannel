@@ -76,7 +76,7 @@ allocCluster.test('emits stats', {
         assert.ifError(err);
         assert.ok(res.ok);
         assert.deepEqual(stats, [{
-            name: 'outbound.calls.sent',
+            name: 'tchannel.outbound.calls.sent',
             type: 'counter',
             value: 1,
             tags: {
@@ -89,7 +89,7 @@ allocCluster.test('emits stats', {
                 host: os.hostname()
             }
         }, {
-            name: 'connections.initiated',
+            name: 'tchannel.connections.initiated',
             type: 'counter',
             value: 1,
             tags: {
@@ -101,7 +101,7 @@ allocCluster.test('emits stats', {
                 host: os.hostname()
             }
         }, {
-            name: 'outbound.request.size',
+            name: 'tchannel.outbound.request.size',
             type: 'counter',
             value: 93,
             tags: {
@@ -114,7 +114,7 @@ allocCluster.test('emits stats', {
                 host: os.hostname()
             }
         }, {
-            name: 'connections.bytes-sent',
+            name: 'tchannel.connections.bytes-sent',
             type: 'counter',
             value: 93,
             tags: {
@@ -126,7 +126,7 @@ allocCluster.test('emits stats', {
                 host: os.hostname()
             }
         }, {
-            name: 'inbound.response.size',
+            name: 'tchannel.inbound.response.size',
             type: 'counter',
             value: 64,
             tags: {
@@ -139,7 +139,7 @@ allocCluster.test('emits stats', {
                 host: os.hostname()
             }
         }, {
-            name: 'connections.bytes-recvd',
+            name: 'tchannel.connections.bytes-recvd',
             type: 'counter',
             value: 64,
             tags: {
@@ -151,7 +151,7 @@ allocCluster.test('emits stats', {
                 host: os.hostname()
             }
         }, {
-            name: 'outbound.calls.per-attempt-latency',
+            name: 'tchannel.outbound.calls.per-attempt-latency',
             type: 'timing',
             value: stats[6].value,
             tags: {
@@ -166,7 +166,7 @@ allocCluster.test('emits stats', {
                 host: os.hostname()
             }
         }, {
-            name: 'outbound.calls.success',
+            name: 'tchannel.outbound.calls.success',
             type: 'counter',
             value: 1,
             tags: {
@@ -179,7 +179,7 @@ allocCluster.test('emits stats', {
                 host: os.hostname()
             }
         }, {
-            name: 'outbound.calls.latency',
+            name: 'tchannel.outbound.calls.latency',
             type: 'timing',
             value: stats[8].value,
             tags: {
