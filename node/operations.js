@@ -56,10 +56,13 @@ function OperationTombstone(operations, id, time, timeout) {
     self.id = id;
     self.time = time;
     self.timeout = timeout;
+    self.timedOut = false;
 }
 
 OperationTombstone.prototype.onTimeout = function onTimeout(now) {
     var self = this;
+
+    self.timedOut = true;
 
     if (self.operations.requests.out[self.id] === self) {
         delete self.operations.requests.out[self.id];
