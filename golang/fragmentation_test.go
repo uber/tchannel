@@ -164,8 +164,8 @@ func TestFragmentationWriterErrors(t *testing.T) {
 	})
 
 	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
-		// EndArgument without beginning argument
-		assert.Error(t, w.EndArgument())
+		// Close without beginning argument
+		assert.Error(t, w.Close())
 	})
 }
 
@@ -178,8 +178,8 @@ func TestFragmentationReaderErrors(t *testing.T) {
 	})
 
 	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
-		// EndArgument without beginning argument
-		assert.Error(t, r.EndArgument())
+		// Close without beginning argument
+		assert.Error(t, r.Close())
 	})
 
 	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
@@ -211,7 +211,7 @@ func TestFragmentationReaderErrors(t *testing.T) {
 	})
 
 	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
-		// EndArgument without receiving all data in chunk
+		// Close without receiving all data in chunk
 		writer, err := w.ArgWriter(true /* last */)
 		assert.NoError(t, err)
 		assert.NoError(t, NewArgWriter(writer, nil).Write([]byte("hello")))
@@ -221,11 +221,11 @@ func TestFragmentationReaderErrors(t *testing.T) {
 		_, err = r.Read(b)
 		assert.NoError(t, err)
 		assert.Equal(t, "hel", string(b))
-		assert.Error(t, r.EndArgument())
+		assert.Error(t, r.Close())
 	})
 
 	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {
-		// EndArgument without receiving all fragments
+		// Close without receiving all fragments
 		writer, err := w.ArgWriter(true /* last */)
 		assert.NoError(t, err)
 		assert.NoError(t, NewArgWriter(writer, nil).Write([]byte("hello world what's up")))
@@ -235,7 +235,7 @@ func TestFragmentationReaderErrors(t *testing.T) {
 		_, err = r.Read(b)
 		assert.NoError(t, err)
 		assert.Equal(t, "hello wo", string(b))
-		assert.Error(t, r.EndArgument())
+		assert.Error(t, r.Close())
 	})
 
 	runFragmentationErrorTest(func(w *fragmentingWriter, r *fragmentingReader) {

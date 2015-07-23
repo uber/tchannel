@@ -247,12 +247,8 @@ func (w *fragmentingWriter) Flush() error {
 	return nil
 }
 
+// Close ends the current argument.
 func (w *fragmentingWriter) Close() error {
-	return w.EndArgument()
-}
-
-// EndArgument ends the current argument.
-func (w *fragmentingWriter) EndArgument() error {
 	last := w.state == fragmentingWriteInLastArgument
 	if w.err != nil {
 		return w.err
