@@ -269,6 +269,7 @@ Operations.prototype.sanitySweep = function sanitySweep() {
 Operations.prototype._sweepOps = function _sweepOps(ops, direction) {
     var self = this;
 
+    var now = self.timers.now();
     var opKeys = Object.keys(ops);
     for (var i = 0; i < opKeys.length; i++) {
         var id = opKeys[i];
@@ -288,6 +289,26 @@ Operations.prototype._sweepOps = function _sweepOps(ops, direction) {
                 self.popInReq(id);
             } else if (direction === 'out') {
                 self.popOutReq(id);
+            }
+        } else if (op.isTombstone) {
+            if (!op.operations) {
+                self.logger.warn('zombie tombstone', op.extendLogInfo({
+                    direction: direction,
+                    opKey: id
+                }));
+                delete ops[id];
+                op.operations = null;
+                op.timeHeapHandle.cancel();
+                op.timeHeapHandle = null;
+            } else if (op.time + op.timeout < now) {
+                self.logger.warn('stale tombstone', op.extendLogInfo({
+                    direction: direction,
+                    opKey: id
+                }));
+                delete ops[id];
+                op.operations = null;
+                op.timeHeapHandle.cancel();
+                op.timeHeapHandle = null;
             }
         }
     }
