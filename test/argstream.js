@@ -68,6 +68,7 @@ test.skip('setup sanity', argSearchTest(function t(state, assert) {
 }));
 
 test('argstream', function t(assert) {
+    var first = true; // stop on first failure
     var verbose = false;
     if (module === require.main) {
         var argv = require('minimist', {
@@ -78,7 +79,9 @@ test('argstream', function t(assert) {
         verbose = argv.verbose;
     }
 
-    assert.test('unit test OutArgStream', {skip: !verbose}, argSearchTest(function t(state, assert) {
+    assert.test('unit test OutArgStream', {skip: !verbose}, argSearchTest({
+        first: first
+    }, function t(state, assert) {
         var frames = state.frames;
         var expect = realFrames(frames);
         var gotI = 0;
@@ -100,7 +103,9 @@ test('argstream', function t(assert) {
         writeFrames(frames, s, assert.end);
     }));
 
-    assert.test('unit test InArgStream', {skip: !verbose}, argSearchTest(function t(state, assert) {
+    assert.test('unit test InArgStream', {skip: !verbose}, argSearchTest({
+        first: first
+    }, function t(state, assert) {
         var frames = state.frames;
         var args = state.args;
         var s = new argstream.InArgStream();
@@ -118,7 +123,9 @@ test('argstream', function t(assert) {
         }
     }));
 
-    assert.test('integration test {Out -> In}ArgStream', {skip: verbose}, argSearchTest(function t(state, assert) {
+    assert.test('integration test {Out -> In}ArgStream', {skip: verbose}, argSearchTest({
+        first: first
+    }, function t(state, assert) {
         var frames = state.frames;
         var args = state.args;
         var o = new argstream.OutArgStream();
