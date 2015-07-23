@@ -206,13 +206,14 @@ Circuit.prototype.setState = StateMachine.prototype.setState;
 Circuit.prototype.handleRequest = function handleRequest(req, buildRes, nextHandler) {
     var self = this;
     if (self.state.shouldRequest()) {
-        return self.monitorRequest(req, buildRes, nextHandler);
+        buildRes = self.monitorRequest(req, buildRes);
+        return nextHandler.handleRequest(req, buildRes);
     } else {
         return buildRes().sendError('Declined', 'Service is not healthy');
     }
 };
 
-Circuit.prototype.monitorRequest = function monitorRequest(req, buildRes, nextHandler) {
+Circuit.prototype.monitorRequest = function monitorRequest(req, buildRes) {
     var self = this;
 
     self.state.onRequest(req);
@@ -229,7 +230,7 @@ Circuit.prototype.monitorRequest = function monitorRequest(req, buildRes, nextHa
         self.state.onRequestError(err);
     }
 
-    return nextHandler.handleRequest(req, monitorBuildRes);
+    return monitorBuildRes;
 };
 
 Circuit.prototype.monitorResponse = function monitorResponse(res) {
