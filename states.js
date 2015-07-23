@@ -135,8 +135,9 @@ PeriodicState.prototype.startNewPeriod = function startNewPeriod(now) {
     var self = this;
 
     self.start = now;
-    self.setPeriodTimer(self.period, now);
-    self.onNewPeriod();
+    if (self.onNewPeriod()) {
+        self.setPeriodTimer(self.period, now);
+    }
 };
 
 PeriodicState.prototype.onDeactivate = function onDeactivate() {
@@ -243,6 +244,8 @@ HealthyState.prototype.onNewPeriod = function onNewPeriod(now) {
         self.healthyCount = 0;
         self.unhealthyCount = 0;
     }
+
+    return false;
 };
 
 HealthyState.prototype.onRequest = function onRequest(/* req */) {
@@ -255,7 +258,9 @@ HealthyState.prototype.onRequestHealthy = function onRequestHealthy() {
     var self = this;
     self.healthyCount++;
     self.totalRequests++;
-    self.invalidate();
+    if (!self.checkPeriod(false, self.timers.now())) {
+        self.invalidate();
+    }
 };
 
 HealthyState.prototype.onRequestUnhealthy = function onRequestUnhealthy() {
@@ -313,6 +318,8 @@ UnhealthyState.prototype.onNewPeriod = function onNewPeriod(now) {
         // we simply are remaining "open" for a single probe
         self.invalidate();
     }
+
+    return false;
 };
 
 UnhealthyState.prototype.toString = function healthyToString() {
@@ -351,6 +358,7 @@ UnhealthyState.prototype.onRequestHealthy = function onRequestHealthy() {
         self.stateMachine.setState(HealthyState);
     } else {
         self.invalidate();
+        self.checkPeriod(false, self.timers.now());
     }
 };
 
@@ -358,6 +366,7 @@ UnhealthyState.prototype.onRequestUnhealthy = function onRequestUnhealthy() {
     var self = this;
 
     self.healthyCount = 0;
+    self.checkPeriod(false, self.timers.now());
 };
 
 UnhealthyState.prototype.onRequestError = function onRequestError(err) {
