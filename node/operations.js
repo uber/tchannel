@@ -52,18 +52,52 @@ function OperationTombstone(operations, id, time, timeout) {
     var self = this;
 
     self.isTombstone = true;
+    self.logger = operations.logger;
     self.operations = operations;
     self.id = id;
     self.time = time;
     self.timeout = timeout;
+    self.timeHeapHandle = null;
 }
+
+OperationTombstone.prototype.extendLogInfo = function extendLogInfo(info) {
+    var self = this;
+
+    var conn = self.operations && self.operations.connection;
+
+    info.id = self.id;
+    info.tombstoneTime = self.time;
+    info.tombstoneTTL = self.timeout;
+    info.heapCanceled = self.timeHeapHandle && !self.timeHeapHandle.item;
+    info.heapExpireTime = self.timeHeapHandle && self.timeHeapHandle.expireTime;
+    info.heapAmItem = self.timeHeapHandle && self.timeHeapHandle.item === self;
+    info.hostPort = conn && conn.channel.hostPort;
+    info.socketRemoteAddr = conn && conn.socketRemoteAddr;
+    info.remoteName = conn && conn.remoteName;
+    info.connClosing = conn && conn.closing;
+
+    var other = self.operations && self.operations.requests.out[self.id];
+    if (self !== other) {
+        info.otherType = typeof other;
+        info.otherConstructorName = other && other.constructor && other.constructor.name;
+    }
+
+    return info;
+};
 
 OperationTombstone.prototype.onTimeout = function onTimeout(now) {
     var self = this;
 
-    if (self.operations.requests.out[self.id] === self) {
+    if (self.operations &&
+        self.operations.requests.out[self.id] === self) {
         delete self.operations.requests.out[self.id];
+        self.operations = null;
+    } else {
+        self.logger.warn('mismatched expired operation tombstone', self.extendLogInfo({}));
+        self.operations = null;
     }
+
+    self.timeHeapHandle = null;
 };
 
 Operations.prototype.checkLastTimeoutTime = function checkLastTimeoutTime(now) {
@@ -153,12 +187,12 @@ Operations.prototype.popOutReq = function popOutReq(id, context) {
 
     var now = self.timers.now();
     var timeout = TOMBSTONE_TTL_OFFSET + req.timeout;
-    var tombstone = new OperationTombstone(self, req.id, now, timeout);
+    var tombstone = new OperationTombstone(self, id, now, timeout);
     req.operations = null;
     self.requests.out[id] = tombstone;
     self.pending.out--;
 
-    self.connection.channel.timeHeap.update(tombstone, now);
+    tombstone.timeHeapHandle = self.connection.channel.timeHeap.update(tombstone, now);
 
     return req;
 };
@@ -235,6 +269,7 @@ Operations.prototype.sanitySweep = function sanitySweep() {
 Operations.prototype._sweepOps = function _sweepOps(ops, direction) {
     var self = this;
 
+    var now = self.timers.now();
     var opKeys = Object.keys(ops);
     for (var i = 0; i < opKeys.length; i++) {
         var id = opKeys[i];
@@ -254,6 +289,26 @@ Operations.prototype._sweepOps = function _sweepOps(ops, direction) {
                 self.popInReq(id);
             } else if (direction === 'out') {
                 self.popOutReq(id);
+            }
+        } else if (op.isTombstone) {
+            if (!op.operations) {
+                self.logger.warn('zombie tombstone', op.extendLogInfo({
+                    direction: direction,
+                    opKey: id
+                }));
+                delete ops[id];
+                op.operations = null;
+                op.timeHeapHandle.cancel();
+                op.timeHeapHandle = null;
+            } else if (op.time + op.timeout < now) {
+                self.logger.warn('stale tombstone', op.extendLogInfo({
+                    direction: direction,
+                    opKey: id
+                }));
+                delete ops[id];
+                op.operations = null;
+                op.timeHeapHandle.cancel();
+                op.timeHeapHandle = null;
             }
         }
     }

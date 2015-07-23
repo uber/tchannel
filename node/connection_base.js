@@ -50,7 +50,6 @@ function TChannelConnectionBase(channel, direction, socketRemoteAddr) {
     self.timers = channel.timers;
     self.direction = direction;
     self.socketRemoteAddr = socketRemoteAddr;
-    self.timer = null;
     self.remoteName = null; // filled in by identify message
 
     self.ops = new Operations({
