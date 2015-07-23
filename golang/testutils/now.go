@@ -20,15 +20,21 @@ package testutils
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import "time"
+import (
+	"sync"
+	"time"
+)
 
 // NowStub replaces a function variable to time.Now with a function that
 // allows the return values to be controller by the caller.
 // The rerturned function is used to control the increment amount between calls.
 func NowStub(funcVar *func() time.Time, initial time.Time) func(time.Duration) {
+	var mut sync.Mutex
 	cur := initial
 	var addAmt time.Duration
 	*funcVar = func() time.Time {
+		mut.Lock()
+		defer mut.Unlock()
 		cur = cur.Add(addAmt)
 		return cur
 	}
