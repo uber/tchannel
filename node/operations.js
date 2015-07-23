@@ -146,6 +146,7 @@ Operations.prototype.popOutReq = function popOutReq(id, context) {
         self.logMissingOutRequest(id, context);
         return null;
     } else if (req.isTombstone) {
+        delete self.requests.out[id];
         return null;
     }
 
