@@ -236,6 +236,7 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
 
     var req = self.buildInRequest(reqFrame);
 
+    // TODO: revive this over lazy call rw
     var err = self.checkCallReqFrame(reqFrame);
     if (err) {
         req.errorEvent.emit(req, err);
