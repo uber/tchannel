@@ -80,7 +80,7 @@ allocCluster.test('emits response stats with ok', {
 
         assert.ok(res.ok, 'res should be ok');
         assert.deepEqual(stats, [{
-            name: 'connections.accepted',
+            name: 'tchannel.connections.accepted',
             type: 'counter',
             value: 1,
             tags:
@@ -93,7 +93,7 @@ allocCluster.test('emits response stats with ok', {
                 version: ''
            }
         }, {
-            name: 'inbound.request.size',
+            name: 'tchannel.inbound.request.size',
             type: 'counter',
             value: 93,
             tags: {
@@ -106,7 +106,7 @@ allocCluster.test('emits response stats with ok', {
                 version: ''
             }
         }, {
-            name: 'connections.bytes-recvd',
+            name: 'tchannel.connections.bytes-recvd',
             type: 'counter',
             value: 93,
             tags: {
@@ -118,7 +118,7 @@ allocCluster.test('emits response stats with ok', {
                 version: ''
             }
         }, {
-            name: 'inbound.calls.recvd',
+            name: 'tchannel.inbound.calls.recvd',
             type: 'counter',
             value: 1,
             tags: {
@@ -131,7 +131,7 @@ allocCluster.test('emits response stats with ok', {
                 version: ''
             }
         }, {
-            name: 'inbound.calls.success',
+            name: 'tchannel.inbound.calls.success',
             type: 'counter',
             value: 1,
             tags: {
@@ -144,7 +144,7 @@ allocCluster.test('emits response stats with ok', {
                 version: ''
             }
         }, {
-            name: 'outbound.response.size',
+            name: 'tchannel.outbound.response.size',
             type: 'counter',
             value: 64,
             tags: { 
@@ -157,7 +157,7 @@ allocCluster.test('emits response stats with ok', {
                 version: ''
             }
         }, {
-            name: 'connections.bytes-sent',
+            name: 'tchannel.connections.bytes-sent',
             type: 'counter',
             value: 64,
             tags: {
@@ -169,7 +169,7 @@ allocCluster.test('emits response stats with ok', {
                 version: ''
             }
         }, {
-            name: 'inbound.calls.latency',
+            name: 'tchannel.inbound.calls.latency',
             type: 'timing',
             value: stats[7].value,
             tags: {
@@ -243,7 +243,7 @@ allocCluster.test('emits response stats with not ok', {
 
         assert.equal(res.ok, false, 'res should be not ok');
         assert.deepEqual(stats, [{
-            name: 'connections.accepted',
+            name: 'tchannel.connections.accepted',
             type: 'counter',
             value: 1,
             tags:
@@ -256,7 +256,7 @@ allocCluster.test('emits response stats with not ok', {
                 version: ''
            }
         }, {
-            name: 'inbound.request.size',
+            name: 'tchannel.inbound.request.size',
             type: 'counter',
             value: 93,
             tags: {
@@ -269,7 +269,7 @@ allocCluster.test('emits response stats with not ok', {
                 version: ''
             }
         }, {
-            name: 'connections.bytes-recvd',
+            name: 'tchannel.connections.bytes-recvd',
             type: 'counter',
             value: 93,
             tags: {
@@ -281,7 +281,7 @@ allocCluster.test('emits response stats with not ok', {
                 version: ''
             }
         }, {
-            name: 'inbound.calls.recvd',
+            name: 'tchannel.inbound.calls.recvd',
             type: 'counter',
             value: 1,
             tags: {
@@ -294,7 +294,7 @@ allocCluster.test('emits response stats with not ok', {
                 version: ''
             }
         }, {
-            name: 'inbound.calls.app-errors',
+            name: 'tchannel.inbound.calls.app-errors',
             type: 'counter',
             value: 1,
             tags: {
@@ -308,7 +308,7 @@ allocCluster.test('emits response stats with not ok', {
                 version: ''
             }
         }, {
-            name: 'outbound.response.size',
+            name: 'tchannel.outbound.response.size',
             type: 'counter',
             value: 73,
             tags: {
@@ -321,7 +321,7 @@ allocCluster.test('emits response stats with not ok', {
                 version: ''
             }
         }, {
-            name: 'connections.bytes-sent',
+            name: 'tchannel.connections.bytes-sent',
             type: 'counter',
             value: 73,
             tags: {
@@ -333,7 +333,7 @@ allocCluster.test('emits response stats with not ok', {
                 version: ''
             }
         }, {
-            name: 'inbound.calls.latency',
+            name: 'tchannel.inbound.calls.latency',
             type: 'timing',
             value: stats[7].value,
             tags: {
@@ -403,7 +403,7 @@ allocCluster.test('emits response stats with error', {
         assert.notEqual(err, null, 'err should not be null');
         assert.equal(res, null, 'res should be null');
         assert.deepEqual(stats, [{
-            name: 'connections.accepted',
+            name: 'tchannel.connections.accepted',
             type: 'counter',
             value: 1,
             tags:
@@ -416,7 +416,7 @@ allocCluster.test('emits response stats with error', {
                 version: ''
            }
         }, {
-            name: 'inbound.request.size',
+            name: 'tchannel.inbound.request.size',
             type: 'counter',
             value: 93,
             tags: {
@@ -429,7 +429,7 @@ allocCluster.test('emits response stats with error', {
                 version: ''
             }
         }, {
-            name: 'connections.bytes-recvd',
+            name: 'tchannel.connections.bytes-recvd',
             type: 'counter',
             value: 93,
             tags: {
@@ -441,7 +441,7 @@ allocCluster.test('emits response stats with error', {
                 version: ''
             }
         }, {
-            name: 'inbound.calls.recvd',
+            name: 'tchannel.inbound.calls.recvd',
             type: 'counter',
             value: 1,
             tags: {
@@ -454,7 +454,7 @@ allocCluster.test('emits response stats with error', {
                 version: ''
             }
         }, {
-            name: 'inbound.calls.system-errors',
+            name: 'tchannel.inbound.calls.system-errors',
             type: 'counter',
             value: 1,
             tags: {
@@ -468,7 +468,7 @@ allocCluster.test('emits response stats with error', {
                 version: ''
             }
         }, {
-            name: 'inbound.calls.latency',
+            name: 'tchannel.inbound.calls.latency',
             type: 'timing',
             value: stats[5].value,
             tags: {

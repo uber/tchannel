@@ -61,7 +61,9 @@ PermissionsCache.prototype.clearBuckets = function clearBuckets() {
 
 PermissionsCache.prototype.increment = function increment(stat) {
     var self = this;
-    if (stat.name === 'inbound.calls.recvd' && stat.type === 'counter') {
+    if (stat.name === 'tchannel.inbound.calls.recvd' &&
+        stat.type === 'counter'
+    ) {
         var key = createCallsKey(
             stat.tags.callingService, stat.tags.service
         );

@@ -21,6 +21,7 @@
 'use strict';
 
 var EventEmitter = require('../lib/event_emitter');
+var stat = require('../lib/stat.js');
 var util = require('util');
 var assert = require('assert');
 
@@ -202,10 +203,10 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
 
     var channel = self.connection.channel;
     channel.emitFastStat(channel.buildStat(
-        'inbound.request.size',
+        'tchannel.inbound.request.size',
         'counter',
         reqFrame.size,
-        new InboundRequestSizeTags(
+        new stat.InboundRequestSizeTags(
             req.headers.cn,
             req.serviceName,
             req.endpoint
@@ -222,41 +223,16 @@ function emitBytesRecvd(frame) {
     var channel = self.connection.channel;
     if (channel.emitConnectionMetrics) {
         channel.emitFastStat(channel.buildStat(
-            'connections.bytes-recvd',
+            'tchannel.connections.bytes-recvd',
             'counter',
             frame.size,
-            new ConnectionsBytesRcvdTags(
+            new stat.ConnectionsBytesRcvdTags(
                 channel.hostPort || '0.0.0.0:0',
                 self.connection.socketRemoteAddr
             )
         ));
     }
 };
-
-function InboundRequestSizeTags(cn, serviceName, endpoint) {
-    var self = this;
-
-    self.app = null;
-    self.host = null;
-    self.cluster = null;
-    self.version = null;
-
-    self.callingService = cn;
-    self.service = serviceName;
-    self.endpoint = endpoint;
-}
-
-function ConnectionsBytesRcvdTags(hostPort, peerHostPort) {
-    var self = this;
-
-    self.app = null;
-    self.host = null;
-    self.cluster = null;
-    self.version = null;
-
-    self.hostPort = hostPort;
-    self.peerHostPort = peerHostPort;
-}
 
 TChannelV2Handler.prototype.incomingRequestInvalid =
 function incomingRequestInvalid(reqFrame, req) {
@@ -332,10 +308,10 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
     var channel = self.connection.channel;
 
     channel.emitFastStat(channel.buildStat(
-        'inbound.response.size',
+        'tchannel.inbound.response.size',
         'counter',
         resFrame.size,
-        new InboundResponseSizeTags(
+        new stat.InboundResponseSizeTags(
             req ? req.headers.cn : '',
             req ? req.serviceName : '',
             req ? req.endpoint : ''
@@ -354,18 +330,7 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
     }
 };
 
-function InboundResponseSizeTags(cn, serviceName, endpoint) {
-    var self = this;
 
-    self.app = null;
-    self.host = null;
-    self.cluster = null;
-    self.version = null;
-
-    self.callingService = cn;
-    self.service = serviceName;
-    self.endpoint = endpoint;
-}
 
 TChannelV2Handler.prototype.checkValidCallResponse =
 function checkValidCallResponse(resFrame) {
@@ -424,10 +389,10 @@ TChannelV2Handler.prototype.handleCallRequestCont = function handleCallRequestCo
     
     var channel = self.connection.channel;
     channel.emitFastStat(channel.buildStat(
-        'inbound.request.size',
+        'tchannel.inbound.request.size',
         'counter',
         reqFrame.size,
-        new InboundRequestSizeTags(
+        new stat.InboundRequestSizeTags(
             req.headers.cn,
             req.serviceName,
             req.endpoint
@@ -452,10 +417,10 @@ TChannelV2Handler.prototype.handleCallResponseCont = function handleCallResponse
     var channel = self.connection.channel;
 
     channel.emitFastStat(channel.buildStat(
-        'inbound.response.size',
+        'tchannel.inbound.response.size',
         'counter',
         resFrame.size,
-        new InboundResponseSizeTags(
+        new stat.InboundResponseSizeTags(
             req ? req.headers.cn : '',
             req ? req.serviceName : '',
             req ? req.endpoint : ''
@@ -588,10 +553,10 @@ function sendCallRequestFrame(req, flags, args) {
     var channel = self.connection.channel;
 
     channel.emitFastStat(channel.buildStat(
-        'outbound.request.size',
+        'tchannel.outbound.request.size',
         'counter',
         result.size,
-        new OutboundRequestSizeTags(
+        new stat.OutboundRequestSizeTags(
             req.serviceName,
             req.headers.cn,
             req.endpoint
@@ -608,10 +573,10 @@ function emitBytesSent(result) {
     var channel = self.connection.channel;
     if (channel.emitConnectionMetrics) {
         channel.emitFastStat(channel.buildStat(
-            'connections.bytes-sent',
+            'tchannel.connections.bytes-sent',
             'counter',
             result.size,
-            new ConnectionsBytesSentTags(
+            new stat.ConnectionsBytesSentTags(
                 channel.hostPort || '0.0.0.0:0',
                 self.connection.socketRemoteAddr
             )
@@ -658,31 +623,6 @@ function verifyCallRequestFrame(req, args) {
     return true;
 };
 
-function OutboundRequestSizeTags(serviceName, cn, endpoint) {
-    var self = this;
-
-    self.app = null;
-    self.host = null;
-    self.cluster = null;
-    self.version = null;
-
-    self.targetService = serviceName;
-    self.service = cn;
-    self.targetEndpoint = endpoint;
-}
-
-function ConnectionsBytesSentTags(hostPort, peer) {
-    var self = this;
-
-    self.app = null;
-    self.host = null;
-    self.cluster = null;
-    self.version = null;
-
-    self.hostPort = hostPort;
-    self.peerHostPort = peer;
-}
-
 TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFrame(res, flags, args) {
     var self = this;
     if (self.remoteName === null) {
@@ -704,10 +644,10 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
 
     var req = res.inreq;
     channel.emitFastStat(channel.buildStat(
-        'outbound.response.size',
+        'tchannel.outbound.response.size',
         'counter',
         result.size,
-        new OutboundResponseSizeTags(
+        new stat.OutboundResponseSizeTags(
             req.serviceName,
             req.headers.cn,
             req.endpoint
@@ -716,19 +656,6 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
 
     self.emitBytesSent(result);
 };
-
-function OutboundResponseSizeTags(serviceName, cn, endpoint) {
-    var self = this;
-
-    self.app = null;
-    self.host = null;
-    self.cluster = null;
-    self.version = null;
-
-    self.targetService = serviceName;
-    self.service = cn;
-    self.targetEndpoint = endpoint;
-}
 
 TChannelV2Handler.prototype.validateCallResponseFrame =
 function validateCallResponseFrame(res) {
@@ -761,10 +688,10 @@ TChannelV2Handler.prototype.sendCallRequestContFrame = function sendCallRequestC
 
     var channel = self.connection.channel;
     channel.emitFastStat(channel.buildStat(
-        'outbound.request.size',
+        'tchannel.outbound.request.size',
         'counter',
         result.size,
-        new OutboundRequestSizeTags(
+        new stat.OutboundRequestSizeTags(
             req0 ? req0.serviceName : '',
             req0 ? req0.headers.cn : '',
             req0 ? req.endpoint : ''
@@ -788,10 +715,10 @@ TChannelV2Handler.prototype.sendCallResponseContFrame = function sendCallRespons
     var channel = self.connection.channel;
 
     channel.emitFastStat(channel.buildStat(
-        'outbound.response.size',
+        'tchannel.outbound.response.size',
         'counter',
         result.size,
-        new OutboundResponseSizeTags(
+        new stat.OutboundResponseSizeTags(
             req.serviceName,
             req.headers.cn,
             req.endpoint

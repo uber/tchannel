@@ -24,6 +24,7 @@ module.exports = TChannelOutRequest;
 
 var assert = require('assert');
 var EventEmitter = require('./lib/event_emitter');
+var stat = require('./lib/stat.js');
 var inherits = require('util').inherits;
 var parallel = require('run-parallel');
 
@@ -178,10 +179,10 @@ function emitResponseStat(res) {
         emitOutboundCallsSuccess(self);
     } else {
         self.channel.emitFastStat(self.channel.buildStat(
-            'outbound.calls.app-errors',
+            'tchannel.outbound.calls.app-errors',
             'counter',
             1,
-            new OutboundCallsAppErrorsTags(
+            new stat.OutboundCallsAppErrorsTags(
                 self.serviceName,
                 self.headers.cn,
                 self.endpoint,
@@ -193,10 +194,10 @@ function emitResponseStat(res) {
 
 function emitOutboundCallsSuccess(request) {
     request.channel.emitFastStat(request.channel.buildStat(
-        'outbound.calls.success',
+        'tchannel.outbound.calls.success',
         'counter',
         1,
-        new OutboundCallsSuccessTags(
+        new stat.OutboundCallsSuccessTags(
             request.serviceName,
             request.headers.cn,
             request.endpoint
@@ -204,32 +205,7 @@ function emitOutboundCallsSuccess(request) {
     ));
 }
 
-function OutboundCallsAppErrorsTags(serviceName, cn, endpoint, type) {
-    var self = this;
 
-    self.app = '';
-    self.host = '';
-    self.cluster = '';
-    self.version = '';
-
-    self.targetService = serviceName;
-    self.service = cn;
-    self.targetEndpoint = endpoint;
-    self.type = type;
-}
-
-function OutboundCallsSuccessTags(serviceName, cn, endpoint) {
-    var self = this;
-
-    self.app = '';
-    self.host = '';
-    self.cluster = '';
-    self.version = '';
-
-    self.targetService = serviceName;
-    self.service = cn;
-    self.targetEndpoint = endpoint;
-}
 
 TChannelOutRequest.prototype.emitPerAttemptResponseStat =
 function emitPerAttemptResponseStat(res) {
@@ -237,10 +213,10 @@ function emitPerAttemptResponseStat(res) {
 
     if (!res.ok) {
         self.channel.emitFastStat(self.channel.buildStat(
-            'outbound.calls.per-attempt.app-errors',
+            'tchannel.outbound.calls.per-attempt.app-errors',
             'counter',
             1,
-            new OutboundCallsPerAttemptAppErrorsTags(
+            new stat.OutboundCallsPerAttemptAppErrorsTags(
                 self.serviceName,
                 self.headers.cn,
                 self.endpoint,
@@ -254,22 +230,6 @@ function emitPerAttemptResponseStat(res) {
     }
 };
 
-function OutboundCallsPerAttemptAppErrorsTags(
-    serviceName, cn, endpoint, type, retryCount
-) {
-    var self = this;
-
-    self.app = '';
-    self.host = '';
-    self.cluster = '';
-    self.version = '';
-
-    self.targetService = serviceName;
-    self.service = cn;
-    self.targetEndpoint = endpoint;
-    self.type = type;
-    self.retryCount = retryCount;
-}
 
 TChannelOutRequest.prototype.emitPerAttemptLatency =
 function emitPerAttemptLatency() {
@@ -278,10 +238,10 @@ function emitPerAttemptLatency() {
     var latency = self.end - self.start;
 
     self.channel.emitFastStat(self.channel.buildStat(
-        'outbound.calls.per-attempt-latency',
+        'tchannel.outbound.calls.per-attempt-latency',
         'timing',
         latency,
-        new OutboundCallsPerAttemptLatencyTags(
+        new stat.OutboundCallsPerAttemptLatencyTags(
             self.serviceName,
             self.headers.cn,
             self.endpoint,
@@ -291,52 +251,22 @@ function emitPerAttemptLatency() {
     ));
 };
 
-function OutboundCallsPerAttemptLatencyTags(
-    serviceName, cn, endpoint, remoteAddr, retryCount
-) {
-    var self = this;
-
-    self.app = '';
-    self.host = '';
-    self.cluster = '';
-    self.version = '';
-
-    self.targetService = serviceName;
-    self.service = cn;
-    self.targetEndpoint = endpoint;
-    self.peer = remoteAddr;
-    self.retryCount = retryCount;
-}
-
 TChannelOutRequest.prototype.emitLatency = function emitLatency() {
     var self = this;
 
     var latency = self.end - self.start;
 
     self.channel.emitFastStat(self.channel.buildStat(
-        'outbound.calls.latency',
+        'tchannel.outbound.calls.latency',
         'timing',
         latency,
-        new OutboundCallsLatencyTags(
+        new stat.OutboundCallsLatencyTags(
             self.serviceName,
             self.headers.cn,
             self.endpoint
         )
     ));
 };
-
-function OutboundCallsLatencyTags(serviceName, cn, endpoint) {
-    var self = this;
-
-    self.app = '';
-    self.host = '';
-    self.cluster = '';
-    self.version = '';
-
-    self.targetService = serviceName;
-    self.service = cn;
-    self.targetEndpoint = endpoint;
-}
 
 TChannelOutRequest.prototype.emitError = function emitError(err) {
     var self = this;
@@ -482,29 +412,16 @@ function emitOutboundCallsSent() {
     var self = this;
 
     self.channel.emitFastStat(self.channel.buildStat(
-        'outbound.calls.sent',
+        'tchannel.outbound.calls.sent',
         'counter',
         1,
-        new OutboundCallsSentTags(
+        new stat.OutboundCallsSentTags(
             self.serviceName,
             self.headers.cn,
             self.endpoint
         )
     ));
 };
-
-function OutboundCallsSentTags(serviceName, cn, endpoint) {
-    var self = this;
-
-    self.app = '';
-    self.host = '';
-    self.cluster = '';
-    self.version = '';
-
-    self.targetService = serviceName;
-    self.service = cn;
-    self.targetEndpoint = endpoint;
-}
 
 TChannelOutRequest.prototype.hookupStreamCallback =
 function hookupCallback(callback) {
