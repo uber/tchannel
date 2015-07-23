@@ -35,6 +35,7 @@
  * served by running the sanity test to iterate on the searcher itself.
  */
 
+var extend = require('xtend');
 var test = require('tape');
 var util = require('util');
 
@@ -141,8 +142,13 @@ test('argstream', function t(assert) {
     }));
 });
 
-function argSearchTest(testFunc) {
-    var search = TestSearch({
+function argSearchTest(options, testFunc) {
+    if (typeof options === 'function') {
+        testFunc = options;
+        options = {};
+    }
+
+    var search = TestSearch(extend(options, {
         describeState: function describe(state) {
             return state.frames.map(function each(frame) {
                 return frame.join('.');
@@ -197,7 +203,7 @@ function argSearchTest(testFunc) {
                 _emit({frames: relabel(frames)});
             }
         }
-    });
+    }));
     return search.run.bind(search);
 }
 
