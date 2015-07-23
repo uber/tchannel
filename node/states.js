@@ -135,8 +135,9 @@ PeriodicState.prototype.startNewPeriod = function startNewPeriod(now) {
     var self = this;
 
     self.start = now;
-    self.setPeriodTimer(self.period, now);
-    self.onNewPeriod();
+    if (self.onNewPeriod()) {
+        self.setPeriodTimer(self.period, now);
+    }
 };
 
 PeriodicState.prototype.onDeactivate = function onDeactivate() {
@@ -243,6 +244,8 @@ HealthyState.prototype.onNewPeriod = function onNewPeriod(now) {
         self.healthyCount = 0;
         self.unhealthyCount = 0;
     }
+
+    return true;
 };
 
 HealthyState.prototype.onRequest = function onRequest(/* req */) {
@@ -313,6 +316,8 @@ UnhealthyState.prototype.onNewPeriod = function onNewPeriod(now) {
         // we simply are remaining "open" for a single probe
         self.invalidate();
     }
+
+    return true;
 };
 
 UnhealthyState.prototype.toString = function healthyToString() {
