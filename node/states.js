@@ -245,7 +245,7 @@ HealthyState.prototype.onNewPeriod = function onNewPeriod(now) {
         self.unhealthyCount = 0;
     }
 
-    return true;
+    return false;
 };
 
 HealthyState.prototype.onRequest = function onRequest(/* req */) {
@@ -258,7 +258,9 @@ HealthyState.prototype.onRequestHealthy = function onRequestHealthy() {
     var self = this;
     self.healthyCount++;
     self.totalRequests++;
-    self.invalidate();
+    if (!self.checkPeriod(false, self.timers.now())) {
+        self.invalidate();
+    }
 };
 
 HealthyState.prototype.onRequestUnhealthy = function onRequestUnhealthy() {
