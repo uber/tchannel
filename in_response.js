@@ -66,18 +66,21 @@ TChannelInResponse.prototype.onFinish = function onFinish(_arg, self) {
     self.state = States.Done;
 };
 
-TChannelInResponse.prototype.handleFrame = function handleFrame(parts) {
+TChannelInResponse.prototype.handleFrame = function handleFrame(parts, isLast) {
     var self = this;
-    if (!parts) return;
-    if (parts.length !== 3 ||
-        self.state !== States.Initial) {
-        self.errorEvent.emit(self, new Error(
-            'un-streamed argument defragmentation is not implemented'));
+
+    if (parts.length !== 3 || self.state !== States.Initial || !isLast) {
+        // TODO: typed error
+        return new Error('un-streamed argument defragmentation is not implemented');
     }
+
     self.arg1 = parts[0] || emptyBuffer;
     self.arg2 = parts[1] || emptyBuffer;
     self.arg3 = parts[2] || emptyBuffer;
+
     self.finishEvent.emit(self);
+
+    return null;
 };
 
 TChannelInResponse.prototype.withArg23 = function withArg23(callback) {
