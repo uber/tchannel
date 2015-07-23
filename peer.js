@@ -75,7 +75,7 @@ function TChannelPeer(channel, hostPort, options) {
     }
 
     self.reportInterval = self.options.reportInterval || DEFAULT_REPORT_INTERVAL;
-    if (self.reportInterval > 0) {
+    if (self.reportInterval > 0 && self.channel.emitConnectionMetrics) {
         self.reportTimer = self.timers.setTimeout(
             onReport, self.reportInterval
         );
