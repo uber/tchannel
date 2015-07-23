@@ -10,6 +10,7 @@
     <version>1.0-SNAPSHOT</version>
     <modules>
         <module>tchannel-core</module>
+        <module>tchannel-example</module>
     </modules>
 
     <dependencies>
