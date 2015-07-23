@@ -487,9 +487,8 @@ TChannelV2Handler.prototype._handleCallFrame = function _handleCallFrame(r, fram
     r.checksum = frame.body.csum;
 
     var isLast = !(frame.body.flags & v2.CallFlags.Fragment);
-    r.handleFrame(frame.body.args);
+    r.handleFrame(frame.body.args, isLast);
     if (isLast) {
-        r.handleFrame(null);
         r.state = States.Done;
     } else if (r.state === States.Initial) {
         r.state = States.Streaming;
