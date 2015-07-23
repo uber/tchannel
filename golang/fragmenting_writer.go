@@ -39,6 +39,14 @@ const (
 	hasMoreFragmentsFlag = 0x01 // flags indicating there are more fragments coming
 )
 
+// ArgWriter is the interface returned by ArgXWriter.
+type ArgWriter interface {
+	io.WriteCloser
+
+	// Flush flushes the currently written bytes without waiting for the frame to be filled.
+	Flush() error
+}
+
 // A writableFragment is a fragment that can be written to, containing a buffer
 // for contents, a running checksum, and placeholders for the fragment flags
 // and final checksum value
@@ -144,9 +152,9 @@ func newFragmentingWriter(sender fragmentSender, checksum Checksum) *fragmenting
 	}
 }
 
-// ArgWriter returns an io.WriteCloser to write an argument. The WriteCloser will handle
-// fragmentation as needed. Once the argument is written, the WriteCloser must be closed.
-func (w *fragmentingWriter) ArgWriter(last bool) (io.WriteCloser, error) {
+// ArgWriter returns an ArgWriter to write an argument. The ArgWriter will handle
+// fragmentation as needed. Once the argument is written, the ArgWriter must be closed.
+func (w *fragmentingWriter) ArgWriter(last bool) (ArgWriter, error) {
 	if err := w.BeginArgument(last); err != nil {
 		return nil, err
 	}
@@ -228,6 +236,10 @@ func (w *fragmentingWriter) Write(b []byte) (int, error) {
 		w.curChunk = newWritableChunk(w.checksum, w.curFragment.contents)
 		b = b[bytesWritten:]
 	}
+}
+
+func (w *fragmentingWriter) Flush() error {
+	return nil
 }
 
 func (w *fragmentingWriter) Close() error {

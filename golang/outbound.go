@@ -177,13 +177,13 @@ func (call *OutboundCall) writeOperation(operation []byte) error {
 
 // Arg2Writer returns a WriteCloser that can be used to write the second argument.
 // The returned writer must be closed once the write is complete.
-func (call *OutboundCall) Arg2Writer() (io.WriteCloser, error) {
+func (call *OutboundCall) Arg2Writer() (ArgWriter, error) {
 	return call.arg2Writer()
 }
 
 // Arg3Writer returns a WriteCloser that can be used to write the last argument.
 // The returned writer must be closed once the write is complete.
-func (call *OutboundCall) Arg3Writer() (io.WriteCloser, error) {
+func (call *OutboundCall) Arg3Writer() (ArgWriter, error) {
 	return call.arg3Writer()
 }
 

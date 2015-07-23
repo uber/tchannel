@@ -78,7 +78,7 @@ type reqResWriter struct {
 
 //go:generate stringer -type=reqResReaderState
 
-func (w *reqResWriter) argWriter(last bool, inState reqResWriterState, outState reqResWriterState) (io.WriteCloser, error) {
+func (w *reqResWriter) argWriter(last bool, inState reqResWriterState, outState reqResWriterState) (ArgWriter, error) {
 	if w.err != nil {
 		return nil, w.err
 	}
@@ -96,15 +96,15 @@ func (w *reqResWriter) argWriter(last bool, inState reqResWriterState, outState 
 	return argWriter, nil
 }
 
-func (w *reqResWriter) arg1Writer() (io.WriteCloser, error) {
+func (w *reqResWriter) arg1Writer() (ArgWriter, error) {
 	return w.argWriter(false /* last */, reqResWriterPreArg1, reqResWriterPreArg2)
 }
 
-func (w *reqResWriter) arg2Writer() (io.WriteCloser, error) {
+func (w *reqResWriter) arg2Writer() (ArgWriter, error) {
 	return w.argWriter(false /* last */, reqResWriterPreArg2, reqResWriterPreArg3)
 }
 
-func (w *reqResWriter) arg3Writer() (io.WriteCloser, error) {
+func (w *reqResWriter) arg3Writer() (ArgWriter, error) {
 	return w.argWriter(true /* last */, reqResWriterPreArg3, reqResWriterComplete)
 }
 
