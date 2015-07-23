@@ -673,7 +673,12 @@ func (c *Connection) checkExchanges() {
 	}
 
 	if updated {
-		c.log.Debugf("checkExchanges updated connection state to %v", c.readState())
+		curState := c.readState()
+		// Close the network when the connection is closed.
+		if curState == connectionClosed {
+			c.closeNetwork()
+		}
+		c.log.Debugf("checkExchanges updated connection state to %v", curState)
 		c.callOnCloseStateChange()
 	}
 }
