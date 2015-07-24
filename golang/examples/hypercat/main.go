@@ -21,59 +21,79 @@ package main
 // THE SOFTWARE.
 
 import (
-	"flag"
 	"io"
 	"log"
+	"net"
 	"os"
 	"os/exec"
 
+	"github.com/jessevdk/go-flags"
 	"github.com/uber/tchannel/golang"
 	"golang.org/x/net/context"
 )
 
-var (
-	serviceName    = flag.String("service", "", "The service name to listen on")
-	operationName  = flag.String("operation", "", "The operation name to handle")
-	hostPort       = flag.String("hostPort", ":0", "The host:port to listen on")
-	maxConcurrency = flag.Int("maxSpwan", 1, "The maximum number of concurrent processes")
-)
+var options = struct {
+	ServiceName string `short:"s" long:"service" required:"true" description:"The TChannel/Hyperbahn service name"`
 
-var (
-	running   chan struct{}
-	spawnArgs []string
-)
+	// OperationName can be specified multiple times to listen on multiple operations.
+	OperationName []string `short:"o" long:"operation" required:"true" description:"The operation name to handle"`
+
+	// HostPort can just be :port or port, in which case host defaults to tchannel's ListenIP.
+	HostPort string `short:"l" long:"hostPort" default:":0" description:"The port or host:port to listen on"`
+
+	MaxConcurrency int `short:"m" long:"maxSpawn" default:"1" description:"The maximum number concurrent processes"`
+
+	Cmd struct {
+		Command string   `long:"command" description:"The command to execute" positional-arg-name:"command"`
+		Args    []string `long:"args" description:"The arguments to pass to the command" positional-arg-name:"args"`
+	} `positional-args:"yes" required:"yes"`
+}{}
+
+var running chan struct{}
 
 func parseArgs() {
-	flag.Parse()
-	spawnArgs = flag.Args()
-
-	if *serviceName == "" {
-		log.Fatalf("service must be specified")
-	}
-	if *operationName == "" {
-		log.Fatalf("operation must be specified")
-	}
-	if len(spawnArgs) == 0 {
-		log.Fatalf("Must specify command to run")
+	var err error
+	if _, err = flags.Parse(&options); err != nil {
+		os.Exit(-1)
 	}
 
-	running = make(chan struct{}, *maxConcurrency)
+	// Convert host port to a real host port.
+	host, port, err := net.SplitHostPort(options.HostPort)
+	if err != nil {
+		port = options.HostPort
+	}
+	if host == "" {
+		hostIP, err := tchannel.ListenIP()
+		if err != nil {
+			log.Printf("could not get ListenIP: %v, defaulting to 127.0.0.1", err)
+			host = "127.0.0.1"
+		} else {
+			host = hostIP.String()
+		}
+	}
+	options.HostPort = host + ":" + port
+
+	running = make(chan struct{}, options.MaxConcurrency)
 }
 
 func main() {
 	parseArgs()
 
-	ch, err := tchannel.NewChannel(*serviceName, nil)
+	ch, err := tchannel.NewChannel(options.ServiceName, nil)
 	if err != nil {
 		log.Fatalf("NewChannel failed: %v", err)
 	}
 
-	ch.Register(tchannel.HandlerFunc(handler), *operationName)
-	if err := ch.ListenAndServe(*hostPort); err != nil {
-		log.Fatalf("ListenAndServe")
+	for _, op := range options.OperationName {
+		ch.Register(tchannel.HandlerFunc(handler), op)
 	}
 
-	log.Printf("listening for %v:%v on %v", *serviceName, *operationName, ch.PeerInfo().HostPort)
+	if err := ch.ListenAndServe(options.HostPort); err != nil {
+		log.Fatalf("ListenAndServe failed: %v", err)
+	}
+
+	peerInfo := ch.PeerInfo()
+	log.Printf("listening for %v:%v on %v", peerInfo.ServiceName, options.OperationName, peerInfo.HostPort)
 	select {}
 }
 
@@ -118,7 +138,7 @@ func handler(ctx context.Context, call *tchannel.InboundCall) {
 }
 
 func spawnProcess(reader io.Reader, writer io.Writer) error {
-	cmd := exec.Command(spawnArgs[0], spawnArgs[1:]...)
+	cmd := exec.Command(options.Cmd.Command, options.Cmd.Args...)
 	cmd.Stdin = reader
 	cmd.Stdout = writer
 	cmd.Stderr = os.Stderr
