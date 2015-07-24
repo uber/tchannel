@@ -153,6 +153,14 @@ Circuits.prototype.getCircuitTuples = function getCircuitTuples() {
 
 Circuits.prototype.handleRequest = function handleRequest(req, buildRes, nextHandler) {
     var self = this;
+
+    buildRes = self.monitorRequest(req);
+    nextHandler.handleRequest(req, buildRes);
+};
+
+Circuits.prototype.monitorRequest = function monitorRequest(req, buildRes) {
+    var self = this;
+
     // Default the caller name.
     // All callers that fail to specifiy a cn share a circuit for each sn:en
     // and fail together.
@@ -169,8 +177,7 @@ Circuits.prototype.handleRequest = function handleRequest(req, buildRes, nextHan
         return buildRes().sendError('Declined', 'Service is not healthy');
     }
 
-    buildRes = circuit.monitorRequest(req, buildRes);
-    return nextHandler.handleRequest(req, buildRes);
+    return circuit.monitorRequest(req, buildRes);
 };
 
 // Called upon membership change to collect services that the corresponding
