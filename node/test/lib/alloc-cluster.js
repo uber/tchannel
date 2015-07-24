@@ -27,6 +27,7 @@ var util = require('util');
 var TChannel = require('../../channel.js');
 var parallel = require('run-parallel');
 var debugLogtron = require('debug-logtron');
+var MockTimers = require('time-mock');
 
 module.exports = allocCluster;
 
@@ -47,10 +48,11 @@ function allocCluster(opts) {
         assertCleanState: assertCleanState,
         connectChannels: connectChannels,
         connectChannelToChannels: connectChannelToChannels,
-        timers: opts.timers
+        timers: opts.timers || new MockTimers(1)
     };
     var channelOptions = extend({
         logger: logger,
+        timers: cluster.timers,
         timeoutFuzz: 0,
         traceSample: 1
     }, opts.channelOptions || opts);
@@ -79,6 +81,7 @@ function allocCluster(opts) {
                         'unexpected channel[%s] peer[%s]', i, j));
                     return;
                 }
+
                 peer.connections.forEach(function eachConn(conn, k) {
                     var connExpect = peerExpect.connections[k];
                     if (!connExpect) {
@@ -86,11 +89,13 @@ function allocCluster(opts) {
                             'unexpected channel[%s] peer[%s] conn[%s]', i, j, k));
                         return;
                     }
-                    Object.keys(connExpect).forEach(function eachProp(prop) {
-                        var desc = util.format(
-                            'channel[%s] peer[%s] conn[%s] should .%s',
-                            i, j, k, prop);
 
+                    var connDesc = util.format(
+                        'channel[%s] peer[%s] conn[%s] should ',
+                        i, j, k);
+
+                    Object.keys(connExpect).forEach(function eachProp(prop) {
+                        var desc = connDesc + '.' + prop;
                         var pending = conn.ops.getPending();
 
                         switch (prop) {
@@ -104,9 +109,127 @@ function allocCluster(opts) {
                             assert.equal(conn[prop], connExpect[prop], desc);
                         }
                     });
+
                 });
             });
         });
+
+        var timeHeapGenerations = [];
+
+        while (timeHeapGenerations.length < 10) {
+            var maxHeapTime = getMaxHeapTime();
+            if (!maxHeapTime) {
+                break;
+            }
+
+            var now = cluster.timers.now();
+            var timeUntilHeapEmpty = maxHeapTime - now;
+            timeHeapGenerations.push({
+                heapSizes: cluster.channels.map(getChannelHeapLength),
+                heapItems: cluster.channels.map(getChannelHeapItems),
+                maxHeapTime: timeUntilHeapEmpty
+            });
+            cluster.timers.advance(timeUntilHeapEmpty);
+
+            now = cluster.timers.now();
+            callExpiredTimeouts(now);
+        }
+
+        function callExpiredTimeouts(now) {
+            cluster.channels.forEach(function eachChannel(chan) {
+                chan.timeHeap.callExpiredTimeouts(now);
+            });
+        }
+
+        cluster.channels.forEach(function eachChannel(chan, i) {
+            assert.equal(chan.timeHeap.end, 0, util.format(
+                'channel[%s] expected empty time heap after %s generations',
+                i, timeHeapGenerations.length));
+            var j;
+            if (chan.timeHeap.end) {
+                for (j = 0; j < timeHeapGenerations.length; j++) {
+                    assert.comment(util.format(
+                        'heapGeneration %s: %j',
+                        j, timeHeapGenerations[j]));
+                }
+            } else {
+                for (j = chan.timeHeap.end; j < chan.timeHeap.array.length; j++) {
+                    assert.equal(chan.timeHeap.array[j].item, null);
+                }
+            }
+        });
+
+        cluster.channels.forEach(function eachChannel(chan, i) {
+            chan.peers.values().forEach(function eachPeer(peer, j) {
+                peer.connections.forEach(function eachConn(conn, k) {
+                    var connDesc = util.format(
+                        'channel[%s] peer[%s] conn[%s] should ',
+                        i, j, k);
+                    var ops = conn.ops;
+                    var inKeys = Object.keys(ops.requests.in);
+                    var outKeys = Object.keys(ops.requests.out);
+                    assert.equal(inKeys.length, 0, connDesc + ' should have no incoming operations');
+                    assert.equal(outKeys.length, 0, connDesc + ' should have no outgoing operations');
+                    if (outKeys.length) {
+                        console.log('WUT', outKeys.map(function(key) {
+                            return ops.requests.out[key].constructor.name;
+                        }));
+                    }
+                });
+            });
+            if (chan.serverConnections) {
+                Object.keys(chan.serverConnections).forEach(function eachServerClient(addr) {
+                    var conn = chan.serverConnections[addr];
+                    var connDesc = util.format('channel[%s] serverConn[%s] should ', i, addr);
+
+                    var ops = conn.ops;
+                    var inKeys = Object.keys(ops.requests.in);
+                    var outKeys = Object.keys(ops.requests.out);
+                    assert.equal(inKeys.length, 0, connDesc + ' should have no incoming operations');
+                    assert.equal(outKeys.length, 0, connDesc + ' should have no outgoing operations');
+                    if (outKeys.length) {
+                        console.log('WUT', outKeys.map(function(key) {
+                            return ops.requests.out[key].constructor.name;
+                        }));
+                    }
+
+                });
+            }
+        });
+
+        function getChannelHeapLength(chan) {
+            return chan.timeHeap.end;
+        }
+
+        function getChannelHeapItems(chan) {
+            var ret = [];
+            for (var i = 0; i < chan.timeHeap.end; i++) {
+                var el = chan.timeHeap.array[i];
+                ret.push({
+                    expireTime: el.expireTime,
+                    name: el.item && el.item.constructor.name
+                });
+            }
+            return ret;
+        }
+
+        function getMaxHeapTime() {
+            var expireTimes = [];
+            cluster.channels.forEach(function eachChannel(chan) {
+                for (var i = 0; i < chan.timeHeap.end; i++) {
+                    var el = chan.timeHeap.array[i];
+                    expireTimes.push(el.expireTime);
+                }
+            });
+
+            if (!expireTimes.length) {
+                return 0;
+            }
+
+            return expireTimes.reduce(function takeMax(a, b) {
+                return b > a ? b : a;
+            });
+        }
     }
 
     function createChannel(i) {
