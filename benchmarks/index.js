@@ -130,14 +130,16 @@ function startServer(serverPort, instances) {
       return self.startGoServer(serverPort, instances);
     }
 
+    var noOverhead = self.opts.noEndpointOverhead;
+
     var serverProc = run(server, [
         self.opts.trace ? '--trace' : '--no-trace',
         '--traceRelayHostPort', '127.0.0.1:' + RELAY_TRACE_PORT,
         '--port', String(serverPort),
         '--instances', String(instances),
-        '--pingOverhead', 'norm:10,5',
-        '--setOverhead', 'norm:200,20',
-        '--getOverhead', 'norm:100,10'
+        '--pingOverhead', noOverhead ? 'none' : 'norm:10,5',
+        '--setOverhead', noOverhead ? 'none' : 'norm:200,20',
+        '--getOverhead', noOverhead ? 'none' : 'norm:100,10'
     ]);
     self.serverProcs.push(serverProc);
     serverProc.stdout.pipe(process.stderr);
@@ -314,7 +316,7 @@ if (require.main === module) {
         alias: {
             o: 'output'
         },
-        boolean: ['relay', 'trace', 'debug']
+        boolean: ['relay', 'trace', 'debug', 'noEndpointOverhead']
     });
     var runner = BenchmarkRunner(argv);
     runner.start();
