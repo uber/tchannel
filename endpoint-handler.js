@@ -59,35 +59,31 @@ TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, bu
     var self = this;
 
     req.withArg1(function arg1Ready(err, arg1) {
+        var res;
         if (err) {
             // TODO: log error
-            var res = buildResponse({streamed: false});
+            res = buildResponse({streamed: false});
             res.sendError('UnexpectedError', util.format(
                 'error accumulating arg1: %s: %s',
                 err.constructor.name, err.message));
+            return;
+        }
+
+        var name = String(arg1);
+        var handler = self.endpoints[name];
+        self.handleEndpointEvent.emit(self, {
+            name: name,
+            handler: handler
+        });
+        if (!handler) {
+            res = buildResponse({streamed: false});
+            res.sendError('BadRequest', util.format(
+                'no such endpoint service=%j endpoint=%j',
+                req.serviceName, name));
         } else {
-            self.handleArg1(req, buildResponse, arg1);
+            handler.handleRequest(req, buildResponse);
         }
     });
-};
-
-TChannelEndpointHandler.prototype.handleArg1 = function handleArg1(req, buildResponse, arg1) {
-    var self = this;
-    var name = String(arg1);
-    var handler = self.endpoints[name];
-    var res;
-    self.handleEndpointEvent.emit(self, {
-        name: name,
-        handler: handler
-    });
-    if (!handler) {
-        res = buildResponse({streamed: false});
-        res.sendError('BadRequest', util.format(
-            'no such endpoint service=%j endpoint=%j',
-            req.serviceName, name));
-    } else {
-        handler.handleRequest(req, buildResponse);
-    }
 };
 
 TChannelEndpointHandler.prototype.withArg23 = function withArg23(req, buildResponse, handler) {
