@@ -20,16 +20,41 @@ package tchannel
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
+// CheckEmptyExchanges checks whether all exchanges for the given connection are empty.
+// If there are exchanges, a string with information about leftover exchanges is returned.
 func CheckEmptyExchanges(c *Connection) string {
 	c.inbound.mut.RLock()
 	c.outbound.mut.RLock()
 	defer c.inbound.mut.RUnlock()
 	defer c.outbound.mut.RUnlock()
 
-	if exchangesLeft := len(c.outbound.exchanges) + len(c.inbound.exchanges); exchangesLeft > 0 {
-		return fmt.Sprintf("connection %p had %v leftover exchanges", c, exchangesLeft)
+	var errors []string
+	for _, v := range c.inbound.exchanges {
+		errors = append(errors, fmt.Sprintf("inbound exchange: %v:%v", v.msgID, v.msgType))
 	}
-	return ""
+	for _, v := range c.outbound.exchanges {
+		errors = append(errors, fmt.Sprintf("outbound exchange: %v:%v", v.msgID, v.msgType))
+	}
+
+	if len(errors) == 0 {
+		return ""
+	}
+
+	return fmt.Sprintf("Connection %p has leftover exchanges:\n\t%v", c, strings.Join(errors, "\n\t"))
+}
+
+// CheckEmptyExchangesConns checks that all exchanges for the given connections are empty.
+func CheckEmptyExchangesConns(connections []*Connection) string {
+	var errors []string
+	for _, c := range connections {
+		if v := CheckEmptyExchanges(c); v != "" {
+			errors = append(errors, v)
+		}
+	}
+	return strings.Join(errors, "\n")
 }

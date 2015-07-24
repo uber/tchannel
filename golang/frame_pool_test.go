@@ -26,7 +26,6 @@ package tchannel_test
 import (
 	"bytes"
 	"math/rand"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -53,16 +52,6 @@ func (*swapper) Handle(ctx context.Context, args *raw.Args) (*raw.Res, error) {
 		Arg2: args.Arg3,
 		Arg3: args.Arg2,
 	}, nil
-}
-
-func checkEmptyExchangesConns(connections []*Connection) string {
-	var errors []string
-	for _, c := range connections {
-		if v := CheckEmptyExchanges(c); v != "" {
-			errors = append(errors, v)
-		}
-	}
-	return strings.Join(errors, "\n")
 }
 
 func TestFramesReleased(t *testing.T) {
@@ -141,7 +130,7 @@ func TestFramesReleased(t *testing.T) {
 	}
 
 	// Check the message exchanges and make sure they are all empty.
-	if exchangesLeft := checkEmptyExchangesConns(connections); exchangesLeft != "" {
+	if exchangesLeft := CheckEmptyExchangesConns(connections); exchangesLeft != "" {
 		t.Errorf("Found uncleared message exchanges:\n%v", exchangesLeft)
 	}
 }
