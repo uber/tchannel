@@ -151,13 +151,6 @@ Circuits.prototype.getCircuitTuples = function getCircuitTuples() {
     return tuples;
 };
 
-Circuits.prototype.handleRequest = function handleRequest(req, buildRes, nextHandler) {
-    var self = this;
-
-    buildRes = self.monitorRequest(req);
-    nextHandler.handleRequest(req, buildRes);
-};
-
 Circuits.prototype.monitorRequest = function monitorRequest(req, buildRes) {
     var self = this;
 
