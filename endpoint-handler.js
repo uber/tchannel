@@ -57,16 +57,8 @@ TChannelEndpointHandler.prototype.register = function register(name, options, ha
 
 TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, buildResponse) {
     var self = this;
-    if (!req.streamed) {
-        self.handleArg1(req, buildResponse, req.arg1);
-    } else {
-        self.waitForArg1(req, buildResponse);
-    }
-};
 
-TChannelEndpointHandler.prototype.waitForArg1 = function waitForArg1(req, buildResponse) {
-    var self = this;
-    req.arg1.onValueReady(function arg1Ready(err, arg1) {
+    req.withArg1(function arg1Ready(err, arg1) {
         if (err) {
             // TODO: log error
             var res = buildResponse({streamed: false});
