@@ -93,17 +93,14 @@ function InArgStream() {
 
 inherits(InArgStream, ArgStream);
 
-InArgStream.prototype.handleFrame = function handleFrame(parts) {
+InArgStream.prototype.handleFrame = function handleFrame(parts, isLast) {
     var self = this;
     var stream = self.streams[self._iStream];
 
-    if (parts === null) {
-        while (stream) stream = advance();
-        return;
-    }
-
     if (self.finished) {
-        self.errorEvent.emit(self, new Error('arg stream finished')); // TODO typed error
+        // TODO typed error, similar condition to in_{req,res}:
+        // return new Error('unknown frame handling state');
+        return new Error('arg stream finished');
     }
 
     for (var i = 0; i < parts.length; i++) {
@@ -112,8 +109,15 @@ InArgStream.prototype.handleFrame = function handleFrame(parts) {
         if (parts[i].length) stream.write(parts[i]);
     }
     if (i < parts.length) {
-        self.errorEvent.emit(self, new Error('frame parts exceeded stream arity')); // TODO clearer / typed error
+        // TODO clearer / typed error
+        return new Error('frame parts exceeded stream arity');
     }
+
+    if (isLast) {
+        while (stream) stream = advance();
+    }
+
+    return null;
 
     function advance() {
         if (self._iStream < self.streams.length) {
