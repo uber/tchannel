@@ -26,7 +26,6 @@ package tchannel_test
 import (
 	"bytes"
 	"math/rand"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -55,16 +54,6 @@ func (*swapper) Handle(ctx context.Context, args *raw.Args) (*raw.Res, error) {
 	}, nil
 }
 
-func checkEmptyExchangesConns(connections []*Connection) string {
-	var errors []string
-	for _, c := range connections {
-		if v := CheckEmptyExchanges(c); v != "" {
-			errors = append(errors, v)
-		}
-	}
-	return strings.Join(errors, "\n")
-}
-
 func TestFramesReleased(t *testing.T) {
 	if testing.Short() {
 		return
@@ -76,16 +65,6 @@ func TestFramesReleased(t *testing.T) {
 		numGoroutines        = 10
 		maxRandArg           = 512 * 1024
 	)
-
-	// Generate random bytes used to create arguments.
-	randBytes := make([]byte, maxRandArg)
-	for i := 0; i < len(randBytes); i += 8 {
-		n := rand.Int63()
-		for j := 0; j < 8; j++ {
-			randBytes[i+j] = byte(n & 0xff)
-			n = n << 1
-		}
-	}
 
 	var connections []*Connection
 	pool := NewRecordingFramePool()
@@ -106,11 +85,6 @@ func TestFramesReleased(t *testing.T) {
 		defer cancel()
 		require.NoError(t, clientCh.Ping(ctx, hostPort))
 
-		generateArg := func(n int) []byte {
-			from := rand.Intn(maxRandArg - n)
-			return randBytes[from : from+n]
-		}
-
 		var wg sync.WaitGroup
 		worker := func() {
 			for i := 0; i < requestsPerGoroutine; i++ {
@@ -119,9 +93,8 @@ func TestFramesReleased(t *testing.T) {
 
 				require.NoError(t, clientCh.Ping(ctx, hostPort))
 
-				argSize := rand.Intn(maxRandArg)
-				arg2 := generateArg(argSize)
-				arg3 := generateArg(argSize)
+				arg2 := testutils.RandBytes(rand.Intn(maxRandArg))
+				arg3 := testutils.RandBytes(rand.Intn(maxRandArg))
 				resArg2, resArg3, _, err := raw.Call(ctx, clientCh, hostPort, "swap-server", "swap", arg2, arg3)
 				if !assert.NoError(t, err, "error during sendRecv") {
 					continue
@@ -157,7 +130,7 @@ func TestFramesReleased(t *testing.T) {
 	}
 
 	// Check the message exchanges and make sure they are all empty.
-	if exchangesLeft := checkEmptyExchangesConns(connections); exchangesLeft != "" {
+	if exchangesLeft := CheckEmptyExchangesConns(connections); exchangesLeft != "" {
 		t.Errorf("Found uncleared message exchanges:\n%v", exchangesLeft)
 	}
 }
