@@ -84,8 +84,7 @@ SelfOutRequest.prototype._sendCallRequestCont =
 SelfStreamingOutRequest.prototype._sendCallRequestCont =
 function passRequestParts(args, isLast ) {
     var self = this;
-    self.inreq.handleFrame(args);
-    if (isLast) self.inreq.handleFrame(null);
+    self.inreq.handleFrame(args, isLast);
     if (!self.closing) self.conn.ops.lastTimeoutTime = 0;
 };
 

@@ -91,15 +91,12 @@ TChannelInRequest.prototype.setupTracing = function setupTracing(options) {
     self.span.annotate('sr');
 };
 
-TChannelInRequest.prototype.handleFrame = function handleFrame(parts) {
+TChannelInRequest.prototype.handleFrame = function handleFrame(parts, isLast) {
     var self = this;
-    if (!parts) {
-        return;
-    }
 
-    if (parts.length !== 3 || self.state !== States.Initial) {
-        self.errorEvent.emit(self, new Error(
-            'un-streamed argument defragmentation is not implemented'));
+    if (parts.length !== 3 || self.state !== States.Initial || !isLast) {
+        // TODO: typed error
+        return new Error('un-streamed argument defragmentation is not implemented');
     }
 
     self.arg1 = parts[0] || emptyBuffer;
@@ -112,6 +109,8 @@ TChannelInRequest.prototype.handleFrame = function handleFrame(parts) {
     }
 
     self.emitFinish();
+
+    return null;
 };
 
 TChannelInRequest.prototype.emitFinish = function emitFinish() {

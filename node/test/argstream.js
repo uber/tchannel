@@ -110,10 +110,9 @@ test('argstream', function t(assert) {
         var args = state.args;
         var s = new argstream.InArgStream();
         hookupEnd(s, finish);
-        realFrames(frames).forEach(function eachFrame(parts) {
-            s.handleFrame(parts);
+        realFrames(frames).forEach(function eachFrame(parts, i, frames) {
+            s.handleFrame(parts, i === (frames.length - 1));
         });
-        s.handleFrame(null);
         function finish(err) {
             assert.ifError(err, 'no end error');
             assert.equal(getArg(s.arg1), args[0] || null, 'expected arg1');
@@ -130,14 +129,18 @@ test('argstream', function t(assert) {
         var args = state.args;
         var o = new argstream.OutArgStream();
         var i = new argstream.InArgStream();
+        var lastParts = null;
         o.on('frame', function onFrame(tup) {
             var parts = tup[0];
-            i.handleFrame(parts);
+            if (lastParts) {
+                i.handleFrame(lastParts, false);
+            }
+            lastParts = parts;
         });
         writeFrames(frames, o, finish);
         function finish(err) {
             assert.ifError(err, 'no end error');
-            i.handleFrame(null);
+            i.handleFrame(lastParts || [], true);
             assert.equal(getArg(i.arg1), args[0] || null, 'expected arg1');
             assert.equal(getArg(i.arg2), args[1] || null, 'expected arg2');
             assert.equal(getArg(i.arg3), args[2] || null, 'expected arg3');

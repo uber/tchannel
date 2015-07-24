@@ -65,8 +65,7 @@ SelfOutResponse.prototype._sendCallResponseCont =
 SelfStreamingOutResponse.prototype._sendCallResponseCont =
 function passResponse(args, isLast ) {
     var self = this;
-    self.inres.handleFrame(args);
-    if (isLast) self.inres.handleFrame(null);
+    self.inres.handleFrame(args, isLast);
     if (self.first) {
         self.inres.code = self.code;
         self.inres.ok = self.ok;

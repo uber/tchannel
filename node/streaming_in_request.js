@@ -24,6 +24,7 @@ var parallel = require('run-parallel');
 var InRequest = require('./in_request');
 var inherits = require('util').inherits;
 
+var States = require('./reqres_states');
 var InArgStream = require('./argstream').InArgStream;
 
 function StreamingInRequest(id, options) {
@@ -52,9 +53,27 @@ inherits(StreamingInRequest, InRequest);
 
 StreamingInRequest.prototype.type = 'tchannel.incoming-request.streaming';
 
-StreamingInRequest.prototype.handleFrame = function handleFrame(parts) {
+StreamingInRequest.prototype.handleFrame = function handleFrame(parts, isLast) {
     var self = this;
-    self._argstream.handleFrame(parts);
+
+    if (self.state === States.Initial) {
+        self.state = States.Streaming;
+    } else if (self.state !== States.Streaming) {
+        // TODO: typed error
+        return new Error('unknown frame handling state');
+    }
+
+    var err = self._argstream.handleFrame(parts, isLast);
+    if (err) {
+        return err;
+    }
+
+    if (!isLast && self.state !== States.Streaming) {
+        // TODO: typed error
+        return new Error('unknown frame handling state');
+    }
+
+    return null;
 };
 
 StreamingInRequest.prototype.withArg1 = function withArg1(callback) {
