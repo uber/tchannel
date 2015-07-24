@@ -59,11 +59,9 @@ TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, bu
     var self = this;
 
     req.withArg1(function arg1Ready(err, arg1) {
-        var res;
         if (err) {
             // TODO: log error
-            res = buildResponse({streamed: false});
-            res.sendError('UnexpectedError', util.format(
+            buildResponse({streamed: false}).sendError('UnexpectedError', util.format(
                 'error accumulating arg1: %s: %s',
                 err.constructor.name, err.message));
             return;
@@ -76,8 +74,7 @@ TChannelEndpointHandler.prototype.handleRequest = function handleRequest(req, bu
             handler: handler
         });
         if (!handler) {
-            res = buildResponse({streamed: false});
-            res.sendError('BadRequest', util.format(
+            buildResponse({streamed: false}).sendError('BadRequest', util.format(
                 'no such endpoint service=%j endpoint=%j',
                 req.serviceName, name));
         } else {
