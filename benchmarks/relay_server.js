@@ -68,13 +68,21 @@ function RelayServer(opts) {
             app: 'relay-server'
         },
         emitConnectionMetrics: false,
-        logger: opts.debug ? require('debug-logtron')('relay') : null,
+        logger: require('debug-logtron')('relay'),
         trace: false,
         statsd: new Statsd({
             host: '127.0.0.1',
             port: 7036
         })
     });
+
+    // // useful for demonstrating tombstone leak
+    // var OpKindMonitor = require('../monitor').OpKindMonitor;
+    // (new OpKindMonitor(self.relay, {
+    //     desc: 'relay',
+    //     interval: 5000,
+    // })).run();
+
     self.relay.handler = ServiceProxy({
         channel: self.relay,
         egressNodes: FakeEgressNodes({

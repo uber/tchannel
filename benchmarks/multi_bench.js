@@ -133,6 +133,15 @@ Test.prototype.newClient = function (id, callback) {
             port: 7036
         })
     });
+
+    // // useful for demonstrating (lack of) tombstone leak
+    // var OpKindMonitor = require('../monitor').OpKindMonitor;
+    // (new OpKindMonitor(clientChan, {
+    //     log: console.error,
+    //     desc: 'client:' + id,
+    //     interval: 5000,
+    // })).run();
+
     if (argv.trace) {
         var reporter = Reporter({
             channel: clientChan.makeSubChannel({
