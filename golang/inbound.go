@@ -271,7 +271,7 @@ func (response *InboundCallResponse) SetApplicationError() error {
 
 // Arg2Writer returns a WriteCloser that can be used to write the second argument.
 // The returned writer must be closed once the write is complete.
-func (response *InboundCallResponse) Arg2Writer() (io.WriteCloser, error) {
+func (response *InboundCallResponse) Arg2Writer() (ArgWriter, error) {
 	if err := NewArgWriter(response.arg1Writer()).Write(nil); err != nil {
 		return nil, err
 	}
@@ -280,7 +280,7 @@ func (response *InboundCallResponse) Arg2Writer() (io.WriteCloser, error) {
 
 // Arg3Writer returns a WriteCloser that can be used to write the last argument.
 // The returned writer must be closed once the write is complete.
-func (response *InboundCallResponse) Arg3Writer() (io.WriteCloser, error) {
+func (response *InboundCallResponse) Arg3Writer() (ArgWriter, error) {
 	return response.arg3Writer()
 }
 
