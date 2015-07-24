@@ -23,17 +23,30 @@ package com.uber.tchannel.messages;
 
 import com.uber.tchannel.tracing.Trace;
 
-public class Error extends AbstractMessage {
+import java.util.Optional;
 
-    public final byte code;
+public class ErrorMessage extends AbstractMessage {
+
+    public final ErrorType type;
     public final Trace tracing;
     public final String message;
 
-    public Error(long id, byte code, Trace tracing, String message) {
+    public ErrorMessage(long id, ErrorType type, Trace tracing, String message) {
         super(id, MessageType.Error);
-        this.code = code;
+        this.type = type;
         this.tracing = tracing;
         this.message = message;
+    }
+
+    @Override
+    public String toString() {
+        return String.format(
+                "<%s id=%d type=%s message=%s>",
+                this.getClass().getCanonicalName(),
+                this.getId(),
+                this.type,
+                this.message
+        );
     }
 
     public enum ErrorType {
@@ -52,6 +65,33 @@ public class Error extends AbstractMessage {
 
         ErrorType(byte code) {
             this.code = code;
+        }
+
+        public static Optional<ErrorType> fromByte(byte value) {
+            switch (value) {
+                case (byte) 0x00:
+                    return Optional.of(Invalid);
+                case (byte) 0x01:
+                    return Optional.of(Timeout);
+                case (byte) 0x02:
+                    return Optional.of(Cancelled);
+                case (byte) 0x03:
+                    return Optional.of(Busy);
+                case (byte) 0x04:
+                    return Optional.of(Declined);
+                case (byte) 0x05:
+                    return Optional.of(UnexpectedError);
+                case (byte) 0x06:
+                    return Optional.of(BadRequest);
+                case (byte) 0x07:
+                    return Optional.of(NetworkError);
+                case (byte) 0x08:
+                    return Optional.of(Unhealthy);
+                case (byte) 0xff:
+                    return Optional.of(FatalProtocolError);
+                default:
+                    return Optional.empty();
+            }
         }
 
         public byte byteValue() {

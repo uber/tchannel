@@ -19,26 +19,34 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package com.uber.tchannel.server;
+package com.uber.tchannel.ping;
 
+import com.uber.tchannel.messages.PingRequest;
+import com.uber.tchannel.messages.PingResponse;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerAdapter;
+import io.netty.channel.ChannelHandlerContext;
 
-import com.uber.tchannel.codecs.MessageCodec;
-import com.uber.tchannel.codecs.TFrameCodec;
-import com.uber.tchannel.framing.TFrame;
-import com.uber.tchannel.handlers.MessageMultiplexer;
-import com.uber.tchannel.handlers.PingHandler;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import java.util.concurrent.atomic.AtomicLong;
 
-public class ServerInitializer extends ChannelInitializer<SocketChannel> {
+public class PingServerHandler extends ChannelHandlerAdapter {
+
+    private final AtomicLong counter = new AtomicLong(0);
+
     @Override
-    public void initChannel(SocketChannel ch) throws Exception {
-        ch.pipeline().addLast("FrameDecoder", new LengthFieldBasedFrameDecoder(TFrame.MAX_FRAME_LENGTH, 0, 2, -2, 0, true));
-        ch.pipeline().addLast("TFrameCodec", new TFrameCodec());
-        ch.pipeline().addLast("MessageCodec", new MessageCodec());
-        ch.pipeline().addLast("PingHandler", new PingHandler());
-        ch.pipeline().addLast("MessageMultiplexer", new MessageMultiplexer());
-        ch.pipeline().addLast("ServerHandler", new ServerHandler());
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        PingRequest pingRequest = (PingRequest) msg;
+        System.out.println(pingRequest);
+        PingResponse pingResponse = new PingResponse(pingRequest.getId() + this.counter.incrementAndGet());
+        ChannelFuture f = ctx.writeAndFlush(pingResponse);
+        f.addListener(ChannelFutureListener.CLOSE);
     }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        cause.printStackTrace();
+        ctx.close();
+    }
+
 }

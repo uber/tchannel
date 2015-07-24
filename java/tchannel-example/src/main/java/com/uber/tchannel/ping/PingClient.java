@@ -22,11 +22,56 @@
 
 package com.uber.tchannel.ping;
 
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioSocketChannel;
+
 public class PingClient {
 
+    private String host;
+    private int port;
+
+    public PingClient(String host, int port) {
+        this.host = host;
+        this.port = port;
+    }
+
     public static void main(String[] args) throws Exception {
-        System.out.println("Starting TChannel Client...");
-        System.out.println("Stopping TChannel Client");
+        String host = "localhost";
+        int port = 8888;
+
+        if (args.length == 1) {
+            port = Integer.parseInt(args[0]);
+        } else if (args.length == 2) {
+            host = String.valueOf(args[1]);
+            port = Integer.parseInt(args[0]);
+        }
+
+        System.out.println(String.format("Connecting from client to server on port: %d", port));
+        new PingClient(host, port).run();
+        System.out.println("Stopping Client...");
+
+    }
+
+    public void run() throws Exception {
+        EventLoopGroup workerGroup = new NioEventLoopGroup();
+
+        try {
+            Bootstrap b = new Bootstrap();
+            b.group(workerGroup);
+            b.channel(NioSocketChannel.class);
+            b.option(ChannelOption.SO_KEEPALIVE, true);
+            b.handler(new PingClientInitializer());
+
+            ChannelFuture f = b.connect(this.host, this.port).sync();
+
+            f.channel().closeFuture().sync();
+        } finally {
+            workerGroup.shutdownGracefully();
+        }
     }
 
 }

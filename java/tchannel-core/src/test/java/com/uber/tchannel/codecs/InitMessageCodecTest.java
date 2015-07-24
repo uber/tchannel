@@ -21,6 +21,7 @@ package com.uber.tchannel.codecs;
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
 import com.uber.tchannel.framing.TFrame;
 import com.uber.tchannel.messages.InitRequest;
 import com.uber.tchannel.messages.InitResponse;

@@ -23,7 +23,6 @@ package com.uber.tchannel.handlers;
 
 import com.uber.tchannel.Fixtures;
 import com.uber.tchannel.messages.*;
-import com.uber.tchannel.messages.Error;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Rule;
 import org.junit.Test;
@@ -109,8 +108,8 @@ public class InitRequestHandlerTest {
 
         CallRequest callRequest = Fixtures.callRequestWithId(0);
         channel.writeInbound(callRequest);
-        Error error = channel.readOutbound();
-        assertThat(error.code, is(Error.ErrorType.FatalProtocolError.byteValue()));
+        ErrorMessage error = channel.readOutbound();
+        assertThat(error.type, is(ErrorMessage.ErrorType.FatalProtocolError));
 
         this.expectedClosedChannelException.expect(ClosedChannelException.class);
         channel.writeOutbound();

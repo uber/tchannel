@@ -19,56 +19,53 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
 package com.uber.tchannel.codecs;
 
-import com.uber.tchannel.checksum.ChecksumType;
 import com.uber.tchannel.framing.TFrame;
-import com.uber.tchannel.messages.CallRequest;
+import com.uber.tchannel.messages.ErrorMessage;
 import com.uber.tchannel.tracing.Trace;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageCodec;
 
 import java.util.List;
-import java.util.Map;
 
-public class CallRequestCodec extends MessageToMessageCodec<TFrame, CallRequest> {
-
+public class ErrorCodec extends MessageToMessageCodec<TFrame, ErrorMessage> {
     @Override
-    protected void encode(ChannelHandlerContext ctx, CallRequest callRequest, List<Object> out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, ErrorMessage msg, List<Object> out) throws Exception {
+        ByteBuf buffer = ctx.alloc().buffer();
 
+        // code:1
+        buffer.writeByte(msg.type.byteValue());
+
+        // tracing:25
+        CodecUtils.encodeTrace(msg.tracing, buffer);
+
+        // message~2
+        CodecUtils.encodeString(msg.message, buffer);
+
+        TFrame frame = new TFrame(buffer.writerIndex(), msg.getMessageType(), msg.getId(), buffer);
+        out.add(frame);
     }
 
     @Override
     protected void decode(ChannelHandlerContext ctx, TFrame frame, List<Object> out) throws Exception {
-        ByteBuf payload = Unpooled.wrappedBuffer(frame.payload);
+        // code:1
+        ErrorMessage.ErrorType type = ErrorMessage.ErrorType.fromByte(frame.payload.readByte()).get();
 
-        byte flags = payload.readByte();
-        long ttl = payload.readUnsignedInt();
-        Trace trace = CodecUtils.decodeTrace(payload);
-        String service = CodecUtils.decodeSmallString(payload);
-        Map<String, String> headers = CodecUtils.decodeSmallHeaders(payload);
-        byte checksumType = payload.readByte();
-        int checksum = 0;
 
-        ChecksumType type = ChecksumType.fromByte(checksumType).get();
-        switch (type) {
-            case NoChecksum:
-                break;
-            case Adler32:
-            case FarmhashFingerPrint32:
-            case CRC32C:
-                checksum = payload.readInt();
-                break;
-        }
+        // tracing:25
+        Trace tracing = CodecUtils.decodeTrace(frame.payload);
 
-        byte[] arg1 = CodecUtils.decodeArg(payload);
-        byte[] arg2 = CodecUtils.decodeArg(payload);
-        byte[] arg3 = CodecUtils.decodeArg(payload);
+        // message~2
+        String message = CodecUtils.decodeString(frame.payload);
 
-        CallRequest req = new CallRequest(frame.id, flags, ttl, trace, service, headers, checksumType, checksum, arg1, arg2, arg3);
-        out.add(req);
+        out.add(new ErrorMessage(
+                frame.id,
+                type,
+                new Trace(0, 0, 0, (byte) 0),
+                message
+        ));
     }
-
 }

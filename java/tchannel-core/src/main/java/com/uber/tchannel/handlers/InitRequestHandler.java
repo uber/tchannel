@@ -22,7 +22,6 @@
 package com.uber.tchannel.handlers;
 
 import com.uber.tchannel.messages.*;
-import com.uber.tchannel.messages.Error;
 import com.uber.tchannel.tracing.Trace;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -51,9 +50,9 @@ public class InitRequestHandler extends ChannelHandlerAdapter {
                     ));
                     ctx.pipeline().remove(this);
                 } else {
-                    ChannelFuture versionErrorFuture = ctx.writeAndFlush(new Error(
+                    ChannelFuture versionErrorFuture = ctx.writeAndFlush(new ErrorMessage(
                             message.getId(),
-                            Error.ErrorType.FatalProtocolError.byteValue(),
+                            ErrorMessage.ErrorType.FatalProtocolError,
                             new Trace(0, 0, 0, (byte) 0x00),
                             String.format("Expected Protocol version: %d", AbstractInitMessage.DEFAULT_VERSION)
                     ));
@@ -63,9 +62,9 @@ public class InitRequestHandler extends ChannelHandlerAdapter {
                 break;
 
             default:
-                ChannelFuture protocolErrorFuture = ctx.writeAndFlush(new Error(
+                ChannelFuture protocolErrorFuture = ctx.writeAndFlush(new ErrorMessage(
                         message.getId(),
-                        Error.ErrorType.FatalProtocolError.byteValue(),
+                        ErrorMessage.ErrorType.FatalProtocolError,
                         new Trace(0, 0, 0, (byte) 0x00),
                         "Must not send any data until receiving Init Request"
                 ));
