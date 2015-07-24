@@ -68,7 +68,7 @@ function RelayServer(opts) {
             app: 'relay-server'
         },
         emitConnectionMetrics: false,
-        logger: opts.debug ? require('debug-logtron')('relay') : null,
+        logger: require('debug-logtron')('relay'),
         trace: false,
         statsd: new Statsd({
             host: '127.0.0.1',
