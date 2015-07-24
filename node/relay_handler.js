@@ -26,14 +26,32 @@ RelayHandler.RelayRequest = RelayRequest;
 
 module.exports = RelayHandler;
 
-function RelayHandler(channel) {
+function RelayHandler(channel, circuits) {
     var self = this;
     self.channel = channel;
+    self.circuits = circuits || null;
 }
 
 RelayHandler.prototype.type = 'tchannel.relay-handler';
 
 RelayHandler.prototype.handleRequest = function handleRequest(req, buildRes) {
+    var self = this;
+
+    if (self.circuits) {
+        self._monitorRequest(req, buildRes);
+    } else {
+        self._handleRequest(req, buildRes);
+    }
+};
+
+RelayHandler.prototype._monitorRequest = function _monitorRequest(req, buildRes) {
+    var self = this;
+
+    buildRes = self.circuits.monitorRequest(req, buildRes);
+    self._handleRequest(req, buildRes);
+};
+
+RelayHandler.prototype._handleRequest = function _handleRequest(req, buildRes) {
     var self = this;
 
     // TODO add this back in a performant way ??
