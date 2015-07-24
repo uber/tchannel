@@ -24,6 +24,7 @@ var assert = require('assert');
 var parseArgs = require('minimist');
 var TChannel = require('../channel');
 var TChannelAsHTTP = require('../as/http');
+var HyperbahnClient = require('../hyperbahn/');
 
 /* Minimal working example of an HTTP "bridge" over TChannel:
  * 1) start an http service:
@@ -54,6 +55,7 @@ function usage() {
     console.error('\nOptions:');
     console.error('  --bind <address>');
     console.error('  --tchannel-port <port>');
+    console.error('  --advertise <host_port>');
     process.exit(1);
 }
 
@@ -77,14 +79,31 @@ var svcChan = tchan.makeSubChannel({
 });
 asHTTP.setHandler(svcChan, onRequest);
 
+function advertise() {
+    var hyperbahnClient = HyperbahnClient({
+        tchannel: tchan,
+        serviceName: serviceName,
+        hostPortList: [argv.advertise],
+        hardFail: true
+    });
+    hyperbahnClient.once('advertised', function adv() {
+        console.log('advertised');
+    });
+    hyperbahnClient.advertise();
+}
+
 function onChannelListening() {
     var addr = tchan.address();
     console.log('tchannel listening on %s:%s', addr.address, addr.port);
+
+    if (argv.advertise) {
+        advertise();
+    }
 }
 
 function onRequest(inreq, outres) {
     asHTTP.forwardToHTTP(svcChan, {
         host: destHost,
-        port: destPort,
+        port: destPort
     }, inreq, outres);
 }
