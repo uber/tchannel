@@ -59,23 +59,33 @@ StreamingOutRequest.prototype.type = 'tchannel.outgoing-request.streaming';
 
 StreamingOutRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     var self = this;
+
+    if (callback) {
+        self.hookupCallback(callback);
+    }
+
+    self.arg1.end(arg1);
     if (self.span) {
         self.span.name = String(arg1);
     }
-    if (callback) self.hookupCallback(callback);
 
-    self.arg1.end(arg1);
     self.arg2.end(arg2);
     self.arg3.end(arg3);
+
     return self;
 };
 
 StreamingOutRequest.prototype.sendStreams = function sendStreams(arg1, arg2, arg3, callback) {
     var self = this;
-    if (callback) self.hookupStreamCallback(callback);
+
+    if (callback) {
+        self.hookupStreamCallback(callback);
+    }
+
     pipelineStreams(
         [arg1, arg2, arg3],
         [self.arg1, self.arg2, self.arg3]);
+
     return self;
 };
 
