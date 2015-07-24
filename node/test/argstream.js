@@ -35,6 +35,7 @@
  * served by running the sanity test to iterate on the searcher itself.
  */
 
+var extend = require('xtend');
 var test = require('tape');
 var util = require('util');
 
@@ -67,20 +68,20 @@ test.skip('setup sanity', argSearchTest(function t(state, assert) {
 }));
 
 test('argstream', function t(assert) {
-    var verbose = true;
+    var first = true; // stop on first failure
+    var verbose = false;
     if (module === require.main) {
         var argv = require('minimist', {
             boolean: {
                 verbose: true
-            },
-            default: {
-                verbose: verbose
             }
         })(process.argv.slice(2));
         verbose = argv.verbose;
     }
 
-    assert.test('unit test OutArgStream', {skip: !verbose}, argSearchTest(function t(state, assert) {
+    assert.test('unit test OutArgStream', {skip: !verbose}, argSearchTest({
+        first: first
+    }, function t(state, assert) {
         var frames = state.frames;
         var expect = realFrames(frames);
         var gotI = 0;
@@ -102,7 +103,9 @@ test('argstream', function t(assert) {
         writeFrames(frames, s, assert.end);
     }));
 
-    assert.test('unit test InArgStream', {skip: !verbose}, argSearchTest(function t(state, assert) {
+    assert.test('unit test InArgStream', {skip: !verbose}, argSearchTest({
+        first: first
+    }, function t(state, assert) {
         var frames = state.frames;
         var args = state.args;
         var s = new argstream.InArgStream();
@@ -120,7 +123,9 @@ test('argstream', function t(assert) {
         }
     }));
 
-    assert.test('integration test {Out -> In}ArgStream', {skip: verbose}, argSearchTest(function t(state, assert) {
+    assert.test('integration test {Out -> In}ArgStream', {skip: verbose}, argSearchTest({
+        first: first
+    }, function t(state, assert) {
         var frames = state.frames;
         var args = state.args;
         var o = new argstream.OutArgStream();
@@ -141,8 +146,13 @@ test('argstream', function t(assert) {
     }));
 });
 
-function argSearchTest(testFunc) {
-    var search = TestSearch({
+function argSearchTest(options, testFunc) {
+    if (typeof options === 'function') {
+        testFunc = options;
+        options = {};
+    }
+
+    var search = TestSearch(extend(options, {
         describeState: function describe(state) {
             return state.frames.map(function each(frame) {
                 return frame.join('.');
@@ -197,7 +207,7 @@ function argSearchTest(testFunc) {
                 _emit({frames: relabel(frames)});
             }
         }
-    });
+    }));
     return search.run.bind(search);
 }
 
