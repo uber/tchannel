@@ -1,0 +1,82 @@
+package testutils
+
+import (
+	"math/rand"
+	"sync"
+)
+
+// This file contains functions for tests to access internal tchannel state.
+// Since it has a _test.go suffix, it is only compiled with tests in this package.
+
+// Copyright (c) 2015 Uber Technologies, Inc.
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+var (
+	randCache []byte
+	randMut   sync.RWMutex
+)
+
+func checkCacheSize(n int) {
+	// Start with a reasonably large cache.
+	if n < 4 {
+		n = 4
+	}
+
+	randMut.RLock()
+	curSize := len(randCache)
+	randMut.RUnlock()
+
+	// The cache needs to be at least twice as large as the requested size.
+	if curSize >= n*2 {
+		return
+	}
+
+	resizeCache(n)
+}
+
+func resizeCache(n int) {
+	randMut.Lock()
+	defer randMut.Unlock()
+
+	// Double check under the write lock
+	if len(randCache) >= n*2 {
+		return
+	}
+
+	newSize := n * 2
+	newCache := make([]byte, newSize)
+	copied := copy(newCache, randCache)
+	for i := copied; i < newSize; i++ {
+		newCache[i] = byte(rand.Intn(256))
+	}
+	randCache = newCache
+}
+
+// RandBytes returns n random byte slice that points to a shared random byte array.
+// Since the underlying random array is shared, the returned byte slice must NOT be modified.
+func RandBytes(n int) []byte {
+	checkCacheSize(n)
+
+	randMut.RLock()
+	startAt := rand.Intn(len(randCache) - n)
+	bs := randCache[startAt : startAt+n]
+	randMut.RUnlock()
+	return bs
+}
