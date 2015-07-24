@@ -77,16 +77,6 @@ func TestFramesReleased(t *testing.T) {
 		maxRandArg           = 512 * 1024
 	)
 
-	// Generate random bytes used to create arguments.
-	randBytes := make([]byte, maxRandArg)
-	for i := 0; i < len(randBytes); i += 8 {
-		n := rand.Int63()
-		for j := 0; j < 8; j++ {
-			randBytes[i+j] = byte(n & 0xff)
-			n = n << 1
-		}
-	}
-
 	var connections []*Connection
 	pool := NewRecordingFramePool()
 	require.NoError(t, testutils.WithServer(&testutils.ChannelOpts{
@@ -106,11 +96,6 @@ func TestFramesReleased(t *testing.T) {
 		defer cancel()
 		require.NoError(t, clientCh.Ping(ctx, hostPort))
 
-		generateArg := func(n int) []byte {
-			from := rand.Intn(maxRandArg - n)
-			return randBytes[from : from+n]
-		}
-
 		var wg sync.WaitGroup
 		worker := func() {
 			for i := 0; i < requestsPerGoroutine; i++ {
@@ -119,9 +104,8 @@ func TestFramesReleased(t *testing.T) {
 
 				require.NoError(t, clientCh.Ping(ctx, hostPort))
 
-				argSize := rand.Intn(maxRandArg)
-				arg2 := generateArg(argSize)
-				arg3 := generateArg(argSize)
+				arg2 := testutils.RandBytes(rand.Intn(maxRandArg))
+				arg3 := testutils.RandBytes(rand.Intn(maxRandArg))
 				resArg2, resArg3, _, err := raw.Call(ctx, clientCh, hostPort, "swap-server", "swap", arg2, arg3)
 				if !assert.NoError(t, err, "error during sendRecv") {
 					continue
