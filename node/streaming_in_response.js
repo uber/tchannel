@@ -63,7 +63,10 @@ StreamingInResponse.prototype.handleFrame = function handleFrame(parts, isLast) 
         return new Error('unknown frame handling state');
     }
 
-    self._argstream.handleFrame(parts, isLast);
+    var err = self._argstream.handleFrame(parts, isLast);
+    if (err) {
+        return err;
+    }
 
     if (!isLast && self.state !== States.Streaming) {
         // TODO: typed error
