@@ -60,6 +60,7 @@ var DEFAULT_ERROR_RETRY_TIMES = [
 
     10000 // Max out at 10 seconds
 ];
+var DEFAULT_TIMEOUT = 500;
 
 module.exports = HyperbahnClient;
 
@@ -140,6 +141,7 @@ function HyperbahnClient(options) {
     self.attemptCounter = 0;
     self.state = States.UNADVERTISED;
     self._destroyed = false;
+    self.defaultAdTimeout = options.defaultAdTimeout || DEFAULT_TIMEOUT;
 
     var advertisementTimeout = options.advertisementTimeout ||
         options.registrationTimeout;
@@ -243,7 +245,7 @@ function sendAdvertiseRequest(opts, cb) {
 
     var req = self.hyperbahnChannel.request({
         serviceName: 'hyperbahn',
-        timeout: (opts && opts.timeout) || 50,
+        timeout: (opts && opts.timeout) || self.defaultAdTimeout,
         hasNoParent: true,
         trace: false,
         retryLimit: 1,

@@ -32,7 +32,7 @@ var TChannelEndpointHandler = require('../endpoint-handler');
 
 var MAX_RELAY_AD_ATTEMPTS = 2;
 var RELAY_AD_RETRY_TIME = 1 * 1000;
-var RELAY_AD_TIMEOUT = 50;
+var RELAY_AD_TIMEOUT = 500;
 
 module.exports = HyperbahnHandler;
 
