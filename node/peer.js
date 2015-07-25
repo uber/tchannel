@@ -165,7 +165,21 @@ TChannelPeer.prototype.close = function close(callback) {
 TChannelPeer.prototype.setState = function setState(StateType) {
     var self = this;
 
+    var currState = self.state;
+
     if (StateMachine.prototype.setState.call(self, StateType)) {
+        var newState = self.state;
+
+        if (currState && currState.healthy && !newState.healthy) {
+            self.logger.warn('peer transitioning to unhealthy state', {
+                hostPort: self.hostPort
+            });
+        } else if (currState && !currState.healthy && newState.healthy) {
+            self.logger.info('peer transitioning to healthy state', {
+                hostPort: self.hostPort
+            });
+        }
+
         self.invalidateScore();
     }
 };
