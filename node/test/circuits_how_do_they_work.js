@@ -54,76 +54,100 @@ RelayNetwork.test('circuits: how do they work', {
     var upPeriods = 40;
     var trigger = 23;
 
-    var done = false;
+    var state = waitForBroke;
     var requestNum = 0;
     var events = new EventLog(network.timers, period);
 
     network.register('call', delegator(hugeBodyHandler));
     sendRequest();
 
-    function each() {
-        // waitForBroke
-        if (!events.byDesc.broke) {
-            if (events.byDesc['res:good'].length > trigger) {
-                network.endpoints.call.delegate = negligentHandler;
-                events.log('broke');
-            }
-            return;
+    var origAdvance = network.timers.advance;
+    network.timers.advance = advanceTime;
+
+    function advanceTime(n) {
+        origAdvance.call(network.timers, n);
+        var now = network.timers.now();
+        network.cluster.channels.forEach(each);
+        function each(chan) {
+            chan.timeHeap.callExpiredTimeouts(now);
         }
+    }
 
-        // waitForDecline
-        if (!events.byDesc.backoff) {
-            if (events.byDesc['err:tchannel.declined'] && delay !== slowDelay) {
-                events.log('backoff');
-                delay = slowDelay;
-            }
-            return;
+    function waitForBroke() {
+        if (events.byDesc['res:good'].length > trigger) {
+            // network.endpoints.call.delegate = negligentHandler;
+            network.endpoints.call.delegate =
+                delayedHandler(network.timers, 15,
+                    // XXX: I can't seem to observe a timeout error during the
+                    // tombstone life span... if I up the delay past
+                    // tombstone span and use negligentHandler I get
+                    // it, but never with noopHandler, nor with
+                    // short delayed negligentHandler
+                    noopHandler
+                    // delayedHandler(network.timers, 5, negligentHandler)
+                );
+            events.log('broke');
+            state = waitForDecline;
         }
+    }
 
-        // waitForDownPeriod
-        if (!events.byDesc.restored) {
-            if (events.periodsSince(EventLog.LAST, 'downPeriod') !== 0) {
-                events.log('downPeriod');
-            }
-            if (events.byDesc.downPeriod.length >= downPeriods) {
-                events.log('restored');
-                network.endpoints.call.delegate = hugeBodyHandler;
-            }
-            return;
+    function waitForDecline() {
+        // if (!events.byDesc.backoff)
+        if (events.byDesc['err:tchannel.declined'] && delay !== slowDelay) {
+            events.log('backoff');
+            delay = slowDelay;
+            state = waitForDownPeriod;
         }
+    }
 
+    function waitForDownPeriod() {
+        var backedOffAt = events.get(EventLog.LAST, 'backoff').time;
+        var errsSince = events.eventsSince('err', backedOffAt);
 
-        // waitForBackoffPeriod
-        if (!events.byDesc.notch) {
-            if (events.periodsSince(EventLog.LAST, 'upPeriod') !== 0) {
-                events.log('upPeriod');
-            }
-
-            if (events.byDesc.upPeriod.length >= backoffPeriods &&
-                delay !== fastDelay) {
-                events.log('notch');
-                delay = fastDelay;
-            }
-            return;
+        if (activePeriodsIn(errsSince) >= downPeriods) {
+            events.log('restored');
+            network.endpoints.call.delegate = hugeBodyHandler;
+            state = waitForBackoffPeriod;
         }
+    }
 
-        // waitForUpPeriod
-        if (events.byDesc.upPeriod.length < upPeriods) {
-            events.log('upPeriod');
+    function waitForBackoffPeriod() {
+        var restoredAt = events.get(EventLog.LAST, 'restored').time;
+        // if (!events.byDesc.notch)
+        var goodSinceRestore = events.eventsSince('res:good', restoredAt);
+        if (activePeriodsIn(goodSinceRestore) >= backoffPeriods) {
+            events.log('notch');
+            delay = fastDelay;
+            state = waitForUpPeriod;
+        }
+    }
+
+    function waitForUpPeriod() {
+        var notchedAt = events.get(EventLog.LAST, 'notch').time;
+        var goodSinceNotch = events.eventsSince('res:good', notchedAt);
+        if (activePeriodsIn(goodSinceNotch) < upPeriods) {
             return;
         }
 
         // reset
         events.log('reset');
         proc(events.take());
-        done = true;
+        state = null;
+    }
+
+    function each() {
+        if (state) {
+            state();
+        }
     }
 
     function sendRequest() {
         var req = network.send({
             callerName: 'alice',
-            serviceName: 'bob'
+            serviceName: 'bob',
+            timeout: 10
         }, 'call', 'HUGE HEAD', 'tiny body', function done(err, res, arg2, arg3) {
+            console.log('REQ DONE', err && err.type, res && res.ok);
             onResponse(req, err, res, arg2, arg3);
         });
     }
@@ -139,7 +163,7 @@ RelayNetwork.test('circuits: how do they work', {
 
         each(req, err, res);
 
-        if (!done && requestNum++ < requestsLimit) {
+        if (state && requestNum++ < requestsLimit) {
             network.timers.advance(delay);
             sendRequest();
         } else {
@@ -186,6 +210,19 @@ function delegator(delegate) {
     function handler(req, res) {
         handler.delegate(req, res);
     }
+}
+
+function delayedHandler(timers, delay, subhandler) {
+    return function handler(req, res) {
+        timers.advance(delay);
+        if (subhandler) {
+            subhandler(req, res);
+        }
+    };
+}
+
+function noopHandler(req, res) {
+    // noop
 }
 
 function negligentHandler(req, res) {
@@ -238,6 +275,37 @@ function EventLog(timers, periodLength) {
     self.byDesc = {};
 }
 
+EventLog.prototype.eventsSince = function eventsSince(desc, time) {
+    var self = this;
+
+    var events = self.byDesc[desc];
+    if (events) {
+        for (var i = 0; i < events.length; i++) {
+            if (events[i].time >= time) {
+                return events.slice(i);
+            }
+        }
+    }
+
+    return [];
+};
+
+EventLog.prototype.get = function since(index, desc) {
+    var self = this;
+
+    var byDesc = self.byDesc[desc];
+    if (byDesc && byDesc.length) {
+        if (index < 0) {
+            index = byDesc.length + index;
+        }
+        if (byDesc[index]) {
+            return byDesc[index];
+        }
+    }
+
+    return null;
+};
+
 EventLog.prototype.hasElapsedSince = function hasElapsedSince(index, desc, numPeriods) {
     var self = this;
 
@@ -247,22 +315,12 @@ EventLog.prototype.hasElapsedSince = function hasElapsedSince(index, desc, numPe
 EventLog.prototype.periodsSince = function since(index, desc) {
     var self = this;
 
-    var byDesc = self.byDesc[desc];
-    if (!byDesc) {
-        return -1;
-    }
-
-    var ent;
-    if (index < 0) {
-        ent = byDesc[byDesc.length + index];
+    var ent = self.get(index, desc);
+    if (ent) {
+        return self.periodNum - ent.period;
     } else {
-        ent = byDesc[index];
-    }
-    if (!ent) {
         return -1;
     }
-
-    return self.periodNum - ent.period;
 };
 
 EventLog.prototype.updateTime = function updateTime() {
@@ -300,11 +358,32 @@ EventLog.prototype.log = function log(desc, extra) {
     };
 
     self.entries.push(ent);
-    if (!self.byDesc[desc]) {
-        self.byDesc[desc] = [ent];
-    } else {
-        self.byDesc[desc].push(ent);
+
+    var descParts = desc.split(/:/g);
+    desc = '';
+    for (var i = 0; i < descParts.length; i++) {
+        if (desc.length) {
+            desc += ':';
+        }
+        desc += descParts[i];
+        if (!self.byDesc[desc]) {
+            self.byDesc[desc] = [ent];
+        } else {
+            self.byDesc[desc].push(ent);
+        }
     }
 
     return ent;
 };
+
+function activePeriodsIn(log) {
+    var seen = {};
+    var num = 0;
+    for (var i = 0; i < log.length; i++) {
+        if (!seen[log[i].period]) {
+            seen[log[i].period] = true;
+            num++;
+        }
+    }
+    return num;
+}
