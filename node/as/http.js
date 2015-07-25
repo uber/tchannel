@@ -67,7 +67,7 @@ function TChannelHTTP(options) {
 
 TChannelHTTP.prototype.sendRequest = function send(treq, hreq, options, callback) {
     assert(treq.streamed, 'as http must have a streamed tchannel request');
-
+    var self = this;
     if (typeof options === 'function') {
         callback = options;
         options = null;
@@ -83,6 +83,9 @@ TChannelHTTP.prototype.sendRequest = function send(treq, hreq, options, callback
     var arg1 = ''; // TODO: left empty for now, could compute circuit names heuristically
     var arg2res = bufrw.toBufferResult(HTTPReqArg2.RW, head);
     if (arg2res.err) {
+        self.logger.error('Buffer write for arg2 failed', {
+            error: arg2res.err
+        });
         callback(arg2res.err, null, null);
         return;
     }
@@ -114,6 +117,9 @@ TChannelHTTP.prototype.sendRequest = function send(treq, hreq, options, callback
         // to ensure singularity
         var arg2res = bufrw.fromBufferResult(HTTPResArg2.RW, arg2);
         if (arg2res.err) {
+            self.logger.error('Buffer read for arg2 failed', {
+                error: arg2res.err
+            });
             callback(arg2res.err, null, null);
         } else if (tres.streamed) {
             callback(null, arg2res.value, tres.arg3);
@@ -128,7 +134,7 @@ TChannelHTTP.prototype.sendRequest = function send(treq, hreq, options, callback
 
 TChannelHTTP.prototype.sendResponse = function send(buildResponse, hres, callback) {
     // TODO: map http response codes onto error frames and application errors
-
+    var self = this;
     var head = new HTTPResArg2(hres.statusCode, hres.statusMessage);
     var keys = Object.keys(hres.headers);
     for (var i = 0; i < keys.length; i++) {
@@ -139,10 +145,12 @@ TChannelHTTP.prototype.sendResponse = function send(buildResponse, hres, callbac
     if (arg2res.err) {
         // TODO: wrapped error
         callback(arg2res.err, null, null);
-        buildResponse().sendError('UnexpectedError',
+        self.logger.error('Buffer write for arg2 failed', {
+            error: arg2res.err
+        });
+        return buildResponse().sendError('UnexpectedError',
             'Couldn\'t encode as-http response arg2: ' +
             arg2res.err.message);
-        return;
     }
     var arg2 = arg2res.value;
 
@@ -156,13 +164,14 @@ TChannelHTTP.prototype.sendResponse = function send(buildResponse, hres, callbac
 
 TChannelHTTP.prototype.setHandler = function register(tchannel, handler) {
     var self = this;
+    self.logger = tchannel.logger;
     tchannel.handler = new AsHTTPHandler(self, tchannel, handler);
     return tchannel.handler;
 };
 
-TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, hreq, hres, tchannelRequestOptions, callback) {
+TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, hreq, hres, requestOptions, callback) {
     var self = this;
-
+    self.logger = self.logger || tchannel.logger;
     // TODO: no retrying due to:
     // - streamed bypasses TChannelRequest
     // - driving peer selection manually therefore
@@ -171,29 +180,32 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
     var options = tchannel.requestOptions(extendInto({
         streamed: true,
         hasNoParent: true
-    }, tchannelRequestOptions));
+    }, requestOptions));
     var peer = tchannel.peers.choosePeer(null);
     if (!peer) {
         hres.writeHead(503, 'Service Unavailable: no tchannel peer');
         hres.end(); // TODO: error content
+        self.logger.warn('Choose peer failed');
         callback(errors.NoPeerAvailable());
-        return null;
-    } else {
-        // TODO: observable
-        peer.waitForIdentified(onIdentified);
         return null;
     }
 
+    self.logger.debug('Waiting for peer to be identified');
+    peer.waitForIdentified(onIdentified);
     function onIdentified(err) {
         if (err) {
             hres.writeHead(500, 'Connection failure');
             hres.end();
+            self.logger.warn('Identifying peer failed', {
+                error: err
+            });
             callback(err);
             return null;
         }
 
         options.host = peer.hostPort;
         var treq = tchannel.request(options);
+        self.logger.debug('Forwarding to tchannel started');
         self.sendRequest(treq, hreq, forwarded);
     }
 
@@ -201,11 +213,12 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
         if (err) {
             // TODO: better map of error type -> http status code, see
             // tchannel/errors.classify
-            // TODO: observable
             hres.writeHead(500, err.type + ' - ' + err.message);
             hres.end(); // TODO: error content
+            self.logger.warn('Forwarding to tchannel failed', {
+                error: err
+            });
         } else {
-            // TODO: observable
             // TODO: better lower level mapping of headerPairs
             var headers = {};
             for (var i = 0; i < head.headerPairs.length; i++) {
@@ -214,14 +227,16 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
             }
             hres.writeHead(head.statusCode, head.message, headers);
             body.pipe(hres);
+            self.logger.info('Forwarding to tchannel succeeded');
         }
         callback(err);
     }
 };
 
-TChannelHTTP.prototype.forwardToHTTP = function forwardToHTTP(ingressChan, options, inreq, outres) {
+TChannelHTTP.prototype.forwardToHTTP = function forwardToHTTP(tchannel, options, inreq, outres) {
     // TODO: should use lb_pool
-
+    var self = this;
+    self.logger = self.logger || tchannel.logger;
     options = extend(options, {
         method: inreq.head.method,
         path: inreq.head.url,
@@ -234,7 +249,7 @@ TChannelHTTP.prototype.forwardToHTTP = function forwardToHTTP(ingressChan, optio
     }
 
     var sent = false;
-    // TODO: observable
+    self.logger.debug('Forwarding to HTTP started');
     var outreq = http.request(options, onResponse);
     outreq.on('error', onError);
     // TODO: more http state machine integration
@@ -243,7 +258,7 @@ TChannelHTTP.prototype.forwardToHTTP = function forwardToHTTP(ingressChan, optio
     function onResponse(inres) {
         if (!sent) {
             sent = true;
-            // TODO: observable
+            self.logger.info('Forwarding to HTTP succeeded');
             outres.sendResponse(inres);
         }
     }
@@ -251,7 +266,9 @@ TChannelHTTP.prototype.forwardToHTTP = function forwardToHTTP(ingressChan, optio
     function onError(err) {
         if (!sent) {
             sent = true;
-            // TODO: observable
+            self.logger.warn('Forwarding to HTTP failed', {
+                error: err
+            });
             outres.sendError(err);
         }
     }
@@ -265,6 +282,7 @@ function AsHTTPHandler(asHTTP, channel, handler) {
     self.asHTTP = asHTTP;
     self.channel = channel;
     self.handler = handler;
+    self.logger = self.channel.logger;
 }
 
 AsHTTPHandler.prototype.handleRequest = function handleRequest(req, buildResponse) {
@@ -295,6 +313,9 @@ AsHTTPHandler.prototype.handleRequest = function handleRequest(req, buildRespons
 
         var arg2res = bufrw.fromBufferResult(HTTPReqArg2.RW, arg2);
         if (arg2res.err) {
+            self.logger.error('Buffer read for arg2 failed', {
+                error: arg2res.err
+            });
             sendError(arg2res.err);
             return;
         }
@@ -312,8 +333,11 @@ AsHTTPHandler.prototype.handleRequest = function handleRequest(req, buildRespons
 
     var sent = false;
     req.errorEvent.on(onError);
-    function onError() {
+    function onError(err) {
         sent = true;
+        self.logger.warn('Handling request failed', {
+            error: err
+        });
     }
 
     function handle() {
@@ -322,13 +346,15 @@ AsHTTPHandler.prototype.handleRequest = function handleRequest(req, buildRespons
             sendError: sendError,
             sendResponse: sendResponse
         };
-        // TODO: observable
+
+        self.logger.debug('Handling request started');
         self.handler.handleRequest(hreq, hres);
     }
 
     function sendResponse(hres) {
         if (!sent) {
             sent = true;
+            self.logger.info('Handling request succeeded');
             self.asHTTP.sendResponse(buildResponse, hres, sendError);
         }
     }
@@ -337,6 +363,9 @@ AsHTTPHandler.prototype.handleRequest = function handleRequest(req, buildRespons
         if (!sent) {
             // TODO: map type?
             sent = true;
+            self.logger.warn('Handling request failed', {
+                error: err
+            });
             buildResponse().sendError('UnexpectedError', err.message);
         }
     }
