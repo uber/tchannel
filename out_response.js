@@ -217,11 +217,12 @@ TChannelOutResponse.prototype.sendError = function sendError(codeString, message
 
 TChannelOutResponse.prototype.emitFinish = function emitFinish() {
     var self = this;
+    var now = self.timers.now();
 
     if (self.end) {
         self.logger.warn('out response double emitFinish', {
             end: self.end,
-            now: Date.now(),
+            now: now,
             serviceName: self.inreq.serviceName,
             cn: self.inreq.headers.cn,
             endpoint: String(self.inreq.arg1),
@@ -234,7 +235,7 @@ TChannelOutResponse.prototype.emitFinish = function emitFinish() {
         return;
     }
 
-    self.end = self.timers.now();
+    self.end = now;
 
     var latency = self.end - self.inreq.start;
 
