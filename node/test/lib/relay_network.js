@@ -80,6 +80,8 @@ function RelayNetwork(options) {
         instanceIndexes.push(instanceIndex);
     }
     self.instanceIndexes = instanceIndexes;
+
+    self.endpoints = [];
 }
 
 RelayNetwork.test = tapeCluster(tape, RelayNetwork);
@@ -279,6 +281,9 @@ RelayNetwork.prototype.connectServices = function connectServices(callback) {
 
 RelayNetwork.prototype.register = function (arg1, handler) {
     var self = this;
+
+    self.endpoints[arg1] = handler;
+
     self.forEachSubChannel(function registerHanlder(subChannel) {
         subChannel.handler.register(arg1, handler);
     });
@@ -291,17 +296,19 @@ RelayNetwork.prototype.registerEchoHandlers = function () {
     });
 };
 
-RelayNetwork.prototype.send = function (options, arg1,  arg2, arg3, callback) {
+RelayNetwork.prototype.send = function send(options, arg1,  arg2, arg3, callback) {
     var self = this;
     var callerChannel = self.subChannelsByName[options.callerName][options.callerIndex || 0];
-    callerChannel.request({
+    var req = callerChannel.request({
         serviceName: options.serviceName,
         headers: {
             as: 'raw',
             cn: options.callerName
         },
         hasNoParent: true
-    }).send(arg1, arg2, arg3, callback);
+    });
+    req.send(arg1, arg2, arg3, callback);
+    return req;
 };
 
 RelayNetwork.prototype.exercise = function (count, delay, eachRequest, eachResponse, callback) {
