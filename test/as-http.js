@@ -83,8 +83,8 @@ allocHTTPTest('as/http can handle a timeout', {
     onServiceRequest: handleTestHTTPTimeout,
     expectedEgressError: function assertError(assert, err) {
         assert.ok(err.type === 'tchannel.request.timeout' ||
-            err.type === 'tchannel.timeout'
-        );
+            err.type === 'tchannel.timeout',
+        'expected error');
     }
 }, function t(cluster, assert) {
     parallel([
