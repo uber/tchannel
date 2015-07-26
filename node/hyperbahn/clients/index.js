@@ -16,10 +16,10 @@ var HyperbahnEgressNodes = require('../egress-nodes');
 var ServiceProxy = require('../service_proxy.js');
 var CountedReadySignal = require('ready-signal/counted');
 var fs = require('fs');
+var ProcessReporter = require('process-reporter');
 
 var createLogger = require('./logger.js');
 var createStatsd = require('./statsd.js');
-var createProcessReporter = require('./process-reporter.js');
 var createRepl = require('./repl.js');
 var HeapDumper = require('./heap-dumper.js');
 
@@ -83,7 +83,7 @@ function ApplicationClients(options) {
         )
     });
 
-    self.processReporter = createProcessReporter({
+    self.processReporter = ProcessReporter({
         statsd: self.statsd
     });
 
