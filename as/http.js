@@ -227,7 +227,7 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
             }
             hres.writeHead(head.statusCode, head.message, headers);
             body.pipe(hres);
-            self.logger.info('Forwarding to tchannel succeeded');
+            self.logger.debug('Forwarding to tchannel succeeded');
         }
         callback(err);
     }
@@ -258,7 +258,7 @@ TChannelHTTP.prototype.forwardToHTTP = function forwardToHTTP(tchannel, options,
     function onResponse(inres) {
         if (!sent) {
             sent = true;
-            self.logger.info('Forwarding to HTTP succeeded');
+            self.logger.debug('Forwarding to HTTP succeeded');
             outres.sendResponse(inres);
         }
     }
@@ -354,7 +354,7 @@ AsHTTPHandler.prototype.handleRequest = function handleRequest(req, buildRespons
     function sendResponse(hres) {
         if (!sent) {
             sent = true;
-            self.logger.info('Handling request succeeded');
+            self.logger.debug('Handling request succeeded');
             self.asHTTP.sendResponse(buildResponse, hres, sendError);
         }
     }
