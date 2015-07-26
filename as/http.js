@@ -83,18 +83,14 @@ TChannelHTTP.prototype.sendRequest = function send(treq, hreq, options, callback
     var arg1 = ''; // TODO: left empty for now, could compute circuit names heuristically
     var arg2res = bufrw.toBufferResult(HTTPReqArg2.RW, head);
     if (arg2res.err) {
-<<<<<<< HEAD
         self.logger.error('Buffer write for arg2 failed', {
             error: arg2res.err
         });
-        callback(arg2res.err, null, null);
-=======
         var toBufferErr = errors.HTTPReqArg2toBufferError(arg2res.err, {
             head: head
         });
         callback(toBufferErr, null, null);
->>>>>>> Wrap around bufrw error
-        return;
+        return null;
     }
     var arg2 = arg2res.value;
 
@@ -124,17 +120,13 @@ TChannelHTTP.prototype.sendRequest = function send(treq, hreq, options, callback
         // to ensure singularity
         var arg2res = bufrw.fromBufferResult(HTTPResArg2.RW, arg2);
         if (arg2res.err) {
-<<<<<<< HEAD
             self.logger.error('Buffer read for arg2 failed', {
                 error: arg2res.err
             });
-            callback(arg2res.err, null, null);
-=======
             var fromBufferErr = errors.HTTPReqArg2fromoBufferError(arg2res.err, {
                 arg2: arg2
             });
             callback(fromBufferErr, null, null);
->>>>>>> Wrap around bufrw error
         } else if (tres.streamed) {
             callback(null, arg2res.value, tres.arg3);
         } else {
@@ -142,7 +134,6 @@ TChannelHTTP.prototype.sendRequest = function send(treq, hreq, options, callback
             body.end(tres.arg3);
             callback(null, arg2res.value, body);
         }
-
     }
 };
 
@@ -157,22 +148,14 @@ TChannelHTTP.prototype.sendResponse = function send(buildResponse, hres, callbac
 
     var arg2res = bufrw.toBufferResult(HTTPResArg2.RW, head);
     if (arg2res.err) {
-<<<<<<< HEAD
-        // TODO: wrapped error
-        callback(arg2res.err, null, null);
         self.logger.error('Buffer write for arg2 failed', {
             error: arg2res.err
         });
-        return buildResponse().sendError('UnexpectedError',
-=======
         var toBufferErr = errors.HTTPResArg2toBufferError(arg2res.err, {
             head: head
         });
         callback(toBufferErr, null, null);
-        buildResponse().sendError('UnexpectedError',
->>>>>>> Wrap around bufrw error
-            'Couldn\'t encode as-http response arg2: ' +
-            arg2res.err.message);
+        return null;
     }
     var arg2 = arg2res.value;
 
@@ -335,17 +318,13 @@ AsHTTPHandler.prototype.handleRequest = function handleRequest(req, buildRespons
 
         var arg2res = bufrw.fromBufferResult(HTTPReqArg2.RW, arg2);
         if (arg2res.err) {
-<<<<<<< HEAD
             self.logger.error('Buffer read for arg2 failed', {
                 error: arg2res.err
             });
-            sendError(arg2res.err);
-=======
             var fromBufferErr = errors.HTTPResArg2fromoBufferError(arg2res.err, {
                 arg2: arg2
             });
             sendError(fromBufferErr);
->>>>>>> Wrap around bufrw error
             return;
         }
 
@@ -394,7 +373,7 @@ AsHTTPHandler.prototype.handleRequest = function handleRequest(req, buildRespons
             self.logger.warn('Handling request failed', {
                 error: err
             });
-            buildResponse().sendError('Declined', err.message);
+            buildResponse().sendError(errors.classify(err), err.message);
         }
     }
 };
