@@ -1,7 +1,7 @@
 'use strict';
 
-var TChannel = require('tchannel');
-var TChannelJSON = require('tchannel/as/json');
+var TChannel = require('../../../channel.js');
+var TChannelJSON = require('../../../as/json');
 var inherits = require('inherits');
 var EventEmitter = require('events').EventEmitter;
 

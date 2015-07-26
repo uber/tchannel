@@ -8,11 +8,11 @@ var deepExtend = require('deep-extend');
 var shallowExtend = require('xtend');
 var getPort = require('get-port');
 var parallel = require('run-parallel');
-var TChannel = require('tchannel');
+var TChannel = require('../../../channel.js');
 var DebugLogtron = require('debug-logtron');
 var inherits = require('util').inherits;
 var nodeAssert = require('assert');
-var TChannelJSON = require('tchannel/as/json');
+var TChannelJSON = require('../../../as/json');
 var tapeCluster = require('tape-cluster');
 
 var TCReporter = require('../../../tcollector/reporter');
