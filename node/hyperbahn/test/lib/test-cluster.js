@@ -15,7 +15,7 @@ var nodeAssert = require('assert');
 var TChannelJSON = require('tchannel/as/json');
 var tapeCluster = require('tape-cluster');
 
-var TCReporter = require('tchannel/tcollector/reporter');
+var TCReporter = require('../../../tcollector/reporter');
 var FakeTCollector = require('./fake-tcollector');
 var TestApplication = require('./test-app.js');
 

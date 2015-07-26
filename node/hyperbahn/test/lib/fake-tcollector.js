@@ -8,8 +8,7 @@ var spec = fs.readFileSync(path.join(
     __dirname,
     '..',
     '..',
-    'node_modules',
-    'tchannel',
+    '..',
     'tcollector',
     'tcollector.thrift'
 ), 'utf8');
