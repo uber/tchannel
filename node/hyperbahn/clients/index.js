@@ -9,11 +9,11 @@ var os = require('os');
 var RingPop = require('ringpop');
 var process = require('process');
 var uncaught = require('uncaught-exception');
-var TChannel = require('tchannel');
-var TChannelAsJSON = require('tchannel/as/json');
-var HyperbahnHandler = require('tchannel/hyperbahn/handler');
-var HyperbahnEgressNodes = require('tchannel/hyperbahn/egress-nodes');
-var ServiceProxy = require('tchannel/hyperbahn/service_proxy.js');
+var TChannel = require('../../');
+var TChannelAsJSON = require('../../as/json');
+var HyperbahnHandler = require('../handler');
+var HyperbahnEgressNodes = require('../egress-nodes');
+var ServiceProxy = require('../service_proxy.js');
 var CountedReadySignal = require('ready-signal/counted');
 var fs = require('fs');
 
