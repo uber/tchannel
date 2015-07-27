@@ -22,7 +22,7 @@
 
 var testRW = require('bufrw/test_rw');
 var Frame = require('../../v2/frame.js');
-var TestBody = require('./test_body.js');
+var TestBody = require('./lib/test_body.js');
 
 TestBody.testWith('Frame.RW: read/write payload', testRW.cases(Frame.RW, [
 
