@@ -26,7 +26,7 @@ var TChannel = require('../../channel.js');
 
 var logger = DebugLogtron('tchannel');
 
-var fixture = require('./server_2_requests_fixture');
+var fixture = require('./lib/server_2_requests_fixture');
 var validators = require('../lib/simple_validators');
 
 test('server 2 requests tracing test', function (assert) {
