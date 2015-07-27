@@ -45,6 +45,7 @@ function allocCluster(opts) {
         destroy: destroy,
         ready: CountedReadySignal(opts.numPeers),
         assertCleanState: assertCleanState,
+        assertEmptyState: assertEmptyState,
         connectChannels: connectChannels,
         connectChannelToChannels: connectChannelToChannels,
         timers: opts.timers
@@ -106,6 +107,30 @@ function allocCluster(opts) {
                     });
                 });
             });
+        });
+    }
+
+    function assertEmptyState(assert) {
+        assertCleanState(assert, {
+            channels: cluster.channels.map(function build(channel) {
+                var peers = channel.peers.values();
+
+                return {
+                    peers: peers.map(function b(p) {
+                        var conn = p.connections;
+
+                        return {
+                            connections: conn.map(function k(c) {
+                                return {
+                                    direction: c.direction,
+                                    inReqs: 0,
+                                    outReqs: 0
+                                };
+                            })
+                        };
+                    })
+                };
+            })
         });
     }
 
