@@ -22,7 +22,7 @@
 
 var HyperbahnCluster = require('./lib/hyperbahn-cluster.js');
 
-require('./errors');
+require('./errors.js');
 require('./event_emitter.js');
 require('./argstream.js');
 require('./circuits.js');
