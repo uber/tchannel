@@ -20,8 +20,6 @@
 
 'use strict';
 
-var HyperbahnCluster = require('./lib/hyperbahn-cluster.js');
-
 require('./errors.js');
 require('./event_emitter.js');
 require('./argstream.js');
@@ -86,4 +84,26 @@ require('./v2/error_response.js');
 require('./v2/args.js');
 require('./v2/lazy_frame.js');
 
-require('./hyperbahn/')(HyperbahnCluster);
+require('./hyperbahn/constructor.js');
+require('./hyperbahn/todo.js');
+require('./hyperbahn/sub-channel.js');
+require('./hyperbahn/kill-switch.js');
+
+module.exports = runTests;
+
+if (require.main === module) {
+    runTests(require('./lib/hyperbahn-cluster.js'));
+}
+
+function runTests(HyperbahnCluster) {
+    require('./hyperbahn/forward.js')(HyperbahnCluster);
+    require('./hyperbahn/advertise.js')(HyperbahnCluster);
+    require('./hyperbahn/unadvertise.js')(HyperbahnCluster);
+    require('./hyperbahn/forward-retry.js')(HyperbahnCluster);
+
+    require('./hyperbahn/hyperbahn-down.js')(HyperbahnCluster);
+    require('./hyperbahn/hyperbahn-times-out.js')(HyperbahnCluster);
+
+    require('./hyperbahn/rate-limiter.js')(HyperbahnCluster);
+}
+
