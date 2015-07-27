@@ -509,6 +509,18 @@ function destroy() {
     self.rateLimiter.destroy();
 };
 
+ServiceDispatchHandler.prototype.enableRateLimiter =
+function enableRateLimiter() {
+    var self = this;
+    self.rateLimiter.rateLimiterEnabled = true;
+};
+
+ServiceDispatchHandler.prototype.disableRateLimiter =
+function enableRateLimiter() {
+    var self = this;
+    self.rateLimiter.rateLimiterEnabled = false;
+};
+
 // TODO Consider sharding by hostPort and indexing exit exitNodes by hostPort.
 // We also have to shard by serviceName and store the serviceName <-> hostPort
 // information under the "service exitNodes".  This means that sharding by
