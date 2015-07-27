@@ -516,7 +516,7 @@ function enableRateLimiter() {
 };
 
 ServiceDispatchHandler.prototype.disableRateLimiter =
-function enableRateLimiter() {
+function disableRateLimiter() {
     var self = this;
     self.rateLimiter.rateLimiterEnabled = false;
 };
