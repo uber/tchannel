@@ -38,7 +38,6 @@ require('./identify.js');
 require('./max_pending.js');
 require('./tchannel.js');
 require('./regression-inOps-leak.js');
-require('./v2/index.js');
 require('./regression-listening-on-used-port.js');
 require('./as-thrift.js');
 require('./as-json.js');
@@ -67,5 +66,19 @@ require('./ephemeral-client.js');
 require('./relay-to-dead.js');
 require('./rate-limiter.js');
 require('./time_heap.js');
+
+require('./v2/frame.js');
+require('./v2/init.js');
+require('./v2/checksum.js');
+require('./v2/header.js');
+require('./v2/tracing.js');
+require('./v2/call.js');
+require('./v2/cancel.js');
+require('./v2/cont.js');
+require('./v2/claim.js');
+require('./v2/ping.js');
+require('./v2/error_response.js');
+require('./v2/args.js');
+require('./v2/lazy_frame.js');
 
 require('./hyperbahn/')(HyperbahnCluster);

@@ -20,6 +20,8 @@
 
 'use strict';
 
+var Frame = require('../../../v2/frame.js');
+
 var bufrw = require('bufrw');
 
 module.exports = TestBody;
@@ -41,7 +43,6 @@ TestBody.RW = bufrw.Struct(TestBody, {
 
 TestBody.testWith = function testWidTestBody(desc, t) {
     var test = require('tape');
-    var Frame = require('../../v2/frame.js');
     test(desc, function s(assert) {
         Frame.Types[TestBody.TypeCode] = TestBody;
         assert.once('end', function removeTestBody() {
