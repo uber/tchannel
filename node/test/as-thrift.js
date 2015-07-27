@@ -248,7 +248,7 @@ allocCluster.test('getting a BadRequest frame', {
         assert.equal(err.isErrorFrame, true);
         assert.equal(err.codeName, 'BadRequest');
         assert.equal(err.message,
-            'tchannel-thrift-handler.parse-error.head-failed: Could not ' +
+            'tchannel.thrift-handler.parse-error.head-failed: Could not ' +
                 'parse head (arg2) argument.\n' +
                 'Expected Thrift encoded arg2 for endpoint Chamber::echo.\n' +
                 'Got junk heade instead of Thrift.\n' +
@@ -356,7 +356,7 @@ allocCluster.test('send without required fields', {
         assert.equal(err.isErrorFrame, true);
         assert.equal(err.codeName, 'BadRequest');
         assert.equal(err.message,
-            'tchannel-thrift-handler.parse-error.body-failed: ' +
+            'tchannel.thrift-handler.parse-error.body-failed: ' +
                 'Could not parse body (arg3) argument.\n' +
                 'Expected Thrift encoded arg3 for endpoint Chamber::echo.\n' +
                 'Got \u000b\u0000\u0000\u0000\u0000\u0000\u0003lol ' +
