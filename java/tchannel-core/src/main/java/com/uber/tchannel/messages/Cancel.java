@@ -25,14 +25,26 @@ import com.uber.tchannel.tracing.Trace;
 
 public class Cancel extends AbstractMessage {
 
-    public final long ttl;
-    public final Trace tracing;
-    public final String why;
+    private final long ttl;
+    private final Trace tracing;
+    private final String message;
 
-    public Cancel(long id, long ttl, Trace tracing, String why) {
+    public Cancel(long id, long ttl, Trace tracing, String message) {
         super(id, MessageType.Cancel);
         this.ttl = ttl;
         this.tracing = tracing;
-        this.why = why;
+        this.message = message;
+    }
+
+    public long getTtl() {
+        return ttl;
+    }
+
+    public Trace getTracing() {
+        return tracing;
+    }
+
+    public String getMessage() {
+        return message;
     }
 }

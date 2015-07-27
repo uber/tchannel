@@ -27,15 +27,27 @@ import java.util.Optional;
 
 public class ErrorMessage extends AbstractMessage {
 
-    public final ErrorType type;
-    public final Trace tracing;
-    public final String message;
+    private final ErrorType type;
+    private final Trace tracing;
+    private final String message;
 
     public ErrorMessage(long id, ErrorType type, Trace tracing, String message) {
         super(id, MessageType.Error);
         this.type = type;
         this.tracing = tracing;
         this.message = message;
+    }
+
+    public ErrorType getType() {
+        return type;
+    }
+
+    public Trace getTracing() {
+        return tracing;
+    }
+
+    public String getMessage() {
+        return message;
     }
 
     @Override

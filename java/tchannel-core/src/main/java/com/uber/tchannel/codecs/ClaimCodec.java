@@ -36,10 +36,10 @@ public class ClaimCodec extends MessageToMessageCodec<TFrame, Claim> {
         ByteBuf buffer = ctx.alloc().buffer(Trace.TRACING_HEADER_LENGTH + Integer.BYTES); // Tracing + TTL
 
         // ttl: 4
-        buffer.writeInt((int) msg.ttl);
+        buffer.writeInt((int) msg.getTtl());
 
         // tracing: 25
-        CodecUtils.encodeTrace(msg.tracing, buffer);
+        CodecUtils.encodeTrace(msg.getTracing(), buffer);
 
         out.add(new TFrame(buffer.writerIndex(), msg.getMessageType(), msg.getId(), buffer));
     }

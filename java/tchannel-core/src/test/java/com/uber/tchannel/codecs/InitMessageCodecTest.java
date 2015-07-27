@@ -50,9 +50,9 @@ public class InitMessageCodecTest {
         InitRequest newInitReq = channel.readInbound();
         assertEquals(newInitReq.getMessageType(), initReq.getMessageType());
         assertEquals(newInitReq.getId(), initReq.getId());
-        assertEquals(newInitReq.version, initReq.version);
-        assertEquals(newInitReq.hostPort, initReq.hostPort);
-        assertEquals(newInitReq.processName, initReq.processName);
+        assertEquals(newInitReq.getVersion(), initReq.getVersion());
+        assertEquals(newInitReq.getHostPort(), initReq.getHostPort());
+        assertEquals(newInitReq.getProcessName(), initReq.getProcessName());
 
     }
 
@@ -73,9 +73,9 @@ public class InitMessageCodecTest {
         InitResponse newInitResponse = channel.readInbound();
         assertEquals(newInitResponse.getMessageType(), initResponse.getMessageType());
         assertEquals(newInitResponse.getId(), initResponse.getId());
-        assertEquals(newInitResponse.version, initResponse.version);
-        assertEquals(newInitResponse.hostPort, initResponse.hostPort);
-        assertEquals(newInitResponse.processName, initResponse.processName);
+        assertEquals(newInitResponse.getVersion(), initResponse.getVersion());
+        assertEquals(newInitResponse.getHostPort(), initResponse.getHostPort());
+        assertEquals(newInitResponse.getProcessName(), initResponse.getProcessName());
 
     }
 

@@ -31,12 +31,8 @@ public class PingClientHandler extends ChannelHandlerAdapter {
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-//        InitRequest initRequest = new InitRequest(42, InitRequest.DEFAULT_VERSION, "0.0.0.0:0", "test-process");
-//        ChannelFuture f = ctx.writeAndFlush(initRequest);
-//        f.addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
-
-        PingRequest pingRequest = new PingRequest(99);
-        ChannelFuture f = ctx.writeAndFlush(pingRequest);
+        InitRequest initRequest = new InitRequest(42, InitRequest.DEFAULT_VERSION, "0.0.0.0:0", "test-process");
+        ChannelFuture f = ctx.writeAndFlush(initRequest);
         f.addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
     }
 
@@ -70,6 +66,7 @@ public class PingClientHandler extends ChannelHandlerAdapter {
                 break;
             default:
                 System.err.println(String.format("Unexpected Message: %s", message));
+                ctx.close();
                 break;
         }
 

@@ -37,9 +37,9 @@ public class CancelCodec extends MessageToMessageCodec<TFrame, Cancel> {
     protected void encode(ChannelHandlerContext ctx, Cancel msg, List<Object> out) throws Exception {
 
         ByteBuf buffer = ctx.alloc().heapBuffer();
-        buffer.writeInt((int) msg.ttl);
-        CodecUtils.encodeTrace(msg.tracing, buffer);
-        CodecUtils.encodeString(msg.why, buffer);
+        buffer.writeInt((int) msg.getTtl());
+        CodecUtils.encodeTrace(msg.getTracing(), buffer);
+        CodecUtils.encodeString(msg.getMessage(), buffer);
         TFrame frame = new TFrame(buffer.writerIndex(), MessageType.Cancel, msg.getId(), buffer);
         out.add(frame);
 

@@ -21,9 +21,11 @@
  */
 package com.uber.tchannel.messages;
 
+import io.netty.buffer.ByteBuf;
+
 public class CallResponseContinue extends AbstractCallMessage {
     public CallResponseContinue(long id, MessageType messageType, byte flags, byte checksumType, int checksum,
-                                byte[] arg1, byte[] arg2, byte[] arg3) {
+                                ByteBuf arg1, ByteBuf arg2, ByteBuf arg3) {
         super(id, messageType, flags, checksumType, checksum, arg1, arg2, arg3);
     }
 }

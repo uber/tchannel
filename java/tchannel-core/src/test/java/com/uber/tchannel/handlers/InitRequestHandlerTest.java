@@ -58,8 +58,8 @@ public class InitRequestHandlerTest {
         // Assert
         assertNotNull(initResponse);
         assertEquals(initRequest.getId(), initResponse.getId());
-        assertEquals(initRequest.version, initResponse.version);
-        assertEquals(initRequest.hostPort, initResponse.hostPort);
+        assertEquals(initRequest.getVersion(), initResponse.getVersion());
+        assertEquals(initRequest.getHostPort(), initResponse.getHostPort());
 
         // Assert Pipeline is empty
         assertEquals(channel.pipeline().names().size(), 2);
@@ -69,8 +69,8 @@ public class InitRequestHandlerTest {
         channel.writeOutbound(channel.readInbound());
         InitRequest sameInitRequest = channel.readOutbound();
         assertEquals(initRequest.getId(), sameInitRequest.getId());
-        assertEquals(initRequest.version, sameInitRequest.version);
-        assertEquals(initRequest.hostPort, sameInitRequest.hostPort);
+        assertEquals(initRequest.getVersion(), sameInitRequest.getVersion());
+        assertEquals(initRequest.getHostPort(), sameInitRequest.getHostPort());
 
     }
 
@@ -93,8 +93,8 @@ public class InitRequestHandlerTest {
         // Assert
         assertNotNull(initResponse);
         assertEquals(initRequest.getId(), initResponse.getId());
-        assertEquals(initRequest.version, initResponse.version);
-        assertEquals(initRequest.hostPort, initResponse.hostPort);
+        assertEquals(initRequest.getVersion(), initResponse.getVersion());
+        assertEquals(initRequest.getHostPort(), initResponse.getHostPort());
 
     }
 
@@ -109,7 +109,7 @@ public class InitRequestHandlerTest {
         CallRequest callRequest = Fixtures.callRequestWithId(0);
         channel.writeInbound(callRequest);
         ErrorMessage error = channel.readOutbound();
-        assertThat(error.type, is(ErrorMessage.ErrorType.FatalProtocolError));
+        assertThat(error.getType(), is(ErrorMessage.ErrorType.FatalProtocolError));
 
         this.expectedClosedChannelException.expect(ClosedChannelException.class);
         channel.writeOutbound();

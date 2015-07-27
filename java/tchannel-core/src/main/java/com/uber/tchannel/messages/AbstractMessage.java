@@ -21,7 +21,7 @@
  */
 package com.uber.tchannel.messages;
 
-public abstract class AbstractMessage {
+public abstract class AbstractMessage implements Message {
     private final long id;
     private final MessageType messageType;
 

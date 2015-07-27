@@ -37,13 +37,13 @@ public class ErrorCodec extends MessageToMessageCodec<TFrame, ErrorMessage> {
         ByteBuf buffer = ctx.alloc().buffer();
 
         // code:1
-        buffer.writeByte(msg.type.byteValue());
+        buffer.writeByte(msg.getType().byteValue());
 
         // tracing:25
-        CodecUtils.encodeTrace(msg.tracing, buffer);
+        CodecUtils.encodeTrace(msg.getTracing(), buffer);
 
         // message~2
-        CodecUtils.encodeString(msg.message, buffer);
+        CodecUtils.encodeString(msg.getMessage(), buffer);
 
         TFrame frame = new TFrame(buffer.writerIndex(), msg.getMessageType(), msg.getId(), buffer);
         out.add(frame);

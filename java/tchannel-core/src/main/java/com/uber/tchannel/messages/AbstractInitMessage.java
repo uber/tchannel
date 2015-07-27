@@ -26,9 +26,9 @@ public abstract class AbstractInitMessage extends AbstractMessage {
     public static final String HOST_PORT_KEY = "host_port";
     public static final String PROCESS_NAME_KEY = "process_name";
 
-    public final int version;
-    public final String hostPort;
-    public final String processName;
+    private final int version;
+    private final String hostPort;
+    private final String processName;
 
     public AbstractInitMessage(long id, MessageType messageType, int version, String hostPort, String processName) {
         super(id, messageType);
@@ -47,5 +47,17 @@ public abstract class AbstractInitMessage extends AbstractMessage {
                 this.hostPort,
                 this.processName
         );
+    }
+
+    public int getVersion() {
+        return version;
+    }
+
+    public String getHostPort() {
+        return hostPort;
+    }
+
+    public String getProcessName() {
+        return processName;
     }
 }

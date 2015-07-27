@@ -25,12 +25,20 @@ import com.uber.tchannel.tracing.Trace;
 
 public class Claim extends AbstractMessage {
 
-    public final long ttl;
-    public final Trace tracing;
+    private final long ttl;
+    private final Trace tracing;
 
     public Claim(long id, long ttl, Trace tracing) {
         super(id, MessageType.Claim);
         this.ttl = ttl;
         this.tracing = tracing;
+    }
+
+    public long getTtl() {
+        return ttl;
+    }
+
+    public Trace getTracing() {
+        return tracing;
     }
 }

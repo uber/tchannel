@@ -43,12 +43,12 @@ public class InitMessageCodec extends MessageToMessageCodec<TFrame, AbstractInit
         ByteBuf buffer = ctx.alloc().buffer();
 
         // version:2
-        buffer.writeShort(msg.version);
+        buffer.writeShort(msg.getVersion());
 
         // nh:2 (key~2 value~2){nh}
         Map<String, String> headers = new HashMap<String, String>();
-        headers.put(AbstractInitMessage.HOST_PORT_KEY, msg.hostPort);
-        headers.put(AbstractInitMessage.PROCESS_NAME_KEY, msg.processName);
+        headers.put(AbstractInitMessage.HOST_PORT_KEY, msg.getHostPort());
+        headers.put(AbstractInitMessage.PROCESS_NAME_KEY, msg.getProcessName());
         CodecUtils.encodeHeaders(headers, buffer);
 
         TFrame frame = new TFrame(buffer.writerIndex(), msg.getMessageType(), msg.getId(), buffer);

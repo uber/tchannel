@@ -19,47 +19,36 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
 package com.uber.tchannel.messages;
 
 import io.netty.buffer.ByteBuf;
 
-public abstract class AbstractCallMessage extends AbstractMessage {
+import java.util.Map;
 
-    public static final int MAX_ARG1_LENGTH = 16384;
-    public static final byte MORE_FRAGMENTS_TO_FOLLOW_MASK = (byte) 0x01;
+public class FullMessage implements Message {
 
-    private final byte flags;
-    private final byte checksumType;
-    private final int checksum; // TODO: `checksums` are optional, can be removed for possible perf. wins.. //
-    private ByteBuf arg1;
-    private ByteBuf arg2;
-    private ByteBuf arg3;
+    private final long id;
+    private final Map<String, String> headers;
+    private final ByteBuf arg1;
+    private final ByteBuf arg2;
+    private final ByteBuf arg3;
 
-    public AbstractCallMessage(long id, MessageType messageType, byte flags, byte checksumType, int checksum,
-                               ByteBuf arg1, ByteBuf arg2, ByteBuf arg3) {
-        super(id, messageType);
-        this.flags = flags;
-        this.checksumType = checksumType;
-        this.checksum = checksum;
+
+    public FullMessage(long id, Map<String, String> headers, ByteBuf arg1, ByteBuf arg2, ByteBuf arg3) {
+        this.id = id;
+        this.headers = headers;
         this.arg1 = arg1;
         this.arg2 = arg2;
         this.arg3 = arg3;
     }
 
-    public boolean moreFragmentsRemain() {
-        return ((this.flags & MORE_FRAGMENTS_TO_FOLLOW_MASK) == 1);
+    public long getId() {
+        return this.id;
     }
 
-    public byte getFlags() {
-        return flags;
-    }
-
-    public byte getChecksumType() {
-        return checksumType;
-    }
-
-    public int getChecksum() {
-        return checksum;
+    public Map<String, String> getHeaders() {
+        return headers;
     }
 
     public ByteBuf getArg1() {

@@ -47,10 +47,10 @@ public class CancelCodecTest {
         channel.writeInbound(cancel);
         Cancel newCancel = channel.readInbound();
         assertEquals(cancel.getId(), newCancel.getId());
-        assertEquals(cancel.ttl, newCancel.ttl);
-        assertTrue(newCancel.ttl > 0);
-        assertEquals(cancel.tracing.traceId, newCancel.tracing.traceId);
-        assertEquals(cancel.why, newCancel.why);
+        assertEquals(cancel.getTtl(), newCancel.getTtl());
+        assertTrue(newCancel.getTtl() > 0);
+        assertEquals(cancel.getTracing().traceId, newCancel.getTracing().traceId);
+        assertEquals(cancel.getMessage(), newCancel.getMessage());
 
     }
 

@@ -19,43 +19,29 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package com.uber.tchannel.messages;
 
-import com.uber.tchannel.tracing.Trace;
-import io.netty.buffer.ByteBuf;
+package com.uber.tchannel.fragmentation;
 
-import java.util.Map;
+public enum DefragmentationState {
+    /* Currently decoding Arg2 */
+    PROCESSING_ARG_1,
 
-public class CallRequest extends AbstractCallMessage {
+    /* Currently decoding Arg2 */
+    PROCESSING_ARG_2,
 
-    private final long ttl;
-    private final Trace tracing;
-    private final String service;
-    private final Map<String, String> headers;
+    /* Currently decoding Arg3 */
+    PROCESSING_ARG_3;
 
-    public CallRequest(long id, byte flags, long ttl, Trace tracing, String service,
-                       Map<String, String> headers, byte checksumType, int checksum,
-                       ByteBuf arg1, ByteBuf arg2, ByteBuf arg3) {
-        super(id, MessageType.CallRequest, flags, checksumType, checksum, arg1, arg2, arg3);
-        this.ttl = ttl;
-        this.service = service;
-        this.tracing = tracing;
-        this.headers = headers;
-    }
-
-    public long getTtl() {
-        return ttl;
-    }
-
-    public Trace getTracing() {
-        return tracing;
-    }
-
-    public String getService() {
-        return service;
-    }
-
-    public Map<String, String> getHeaders() {
-        return headers;
+    public static DefragmentationState nextState(DefragmentationState current) {
+        switch (current) {
+            case PROCESSING_ARG_1:
+                return PROCESSING_ARG_2;
+            case PROCESSING_ARG_2:
+                return PROCESSING_ARG_3;
+            case PROCESSING_ARG_3:
+                return PROCESSING_ARG_3;
+            default:
+                return null;
+        }
     }
 }

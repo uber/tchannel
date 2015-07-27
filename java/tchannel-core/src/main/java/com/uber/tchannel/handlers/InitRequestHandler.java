@@ -41,12 +41,12 @@ public class InitRequestHandler extends ChannelHandlerAdapter {
             case InitRequest:
                 InitRequest initRequestMessage = (InitRequest) message;
 
-                if (initRequestMessage.version == AbstractInitMessage.DEFAULT_VERSION) {
+                if (initRequestMessage.getVersion() == AbstractInitMessage.DEFAULT_VERSION) {
                     ctx.writeAndFlush(new InitResponse(
                             initRequestMessage.getId(),
                             AbstractInitMessage.DEFAULT_VERSION,
-                            initRequestMessage.hostPort,
-                            initRequestMessage.processName
+                            initRequestMessage.getHostPort(),
+                            initRequestMessage.getProcessName()
                     ));
                     ctx.pipeline().remove(this);
                 } else {
