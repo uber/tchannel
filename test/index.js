@@ -45,7 +45,6 @@ require('./as-http.js');
 require('./peer.js');
 require('./peers.js');
 require('./peer_states.js');
-require('./trace/');
 require('./streaming-resp-err.js');
 require('./double-response.js');
 require('./ping.js');
@@ -66,6 +65,10 @@ require('./ephemeral-client.js');
 require('./relay-to-dead.js');
 require('./rate-limiter.js');
 require('./time_heap.js');
+
+require('./trace/basic_server.js');
+require('./trace/server_2_requests.js');
+require('./trace/outpeer_span_handle.js');
 
 require('./v2/frame.js');
 require('./v2/init.js');
