@@ -7,7 +7,7 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/apache/thrift/lib/go/thrift",
-			"Rev": "211b82de11c3c5bb83f669a95373b3ea6601d666"
+			"Rev": "b2e90c143e266c9af9ed437a3ab0dbb229a0b722"
 		},
 		{
 			"ImportPath": "github.com/cactus/go-statsd-client/statsd",

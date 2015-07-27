@@ -48,4 +48,11 @@ func (t *readWriterTransport) Close() error {
 	return nil
 }
 
+// RemainingBytes returns the max number of bytes (same as Thrift's StreamTransport) as we
+// do not know how many bytes we have left.
+func (t *readWriterTransport) RemainingBytes() uint64 {
+	const maxSize = ^uint64(0)
+	return maxSize
+}
+
 var _ thrift.TTransport = &readWriterTransport{}
