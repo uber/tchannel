@@ -136,34 +136,6 @@ module.exports.EphemeralInitResponse = TypedError({
     processName: null
 });
 
-module.exports.HTTPReqArg2fromBufferError = WrappedError({
-    type: 'tchannel.http-handler.from-buffer-arg2.req-failed',
-    message: 'Could not read from buffer when sending request.',
-    isSerializationError: true,
-    arg2: null
-});
-
-module.exports.HTTPReqArg2toBufferError = WrappedError({
-    type: 'tchannel.http-handler.to-buffer-arg2.req-failed',
-    message: 'Could not write to buffer when sending request.',
-    isSerializationError: true,
-    head: null
-});
-
-module.exports.HTTPResArg2fromBufferError = WrappedError({
-    type: 'tchannel.http-handler.from-buffer-arg2.res-failed',
-    message: 'Could not read from buffer when sending response.',
-    isSerializationError: true,
-    arg2: null
-});
-
-module.exports.HTTPResArg2toBufferError = WrappedError({
-    type: 'tchannel.http-handler.to-buffer-arg2.res-failed',
-    message: 'Could not write to buffer when sending response.',
-    isSerializationError: true,
-    head: null
-});
-
 module.exports.InvalidArgumentError = TypedError({
     type: 'tchannel.invalid-argument',
     message: 'invalid argument, expected array or null',
@@ -207,7 +179,7 @@ module.exports.InvalidHeaderTypeError = TypedError({
 });
 
 module.exports.InvalidJSONBody = TypedError({
-    type: 'tchannel.json-handler.invalid-body',
+    type: 'tchannel-handler.json.invalid-body',
     message: 'Invalid error body, expected a typed-error',
     isSerializationError: true,
     head: null,
@@ -221,7 +193,7 @@ module.exports.InvalidTTL = TypedError({
 });
 
 module.exports.JSONBodyParserError = WrappedError({
-    type: 'tchannel.json-handler.parse-error.body-failed',
+    type: 'tchannel-json-handler.parse-error.body-failed',
     message: 'Could not parse body (arg3) argument.\n' +
         'Expected JSON encoded arg3 for endpoint {endpoint}.\n' +
         'Got {bodyStr} instead of JSON.',
@@ -232,7 +204,7 @@ module.exports.JSONBodyParserError = WrappedError({
 });
 
 module.exports.JSONBodyStringifyError = WrappedError({
-    type: 'tchannel.json-handler.stringify-error.body-failed',
+    type: 'tchannel-json-handler.stringify-error.body-failed',
     message: 'Could not stringify body (res2) argument.\n' +
         'Expected JSON serializable res2 for endpoint {endpoint}.',
     isSerializationError: true,
@@ -242,7 +214,7 @@ module.exports.JSONBodyStringifyError = WrappedError({
 });
 
 module.exports.JSONHeadParserError = WrappedError({
-    type: 'tchannel.json-handler.parse-error.head-failed',
+    type: 'tchannel-json-handler.parse-error.head-failed',
     message: 'Could not parse head (arg2) argument.\n' +
         'Expected JSON encoded arg2 for endpoint {endpoint}.\n' +
         'Got {headStr} instead of JSON.',
@@ -253,7 +225,7 @@ module.exports.JSONHeadParserError = WrappedError({
 });
 
 module.exports.JSONHeadStringifyError = WrappedError({
-    type: 'tchannel.json-handler.stringify-error.head-failed',
+    type: 'tchannel-json-handler.stringify-error.head-failed',
     message: 'Could not stringify head (res1) argument.\n' +
         'Expected JSON serializable res1 for endpoint {endpoint}.',
     isSerializationError: true,
@@ -447,7 +419,7 @@ module.exports.TChannelWriteProtocolError = WrappedError({
 });
 
 module.exports.ThriftBodyParserError = WrappedError({
-    type: 'tchannel.thrift-handler.parse-error.body-failed',
+    type: 'tchannel-thrift-handler.parse-error.body-failed',
     message: 'Could not parse body (arg3) argument.\n' +
         'Expected Thrift encoded arg3 for endpoint {endpoint}.\n' +
         'Got {bodyBuf} instead of Thrift.\n' +
@@ -460,7 +432,7 @@ module.exports.ThriftBodyParserError = WrappedError({
 });
 
 module.exports.ThriftBodyStringifyError = WrappedError({
-    type: 'tchannel.thrift-handler.stringify-error.body-failed',
+    type: 'tchannel-thrift-handler.stringify-error.body-failed',
     message: 'Could not stringify body (res2) argument.\n' +
         'Expected Thrift serializable res2 for endpoint {endpoint}.',
     isSerializationError: true,
@@ -471,7 +443,7 @@ module.exports.ThriftBodyStringifyError = WrappedError({
 });
 
 module.exports.ThriftHeadParserError = WrappedError({
-    type: 'tchannel.thrift-handler.parse-error.head-failed',
+    type: 'tchannel-thrift-handler.parse-error.head-failed',
     message: 'Could not parse head (arg2) argument.\n' +
         'Expected Thrift encoded arg2 for endpoint {endpoint}.\n' +
         'Got {headBuf} instead of Thrift.\n' +
@@ -484,7 +456,7 @@ module.exports.ThriftHeadParserError = WrappedError({
 });
 
 module.exports.ThriftHeadStringifyError = WrappedError({
-    type: 'tchannel.thrift-handler.stringify-error.head-failed',
+    type: 'tchannel-thrift-handler.stringify-error.head-failed',
     message: 'Could not stringify head (res1) argument.\n' +
         'Expected Thrift serializable res1 for endpoint {endpoint}.',
     isSerializationError: true,
@@ -550,15 +522,13 @@ module.exports.classify = function classify(err) {
         case 'tchannel.connection-stale.timeout':
             return 'Timeout';
 
-        case 'tchannel.json-handler.invalid-body':
-        case 'tchannel.json-handler.parse-error.body-failed':
-        case 'tchannel.json-handler.parse-error.head-failed':
+        case 'tchannel-handler.json.invalid-body':
+        case 'tchannel-json-handler.parse-error.body-failed':
+        case 'tchannel-json-handler.parse-error.head-failed':
         case 'tchannel.request-frame-state':
         case 'tchannel.request-already-done':
-        case 'tchannel.thrift-handler.parse-error.body-failed':
-        case 'tchannel.thrift-handler.parse-error.head-failed':
-        case 'tchannel.http-handler.to-buffer-arg2.req-failed':
-        case 'tchannel.http-handler.to-buffer-arg2.res-failed':
+        case 'tchannel-thrift-handler.parse-error.body-failed':
+        case 'tchannel-thrift-handler.parse-error.head-failed':
         case 'tchannel.checksum':
         case 'tchannel.duplicate-header-key':
         case 'tchannel.null-key':
@@ -600,12 +570,10 @@ module.exports.classify = function classify(err) {
         case 'tchannel.local.reset':
             return 'NetworkError';
 
-        case 'tchannel.json-handler.stringify-error.body-failed':
-        case 'tchannel.json-handler.stringify-error.head-failed':
-        case 'tchannel.thrift-handler.stringify-error.body-failed':
-        case 'tchannel.thrift-handler.stringify-error.head-failed':
-        case 'tchannel.http-handler.from-buffer-arg2.req-failed':
-        case 'tchannel.http-handler.from-buffer-arg2.res-failed':
+        case 'tchannel-json-handler.stringify-error.body-failed':
+        case 'tchannel-json-handler.stringify-error.head-failed':
+        case 'tchannel-thrift-handler.stringify-error.body-failed':
+        case 'tchannel-thrift-handler.stringify-error.head-failed':
         case 'tchannel.response-already-done':
         case 'tchannel.response-already-started':
         case 'tchannel.response-frame-state':
