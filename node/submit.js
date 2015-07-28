@@ -54,6 +54,48 @@ function tsGen() {
     }
 }
 
+function tcall(t, reporter, traceId, parentId, service, endpoint, port) {
+    if (!parentId) parentId = zeroId();
+    var spanId = genId();
+
+    var host = {
+        ipv4: '127.0.0.1',
+        port: port,
+        serviceName: service
+    };
+
+    var t0 = t();
+    var t1 = t();
+    var t2 = t();
+    var t3 = t();
+
+    // client reporting
+    reporter.report({
+        traceid: traceId,
+        name: endpoint,
+        id: spanId,
+        parentid: parentId,
+        annotations: [
+            {host: host, value: 'cs', timestamp: t0},
+            {host: host, value: 'cr', timestamp: t3}
+        ],
+        binaryAnnotations: []
+    });
+
+    // server reporting
+    reporter.report({
+        traceid: traceId,
+        name: endpoint,
+        id: spanId,
+        parentid: parentId,
+        annotations: [
+            {host: host, value: 'sr', timestamp: t1},
+            {host: host, value: 'ss', timestamp: t2}
+        ],
+        binaryAnnotations: []
+    });
+}
+
 function main(channel) {
     var traceId = genId();
     var spanId = genId();
@@ -70,19 +112,8 @@ function main(channel) {
         serviceName: SERVICE
     };
 
-    var calc = {
-        ipv4: '127.0.0.1',
-        port: 6668,
-        serviceName: 'calc'
-    };
-
     var t = tsGen();
-    t0 = t();
-    t1 = t();
-    t2 = t();
-    t3 = t();
-    t4 = t();
-    t5 = t();
+    var t0 = t();
 
     reporter.report({
         traceid: traceId,
@@ -91,34 +122,11 @@ function main(channel) {
         parentid: zeroId(),
         annotations: [
             {host: submitjs, value: 'sr', timestamp: t0},
-            {host: submitjs, value: 'ss', timestamp: t5}
+            {host: submitjs, value: 'ss', timestamp: t0 + 1000}
         ],
         binaryAnnotations: []
     });
 
-    var calcId = genId();
-    reporter.report({
-        traceid: traceId,
-        name: '/add',
-        id: calcId,
-        parentid: spanId,
-        annotations: [
-            {host: calc, value: 'cs', timestamp: t1},
-            {host: calc, value: 'cr', timestamp: t4}
-        ],
-        binaryAnnotations: []
-    });
-
-    reporter.report({
-        traceid: traceId,
-        name: '/add',
-        id: calcId,
-        parentid: spanId,
-        annotations: [
-            {host: calc, value: 'sr', timestamp: t2},
-            {host: calc, value: 'ss', timestamp: t3}
-        ],
-        binaryAnnotations: []
-    });
+    tcall(t, reporter, traceId, spanId, 'calc', '/add', 65521);
 }
 
