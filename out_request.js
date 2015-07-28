@@ -83,7 +83,7 @@ function TChannelOutRequest(id, options) {
         self.setupTracing(options);
     }
 
-    self.peer.invalidateScore();
+    // self.peer.invalidateScore();
 }
 
 inherits(TChannelOutRequest, EventEmitter);
