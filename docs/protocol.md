@@ -623,6 +623,7 @@ name  | req | res | description
 `re`  | Y   | N   | Retry Flags
 `se`  | Y   | N   | Speculative Execution
 `fd`  | Y   | Y   | Failure Domain
+`sk`  | Y   | N   | Shard key
 
 ### Transport Header `as` -- Arg Scheme
 
@@ -700,6 +701,19 @@ likely to fail in the same way if they were to fail.
 For example some requests might have a downstream dependency on another
 service, while others might be handled entirely within the requested service.
 This is used to implement Hystrix-like "circuit breaker" behavior.
+
+### Transport Header `sk` -- Shard Key
+
+The shard key determines where this call request belongs. If you want to have
+a ring of tchannels where requests go to a particular node you can set a shard
+key header.
+
+This `sk` header is used by `ringpop` to deliver the call request to a specific
+tchannel instance.
+
+For example you may want to keep some in memory state, i.e. cache, aggregation.
+You can use read the `sk` and forward the call request to a specific process
+that has ownership for the shard key.
 
 ### A note on `host:port` header values
 
