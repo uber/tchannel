@@ -24,7 +24,7 @@ var Buffer = require('buffer').Buffer;
 var test = require('tape');
 var testRW = require('bufrw/test_rw');
 
-var TestBody = require('./test_body.js');
+var TestBody = require('./lib/test_body.js');
 var Frame = require('../../v2/frame.js');
 var LazyFrame = require('../../v2/lazy_frame.js');
 

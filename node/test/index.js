@@ -20,9 +20,7 @@
 
 'use strict';
 
-var HyperbahnCluster = require('./lib/hyperbahn-cluster.js');
-
-require('./errors');
+require('./errors.js');
 require('./event_emitter.js');
 require('./argstream.js');
 require('./circuits.js');
@@ -38,7 +36,6 @@ require('./identify.js');
 require('./max_pending.js');
 require('./tchannel.js');
 require('./regression-inOps-leak.js');
-require('./v2/index.js');
 require('./regression-listening-on-used-port.js');
 require('./as-thrift.js');
 require('./as-json.js');
@@ -46,7 +43,6 @@ require('./as-http.js');
 require('./peer.js');
 require('./peers.js');
 require('./peer_states.js');
-require('./trace/');
 require('./streaming-resp-err.js');
 require('./double-response.js');
 require('./ping.js');
@@ -67,5 +63,47 @@ require('./ephemeral-client.js');
 require('./relay-to-dead.js');
 require('./rate-limiter.js');
 require('./time_heap.js');
+require('./balance_peer_requests.js');
+require('./tcollector-reporter.js');
 
-require('./hyperbahn/')(HyperbahnCluster);
+require('./trace/basic_server.js');
+require('./trace/server_2_requests.js');
+require('./trace/outpeer_span_handle.js');
+
+require('./v2/frame.js');
+require('./v2/init.js');
+require('./v2/checksum.js');
+require('./v2/header.js');
+require('./v2/tracing.js');
+require('./v2/call.js');
+require('./v2/cancel.js');
+require('./v2/cont.js');
+require('./v2/claim.js');
+require('./v2/ping.js');
+require('./v2/error_response.js');
+require('./v2/args.js');
+require('./v2/lazy_frame.js');
+
+require('./hyperbahn/constructor.js');
+require('./hyperbahn/todo.js');
+require('./hyperbahn/sub-channel.js');
+require('./hyperbahn/kill-switch.js');
+
+module.exports = runTests;
+
+if (require.main === module) {
+    runTests(require('./lib/hyperbahn-cluster.js'));
+}
+
+function runTests(HyperbahnCluster) {
+    require('./hyperbahn/forward.js')(HyperbahnCluster);
+    require('./hyperbahn/advertise.js')(HyperbahnCluster);
+    require('./hyperbahn/unadvertise.js')(HyperbahnCluster);
+    require('./hyperbahn/forward-retry.js')(HyperbahnCluster);
+
+    require('./hyperbahn/hyperbahn-down.js')(HyperbahnCluster);
+    require('./hyperbahn/hyperbahn-times-out.js')(HyperbahnCluster);
+
+    require('./hyperbahn/rate-limiter.js')(HyperbahnCluster);
+}
+

@@ -57,7 +57,12 @@ allocCluster.test('requests are balanced evenly across peers', {
             jobs.push(function sendRequest(callback) {
                 head.request({
                     serviceName: 'tiberius',
-                    timeout: 2000
+                    timeout: 2000,
+                    hasNoParent: true,
+                    headers: {
+                        'as': 'raw',
+                        'cn': 'wat'
+                    }
                 }).send('slow', 'okay?', 'okay?', onResponse);
                 function onResponse(err, res, hostPort, result) {
                     responderCounts[hostPort] = (responderCounts[hostPort] || 0) + 1;
@@ -92,6 +97,7 @@ function setupServiceCluster(cluster) {
     cluster.tiberii.forEach(function (tiberius) {
         tiberius.register('slow', function (req, res) {
             cluster.timers.setTimeout(function delayedOk() {
+                res.headers.as = 'raw';
                 res.sendOk(tiberius.hostPort, 'dokie');
             }, 500);
         });

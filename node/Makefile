@@ -10,7 +10,7 @@ TEST_PORT=0
 TEST_LOG_FILE=test-server.log
 
 test_server:
-	node test/run_server.js --logFile ${TEST_LOG_FILE} --host ${TEST_HOST} --port ${TEST_PORT}
+	node test/lib/run_server.js --logFile ${TEST_LOG_FILE} --host ${TEST_HOST} --port ${TEST_PORT}
 
 install:
 	npm install

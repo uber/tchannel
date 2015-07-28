@@ -1,5 +1,5 @@
 // Copyright (c) 2015 Uber Technologies, Inc.
-//
+
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -20,25 +20,34 @@
 
 'use strict';
 
-require('./constructor.js');
-require('./todo.js');
-require('./sub-channel.js');
-require('./kill-switch.js');
+var Frame = require('../../../v2/frame.js');
 
-module.exports = runTests;
+var bufrw = require('bufrw');
 
-if (require.main === module) {
-    runTests(require('../lib/hyperbahn-cluster.js'));
+module.exports = TestBody;
+
+function TestBody(payload) {
+    if (!(this instanceof TestBody)) {
+        return new TestBody(payload);
+    }
+    var self = this;
+    self.type = TestBody.TypeCode;
+    self.payload = payload;
 }
 
-function runTests(HyperbahnCluster) {
-    require('./forward.js')(HyperbahnCluster);
-    require('./advertise.js')(HyperbahnCluster);
-    require('./unadvertise.js')(HyperbahnCluster);
-    require('./forward-retry.js')(HyperbahnCluster);
+TestBody.TypeCode = 0x00;
 
-    require('./hyperbahn-down.js')(HyperbahnCluster);
-    require('./hyperbahn-times-out.js')(HyperbahnCluster);
+TestBody.RW = bufrw.Struct(TestBody, {
+    payload: bufrw.buf1
+});
 
-    require('./rate-limiter.js')(HyperbahnCluster);
-}
+TestBody.testWith = function testWidTestBody(desc, t) {
+    var test = require('tape');
+    test(desc, function s(assert) {
+        Frame.Types[TestBody.TypeCode] = TestBody;
+        assert.once('end', function removeTestBody() {
+            delete Frame.Types[TestBody.TypeCode];
+        });
+        return t(assert);
+    });
+};
