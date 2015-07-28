@@ -86,7 +86,7 @@ allocCluster.test('request().send() to a pool of servers', {
     }
 });
 
-allocCluster.test.only('request().send() to a pool of servers', {
+allocCluster.test('request().send() to a pool of servers', {
     numPeers: 26
 }, function t(cluster, assert) {
     var client = cluster.channels[0];
