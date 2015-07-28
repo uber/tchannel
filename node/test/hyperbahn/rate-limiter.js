@@ -59,15 +59,13 @@ function waitFor(t) {
 function runTests(HyperbahnCluster) {
     HyperbahnCluster.test('rps counter works', {
         size: 1,
-        seedConfig: {
-            'rateLimiting': {
-                'enabled': true,
-                'rateLimiterBuckets': 2,
-                'exemptServices': [
-                    'hyperbahn',
-                    'ringpop'
-                ]
-            }
+        remoteConfig: {
+            'rateLimiting.enabled': true,
+            'rateLimiting.rateLimiterBuckets': 2,
+            'rateLimiting.exemptServices': [
+                'hyperbahn',
+                'ringpop'
+            ]
         }
     }, function t(cluster, assert) {
         var steve = cluster.remotes.steve;
@@ -111,15 +109,13 @@ function runTests(HyperbahnCluster) {
 
     HyperbahnCluster.test('rps counter works in 1.5 seconds', {
         size: 1,
-        seedConfig: {
-            'rateLimiting': {
-                'enabled': true,
-                'rateLimiterBuckets': 2,
-                'exemptServices': [
-                    'hyperbahn',
-                    'ringpop'
-                ]
-            }
+        remoteConfig: {
+            'rateLimiting.enabled': true,
+            'rateLimiting.rateLimiterBuckets': 2,
+            'rateLimiting.exemptServices': [
+                'hyperbahn',
+                'ringpop'
+            ]
         }
     }, function t(cluster, assert) {
         var steve = cluster.remotes.steve;
@@ -179,17 +175,15 @@ function runTests(HyperbahnCluster) {
     HyperbahnCluster.test('service rate limiting works', {
         size: 1,
         kValue: 2,
-        seedConfig: {
-            'rateLimiting': {
-                'enabled': true,
-                'rateLimiterBuckets': 2,
-                'exemptServices': [
-                    'hyperbahn',
-                    'ringpop'
-                ],
-                'rpsLimitForServiceName': {
-                    'steve': 2
-                }
+        remoteConfig: {
+            'rateLimiting.enabled': true,
+            'rateLimiting.rateLimiterBuckets': 2,
+            'rateLimiting.exemptServices': [
+                'hyperbahn',
+                'ringpop'
+            ],
+            'rateLimiting.rpsLimitForServiceName': {
+                'steve': 2
             }
         }
     }, function t(cluster, assert) {
@@ -241,16 +235,14 @@ function runTests(HyperbahnCluster) {
     HyperbahnCluster.test('total rate limiting works', {
         size: 5,
         kValue: 1,
-        seedConfig: {
-            'rateLimiting': {
-                'enabled': true,
-                'rateLimiterBuckets': 2,
-                'totalRpsLimit': 2,
-                'exemptServices': [
-                    'hyperbahn',
-                    'ringpop'
-                ]
-            }
+        remoteConfig: {
+            'rateLimiting.enabled': true,
+            'rateLimiting.rateLimiterBuckets': 2,
+            'rateLimiting.totalRpsLimit': 2,
+            'rateLimiting.exemptServices': [
+                'hyperbahn',
+                'ringpop'
+            ]
         }
     }, function t(cluster, assert) {
         var steve = cluster.remotes.steve;
@@ -302,17 +294,15 @@ function runTests(HyperbahnCluster) {
     HyperbahnCluster.test('service exempt works', {
         size: 1,
         kValue: 1,
-        seedConfig: {
-            'rateLimiting': {
-                'enabled': true,
-                'rateLimiterBuckets': 2,
-                'totalRpsLimit': 2,
-                'exemptServices': [
-                    'hyperbahn',
-                    'ringpop',
-                    'bob'
-                ]
-            }
+        remoteConfig: {
+            'rateLimiting.enabled': true,
+            'rateLimiting.rateLimiterBuckets': 2,
+            'rateLimiting.totalRpsLimit': 2,
+            'rateLimiting.exemptServices': [
+                'hyperbahn',
+                'ringpop',
+                'bob'
+            ]
         }
     }, function t(cluster, assert) {
         var steve = cluster.remotes.steve;
