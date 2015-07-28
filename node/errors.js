@@ -46,6 +46,26 @@ module.exports.ArgChunkOutOfOrderError = TypedError({
     got: null
 });
 
+module.exports.ArgStreamExceededFramePartsError = TypedError({
+    type: 'tchannel.argstream.exceeded-frame-parts',
+    message: 'frame parts exceeded stream arity'
+});
+
+module.exports.ArgStreamFinishedError = TypedError({
+    type: 'tchannel.argstream.finished',
+    message: 'arg stream already finished'
+});
+
+module.exports.ArgStreamUnimplementedError = TypedError({
+    type: 'tchannel.argstream.unimplemented',
+    message: 'un-streamed argument defragmentation is not implemented'
+});
+
+module.exports.ArgStreamUnknownFrameHandlingStateError = TypedError({
+    type: 'tchannel.argstream.unknown-frame-handling-state',
+    message: 'unknown frame handling state'
+});
+
 module.exports.AsHeaderRequired = TypedError({
     type: 'tchannel.handler.incoming-req-as-header-required',
     message: 'Expected incoming call {frame} to have "as" header set.',
