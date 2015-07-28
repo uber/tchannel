@@ -96,14 +96,27 @@ function main(channel) {
         binaryAnnotations: []
     });
 
+    var calcId = genId();
     reporter.report({
         traceid: traceId,
         name: '/add',
-        id: genId(),
+        id: calcId,
         parentid: spanId,
         annotations: [
-            {host: calc, value: 'sr', timestamp: t1},
-            {host: calc, value: 'ss', timestamp: t2}
+            {host: calc, value: 'cs', timestamp: t1},
+            {host: calc, value: 'cr', timestamp: t4}
+        ],
+        binaryAnnotations: []
+    });
+
+    reporter.report({
+        traceid: traceId,
+        name: '/add',
+        id: calcId,
+        parentid: spanId,
+        annotations: [
+            {host: calc, value: 'sr', timestamp: t2},
+            {host: calc, value: 'ss', timestamp: t3}
         ],
         binaryAnnotations: []
     });
