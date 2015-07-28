@@ -121,7 +121,7 @@ PeerHeap.prototype.clear = function clear() {
 PeerHeap.prototype.add = function add(peer) {
     var self = this;
 
-    var score = peer.handler.shouldRequest();
+    var score = peer.handler.getScore();
     var i = self.push(peer, score);
     var el = self.array[i];
     return el;
@@ -132,7 +132,7 @@ PeerHeap.prototype.rescore = function rescore() {
 
     for (var i = 0; i < self.array.length; i++) {
         var el = self.array[i];
-        el.score = el.peer.handler.shouldRequest();
+        el.score = el.peer.handler.getScore();
     }
     self.heapify();
 };
@@ -274,7 +274,7 @@ PeerHeapElement.prototype.rescore = function rescore(score) {
     }
 
     if (score === undefined) {
-        score = self.peer.handler.shouldRequest();
+        score = self.peer.getScore();
     }
 
     self.score = score;

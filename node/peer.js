@@ -89,7 +89,7 @@ TChannelPeer.prototype.invalidateScore = function invalidateScore() {
         return;
     }
 
-    var score = self.handler.shouldRequest();
+    var score = self.handler.getScore();
     for (var i = 0; i < self.heapElements.length; i++) {
         var el = self.heapElements[i];
         el.rescore(score);
@@ -265,7 +265,7 @@ TChannelPeer.prototype.addConnection = function addConnection(conn) {
     self._maybeInvalidateScore();
     if (!conn.remoteName) {
         // TODO: could optimize if handler had a way of saying "would a new
-        // identified connection change your QOS?"
+        // identified connection change your Tier?"
         conn.identifiedEvent.on(onIdentified);
     }
 
@@ -373,69 +373,72 @@ TChannelPeer.prototype.countOutPending = function countOutPending() {
     return pending;
 };
 
-// TODO: on connection #shouldRequest impacting event
+// TODO: on connection #getScore impacting event
 // - on identified
 
 // Called on connection change event
 TChannelPeer.prototype._maybeInvalidateScore = function _maybeInvalidateScore() {
     var self = this;
 
-    if (self.handler.getQOS() !== self.handler.lastQOS) {
+    if (self.handler.getTier() !== self.handler.lastTier) {
         self.invalidateScore();
     }
 };
 
-var QOS_UNCONNECTED = 0;
-var QOS_ONLY_INCOMING = 1;
-var QOS_FRESH_OUTGOING = 2;
-var QOS_READY_OUTGOING = 3;
+TChannelPeer.prototype.getScore = function getScore() {
+    var self = this;
+    return self.handler.getScore();
+};
+
+var TIER_UNCONNECTED = 0;
+var TIER_ONLY_INCOMING = 1;
+var TIER_FRESH_OUTGOING = 2;
+var TIER_READY_OUTGOING = 3;
 
 function PreferOutgoingHandler(peer) {
     var self = this;
 
     self.peer = peer;
-    self.lastQOS = self.getQOS();
+    self.lastTier = self.getTier();
 }
 
-PreferOutgoingHandler.prototype.getQOS = function getQOS() {
+PreferOutgoingHandler.prototype.getTier = function getTier() {
     var self = this;
 
     var inconn = self.peer.getInConnection();
     var outconn = self.peer.getIdentifiedOutConnection();
 
     if (!inconn && !outconn) {
-        return QOS_UNCONNECTED;
+        return TIER_UNCONNECTED;
     } else if (!outconn || outconn.direction !== 'out') {
-        return QOS_ONLY_INCOMING;
+        return TIER_ONLY_INCOMING;
     } else if (outconn.remoteName === null) {
-        return QOS_FRESH_OUTGOING;
+        return TIER_FRESH_OUTGOING;
     } else {
-        return QOS_READY_OUTGOING;
+        return TIER_READY_OUTGOING;
     }
 };
 
-PreferOutgoingHandler.prototype.shouldRequest = function shouldRequest() {
+PreferOutgoingHandler.prototype.getScore = function getScore() {
     var self = this;
 
     // space:
     //   [0.1, 0.4)  peers with no identified outgoing connection
     //   [0.4, 1.0)  identified outgoing connections
     var random = self.peer.outPendingWeightedRandom();
-    var qos = self.getQOS();
-    if (self.lastQOS !== qos) {
-        self.lastQOS = qos;
-    }
+    var qos = self.getTier();
+    self.lastTier = qos;
     switch (qos) {
-        case QOS_ONLY_INCOMING:
+        case TIER_ONLY_INCOMING:
             if (!self.peer.channel.destroyed) {
                 self.peer.connect();
             }
             /* falls through */
-        case QOS_UNCONNECTED:
+        case TIER_UNCONNECTED:
             /* falls through */
-        case QOS_FRESH_OUTGOING:
+        case TIER_FRESH_OUTGOING:
             return 0.1 + random * 0.3;
-        case QOS_READY_OUTGOING:
+        case TIER_READY_OUTGOING:
             return 0.4 + random * 0.6;
     }
 };
