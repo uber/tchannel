@@ -175,15 +175,12 @@ A1 receives "call res" from R1:
 
 All frames of all types use this structure:
 
-```
-----------------------------------------------
-| 0-7  | size:2 | type:1 | reserved:1 | id:4 |
-|------|-------------------------------------|
-| 8-15 | reserved:8                          |
-|------|-------------------------------------|
-| 16+  | payload - based on type             |
-----------------------------------------------
-```
+| Position | Contents                           |
+| -------- | ---------------------------------- |
+| 0-7      | `size:2  type:1  reserved:1  id:4` |
+| 8-15     | `reserved:8`                       |
+| 16+      | `payload` - based on type          |
+
 
 ### size:2
 
@@ -196,19 +193,19 @@ take care to not exceed the total frame size of 64KiB.
 
 Type of the payload.  Valid types are:
 
-code   | name              | description
--------|-------------------|------------
-`0x01` | init req          | First message on every connection must be init
-`0x02` | init res          | Remote response to init req
-`0x03` | call req          | RPC method request
-`0x04` | call res          | RPC method response
-`0x13` | call req continue | RPC request continuation fragment
-`0x14` | call res continue | RPC response continuation fragment
-`0xc0` | cancel            | Cancel an outstanding call req / forward req (no body)
-`0xc1` | claim             | Claim / cancel a redundant request
-`0xd0` | ping req          | Protocol level ping req (no body)
-`0xd1` | ping res          | Ping res (no body)
-`0xff` | error             | Protocol level error.
+| code   | name              | description
+| :----- | :---------------- | :----------
+| `0x01` | init req          | First message on every connection must be init
+| `0x02` | init res          | Remote response to init req
+| `0x03` | call req          | RPC method request
+| `0x04` | call res          | RPC method response
+| `0x13` | call req continue | RPC request continuation fragment
+| `0x14` | call res continue | RPC response continuation fragment
+| `0xc0` | cancel            | Cancel an outstanding call req / forward req (no body)
+| `0xc1` | claim             | Claim / cancel a redundant request
+| `0xd0` | ping req          | Protocol level ping req (no body)
+| `0xd1` | ping res          | Ping res (no body)
+| `0xff` | error             | Protocol level error.
 
 The framing layer is common to all payloads. It intentionally limits the frame
 size to 64KiB to allow better interleaving of frames across a shared TCP
@@ -272,10 +269,10 @@ new versions are required, this is where a common version can be negotiated.
 There are a variable number of key/value pairs. For version 2, the following
 are required:
 
-name            | format             | description
-----------------|--------------------|------------
-`host_port`    | `address:port`     | where this process can be reached
-`process_name` | *arbitrary string* | additional identifier for this instance, used for logging
+| name           | format             | description
+| :------------- | :----------------- | :----------
+| `host_port`    | `address:port`     | where this process can be reached
+| `process_name` | *arbitrary string* | additional identifier for this instance, used for logging
 
 For forward compatibility, implementations should ignore headers other than
 these listed above.
@@ -323,9 +320,9 @@ is a "call req", and all subsequent frames are "call req continue" frames.
 
 Used to control fragmentation. Valid flags:
 
-flag   | description
--------|------------
-`0x01` | more fragments follow
+| flag   | description
+| ------ | -----------
+| `0x01` | more fragments follow
 
 If the fragments flag isn't set, then this is the only/last frame for this
 message id.
@@ -391,10 +388,10 @@ Headers described below in the "Transport Headers" section.
 
 Response code:
 
-code   | name  | description
--------|-------|------------
-`0x00` | OK    | everything is great and we value your contribution.
-`0x01` | Error | application error, details are in the args.
+| code   | name  | description
+| ------ | ----- | -----------
+| `0x00` | OK    | everything is great and we value your contribution.
+| `0x01` | Error | application error, details are in the args.
 
 Non-zero code does not imply anything about whether this request should be retried.
 
@@ -512,18 +509,18 @@ specific exception data in the args.
 
 #### code:1
 
-code   | name                 | description
--------|----------------------|------------
-`0x00` | invalid              | Not a valid value for `code`. Do not use.
-`0x01` | timeout              | No nodes responded successfully within the ttl deadline.
-`0x02` | cancelled            | Request was cancelled with a cancel message.
-`0x03` | busy                 | Node is too busy, this request is safe to retry elsewhere if desired, prefer other peers for future requests where possible.
-`0x04` | declined             | Node declined request for reasons other than load, the request is safe to retry elsewhere if desired, do not change peer preferencing for future requests.
-`0x05` | unexpected error     | Request resulted in an unexpected error. The request may have been completed before the error, retry only if the request is idempotent or duplicate execution can be handled.
-`0x06` | bad request          | Request args do not match expectations, request will never be satisfied, do not retry.
-`0x07` | network error        | A network error (e.g. socket error) occurred.
-`0x08` | unhealthy            | A relay on the network declined to forward the request to an unhealthy node, do not retry.
-`0xFF` | fatal protocol error | Connection will close after this frame. message ID of this frame should be `0xFFFFFFFF`.
+| code   | name                 | description
+| ------ | -------------------- | -----------
+| `0x00` | invalid              | Not a valid value for `code`. Do not use.
+| `0x01` | timeout              | No nodes responded successfully within the ttl deadline.
+| `0x02` | cancelled            | Request was cancelled with a cancel message.
+| `0x03` | busy                 | Node is too busy, this request is safe to retry elsewhere if desired, prefer other peers for  future requests where possible.
+| `0x04` | declined             | Node declined request for reasons other than load, the request is safe to retry elsewhere if desired, do not change peer preferencing for future requests.
+| `0x05` | unexpected error     | Request resulted in an unexpected error. The request may have been completed before the error, retry only if the request is idempotent or duplicate execution can be handled.
+| `0x06` | bad request          | Request args do not match expectations, request will never be satisfied, do not retry.
+| `0x07` | network error        | A network error (e.g. socket error) occurred.
+| `0x08` | unhealthy            | A relay on the network declined to forward the request to an unhealthy node, do not retry.
+| `0xFF` | fatal protocol error | Connection will close after this frame. message ID of this frame should be `0xFFFFFFFF`.
 
 #### id:4
 
@@ -546,12 +543,12 @@ Schema:
 spanid:8 parentid:8 traceid:8 traceflags:1
 ```
 
-field        | type  | description
--------------|-------|------------
-`spanid`     | int64 | that identifies the current *span*
-`parentid`   | int64 | of the previous *span*
-`traceid`    | int64 | assigned by the original requestor
-`traceflags` | uint8 | bit flags field
+| field        | type  | description
+| ------------ | ----- | -----------
+| `spanid`     | int64 | that identifies the current *span*
+| `parentid`   | int64 | of the previous *span*
+| `traceid`    | int64 | assigned by the original requestor
+| `traceflags` | uint8 | bit flags field
 
 A *span* is a logical operation like call or forward
 
@@ -566,9 +563,9 @@ generated. If it was started from a previous request that id is moved to the
 
 Trace flags:
 
-flag   | description
--------|------------
-`0x01` | tracing enabled for this request
+| flag   | description
+| ------ | -----------
+| `0x01` | tracing enabled for this request
 
 When the enabled flag is not set, the tracing data is still required to be
 present in the frame, but the tracing data will not necessarily be sent to
@@ -614,15 +611,15 @@ Encodes exactly one key/val pair: `("cid", "hi")`.
 The following table lists the valid transport header keys and whether they are
 valid or not in a call req or res.  Following sections will elaborate on details.
 
-name  | req | res | description
-------|-----|-----|---------------
-`as`  | Y   | Y   | the Arg Scheme
-`cas` | Y   | N   | Claim At Start
-`caf` | Y   | N   | Claim At Finish
-`cn`  | Y   | N   | Caller Name
-`re`  | Y   | N   | Retry Flags
-`se`  | Y   | N   | Speculative Execution
-`fd`  | Y   | Y   | Failure Domain
+| name  | req | res | description
+| ----- | --- | --- | --------------
+| `as`  | Y   | Y   | the Arg Scheme
+| `cas` | Y   | N   | Claim At Start
+| `caf` | Y   | N   | Claim At Finish
+| `cn`  | Y   | N   | Caller Name
+| `re`  | Y   | N   | Retry Flags
+| `se`  | Y   | N   | Speculative Execution
+| `fd`  | Y   | Y   | Failure Domain
 
 ### Transport Header `as` -- Arg Scheme
 
@@ -635,12 +632,12 @@ used for interop with other systems.
 The following table describes the valid `as` values and their corresponding
 arg1, arg2, and arg3 forms:
 
-value    | arg1                  | arg2                                     | arg3
----------|-----------------------|------------------------------------------|---------------
-`thrift` | string method name    | application headers `nh:2 (k~2 v~2){nh}` | thrift payload
-`json`   | method name as string | application headers as JSON              | body as JSON
-`http`   | method + URI          | headers as JSON array                    | raw body
-`raw`    | raw bytes             | raw bytes                                | raw bytes
+| value    | arg1                  | arg2                                     | arg3
+| -------- | --------------------- | ---------------------------------------- | --------------
+| `thrift` | string method name    | application headers `nh:2 (k~2 v~2){nh}` | thrift payload
+| `json`   | method name as string | application headers as JSON              | body as JSON
+| `http`   | method + URI          | headers as JSON array                    | raw body
+| `raw`    | raw bytes             | raw bytes                                | raw bytes
 
 ### Transport Header `cas` -- Claim At Start
 
@@ -666,19 +663,21 @@ Value is name of the service making the call.
 Flags are encoded as a UTF-8 string, as are all header values. Each flag is
 represented by a single character:
 
-`n` | no retry, expose all errors immediately - cancels `c` and `t`
-`c` | retry on connection error. The specific mechanism of retry is not specified by tchannel. Actual retries are handled by the routing layer.
-`t` | retry on timeout
+| flag | meaning
+| ---- | -------
+| `n`  | no retry, expose all errors immediately - cancels `c` and `t`
+| `c`  | retry on connection error. The specific mechanism of retry is not specified by tchannel. Actual retries are handled by  the routing layer.
+| `t`  | retry on timeout
 
 Valid values for `re` are:
 
-value | description
-------|------------
-`c`   | retry on connection error; this is the default
-`t`   | retry on timeout
-`n`   | no retry
-`ct`  | retry on connection error or timeout
-`tc`  | retry on connection error or timeout
+| value | description
+| ----- | -----------
+| `c`   | retry on connection error; this is the default
+| `t`   | retry on timeout
+| `n`   | no retry
+| `ct`  | retry on connection error or timeout
+| `tc`  | retry on connection error or timeout
 
 ### Transport Header `se` -- Speculative Execution
 
@@ -755,12 +754,12 @@ This behavior changes slightly when messages are fragmented. See the
 
 ### Checksum types:
 
-`type:1` | scheme                 | value length
----------|------------------------|-------------
-`0x00`   | none                   | 0 bytes
-`0x01`   | crc-32 (adler-32)      | 4 bytes
-`0x02`   | farmhash Fingerprint32 | 4 bytes
-`0x03`   | crc-32C                | 4 bytes
+| `type:1` | scheme                 | value length
+| -------- | ---------------------- | ------------
+| `0x00`   | none                   | 0 bytes
+| `0x01`   | crc-32 (adler-32)      | 4 bytes
+| `0x02`   | farmhash Fingerprint32 | 4 bytes
+| `0x03`   | crc-32C                | 4 bytes
 
 CRC32 is intended as a checksum as defined by Adler for zlib (technically this
 isn't a CRC according to wikipedia, although it seems to be frequently confused
@@ -844,8 +843,8 @@ indicates that arg2 is finished. The 8 bytes of arg3 are read, which fall on
 the frame boundary. The receiving parser knows that arg3 is complete because
 the "more fragments remain" flag was not set.
 
-type | id | payload | state after parsing
------|----|---------|--------------------
-0x03 | 1  | flags:1=0x1, ttl:4=0x2328, tracing:24=0x1,0x2,0x3, traceflags:1=0x1, service~1=0x5"svc A", nh:1=0x1, hk~1=0x1"k", hv~1=0xA"abcdefghij", csumtype:1=0x2 csum:4=0xBEEF arg1~2=0x2<2 bytes> | sending arg1
-0x13 | 1  | flags:1=0x1, csumtype:1=0x2 csum:4=0xDEAD arg1~2=0x2<2 bytes> arg2~2=0x2<2 bytes> | sending arg2
-0x13 | 1  | flags:1=0x0, csumtype:1=0x2 csum:4=0xF00F arg2~2=0x0<0 bytes> arg3~2=0x8<8 bytes> | complete
+| type | id | payload | state after parsing
+| -----|----|---------|--------------------
+| 0x03 | 1  | flags:1=0x1, ttl:4=0x2328, tracing:24=0x1,0x2,0x3, traceflags:1=0x1, service~1=0x5"svc A", nh:1=0x1, hk~1=0x1"k", hv~1=0xA"abcdefghij", csumtype:1=0x2 csum:4=0xBEEF arg1~2=0x2<2 bytes> | sending arg1
+| 0x13 | 1  | flags:1=0x1, csumtype:1=0x2 csum:4=0xDEAD arg1~2=0x2<2 bytes> arg2~2=0x2<2 bytes> | sending arg2
+| 0x13 | 1  | flags:1=0x0, csumtype:1=0x2 csum:4=0xF00F arg2~2=0x0<0 bytes> arg3~2=0x8<8 bytes> | complete
