@@ -2,6 +2,7 @@ var TChannel = require('./');
 var TCollectorTraceReporter = require('./tcollector/reporter.js');
 var HyperbahnClient = require('./hyperbahn/');
 var async = require('async');
+var extend = require('xtend');
 
 var SERVICE = 'submitjs';
 
@@ -54,27 +55,26 @@ function tsGen() {
     }
 }
 
-function tcall(t, reporter, traceId, parentId, service, endpoint, port) {
-    if (!parentId) parentId = zeroId();
-    var spanId = genId();
+function tcall(_ctx, service, endpoint, callback) {
 
-    var host = {
-        ipv4: '127.0.0.1',
-        port: port,
-        serviceName: service
-    };
+    var ctx = extend({}, _ctx, {
+        spanId: genId(),
+        parentId: _ctx.spanId
+    });
 
-    var t0 = t();
-    var t1 = t();
-    var t2 = t();
-    var t3 = t();
+    var host = mkHost(service);
+
+    var t0 = ctx.t();
+    var t1 = ctx.t();
+    var t2 = ctx.t();
+    var t3 = ctx.t();
 
     // client reporting
-    reporter.report({
-        traceid: traceId,
+    ctx.reporter.report({
+        traceid: ctx.traceId,
         name: endpoint,
-        id: spanId,
-        parentid: parentId,
+        id: ctx.spanId,
+        parentid: ctx.parentId,
         annotations: [
             {host: host, value: 'cs', timestamp: t0},
             {host: host, value: 'cr', timestamp: t3}
@@ -83,17 +83,25 @@ function tcall(t, reporter, traceId, parentId, service, endpoint, port) {
     });
 
     // server reporting
-    reporter.report({
-        traceid: traceId,
+    ctx.reporter.report({
+        traceid: ctx.traceId,
         name: endpoint,
-        id: spanId,
-        parentid: parentId,
+        id: ctx.spanId,
+        parentid: ctx.parentId,
         annotations: [
             {host: host, value: 'sr', timestamp: t1},
             {host: host, value: 'ss', timestamp: t2}
         ],
         binaryAnnotations: []
     });
+}
+
+function mkHost(service, port) {
+    return {
+        ipv4: '127.0.0.1',
+        port: 8000 + Math.floor(Math.random() * 1000),
+        serviceName: service
+    };
 }
 
 function main(channel) {
@@ -106,14 +114,17 @@ function main(channel) {
         callerName: SERVICE
     });
 
-    var submitjs = {
-        ipv4: '127.0.0.1',
-        port: 6667,
-        serviceName: SERVICE
+    var ctx = {
+        t: tsGen(),
+        reporter: reporter,
+        traceId: traceId,
+        spanId: spanId
     };
 
-    var t = tsGen();
-    var t0 = t();
+    var t0 = ctx.t();
+    var host = mkHost('submitjs');
+
+    tcall(ctx, 'calc', '/add');
 
     reporter.report({
         traceid: traceId,
@@ -121,12 +132,10 @@ function main(channel) {
         id: spanId,
         parentid: zeroId(),
         annotations: [
-            {host: submitjs, value: 'sr', timestamp: t0},
-            {host: submitjs, value: 'ss', timestamp: t0 + 1000}
+            {host: host, value: 'sr', timestamp: t0},
+            {host: host, value: 'ss', timestamp: ctx.t()}
         ],
         binaryAnnotations: []
     });
-
-    tcall(t, reporter, traceId, spanId, 'calc', '/add', 65521);
 }
 
