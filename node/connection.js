@@ -436,7 +436,6 @@ TChannelConnection.prototype.nextFrameId = function nextFrameId() {
 
 TChannelConnection.prototype.buildOutRequest = function buildOutRequest(options) {
     var self = this;
-
     return self.handler.buildOutRequest(options);
 };
 

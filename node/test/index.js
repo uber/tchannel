@@ -42,7 +42,6 @@ require('./as-json.js');
 require('./as-http.js');
 require('./peer.js');
 require('./peers.js');
-require('./peer_states.js');
 require('./streaming-resp-err.js');
 require('./double-response.js');
 require('./ping.js');
