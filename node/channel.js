@@ -692,7 +692,6 @@ function RequestOptions(channel, opts) {
 
     self.retryCount = 0;
     self.logical = false;
-    self.peerState = null;
     self.remoteAddr = null;
     self.hostPort = null;
 }
@@ -721,17 +720,18 @@ TChannel.prototype._request = function _request(opts) {
         req = opts.peer.request(opts);
     } else if (opts.host) {
         opts.retryCount = 0;
-        req = self.peers.add(opts.host).request(opts);
+        opts.peer = self.peers.add(opts.host);
+        req = opts.peer.request(opts);
     // streaming retries not yet implemented
     } else if (opts.streamed) {
         opts.retryCount = 0;
 
-        var peer = self.peers.choosePeer();
-        if (!peer) {
+        opts.peer = self.peers.choosePeer();
+        if (!opts.peer) {
             // TODO: operational error?
             throw errors.NoPeerAvailable();
         }
-        req = peer.request(opts);
+        req = opts.peer.request(opts);
     } else {
         req = new TChannelRequest(opts);
     }
