@@ -21,9 +21,11 @@ package tchannel_test
 // THE SOFTWARE.
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strings"
 	"testing"
 	"time"
 
@@ -95,6 +97,12 @@ func streamPartialHandler(t *testing.T) HandlerFunc {
 			}
 			if err != nil {
 				onError(fmt.Errorf("arg3 Read failed: %v", err))
+				return
+			}
+
+			// Magic number to cause a failure
+			if arg3[0] == 255 {
+				response.SendSystemError(errors.New("intentional failure"))
 				return
 			}
 
@@ -171,5 +179,63 @@ func TestStreamPartialArg(t *testing.T) {
 		// Once closed, we expect the reader to return EOF
 		n, err := io.Copy(ioutil.Discard, argReader)
 		assert.Equal(t, int64(0), n, "arg2 reader expected to EOF after arg3 writer is closed")
+	}))
+}
+
+func TestStreamSendError(t *testing.T) {
+	defer testutils.SetTimeout(t, 2*time.Second)()
+	ctx, cancel := NewContext(time.Second)
+	defer cancel()
+
+	require.NoError(t, testutils.WithServer(nil, func(ch *Channel, hostPort string) {
+		ch.Register(streamPartialHandler(t), "echoStream")
+
+		call, err := ch.BeginCall(ctx, hostPort, ch.PeerInfo().ServiceName, "echoStream", nil)
+		require.NoError(t, err, "BeginCall failed")
+		require.Nil(t, NewArgWriter(call.Arg2Writer()).Write(nil))
+
+		argWriter, err := call.Arg3Writer()
+		require.NoError(t, err, "Arg3Writer failed")
+
+		// Flush arg3 to force the call to start without any arg3.
+		require.NoError(t, argWriter.Flush(), "Arg3Writer flush failed")
+
+		// Write out to the stream, and expect to get data
+		response := call.Response()
+
+		var arg2 []byte
+		require.NoError(t, NewArgReader(response.Arg2Reader()).Read(&arg2), "Arg2Reader failed")
+		require.False(t, response.ApplicationError(), "call failed")
+
+		argReader, err := response.Arg3Reader()
+		require.NoError(t, err, "Arg3Reader failed")
+
+		verifyBytes := func(n byte) {
+			_, err := argWriter.Write([]byte{n})
+			require.NoError(t, err, "arg3 write failed")
+			require.NoError(t, argWriter.Flush(), "arg3 flush failed")
+
+			arg3 := make([]byte, int(n))
+			_, err = io.ReadFull(argReader, arg3)
+			require.NoError(t, err, "arg3 read failed")
+
+			assert.Equal(t, makeRepeatedBytes(n), arg3, "arg3 result mismatch")
+		}
+
+		verifyBytes(0)
+		verifyBytes(5)
+		verifyBytes(100)
+		verifyBytes(1)
+
+		// Ask for an error!
+		_, err = argWriter.Write([]byte{byte(255)})
+		require.NoError(t, err, "arg3 write failed")
+		require.NoError(t, argWriter.Flush(), "arg3 flush")
+
+		// Now we expect an error on our next read.
+		_, err = ioutil.ReadAll(argReader)
+		assert.Error(t, err, "ReadAll should fail")
+		assert.True(t, strings.Contains(err.Error(), "intentional failure"), "err %v unexpected", err)
+		require.NoError(t, argWriter.Close(), "arg3 close failed")
 	}))
 }
