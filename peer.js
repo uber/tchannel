@@ -344,19 +344,28 @@ TChannelPeer.prototype.makeOutConnection = function makeOutConnection(socket) {
 };
 
 TChannelPeer.prototype.outPendingWeightedRandom = function outPendingWeightedRandom() {
-    // A weighted random variable:
-    //   random() ** (1 / weight)
-    // Such that the probability distribution is uniform for weights of 0, but
-    // an increasing bias with increasing weight.
-    // However, although weight should start at 0 and increase probability,
-    // the number of pending requests starts at 0 and should decrease
-    // probability as it increases.
-    // For 0 pending requests, we produce a uniform probability distribution by
-    // raising a uniform random variable to the power of 1 (pending + 1).
-    // As the number of pending requests increase, the magnitude of the power
-    // increases and the probability distribution develops a bias toward zero.
-    // TODO review weighted reservoir sampling:
-    // http://arxiv.org/pdf/1012.0256.pdf
+    // Returns a score in the range from 0 to 1, where it is preferable to use
+    // a peer with a higher score over one with a lower score.
+    // This range is divided among an infinite set of subranges corresponding
+    // to peers with the same number of pending requests.
+    // So, the range (1/2, 1) is reserved for peers with 0 pending connections.
+    // The range (1/4, 1/2) is reserved for peers with 1 pending connections.
+    // The range (1/8, 1/4) is reserved for peers with 2 pending connections.
+    // Ad nauseam.
+    // Within each equivalence class, each peer receives a uniform random
+    // value.
+    //
+    // The previous score was a weighted random variable:
+    //   random() ** (1 + pending)
+    // This had the attribute that a less loaded peer was merely more likely to
+    // be chosen over a more loaded peer.
+    // We observed with the introduction of a heap, that a less favored peer
+    // would have its score less frequently re-evaluated.
+    // An emergent behavior was that scores would, over time, be squeezed
+    // toward zero and the least favored peer would remain the least favored
+    // for ever increasing durations.
+    //
+    // This remains true with this algorithm, within each equivalence class.
     var self = this;
     var pending = self.pendingIdentified + self.countOutPending();
     var max = Math.pow(0.5, pending);
