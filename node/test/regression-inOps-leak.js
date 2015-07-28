@@ -68,23 +68,7 @@ allocCluster.test('does not leak inOps', {
 
         // Force the server to reap in operations
         setTimeout(function checkState() {
-            cluster.assertCleanState(assert, {
-                channels: [{
-                    peers: [{
-                        connections: [{
-                            direction: 'in',
-                            inReqs: 0,
-                            outReqs: 0
-                        }]
-                    }]
-                }, {
-                    peers: [{
-                        connections: [
-                            {direction: 'out', inReqs: 0, outReqs: 0}
-                        ]
-                    }]
-                }]
-            });
+            cluster.assertEmptyState(assert);
             assert.end();
         }, 150);
     }

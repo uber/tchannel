@@ -45,6 +45,7 @@ function allocCluster(opts) {
         destroy: destroy,
         ready: CountedReadySignal(opts.numPeers),
         assertCleanState: assertCleanState,
+        assertEmptyState: assertEmptyState,
         connectChannels: connectChannels,
         connectChannelToChannels: connectChannelToChannels,
         timers: opts.timers
@@ -109,6 +110,30 @@ function allocCluster(opts) {
         });
     }
 
+    function assertEmptyState(assert) {
+        assertCleanState(assert, {
+            channels: cluster.channels.map(function build(channel) {
+                var peers = channel.peers.values();
+
+                return {
+                    peers: peers.map(function b(p) {
+                        var conn = p.connections;
+
+                        return {
+                            connections: conn.map(function k(c) {
+                                return {
+                                    direction: c.direction,
+                                    inReqs: 0,
+                                    outReqs: 0
+                                };
+                            })
+                        };
+                    })
+                };
+            })
+        });
+    }
+
     function createChannel(i) {
         var chan = TChannel(extend(channelOptions));
         var port = opts.listen && opts.listen[i] || 0;
@@ -153,6 +178,7 @@ allocCluster.test = function testCluster(desc, opts, t) {
         opts.assert = assert;
         allocCluster(opts).ready(function clusterReady(cluster) {
             assert.once('end', function testEnded() {
+                cluster.assertEmptyState(assert);
                 cluster.destroy();
             });
             t(cluster, assert);

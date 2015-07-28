@@ -249,8 +249,22 @@ Operations.prototype.popInReq = function popInReq(id) {
 Operations.prototype.clear = function clear() {
     var self = this;
 
-    self.pending.in = 0;
-    self.pending.out = 0;
+    var now = self.timers.now();
+    var inReqKeys = Object.keys(self.requests.in);
+    var outReqKeys = Object.keys(self.requests.out);
+
+    for (var i = 0; i < inReqKeys.length; i++) {
+        self.popInReq(inReqKeys[i]);
+    }
+    for (var j = 0; j < outReqKeys.length; j++) {
+        self.popOutReq(outReqKeys[j]);
+
+        var tombstone = self.requests.out[outReqKeys[j]];
+        if (tombstone.timeHeapHandle) {
+            tombstone.timeHeapHandle.cancel();
+        }
+        tombstone.onTimeout(now);
+    }
 };
 
 Operations.prototype.destroy = function destroy() {

@@ -137,33 +137,7 @@ allocCluster.test('request retries', {
     function finish(err) {
         assert.ifError(err, 'no final error');
 
-        cluster.assertCleanState(assert, {
-            channels: [{
-                peers: [{
-                    connections: [
-                        {direction: 'in', inReqs: 0, outReqs: 0}
-                    ]
-                }]
-            }, {
-                peers: [{
-                    connections: [
-                        {direction: 'in', inReqs: 0, outReqs: 0}
-                    ]
-                }]
-            }, {
-                peers: [{
-                    connections: [
-                        {direction: 'in', inReqs: 0, outReqs: 0}
-                    ]
-                }]
-            }, {
-                peers: [{
-                    connections: [
-                        {direction: 'in', inReqs: 0, outReqs: 0}
-                    ]
-                }]
-            }]
-        });
+        cluster.assertEmptyState(assert);
 
         client.close();
         assert.end();
@@ -269,25 +243,7 @@ allocCluster.test('request application retries', {
     function finish(err) {
         assert.ifError(err, 'no final error');
 
-        cluster.assertCleanState(assert, {
-            channels: [{
-                peers: [{
-                    connections: [
-                        {direction: 'in', inReqs: 0, outReqs: 0}
-                    ]
-                }]
-            }, {
-                peers: [{
-                    connections: [
-                        {direction: 'in', inReqs: 0, outReqs: 0}
-                    ]
-                }]
-            }, {
-                peers: []
-            }, {
-                peers: []
-            }]
-        });
+        cluster.assertEmptyState(assert);
 
         client.close();
         assert.end();
@@ -403,21 +359,7 @@ allocCluster.test('retryFlags work', {
     function finish(err) {
         assert.ifError(err, 'no final error');
 
-        cluster.assertCleanState(assert, {
-            channels: [{
-                peers: [{
-                    connections: [
-                        {direction: 'in', inReqs: 0, outReqs: 0}
-                    ]
-                }]
-            }, {
-                peers: [{
-                    connections: [
-                        {direction: 'in', inReqs: 0, outReqs: 0}
-                    ]
-                }]
-            }]
-        });
+        cluster.assertEmptyState(assert);
 
         client.close();
         assert.end();

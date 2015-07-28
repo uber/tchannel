@@ -79,21 +79,7 @@ allocCluster.test('streaming echo w/ streaming callback', 2, function t(cluster,
         return partsTest(testCase, assert);
     }), function onResults(err) {
         assert.ifError(err, 'no errors from sending');
-        cluster.assertCleanState(assert, {
-            channels: [{
-                peers: [{
-                    connections: [
-                        {direction: 'in', inReqs: 0, outReqs: 0}
-                    ]
-                }]
-            }, {
-                peers: [{
-                    connections: [
-                        {direction: 'out', inReqs: 0, outReqs: 0}
-                    ]
-                }]
-            }]
-        });
+        cluster.assertEmptyState(assert);
         cluster.destroy(assert.end);
     });
 });

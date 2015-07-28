@@ -94,21 +94,7 @@ allocCluster.test('requests will timeout', {
     function onTimeout(err) {
         assert.equal(err && err.type, 'tchannel.request.timeout', 'expected timeout error');
         // one.peers.get(two.hostPort).connections[0].onTimeoutCheck();
-        cluster.assertCleanState(assert, {
-            channels: [{
-                peers: [{
-                    connections: [
-                        {direction: 'in', inReqs: 0, outReqs: 0}
-                    ]
-                }]
-            }, {
-                peers: [{
-                    connections: [
-                        {direction: 'out', inReqs: 0, outReqs: 0}
-                    ]
-                }]
-            }]
-        });
+        cluster.assertEmptyState(assert);
         assert.end();
     }
 
@@ -193,21 +179,7 @@ allocCluster.test('requests will timeout per attempt', {
     function onTimeout(err) {
         assert.equal(err && err.type, 'tchannel.request.timeout', 'expected timeout error');
         assert.ok(err && err.logical, 'the timeout should be from logical request');
-        cluster.assertCleanState(assert, {
-            channels: [{
-                peers: [{
-                    connections: [
-                        {direction: 'in', inReqs: 0, outReqs: 0}
-                    ]
-                }]
-            }, {
-                peers: [{
-                    connections: [
-                        {direction: 'out', inReqs: 0, outReqs: 0}
-                    ]
-                }]
-            }]
-        });
+        cluster.assertEmptyState(assert);
         assert.end();
     }
 
@@ -291,31 +263,7 @@ allocCluster.test('requests can succeed after timeout per attempt', {
         assert.equal(req.outReqs[0].err && req.outReqs[0].err.type, 'tchannel.request.timeout', 'expected timeout error');
         assert.ok(req.outReqs[0].err && req.outReqs[0].err.logical, 'the timeout should be from logical request');
 
-        cluster.assertCleanState(assert, {
-            channels: [{
-                peers: [{
-                    connections: [
-                        {direction: 'in', inReqs: 0, outReqs: 0}
-                    ]
-                }]
-            }, {
-                peers: [{
-                    connections: [
-                        {direction: 'out', inReqs: 0, outReqs: 0}
-                    ]
-                }, {
-                    connections: [
-                        {direction: 'out', inReqs: 0, outReqs: 0}
-                    ]
-                }]
-            }, {
-                peers: [{
-                    connections: [
-                        {direction: 'in', inReqs: 0, outReqs: 0}
-                    ]
-                }]
-            },]
-        });
+        cluster.assertEmptyState(assert);
         assert.end();
     }
 
