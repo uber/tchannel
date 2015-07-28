@@ -164,6 +164,11 @@ TChannelPeer.prototype.getOutConnection = function getOutConnection(preferIdenti
     return candidate;
 };
 
+TChannelPeer.prototype.getIdentifiedOutConnection = function getIdentifiedOutConnection() {
+    var self = this;
+    return self.getOutConnection(true);
+};
+
 TChannelPeer.prototype.countConnections = function countConnections(direction) {
     var self = this;
     if (!direction) {
@@ -183,7 +188,7 @@ TChannelPeer.prototype.countConnections = function countConnections(direction) {
 
 TChannelPeer.prototype.connect = function connect(outOnly) {
     var self = this;
-    var conn = self.getOutConnection(true);
+    var conn = self.getIdentifiedOutConnection();
     if (!conn || (outOnly && conn.direction !== 'out')) {
         var socket = self.makeOutSocket();
         conn = self.makeOutConnection(socket);
@@ -396,7 +401,7 @@ PreferOutgoingHandler.prototype.getQOS = function getQOS() {
     var self = this;
 
     var inconn = self.peer.getInConnection();
-    var outconn = self.peer.getOutConnection(true);
+    var outconn = self.peer.getIdentifiedOutConnection();
 
     if (!inconn && !outconn) {
         return QOS_UNCONNECTED;
