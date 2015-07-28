@@ -124,7 +124,7 @@ TChannelSubPeers.prototype.chooseLinearPeer = function chooseLinearPeer(req) {
         var hostPort = hosts[i];
         var peer = self._map[hostPort];
         if (!req || !req.triedRemoteAddrs || !req.triedRemoteAddrs[hostPort]) {
-            var score = peer.handler.shouldRequest(req);
+            var score = peer.handler.getScore(req);
             var want = score > threshold &&
                        (selectedPeer === null || score > selectedScore);
             if (want) {
