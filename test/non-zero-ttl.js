@@ -45,8 +45,8 @@ allocCluster.test('request() with zero timeout', {
         // fff magic test
         var req = conn.buildOutRequest({
             channel: conn.channel,
+            peer: peer,
             remoteAddr: conn.remoteName,
-            peerState: peer.state,
             timeout: 0,
             tracer: conn.tracer,
             serviceName: 'server',
@@ -108,8 +108,8 @@ allocCluster.test('request() with zero timeout', {
 
         var req = conn.buildOutRequest({
             channel: conn.channel,
+            peer: peer,
             remoteAddr: conn.remoteName,
-            peerState: peer.state,
             timeout: -10,
             tracer: conn.tracer,
             serviceName: 'server',

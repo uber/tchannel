@@ -23,12 +23,10 @@
 var assert = require('assert');
 var inherits = require('util').inherits;
 var EventEmitter = require('./lib/event_emitter');
-var StateMachine = require('./state_machine');
 var net = require('net');
 
 var TChannelConnection = require('./connection');
 var errors = require('./errors');
-var states = require('./states');
 var Request = require('./request');
 
 var DEFAULT_REPORT_INTERVAL = 1000;
@@ -39,7 +37,6 @@ function TChannelPeer(channel, hostPort, options) {
     }
     var self = this;
     EventEmitter.call(self);
-    StateMachine.call(self);
 
     self.stateChangedEvent = self.defineEvent('stateChanged');
     self.allocConnectionEvent = self.defineEvent('allocConnection');
@@ -55,24 +52,7 @@ function TChannelPeer(channel, hostPort, options) {
     self.connections = [];
     self.pendingIdentified = 0;
     self.heapElements = [];
-
-    self.stateOptions = new states.StateOptions(self, {
-        timeHeap: self.channel.timeHeap,
-        timers: self.timers,
-        random: self.random,
-        period: self.options.period,
-        maxErrorRate: self.options.maxErrorRate,
-        minimumRequests: self.options.minimumRequests,
-        probation: self.options.probation,
-        nextHandler: new PreferOutgoingHandler(self)
-    });
-
-    if (self.options.initialState) {
-        self.setState(self.options.initialState);
-        delete self.options.initialState;
-    } else {
-        self.setState(states.HealthyState);
-    }
+    self.handler = new PreferOutgoingHandler(self);
 
     self.reportInterval = self.options.reportInterval || DEFAULT_REPORT_INTERVAL;
     if (self.reportInterval > 0 && self.channel.emitConnectionMetrics) {
@@ -109,7 +89,7 @@ TChannelPeer.prototype.invalidateScore = function invalidateScore() {
         return;
     }
 
-    var score = self.state.shouldRequest();
+    var score = self.handler.shouldRequest();
     for (var i = 0; i < self.heapElements.length; i++) {
         var el = self.heapElements[i];
         el.rescore(score);
@@ -148,7 +128,7 @@ TChannelPeer.prototype.close = function close(callback) {
             conn.close(onClose);
         });
     } else {
-        self.state.close(callback);
+        callback(null);
     }
     function onClose() {
         if (--counter <= 0) {
@@ -157,30 +137,8 @@ TChannelPeer.prototype.close = function close(callback) {
                     counter: counter
                 });
             }
-            self.state.close(callback);
+            callback(null);
         }
-    }
-};
-
-TChannelPeer.prototype.setState = function setState(StateType) {
-    var self = this;
-
-    var currState = self.state;
-
-    if (StateMachine.prototype.setState.call(self, StateType)) {
-        var newState = self.state;
-
-        if (currState && currState.healthy && !newState.healthy) {
-            self.logger.warn('peer transitioning to unhealthy state', {
-                hostPort: self.hostPort
-            });
-        } else if (currState && !currState.healthy && newState.healthy) {
-            self.logger.info('peer transitioning to healthy state', {
-                hostPort: self.hostPort
-            });
-        }
-
-        self.invalidateScore();
     }
 };
 
@@ -283,8 +241,6 @@ function _waitForIdentified(conn, callback) {
 
 TChannelPeer.prototype.request = function peerRequest(options) {
     var self = this;
-
-    options.peerState = self.state;
     options.timeout = options.timeout || Request.defaultTimeout;
     return self.connect().request(options);
 };
@@ -303,7 +259,7 @@ TChannelPeer.prototype.addConnection = function addConnection(conn) {
 
     self._maybeInvalidateScore();
     if (!conn.remoteName) {
-        // TODO: could optimize if nextHandler had a way of saying "would a new
+        // TODO: could optimize if handler had a way of saying "would a new
         // identified connection change your QOS?"
         conn.identifiedEvent.on(onIdentified);
     }
@@ -419,16 +375,9 @@ TChannelPeer.prototype.countOutPending = function countOutPending() {
 TChannelPeer.prototype._maybeInvalidateScore = function _maybeInvalidateScore() {
     var self = this;
 
-    if (!self.state.willCallNextHandler()) {
-        return;
+    if (self.handler.getQOS() !== self.handler.lastQOS) {
+        self.invalidateScore();
     }
-
-    var nextHandler = self.state.nextHandler;
-    if (nextHandler.getQOS() === nextHandler.lastQOS) {
-        return;
-    }
-
-    self.invalidateScore();
 };
 
 var QOS_UNCONNECTED = 0;
@@ -460,7 +409,6 @@ PreferOutgoingHandler.prototype.getQOS = function getQOS() {
     }
 };
 
-// Consulted depending on the peer state
 PreferOutgoingHandler.prototype.shouldRequest = function shouldRequest() {
     var self = this;
 
