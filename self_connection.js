@@ -39,6 +39,8 @@ function TChannelSelfConnection(channel) {
 
     // populate the remoteName as self
     self.remoteName = channel.hostPort;
+
+    self.peer = channel.peers.getSelfPeer();
 }
 inherits(TChannelSelfConnection, TChannelConnectionBase);
 
@@ -46,6 +48,7 @@ TChannelSelfConnection.prototype.buildOutRequest = function buildOutRequest(opti
     var self = this;
     var id = self.idCount++;
 
+    options.peer = self.peer;
     options.hostPort = self.channel.hostPort;
 
     var outreq;
