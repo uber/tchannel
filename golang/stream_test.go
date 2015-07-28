@@ -37,6 +37,8 @@ import (
 	"golang.org/x/net/context"
 )
 
+const streamRequestError = byte(255)
+
 func makeRepeatedBytes(n byte) []byte {
 	data := make([]byte, int(n))
 	for i := byte(0); i < n; i++ {
@@ -101,7 +103,7 @@ func streamPartialHandler(t *testing.T) HandlerFunc {
 			}
 
 			// Magic number to cause a failure
-			if arg3[0] == 255 {
+			if arg3[0] == streamRequestError {
 				response.SendSystemError(errors.New("intentional failure"))
 				return
 			}
@@ -129,7 +131,7 @@ func streamPartialHandler(t *testing.T) HandlerFunc {
 	}
 }
 
-func TestStreamPartialArg(t *testing.T) {
+func testStreamArg(t *testing.T, f func(argWriter ArgWriter, argReader io.ReadCloser)) {
 	defer testutils.SetTimeout(t, 2*time.Second)()
 	ctx, cancel := NewContext(time.Second)
 	defer cancel()
@@ -174,61 +176,25 @@ func TestStreamPartialArg(t *testing.T) {
 		verifyBytes(100)
 		verifyBytes(1)
 
+		f(argWriter, argReader)
+	}))
+}
+
+func TestStreamPartialArg(t *testing.T) {
+	testStreamArg(t, func(argWriter ArgWriter, argReader io.ReadCloser) {
 		require.NoError(t, argWriter.Close(), "arg3 close failed")
 
 		// Once closed, we expect the reader to return EOF
 		n, err := io.Copy(ioutil.Discard, argReader)
 		assert.Equal(t, int64(0), n, "arg2 reader expected to EOF after arg3 writer is closed")
-	}))
+		assert.NoError(t, err, "Copy should not fail")
+	})
 }
 
 func TestStreamSendError(t *testing.T) {
-	defer testutils.SetTimeout(t, 2*time.Second)()
-	ctx, cancel := NewContext(time.Second)
-	defer cancel()
-
-	require.NoError(t, testutils.WithServer(nil, func(ch *Channel, hostPort string) {
-		ch.Register(streamPartialHandler(t), "echoStream")
-
-		call, err := ch.BeginCall(ctx, hostPort, ch.PeerInfo().ServiceName, "echoStream", nil)
-		require.NoError(t, err, "BeginCall failed")
-		require.Nil(t, NewArgWriter(call.Arg2Writer()).Write(nil))
-
-		argWriter, err := call.Arg3Writer()
-		require.NoError(t, err, "Arg3Writer failed")
-
-		// Flush arg3 to force the call to start without any arg3.
-		require.NoError(t, argWriter.Flush(), "Arg3Writer flush failed")
-
-		// Write out to the stream, and expect to get data
-		response := call.Response()
-
-		var arg2 []byte
-		require.NoError(t, NewArgReader(response.Arg2Reader()).Read(&arg2), "Arg2Reader failed")
-		require.False(t, response.ApplicationError(), "call failed")
-
-		argReader, err := response.Arg3Reader()
-		require.NoError(t, err, "Arg3Reader failed")
-
-		verifyBytes := func(n byte) {
-			_, err := argWriter.Write([]byte{n})
-			require.NoError(t, err, "arg3 write failed")
-			require.NoError(t, argWriter.Flush(), "arg3 flush failed")
-
-			arg3 := make([]byte, int(n))
-			_, err = io.ReadFull(argReader, arg3)
-			require.NoError(t, err, "arg3 read failed")
-
-			assert.Equal(t, makeRepeatedBytes(n), arg3, "arg3 result mismatch")
-		}
-
-		verifyBytes(0)
-		verifyBytes(5)
-		verifyBytes(100)
-		verifyBytes(1)
-
-		// Ask for an error!
-		_, err = argWriter.Write([]byte{byte(255)})
+	testStreamArg(t, func(argWriter ArgWriter, argReader io.ReadCloser) {
+		// Send the magic number to request an error.
+		_, err := argWriter.Write([]byte{streamRequestError})
 		require.NoError(t, err, "arg3 write failed")
 		require.NoError(t, argWriter.Flush(), "arg3 flush")
 
@@ -237,5 +203,5 @@ func TestStreamSendError(t *testing.T) {
 		assert.Error(t, err, "ReadAll should fail")
 		assert.True(t, strings.Contains(err.Error(), "intentional failure"), "err %v unexpected", err)
 		require.NoError(t, argWriter.Close(), "arg3 close failed")
-	}))
+	})
 }
