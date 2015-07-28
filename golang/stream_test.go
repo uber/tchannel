@@ -21,9 +21,11 @@ package tchannel_test
 // THE SOFTWARE.
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strings"
 	"testing"
 	"time"
 
@@ -34,6 +36,8 @@ import (
 	"github.com/uber/tchannel/golang/testutils"
 	"golang.org/x/net/context"
 )
+
+const streamRequestError = byte(255)
 
 func makeRepeatedBytes(n byte) []byte {
 	data := make([]byte, int(n))
@@ -98,6 +102,12 @@ func streamPartialHandler(t *testing.T) HandlerFunc {
 				return
 			}
 
+			// Magic number to cause a failure
+			if arg3[0] == streamRequestError {
+				response.SendSystemError(errors.New("intentional failure"))
+				return
+			}
+
 			// Write the number of bytes as specified by arg3[0]
 			if _, err := argWriter.Write(makeRepeatedBytes(arg3[0])); err != nil {
 				onError(fmt.Errorf("argWriter Write failed: %v", err))
@@ -121,7 +131,7 @@ func streamPartialHandler(t *testing.T) HandlerFunc {
 	}
 }
 
-func TestStreamPartialArg(t *testing.T) {
+func testStreamArg(t *testing.T, f func(argWriter ArgWriter, argReader io.ReadCloser)) {
 	defer testutils.SetTimeout(t, 2*time.Second)()
 	ctx, cancel := NewContext(time.Second)
 	defer cancel()
@@ -166,10 +176,32 @@ func TestStreamPartialArg(t *testing.T) {
 		verifyBytes(100)
 		verifyBytes(1)
 
+		f(argWriter, argReader)
+	}))
+}
+
+func TestStreamPartialArg(t *testing.T) {
+	testStreamArg(t, func(argWriter ArgWriter, argReader io.ReadCloser) {
 		require.NoError(t, argWriter.Close(), "arg3 close failed")
 
 		// Once closed, we expect the reader to return EOF
 		n, err := io.Copy(ioutil.Discard, argReader)
 		assert.Equal(t, int64(0), n, "arg2 reader expected to EOF after arg3 writer is closed")
-	}))
+		assert.NoError(t, err, "Copy should not fail")
+	})
+}
+
+func TestStreamSendError(t *testing.T) {
+	testStreamArg(t, func(argWriter ArgWriter, argReader io.ReadCloser) {
+		// Send the magic number to request an error.
+		_, err := argWriter.Write([]byte{streamRequestError})
+		require.NoError(t, err, "arg3 write failed")
+		require.NoError(t, argWriter.Flush(), "arg3 flush")
+
+		// Now we expect an error on our next read.
+		_, err = ioutil.ReadAll(argReader)
+		assert.Error(t, err, "ReadAll should fail")
+		assert.True(t, strings.Contains(err.Error(), "intentional failure"), "err %v unexpected", err)
+		require.NoError(t, argWriter.Close(), "arg3 close failed")
+	})
 }
