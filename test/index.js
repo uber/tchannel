@@ -64,6 +64,7 @@ require('./rate-limiter.js');
 require('./time_heap.js');
 require('./balance_peer_requests.js');
 require('./tcollector-reporter.js');
+require('./pool-of-servers.js');
 
 require('./trace/basic_server.js');
 require('./trace/server_2_requests.js');

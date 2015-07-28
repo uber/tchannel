@@ -84,8 +84,9 @@ function connBaseRequest(options) {
     // options.checksumType = options.checksum;
 
     var req = self.buildOutRequest(options);
-
-    return self.ops.addOutReq(req);
+    self.ops.addOutReq(req);
+    req.peer.invalidateScore();
+    return req;
 };
 
 TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(req) {
