@@ -68,7 +68,7 @@ allocCluster.test('peer should use the identified connection', {
             'should use the identified connection'
         );
 
-        assert.notEqual(conn, peer.getOutConnection(true), 'should return the identified connection');
+        assert.notEqual(conn, peer.getIdentifiedOutConnection(), 'should return the identified connection');
         assert.equals(conn, peer.getOutConnection(), 'should return the latest connection');
 
         client.close();
@@ -98,7 +98,7 @@ allocCluster.test('peer should return the latest connection when none is identif
     var conn = peer.makeOutConnection(socket);
     peer.addConnection(conn);
 
-    assert.equals(conn, peer.getOutConnection(true), 'should return the latest connection');
+    assert.equals(conn, peer.getIdentifiedOutConnection(), 'should return the latest connection');
     assert.equals(conn, peer.getOutConnection(), 'should return the latest connection');
 
     client.close();
