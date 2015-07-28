@@ -147,6 +147,7 @@ function TChannel(options) {
     self.emitConnectionMetrics =
         typeof self.options.emitConnectionMetrics === 'boolean' ?
         self.options.emitConnectionMetrics : true;
+    self.chooseHeapPeers = self.options.chooseHeapPeers || false;
 
     // Filled in by the listen call:
     self.host = null;
