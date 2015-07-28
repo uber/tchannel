@@ -34,9 +34,11 @@
 var os = require('os');
 var console = require('console');
 var fs = require('fs');
+var path = require('path');
 var CountedReadySignal = require('ready-signal/counted');
 
 var TChannel = require('../');
+var TChannelAsThrift = require('../as/thrift');
 var HyperbahnClient = require('../hyperbahn/');
 var DebugLogger = require('debug-logtron');
 
@@ -62,7 +64,13 @@ function main() {
     opts.host = getHost();
     opts.autobahnList = getAutobahnHost();
     opts.logger = DebugLogger('adhocMulti');
+    var spec = fs.readFileSync(path.join(__dirname, 'adhoc-multi.thrift'), 'utf8');
     EP_NAME = 'echo';
+    opts.asThrift = [];
+    for (var i = 0; i < rcount; i++) {
+        opts.asThrift.push(new TChannelAsThrift({source: spec.replace(EP_NAME, EP_NAME + '_' + i)}));
+    }
+
     start(opts, rcount);
 }
 
@@ -87,25 +95,26 @@ function start(opts, rcount) {
         console.log('All clients advertised.');
         var chan = createChannel(opts);
         var service = opts.serviceName + '_0';
-        chan.makeSubChannel({
+        var req = chan.makeSubChannel({
             serviceName: service,
             peers: opts.autobahnList
         }).request({
             headers: {
-                cn: opts.serviceName,
-                as: 'raw'
+                cn: opts.serviceName
             },
             hasNoParent: true,
             serviceName: service
-        }).send(
-            EP_NAME + '_0',
-            'aa2',
-            'hello',
+        });
+        opts.asThrift[0].send(
+            req,
+            'AdhocMulti::' + EP_NAME + '_0',
+            null,
+            {value: 'hello'},
             function onRes(err, res) {
                 if (err) {
                     console.log(err);
                 } else {
-                    console.log(String(res.arg3));
+                    console.log(String(res.body));
                 }
             }
         );
@@ -128,9 +137,14 @@ function createClient(options) {
     var count = options.i;
 
     console.log('advertising ' + enumerated(EP_NAME));
-    tchannel.makeSubChannel({
-        serviceName: enumerated(options.serviceName)
-    }).register(enumerated(EP_NAME), onResponse);
+    options.asThrift[count].register(
+        tchannel.makeSubChannel({
+            serviceName: enumerated(options.serviceName)
+        }),
+        enumerated('AdhocMulti::' + EP_NAME),
+        options,
+        onResponse
+    );
 
     var hyperbahnClient = new HyperbahnClient({
         tchannel: tchannel,
@@ -165,44 +179,43 @@ function createClient(options) {
         return name + '_' + index;
     }
 
-    function forwardChannel(req, res, arg2, arg3) {
+    function forwardChannel(opts, req, head, body, cb) {
         var fchan = createChannel(options);
         var service = enumerated(options.serviceName, count + 1);
 
-        fchan.makeSubChannel({
+        var req = fchan.makeSubChannel({
             serviceName: service,
             peers: options.autobahnList
         }).request({
             headers: {
-                cn: enumerated(options.serviceName, count),
-                as: 'raw'
+                cn: enumerated(options.serviceName, count)
             },
             serviceName: service,
             parent: req
-        }).send(
-            enumerated(EP_NAME, count + 1),
-            arg2,
-            arg3,
+        });
+        opts.asThrift[count + 1].send(
+            req,
+            enumerated('AdhocMulti::' + EP_NAME, count + 1),
+            null,
+            body,
             function onRet(e, r) {
                 if (e) {
                     console.log(e);
                 } else {
-                    res.headers.as = 'raw';
-                    res.sendOk(
-                        r.arg2,
-                        enumerated(options.serviceName) +
-                            ' says "' + String(r.arg3) + '"'
-                    );
+                    return cb(null, {
+                        ok: true,
+                        body: enumerated(options.serviceName) + ' says "' + String(r.body) + '"'
+                    });
                 }
             }
         );
     }
 
-    function finish(req, res, arg2, arg3) {
-        res.headers.as = 'raw';
-        res.sendOk(
-            arg2,
-            enumerated(options.serviceName) + ' says "' + String(arg3) + '"');
+    function finish(opts, req, head, body, cb) {
+        return cb(null, {
+            ok: true,
+            body: enumerated(options.serviceName) + ' says "' + String(body.value) + '"'
+        });
     }
 }
 
