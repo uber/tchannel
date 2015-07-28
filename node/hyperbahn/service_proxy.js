@@ -98,8 +98,10 @@ function handleRequest(req, buildRes) {
     /* eslint max-statements:[2,20] */
     var self = this;
     if (!req.serviceName) {
-        self.logger.error('Got incoming req with no service', {
+        self.logger.warn('Got incoming req with no service', {
             serviceName: req.serviceName,
+            callerName: req.headers.cn,
+            socketRemoteAddr: req.connection.socketRemoteAddr,
             arg1: String(req.arg1)
         });
 
