@@ -396,7 +396,7 @@ PreferOutgoingHandler.prototype.getQOS = function getQOS() {
     var self = this;
 
     var inconn = self.peer.getInConnection();
-    var outconn = self.peer.getOutConnection();
+    var outconn = self.peer.getOutConnection(true);
 
     if (!inconn && !outconn) {
         return QOS_UNCONNECTED;
