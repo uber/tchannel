@@ -6,8 +6,12 @@ var extend = require('xtend');
 
 var SERVICE = 'submitjs';
 
+function randInt(n) {
+    return Math.floor(Math.random() * n)
+}
+
 function g() {
-    return Math.floor(Math.random() * 255);
+    return randInt(255);
 }
 
 function genId() {
@@ -102,10 +106,14 @@ function tcall(_ctx, service, endpoint, callback) {
     });
 }
 
+function randIP() {
+    return [10, randInt(255), randInt(255), randInt(255)].join(".");
+}
+
 function mkHost(service) {
     return {
-        ipv4: '127.0.0.1',
-        port: 8000 + Math.floor(Math.random() * 1000),
+        ipv4: randIP(),
+        port: 8000 + randInt(1000),
         serviceName: service
     };
 }
