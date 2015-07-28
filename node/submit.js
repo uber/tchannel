@@ -45,6 +45,14 @@ rootChannel.on('listening', function () {
     });
 });
 
+function tsGen() {
+    var t = Date.now();
+    return function next() {
+        t += 10 + Math.floor(Math.random() * 150);
+        return t;
+    }
+}
+
 function main(channel) {
     var traceId = genId();
     var spanId = genId();
@@ -61,8 +69,8 @@ function main(channel) {
         serviceName: SERVICE
     };
 
-    var t0 = Date.now();
-    var t1 = t0 + 100;
+    var t = tsGen();
+
 
     reporter.report({
         traceid: traceId,
@@ -70,8 +78,8 @@ function main(channel) {
         id: spanId,
         parentid: zeroId(),
         annotations: [
-            {host: host, value: 'cs', timestamp: t0},
-            {host: host, value: 'cr', timestamp: t1}
+            {host: host, value: 'sr', timestamp: t()},
+            {host: host, value: 'ss', timestamp: t()}
         ],
         binaryAnnotations: []
     }, function (err, res) {
