@@ -359,7 +359,10 @@ TChannelPeer.prototype.outPendingWeightedRandom = function outPendingWeightedRan
     // http://arxiv.org/pdf/1012.0256.pdf
     var self = this;
     var pending = self.pendingIdentified + self.countOutPending();
-    return Math.pow(self.random(), 1 + pending);
+    var max = Math.pow(0.5, pending);
+    var min = max / 2;
+    var diff = max - min;
+    return min + diff * self.random();
 };
 
 TChannelPeer.prototype.countOutPending = function countOutPending() {
