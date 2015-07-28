@@ -183,7 +183,7 @@ function createClient(options) {
         var fchan = createChannel(options);
         var service = enumerated(options.serviceName, count + 1);
 
-        var req = fchan.makeSubChannel({
+        var request = fchan.makeSubChannel({
             serviceName: service,
             peers: options.autobahnList
         }).request({
@@ -194,7 +194,7 @@ function createClient(options) {
             parent: req
         });
         opts.asThrift[count + 1].send(
-            req,
+            request,
             enumerated('AdhocMulti::' + EP_NAME, count + 1),
             null,
             body,
