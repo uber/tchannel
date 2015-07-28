@@ -570,6 +570,7 @@ module.exports.classify = function classify(err) {
         case 'tchannel.connection-stale.timeout':
             return 'Timeout';
 
+        case 'tchannel.argstream.exceeded-frame-parts':
         case 'tchannel-handler.json.invalid-body':
         case 'tchannel-json-handler.parse-error.body-failed':
         case 'tchannel-json-handler.parse-error.head-failed':
@@ -595,6 +596,8 @@ module.exports.classify = function classify(err) {
         case 'tchannel.init.send-call-request-cont-before-indentified':
         case 'tchannel.init.send-call-response-before-indentified':
         case 'tchannel.init.send-call-response-cont-before-indentified':
+        case 'tchannel.argstream.unimplemented':
+        case 'tchannel.argstream.finished':
         case 'tchannel.arg-chunk.gap':
         case 'tchannel.arg-chunk.out-of-order':
         case 'tchannel.invalid-error-code':
@@ -620,6 +623,7 @@ module.exports.classify = function classify(err) {
         case 'tchannel.local.reset':
             return 'NetworkError';
 
+        case 'tchannel.argstream.unknown-frame-handling-state':
         case 'tchannel-json-handler.stringify-error.body-failed':
         case 'tchannel-json-handler.stringify-error.head-failed':
         case 'tchannel-thrift-handler.stringify-error.body-failed':
