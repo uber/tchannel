@@ -114,7 +114,7 @@ allocCluster.test('send relay with tiny timeout', {
         twoClient.request({
             hasNoParent: true,
             host: one.hostPort,
-            timeout: 5
+            timeout: 15
         }).send('echo', 'foo', 'bar', function done(err2, res, arg2, arg3) {
             assert.ifError(err2, 'no unexpected error');
             assert.equal(String(arg2), 'foo', 'expected arg2');
