@@ -34,6 +34,7 @@ function TChannelSubPeers(channel, options) {
 
     self.peerScoreThreshold = self.options.peerScoreThreshold || 0;
     self._heap = new PeerHeap();
+    self.chooseHeapPeers = channel.chooseHeapPeers;
 }
 
 inherits(TChannelSubPeers, TChannelPeersBase);
@@ -46,7 +47,7 @@ TChannelSubPeers.prototype.close = function close(callback) {
 };
 
 TChannelSubPeers.prototype.add = function add(hostPort, options) {
-    /*eslint max-statements: [2, 25]*/
+    /* eslint max-statements: [2, 25]*/
     var self = this;
 
     var peer = self._map[hostPort];
@@ -99,14 +100,55 @@ TChannelSubPeers.prototype._delete = function _del(peer) {
 TChannelSubPeers.prototype.choosePeer = function choosePeer(req) {
     var self = this;
 
-    if (req && req.triedRemoteAddrs) {
-        return self._choosePeerSkipTried(req);
-    } else {
-        return self._heap.choose(self.peerScoreThreshold);
+    if (self.chooseHeapPeers) {
+        return self.chooseHeapPeer(req);
     }
+
+    return self.chooseLinearPeer(req);
 };
 
-TChannelSubPeers.prototype._choosePeerSkipTried = function _choosePeerSkipTried(req) {
+TChannelSubPeers.prototype.chooseLinearPeer = function chooseLinearPeer(req) {
+    /* eslint complexity: [2, 15]*/
+    var self = this;
+
+    var hosts = self._keys;
+    if (!hosts || !hosts.length) {
+        return null;
+    }
+
+    var threshold = self.peerScoreThreshold;
+
+    var selectedPeer = null;
+    var selectedScore = 0;
+    for (var i = 0; i < hosts.length; i++) {
+        var hostPort = hosts[i];
+        var peer = self._map[hostPort];
+        if (!req || !req.triedRemoteAddrs || !req.triedRemoteAddrs[hostPort]) {
+            var score = peer.state.shouldRequest(req);
+            var want = score > threshold &&
+                       (selectedPeer === null || score > selectedScore);
+            if (want) {
+                selectedPeer = peer;
+                selectedScore = score;
+            }
+        }
+    }
+
+    return selectedPeer;
+};
+
+TChannelSubPeers.prototype.chooseHeapPeer = function chooseHeapPeer(req) {
+    var self = this;
+
+    if (req && req.triedRemoteAddrs) {
+        return self._choosePeerSkipTried(req);
+    }
+
+    return self._heap.choose(self.peerScoreThreshold);
+};
+
+TChannelSubPeers.prototype._choosePeerSkipTried =
+function _choosePeerSkipTried(req) {
     var self = this;
 
     return self._heap.choose(self.peerScoreThreshold, filterTriedPeers);
