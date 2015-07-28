@@ -58,6 +58,7 @@ function main() {
     tchannel.makeSubChannel({
         serviceName: serviceName
     }).register('echo', function echo(req, res, arg2, arg3) {
+        res.headers.as = 'raw';
         res.sendOk(arg2, arg3);
     });
 
