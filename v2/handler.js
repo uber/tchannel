@@ -197,8 +197,12 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
     if (handled) {
         if (req.state === States.Streaming) {
             self.streamingReq[req.id] = req;
+        } else {
+            delete self.streamingReq[req.id];
         }
         self.callIncomingRequestEvent.emit(self, req);
+    } else {
+        delete self.streamingReq[req.id];
     }
 
     var channel = self.connection.channel;
@@ -325,8 +329,12 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
     if (handled) {
         if (res.state === States.Streaming) {
             self.streamingRes[res.id] = res;
+        } else {
+            delete self.streamingRes[res.id];
         }
         self.callIncomingResponseEvent.emit(self, res);
+    } else {
+        delete self.streamingRes[res.id];
     }
 };
 
