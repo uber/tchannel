@@ -64,10 +64,11 @@ function tcall(_ctx, service, endpoint, callback) {
 
     var ctx = extend({}, _ctx, {
         spanId: genId(),
-        parentId: _ctx.spanId
+        parentId: _ctx.spanId,
+        host: mkHost(service)
     });
 
-    var host = mkHost(service);
+    console.log(_ctx.host, ctx.host);
 
     var t0 = ctx.t();
     var t1 = ctx.t();
@@ -86,8 +87,8 @@ function tcall(_ctx, service, endpoint, callback) {
         id: ctx.spanId,
         parentid: ctx.parentId,
         annotations: [
-            {host: host, value: 'cs', timestamp: t0},
-            {host: host, value: 'cr', timestamp: t3}
+            {host: _ctx.host, value: 'cs', timestamp: t0},
+            {host: _ctx.host, value: 'cr', timestamp: t3}
         ],
         binaryAnnotations: []
     });
@@ -99,8 +100,8 @@ function tcall(_ctx, service, endpoint, callback) {
         id: ctx.spanId,
         parentid: ctx.parentId,
         annotations: [
-            {host: host, value: 'sr', timestamp: t1},
-            {host: host, value: 'ss', timestamp: t2}
+            {host: ctx.host, value: 'sr', timestamp: t1},
+            {host: ctx.host, value: 'ss', timestamp: t2}
         ],
         binaryAnnotations: []
     });
@@ -132,11 +133,11 @@ function main(channel) {
         t: tsGen(),
         reporter: reporter,
         traceId: traceId,
-        spanId: spanId
+        spanId: spanId,
+        host: mkHost('submitjs')
     };
 
     var t0 = ctx.t();
-    var host = mkHost('submitjs');
 
     tcall(ctx, 'calc', '/add', function (ctx) {
         tcall(ctx, 'math', '/getarg0');
@@ -160,8 +161,8 @@ function main(channel) {
         id: spanId,
         parentid: zeroId(),
         annotations: [
-            {host: host, value: 'sr', timestamp: t0},
-            {host: host, value: 'ss', timestamp: ctx.t()}
+            {host: ctx.host, value: 'sr', timestamp: t0},
+            {host: ctx.host, value: 'ss', timestamp: ctx.t()}
         ],
         binaryAnnotations: []
     });
