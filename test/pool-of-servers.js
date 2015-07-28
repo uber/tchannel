@@ -60,7 +60,7 @@ allocCluster.test('request().send() to a pool of servers', {
     parallel(callReqThunks, onResults);
 
     function onResults(err, results) {
-        assert.ifError(err);
+        assert.ifError(err, 'expect no req error');
 
         var byServer = {};
         for (var j = 0; j < results.length; j++) {
@@ -75,12 +75,116 @@ allocCluster.test('request().send() to a pool of servers', {
         }
 
         var keys = Object.keys(byServer);
-        assert.equal(keys.length, 4);
+        assert.equal(keys.length, 4, 'expected 4 servers');
 
         for (var k = 0; k < keys.length; k++) {
             var count = byServer[keys[k]];
 
             assert.equal(count, 50, 'count for ' + keys[k] + ' is ' + count);
+        }
+        assert.end();
+    }
+});
+
+allocCluster.test.only('request().send() to a pool of servers', {
+    numPeers: 26
+}, function t(cluster, assert) {
+    var client = cluster.channels[0];
+
+    var numPeers = 25;
+    var numRequests = 800;
+    var numExpectedReqs = numRequests / numPeers;
+
+    var hosts = cluster.channels.slice(1).map(function hp(c) {
+        return c.hostPort;
+    });
+
+    var clientChannel = client.makeSubChannel({
+        serviceName: 'server',
+        peers: hosts
+    });
+
+    cluster.channels.slice(1).forEach(function each(chan, i) {
+        makeServer(chan, i);
+    });
+
+    var waiting = [];
+    for (var l = 0; l < numPeers; l++) {
+        var host = hosts[l];
+
+        waiting.push(clientChannel.waitForIdentified.bind(clientChannel, {
+            host: host
+        }));
+    }
+
+    parallel(waiting, onWarmedup);
+
+    function onWarmedup(err1) {
+        assert.ifError(err1, 'expect no initialize error');
+
+        var callReqThunks = [];
+        for (var i = 0; i < numRequests; i++) {
+            var req = clientChannel.request({
+                serviceName: 'server',
+                hasNoParent: true,
+                timeout: 500,
+                headers: {
+                    cn: 'client',
+                    as: 'raw'
+                }
+            });
+
+            callReqThunks.push(req.send.bind(req, 'foo', 'a', 'b'));
+        }
+
+        var resultList = [];
+        (function loop() {
+            if (callReqThunks.length === 0) {
+                return onResults(null, resultList);
+            }
+
+            var parts = callReqThunks.slice(0, 10);
+            callReqThunks = callReqThunks.slice(10);
+
+            parallel(parts, onPartial);
+
+            function onPartial(err2, results) {
+                assert.ifError(err2, 'expect no req err');
+
+                resultList = resultList.concat(results);
+                loop();
+            }
+        }());
+
+    }
+
+    function onResults(err, results) {
+        assert.ifError(err, 'expect no req err');
+
+        var byServer = {};
+        for (var j = 0; j < results.length; j++) {
+            var res = results[j];
+            var body = String(res.arg3);
+
+            if (!byServer[body]) {
+                byServer[body] = 0;
+            }
+
+            byServer[body]++;
+        }
+
+        var keys = Object.keys(byServer);
+        assert.equal(keys.length, numPeers, 'expected 25 servers');
+
+        for (var k = 0; k < keys.length; k++) {
+            var count = byServer[keys[k]];
+
+            assert.ok(count >= numExpectedReqs * 0.5,
+                'count (' + count + ') for ' + keys[k] +
+                    ' is >= ' + numExpectedReqs * 0.5);
+            assert.ok(count <= numExpectedReqs * 1.5,
+                'count (' + count + ') for ' + keys[k] +
+                    ' is <= ' + numExpectedReqs * 1.5);
         }
         assert.end();
     }
