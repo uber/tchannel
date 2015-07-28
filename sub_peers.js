@@ -34,7 +34,7 @@ function TChannelSubPeers(channel, options) {
 
     self.peerScoreThreshold = self.options.peerScoreThreshold || 0;
     self._heap = new PeerHeap();
-    self.chooseHeapPeers = channel.chooseHeapPeers;
+    self.choosePeerWithHeap = channel.choosePeerWithHeap;
 }
 
 inherits(TChannelSubPeers, TChannelPeersBase);
@@ -100,7 +100,7 @@ TChannelSubPeers.prototype._delete = function _del(peer) {
 TChannelSubPeers.prototype.choosePeer = function choosePeer(req) {
     var self = this;
 
-    if (self.chooseHeapPeers) {
+    if (self.choosePeerWithHeap) {
         return self.chooseHeapPeer(req);
     }
 
