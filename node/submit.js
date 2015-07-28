@@ -56,6 +56,7 @@ function tsGen() {
 }
 
 function tcall(_ctx, service, endpoint, callback) {
+    //TODO: need to thread host through the ctx
 
     var ctx = extend({}, _ctx, {
         spanId: genId(),
@@ -66,6 +67,11 @@ function tcall(_ctx, service, endpoint, callback) {
 
     var t0 = ctx.t();
     var t1 = ctx.t();
+
+    if (callback) {
+        callback(ctx);
+    }
+
     var t2 = ctx.t();
     var t3 = ctx.t();
 
@@ -96,7 +102,7 @@ function tcall(_ctx, service, endpoint, callback) {
     });
 }
 
-function mkHost(service, port) {
+function mkHost(service) {
     return {
         ipv4: '127.0.0.1',
         port: 8000 + Math.floor(Math.random() * 1000),
@@ -124,7 +130,21 @@ function main(channel) {
     var t0 = ctx.t();
     var host = mkHost('submitjs');
 
-    tcall(ctx, 'calc', '/add');
+    tcall(ctx, 'calc', '/add', function (ctx) {
+        tcall(ctx, 'math', '/getarg0');
+        tcall(ctx, 'math', '/getarg1');
+        tcall(ctx, 'math', '/getarg2');
+        tcall(ctx, 'math', '/getarg3');
+        tcall(ctx, 'math', '/getarg4');
+        tcall(ctx, 'math', '/getarg5', function (ctx) {
+            tcall(ctx, 'argument', '/extract0');
+            tcall(ctx, 'argument', '/extract1');
+            tcall(ctx, 'argument', '/extract2');
+            tcall(ctx, 'argument', '/extract3');
+        });
+        tcall(ctx, 'math', '/getarg6');
+        tcall(ctx, 'math', '/getarg7');
+    });
 
     reporter.report({
         traceid: traceId,
