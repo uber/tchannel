@@ -512,13 +512,13 @@ function destroy() {
 ServiceDispatchHandler.prototype.enableRateLimiter =
 function enableRateLimiter() {
     var self = this;
-    self.rateLimiter.rateLimiterEnabled = true;
+    self.rateLimiterEnabled = true;
 };
 
 ServiceDispatchHandler.prototype.disableRateLimiter =
 function disableRateLimiter() {
     var self = this;
-    self.rateLimiter.rateLimiterEnabled = false;
+    self.rateLimiterEnabled = false;
 };
 
 // TODO Consider sharding by hostPort and indexing exit exitNodes by hostPort.

@@ -130,14 +130,34 @@ function updateExemptServices(exemptServices) {
     self.exemptServices = exemptServices;
 };
 
-RateLimiter.prototype.updateRpsLimitForServiceName =
-function updateRpsLimitForServiceName(rpsLimitForServiceName) {
+RateLimiter.prototype.updateRpsLimitForAllServices =
+function updateRpsLimitForAllServices(rpsLimitForServiceName) {
     var self = this;
-    // do a complete update
+
+    var name;
+    var limit;
+
+    // for removed or updated services
     var keys = Object.keys(self.rpsLimitForServiceName);
     for (var i = 0; i < keys.length; i++) {
-        var name = keys[i];
-        self.updateServiceLimit(name, rpsLimitForServiceName[name]);
+        name = keys[i];
+        limit = rpsLimitForServiceName[name];
+        if (typeof limit !== 'number') {
+            limit = 'default';
+            delete self.rpsLimitForServiceName[name];
+        }
+        self.updateServiceLimit(name, limit);
+    }
+
+    // for new services
+    keys = Object.keys(rpsLimitForServiceName);
+    for (i = 0; i < keys.length; i++) {
+        name = keys[i];
+        limit = self.rpsLimitForServiceName[name];
+        if (typeof limit !== 'number') {
+            limit = rpsLimitForServiceName[name];
+            self.updateServiceLimit(name, limit);
+        }
     }
 };
 
@@ -145,7 +165,7 @@ RateLimiter.prototype.updateServiceLimit =
 function updateServiceLimit(serviceName, limit) {
     var self = this;
 
-    if (limit === undefined) {
+    if (limit === 'default') {
         delete self.rpsLimitForServiceName[serviceName];
         limit = self.defaultServiceRpsLimit;
     } else {
