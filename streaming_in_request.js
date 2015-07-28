@@ -23,6 +23,7 @@
 var parallel = require('run-parallel');
 var InRequest = require('./in_request');
 var inherits = require('util').inherits;
+var errors = require('./errors');
 
 var States = require('./reqres_states');
 var InArgStream = require('./argstream').InArgStream;
@@ -59,8 +60,7 @@ StreamingInRequest.prototype.handleFrame = function handleFrame(parts, isLast) {
     if (self.state === States.Initial) {
         self.state = States.Streaming;
     } else if (self.state !== States.Streaming) {
-        // TODO: typed error
-        return new Error('unknown frame handling state');
+        return errors.ArgStreamUnknownFrameHandlingStateError();
     }
 
     var err = self._argstream.handleFrame(parts, isLast);
@@ -69,8 +69,7 @@ StreamingInRequest.prototype.handleFrame = function handleFrame(parts, isLast) {
     }
 
     if (!isLast && self.state !== States.Streaming) {
-        // TODO: typed error
-        return new Error('unknown frame handling state');
+        return errors.ArgStreamUnknownFrameHandlingStateError();
     }
 
     return null;
