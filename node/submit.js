@@ -1,6 +1,7 @@
 var TChannel = require('./');
 var TCollectorTraceReporter = require('./tcollector/reporter.js');
 var HyperbahnClient = require('./hyperbahn/');
+var async = require('async');
 
 var SERVICE = 'submitjs';
 
@@ -63,14 +64,25 @@ function main(channel) {
         callerName: SERVICE
     });
 
-    var host = {
+    var submitjs = {
         ipv4: '127.0.0.1',
         port: 6667,
         serviceName: SERVICE
     };
 
-    var t = tsGen();
+    var calc = {
+        ipv4: '127.0.0.1',
+        port: 6668,
+        serviceName: 'calc'
+    };
 
+    var t = tsGen();
+    t0 = t();
+    t1 = t();
+    t2 = t();
+    t3 = t();
+    t4 = t();
+    t5 = t();
 
     reporter.report({
         traceid: traceId,
@@ -78,12 +90,22 @@ function main(channel) {
         id: spanId,
         parentid: zeroId(),
         annotations: [
-            {host: host, value: 'sr', timestamp: t()},
-            {host: host, value: 'ss', timestamp: t()}
+            {host: submitjs, value: 'sr', timestamp: t0},
+            {host: submitjs, value: 'ss', timestamp: t5}
         ],
         binaryAnnotations: []
-    }, function (err, res) {
-        console.log('abc', err, res);
+    });
+
+    reporter.report({
+        traceid: traceId,
+        name: '/add',
+        id: genId(),
+        parentid: spanId,
+        annotations: [
+            {host: calc, value: 'sr', timestamp: t1},
+            {host: calc, value: 'ss', timestamp: t2}
+        ],
+        binaryAnnotations: []
     });
 }
 
