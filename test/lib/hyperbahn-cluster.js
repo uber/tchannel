@@ -77,12 +77,12 @@ function HyperbahnCluster(options) {
         clusterOptions: options.cluster || options.clusterOptions,
         timers: options.timers,
         servicePurgePeriod: options.servicePurgePeriod,
-        exemptServices: readSeedConfig(options.seedConfig, 'rateLimiting.exemptServices'),
-        rpsLimitForServiceName: readSeedConfig(options.seedConfig, 'rateLimiting.rpsLimitForServiceName'),
-        totalRpsLimit: readSeedConfig(options.seedConfig, 'rateLimiting.totalRpsLimit'),
-        defaultServiceRpsLimit: readSeedConfig(options.seedConfig, 'rateLimiting.defaultServiceRpsLimit'),
-        rateLimiterBuckets: readSeedConfig(options.seedConfig, 'rateLimiting.rateLimiterBuckets'),
-        rateLimiterEnabled: readSeedConfig(options.seedConfig, 'rateLimiting.enabled'),
+        exemptServices: readSeedConfig(options.remoteConfig, 'rateLimiting.exemptServices'),
+        rpsLimitForServiceName: readSeedConfig(options.remoteConfig, 'rateLimiting.rpsLimitForServiceName'),
+        totalRpsLimit: readSeedConfig(options.remoteConfig, 'rateLimiting.totalRpsLimit'),
+        defaultServiceRpsLimit: readSeedConfig(options.remoteConfig, 'rateLimiting.defaultServiceRpsLimit'),
+        rateLimiterBuckets: readSeedConfig(options.remoteConfig, 'rateLimiting.rateLimiterBuckets'),
+        rateLimiterEnabled: readSeedConfig(options.remoteConfig, 'rateLimiting.enabled'),
     });
 
     self.remotes = {};
@@ -224,14 +224,5 @@ function readSeedConfig(config, key) {
         return undefined;
     }
 
-    var levels = key.split('.');
-    var value = config;
-    for (var i = 0; i < levels.length; i++) {
-        value = value[levels[i]];
-        if (!value) {
-            return undefined;
-        }
-    }
-
-    return value;
+    return config[key];
 }
