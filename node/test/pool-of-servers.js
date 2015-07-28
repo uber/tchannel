@@ -79,10 +79,8 @@ allocCluster.test('request().send() to a pool of servers', {
 
         for (var k = 0; k < keys.length; k++) {
             var count = byServer[keys[k]];
-            console.log('count', count);
 
-            assert.ok(count >= 30, 'count for ' + keys[k] + ' is >= 30');
-            assert.ok(count <= 70, 'count for ' + keys[k] + ' is <= 70');
+            assert.equal(count, 50, 'count for ' + keys[k] + ' is ' + count);
         }
         assert.end();
     }
