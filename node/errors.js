@@ -136,6 +136,34 @@ module.exports.EphemeralInitResponse = TypedError({
     processName: null
 });
 
+module.exports.HTTPReqArg2fromBufferError = WrappedError({
+    type: 'tchannel.http-handler.from-buffer-arg2.req-failed',
+    message: 'Could not read from buffer when sending request.',
+    isSerializationError: true,
+    arg2: null
+});
+
+module.exports.HTTPReqArg2toBufferError = WrappedError({
+    type: 'tchannel.http-handler.to-buffer-arg2.req-failed',
+    message: 'Could not write to buffer when sending request.',
+    isSerializationError: true,
+    head: null
+});
+
+module.exports.HTTPResArg2fromBufferError = WrappedError({
+    type: 'tchannel.http-handler.from-buffer-arg2.res-failed',
+    message: 'Could not read from buffer when sending response.',
+    isSerializationError: true,
+    arg2: null
+});
+
+module.exports.HTTPResArg2toBufferError = WrappedError({
+    type: 'tchannel.http-handler.to-buffer-arg2.res-failed',
+    message: 'Could not write to buffer when sending response.',
+    isSerializationError: true,
+    head: null
+});
+
 module.exports.InvalidArgumentError = TypedError({
     type: 'tchannel.invalid-argument',
     message: 'invalid argument, expected array or null',
@@ -529,6 +557,8 @@ module.exports.classify = function classify(err) {
         case 'tchannel.request-already-done':
         case 'tchannel-thrift-handler.parse-error.body-failed':
         case 'tchannel-thrift-handler.parse-error.head-failed':
+        case 'tchannel.http-handler.to-buffer-arg2.req-failed':
+        case 'tchannel.http-handler.to-buffer-arg2.res-failed':
         case 'tchannel.checksum':
         case 'tchannel.duplicate-header-key':
         case 'tchannel.null-key':
@@ -574,6 +604,8 @@ module.exports.classify = function classify(err) {
         case 'tchannel-json-handler.stringify-error.head-failed':
         case 'tchannel-thrift-handler.stringify-error.body-failed':
         case 'tchannel-thrift-handler.stringify-error.head-failed':
+        case 'tchannel.http-handler.from-buffer-arg2.req-failed':
+        case 'tchannel.http-handler.from-buffer-arg2.res-failed':
         case 'tchannel.response-already-done':
         case 'tchannel.response-already-started':
         case 'tchannel.response-frame-state':
