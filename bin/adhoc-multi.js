@@ -115,7 +115,8 @@ function start(opts, rcount) {
 function createChannel(options) {
     var tchannel = new TChannel({
         trace: true,
-        logger: options.logger
+        logger: options.logger,
+        traceSample: 1
     });
 
     return tchannel;
