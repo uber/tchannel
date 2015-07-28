@@ -50,28 +50,7 @@ allocCluster.test('request retries', {
         .register('foo', servedByFoo(4));
 
     var client = TChannel({
-        timeoutFuzz: 0,
-        random: randSeq([
-            0.0, // chan 1: add peer
-            0.0, // chan 2: add peer
-            0.0, // chan 3: add peer
-            0.0, // chan 4: add peer
-                 //
-            0.0, // chan 1: connect
-            0.0, // chan 2: connect
-            0.0, // chan 3: connect
-            0.0, // chan 4: connect
-                 //
-            1.0, // chan 1: identified
-            0.9, // chan 2: identified
-            0.8, // chan 3: identified
-            0.7, // chan 4: identified
-                 //
-            0.0, // top of heap is chan 1: rescore to last
-            0.0, // top of heap is chan 2: restore to last
-            0.0, // top of heap is chan 3: restore to last
-            0.0, // top of heap is chan 4: restore to last
-        ], false /* NOTE: set true to print debug traces */)
+        timeoutFuzz: 0
     });
     var chan = client.makeSubChannel({
         serviceName: 'tristan',
@@ -99,35 +78,33 @@ allocCluster.test('request retries', {
     function onResponse(req, err, res, arg2, arg3) {
         if (err) return finish(err);
 
-        assert.equal(req.outReqs.length, 4, 'expected 4 tries');
+        assert.ok(req.outReqs.length >= 1 &&
+            req.outReqs.length <= 4, 'expected at most 4 tries');
 
-        assert.equal(
-            req.outReqs[0] &&
-            req.outReqs[0].err &&
-            req.outReqs[0].err.type,
-            'tchannel.declined',
-            'expected first request to decline');
+        var reqErrors = req.outReqs.filter(function isErr(r) {
+            return r.err;
+        });
+        var reqResp = req.outReqs.filter(function isResp(r) {
+            return r.res;
+        });
 
-        assert.equal(
-            req.outReqs[1] &&
-            req.outReqs[1].err &&
-            req.outReqs[1].err.type,
-            'tchannel.busy',
-            'expected second request to bounce b/c busy');
+        assert.equal(reqResp.length, 1);
 
-        assert.equal(
-            req.outReqs[2] &&
-            req.outReqs[2].err &&
-            req.outReqs[2].err.type,
-            'tchannel.unexpected',
-            'expected third request to bounce w/ unexpected error');
+        for (var i = 0; i < reqErrors.length; i++) {
+            assert.ok(
+                reqErrors[i].err.type === 'tchannel.declined' ||
+                reqErrors[i].err.type === 'tchannel.busy' ||
+                reqErrors[i].err.type === 'tchannel.unexpected',
+                'expected error request'
+            );
+        }
 
-        assert.ok(req.outReqs[3] &&
-                  req.outReqs[3].res, 'expected to have 4th response');
-        assert.deepEqual(req.outReqs[3] &&
-                         req.outReqs[3].res.arg2, arg2, 'arg2 came form 4th response');
-        assert.deepEqual(req.outReqs[3] &&
-                         req.outReqs[3].res.arg3, arg3, 'arg3 came form 4th response');
+        assert.ok(reqResp[0] &&
+                  reqResp[0].res, 'expected to have 4th response');
+        assert.deepEqual(reqResp[0] &&
+                         reqResp[0].res.arg2, arg2, 'arg2 came form 4th response');
+        assert.deepEqual(reqResp[0] &&
+                         reqResp[0].res.arg3, arg3, 'arg3 came form 4th response');
         assert.equal(String(arg2), 'served by 4', 'served by expected server');
         assert.equal(String(arg3), 'HI', 'got expected response');
 
