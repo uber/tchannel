@@ -199,10 +199,13 @@ function createClient(options) {
     }
 
     function finish(req, res, arg2, arg3) {
+        var timeout = Math.floor((Math.random() * 25) + 1);
         res.headers.as = 'raw';
-        res.sendOk(
-            arg2,
-            enumerated(options.serviceName) + ' says "' + String(arg3) + '"');
+        setTimeout(function () {
+            res.sendOk(
+                arg2,
+                enumerated(options.serviceName) + ' says "' + String(arg3) + '"');
+        }, timeout);
     }
 }
 

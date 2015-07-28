@@ -128,6 +128,8 @@ function jsonSpanToThriftSpan(span) {
         host: span.host
     };
 
+    console.log('mapped:', JSON.stringify(mapped, null, 2));
+
     return mapped;
 };
 
