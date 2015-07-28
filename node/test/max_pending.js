@@ -34,7 +34,6 @@ testBattle('cap maximum pending requests', {
         }
     }
 }, [
-    // TODO wtf please no connection timeout
     'tchannel.request.timeout',
     'tchannel.max-pending'
 ]);
