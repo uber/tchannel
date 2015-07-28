@@ -476,7 +476,8 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
     var outOpKeys = Object.keys(requests.out);
 
     if (!err) {
-        err = new Error('unknown connection reset'); // TODO typed error
+        // TODO typed error
+        err = new Error('unknown connection reset');
     }
 
     if (!self.remoteName && self.channel.emitConnectionMetrics) {
