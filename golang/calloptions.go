@@ -44,7 +44,7 @@ type CallOptions struct {
 
 var defaultCallOptions = &CallOptions{}
 
-func (c *CallOptions) setHeaders(headers callHeaders) {
+func (c *CallOptions) setHeaders(headers transportHeaders) {
 	if c == nil {
 		c = defaultCallOptions
 	}
@@ -58,6 +58,6 @@ func (c *CallOptions) setHeaders(headers callHeaders) {
 }
 
 // setResponseHeaders copies some headers from the incoming call request to the response.
-func setResponseHeaders(reqHeaders, respHeaders callHeaders) {
+func setResponseHeaders(reqHeaders, respHeaders transportHeaders) {
 	respHeaders[ArgScheme] = reqHeaders[ArgScheme]
 }
