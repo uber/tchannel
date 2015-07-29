@@ -97,11 +97,13 @@ function tcall(_ctx, service, endpoint, callback) {
     var t2 = ctx.t();
     var t3 = ctx.t();
 
+    var span;
+
     // client reporting
     if (!_ctx.topLevel) {
         var src = _ctx.host.ipv4 + ":" + _ctx.host.port;
 
-        var span = new Span({
+        span = new Span({
             endpoint: new Span.Endpoint(ctx.host.ipv4, ctx.host.port, ctx.host.serviceName),
             traceid: ctx.traceId,
             name: endpoint,
@@ -119,17 +121,16 @@ function tcall(_ctx, service, endpoint, callback) {
     }
 
     // server reporting
-    ctx.reporter.report({
+    span = new Span({
+        endpoint: new Span.Endpoint(ctx.host.ipv4, ctx.host.port, ctx.host.serviceName),
         traceid: ctx.traceId,
         name: endpoint,
         id: ctx.spanId,
-        parentid: ctx.parentId,
-        annotations: [
-            {host: ctx.host, value: 'sr', timestamp: t1},
-            {host: ctx.host, value: 'ss', timestamp: t2}
-        ],
-        binaryAnnotations: []
+        parentid: ctx.parentId
     });
+    span.annotate('sr', t1);
+    span.annotate('cs', t2);
+    ctx.reporter.report(span);
 }
 
 function randIP() {
