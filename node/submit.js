@@ -18,9 +18,7 @@ function genId() {
     return new Buffer([g(), g(), g(), g(), g(), g(), g(), g()]);
 }
 
-function zeroId() {
-    return new Buffer([0, 0, 0, 0, 0, 0, 0, 0]);
-}
+var zeroId = Buffer([0, 0, 0, 0, 0, 0, 0, 0]);
 
 var rootChannel = TChannel();
 rootChannel.listen(0, '127.0.0.1');
@@ -92,17 +90,19 @@ function tcall(_ctx, service, endpoint, callback) {
     var t3 = ctx.t();
 
     // client reporting
-    ctx.reporter.report({
-        traceid: ctx.traceId,
-        name: endpoint,
-        id: ctx.spanId,
-        parentid: ctx.parentId,
-        annotations: [
-            {host: _ctx.host, value: 'cs', timestamp: t0},
-            {host: _ctx.host, value: 'cr', timestamp: t3}
-        ],
-        binaryAnnotations: []
-    });
+    if (_ctx.parentId !== zeroId) {
+        ctx.reporter.report({
+            traceid: ctx.traceId,
+            name: endpoint,
+            id: ctx.spanId,
+            parentid: ctx.parentId,
+            annotations: [
+                {host: _ctx.host, value: 'cs', timestamp: t0},
+                {host: _ctx.host, value: 'cr', timestamp: t3}
+            ],
+            binaryAnnotations: []
+        });
+    }
 
     // server reporting
     ctx.reporter.report({
@@ -145,48 +145,37 @@ function main(channel) {
         reporter: reporter,
         traceId: traceId,
         spanId: spanId,
+        parentid: zeroId,
         host: mkHost('submitjs')
     };
 
-    var t0 = ctx.t();
+    tcall(ctx, 'submitjs', '/endpoint', function (ctx) {
+        tcall(ctx, 'calc', '/add', function (ctx) {
+            var ctx2 = branch(ctx);
 
-    tcall(ctx, 'calc', '/add', function (ctx) {
-        var ctx2 = branch(ctx);
+            tcall(ctx, 'math', '/getarg0');
+            tcall(ctx, 'math', '/getarg1');
+            tcall(ctx, 'math', '/getarg2');
+            tcall(ctx, 'math', '/getarg3');
+            tcall(ctx, 'math', '/getarg4');
+            tcall(ctx, 'math', '/getarg5', function (ctx) {
+                tcall(ctx, 'argument', '/extract0');
+                tcall(ctx, 'argument', '/extract1');
+                tcall(ctx, 'argument', '/extract2');
+                tcall(ctx, 'argument', '/extract3');
+            });
+            tcall(ctx, 'math', '/getarg6');
+            tcall(ctx, 'math', '/getarg7');
 
-        tcall(ctx, 'math', '/getarg0');
-        tcall(ctx, 'math', '/getarg1');
-        tcall(ctx, 'math', '/getarg2');
-        tcall(ctx, 'math', '/getarg3');
-        tcall(ctx, 'math', '/getarg4');
-        tcall(ctx, 'math', '/getarg5', function (ctx) {
-            tcall(ctx, 'argument', '/extract0');
-            tcall(ctx, 'argument', '/extract1');
-            tcall(ctx, 'argument', '/extract2');
-            tcall(ctx, 'argument', '/extract3');
+            // branch
+            tcall(ctx2, 'ncar', '/find', function (ctx) {
+                tcall(ctx, 'geo', '/lookup0');
+                tcall(ctx, 'geo', '/lookup1');
+                tcall(ctx, 'geo', '/lookup2');
+                tcall(ctx, 'geo', '/lookup3');
+                tcall(ctx, 'geo', '/lookup4');
+            });
         });
-        tcall(ctx, 'math', '/getarg6');
-        tcall(ctx, 'math', '/getarg7');
-
-        // branch
-        tcall(ctx2, 'ncar', '/find', function (ctx) {
-            tcall(ctx, 'math', '/newstuff0');
-            tcall(ctx, 'math', '/newstuff1');
-            tcall(ctx, 'math', '/newstuff2');
-            tcall(ctx, 'math', '/newstuff3');
-            tcall(ctx, 'math', '/newstuff4');
-        });
-    });
-
-    reporter.report({
-        traceid: traceId,
-        name: '/endpoint',
-        id: spanId,
-        parentid: zeroId(),
-        annotations: [
-            {host: ctx.host, value: 'sr', timestamp: t0},
-            {host: ctx.host, value: 'ss', timestamp: ctx.t()}
-        ],
-        binaryAnnotations: []
     });
 }
 
