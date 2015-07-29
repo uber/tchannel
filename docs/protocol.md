@@ -176,7 +176,7 @@ A1 receives "call res" from R1:
 All frames of all types use this structure:
 
 | Position | Contents                           |
-| -------- | ---------------------------------- |
+|----------|------------------------------------|
 | 0-7      | `size:2  type:1  reserved:1  id:4` |
 | 8-15     | `reserved:8`                       |
 | 16+      | `payload` - based on type          |

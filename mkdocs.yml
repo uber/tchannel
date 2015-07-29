@@ -1,0 +1,20 @@
+site_name: TChannel
+repo_url: https://github.com/uber/tchannel
+
+pages:
+- Home: index.md
+- Specification: protocol.md
+- HTTP over TChannel: http.md
+- JSON over TChannel:  json.md
+- Thrift over TChannel: thrift.md
+- Circuit Breaking: circuit-breaking.md
+- Traffic Metrics: metrics.md
+- Go Guide: go-guide.md
+- Node Guide: node-guide.md
+- Python Guide: python-guide.md
+theme: readthedocs
+
+markdown_extensions:
+  - toc:
+      permalink: 
+  - admonition:
