@@ -1,7 +1,6 @@
 var TChannel = require('./');
 var TCollectorTraceReporter = require('./tcollector/reporter.js');
 var HyperbahnClient = require('./hyperbahn/');
-var async = require('async');
 var extend = require('xtend');
 var Span = require('./trace/span');
 
@@ -11,7 +10,7 @@ var SERVICE = 'submitjs';
 // integrate with POC on ON
 
 function randInt(n) {
-    return Math.floor(Math.random() * n)
+    return Math.floor(Math.random() * n);
 }
 
 function g() {
@@ -60,7 +59,7 @@ function tsGen(t) {
             t += offset;
         }
         return t;
-    }
+    };
 }
 
 function branch(_ctx) {
@@ -70,20 +69,13 @@ function branch(_ctx) {
 }
 
 
-function bcall(/* args */) {
-    var args = Array.prototype.slice.call(arguments, 0);
-    args[0] = branch(args[0]);
-    tcall.apply(null, args);
-}
-
-
 function tcall(_ctx, service, endpoint, callback) {
     //TODO: need to thread host through the ctx
 
     var ctx = extend({}, _ctx, {
         spanId: genId(),
         parentId: _ctx.spanId,
-        host: mkHost(service),
+        endpoint: mkEndpoint(service),
         topLevel: false
     });
 
@@ -101,10 +93,10 @@ function tcall(_ctx, service, endpoint, callback) {
 
     // client reporting
     if (!_ctx.topLevel) {
-        var src = _ctx.host.ipv4 + ":" + _ctx.host.port;
+        var src = _ctx.endpoint.ipv4 + ":" + _ctx.endpoint.port;
 
         span = new Span({
-            endpoint: new Span.Endpoint(ctx.host.ipv4, ctx.host.port, ctx.host.serviceName),
+            endpoint: ctx.endpoint,
             traceid: ctx.traceId,
             name: endpoint,
             id: ctx.spanId,
@@ -112,7 +104,7 @@ function tcall(_ctx, service, endpoint, callback) {
         });
         span.annotate('cs', t0);
         span.annotate('cr', t3);
-        span.annotateBinary('cn', _ctx.host.serviceName, 'STRING');
+        span.annotateBinary('cn', _ctx.endpoint.serviceName, 'STRING');
         span.annotateBinary('as', 'thrift', 'STRING');
         span.annotateBinary('src', src, 'STRING');
         console.log(JSON.stringify(span.toJSON()));
@@ -122,7 +114,7 @@ function tcall(_ctx, service, endpoint, callback) {
 
     // server reporting
     span = new Span({
-        endpoint: new Span.Endpoint(ctx.host.ipv4, ctx.host.port, ctx.host.serviceName),
+        endpoint: ctx.endpoint,
         traceid: ctx.traceId,
         name: endpoint,
         id: ctx.spanId,
@@ -137,12 +129,8 @@ function randIP() {
     return [10, randInt(255), randInt(255), randInt(255)].join(".");
 }
 
-function mkHost(service) {
-    return {
-        ipv4: randIP(),
-        port: 8000 + randInt(1000),
-        serviceName: service
-    };
+function mkEndpoint(service) {
+    return new Span.Endpoint(randIP(), 8000 + randInt(1000), service);
 }
 
 function parallel(ctx, funcs) {
@@ -173,7 +161,7 @@ function main(channel) {
         traceId: traceId,
         spanId: spanId,
         parentid: zeroId,
-        host: mkHost('submitjs'),
+        endpoint: mkEndpoint('submitjs'),
         topLevel: true
     };
 
