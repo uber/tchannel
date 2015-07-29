@@ -436,7 +436,6 @@ TChannelConnection.prototype.nextFrameId = function nextFrameId() {
 
 TChannelConnection.prototype.buildOutRequest = function buildOutRequest(options) {
     var self = this;
-
     return self.handler.buildOutRequest(options);
 };
 
@@ -476,7 +475,8 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
     var outOpKeys = Object.keys(requests.out);
 
     if (!err) {
-        err = new Error('unknown connection reset'); // TODO typed error
+        // TODO typed error
+        err = new Error('unknown connection reset');
     }
 
     if (!self.remoteName && self.channel.emitConnectionMetrics) {

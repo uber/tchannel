@@ -34,7 +34,6 @@ testBattle('cap maximum pending requests', {
         }
     }
 }, [
-    // TODO wtf please no connection timeout
     'tchannel.request.timeout',
     'tchannel.max-pending'
 ]);
@@ -93,7 +92,9 @@ function testBattle(name, options, expectedErrorTypes) {
 
         dumChannel.peers.add(tweedleDee.hostPort);
 
-        deeChannel.register('start', function start() {
+        deeChannel.register('start', function start(req, res) {
+            req.connection.ops.popInReq(req.id);
+
             // Let's just say we did
         });
 

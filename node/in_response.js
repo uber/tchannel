@@ -22,6 +22,7 @@
 
 var EventEmitter = require('./lib/event_emitter');
 var inherits = require('util').inherits;
+var errors = require('./errors');
 
 var States = require('./reqres_states');
 
@@ -70,8 +71,7 @@ TChannelInResponse.prototype.handleFrame = function handleFrame(parts, isLast) {
     var self = this;
 
     if (parts.length !== 3 || self.state !== States.Initial || !isLast) {
-        // TODO: typed error
-        return new Error('un-streamed argument defragmentation is not implemented');
+        return errors.ArgStreamUnimplementedError();
     }
 
     self.arg1 = parts[0] || emptyBuffer;

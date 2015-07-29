@@ -40,12 +40,14 @@ function TChannelOutRequest(id, options) {
     self.responseEvent = self.defineEvent('response');
     self.finishEvent = self.defineEvent('finish');
 
+    // TODO perhaps these ought not be options
     assert(options.channel, 'channel required');
+    assert(options.peer, 'peer required');
     assert(id, 'id is required');
 
-    self.peerState = options.peerState || null;
     self.retryCount = options.retryCount || 0;
-    self.channel = options.channel || null;
+    self.channel = options.channel;
+    self.peer = options.peer;
     self.logical = options.logical || false;
     self.parent = options.parent || null;
     self.hasNoParent = options.hasNoParent || false;
@@ -80,8 +82,6 @@ function TChannelOutRequest(id, options) {
         // new span with new ids
         self.setupTracing(options);
     }
-
-    self.peerState.onRequest(self);
 }
 
 inherits(TChannelOutRequest, EventEmitter);
@@ -278,7 +278,8 @@ TChannelOutRequest.prototype.emitError = function emitError(err) {
     self.err = err;
     self.emitPerAttemptLatency();
     self.emitPerAttemptErrorStat(err);
-    self.peerState.onRequestError(err);
+
+    self.peer.invalidateScore();
 
     self.errorEvent.emit(self, err);
 };
@@ -294,7 +295,8 @@ TChannelOutRequest.prototype.extendLogInfo = function extendLogInfo(info) {
 TChannelOutRequest.prototype.emitResponse = function emitResponse(res) {
     var self = this;
 
-    self.peerState.onRequestHealthy(self);
+    self.peer.invalidateScore();
+
     if (!self.end) {
         self.end = self.channel.timers.now();
     }

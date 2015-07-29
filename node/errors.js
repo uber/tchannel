@@ -46,6 +46,26 @@ module.exports.ArgChunkOutOfOrderError = TypedError({
     got: null
 });
 
+module.exports.ArgStreamExceededFramePartsError = TypedError({
+    type: 'tchannel.argstream.exceeded-frame-parts',
+    message: 'frame parts exceeded stream arity'
+});
+
+module.exports.ArgStreamFinishedError = TypedError({
+    type: 'tchannel.argstream.finished',
+    message: 'arg stream already finished'
+});
+
+module.exports.ArgStreamUnimplementedError = TypedError({
+    type: 'tchannel.argstream.unimplemented',
+    message: 'un-streamed argument defragmentation is not implemented'
+});
+
+module.exports.ArgStreamUnknownFrameHandlingStateError = TypedError({
+    type: 'tchannel.argstream.unknown-frame-handling-state',
+    message: 'unknown frame handling state'
+});
+
 module.exports.AsHeaderRequired = TypedError({
     type: 'tchannel.handler.incoming-req-as-header-required',
     message: 'Expected incoming call {frame} to have "as" header set.',
@@ -550,6 +570,7 @@ module.exports.classify = function classify(err) {
         case 'tchannel.connection-stale.timeout':
             return 'Timeout';
 
+        case 'tchannel.argstream.exceeded-frame-parts':
         case 'tchannel-handler.json.invalid-body':
         case 'tchannel-json-handler.parse-error.body-failed':
         case 'tchannel-json-handler.parse-error.head-failed':
@@ -575,6 +596,8 @@ module.exports.classify = function classify(err) {
         case 'tchannel.init.send-call-request-cont-before-indentified':
         case 'tchannel.init.send-call-response-before-indentified':
         case 'tchannel.init.send-call-response-cont-before-indentified':
+        case 'tchannel.argstream.unimplemented':
+        case 'tchannel.argstream.finished':
         case 'tchannel.arg-chunk.gap':
         case 'tchannel.arg-chunk.out-of-order':
         case 'tchannel.invalid-error-code':
@@ -600,6 +623,7 @@ module.exports.classify = function classify(err) {
         case 'tchannel.local.reset':
             return 'NetworkError';
 
+        case 'tchannel.argstream.unknown-frame-handling-state':
         case 'tchannel-json-handler.stringify-error.body-failed':
         case 'tchannel-json-handler.stringify-error.head-failed':
         case 'tchannel-thrift-handler.stringify-error.body-failed':

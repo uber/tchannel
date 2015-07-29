@@ -25,8 +25,6 @@ var Buffer = require('buffer').Buffer;
 var allocCluster = require('./lib/alloc-cluster.js');
 var EndpointHandler = require('../endpoint-handler');
 var TChannel = require('../channel.js');
-var CountedReadySignal = require('ready-signal/counted');
-var randSeq = require('./lib/peer_score_random.js').randSeq;
 
 allocCluster.test('request().send() to a server', 2, function t(cluster, assert) {
     var one = cluster.channels[0];
@@ -195,126 +193,7 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
 
     function onResults(err) {
         if (err) return assert.end(err);
-        cluster.assertCleanState(assert, {
-            channels: [{
-                peers: [{
-                    connections: [
-                        {direction: 'in', inReqs: 0, outReqs: 0}
-                    ]
-                }]
-            }, {
-                peers: [{
-                    connections: [
-                        {direction: 'out', inReqs: 0, outReqs: 0}
-                    ]
-                }]
-            }]
-        });
-        assert.end();
-    }
-});
-
-allocCluster.test('request().send() to a pool of servers', 4, function t(cluster, assert) {
-    var client = TChannel({
-        timeoutFuzz: 0,
-        random: randSeq([
-            0.0, 0.0, // chan 1: add peer, add conn
-            0.0, 0.0, // chan 2: add peer, add conn
-            0.0, 0.0, // chan 3: add peer, add conn
-            0.0, 0.0, // chan 4: add peer, add conn
-                      //
-            0.8,      // chan 1: onIdentified
-            0.7,      // chan 2: onIdentified
-            0.6,      // chan 3: onIdentified
-            0.5,      // chan 4: onIdentified
-                      //
-            0.4,      // chan 1 is top of heap, rescores to last
-            0.3,      // chan 2 is top of heap, rescores to last
-            0.2,      // chan 3 is top of heap, rescores to last
-            0.1,      // chan 4 is top of heap, rescores to last
-                      //
-            0.0,      // chan 1 is top of heap, rescores to last
-            0.0,      // chan 2 is top of heap, rescores to last
-            0.0,      // chan 3 is top of heap, rescores to last
-            0.0       // chan 4 is top of heap, rescores to last
-        ], false /* NOTE: set true to print debug traces */)
-    });
-
-    var channel = client.makeSubChannel({
-        serviceName: 'lol'
-    });
-
-    var ready = CountedReadySignal(cluster.channels.length);
-
-    cluster.channels.forEach(function each(chan, i) {
-        var chanNum = i + 1;
-        chan.handler = EndpointHandler();
-        chan.handler.register('foo', function foo(req, res, arg2, arg3) {
-            res.headers.as = 'raw';
-            res.sendOk(arg2, arg3 + ' served by ' + chanNum);
-        });
-        channel.peers.add(chan.hostPort);
-        var peer = channel.peers.get(chan.hostPort);
-        var conn = peer.connect(chan.hostPort);
-        conn.on('identified', ready.signal);
-    });
-
-    ready(testIt);
-
-    function testIt() {
-        parallelSendTest(channel, [
-
-            { name: 'msg1', op: 'foo',
-              logger: cluster.logger,
-              reqHead: '', reqBody: 'msg1',
-              resHead: '', resBody: 'msg1 served by 1' },
-            { name: 'msg2', op: 'foo',
-              logger: cluster.logger,
-              reqHead: '', reqBody: 'msg2',
-              resHead: '', resBody: 'msg2 served by 2' },
-            { name: 'msg3', op: 'foo',
-              logger: cluster.logger,
-              reqHead: '', reqBody: 'msg3',
-              resHead: '', resBody: 'msg3 served by 3' },
-            { name: 'msg4', op: 'foo',
-              logger: cluster.logger,
-              reqHead: '', reqBody: 'msg4',
-              resHead: '', resBody: 'msg4 served by 4' },
-
-            { name: 'msg5', op: 'foo',
-              logger: cluster.logger,
-              reqHead: '', reqBody: 'msg5',
-              resHead: '', resBody: 'msg5 served by 1' },
-            { name: 'msg6', op: 'foo',
-              logger: cluster.logger,
-              reqHead: '', reqBody: 'msg6',
-              resHead: '', resBody: 'msg6 served by 2' },
-            { name: 'msg7', op: 'foo',
-              logger: cluster.logger,
-              reqHead: '', reqBody: 'msg7',
-              resHead: '', resBody: 'msg7 served by 3' },
-            { name: 'msg8', op: 'foo',
-              logger: cluster.logger,
-              reqHead: '', reqBody: 'msg8',
-              resHead: '', resBody: 'msg8 served by 4' },
-
-        ], assert, onResults);
-    }
-
-    function onResults(err) {
-        assert.ifError(err, 'no errors from sending');
-        cluster.assertCleanState(assert, {
-            channels: cluster.channels.map(function each() {
-                return {
-                    peers: [{
-                        connections: [
-                            {direction: 'in', inReqs: 0, outReqs: 0}
-                        ]
-                    }]
-                };
-            })
-        });
-        client.close();
+        cluster.assertEmptyState(assert);
         assert.end();
     }
 });
@@ -361,17 +240,7 @@ allocCluster.test('request().send() balances', 4, function t(cluster, assert) {
 
     function onResults(err) {
         assert.ifError(err, 'no errors from sending');
-        cluster.assertCleanState(assert, {
-            channels: cluster.channels.map(function each() {
-                return {
-                    peers: [{
-                        connections: [
-                            {direction: 'in', inReqs: 0, outReqs: 0}
-                        ]
-                    }]
-                };
-            })
-        });
+        cluster.assertEmptyState(assert);
         client.close();
         assert.end();
     }
@@ -480,11 +349,7 @@ allocCluster.test('request().send() to self', 1, function t(cluster, assert) {
 
     function onResults(err) {
         assert.ifError(err, 'no errors from sending');
-        cluster.assertCleanState(assert, {
-            channels: [{
-                peers: []
-            }]
-        });
+        cluster.assertEmptyState(assert);
         assert.end();
     }
 });

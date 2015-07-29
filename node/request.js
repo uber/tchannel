@@ -208,6 +208,7 @@ TChannelRequest.prototype.onIdentified = function onIdentified(peer) {
         opts.timeout = self.timeoutPerAttempt;
     }
 
+    opts.peer = peer;
     opts.retryCount = self.outReqs.length;
     opts.logical = true;
 

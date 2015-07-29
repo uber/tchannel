@@ -23,12 +23,10 @@
 var assert = require('assert');
 var inherits = require('util').inherits;
 var EventEmitter = require('./lib/event_emitter');
-var StateMachine = require('./state_machine');
 var net = require('net');
 
 var TChannelConnection = require('./connection');
 var errors = require('./errors');
-var states = require('./states');
 var Request = require('./request');
 
 var DEFAULT_REPORT_INTERVAL = 1000;
@@ -39,7 +37,6 @@ function TChannelPeer(channel, hostPort, options) {
     }
     var self = this;
     EventEmitter.call(self);
-    StateMachine.call(self);
 
     self.stateChangedEvent = self.defineEvent('stateChanged');
     self.allocConnectionEvent = self.defineEvent('allocConnection');
@@ -55,24 +52,7 @@ function TChannelPeer(channel, hostPort, options) {
     self.connections = [];
     self.pendingIdentified = 0;
     self.heapElements = [];
-
-    self.stateOptions = new states.StateOptions(self, {
-        timeHeap: self.channel.timeHeap,
-        timers: self.timers,
-        random: self.random,
-        period: self.options.period,
-        maxErrorRate: self.options.maxErrorRate,
-        minimumRequests: self.options.minimumRequests,
-        probation: self.options.probation,
-        nextHandler: new PreferOutgoingHandler(self)
-    });
-
-    if (self.options.initialState) {
-        self.setState(self.options.initialState);
-        delete self.options.initialState;
-    } else {
-        self.setState(states.HealthyState);
-    }
+    self.handler = new PreferOutgoingHandler(self);
 
     self.reportInterval = self.options.reportInterval || DEFAULT_REPORT_INTERVAL;
     if (self.reportInterval > 0 && self.channel.emitConnectionMetrics) {
@@ -109,7 +89,7 @@ TChannelPeer.prototype.invalidateScore = function invalidateScore() {
         return;
     }
 
-    var score = self.state.shouldRequest();
+    var score = self.handler.getScore();
     for (var i = 0; i < self.heapElements.length; i++) {
         var el = self.heapElements[i];
         el.rescore(score);
@@ -148,7 +128,7 @@ TChannelPeer.prototype.close = function close(callback) {
             conn.close(onClose);
         });
     } else {
-        self.state.close(callback);
+        callback(null);
     }
     function onClose() {
         if (--counter <= 0) {
@@ -157,30 +137,8 @@ TChannelPeer.prototype.close = function close(callback) {
                     counter: counter
                 });
             }
-            self.state.close(callback);
+            callback(null);
         }
-    }
-};
-
-TChannelPeer.prototype.setState = function setState(StateType) {
-    var self = this;
-
-    var currState = self.state;
-
-    if (StateMachine.prototype.setState.call(self, StateType)) {
-        var newState = self.state;
-
-        if (currState && currState.healthy && !newState.healthy) {
-            self.logger.warn('peer transitioning to unhealthy state', {
-                hostPort: self.hostPort
-            });
-        } else if (currState && !currState.healthy && newState.healthy) {
-            self.logger.info('peer transitioning to healthy state', {
-                hostPort: self.hostPort
-            });
-        }
-
-        self.invalidateScore();
     }
 };
 
@@ -206,6 +164,11 @@ TChannelPeer.prototype.getOutConnection = function getOutConnection(preferIdenti
     return candidate;
 };
 
+TChannelPeer.prototype.getIdentifiedOutConnection = function getIdentifiedOutConnection() {
+    var self = this;
+    return self.getOutConnection(true);
+};
+
 TChannelPeer.prototype.countConnections = function countConnections(direction) {
     var self = this;
     if (!direction) {
@@ -225,7 +188,7 @@ TChannelPeer.prototype.countConnections = function countConnections(direction) {
 
 TChannelPeer.prototype.connect = function connect(outOnly) {
     var self = this;
-    var conn = self.getOutConnection(true);
+    var conn = self.getIdentifiedOutConnection();
     if (!conn || (outOnly && conn.direction !== 'out')) {
         var socket = self.makeOutSocket();
         conn = self.makeOutConnection(socket);
@@ -283,8 +246,6 @@ function _waitForIdentified(conn, callback) {
 
 TChannelPeer.prototype.request = function peerRequest(options) {
     var self = this;
-
-    options.peerState = self.state;
     options.timeout = options.timeout || Request.defaultTimeout;
     return self.connect().request(options);
 };
@@ -303,8 +264,8 @@ TChannelPeer.prototype.addConnection = function addConnection(conn) {
 
     self._maybeInvalidateScore();
     if (!conn.remoteName) {
-        // TODO: could optimize if nextHandler had a way of saying "would a new
-        // identified connection change your QOS?"
+        // TODO: could optimize if handler had a way of saying "would a new
+        // identified connection change your Tier?"
         conn.identifiedEvent.on(onIdentified);
     }
 
@@ -383,22 +344,34 @@ TChannelPeer.prototype.makeOutConnection = function makeOutConnection(socket) {
 };
 
 TChannelPeer.prototype.outPendingWeightedRandom = function outPendingWeightedRandom() {
-    // A weighted random variable:
-    //   random() ** (1 / weight)
-    // Such that the probability distribution is uniform for weights of 0, but
-    // an increasing bias with increasing weight.
-    // However, although weight should start at 0 and increase probability,
-    // the number of pending requests starts at 0 and should decrease
-    // probability as it increases.
-    // For 0 pending requests, we produce a uniform probability distribution by
-    // raising a uniform random variable to the power of 1 (pending + 1).
-    // As the number of pending requests increase, the magnitude of the power
-    // increases and the probability distribution develops a bias toward zero.
-    // TODO review weighted reservoir sampling:
-    // http://arxiv.org/pdf/1012.0256.pdf
+    // Returns a score in the range from 0 to 1, where it is preferable to use
+    // a peer with a higher score over one with a lower score.
+    // This range is divided among an infinite set of subranges corresponding
+    // to peers with the same number of pending requests.
+    // So, the range (1/2, 1) is reserved for peers with 0 pending connections.
+    // The range (1/4, 1/2) is reserved for peers with 1 pending connections.
+    // The range (1/8, 1/4) is reserved for peers with 2 pending connections.
+    // Ad nauseam.
+    // Within each equivalence class, each peer receives a uniform random
+    // value.
+    //
+    // The previous score was a weighted random variable:
+    //   random() ** (1 + pending)
+    // This had the attribute that a less loaded peer was merely more likely to
+    // be chosen over a more loaded peer.
+    // We observed with the introduction of a heap, that a less favored peer
+    // would have its score less frequently re-evaluated.
+    // An emergent behavior was that scores would, over time, be squeezed
+    // toward zero and the least favored peer would remain the least favored
+    // for ever increasing durations.
+    //
+    // This remains true with this algorithm, within each equivalence class.
     var self = this;
     var pending = self.pendingIdentified + self.countOutPending();
-    return Math.pow(self.random(), 1 + pending);
+    var max = Math.pow(0.5, pending);
+    var min = max / 2;
+    var diff = max - min;
+    return min + diff * self.random();
 };
 
 TChannelPeer.prototype.countOutPending = function countOutPending() {
@@ -412,77 +385,72 @@ TChannelPeer.prototype.countOutPending = function countOutPending() {
     return pending;
 };
 
-// TODO: on connection #shouldRequest impacting event
+// TODO: on connection #getScore impacting event
 // - on identified
 
 // Called on connection change event
 TChannelPeer.prototype._maybeInvalidateScore = function _maybeInvalidateScore() {
     var self = this;
 
-    if (!self.state.willCallNextHandler()) {
-        return;
+    if (self.handler.getTier() !== self.handler.lastTier) {
+        self.invalidateScore();
     }
-
-    var nextHandler = self.state.nextHandler;
-    if (nextHandler.getQOS() === nextHandler.lastQOS) {
-        return;
-    }
-
-    self.invalidateScore();
 };
 
-var QOS_UNCONNECTED = 0;
-var QOS_ONLY_INCOMING = 1;
-var QOS_FRESH_OUTGOING = 2;
-var QOS_READY_OUTGOING = 3;
+TChannelPeer.prototype.getScore = function getScore() {
+    var self = this;
+    return self.handler.getScore();
+};
+
+var TIER_UNCONNECTED = 0;
+var TIER_ONLY_INCOMING = 1;
+var TIER_FRESH_OUTGOING = 2;
+var TIER_READY_OUTGOING = 3;
 
 function PreferOutgoingHandler(peer) {
     var self = this;
 
     self.peer = peer;
-    self.lastQOS = self.getQOS();
+    self.lastTier = self.getTier();
 }
 
-PreferOutgoingHandler.prototype.getQOS = function getQOS() {
+PreferOutgoingHandler.prototype.getTier = function getTier() {
     var self = this;
 
     var inconn = self.peer.getInConnection();
-    var outconn = self.peer.getOutConnection();
+    var outconn = self.peer.getIdentifiedOutConnection();
 
     if (!inconn && !outconn) {
-        return QOS_UNCONNECTED;
+        return TIER_UNCONNECTED;
     } else if (!outconn || outconn.direction !== 'out') {
-        return QOS_ONLY_INCOMING;
+        return TIER_ONLY_INCOMING;
     } else if (outconn.remoteName === null) {
-        return QOS_FRESH_OUTGOING;
+        return TIER_FRESH_OUTGOING;
     } else {
-        return QOS_READY_OUTGOING;
+        return TIER_READY_OUTGOING;
     }
 };
 
-// Consulted depending on the peer state
-PreferOutgoingHandler.prototype.shouldRequest = function shouldRequest() {
+PreferOutgoingHandler.prototype.getScore = function getScore() {
     var self = this;
 
     // space:
     //   [0.1, 0.4)  peers with no identified outgoing connection
     //   [0.4, 1.0)  identified outgoing connections
     var random = self.peer.outPendingWeightedRandom();
-    var qos = self.getQOS();
-    if (self.lastQOS !== qos) {
-        self.lastQOS = qos;
-    }
+    var qos = self.getTier();
+    self.lastTier = qos;
     switch (qos) {
-        case QOS_ONLY_INCOMING:
+        case TIER_ONLY_INCOMING:
             if (!self.peer.channel.destroyed) {
                 self.peer.connect();
             }
             /* falls through */
-        case QOS_UNCONNECTED:
+        case TIER_UNCONNECTED:
             /* falls through */
-        case QOS_FRESH_OUTGOING:
+        case TIER_FRESH_OUTGOING:
             return 0.1 + random * 0.3;
-        case QOS_READY_OUTGOING:
+        case TIER_READY_OUTGOING:
             return 0.4 + random * 0.6;
     }
 };

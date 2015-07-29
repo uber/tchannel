@@ -36,21 +36,7 @@ allocCluster.test('identify', 2, function t(cluster, assert) {
         assert.equal(idents.one.hostPort, hostTwo, 'one identified two');
         assert.equal(idents.two.hostPort, hostOne, 'two identified one');
 
-        cluster.assertCleanState(assert, {
-            channels: [{
-                peers: [{
-                    connections: [{
-                        remoteName: hostTwo
-                    }]
-                }]
-            }, {
-                peers: [{
-                    connections: [{
-                        remoteName: hostOne
-                    }]
-                }]
-            }]
-        });
+        cluster.assertEmptyState(assert);
 
         done();
     }, assert.end);
