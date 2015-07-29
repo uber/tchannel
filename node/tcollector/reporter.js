@@ -112,11 +112,8 @@ function jsonSpanToThriftSpan(span) {
             return ret;
         });
 
-    if (!span.host) {
-        // Workaround to support older tchannels
-        span.host =
-            TCollectorTraceReporter.convertHost(span.annotations[0].host);
-    }
+    var endpoint = span.endpoint || span.annotations[0].host;
+    var host = TCollectorTraceReporter.convertHost(endpoint);
 
     var mapped = {
         name: span.name,
@@ -125,7 +122,7 @@ function jsonSpanToThriftSpan(span) {
         id: span.id,
         annotations: annotations,
         binaryAnnotations: binaryAnnotations,
-        host: span.host
+        host: host
     };
 
     return mapped;

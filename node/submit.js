@@ -3,8 +3,12 @@ var TCollectorTraceReporter = require('./tcollector/reporter.js');
 var HyperbahnClient = require('./hyperbahn/');
 var async = require('async');
 var extend = require('xtend');
+var Span = require('./trace/span');
 
 var SERVICE = 'submitjs';
+
+// rewrite using span.js
+// integrate with POC on ON
 
 function randInt(n) {
     return Math.floor(Math.random() * n)
@@ -37,10 +41,8 @@ var hyperbahnClient = HyperbahnClient({
 });
 
 rootChannel.on('listening', function () {
-    console.log('listening');
     hyperbahnClient.advertise();
     hyperbahnClient.once('advertised', function adv() {
-        console.log('advertised');
         var channel = hyperbahnClient.getClientChannel({
             serviceName: 'tcollector',
             trace: false
@@ -85,8 +87,6 @@ function tcall(_ctx, service, endpoint, callback) {
         topLevel: false
     });
 
-    console.log(_ctx.host, ctx.host);
-
     var t0 = ctx.t();
     var t1 = ctx.t();
 
@@ -100,21 +100,22 @@ function tcall(_ctx, service, endpoint, callback) {
     // client reporting
     if (!_ctx.topLevel) {
         var src = _ctx.host.ipv4 + ":" + _ctx.host.port;
-        ctx.reporter.report({
+
+        var span = new Span({
+            endpoint: new Span.Endpoint(ctx.host.ipv4, ctx.host.port, ctx.host.serviceName),
             traceid: ctx.traceId,
             name: endpoint,
             id: ctx.spanId,
-            parentid: ctx.parentId,
-            annotations: [
-                {host: ctx.host, value: 'cs', timestamp: t0},
-                {host: ctx.host, value: 'cr', timestamp: t3}
-            ],
-            binaryAnnotations: [
-                {key: 'cn', value: _ctx.host.serviceName, annotationType: 'STRING'},
-                {key: 'as', value: 'thrift', annotationType: 'STRING'},
-                {key: 'src', value: src, annotationType: 'STRING'}
-            ]
+            parentid: ctx.parentId
         });
+        span.annotate('cs', t0);
+        span.annotate('cr', t3);
+        span.annotateBinary('cn', _ctx.host.serviceName, 'STRING');
+        span.annotateBinary('as', 'thrift', 'STRING');
+        span.annotateBinary('src', src, 'STRING');
+        console.log(JSON.stringify(span.toJSON()));
+
+        ctx.reporter.report(span);
     }
 
     // server reporting
