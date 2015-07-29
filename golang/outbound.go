@@ -97,12 +97,18 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string, callOpti
 		call.callReq.Tracing.EnableTracing(false)
 	}
 
+	call.AddBinaryAnnotation(BinaryAnnotation{Key: "cn", Value: call.callReq.Headers[CallerName]})
+	call.AddBinaryAnnotation(BinaryAnnotation{Key: "as", Value: call.callReq.Headers[ArgScheme]})
+	call.AddAnnotation(AnnotationKeyClientSend)
+
 	response := new(OutboundCallResponse)
 	response.startedAt = timeNow()
 	response.mex = mex
 	response.log = c.log.WithFields(LogFields{{"Out-Response", requestID}})
 	response.messageForFragment = func(initial bool) message {
 		if initial {
+			call.AddAnnotation(AnnotationKeyClientReceive)
+			call.Report(call.callReq.Tracing, c.traceReporter)
 			return &response.callRes
 		}
 
