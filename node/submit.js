@@ -137,6 +137,20 @@ function mkHost(service) {
     };
 }
 
+function parallel(ctx, funcs) {
+    var times = funcs.map(function (f) {
+        var ctx2 = branch(ctx);
+        f(ctx2);
+        return ctx2.t(0);
+    });
+    console.log(times);
+    var last = Math.max.apply(Math, times);
+    var delta = last - ctx.t(0);
+    ctx.t(delta);
+    ctx.t();
+    console.log(ctx.t(0));
+}
+
 function main(channel) {
     var traceId = genId();
     var spanId = genId();
@@ -166,26 +180,36 @@ function main(channel) {
                 tcall(ctx, 'geo', '/lookup3');
                 tcall(ctx, 'geo', '/lookup4');
             });
-            bcall(ctx, 'goldeta', '/eta', function (ctx) {
-                tcall(ctx, 'osrm', '/route');
-                tcall(ctx, 'osrm', '/route');
-                tcall(ctx, 'osrm', '/route');
-            });
-            bcall(ctx, 'goldeta', '/eta', function (ctx) {
-                tcall(ctx, 'osrm', '/route');
-                tcall(ctx, 'osrm', '/route');
-                tcall(ctx, 'osrm', '/route');
-            });
-            bcall(ctx, 'goldeta', '/eta', function (ctx) {
-                tcall(ctx, 'osrm', '/route');
-                tcall(ctx, 'osrm', '/route');
-                tcall(ctx, 'osrm', '/route');
-            });
-            bcall(ctx, 'goldeta', '/eta', function (ctx) {
-                tcall(ctx, 'osrm', '/route');
-                tcall(ctx, 'osrm', '/route');
-                tcall(ctx, 'osrm', '/route');
-            });
+            parallel(ctx, [
+                function (ctx) {
+                    tcall(ctx, 'goldeta', '/eta', function (ctx) {
+                        tcall(ctx, 'osrm', '/route');
+                        tcall(ctx, 'osrm', '/route');
+                        tcall(ctx, 'osrm', '/route');
+                    });
+                },
+                function (ctx) {
+                    tcall(ctx, 'goldeta', '/eta', function (ctx) {
+                        tcall(ctx, 'osrm', '/route');
+                        tcall(ctx, 'osrm', '/route');
+                        tcall(ctx, 'osrm', '/route');
+                    });
+                },
+                function (ctx) {
+                    tcall(ctx, 'goldeta', '/eta', function (ctx) {
+                        tcall(ctx, 'osrm', '/route');
+                        tcall(ctx, 'osrm', '/route');
+                        tcall(ctx, 'osrm', '/route');
+                    });
+                },
+                function (ctx) {
+                    tcall(ctx, 'goldeta', '/eta', function (ctx) {
+                        tcall(ctx, 'osrm', '/route');
+                        tcall(ctx, 'osrm', '/route');
+                        tcall(ctx, 'osrm', '/route');
+                    });
+                }]
+            );
         });
     });
 }
