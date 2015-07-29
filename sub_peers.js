@@ -83,8 +83,12 @@ TChannelSubPeers.prototype.clear = function clear() {
 TChannelSubPeers.prototype._delete = function _del(peer) {
     var self = this;
 
-    delete self._map[peer.hostPort];
     var index = self._keys.indexOf(peer.hostPort);
+    if (index === -1) {
+        return;
+    }
+
+    delete self._map[peer.hostPort];
     popout(self._keys, index);
 
     for (var i = 0; i < peer.heapElements.length; i++) {
