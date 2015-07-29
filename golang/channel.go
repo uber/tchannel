@@ -67,6 +67,7 @@ type Channel struct {
 	log               Logger
 	commonStatsTags   map[string]string
 	statsReporter     StatsReporter
+	traceReporter     TraceReporter
 	connectionOptions ConnectionOptions
 	handlers          *handlerMap
 	peers             *PeerList
@@ -113,6 +114,7 @@ func NewChannel(serviceName string, opts *ChannelOptions) (*Channel, error) {
 		connectionOptions: opts.DefaultConnectionOptions,
 		log:               logger,
 		statsReporter:     statsReporter,
+		traceReporter:     traceReporter,
 		handlers:          &handlerMap{},
 	}
 	ch.mutable.peerInfo = LocalPeerInfo{

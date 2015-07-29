@@ -54,6 +54,9 @@ type ChannelOpts struct {
 	// StatsReporter specifies the StatsReporter to use.
 	StatsReporter tchannel.StatsReporter
 
+	// TraceReporter specified the TraceReporter to use.
+	TraceReporter tchannel.TraceReporter
+
 	// DefaultConnectionOptions specifies the channel's default connection options.
 	DefaultConnectionOptions tchannel.ConnectionOptions
 }
@@ -76,6 +79,7 @@ func getChannelOptions(opts *ChannelOpts, processName string) *tchannel.ChannelO
 		Logger:      logger,
 		DefaultConnectionOptions: opts.DefaultConnectionOptions,
 		StatsReporter:            opts.StatsReporter,
+		TraceReporter:            opts.TraceReporter,
 	}
 }
 
