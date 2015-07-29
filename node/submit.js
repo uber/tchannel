@@ -51,13 +51,24 @@ rootChannel.on('listening', function () {
     });
 });
 
-function tsGen() {
-    var t = Date.now();
-    return function next() {
-        t += 10 + Math.floor(Math.random() * 150);
+function tsGen(t) {
+    if (!t) t = Date.now();
+    return function next(offset) {
+        if (offset === undefined) {
+            t += 10 + Math.floor(Math.random() * 150);
+        } else {
+            t += offset;
+        }
         return t;
     }
 }
+
+function branch(_ctx) {
+    return extend({}, _ctx, {
+        t: tsGen(_ctx.t(0))
+    });
+}
+
 
 function tcall(_ctx, service, endpoint, callback) {
     //TODO: need to thread host through the ctx
@@ -140,6 +151,8 @@ function main(channel) {
     var t0 = ctx.t();
 
     tcall(ctx, 'calc', '/add', function (ctx) {
+        var ctx2 = branch(ctx);
+
         tcall(ctx, 'math', '/getarg0');
         tcall(ctx, 'math', '/getarg1');
         tcall(ctx, 'math', '/getarg2');
@@ -153,6 +166,15 @@ function main(channel) {
         });
         tcall(ctx, 'math', '/getarg6');
         tcall(ctx, 'math', '/getarg7');
+
+        // branch
+        tcall(ctx2, 'ncar', '/find', function (ctx) {
+            tcall(ctx, 'math', '/newstuff0');
+            tcall(ctx, 'math', '/newstuff1');
+            tcall(ctx, 'math', '/newstuff2');
+            tcall(ctx, 'math', '/newstuff3');
+            tcall(ctx, 'math', '/newstuff4');
+        });
     });
 
     reporter.report({
