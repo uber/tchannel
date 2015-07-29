@@ -31,6 +31,8 @@ function PeerHeap() {
     // TODO: worth it to keep a tail free list like TimeHeap?
     // self.end = 0;
     self._stack = [];
+    // This is a reusable array, used in the non-reentrant chooseEl routine.
+    self._candidates = [];
 }
 
 PeerHeap.prototype.choose = function choose(threshold, filter) {
@@ -57,11 +59,40 @@ PeerHeap.prototype.choose = function choose(threshold, filter) {
 
 PeerHeap.prototype._chooseEl = function _chooseEl(threshold) {
     var self = this;
+    var i;
 
-    var el = self.array[0];
-    if (el.score <= threshold) { // TODO: why inclusive?
+    var score = self.array[0].score;
+
+    if (score <= threshold) { // TODO: why inclusive?
         return null;
     }
+
+    // Seed the candidate list with the one obvious maximum
+    self._candidates.push(0);
+
+    // Find all elements atop the heap that share the maximum score
+    for (i = 0; i < self._candidates.length; i++) {
+        var left = (2 * i) + 1;
+        if (left >= self.array.length) {
+            continue;
+        }
+        if (self.array[left].score === score) {
+            self._candidates.push(left);
+        }
+        var right = left + 1;
+        if (right >= self.array.length) {
+            continue;
+        }
+        if (self.array[right].score === score) {
+            self._candidates.push(right);
+        }
+    }
+
+    // Choose one candidate randomly
+    i = Math.floor(Math.random() * self._candidates.length);
+    var el = self.array[i];
+
+    self._candidates.length = 0;
 
     return el;
 };
