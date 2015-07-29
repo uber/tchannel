@@ -167,24 +167,24 @@ function main(channel) {
                 tcall(ctx, 'geo', '/lookup4');
             });
             bcall(ctx, 'goldeta', '/eta', function (ctx) {
-                tcall(ctx, 'geo', '/lookup');
-                tcall(ctx, 'geo', '/lookup');
-                tcall(ctx, 'geo', '/lookup');
+                tcall(ctx, 'osrm', '/route');
+                tcall(ctx, 'osrm', '/route');
+                tcall(ctx, 'osrm', '/route');
             });
             bcall(ctx, 'goldeta', '/eta', function (ctx) {
-                tcall(ctx, 'geo', '/lookup');
-                tcall(ctx, 'geo', '/lookup');
-                tcall(ctx, 'geo', '/lookup');
+                tcall(ctx, 'osrm', '/route');
+                tcall(ctx, 'osrm', '/route');
+                tcall(ctx, 'osrm', '/route');
             });
             bcall(ctx, 'goldeta', '/eta', function (ctx) {
-                tcall(ctx, 'geo', '/lookup');
-                tcall(ctx, 'geo', '/lookup');
-                tcall(ctx, 'geo', '/lookup');
+                tcall(ctx, 'osrm', '/route');
+                tcall(ctx, 'osrm', '/route');
+                tcall(ctx, 'osrm', '/route');
             });
             bcall(ctx, 'goldeta', '/eta', function (ctx) {
-                tcall(ctx, 'geo', '/lookup');
-                tcall(ctx, 'geo', '/lookup');
-                tcall(ctx, 'geo', '/lookup');
+                tcall(ctx, 'osrm', '/route');
+                tcall(ctx, 'osrm', '/route');
+                tcall(ctx, 'osrm', '/route');
             });
         });
     });
