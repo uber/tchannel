@@ -81,7 +81,8 @@ function tcall(_ctx, service, endpoint, callback) {
     var ctx = extend({}, _ctx, {
         spanId: genId(),
         parentId: _ctx.spanId,
-        host: mkHost(service)
+        host: mkHost(service),
+        topLevel: false
     });
 
     console.log(_ctx.host, ctx.host);
@@ -97,7 +98,8 @@ function tcall(_ctx, service, endpoint, callback) {
     var t3 = ctx.t();
 
     // client reporting
-    if (_ctx.parentId !== zeroId) {
+    if (!_ctx.topLevel) {
+        var src = _ctx.host.ipv4 + ":" + _ctx.host.port;
         ctx.reporter.report({
             traceid: ctx.traceId,
             name: endpoint,
@@ -107,7 +109,11 @@ function tcall(_ctx, service, endpoint, callback) {
                 {host: ctx.host, value: 'cs', timestamp: t0},
                 {host: ctx.host, value: 'cr', timestamp: t3}
             ],
-            binaryAnnotations: []
+            binaryAnnotations: [
+                {key: 'cn', value: _ctx.host.serviceName, annotationType: 'STRING'},
+                {key: 'as', value: 'thrift', annotationType: 'STRING'},
+                {key: 'src', value: src, annotationType: 'STRING'}
+            ]
         });
     }
 
@@ -143,12 +149,10 @@ function parallel(ctx, funcs) {
         f(ctx2);
         return ctx2.t(0);
     });
-    console.log(times);
     var last = Math.max.apply(Math, times);
     var delta = last - ctx.t(0);
     ctx.t(delta);
     ctx.t();
-    console.log(ctx.t(0));
 }
 
 function main(channel) {
@@ -167,10 +171,11 @@ function main(channel) {
         traceId: traceId,
         spanId: spanId,
         parentid: zeroId,
-        host: mkHost('submitjs')
+        host: mkHost('submitjs'),
+        topLevel: true
     };
 
-    tcall(ctx, 'cn', '/ping', function (ctx) {
+    tcall(ctx, 'connection_node', '/ping', function (ctx) {
         tcall(ctx, 'dispatch', '/ping', function (ctx) {
             // branch
             tcall(ctx, 'ncar', '/find', function (ctx) {
