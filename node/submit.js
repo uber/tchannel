@@ -68,6 +68,13 @@ function branch(_ctx) {
 }
 
 
+function bcall(/* args */) {
+    var args = Array.prototype.slice.call(arguments, 0);
+    args[0] = branch(args[0]);
+    tcall.apply(null, args);
+}
+
+
 function tcall(_ctx, service, endpoint, callback) {
     //TODO: need to thread host through the ctx
 
@@ -97,8 +104,8 @@ function tcall(_ctx, service, endpoint, callback) {
             id: ctx.spanId,
             parentid: ctx.parentId,
             annotations: [
-                {host: _ctx.host, value: 'cs', timestamp: t0},
-                {host: _ctx.host, value: 'cr', timestamp: t3}
+                {host: ctx.host, value: 'cs', timestamp: t0},
+                {host: ctx.host, value: 'cr', timestamp: t3}
             ],
             binaryAnnotations: []
         });
@@ -149,31 +156,35 @@ function main(channel) {
         host: mkHost('submitjs')
     };
 
-    tcall(ctx, 'submitjs', '/endpoint', function (ctx) {
-        tcall(ctx, 'calc', '/add', function (ctx) {
-            var ctx2 = branch(ctx);
-
-            tcall(ctx, 'math', '/getarg0');
-            tcall(ctx, 'math', '/getarg1');
-            tcall(ctx, 'math', '/getarg2');
-            tcall(ctx, 'math', '/getarg3');
-            tcall(ctx, 'math', '/getarg4');
-            tcall(ctx, 'math', '/getarg5', function (ctx) {
-                tcall(ctx, 'argument', '/extract0');
-                tcall(ctx, 'argument', '/extract1');
-                tcall(ctx, 'argument', '/extract2');
-                tcall(ctx, 'argument', '/extract3');
-            });
-            tcall(ctx, 'math', '/getarg6');
-            tcall(ctx, 'math', '/getarg7');
-
+    tcall(ctx, 'cn', '/ping', function (ctx) {
+        tcall(ctx, 'dispatch', '/ping', function (ctx) {
             // branch
-            tcall(ctx2, 'ncar', '/find', function (ctx) {
+            tcall(ctx, 'ncar', '/find', function (ctx) {
                 tcall(ctx, 'geo', '/lookup0');
                 tcall(ctx, 'geo', '/lookup1');
                 tcall(ctx, 'geo', '/lookup2');
                 tcall(ctx, 'geo', '/lookup3');
                 tcall(ctx, 'geo', '/lookup4');
+            });
+            bcall(ctx, 'goldeta', '/eta', function (ctx) {
+                tcall(ctx, 'geo', '/lookup');
+                tcall(ctx, 'geo', '/lookup');
+                tcall(ctx, 'geo', '/lookup');
+            });
+            bcall(ctx, 'goldeta', '/eta', function (ctx) {
+                tcall(ctx, 'geo', '/lookup');
+                tcall(ctx, 'geo', '/lookup');
+                tcall(ctx, 'geo', '/lookup');
+            });
+            bcall(ctx, 'goldeta', '/eta', function (ctx) {
+                tcall(ctx, 'geo', '/lookup');
+                tcall(ctx, 'geo', '/lookup');
+                tcall(ctx, 'geo', '/lookup');
+            });
+            bcall(ctx, 'goldeta', '/eta', function (ctx) {
+                tcall(ctx, 'geo', '/lookup');
+                tcall(ctx, 'geo', '/lookup');
+                tcall(ctx, 'geo', '/lookup');
             });
         });
     });
