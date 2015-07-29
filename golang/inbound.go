@@ -64,7 +64,7 @@ func (c *Connection) handleCallReq(frame *Frame) bool {
 	response.cancel = cancel
 	response.span = callReq.Tracing
 	response.log = c.log.WithField(LogField{"In-Response", callReq.ID()})
-	response.headers = callHeaders{}
+	response.headers = transportHeaders{}
 	response.messageForFragment = func(initial bool) message {
 		if initial {
 			callRes := new(callRes)
@@ -156,7 +156,7 @@ type InboundCall struct {
 	response        *InboundCallResponse
 	serviceName     string
 	operation       []byte
-	headers         callHeaders
+	headers         transportHeaders
 	span            Span
 	statsReporter   StatsReporter
 	commonStatsTags map[string]string
@@ -221,7 +221,7 @@ type InboundCallResponse struct {
 	// calledAt is the time the inbound call was routed to the application.
 	calledAt         time.Time
 	applicationError bool
-	headers          callHeaders
+	headers          transportHeaders
 	span             Span
 	statsReporter    StatsReporter
 	commonStatsTags  map[string]string

@@ -61,7 +61,7 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string, callOpti
 		return nil, err
 	}
 
-	headers := callHeaders{
+	headers := transportHeaders{
 		CallerName: c.localPeerInfo.ServiceName,
 	}
 	callOptions.setHeaders(headers)

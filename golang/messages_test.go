@@ -75,7 +75,7 @@ func TestCallReq(t *testing.T) {
 			spanID:   12762782,
 			flags:    0x01,
 		},
-		Headers: callHeaders{
+		Headers: transportHeaders{
 			"r": "c",
 			"f": "d",
 		},
@@ -101,7 +101,7 @@ func TestCallRes(t *testing.T) {
 	r := callRes{
 		id:           0xDEADBEEF,
 		ResponseCode: responseApplicationError,
-		Headers: callHeaders{
+		Headers: transportHeaders{
 			"r": "c",
 			"f": "d",
 		},

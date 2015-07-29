@@ -29,16 +29,16 @@ import (
 func TestSetHeaders(t *testing.T) {
 	tests := []struct {
 		format          Format
-		expectedHeaders callHeaders
+		expectedHeaders transportHeaders
 	}{
 		{
 			// When no format is specified, Raw should be used by default.
 			format:          "",
-			expectedHeaders: callHeaders{ArgScheme: Raw.String()},
+			expectedHeaders: transportHeaders{ArgScheme: Raw.String()},
 		},
 		{
 			format:          Thrift,
-			expectedHeaders: callHeaders{ArgScheme: Thrift.String()},
+			expectedHeaders: transportHeaders{ArgScheme: Thrift.String()},
 		},
 	}
 
@@ -46,7 +46,7 @@ func TestSetHeaders(t *testing.T) {
 		callOpts := &CallOptions{
 			Format: tt.format,
 		}
-		headers := make(callHeaders)
+		headers := make(transportHeaders)
 		callOpts.setHeaders(headers)
 		assert.Equal(t, tt.expectedHeaders, headers)
 	}
