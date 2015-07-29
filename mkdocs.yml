@@ -12,9 +12,5 @@ pages:
 - Go Guide: go-guide.md
 - Node Guide: node-guide.md
 - Python Guide: python-guide.md
-theme: readthedocs
 
-markdown_extensions:
-  - toc:
-      permalink: 
-  - admonition:
+theme: cosmo
