@@ -63,3 +63,24 @@ func (simpleTraceReporter) Report(span Span, annotations []Annotation, binaryAnn
 	log.Printf("SimpleTraceReporter.Report span: %+v annotations: %+v binaryAnnotations: %+v",
 		span, annotations, binaryAnnotations)
 }
+
+// Annotations is am embeddable struct used to track annotations.
+type Annotations struct {
+	binaryAnnotations []BinaryAnnotation
+	annotations       []Annotation
+}
+
+// AddBinaryAnnotation adds a binary annotation.
+func (as *Annotations) AddBinaryAnnotation(binaryAnnotation BinaryAnnotation) {
+	as.binaryAnnotations = append(as.binaryAnnotations, binaryAnnotation)
+}
+
+// AddAnnotation adds a standard annotation.
+func (as *Annotations) AddAnnotation(key AnnotationKey) {
+	as.annotations = append(as.annotations, NewAnnotation(key))
+}
+
+// Report reports the annotations to the given trace reporter.
+func (as *Annotations) Report(span Span, reporter TraceReporter) {
+	reporter.Report(span, as.annotations, as.binaryAnnotations)
+}

@@ -141,6 +141,7 @@ func (c *Connection) handleCallResContinue(frame *Frame) bool {
 // ArgReader2() and ArgReader3() methods on the Response() object.
 type OutboundCall struct {
 	reqResWriter
+	Annotations
 
 	callReq         callReq
 	response        *OutboundCallResponse

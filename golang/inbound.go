@@ -151,6 +151,7 @@ func (c *Connection) dispatchInbound(call *InboundCall) {
 
 // An InboundCall is an incoming call from a peer
 type InboundCall struct {
+	Annotations
 	reqResReader
 
 	response        *InboundCallResponse
