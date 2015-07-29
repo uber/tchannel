@@ -39,8 +39,8 @@ type statsdReporter struct {
 }
 
 // NewStatsdReporter returns a StatsReporter that reports to statsd on the given addr.
-func NewStatsdReporter(addr string) (tchannel.StatsReporter, error) {
-	client, err := statsd.NewBufferedClient(addr, "", time.Second, 0)
+func NewStatsdReporter(addr, prefix string) (tchannel.StatsReporter, error) {
+	client, err := statsd.NewBufferedClient(addr, prefix, time.Second, 0)
 	if err != nil {
 		return nil, err
 	}
