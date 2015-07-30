@@ -25,6 +25,10 @@ var timers = TimeMock(Date.now());
 var series = require('run-series');
 var RateLimiter = require('../rate_limiter.js');
 
+var nullStatsd = require('uber-statsd-client/null');
+var StatEmitter = require('../lib/stat_emitter');
+var TChannelStatsd = require('../lib/statsd');
+
 function increment(rateLimiter, steve, bob, done) {
     if (steve) {
         rateLimiter.incrementTotalCounter('steve');
@@ -47,9 +51,16 @@ function wait(done) {
 }
 
 test('rps counter works', function (assert) {
+    var statEmitter = new StatEmitter();
+    var statsd = new TChannelStatsd({
+        statEmitter: statEmitter,
+        statsd: nullStatsd(2)
+    });
+
     var rateLimiter = RateLimiter ({
         timers: timers,
-        numOfBuckets: 2
+        numOfBuckets: 2,
+        statEmitter: statEmitter
     });
 
     increment(rateLimiter, 'steve', 'bob');
@@ -60,14 +71,35 @@ test('rps counter works', function (assert) {
     assert.equals(rateLimiter.counters.steve.rps, 3, 'request for steve');
     assert.equals(rateLimiter.counters.bob.rps, 2, 'request for bob');
 
+    assert.deepEqual(statsd.statsd._buffer._elements, [{
+        type: 'g',
+        name: 'tchannel.rate-limiting.total-rps',
+        value: null,
+        delta: null,
+        time: null
+    }, {
+        type: 'g',
+        name: 'tchannel.rate-limiting.total-rps-limit',
+        value: 1000,
+        delta: null,
+        time: null
+    }], 'stats keys/values as expected');
+
     rateLimiter.destroy();
     assert.end();
 });
 
 test('rps counter works in 1.5 seconds', function (assert) {
+    var statEmitter = new StatEmitter();
+    var statsd = new TChannelStatsd({
+        statEmitter: statEmitter,
+        statsd: nullStatsd(26)
+    });
+
     var rateLimiter = RateLimiter ({
         timers: timers,
-        numOfBuckets: 2
+        numOfBuckets: 2,
+        statEmitter: statEmitter
     });
 
     series([
@@ -91,6 +123,164 @@ test('rps counter works in 1.5 seconds', function (assert) {
         }
     ], function done() {
         if (!rateLimiter.destroyed) {
+            assert.deepEqual(statsd.statsd._buffer._elements, [{
+                type: 'g',
+                name: 'tchannel.rate-limiting.total-rps',
+                value: null,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.total-rps-limit',
+                value: 1000,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.total-rps',
+                value: 4,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.total-rps-limit',
+                value: 1000,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.service-rps.steve',
+                value: 2,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.service-rps-limit.steve',
+                value: 100,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.service-rps.bob',
+                value: 2,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.service-rps-limit.bob',
+                value: 100,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.total-rps',
+                value: 5,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.total-rps-limit',
+                value: 1000,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.service-rps.steve',
+                value: 3,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.service-rps-limit.steve',
+                value: 100,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.service-rps.bob',
+                value: 2,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.service-rps-limit.bob',
+                value: 100,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.total-rps',
+                value: 3,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.total-rps-limit',
+                value: 1000,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.service-rps.steve',
+                value: 2,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.service-rps-limit.steve',
+                value: 100,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.service-rps.bob',
+                value: 1,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.service-rps-limit.bob',
+                value: 100,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.total-rps',
+                value: 2,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.total-rps-limit',
+                value: 1000,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.service-rps.steve',
+                value: 1,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.service-rps-limit.steve',
+                value: 100,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.service-rps.bob',
+                value: 1,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.service-rps-limit.bob',
+                value: 100,
+                delta: null,
+                time: null
+            }], 'stats keys/values as expected');
+
             rateLimiter.destroy();
             assert.end();
         }

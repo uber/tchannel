@@ -47,7 +47,11 @@ allocCluster.test('emits connection stats with success', {
         cluster: 'c0',
         version: '1.0'
     };
-    client.channelStatsd = new TChannelStatsd(client, statsd);
+    client.channelStatsd = new TChannelStatsd({
+        statEmitter: client,
+        statsd: statsd,
+        logger: client.logger
+    });
     var subClient = client.makeSubChannel({
         serviceName: 'reservoir',
         peers: [server.hostPort]
@@ -101,7 +105,11 @@ allocCluster.test('emits connection stats with failure', {
         cluster: 'c0',
         version: '1.0'
     };
-    client.channelStatsd = new TChannelStatsd(client, statsd);
+    client.channelStatsd = new TChannelStatsd({
+        statEmitter: client,
+        statsd: statsd,
+        logger: client.logger
+    });
     var subClient = client.makeSubChannel({
         serviceName: 'reservoir',
         peers: ['localhost:9999']
@@ -162,7 +170,11 @@ allocCluster.test('emits active connections', {
         cluster: 'c0',
         version: '1.0'
     };
-    client.channelStatsd = new TChannelStatsd(client, statsd);
+    client.channelStatsd = new TChannelStatsd({
+        statEmitter: client,
+        statsd: statsd,
+        logger: client.logger
+    });
     var subClient = client.makeSubChannel({
         serviceName: 'reservoir',
         peers: [server.hostPort]

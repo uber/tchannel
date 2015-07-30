@@ -127,17 +127,6 @@ function TChannel(options) {
         processName: format('%s[%s]', process.title, process.pid)
     }, options);
 
-    // required: 'app'
-    // optional: 'host', 'cluster', 'version'
-    assert(!self.options.statTags || self.options.statTags.app, 'the stats must have the "app" tag');
-    self.statTags = new StatTags(self.options.statTags || {});
-
-    self.statsd = self.options.statsd;
-    if (self.statsd) {
-        self.channelStatsd = new TChannelStatsd(self, self.statsd);
-        self.options.statsd = null;
-    }
-
     self.logger = self.options.logger || nullLogger;
     self.random = self.options.random || globalRandom;
     self.timers = self.options.timers || globalTimers;
@@ -148,6 +137,21 @@ function TChannel(options) {
         typeof self.options.emitConnectionMetrics === 'boolean' ?
         self.options.emitConnectionMetrics : true;
     self.choosePeerWithHeap = self.options.choosePeerWithHeap || false;
+
+    // required: 'app'
+    // optional: 'host', 'cluster', 'version'
+    assert(!self.options.statTags || self.options.statTags.app, 'the stats must have the "app" tag');
+    self.statTags = new StatTags(self.options.statTags || {});
+
+    self.statsd = self.options.statsd;
+    if (self.statsd) {
+        self.channelStatsd = new TChannelStatsd({
+            statEmitter: self,
+            statsd: self.statsd,
+            logger: self.logger
+        });
+        self.options.statsd = null;
+    }
 
     // Filled in by the listen call:
     self.host = null;
