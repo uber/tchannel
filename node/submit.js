@@ -7,6 +7,7 @@ var Span = require('./trace/span');
 var SERVICE = 'submitjs';
 
 // rewrite using span.js
+//  - use the built-in trace generation
 // integrate with POC on ON
 
 function randInt(n) {
