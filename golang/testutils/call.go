@@ -30,10 +30,12 @@ type FakeIncomingCall struct {
 	callerName string
 }
 
+// CallerName returns the caller name as specified in the fake call.
 func (f *FakeIncomingCall) CallerName() string {
 	return f.callerName
 }
 
+// NewIncomingCall creates an incoming call for tests.
 func NewIncomingCall(callerName string) tchannel.IncomingCall {
 	return &FakeIncomingCall{callerName: callerName}
 }
