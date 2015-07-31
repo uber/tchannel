@@ -22,7 +22,6 @@ package tchannel_test
 
 import (
 	"bytes"
-	"flag"
 	"log"
 	"testing"
 	"time"
@@ -42,12 +41,8 @@ func makeData(size int) []byte {
 	return data
 }
 
-var flagStressTest = flag.Bool("stressTest", false, "Run stress tests (very slow)")
-
 func TestLargeRequest(t *testing.T) {
-	if !*flagStressTest {
-		t.Skip("skipping as stress tests are not enabled")
-	}
+	CheckStress(t)
 
 	const (
 		KB = 1024

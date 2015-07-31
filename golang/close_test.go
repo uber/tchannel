@@ -49,9 +49,7 @@ func makeCall(ch *Channel, hostPort, service string) error {
 
 // TestClose ensures that once a Channel is closed, it cannot be reached.
 func TestClose(t *testing.T) {
-	if testing.Short() {
-		return
-	}
+	CheckStress(t)
 
 	const numHandlers = 5
 	handler := &swapper{t}

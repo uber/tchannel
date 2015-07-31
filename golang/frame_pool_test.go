@@ -55,9 +55,7 @@ func (*swapper) Handle(ctx context.Context, args *raw.Args) (*raw.Res, error) {
 }
 
 func TestFramesReleased(t *testing.T) {
-	if testing.Short() {
-		return
-	}
+	CheckStress(t)
 
 	defer testutils.SetTimeout(t, 10*time.Second)()
 	const (
