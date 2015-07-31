@@ -284,6 +284,19 @@ TChannelOutResponse.prototype.send = function send(res1, res2) {
 
     /* send calls after finish() should be swallowed */
     if (self.end) {
+        self.logger.warn('OutResponse called send() after end', {
+            serviceName: self.inreq.serviceName,
+            cn: self.inreq.headers.cn,
+            endpoint: self.inreq.endpoint,
+            remoteAddr: self.inreq.remoteAddr,
+
+            end: self.end,
+            codeString: self.codeString,
+            errorMessage: self.message,
+            isOk: self.ok,
+            hasResponse: !!self.arg3,
+            state: self.state
+        });
         return;
     }
 
