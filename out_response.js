@@ -217,9 +217,10 @@ TChannelOutResponse.prototype.emitFinish = function emitFinish() {
             codeString: self.codeString,
             errorMessage: self.message,
             remoteAddr: self.inreq.connection.socketRemoteAddr,
-            state: self.state
-        });
+            state: self.state,
 
+            isOk: self.ok
+        });
         return;
     }
 
