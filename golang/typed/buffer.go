@@ -59,7 +59,7 @@ func (r *ReadBuffer) ReadByte() byte {
 	}
 
 	if len(r.remaining) == 0 {
-		r.err = io.EOF
+		r.err = ErrEOF
 		return 0
 	}
 
@@ -75,10 +75,8 @@ func (r *ReadBuffer) ReadBytes(n int) []byte {
 	}
 
 	if len(r.remaining) < n {
-		b := r.remaining
-		r.remaining = nil
-		r.err = io.EOF
-		return b
+		r.err = ErrEOF
+		return nil
 	}
 
 	b := r.remaining[0:n]
