@@ -515,12 +515,12 @@ TChannelOutRequest.prototype.onTimeout = function onTimeout(now) {
     }
 
     if (!self.res || self.res.state === States.Initial) {
-        self.end = now;
         self.timedOut = true;
         if (self.operations) {
             self.operations.checkLastTimeoutTime(now);
             self.operations.popOutReq(self.id);
         }
+
         process.nextTick(deferOutReqTimeoutErrorEmit);
     }
 
