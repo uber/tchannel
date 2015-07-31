@@ -33,14 +33,6 @@ import (
 	"github.com/uber/tchannel/golang/testutils"
 )
 
-func makeData(size int) []byte {
-	data := make([]byte, size)
-	for i := 0; i < size; i++ {
-		data[i] = byte(i)
-	}
-	return data
-}
-
 func TestLargeRequest(t *testing.T) {
 	CheckStress(t)
 
@@ -57,8 +49,8 @@ func TestLargeRequest(t *testing.T) {
 
 		for reqSize := 2; reqSize <= maxRequestSize; reqSize *= 2 {
 			log.Printf("reqSize = %v", reqSize)
-			arg3 := makeData(reqSize)
-			arg2 := arg3[len(arg3)/2:]
+			arg3 := testutils.RandBytes(reqSize)
+			arg2 := testutils.RandBytes(reqSize / 2)
 
 			clientCh, err := testutils.NewClient(nil)
 			require.NoError(t, err, "new client failed")

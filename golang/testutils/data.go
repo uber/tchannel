@@ -72,6 +72,19 @@ func resizeCache(n int) {
 // RandBytes returns n random byte slice that points to a shared random byte array.
 // Since the underlying random array is shared, the returned byte slice must NOT be modified.
 func RandBytes(n int) []byte {
+	const maxSize = 2 * 1024 * 1024
+	data := make([]byte, 0, n)
+	for i := 0; i < n; i += maxSize {
+		s := n - i
+		if s > maxSize {
+			s = maxSize
+		}
+		data = append(data, randBytes(s)...)
+	}
+	return data
+}
+
+func randBytes(n int) []byte {
 	checkCacheSize(n)
 
 	randMut.RLock()
