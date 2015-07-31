@@ -280,6 +280,11 @@ TChannelOutResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
 TChannelOutResponse.prototype.send = function send(res1, res2) {
     var self = this;
 
+    /* send calls after finish() should be swallowed */
+    if (self.end) {
+        return;
+    }
+
     self.arg2 = res1;
     self.arg3 = res2;
 
