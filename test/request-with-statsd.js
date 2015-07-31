@@ -57,11 +57,7 @@ allocCluster.test('emits stats on call success', {
         cluster: 'c0',
         version: '1.0'
     };
-    client.channelStatsd = new TChannelStatsd({
-        statEmitter: client,
-        statsd: statsd,
-        logger: client.logger
-    });
+    client.channelStatsd = new TChannelStatsd(client, statsd);
     var clientChan = client.makeSubChannel({
         serviceName: 'reservoir',
         peers: [server.hostPort],
@@ -179,11 +175,7 @@ allocCluster.test('emits stats on p2p call success', {
         cluster: 'c0',
         version: '1.0'
     };
-    client.channelStatsd = new TChannelStatsd({
-        statEmitter: client,
-        statsd: statsd,
-        logger: client.logger
-    });
+    client.channelStatsd = new TChannelStatsd(client, statsd);
     var clientChan = client.makeSubChannel({
         serviceName: 'reservoir',
         peers: [server.hostPort],
@@ -300,11 +292,7 @@ allocCluster.test('emits stats with no connection metrics', {
         cluster: 'c0',
         version: '1.0'
     };
-    client.channelStatsd = new TChannelStatsd({
-        statEmitter: client,
-        statsd: statsd,
-        logger: client.logger
-    });
+    client.channelStatsd = new TChannelStatsd(client, statsd);
     var clientChan = client.makeSubChannel({
         serviceName: 'reservoir',
         peers: [server.hostPort],
@@ -404,11 +392,7 @@ allocCluster.test('emits stats on call failure', {
         cluster: 'c0',
         version: '1.0'
     };
-    client.channelStatsd = new TChannelStatsd({
-        statEmitter: client,
-        statsd: statsd,
-        logger: client.logger
-    });
+    client.channelStatsd = new TChannelStatsd(client, statsd);
     var clientChan = client.makeSubChannel({
         serviceName: 'reservoir',
         peers: [server.hostPort],
