@@ -284,7 +284,7 @@ TChannelOutResponse.prototype.send = function send(res1, res2) {
 
     /* send calls after finish() should be swallowed */
     if (self.end) {
-        self.logger.warn('OutResponse called send() after end', {
+        var logOptions = {
             serviceName: self.inreq.serviceName,
             cn: self.inreq.headers.cn,
             endpoint: self.inreq.endpoint,
@@ -296,7 +296,13 @@ TChannelOutResponse.prototype.send = function send(res1, res2) {
             isOk: self.ok,
             hasResponse: !!self.arg3,
             state: self.state
-        });
+        };
+
+        if (self.inreq && self.inreq.timedOut) {
+            self.logger.info('OutResponse.send() after inreq timed out', logOptions);
+        } else {
+            self.logger.warn('OutResponse called send() after end', logOptions);
+        }
         return;
     }
 
