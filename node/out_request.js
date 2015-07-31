@@ -271,6 +271,20 @@ TChannelOutRequest.prototype.emitLatency = function emitLatency() {
 TChannelOutRequest.prototype.emitError = function emitError(err) {
     var self = this;
 
+    if (self.end) {
+        self.channel.logger.warn('Unexpected error after end for OutRequest', {
+            serviceName: self.serviceName,
+            endpoint: self.endpoint,
+            socketRemoteAddr: self.remoteAddr,
+            callerName: self.headers.cn,
+
+            oldError: self.err,
+            oldResponse: !!self.res,
+
+            error: err
+        });
+    }
+
     if (!self.end) {
         self.end = self.channel.timers.now();
     }
