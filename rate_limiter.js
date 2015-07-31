@@ -186,15 +186,15 @@ function updateTotalLimit(limit) {
     self.totalRequestCounter.rpsLimit = limit;
 };
 
-RateLimiter.prototype.incrementServiceCounter =
-function incrementServiceCounter(serviceName) {
+RateLimiter.prototype.createServiceCounter =
+function createServiceCounter(serviceName) {
     var self = this;
     var counter;
 
-    assert(serviceName, 'incrementServiceCounter requires the serviceName');
+    assert(serviceName, 'createServiceCounter requires the serviceName');
 
     if (self.exemptServices.indexOf(serviceName) !== -1) {
-        return;
+        return null;
     }
 
     // if this is an existing service counter
@@ -212,8 +212,18 @@ function incrementServiceCounter(serviceName) {
         self.counters[serviceName] = counter;
     }
 
-    // increment the service counter
-    counter.increment();
+    return counter;
+};
+
+RateLimiter.prototype.incrementServiceCounter =
+function incrementServiceCounter(serviceName) {
+    var self = this;
+    var counter = self.createServiceCounter(serviceName);
+
+    if (counter) {
+        // increment the service counter
+        counter.increment();
+    }
 };
 
 RateLimiter.prototype.incrementTotalCounter =
