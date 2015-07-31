@@ -183,6 +183,13 @@ Operations.prototype.popOutReq = function popOutReq(id, context) {
     if (req.timeHeapHandle) {
         req.timeHeapHandle.cancel();
         req.timeHeapHandle = null;
+    } else {
+        self.logger.warn('Found OutRequest without timeHeapHandle', {
+            serviceName: req.serviceName,
+            endpoint: req.endpoint,
+            socketRemoteAddr: req.remoteAddr,
+            callerName: req.headers.cn
+        });
     }
 
     var now = self.timers.now();
