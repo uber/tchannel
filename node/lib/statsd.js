@@ -23,20 +23,17 @@
 var Cleaner = require('./statsd-clean');
 var clean = Cleaner.clean;
 var cleanHostPort = Cleaner.cleanHostPort;
-var nullLogger = require('../null-logger.js');
 
-function TChannelStatsd(options) {
+function TChannelStatsd(channel, statsd) {
     if (!(this instanceof TChannelStatsd)) {
-        return new TChannelStatsd(options);
+        return new TChannelStatsd(channel, statsd);
     }
 
     var self = this;
 
-    self.statsd = options.statsd;
-    self.statEmitter = options.statEmitter;
-    self.logger = options.logger || nullLogger;
-
-    self.statEmitter.statEvent.on(onStat);
+    self.statsd = statsd;
+    self.channel = channel;
+    self.channel.statEvent.on(onStat);
 
     function onStat(stat) {
         self.onStat(stat);
@@ -129,7 +126,7 @@ TChannelStatsd.prototype.onStat = function onStat(stat) {
     } else if (stat.type === 'timing') {
         return self.statsd.timing(key, stat.value);
     } else {
-        self.logger.error('Trying to emit an invalid stat object', {
+        self.channel.logger.error('Trying to emit an invalid stat object', {
             statType: stat.type,
             statName: stat.name
         });

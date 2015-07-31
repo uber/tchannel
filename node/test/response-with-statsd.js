@@ -59,11 +59,7 @@ allocCluster.test('emits stats on response ok', {
         cluster: 'c0',
         version: '1.0'
     };
-    server.channelStatsd = new TChannelStatsd({
-        statEmitter: server,
-        statsd: statsd,
-        logger: server.logger
-    });
+    server.channelStatsd = new TChannelStatsd(server, statsd);
 
     var clientChan = client.makeSubChannel({
         serviceName: 'reservoir',
@@ -178,11 +174,7 @@ allocCluster.test('emits stats on response not ok', {
         cluster: 'c0',
         version: '1.0'
     };
-    server.channelStatsd = new TChannelStatsd({
-        statEmitter: server,
-        statsd: statsd,
-        logger: server.logger
-    });
+    server.channelStatsd = new TChannelStatsd(server, statsd);
 
     var clientChan = client.makeSubChannel({
         serviceName: 'reservoir',
@@ -296,11 +288,7 @@ allocCluster.test('emits stats on response error', {
         cluster: 'c0',
         version: '1.0'
     };
-    server.channelStatsd = new TChannelStatsd({
-        statEmitter: server,
-        statsd: statsd,
-        logger: server.logger
-    });
+    server.channelStatsd = new TChannelStatsd(server, statsd);
 
     var clientChan = client.makeSubChannel({
         serviceName: 'reservoir',

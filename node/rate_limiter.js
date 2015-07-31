@@ -21,9 +21,7 @@
 'use strict';
 
 var assert = require('assert');
-var StatEmitter = require('./lib/stat_emitter');
 var stat = require('./lib/stat');
-var nullLogger = require('./null-logger.js');
 
 var DEFAULT_SERVICE_RPS_LIMIT = 100;
 var DEFAULT_TOTAL_RPS_LIMIT = 1000;
@@ -76,20 +74,15 @@ function RateLimiter(options) {
     var self = this;
 
     // stats
-    self.statEmitter = options.statEmitter || new StatEmitter();
+    self.channel = options.channel;
+    assert(self.channel && !self.channel.topChannel, 'RateLimiter requires top channel');
     self.rateLimiterEmptyTags = new stat.RateLimiterEmptyTags();
-    self.serviceRpsStat = self.statEmitter.defineGauge('tchannel.rate-limiting.service-rps');
-    self.serviceRpsLimitStat = self.statEmitter.defineGauge('tchannel.rate-limiting.service-rps-limit');
-    self.totalRpsStat = self.statEmitter.defineGauge('tchannel.rate-limiting.total-rps');
-    self.totalRpsLimitStat = self.statEmitter.defineGauge('tchannel.rate-limiting.total-rps-limit');
-    self.totalBusyStat = self.statEmitter.defineCounter('tchannel.rate-limiting.total-busy');
-    self.serviceBusyStat = self.statEmitter.defineCounter('tchannel.rate-limiting.service-busy');
 
-    self.timers = options.timers;
-    self.logger = options.logger || nullLogger;
+    self.timers = self.channel.timers;
 
     self.numOfBuckets = options.numOfBuckets || DEFAULT_BUCKET_NUMBER;
     assert(self.numOfBuckets > 0 && self.numOfBuckets <= 1000, 'counter numOfBuckets should between (0 1000]');
+    self.cycle = self.numOfBuckets;
 
     self.defaultServiceRpsLimit = options.defaultServiceRpsLimit || DEFAULT_SERVICE_RPS_LIMIT;
     self.defaultTotalRpsLimit = DEFAULT_TOTAL_RPS_LIMIT;
@@ -117,16 +110,49 @@ RateLimiter.prototype.refresh =
 function refresh() {
     var self = this;
 
-    self.totalRpsStat.update(self.totalRequestCounter.rps, self.rateLimiterEmptyTags);
-    self.totalRpsLimitStat.update(self.totalRequestCounter.rpsLimit, self.rateLimiterEmptyTags);
+    if (self.cycle === self.numOfBuckets) {
+        self.channel.emitFastStat(self.channel.buildStat(
+            'tchannel.rate-limiting.total-rps',
+            'gauge',
+            self.totalRequestCounter.rps,
+            self.rateLimiterEmptyTags
+        ));
+
+        self.channel.emitFastStat(self.channel.buildStat(
+            'tchannel.rate-limiting.total-rps-limit',
+            'gauge',
+            self.totalRequestCounter.rpsLimit,
+            self.rateLimiterEmptyTags
+        ));
+    }
+
     self.totalRequestCounter.refresh();
 
     var serviceNames = Object.keys(self.counters);
     for (var i = 0; i < serviceNames.length; i++) {
         var counter = self.counters[serviceNames[i]];
-        self.serviceRpsStat.update(counter.rps, new stat.RateLimiterServiceTags(serviceNames[i]));
-        self.serviceRpsLimitStat.update(counter.rpsLimit, new stat.RateLimiterServiceTags(serviceNames[i]));
+        if (self.cycle === self.numOfBuckets) {
+            var statsTag = new stat.RateLimiterServiceTags(serviceNames[i]);
+            self.channel.emitFastStat(self.channel.buildStat(
+                'tchannel.rate-limiting.service-rps',
+                'gauge',
+                counter.rps,
+                statsTag
+            ));
+
+            self.channel.emitFastStat(self.channel.buildStat(
+                'tchannel.rate-limiting.service-rps-limit',
+                'gauge',
+                counter.rpsLimit,
+                statsTag
+            ));
+        }
         counter.refresh();
+    }
+
+    self.cycle--;
+    if (self.cycle <= 0) {
+        self.cycle = self.numOfBuckets;
     }
 
     self.refreshTimer = self.timers.setTimeout(
@@ -253,7 +279,12 @@ function shouldRateLimitService(serviceName) {
     assert(counter, 'cannot find counter for ' + serviceName);
     var result = counter.rps > counter.rpsLimit;
     if (result) {
-        self.serviceBusyStat.increment(1, new stat.RateLimiterServiceTags(serviceName));
+        self.channel.emitFastStat(self.channel.buildStat(
+            'tchannel.rate-limiting.service-busy',
+            'counter',
+            1,
+            new stat.RateLimiterServiceTags(serviceName)
+        ));
     }
     return result;
 };
@@ -269,7 +300,12 @@ function shouldRateLimitTotalRequest(serviceName) {
     }
 
     if (result) {
-        self.totalBusyStat.increment(1, new stat.RateLimiterServiceTags(serviceName));
+        self.channel.emitFastStat(self.channel.buildStat(
+            'tchannel.rate-limiting.total-busy',
+            'counter',
+            1,
+            new stat.RateLimiterServiceTags(serviceName)
+        ));
     }
 
     return result;
