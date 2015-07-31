@@ -501,7 +501,7 @@ TChannelOutRequest.prototype.onTimeout = function onTimeout(now) {
     var self = this;
 
     if (self.err) {
-        self.channel.logger.warn('weird onTimeout for errored out request', {
+        self.channel.logger.warn('unexpected onTimeout for errored out request', {
             serviceName: self.serviceName,
             endpoint: self.endpoint,
             socketRemoteAddr: self.remoteAddr,
