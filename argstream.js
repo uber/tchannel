@@ -153,10 +153,12 @@ function OutArgStream() {
         self._handleFrameChunk(2, null);
     });
     self.arg3.on('finish', function onArg3Finish() {
-        self._handleFrameChunk(3, null);
-        self._flushParts(true);
-        self.finished = true;
-        self.finishEvent.emit(self);
+        if (!self.finished) {
+            self._handleFrameChunk(3, null);
+            self._flushParts(true);
+            self.finished = true;
+            self.finishEvent.emit(self);
+        }
     });
 }
 

@@ -217,9 +217,10 @@ TChannelOutResponse.prototype.emitFinish = function emitFinish() {
             codeString: self.codeString,
             errorMessage: self.message,
             remoteAddr: self.inreq.connection.socketRemoteAddr,
-            state: self.state
-        });
+            state: self.state,
 
+            isOk: self.ok
+        });
         return;
     }
 
@@ -253,6 +254,7 @@ TChannelOutResponse.prototype.setOk = function setOk(ok) {
             method: 'setOk',
             ok: ok
         }));
+        return;
     }
     self.ok = ok;
     self.code = ok ? 0 : 1; // TODO: too coupled to v2 specifics?
@@ -279,6 +281,30 @@ TChannelOutResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
 
 TChannelOutResponse.prototype.send = function send(res1, res2) {
     var self = this;
+
+    /* send calls after finish() should be swallowed */
+    if (self.end) {
+        var logOptions = {
+            serviceName: self.inreq.serviceName,
+            cn: self.inreq.headers.cn,
+            endpoint: self.inreq.endpoint,
+            remoteAddr: self.inreq.remoteAddr,
+
+            end: self.end,
+            codeString: self.codeString,
+            errorMessage: self.message,
+            isOk: self.ok,
+            hasResponse: !!self.arg3,
+            state: self.state
+        };
+
+        if (self.inreq && self.inreq.timedOut) {
+            self.logger.info('OutResponse.send() after inreq timed out', logOptions);
+        } else {
+            self.logger.warn('OutResponse called send() after end', logOptions);
+        }
+        return;
+    }
 
     self.arg2 = res1;
     self.arg3 = res2;
