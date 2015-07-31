@@ -500,6 +500,20 @@ TChannelOutRequest.prototype.hookupCallback = function hookupCallback(callback) 
 TChannelOutRequest.prototype.onTimeout = function onTimeout(now) {
     var self = this;
 
+    if (self.err) {
+        self.channel.logger.warn('weird onTimeout for errored out request', {
+            serviceName: self.serviceName,
+            endpoint: self.endpoint,
+            socketRemoteAddr: self.remoteAddr,
+            callerName: self.headers.cn,
+
+            oldError: self.err,
+            oldResponse: !!self.res,
+
+            time: now
+        });
+    }
+
     if (!self.res || self.res.state === States.Initial) {
         self.end = now;
         self.timedOut = true;
