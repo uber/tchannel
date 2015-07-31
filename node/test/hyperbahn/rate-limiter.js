@@ -211,6 +211,7 @@ function runTests(HyperbahnCluster) {
             series([
                 send.bind(null, opts),
                 send.bind(null, opts),
+                send.bind(null, opts),
                 function sendError(done) {
                     var tchannelJSON = TChannelJSON({
                         logger: cluster.logger
@@ -270,6 +271,7 @@ function runTests(HyperbahnCluster) {
                 send.bind(null, opts),
                 send.bind(null, opts),
                 waitFor(500),
+                send.bind(null, opts),
                 function sendError(done) {
                     var tchannelJSON = TChannelJSON({
                         logger: cluster.logger
