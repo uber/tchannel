@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	_ "net/http/pprof"
+	"runtime"
 	"sync"
 
 	"github.com/uber/tchannel/golang"
@@ -18,14 +19,16 @@ var (
 	flagHost      = flag.String("host", "localhost", "The hostname to listen on")
 	flagPort      = flag.Int("port", 12345, "The base port to listen on")
 	flagInstances = flag.Int("instances", 1, "The number of instances to start")
+	flagOSThreads = flag.Int("numThreads", 1, "The number of OS threads to use (sets GOMAXPROCS)")
 )
 
 func main() {
 	flag.Parse()
+	runtime.GOMAXPROCS(*flagOSThreads)
 
 	// Sets up a listener for pprof.
 	go func() {
-		log.Println(http.ListenAndServe("localhost:6060", nil))
+		log.Printf("server pprof endpoint failed: %v", http.ListenAndServe("localhost:6060", nil))
 	}()
 
 	for i := 0; i < *flagInstances; i++ {
@@ -33,6 +36,8 @@ func main() {
 			log.Fatalf("setupServer %v failed: %v", i, err)
 		}
 	}
+
+	log.Printf("server config: %v threads listening on %v:%v", *flagOSThreads, *flagHost, *flagPort)
 
 	// Listen indefinitely.
 	select {}

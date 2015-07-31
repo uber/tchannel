@@ -42,7 +42,7 @@ func main() {
 		go worker(ch)
 	}
 
-	log.Printf("Config: %v workers on %v threads, setBlockSize %v, getToSetRatio %v",
+	log.Printf("client config: %v workers on %v threads, setBlockSize %v, getToSetRatio %v",
 		*numGoroutines, *numOSThreads, *setBlockSize, *getToSetRatio)
 	requestCountReporter()
 }
