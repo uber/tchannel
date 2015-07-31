@@ -74,6 +74,7 @@ examples: clean setup thrift_example
 	go build -o $(BUILD)/examples/hyperbahn/echo-server    ./examples/hyperbahn/echo-server/main.go
 	go build -o $(BUILD)/examples/bench/server ./examples/bench/server
 	go build -o $(BUILD)/examples/bench/client ./examples/bench/client
+	go build -o $(BUILD)/examples/bench/runner ./examples/bench/runner.go
 	go build -o $(BUILD)/examples/test_server ./examples/test_server
 
 thrift_gen:
