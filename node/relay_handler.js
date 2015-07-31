@@ -247,6 +247,17 @@ RelayRequest.prototype.onResponse = function onResponse(res) {
 RelayRequest.prototype.onError = function onError(err) {
     var self = this;
 
+    if (self.error) {
+        self.logger.warn('Unexpected double onError', {
+            remoteAddr: self.inreq.remoteAddr,
+            serviceName: self.inreq.serviceName,
+            endpoint: self.inreq.endpoint,
+            callerName: self.inreq.headers.cn,
+
+            oldError: self.error,
+            error: err
+        });
+    }
     self.error = err;
 
     if (!self.createOutResponse()) return;

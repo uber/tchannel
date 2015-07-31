@@ -155,10 +155,6 @@ TimeHeap.prototype.drainExpired = function drainExpired(now) {
         }
     }
     if (self.expired.length) {
-        process.nextTick(callExpiredTimeouts);
-    }
-
-    function callExpiredTimeouts() {
         self.callExpiredTimeouts(now);
     }
 };
