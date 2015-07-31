@@ -123,14 +123,14 @@ Span.prototype.annotate = function annotate(value, timestamp) {
 
     timestamp = timestamp || Date.now();
 
-    self.annotations.push(Annotation(value, self.endpoint, timestamp));
+    self.annotations.push(new Annotation(value, self.endpoint, timestamp));
 };
 
 Span.prototype.annotateBinary =
 function annotateBinary(key, value, type) {
     var self = this;
 
-    self.binaryAnnotations.push(BinaryAnnotation(key, value, type, self.endpoint));
+    self.binaryAnnotations.push(new BinaryAnnotation(key, value, type, self.endpoint));
 };
 
 function Endpoint(ipv4, port, serviceName) {
@@ -146,7 +146,7 @@ function Endpoint(ipv4, port, serviceName) {
 
 function Annotation(value, host, timestamp) {
     if (!(this instanceof Annotation)) {
-        return new Annotation(value, host);
+        return new Annotation(value, host, timestamp);
     }
     var self = this;
 
