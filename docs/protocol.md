@@ -633,12 +633,12 @@ used for interop with other systems.
 The following table describes the valid `as` values and their corresponding
 arg1, arg2, and arg3 forms:
 
-| value    | arg1                  | arg2                                     | arg3
-| -------- | --------------------- | ---------------------------------------- | --------------
-| `thrift` | string method name    | application headers `nh:2 (k~2 v~2){nh}` | thrift payload
-| `json`   | method name as string | application headers as JSON              | body as JSON
-| `http`   | method + URI          | headers as JSON array                    | raw body
-| `raw`    | raw bytes             | raw bytes                                | raw bytes
+
+ - For `as=thrift` see [thrift arg scheme definition](./thrift.md)
+ - For `as=sthrift` see [streaming thrift arg scheme definition](./sthrift.md)
+ - For `as=json` see [json arg scheme definition](./json.md)
+ - For `as=http` see [http arg scheme definition](./http.md)
+ - For `as=raw` see [raw arg scheme definition](./raw.md)
 
 ### Transport Header `cas` -- Claim At Start
 
