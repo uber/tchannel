@@ -76,7 +76,6 @@ function RateLimiter(options) {
     // stats
     self.channel = options.channel;
     assert(self.channel && !self.channel.topChannel, 'RateLimiter requires top channel');
-    self.rateLimiterEmptyTags = new stat.RateLimiterEmptyTags();
 
     self.timers = self.channel.timers;
 
@@ -115,14 +114,14 @@ function refresh() {
             'tchannel.rate-limiting.total-rps',
             'gauge',
             self.totalRequestCounter.rps,
-            self.rateLimiterEmptyTags
+            new stat.RateLimiterEmptyTags()
         ));
 
         self.channel.emitFastStat(self.channel.buildStat(
             'tchannel.rate-limiting.total-rps-limit',
             'gauge',
             self.totalRequestCounter.rpsLimit,
-            self.rateLimiterEmptyTags
+            new stat.RateLimiterEmptyTags()
         ));
     }
 
