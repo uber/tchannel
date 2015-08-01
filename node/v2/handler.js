@@ -195,7 +195,8 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
 
     var handled = self._handleCallFrame(req, reqFrame);
     if (handled) {
-        if (req.state === States.Streaming) {
+        var isLast = !(reqFrame.body.flags & v2.CallFlags.Fragment);
+        if (!isLast) {
             self.streamingReq[req.id] = req;
         } else {
             delete self.streamingReq[req.id];
@@ -327,7 +328,8 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
     res.remoteAddr = self.remoteName;
     var handled = self._handleCallFrame(res, resFrame);
     if (handled) {
-        if (res.state === States.Streaming) {
+        var isLast = !(resFrame.body.flags & v2.CallFlags.Fragment);
+        if (!isLast) {
             self.streamingRes[res.id] = res;
         } else {
             delete self.streamingRes[res.id];
