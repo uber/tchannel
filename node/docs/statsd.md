@@ -31,6 +31,8 @@ TChannel can emit the following stats:
  - `connections.accept-errors.{host}`
  - `connections.errors.{peer-host}.{type}`
  - `connections.closed.{peer-host}.{reason}`
+ - `rate-limiting.service-busy.target-service`
+ - `rate-limiting.total-busy.target-service`
 
 ### Timers
 
@@ -41,3 +43,7 @@ TChannel can emit the following stats:
 ### Gauges
 
  - `connections.active.{peer-host}`
+ - `rate-limiting.service-rps.target-service`
+ - `rate-limiting.service-rps-limit.target-service`
+ - `rate-limiting.total-rps`
+ - `rate-limiting.total-rps-limit`

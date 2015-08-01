@@ -292,3 +292,31 @@ The pattern for circuit counter stats is:
     -   `by-caller.$caller.$service.$endpoint`, or
     -   `by-service.$service.$caller.$endpoint`
 
+## Rate Limiting Metrics
+
+The rate limiting metrics track the number of requests sent to a service per second (RPS) and the number of
+busy responses generated because of rate limiting taking effect.  
+
+#### Gauges
+##### rate-limiting.service-rps
+The number of requests sent to a service per second. It MUST contain the ``target-service`` tag.
+
+##### rate-limiting.service-rps-limit
+The maximum number of requests that can be sent to a service per second. If the service's RPS goes
+above the rate limit, requests will be reponded by busy frames. It MUST contain the ``target-service`` tag.
+
+##### rate-limiting.total-rps
+The number of requests received by a tchannel process.
+
+##### rate-limiting.total-rps-limit
+The maximum number of requests that can be processed by a tcahnnel process. If the RPS goes above the
+limit, requests will be reponded by busy frames.
+
+#### Counters
+##### rate-limiting.service-busy
+The number of busy responses generated because the number of requests sent to a service passes the limit.
+It MUST contain the ``target-service`` tag.
+
+##### rate-limiting.total-busy
+The number of busy responses generated because the number of requests sent to a tchannel process passes the 
+limit. It SHOULD contain the ``target-service`` tag when the information is available.
