@@ -21,9 +21,11 @@
 'use strict';
 var test = require('tape');
 var TimeMock = require('time-mock');
+var nullStatsd = require('uber-statsd-client/null');
 var timers = TimeMock(Date.now());
 var series = require('run-series');
 var RateLimiter = require('../rate_limiter.js');
+var TChannel = require('../channel.js');
 
 function increment(rateLimiter, steve, bob, done) {
     if (steve) {
@@ -47,9 +49,14 @@ function wait(done) {
 }
 
 test('rps counter works', function (assert) {
-    var rateLimiter = RateLimiter ({
+    var channel = new TChannel({
         timers: timers,
-        numOfBuckets: 2
+        statsd: nullStatsd(2)
+    });
+    var statsd = channel.statsd;
+    var rateLimiter = RateLimiter ({
+        numOfBuckets: 2,
+        channel: channel
     });
 
     increment(rateLimiter, 'steve', 'bob');
@@ -60,14 +67,35 @@ test('rps counter works', function (assert) {
     assert.equals(rateLimiter.counters.steve.rps, 3, 'request for steve');
     assert.equals(rateLimiter.counters.bob.rps, 2, 'request for bob');
 
+    channel.flushStats();
+    assert.deepEqual(statsd._buffer._elements, [{
+        type: 'g',
+        name: 'tchannel.rate-limiting.total-rps',
+        value: null,
+        delta: null,
+        time: null
+    }, {
+        type: 'g',
+        name: 'tchannel.rate-limiting.total-rps-limit',
+        value: 1000,
+        delta: null,
+        time: null
+    }], 'stats keys/values as expected');
+
     rateLimiter.destroy();
     assert.end();
+    channel.close();
 });
 
 test('rps counter works in 1.5 seconds', function (assert) {
-    var rateLimiter = RateLimiter ({
+    var channel = new TChannel({
         timers: timers,
-        numOfBuckets: 2
+        statsd: nullStatsd(14)
+    });
+    var statsd = channel.statsd;
+    var rateLimiter = RateLimiter ({
+        numOfBuckets: 2,
+        channel: channel
     });
 
     series([
@@ -91,6 +119,95 @@ test('rps counter works in 1.5 seconds', function (assert) {
         }
     ], function done() {
         if (!rateLimiter.destroyed) {
+            channel.flushStats();
+            // console.log(statsd._buffer._elements);
+            assert.deepEqual(statsd._buffer._elements, [{
+                type: 'g',
+                name: 'tchannel.rate-limiting.total-rps',
+                value: null,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.total-rps-limit',
+                value: 1000,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.total-rps',
+                value: 5,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.total-rps-limit',
+                value: 1000,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.service-rps.steve',
+                value: 3,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.service-rps-limit.steve',
+                value: 100,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.service-rps.bob',
+                value: 2,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.service-rps-limit.bob',
+                value: 100,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.total-rps',
+                value: 2,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.total-rps-limit',
+                value: 1000,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.service-rps.steve',
+                value: 1,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.service-rps-limit.steve',
+                value: 100,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.service-rps.bob',
+                value: 1,
+                delta: null,
+                time: null
+            }, {
+                type: 'g',
+                name: 'tchannel.rate-limiting.service-rps-limit.bob',
+                value: 100,
+                delta: null,
+                time: null
+            }], 'stats keys/values as expected');
+
+            channel.close();
             rateLimiter.destroy();
             assert.end();
         }
@@ -98,8 +215,11 @@ test('rps counter works in 1.5 seconds', function (assert) {
 });
 
 test('remove counter works', function (assert) {
-    var rateLimiter = RateLimiter ({
+    var channel = new TChannel({
         timers: timers,
+    });
+    var rateLimiter = RateLimiter ({
+        channel: channel,
         numOfBuckets: 2
     });
 
@@ -114,12 +234,16 @@ test('remove counter works', function (assert) {
     assert.equals(rateLimiter.counters.bob.rps, 2, 'request for bob');
 
     rateLimiter.destroy();
+    channel.close();
     assert.end();
 });
 
 test('rate limit works', function (assert) {
-    var rateLimiter = RateLimiter ({
+    var channel = new TChannel({
         timers: timers,
+    });
+    var rateLimiter = RateLimiter ({
+        channel: channel,
         numOfBuckets: 2,
         rpsLimitForServiceName: {
             steve: 2
@@ -140,12 +264,16 @@ test('rate limit works', function (assert) {
     assert.ok(!rateLimiter.shouldRateLimitService('bob'), 'should not rate limit bob');
 
     rateLimiter.destroy();
+    channel.close();
     assert.end();
 });
 
 test('rate exempt service works', function (assert) {
-    var rateLimiter = RateLimiter ({
+    var channel = new TChannel({
         timers: timers,
+    });
+    var rateLimiter = RateLimiter ({
+        channel: channel,
         totalRpsLimit: 2,
         exemptServices: ['steve']
     });
@@ -159,12 +287,16 @@ test('rate exempt service works', function (assert) {
     assert.ok(rateLimiter.shouldRateLimitTotalRequest('bob'), 'should rate limit bob');
 
     rateLimiter.destroy();
+    channel.close();
     assert.end();
 });
 
 test('rate exempt service works', function (assert) {
-    var rateLimiter = RateLimiter ({
+    var channel = new TChannel({
         timers: timers,
+    });
+    var rateLimiter = RateLimiter ({
+        channel: channel,
         totalRpsLimit: 2,
         rpsLimitForServiceName: {
             steve: 2,

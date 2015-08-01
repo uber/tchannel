@@ -65,7 +65,7 @@ function ServiceDispatchHandler(options) {
     self.exitServices = Object.create(null);
     self.purgeServices();
     self.rateLimiter = new RateLimiter({
-        timers: self.channel.timers,
+        channel: self.channel,
         rpsLimitForServiceName: options.rpsLimitForServiceName,
         exemptServices: options.exemptServices,
         totalRpsLimit: options.totalRpsLimit,

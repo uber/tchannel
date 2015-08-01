@@ -21,6 +21,7 @@
 'use strict';
 
 var assert = require('assert');
+var stat = require('./lib/stat');
 
 var DEFAULT_SERVICE_RPS_LIMIT = 100;
 var DEFAULT_TOTAL_RPS_LIMIT = 1000;
@@ -72,10 +73,15 @@ function RateLimiter(options) {
     }
     var self = this;
 
-    self.timers = options.timers;
+    // stats
+    self.channel = options.channel;
+    assert(self.channel && !self.channel.topChannel, 'RateLimiter requires top channel');
+
+    self.timers = self.channel.timers;
 
     self.numOfBuckets = options.numOfBuckets || DEFAULT_BUCKET_NUMBER;
     assert(self.numOfBuckets > 0 && self.numOfBuckets <= 1000, 'counter numOfBuckets should between (0 1000]');
+    self.cycle = self.numOfBuckets;
 
     self.defaultServiceRpsLimit = options.defaultServiceRpsLimit || DEFAULT_SERVICE_RPS_LIMIT;
     self.defaultTotalRpsLimit = DEFAULT_TOTAL_RPS_LIMIT;
@@ -97,17 +103,55 @@ function RateLimiter(options) {
     self.destroyed = false;
 }
 
-RateLimiter.prototype.type = 'tchannel.hyperbahn.rate-limiting';
+RateLimiter.prototype.type = 'tchannel.rate-limiting';
 
 RateLimiter.prototype.refresh =
 function refresh() {
     var self = this;
 
+    if (self.cycle === self.numOfBuckets) {
+        self.channel.emitFastStat(self.channel.buildStat(
+            'tchannel.rate-limiting.total-rps',
+            'gauge',
+            self.totalRequestCounter.rps,
+            new stat.RateLimiterEmptyTags()
+        ));
+
+        self.channel.emitFastStat(self.channel.buildStat(
+            'tchannel.rate-limiting.total-rps-limit',
+            'gauge',
+            self.totalRequestCounter.rpsLimit,
+            new stat.RateLimiterEmptyTags()
+        ));
+    }
+
     self.totalRequestCounter.refresh();
 
     var serviceNames = Object.keys(self.counters);
     for (var i = 0; i < serviceNames.length; i++) {
-        self.counters[serviceNames[i]].refresh();
+        var counter = self.counters[serviceNames[i]];
+        if (self.cycle === self.numOfBuckets) {
+            var statsTag = new stat.RateLimiterServiceTags(serviceNames[i]);
+            self.channel.emitFastStat(self.channel.buildStat(
+                'tchannel.rate-limiting.service-rps',
+                'gauge',
+                counter.rps,
+                statsTag
+            ));
+
+            self.channel.emitFastStat(self.channel.buildStat(
+                'tchannel.rate-limiting.service-rps-limit',
+                'gauge',
+                counter.rpsLimit,
+                statsTag
+            ));
+        }
+        counter.refresh();
+    }
+
+    self.cycle--;
+    if (self.cycle <= 0) {
+        self.cycle = self.numOfBuckets;
     }
 
     self.refreshTimer = self.timers.setTimeout(
@@ -242,17 +286,38 @@ function shouldRateLimitService(serviceName) {
     }
     var counter = self.counters[serviceName];
     assert(counter, 'cannot find counter for ' + serviceName);
-    return counter.rps > counter.rpsLimit;
+    var result = counter.rps > counter.rpsLimit;
+    if (result) {
+        self.channel.emitFastStat(self.channel.buildStat(
+            'tchannel.rate-limiting.service-busy',
+            'counter',
+            1,
+            new stat.RateLimiterServiceTags(serviceName)
+        ));
+    }
+    return result;
 };
 
 RateLimiter.prototype.shouldRateLimitTotalRequest =
 function shouldRateLimitTotalRequest(serviceName) {
     var self = this;
+    var result;
     if (!serviceName || self.exemptServices.indexOf(serviceName) === -1) {
-        return self.totalRequestCounter.rps > self.totalRequestCounter.rpsLimit;
+        result = self.totalRequestCounter.rps > self.totalRequestCounter.rpsLimit;
     } else {
-        return false;
+        result = false;
     }
+
+    if (result) {
+        self.channel.emitFastStat(self.channel.buildStat(
+            'tchannel.rate-limiting.total-busy',
+            'counter',
+            1,
+            new stat.RateLimiterServiceTags(serviceName)
+        ));
+    }
+
+    return result;
 };
 
 RateLimiter.prototype.destroy =
