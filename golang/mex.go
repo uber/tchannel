@@ -88,11 +88,13 @@ func (mex *messageExchange) recvPeerFrameOfType(msgType messageType) (*Frame, er
 		return frame, nil
 
 	case messageTypeError:
-		var err errorMessage
+		var errMsg errorMessage
 		var rbuf typed.ReadBuffer
 		rbuf.Wrap(frame.SizedPayload())
-		err.read(&rbuf)
-		return nil, err.AsSystemError()
+		if err := errMsg.read(&rbuf); err != nil {
+			return nil, err
+		}
+		return nil, errMsg.AsSystemError()
 
 	default:
 		// TODO(mmihic): Should be treated as a protocol error
