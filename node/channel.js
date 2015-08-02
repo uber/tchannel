@@ -40,6 +40,8 @@ var TChannelRequest = require('./request');
 var TChannelServiceNameHandler = require('./service-name-handler');
 var errors = require('./errors');
 
+var ErrorBackoff = require('./error_backoff.js');
+
 var BaseStat = require('./lib/stat.js').BaseStat;
 var TChannelAsThrift = require('./as/thrift');
 var TChannelAsJSON = require('./as/json');
@@ -253,6 +255,13 @@ function TChannel(options) {
     if (!self.topChannel) {
         self.sanityTimer = self.timers.setTimeout(doSanitySweep, SANITY_PERIOD);
         self.flushStats();
+    }
+
+    if (!self.topChannel) {
+        self.errorBackoff = new ErrorBackoff({
+            channel: self,
+            backoffRate: self.options.backoffRate
+        });
     }
 
     function doSanitySweep() {

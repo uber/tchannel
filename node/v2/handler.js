@@ -554,15 +554,17 @@ function sendCallRequestFrame(req, flags, args) {
         req.checksum.type, args
     );
 
-    if (!self.verifyCallRequestFrame(req, args)) {
-        return;
+    var result;
+    if (self.verifyCallRequestFrame(req, args)) {
+        result = self._sendCallBodies(req.id, reqBody, null);
+        req.checksum = result.checksum;
+    } else {
+        result = {
+            size: 0
+        };
     }
 
-    var result = self._sendCallBodies(req.id, reqBody, null);
-    req.checksum = result.checksum;
-
     var channel = self.connection.channel;
-
     channel.emitFastStat(channel.buildStat(
         'tchannel.outbound.request.size',
         'counter',
@@ -631,7 +633,19 @@ function verifyCallRequestFrame(req, args) {
         });
     }
 
+    var channel = self.connection.channel;
+    var err = channel.errorBackoff.getBackoffError(req.headers.cn, req.serviceName);
+    if (err) {
+        err.originalId = req.id;
+        process.nextTick(deferBackoffErrorEmit);
+        return false;
+    }
+
     return true;
+
+    function deferBackoffErrorEmit() {
+        self.callIncomingErrorEvent.emit(self, err);
+    }
 };
 
 TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFrame(res, flags, args) {
