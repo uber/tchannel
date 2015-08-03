@@ -53,6 +53,9 @@ type ChannelOptions struct {
 
 	// The reporter to use for reporting stats for this channel.
 	StatsReporter StatsReporter
+
+	// Trace reporter to use for this channel.
+	TraceReporter TraceReporter
 }
 
 // A Channel is a bi-directional connection to the peering and routing network.
@@ -64,6 +67,7 @@ type Channel struct {
 	log               Logger
 	commonStatsTags   map[string]string
 	statsReporter     StatsReporter
+	traceReporter     TraceReporter
 	connectionOptions ConnectionOptions
 	handlers          *handlerMap
 	peers             *PeerList
@@ -91,6 +95,11 @@ func NewChannel(serviceName string, opts *ChannelOptions) (*Channel, error) {
 		logger = NullLogger
 	}
 
+	traceReporter := opts.TraceReporter
+	if traceReporter == nil {
+		traceReporter = NullReporter
+	}
+
 	processName := opts.ProcessName
 	if processName == "" {
 		processName = fmt.Sprintf("%s[%d]", filepath.Base(os.Args[0]), os.Getpid())
@@ -105,6 +114,7 @@ func NewChannel(serviceName string, opts *ChannelOptions) (*Channel, error) {
 		connectionOptions: opts.DefaultConnectionOptions,
 		log:               logger,
 		statsReporter:     statsReporter,
+		traceReporter:     traceReporter,
 		handlers:          &handlerMap{},
 	}
 	ch.mutable.peerInfo = LocalPeerInfo{

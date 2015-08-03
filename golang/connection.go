@@ -108,6 +108,7 @@ type OnActiveHandler func(c *Connection)
 type Connection struct {
 	log             Logger
 	statsReporter   StatsReporter
+	traceReporter   TraceReporter
 	checksumType    ChecksumType
 	framePool       FramePool
 	conn            net.Conn
@@ -208,6 +209,7 @@ func (ch *Channel) newConnection(conn net.Conn, initialState connectionState, on
 	c := &Connection{
 		log:           log,
 		statsReporter: ch.statsReporter,
+		traceReporter: ch.traceReporter,
 		conn:          conn,
 		framePool:     framePool,
 		state:         initialState,

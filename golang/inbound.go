@@ -57,6 +57,10 @@ func (c *Connection) handleCallReq(frame *Frame) bool {
 		return true
 	}
 
+	call.AddBinaryAnnotation(BinaryAnnotation{Key: "cn", Value: callReq.Headers[CallerName]})
+	call.AddBinaryAnnotation(BinaryAnnotation{Key: "as", Value: callReq.Headers[ArgScheme]})
+	call.AddAnnotation(AnnotationKeyServerReceive)
+
 	response := new(InboundCallResponse)
 	response.mex = mex
 	response.conn = c
@@ -67,6 +71,9 @@ func (c *Connection) handleCallReq(frame *Frame) bool {
 	response.headers = transportHeaders{}
 	response.messageForFragment = func(initial bool) message {
 		if initial {
+			call.AddAnnotation(AnnotationKeyServerSend)
+			call.Report(callReq.Tracing, c.traceReporter)
+
 			callRes := new(callRes)
 			callRes.Headers = response.headers
 			callRes.ResponseCode = responseOK
@@ -151,6 +158,7 @@ func (c *Connection) dispatchInbound(call *InboundCall) {
 
 // An InboundCall is an incoming call from a peer
 type InboundCall struct {
+	Annotations
 	reqResReader
 
 	response        *InboundCallResponse
