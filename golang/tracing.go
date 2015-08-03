@@ -51,7 +51,7 @@ func (s *Span) read(r *typed.ReadBuffer) error {
 	s.traceID = r.ReadUint64()
 	s.parentID = r.ReadUint64()
 	s.spanID = r.ReadUint64()
-	s.flags = r.ReadByte()
+	s.flags = r.ReadSingleByte()
 	return r.Err()
 }
 
@@ -59,7 +59,7 @@ func (s *Span) write(w *typed.WriteBuffer) error {
 	w.WriteUint64(s.traceID)
 	w.WriteUint64(s.parentID)
 	w.WriteUint64(s.spanID)
-	w.WriteByte(s.flags)
+	w.WriteSingleByte(s.flags)
 	return w.Err()
 }
 

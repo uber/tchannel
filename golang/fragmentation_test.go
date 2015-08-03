@@ -375,7 +375,7 @@ func (ch fragmentChannel) newFragment(initial bool, checksum Checksum) (*writabl
 	wbuf := typed.NewWriteBuffer(make([]byte, testFragmentSize))
 	fragment := new(writableFragment)
 	fragment.flagsRef = wbuf.DeferByte()
-	wbuf.WriteByte(byte(checksum.TypeCode()))
+	wbuf.WriteSingleByte(byte(checksum.TypeCode()))
 	fragment.checksumRef = wbuf.DeferBytes(checksum.Size())
 	fragment.checksum = checksum
 	fragment.contents = wbuf
@@ -393,8 +393,8 @@ func (ch fragmentChannel) recvNextFragment(initial bool) (*readableFragment, err
 	rbuf := typed.NewReadBuffer(<-ch)
 	fragment := new(readableFragment)
 	fragment.done = func() {}
-	fragment.flags = rbuf.ReadByte()
-	fragment.checksumType = ChecksumType(rbuf.ReadByte())
+	fragment.flags = rbuf.ReadSingleByte()
+	fragment.checksumType = ChecksumType(rbuf.ReadSingleByte())
 	fragment.checksum = rbuf.ReadBytes(fragment.checksumType.ChecksumSize())
 	fragment.contents = rbuf
 	return fragment, rbuf.Err()

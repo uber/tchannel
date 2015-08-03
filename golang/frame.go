@@ -76,8 +76,8 @@ func (fh FrameHeader) String() string { return fmt.Sprintf("%v[%d]", fh.messageT
 
 func (fh *FrameHeader) read(r *typed.ReadBuffer) error {
 	fh.size = r.ReadUint16()
-	fh.messageType = messageType(r.ReadByte())
-	fh.reserved1 = r.ReadByte()
+	fh.messageType = messageType(r.ReadSingleByte())
+	fh.reserved1 = r.ReadSingleByte()
 	fh.ID = r.ReadUint32()
 	r.ReadBytes(len(fh.reserved))
 	return r.Err()
@@ -85,8 +85,8 @@ func (fh *FrameHeader) read(r *typed.ReadBuffer) error {
 
 func (fh *FrameHeader) write(w *typed.WriteBuffer) error {
 	w.WriteUint16(fh.size)
-	w.WriteByte(byte(fh.messageType))
-	w.WriteByte(fh.reserved1)
+	w.WriteSingleByte(byte(fh.messageType))
+	w.WriteSingleByte(fh.reserved1)
 	w.WriteUint32(fh.ID)
 	w.WriteBytes(fh.reserved[:])
 	return w.Err()

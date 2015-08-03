@@ -36,9 +36,9 @@ func TestSimple(t *testing.T) {
 
 	{
 		w.Wrap(buf)
-		w.WriteByte(0xFC)
+		w.WriteSingleByte(0xFC)
 		r.Wrap(buf)
-		assert.Equal(t, byte(0xFC), r.ReadByte())
+		assert.Equal(t, byte(0xFC), r.ReadSingleByte())
 	}
 
 	{
@@ -70,7 +70,7 @@ func TestReadWrite(t *testing.T) {
 	w.WriteUint64(0x0123456789ABCDEF)
 	w.WriteUint32(0xABCDEF01)
 	w.WriteUint16(0x2345)
-	w.WriteByte(0xFF)
+	w.WriteSingleByte(0xFF)
 	w.WriteString(s)
 	w.WriteBytes(bslice)
 	w.WriteLen8String("hello")
@@ -86,7 +86,7 @@ func TestReadWrite(t *testing.T) {
 	assert.Equal(t, uint64(0x0123456789ABCDEF), r.ReadUint64())
 	assert.Equal(t, uint32(0xABCDEF01), r.ReadUint32())
 	assert.Equal(t, uint16(0x2345), r.ReadUint16())
-	assert.Equal(t, byte(0xFF), r.ReadByte())
+	assert.Equal(t, byte(0xFF), r.ReadSingleByte())
 	assert.Equal(t, s, r.ReadString(len(s)))
 	assert.Equal(t, bslice, r.ReadBytes(len(bslice)))
 	assert.Equal(t, "hello", r.ReadLen8String())
@@ -144,7 +144,7 @@ func TestDeferredWrites(t *testing.T) {
 	s := r.ReadString(5)
 	assert.Equal(t, "where", s)
 
-	u8 := r.ReadByte()
+	u8 := r.ReadSingleByte()
 	assert.Equal(t, byte(0x44), u8)
 	assert.NoError(t, r.Err())
 }
