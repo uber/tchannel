@@ -205,3 +205,39 @@ func TestEmptyRequestHeader(t *testing.T) {
 	require.NoError(t, tchannel.NewArgReader(resp.Arg2Reader()).ReadJSON(&data))
 	require.NoError(t, tchannel.NewArgReader(resp.Arg3Reader()).ReadJSON(&data))
 }
+
+func TestMapInputOutput(t *testing.T) {
+	ctx, cancel := NewContext(time.Second)
+	defer cancel()
+
+	ch, err := tchannel.NewChannel("server", nil)
+	require.NoError(t, err)
+	require.NoError(t, ch.ListenAndServe("127.0.0.1:0"))
+
+	handler := func(ctx Context, args map[string]interface{}) (map[string]interface{}, error) {
+		return args, nil
+	}
+	onError := func(ctx context.Context, err error) {
+		t.Errorf("onError: %v", err)
+	}
+	require.NoError(t, Register(ch, Handlers{"handle": handler}, onError))
+
+	call, err := ch.BeginCall(ctx, ch.PeerInfo().HostPort, "server", "handle", &tchannel.CallOptions{
+		Format: tchannel.JSON,
+	})
+	require.NoError(t, err)
+
+	arg := map[string]interface{}{
+		"v1": "value1",
+		"v2": 2.0,
+		"v3": map[string]interface{}{"k": "v", "k2": "v2"},
+	}
+	require.NoError(t, tchannel.NewArgWriter(call.Arg2Writer()).Write(nil))
+	require.NoError(t, tchannel.NewArgWriter(call.Arg3Writer()).WriteJSON(arg))
+
+	resp := call.Response()
+	var data interface{}
+	require.NoError(t, tchannel.NewArgReader(resp.Arg2Reader()).ReadJSON(&data))
+	require.NoError(t, tchannel.NewArgReader(resp.Arg3Reader()).ReadJSON(&data))
+	assert.Equal(t, arg, data.(map[string]interface{}), "result does not match arg")
+}

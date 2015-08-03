@@ -46,15 +46,24 @@ func verifyHandler(t reflect.Type) error {
 	isStructPtr := func(t reflect.Type) bool {
 		return t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Struct
 	}
+	isMap := func(t reflect.Type) bool {
+		return t.Kind() == reflect.Map && t.Key().Kind() == reflect.String
+	}
+	validateArgRes := func(t reflect.Type, name string) error {
+		if !isStructPtr(t) && !isMap(t) {
+			return fmt.Errorf("%v should be a pointer to a struct, or a map[string]interface{}", name)
+		}
+		return nil
+	}
 
 	if t.In(0) != typeOfContext {
 		return fmt.Errorf("arg0 should be of type json.Context")
 	}
-	if !isStructPtr(t.In(1)) {
-		return fmt.Errorf("arg1 should be a pointer to an args struct")
+	if err := validateArgRes(t.In(1), "second argument"); err != nil {
+		return err
 	}
-	if !isStructPtr(t.Out(0)) {
-		return fmt.Errorf("first return value should be a pointer to a result struct")
+	if err := validateArgRes(t.Out(0), "first return value"); err != nil {
+		return err
 	}
 	if !t.Out(1).AssignableTo(typeOfError) {
 		return fmt.Errorf("second return value should be an error")
@@ -64,8 +73,9 @@ func verifyHandler(t reflect.Type) error {
 }
 
 type handler struct {
-	handler reflect.Value
-	argType reflect.Type
+	handler  reflect.Value
+	argType  reflect.Type
+	isArgMap bool
 }
 
 func toHandler(f interface{}) (*handler, error) {
@@ -74,7 +84,7 @@ func toHandler(f interface{}) (*handler, error) {
 		return nil, err
 	}
 	argType := hV.Type().In(1)
-	return &handler{hV, argType}, nil
+	return &handler{hV, argType, argType.Kind() == reflect.Map}, nil
 }
 
 // Register registers the specified methods specified as a map from method name to the
@@ -115,13 +125,21 @@ func (h *handler) Handle(tctx context.Context, call *tchannel.InboundCall) error
 	}
 	ctx := WithHeaders(tctx, headers)
 
-	// arg3 will be a pointer to a struct.
-	arg3 := reflect.New(h.argType.Elem())
+	var arg3 reflect.Value
+	var callArg reflect.Value
+	if h.isArgMap {
+		arg3 = reflect.New(h.argType)
+		// New returns a pointer, but the method accepts the map directly.
+		callArg = arg3.Elem()
+	} else {
+		arg3 = reflect.New(h.argType.Elem())
+		callArg = arg3
+	}
 	if err := tchannel.NewArgReader(call.Arg3Reader()).ReadJSON(arg3.Interface()); err != nil {
 		return fmt.Errorf("arg3 read failed: %v", err)
 	}
 
-	args := []reflect.Value{reflect.ValueOf(ctx), arg3}
+	args := []reflect.Value{reflect.ValueOf(ctx), callArg}
 	results := h.handler.Call(args)
 
 	res := results[0].Interface()
