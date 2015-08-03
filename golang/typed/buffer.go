@@ -52,8 +52,8 @@ func NewReadBufferWithSize(size int) *ReadBuffer {
 	return &ReadBuffer{buffer: make([]byte, size), remaining: nil}
 }
 
-// ReadByte reads the next byte from the buffer
-func (r *ReadBuffer) ReadByte() byte {
+// ReadSingleByte reads the next byte from the buffer
+func (r *ReadBuffer) ReadSingleByte() byte {
 	if r.err != nil {
 		return 0
 	}
@@ -123,7 +123,7 @@ func (r *ReadBuffer) ReadUint64() uint64 {
 
 // ReadLen8String reads an 8-bit length preceded string value
 func (r *ReadBuffer) ReadLen8String() string {
-	n := r.ReadByte()
+	n := r.ReadSingleByte()
 	return r.ReadString(int(n))
 }
 
@@ -177,8 +177,8 @@ func NewWriteBufferWithSize(size int) *WriteBuffer {
 	return NewWriteBuffer(make([]byte, size))
 }
 
-// WriteByte writes a single byte to the buffer
-func (w *WriteBuffer) WriteByte(n byte) {
+// WriteSingleByte writes a single byte to the buffer
+func (w *WriteBuffer) WriteSingleByte(n byte) {
 	if w.err != nil {
 		return
 	}
@@ -231,7 +231,7 @@ func (w *WriteBuffer) WriteString(s string) {
 
 // WriteLen8String writes an 8-bit length preceded string
 func (w *WriteBuffer) WriteLen8String(s string) {
-	w.WriteByte(byte(len(s)))
+	w.WriteSingleByte(byte(len(s)))
 	w.WriteString(s)
 }
 

@@ -162,7 +162,7 @@ const (
 type transportHeaders map[TransportHeaderName]string
 
 func (ch transportHeaders) read(r *typed.ReadBuffer) {
-	nh := r.ReadByte()
+	nh := r.ReadSingleByte()
 	for i := 0; i < int(nh); i++ {
 		k := r.ReadLen8String()
 		v := r.ReadLen8String()
@@ -171,7 +171,7 @@ func (ch transportHeaders) read(r *typed.ReadBuffer) {
 }
 
 func (ch transportHeaders) write(w *typed.WriteBuffer) {
-	w.WriteByte(byte(len(ch)))
+	w.WriteSingleByte(byte(len(ch)))
 
 	for k, v := range ch {
 		w.WriteLen8String(k.String())
@@ -236,7 +236,7 @@ func (m *callRes) ID() uint32               { return m.id }
 func (m *callRes) messageType() messageType { return messageTypeCallRes }
 
 func (m *callRes) read(r *typed.ReadBuffer) error {
-	m.ResponseCode = ResponseCode(r.ReadByte())
+	m.ResponseCode = ResponseCode(r.ReadSingleByte())
 	m.Tracing.read(r)
 	m.Headers = transportHeaders{}
 	m.Headers.read(r)
@@ -244,7 +244,7 @@ func (m *callRes) read(r *typed.ReadBuffer) error {
 }
 
 func (m *callRes) write(w *typed.WriteBuffer) error {
-	w.WriteByte(byte(m.ResponseCode))
+	w.WriteSingleByte(byte(m.ResponseCode))
 	m.Tracing.write(w)
 	m.Headers.write(w)
 	return w.Err()
@@ -270,14 +270,14 @@ type errorMessage struct {
 func (m *errorMessage) ID() uint32               { return m.id }
 func (m *errorMessage) messageType() messageType { return messageTypeError }
 func (m *errorMessage) read(r *typed.ReadBuffer) error {
-	m.errCode = SystemErrCode(r.ReadByte())
+	m.errCode = SystemErrCode(r.ReadSingleByte())
 	m.id = r.ReadUint32()
 	m.message = r.ReadLen16String()
 	return r.Err()
 }
 
 func (m *errorMessage) write(w *typed.WriteBuffer) error {
-	w.WriteByte(byte(m.errCode))
+	w.WriteSingleByte(byte(m.errCode))
 	w.WriteUint32(m.id)
 	w.WriteLen16String(m.message)
 	return w.Err()

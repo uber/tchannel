@@ -76,8 +76,8 @@ func (fh FrameHeader) String() string { return fmt.Sprintf("%v[%d]", fh.messageT
 
 func (fh *FrameHeader) read(r *typed.ReadBuffer) error {
 	fh.size = r.ReadUint16()
-	fh.messageType = messageType(r.ReadByte())
-	fh.reserved1 = r.ReadByte()
+	fh.messageType = messageType(r.ReadSingleByte())
+	fh.reserved1 = r.ReadSingleByte()
 	fh.ID = r.ReadUint32()
 	r.ReadBytes(len(fh.reserved))
 	return r.Err()
@@ -85,8 +85,8 @@ func (fh *FrameHeader) read(r *typed.ReadBuffer) error {
 
 func (fh *FrameHeader) write(w *typed.WriteBuffer) error {
 	w.WriteUint16(fh.size)
-	w.WriteByte(byte(fh.messageType))
-	w.WriteByte(fh.reserved1)
+	w.WriteSingleByte(byte(fh.messageType))
+	w.WriteSingleByte(fh.reserved1)
 	w.WriteUint32(fh.ID)
 	w.WriteBytes(fh.reserved[:])
 	return w.Err()
@@ -113,8 +113,8 @@ func NewFrame(payloadCapacity int) *Frame {
 	return f
 }
 
-// ReadFrom reads the frame from the given io.Reader
-func (f *Frame) ReadFrom(r io.Reader) error {
+// ReadIn reads the frame from the given io.Reader
+func (f *Frame) ReadIn(r io.Reader) error {
 	var rbuf typed.ReadBuffer
 	rbuf.Wrap(f.headerBuffer)
 
@@ -134,8 +134,8 @@ func (f *Frame) ReadFrom(r io.Reader) error {
 	return nil
 }
 
-// WriteTo writes the frame to the given io.Writer
-func (f *Frame) WriteTo(w io.Writer) error {
+// WriteOut writes the frame to the given io.Writer
+func (f *Frame) WriteOut(w io.Writer) error {
 	var wbuf typed.WriteBuffer
 	wbuf.Wrap(f.headerBuffer)
 

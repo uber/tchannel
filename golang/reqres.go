@@ -125,7 +125,7 @@ func (w *reqResWriter) newFragment(initial bool, checksum Checksum) (*writableFr
 	if err := message.write(wbuf); err != nil {
 		return nil, err
 	}
-	wbuf.WriteByte(byte(checksum.TypeCode()))
+	wbuf.WriteSingleByte(byte(checksum.TypeCode()))
 	fragment.checksumRef = wbuf.DeferBytes(checksum.Size())
 	fragment.checksum = checksum
 	fragment.contents = wbuf
@@ -252,12 +252,12 @@ func (r *reqResReader) failed(err error) error {
 func parseInboundFragment(framePool FramePool, frame *Frame, message message) (*readableFragment, error) {
 	rbuf := typed.NewReadBuffer(frame.SizedPayload())
 	fragment := new(readableFragment)
-	fragment.flags = rbuf.ReadByte()
+	fragment.flags = rbuf.ReadSingleByte()
 	if err := message.read(rbuf); err != nil {
 		return nil, err
 	}
 
-	fragment.checksumType = ChecksumType(rbuf.ReadByte())
+	fragment.checksumType = ChecksumType(rbuf.ReadSingleByte())
 	fragment.checksum = rbuf.ReadBytes(fragment.checksumType.ChecksumSize())
 	fragment.contents = rbuf
 	fragment.done = func() {
