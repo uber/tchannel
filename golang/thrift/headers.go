@@ -49,11 +49,11 @@ func readHeaders(r io.Reader) (map[string]string, error) {
 	buffer := typed.NewReadBuffer(bs)
 	numHeaders := buffer.ReadUint16()
 	if numHeaders == 0 {
-		return nil, nil
+		return nil, buffer.Err()
 	}
 
 	headers := make(map[string]string)
-	for i := 0; i < int(numHeaders); i++ {
+	for i := 0; i < int(numHeaders) && buffer.Err() == nil; i++ {
 		k := buffer.ReadLen16String()
 		v := buffer.ReadLen16String()
 		headers[k] = v

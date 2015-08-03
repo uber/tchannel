@@ -54,7 +54,12 @@ func TestSimple(t *testing.T) {
 		r.Wrap(buf)
 		assert.Equal(t, uint32(0xBEEFDEAD), r.ReadUint32())
 	}
+}
 
+func TestShortBuffer(t *testing.T) {
+	r := NewReadBuffer([]byte{23})
+	assert.EqualValues(t, 0, r.ReadUint16())
+	assert.Equal(t, ErrEOF, r.Err())
 }
 
 func TestReadWrite(t *testing.T) {
