@@ -22,6 +22,7 @@ package tchannel
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"time"
 
@@ -39,6 +40,19 @@ var (
 // exchange to receive further fragments for that call, and dispatching it in
 // another goroutine
 func (c *Connection) handleCallReq(frame *Frame) bool {
+	switch state := c.readState(); state {
+	case connectionActive:
+		break
+	case connectionStartClose, connectionInboundClosed, connectionClosed:
+		c.SendSystemError(frame.Header.ID, ErrChannelClosed)
+		return true
+	case connectionWaitingToRecvInitReq, connectionWaitingToSendInitReq, connectionWaitingToRecvInitRes:
+		c.SendSystemError(frame.Header.ID, NewSystemError(ErrCodeDeclined, "connection not ready"))
+		return true
+	default:
+		panic(fmt.Errorf("unknown connection state for call req: %v", state))
+	}
+
 	callReq := new(callReq)
 	initialFragment, err := parseInboundFragment(c.framePool, frame, callReq)
 	if err != nil {
