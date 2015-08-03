@@ -174,6 +174,17 @@ function updateExemptServices(exemptServices) {
     self.exemptServices = exemptServices;
 };
 
+RateLimiter.prototype.getRpsLimitForService =
+function getRpsLimitForService(serviceName) {
+    var self = this;
+    var limit = self.rpsLimitForServiceName[serviceName];
+    if (typeof limit !== 'number') {
+        limit = self.defaultServiceRpsLimit;
+    }
+
+    return limit;
+};
+
 RateLimiter.prototype.updateRpsLimitForAllServices =
 function updateRpsLimitForAllServices(rpsLimitForServiceName) {
     var self = this;

@@ -141,6 +141,7 @@ function rateLimit(req, buildRes) {
     if (self.rateLimiter.shouldRateLimitTotalRequest(req.serviceName)) {
         var totalLimit = self.rateLimiter.totalRequestCounter.rpsLimit;
         self.logger.info('hyperbahn node is rate-limited by the total rps limit', {
+            cn: req.headers && req.headers.cn,
             rpsLimit: totalLimit
         });
         buildRes().sendError('Busy', 'hyperbahn node is rate-limited by the total rps of ' + totalLimit);
@@ -149,8 +150,9 @@ function rateLimit(req, buildRes) {
 
     // check RPS for service limit
     if (isExitNode && self.rateLimiter.shouldRateLimitService(req.serviceName)) {
-        var serviceLimit = self.rateLimiter.rpsLimitForServiceName[req.serviceName];
+        var serviceLimit = self.rateLimiter.getRpsLimitForService(req.serviceName);
         self.logger.info('hyperbahn service is rate-limited by the service rps limit', {
+            cn: req.headers && req.headers.cn,
             serviceName: req.serviceName,
             rpsLimit: serviceLimit
         });
