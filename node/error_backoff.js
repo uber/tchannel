@@ -34,6 +34,11 @@ var BackoffError = TypedError({
     serviceName: null
 });
 
+function getEdgeName(cn, serviceName) {
+    return cn + '~~' + serviceName;
+}
+
+
 function ErrorBackoff(options) {
     if (!(this instanceof ErrorBackoff)) {
         return new ErrorBackoff(options);
@@ -71,7 +76,7 @@ function handleError(err, cn, serviceName) {
         return;
     }
 
-    var edge = cn + '~~' + serviceName;
+    var edge = getEdgeName(cn, serviceName);
     if (!self.reqErrors[edge]) {
         self.reqErrors[edge] = self.backoffRate;
     } else {
@@ -110,7 +115,7 @@ function getBackoffError(cn, serviceName) {
         return null;
     }
 
-    var edge = cn + '~~' + serviceName;
+    var edge = getEdgeName(cn, serviceName);
     if (!self.reqErrors[edge] || self.reqErrors[edge] < 1) {
         return null;
     }
