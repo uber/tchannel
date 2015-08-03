@@ -586,7 +586,7 @@ func (c *Connection) readState() connectionState {
 func (c *Connection) readFrames() {
 	for {
 		frame := c.framePool.Get()
-		if err := frame.ReadFrom(c.conn); err != nil {
+		if err := frame.ReadIn(c.conn); err != nil {
 			c.framePool.Release(frame)
 			c.connectionError(err)
 			return
@@ -630,7 +630,7 @@ func (c *Connection) writeFrames() {
 	for f := range c.sendCh {
 		c.log.Debugf("Writing frame %s", f.Header)
 
-		err := f.WriteTo(c.conn)
+		err := f.WriteOut(c.conn)
 		c.framePool.Release(f)
 		if err != nil {
 			c.connectionError(err)

@@ -66,12 +66,12 @@ func TestPartialRead(t *testing.T) {
 		f.Payload[i] = byte(val)
 	}
 	buf := &bytes.Buffer{}
-	require.NoError(t, f.WriteTo(buf))
+	require.NoError(t, f.WriteOut(buf))
 	assert.Equal(t, f.Header.size, uint16(buf.Len()), "frame size should match written bytes")
 
 	// Read the data back, from a reader that fragments.
 	f2 := NewFrame(MaxFramePayloadSize)
-	require.NoError(t, f2.ReadFrom(iotest.OneByteReader(buf)))
+	require.NoError(t, f2.ReadIn(iotest.OneByteReader(buf)))
 
 	// Ensure header and payload are the same.
 	require.Equal(t, f.Header, f2.Header, "frame headers don't match")
@@ -85,11 +85,11 @@ func TestEmptyPayload(t *testing.T) {
 
 	// Write out the frame.
 	buf := &bytes.Buffer{}
-	require.NoError(t, f.WriteTo(buf))
+	require.NoError(t, f.WriteOut(buf))
 	assert.Equal(t, FrameHeaderSize, buf.Len())
 
 	// Read the frame from the buffer.
 	// net.Conn returns io.EOF if you try to read 0 bytes at the end.
 	// This is also simulated by the LimitedReader so we use that here.
-	require.NoError(t, f.ReadFrom(&io.LimitedReader{R: buf, N: FrameHeaderSize}))
+	require.NoError(t, f.ReadIn(&io.LimitedReader{R: buf, N: FrameHeaderSize}))
 }

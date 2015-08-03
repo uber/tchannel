@@ -113,8 +113,8 @@ func NewFrame(payloadCapacity int) *Frame {
 	return f
 }
 
-// ReadFrom reads the frame from the given io.Reader
-func (f *Frame) ReadFrom(r io.Reader) error {
+// ReadIn reads the frame from the given io.Reader
+func (f *Frame) ReadIn(r io.Reader) error {
 	var rbuf typed.ReadBuffer
 	rbuf.Wrap(f.headerBuffer)
 
@@ -134,8 +134,8 @@ func (f *Frame) ReadFrom(r io.Reader) error {
 	return nil
 }
 
-// WriteTo writes the frame to the given io.Writer
-func (f *Frame) WriteTo(w io.Writer) error {
+// WriteOut writes the frame to the given io.Writer
+func (f *Frame) WriteOut(w io.Writer) error {
 	var wbuf typed.WriteBuffer
 	wbuf.Wrap(f.headerBuffer)
 

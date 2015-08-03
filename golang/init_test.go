@@ -15,12 +15,12 @@ func writeMessage(w io.Writer, msg message) error {
 	if err := f.write(msg); err != nil {
 		return err
 	}
-	return f.WriteTo(w)
+	return f.WriteOut(w)
 }
 
 func readFrame(r io.Reader) (*Frame, error) {
 	f := NewFrame(MaxFramePayloadSize)
-	return f, f.ReadFrom(r)
+	return f, f.ReadIn(r)
 }
 
 func TestUnexpectedInitReq(t *testing.T) {
