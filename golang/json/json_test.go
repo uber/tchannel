@@ -148,7 +148,7 @@ func TestForwardChain(t *testing.T) {
 		require.NoError(t, err)
 
 		s.handler = &testHandler{t: t}
-		require.NoError(t, Register(s.channel, map[string]interface{}{
+		require.NoError(t, Register(s.channel, Handlers{
 			"forward": s.handler.forward,
 			"leaf":    s.handler.leaf,
 		}, s.handler.onError))
@@ -190,7 +190,7 @@ func TestEmptyRequestHeader(t *testing.T) {
 	onError := func(ctx context.Context, err error) {
 		t.Errorf("onError: %v", err)
 	}
-	require.NoError(t, Register(ch, map[string]interface{}{"handle": handler}, onError))
+	require.NoError(t, Register(ch, Handlers{"handle": handler}, onError))
 
 	call, err := ch.BeginCall(ctx, ch.PeerInfo().HostPort, "server", "handle", &tchannel.CallOptions{
 		Format: tchannel.JSON,

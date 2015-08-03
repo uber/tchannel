@@ -90,7 +90,7 @@ func toHandler(f interface{}) (*handler, error) {
 // Register registers the specified methods specified as a map from method name to the
 // JSON handler function. The handler functions should have the following signature:
 // func(context.Context, *ArgType)(*ResType, error)
-func Register(ch *tchannel.Channel, funcs map[string]interface{}, onError func(context.Context, error)) error {
+func Register(ch *tchannel.Channel, funcs Handlers, onError func(context.Context, error)) error {
 	handlers := make(map[string]*handler)
 
 	handler := tchannel.HandlerFunc(func(ctx context.Context, call *tchannel.InboundCall) {
