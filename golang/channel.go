@@ -323,7 +323,7 @@ func (ch *Channel) serve() {
 			netConn.Close()
 			continue
 		}
-		c.onCloseStateChange = ch.ConnectionCloseStateChange
+		c.onCloseStateChange = ch.connectionCloseStateChange
 	}
 }
 
@@ -362,7 +362,7 @@ func (ch *Channel) Connect(ctx context.Context, hostPort string, connectionOptio
 	if err != nil {
 		return nil, err
 	}
-	c.onCloseStateChange = ch.ConnectionCloseStateChange
+	c.onCloseStateChange = ch.connectionCloseStateChange
 
 	if err := c.sendInit(ctx); err != nil {
 		return nil, err
@@ -384,7 +384,8 @@ func (ch *Channel) Connect(ctx context.Context, hostPort string, connectionOptio
 	return c, err
 }
 
-func (ch *Channel) ConnectionCloseStateChange(c *Connection) {
+// connectionCloseStateChange is called when a connection's close state changes.
+func (ch *Channel) connectionCloseStateChange(c *Connection) {
 	switch chState := ch.State(); chState {
 	case ChannelStartClose, ChannelInboundClosed:
 		ch.mutable.mut.RLock()
