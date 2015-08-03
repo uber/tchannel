@@ -78,7 +78,7 @@ func (h *traceHandler) onError(ctx context.Context, err error) {
 func TestTracingPropagates(t *testing.T) {
 	require.Nil(t, testutils.WithServer(nil, func(ch *Channel, hostPort string) {
 		handler := &traceHandler{t: t, ch: ch}
-		json.Register(ch, map[string]interface{}{
+		json.Register(ch, json.Handlers{
 			"call": handler.call,
 		}, handler.onError)
 
