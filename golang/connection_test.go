@@ -244,6 +244,17 @@ func TestTimeout(t *testing.T) {
 	}))
 }
 
+func TestLargeOperation(t *testing.T) {
+	require.Nil(t, testutils.WithServer(nil, func(ch *Channel, hostPort string) {
+		ctx, cancel := NewContext(time.Second)
+		defer cancel()
+
+		largeOperation := testutils.RandBytes(16*1024 + 1)
+		_, _, _, err := raw.Call(ctx, ch, hostPort, testServiceName, string(largeOperation), nil, nil)
+		assert.Equal(t, ErrOperationTooLarge, err)
+	}))
+}
+
 func TestFragmentation(t *testing.T) {
 	require.Nil(t, testutils.WithServer(nil, func(ch *Channel, hostPort string) {
 		ch.Register(raw.Wrap(newTestHandler(t)), "echo")

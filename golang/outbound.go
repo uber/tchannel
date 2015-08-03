@@ -28,6 +28,9 @@ import (
 	"golang.org/x/net/context"
 )
 
+// maxOperationSize is the maximum size of arg1.
+const maxOperationSize = 16 * 1024
+
 // beginCall begins an outbound call on the connection
 func (c *Connection) beginCall(ctx context.Context, serviceName string, callOptions *CallOptions) (*OutboundCall, error) {
 	switch c.readState() {
@@ -169,6 +172,10 @@ func (call *OutboundCall) createStatsTags(connectionTags map[string]string) {
 
 // writeOperation writes the operation (arg1) to the call
 func (call *OutboundCall) writeOperation(operation []byte) error {
+	if len(operation) > maxOperationSize {
+		return ErrOperationTooLarge
+	}
+
 	// TODO(prashant): Should operation become part of BeginCall so this can use Format directly.
 	if call.callReq.Headers[ArgScheme] != HTTP.String() {
 		call.commonStatsTags["target-endpoint"] = string(operation)
