@@ -669,10 +669,9 @@ func (c *Connection) checkExchanges() {
 
 	if updated {
 		curState := c.readState()
-		// If the connection is closed, we can safely close the channel and network.
+		// If the connection is closed, we can safely close the channel.
 		if curState == connectionClosed {
 			close(c.sendCh)
-			c.closeNetwork()
 		}
 
 		c.log.Debugf("checkExchanges updated connection state to %v", curState)
