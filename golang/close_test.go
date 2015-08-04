@@ -22,6 +22,7 @@ package tchannel_test
 
 import (
 	"math/rand"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -234,6 +235,22 @@ func TestCloseSemantics(t *testing.T) {
 }
 
 func TestCloseGoroutines(t *testing.T) {
-	// Make sure that all client and server Goroutines are closed when a connection is closed.
+	ctx, cancel := NewContext(time.Second)
+	defer cancel()
 
+	// Make sure that all client and server Goroutines are closed when a connection is closed.
+	ch, err := testutils.NewServer(nil)
+	require.NoError(t, err, "NewServer failed")
+	ch.Register(raw.Wrap(&testHandler{}), "echo")
+
+	peerInfo := ch.PeerInfo()
+	_, _, _, err = raw.Call(ctx, ch, peerInfo.HostPort, peerInfo.ServiceName, "echo", nil, nil)
+	assert.NoError(t, err, "Call failed")
+
+	ch.Close()
+	assert.Equal(t, ChannelClosed, ch.State())
+
+	// Give a chance for the closed connection to close the read/write goroutines.
+	runtime.Gosched()
+	VerifyNoBlockedGoroutines(t)
 }
