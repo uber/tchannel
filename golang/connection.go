@@ -240,8 +240,8 @@ func (ch *Channel) newConnection(conn net.Conn, initialState connectionState, on
 	c.inbound.onRemoved = c.checkExchanges
 	c.outbound.onRemoved = c.checkExchanges
 
-	go c.readFrames()
-	go c.writeFrames()
+	go c.readFrames(connID)
+	go c.writeFrames(connID)
 	return c
 }
 
@@ -578,7 +578,7 @@ func (c *Connection) readState() connectionState {
 // prevent overlapping reads on the socket.  Most handlers simply send the
 // incoming frame to a channel; the init handlers are a notable exception,
 // since we cannot process new frames until the initialization is complete.
-func (c *Connection) readFrames() {
+func (c *Connection) readFrames(_ uint32) {
 	for {
 		frame := c.framePool.Get()
 		if err := frame.ReadIn(c.conn); err != nil {
@@ -621,7 +621,7 @@ func (c *Connection) readFrames() {
 
 // writeFrames is the main loop that pulls frames from the send channel and
 // writes them to the connection.
-func (c *Connection) writeFrames() {
+func (c *Connection) writeFrames(_ uint32) {
 	for f := range c.sendCh {
 		c.log.Debugf("Writing frame %s", f.Header)
 

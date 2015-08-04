@@ -26,14 +26,13 @@ import (
 	"testing"
 	"time"
 
-	"golang.org/x/net/context"
-
 	. "github.com/uber/tchannel/golang"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel/golang/raw"
 	"github.com/uber/tchannel/golang/testutils"
+	"golang.org/x/net/context"
 )
 
 type channelState struct {
@@ -232,4 +231,9 @@ func TestCloseSemantics(t *testing.T) {
 	s2C <- struct{}{}
 	<-call1
 	assert.Equal(t, ChannelClosed, s1.State())
+}
+
+func TestCloseGoroutines(t *testing.T) {
+	// Make sure that all client and server Goroutines are closed when a connection is closed.
+
 }
