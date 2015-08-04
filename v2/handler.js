@@ -195,15 +195,11 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
 
     var handled = self._handleCallFrame(req, reqFrame);
     if (handled) {
-        var isLast = !(reqFrame.body.flags & v2.CallFlags.Fragment);
-        if (!isLast) {
+        var hasMoreFrames = reqFrame.body.flags & v2.CallFlags.Fragment;
+        if (hasMoreFrames) {
             self.streamingReq[req.id] = req;
-        } else {
-            delete self.streamingReq[req.id];
         }
         self.callIncomingRequestEvent.emit(self, req);
-    } else {
-        delete self.streamingReq[req.id];
     }
 
     var channel = self.connection.channel;
@@ -328,15 +324,11 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
     res.remoteAddr = self.remoteName;
     var handled = self._handleCallFrame(res, resFrame);
     if (handled) {
-        var isLast = !(resFrame.body.flags & v2.CallFlags.Fragment);
-        if (!isLast) {
+        var hasMoreFrames = resFrame.body.flags & v2.CallFlags.Fragment;
+        if (hasMoreFrames) {
             self.streamingRes[res.id] = res;
-        } else {
-            delete self.streamingRes[res.id];
         }
         self.callIncomingResponseEvent.emit(self, res);
-    } else {
-        delete self.streamingRes[res.id];
     }
 };
 
@@ -396,7 +388,12 @@ TChannelV2Handler.prototype.handleCallRequestCont = function handleCallRequestCo
     }
 
     self._handleCallFrame(req, reqFrame);
-    
+
+    var isLast = !(reqFrame.body.flags & v2.CallFlags.Fragment);
+    if (isLast) {
+        delete self.streamingReq[reqFrame.id];
+    }
+
     var channel = self.connection.channel;
     channel.emitFastStat(channel.buildStat(
         'tchannel.inbound.request.size',
@@ -440,6 +437,11 @@ TChannelV2Handler.prototype.handleCallResponseCont = function handleCallResponse
     self.emitBytesRecvd(resFrame);
 
     self._handleCallFrame(res, resFrame);
+
+    var isLast = !(resFrame.body.flags & v2.CallFlags.Fragment);
+    if (isLast) {
+        delete self.streamingRes[resFrame.id];
+    }
 };
 
 TChannelV2Handler.prototype.handleClaim = function handleClaim(frame) {
@@ -468,6 +470,10 @@ TChannelV2Handler.prototype.handleError = function handleError(errFrame, callbac
         originalId: id,
         message: message
     });
+
+    delete self.streamingReq[id];
+    delete self.streamingRes[id];
+
     if (id === v2.Frame.NullId) {
         // fatal error not associated with a prior frame
         self.errorEvent.emit(self, err);
