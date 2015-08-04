@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -13,24 +14,41 @@ import (
 	"github.com/uber/tchannel/golang/thrift"
 )
 
-var chOptions = &tchannel.ChannelOptions{}
+var (
+	chOptions   = &tchannel.ChannelOptions{}
+	hostPort    = flag.String("hostPort", "127.0.0.1:12345", "Host:Port of the server")
+	startServer = flag.Bool("server", false, "Whether to start the server")
+	startClient = flag.Bool("client", false, "Whether to start the client")
+)
 
 func main() {
+	flag.Parse()
+	if !*startServer && !*startClient {
+		log.Fatalf("at least one of --server or --client must be specified")
+	}
+
 	ch, err := tchannel.NewChannel("uniq", chOptions)
 	if err != nil {
 		log.Fatalf("NewChannel failed: %v", err)
 	}
 
-	svr := thrift.NewServer(ch)
-	svr.RegisterStreaming(stream.NewSTChanUniqCServer(handler{}, thrift.NewClient(ch, "uniq", nil)))
+	if *startServer {
+		svr := thrift.NewServer(ch)
+		svr.RegisterStreaming(stream.NewSTChanUniqCServer(handler{}, thrift.NewClient(ch, "uniq", nil)))
 
-	if err := ch.ListenAndServe(":12345"); err != nil {
-		log.Fatalf("ListenAndServe failed: %v", err)
+		if err := ch.ListenAndServe(*hostPort); err != nil {
+			log.Fatalf("ListenAndServe failed: %v", err)
+		}
+		log.Printf("server: listening on %v", ch.PeerInfo().HostPort)
 	}
 
-	if err := runClient(ch.PeerInfo().HostPort); err != nil {
-		log.Fatalf("runClient failed: %v", err)
+	if *startClient {
+		if err := runClient(*hostPort); err != nil {
+			log.Fatalf("runClient failed: %v", err)
+		}
 	}
+
+	select {}
 }
 
 func runClient(hostPort string) error {
