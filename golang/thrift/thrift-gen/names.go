@@ -113,8 +113,10 @@ func goPublicFieldName(name string) string {
 }
 
 var thriftToGo = map[string]string{
-	"bool":   "bool",
-	"byte":   "byte",
+	"bool": "bool",
+	// TODO(prashant): The Thrift compiler uses int8 for byte - fix the Thrift
+	// compiler and update this.
+	"byte":   "int8",
 	"i16":    "int16",
 	"i32":    "int32",
 	"i64":    "int64",
