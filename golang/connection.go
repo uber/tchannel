@@ -545,9 +545,8 @@ func (c *Connection) SendSystemError(id uint32, err error) {
 
 // connectionError handles a connection level error
 func (c *Connection) connectionError(err error) error {
-	c.log.Debugf("connectionError: %v", err)
-	c.tryClose()
-
+	c.log.Warnf("connectionError: %v", err)
+	c.Close()
 	return NewWrappedSystemError(ErrCodeNetwork, err)
 }
 
