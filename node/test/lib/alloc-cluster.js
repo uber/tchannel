@@ -93,6 +93,7 @@ function allocCluster(opts) {
                             i, j, k, prop);
 
                         var pending = conn.ops.getPending();
+                        var handler = conn.handler;
 
                         switch (prop) {
                         case 'inReqs':
@@ -100,6 +101,14 @@ function allocCluster(opts) {
                             break;
                         case 'outReqs':
                             assert.equal(pending.out, connExpect.outReqs, desc);
+                            break;
+                        case 'streamingReq':
+                            var streamingReq = Object.keys(handler.streamingReq).length;
+                            assert.equal(streamingReq, connExpect.streamingReq, desc);
+                            break;
+                        case 'streamingRes':
+                            var streamingRes = Object.keys(handler.streamingRes).length;
+                            assert.equal(streamingRes, connExpect.streamingRes, desc);
                             break;
                         default:
                             assert.equal(conn[prop], connExpect[prop], desc);
@@ -124,7 +133,9 @@ function allocCluster(opts) {
                                 return {
                                     direction: c.direction,
                                     inReqs: 0,
-                                    outReqs: 0
+                                    outReqs: 0,
+                                    streamingReq: 0,
+                                    streamingRes: 0
                                 };
                             })
                         };
