@@ -64,7 +64,7 @@ function handleError(err, cn, serviceName) {
     }
 
     if (!err || !cn || !serviceName) {
-        self.logger.warn('ErrorBackoff.handleError called wiht invalid parameters', {
+        self.logger.warn('ErrorBackoff.handleError called with invalid parameters', {
             error: err,
             cn: cn,
             serviceName: serviceName
@@ -108,7 +108,7 @@ function getBackoffError(cn, serviceName) {
     }
 
     if (!cn || !serviceName) {
-        self.logger.warn('ErrorBackoff.getBackoffError called wiht invalid parameters', {
+        self.logger.warn('ErrorBackoff.getBackoffError called with invalid parameters', {
             cn: cn,
             serviceName: serviceName
         });

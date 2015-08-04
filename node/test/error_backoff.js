@@ -95,11 +95,11 @@ allocCluster.test('error backoff on invalid cn/serviceName', {
     });
     channel.logger.whitelist(
         'warn',
-        'ErrorBackoff.handleError called wiht invalid parameters'
+        'ErrorBackoff.handleError called with invalid parameters'
     );
     channel.logger.whitelist(
         'warn',
-        'ErrorBackoff.getBackoffError called wiht invalid parameters'
+        'ErrorBackoff.getBackoffError called with invalid parameters'
     );
 
     backoff.handleError({
