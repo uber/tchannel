@@ -295,6 +295,17 @@ function refreshServicePeer(serviceName, hostPort) {
     self.exitServices[serviceName] = time;
 };
 
+ServiceDispatchHandler.prototype.removeServicePeer =
+function removeServicePeer(serviceName, hostPort) {
+    var self = this;
+    var svcchan = self.channel.subChannels[serviceName];
+    var peer = svcchan.peers.get(hostPort);
+    if (peer) {
+        peer.close();
+    }
+    self.channel.peers.delete(hostPort);
+};
+
 ServiceDispatchHandler.prototype.updateServiceChannels =
 function updateServiceChannels() {
     var self = this;
