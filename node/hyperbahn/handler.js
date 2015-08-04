@@ -90,19 +90,21 @@ HyperbahnHandler.prototype.type = 'hyperbahn.advertisement-handler';
         connectionCount: Number
     }
 */
+
 HyperbahnHandler.prototype.handleAdvertise =
 function handleAdvertise(self, req, arg2, arg3, cb) {
-    self.sendRelays(self, req, arg2, arg3, 'relay-ad', cb);
+    self.sendRelays(req, arg2, arg3, 'relay-ad', cb);
 };
 
 HyperbahnHandler.prototype.handleUnadvertise =
 function handleUnadvertise(self, req, arg2, arg3, cb) {
-    self.sendRelays(self, req, arg2, arg3, 'relay-unad', cb);
+    self.sendRelays(req, arg2, arg3, 'relay-unad', cb);
 };
 
 HyperbahnHandler.prototype.sendRelays =
-function sendRelays(self, req, arg2, arg3, endpoint, cb) {
-    /*eslint max-statements: [2, 25], max-params: [2, 5]*/
+function sendRelays(req, arg2, arg3, endpoint, cb) {
+    /*eslint max-statements: [2, 25], max-params: [2, 6]*/
+    var self = this;
     var services = arg3.services;
 
     var servicesByExitNode = {};
@@ -196,17 +198,17 @@ function sendAdvertise(services, options, callback) {
 
 HyperbahnHandler.prototype.handleRelayAdvertise =
 function handleRelayAdvertise(self, req, arg2, arg3, cb) {
-    self.handleRelay(self, req, arg2, arg3, cb, self.advertise);
+    self.handleRelay(req, arg2, arg3, cb, self.advertise);
 };
 
 HyperbahnHandler.prototype.handleRelayUnadvertise =
 function handleRelayUnadvertise(self, req, arg2, arg3, cb) {
-    self.handleRelay(self, req, arg2, arg3, cb, self.unadvertise);
+    self.handleRelay(req, arg2, arg3, cb, self.unadvertise);
 };
 
 HyperbahnHandler.prototype.handleRelay =
-function handleRelay(self, req, arg2, arg3, cb, func) {
-    /*eslint max-params: [2, 5]*/
+function handleRelay(req, arg2, arg3, cb, func) {
+    var self = this;
     var services = arg3.services;
     var logger = self.channel.logger;
 
