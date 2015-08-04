@@ -301,10 +301,12 @@ function removeServicePeer(serviceName, hostPort) {
     var svcchan = self.channel.subChannels[serviceName];
     var peer = svcchan.peers.get(hostPort);
     if (peer) {
-        peer.close();
+        peer.close(noop);
     }
     self.channel.peers.delete(hostPort);
 };
+
+function noop() {}
 
 ServiceDispatchHandler.prototype.updateServiceChannels =
 function updateServiceChannels() {
