@@ -89,7 +89,7 @@ func (w *reqResWriter) argWriter(last bool, inState reqResWriterState, outState 
 
 	argWriter, err := w.contents.ArgWriter(last)
 	if err != nil {
-		return nil, err
+		return nil, w.failed(err)
 	}
 
 	w.state = outState
