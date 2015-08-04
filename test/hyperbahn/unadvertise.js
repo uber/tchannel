@@ -35,7 +35,6 @@ if (require.main === module) {
 function runTests(HyperbahnCluster) {
     HyperbahnCluster.test('advertise and forward', {
         size: 5,
-        servicePurgePeriod: 50
     }, function t(cluster, assert) {
         var steve = cluster.remotes.steve;
         var bob = cluster.remotes.bob;
@@ -75,8 +74,7 @@ function runTests(HyperbahnCluster) {
     });
 
     HyperbahnCluster.test('advertise, unadvertise and forward', {
-        size: 5,
-        servicePurgePeriod: 50
+        size: 5
     }, function t(cluster, assert) {
         var steve = cluster.remotes.steve;
         var bob = cluster.remotes.bob;
