@@ -180,14 +180,6 @@ RelayNetwork.prototype.setCluster = function setCluster(cluster) {
             egressNodes: egressNodes,
             callerName: 'hyperbahn'
         });
-        hyperbahnHandler.advertise =
-        function advertise(serviceObj) {
-            relayChannel.handler.refreshServicePeer(serviceObj.serviceName, serviceObj.hostPort);
-        };
-        hyperbahnHandler.unadvertise =
-        function unadvertise(serviceObj) {
-            relayChannel.handler.removeServicePeer(serviceObj.serviceName, serviceObj.hostPort);
-        };
         hyperbahnChannel.handler = hyperbahnHandler;
 
         // In response to artificial advertisement
