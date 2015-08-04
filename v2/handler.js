@@ -470,6 +470,10 @@ TChannelV2Handler.prototype.handleError = function handleError(errFrame, callbac
         originalId: id,
         message: message
     });
+
+    delete self.streamingReq[id];
+    delete self.streamingRes[id];
+
     if (id === v2.Frame.NullId) {
         // fatal error not associated with a prior frame
         self.errorEvent.emit(self, err);
