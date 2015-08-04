@@ -90,7 +90,6 @@ HyperbahnHandler.prototype.type = 'hyperbahn.advertisement-handler';
         connectionCount: Number
     }
 */
-
 HyperbahnHandler.prototype.handleAdvertise =
 function handleAdvertise(self, req, arg2, arg3, cb) {
     self.sendRelays(req, arg2, arg3, 'relay-ad', cb);
@@ -195,19 +194,18 @@ function sendAdvertise(services, options, callback) {
 
     res: {}
 */
-
 HyperbahnHandler.prototype.handleRelayAdvertise =
 function handleRelayAdvertise(self, req, arg2, arg3, cb) {
-    self.handleRelay(req, arg2, arg3, cb, self.advertise);
+    self.handleRelay(req, arg2, arg3, cb, 'ad');
 };
 
 HyperbahnHandler.prototype.handleRelayUnadvertise =
 function handleRelayUnadvertise(self, req, arg2, arg3, cb) {
-    self.handleRelay(req, arg2, arg3, cb, self.unadvertise);
+    self.handleRelay(req, arg2, arg3, cb, 'unad');
 };
 
 HyperbahnHandler.prototype.handleRelay =
-function handleRelay(req, arg2, arg3, cb, func) {
+function handleRelay(req, arg2, arg3, cb, endpoint) {
     var self = this;
     var services = arg3.services;
     var logger = self.channel.logger;
@@ -221,7 +219,16 @@ function handleRelay(req, arg2, arg3, cb, func) {
 
         var myHost = self.channel.hostPort;
         if (exitHosts.indexOf(myHost) !== -1) {
-            func(service);
+            if (endpoint === 'ad') {
+                self.advertise(service);
+            } else if (endpoint === 'unad') {
+                self.unadvertise(service);
+            } else {
+                logger.error('Unexpected endpoint for relay', {
+                    endpoint: endpoint,
+                    service: service
+                });
+            }
         } else {
             logger.warn('Non-exit node got relay', {
                 myHost: myHost,
@@ -322,10 +329,12 @@ function logError(err, opts, response) {
 
 HyperbahnHandler.prototype.advertise =
 function advertise(service) {
-    throw new Error('not implemented');
+    var self = this;
+    self.channel.topChannel.handler.refreshServicePeer(service.serviceName, service.hostPort);
 };
 
 HyperbahnHandler.prototype.unadvertise =
 function unadvertise(service) {
-    throw new Error('not implemented');
+    var self = this;
+    self.channel.topChannel.handler.removeServicePeer(service.serviceName, service.hostPort);
 };

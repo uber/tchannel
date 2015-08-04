@@ -371,8 +371,15 @@ function unadvertise(opts) {
     self.state = States.UNADVERTISED;
     self.emit('unadvertised');
     function unadvertiseInternalCb(error, result) {
-        self.logger.debug('HyperbahnClient: unadvertisement complete', {
-            error: error,
+        if (error) {
+            self.logger.warn('HyperbahnClient: unadvertisement failure', {
+                error: error,
+                serviceName: self.serviceName,
+                hostPort: self.hostPort
+            });
+            return;
+        }
+        self.logger.debug('HyperbahnClient: unadvertisement success', {
             result: result,
             serviceName: self.serviceName,
             hostPort: self.hostPort
@@ -397,7 +404,7 @@ HyperbahnClient.prototype.getHealthyRetryTime = function getHealthyRetryTime() {
 };
 
 HyperbahnClient.prototype.advertiseAgain =
-    function advertiseAgain(delay) {
+function advertiseAgain(delay) {
     var self = this;
 
     if (self._destroyed) {
