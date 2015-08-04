@@ -2,10 +2,10 @@
 
 This document outlines what the raw encoding is.
 
-The `as=raw` encoded is intended for any custom encodings you want to do that
-are not part of tchannel but are application specific.
+The `as=raw` encoding is intended for any custom encodings you want to do that
+are not part of TChannel but are application specific.
 
-Consider using the `thrift`, `sthrift`, `json` or `http` encodigns
+Consider using the `thrift`, `sthrift`, `json` or `http` encodings
 before using `as=raw`.
 
 ## Arguments
