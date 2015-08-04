@@ -63,6 +63,10 @@ function HyperbahnHandler(options) {
         self.handleAdvertise);
     self.tchannelJSON.register(self, 'relay-ad', self,
         self.handleRelayAdvertise);
+    self.tchannelJSON.register(self, 'unad', self,
+        self.handleUnadvertise);
+    self.tchannelJSON.register(self, 'relay-unad', self,
+        self.handleRelayUnadvertise);
 
     self.relayAdTimeout = options.relayAdTimeout ||
         RELAY_AD_TIMEOUT;
@@ -88,6 +92,16 @@ HyperbahnHandler.prototype.type = 'hyperbahn.advertisement-handler';
 */
 HyperbahnHandler.prototype.handleAdvertise =
 function handleAdvertise(self, req, arg2, arg3, cb) {
+    self.sendRelays(self, req, arg2, arg3, 'relay-ad', cb);
+};
+
+HyperbahnHandler.prototype.handleUnadvertise =
+function handleUnadvertise(self, req, arg2, arg3, cb) {
+    self.sendRelays(self, req, arg2, arg3, 'relay-unad', cb);
+};
+
+HyperbahnHandler.prototype.sendRelays =
+function sendRelays(self, req, arg2, arg3, endpoint, cb) {
     /*eslint max-statements: [2, 25], max-params: [2, 5]*/
     var services = arg3.services;
 
@@ -123,10 +137,11 @@ function handleAdvertise(self, req, arg2, arg3, cb) {
         var hostPort = exitNodeKeys[k];
         var exitNodeServices = servicesByExitNode[hostPort];
 
-        self.sendRelayAdvertise({
+        self.sendRelay({
             hostPort: hostPort,
             services: exitNodeServices,
-            inreq: req
+            inreq: req,
+            endpoint: endpoint
         }, onFinish);
     }
 
@@ -178,8 +193,19 @@ function sendAdvertise(services, options, callback) {
 
     res: {}
 */
+
 HyperbahnHandler.prototype.handleRelayAdvertise =
 function handleRelayAdvertise(self, req, arg2, arg3, cb) {
+    self.handleRelay(self, req, arg2, arg3, cb, self.advertise);
+};
+
+HyperbahnHandler.prototype.handleRelayUnadvertise =
+function handleRelayUnadvertise(self, req, arg2, arg3, cb) {
+    self.handleRelay(self, req, arg2, arg3, cb, self.unadvertise);
+};
+
+HyperbahnHandler.prototype.handleRelay =
+function handleRelay(self, req, arg2, arg3, cb, func) {
     /*eslint max-params: [2, 5]*/
     var services = arg3.services;
     var logger = self.channel.logger;
@@ -193,9 +219,9 @@ function handleRelayAdvertise(self, req, arg2, arg3, cb) {
 
         var myHost = self.channel.hostPort;
         if (exitHosts.indexOf(myHost) !== -1) {
-            self.advertise(service);
+            func(service);
         } else {
-            logger.warn('Non-exit node got relay handle advertise', {
+            logger.warn('Non-exit node got relay', {
                 myHost: myHost,
                 exitHosts: exitHosts,
                 service: service
@@ -210,8 +236,8 @@ function handleRelayAdvertise(self, req, arg2, arg3, cb) {
     });
 };
 
-HyperbahnHandler.prototype.sendRelayAdvertise =
-function sendRelayAdvertise(opts, callback) {
+HyperbahnHandler.prototype.sendRelay =
+function sendRelay(opts, callback) {
     var self = this;
 
     var attempts = 0;
@@ -241,7 +267,7 @@ function sendRelayAdvertise(opts, callback) {
                 },
                 retryLimit: 1,
                 parent: opts.inreq
-            }), 'relay-ad', null, {
+            }), opts.endpoint, null, {
                 services: opts.services
             }, onResponse);
         }
@@ -294,5 +320,10 @@ function logError(err, opts, response) {
 
 HyperbahnHandler.prototype.advertise =
 function advertise(service) {
+    throw new Error('not implemented');
+};
+
+HyperbahnHandler.prototype.unadvertise =
+function unadvertise(service) {
     throw new Error('not implemented');
 };
