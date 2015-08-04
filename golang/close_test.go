@@ -133,17 +133,22 @@ func TestCloseStress(t *testing.T) {
 	}
 }
 
-type rawFuncHandler func(context.Context, *raw.Args) (*raw.Res, error)
-
-func (f rawFuncHandler) OnError(_ context.Context, _ error) {}
-func (f rawFuncHandler) Handle(ctx context.Context, args *raw.Args) (*raw.Res, error) {
-	return f(ctx, args)
+type simpleHandler struct {
+	t *testing.T
+	f func(context.Context, *raw.Args) (*raw.Res, error)
 }
 
-func registerFunc(ch *Channel, name string,
-	f func(ctx context.Context, args *raw.Args) (*raw.Res, error)) {
+func (h simpleHandler) OnError(ctx context.Context, err error) {
+	h.t.Errorf("simpleHandler OnError: %v %v", ctx, err)
+}
 
-	ch.Register(raw.Wrap(rawFuncHandler(f)), name)
+func (h simpleHandler) Handle(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+	return h.f(ctx, args)
+}
+
+func registerFunc(t *testing.T, ch *Channel, name string,
+	f func(ctx context.Context, args *raw.Args) (*raw.Res, error)) {
+	ch.Register(raw.Wrap(simpleHandler{t, f}), name)
 }
 
 func TestCloseSemantics(t *testing.T) {
@@ -155,11 +160,11 @@ func TestCloseSemantics(t *testing.T) {
 		ch, err := testutils.NewServer(&testutils.ChannelOpts{ServiceName: name})
 		require.NoError(t, err)
 		c := make(chan struct{})
-		registerFunc(ch, "stream", func(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+		registerFunc(t, ch, "stream", func(ctx context.Context, args *raw.Args) (*raw.Res, error) {
 			<-c
 			return &raw.Res{}, nil
 		})
-		registerFunc(ch, "call", func(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+		registerFunc(t, ch, "call", func(ctx context.Context, args *raw.Args) (*raw.Res, error) {
 			return &raw.Res{}, nil
 		})
 		return ch, c
@@ -238,19 +243,44 @@ func TestCloseGoroutines(t *testing.T) {
 	ctx, cancel := NewContext(time.Second)
 	defer cancel()
 
-	// Make sure that all client and server Goroutines are closed when a connection is closed.
 	ch, err := testutils.NewServer(nil)
 	require.NoError(t, err, "NewServer failed")
-	ch.Register(raw.Wrap(&testHandler{}), "echo")
 
-	peerInfo := ch.PeerInfo()
-	_, _, _, err = raw.Call(ctx, ch, peerInfo.HostPort, peerInfo.ServiceName, "echo", nil, nil)
-	assert.NoError(t, err, "Call failed")
+	var connected sync.WaitGroup
+	var completed sync.WaitGroup
+	blockCall := make(chan struct{})
 
+	registerFunc(t, ch, "echo", func(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+		connected.Done()
+		<-blockCall
+		return &raw.Res{
+			Arg2: args.Arg2,
+			Arg3: args.Arg3,
+		}, nil
+	})
+
+	for i := 0; i < 10; i++ {
+		connected.Add(1)
+		completed.Add(1)
+		go func() {
+			peerInfo := ch.PeerInfo()
+			_, _, _, err = raw.Call(ctx, ch, peerInfo.HostPort, peerInfo.ServiceName, "echo", nil, nil)
+			assert.NoError(t, err, "Call failed")
+			completed.Done()
+		}()
+	}
+
+	// Wait for all calls to connect before triggerring the Close (so they do not fail).
+	connected.Wait()
 	ch.Close()
-	assert.Equal(t, ChannelClosed, ch.State())
 
-	// Give a chance for the closed connection to close the read/write goroutines.
+	// Unblock the calls, and wait for all the calls to complete.
+	close(blockCall)
+	completed.Wait()
+
+	// Once all calls are complete, the channel should be closed.
+	runtime.Gosched()
+	assert.Equal(t, ChannelClosed, ch.State())
 	runtime.Gosched()
 	VerifyNoBlockedGoroutines(t)
 }
