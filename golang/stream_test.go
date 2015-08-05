@@ -136,7 +136,7 @@ func testStreamArg(t *testing.T, f func(argWriter ArgWriter, argReader io.ReadCl
 	ctx, cancel := NewContext(time.Second)
 	defer cancel()
 
-	require.NoError(t, testutils.WithServer(nil, func(ch *Channel, hostPort string) {
+	WithVerifiedServer(t, nil, func(ch *Channel, hostPort string) {
 		ch.Register(streamPartialHandler(t), "echoStream")
 
 		call, err := ch.BeginCall(ctx, hostPort, ch.PeerInfo().ServiceName, "echoStream", nil)
@@ -177,7 +177,7 @@ func testStreamArg(t *testing.T, f func(argWriter ArgWriter, argReader io.ReadCl
 		verifyBytes(1)
 
 		f(argWriter, argReader)
-	}))
+	})
 }
 
 func TestStreamPartialArg(t *testing.T) {
