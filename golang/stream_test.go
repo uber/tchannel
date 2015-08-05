@@ -136,7 +136,7 @@ func testStreamArg(t *testing.T, f func(argWriter ArgWriter, argReader io.ReadCl
 	ctx, cancel := NewContext(time.Second)
 	defer cancel()
 
-	require.NoError(t, testutils.WithServer(nil, func(ch *Channel, hostPort string) {
+	WithVerifiedServer(t, nil, func(ch *Channel, hostPort string) {
 		ch.Register(streamPartialHandler(t), "echoStream")
 
 		call, err := ch.BeginCall(ctx, hostPort, ch.PeerInfo().ServiceName, "echoStream", nil)
@@ -177,7 +177,7 @@ func testStreamArg(t *testing.T, f func(argWriter ArgWriter, argReader io.ReadCl
 		verifyBytes(1)
 
 		f(argWriter, argReader)
-	}))
+	})
 }
 
 func TestStreamPartialArg(t *testing.T) {
@@ -188,6 +188,7 @@ func TestStreamPartialArg(t *testing.T) {
 		n, err := io.Copy(ioutil.Discard, argReader)
 		assert.Equal(t, int64(0), n, "arg2 reader expected to EOF after arg3 writer is closed")
 		assert.NoError(t, err, "Copy should not fail")
+		assert.NoError(t, argReader.Close(), "close arg reader failed")
 	})
 }
 
