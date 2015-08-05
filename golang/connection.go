@@ -26,7 +26,6 @@ import (
 	"net"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/uber/tchannel/golang/typed"
 	"golang.org/x/net/context"
@@ -555,11 +554,7 @@ func (c *Connection) connectionError(err error) error {
 func (c *Connection) protocolError(err error) error {
 	sysErr := NewWrappedSystemError(ErrCodeProtocol, err)
 	c.SendSystemError(invalidMessageID, sysErr)
-
-	// TODO(prashant): This is a huge hack, and should be removed once graceful Close is supported.
-	time.Sleep(100 * time.Millisecond)
-
-	c.tryClose()
+	c.Close()
 	return sysErr
 }
 
