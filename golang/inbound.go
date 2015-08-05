@@ -275,6 +275,7 @@ func (response *InboundCallResponse) SendSystemError(err error) error {
 			response.conn.remotePeerInfo, response.mex.msgID, err)
 	}
 
+	response.errorSending()
 	return nil
 }
 
@@ -317,5 +318,10 @@ func (response *InboundCallResponse) doneSending() {
 	latency := timeNow().Sub(response.calledAt)
 	response.statsReporter.RecordTimer("inbound.calls.latency", response.commonStatsTags, latency)
 
+	response.mex.shutdown()
+}
+
+// errorSending shuts down the message exhcnage for this call, and records counters.
+func (response *InboundCallResponse) errorSending() {
 	response.mex.shutdown()
 }

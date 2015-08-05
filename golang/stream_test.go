@@ -188,6 +188,7 @@ func TestStreamPartialArg(t *testing.T) {
 		n, err := io.Copy(ioutil.Discard, argReader)
 		assert.Equal(t, int64(0), n, "arg2 reader expected to EOF after arg3 writer is closed")
 		assert.NoError(t, err, "Copy should not fail")
+		assert.NoError(t, argReader.Close(), "close arg reader failed")
 	})
 }
 
