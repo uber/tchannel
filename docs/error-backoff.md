@@ -1,33 +1,19 @@
 # Error Backoff
 
 Error backoff is a mechanism that throttles outgoing TChannel traffic in order to improve the
-health of the Hyperbahn cluster and its hosted services. By definition, error backoff monitors
-the status of outgoing TChannel traffic. If it determines that 1) the Hyperbahn cluster/services
-are unhealthy, and 2) the unheathy state can be improved by throttling outgoing
-traffic, error backoff will effectively throttle outgoing traffic by returning error responses
-corresponding to the out requests.
-
-There are many reasons why error backoff can help. For example, when responding to `tchannel.busy`,
-it means that a service is stressed so that requests to the service should be reduced. As another
-example, when `tchannel.declined` is received, it may indicate the absence of any healthy host
-for the service, so there is no reason to send more requests to the same service in the next short
-amount of time period.
+health of the Hyperbahn cluster and its hosted services.
 
 
 ## Goals
 
 Error backoff works passively to defend Hyperbahn cluster and services from flooding requests and retries.
-When a service is unhealth or over stressed, there will be an increasing number of error responses.
-Such an unhealthy state should be handled by reducing the requests to the service. On the other hand,
-it is very important that error backoff never affects healthy traffic.
+It is very important that error backoff never affects healthy traffic.
 
 Goals:
 
-* Monitor the health state of an Hyperbahn edge, i.e., callerName ==> serviceName. Most effectively,
-  such information should be observed locally through call responses.
-* Throttle out requests if the current unheathy state can be relieved by reducing the requests.
-* The throttling should grow if the health state continues to decline.
-* The throttling should decline if the health state improves.
+* Throttle out requests when busy frame is received.
+* The throttling should grow if we have a growth in busy frames.
+* The throttling should decline if the number of busy frames decline.
 * Error backoff should converge. In other words, if the traffic stablizes in terms of failure/success
   ratios, the level of throttling should also be stable.
 * No healthy traffic should be affected at any time. 
@@ -45,29 +31,19 @@ Non-goals:
 
 ## Design & Implemenation
 
-### Errors sensitive to backoff 
-Only issues that can be relieved by throttling should be considered for error backoff. Errors sensitive to
-backoff are also called eligible errors. There are three types of eligible errors handled by error backoff. 
-
-`tchannel.timeout` is received when a request is not completed within its timeout limit. The error indicates
-that the Hyerbahn cluster and/or the service is becoming slow.
+### Eligible errors
 
 `tchannel.busy` is returned by Rate Limiting when one of the relaying nodes decides that the RPS limit for this
-request has been reached.
-
-`tchannel.declined` is returned when 1) there is no peer available for this service or 2) the request is declined
-by Circuit Breaking. 
+request has been reached. It can also be returned by the edge server when it has high event loop lag, RAM usage,
+etc.
 
 
-### Health monitor 
-Error backoff is specific to Hyperbahn edges, i.e., callerName ==> serviceName. Therefore, the measurement of
-traffic health is associated with the edges.
+### Monitor 
+Error backoff is specific to Hyperbahn edges, i.e., callerName ==> serviceName.
 
 When an error is received, error backoff should take the error type and the frequency of the error into account.
-Only eligible errors should be considered towarding an unhealthy state. The frequency of the error is used to
-identify the change of the service quality such as degradation or recovery. In other words, the more errors received,
-the unhealthier the service is considered.
-
+Only eligible errors should be considered for backoff. The frequency of the error is used to
+identify the change of the service quality such as degradation or recovery.
 
 ### Throttling
 When a request should be throttled, error backoff returns `tchannel.busy` immediately rather than sending the request
