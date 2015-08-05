@@ -37,7 +37,7 @@
     "ready-signal": "^1.1.1",
     "run-parallel": "^1.1.0",
     "run-series": "^1.1.2",
-    "sse4_crc32": "^3.1.0",
+    "sse4_crc32": "3.2.0",
     "tape-cluster": "2.1.0",
     "thriftify": "1.0.0-alpha14",
     "uber-statsd-client": "1.3.2",
