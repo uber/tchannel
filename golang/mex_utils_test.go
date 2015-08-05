@@ -45,7 +45,7 @@ func CheckEmptyExchanges(c *Connection) string {
 		return ""
 	}
 
-	return fmt.Sprintf("Connection %p has leftover exchanges:\n\t%v", c, strings.Join(errors, "\n\t"))
+	return fmt.Sprintf("Connection %d has leftover exchanges:\n\t%v", c.connID, strings.Join(errors, "\n\t"))
 }
 
 // CheckEmptyExchangesConns checks that all exchanges for the given connections are empty.
