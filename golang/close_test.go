@@ -237,9 +237,12 @@ func TestCloseSemantics(t *testing.T) {
 	s2C <- struct{}{}
 	<-call1
 	assert.Equal(t, ChannelClosed, s1.State())
+
+	//time.Sleep(100 * time.Millisecond)
+	VerifyNoBlockedGoroutines(t)
 }
 
-func TestCloseGoroutines(t *testing.T) {
+func TestCloseSingleChannel(t *testing.T) {
 	ctx, cancel := NewContext(time.Second)
 	defer cancel()
 
@@ -281,6 +284,50 @@ func TestCloseGoroutines(t *testing.T) {
 	// Once all calls are complete, the channel should be closed.
 	runtime.Gosched()
 	assert.Equal(t, ChannelClosed, ch.State())
+	VerifyNoBlockedGoroutines(t)
+}
+
+func TestCloseOneSide(t *testing.T) {
+	ctx, cancel := NewContext(time.Second)
+	defer cancel()
+
+	ch1, err := testutils.NewServer(&testutils.ChannelOpts{ServiceName: "client"})
+	ch2, err := testutils.NewServer(&testutils.ChannelOpts{ServiceName: "server"})
+	require.NoError(t, err, "NewServer 1 failed")
+	require.NoError(t, err, "NewServer 2 failed")
+
+	connected := make(chan struct{})
+	completed := make(chan struct{})
+	blockCall := make(chan struct{})
+	registerFunc(t, ch2, "echo", func(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+		connected <- struct{}{}
+		<-blockCall
+		return &raw.Res{
+			Arg2: args.Arg2,
+			Arg3: args.Arg3,
+		}, nil
+	})
+
+	go func() {
+		ch2Peer := ch2.PeerInfo()
+		_, _, _, err := raw.Call(ctx, ch1, ch2Peer.HostPort, ch2Peer.ServiceName, "echo", nil, nil)
+		assert.NoError(t, err, "Call failed")
+		completed <- struct{}{}
+	}()
+
+	// Wait for connected before calling Close.
+	<-connected
+	ch1.Close()
+
+	// Now unblock the call and wait for the call to complete.
+	close(blockCall)
+	<-completed
+
+	// Once the call completes, the channel should be closed.
 	runtime.Gosched()
+	assert.Equal(t, ChannelClosed, ch1.State())
+
+	// We need to close all open TChannels before verifying blocked goroutines.
+	ch2.Close()
 	VerifyNoBlockedGoroutines(t)
 }
