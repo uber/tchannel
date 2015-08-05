@@ -173,7 +173,7 @@ func (call *OutboundCall) createStatsTags(connectionTags map[string]string) {
 // writeOperation writes the operation (arg1) to the call
 func (call *OutboundCall) writeOperation(operation []byte) error {
 	if len(operation) > maxOperationSize {
-		return ErrOperationTooLarge
+		return call.failed(ErrOperationTooLarge)
 	}
 
 	// TODO(prashant): Should operation become part of BeginCall so this can use Format directly.
