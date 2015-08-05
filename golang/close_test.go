@@ -170,10 +170,11 @@ func TestCloseSemantics(t *testing.T) {
 		return ch, c
 	}
 
-	newClient := func() *Channel {
+	withNewClient := func(f func(ch *Channel)) {
 		ch, err := testutils.NewClient(&testutils.ChannelOpts{ServiceName: "client"})
 		require.NoError(t, err)
-		return ch
+		f(ch)
+		ch.Close()
 	}
 
 	call := func(from *Channel, to *Channel) error {
@@ -209,16 +210,21 @@ func TestCloseSemantics(t *testing.T) {
 	call2 := callStream(s2, s1)
 
 	// s1 and s2 are both open, so calls to it should be successful.
-	require.NoError(t, call(newClient(), s1))
-	require.NoError(t, call(newClient(), s2))
+	withNewClient(func(ch *Channel) {
+		require.NoError(t, call(ch, s1))
+		require.NoError(t, call(ch, s2))
+	})
 	require.NoError(t, call(s1, s2))
 	require.NoError(t, call(s2, s1))
 
 	// Close s1, should no longer be able to call it.
 	s1.Close()
 	assert.Equal(t, ChannelStartClose, s1.State())
-	assert.Error(t, call(newClient(), s1), "closed channel should not accept incoming calls")
-	require.NoError(t, call(newClient(), s2))
+	withNewClient(func(ch *Channel) {
+		assert.Error(t, call(ch, s1), "closed channel should not accept incoming calls")
+		require.NoError(t, call(ch, s2),
+			"closed channel with pending incoming calls should allow outgoing calls")
+	})
 
 	// Even an existing connection (e.g. from s2) should fail.
 	assert.Equal(t, ErrChannelClosed, call(s2, s1), "closed channel should not accept incoming calls")
@@ -238,7 +244,8 @@ func TestCloseSemantics(t *testing.T) {
 	<-call1
 	assert.Equal(t, ChannelClosed, s1.State())
 
-	//time.Sleep(100 * time.Millisecond)
+	// Close s2 so we don't leave any goroutines running.
+	s2.Close()
 	VerifyNoBlockedGoroutines(t)
 }
 
@@ -267,7 +274,7 @@ func TestCloseSingleChannel(t *testing.T) {
 		completed.Add(1)
 		go func() {
 			peerInfo := ch.PeerInfo()
-			_, _, _, err = raw.Call(ctx, ch, peerInfo.HostPort, peerInfo.ServiceName, "echo", nil, nil)
+			_, _, _, err := raw.Call(ctx, ch, peerInfo.HostPort, peerInfo.ServiceName, "echo", nil, nil)
 			assert.NoError(t, err, "Call failed")
 			completed.Done()
 		}()
