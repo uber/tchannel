@@ -661,15 +661,6 @@ Value is name of the service making the call.
 
 ### Transport Header `re` -- Retry Flags
 
-Flags are encoded as a UTF-8 string, as are all header values. Each flag is
-represented by a single character:
-
-| flag | meaning
-| ---- | -------
-| `n`  | no retry, expose all errors immediately - cancels `c` and `t`
-| `c`  | retry on connection error. The specific mechanism of retry is not specified by tchannel. Actual retries are handled by  the routing layer.
-| `t`  | retry on timeout
-
 Valid values for `re` are:
 
 | value | description
