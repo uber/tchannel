@@ -324,7 +324,6 @@ func (c *Connection) handleInitReq(frame *Frame) {
 	}
 
 	if req.Version != CurrentProtocolVersion {
-		// TODO(mmihic): Send protocol error
 		c.protocolError(fmt.Errorf("Unsupported protocol version %d from peer", req.Version))
 		return
 	}
@@ -505,22 +504,6 @@ func (c *Connection) NextMessageID() uint32 {
 	return atomic.AddUint32(&c.nextMessageID, 1)
 }
 
-// tryClose closes the connection if it is not closed.
-func (c *Connection) tryClose() {
-	doClose := false
-	c.withStateLock(func() error {
-		if c.state != connectionClosed {
-			c.state = connectionClosed
-			doClose = true
-		}
-		return nil
-	})
-
-	if doClose {
-		c.closeNetwork()
-	}
-}
-
 // SendSystemError sends an error frame for the given system error.
 func (c *Connection) SendSystemError(id uint32, err error) {
 	frame := c.framePool.Get()
@@ -545,14 +528,16 @@ func (c *Connection) SendSystemError(id uint32, err error) {
 
 // connectionError handles a connection level error
 func (c *Connection) connectionError(err error) error {
-	c.log.Warnf("connectionError: %v", err)
+	c.log.Warnf("Connection error: %v", err)
 	c.Close()
 	return NewWrappedSystemError(ErrCodeNetwork, err)
 }
 
 func (c *Connection) protocolError(err error) error {
+	c.log.Warnf("Protocol error: %v", err)
 	sysErr := NewWrappedSystemError(ErrCodeProtocol, err)
 	c.SendSystemError(invalidMessageID, sysErr)
+	// Don't close the connection until the error has been sent.
 	c.Close()
 	return sysErr
 }
@@ -622,8 +607,12 @@ func (c *Connection) readFrames(_ uint32) {
 // writes them to the connection.
 func (c *Connection) writeFrames(_ uint32) {
 	for f := range c.sendCh {
-		c.log.Debugf("Writing frame %s", f.Header)
+		if f == nil {
+			close(c.sendCh)
+			break
+		}
 
+		c.log.Debugf("Writing frame %s", f.Header)
 		err := f.WriteOut(c.conn)
 		c.framePool.Release(f)
 		if err != nil {
@@ -683,16 +672,16 @@ func (c *Connection) checkExchanges() {
 func (c *Connection) Close() error {
 	c.log.Debugf("Connection Close")
 
-	var closeNetwork bool
+	var closeSendCh bool
 	// Update the state which will start blocking incoming calls.
 	if err := c.withStateLock(func() error {
 		switch c.state {
 		case connectionActive:
 			c.state = connectionStartClose
 		case connectionWaitingToRecvInitReq, connectionWaitingToRecvInitRes:
-			// If the connection isn't active yet, it can be closed straight away.
+			// If the connection isn't active yet, it can be closed after messages in sendCh.
 			c.state = connectionClosed
-			closeNetwork = true
+			closeSendCh = true
 		default:
 			return fmt.Errorf("connection must be Active to Close")
 		}
@@ -701,8 +690,8 @@ func (c *Connection) Close() error {
 		return err
 	}
 
-	if closeNetwork {
-		c.closeNetwork()
+	if closeSendCh {
+		close(c.sendCh)
 	}
 
 	// Check all in-flight requests to see whether we can transition the Close state.

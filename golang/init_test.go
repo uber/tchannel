@@ -73,13 +73,19 @@ func TestUnexpectedInitReq(t *testing.T) {
 		require.NoError(t, err)
 		conn.SetReadDeadline(time.Now().Add(time.Second))
 
-		require.NoError(t, writeMessage(conn, tt.initMsg))
+		if !assert.NoError(t, writeMessage(conn, tt.initMsg), "write to conn failed") {
+			continue
+		}
 
 		f, err := readFrame(conn)
-		require.NoError(t, err)
+		if !assert.NoError(t, err, "read frame failed") {
+			continue
+		}
 		assert.Equal(t, messageTypeError, f.Header.messageType)
 		var errMsg errorMessage
-		require.NoError(t, f.read(&errMsg))
+		if !assert.NoError(t, f.read(&errMsg), "parse frame to errorMessage") {
+			continue
+		}
 		assert.Equal(t, tt.expectedError.ID(), errMsg.ID(), "test %v got bad ID", tt.name)
 		assert.Equal(t, tt.expectedError.errCode, errMsg.errCode, "test %v got bad code", tt.name)
 		assert.NoError(t, conn.Close(), "closing connection failed")
