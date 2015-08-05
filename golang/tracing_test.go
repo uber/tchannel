@@ -30,7 +30,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel/golang/json"
-	"github.com/uber/tchannel/golang/testutils"
 	"golang.org/x/net/context"
 )
 
@@ -76,7 +75,7 @@ func (h *traceHandler) onError(ctx context.Context, err error) {
 }
 
 func TestTracingPropagates(t *testing.T) {
-	require.Nil(t, testutils.WithServer(nil, func(ch *Channel, hostPort string) {
+	WithVerifiedServer(t, nil, func(ch *Channel, hostPort string) {
 		handler := &traceHandler{t: t, ch: ch}
 		json.Register(ch, json.Handlers{
 			"call": handler.call,
@@ -106,5 +105,5 @@ func TestTracingPropagates(t *testing.T) {
 		assert.Equal(t, clientSpan.TraceID(), nestedResponse.TraceID)
 		assert.Equal(t, response.SpanID, nestedResponse.ParentID)
 		assert.NotEqual(t, response.SpanID, nestedResponse.SpanID)
-	}))
+	})
 }

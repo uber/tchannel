@@ -66,7 +66,7 @@ func TestFramesReleased(t *testing.T) {
 
 	var connections []*Connection
 	pool := NewRecordingFramePool()
-	require.NoError(t, testutils.WithServer(&testutils.ChannelOpts{
+	WithVerifiedServer(t, &testutils.ChannelOpts{
 		ServiceName: "swap-server",
 		DefaultConnectionOptions: ConnectionOptions{
 			FramePool: pool,
@@ -118,7 +118,7 @@ func TestFramesReleased(t *testing.T) {
 
 		connections = append(connections, GetConnections(serverCh)...)
 		connections = append(connections, GetConnections(clientCh)...)
-	}))
+	})
 
 	// Wait a few milliseconds for the closing of channels to take effect.
 	time.Sleep(10 * time.Millisecond)

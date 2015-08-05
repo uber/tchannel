@@ -44,7 +44,7 @@ func TestLargeRequest(t *testing.T) {
 		maxRequestSize = 1 * GB
 	)
 
-	require.NoError(t, testutils.WithServer(nil, func(serverCh *Channel, hostPort string) {
+	WithVerifiedServer(t, nil, func(serverCh *Channel, hostPort string) {
 		serverCh.Register(raw.Wrap(newTestHandler(t)), "echo")
 
 		for reqSize := 2; reqSize <= maxRequestSize; reqSize *= 2 {
@@ -67,5 +67,5 @@ func TestLargeRequest(t *testing.T) {
 			}
 			cancel()
 		}
-	}))
+	})
 }
