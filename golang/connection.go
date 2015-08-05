@@ -103,30 +103,35 @@ type ConnectionOptions struct {
 	ChecksumType ChecksumType
 }
 
-// OnActiveHandler is the event handler for when a connection becomes active.
-type OnActiveHandler func(c *Connection)
+// connectionEvents are the events that can be triggered by a connection.
+type connectionEvents struct {
+	// OnActive is called when a connection becomes active.
+	OnActive func(c *Connection)
+
+	// OnCloseStateChange is called when a connection that is closing changes state.
+	OnCloseStateChange func(c *Connection)
+}
 
 // Connection represents a connection to a remote peer.
 type Connection struct {
-	connID             uint32
-	log                Logger
-	statsReporter      StatsReporter
-	traceReporter      TraceReporter
-	checksumType       ChecksumType
-	framePool          FramePool
-	conn               net.Conn
-	localPeerInfo      LocalPeerInfo
-	remotePeerInfo     PeerInfo
-	sendCh             chan *Frame
-	state              connectionState
-	stateMut           sync.RWMutex
-	inbound            messageExchangeSet
-	outbound           messageExchangeSet
-	handlers           *handlerMap
-	nextMessageID      uint32
-	onActive           OnActiveHandler
-	onCloseStateChange OnActiveHandler
-	commonStatsTags    map[string]string
+	connID          uint32
+	log             Logger
+	statsReporter   StatsReporter
+	traceReporter   TraceReporter
+	checksumType    ChecksumType
+	framePool       FramePool
+	conn            net.Conn
+	localPeerInfo   LocalPeerInfo
+	remotePeerInfo  PeerInfo
+	sendCh          chan *Frame
+	state           connectionState
+	stateMut        sync.RWMutex
+	inbound         messageExchangeSet
+	outbound        messageExchangeSet
+	handlers        *handlerMap
+	nextMessageID   uint32
+	events          connectionEvents
+	commonStatsTags map[string]string
 }
 
 // nextConnID gives an ID for each connection for debugging purposes.
@@ -163,22 +168,22 @@ const (
 //go:generate stringer -type=connectionState
 
 // Creates a new Connection around an outbound connection initiated to a peer
-func (ch *Channel) newOutboundConnection(hostPort string, opts *ConnectionOptions) (*Connection, error) {
+func (ch *Channel) newOutboundConnection(hostPort string, events connectionEvents, opts *ConnectionOptions) (*Connection, error) {
 	conn, err := net.Dial("tcp", hostPort)
 	if err != nil {
 		return nil, err
 	}
 
-	return ch.newConnection(conn, connectionWaitingToSendInitReq, nil, opts), nil
+	return ch.newConnection(conn, connectionWaitingToSendInitReq, events, opts), nil
 }
 
 // Creates a new Connection based on an incoming connection from a peer
-func (ch *Channel) newInboundConnection(conn net.Conn, onActive OnActiveHandler, opts *ConnectionOptions) (*Connection, error) {
-	return ch.newConnection(conn, connectionWaitingToRecvInitReq, onActive, opts), nil
+func (ch *Channel) newInboundConnection(conn net.Conn, events connectionEvents, opts *ConnectionOptions) (*Connection, error) {
+	return ch.newConnection(conn, connectionWaitingToRecvInitReq, events, opts), nil
 }
 
 // Creates a new connection in a given initial state
-func (ch *Channel) newConnection(conn net.Conn, initialState connectionState, onActive OnActiveHandler, opts *ConnectionOptions) *Connection {
+func (ch *Channel) newConnection(conn net.Conn, initialState connectionState, events connectionEvents, opts *ConnectionOptions) *Connection {
 	if opts == nil {
 		opts = &ConnectionOptions{}
 	}
@@ -234,7 +239,7 @@ func (ch *Channel) newConnection(conn net.Conn, initialState connectionState, on
 			exchanges: make(map[uint32]*messageExchange),
 		},
 		handlers:        ch.handlers,
-		onActive:        onActive,
+		events:          events,
 		commonStatsTags: ch.commonStatsTags,
 	}
 	c.inbound.onRemoved = c.checkExchanges
@@ -251,13 +256,13 @@ func (c *Connection) IsActive() bool {
 }
 
 func (c *Connection) callOnActive() {
-	if f := c.onActive; f != nil {
+	if f := c.events.OnActive; f != nil {
 		f(c)
 	}
 }
 
 func (c *Connection) callOnCloseStateChange() {
-	if f := c.onCloseStateChange; f != nil {
+	if f := c.events.OnCloseStateChange; f != nil {
 		f(c)
 	}
 }

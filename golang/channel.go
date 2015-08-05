@@ -307,23 +307,16 @@ func (ch *Channel) serve() {
 		acceptBackoff = 0
 
 		// Register the connection in the peer once the channel is set up.
-		onActive := func(c *Connection) {
-			c.log.Debugf("Add connection as an active peer for %v", c.remotePeerInfo.HostPort)
-			p := ch.peers.GetOrAdd(c.remotePeerInfo.HostPort)
-			p.AddConnection(c)
-
-			ch.mutable.mut.Lock()
-			ch.mutable.conns = append(ch.mutable.conns, c)
-			ch.mutable.mut.Unlock()
+		events := connectionEvents{
+			OnActive:           ch.incomingConnectionActive,
+			OnCloseStateChange: ch.connectionCloseStateChange,
 		}
-		c, err := ch.newInboundConnection(netConn, onActive, &ch.connectionOptions)
-		if err != nil {
+		if _, err := ch.newInboundConnection(netConn, events, &ch.connectionOptions); err != nil {
 			// Server is getting overloaded - begin rejecting new connections
 			ch.log.Errorf("could not create new TChannelConnection for incoming conn: %v", err)
 			netConn.Close()
 			continue
 		}
-		c.onCloseStateChange = ch.connectionCloseStateChange
 	}
 }
 
@@ -356,11 +349,11 @@ func (ch *Channel) Connect(ctx context.Context, hostPort string, connectionOptio
 		return nil, errInvalidStateForOp
 	}
 
-	c, err := ch.newOutboundConnection(hostPort, connectionOptions)
+	events := connectionEvents{OnCloseStateChange: ch.connectionCloseStateChange}
+	c, err := ch.newOutboundConnection(hostPort, events, connectionOptions)
 	if err != nil {
 		return nil, err
 	}
-	c.onCloseStateChange = ch.connectionCloseStateChange
 
 	if err := c.sendInit(ctx); err != nil {
 		return nil, err
@@ -383,6 +376,17 @@ func (ch *Channel) Connect(ctx context.Context, hostPort string, connectionOptio
 	}
 
 	return c, err
+}
+
+// incomingConnectionActive adds a new active connection to our peer list.
+func (ch *Channel) incomingConnectionActive(c *Connection) {
+	c.log.Debugf("Add connection as an active peer for %v", c.remotePeerInfo.HostPort)
+	p := ch.peers.GetOrAdd(c.remotePeerInfo.HostPort)
+	p.AddConnection(c)
+
+	ch.mutable.mut.Lock()
+	ch.mutable.conns = append(ch.mutable.conns, c)
+	ch.mutable.mut.Unlock()
 }
 
 // connectionCloseStateChange is called when a connection's close state changes.
