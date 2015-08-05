@@ -141,7 +141,7 @@ function HyperbahnClient(options) {
     self.attemptCounter = 0;
     self.state = States.UNADVERTISED;
     self._destroyed = false;
-    self.defaultAdTimeout = options.defaultAdTimeout || DEFAULT_TIMEOUT;
+    self.defaultTimeout = options.defaultTimeout || DEFAULT_TIMEOUT;
 
     var advertisementTimeout = options.advertisementTimeout ||
         options.registrationTimeout;
@@ -239,13 +239,13 @@ function advertisementFailure(err) {
     }
 };
 
-HyperbahnClient.prototype.sendAdvertiseRequest =
-function sendAdvertiseRequest(opts, cb) {
+HyperbahnClient.prototype.sendRequest =
+function sendRequest(opts, endpoint, cb) {
     var self = this;
 
     var req = self.hyperbahnChannel.request({
         serviceName: 'hyperbahn',
-        timeout: (opts && opts.timeout) || self.defaultAdTimeout,
+        timeout: (opts && opts.timeout) || self.defaultTimeout,
         hasNoParent: true,
         trace: false,
         retryLimit: 1,
@@ -253,7 +253,7 @@ function sendAdvertiseRequest(opts, cb) {
             cn: self.callerName
         }
     });
-    self.tchannelJSON.send(req, 'ad', null, {
+    self.tchannelJSON.send(req, endpoint, null, {
         services: [{
             cost: 0,
             serviceName: self.serviceName
@@ -300,7 +300,7 @@ function advertise(opts) {
     }
 
     self.attemptCounter++;
-    self.sendAdvertiseRequest(opts, advertiseInternalCb);
+    self.sendRequest(opts, 'ad', advertiseInternalCb);
     self.emit('advertise-attempt');
 
     function advertiseInternalCb(err, result) {
@@ -362,12 +362,29 @@ function advertise(opts) {
 };
 
 HyperbahnClient.prototype.unadvertise =
-function unadvertise() {
+function unadvertise(opts) {
     var self = this;
-    self.destroy();
+    self.sendRequest(opts, 'unad', unadvertiseInternalCb);
+    timers.clearTimeout(self._advertisementTimer);
+    timers.clearTimeout(self.advertisementTimeoutTimer);
     self.latestAdvertisementResult = null;
     self.state = States.UNADVERTISED;
     self.emit('unadvertised');
+    function unadvertiseInternalCb(error, result) {
+        if (error) {
+            self.logger.warn('HyperbahnClient: unadvertisement failure', {
+                error: error,
+                serviceName: self.serviceName,
+                hostPort: self.hostPort
+            });
+            return;
+        }
+        self.logger.debug('HyperbahnClient: unadvertisement success', {
+            result: result,
+            serviceName: self.serviceName,
+            hostPort: self.hostPort
+        });
+    }
 };
 
 HyperbahnClient.prototype.getErrorRetryTime = function getErrorRetryTime() {
@@ -410,6 +427,6 @@ HyperbahnClient.prototype.destroy = function destroy() {
     }
 
     self._destroyed = true;
-    timers.clearTimeout(this._advertisementTimer);
-    timers.clearTimeout(this.advertisementTimeoutTimer);
+    timers.clearTimeout(self._advertisementTimer);
+    timers.clearTimeout(self.advertisementTimeoutTimer);
 };

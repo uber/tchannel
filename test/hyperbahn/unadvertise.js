@@ -121,4 +121,42 @@ function runTests(HyperbahnCluster) {
             assert.end();
         }
     });
+
+    HyperbahnCluster.test('advertise, unadvertise and re-advertise', {
+        size: 5
+    }, function t(cluster, assert) {
+        var steve = cluster.remotes.steve;
+        var steveHyperbahnClient = new HyperbahnClient({
+            serviceName: steve.serviceName,
+            callerName: 'forward-test',
+            hostPortList: cluster.hostPortList,
+            tchannel: steve.channel,
+            advertiseInterval: 2,
+            logger: DebugLogtron('hyperbahnClient')
+        });
+        steveHyperbahnClient.once('advertised', onAdvertised);
+        steveHyperbahnClient.advertise();
+
+        function onAdvertised() {
+            assert.equal(steveHyperbahnClient.state, 'ADVERTISED', 'state should be ADVERTISED');
+            steveHyperbahnClient.once('unadvertised', onUnadvertised);
+            steveHyperbahnClient.unadvertise();
+        }
+
+        function onUnadvertised() {
+            assert.equal(steveHyperbahnClient.latestAdvertisementResult, null, 'latestAdvertisementResult is null');
+            assert.equal(steveHyperbahnClient.state, 'UNADVERTISED', 'state should be UNADVERTISED');
+            setTimeout(function readvertise() {
+                steveHyperbahnClient.once('advertised', onReadvertised);
+                steveHyperbahnClient.advertise();
+            }, 100);
+        }
+
+        function onReadvertised() {
+            assert.equal(steveHyperbahnClient.state, 'ADVERTISED', 'state should be ADVERTISED');
+            steveHyperbahnClient.destroy();
+            assert.end();
+        }
+    });
+
 }
