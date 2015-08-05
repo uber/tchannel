@@ -82,6 +82,7 @@ func TestUnexpectedInitReq(t *testing.T) {
 		require.NoError(t, f.read(&errMsg))
 		assert.Equal(t, tt.expectedError.ID(), errMsg.ID(), "test %v got bad ID", tt.name)
 		assert.Equal(t, tt.expectedError.errCode, errMsg.errCode, "test %v got bad code", tt.name)
+		assert.NoError(t, conn.Close(), "closing connection failed")
 	}
 }
 

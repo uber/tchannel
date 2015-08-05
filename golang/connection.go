@@ -682,15 +682,27 @@ func (c *Connection) checkExchanges() {
 // before finally marking the connection state as closed.
 func (c *Connection) Close() error {
 	c.log.Debugf("Connection Close")
+
+	var closeNetwork bool
 	// Update the state which will start blocking incoming calls.
 	if err := c.withStateLock(func() error {
-		if c.state != connectionActive {
+		switch c.state {
+		case connectionActive:
+			c.state = connectionStartClose
+		case connectionWaitingToRecvInitReq, connectionWaitingToRecvInitRes:
+			// If the connection isn't active yet, it can be closed straight away.
+			c.state = connectionClosed
+			closeNetwork = true
+		default:
 			return fmt.Errorf("connection must be Active to Close")
 		}
-		c.state = connectionStartClose
 		return nil
 	}); err != nil {
 		return err
+	}
+
+	if closeNetwork {
+		c.closeNetwork()
 	}
 
 	// Check all in-flight requests to see whether we can transition the Close state.
