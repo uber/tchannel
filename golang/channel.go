@@ -308,7 +308,7 @@ func (ch *Channel) serve() {
 
 		// Register the connection in the peer once the channel is set up.
 		onActive := func(c *Connection) {
-			ch.log.Debugf("Add connection as an active peer for %v", c.remotePeerInfo.HostPort)
+			c.log.Debugf("Add connection as an active peer for %v", c.remotePeerInfo.HostPort)
 			p := ch.peers.GetOrAdd(c.remotePeerInfo.HostPort)
 			p.AddConnection(c)
 
@@ -345,14 +345,12 @@ func (ch *Channel) Logger() Logger {
 
 // Connect connects the channel.
 func (ch *Channel) Connect(ctx context.Context, hostPort string, connectionOptions *ConnectionOptions) (*Connection, error) {
-	var isStartClose bool
 	switch state := ch.State(); state {
 	case ChannelClient, ChannelListening:
 		break
 	case ChannelStartClose:
 		// We still allow outgoing connections during Close, but the connection has to immediately
 		// be Closed after opening
-		isStartClose = true
 	default:
 		ch.log.Debugf("Connect rejecting new connection as state is %v", state)
 		return nil, errInvalidStateForOp
@@ -368,18 +366,21 @@ func (ch *Channel) Connect(ctx context.Context, hostPort string, connectionOptio
 		return nil, err
 	}
 
-	if isStartClose {
+	ch.mutable.mut.Lock()
+	ch.mutable.conns = append(ch.mutable.conns, c)
+	chState := ch.mutable.state
+	ch.mutable.mut.Unlock()
+
+	// Any connections added after the channel is in StartClose should also be set to start close.
+	if chState == ChannelStartClose {
 		// TODO(prashant): If Connect is called, but no outgoing calls are made, then this connection
 		// will block Close, as it will never get cleaned up.
 		c.withStateLock(func() error {
 			c.state = connectionStartClose
 			return nil
 		})
+		c.log.Debugf("Channel is in start close, set connection to start close")
 	}
-
-	ch.mutable.mut.Lock()
-	ch.mutable.conns = append(ch.mutable.conns, c)
-	ch.mutable.mut.Unlock()
 
 	return c, err
 }

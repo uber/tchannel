@@ -22,11 +22,10 @@ package tchannel_test
 
 import (
 	"math/rand"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
-
-	"golang.org/x/net/context"
 
 	. "github.com/uber/tchannel/golang"
 
@@ -34,6 +33,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel/golang/raw"
 	"github.com/uber/tchannel/golang/testutils"
+	"golang.org/x/net/context"
 )
 
 type channelState struct {
@@ -133,17 +133,22 @@ func TestCloseStress(t *testing.T) {
 	}
 }
 
-type rawFuncHandler func(context.Context, *raw.Args) (*raw.Res, error)
-
-func (f rawFuncHandler) OnError(_ context.Context, _ error) {}
-func (f rawFuncHandler) Handle(ctx context.Context, args *raw.Args) (*raw.Res, error) {
-	return f(ctx, args)
+type simpleHandler struct {
+	t *testing.T
+	f func(context.Context, *raw.Args) (*raw.Res, error)
 }
 
-func registerFunc(ch *Channel, name string,
-	f func(ctx context.Context, args *raw.Args) (*raw.Res, error)) {
+func (h simpleHandler) OnError(ctx context.Context, err error) {
+	h.t.Errorf("simpleHandler OnError: %v %v", ctx, err)
+}
 
-	ch.Register(raw.Wrap(rawFuncHandler(f)), name)
+func (h simpleHandler) Handle(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+	return h.f(ctx, args)
+}
+
+func registerFunc(t *testing.T, ch *Channel, name string,
+	f func(ctx context.Context, args *raw.Args) (*raw.Res, error)) {
+	ch.Register(raw.Wrap(simpleHandler{t, f}), name)
 }
 
 func TestCloseSemantics(t *testing.T) {
@@ -155,20 +160,21 @@ func TestCloseSemantics(t *testing.T) {
 		ch, err := testutils.NewServer(&testutils.ChannelOpts{ServiceName: name})
 		require.NoError(t, err)
 		c := make(chan struct{})
-		registerFunc(ch, "stream", func(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+		registerFunc(t, ch, "stream", func(ctx context.Context, args *raw.Args) (*raw.Res, error) {
 			<-c
 			return &raw.Res{}, nil
 		})
-		registerFunc(ch, "call", func(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+		registerFunc(t, ch, "call", func(ctx context.Context, args *raw.Args) (*raw.Res, error) {
 			return &raw.Res{}, nil
 		})
 		return ch, c
 	}
 
-	newClient := func() *Channel {
+	withNewClient := func(f func(ch *Channel)) {
 		ch, err := testutils.NewClient(&testutils.ChannelOpts{ServiceName: "client"})
 		require.NoError(t, err)
-		return ch
+		f(ch)
+		ch.Close()
 	}
 
 	call := func(from *Channel, to *Channel) error {
@@ -204,16 +210,21 @@ func TestCloseSemantics(t *testing.T) {
 	call2 := callStream(s2, s1)
 
 	// s1 and s2 are both open, so calls to it should be successful.
-	require.NoError(t, call(newClient(), s1))
-	require.NoError(t, call(newClient(), s2))
+	withNewClient(func(ch *Channel) {
+		require.NoError(t, call(ch, s1))
+		require.NoError(t, call(ch, s2))
+	})
 	require.NoError(t, call(s1, s2))
 	require.NoError(t, call(s2, s1))
 
 	// Close s1, should no longer be able to call it.
 	s1.Close()
 	assert.Equal(t, ChannelStartClose, s1.State())
-	assert.Error(t, call(newClient(), s1), "closed channel should not accept incoming calls")
-	require.NoError(t, call(newClient(), s2))
+	withNewClient(func(ch *Channel) {
+		assert.Error(t, call(ch, s1), "closed channel should not accept incoming calls")
+		require.NoError(t, call(ch, s2),
+			"closed channel with pending incoming calls should allow outgoing calls")
+	})
 
 	// Even an existing connection (e.g. from s2) should fail.
 	assert.Equal(t, ErrChannelClosed, call(s2, s1), "closed channel should not accept incoming calls")
@@ -232,4 +243,98 @@ func TestCloseSemantics(t *testing.T) {
 	s2C <- struct{}{}
 	<-call1
 	assert.Equal(t, ChannelClosed, s1.State())
+
+	// Close s2 so we don't leave any goroutines running.
+	s2.Close()
+	VerifyNoBlockedGoroutines(t)
+}
+
+func TestCloseSingleChannel(t *testing.T) {
+	ctx, cancel := NewContext(time.Second)
+	defer cancel()
+
+	ch, err := testutils.NewServer(nil)
+	require.NoError(t, err, "NewServer failed")
+
+	var connected sync.WaitGroup
+	var completed sync.WaitGroup
+	blockCall := make(chan struct{})
+
+	registerFunc(t, ch, "echo", func(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+		connected.Done()
+		<-blockCall
+		return &raw.Res{
+			Arg2: args.Arg2,
+			Arg3: args.Arg3,
+		}, nil
+	})
+
+	for i := 0; i < 10; i++ {
+		connected.Add(1)
+		completed.Add(1)
+		go func() {
+			peerInfo := ch.PeerInfo()
+			_, _, _, err := raw.Call(ctx, ch, peerInfo.HostPort, peerInfo.ServiceName, "echo", nil, nil)
+			assert.NoError(t, err, "Call failed")
+			completed.Done()
+		}()
+	}
+
+	// Wait for all calls to connect before triggerring the Close (so they do not fail).
+	connected.Wait()
+	ch.Close()
+
+	// Unblock the calls, and wait for all the calls to complete.
+	close(blockCall)
+	completed.Wait()
+
+	// Once all calls are complete, the channel should be closed.
+	runtime.Gosched()
+	assert.Equal(t, ChannelClosed, ch.State())
+	VerifyNoBlockedGoroutines(t)
+}
+
+func TestCloseOneSide(t *testing.T) {
+	ctx, cancel := NewContext(time.Second)
+	defer cancel()
+
+	ch1, err := testutils.NewServer(&testutils.ChannelOpts{ServiceName: "client"})
+	ch2, err := testutils.NewServer(&testutils.ChannelOpts{ServiceName: "server"})
+	require.NoError(t, err, "NewServer 1 failed")
+	require.NoError(t, err, "NewServer 2 failed")
+
+	connected := make(chan struct{})
+	completed := make(chan struct{})
+	blockCall := make(chan struct{})
+	registerFunc(t, ch2, "echo", func(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+		connected <- struct{}{}
+		<-blockCall
+		return &raw.Res{
+			Arg2: args.Arg2,
+			Arg3: args.Arg3,
+		}, nil
+	})
+
+	go func() {
+		ch2Peer := ch2.PeerInfo()
+		_, _, _, err := raw.Call(ctx, ch1, ch2Peer.HostPort, ch2Peer.ServiceName, "echo", nil, nil)
+		assert.NoError(t, err, "Call failed")
+		completed <- struct{}{}
+	}()
+
+	// Wait for connected before calling Close.
+	<-connected
+	ch1.Close()
+
+	// Now unblock the call and wait for the call to complete.
+	close(blockCall)
+	<-completed
+
+	// Once the call completes, the channel should be closed.
+	runtime.Gosched()
+	assert.Equal(t, ChannelClosed, ch1.State())
+
+	// We need to close all open TChannels before verifying blocked goroutines.
+	ch2.Close()
+	VerifyNoBlockedGoroutines(t)
 }
