@@ -166,6 +166,15 @@ func (c *Connection) dispatchInbound(call *InboundCall) {
 		return
 	}
 
+	// TODO(prashant): This is an expensive way to check for cancellation, and is not thread-safe.
+	// We need to figure out a better solution to avoid leaking calls that timeout.
+	go func() {
+		<-call.mex.ctx.Done()
+		if call.mex.ctx.Err() != nil {
+			call.failed(call.mex.ctx.Err())
+		}
+	}()
+
 	c.log.Debugf("Dispatching %s:%s from %s", call.ServiceName(), call.Operation(), c.remotePeerInfo)
 	h.Handle(call.mex.ctx, call)
 }

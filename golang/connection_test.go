@@ -231,7 +231,7 @@ func TestServerBusy(t *testing.T) {
 }
 
 func TestTimeout(t *testing.T) {
-	require.Nil(t, testutils.WithServer(nil, func(ch *Channel, hostPort string) {
+	WithVerifiedServer(t, nil, func(ch *Channel, hostPort string) {
 		ch.Register(raw.Wrap(newTestHandler(t)), "timeout")
 
 		ctx, cancel := NewContext(time.Millisecond * 100)
@@ -241,7 +241,7 @@ func TestTimeout(t *testing.T) {
 
 		// TODO(mmihic): Maybe translate this into ErrTimeout (or vice versa)?
 		assert.Equal(t, context.DeadlineExceeded, err)
-	}))
+	})
 }
 
 func TestLargeOperation(t *testing.T) {
