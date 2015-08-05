@@ -86,7 +86,13 @@ function connBaseRequest(options) {
     var req = self.buildOutRequest(options);
     self.ops.addOutReq(req);
     req.peer.invalidateScore();
+    req.errorEvent.on(onReqError);
+
     return req;
+
+    function onReqError(err) {
+        self.ops.popOutReq(req.id, req);
+    }
 };
 
 TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(req) {
