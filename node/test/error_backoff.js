@@ -25,6 +25,7 @@ var allocCluster = require('./lib/alloc-cluster.js');
 var timers = TimeMock(Date.now());
 var ErrorBackoff = require('../error_backoff.js');
 var series = require('run-series');
+var endhand = require('../endpoint-handler');
 
 function send(channel, endpoint, check, done) {
     channel.request({
@@ -42,6 +43,38 @@ function send(channel, endpoint, check, done) {
     });
 }
 
+function sendStreaming(channel, endpoint, check, done) {
+    var req = channel.request({
+        serviceName: 'server',
+        streamed: true,
+        hasNoParent: true,
+        headers: {
+            'as': 'raw',
+            cn: 'wat'
+        }
+    });
+    req.on('response', good);
+    req.on('error', bad);
+    req.arg1.end(endpoint);
+    req.arg2.end();
+    req.arg3.end();
+
+    function good(res) {
+        onResponse(null, res);
+    }
+
+    function bad(err) {
+        onResponse(err);
+    }
+
+    function onResponse(err, res) {
+        if (check) {
+            check(err, res);
+        }
+        process.nextTick(done.bind(null, err, res));
+    }
+}
+
 allocCluster.test('error backoff work as expected', {
     numPeers: 1
 }, function t(cluster, assert) {
@@ -52,7 +85,7 @@ allocCluster.test('error backoff work as expected', {
     });
 
     backoff.handleError({
-        type: 'tchannel.timeout'
+        type: 'tchannel.busy'
     }, 'bob', 'steve');
     assert.equal(backoff.reqErrors['bob~~steve'], 1, 'error counter works, should be 1');
     backoff.handleError({
@@ -60,24 +93,24 @@ allocCluster.test('error backoff work as expected', {
     }, 'bob', 'steve');
     assert.equal(backoff.reqErrors['bob~~steve'], 2, 'error counter works, should be 2');
     backoff.handleError({
-        type: 'tchannel.declined'
+        type: 'tchannel.busy'
     }, 'bob', 'jane');
     assert.equal(backoff.reqErrors['bob~~jane'], 1, 'error counter works, should be 1');
     assert.equal(backoff.reqErrors['bob~~steve'], 2, 'error counter works, should be 2');
 
-    var res = backoff.getBackoffError('bob', 'jane');
+    var res = backoff.nextBackoffError('bob', 'jane');
     assert.ok(res, 'should backoff');
-    assert.equal(res.type, 'tchannel.busy', 'expected backoff error type');
+    assert.equal(res.type, 'tchannel.backoff.error', 'expected backoff error type');
     assert.equal(res.cn, 'bob', 'cn === bob');
     assert.equal(res.serviceName, 'jane', 'serviceName === jane');
-    res = backoff.getBackoffError('bob', 'jane');
+    res = backoff.nextBackoffError('bob', 'jane');
     assert.ok(!res, 'should not backoff');
-    res = backoff.getBackoffError('bob', 'tom');
+    res = backoff.nextBackoffError('bob', 'tom');
     assert.ok(!res, 'should not backoff');
 
-    res = backoff.getBackoffError('bob', 'steve');
+    res = backoff.nextBackoffError('bob', 'steve');
     assert.ok(res, 'should backoff');
-    assert.equal(res.type, 'tchannel.busy', 'expected backoff error type');
+    assert.equal(res.type, 'tchannel.backoff.error', 'expected backoff error type');
     assert.equal(res.cn, 'bob', 'cn === bob');
     assert.equal(res.serviceName, 'steve', 'serviceName === steve');
     assert.equal(backoff.reqErrors['bob~~steve'], 1, 'error counter works, should be 1');
@@ -99,7 +132,7 @@ allocCluster.test('error backoff on invalid cn/serviceName', {
     );
     channel.logger.whitelist(
         'warn',
-        'ErrorBackoff.getBackoffError called with invalid parameters'
+        'ErrorBackoff.nextBackoffError called with invalid parameters'
     );
 
     backoff.handleError({
@@ -112,8 +145,8 @@ allocCluster.test('error backoff on invalid cn/serviceName', {
     }, 'bob', null);
     assert.equal(Object.keys(backoff.reqErrors).length, 0, 'nothing should be added when serviceName is invalid');
 
-    assert.ok(!backoff.getBackoffError(null, 'steve'), 'should not backoff on invalid cn');
-    assert.ok(!backoff.getBackoffError('steve', null), 'should not backoff on invalid serviceName');
+    assert.ok(!backoff.nextBackoffError(null, 'steve'), 'should not backoff on invalid cn');
+    assert.ok(!backoff.nextBackoffError('steve', null), 'should not backoff on invalid serviceName');
 
     assert.end();
 });
@@ -139,7 +172,9 @@ allocCluster.test('should not backoff on good traffic', {
 
     send(twoSub, '/normal-proxy', null, onResp);
     function onResp(empty, err, res) {
-        assert.ifError(err);
+        if (err) {
+            assert.end(err);
+        }
         assert.equal(Object.keys(two.errorBackoff.reqErrors).length, 0, 'nothing should be added');
         assert.end();
     }
@@ -162,6 +197,8 @@ allocCluster.test('backoff on errors', {
     var sub = one.makeSubChannel({
         serviceName: 'server'
     });
+
+    one.logger.whitelist('warn', 'Unexpected error after end for OutRequest');
 
     sub.register('/normal-proxy', normalProxy);
     sub.register('/busy', busy);
@@ -194,11 +231,81 @@ allocCluster.test('backoff on errors', {
     }
     function check2(err, res) {
         assert.ok(err, 'there should be a backoff error');
-        assert.equal(err.type, 'tchannel.busy', 'backoff error type as expected');
-        assert.equal(err.subType, 'tchannel.backoff.error', 'backoff error subType as expected');
+        assert.equal(err.type, 'tchannel.backoff.error', 'backoff error type as expected');
     }
     function check3(err, res) {
-        assert.ifError(err, 'there should be no error');
+        if (err) {
+            assert.end(err);
+        }
+        assert.ok(res.ok, 'response should be ok');
+    }
+});
+
+allocCluster.test('backoff on errors for streaming', {
+    numPeers: 2,
+    channelOptions: {
+        timers: timers,
+        backoffRate: 1
+    }
+}, function t(cluster, assert) {
+    var one = cluster.channels[0];
+    var two = cluster.channels[1];
+    var sub = one.makeSubChannel({
+        serviceName: 'server'
+    });
+    var twoSub = two.makeSubChannel({
+        serviceName: 'server',
+        peers: [one.hostPort]
+    });
+
+    one.logger.whitelist('warn', 'Unexpected error after end for OutRequest');
+    cluster.connectChannels(cluster.channels, connected);
+
+    function connected() {
+        sub.handler = endhand();
+        normalProxy.canStream = true;
+        busy.canStream = true;
+        sub.handler.register('/normal-proxy', {streamed: true}, normalProxy);
+        sub.handler.register('/busy', {streamed: true}, busy);
+        sendStreaming(twoSub, '/busy', check1, next1);
+    }
+
+    function next1() {
+        sendStreaming(twoSub, '/busy', check2, next2);
+    }
+
+    function next2() {
+        sendStreaming(twoSub, '/normal-proxy', check3, done);
+    }
+
+    function done() {
+        assert.end();
+    }
+
+    function normalProxy(req, buildRes) {
+        var res = buildRes({streamed: true});
+        res.headers.as = 'raw';
+        res.setOk(true);
+        res.arg2.end();
+        res.arg3.end();
+    }
+    function busy(req, buildRes) {
+        var res = buildRes({streamed: true});
+        res.headers.as = 'raw';
+        res.sendError('Busy', 'too busy!');
+    }
+    function check1(err, res) {
+        assert.ok(err, 'there should be an error');
+        assert.equal(err.type, 'tchannel.busy', 'error type as expected');
+    }
+    function check2(err, res) {
+        assert.ok(err, 'there should be a backoff error');
+        assert.equal(err.type, 'tchannel.backoff.error', 'backoff error type as expected');
+    }
+    function check3(err, res) {
+        if (err) {
+            assert.end(err);
+        }
         assert.ok(res.ok, 'response should be ok');
     }
 });

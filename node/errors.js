@@ -72,6 +72,13 @@ module.exports.AsHeaderRequired = TypedError({
     frame: null
 });
 
+module.exports.BackoffError = TypedError({
+    type: 'tchannel.backoff.error',
+    message: 'Backoff error triggered due to previous requset failures {cn} ==> {serviceName}',
+    cn: null,
+    serviceName: null
+});
+
 module.exports.CallReqBeforeInitReqError = TypedError({
     type: 'tchannel.init.call-request-before-init-request',
     message: 'call request before init request'
@@ -645,6 +652,9 @@ module.exports.classify = function classify(err) {
         case 'tchannel.tracer.parent-required':
         case 'tchannel.lazy-frame.write-corrupt':
             return 'UnexpectedError';
+
+        case 'tchannel.backoff.error':
+            return 'Busy';
 
         default:
             return null;

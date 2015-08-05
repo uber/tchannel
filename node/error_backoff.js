@@ -21,18 +21,7 @@
 'use strict';
 
 var assert = require('assert');
-var TypedError = require('error/typed');
-
-var BackoffError = TypedError({
-    type: 'tchannel.busy',
-    subType: 'tchannel.backoff.error',
-    message: 'Backoff error triggered due to previous requset failures',
-    isErrorFrame: true,
-    codeName: 'Busy',
-    errorCode: 3,
-    cn: null,
-    serviceName: null
-});
+var errors = require('./errors.js');
 
 function getEdgeName(cn, serviceName) {
     return cn + '~~' + serviceName;
@@ -86,29 +75,22 @@ function handleError(err, cn, serviceName) {
 
 ErrorBackoff.prototype.shouldConsider =
 function shouldConsider(err) {
-    // prevent recursive errors
-    if (err.subType === 'tchannel.backoff.error') {
-        return false;
-    }
-
-    if (err.type === 'tchannel.timeout' ||
-        err.type === 'tchannel.busy' ||
-        err.type === 'tchannel.declined') {
+    if (err.type === 'tchannel.busy') {
         return true;
     } else {
         return false;
     }
 };
 
-ErrorBackoff.prototype.getBackoffError =
-function getBackoffError(cn, serviceName) {
+ErrorBackoff.prototype.nextBackoffError =
+function nextBackoffError(cn, serviceName) {
     var self = this;
     if (!self.backoffRate) {
         return null;
     }
 
     if (!cn || !serviceName) {
-        self.logger.warn('ErrorBackoff.getBackoffError called with invalid parameters', {
+        self.logger.warn('ErrorBackoff.nextBackoffError called with invalid parameters', {
             cn: cn,
             serviceName: serviceName
         });
@@ -121,7 +103,7 @@ function getBackoffError(cn, serviceName) {
     }
 
     self.reqErrors[edge] -= 1;
-    return BackoffError({
+    return errors.BackoffError({
         cn: cn,
         serviceName: serviceName
     });

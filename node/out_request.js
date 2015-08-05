@@ -351,6 +351,12 @@ TChannelOutRequest.prototype.sendCallRequestFrame = function sendCallRequestFram
     var self = this;
     switch (self.state) {
         case States.Initial:
+            var errorBackoff = self.channel.errorBackoff || self.channel.topChannel.errorBackoff;
+            var err = errorBackoff.nextBackoffError(self.headers.cn, self.serviceName);
+            if (err) {
+                self.emitError(err);
+                return;
+            }
             self.start = self.channel.timers.now();
             if (self.span) {
                 self.span.annotate('cs');
