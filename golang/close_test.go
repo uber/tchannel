@@ -64,7 +64,7 @@ func TestCloseStress(t *testing.T) {
 	for i := 0; i < numHandlers; i++ {
 		wg.Add(1)
 		go func() {
-			assert.NoError(t, testutils.WithServer(nil, func(ch *Channel, hostPort string) {
+			WithVerifiedServer(t, nil, func(ch *Channel, hostPort string) {
 				ch.Register(raw.Wrap(handler), "test")
 
 				chState := &channelState{
@@ -83,7 +83,7 @@ func TestCloseStress(t *testing.T) {
 				// Lock until the connection is closed.
 				lock.Lock()
 				chState.closed = true
-			}))
+			})
 			lock.Unlock()
 		}()
 	}
