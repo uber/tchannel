@@ -56,7 +56,10 @@ func main() {
 	if len(config.InitialNodes) == 0 {
 		log.Fatalf("No Autobahn nodes to advertise with")
 	}
-	client := hyperbahn.NewClient(ch, config, nil)
+	client, err := hyperbahn.NewClient(ch, config, nil)
+	if err != nil {
+		log.Fatalf("hyperbahn.NewClient failed: %v", err)
+	}
 	if err := client.Advertise(); err != nil {
 		log.Fatalf("Hyperbahn advertise failed: %v", err)
 	}
