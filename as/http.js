@@ -235,7 +235,7 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
     }
 };
 
-TChannelHTTP.prototype.forwardToHTTP = function forwardToHTTP(tchannel, options, inreq, outres) {
+TChannelHTTP.prototype.forwardToHTTP = function forwardToHTTP(tchannel, options, inreq, outres, callback) {
     // TODO: should use lb_pool
     var self = this;
     self.logger = self.logger || tchannel.logger;
@@ -260,6 +260,7 @@ TChannelHTTP.prototype.forwardToHTTP = function forwardToHTTP(tchannel, options,
         if (!sent) {
             sent = true;
             outres.sendResponse(inres);
+            callback(null);
         }
     }
 
@@ -270,6 +271,7 @@ TChannelHTTP.prototype.forwardToHTTP = function forwardToHTTP(tchannel, options,
                 error: err
             });
             outres.sendError(err);
+            callback(err);
         }
     }
 };

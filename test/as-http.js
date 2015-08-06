@@ -217,7 +217,7 @@ function allocHTTPBridge(opts) {
         cluster.asHTTP.forwardToHTTP(cluster.ingressChan, {
             host: addr.address,
             port: addr.port
-        }, treq, tres);
+        }, treq, tres, onIngressComplete);
     }
 
     function onEgressRequest(hreq, hres) {
@@ -227,6 +227,10 @@ function allocHTTPBridge(opts) {
             hres,
             {},
             onEgressComplete);
+    }
+
+    function onIngressComplete(err) {
+        opts.assert.error(err);
     }
 
     function onEgressComplete(err) {
