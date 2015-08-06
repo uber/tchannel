@@ -379,11 +379,6 @@ function unadvertise(opts) {
             });
             return;
         }
-        self.logger.debug('HyperbahnClient: unadvertisement success', {
-            result: result,
-            serviceName: self.serviceName,
-            hostPort: self.hostPort
-        });
     }
 };
 
