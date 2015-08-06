@@ -24,4 +24,7 @@ package hyperbahn
 type Configuration struct {
 	// InitialNodes is the list of known Hyperbahn nodes to add initially.
 	InitialNodes []string
+	// InitialNodesFile is a JSON file that contains the list of known Hyperbahn nodes.
+	// If this option is set, it overrides InitialNodes.
+	InitialNodesFile string
 }

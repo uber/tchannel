@@ -21,6 +21,9 @@ package hyperbahn
 // THE SOFTWARE.
 
 import (
+	"encoding/json"
+	"fmt"
+	"os"
 	"time"
 
 	"github.com/uber/tchannel/golang"
@@ -57,7 +60,7 @@ type ClientOptions struct {
 // NewClient creates a new Hyperbahn client using the given channel.
 // config is the environment-specific configuration for Hyperbahn such as the list of initial nodes.
 // opts are optional, and are used to customize the client.
-func NewClient(ch *tchannel.Channel, config Configuration, opts *ClientOptions) *Client {
+func NewClient(ch *tchannel.Channel, config Configuration, opts *ClientOptions) (*Client, error) {
 	client := &Client{tchan: ch}
 	if opts != nil {
 		client.opts = *opts
@@ -69,12 +72,37 @@ func NewClient(ch *tchannel.Channel, config Configuration, opts *ClientOptions) 
 		client.opts.Handler = nullHandler{}
 	}
 
+	if err := parseConfig(&config); err != nil {
+		return nil, err
+	}
+
 	// Add the given initial nodes as peers.
 	for _, node := range config.InitialNodes {
 		addPeer(ch, node)
 	}
 
-	return client
+	return client, nil
+}
+
+// parseConfig parses the configuration options (e.g. InitialNodesFile)
+func parseConfig(config *Configuration) error {
+	if config.InitialNodesFile != "" {
+		f, err := os.Open(config.InitialNodesFile)
+		if err != nil {
+			return err
+		}
+
+		decoder := json.NewDecoder(f)
+		if err := decoder.Decode(&config.InitialNodes); err != nil {
+			return err
+		}
+	}
+
+	if len(config.InitialNodes) == 0 {
+		return fmt.Errorf("hyperbahn Client requires at least one initial node")
+	}
+
+	return nil
 }
 
 // addPeer adds a peer to the Hyperbahn subchannel.
