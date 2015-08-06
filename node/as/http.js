@@ -195,7 +195,6 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
         return null;
     }
 
-    self.logger.debug('Waiting for peer to be identified');
     peer.waitForIdentified(onIdentified);
     function onIdentified(err) {
         if (err) {
@@ -210,7 +209,6 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
 
         options.host = peer.hostPort;
         var treq = tchannel.request(options);
-        self.logger.debug('Forwarding to tchannel started');
         self.sendRequest(treq, hreq, forwarded);
     }
 
@@ -232,7 +230,6 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
             }
             hres.writeHead(head.statusCode, head.message, headers);
             body.pipe(hres);
-            self.logger.debug('Forwarding to tchannel succeeded');
         }
         callback(err);
     }
@@ -254,7 +251,6 @@ TChannelHTTP.prototype.forwardToHTTP = function forwardToHTTP(tchannel, options,
     }
 
     var sent = false;
-    self.logger.debug('Forwarding to HTTP started');
     var outreq = http.request(options, onResponse);
     outreq.on('error', onError);
     // TODO: more http state machine integration
@@ -263,7 +259,6 @@ TChannelHTTP.prototype.forwardToHTTP = function forwardToHTTP(tchannel, options,
     function onResponse(inres) {
         if (!sent) {
             sent = true;
-            self.logger.debug('Forwarding to HTTP succeeded');
             outres.sendResponse(inres);
         }
     }
@@ -355,14 +350,12 @@ AsHTTPHandler.prototype.handleRequest = function handleRequest(req, buildRespons
             sendResponse: sendResponse
         };
 
-        self.logger.debug('Handling request started');
         self.handler.handleRequest(hreq, hres);
     }
 
     function sendResponse(hres) {
         if (!sent) {
             sent = true;
-            self.logger.debug('Handling request succeeded');
             self.asHTTP.sendResponse(buildResponse, hres, sendError);
         }
     }
