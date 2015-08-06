@@ -59,10 +59,13 @@ func main() {
 
 	// advertise service with Hyperbahn.
 	config := hyperbahn.Configuration{InitialNodes: os.Args[1:]}
-	client := hyperbahn.NewClient(tchan, config, &hyperbahn.ClientOptions{
+	client, err := hyperbahn.NewClient(tchan, config, &hyperbahn.ClientOptions{
 		Handler: eventHandler{},
 		Timeout: time.Second,
 	})
+	if err != nil {
+		log.Fatalf("hyperbahn.NewClient failed: %v", err)
+	}
 	if err := client.Advertise(); err != nil {
 		log.Fatalf("Advertise failed: %v", err)
 	}

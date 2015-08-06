@@ -74,6 +74,18 @@ func (l *PeerList) GetOrAdd(hostPort string) *Peer {
 	return l.Add(hostPort)
 }
 
+// Copy returns a copy of the peer list. This method should only be used for testing.
+func (l *PeerList) Copy() map[string]*Peer {
+	l.mut.RLock()
+	defer l.mut.RUnlock()
+
+	listCopy := make(map[string]*Peer)
+	for k, v := range l.peersByHostPort {
+		listCopy[k] = v
+	}
+	return listCopy
+}
+
 // Close closes connections for all peers.
 func (l *PeerList) Close() {
 	l.mut.RLock()

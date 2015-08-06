@@ -61,8 +61,9 @@ func TestAdvertiseFailed(t *testing.T) {
 		require.NoError(t, err)
 		defer clientCh.Close()
 
-		client := NewClient(clientCh, configFor(hostPort), nil)
-		require.Error(t, client.Advertise())
+		client, err := NewClient(clientCh, configFor(hostPort), nil)
+		require.NoError(t, err, "NewClient")
+		assert.Error(t, client.Advertise(), "Advertise without handler should fail")
 	})
 }
 
@@ -122,10 +123,11 @@ func runRetryTest(t *testing.T, f func(r *retryTest)) {
 		require.NoError(t, err)
 		defer clientCh.Close()
 
-		r.client = NewClient(clientCh, configFor(hostPort), &ClientOptions{
+		r.client, err = NewClient(clientCh, configFor(hostPort), &ClientOptions{
 			Handler:      r,
 			FailStrategy: FailStrategyIgnore,
 		})
+		require.NoError(t, err, "NewClient")
 		f(r)
 		r.mock.AssertExpectations(t)
 	})
