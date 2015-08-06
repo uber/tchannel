@@ -2,6 +2,7 @@ package tchannel
 
 import (
 	"fmt"
+	"io"
 	"time"
 )
 
@@ -84,48 +85,54 @@ func (nullLogger) Fields() LogFields                      { return nil }
 func (l nullLogger) WithFields(_ LogFields) Logger { return l }
 func (l nullLogger) WithField(_ LogField) Logger   { return l }
 
-// SimpleLogger prints logging information to the console
-var SimpleLogger Logger = simpleLogger{}
+// SimpleLogger prints logging information to standard out.
+var SimpleLogger = NewLogger(os.Stdout)
 
-type simpleLogger struct {
+type writerLogger struct {
+	writer io.Writer
 	fields LogFields
 }
 
 const (
-	simpleLoggerStamp = "2006-01-02 15:04:05"
+	writerLoggerStamp = "2006-01-02 15:04:05"
 )
 
-func (l simpleLogger) Fatalf(msg string, args ...interface{}) {
+// NewLogger returns a Logger that writes to the given writer.
+func NewLogger(writer io.Writer, fields ...LogField) Logger {
+	return &writerLogger{writer, fields}
+}
+
+func (l writerLogger) Fatalf(msg string, args ...interface{}) {
 	l.printfn("F", msg, args...)
 	os.Exit(1)
 }
 
-func (l simpleLogger) Errorf(msg string, args ...interface{}) { l.printfn("E", msg, args...) }
-func (l simpleLogger) Warnf(msg string, args ...interface{})  { l.printfn("W", msg, args...) }
-func (l simpleLogger) Infof(msg string, args ...interface{})  { l.printfn("I", msg, args...) }
-func (l simpleLogger) Debugf(msg string, args ...interface{}) { l.printfn("D", msg, args...) }
-func (l simpleLogger) printfn(prefix, msg string, args ...interface{}) {
-	fmt.Printf("%s [%s] %s tags: %v\n", time.Now().Format(simpleLoggerStamp), prefix, fmt.Sprintf(msg, args...), l.fields)
+func (l writerLogger) Errorf(msg string, args ...interface{}) { l.printfn("E", msg, args...) }
+func (l writerLogger) Warnf(msg string, args ...interface{})  { l.printfn("W", msg, args...) }
+func (l writerLogger) Infof(msg string, args ...interface{})  { l.printfn("I", msg, args...) }
+func (l writerLogger) Debugf(msg string, args ...interface{}) { l.printfn("D", msg, args...) }
+func (l writerLogger) printfn(prefix, msg string, args ...interface{}) {
+	fmt.Fprintf(l.writer, "%s [%s] %s tags: %v\n", time.Now().Format(writerLoggerStamp), prefix, fmt.Sprintf(msg, args...), l.fields)
 }
 
-func (l simpleLogger) Fields() LogFields {
+func (l writerLogger) Fields() LogFields {
 	return l.fields
 }
 
-func (l simpleLogger) WithField(newField LogField) Logger {
+func (l writerLogger) WithField(newField LogField) Logger {
 	existingFields := l.Fields()
 	fields := make(LogFields, 0, len(existingFields)+1)
 	fields = append(fields, existingFields...)
 	fields = append(fields, newField)
-	return simpleLogger{fields}
+	return writerLogger{l.writer, fields}
 }
 
-func (l simpleLogger) WithFields(newFields LogFields) Logger {
+func (l writerLogger) WithFields(newFields LogFields) Logger {
 	existingFields := l.Fields()
 	fields := make(LogFields, 0, len(existingFields)+1)
 	fields = append(fields, existingFields...)
 	fields = append(fields, newFields...)
-	return simpleLogger{fields}
+	return writerLogger{l.writer, fields}
 }
 
 // LogLevel is the level of logging used by LevelLogger.
