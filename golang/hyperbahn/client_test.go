@@ -42,8 +42,10 @@ func getPeers(ch *tchannel.Channel) []string {
 }
 
 func TestParseConfiguration(t *testing.T) {
-	expectedPeers1 := []string{"1.1.1.1:1", "2.2.2.2:2"}
-	expectedPeers2 := []string{"3.3.3.3:3", "4.4.4.4:4"}
+	peers1 := []string{"1.1.1.1:1", "2.2.2.2:2"}
+	peers2 := []string{"3.3.3.3:3", "4.4.4.4:4"}
+	invalidPeer1 := []string{"2:2:2:2"}
+	invalidPeer2 := []string{"2.2.2.2"}
 	peersFile2 := `["3.3.3.3:3", "4.4.4.4:4"]`
 
 	tests := []struct {
@@ -59,19 +61,29 @@ func TestParseConfiguration(t *testing.T) {
 		},
 		{
 			name:      "no peer list",
-			peersArg:  expectedPeers1,
-			wantPeers: expectedPeers1,
+			peersArg:  peers1,
+			wantPeers: peers1,
+		},
+		{
+			name:     "invalid peers invalid format",
+			peersArg: invalidPeer1,
+			wantErr:  true,
+		},
+		{
+			name:     "invalid peers no port",
+			peersArg: invalidPeer2,
+			wantErr:  true,
 		},
 		{
 			name:      "peer file",
 			peersFile: peersFile2,
-			wantPeers: expectedPeers2,
+			wantPeers: peers2,
 		},
 		{
 			name:      "peer file overrides args",
-			peersArg:  expectedPeers1,
+			peersArg:  peers1,
 			peersFile: peersFile2,
-			wantPeers: expectedPeers2,
+			wantPeers: peers2,
 		},
 	}
 

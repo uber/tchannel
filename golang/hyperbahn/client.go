@@ -23,6 +23,7 @@ package hyperbahn
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 	"time"
 
@@ -100,6 +101,12 @@ func parseConfig(config *Configuration) error {
 
 	if len(config.InitialNodes) == 0 {
 		return fmt.Errorf("hyperbahn Client requires at least one initial node")
+	}
+
+	for _, node := range config.InitialNodes {
+		if _, _, err := net.SplitHostPort(node); err != nil {
+			return fmt.Errorf("hyperbahn Client got invalid node %v: %v", node, err)
+		}
 	}
 
 	return nil
