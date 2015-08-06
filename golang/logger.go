@@ -127,3 +127,74 @@ func (l simpleLogger) WithFields(newFields LogFields) Logger {
 	fields = append(fields, newFields...)
 	return simpleLogger{fields}
 }
+
+// LogLevel is the level of logging used by LevelLogger.
+type LogLevel int
+
+// The minimum level that will be logged. e.g. LogLevelError only logs errors and fatals.
+const (
+	LogLevelAll LogLevel = iota
+	LogLevelDebug
+	LogLevelInfo
+	LogLevelWarn
+	LogLevelError
+	LogLevelFatal
+)
+
+type levelLogger struct {
+	logger Logger
+	level  LogLevel
+}
+
+// NewLevelLogger returns a logger that only logs messages with a minimum of level.
+func NewLevelLogger(level LogLevel, logger Logger) Logger {
+	return levelLogger{logger, level}
+}
+
+func (l levelLogger) Fatalf(msg string, args ...interface{}) {
+	if l.level <= LogLevelFatal {
+		l.logger.Fatalf(msg, args...)
+	}
+}
+
+func (l levelLogger) Errorf(msg string, args ...interface{}) {
+	if l.level <= LogLevelError {
+		l.logger.Errorf(msg, args...)
+	}
+}
+
+func (l levelLogger) Warnf(msg string, args ...interface{}) {
+	if l.level <= LogLevelWarn {
+		l.logger.Warnf(msg, args...)
+	}
+}
+
+func (l levelLogger) Infof(msg string, args ...interface{}) {
+	if l.level <= LogLevelInfo {
+		l.logger.Infof(msg, args...)
+	}
+}
+
+func (l levelLogger) Debugf(msg string, args ...interface{}) {
+	if l.level <= LogLevelDebug {
+		l.logger.Debugf(msg, args...)
+	}
+}
+
+func (l levelLogger) Fields() LogFields {
+	return l.logger.Fields()
+}
+
+func (l levelLogger) WithField(field LogField) Logger {
+	return levelLogger{
+		logger: l.logger.WithField(field),
+		level:  l.level,
+	}
+}
+
+func (l levelLogger) WithFields(fields LogFields) Logger {
+	return levelLogger{
+		logger: l.logger.WithFields(fields),
+		level:  l.level,
+	}
+}
