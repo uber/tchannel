@@ -559,91 +559,91 @@ module.exports.classify = function classify(err) {
     }
 
     switch (err.type) {
-        case 'tchannel.no-peer-available':
-        case 'tchannel.no-service-handler':
         case 'tchannel.max-pending':
         case 'tchannel.max-pending-for-service':
+        case 'tchannel.no-peer-available':
+        case 'tchannel.no-service-handler':
             return 'Declined';
 
-        case 'tchannel.request.timeout':
-        case 'tchannel.connection.timeout':
         case 'tchannel.connection-stale.timeout':
+        case 'tchannel.connection.timeout':
+        case 'tchannel.request.timeout':
             return 'Timeout';
 
-        case 'tchannel.argstream.exceeded-frame-parts':
         case 'tchannel-handler.json.invalid-body':
         case 'tchannel-json-handler.parse-error.body-failed':
         case 'tchannel-json-handler.parse-error.head-failed':
-        case 'tchannel.request-frame-state':
-        case 'tchannel.request-already-done':
         case 'tchannel-thrift-handler.parse-error.body-failed':
         case 'tchannel-thrift-handler.parse-error.head-failed':
-        case 'tchannel.http-handler.to-buffer-arg2.req-failed':
-        case 'tchannel.http-handler.to-buffer-arg2.res-failed':
+        case 'tchannel.arg1-over-length-limit':
+        case 'tchannel.argstream.exceeded-frame-parts':
         case 'tchannel.checksum':
         case 'tchannel.duplicate-header-key':
+        case 'tchannel.http-handler.to-buffer-arg2.req-failed':
+        case 'tchannel.http-handler.to-buffer-arg2.res-failed':
         case 'tchannel.null-key':
-        case 'tchannel.arg1-over-length-limit':
+        case 'tchannel.request-already-done':
+        case 'tchannel.request-frame-state':
             return 'BadRequest';
 
+        case 'tchannel.arg-chunk.gap':
+        case 'tchannel.arg-chunk.out-of-order':
+        case 'tchannel.argstream.finished':
+        case 'tchannel.argstream.unimplemented':
+        case 'tchannel.handler.incoming-req-as-header-required':
+        case 'tchannel.handler.incoming-req-cn-header-required':
         case 'tchannel.init.call-request-before-init-request':
         case 'tchannel.init.call-request-cont-before-init-request':
         case 'tchannel.init.call-response-before-init-response':
         case 'tchannel.init.call-response-cont-before-init-response':
         case 'tchannel.init.duplicate-init-request':
         case 'tchannel.init.duplicate-init-response':
+        case 'tchannel.init.ephemeral-init-response':
         case 'tchannel.init.send-call-request-before-indentified':
         case 'tchannel.init.send-call-request-cont-before-indentified':
         case 'tchannel.init.send-call-response-before-indentified':
         case 'tchannel.init.send-call-response-cont-before-indentified':
-        case 'tchannel.argstream.unimplemented':
-        case 'tchannel.argstream.finished':
-        case 'tchannel.arg-chunk.gap':
-        case 'tchannel.arg-chunk.out-of-order':
         case 'tchannel.invalid-error-code':
         case 'tchannel.invalid-frame-type':
         case 'tchannel.missing-init-header':
-        case 'tchannel.protocol.read-failed':
-        case 'tchannel.protocol.write-failed':
-        case 'tchannel.unhandled-frame-type':
-        case 'tchannel.handler.incoming-req-as-header-required':
-        case 'tchannel.handler.incoming-req-cn-header-required':
-        case 'tchannel.init.ephemeral-init-response':
-        case 'tchannel.transport-header-too-long':
-        case 'tchannel.protocol.too-many-headers':
         case 'tchannel.protocol.invalid-ttl':
+        case 'tchannel.protocol.read-failed':
+        case 'tchannel.protocol.too-many-headers':
+        case 'tchannel.protocol.write-failed':
+        case 'tchannel.transport-header-too-long':
+        case 'tchannel.unhandled-frame-type':
             return 'ProtocolError';
 
         case 'tchannel.connection.close':
         case 'tchannel.connection.reset':
         case 'tchannel.destroyed':
+        case 'tchannel.local.reset':
         case 'tchannel.socket':
         case 'tchannel.socket-closed':
         case 'tchannel.socket-local-closed':
-        case 'tchannel.local.reset':
             return 'NetworkError';
 
-        case 'tchannel.argstream.unknown-frame-handling-state':
         case 'tchannel-json-handler.stringify-error.body-failed':
         case 'tchannel-json-handler.stringify-error.head-failed':
         case 'tchannel-thrift-handler.stringify-error.body-failed':
         case 'tchannel-thrift-handler.stringify-error.head-failed':
+        case 'tchannel.argstream.unknown-frame-handling-state':
         case 'tchannel.http-handler.from-buffer-arg2.req-failed':
         case 'tchannel.http-handler.from-buffer-arg2.res-failed':
+        case 'tchannel.hydrated-error.default-type':
+        case 'tchannel.invalid-argument':
+        case 'tchannel.invalid-handler':
+        case 'tchannel.invalid-handler.for-registration':
+        case 'tchannel.invalid-header-type':
+        case 'tchannel.lazy-frame.write-corrupt':
         case 'tchannel.response-already-done':
         case 'tchannel.response-already-started':
         case 'tchannel.response-frame-state':
-        case 'tchannel.invalid-argument':
-        case 'tchannel.invalid-handler':
-        case 'tchannel.invalid-header-type':
-        case 'tchannel.invalid-handler.for-registration':
-        case 'tchannel.hydrated-error.default-type':
         case 'tchannel.server.listen-failed':
         case 'tchannel.top-level-register':
         case 'tchannel.top-level-request':
-        case 'tchannel.unimplemented-method':
         case 'tchannel.tracer.parent-required':
-        case 'tchannel.lazy-frame.write-corrupt':
+        case 'tchannel.unimplemented-method':
             return 'UnexpectedError';
 
         default:
