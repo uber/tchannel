@@ -27,6 +27,8 @@ import (
 	"time"
 
 	// Test is in a separate package to avoid circular dependencies.
+
+	"github.com/uber/tchannel/golang/testutils"
 	. "github.com/uber/tchannel/golang/thrift"
 
 	"github.com/stretchr/testify/assert"
@@ -127,6 +129,41 @@ func TestHeaders(t *testing.T) {
 		require.NoError(t, args.c1.Simple(ctx))
 		assert.Equal(t, respHeaders, ctx.ResponseHeaders(), "response headers mismatch")
 	})
+}
+
+func TestClientHostPort(t *testing.T) {
+	ctx, cancel := NewContext(time.Second * 10)
+	defer cancel()
+
+	s1ch, err := testutils.NewServer(nil)
+	require.NoError(t, err, "testutils.NewServer failed")
+	s2ch, err := testutils.NewServer(nil)
+	require.NoError(t, err, "testutils.NewServer failed")
+	defer s1ch.Close()
+	defer s2ch.Close()
+
+	s1ch.Peers().Add(s2ch.PeerInfo().HostPort)
+	s2ch.Peers().Add(s1ch.PeerInfo().HostPort)
+
+	mock1, mock2 := new(mocks.TChanSecondService), new(mocks.TChanSecondService)
+	NewServer(s1ch).Register(gen.NewTChanSecondServiceServer(mock1))
+	NewServer(s2ch).Register(gen.NewTChanSecondServiceServer(mock2))
+
+	// When we call using a normal client, it can only call the other server (only peer).
+	c1 := gen.NewTChanSecondServiceClient(NewClient(s1ch, s2ch.PeerInfo().ServiceName, nil))
+	mock2.On("Echo", ctxArg(), "call1").Return("call1", nil)
+	res, err := c1.Echo(ctx, "call1")
+	assert.NoError(t, err, "call1 failed")
+	assert.Equal(t, "call1", res)
+
+	// When we call using a client that specifies host:port, it should call that server.
+	c2 := gen.NewTChanSecondServiceClient(NewClient(s1ch, s1ch.PeerInfo().ServiceName, &ClientOptions{
+		HostPort: s1ch.PeerInfo().HostPort,
+	}))
+	mock1.On("Echo", ctxArg(), "call2").Return("call2", nil)
+	res, err = c2.Echo(ctx, "call2")
+	assert.NoError(t, err, "call2 failed")
+	assert.Equal(t, "call2", res)
 }
 
 func withSetup(t *testing.T, f func(ctx Context, args testArgs)) {
