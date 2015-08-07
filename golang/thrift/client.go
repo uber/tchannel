@@ -27,7 +27,7 @@ import (
 
 // client implements TChanClient and makes outgoing Thrift calls.
 type client struct {
-	ch          *tchannel.Channel
+	sc          *tchannel.SubChannel
 	serviceName string
 	opts        ClientOptions
 }
@@ -41,7 +41,7 @@ type ClientOptions struct {
 // NewClient returns a Client that makes calls over the given tchannel to the given Hyperbahn service.
 func NewClient(ch *tchannel.Channel, serviceName string, opts *ClientOptions) TChanClient {
 	client := &client{
-		ch:          ch,
+		sc:          ch.GetSubChannel(serviceName),
 		serviceName: serviceName,
 	}
 	if opts != nil {
@@ -53,9 +53,9 @@ func NewClient(ch *tchannel.Channel, serviceName string, opts *ClientOptions) TC
 func (c *client) Call(ctx Context, thriftService, methodName string, req, resp thrift.TStruct) (bool, error) {
 	var peer *tchannel.Peer
 	if c.opts.HostPort != "" {
-		peer = c.ch.Peers().GetOrAdd(c.opts.HostPort)
+		peer = c.sc.Peers().GetOrAdd(c.opts.HostPort)
 	} else {
-		peer = c.ch.GetSubChannel(c.serviceName).Peers().Get()
+		peer = c.sc.Peers().Get()
 	}
 	call, err := peer.BeginCall(ctx, c.serviceName, thriftService+"::"+methodName, &tchannel.CallOptions{Format: tchannel.Thrift})
 	if err != nil {
