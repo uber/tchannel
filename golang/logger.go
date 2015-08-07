@@ -154,7 +154,7 @@ type levelLogger struct {
 }
 
 // NewLevelLogger returns a logger that only logs messages with a minimum of level.
-func NewLevelLogger(level LogLevel, logger Logger) Logger {
+func NewLevelLogger(logger Logger, level LogLevel) Logger {
 	return levelLogger{logger, level}
 }
 
