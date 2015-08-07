@@ -88,6 +88,7 @@ require('./hyperbahn/constructor.js');
 require('./hyperbahn/todo.js');
 require('./hyperbahn/sub-channel.js');
 require('./hyperbahn/kill-switch.js');
+require('./hyperbahn/egress-nodes.js');
 
 var HyperbahnCluster = require('./lib/hyperbahn-cluster.js');
 require('./hyperbahn/forward.js')(HyperbahnCluster);
