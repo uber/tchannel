@@ -138,7 +138,7 @@ func NewChannel(serviceName string, opts *ChannelOptions) (*Channel, error) {
 
 	ch := &Channel{
 		connectionOptions: opts.DefaultConnectionOptions,
-		log:               logger.WithField(LogField{"service", serviceName}),
+		log:               logger.WithFields(LogField{"service", serviceName}),
 		statsReporter:     statsReporter,
 		traceReporter:     traceReporter,
 		handlers:          &handlerMap{},

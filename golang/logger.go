@@ -2,6 +2,7 @@ package tchannel
 
 import (
 	"fmt"
+	"io"
 	"time"
 )
 
@@ -53,11 +54,8 @@ type Logger interface {
 	// Fields returns the fields that this logger contains.
 	Fields() LogFields
 
-	// WithField returns a logger with the current logger's fields and newField.
-	WithField(newField LogField) Logger
-
-	// WithFields returns a logger with the current logger's fields and newFields.
-	WithFields(newFields LogFields) Logger
+	// WithFields returns a logger with the current logger's fields and fields.
+	WithFields(fields ...LogField) Logger
 }
 
 // LogField is a single field of additional information passed to the logger.
@@ -80,50 +78,110 @@ func (nullLogger) Warnf(msg string, args ...interface{})  {}
 func (nullLogger) Infof(msg string, args ...interface{})  {}
 func (nullLogger) Debugf(msg string, args ...interface{}) {}
 func (nullLogger) Fields() LogFields                      { return nil }
+func (l nullLogger) WithFields(_ ...LogField) Logger      { return l }
 
-func (l nullLogger) WithFields(_ LogFields) Logger { return l }
-func (l nullLogger) WithField(_ LogField) Logger   { return l }
+// SimpleLogger prints logging information to standard out.
+var SimpleLogger = NewLogger(os.Stdout)
 
-// SimpleLogger prints logging information to the console
-var SimpleLogger Logger = simpleLogger{}
-
-type simpleLogger struct {
+type writerLogger struct {
+	writer io.Writer
 	fields LogFields
 }
 
 const (
-	simpleLoggerStamp = "2006-01-02 15:04:05"
+	writerLoggerStamp = "2006-01-02 15:04:05"
 )
 
-func (l simpleLogger) Fatalf(msg string, args ...interface{}) {
+// NewLogger returns a Logger that writes to the given writer.
+func NewLogger(writer io.Writer, fields ...LogField) Logger {
+	return &writerLogger{writer, fields}
+}
+
+func (l writerLogger) Fatalf(msg string, args ...interface{}) {
 	l.printfn("F", msg, args...)
 	os.Exit(1)
 }
 
-func (l simpleLogger) Errorf(msg string, args ...interface{}) { l.printfn("E", msg, args...) }
-func (l simpleLogger) Warnf(msg string, args ...interface{})  { l.printfn("W", msg, args...) }
-func (l simpleLogger) Infof(msg string, args ...interface{})  { l.printfn("I", msg, args...) }
-func (l simpleLogger) Debugf(msg string, args ...interface{}) { l.printfn("D", msg, args...) }
-func (l simpleLogger) printfn(prefix, msg string, args ...interface{}) {
-	fmt.Printf("%s [%s] %s tags: %v\n", time.Now().Format(simpleLoggerStamp), prefix, fmt.Sprintf(msg, args...), l.fields)
+func (l writerLogger) Errorf(msg string, args ...interface{}) { l.printfn("E", msg, args...) }
+func (l writerLogger) Warnf(msg string, args ...interface{})  { l.printfn("W", msg, args...) }
+func (l writerLogger) Infof(msg string, args ...interface{})  { l.printfn("I", msg, args...) }
+func (l writerLogger) Debugf(msg string, args ...interface{}) { l.printfn("D", msg, args...) }
+func (l writerLogger) printfn(prefix, msg string, args ...interface{}) {
+	fmt.Fprintf(l.writer, "%s [%s] %s tags: %v\n", time.Now().Format(writerLoggerStamp), prefix, fmt.Sprintf(msg, args...), l.fields)
 }
 
-func (l simpleLogger) Fields() LogFields {
+func (l writerLogger) Fields() LogFields {
 	return l.fields
 }
 
-func (l simpleLogger) WithField(newField LogField) Logger {
-	existingFields := l.Fields()
-	fields := make(LogFields, 0, len(existingFields)+1)
-	fields = append(fields, existingFields...)
-	fields = append(fields, newField)
-	return simpleLogger{fields}
-}
-
-func (l simpleLogger) WithFields(newFields LogFields) Logger {
+func (l writerLogger) WithFields(newFields ...LogField) Logger {
 	existingFields := l.Fields()
 	fields := make(LogFields, 0, len(existingFields)+1)
 	fields = append(fields, existingFields...)
 	fields = append(fields, newFields...)
-	return simpleLogger{fields}
+	return writerLogger{l.writer, fields}
+}
+
+// LogLevel is the level of logging used by LevelLogger.
+type LogLevel int
+
+// The minimum level that will be logged. e.g. LogLevelError only logs errors and fatals.
+const (
+	LogLevelAll LogLevel = iota
+	LogLevelDebug
+	LogLevelInfo
+	LogLevelWarn
+	LogLevelError
+	LogLevelFatal
+)
+
+type levelLogger struct {
+	logger Logger
+	level  LogLevel
+}
+
+// NewLevelLogger returns a logger that only logs messages with a minimum of level.
+func NewLevelLogger(logger Logger, level LogLevel) Logger {
+	return levelLogger{logger, level}
+}
+
+func (l levelLogger) Fatalf(msg string, args ...interface{}) {
+	if l.level <= LogLevelFatal {
+		l.logger.Fatalf(msg, args...)
+	}
+}
+
+func (l levelLogger) Errorf(msg string, args ...interface{}) {
+	if l.level <= LogLevelError {
+		l.logger.Errorf(msg, args...)
+	}
+}
+
+func (l levelLogger) Warnf(msg string, args ...interface{}) {
+	if l.level <= LogLevelWarn {
+		l.logger.Warnf(msg, args...)
+	}
+}
+
+func (l levelLogger) Infof(msg string, args ...interface{}) {
+	if l.level <= LogLevelInfo {
+		l.logger.Infof(msg, args...)
+	}
+}
+
+func (l levelLogger) Debugf(msg string, args ...interface{}) {
+	if l.level <= LogLevelDebug {
+		l.logger.Debugf(msg, args...)
+	}
+}
+
+func (l levelLogger) Fields() LogFields {
+	return l.logger.Fields()
+}
+
+func (l levelLogger) WithFields(fields ...LogField) Logger {
+	return levelLogger{
+		logger: l.logger.WithFields(fields...),
+		level:  l.level,
+	}
 }
