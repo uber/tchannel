@@ -27,8 +27,8 @@ package {{ .Package }}
 import (
 "fmt"
 
-athrift "github.com/apache/thrift/lib/go/thrift"
-"github.com/uber/tchannel/golang/thrift"
+athrift "{{ .ThriftImport }}"
+"{{ .TChannelImport }}"
 )
 
 // Interfaces for the service and client for the services defined in the IDL.

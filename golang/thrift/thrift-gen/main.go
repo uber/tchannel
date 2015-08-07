@@ -40,17 +40,19 @@ import (
 )
 
 var (
-	generateThrift = flag.Bool("generateThrift", false, "Whether to generate all Thrift go code")
-	inputFile      = flag.String("inputFile", "", "The .thrift file to generate a client for")
-	outputFile     = flag.String("outputFile", "", "The output file to generate go code to")
-
-	nlSpaceNL = regexp.MustCompile(`\n[ \t]+\n`)
+	generateThrift      = flag.Bool("generateThrift", false, "Whether to generate all Thrift go code")
+	inputFile           = flag.String("inputFile", "", "The .thrift file to generate a client for")
+	outputFile          = flag.String("outputFile", "", "The output file to generate go code to")
+	defaultTchannelPath = "github.com/uber/tchannel/golang/thrift"
+	nlSpaceNL           = regexp.MustCompile(`\n[ \t]+\n`)
 )
 
 // TemplateData is the data passed to the template that generates code.
 type TemplateData struct {
-	Package  string
-	Services []*Service
+	Package        string
+	Services       []*Service
+	ThriftImport   string
+	TChannelImport string
 }
 
 func main() {
@@ -105,9 +107,15 @@ func generateCode(outputFile string, tmpl *template.Template, pkg string, parsed
 	}
 
 	buf := &bytes.Buffer{}
+
+	tchan := defaultTchannelPath
+	thrift := *thriftImport
+
 	td := TemplateData{
-		Package:  pkg,
-		Services: wrappedServices,
+		Package:        pkg,
+		Services:       wrappedServices,
+		ThriftImport:   thrift,
+		TChannelImport: tchan,
 	}
 	if err := tmpl.Execute(buf, td); err != nil {
 		return fmt.Errorf("failed to execute template: %v", err)
