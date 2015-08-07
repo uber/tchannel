@@ -105,7 +105,7 @@ allocCluster.test('request() with large arg1', {
         assert.ok(err);
         assert.equal(err.type, 'tchannel.arg1-over-length-limit');
         assert.equal(err.message,
-            'arg 1 length 0x4001 is larger than the limit 0x4000'
+            'arg1 length 0x4001 is larger than the limit 0x4000'
         );
 
         assert.equal(null, resp);
