@@ -56,6 +56,45 @@ test('errors module should be in sorted order', function t(assert) {
     }
 });
 
+test('error classification cases must be sorted', function t(assert) {
+    var caseAccum = [];
+    var cases = {};
+
+    processLineMatches(errorsPath,
+        /\breturn +'(\w+)'|case\s+(['"])(.+?)\2/,
+        function each(match) {
+            if (match[1]) {
+                cases[match[1]] = caseAccum;
+                caseAccum = [];
+            } else {
+                caseAccum.push(match[3]);
+            }
+        }, checkCases);
+
+    function checkCases() {
+        Object.keys(cases).forEach(checkCase);
+        assert.end();
+    }
+
+    function checkCase(category) {
+        var catCases = cases[category];
+        var expected = catCases.slice().sort();
+        var allOk = true;
+        for (var i = 0; i < expected.length; i++) {
+            if (catCases[i] !== expected[i]) {
+                allOk = false;
+                assert.fail(util.format(
+                    '%s cases not in sorted order: %s is out of place (expected %s)',
+                    category, catCases[i], expected[i]));
+            }
+        }
+
+        if (allOk) {
+            assert.pass(util.format('%s cases are in sorted order', category));
+        }
+    }
+});
+
 test('error case statements should not be duplicates', function t(assert) {
     var caseTypes = [];
     processLineMatches(errorsPath,
