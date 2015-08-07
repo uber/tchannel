@@ -75,7 +75,7 @@ EgressNodes.prototype.exitsFor = function exitsFor(serviceName) {
     var k = self.kValueFor(serviceName);
     // Object<hostPort: String, Array<lookupKey: String>>
     var exitNodes = Object.create(null);
-    for (var i = 0; i < k; i++) {
+    for (var i = 0; exitNodes.length < k && i < 2 * k; i++) {
         var shardKey = serviceName + '~' + i;
 
         // TODO ringpop will return itself if it cannot find
