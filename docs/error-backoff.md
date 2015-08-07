@@ -1,7 +1,7 @@
 # Error Backoff
 
 Error backoff is a mechanism that throttles outgoing TChannel traffic in order to improve the
-health of the Hyperbahn cluster and its hosted services.
+availability of the Hyperbahn cluster and its hosted services.
 
 
 ## Goals

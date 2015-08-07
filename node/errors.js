@@ -74,7 +74,7 @@ module.exports.AsHeaderRequired = TypedError({
 
 module.exports.BackoffError = TypedError({
     type: 'tchannel.backoff.error',
-    message: 'Backoff error triggered due to previous requset failures {cn} ==> {serviceName}',
+    message: 'Backoff error triggered due to previous request failures {cn} ==> {serviceName}',
     cn: null,
     serviceName: null
 });

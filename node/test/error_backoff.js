@@ -81,6 +81,7 @@ allocCluster.test('error backoff work as expected', {
     var channel = cluster.channels[0];
     var backoff = new ErrorBackoff({
         channel: channel,
+        enabled: true,
         backoffRate: 1
     });
 
@@ -98,21 +99,40 @@ allocCluster.test('error backoff work as expected', {
     assert.equal(backoff.reqErrors['bob~~jane'], 1, 'error counter works, should be 1');
     assert.equal(backoff.reqErrors['bob~~steve'], 2, 'error counter works, should be 2');
 
-    var res = backoff.nextBackoffError('bob', 'jane');
-    assert.ok(res, 'should backoff');
-    assert.equal(res.type, 'tchannel.backoff.error', 'expected backoff error type');
-    assert.equal(res.cn, 'bob', 'cn === bob');
-    assert.equal(res.serviceName, 'jane', 'serviceName === jane');
-    res = backoff.nextBackoffError('bob', 'jane');
-    assert.ok(!res, 'should not backoff');
-    res = backoff.nextBackoffError('bob', 'tom');
-    assert.ok(!res, 'should not backoff');
+    assert.ok(backoff.shouldBackoff('bob', 'jane'), 'should backoff');
+    assert.ok(!backoff.shouldBackoff('bob', 'jane'), 'should not backoff');
+    assert.ok(!backoff.shouldBackoff('bob', 'tom'), 'should not backoff');
 
-    res = backoff.nextBackoffError('bob', 'steve');
-    assert.ok(res, 'should backoff');
-    assert.equal(res.type, 'tchannel.backoff.error', 'expected backoff error type');
-    assert.equal(res.cn, 'bob', 'cn === bob');
-    assert.equal(res.serviceName, 'steve', 'serviceName === steve');
+    assert.ok(backoff.shouldBackoff('bob', 'steve'), 'should backoff');
+    assert.equal(backoff.reqErrors['bob~~steve'], 1, 'error counter works, should be 1');
+
+    assert.end();
+});
+
+allocCluster.test('error backoff enable/disable', {
+    numPeers: 1
+}, function t(cluster, assert) {
+    var channel = cluster.channels[0];
+    var backoff = new ErrorBackoff({
+        channel: channel,
+        enabled: true,
+        backoffRate: 1
+    });
+
+    backoff.handleError({
+        type: 'tchannel.busy'
+    }, 'bob', 'steve');
+    assert.equal(backoff.reqErrors['bob~~steve'], 1, 'error counter works, should be 1');
+    backoff.disable();
+    backoff.handleError({
+        type: 'tchannel.busy'
+    }, 'bob', 'steve');
+    assert.ok(!backoff.reqErrors['bob~~steve'], 'should not count if disabled');
+    assert.ok(!backoff.shouldBackoff('bob', 'steve'), 'should not backoff if disabled');
+    backoff.enable();
+    backoff.handleError({
+        type: 'tchannel.busy'
+    }, 'bob', 'steve');
     assert.equal(backoff.reqErrors['bob~~steve'], 1, 'error counter works, should be 1');
 
     assert.end();
@@ -124,15 +144,16 @@ allocCluster.test('error backoff on invalid cn/serviceName', {
     var channel = cluster.channels[0];
     var backoff = new ErrorBackoff({
         channel: channel,
+        enabled: true,
         backoffRate: 1
     });
     channel.logger.whitelist(
-        'warn',
+        'error',
         'ErrorBackoff.handleError called with invalid parameters'
     );
     channel.logger.whitelist(
-        'warn',
-        'ErrorBackoff.nextBackoffError called with invalid parameters'
+        'error',
+        'ErrorBackoff.shouldBackoff called with invalid parameters'
     );
 
     backoff.handleError({
@@ -145,8 +166,8 @@ allocCluster.test('error backoff on invalid cn/serviceName', {
     }, 'bob', null);
     assert.equal(Object.keys(backoff.reqErrors).length, 0, 'nothing should be added when serviceName is invalid');
 
-    assert.ok(!backoff.nextBackoffError(null, 'steve'), 'should not backoff on invalid cn');
-    assert.ok(!backoff.nextBackoffError('steve', null), 'should not backoff on invalid serviceName');
+    assert.ok(!backoff.shouldBackoff(null, 'steve'), 'should not backoff on invalid cn');
+    assert.ok(!backoff.shouldBackoff('steve', null), 'should not backoff on invalid serviceName');
 
     assert.end();
 });
@@ -189,7 +210,8 @@ allocCluster.test('backoff on errors', {
     numPeers: 2,
     channelOptions: {
         timers: timers,
-        backoffRate: 2
+        enableErrorBackoff: true,
+        backoffRate: 2,
     }
 }, function t(cluster, assert) {
     var one = cluster.channels[0];
@@ -245,6 +267,7 @@ allocCluster.test('backoff on errors for streaming', {
     numPeers: 2,
     channelOptions: {
         timers: timers,
+        enableErrorBackoff: true,
         backoffRate: 1
     }
 }, function t(cluster, assert) {

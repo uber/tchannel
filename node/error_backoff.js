@@ -21,12 +21,10 @@
 'use strict';
 
 var assert = require('assert');
-var errors = require('./errors.js');
 
 function getEdgeName(cn, serviceName) {
     return cn + '~~' + serviceName;
 }
-
 
 function ErrorBackoff(options) {
     if (!(this instanceof ErrorBackoff)) {
@@ -35,10 +33,15 @@ function ErrorBackoff(options) {
     var self = this;
 
     self.channel = options.channel;
+    self.enabled = !!options.enabled;
     assert(self.channel && !self.channel.topChannel, 'ErrorBackoff requires top channel');
     self.backoffRate = options.backoffRate || 0;
     assert(self.backoffRate >= 0, 'ErrorBackoff requires a nonnegative backoffRate');
-    self.reqErrors = {};
+    self.reqErrors = Object.create(null);
+    self.recoverRate = 1;
+    if (options.recoverRate && options.recoverRate > 1) {
+        self.recoverRate = options.recoverRate;
+    }
 
     self.logger = self.channel.logger;
 }
@@ -48,12 +51,12 @@ ErrorBackoff.prototype.type = 'tchannel.error-backoff';
 ErrorBackoff.prototype.handleError =
 function handleError(err, cn, serviceName) {
     var self = this;
-    if (!self.backoffRate) {
+    if (!self.enabled || !self.backoffRate) {
         return;
     }
 
     if (!err || !cn || !serviceName) {
-        self.logger.warn('ErrorBackoff.handleError called with invalid parameters', {
+        self.logger.error('ErrorBackoff.handleError called with invalid parameters', {
             error: err,
             cn: cn,
             serviceName: serviceName
@@ -73,6 +76,19 @@ function handleError(err, cn, serviceName) {
     }
 };
 
+ErrorBackoff.prototype.enable =
+function enable() {
+    var self = this;
+    self.enabled = true;
+};
+
+ErrorBackoff.prototype.disable =
+function disable() {
+    var self = this;
+    self.enabled = false;
+    self.reqErrors = Object.create(null);
+};
+
 ErrorBackoff.prototype.shouldConsider =
 function shouldConsider(err) {
     if (err.type === 'tchannel.busy') {
@@ -82,31 +98,28 @@ function shouldConsider(err) {
     }
 };
 
-ErrorBackoff.prototype.nextBackoffError =
-function nextBackoffError(cn, serviceName) {
+ErrorBackoff.prototype.shouldBackoff =
+function shouldBackoff(cn, serviceName) {
     var self = this;
-    if (!self.backoffRate) {
-        return null;
+    if (!self.enabled || !self.backoffRate) {
+        return false;
     }
 
     if (!cn || !serviceName) {
-        self.logger.warn('ErrorBackoff.nextBackoffError called with invalid parameters', {
+        self.logger.error('ErrorBackoff.shouldBackoff called with invalid parameters', {
             cn: cn,
             serviceName: serviceName
         });
-        return null;
+        return false;
     }
 
     var edge = getEdgeName(cn, serviceName);
     if (!self.reqErrors[edge] || self.reqErrors[edge] < 1) {
-        return null;
+        return false;
     }
 
-    self.reqErrors[edge] -= 1;
-    return errors.BackoffError({
-        cn: cn,
-        serviceName: serviceName
-    });
+    self.reqErrors[edge] -= self.recoverRate;
+    return true;
 };
 
 module.exports = ErrorBackoff;

@@ -260,6 +260,7 @@ function TChannel(options) {
     if (!self.topChannel) {
         self.errorBackoff = new ErrorBackoff({
             channel: self,
+            enabled: self.options.enableErrorBackoff,
             backoffRate: self.options.backoffRate
         });
     }
