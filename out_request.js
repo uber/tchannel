@@ -277,15 +277,11 @@ TChannelOutRequest.prototype.emitError = function emitError(err) {
             endpoint: self.endpoint,
             socketRemoteAddr: self.remoteAddr,
             callerName: self.headers.cn,
-
             oldError: self.err,
             oldResponse: !!self.res,
-
             error: err
         });
-    }
-
-    if (!self.end) {
+    } else {
         self.end = self.channel.timers.now();
     }
 
@@ -311,7 +307,16 @@ TChannelOutRequest.prototype.emitResponse = function emitResponse(res) {
 
     self.peer.invalidateScore();
 
-    if (!self.end) {
+    if (self.end) {
+        self.channel.logger.warn('Unexpected response after end for OutRequest', {
+            serviceName: self.serviceName,
+            endpoint: self.endpoint,
+            socketRemoteAddr: self.remoteAddr,
+            callerName: self.headers.cn,
+            oldError: self.err,
+            oldResponse: !!self.res
+        });
+    } else {
         self.end = self.channel.timers.now();
     }
 
