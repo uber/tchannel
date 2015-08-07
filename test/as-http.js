@@ -166,14 +166,13 @@ function allocHTTPBridge(opts) {
     var cluster = allocCluster({
         numPeers: 2
     });
-    var tready = cluster.ready;
     var tdestroy = cluster.destroy;
 
-    cluster.ready = CountedReadySignal(3);
+    var cready = CountedReadySignal(3);
     cluster.destroy = destroy;
-    tready(cluster.ready.signal);
-    cluster.httpEgress = allocHTTPServer(opts.onEgressRequest, cluster.ready.signal);
-    cluster.httpService = allocHTTPServer(opts.onServiceRequest, cluster.ready.signal);
+    cluster.ready(cready.signal);
+    cluster.httpEgress = allocHTTPServer(opts.onEgressRequest, cready.signal);
+    cluster.httpService = allocHTTPServer(opts.onServiceRequest, cready.signal);
 
     var serviceName = opts.serviceName || 'test_http';
     var chanOpts = {
@@ -201,7 +200,7 @@ function allocHTTPBridge(opts) {
     };
     cluster.sendRequest = testRequester(opts.assert, cluster.requestOptions);
 
-    cluster.ready(onReady);
+    cready(onReady);
 
     function onReady() {
         if (!cluster.ingressServer.hostPort) throw new Error('no ingress hostPort');
