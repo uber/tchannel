@@ -106,7 +106,7 @@ TChannelRequest.prototype.emitResponse = function emitResponse(res) {
     self.responseEvent.emit(self, res);
 };
 
-TChannelRequest.prototype.hookupStreamCallback = function hookupStreamCallback(callback) {
+TChannelRequest.prototype.hookupStreamCallback = function hookupCallback(callback) {
     throw new Error('not implemented');
 };
 

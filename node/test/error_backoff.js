@@ -86,15 +86,21 @@ allocCluster.test('error backoff work as expected', {
     });
 
     backoff.handleError({
-        type: 'tchannel.busy'
+        type: 'tchannel.busy',
+        isErrorFrame: true,
+        codeName: 'Busy'
     }, 'bob', 'steve');
     assert.equal(backoff.reqErrors['bob~~steve'], 1, 'error counter works, should be 1');
     backoff.handleError({
-        type: 'tchannel.busy'
+        type: 'tchannel.busy',
+        isErrorFrame: true,
+        codeName: 'Busy'
     }, 'bob', 'steve');
     assert.equal(backoff.reqErrors['bob~~steve'], 2, 'error counter works, should be 2');
     backoff.handleError({
-        type: 'tchannel.busy'
+        type: 'tchannel.busy',
+        isErrorFrame: true,
+        codeName: 'Busy'
     }, 'bob', 'jane');
     assert.equal(backoff.reqErrors['bob~~jane'], 1, 'error counter works, should be 1');
     assert.equal(backoff.reqErrors['bob~~steve'], 2, 'error counter works, should be 2');
@@ -120,18 +126,24 @@ allocCluster.test('error backoff enable/disable', {
     });
 
     backoff.handleError({
-        type: 'tchannel.busy'
+        type: 'tchannel.busy',
+        isErrorFrame: true,
+        codeName: 'Busy'
     }, 'bob', 'steve');
     assert.equal(backoff.reqErrors['bob~~steve'], 1, 'error counter works, should be 1');
     backoff.disable();
     backoff.handleError({
-        type: 'tchannel.busy'
+        type: 'tchannel.busy',
+        isErrorFrame: true,
+        codeName: 'Busy'
     }, 'bob', 'steve');
     assert.ok(!backoff.reqErrors['bob~~steve'], 'should not count if disabled');
     assert.ok(!backoff.shouldBackoff('bob', 'steve'), 'should not backoff if disabled');
     backoff.enable();
     backoff.handleError({
-        type: 'tchannel.busy'
+        type: 'tchannel.busy',
+        isErrorFrame: true,
+        codeName: 'Busy'
     }, 'bob', 'steve');
     assert.equal(backoff.reqErrors['bob~~steve'], 1, 'error counter works, should be 1');
 
@@ -147,27 +159,33 @@ allocCluster.test('error backoff on invalid cn/serviceName', {
         enabled: true,
         backoffRate: 1
     });
-    channel.logger.whitelist(
-        'error',
-        'ErrorBackoff.handleError called with invalid parameters'
-    );
-    channel.logger.whitelist(
-        'error',
-        'ErrorBackoff.shouldBackoff called with invalid parameters'
-    );
 
-    backoff.handleError({
-        type: 'tchannel.timeout'
-    }, null, 'steve');
+    assert.throws(function invalidCn() {
+        backoff.handleError({
+            type: 'tchannel.timeout',
+            isErrorFrame: true,
+            codeName: 'Busy'
+        }, null, 'steve');
+    });
+
+    assert.throws(function invalidServiceName() {
+        backoff.handleError({
+            type: 'tchannel.timeout',
+            isErrorFrame: true,
+            codeName: 'Busy'
+        }, 'bob', null);
+    });
+
     assert.equal(Object.keys(backoff.reqErrors).length, 0, 'nothing should be added when cn is invalid');
-
-    backoff.handleError({
-        type: 'tchannel.timeout'
-    }, 'bob', null);
     assert.equal(Object.keys(backoff.reqErrors).length, 0, 'nothing should be added when serviceName is invalid');
 
-    assert.ok(!backoff.shouldBackoff(null, 'steve'), 'should not backoff on invalid cn');
-    assert.ok(!backoff.shouldBackoff('steve', null), 'should not backoff on invalid serviceName');
+    assert.throws(function invalidCnBackoffCheck() {
+        backoff.shouldBackoff(null, 'steve');
+    });
+
+    assert.throws(function invalidServiceNameBackoffCheck() {
+        backoff.shouldBackoff('steve', null);
+    });
 
     assert.end();
 });

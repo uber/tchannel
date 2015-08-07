@@ -21,6 +21,7 @@
 'use strict';
 
 var assert = require('assert');
+var errors = require('./errors');
 
 function getEdgeName(cn, serviceName) {
     return cn + '~~' + serviceName;
@@ -55,14 +56,7 @@ function handleError(err, cn, serviceName) {
         return;
     }
 
-    if (!err || !cn || !serviceName) {
-        self.logger.error('ErrorBackoff.handleError called with invalid parameters', {
-            error: err,
-            cn: cn,
-            serviceName: serviceName
-        });
-        return;
-    }
+    assert(err && cn && serviceName, 'ErrorBackoff.handleError called with invalid parameters');
 
     if (!self.shouldConsider(err)) {
         return;
@@ -91,11 +85,7 @@ function disable() {
 
 ErrorBackoff.prototype.shouldConsider =
 function shouldConsider(err) {
-    if (err.type === 'tchannel.busy') {
-        return true;
-    } else {
-        return false;
-    }
+    return errors.isUnhealthy(errors.classify(err));
 };
 
 ErrorBackoff.prototype.shouldBackoff =
@@ -105,13 +95,7 @@ function shouldBackoff(cn, serviceName) {
         return false;
     }
 
-    if (!cn || !serviceName) {
-        self.logger.error('ErrorBackoff.shouldBackoff called with invalid parameters', {
-            cn: cn,
-            serviceName: serviceName
-        });
-        return false;
-    }
+    assert(cn && serviceName, 'ErrorBackoff.shouldBackoff called with invalid parameters');
 
     var edge = getEdgeName(cn, serviceName);
     if (!self.reqErrors[edge] || self.reqErrors[edge] < 1) {
