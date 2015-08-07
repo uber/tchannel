@@ -86,5 +86,5 @@ function onRequest(inreq, outres) {
     asHTTP.forwardToHTTP(svcChan, {
         host: destHost,
         port: destPort,
-    }, inreq, outres);
+    }, inreq, outres, function() { return true; });
 }
