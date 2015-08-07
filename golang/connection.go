@@ -217,6 +217,7 @@ func (ch *Channel) newConnection(conn net.Conn, initialState connectionState, ev
 	peerInfo := ch.PeerInfo()
 	log.Debugf("created for %v (%v) local: %v remote: %v",
 		peerInfo.ServiceName, peerInfo.ProcessName, conn.LocalAddr(), conn.RemoteAddr())
+
 	c := &Connection{
 		connID:        connID,
 		log:           log,

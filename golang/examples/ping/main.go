@@ -50,6 +50,12 @@ func onError(ctx context.Context, err error) {
 	log.Fatalf("onError: %v", err)
 }
 
+func pingOtherHandler(ctx json.Context, ping *Ping) (*Pong, error) {
+	return &Pong{
+		Message: fmt.Sprintf("pingOther %v", ping),
+	}, nil
+}
+
 func listenAndHandle(s *tchannel.Channel, hostPort string) {
 	log.Infof("Service %s", hostPort)
 
@@ -74,6 +80,13 @@ func main() {
 	// Listen for incoming requests
 	listenAndHandle(ch, "127.0.0.1:10500")
 
+	// Create the "Other" channel for the above top level channel
+	chOther := ch.GetOtherChannel("PingServiceOther")
+
+	json.Register(chOther, json.Handlers{
+		"pingOther": pingOtherHandler,
+	}, onError)
+
 	// Create a new TChannel for sending requests.
 	client, err := tchannel.NewChannel("ping-client", nil)
 	if err != nil {
@@ -91,4 +104,11 @@ func main() {
 	}
 
 	log.Infof("Received pong: %s", pong.Message)
+
+	peer = client.Peers().Add(chOther.PeerInfo().HostPort)
+	if err := json.CallPeer(ctx, peer, "PingServiceOther", "pingOther", &Ping{"Hello Other World"}, &pong); err != nil {
+		log.Fatalf("json.Call failed: %v", err)
+	}
+
+	log.Infof("Received other pong: %s", pong.Message)
 }
