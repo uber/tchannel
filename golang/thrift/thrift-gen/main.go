@@ -39,12 +39,14 @@ import (
 	"github.com/samuel/go-thrift/parser"
 )
 
+const tchannelThriftImport = "github.com/uber/tchannel/golang/thrift"
+
 var (
-	generateThrift      = flag.Bool("generateThrift", false, "Whether to generate all Thrift go code")
-	inputFile           = flag.String("inputFile", "", "The .thrift file to generate a client for")
-	outputFile          = flag.String("outputFile", "", "The output file to generate go code to")
-	defaultTchannelPath = "github.com/uber/tchannel/golang/thrift"
-	nlSpaceNL           = regexp.MustCompile(`\n[ \t]+\n`)
+	generateThrift     = flag.Bool("generateThrift", false, "Whether to generate all Thrift go code")
+	apacheThriftImport = flag.String("thriftImport", "github.com/apache/thrift/lib/go/thrift", "Go package to use for the Thrift import")
+	inputFile          = flag.String("inputFile", "", "The .thrift file to generate a client for")
+	outputFile         = flag.String("outputFile", "", "The output file to generate go code to")
+	nlSpaceNL          = regexp.MustCompile(`\n[ \t]+\n`)
 )
 
 // TemplateData is the data passed to the template that generates code.
@@ -68,7 +70,7 @@ func main() {
 
 func processFile(generateThrift bool, inputFile string, outputFile string) error {
 	if generateThrift {
-		if outFile, err := runThrift(inputFile); err != nil {
+		if outFile, err := runThrift(inputFile, *apacheThriftImport); err != nil {
 			return fmt.Errorf("Could not generate thrift output: %v", err)
 		} else if outputFile == "" {
 			outputFile = outFile
@@ -108,14 +110,11 @@ func generateCode(outputFile string, tmpl *template.Template, pkg string, parsed
 
 	buf := &bytes.Buffer{}
 
-	tchan := defaultTchannelPath
-	thrift := *thriftImport
-
 	td := TemplateData{
 		Package:        pkg,
 		Services:       wrappedServices,
-		ThriftImport:   thrift,
-		TChannelImport: tchan,
+		ThriftImport:   *apacheThriftImport,
+		TChannelImport: tchannelThriftImport,
 	}
 	if err := tmpl.Execute(buf, td); err != nil {
 		return fmt.Errorf("failed to execute template: %v", err)
