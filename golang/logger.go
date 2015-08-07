@@ -54,11 +54,8 @@ type Logger interface {
 	// Fields returns the fields that this logger contains.
 	Fields() LogFields
 
-	// WithField returns a logger with the current logger's fields and newField.
-	WithField(newField LogField) Logger
-
-	// WithFields returns a logger with the current logger's fields and newFields.
-	WithFields(newFields LogFields) Logger
+	// WithFields returns a logger with the current logger's fields and fields.
+	WithFields(fields ...LogField) Logger
 }
 
 // LogField is a single field of additional information passed to the logger.
@@ -81,9 +78,7 @@ func (nullLogger) Warnf(msg string, args ...interface{})  {}
 func (nullLogger) Infof(msg string, args ...interface{})  {}
 func (nullLogger) Debugf(msg string, args ...interface{}) {}
 func (nullLogger) Fields() LogFields                      { return nil }
-
-func (l nullLogger) WithFields(_ LogFields) Logger { return l }
-func (l nullLogger) WithField(_ LogField) Logger   { return l }
+func (l nullLogger) WithFields(_ ...LogField) Logger      { return l }
 
 // SimpleLogger prints logging information to standard out.
 var SimpleLogger = NewLogger(os.Stdout)
@@ -119,15 +114,7 @@ func (l writerLogger) Fields() LogFields {
 	return l.fields
 }
 
-func (l writerLogger) WithField(newField LogField) Logger {
-	existingFields := l.Fields()
-	fields := make(LogFields, 0, len(existingFields)+1)
-	fields = append(fields, existingFields...)
-	fields = append(fields, newField)
-	return writerLogger{l.writer, fields}
-}
-
-func (l writerLogger) WithFields(newFields LogFields) Logger {
+func (l writerLogger) WithFields(newFields ...LogField) Logger {
 	existingFields := l.Fields()
 	fields := make(LogFields, 0, len(existingFields)+1)
 	fields = append(fields, existingFields...)
@@ -192,16 +179,9 @@ func (l levelLogger) Fields() LogFields {
 	return l.logger.Fields()
 }
 
-func (l levelLogger) WithField(field LogField) Logger {
+func (l levelLogger) WithFields(fields ...LogField) Logger {
 	return levelLogger{
-		logger: l.logger.WithField(field),
-		level:  l.level,
-	}
-}
-
-func (l levelLogger) WithFields(fields LogFields) Logger {
-	return levelLogger{
-		logger: l.logger.WithFields(fields),
+		logger: l.logger.WithFields(fields...),
 		level:  l.level,
 	}
 }

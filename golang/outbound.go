@@ -76,7 +76,7 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string, callOpti
 	}
 	call.statsReporter = c.statsReporter
 	call.createStatsTags(c.commonStatsTags)
-	call.log = c.log.WithFields(LogFields{{"Out-Call", requestID}})
+	call.log = c.log.WithFields(LogField{"Out-Call", requestID})
 
 	// TODO(mmihic): It'd be nice to do this without an fptr
 	call.messageForFragment = func(initial bool) message {
@@ -103,7 +103,7 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string, callOpti
 	response := new(OutboundCallResponse)
 	response.startedAt = timeNow()
 	response.mex = mex
-	response.log = c.log.WithFields(LogFields{{"Out-Response", requestID}})
+	response.log = c.log.WithFields(LogField{"Out-Response", requestID})
 	response.messageForFragment = func(initial bool) message {
 		if initial {
 			call.AddAnnotation(AnnotationKeyClientReceive)

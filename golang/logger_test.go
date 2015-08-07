@@ -49,26 +49,29 @@ func TestWriterLogger(t *testing.T) {
 	}
 
 	for _, level := range levels {
-		tagLogger1 := bufLogger.WithField(LogField{"key1", "value1"})
-		tagLogger2 := bufLogger.WithField(LogField{"key2", "value2"})
+		tagLogger1 := bufLogger.WithFields(LogField{"key1", "value1"})
+		tagLogger2 := bufLogger.WithFields(LogField{"key2", "value2"}, LogField{"key3", "value3"})
 
-		verifyMsgAndPrefix := func() {
+		verifyMsgAndPrefix := func(logger Logger) {
+			buf.Reset()
+			level.levelFunc(logger, "mes%v", "sage")
+
 			out := buf.String()
 			assert.Contains(t, out, "message")
 			assert.Contains(t, out, "["+level.levelPrefix+"]")
 		}
 
-		buf.Reset()
-		level.levelFunc(bufLogger, "mes%v", "sage")
-		verifyMsgAndPrefix()
+		verifyMsgAndPrefix(bufLogger)
 
-		level.levelFunc(tagLogger1, "mes%v", "sage")
-		verifyMsgAndPrefix()
+		verifyMsgAndPrefix(tagLogger1)
 		assert.Contains(t, buf.String(), "{key1 value1}")
+		assert.NotContains(t, buf.String(), "{key2 value2}")
+		assert.NotContains(t, buf.String(), "{key3 value3}")
 
-		level.levelFunc(tagLogger2, "mes%v", "sage")
-		verifyMsgAndPrefix()
+		verifyMsgAndPrefix(tagLogger2)
 		assert.Contains(t, buf.String(), "{key2 value2}")
+		assert.Contains(t, buf.String(), "{key3 value3}")
+		assert.NotContains(t, buf.String(), "{key1 value1}")
 	}
 }
 
