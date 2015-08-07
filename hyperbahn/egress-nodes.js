@@ -59,6 +59,12 @@ EgressNodes.prototype.kValueFor = function kValueFor(serviceName) {
         self.defaultKValue;
 };
 
+EgressNodes.prototype.setDefaultKValue = function setDefaultKValue(kValue) {
+    var self = this;
+    assert(typeof kValue === 'number' && kValue > 0);
+    self.defaultKValue = kValue;
+};
+
 EgressNodes.prototype.setKValueFor = function setKValueFor(serviceName, k) {
     var self = this;
     self.kValueForServiceName[serviceName] = k;
