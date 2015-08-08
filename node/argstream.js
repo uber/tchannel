@@ -187,7 +187,7 @@ OutArgStream.prototype._handleFrameChunk = function _handleFrameChunk(n, chunk) 
     } else {
         self._appendFrameChunk(chunk);
     }
-    self._deferFlushParts();
+    self.deferFlushParts();
 };
 
 OutArgStream.prototype._appendFrameChunk = function _appendFrameChunk(chunk) {
@@ -201,7 +201,7 @@ OutArgStream.prototype._appendFrameChunk = function _appendFrameChunk(chunk) {
     }
 };
 
-OutArgStream.prototype._deferFlushParts = function _deferFlushParts() {
+OutArgStream.prototype.deferFlushParts = function deferFlushParts() {
     var self = this;
     if (!self._flushImmed) {
         self._flushImmed = setImmediate(function() {
