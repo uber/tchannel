@@ -346,6 +346,8 @@ TChannelConnection.prototype.onCallError = function onCallError(err) {
 
         req.emitError(err);
     }
+
+    self.channel.errorBackoff.handleError(err, req.headers.cn, req.serviceName);
 };
 
 TChannelConnection.prototype.start = function start() {
