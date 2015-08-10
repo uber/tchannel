@@ -287,8 +287,7 @@ function incomingRequestInvalid(reqFrame, req) {
         reqFrame.body.args[0].length > v2.MaxArg1Size) {
         req.res = self.buildOutResponse(req);
         self.sendErrorFrame(req.res, 'BadRequest',
-            'arg1 exceeds the max size of 0x' +
-            v2.MaxArg1Size.toString(16));
+            'arg1 exceeds the max size of ' + v2.MaxArg1Size);
         return true;
     }
 };
@@ -361,8 +360,8 @@ function checkValidCallResponse(resFrame) {
     if (resFrame.body.args && resFrame.body.args[0] &&
         resFrame.body.args[0].length > v2.MaxArg1Size) {
         self.errorEvent.emit(self, errors.Arg1OverLengthLimit({
-                length: '0x' + resFrame.body.args[0].length.toString(16),
-                limit: '0x' + v2.MaxArg1Size.toString(16)
+            length: resFrame.body.args[0].length,
+            limit: v2.MaxArg1Size
         }));
         return false;
     }
