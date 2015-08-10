@@ -46,6 +46,7 @@ Frame.Types[Types.CallRequest] = call.Request;
 Frame.Types[Types.CallResponse] = call.Response;
 module.exports.CallRequest = call.Request;
 module.exports.CallResponse = call.Response;
+module.exports.MaxArg1Size = 0x4000;
 
 var Cancel = require('./cancel');
 Types.Cancel = Cancel.TypeCode;
