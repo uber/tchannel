@@ -917,6 +917,14 @@ TChannelV2Handler.prototype.onReqError = function onReqError(err, req) {
     }
 };
 
+TChannelV2Handler.prototype.onResError = function onResError(err, res) {
+    var self = this;
+
+    // TODO: wrap errors to clarify "errors on responses to req..." ?
+    var req = self.connection.ops.getOutReq(res.id);
+    req.errorEvent.emit(req, err);
+};
+
 /*jshint maxparams:10*/
 function InRequestOptions(
     channel, timeout, tracing, serviceName, headers, checksum,
@@ -938,6 +946,7 @@ function InRequestOptions(
 
 TChannelV2Handler.prototype.buildInResponse = function buildInResponse(resFrame) {
     var self = this;
+
     var opts = {
         logger: self.logger,
         random: self.random,
@@ -947,9 +956,19 @@ TChannelV2Handler.prototype.buildInResponse = function buildInResponse(resFrame)
         streamed: resFrame.body.flags & v2.CallFlags.Fragment,
         headers: resFrame.body.headers
     };
+
+    var res;
     if (opts.streamed) {
-        return new StreamingInResponse(resFrame.id, opts);
+        res = new StreamingInResponse(resFrame.id, opts);
     } else {
-        return new InResponse(resFrame.id, opts);
+        res = new InResponse(resFrame.id, opts);
     }
+
+    res.errorEvent.on(onResError);
+
+    function onResError(err) {
+        self.onResError(err, res);
+    }
+
+    return res;
 };
