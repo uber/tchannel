@@ -108,3 +108,5 @@ module.exports.encodeRetryFlags = function encodeRetryFlags(retryFlags) {
 };
 
 module.exports.Handler = require('./handler');
+
+module.exports.Tracing = require('./tracing.js');
