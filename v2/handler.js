@@ -191,7 +191,12 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
 
     var req = self.buildInRequest(reqFrame);
 
-    if (self.incomingRequestInvalid(reqFrame, req)) {
+    var err = self.checkCallReqFrame(reqFrame);
+    if (err) {
+        req.res = self.buildOutResponse(req);
+        self.sendErrorFrame(
+            req.res, 'ProtocolError', err.message
+        );
         return;
     }
 
@@ -237,24 +242,17 @@ function emitBytesRecvd(frame) {
     }
 };
 
-TChannelV2Handler.prototype.incomingRequestInvalid =
-function incomingRequestInvalid(reqFrame, req) {
+TChannelV2Handler.prototype.checkCallReqFrame = function checkCallReqFrame(reqFrame) {
     var self = this;
 
-    var err;
     if (!reqFrame.body ||
         !reqFrame.body.headers ||
         !reqFrame.body.headers.as
     ) {
         if (self.requireAs) {
-            err = errors.AsHeaderRequired({
+            return errors.AsHeaderRequired({
                 frame: 'request'
             });
-            req.res = self.buildOutResponse(req);
-            self.sendErrorFrame(
-                req.res, 'ProtocolError', err.message
-            );
-            return true;
         } else {
             self.logger.warn('Expected "as" header for incoming req', {
                 arg1: String(reqFrame.body.args[0]),
@@ -271,10 +269,7 @@ function incomingRequestInvalid(reqFrame, req) {
         !reqFrame.body.headers.cn
     ) {
         if (self.requireCn) {
-            err = errors.CnHeaderRequired();
-            req.res = self.buildOutResponse(req);
-            self.sendErrorFrame(req.res, 'ProtocolError', err.message);
-            return true;
+            return errors.CnHeaderRequired();
         } else {
             self.logger.warn('Expected "cn" header for incoming req', {
                 arg1: String(reqFrame.body.args[0]),
@@ -285,16 +280,21 @@ function incomingRequestInvalid(reqFrame, req) {
         }
     }
 
-    if (reqFrame.body.args && reqFrame.body.args[0] &&
-        reqFrame.body.args[0].length > v2.MaxArg1Size) {
-        err = errors.Arg1OverLengthLimit({
-            length: reqFrame.body.args[0].length,
+    return self.checkCallFrameArgs(reqFrame);
+};
+
+TChannelV2Handler.prototype.checkCallFrameArgs = function checkCallFrameArgs(frame) {
+    if (frame.body.args &&
+        frame.body.args[0] &&
+        frame.body.args[0].length > v2.MaxArg1Size
+    ) {
+        return errors.Arg1OverLengthLimit({
+            length: frame.body.args[0].length,
             limit: v2.MaxArg1Size
         });
-        req.res = self.buildOutResponse(req);
-        self.sendErrorFrame(req.res, 'BadRequest', err.message);
-        return true;
     }
+
+    return null;
 };
 
 TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(resFrame) {
