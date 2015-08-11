@@ -496,8 +496,12 @@ TChannelV2Handler.prototype.handleError = function handleError(errFrame, callbac
 };
 
 TChannelV2Handler.prototype._checkCallFrame = function _checkCallFrame(r, frame) {
+    // TODO: also an error if state === States.Error
     if (r.state === States.Done) {
-        return new Error('got cont in done state'); // TODO typed error
+        return errors.UnexpectedCallFrame({
+            frameType: frame.body.type,
+            state: 'done'
+        });
     }
 
     var checksum = r.checksum;

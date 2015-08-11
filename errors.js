@@ -556,6 +556,13 @@ module.exports.TransportHeaderTooLong = TypedError({
     endOffset: null
 });
 
+module.exports.UnexpectedCallFrameAfterDone = TypedError({
+    type: 'tchannel.call.frame-unexpected.after-done',
+    message: 'got call frame (type {frameType}) in done state',
+    frameId: null,
+    frameType: null
+});
+
 module.exports.UnimplementedMethod = TypedError({
     message: 'Unimplemented {className}#{methodName}',
     type: 'tchannel.unimplemented-method',
@@ -616,6 +623,9 @@ module.exports.classify = function classify(err) {
         // TODO: can BadRequest be used for a response error? Maybe instead we
         // could use UnexpectedError rather than terminate the connection?
         case 'tchannel.call-response.orphan-cont':
+
+        // TODO: classify as BadRequest/UnexpectedError for req/res?
+        case 'tchannel.call.frame-unexpected.after-done':
 
         case 'tchannel.handler.incoming-req-as-header-required':
         case 'tchannel.handler.incoming-req-cn-header-required':
