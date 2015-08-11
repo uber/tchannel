@@ -120,7 +120,7 @@ TChannelStatsd.prototype.onStat = function onStat(stat) {
     var key = getKey(stat);
 
     if (stat.type === 'counter') {
-        return self.statsd.counter(key, stat.value);
+        return self.statsd.increment(key, stat.value);
     } else if (stat.type === 'gauge') {
         return self.statsd.gauge(key, stat.value);
     } else if (stat.type === 'timing') {

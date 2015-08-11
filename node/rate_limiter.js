@@ -110,12 +110,14 @@ function refresh() {
     var self = this;
 
     if (self.cycle === self.numOfBuckets) {
-        self.channel.emitFastStat(self.channel.buildStat(
-            'tchannel.rate-limiting.total-rps',
-            'counter',
-            self.totalRequestCounter.rps,
-            new stat.RateLimiterEmptyTags()
-        ));
+        if (self.totalRequestCounter.rps) {
+            self.channel.emitFastStat(self.channel.buildStat(
+                'tchannel.rate-limiting.total-rps',
+                'counter',
+                self.totalRequestCounter.rps,
+                new stat.RateLimiterEmptyTags()
+            ));
+        }
 
         self.channel.emitFastStat(self.channel.buildStat(
             'tchannel.rate-limiting.total-rps-limit',
@@ -132,12 +134,14 @@ function refresh() {
         var counter = self.counters[serviceNames[i]];
         if (self.cycle === self.numOfBuckets) {
             var statsTag = new stat.RateLimiterServiceTags(serviceNames[i]);
-            self.channel.emitFastStat(self.channel.buildStat(
-                'tchannel.rate-limiting.service-rps',
-                'counter',
-                counter.rps,
-                statsTag
-            ));
+            if (counter.rps) {
+                self.channel.emitFastStat(self.channel.buildStat(
+                    'tchannel.rate-limiting.service-rps',
+                    'counter',
+                    counter.rps,
+                    statsTag
+                ));
+            }
 
             self.channel.emitFastStat(self.channel.buildStat(
                 'tchannel.rate-limiting.service-rps-limit',
