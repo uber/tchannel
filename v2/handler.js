@@ -299,13 +299,16 @@ function incomingRequestInvalid(reqFrame, req) {
 
 TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(resFrame) {
     var self = this;
+
     if (self.remoteName === null) {
-        return self.errorEvent.emit(self, errors.CallResBeforeInitResError());
+        self.errorEvent.emit(self, errors.CallResBeforeInitResError());
+        return;
     }
+
     var res = self.buildInResponse(resFrame);
 
     if (!self.checkValidCallResponse(resFrame)) {
-        return null;
+        return;
     }
 
     var req = self.connection.ops.getOutReq(res.id);
