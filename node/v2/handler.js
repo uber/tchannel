@@ -489,29 +489,35 @@ TChannelV2Handler.prototype.handleError = function handleError(errFrame, callbac
     }
 };
 
-TChannelV2Handler.prototype._handleCallFrame = function _handleCallFrame(r, frame) {
-    var self = this;
+TChannelV2Handler.prototype._checkCallFrame = function _checkCallFrame(r, frame) {
     if (r.state === States.Done) {
-        self.errorEvent.emit(self, new Error('got cont in done state')); // TODO typed error
-        return false;
+        return new Error('got cont in done state'); // TODO typed error
     }
 
     var checksum = r.checksum;
     if (checksum.type !== frame.body.csum.type) {
-        self.errorEvent.emit(self, new Error('checksum type changed mid-stream')); // TODO typed error
-        return false;
+        return new Error('checksum type changed mid-stream'); // TODO typed error
     }
 
-    var err = frame.body.verifyChecksum(checksum.val);
-    if (err) {
-        self.errorEvent.emit(self, err); // TODO wrap context
-        return false;
-    }
-    r.checksum = frame.body.csum;
+    return frame.body.verifyChecksum(checksum.val);
+};
 
-    var isLast = !(frame.body.flags & v2.CallFlags.Fragment);
-    err = r.handleFrame(frame.body.args, isLast);
+TChannelV2Handler.prototype._handleCallFrame = function _handleCallFrame(r, frame) {
+    var self = this;
+
+    var isLast = true;
+    var err = self._checkCallFrame(r, frame);
+
+    if (!err) {
+        // TODO: refactor r.handleFrame to just take the whole frame? or should
+        // it be (checksum, args)
+        isLast = !(frame.body.flags & v2.CallFlags.Fragment);
+        r.checksum = frame.body.csum;
+        err = r.handleFrame(frame.body.args, isLast);
+    }
+
     if (err) {
+        // TODO wrap context
         self.errorEvent.emit(self, err);
         return false;
     }
