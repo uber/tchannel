@@ -496,11 +496,16 @@ TChannelV2Handler.prototype.handleError = function handleError(errFrame, callbac
 };
 
 TChannelV2Handler.prototype._checkCallFrame = function _checkCallFrame(r, frame) {
-    // TODO: also an error if state === States.Error
+    // TODO: this obsoletes similar checks in StreamingIn{Request,Response}#handleFrame
     if (r.state === States.Done) {
-        return errors.UnexpectedCallFrame({
-            frameType: frame.body.type,
-            state: 'done'
+        return errors.UnexpectedCallFrameAfterDone({
+            frameId: frame.id,
+            frameType: frame.body.type
+        });
+    } else if (r.state === States.Error) {
+        return errors.UnexpectedCallFrameAfterError({
+            frameId: frame.id,
+            frameType: frame.body.type
         });
     }
 

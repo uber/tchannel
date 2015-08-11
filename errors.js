@@ -563,6 +563,13 @@ module.exports.UnexpectedCallFrameAfterDone = TypedError({
     frameType: null
 });
 
+module.exports.UnexpectedCallFrameAfterError = TypedError({
+    type: 'tchannel.call.frame-unexpected.after-error',
+    message: 'got call frame (type {frameType}) in error state',
+    frameId: null,
+    frameType: null
+});
+
 module.exports.UnimplementedMethod = TypedError({
     message: 'Unimplemented {className}#{methodName}',
     type: 'tchannel.unimplemented-method',
@@ -626,6 +633,7 @@ module.exports.classify = function classify(err) {
 
         // TODO: classify as BadRequest/UnexpectedError for req/res?
         case 'tchannel.call.frame-unexpected.after-done':
+        case 'tchannel.call.frame-unexpected.after-error':
 
         case 'tchannel.handler.incoming-req-as-header-required':
         case 'tchannel.handler.incoming-req-cn-header-required':
