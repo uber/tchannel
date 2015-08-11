@@ -386,7 +386,15 @@ TChannelV2Handler.prototype.handleCallRequestCont = function handleCallRequestCo
     var id = reqFrame.id;
     var req = self.streamingReq[id];
     if (!req) {
-        return self.errorEvent.emit(self, new Error('call request cont for unknown request')); // TODO typed error
+        // TODO: maybe we should send an error frame directed at the missing
+        // request id?  Currently the handler -> connection boundary only
+        // supports "close them all" error handling.  If instead we added an
+        // option for errors classified as 'BadRequest' to resolve through
+        // something like `var refId = errors.badRequestRefId(err); if (refId
+        // !== undefined) ...` then we could support it.
+        return self.errorEvent.emit(self, errors.OrphanCallRequestCont({
+            frameId: id
+        }));
     }
 
     self._handleCallFrame(req, reqFrame);
@@ -419,7 +427,10 @@ TChannelV2Handler.prototype.handleCallResponseCont = function handleCallResponse
     var id = resFrame.id;
     var res = self.streamingRes[id];
     if (!res) {
-        return self.errorEvent.emit(self, new Error('call response cont for unknown response')); // TODO typed error
+        // TODO: see note in #handleCallRequestCont
+        return self.errorEvent.emit(self, errors.OrphanCallResponseCont({
+            frameId: id
+        }));
     }
 
     var req = self.connection.ops.getOutReq(res.id);

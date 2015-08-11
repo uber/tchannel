@@ -324,6 +324,18 @@ module.exports.NullKeyError = TypedError({
     endOffset: null
 });
 
+module.exports.OrphanCallRequestCont = TypedError({
+    type: 'tchannel.call-request.orphan-cont',
+    message: 'orphaned call request cont',
+    frameId: null
+});
+
+module.exports.OrphanCallResponseCont = TypedError({
+    type: 'tchannel.call-response.orphan-cont',
+    message: 'orphaned call response cont',
+    frameId: null
+});
+
 module.exports.ParentRequired = TypedError({
     type: 'tchannel.tracer.parent-required',
     message: 'parent not specified for outgoing call req.\n' +
@@ -595,6 +607,16 @@ module.exports.classify = function classify(err) {
         case 'tchannel.arg-chunk.out-of-order':
         case 'tchannel.argstream.finished':
         case 'tchannel.argstream.unimplemented':
+
+        // TODO: really we'd rather classify as BadRequest. see note in
+        // TChannelV2Handler#handleCallRequestCont wrt frame id association
+        // support
+        case 'tchannel.call-request.orphan-cont':
+
+        // TODO: can BadRequest be used for a response error? Maybe instead we
+        // could use UnexpectedError rather than terminate the connection?
+        case 'tchannel.call-response.orphan-cont':
+
         case 'tchannel.handler.incoming-req-as-header-required':
         case 'tchannel.handler.incoming-req-cn-header-required':
         case 'tchannel.init.call-request-before-init-request':
