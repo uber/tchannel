@@ -268,7 +268,9 @@ TChannelRequest.prototype.onSubreqResponse = function onSubreqResponse(res) {
 TChannelRequest.prototype.deferResend = function deferResend() {
     var self = this;
     if (--self.resendSanity <= 0) {
-        self.emitError(new Error('TChannelRequest out of resend sanity'));
+        self.emitError(errors.RequestRetryLimitExceeded({
+            limit: self.limit
+        }));
     } else {
         process.nextTick(doResend);
     }
