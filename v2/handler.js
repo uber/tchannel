@@ -194,9 +194,15 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
     var err = self.checkCallReqFrame(reqFrame);
     if (err) {
         req.res = self.buildOutResponse(req);
-        self.sendErrorFrame(
-            req.res, 'ProtocolError', err.message
-        );
+        var codeName = errors.classify(err) || 'ProtocolError';
+        // TODO: would UnexpectedError be a better default?
+        // - on the one hand, if the error isn't classified, we may be safer
+        //   "failing closed" and terminating the connection
+        // - on the other hand, that may be too heavy handed for a forwarding
+        //   entity, since it may cause undue connection thrashing in the
+        //   presence of bad actors
+        // all the more reason to kill every "TODO typed error"
+        self.sendErrorFrame(req.res, codeName, err.message);
         return;
     }
 
