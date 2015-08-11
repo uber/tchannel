@@ -183,14 +183,27 @@ TChannelV2Handler.prototype.handleInitResponse = function handleInitResponse(res
 
 TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFrame) {
     var self = this;
+
     if (self.remoteName === null) {
-        return self.errorEvent.emit(self, errors.CallReqBeforeInitReqError());
+        self.errorEvent.emit(self, errors.CallReqBeforeInitReqError());
+        return;
     }
 
     var req = self.buildInRequest(reqFrame);
 
-    if (self.incomingRequestInvalid(reqFrame, req)) {
-        return null;
+    var err = self.checkCallReqFrame(reqFrame);
+    if (err) {
+        req.res = self.buildOutResponse(req);
+        var codeName = errors.classify(err) || 'ProtocolError';
+        // TODO: would UnexpectedError be a better default?
+        // - on the one hand, if the error isn't classified, we may be safer
+        //   "failing closed" and terminating the connection
+        // - on the other hand, that may be too heavy handed for a forwarding
+        //   entity, since it may cause undue connection thrashing in the
+        //   presence of bad actors
+        // all the more reason to kill every "TODO typed error"
+        self.sendErrorFrame(req.res, codeName, err.message);
+        return;
     }
 
     var handled = self._handleCallFrame(req, reqFrame);
@@ -235,24 +248,41 @@ function emitBytesRecvd(frame) {
     }
 };
 
-TChannelV2Handler.prototype.incomingRequestInvalid =
-function incomingRequestInvalid(reqFrame, req) {
+TChannelV2Handler.prototype.checkCallResFrame = function checkCallResFrame(resFrame) {
     var self = this;
 
-    var err;
+    if (!resFrame.body ||
+        !resFrame.body.headers ||
+        !resFrame.body.headers.as
+    ) {
+        if (self.requireAs) {
+            return errors.AsHeaderRequired({
+                frame: 'response'
+            });
+        } else {
+            self.logger.warn('Expected "as" for incoming response', {
+                code: resFrame.body.code,
+                remoteName: self.remoteName,
+                endpoint: String(resFrame.body.args[0]),
+                socketRemoteAddr: self.connection.socketRemoteAddr
+            });
+        }
+    }
+
+    return self.checkCallFrameArgs(resFrame);
+};
+
+TChannelV2Handler.prototype.checkCallReqFrame = function checkCallReqFrame(reqFrame) {
+    var self = this;
+
     if (!reqFrame.body ||
         !reqFrame.body.headers ||
         !reqFrame.body.headers.as
     ) {
         if (self.requireAs) {
-            err = errors.AsHeaderRequired({
+            return errors.AsHeaderRequired({
                 frame: 'request'
             });
-            req.res = self.buildOutResponse(req);
-            self.sendErrorFrame(
-                req.res, 'ProtocolError', err.message
-            );
-            return true;
         } else {
             self.logger.warn('Expected "as" header for incoming req', {
                 arg1: String(reqFrame.body.args[0]),
@@ -269,10 +299,7 @@ function incomingRequestInvalid(reqFrame, req) {
         !reqFrame.body.headers.cn
     ) {
         if (self.requireCn) {
-            err = errors.CnHeaderRequired();
-            req.res = self.buildOutResponse(req);
-            self.sendErrorFrame(req.res, 'ProtocolError', err.message);
-            return true;
+            return errors.CnHeaderRequired();
         } else {
             self.logger.warn('Expected "cn" header for incoming req', {
                 arg1: String(reqFrame.body.args[0]),
@@ -283,27 +310,37 @@ function incomingRequestInvalid(reqFrame, req) {
         }
     }
 
-    if (reqFrame.body.args && reqFrame.body.args[0] &&
-        reqFrame.body.args[0].length > v2.MaxArg1Size) {
-        err = errors.Arg1OverLengthLimit({
-            length: reqFrame.body.args[0].length,
+    return self.checkCallFrameArgs(reqFrame);
+};
+
+TChannelV2Handler.prototype.checkCallFrameArgs = function checkCallFrameArgs(frame) {
+    if (frame.body.args &&
+        frame.body.args[0] &&
+        frame.body.args[0].length > v2.MaxArg1Size
+    ) {
+        return errors.Arg1OverLengthLimit({
+            length: frame.body.args[0].length,
             limit: v2.MaxArg1Size
         });
-        req.res = self.buildOutResponse(req);
-        self.sendErrorFrame(req.res, 'BadRequest', err.message);
-        return true;
     }
+
+    return null;
 };
 
 TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(resFrame) {
     var self = this;
+
     if (self.remoteName === null) {
-        return self.errorEvent.emit(self, errors.CallResBeforeInitResError());
+        self.errorEvent.emit(self, errors.CallResBeforeInitResError());
+        return;
     }
+
     var res = self.buildInResponse(resFrame);
 
-    if (!self.checkValidCallResponse(resFrame)) {
-        return null;
+    var err = self.checkCallResFrame(resFrame);
+    if (err) {
+        self.errorEvent.emit(self, err);
+        return;
     }
 
     var req = self.connection.ops.getOutReq(res.id);
@@ -334,43 +371,6 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
     }
 };
 
-
-
-TChannelV2Handler.prototype.checkValidCallResponse =
-function checkValidCallResponse(resFrame) {
-    var self = this;
-
-    if (!resFrame.body ||
-        !resFrame.body.headers ||
-        !resFrame.body.headers.as
-    ) {
-        if (self.requireAs) {
-            var err = errors.AsHeaderRequired({
-                frame: 'response'
-            });
-            self.errorEvent.emit(self, err);
-            return false;
-        } else {
-            self.logger.warn('Expected "as" for incoming response', {
-                code: resFrame.body.code,
-                remoteName: self.remoteName,
-                endpoint: String(resFrame.body.args[0]),
-                socketRemoteAddr: self.connection.socketRemoteAddr
-            });
-        }
-    }
-
-    if (resFrame.body.args && resFrame.body.args[0] &&
-        resFrame.body.args[0].length > v2.MaxArg1Size) {
-        self.errorEvent.emit(self, errors.Arg1OverLengthLimit({
-            length: resFrame.body.args[0].length,
-            limit: v2.MaxArg1Size
-        }));
-        return false;
-    }
-
-    return true;
-};
 
 // TODO  we should implement clearing of self.streaming{Req,Res}
 TChannelV2Handler.prototype.handleCancel = function handleCancel(frame) {
@@ -484,29 +484,35 @@ TChannelV2Handler.prototype.handleError = function handleError(errFrame, callbac
     }
 };
 
-TChannelV2Handler.prototype._handleCallFrame = function _handleCallFrame(r, frame) {
-    var self = this;
+TChannelV2Handler.prototype._checkCallFrame = function _checkCallFrame(r, frame) {
     if (r.state === States.Done) {
-        self.errorEvent.emit(self, new Error('got cont in done state')); // TODO typed error
-        return false;
+        return new Error('got cont in done state'); // TODO typed error
     }
 
     var checksum = r.checksum;
     if (checksum.type !== frame.body.csum.type) {
-        self.errorEvent.emit(self, new Error('checksum type changed mid-stream')); // TODO typed error
-        return false;
+        return new Error('checksum type changed mid-stream'); // TODO typed error
     }
 
-    var err = frame.body.verifyChecksum(checksum.val);
-    if (err) {
-        self.errorEvent.emit(self, err); // TODO wrap context
-        return false;
-    }
-    r.checksum = frame.body.csum;
+    return frame.body.verifyChecksum(checksum.val);
+};
 
-    var isLast = !(frame.body.flags & v2.CallFlags.Fragment);
-    err = r.handleFrame(frame.body.args, isLast);
+TChannelV2Handler.prototype._handleCallFrame = function _handleCallFrame(r, frame) {
+    var self = this;
+
+    var isLast = true;
+    var err = self._checkCallFrame(r, frame);
+
+    if (!err) {
+        // TODO: refactor r.handleFrame to just take the whole frame? or should
+        // it be (checksum, args)
+        isLast = !(frame.body.flags & v2.CallFlags.Fragment);
+        r.checksum = frame.body.csum;
+        err = r.handleFrame(frame.body.args, isLast);
+    }
+
     if (err) {
+        // TODO wrap context
         self.errorEvent.emit(self, err);
         return false;
     }
