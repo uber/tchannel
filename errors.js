@@ -551,6 +551,11 @@ module.exports.UnimplementedMethod = TypedError({
     methodName: null
 });
 
+module.exports.UnknownConnectionReset = TypedError({
+    type: 'tchannel.connection.unknown-reset',
+    message: 'unknown connection reset'
+});
+
 // utilities
 
 module.exports.classify = function classify(err) {
@@ -628,6 +633,7 @@ module.exports.classify = function classify(err) {
         case 'tchannel-thrift-handler.stringify-error.body-failed':
         case 'tchannel-thrift-handler.stringify-error.head-failed':
         case 'tchannel.argstream.unknown-frame-handling-state':
+        case 'tchannel.connection.unknown-reset':
         case 'tchannel.http-handler.from-buffer-arg2.req-failed':
         case 'tchannel.http-handler.from-buffer-arg2.res-failed':
         case 'tchannel.hydrated-error.default-type':
