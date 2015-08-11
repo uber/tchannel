@@ -183,14 +183,16 @@ TChannelV2Handler.prototype.handleInitResponse = function handleInitResponse(res
 
 TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFrame) {
     var self = this;
+
     if (self.remoteName === null) {
-        return self.errorEvent.emit(self, errors.CallReqBeforeInitReqError());
+        self.errorEvent.emit(self, errors.CallReqBeforeInitReqError());
+        return;
     }
 
     var req = self.buildInRequest(reqFrame);
 
     if (self.incomingRequestInvalid(reqFrame, req)) {
-        return null;
+        return;
     }
 
     var handled = self._handleCallFrame(req, reqFrame);
