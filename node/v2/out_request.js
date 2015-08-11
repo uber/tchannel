@@ -56,11 +56,11 @@ function _sendCallRequest(args, isLast) {
         flags |= CallFlags.Fragment;
     }
 
-    if (args && args[0] && args[0].length > v2.CallRequest.MaxArg1Size) {
+    if (args && args[0] && args[0].length > v2.MaxArg1Size) {
         self.operations.popOutReq(self.id);
         self.errorEvent.emit(self, errors.Arg1OverLengthLimit({
-                length: '0x' + args[0].length.toString(16),
-                limit: '0x' + v2.CallRequest.MaxArg1Size.toString(16)
+            length: args[0].length,
+            limit: v2.MaxArg1Size
         }));
         return false;
     }
