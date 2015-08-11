@@ -372,6 +372,12 @@ module.exports.RequestFrameState = TypedError({
     state: null
 });
 
+module.exports.RequestRetryLimitExceeded = TypedError({
+    type: 'tchannel.request.retry-limit-exceeded',
+    message: 'exceeded retry limit',
+    limit: null
+});
+
 module.exports.RequestTimeoutError = TypedError({
     type: 'tchannel.request.timeout',
     message: 'request timed out after {elapsed}ms ' +
@@ -601,6 +607,7 @@ module.exports.classify = function classify(err) {
         case 'tchannel.max-pending-for-service':
         case 'tchannel.no-peer-available':
         case 'tchannel.no-service-handler':
+        case 'tchannel.request.retry-limit-exceeded':
             return 'Declined';
 
         case 'tchannel.connection-stale.timeout':
