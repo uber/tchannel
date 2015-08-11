@@ -100,6 +100,13 @@ module.exports.ChecksumError = TypedError({
     actualValue: null
 });
 
+module.exports.ChecksumTypeChanged = TypedError({
+    type: 'tchannel.call.checksum-type-changed',
+    message: 'checksum type changed mid-stream',
+    initialChecksumType: null,
+    newChecksumType: null
+});
+
 module.exports.CnHeaderRequired = TypedError({
     type: 'tchannel.handler.incoming-req-cn-header-required',
     message: 'Expected incoming call request to have "cn" header set.'
@@ -608,6 +615,7 @@ module.exports.classify = function classify(err) {
         case 'tchannel-thrift-handler.parse-error.head-failed':
         case 'tchannel.arg1-over-length-limit':
         case 'tchannel.argstream.exceeded-frame-parts':
+        case 'tchannel.call.checksum-type-changed':
         case 'tchannel.checksum':
         case 'tchannel.duplicate-header-key':
         case 'tchannel.http-handler.to-buffer-arg2.req-failed':
