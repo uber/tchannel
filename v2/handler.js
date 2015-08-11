@@ -511,7 +511,10 @@ TChannelV2Handler.prototype._checkCallFrame = function _checkCallFrame(r, frame)
 
     var checksum = r.checksum;
     if (checksum.type !== frame.body.csum.type) {
-        return new Error('checksum type changed mid-stream'); // TODO typed error
+        return errors.ChecksumTypeChanged({
+            initialChecksumType: checksum.type,
+            newChecksumType: frame.body.csum.type
+        });
     }
 
     return frame.body.verifyChecksum(checksum.val);
