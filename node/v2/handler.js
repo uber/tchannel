@@ -285,9 +285,12 @@ function incomingRequestInvalid(reqFrame, req) {
 
     if (reqFrame.body.args && reqFrame.body.args[0] &&
         reqFrame.body.args[0].length > v2.MaxArg1Size) {
+        err = errors.Arg1OverLengthLimit({
+            length: reqFrame.body.args[0].length,
+            limit: v2.MaxArg1Size
+        });
         req.res = self.buildOutResponse(req);
-        self.sendErrorFrame(req.res, 'BadRequest',
-            'arg1 exceeds the max size of ' + v2.MaxArg1Size);
+        self.sendErrorFrame(req.res, 'BadRequest', err.message);
         return true;
     }
 };
