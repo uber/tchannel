@@ -70,12 +70,6 @@ test('rps counter works', function (assert) {
     channel.flushStats();
     assert.deepEqual(statsd._buffer._elements, [{
         type: 'g',
-        name: 'tchannel.rate-limiting.total-rps',
-        value: null,
-        delta: null,
-        time: null
-    }, {
-        type: 'g',
         name: 'tchannel.rate-limiting.total-rps-limit',
         value: 1000,
         delta: null,
@@ -123,9 +117,15 @@ test('rps counter works in 1.5 seconds', function (assert) {
             // console.log(statsd._buffer._elements);
             assert.deepEqual(statsd._buffer._elements, [{
                 type: 'g',
+                name: 'tchannel.rate-limiting.total-rps-limit',
+                value: 1000,
+                delta: null,
+                time: null
+            }, {
+                type: 'c',
                 name: 'tchannel.rate-limiting.total-rps',
                 value: null,
-                delta: null,
+                delta: 5,
                 time: null
             }, {
                 type: 'g',
@@ -134,22 +134,10 @@ test('rps counter works in 1.5 seconds', function (assert) {
                 delta: null,
                 time: null
             }, {
-                type: 'g',
-                name: 'tchannel.rate-limiting.total-rps',
-                value: 5,
-                delta: null,
-                time: null
-            }, {
-                type: 'g',
-                name: 'tchannel.rate-limiting.total-rps-limit',
-                value: 1000,
-                delta: null,
-                time: null
-            }, {
-                type: 'g',
+                type: 'c',
                 name: 'tchannel.rate-limiting.service-rps.steve',
-                value: 3,
-                delta: null,
+                value: null,
+                delta: 3,
                 time: null
             }, {
                 type: 'g',
@@ -158,10 +146,10 @@ test('rps counter works in 1.5 seconds', function (assert) {
                 delta: null,
                 time: null
             }, {
-                type: 'g',
+                type: 'c',
                 name: 'tchannel.rate-limiting.service-rps.bob',
-                value: 2,
-                delta: null,
+                value: null,
+                delta: 2,
                 time: null
             }, {
                 type: 'g',
@@ -170,10 +158,10 @@ test('rps counter works in 1.5 seconds', function (assert) {
                 delta: null,
                 time: null
             }, {
-                type: 'g',
+                type: 'c',
                 name: 'tchannel.rate-limiting.total-rps',
-                value: 2,
-                delta: null,
+                value: null,
+                delta: 2,
                 time: null
             }, {
                 type: 'g',
@@ -182,10 +170,10 @@ test('rps counter works in 1.5 seconds', function (assert) {
                 delta: null,
                 time: null
             }, {
-                type: 'g',
+                type: 'c',
                 name: 'tchannel.rate-limiting.service-rps.steve',
-                value: 1,
-                delta: null,
+                value: null,
+                delta: 1,
                 time: null
             }, {
                 type: 'g',
@@ -194,10 +182,10 @@ test('rps counter works in 1.5 seconds', function (assert) {
                 delta: null,
                 time: null
             }, {
-                type: 'g',
+                type: 'c',
                 name: 'tchannel.rate-limiting.service-rps.bob',
-                value: 1,
-                delta: null,
+                value: null,
+                delta: 1,
                 time: null
             }, {
                 type: 'g',
