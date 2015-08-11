@@ -508,6 +508,7 @@ TChannelV2Handler.prototype._handleCallFrame = function _handleCallFrame(r, fram
     if (err) {
         // TODO wrap context
         r.errorEvent.emit(r, err);
+        delete streamingColl[r.id];
         return false;
     }
 
