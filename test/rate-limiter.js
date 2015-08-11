@@ -69,12 +69,6 @@ test('rps counter works', function (assert) {
 
     channel.flushStats();
     assert.deepEqual(statsd._buffer._elements, [{
-        type: 'c',
-        name: 'tchannel.rate-limiting.total-rps',
-        value: null,
-        delta: null,
-        time: null
-    }, {
         type: 'g',
         name: 'tchannel.rate-limiting.total-rps-limit',
         value: 1000,
@@ -122,12 +116,6 @@ test('rps counter works in 1.5 seconds', function (assert) {
             channel.flushStats();
             // console.log(statsd._buffer._elements);
             assert.deepEqual(statsd._buffer._elements, [{
-                type: 'c',
-                name: 'tchannel.rate-limiting.total-rps',
-                value: null,
-                delta: null,
-                time: null
-            }, {
                 type: 'g',
                 name: 'tchannel.rate-limiting.total-rps-limit',
                 value: 1000,
