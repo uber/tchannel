@@ -20,6 +20,7 @@
 
 'use strict';
 
+var errors = require('./errors.js');
 var OutRequest = require('./self_out_request').OutRequest;
 var OutResponse = require('./self_out_response').OutResponse;
 var StreamingOutRequest = require('./self_out_request').StreamingOutRequest;
@@ -62,6 +63,31 @@ TChannelSelfConnection.prototype.buildOutRequest = function buildOutRequest(opti
 
     function handleRequest() {
         self.handleCallRequest(outreq.inreq);
+    }
+};
+
+TChannelSelfConnection.prototype.handleCallRequest = function handleCallRequest(req) {
+    var self = this;
+
+    req.errorEvent.on(onReqError);
+    TChannelConnectionBase.prototype.handleCallRequest.call(self, req);
+
+    function onReqError(err) {
+        self.onReqError(req, err);
+    }
+};
+
+TChannelSelfConnection.prototype.onReqError = function onReqError(req, err) {
+    var self = this;
+
+    if (!req.res) self.buildResponse(req, {});
+
+    var codeName = errors.classify(err);
+    if (codeName) {
+        req.res.sendError(codeName, err.message);
+    } else {
+        var errName = err.name || err.constructor.name;
+        req.res.sendError('UnexpectedError', errName + ': ' + err.message);
     }
 };
 
