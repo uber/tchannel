@@ -112,7 +112,7 @@ function refresh() {
     if (self.cycle === self.numOfBuckets) {
         self.channel.emitFastStat(self.channel.buildStat(
             'tchannel.rate-limiting.total-rps',
-            'gauge',
+            'counter',
             self.totalRequestCounter.rps,
             new stat.RateLimiterEmptyTags()
         ));
@@ -134,7 +134,7 @@ function refresh() {
             var statsTag = new stat.RateLimiterServiceTags(serviceNames[i]);
             self.channel.emitFastStat(self.channel.buildStat(
                 'tchannel.rate-limiting.service-rps',
-                'gauge',
+                'counter',
                 counter.rps,
                 statsTag
             ));
