@@ -120,8 +120,9 @@ def run(scenario):
             gained = current_workers.difference(previous_workers)
             lost = previous_workers.difference(current_workers)
             if lost or gained:
-                print '%d: +[%s] -[%s]' % (
+                print '%d: %d +[%s] -[%s]' % (
                     relay,
+                    len(current_workers),
                     ','.join('%d' % worker for worker in gained),
                     ','.join('%d' % worker for worker in lost)
                 )
@@ -133,5 +134,13 @@ def scaling_up_workers():
     for w in range(0, 100):
         yield r, w
 
-# run(scaling_up_workers())
+def partition():
+    yield (100, 100)
+    yield (50, 100)
+
+print 'initialization'
+run(scaling_up_workers())
+print 'partition'
+run(partition())
+print 'verify gammut of simulations'
 gammut()
