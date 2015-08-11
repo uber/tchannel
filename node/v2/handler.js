@@ -872,6 +872,7 @@ TChannelV2Handler.prototype.buildOutResponse = function buildOutResponse(req, op
 
 TChannelV2Handler.prototype.buildInRequest = function buildInRequest(reqFrame) {
     var self = this;
+
     var opts = new InRequestOptions(
         self.connection.channel,
         reqFrame.body.ttl || SERVER_TIMEOUT_DEFAULT,
@@ -885,10 +886,34 @@ TChannelV2Handler.prototype.buildInRequest = function buildInRequest(reqFrame) {
         self.tracer
     );
 
+    var req;
     if (reqFrame.body.flags & v2.CallFlags.Fragment) {
-        return new StreamingInRequest(reqFrame.id, opts);
+        req = new StreamingInRequest(reqFrame.id, opts);
     } else {
-        return new InRequest(reqFrame.id, opts);
+        req = new InRequest(reqFrame.id, opts);
+    }
+
+    req.errorEvent.on(onReqError);
+
+    function onReqError(err) {
+        self.onReqError(err, req);
+    }
+
+    return req;
+};
+
+TChannelV2Handler.prototype.onReqError = function onReqError(err, req) {
+    var self = this;
+
+    var codeName = errors.classify(err);
+    if (codeName) {
+        // TODO: move req to error state?
+        if (!req.res) {
+            req.res = self.buildOutResponse(req);
+        }
+        req.res.sendError(codeName, err.message);
+    } else {
+        self.errorEvent.emit(self, err);
     }
 };
 
