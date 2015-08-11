@@ -242,6 +242,30 @@ function emitBytesRecvd(frame) {
     }
 };
 
+TChannelV2Handler.prototype.checkCallResFrame = function checkCallResFrame(resFrame) {
+    var self = this;
+
+    if (!resFrame.body ||
+        !resFrame.body.headers ||
+        !resFrame.body.headers.as
+    ) {
+        if (self.requireAs) {
+            return errors.AsHeaderRequired({
+                frame: 'response'
+            });
+        } else {
+            self.logger.warn('Expected "as" for incoming response', {
+                code: resFrame.body.code,
+                remoteName: self.remoteName,
+                endpoint: String(resFrame.body.args[0]),
+                socketRemoteAddr: self.connection.socketRemoteAddr
+            });
+        }
+    }
+
+    return self.checkCallFrameArgs(resFrame);
+};
+
 TChannelV2Handler.prototype.checkCallReqFrame = function checkCallReqFrame(reqFrame) {
     var self = this;
 
@@ -307,7 +331,9 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
 
     var res = self.buildInResponse(resFrame);
 
-    if (!self.checkValidCallResponse(resFrame)) {
+    var err = self.checkCallResFrame(resFrame);
+    if (err) {
+        self.errorEvent.emit(self, err);
         return;
     }
 
@@ -339,43 +365,6 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
     }
 };
 
-
-
-TChannelV2Handler.prototype.checkValidCallResponse =
-function checkValidCallResponse(resFrame) {
-    var self = this;
-
-    if (!resFrame.body ||
-        !resFrame.body.headers ||
-        !resFrame.body.headers.as
-    ) {
-        if (self.requireAs) {
-            var err = errors.AsHeaderRequired({
-                frame: 'response'
-            });
-            self.errorEvent.emit(self, err);
-            return false;
-        } else {
-            self.logger.warn('Expected "as" for incoming response', {
-                code: resFrame.body.code,
-                remoteName: self.remoteName,
-                endpoint: String(resFrame.body.args[0]),
-                socketRemoteAddr: self.connection.socketRemoteAddr
-            });
-        }
-    }
-
-    if (resFrame.body.args && resFrame.body.args[0] &&
-        resFrame.body.args[0].length > v2.MaxArg1Size) {
-        self.errorEvent.emit(self, errors.Arg1OverLengthLimit({
-            length: resFrame.body.args[0].length,
-            limit: v2.MaxArg1Size
-        }));
-        return false;
-    }
-
-    return true;
-};
 
 // TODO  we should implement clearing of self.streaming{Req,Res}
 TChannelV2Handler.prototype.handleCancel = function handleCancel(frame) {
