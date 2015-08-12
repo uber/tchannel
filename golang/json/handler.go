@@ -117,6 +117,33 @@ func Register(ch *tchannel.Channel, funcs Handlers, onError func(context.Context
 	return nil
 }
 
+func RegisterSub(ch *tchannel.SubChannel, funcs Handlers, onError func(context.Context, error)) error {
+	handlers := make(map[string]*handler)
+
+	handler := tchannel.HandlerFunc(func(ctx context.Context, call *tchannel.InboundCall) {
+		h, ok := handlers[string(call.Operation())]
+		if !ok {
+			onError(ctx, fmt.Errorf("call for unregistered method: %s", call.Operation()))
+			return
+		}
+
+		if err := h.Handle(ctx, call); err != nil {
+			onError(ctx, err)
+		}
+	})
+
+	for m, f := range funcs {
+		h, err := toHandler(f)
+		if err != nil {
+			return fmt.Errorf("%v cannot be used as a handler: %v", m, err)
+		}
+		handlers[m] = h
+		ch.Register(handler, m)
+	}
+
+	return nil
+}
+
 // Handle deserializes the JSON arguments and calls the underlying handler.
 func (h *handler) Handle(tctx context.Context, call *tchannel.InboundCall) error {
 	var headers interface{}
