@@ -58,6 +58,7 @@ function OperationTombstone(operations, id, time, timeout) {
     self.time = time;
     self.timeout = timeout;
     self.timeHeapHandle = null;
+    self.destroyed = false;
 }
 
 OperationTombstone.prototype.extendLogInfo = function extendLogInfo(info) {
@@ -85,10 +86,18 @@ OperationTombstone.prototype.extendLogInfo = function extendLogInfo(info) {
     return info;
 };
 
+OperationTombstone.prototype.destroy = function destroy(now) {
+    var self = this;
+
+    self.destroyed = true;
+
+    self.onTimeout(now);
+};
+
 OperationTombstone.prototype.onTimeout = function onTimeout(now) {
     var self = this;
 
-    if (now < self.timeout + self.time) {
+    if (!self.destroyed && now < self.timeout + self.time) {
         self.logger.error('tombstone timed out too early', self.extendLogInfo({
             now: now,
             expireTime: self.timeout + self.time,
@@ -278,7 +287,7 @@ Operations.prototype.clear = function clear() {
         if (tombstone.timeHeapHandle) {
             tombstone.timeHeapHandle.cancel();
         }
-        tombstone.onTimeout(now);
+        tombstone.destroy(now);
     }
 };
 
