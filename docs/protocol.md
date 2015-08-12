@@ -338,6 +338,7 @@ If the ttl expires an error response should be generated.
 #### tracing:25
 
 Tracing payload, see tracing section.
+
 #### service~1
 
 UTF-8 string identifying the destination service to which this request should be
@@ -507,6 +508,9 @@ unable to invoke the requested RPC for some reason. Application errors do not
 go here. Application errors are sent with "call res" messages and application
 specific exception data in the args.
 
+The `id` in the frame header should be the message id of the original request
+that triggered this error, or `0xFFFFFFFF` if no message id is available.
+
 #### code:1
 
 | code   | name                 | description
@@ -522,10 +526,10 @@ specific exception data in the args.
 | `0x08` | unhealthy            | A relay on the network declined to forward the request to an unhealthy node, do not retry.
 | `0xFF` | fatal protocol error | Connection will close after this frame. message ID of this frame should be `0xFFFFFFFF`.
 
-#### id:4
+#### tracing: 25
 
-Message id of the original request that triggered this error, or `0xFFFFFFFF` if
-no message id is available.
+Tracing payload, see tracing section. If tracing information is not available
+(e.g. on a bad init message), then an empty span (all 0's) should be used.
 
 #### message~2
 
