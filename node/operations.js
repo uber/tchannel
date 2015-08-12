@@ -345,6 +345,9 @@ Operations.prototype._sweepOps = function _sweepOps(ops, direction) {
                 self.popOutReq(id);
             }
         } else if (op.isTombstone) {
+            var heap = self.connection.channel.timeHeap;
+            var expireTime = op.time + op.timeout;
+
             if (!op.operations) {
                 self.logger.warn('zombie tombstone', op.extendLogInfo({
                     direction: direction,
@@ -354,10 +357,11 @@ Operations.prototype._sweepOps = function _sweepOps(ops, direction) {
                 op.operations = null;
                 op.timeHeapHandle.cancel();
                 op.timeHeapHandle = null;
-            } else if (op.time + op.timeout < now) {
+            } else if (expireTime < now && heap.lastRun > expireTime) {
                 self.logger.warn('stale tombstone', op.extendLogInfo({
                     direction: direction,
-                    opKey: id
+                    opKey: id,
+                    heapLastRun: heap.lastRun
                 }));
                 delete ops[id];
                 op.operations = null;
