@@ -361,6 +361,9 @@ Operations.prototype._sweepOps = function _sweepOps(ops, direction) {
                 self.logger.warn('stale tombstone', op.extendLogInfo({
                     direction: direction,
                     opKey: id,
+                    now: now,
+                    staleDelta: op.time + op.timeout - now,
+                    expireTime: expireTime,
                     heapLastRun: heap.lastRun
                 }));
                 delete ops[id];
