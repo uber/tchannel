@@ -88,7 +88,9 @@ func (mex *messageExchange) recvPeerFrameOfType(msgType messageType) (*Frame, er
 		return frame, nil
 
 	case messageTypeError:
-		var errMsg errorMessage
+		errMsg := errorMessage{
+			id: frame.Header.ID,
+		}
 		var rbuf typed.ReadBuffer
 		rbuf.Wrap(frame.SizedPayload())
 		if err := errMsg.read(&rbuf); err != nil {

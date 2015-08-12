@@ -40,14 +40,15 @@ var (
 // exchange to receive further fragments for that call, and dispatching it in
 // another goroutine
 func (c *Connection) handleCallReq(frame *Frame) bool {
+	// TODO(prashant): Parse out the span from
 	switch state := c.readState(); state {
 	case connectionActive:
 		break
 	case connectionStartClose, connectionInboundClosed, connectionClosed:
-		c.SendSystemError(frame.Header.ID, ErrChannelClosed)
+		c.SendSystemError(frame.Header.ID, nil, ErrChannelClosed)
 		return true
 	case connectionWaitingToRecvInitReq, connectionWaitingToSendInitReq, connectionWaitingToRecvInitRes:
-		c.SendSystemError(frame.Header.ID, NewSystemError(ErrCodeDeclined, "connection not ready"))
+		c.SendSystemError(frame.Header.ID, nil, NewSystemError(ErrCodeDeclined, "connection not ready"))
 		return true
 	default:
 		panic(fmt.Errorf("unknown connection state for call req: %v", state))
@@ -265,27 +266,7 @@ func (response *InboundCallResponse) SendSystemError(err error) error {
 	response.cancel()
 	response.state = reqResWriterComplete
 
-	// Send the error frame
-	frame := response.conn.framePool.Get()
-	if err := frame.write(&errorMessage{
-		id:      response.mex.msgID,
-		errCode: GetSystemErrorCode(err),
-		message: err.Error()}); err != nil {
-		// Nothing we can do here
-		response.conn.log.Warnf("Could not create outbound frame to %s for %d: %v",
-			response.conn.remotePeerInfo, response.mex.msgID, err)
-		return nil
-	}
-
-	select {
-	case response.conn.sendCh <- frame: // Good to go
-	default: // Nothing we can do here anyway
-		response.conn.log.Warnf("Could not send error frame to %s for %d : %v",
-			response.conn.remotePeerInfo, response.mex.msgID, err)
-	}
-
-	response.errorSending()
-	return nil
+	return response.conn.SendSystemError(response.mex.msgID, CurrentSpan(response.mex.ctx), err)
 }
 
 // SetApplicationError marks the response as being an application error.  This method can
