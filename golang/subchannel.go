@@ -1,20 +1,34 @@
 package tchannel
 
-import "golang.org/x/net/context"
+import (
+	"sync"
+
+	"golang.org/x/net/context"
+)
 
 // SubChannel allows calling a specific service on a channel.
 // TODO(prashant): Allow creating a subchannel with default call options.
 // TODO(prashant): Allow registering handlers on a subchannel.
 type SubChannel struct {
 	serviceName        string
+	topChannel         *Channel
 	defaultCallOptions *CallOptions
 	peers              *PeerList
+	handlers           *handlerMap
 }
 
-func newSubChannel(serviceName string, peers *PeerList) *SubChannel {
+// Map of subchannel and the corresponding service
+type subChannelMap struct {
+	mut         sync.RWMutex
+	subchannels map[string]*SubChannel
+}
+
+func newSubChannel(serviceName string, ch *Channel) *SubChannel {
 	return &SubChannel{
 		serviceName: serviceName,
-		peers:       peers,
+		peers:       ch.peers,
+		topChannel:  ch,
+		handlers:    &handlerMap{},
 	}
 }
 
@@ -29,10 +43,47 @@ func (c *SubChannel) BeginCall(ctx context.Context, operationName string, callOp
 	if callOptions == nil {
 		callOptions = defaultCallOptions
 	}
-	return c.peers.Get().BeginCall(ctx, c.serviceName, operationName, callOptions)
+
+	return c.peers.Get().BeginCall(ctx, c.ServiceName(), operationName, callOptions)
 }
 
 // Peers returns the PeerList for this subchannel.
 func (c *SubChannel) Peers() *PeerList {
 	return c.peers
+}
+
+// Register registers a handler on the subchannel for a service+operation pair
+func (c *SubChannel) Register(h Handler, operationName string) {
+	c.handlers.register(h, c.ServiceName(), operationName)
+}
+
+// Find if a handler for the given service+operation pair exists
+func (subChMap *subChannelMap) find(serviceName string, operation []byte) Handler {
+	subChMap.mut.RLock()
+
+	if sc, ok := subChMap.subchannels[serviceName]; ok {
+		subChMap.mut.RUnlock()
+		return sc.handlers.find(serviceName, operation)
+	}
+
+	subChMap.mut.RUnlock()
+	return nil
+}
+
+// Register a new subchannel for the given serviceName
+func (subChMap *subChannelMap) registerNewSubChannel(serviceName string, ch *Channel) *SubChannel {
+	subChMap.mut.Lock()
+	defer subChMap.mut.Unlock()
+
+	if subChMap.subchannels == nil {
+		subChMap.subchannels = make(map[string]*SubChannel)
+	}
+
+	if sc, ok := subChMap.subchannels[serviceName]; ok {
+		return sc
+	}
+
+	sc := newSubChannel(serviceName, ch)
+	subChMap.subchannels[serviceName] = sc
+	return sc
 }

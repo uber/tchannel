@@ -46,6 +46,12 @@ func pingHandler(ctx json.Context, ping *Ping) (*Pong, error) {
 	}, nil
 }
 
+func pingOtherHandler(ctx json.Context, ping *Ping) (*Pong, error) {
+	return &Pong{
+		Message: fmt.Sprintf("pingOther %v", ping),
+	}, nil
+}
+
 func onError(ctx context.Context, err error) {
 	log.Fatalf("onError: %v", err)
 }
@@ -85,8 +91,24 @@ func main() {
 	defer cancel()
 
 	peer := client.Peers().Add(ch.PeerInfo().HostPort)
+
 	var pong Pong
 	if err := json.CallPeer(ctx, peer, "PingService", "ping", &Ping{"Hello World"}, &pong); err != nil {
+		log.Fatalf("json.Call failed: %v", err)
+	}
+
+	log.Infof("Received pong: %s", pong.Message)
+
+	// Create a new subchannel for the top-level channel
+	subCh := ch.GetSubChannel("PingServiceOther")
+
+	// Register a handler on the subchannel
+	json.RegisterSub(subCh, json.Handlers{
+		"pingOther": pingOtherHandler,
+	}, onError)
+
+	// Try to send a message to the Service:Operation pair for the subchannel
+	if err := json.CallPeer(ctx, peer, "PingServiceOther", "pingOther", &Ping{"Hello Other World"}, &pong); err != nil {
 		log.Fatalf("json.Call failed: %v", err)
 	}
 
