@@ -202,7 +202,7 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
         //   entity, since it may cause undue connection thrashing in the
         //   presence of bad actors
         // all the more reason to kill every "TODO typed error"
-        self.sendErrorFrame(req.res, codeName, err.message);
+        req.res.sendError(codeName, err.message);
         return;
     }
 
