@@ -338,6 +338,7 @@ If the ttl expires an error response should be generated.
 #### tracing:25
 
 Tracing payload, see tracing section.
+
 #### service~1
 
 UTF-8 string identifying the destination service to which this request should be
@@ -526,6 +527,11 @@ specific exception data in the args.
 
 Message id of the original request that triggered this error, or `0xFFFFFFFF` if
 no message id is available.
+
+#### tracing: 25
+
+Tracing payload, see tracing section. If tracing information is not available
+(e.g. on a bad init message), then an empty span (all 0's) should be used.
 
 #### message~2
 
