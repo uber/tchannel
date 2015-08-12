@@ -36,27 +36,27 @@ func TestUnexpectedInitReq(t *testing.T) {
 				InitParamProcessName: "test",
 			}}},
 			expectedError: errorMessage{
-				id:      invalidMessageID,
+				id:      1,
 				errCode: ErrCodeProtocol,
 			},
 		},
 		{
 			name: "missing InitParamHostPort",
-			initMsg: &initReq{initMessage{id: 1, Version: CurrentProtocolVersion, initParams: initParams{
+			initMsg: &initReq{initMessage{id: 2, Version: CurrentProtocolVersion, initParams: initParams{
 				InitParamProcessName: "test",
 			}}},
 			expectedError: errorMessage{
-				id:      invalidMessageID,
+				id:      2,
 				errCode: ErrCodeProtocol,
 			},
 		},
 		{
 			name: "missing InitParamProcessName",
-			initMsg: &initReq{initMessage{id: 1, Version: CurrentProtocolVersion, initParams: initParams{
+			initMsg: &initReq{initMessage{id: 3, Version: CurrentProtocolVersion, initParams: initParams{
 				InitParamHostPort: "0.0.0.0:0",
 			}}},
 			expectedError: errorMessage{
-				id:      invalidMessageID,
+				id:      3,
 				errCode: ErrCodeProtocol,
 			},
 		},
@@ -86,7 +86,7 @@ func TestUnexpectedInitReq(t *testing.T) {
 		if !assert.NoError(t, f.read(&errMsg), "parse frame to errorMessage") {
 			continue
 		}
-		assert.Equal(t, tt.expectedError.ID(), errMsg.ID(), "test %v got bad ID", tt.name)
+		assert.Equal(t, tt.expectedError.ID(), f.Header.ID, "test %v got bad ID", tt.name)
 		assert.Equal(t, tt.expectedError.errCode, errMsg.errCode, "test %v got bad code", tt.name)
 		assert.NoError(t, conn.Close(), "closing connection failed")
 	}

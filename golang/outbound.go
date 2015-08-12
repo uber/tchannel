@@ -248,17 +248,19 @@ func (response *OutboundCallResponse) Arg3Reader() (io.ReadCloser, error) {
 // channel and converted into a SystemError returned from the next reader or
 // access call.
 func (c *Connection) handleError(frame *Frame) {
-	var errorMessage errorMessage
+	errMsg := errorMessage{
+		id: frame.Header.ID,
+	}
 	rbuf := typed.NewReadBuffer(frame.SizedPayload())
-	if err := errorMessage.read(rbuf); err != nil {
+	if err := errMsg.read(rbuf); err != nil {
 		c.log.Warnf("Unable to read Error frame from %s: %v", c.remotePeerInfo, err)
 		c.connectionError(err)
 		return
 	}
 
-	if errorMessage.errCode == ErrCodeProtocol {
-		c.log.Warnf("Peer %s reported protocol error: %s", c.remotePeerInfo, errorMessage.message)
-		c.connectionError(errorMessage.AsSystemError())
+	if errMsg.errCode == ErrCodeProtocol {
+		c.log.Warnf("Peer %s reported protocol error: %s", c.remotePeerInfo, errMsg.message)
+		c.connectionError(errMsg.AsSystemError())
 		return
 	}
 

@@ -320,6 +320,7 @@ func (c *Connection) sendInit(ctx context.Context) error {
 // InitReq, and the InitReq is valid, send a corresponding InitRes and mark
 // ourselves as active
 func (c *Connection) handleInitReq(frame *Frame) {
+	id := frame.Header.ID
 	var req initReq
 	rbuf := typed.NewReadBuffer(frame.SizedPayload())
 	if err := req.read(rbuf); err != nil {
@@ -329,17 +330,17 @@ func (c *Connection) handleInitReq(frame *Frame) {
 	}
 
 	if req.Version != CurrentProtocolVersion {
-		c.protocolError(fmt.Errorf("Unsupported protocol version %d from peer", req.Version))
+		c.protocolError(id, fmt.Errorf("Unsupported protocol version %d from peer", req.Version))
 		return
 	}
 
 	var ok bool
 	if c.remotePeerInfo.HostPort, ok = req.initParams[InitParamHostPort]; !ok {
-		c.protocolError(fmt.Errorf("Header %v is required", InitParamHostPort))
+		c.protocolError(id, fmt.Errorf("Header %v is required", InitParamHostPort))
 		return
 	}
 	if c.remotePeerInfo.ProcessName, ok = req.initParams[InitParamProcessName]; !ok {
-		c.protocolError(fmt.Errorf("Header %v is required", InitParamProcessName))
+		c.protocolError(id, fmt.Errorf("Header %v is required", InitParamProcessName))
 		return
 	}
 	if c.remotePeerInfo.IsEphemeral() {
@@ -405,7 +406,7 @@ func (c *Connection) handlePingRes(frame *Frame) bool {
 // handlePingReq responds to the pingReq message with a pingRes.
 func (c *Connection) handlePingReq(frame *Frame) {
 	if c.readState() != connectionActive {
-		c.protocolError(fmt.Errorf("connection state is not active"))
+		c.protocolError(frame.Header.ID, fmt.Errorf("connection state is not active"))
 		return
 	}
 
@@ -445,7 +446,7 @@ func (c *Connection) handleInitRes(frame *Frame) bool {
 	}
 
 	if res.Version != CurrentProtocolVersion {
-		c.protocolError(fmt.Errorf("unsupported protocol version %d from peer", res.Version))
+		c.protocolError(frame.Header.ID, fmt.Errorf("unsupported protocol version %d from peer", res.Version))
 		return true
 	}
 
@@ -510,17 +511,24 @@ func (c *Connection) NextMessageID() uint32 {
 }
 
 // SendSystemError sends an error frame for the given system error.
-func (c *Connection) SendSystemError(id uint32, err error) {
+func (c *Connection) SendSystemError(id uint32, span *Span, err error) error {
 	frame := c.framePool.Get()
+
+	errorSpan := Span{}
+	if span != nil {
+		errorSpan = *span
+	}
+
 	if err := frame.write(&errorMessage{
 		id:      id,
 		errCode: GetSystemErrorCode(err),
+		tracing: errorSpan,
 		message: err.Error()}); err != nil {
 
 		// This shouldn't happen - it means writing the errorMessage is broken.
 		c.log.Warnf("Could not create outbound frame to %s for %d: %v",
 			c.remotePeerInfo, id, err)
-		return
+		return fmt.Errorf("failed to create outbound error frame")
 	}
 
 	select {
@@ -528,7 +536,10 @@ func (c *Connection) SendSystemError(id uint32, err error) {
 	default: // Nothing we can do here anyway
 		c.log.Warnf("Could not send error frame to %s for %d : %v",
 			c.remotePeerInfo, id, err)
+		return fmt.Errorf("failed to send error frame")
 	}
+
+	return nil
 }
 
 // connectionError handles a connection level error
@@ -538,10 +549,10 @@ func (c *Connection) connectionError(err error) error {
 	return NewWrappedSystemError(ErrCodeNetwork, err)
 }
 
-func (c *Connection) protocolError(err error) error {
+func (c *Connection) protocolError(id uint32, err error) error {
 	c.log.Warnf("Protocol error: %v", err)
 	sysErr := NewWrappedSystemError(ErrCodeProtocol, err)
-	c.SendSystemError(invalidMessageID, sysErr)
+	c.SendSystemError(id, nil, sysErr)
 	// Don't close the connection until the error has been sent.
 	c.Close()
 	return sysErr
