@@ -32,6 +32,7 @@ function ChanConnMonitor(channel, options) {
     self.channel = channel;
     self.interval = options.interval;
     self.byBucket = options.byBucket;
+    self.byTTL = options.byTTL;
     self.timers = channel.timers;
     self.timer = null;
     self.running = false;
@@ -170,17 +171,17 @@ OpKindMonitor.prototype.summary = function summary() {
         self.inCounts.length = 0;
     }
 
-    // if (self.outCounts.length && self.byBucket) {
-    //     self.log('= %s OUT COUNTS BY BUCKET: %j',
-    //         self.options.desc,
-    //         reduceByBucket(self.outCounts, self.byBucket));
-    // }
+    if (self.outCounts.length && self.byBucket) {
+        self.log('= %s OUT COUNTS BY BUCKET: %j',
+            self.options.desc,
+            reduceByBucket(self.outCounts, self.byBucket));
+    }
 
-    // if (self.outCounts.length) {
-    //     self.log('= %s OUT COUNTS BY TTL: %j',
-    //         self.options.desc,
-    //         reduceByTTL(self.outCounts));
-    // }
+    if (self.outCounts.length && self.byTTL) {
+        self.log('= %s OUT COUNTS BY TTL: %j',
+            self.options.desc,
+            reduceByTTL(self.outCounts));
+    }
 
     if (self.outCounts.length) {
         self.log('= %s OUT COUNTS: %j',
