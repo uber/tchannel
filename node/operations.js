@@ -51,6 +51,7 @@ function Operations(opts) {
 function OperationTombstone(operations, id, time, timeout) {
     var self = this;
 
+    self.type = 'tchannel.operation.tombstone';
     self.isTombstone = true;
     self.logger = operations.logger;
     self.operations = operations;
@@ -58,6 +59,7 @@ function OperationTombstone(operations, id, time, timeout) {
     self.time = time;
     self.timeout = timeout;
     self.timeHeapHandle = null;
+    self.destroyed = false;
 }
 
 OperationTombstone.prototype.extendLogInfo = function extendLogInfo(info) {
@@ -85,8 +87,24 @@ OperationTombstone.prototype.extendLogInfo = function extendLogInfo(info) {
     return info;
 };
 
+OperationTombstone.prototype.destroy = function destroy(now) {
+    var self = this;
+
+    self.destroyed = true;
+
+    self.onTimeout(now);
+};
+
 OperationTombstone.prototype.onTimeout = function onTimeout(now) {
     var self = this;
+
+    if (!self.destroyed && now < self.timeout + self.time) {
+        self.logger.error('tombstone timed out too early', self.extendLogInfo({
+            now: now,
+            expireTime: self.timeout + self.time,
+            delta: (self.timeout + self.time) - now
+        }));
+    }
 
     if (self.operations &&
         self.operations.requests.out[self.id] === self) {
@@ -270,7 +288,7 @@ Operations.prototype.clear = function clear() {
         if (tombstone.timeHeapHandle) {
             tombstone.timeHeapHandle.cancel();
         }
-        tombstone.onTimeout(now);
+        tombstone.destroy(now);
     }
 };
 
@@ -312,6 +330,9 @@ Operations.prototype._sweepOps = function _sweepOps(ops, direction) {
                 self.popOutReq(id);
             }
         } else if (op.isTombstone) {
+            var heap = self.connection.channel.timeHeap;
+            var expireTime = op.time + op.timeout;
+
             if (!op.operations) {
                 self.logger.warn('zombie tombstone', op.extendLogInfo({
                     direction: direction,
@@ -321,10 +342,16 @@ Operations.prototype._sweepOps = function _sweepOps(ops, direction) {
                 op.operations = null;
                 op.timeHeapHandle.cancel();
                 op.timeHeapHandle = null;
-            } else if (op.time + op.timeout < now) {
+            } else if (op.time + op.timeout < now &&
+                heap.lastRun > expireTime
+            ) {
                 self.logger.warn('stale tombstone', op.extendLogInfo({
                     direction: direction,
-                    opKey: id
+                    opKey: id,
+                    now: now,
+                    staleDelta: op.time + op.timeout - now,
+                    expireTime: expireTime,
+                    heapLastRun: self.connection.channel.timeHeap.lastRun
                 }));
                 delete ops[id];
                 op.operations = null;

@@ -31,6 +31,8 @@ function ChanConnMonitor(channel, options) {
     self.options = options;
     self.channel = channel;
     self.interval = options.interval;
+    self.byBucket = options.byBucket;
+    self.byTTL = options.byTTL;
     self.timers = channel.timers;
     self.timer = null;
     self.running = false;
@@ -165,21 +167,98 @@ OpKindMonitor.prototype.summary = function summary() {
     if (self.inCounts.length) {
         self.log('= %s IN COUNTS: %j',
                     self.options.desc,
-                    self.inCounts.reduce(sumCounts));
+                    self.inCounts.reduce(sumCounts, {}));
         self.inCounts.length = 0;
+    }
+
+    if (self.outCounts.length && self.byBucket) {
+        self.log('= %s OUT COUNTS BY BUCKET: %j',
+            self.options.desc,
+            reduceByBucket(self.outCounts, self.byBucket));
+    }
+
+    if (self.outCounts.length && self.byTTL) {
+        self.log('= %s OUT COUNTS BY TTL: %j',
+            self.options.desc,
+            reduceByTTL(self.outCounts));
     }
 
     if (self.outCounts.length) {
         self.log('= %s OUT COUNTS: %j',
                     self.options.desc,
-                    self.outCounts.reduce(sumCounts));
+                    self.outCounts.reduce(sumCounts, {}));
         self.outCounts.length = 0;
     }
 };
 
+function reduceByBucket(list) {
+    var info = {};
+
+    for (var i = 0; i < list.length; i++) {
+        var constrs = list[i];
+
+        var keys = Object.keys(constrs);
+        for (var j = 0; j < keys.length; j++) {
+            var name = keys[j];
+            var opCount = constrs[keys[j]];
+
+            if (!info[name]) {
+                info[name] = {};
+            }
+
+            var bucketKeys = Object.keys(opCount.buckets);
+            for (var k = 0; k < bucketKeys.length; k++) {
+                var bucketKey = bucketKeys[k];
+                if (!info[name][bucketKey]) {
+                    info[name][bucketKey] = 0;
+                }
+
+                info[name][bucketKey] += opCount.buckets[bucketKey].length;
+            }
+        }
+    }
+
+    return info;
+}
+
+function reduceByTTL(list) {
+    var info = {};
+
+    for (var i = 0; i < list.length; i++) {
+        var constrs = list[i];
+
+        var keys = Object.keys(constrs);
+        for (var j = 0; j < keys.length; j++) {
+            var name = keys[j];
+            var opCount = constrs[keys[j]];
+
+            if (!info[name]) {
+                info[name] = {};
+            }
+
+            var timeoutKeys = Object.keys(opCount.timeouts);
+            for (var k = 0; k < timeoutKeys.length; k++) {
+                var timeoutKey = timeoutKeys[k];
+                if (!info[name][timeoutKey]) {
+                    info[name][timeoutKey] = 0;
+                }
+
+                info[name][timeoutKey] += opCount.timeouts[timeoutKey];
+            }
+        }
+    }
+
+    return info;
+}
+
+
 function sumCounts(a, b) {
     Object.keys(b).forEach(function eachB(key) {
-        a[key] = (a[key] || 0) + b[key];
+        if (!a[key]) {
+            a[key] = 0;
+        }
+
+        a[key] += b[key].count;
     });
     return a;
 }
@@ -188,7 +267,43 @@ function countConstructors(obj) {
     var counts = {};
     Object.keys(obj).forEach(function each(prop) {
         var name = obj[prop].constructor.name;
-        counts[name] = (counts[name] || 0) + 1;
+        if (!counts[name]) {
+            counts[name] = new OpCount();
+        }
+
+        counts[name].push(obj[prop]);
     });
     return counts;
 }
+
+function OpCount() {
+    this.count = 0;
+    this.values = [];
+    this.buckets = {};
+    this.timeouts = {};
+}
+
+OpCount.prototype.push = function push(value) {
+    this.count++;
+    this.values.push(value);
+
+    if (value.type === 'tchannel.operation.tombstone') {
+        var expireTime = value.time + value.timeout;
+
+        var bucketIndex = Math.floor(expireTime / 5000) * 5000;
+        if (!this.buckets[bucketIndex]) {
+            this.buckets[bucketIndex] = [];
+        }
+        this.buckets[bucketIndex].push(value);
+    }
+
+    if (value.type === 'tchannel.operation.tombstone') {
+        var ttl = value.timeout;
+
+        if (!this.timeouts[ttl]) {
+            this.timeouts[ttl] = 0;
+        }
+
+        this.timeouts[ttl]++;
+    }
+};
