@@ -88,6 +88,14 @@ OperationTombstone.prototype.extendLogInfo = function extendLogInfo(info) {
 OperationTombstone.prototype.onTimeout = function onTimeout(now) {
     var self = this;
 
+    if (now < self.timeout + self.time) {
+        self.logger.error('tombstone timed out too early', self.extendLogInfo({
+            now: now,
+            expireTime: self.timeout + self.time,
+            delta: (self.timeout + self.time) - now
+        }));
+    }
+
     if (self.operations &&
         self.operations.requests.out[self.id] === self) {
         delete self.operations.requests.out[self.id];
