@@ -48,7 +48,7 @@ function Operations(opts) {
     self.lastTimeoutTime = 0;
 }
 
-function OperationTombstone(operations, id, time, timeout) {
+function OperationTombstone(operations, id, time, req) {
     var self = this;
 
     self.type = 'tchannel.operation.tombstone';
@@ -57,9 +57,12 @@ function OperationTombstone(operations, id, time, timeout) {
     self.operations = operations;
     self.id = id;
     self.time = time;
-    self.timeout = timeout;
+    self.timeout = TOMBSTONE_TTL_OFFSET + req.timeout;
     self.timeHeapHandle = null;
     self.destroyed = false;
+    self.serviceName = req.serviceName;
+    self.callerName = req.headers.cn;
+    self.endpoint = req.endpoint;
 }
 
 OperationTombstone.prototype.extendLogInfo = function extendLogInfo(info) {
@@ -68,6 +71,9 @@ OperationTombstone.prototype.extendLogInfo = function extendLogInfo(info) {
     var conn = self.operations && self.operations.connection;
 
     info.id = self.id;
+    info.serviceName = self.serviceName;
+    info.callerName = self.callerName;
+    info.endpoint = self.endpoint;
     info.tombstoneTime = self.time;
     info.tombstoneTTL = self.timeout;
     info.heapCanceled = self.timeHeapHandle && !self.timeHeapHandle.item;
@@ -226,8 +232,7 @@ Operations.prototype.popOutReq = function popOutReq(id, context) {
     }
 
     var now = self.timers.now();
-    var timeout = TOMBSTONE_TTL_OFFSET + req.timeout;
-    var tombstone = new OperationTombstone(self, id, now, timeout);
+    var tombstone = new OperationTombstone(self, id, now, req);
     req.operations = null;
     self.requests.out[id] = tombstone;
     self.pending.out--;
