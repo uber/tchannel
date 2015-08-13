@@ -57,9 +57,6 @@ type ChannelOptions struct {
 
 	// Trace reporter to use for this channel.
 	TraceReporter TraceReporter
-
-	// Internal option to specify the top channel
-	topChannel *Channel
 }
 
 // ChannelState is the state of a channel.
@@ -99,17 +96,15 @@ type Channel struct {
 	connectionOptions ConnectionOptions
 	handlers          *handlerMap
 	peers             *PeerList
-	topChannel        *Channel
 
 	// mutable contains all the members of Channel which are mutable.
 	mutable struct {
-		mut           sync.RWMutex // protects members of the mutable struct.
-		state         ChannelState
-		peerInfo      LocalPeerInfo // May be ephemeral if this is a client only channel
-		l             net.Listener  // May be nil if this is a client only channel
-		subChannels   map[string]*SubChannel
-		otherChannels map[string]*Channel
-		conns         []*Connection
+		mut         sync.RWMutex // protects members of the mutable struct.
+		state       ChannelState
+		peerInfo    LocalPeerInfo // May be ephemeral if this is a client only channel
+		l           net.Listener  // May be nil if this is a client only channel
+		subChannels map[string]*SubChannel
+		conns       []*Connection
 	}
 }
 
@@ -155,17 +150,10 @@ func NewChannel(serviceName string, opts *ChannelOptions) (*Channel, error) {
 		},
 		ServiceName: serviceName,
 	}
-
+	ch.mutable.subChannels = make(map[string]*SubChannel)
 	ch.mutable.state = ChannelClient
-	ch.topChannel = opts.topChannel
-
-	// TODO: Make sure we don't try to create sub channels on the "Other" channel
-	if ch.topChannel == nil {
-		ch.mutable.subChannels = make(map[string]*SubChannel)
-		ch.mutable.otherChannels = make(map[string]*Channel)
-		ch.peers = newPeerList(ch)
-		ch.createCommonStats()
-	}
+	ch.peers = newPeerList(ch)
+	ch.createCommonStats()
 	return ch, nil
 }
 
@@ -213,16 +201,12 @@ func (ch *Channel) ListenAndServe(hostPort string) error {
 	}
 
 	mutable.mut.RUnlock()
-	// TODO: Should probably check the list of "Other" channels and update their state as well
 	return ch.Serve(l)
 }
 
 // Register registers a handler for a service+operation pair
 func (ch *Channel) Register(h Handler, operationName string) {
-	// Register on the top level channel handler map with the service
-	// name of the given channel
-	lCh := ch.getRightChannel()
-	lCh.handlers.register(h, ch.PeerInfo().ServiceName, operationName)
+	ch.handlers.register(h, ch.PeerInfo().ServiceName, operationName)
 }
 
 // Register registers a handler for a service+operation pair
@@ -256,53 +240,6 @@ func (ch *Channel) createCommonStats() {
 	// TODO(prashant): Allow user to pass extra tags (such as cluster, version).
 }
 
-func (ch *Channel) registerNewOtherChannel(serviceName string) *Channel {
-	mutable := &ch.mutable
-	mutable.mut.Lock()
-	defer mutable.mut.Unlock()
-
-	// Recheck for the other channel under the write lock.
-	if oc, ok := mutable.otherChannels[serviceName]; ok {
-		return oc
-	}
-
-	cOpts := &ChannelOptions{
-		topChannel: ch,
-	}
-	oc, _ := NewChannel(serviceName, cOpts)
-
-	mutable.otherChannels[serviceName] = oc
-
-	// if the topChannel is listening, make sure the host port info is updated on
-	// "other" channel
-	l := mutable.l
-
-	//TODO: This should probably be moved within ListenAndServe() where we listen on the
-	// topChannel and only update the state on the "Other" channels
-	if l != nil {
-		// TODO: Do I need to call the entire Serve(l) or is it just enough to copy the
-		// state from the topChannel (about hostport)
-		oc.Serve(l) //Should probably expose this separately
-	}
-	return oc
-}
-
-// GetOtherChannel returns a Channel for the given service name. If the otherChannel does not
-// exist, it is created. This channel can be used to register its own endpoints but the
-// listening will be done by the top level channel
-func (ch *Channel) GetOtherChannel(serviceName string) *Channel {
-	mutable := &ch.mutable
-	mutable.mut.RLock()
-
-	if sc, ok := mutable.otherChannels[serviceName]; ok {
-		mutable.mut.RUnlock()
-		return sc
-	}
-
-	mutable.mut.RUnlock()
-	return ch.registerNewOtherChannel(serviceName)
-}
-
 func (ch *Channel) registerNewSubChannel(serviceName string) *SubChannel {
 	mutable := &ch.mutable
 	mutable.mut.Lock()
@@ -333,26 +270,15 @@ func (ch *Channel) GetSubChannel(serviceName string) *SubChannel {
 	return ch.registerNewSubChannel(serviceName)
 }
 
-// If we have a top channel, then that is the channel we need to use.
-func (ch *Channel) getRightChannel() *Channel {
-	lCh := ch
-	if ch.topChannel != nil {
-		lCh = ch.topChannel
-	}
-	return lCh
-}
-
 // Peers returns the PeerList for the channel.
 func (ch *Channel) Peers() *PeerList {
-	lCh := ch.getRightChannel()
-	return lCh.peers
+	return ch.peers
 }
 
 // BeginCall starts a new call to a remote peer, returning an OutboundCall that can
 // be used to write the arguments of the call.
 func (ch *Channel) BeginCall(ctx context.Context, hostPort, serviceName, operationName string, callOptions *CallOptions) (*OutboundCall, error) {
-	lCh := ch.getRightChannel()
-	p := lCh.peers.GetOrAdd(hostPort)
+	p := ch.peers.GetOrAdd(hostPort)
 	return p.BeginCall(ctx, serviceName, operationName, callOptions)
 }
 
@@ -389,17 +315,14 @@ func (ch *Channel) serve() {
 
 		acceptBackoff = 0
 
-		// Make sure we always work on the "right" channel. i.e, if we have a top level channel use it
-		lCh := ch.getRightChannel()
 		// Register the connection in the peer once the channel is set up.
 		events := connectionEvents{
-			OnActive:           lCh.incomingConnectionActive,
-			OnCloseStateChange: lCh.connectionCloseStateChange,
+			OnActive:           ch.incomingConnectionActive,
+			OnCloseStateChange: ch.connectionCloseStateChange,
 		}
-
-		if _, err := lCh.newInboundConnection(netConn, events, &lCh.connectionOptions); err != nil {
+		if _, err := ch.newInboundConnection(netConn, events, &ch.connectionOptions); err != nil {
 			// Server is getting overloaded - begin rejecting new connections
-			lCh.log.Errorf("could not create new TChannelConnection for incoming conn: %v", err)
+			ch.log.Errorf("could not create new TChannelConnection for incoming conn: %v", err)
 			netConn.Close()
 			continue
 		}
@@ -408,8 +331,7 @@ func (ch *Channel) serve() {
 
 // Ping sends a ping message to the given hostPort and waits for a response.
 func (ch *Channel) Ping(ctx context.Context, hostPort string) error {
-	lCh := ch.getRightChannel()
-	peer := lCh.Peers().GetOrAdd(hostPort)
+	peer := ch.Peers().GetOrAdd(hostPort)
 	conn, err := peer.GetConnection(ctx)
 	if err != nil {
 		return err
@@ -467,30 +389,27 @@ func (ch *Channel) Connect(ctx context.Context, hostPort string, connectionOptio
 
 // incomingConnectionActive adds a new active connection to our peer list.
 func (ch *Channel) incomingConnectionActive(c *Connection) {
-	lCh := ch.getRightChannel()
 	c.log.Debugf("Add connection as an active peer for %v", c.remotePeerInfo.HostPort)
-	p := lCh.peers.GetOrAdd(c.remotePeerInfo.HostPort)
+	p := ch.peers.GetOrAdd(c.remotePeerInfo.HostPort)
 	p.AddConnection(c)
 
-	lCh.mutable.mut.Lock()
-	lCh.mutable.conns = append(lCh.mutable.conns, c)
-	lCh.mutable.mut.Unlock()
+	ch.mutable.mut.Lock()
+	ch.mutable.conns = append(ch.mutable.conns, c)
+	ch.mutable.mut.Unlock()
 }
 
 // connectionCloseStateChange is called when a connection's close state changes.
 func (ch *Channel) connectionCloseStateChange(c *Connection) {
-	lCh := ch.getRightChannel()
-
-	switch chState := lCh.State(); chState {
+	switch chState := ch.State(); chState {
 	case ChannelStartClose, ChannelInboundClosed:
-		lCh.mutable.mut.RLock()
+		ch.mutable.mut.RLock()
 		minState := connectionClosed
 		for _, c := range ch.mutable.conns {
 			if s := c.readState(); s < minState {
 				minState = s
 			}
 		}
-		lCh.mutable.mut.RUnlock()
+		ch.mutable.mut.RUnlock()
 
 		var updateTo ChannelState
 		if minState >= connectionClosed {
@@ -500,9 +419,9 @@ func (ch *Channel) connectionCloseStateChange(c *Connection) {
 		}
 
 		if updateTo > 0 {
-			lCh.mutable.mut.Lock()
-			lCh.mutable.state = updateTo
-			lCh.mutable.mut.Unlock()
+			ch.mutable.mut.Lock()
+			ch.mutable.state = updateTo
+			ch.mutable.mut.Unlock()
 			chState = updateTo
 		}
 
@@ -513,16 +432,14 @@ func (ch *Channel) connectionCloseStateChange(c *Connection) {
 
 // Closed returns whether this channel has been closed with .Close()
 func (ch *Channel) Closed() bool {
-	lCh := ch.getRightChannel()
-	return lCh.State() == ChannelClosed
+	return ch.State() == ChannelClosed
 }
 
 // State returns the current channel state.
 func (ch *Channel) State() ChannelState {
-	lCh := ch.getRightChannel()
-	lCh.mutable.mut.RLock()
-	state := lCh.mutable.state
-	lCh.mutable.mut.RUnlock()
+	ch.mutable.mut.RLock()
+	state := ch.mutable.state
+	ch.mutable.mut.RUnlock()
 
 	return state
 }
@@ -532,13 +449,13 @@ func (ch *Channel) State() ChannelState {
 // 2. When all incoming connections are drainged, the connection blocks new outgoing calls.
 // 3. When all connections are drainged, the channel's state is updated to Closed.
 func (ch *Channel) Close() {
-	lCh := ch.getRightChannel()
-	lCh.mutable.mut.Lock()
-	if lCh.mutable.l != nil {
-		lCh.mutable.l.Close()
-	}
-	lCh.mutable.state = ChannelStartClose
-	lCh.mutable.mut.Unlock()
+	ch.mutable.mut.Lock()
 
-	lCh.peers.Close()
+	if ch.mutable.l != nil {
+		ch.mutable.l.Close()
+	}
+	ch.mutable.state = ChannelStartClose
+	ch.mutable.mut.Unlock()
+
+	ch.peers.Close()
 }
