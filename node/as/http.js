@@ -228,7 +228,13 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
                 var pair = head.headerPairs[i];
                 headers[pair[0]] = pair[1];
             }
-            hres.writeHead(head.statusCode, head.message, headers);
+            // work-arround a node issue where default statusMessage is missing
+            // from the client side when server side set as optional parameter
+            if (head.message) {
+                hres.writeHead(head.statusCode, head.message, headers);
+            } else {
+                hres.writeHead(head.statusCode, headers);
+            }
             body.pipe(hres);
         }
         callback(err);
