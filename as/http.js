@@ -228,7 +228,12 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
                 var pair = head.headerPairs[i];
                 headers[pair[0]] = pair[1];
             }
-            hres.writeHead(head.statusCode, head.message, headers);
+            // work-around https://github.com/joyent/node/issues/25490
+            if (head.message) {
+                hres.writeHead(head.statusCode, head.message, headers);
+            } else {
+                hres.writeHead(head.statusCode, headers);
+            }
             body.pipe(hres);
         }
         callback(err);
