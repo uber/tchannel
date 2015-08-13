@@ -225,6 +225,15 @@ func (ch *Channel) Register(h Handler, operationName string) {
 	lCh.handlers.register(h, ch.PeerInfo().ServiceName, operationName)
 }
 
+// Register registers a handler for a service+operation pair
+func (ch *Channel) RegisterNewService(h Handler, serviceName string, operationName string) {
+	ch.handlers.register(h, serviceName, operationName)
+}
+
+func (ch *Channel) ServiceName() string {
+	return ch.PeerInfo().ServiceName
+}
+
 // PeerInfo returns the current peer info for the channel
 func (ch *Channel) PeerInfo() LocalPeerInfo {
 	ch.mutable.mut.RLock()
