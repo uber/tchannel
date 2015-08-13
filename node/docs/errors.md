@@ -34,27 +34,3 @@ please check the [source code of `errors.js`](../errors.js)
  - `TimeoutError` TChannel has per-request timeouts. This means
     any in request or out request can timeout when it's ttl is
     up.
-
-## TChannel client Errors. Errors from `OutResponse.send()`
-
-When sending an `OutResponse`, tchannel errors need be mapped to proper http
-status codes/messages so that the client can differentiate errors and possibly 
-take some actions.
-
-A list of tchannel response errors:
-[source code of `error_response.js`](../v2/error_response.js)
-
-A list of http status code:
-[http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html]
-
-The proposed mapping is:
-
- - Codes.Timeout : 408 Request Timeout
- - Codes.BadRequest: 400 Bad Request
- - Codes.UnexpectedError: 500 Internal Server Error
- - Codes.Busy: 503 Service Unavailable
- - Codes.Unhealthy: 503 Service Unavailable
- - Codes.Declined: 403 Forbidden
- - Codes.Cancelled: TBD
- - Codes.NetworkError: TBD
- - Codes.ProtocolError: TBD
