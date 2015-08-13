@@ -29,12 +29,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-var (
-	// ErrHandlerNotFound is returned when no registered handler can be found for a given service and operation
-	ErrHandlerNotFound = NewSystemError(ErrCodeBadRequest, "no handler for service and operation")
-
-	errInboundRequestAlreadyActive = errors.New("inbound request is already active; possible duplicate client id")
-)
+var errInboundRequestAlreadyActive = errors.New("inbound request is already active; possible duplicate client id")
 
 // handleCallReq handles an incoming call request, registering a message
 // exchange to receive further fragments for that call, and dispatching it in
@@ -163,7 +158,8 @@ func (c *Connection) dispatchInbound(call *InboundCall) {
 	if h == nil {
 		c.log.Errorf("Could not find handler for %s:%s", call.ServiceName(), call.Operation())
 		call.mex.shutdown()
-		call.Response().SendSystemError(ErrHandlerNotFound)
+		call.Response().SendSystemError(
+			NewSystemError(ErrCodeBadRequest, "no handler for service %q and operation %q", call.ServiceName(), call.Operation()))
 		return
 	}
 
