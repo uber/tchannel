@@ -103,8 +103,8 @@ type SystemError struct {
 }
 
 // NewSystemError defines a new SystemError with a code and message
-func NewSystemError(code SystemErrCode, msg string) error {
-	return SystemError{code: code, msg: msg}
+func NewSystemError(code SystemErrCode, msg string, args ...interface{}) error {
+	return SystemError{code: code, msg: fmt.Sprintf(msg, args...)}
 }
 
 // NewWrappedSystemError defines a new SystemError wrapping an existing error
