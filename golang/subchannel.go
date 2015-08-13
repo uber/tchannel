@@ -59,14 +59,10 @@ func (c *SubChannel) Register(h Handler, operationName string) {
 
 // Find if a handler for the given service+operation pair exists
 func (subChMap *subChannelMap) find(serviceName string, operation []byte) Handler {
-	subChMap.mut.RLock()
-
-	if sc, ok := subChMap.subchannels[serviceName]; ok {
-		subChMap.mut.RUnlock()
+	if sc, ok := subChMap.get(serviceName); ok {
 		return sc.handlers.find(serviceName, operation)
 	}
 
-	subChMap.mut.RUnlock()
 	return nil
 }
 
@@ -86,4 +82,21 @@ func (subChMap *subChannelMap) registerNewSubChannel(serviceName string, ch *Cha
 	sc := newSubChannel(serviceName, ch)
 	subChMap.subchannels[serviceName] = sc
 	return sc
+}
+
+// Get subchannel if, we have one
+func (subChMap *subChannelMap) get(serviceName string) (*SubChannel, bool) {
+	subChMap.mut.RLock()
+	sc, ok := subChMap.subchannels[serviceName]
+	subChMap.mut.RUnlock()
+	return sc, ok
+}
+
+// GetOrAdd a subchannel for the given serviceName on the map
+func (subChMap *subChannelMap) getOrAdd(serviceName string, ch *Channel) *SubChannel {
+	if sc, ok := subChMap.get(serviceName); ok {
+		return sc
+	}
+
+	return subChMap.registerNewSubChannel(serviceName, ch)
 }

@@ -103,7 +103,7 @@ func main() {
 	subCh := ch.GetSubChannel("PingServiceOther")
 
 	// Register a handler on the subchannel
-	json.RegisterSub(subCh, json.Handlers{
+	json.Register(subCh, json.Handlers{
 		"pingOther": pingOtherHandler,
 	}, onError)
 

@@ -204,6 +204,12 @@ func (ch *Channel) ListenAndServe(hostPort string) error {
 	return ch.Serve(l)
 }
 
+// Registrar is the base interface for registering handlers on either the base
+// Channel or the SubChannel
+type Registrar interface {
+	Register(h Handler, operationName string)
+}
+
 // Register registers a handler for a service+operation pair
 func (ch *Channel) Register(h Handler, operationName string) {
 	ch.handlers.register(h, ch.PeerInfo().ServiceName, operationName)
@@ -234,16 +240,7 @@ func (ch *Channel) createCommonStats() {
 // GetSubChannel returns a SubChannel for the given service name. If the subchannel does not
 // exist, it is created.
 func (ch *Channel) GetSubChannel(serviceName string) *SubChannel {
-	subChMap := ch.subChannels
-	subChMap.mut.RLock()
-
-	if sc, ok := subChMap.subchannels[serviceName]; ok {
-		subChMap.mut.RUnlock()
-		return sc
-	}
-
-	subChMap.mut.RUnlock()
-	return subChMap.registerNewSubChannel(serviceName, ch)
+	return ch.subChannels.getOrAdd(serviceName, ch)
 }
 
 // Peers returns the PeerList for the channel.

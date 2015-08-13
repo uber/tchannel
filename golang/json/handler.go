@@ -90,7 +90,7 @@ func toHandler(f interface{}) (*handler, error) {
 // Register registers the specified methods specified as a map from method name to the
 // JSON handler function. The handler functions should have the following signature:
 // func(context.Context, *ArgType)(*ResType, error)
-func Register(ch *tchannel.Channel, funcs Handlers, onError func(context.Context, error)) error {
+func Register(registrar tchannel.Registrar, funcs Handlers, onError func(context.Context, error)) error {
 	handlers := make(map[string]*handler)
 
 	handler := tchannel.HandlerFunc(func(ctx context.Context, call *tchannel.InboundCall) {
@@ -111,34 +111,7 @@ func Register(ch *tchannel.Channel, funcs Handlers, onError func(context.Context
 			return fmt.Errorf("%v cannot be used as a handler: %v", m, err)
 		}
 		handlers[m] = h
-		ch.Register(handler, m)
-	}
-
-	return nil
-}
-
-func RegisterSub(ch *tchannel.SubChannel, funcs Handlers, onError func(context.Context, error)) error {
-	handlers := make(map[string]*handler)
-
-	handler := tchannel.HandlerFunc(func(ctx context.Context, call *tchannel.InboundCall) {
-		h, ok := handlers[string(call.Operation())]
-		if !ok {
-			onError(ctx, fmt.Errorf("call for unregistered method: %s", call.Operation()))
-			return
-		}
-
-		if err := h.Handle(ctx, call); err != nil {
-			onError(ctx, err)
-		}
-	})
-
-	for m, f := range funcs {
-		h, err := toHandler(f)
-		if err != nil {
-			return fmt.Errorf("%v cannot be used as a handler: %v", m, err)
-		}
-		handlers[m] = h
-		ch.Register(handler, m)
+		registrar.Register(handler, m)
 	}
 
 	return nil
