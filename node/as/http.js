@@ -228,7 +228,9 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
                 var pair = head.headerPairs[i];
                 headers[pair[0]] = pair[1];
             }
-            // work-around https://github.com/joyent/node/issues/25490
+            // work-arround a node issue where default statusMessage is missing
+            // from the client side when server side try to set it
+            // https://github.com/joyent/node/issues/25490
             if (head.message) {
                 hres.writeHead(head.statusCode, head.message, headers);
             } else {
