@@ -51,6 +51,7 @@ function Operations(opts) {
 function OperationTombstone(operations, id, time, timeout) {
     var self = this;
 
+    self.type = 'tchannel.operation.tombstone';
     self.isTombstone = true;
     self.logger = operations.logger;
     self.operations = operations;
