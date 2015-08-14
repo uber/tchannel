@@ -38,11 +38,6 @@ allocCluster.test('conn double buildResponse: build send build sendError', {
         'outgoing response has an error'
     );
 
-    cluster.logger.whitelist(
-        'error',
-        'Got an unexpected connection error'
-    );
-
     one.makeSubChannel({
         serviceName: 'server'
     }).register('/foo', {streamed: true}, bsbseHandler);
@@ -73,31 +68,27 @@ allocCluster.test('conn double buildResponse: build send build sendError', {
         assert.equal(String(arg3), 'results', 'expected response arg3');
 
         var lines = cluster.logger.items();
-        assert.equal(lines.length, 3);
+        assert.equal(lines.length, 2);
         var record1 = lines[0];
         var record2 = lines[1];
-        var record3 = lines[2];
 
         assert.deepEqual(pluckErrorLog(record1), {
             levelName: 'error',
-            msg: 'Got an unexpected connection error',
-            errorType: 'tchannel.response-already-started',
-            errorMessage: 'response already started (state 2)'
+            msg: 'outgoing response has an error',
+            errorType: 'tchannel.response-already-done',
+            errorMessage: 'cannot send send error frame: ' +
+                          'UnexpectedError: TchannelResponseAlreadyStartedError: response already started (state 2)' +
+                          ', response already done in state: 2'
         }, 'expected first error log');
 
         assert.deepEqual(pluckErrorLog(record2), {
             levelName: 'error',
-            msg: 'Got an unexpected connection error',
-            errorType: 'tchannel.response-already-started',
-            errorMessage: 'response already started (state 2)'
-        }, 'expected second error log');
-
-        assert.deepEqual(pluckErrorLog(record3), {
-            levelName: 'error',
             msg: 'outgoing response has an error',
             errorType: 'tchannel.response-already-done',
-            errorMessage: 'cannot send send error frame: UnexpectedError: nope, response already done in state: 2'
-        }, 'expected third error log');
+            errorMessage: 'cannot send send error frame: ' +
+                          'UnexpectedError: nope' +
+                          ', response already done in state: 2'
+        }, 'expected second error log');
 
         assert.end();
     }
