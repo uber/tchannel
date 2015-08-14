@@ -37,6 +37,7 @@ require('./max_pending.js');
 require('./tchannel.js');
 require('./regression-inOps-leak.js');
 require('./regression-listening-on-used-port.js');
+require('./regression-conn-double-buildResponse.js');
 require('./as-thrift.js');
 require('./as-json.js');
 require('./as-http.js');
