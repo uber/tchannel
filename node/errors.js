@@ -603,11 +603,13 @@ module.exports.classify = function classify(err) {
     }
 
     switch (err.type) {
+        case 'tchannel.request.retry-limit-exceeded':
+            return 'Cancelled';
+
         case 'tchannel.max-pending':
         case 'tchannel.max-pending-for-service':
         case 'tchannel.no-peer-available':
         case 'tchannel.no-service-handler':
-        case 'tchannel.request.retry-limit-exceeded':
             return 'Declined';
 
         case 'tchannel.connection-stale.timeout':
