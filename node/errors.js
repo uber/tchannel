@@ -100,6 +100,13 @@ module.exports.ChecksumError = TypedError({
     actualValue: null
 });
 
+module.exports.ChecksumTypeChanged = TypedError({
+    type: 'tchannel.call.checksum-type-changed',
+    message: 'checksum type changed mid-stream',
+    initialChecksumType: null,
+    newChecksumType: null
+});
+
 module.exports.CnHeaderRequired = TypedError({
     type: 'tchannel.handler.incoming-req-cn-header-required',
     message: 'Expected incoming call request to have "cn" header set.'
@@ -324,6 +331,18 @@ module.exports.NullKeyError = TypedError({
     endOffset: null
 });
 
+module.exports.OrphanCallRequestCont = TypedError({
+    type: 'tchannel.call-request.orphan-cont',
+    message: 'orphaned call request cont',
+    frameId: null
+});
+
+module.exports.OrphanCallResponseCont = TypedError({
+    type: 'tchannel.call-response.orphan-cont',
+    message: 'orphaned call response cont',
+    frameId: null
+});
+
 module.exports.ParentRequired = TypedError({
     type: 'tchannel.tracer.parent-required',
     message: 'parent not specified for outgoing call req.\n' +
@@ -351,6 +370,12 @@ module.exports.RequestFrameState = TypedError({
     message: 'cannot send {attempted} in {state} request state',
     attempted: null,
     state: null
+});
+
+module.exports.RequestRetryLimitExceeded = TypedError({
+    type: 'tchannel.request.retry-limit-exceeded',
+    message: 'exceeded retry limit',
+    limit: null
 });
 
 module.exports.RequestTimeoutError = TypedError({
@@ -544,11 +569,30 @@ module.exports.TransportHeaderTooLong = TypedError({
     endOffset: null
 });
 
+module.exports.UnexpectedCallFrameAfterDone = TypedError({
+    type: 'tchannel.call.frame-unexpected.after-done',
+    message: 'got call frame (type {frameType}) in done state',
+    frameId: null,
+    frameType: null
+});
+
+module.exports.UnexpectedCallFrameAfterError = TypedError({
+    type: 'tchannel.call.frame-unexpected.after-error',
+    message: 'got call frame (type {frameType}) in error state',
+    frameId: null,
+    frameType: null
+});
+
 module.exports.UnimplementedMethod = TypedError({
     message: 'Unimplemented {className}#{methodName}',
     type: 'tchannel.unimplemented-method',
     className: null,
     methodName: null
+});
+
+module.exports.UnknownConnectionReset = TypedError({
+    type: 'tchannel.connection.unknown-reset',
+    message: 'unknown connection reset'
 });
 
 // utilities
@@ -559,6 +603,9 @@ module.exports.classify = function classify(err) {
     }
 
     switch (err.type) {
+        case 'tchannel.request.retry-limit-exceeded':
+            return 'Cancelled';
+
         case 'tchannel.max-pending':
         case 'tchannel.max-pending-for-service':
         case 'tchannel.no-peer-available':
@@ -577,6 +624,7 @@ module.exports.classify = function classify(err) {
         case 'tchannel-thrift-handler.parse-error.head-failed':
         case 'tchannel.arg1-over-length-limit':
         case 'tchannel.argstream.exceeded-frame-parts':
+        case 'tchannel.call.checksum-type-changed':
         case 'tchannel.checksum':
         case 'tchannel.duplicate-header-key':
         case 'tchannel.http-handler.to-buffer-arg2.req-failed':
@@ -590,6 +638,20 @@ module.exports.classify = function classify(err) {
         case 'tchannel.arg-chunk.out-of-order':
         case 'tchannel.argstream.finished':
         case 'tchannel.argstream.unimplemented':
+
+        // TODO: really we'd rather classify as BadRequest. see note in
+        // TChannelV2Handler#handleCallRequestCont wrt frame id association
+        // support
+        case 'tchannel.call-request.orphan-cont':
+
+        // TODO: can BadRequest be used for a response error? Maybe instead we
+        // could use UnexpectedError rather than terminate the connection?
+        case 'tchannel.call-response.orphan-cont':
+
+        // TODO: classify as BadRequest/UnexpectedError for req/res?
+        case 'tchannel.call.frame-unexpected.after-done':
+        case 'tchannel.call.frame-unexpected.after-error':
+
         case 'tchannel.handler.incoming-req-as-header-required':
         case 'tchannel.handler.incoming-req-cn-header-required':
         case 'tchannel.init.call-request-before-init-request':
@@ -628,6 +690,7 @@ module.exports.classify = function classify(err) {
         case 'tchannel-thrift-handler.stringify-error.body-failed':
         case 'tchannel-thrift-handler.stringify-error.head-failed':
         case 'tchannel.argstream.unknown-frame-handling-state':
+        case 'tchannel.connection.unknown-reset':
         case 'tchannel.http-handler.from-buffer-arg2.req-failed':
         case 'tchannel.http-handler.from-buffer-arg2.res-failed':
         case 'tchannel.hydrated-error.default-type':
