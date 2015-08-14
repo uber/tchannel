@@ -146,7 +146,7 @@ function buildResponse(req, options) {
     var self = this;
 
     if (req.res && req.res.state !== States.Initial) {
-        self.errorEvent.emit(self, errors.ResponseAlreadyStarted({
+        req.errorEvent.emit(req, errors.ResponseAlreadyStarted({
             state: req.res.state,
             reason: 'buildResponse called twice',
             codeString: req.res.codeString,
