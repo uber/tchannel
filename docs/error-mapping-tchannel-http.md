@@ -24,11 +24,11 @@ The proposed mapping is:
 | code   | name                 | http status code/message
 | ------ | -------------------- | -------------------------
 | `0x01` | timeout              | 504 Gateway Timeout
-| `0x02` | cancelled            | 500 Internal Server Error
+| `0x02` | cancelled            | 500 TChannel Cancelled
 | `0x03` | busy                 | 429 Too Many Requests
 | `0x04` | declined             | 503 Service Unavailable
 | `0x05` | unexpected error     | 500 Internal Server Error
 | `0x06` | bad request          | 400 Bad Request
-| `0x07` | network error        | 500 Internal Server Error
+| `0x07` | network error        | 500 TChannel Network Error
 | `0x08` | unhealthy            | 503 Service Unavailable
-| `0xFF` | fatal protocol error | 500 Internal Server Error
+| `0xFF` | fatal protocol error | 500 TChannel Protocol Error
