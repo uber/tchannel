@@ -580,12 +580,7 @@ function RequestDefaults(reqDefaults) {
 TChannel.prototype.request = function channelRequest(options) {
     var self = this;
 
-    options = options || {};
-
-    var opts = new TChannelRequest.Options(self, options);
-    if (self.requestDefaults) {
-        opts.mergeDefaults(self.requestDefaults);
-    }
+    var opts = new TChannelRequest.Options(self, options, self.requestDefaults);
 
     if (opts.trace && opts.hasNoParent) {
         if (Math.random() < self.traceSample) {
