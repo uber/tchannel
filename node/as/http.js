@@ -63,6 +63,8 @@ function TChannelHTTP(options) {
     if (!(this instanceof TChannelHTTP)) {
         return new TChannelHTTP(options);
     }
+    var self = this;
+    self.lbpool = options;
 }
 
 TChannelHTTP.prototype.sendRequest = function send(treq, hreq, options, callback) {
@@ -242,7 +244,6 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
 };
 
 TChannelHTTP.prototype.forwardToHTTP = function forwardToHTTP(tchannel, options, inreq, outres, callback) {
-    // TODO: should use lb_pool
     var self = this;
     self.logger = self.logger || tchannel.logger;
     options = extend(options, {
@@ -255,9 +256,27 @@ TChannelHTTP.prototype.forwardToHTTP = function forwardToHTTP(tchannel, options,
         var pair = inreq.head.headerPairs[i];
         options.headers[pair[0]] = pair[1];
     }
+    var outreq;
+    if (self.lbpool) {
+        options.buffer_body = false;
+        outreq = self.lbpool.request(options, inreq.body, onLBPoolResponse);
+        return;
+    }
+
+    function onLBPoolResponse(err, res, body) {
+        if (err) {
+            outres.sendError(err);
+            callback(err);
+            return;
+        }
+        console.log(outreq.state);
+        console.log(outreq.response.readable);
+        outres.sendResponse(outreq.response);
+        callback(null);
+    }
 
     var sent = false;
-    var outreq = http.request(options, onResponse);
+    outreq = http.request(options, onResponse);
     outreq.on('error', onError);
     // TODO: more http state machine integration
     inreq.body.pipe(outreq);
@@ -265,6 +284,7 @@ TChannelHTTP.prototype.forwardToHTTP = function forwardToHTTP(tchannel, options,
     function onResponse(inres) {
         if (!sent) {
             sent = true;
+            console.log(inres.readable);
             outres.sendResponse(inres);
             callback(null);
         }
