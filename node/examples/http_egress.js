@@ -89,7 +89,7 @@ function onHTTPListening() {
 function onHTTPRequest(hreq, hres) {
     asHTTP.forwardToTChannel(svcChan, hreq, hres, {}, function onComplete(error) {
         if (error) {
-            console.log('forward to tchannel failed', error);
+            console.error('forward to tchannel failed', error);
         }
     });
 }
