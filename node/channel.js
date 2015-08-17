@@ -241,8 +241,11 @@ function TChannel(options) {
 
     self.statsQueue = [];
 
-    self.requestDefaults = self.options.requestDefaults ?
-        new RequestDefaults(self.options.requestDefaults) : null;
+    self.requestDefaults = null;
+
+    if (self.options.requestDefaults) {
+        self.requestDefaults = new TChannelRequest.Options(self.options.requestDefaults);
+    }
 
     if (!self.topChannel) {
         self.sanityTimer = self.timers.setTimeout(doSanitySweep, SANITY_PERIOD);
