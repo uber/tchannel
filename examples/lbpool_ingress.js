@@ -71,9 +71,7 @@ var destPort = parts[1];
 
 var servers = [dest];
 var lbpool = new LBPool(http, servers, {
-    max_pending: 50,
-    timeout: 5000,
-    max_sockets: 5
+    keep_alive: true
 });
 var asHTTP = TChannelAsHTTP(lbpool);
 
