@@ -139,7 +139,7 @@ TChannelHTTP.prototype.sendRequest = function send(treq, hreq, options, callback
     }
 };
 
-TChannelHTTP.prototype.sendResponse = function send(buildResponse, hres, callback) {
+TChannelHTTP.prototype.sendResponse = function send(buildResponse, hres, body, callback) {
     // TODO: map http response codes onto error frames and application errors
     var self = this;
     var head = new HTTPResArg2(hres.statusCode, hres.statusMessage);
@@ -160,6 +160,14 @@ TChannelHTTP.prototype.sendResponse = function send(buildResponse, hres, callbac
         return null;
     }
     var arg2 = arg2res.value;
+    if (body) {
+        return buildResponse({
+            streamed: false,
+            headers: {
+                as: 'http'
+            }
+        }).sendOk(arg2, body);
+    }
 
     return buildResponse({
         streamed: true,
@@ -258,7 +266,7 @@ TChannelHTTP.prototype.forwardToHTTP = function forwardToHTTP(tchannel, options,
     }
     var outreq;
     if (self.lbpool) {
-        options.buffer_body = false;
+        //options.buffer_body = false;
         outreq = self.lbpool.request(options, inreq.body, onLBPoolResponse);
         return;
     }
@@ -269,9 +277,7 @@ TChannelHTTP.prototype.forwardToHTTP = function forwardToHTTP(tchannel, options,
             callback(err);
             return;
         }
-        console.log(outreq.state);
-        console.log(outreq.response.readable);
-        outres.sendResponse(outreq.response);
+        outres.sendResponse(res, body);
         callback(null);
     }
 
@@ -284,8 +290,7 @@ TChannelHTTP.prototype.forwardToHTTP = function forwardToHTTP(tchannel, options,
     function onResponse(inres) {
         if (!sent) {
             sent = true;
-            console.log(inres.readable);
-            outres.sendResponse(inres);
+            outres.sendResponse(inres, null);
             callback(null);
         }
     }
@@ -381,10 +386,10 @@ AsHTTPHandler.prototype.handleRequest = function handleRequest(req, buildRespons
         self.handler.handleRequest(hreq, hres);
     }
 
-    function sendResponse(hres) {
+    function sendResponse(hres, body) {
         if (!sent) {
             sent = true;
-            self.asHTTP.sendResponse(buildResponse, hres, sendError);
+            self.asHTTP.sendResponse(buildResponse, hres, body, sendError);
         }
     }
 
