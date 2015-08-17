@@ -152,6 +152,7 @@ function TChannel(options) {
     // Filled in by the listen call:
     self.host = null;
     self.requestedPort = null;
+    self.listenFd = null;
 
     // Filled in by listening event:
     self.hostPort = null;
@@ -453,20 +454,37 @@ TChannel.prototype.makeSubChannel = function makeSubChannel(options) {
     return chan;
 };
 
-TChannel.prototype.listen = function listen(port, host, callback) {
+TChannel.prototype.listen = function listen(port, host, opts, callback) {
     // Note:
     // - 0 is a valid port number, indicating that the system must assign an
     //   available ephemeral port
     // - 127.0.0.1 is a valid host, primarily for testing
+    // - opts supports:
+    //   {fd: X} - listen will attach to the existing socket, and host/port
+    //   remain required, but become only descriptive. See also:
+    //   https://nodejs.org/api/net.html#net_server_listen_handle_callback
     var self = this;
+    if (opts && typeof opts === 'function') {
+        callback = opts;
+        opts = {};
+    }
+    opts = opts || {};
     assert(!self.listened, 'TChannel can only listen once');
     assert(typeof host === 'string', 'TChannel requires host argument');
     assert(typeof port === 'number', 'TChannel must listen with numeric port');
+    assert(!('fd' in opts) || typeof opts.fd === 'number', 'TChannel listen opts.fd must be numeric');
     assert(host !== '0.0.0.0', 'TChannel must listen with externally visible host');
     self.listened = true;
     self.requestedPort = port;
     self.host = host;
-    self.getServer().listen(port, host, callback);
+    self.listenFd = opts.fd;
+
+    if (self.listenFd >= 0) {
+        assert(port !== 0, 'TChannel.listen given a FD must have a defined port');
+        self.getServer().listen({ fd: self.listenFd }, callback);
+    } else {
+        self.getServer().listen(port, host, callback);
+    }
 };
 
 TChannel.prototype.register = function register(name, options, handler) {
@@ -493,7 +511,11 @@ TChannel.prototype.register = function register(name, options, handler) {
 TChannel.prototype.address = function address() {
     var self = this;
     if (self.serverSocket) {
-        return self.serverSocket.address() || null;
+        if (self.listenFd !== null && self.listenFd !== undefined) {
+            return { port: self.port, family: 'IPv4', address: self.address };
+        } else {
+            return self.serverSocket.address() || null;
+        }
     } else if (self.topChannel) {
         return self.topChannel.address();
     } else {
