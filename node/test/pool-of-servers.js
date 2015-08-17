@@ -25,7 +25,10 @@ var parallel = require('run-parallel');
 var allocCluster = require('./lib/alloc-cluster.js');
 
 allocCluster.test('request().send() to a pool of servers', {
-    numPeers: 5
+    numPeers: 5,
+    channelOptions: {
+        choosePeerWithHeap: true
+    }
 }, function t(cluster, assert) {
     var client = cluster.channels[0];
 
@@ -174,7 +177,7 @@ allocCluster.test('request().send() to a pool of servers', {
         }
 
         var keys = Object.keys(byServer);
-        assert.equal(keys.length, numPeers, 'expected 25 servers');
+        assert.equal(keys.length, numPeers, 'expected responses from all servers');
 
         for (var k = 0; k < keys.length; k++) {
             var count = byServer[keys[k]];
