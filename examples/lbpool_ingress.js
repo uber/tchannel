@@ -73,7 +73,7 @@ var servers = [dest];
 var lbpool = new LBPool(http, servers, {
     keep_alive: true
 });
-var asHTTP = TChannelAsHTTP(lbpool);
+var asHTTP = TChannelAsHTTP({lbpool: lbpool});
 
 var tchan = TChannel();
 tchan.listen(argv.tchannelPort, argv.bind, onChannelListening);
