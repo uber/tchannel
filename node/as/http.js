@@ -64,7 +64,9 @@ function TChannelHTTP(options) {
         return new TChannelHTTP(options);
     }
     var self = this;
-    self.lbpool = options;
+    if (options) {
+        self.lbpool = options.lbpool;
+    }
 }
 
 TChannelHTTP.prototype.sendRequest = function send(treq, hreq, options, callback) {
@@ -156,11 +158,12 @@ TChannelHTTP.prototype.sendResponse = function send(buildResponse, hres, body, c
         var toBufferErr = errors.HTTPResArg2toBufferError(arg2res.err, {
             head: head
         });
-        callback(toBufferErr, null, null);
+        callback(toBufferErr);
         return null;
     }
     var arg2 = arg2res.value;
     if (body) {
+        callback(null);
         return buildResponse({
             streamed: false,
             headers: {
@@ -264,15 +267,22 @@ TChannelHTTP.prototype.forwardToHTTP = function forwardToHTTP(tchannel, options,
         var pair = inreq.head.headerPairs[i];
         options.headers[pair[0]] = pair[1];
     }
-    var outreq;
     if (self.lbpool) {
-        //options.buffer_body = false;
-        outreq = self.lbpool.request(options, inreq.body, onLBPoolResponse);
-        return;
+        self._forwardToLBPool(options, inreq, outres, callback);
+    } else {
+        self._forwardToNodeHTTP(options, inreq, outres, callback);
     }
+};
 
-    function onLBPoolResponse(err, res, body) {
+TChannelHTTP.prototype._forwardToLBPool = function _forwardToLBPool(options, inreq, outres, callback) {
+    var self = this;
+    self.lbpool.request(options, inreq.body, onResponse);
+
+    function onResponse(err, res, body) {
         if (err) {
+            self.logger.warn('Forwarding to LBPool failed', {
+                error: err
+            });
             outres.sendError(err);
             callback(err);
             return;
@@ -280,9 +290,12 @@ TChannelHTTP.prototype.forwardToHTTP = function forwardToHTTP(tchannel, options,
         outres.sendResponse(res, body);
         callback(null);
     }
+};
 
+TChannelHTTP.prototype._forwardToNodeHTTP = function _forwardToNodeHTTP(options, inreq, outres, callback) {
+    var self = this;
     var sent = false;
-    outreq = http.request(options, onResponse);
+    var outreq = http.request(options, onResponse);
     outreq.on('error', onError);
     // TODO: more http state machine integration
     inreq.body.pipe(outreq);
