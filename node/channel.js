@@ -552,64 +552,6 @@ function waitForIdentified(options, callback) {
     }
 };
 
-/*
-    Build a new opts
-    Copy all props from defaults over.
-    Build a new opts.headers
-    Copy all headers from defaults.headers over
-    For each key in per request options; assign
-    For each key in per request headers; assign
-*/
-TChannel.prototype.fastRequestDefaults =
-function fastRequestDefaults(reqOpts) {
-    var self = this;
-
-    var defaults = self.requestDefaults;
-    if (!defaults) {
-        return;
-    }
-
-    if (defaults.timeout && !reqOpts.timeout) {
-        reqOpts.timeout = defaults.timeout;
-    }
-    if (defaults.retryLimit && !reqOpts.retryLimit) {
-        reqOpts.retryLimit = defaults.retryLimit;
-    }
-    if (defaults.serviceName && !reqOpts.serviceName) {
-        reqOpts.serviceName = defaults.serviceName;
-    }
-    if (defaults._trackPendingSpecified && !reqOpts._trackPendingSpecified) {
-        reqOpts.trackPending = defaults.trackPending;
-    }
-    if (defaults._checkSumTypeSpecified && reqOpts.checksumType === null) {
-        reqOpts.checksumType = defaults.checksumType;
-    }
-    if (defaults._hasNoParentSpecified && !reqOpts._hasNoParentSpecified) {
-        reqOpts.hasNoParent = defaults.hasNoParent;
-    }
-    if (defaults._traceSpecified && !reqOpts._traceSpecified) {
-        reqOpts.trace = defaults.trace;
-    }
-    if (defaults.retryFlags && !reqOpts._retryFlagsSpecified) {
-        reqOpts.retryFlags = defaults.retryFlags;
-    }
-    if (defaults.shouldApplicationRetry &&
-        !reqOpts.shouldApplicationRetry
-    ) {
-        reqOpts.shouldApplicationRetry = defaults.shouldApplicationRetry;
-    }
-
-    if (defaults.headers) {
-        // jshint forin:false
-        for (var key in defaults.headers) {
-            if (!reqOpts.headers[key]) {
-                reqOpts.headers[key] = defaults.headers[key];
-            }
-        }
-        // jshint forin:true
-    }
-};
-
 function RequestDefaults(reqDefaults) {
     var self = this;
 
@@ -641,7 +583,9 @@ TChannel.prototype.request = function channelRequest(options) {
     options = options || {};
 
     var opts = new TChannelRequest.Options(self, options);
-    self.fastRequestDefaults(opts);
+    if (self.requestDefaults) {
+        opts.mergeDefaults(self.requestDefaults);
+    }
 
     if (opts.trace && opts.hasNoParent) {
         if (Math.random() < self.traceSample) {

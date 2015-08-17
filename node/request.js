@@ -420,6 +420,50 @@ function RequestOptions(channel, opts) {
     self.hostPort = null;
 }
 
+RequestOptions.prototype.mergeDefaults = function mergeDefaults(defaults) {
+    var self = this;
+
+    if (defaults.timeout && !self.timeout) {
+        self.timeout = defaults.timeout;
+    }
+    if (defaults.retryLimit && !self.retryLimit) {
+        self.retryLimit = defaults.retryLimit;
+    }
+    if (defaults.serviceName && !self.serviceName) {
+        self.serviceName = defaults.serviceName;
+    }
+    if (defaults._trackPendingSpecified && !self._trackPendingSpecified) {
+        self.trackPending = defaults.trackPending;
+    }
+    if (defaults._checkSumTypeSpecified && self.checksumType === null) {
+        self.checksumType = defaults.checksumType;
+    }
+    if (defaults._hasNoParentSpecified && !self._hasNoParentSpecified) {
+        self.hasNoParent = defaults.hasNoParent;
+    }
+    if (defaults._traceSpecified && !self._traceSpecified) {
+        self.trace = defaults.trace;
+    }
+    if (defaults.retryFlags && !self._retryFlagsSpecified) {
+        self.retryFlags = defaults.retryFlags;
+    }
+    if (defaults.shouldApplicationRetry &&
+        !self.shouldApplicationRetry
+    ) {
+        self.shouldApplicationRetry = defaults.shouldApplicationRetry;
+    }
+
+    if (defaults.headers) {
+        // jshint forin:false
+        for (var key in defaults.headers) {
+            if (!self.headers[key]) {
+                self.headers[key] = defaults.headers[key];
+            }
+        }
+        // jshint forin:true
+    }
+};
+
 function RequestHeaders() {
     var self = this;
 
