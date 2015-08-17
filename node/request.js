@@ -383,9 +383,11 @@ var DEFAULT_RETRY_FLAGS = new RetryFlags(
     false  // onTimeout
 );
 
-function RequestOptions(channel, opts) {
+function RequestOptions(channel, opts, defaults) {
     /*eslint complexity: [2, 30]*/
     var self = this;
+
+    opts = opts || {};
 
     self.channel = channel;
 
@@ -418,6 +420,10 @@ function RequestOptions(channel, opts) {
     self.logical = false;
     self.remoteAddr = null;
     self.hostPort = null;
+
+    if (defaults) {
+        self.mergeDefaults(defaults);
+    }
 }
 
 RequestOptions.prototype.mergeDefaults = function mergeDefaults(defaults) {
