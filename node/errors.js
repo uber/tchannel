@@ -66,12 +66,6 @@ module.exports.ArgStreamUnknownFrameHandlingStateError = TypedError({
     message: 'unknown frame handling state'
 });
 
-module.exports.AsHeaderRequired = TypedError({
-    type: 'tchannel.handler.incoming-req-as-header-required',
-    message: 'Expected incoming call {frame} to have "as" header set.',
-    frame: null
-});
-
 module.exports.CallReqBeforeInitReqError = TypedError({
     type: 'tchannel.init.call-request-before-init-request',
     message: 'call request before init request'
@@ -105,11 +99,6 @@ module.exports.ChecksumTypeChanged = TypedError({
     message: 'checksum type changed mid-stream',
     initialChecksumType: null,
     newChecksumType: null
-});
-
-module.exports.CnHeaderRequired = TypedError({
-    type: 'tchannel.handler.incoming-req-cn-header-required',
-    message: 'Expected incoming call request to have "cn" header set.'
 });
 
 module.exports.ConnectionStaleTimeoutError = TypedError({
@@ -189,6 +178,17 @@ module.exports.HTTPResArg2toBufferError = WrappedError({
     message: 'Could not write to buffer when sending response.',
     isSerializationError: true,
     head: null
+});
+
+module.exports.InAsHeaderRequired = TypedError({
+    type: 'tchannel.handler.incoming-req-as-header-required',
+    message: 'Expected incoming call {frame} to have "as" header set.',
+    frame: null
+});
+
+module.exports.InCnHeaderRequired = TypedError({
+    type: 'tchannel.handler.incoming-req-cn-header-required',
+    message: 'Expected incoming call request to have "cn" header set.'
 });
 
 module.exports.InvalidArgumentError = TypedError({
