@@ -555,31 +555,6 @@ function waitForIdentified(options, callback) {
     }
 };
 
-function RequestDefaults(reqDefaults) {
-    var self = this;
-
-    self.timeout = reqDefaults.timeout || 0;
-    self.retryLimit = reqDefaults.retryLimit || 0;
-    self.serviceName = reqDefaults.serviceName || '';
-
-    self._trackPendingSpecified = typeof reqDefaults.trackPending === 'boolean';
-    self.trackPending = reqDefaults.trackPending;
-
-    self._checkSumTypeSpecified = typeof reqDefaults.checksumType === 'number';
-    self.checksumType = reqDefaults.checksumType || 0;
-
-    self._hasNoParentSpecified = typeof reqDefaults.hasNoParent === 'boolean';
-    self.hasNoParent = reqDefaults.hasNoParent || false;
-
-    self._traceSpecified = typeof reqDefaults.trace === 'boolean';
-    self.trace = reqDefaults.trace || false;
-
-    self.retryFlags = reqDefaults.retryFlags || null;
-    self.shouldApplicationRetry = reqDefaults.shouldApplicationRetry || null;
-
-    self.headers = reqDefaults.headers;
-}
-
 TChannel.prototype.request = function channelRequest(options) {
     var self = this;
 

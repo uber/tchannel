@@ -390,86 +390,130 @@ function RequestOptions(channel, opts, defaults) {
     /*eslint complexity: [2, 30]*/
     var self = this;
 
-    opts = opts || {};
-
     self.channel = channel;
+    self.host = '';
+    self.streamed = false;
+    self.timeout = 0;
+    self.retryLimit = 0;
+    self.serviceName = '';
+    self.trackPending = false;
+    self.checksumType = null;
+    self.hasNoParent = false;
+    self.forwardTrace = false;
+    self.trace = true;
+    self.retryFlags = DEFAULT_RETRY_FLAGS;
+    self.shouldApplicationRetry = null;
+    self.parent = null;
+    self.tracing = null;
+    self.peer = null;
+    self.timeoutPerAttempt = 0;
+    self.checksum = null;
+    self.headers = new RequestHeaders();
 
-    self.host = opts.host || '';
-    self.streamed = opts.streamed || false;
-    self.timeout = opts.timeout || 0;
-    self.retryLimit = opts.retryLimit || 0;
-    self.serviceName = opts.serviceName || '';
-    self._trackPendingSpecified = typeof opts.trackPending === 'boolean';
-    self.trackPending = opts.trackPending || false;
-    self.checksumType = opts.checksumType || null;
-    self._hasNoParentSpecified = typeof opts.hasNoParent === 'boolean';
-    self.hasNoParent = opts.hasNoParent || false;
-    self.forwardTrace = opts.forwardTrace || false;
-    self._traceSpecified = typeof opts.trace === 'boolean';
-    self.trace = self._traceSpecified ? opts.trace : true;
-    self._retryFlagsSpecified = !!opts.retryFlags;
-    self.retryFlags = opts.retryFlags || DEFAULT_RETRY_FLAGS;
-    self.shouldApplicationRetry = opts.shouldApplicationRetry || null;
-    self.parent = opts.parent || null;
-    self.tracing = opts.tracing || null;
-    self.peer = opts.peer || null;
-    self.timeoutPerAttempt = opts.timeoutPerAttempt || 0;
-    self.checksum = opts.checksum || null;
+    if (defaults) {
+        self.copyDefaults(defaults);
+    }
 
-    // TODO optimize?
-    self.headers = opts.headers || new RequestHeaders();
+    if (opts) {
+        self.extend(opts);
+    }
 
     self.retryCount = 0;
     self.logical = false;
     self.remoteAddr = null;
     self.hostPort = null;
 
-    if (defaults) {
-        self.mergeDefaults(defaults);
-    }
 }
 
-RequestOptions.prototype.mergeDefaults = function mergeDefaults(defaults) {
+RequestOptions.prototype.copyDefaults = function copyDefaults(defaults) {
+    assert(defaults instanceof RequestOptions);
     var self = this;
 
-    if (defaults.timeout && !self.timeout) {
-        self.timeout = defaults.timeout;
-    }
-    if (defaults.retryLimit && !self.retryLimit) {
-        self.retryLimit = defaults.retryLimit;
-    }
-    if (defaults.serviceName && !self.serviceName) {
-        self.serviceName = defaults.serviceName;
-    }
-    if (defaults._trackPendingSpecified && !self._trackPendingSpecified) {
-        self.trackPending = defaults.trackPending;
-    }
-    if (defaults._checkSumTypeSpecified && self.checksumType === null) {
-        self.checksumType = defaults.checksumType;
-    }
-    if (defaults._hasNoParentSpecified && !self._hasNoParentSpecified) {
-        self.hasNoParent = defaults.hasNoParent;
-    }
-    if (defaults._traceSpecified && !self._traceSpecified) {
-        self.trace = defaults.trace;
-    }
-    if (defaults.retryFlags && !self._retryFlagsSpecified) {
-        self.retryFlags = defaults.retryFlags;
-    }
-    if (defaults.shouldApplicationRetry &&
-        !self.shouldApplicationRetry
-    ) {
-        self.shouldApplicationRetry = defaults.shouldApplicationRetry;
+    self.timeout = defaults.timeout;
+    self.retryLimit = defaults.retryLimit;
+    self.serviceName = defaults.serviceName;
+    self.trackPending = defaults.trackPending;
+    self.checksumType = defaults.checksumType;
+    self.hasNoParent = defaults.hasNoParent;
+    self.trace = defaults.trace;
+    self.retryFlags = defaults.retryFlags;
+    self.shouldApplicationRetry = defaults.shouldApplicationRetry;
+    self.headers.extend(defaults.headers);
+};
+
+RequestOptions.prototype.extend = function extend(opts) {
+    var self = this;
+
+    if (opts.host) {
+        self.host = opts.host;
     }
 
-    if (defaults.headers) {
-        // jshint forin:false
-        for (var key in defaults.headers) {
-            if (!self.headers[key]) {
-                self.headers[key] = defaults.headers[key];
-            }
-        }
-        // jshint forin:true
+    if (opts.streamed) {
+        self.streamed = opts.streamed;
+    }
+
+    if (opts.timeout) {
+        self.timeout = opts.timeout;
+    }
+
+    if (opts.retryLimit) {
+        self.retryLimit = opts.retryLimit;
+    }
+
+    if (opts.serviceName) {
+        self.serviceName = opts.serviceName;
+    }
+
+    if (typeof opts.trackPending === 'boolean') {
+        self.trackPending = opts.trackPending;
+    }
+
+    if (opts.checksumType) {
+        self.checksumType = opts.checksumType;
+    }
+
+    if (typeof opts.hasNoParent === 'boolean') {
+        self.hasNoParent = opts.hasNoParent;
+    }
+
+    if (opts.forwardTrace) {
+        self.forwardTrace = opts.forwardTrace;
+    }
+
+    if (typeof opts.trace === 'boolean') {
+        self.trace = opts.trace;
+    }
+
+    if (opts.retryFlags) {
+        self.retryFlags = opts.retryFlags;
+    }
+
+    if (opts.shouldApplicationRetry) {
+        self.shouldApplicationRetry = opts.shouldApplicationRetry;
+    }
+
+    if (opts.parent) {
+        self.parent = opts.parent;
+    }
+
+    if (opts.tracing) {
+        self.tracing = opts.tracing;
+    }
+
+    if (opts.peer) {
+        self.peer = opts.peer;
+    }
+
+    if (opts.timeoutPerAttempt) {
+        self.timeoutPerAttempt = opts.timeoutPerAttempt;
+    }
+
+    if (opts.checksum) {
+        self.checksum = opts.checksum;
+    }
+
+    if (opts.headers) {
+        self.headers.extend(opts.headers);
     }
 };
 
@@ -480,3 +524,19 @@ function RequestHeaders() {
     self.as = '';
     self.re = '';
 }
+
+RequestHeaders.prototype.extend = function extend(headers) {
+    var self = this;
+
+    if (headers.cn) {
+        self.cn = headers.cn;
+    }
+
+    if (headers.as) {
+        self.as = headers.as;
+    }
+
+    if (headers.re) {
+        self.re = headers.re;
+    }
+};
