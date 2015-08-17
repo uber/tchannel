@@ -146,13 +146,21 @@ function buildResponse(req, options) {
     var self = this;
 
     if (req.res && req.res.state !== States.Initial) {
-        self.errorEvent.emit(self, errors.ResponseAlreadyStarted({
+        req.errorEvent.emit(req, errors.ResponseAlreadyStarted({
             state: req.res.state,
             reason: 'buildResponse called twice',
             codeString: req.res.codeString,
             responseMessage: req.res.message
         }));
+        return req.res;
     }
+
+    return self._buildResponse(req, options);
+};
+
+TChannelConnectionBase.prototype._buildResponse =
+function _buildResponse(req, options) {
+    var self = this;
 
     options.channel = self.channel;
     options.inreq = req;
