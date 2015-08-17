@@ -86,5 +86,9 @@ function onRequest(inreq, outres) {
     asHTTP.forwardToHTTP(svcChan, {
         host: destHost,
         port: destPort,
-    }, inreq, outres, function() { return true; });
+    }, inreq, outres, function onComplete(error) {
+        if (error) {
+            console.error('forward to http failed', error);
+        }
+    });
 }
