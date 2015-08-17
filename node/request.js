@@ -406,6 +406,10 @@ function RequestOptions(channel, opts, defaults) {
     self.timeoutPerAttempt = 0;
     self.checksum = null;
     self.headers = new RequestHeaders();
+    self.retryCount = 0;
+    self.logical = false;
+    self.remoteAddr = null;
+    self.hostPort = null;
 
     if (defaults) {
         self.copyDefaults(defaults);
@@ -414,12 +418,6 @@ function RequestOptions(channel, opts, defaults) {
     if (opts) {
         self.extend(opts);
     }
-
-    self.retryCount = 0;
-    self.logical = false;
-    self.remoteAddr = null;
-    self.hostPort = null;
-
 }
 
 RequestOptions.prototype.copyDefaults = function copyDefaults(defaults) {
