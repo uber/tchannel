@@ -256,7 +256,7 @@ TChannelV2Handler.prototype.checkCallResFrame = function checkCallResFrame(resFr
         !resFrame.body.headers.as
     ) {
         if (self.requireAs) {
-            return errors.AsHeaderRequired({
+            return errors.InAsHeaderRequired({
                 frame: 'response'
             });
         } else {
@@ -280,7 +280,7 @@ TChannelV2Handler.prototype.checkCallReqFrame = function checkCallReqFrame(reqFr
         !reqFrame.body.headers.as
     ) {
         if (self.requireAs) {
-            return errors.AsHeaderRequired({
+            return errors.InAsHeaderRequired({
                 frame: 'request'
             });
         } else {
@@ -299,7 +299,7 @@ TChannelV2Handler.prototype.checkCallReqFrame = function checkCallReqFrame(reqFr
         !reqFrame.body.headers.cn
     ) {
         if (self.requireCn) {
-            return errors.CnHeaderRequired();
+            return errors.InCnHeaderRequired();
         } else {
             self.logger.warn('Expected "cn" header for incoming req', {
                 arg1: String(reqFrame.body.args[0]),
