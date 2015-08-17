@@ -88,7 +88,7 @@ function onRequest(inreq, outres) {
         port: destPort,
     }, inreq, outres, function onComplete(error) {
         if (error) {
-            console.log('forward to http failed', error);
+            console.error('forward to http failed', error);
         }
     });
 }
