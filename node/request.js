@@ -373,3 +373,57 @@ TChannelRequest.prototype.maybeAppRetry = function maybeAppRetry(res) {
         }
     }
 };
+
+// also plays double duty for TChannelOutRequest
+TChannelRequest.Options = RequestOptions;
+
+var DEFAULT_RETRY_FLAGS = new RetryFlags(
+    false, // never
+    true,  // onConnectionError
+    false  // onTimeout
+);
+
+function RequestOptions(channel, opts) {
+    /*eslint complexity: [2, 30]*/
+    var self = this;
+
+    self.channel = channel;
+
+    self.host = opts.host || '';
+    self.streamed = opts.streamed || false;
+    self.timeout = opts.timeout || 0;
+    self.retryLimit = opts.retryLimit || 0;
+    self.serviceName = opts.serviceName || '';
+    self._trackPendingSpecified = typeof opts.trackPending === 'boolean';
+    self.trackPending = opts.trackPending || false;
+    self.checksumType = opts.checksumType || null;
+    self._hasNoParentSpecified = typeof opts.hasNoParent === 'boolean';
+    self.hasNoParent = opts.hasNoParent || false;
+    self.forwardTrace = opts.forwardTrace || false;
+    self._traceSpecified = typeof opts.trace === 'boolean';
+    self.trace = self._traceSpecified ? opts.trace : true;
+    self._retryFlagsSpecified = !!opts.retryFlags;
+    self.retryFlags = opts.retryFlags || DEFAULT_RETRY_FLAGS;
+    self.shouldApplicationRetry = opts.shouldApplicationRetry || null;
+    self.parent = opts.parent || null;
+    self.tracing = opts.tracing || null;
+    self.peer = opts.peer || null;
+    self.timeoutPerAttempt = opts.timeoutPerAttempt || 0;
+    self.checksum = opts.checksum || null;
+
+    // TODO optimize?
+    self.headers = opts.headers || new RequestHeaders();
+
+    self.retryCount = 0;
+    self.logical = false;
+    self.remoteAddr = null;
+    self.hostPort = null;
+}
+
+function RequestHeaders() {
+    var self = this;
+
+    self.cn = '';
+    self.as = '';
+    self.re = '';
+}

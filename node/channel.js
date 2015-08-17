@@ -48,7 +48,6 @@ var TChannelRootPeers = require('./root_peers');
 var TChannelSubPeers = require('./sub_peers');
 var TChannelServices = require('./services');
 var TChannelStatsd = require('./lib/statsd');
-var RetryFlags = require('./retry-flags.js');
 var TimeHeap = require('./time_heap');
 
 var TracingAgent = require('./trace/agent');
@@ -56,11 +55,6 @@ var TracingAgent = require('./trace/agent');
 var CONN_STALE_PERIOD = 1500;
 var SANITY_PERIOD = 10 * 1000;
 var STAT_EMIT_PERIOD = 100;
-var DEFAULT_RETRY_FLAGS = new RetryFlags(
-    /*never:*/ false,
-    /*onConnectionError*/ true,
-    /*onTimeout*/ false
-);
 
 function StatTags(statTags) {
     var self = this;
@@ -646,7 +640,7 @@ TChannel.prototype.request = function channelRequest(options) {
 
     options = options || {};
 
-    var opts = new RequestOptions(self, options);
+    var opts = new TChannelRequest.Options(self, options);
     self.fastRequestDefaults(opts);
 
     if (opts.trace && opts.hasNoParent) {
@@ -659,51 +653,6 @@ TChannel.prototype.request = function channelRequest(options) {
 
     return self._request(opts);
 };
-
-function RequestOptions(channel, opts) {
-    /*eslint complexity: [2, 30]*/
-    var self = this;
-
-    self.channel = channel;
-
-    self.host = opts.host || '';
-    self.streamed = opts.streamed || false;
-    self.timeout = opts.timeout || 0;
-    self.retryLimit = opts.retryLimit || 0;
-    self.serviceName = opts.serviceName || '';
-    self._trackPendingSpecified = typeof opts.trackPending === 'boolean';
-    self.trackPending = opts.trackPending || false;
-    self.checksumType = opts.checksumType || null;
-    self._hasNoParentSpecified = typeof opts.hasNoParent === 'boolean';
-    self.hasNoParent = opts.hasNoParent || false;
-    self.forwardTrace = opts.forwardTrace || false;
-    self._traceSpecified = typeof opts.trace === 'boolean';
-    self.trace = self._traceSpecified ? opts.trace : true;
-    self._retryFlagsSpecified = !!opts.retryFlags;
-    self.retryFlags = opts.retryFlags || DEFAULT_RETRY_FLAGS;
-    self.shouldApplicationRetry = opts.shouldApplicationRetry || null;
-    self.parent = opts.parent || null;
-    self.tracing = opts.tracing || null;
-    self.peer = opts.peer || null;
-    self.timeoutPerAttempt = opts.timeoutPerAttempt || 0;
-    self.checksum = opts.checksum || null;
-
-    // TODO optimize?
-    self.headers = opts.headers || new RequestHeaders();
-
-    self.retryCount = 0;
-    self.logical = false;
-    self.remoteAddr = null;
-    self.hostPort = null;
-}
-
-function RequestHeaders() {
-    var self = this;
-
-    self.cn = '';
-    self.as = '';
-    self.re = '';
-}
 
 TChannel.prototype._request = function _request(opts) {
     /*eslint max-statements: [2, 25]*/
