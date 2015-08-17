@@ -129,6 +129,7 @@ type Connection struct {
 	inbound         messageExchangeSet
 	outbound        messageExchangeSet
 	handlers        *handlerMap
+	subchannels     *subChannelMap
 	nextMessageID   uint32
 	events          connectionEvents
 	commonStatsTags map[string]string
@@ -241,6 +242,7 @@ func (ch *Channel) newConnection(conn net.Conn, initialState connectionState, ev
 		handlers:        ch.handlers,
 		events:          events,
 		commonStatsTags: ch.commonStatsTags,
+		subchannels:     ch.subChannels,
 	}
 	c.inbound.onRemoved = c.checkExchanges
 	c.outbound.onRemoved = c.checkExchanges

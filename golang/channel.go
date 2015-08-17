@@ -96,15 +96,15 @@ type Channel struct {
 	connectionOptions ConnectionOptions
 	handlers          *handlerMap
 	peers             *PeerList
+	subChannels       *subChannelMap
 
 	// mutable contains all the members of Channel which are mutable.
 	mutable struct {
-		mut         sync.RWMutex // protects members of the mutable struct.
-		state       ChannelState
-		peerInfo    LocalPeerInfo // May be ephemeral if this is a client only channel
-		l           net.Listener  // May be nil if this is a client only channel
-		subChannels map[string]*SubChannel
-		conns       []*Connection
+		mut      sync.RWMutex // protects members of the mutable struct.
+		state    ChannelState
+		peerInfo LocalPeerInfo // May be ephemeral if this is a client only channel
+		l        net.Listener  // May be nil if this is a client only channel
+		conns    []*Connection
 	}
 }
 
@@ -142,6 +142,7 @@ func NewChannel(serviceName string, opts *ChannelOptions) (*Channel, error) {
 		statsReporter:     statsReporter,
 		traceReporter:     traceReporter,
 		handlers:          &handlerMap{},
+		subChannels:       &subChannelMap{},
 	}
 	ch.mutable.peerInfo = LocalPeerInfo{
 		PeerInfo: PeerInfo{
@@ -150,7 +151,6 @@ func NewChannel(serviceName string, opts *ChannelOptions) (*Channel, error) {
 		},
 		ServiceName: serviceName,
 	}
-	ch.mutable.subChannels = make(map[string]*SubChannel)
 	ch.mutable.state = ChannelClient
 	ch.peers = newPeerList(ch)
 	ch.createCommonStats()
@@ -204,6 +204,12 @@ func (ch *Channel) ListenAndServe(hostPort string) error {
 	return ch.Serve(l)
 }
 
+// Registrar is the base interface for registering handlers on either the base
+// Channel or the SubChannel
+type Registrar interface {
+	Register(h Handler, operationName string)
+}
+
 // Register registers a handler for a service+operation pair
 func (ch *Channel) Register(h Handler, operationName string) {
 	ch.handlers.register(h, ch.PeerInfo().ServiceName, operationName)
@@ -231,34 +237,10 @@ func (ch *Channel) createCommonStats() {
 	// TODO(prashant): Allow user to pass extra tags (such as cluster, version).
 }
 
-func (ch *Channel) registerNewSubChannel(serviceName string) *SubChannel {
-	mutable := &ch.mutable
-	mutable.mut.Lock()
-	defer mutable.mut.Unlock()
-
-	// Recheck for the subchannel under the write lock.
-	if sc, ok := mutable.subChannels[serviceName]; ok {
-		return sc
-	}
-
-	sc := newSubChannel(serviceName, ch.peers)
-	mutable.subChannels[serviceName] = sc
-	return sc
-}
-
 // GetSubChannel returns a SubChannel for the given service name. If the subchannel does not
 // exist, it is created.
 func (ch *Channel) GetSubChannel(serviceName string) *SubChannel {
-	mutable := &ch.mutable
-	mutable.mut.RLock()
-
-	if sc, ok := mutable.subChannels[serviceName]; ok {
-		mutable.mut.RUnlock()
-		return sc
-	}
-
-	mutable.mut.RUnlock()
-	return ch.registerNewSubChannel(serviceName)
+	return ch.subChannels.getOrAdd(serviceName, ch)
 }
 
 // Peers returns the PeerList for the channel.
