@@ -163,13 +163,14 @@ TChannelHTTP.prototype.sendResponse = function send(buildResponse, hres, body, c
     }
     var arg2 = arg2res.value;
     if (body) {
-        callback(null);
-        return buildResponse({
+        buildResponse({
             streamed: false,
             headers: {
                 as: 'http'
             }
         }).sendOk(arg2, body);
+        callback(null);
+        return;
     }
 
     return buildResponse({
@@ -303,7 +304,7 @@ TChannelHTTP.prototype._forwardToNodeHTTP = function _forwardToNodeHTTP(options,
     function onResponse(inres) {
         if (!sent) {
             sent = true;
-            outres.sendResponse(inres, null);
+            outres.sendResponse(inres);
             callback(null);
         }
     }
