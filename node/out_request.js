@@ -31,6 +31,8 @@ var parallel = require('run-parallel');
 var errors = require('./errors');
 var States = require('./reqres_states');
 
+// options :: Request.options where Request = require('./request.js');
+
 function TChannelOutRequest(id, options) {
     /*max-statements: [2, 50]*/
     var self = this;
