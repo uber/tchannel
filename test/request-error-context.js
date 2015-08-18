@@ -66,7 +66,7 @@ allocCluster.test('request() without as header', {
     }, function onIdentified(err) {
         assert.ifError(err);
 
-        assert.throws(doRequest, /Got request for server echo without as header/);
+        assert.throws(doRequest, /Expected outgoing call request to have "as" header set./);
 
         assert.end();
     });
@@ -99,7 +99,7 @@ allocCluster.test('request() without cn header', {
     }, function onIdentified(err) {
         assert.ifError(err);
 
-        assert.throws(doRequest, /Got request for server echo without cn header/);
+        assert.throws(doRequest, /Expected outgoing call request to have "cn" header set./);
 
         assert.end();
     });
