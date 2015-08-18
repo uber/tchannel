@@ -69,7 +69,7 @@ function _sendCallRequest(args, isLast) {
 
     if (err) {
         self.operations.popOutReq(self.id);
-        self.errorEvent.emit(self, err);
+        self.emitError(err);
     }
 };
 
