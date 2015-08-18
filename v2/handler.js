@@ -580,14 +580,15 @@ function sendCallRequestFrame(req, flags, args) {
         self.errorEvent.emit(self, errors.SendCallReqBeforeIdentifiedError());
         return;
     }
-    var reqBody = new v2.CallRequest(
-        flags, req.timeout, req.tracing, req.serviceName, req.headers,
-        req.checksum.type, args
-    );
 
     if (!self.verifyCallRequestFrame(req, args)) {
         return;
     }
+
+    var reqBody = new v2.CallRequest(
+        flags, req.timeout, req.tracing, req.serviceName, req.headers,
+        req.checksum.type, args
+    );
 
     var result = self._sendCallBodies(req.id, reqBody, null);
     req.checksum = result.checksum;
