@@ -852,6 +852,13 @@ TChannelV2Handler.prototype.buildOutRequest = function buildOutRequest(options) 
 TChannelV2Handler.prototype.buildOutResponse = function buildOutResponse(req, options) {
     var self = this;
     if (!options) options = {};
+
+    options.inreq = req;
+    options.channel = req.channel;
+    options.logger = self.logger;
+    options.random = self.random;
+    options.timers = self.timers;
+
     options.tracing = req.tracing;
     options.span = req.span;
     options.checksumType = req.checksum.type;
