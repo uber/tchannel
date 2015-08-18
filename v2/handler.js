@@ -581,8 +581,9 @@ function sendCallRequestFrame(req, flags, args) {
         return;
     }
 
-    if (!self.verifyCallRequestFrame(req, args)) {
-        return;
+    var err = self.verifyCallRequestFrame(req, args);
+    if (err) {
+        throw err;
     }
 
     var reqBody = new v2.CallRequest(
@@ -633,7 +634,7 @@ function verifyCallRequestFrame(req, args) {
 
     if (!req.headers || !req.headers.as) {
         if (self.requireAs) {
-            throw errors.OutAsHeaderRequired();
+            return errors.OutAsHeaderRequired();
         } else {
             self.logger.error('Expected "as" header to be set for request', {
                 arg1: req.endpoint,
@@ -647,7 +648,7 @@ function verifyCallRequestFrame(req, args) {
 
     if (!req.headers || !req.headers.cn) {
         if (self.requireCn) {
-            throw errors.OutCnHeaderRequired();
+            return errors.OutCnHeaderRequired();
         } else {
             self.logger.error('Expected "cn" header to be set for request', {
                 arg1: req.endpoint,
@@ -658,7 +659,7 @@ function verifyCallRequestFrame(req, args) {
         }
     }
 
-    return true;
+    return null;
 };
 
 TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFrame(res, flags, args) {
