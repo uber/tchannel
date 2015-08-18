@@ -35,7 +35,6 @@ var errInboundRequestAlreadyActive = errors.New("inbound request is already acti
 // exchange to receive further fragments for that call, and dispatching it in
 // another goroutine
 func (c *Connection) handleCallReq(frame *Frame) bool {
-	// TODO(prashant): Parse out the span from
 	switch state := c.readState(); state {
 	case connectionActive:
 		break
