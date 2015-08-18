@@ -38,14 +38,16 @@ allocCluster.test('request() without hasNoParent', {
     }, function onIdentified(err) {
         assert.ifError(err);
 
-        assert.throws(function throwIt() {
-            subTwo.request({
-                serviceName: 'server'
-            }).send('echo', 'a', 'b');
-        }, /For the call to server/);
+        assert.throws(doRequest, /For the call to server/);
 
         assert.end();
     });
+
+    function doRequest() {
+        subTwo.request({
+            serviceName: 'server'
+        }).send('echo', 'a', 'b');
+    }
 });
 
 allocCluster.test('request() without as header', {
@@ -64,15 +66,17 @@ allocCluster.test('request() without as header', {
     }, function onIdentified(err) {
         assert.ifError(err);
 
-        assert.throws(function throwIt() {
-            subTwo.request({
-                serviceName: 'server',
-                hasNoParent: true
-            }).send('echo', 'a', 'b', noop);
-        }, /Got request for server echo without as header/);
+        assert.throws(doRequest, /Got request for server echo without as header/);
 
         assert.end();
     });
+
+    function doRequest() {
+        subTwo.request({
+            serviceName: 'server',
+            hasNoParent: true
+        }).send('echo', 'a', 'b', noop);
+    }
 });
 
 allocCluster.test('request() without cn header', {
@@ -91,18 +95,20 @@ allocCluster.test('request() without cn header', {
     }, function onIdentified(err) {
         assert.ifError(err);
 
-        assert.throws(function throwIt() {
-            subTwo.request({
-                serviceName: 'server',
-                hasNoParent: true,
-                headers: {
-                    as: 'raw'
-                }
-            }).send('echo', 'a', 'b', noop);
-        }, /Got request for server echo without cn header/);
+        assert.throws(doRequest, /Got request for server echo without cn header/);
 
         assert.end();
     });
+
+    function doRequest() {
+        subTwo.request({
+            serviceName: 'server',
+            hasNoParent: true,
+            headers: {
+                as: 'raw'
+            }
+        }).send('echo', 'a', 'b', noop);
+    }
 });
 
 function noop() {}
