@@ -259,9 +259,10 @@ function allocHTTPBridge(opts) {
         cluster.requestOptions.host = addr.address;
         cluster.requestOptions.port = addr.port;
         if (opts.enableLBPool) {
-            var addr = cluster.httpService.address();
-            opts.lbpool = new LBPool(http, [addr.address + ':' + addr.port], {
-                keep_alive: true
+            var dest = cluster.httpService.address().address + ':' +
+                cluster.httpService.address().port;
+            opts.lbpool = new LBPool(http, [dest], {
+                'keep_alive': true
             });
         }
         cluster.asHTTP = new TChannelHTTP(opts);
