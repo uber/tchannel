@@ -443,9 +443,15 @@ TChannelConnection.prototype.buildOutResponse = function buildOutResponse(req, o
     var self = this;
 
     options = options || {};
+    options.inreq = req;
+    options.channel = self.channel;
     options.logger = self.logger;
     options.random = self.random;
     options.timers = self.timers;
+
+    options.tracing = req.tracing;
+    options.span = req.span;
+    options.checksumType = req.checksum && req.checksum.type;
 
     return self.handler.buildOutResponse(req, options);
 };
