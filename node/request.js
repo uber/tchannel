@@ -171,14 +171,17 @@ TChannelRequest.prototype.resend = function resend() {
 
     var peer = self.choosePeer();
     if (!peer) {
-        if (self.outReqs.length) {
-            var lastReq = self.outReqs[self.outReqs.length - 1];
-            if (lastReq.err) {
-                self.emitError(lastReq.err);
-            } else {
-                self.emitResponse(lastReq.res);
-            }
+        var lastReq = self.outReqs.length &&
+                      self.outReqs[self.outReqs.length - 1];
+        if (!lastReq) {
+            self.emitError(errors.NoPeerAvailable());
+        } else if (lastReq.err) {
+            self.emitError(lastReq.err);
+        } else if (lastReq.res) {
+            self.emitResponse(lastReq.res);
         } else {
+            // TODO: perhaps a different typed error "last request didn't even
+            // error?"
             self.emitError(errors.NoPeerAvailable());
         }
         return;
