@@ -75,7 +75,11 @@ allocCluster.test('request() without as header', {
         subTwo.request({
             serviceName: 'server',
             hasNoParent: true
-        }).send('echo', 'a', 'b', noop);
+        }).send('echo', 'a', 'b', onResponse);
+    }
+
+    function onResponse() {
+        assert.fail("shouldn't get a response callback");
     }
 });
 
@@ -107,11 +111,13 @@ allocCluster.test('request() without cn header', {
             headers: {
                 as: 'raw'
             }
-        }).send('echo', 'a', 'b', noop);
+        }).send('echo', 'a', 'b', onResponse);
+    }
+
+    function onResponse() {
+        assert.fail("shouldn't get a response callback");
     }
 });
-
-function noop() {}
 
 function remoteService(chan) {
     chan.makeSubChannel({
