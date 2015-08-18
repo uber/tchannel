@@ -66,9 +66,7 @@ allocCluster.test('request() without as header', {
     }, function onIdentified(err) {
         assert.ifError(err);
 
-        assert.throws(doRequest, /Expected outgoing call request to have "as" header set./);
-
-        assert.end();
+        doRequest();
     });
 
     function doRequest() {
@@ -78,8 +76,13 @@ allocCluster.test('request() without as header', {
         }).send('echo', 'a', 'b', onResponse);
     }
 
-    function onResponse() {
-        assert.fail("shouldn't get a response callback");
+    function onResponse(err, res) {
+        assert.equal(err && err.type,
+                     'tchannel.handler.outgoing-req-as-header-required',
+                     'expected error type');
+        assert.notOk(res, 'expected no response');
+
+        assert.end();
     }
 });
 
@@ -99,9 +102,7 @@ allocCluster.test('request() without cn header', {
     }, function onIdentified(err) {
         assert.ifError(err);
 
-        assert.throws(doRequest, /Expected outgoing call request to have "cn" header set./);
-
-        assert.end();
+        doRequest();
     });
 
     function doRequest() {
@@ -114,8 +115,13 @@ allocCluster.test('request() without cn header', {
         }).send('echo', 'a', 'b', onResponse);
     }
 
-    function onResponse() {
-        assert.fail("shouldn't get a response callback");
+    function onResponse(err, res) {
+        assert.equal(err && err.type,
+                     'tchannel.handler.outgoing-req-cn-header-required',
+                     'expected error type');
+        assert.notOk(res, 'expected no response');
+
+        assert.end();
     }
 });
 

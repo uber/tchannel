@@ -91,11 +91,8 @@ allocCluster.test('request() with large arg1', {
     }, function onIdentified(err) {
         assert.ifError(err);
 
-        // TODO: O(pinions) -- is this really what we want?
-        assert.throws(doRequest, /arg1 length \d+ is larger than the limit \d+/);
-
-        assert.end();
-    });
+        doRequest();
+});
 
     function doRequest() {
         subTwo.request({
@@ -108,18 +105,13 @@ allocCluster.test('request() with large arg1', {
         }).send(arg1, 'a', 'b', onResponse);
     }
 
-    function onResponse(err, resp, arg2, arg3) {
-        assert.fail("shouldn't get a response callback");
+    function onResponse(err, res) {
+        assert.equal(err && err.type,
+                     'tchannel.arg1-over-length-limit',
+                     'expected error type');
+        assert.notOk(res, 'expected no response');
 
-        // assert.ok(err);
-        // assert.equal(err.type, 'tchannel.arg1-over-length-limit');
-        // assert.equal(err.message,
-        //     'arg1 length 16385 is larger than the limit 16384'
-        // );
-
-        // assert.equal(null, resp);
-
-        // assert.end();
+        assert.end();
     }
 });
 
