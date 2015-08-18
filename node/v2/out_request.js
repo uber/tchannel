@@ -69,7 +69,9 @@ function _sendCallRequest(args, isLast) {
 
     if (err) {
         self.operations.popOutReq(self.id);
-        self.emitError(err);
+        throw err;
+        // TODO: O(pinions)
+        // self.emitError(err);
     }
 };
 
