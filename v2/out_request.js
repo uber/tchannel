@@ -64,7 +64,7 @@ function _sendCallRequest(args, isLast) {
             limit: v2.MaxArg1Size
         });
     } else {
-        self.handler.sendCallRequestFrame(self, flags, args);
+        err = self.handler.sendCallRequestFrame(self, flags, args);
     }
 
     if (err) {
