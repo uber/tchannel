@@ -343,6 +343,16 @@ module.exports.OrphanCallResponseCont = TypedError({
     frameId: null
 });
 
+module.exports.OutAsHeaderRequired = TypedError({
+    type: 'tchannel.handler.outgoing-req-as-header-required',
+    message: 'Expected outgoing call request to have "as" header set.'
+});
+
+module.exports.OutCnHeaderRequired = TypedError({
+    type: 'tchannel.handler.outgoing-req-cn-header-required',
+    message: 'Expected outgoing call request to have "cn" header set.'
+});
+
 module.exports.ParentRequired = TypedError({
     type: 'tchannel.tracer.parent-required',
     message: 'parent not specified for outgoing call req.\n' +
@@ -691,6 +701,8 @@ module.exports.classify = function classify(err) {
         case 'tchannel-thrift-handler.stringify-error.head-failed':
         case 'tchannel.argstream.unknown-frame-handling-state':
         case 'tchannel.connection.unknown-reset':
+        case 'tchannel.handler.outgoing-req-as-header-required':
+        case 'tchannel.handler.outgoing-req-cn-header-required':
         case 'tchannel.http-handler.from-buffer-arg2.req-failed':
         case 'tchannel.http-handler.from-buffer-arg2.res-failed':
         case 'tchannel.hydrated-error.default-type':
