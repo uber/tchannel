@@ -24,6 +24,7 @@ import (
 	"math/rand"
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -336,5 +337,62 @@ func TestCloseOneSide(t *testing.T) {
 
 	// We need to close all open TChannels before verifying blocked goroutines.
 	ch2.Close()
+	VerifyNoBlockedGoroutines(t)
+}
+
+// TestCloseSendError tests that system errors are not attempted to be sent when
+// a connection is closed, and ensures there's no race conditions such as the error
+// frame being added to the channel just as it is closed.
+// TODO(prashant): This test is waiting for timeout, but socket close shouldn't wait for timeout.
+func TestCloseSendError(t *testing.T) {
+	ctx, cancel := NewContext(time.Second)
+	defer cancel()
+
+	serverCh, err := testutils.NewServer(nil)
+	require.NoError(t, err, "NewServer failed")
+
+	closed := uint32(0)
+	counter := uint32(0)
+	registerFunc(t, serverCh, "echo", func(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+		atomic.AddUint32(&counter, 1)
+		return &raw.Res{Arg2: args.Arg2, Arg3: args.Arg3}, nil
+	})
+
+	clientCh, err := testutils.NewClient(nil)
+	require.NoError(t, err, "NewClient failed")
+
+	// Make a call to create a connection that will be shared.
+	peerInfo := serverCh.PeerInfo()
+	_, _, _, err = raw.Call(ctx, clientCh, peerInfo.HostPort, peerInfo.ServiceName, "echo", nil, nil)
+	require.NoError(t, err, "Call should succeed")
+
+	var wg sync.WaitGroup
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go func() {
+			time.Sleep(time.Duration(rand.Intn(1000)) * time.Microsecond)
+			_, _, _, err := raw.Call(ctx, clientCh, peerInfo.HostPort, peerInfo.ServiceName, "echo", nil, nil)
+			if err != nil && atomic.LoadUint32(&closed) == 0 {
+				t.Errorf("Call failed: %v", err)
+			}
+			wg.Done()
+		}()
+	}
+
+	// Wait for the server to have processed some number of these calls.
+	for {
+		if atomic.LoadUint32(&counter) >= 10 {
+			break
+		}
+		runtime.Gosched()
+	}
+
+	atomic.AddUint32(&closed, 1)
+	serverCh.Close()
+
+	// Wait for all the goroutines to end
+	wg.Wait()
+
+	clientCh.Close()
 	VerifyNoBlockedGoroutines(t)
 }

@@ -533,15 +533,21 @@ func (c *Connection) SendSystemError(id uint32, span *Span, err error) error {
 		return fmt.Errorf("failed to create outbound error frame")
 	}
 
-	select {
-	case c.sendCh <- frame: // Good to go
-	default: // Nothing we can do here anyway
+	// When sending errors, we hold the state rlock to ensure that sendCh is not closed
+	// as we are sending the frame.
+	return c.withStateRLock(func() error {
+		// Errors cannot be sent if the connection has been closed.
+		if c.state != connectionClosed {
+			select {
+			case c.sendCh <- frame: // Good to go
+				return nil
+			default: // If the send buffer is full, log and return an error.
+			}
+		}
 		c.log.Warnf("Could not send error frame to %s for %d : %v",
 			c.remotePeerInfo, id, err)
 		return fmt.Errorf("failed to send error frame")
-	}
-
-	return nil
+	})
 }
 
 // connectionError handles a connection level error
@@ -566,6 +572,14 @@ func (c *Connection) withStateLock(f func() error) error {
 	defer c.stateMut.Unlock()
 
 	return f()
+}
+
+// withStateRLock performs an action with the connection state mutex rlocked.
+func (c *Connection) withStateRLock(f func() error) error {
+	c.stateMut.RLock()
+	err := f()
+	c.stateMut.RUnlock()
+	return err
 }
 
 func (c *Connection) readState() connectionState {
