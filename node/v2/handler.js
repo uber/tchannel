@@ -578,12 +578,12 @@ function sendCallRequestFrame(req, flags, args) {
     var self = this;
     if (self.remoteName === null) {
         self.errorEvent.emit(self, errors.SendCallReqBeforeIdentifiedError());
-        return;
+        return null;
     }
 
     var err = self.verifyCallRequestFrame(req, args);
     if (err) {
-        throw err;
+        return err;
     }
 
     var reqBody = new v2.CallRequest(
@@ -608,6 +608,7 @@ function sendCallRequestFrame(req, flags, args) {
     ));
 
     self.emitBytesSent(result);
+    return null;
 };
 
 TChannelV2Handler.prototype.emitBytesSent =
