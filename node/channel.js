@@ -454,30 +454,30 @@ TChannel.prototype.makeSubChannel = function makeSubChannel(options) {
     return chan;
 };
 
-TChannel.prototype.listen = function listen(port, host, opts, callback) {
+TChannel.prototype.listen = function listen(port, host, options, callback) {
     // Note:
     // - 0 is a valid port number, indicating that the system must assign an
     //   available ephemeral port
     // - 127.0.0.1 is a valid host, primarily for testing
-    // - opts supports:
+    // - options supports:
     //   {fd: X} - listen will attach to the existing socket, and host/port
     //   remain required, but become only descriptive. See also:
     //   https://nodejs.org/api/net.html#net_server_listen_handle_callback
     var self = this;
-    if (opts && typeof opts === 'function') {
-        callback = opts;
-        opts = {};
+    if (options && typeof options === 'function') {
+        callback = options;
+        options = {};
     }
-    opts = opts || {};
+    options = options || {};
     assert(!self.listened, 'TChannel can only listen once');
     assert(typeof host === 'string', 'TChannel requires host argument');
     assert(typeof port === 'number', 'TChannel must listen with numeric port');
-    assert(!('fd' in opts) || typeof opts.fd === 'number', 'TChannel listen opts.fd must be numeric');
+    assert(options.fd === undefined || typeof options.fd === 'number', 'TChannel listen options.fd must be numeric');
     assert(host !== '0.0.0.0', 'TChannel must listen with externally visible host');
     self.listened = true;
     self.requestedPort = port;
     self.host = host;
-    self.listenFd = opts.fd;
+    self.listenFd = options.fd;
 
     if (self.listenFd >= 0) {
         assert(port !== 0, 'TChannel.listen given a FD must have a defined port');
@@ -511,8 +511,8 @@ TChannel.prototype.register = function register(name, options, handler) {
 TChannel.prototype.address = function address() {
     var self = this;
     if (self.serverSocket) {
-        if (self.listenFd !== null && self.listenFd !== undefined) {
-            return { port: self.port, family: 'IPv4', address: self.address };
+        if (typeof self.listenFd === 'number') {
+            return { port: self.port, family: 'IPv4', address: self.host };
         } else {
             return self.serverSocket.address() || null;
         }
