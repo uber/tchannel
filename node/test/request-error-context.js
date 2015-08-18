@@ -38,12 +38,11 @@ allocCluster.test('request() without hasNoParent', {
     }, function onIdentified(err) {
         assert.ifError(err);
 
-        var error = getError(function throwIt() {
+        assert.throws(function throwIt() {
             subTwo.request({
                 serviceName: 'server'
             }).send('echo', 'a', 'b');
-        });
-        assert.ok(error.message.indexOf('For the call to server') >= 0);
+        }, /For the call to server/);
 
         assert.end();
     });
@@ -65,15 +64,12 @@ allocCluster.test('request() without as header', {
     }, function onIdentified(err) {
         assert.ifError(err);
 
-        var error = getError(function throwIt() {
+        assert.throws(function throwIt() {
             subTwo.request({
                 serviceName: 'server',
                 hasNoParent: true
             }).send('echo', 'a', 'b', noop);
-        });
-        assert.ok(error.message.indexOf(
-            'Got request for server echo without as header'
-        ) >= 0);
+        }, /Got request for server echo without as header/);
 
         // purge orphaned out req.
         subTwo.peers.get(one.hostPort).connections[0].ops.clear();
@@ -98,7 +94,7 @@ allocCluster.test('request() without cn header', {
     }, function onIdentified(err) {
         assert.ifError(err);
 
-        var error = getError(function throwIt() {
+        assert.throws(function throwIt() {
             subTwo.request({
                 serviceName: 'server',
                 hasNoParent: true,
@@ -106,32 +102,16 @@ allocCluster.test('request() without cn header', {
                     as: 'raw'
                 }
             }).send('echo', 'a', 'b', noop);
-        });
+        }, /Got request for server echo without cn header/);
 
         // purge orphaned out req.
         subTwo.peers.get(one.hostPort).connections[0].ops.clear();
-
-        assert.ok(error.message.indexOf(
-            'Got request for server echo without cn header'
-        ) >= 0);
 
         assert.end();
     });
 });
 
 function noop() {}
-
-function getError(fn) {
-    var error = null;
-
-    try {
-        fn();
-    } catch (err) {
-        error = err;
-    }
-
-    return error;
-}
 
 function remoteService(chan) {
     chan.makeSubChannel({
