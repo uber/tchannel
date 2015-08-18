@@ -71,9 +71,6 @@ allocCluster.test('request() without as header', {
             }).send('echo', 'a', 'b', noop);
         }, /Got request for server echo without as header/);
 
-        // purge orphaned out req.
-        subTwo.peers.get(one.hostPort).connections[0].ops.clear();
-
         assert.end();
     });
 });
@@ -103,9 +100,6 @@ allocCluster.test('request() without cn header', {
                 }
             }).send('echo', 'a', 'b', noop);
         }, /Got request for server echo without cn header/);
-
-        // purge orphaned out req.
-        subTwo.peers.get(one.hostPort).connections[0].ops.clear();
 
         assert.end();
     });
