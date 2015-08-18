@@ -569,9 +569,10 @@ func (c *Connection) protocolError(id uint32, err error) error {
 // withStateLock performs an action with the connection state mutex locked
 func (c *Connection) withStateLock(f func() error) error {
 	c.stateMut.Lock()
-	defer c.stateMut.Unlock()
+	err := f()
+	c.stateMut.Unlock()
 
-	return f()
+	return err
 }
 
 // withStateRLock performs an action with the connection state mutex rlocked.
@@ -579,6 +580,7 @@ func (c *Connection) withStateRLock(f func() error) error {
 	c.stateMut.RLock()
 	err := f()
 	c.stateMut.RUnlock()
+
 	return err
 }
 
