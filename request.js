@@ -171,15 +171,14 @@ TChannelRequest.prototype.resend = function resend() {
 
     var peer = self.choosePeer();
     if (!peer) {
-        if (self.outReqs.length) {
-            var lastReq = self.outReqs[self.outReqs.length - 1];
-            if (lastReq.err) {
-                self.emitError(lastReq.err);
-            } else {
-                self.emitResponse(lastReq.res);
-            }
-        } else {
+        var lastReq = self.outReqs.length &&
+                      self.outReqs[self.outReqs.length - 1];
+        if (!lastReq) {
             self.emitError(errors.NoPeerAvailable());
+        } else if (lastReq.err) {
+            self.emitError(lastReq.err);
+        } else {
+            self.emitResponse(lastReq.res);
         }
         return;
     }
