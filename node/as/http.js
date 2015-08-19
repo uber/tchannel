@@ -63,6 +63,10 @@ function TChannelHTTP(options) {
     if (!(this instanceof TChannelHTTP)) {
         return new TChannelHTTP(options);
     }
+    var self = this;
+    if (options) {
+        self.lbpool = options.lbpool;
+    }
 }
 
 TChannelHTTP.prototype.sendRequest = function send(treq, hreq, options, callback) {
@@ -137,7 +141,7 @@ TChannelHTTP.prototype.sendRequest = function send(treq, hreq, options, callback
     }
 };
 
-TChannelHTTP.prototype.sendResponse = function send(buildResponse, hres, callback) {
+TChannelHTTP.prototype.sendResponse = function send(buildResponse, hres, body, callback) {
     // TODO: map http response codes onto error frames and application errors
     var self = this;
     var head = new HTTPResArg2(hres.statusCode, hres.statusMessage);
@@ -154,10 +158,20 @@ TChannelHTTP.prototype.sendResponse = function send(buildResponse, hres, callbac
         var toBufferErr = errors.HTTPResArg2toBufferError(arg2res.err, {
             head: head
         });
-        callback(toBufferErr, null, null);
+        callback(toBufferErr);
         return null;
     }
     var arg2 = arg2res.value;
+    if (body) {
+        buildResponse({
+            streamed: false,
+            headers: {
+                as: 'http'
+            }
+        }).sendOk(arg2, body);
+        callback(null);
+        return;
+    }
 
     return buildResponse({
         streamed: true,
@@ -242,7 +256,6 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
 };
 
 TChannelHTTP.prototype.forwardToHTTP = function forwardToHTTP(tchannel, options, inreq, outres, callback) {
-    // TODO: should use lb_pool
     var self = this;
     self.logger = self.logger || tchannel.logger;
     options = extend(options, {
@@ -255,7 +268,33 @@ TChannelHTTP.prototype.forwardToHTTP = function forwardToHTTP(tchannel, options,
         var pair = inreq.head.headerPairs[i];
         options.headers[pair[0]] = pair[1];
     }
+    if (self.lbpool) {
+        self._forwardToLBPool(options, inreq, outres, callback);
+    } else {
+        self._forwardToNodeHTTP(options, inreq, outres, callback);
+    }
+};
 
+TChannelHTTP.prototype._forwardToLBPool = function _forwardToLBPool(options, inreq, outres, callback) {
+    var self = this;
+    self.lbpool.request(options, inreq.body, onResponse);
+
+    function onResponse(err, res, body) {
+        if (err) {
+            self.logger.warn('Forwarding to LBPool failed', {
+                error: err
+            });
+            outres.sendError(err);
+            callback(err);
+            return;
+        }
+        outres.sendResponse(res, body);
+        callback(null);
+    }
+};
+
+TChannelHTTP.prototype._forwardToNodeHTTP = function _forwardToNodeHTTP(options, inreq, outres, callback) {
+    var self = this;
     var sent = false;
     var outreq = http.request(options, onResponse);
     outreq.on('error', onError);
@@ -361,10 +400,10 @@ AsHTTPHandler.prototype.handleRequest = function handleRequest(req, buildRespons
         self.handler.handleRequest(hreq, hres);
     }
 
-    function sendResponse(hres) {
+    function sendResponse(hres, body) {
         if (!sent) {
             sent = true;
-            self.asHTTP.sendResponse(buildResponse, hres, sendError);
+            self.asHTTP.sendResponse(buildResponse, hres, body, sendError);
         }
     }
 

@@ -29,8 +29,9 @@ var test = require('tape');
 
 var TChannelHTTP = require('../as/http.js');
 var allocCluster = require('./lib/alloc-cluster.js');
+var LBPool = require('lb_pool').Pool;
 
-allocHTTPTest('as/http can bridge a service', {
+allocHTTPTest('as/http can bridge a service using node http', {
     onServiceRequest: handleTestHTTPRequest
 }, function t(cluster, assert) {
 
@@ -77,6 +78,56 @@ allocHTTPTest('as/http can bridge a service', {
         }),
 
     ], assert.end);
+});
+
+allocHTTPTest('as/http can bridge a service using lbpool', {
+    onServiceRequest: handleTestHTTPRequest,
+    enableLBPool: true
+}, function t(cluster, assert) {
+
+    var egressHost = cluster.httpEgress.address().address + ':' +
+                     cluster.httpEgress.address().port;
+    parallel([
+
+        cluster.sendRequest.thunk({
+            method: 'GET',
+            path: '/such/stuff',
+        }, null, {
+            statusCode: 200,
+            statusMessage: 'Ok',
+            body:
+                '{"request":{"method":"GET","url":"/such/stuff","headers":{"host":"' + egressHost + '","connection":"keep-alive"}}}\n'
+        }),
+
+        cluster.sendRequest.thunk({
+            method: 'PUT',
+            path: '/wat/even/is',
+            headers: {
+                'Content-Type': 'text/plain',
+                'X-Test-Header': 'test header value'
+            }
+        }, 'hello world', {
+            statusCode: 200,
+            statusMessage: 'Ok',
+            body:
+                '{"request":{"method":"PUT","url":"/wat/even/is","headers":{"content-type":"text/plain","x-test-header":"test header value","host":"' +
+                egressHost +
+                '","connection":"keep-alive","transfer-encoding":"chunked"}}}\n' +
+                '{"chunk":"hello world"}\n'
+        }),
+
+        cluster.sendRequest.thunk({
+            method: 'GET',
+            path: '/returnStatus/420/obviously',
+        }, null, {
+            statusCode: 420,
+            statusMessage: 'obviously',
+            body:
+                '{"request":{"method":"GET","url":"/returnStatus/420/obviously","headers":{"host":"' + egressHost + '","connection":"keep-alive"}}}\n'
+        }),
+
+    ], assert.end);
+
 });
 
 allocHTTPTest('as/http can handle a timeout', {
@@ -140,6 +191,7 @@ function handleTestHTTPRequest(hreq, hres) {
 
     function onEnd() {
         hres.end();
+        hreq.connection.destroy();
     }
 }
 
@@ -173,7 +225,6 @@ function allocHTTPBridge(opts) {
     cluster.ready(cready.signal);
     cluster.httpEgress = allocHTTPServer(opts.onEgressRequest, cready.signal);
     cluster.httpService = allocHTTPServer(opts.onServiceRequest, cready.signal);
-
     var serviceName = opts.serviceName || 'test_http';
     var chanOpts = {
         serviceName: serviceName,
@@ -191,8 +242,6 @@ function allocHTTPBridge(opts) {
     cluster.ingressChan = cluster.ingressServer.makeSubChannel(chanOpts);
     cluster.egressChan = cluster.egressServer.makeSubChannel(chanOpts);
 
-    cluster.asHTTP = new TChannelHTTP();
-    cluster.asHTTP.setHandler(cluster.ingressChan, onIngressRequest);
     cluster.httpEgress.on('request', onEgressRequest);
 
     cluster.requestOptions = {
@@ -209,6 +258,15 @@ function allocHTTPBridge(opts) {
         var addr = cluster.httpEgress.address();
         cluster.requestOptions.host = addr.address;
         cluster.requestOptions.port = addr.port;
+        if (opts.enableLBPool) {
+            var dest = cluster.httpService.address().address + ':' +
+                cluster.httpService.address().port;
+            opts.lbpool = new LBPool(http, [dest], {
+                'keep_alive': true
+            });
+        }
+        cluster.asHTTP = new TChannelHTTP(opts);
+        cluster.asHTTP.setHandler(cluster.ingressChan, onIngressRequest);
     }
 
     function onIngressRequest(treq, tres) {
@@ -251,6 +309,7 @@ function allocHTTPBridge(opts) {
         tdestroy(closed.signal);
         cluster.httpEgress.close(closed.signal);
         cluster.httpService.close(closed.signal);
+        if (opts.lbpool) opts.lbpool.close();
         if (callback) closed(callback);
     }
 
