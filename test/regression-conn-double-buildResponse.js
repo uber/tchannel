@@ -77,7 +77,7 @@ allocCluster.test('conn double buildResponse: build send build sendError', {
             msg: 'outgoing response has an error',
             errorType: 'tchannel.response-already-done',
             errorMessage: 'cannot send send error frame: ' +
-                          'UnexpectedError: TchannelResponseAlreadyStartedError: response already started (state 2)' +
+                          'UnexpectedError: response already started (state 2)' +
                           ', response already done in state: 2'
         }, 'expected first error log');
 
