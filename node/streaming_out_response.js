@@ -86,10 +86,12 @@ StreamingOutResponse.prototype.setOk = function setOk(ok) {
         self.errorEvent.emit(self, errors.ResponseAlreadyStarted({
             state: self.state
         }));
+        return false;
     }
     self.ok = ok;
     self.code = ok ? 0 : 1; // TODO: too coupled to v2 specifics?
     self.arg1.end();
+    return true;
 };
 
 StreamingOutResponse.prototype.send = function send(res1, res2) {
