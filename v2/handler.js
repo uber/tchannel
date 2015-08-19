@@ -256,7 +256,7 @@ TChannelV2Handler.prototype.checkCallResFrame = function checkCallResFrame(resFr
         !resFrame.body.headers.as
     ) {
         if (self.requireAs) {
-            return errors.AsHeaderRequired({
+            return errors.InAsHeaderRequired({
                 frame: 'response'
             });
         } else {
@@ -280,7 +280,7 @@ TChannelV2Handler.prototype.checkCallReqFrame = function checkCallReqFrame(reqFr
         !reqFrame.body.headers.as
     ) {
         if (self.requireAs) {
-            return errors.AsHeaderRequired({
+            return errors.InAsHeaderRequired({
                 frame: 'request'
             });
         } else {
@@ -299,7 +299,7 @@ TChannelV2Handler.prototype.checkCallReqFrame = function checkCallReqFrame(reqFr
         !reqFrame.body.headers.cn
     ) {
         if (self.requireCn) {
-            return errors.CnHeaderRequired();
+            return errors.InCnHeaderRequired();
         } else {
             self.logger.warn('Expected "cn" header for incoming req', {
                 arg1: String(reqFrame.body.args[0]),
@@ -578,16 +578,18 @@ function sendCallRequestFrame(req, flags, args) {
     var self = this;
     if (self.remoteName === null) {
         self.errorEvent.emit(self, errors.SendCallReqBeforeIdentifiedError());
-        return;
+        return null;
     }
+
+    var err = self.verifyCallRequestFrame(req, args);
+    if (err) {
+        return err;
+    }
+
     var reqBody = new v2.CallRequest(
         flags, req.timeout, req.tracing, req.serviceName, req.headers,
         req.checksum.type, args
     );
-
-    if (!self.verifyCallRequestFrame(req, args)) {
-        return;
-    }
 
     var result = self._sendCallBodies(req.id, reqBody, null);
     req.checksum = result.checksum;
@@ -606,6 +608,7 @@ function sendCallRequestFrame(req, flags, args) {
     ));
 
     self.emitBytesSent(result);
+    return null;
 };
 
 TChannelV2Handler.prototype.emitBytesSent =
@@ -630,39 +633,34 @@ TChannelV2Handler.prototype.verifyCallRequestFrame =
 function verifyCallRequestFrame(req, args) {
     var self = this;
 
-    var message;
-    if (self.requireAs) {
-        message = 'Expected the "as" transport header to be set for request\n' +
-            'Got request for ' + req.serviceName + ' ' + req.endpoint +
-            ' without as header';
-
-        assert(req.headers && req.headers.as, message);
-    } else if (!req.headers || !req.headers.as) {
-        self.logger.error('Expected "as" header to be set for request', {
-            arg1: req.endpoint,
-            callerName: req.headers && req.headers.cn,
-            remoteName: self.remoteName,
-            serviceName: req.serviceName,
-            socketRemoteAddr: self.connection.socketRemoteAddr
-        });
+    if (!req.headers || !req.headers.as) {
+        if (self.requireAs) {
+            return errors.OutAsHeaderRequired();
+        } else {
+            self.logger.error('Expected "as" header to be set for request', {
+                arg1: req.endpoint,
+                callerName: req.headers && req.headers.cn,
+                remoteName: self.remoteName,
+                serviceName: req.serviceName,
+                socketRemoteAddr: self.connection.socketRemoteAddr
+            });
+        }
     }
 
-    if (self.requireCn) {
-        message = 'Expected the "cn" transport header to be set for request\n' +
-            'Got request for ' + req.serviceName + ' ' + req.endpoint +
-            ' without cn header';
-
-        assert(req.headers && req.headers.cn, message);
-    } else if (!req.headers || !req.headers.cn) {
-        self.logger.error('Expected "cn" header to be set for request', {
-            arg1: req.endpoint,
-            remoteName: self.remoteName,
-            serviceName: req.serviceName,
-            socketRemoteAddr: self.connection.socketRemoteAddr
-        });
+    if (!req.headers || !req.headers.cn) {
+        if (self.requireCn) {
+            return errors.OutCnHeaderRequired();
+        } else {
+            self.logger.error('Expected "cn" header to be set for request', {
+                arg1: req.endpoint,
+                remoteName: self.remoteName,
+                serviceName: req.serviceName,
+                socketRemoteAddr: self.connection.socketRemoteAddr
+            });
+        }
     }
 
-    return true;
+    return null;
 };
 
 TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFrame(res, flags, args) {
