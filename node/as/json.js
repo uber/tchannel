@@ -233,12 +233,13 @@ TChannelJSON.prototype.register = function register(
                     'Could not JSON stringify');
             }
 
-            res.headers.as = 'json';
-            res.setOk(respObject.ok);
-            res.send(
-                stringifyResult.value.head,
-                stringifyResult.value.body
-            );
+            if (res.setOk(respObject.ok)) {
+                res.headers.as = 'json';
+                res.send(
+                    stringifyResult.value.head,
+                    stringifyResult.value.body
+                );
+            }
         }
     }
 };
