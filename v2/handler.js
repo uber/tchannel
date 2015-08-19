@@ -906,7 +906,9 @@ TChannelV2Handler.prototype.onReqError = function onReqError(err, req) {
     var self = this;
 
     var codeName = errors.classify(err);
-    if (codeName) {
+    if (codeName &&
+        codeName !== 'ProtocolError'
+    ) {
         // TODO: move req to error state?
         if (!req.res) {
             req.res = self.buildOutResponse(req);
