@@ -215,6 +215,9 @@ type Registrar interface {
 
 	// Logger returns the logger for this Registrar.
 	Logger() Logger
+
+	// Peers returns the peerlist for this Registrar
+	Peers() *PeerList
 }
 
 // Register registers a handler for a service+operation pair
