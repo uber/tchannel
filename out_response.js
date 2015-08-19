@@ -254,10 +254,11 @@ TChannelOutResponse.prototype.setOk = function setOk(ok) {
             method: 'setOk',
             ok: ok
         }));
-        return;
+        return false;
     }
     self.ok = ok;
     self.code = ok ? 0 : 1; // TODO: too coupled to v2 specifics?
+    return true;
 };
 
 TChannelOutResponse.prototype.sendOk = function sendOk(res1, res2) {
