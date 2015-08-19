@@ -24,7 +24,7 @@ var CountedReadySignal = require('ready-signal/counted');
 var extend = require('xtend');
 var http = require('http');
 var parallel = require('run-parallel');
-var PassThrough = require('readable-stream').PassThrough;
+var PassThrough = require('stream').PassThrough;
 var test = require('tape');
 
 var TChannelHTTP = require('../as/http.js');
