@@ -99,3 +99,17 @@ test('create HyperbahnClient without hostPortList', function t(assert) {
     tchannel.close();
     assert.end();
 });
+
+test('create HyperbahnClient with bad hostPortFile', function t(assert) {
+    var tchannel = TChannel();
+    assert.throws(function throwIt() {
+        HyperbahnClient({
+            tchannel: tchannel,
+            serviceName: 'foo',
+            hostPortFile: '~~~~~'
+        });
+    }, /Failed to read the hostPortFile/);
+
+    tchannel.close();
+    assert.end();
+});

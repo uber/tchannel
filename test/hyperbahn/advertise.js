@@ -21,6 +21,7 @@
 'use strict';
 
 var DebugLogtron = require('debug-logtron');
+var fs = require('fs');
 
 var HyperbahnClient = require('../../hyperbahn/index.js');
 
@@ -63,6 +64,47 @@ function runTests(HyperbahnCluster) {
                 'expect to have at most 5 advertise results');
 
             client.destroy();
+            assert.end();
+        }
+    });
+
+    HyperbahnCluster.test('can advertise using hostPortFile', {
+        size: 5
+    }, function t(cluster, assert) {
+        var bob = cluster.remotes.bob;
+        var hostPortFile = '/tmp/host-special.json';
+        fs.writeFileSync(hostPortFile, JSON.stringify(cluster.hostPortList), 'utf8');
+
+        var client = new HyperbahnClient({
+            serviceName: 'hello-bob',
+            callerName: 'hello-bob-test',
+            hostPortFile: hostPortFile,
+            tchannel: bob.channel,
+            logger: DebugLogtron('hyperbahnClient')
+        });
+
+        client.once('advertised', onResponse);
+        client.advertise();
+
+        function onResponse() {
+            var result = client.latestAdvertisementResult;
+
+            cluster.checkExitPeers(assert, {
+                serviceName: 'hello-bob',
+                hostPort: bob.channel.hostPort
+            });
+
+            assert.equal(result.head, null);
+
+            // Because of duplicates in a size 5 cluster we know
+            // that we have at most 5 kValues
+            assert.ok(result.body.connectionCount <= 5,
+                'expect to have at most 5 advertise results');
+
+            client.destroy();
+            if (fs.existsSync(hostPortFile)) {
+                fs.unlinkSync(hostPortFile);
+            }
             assert.end();
         }
     });
