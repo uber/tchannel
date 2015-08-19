@@ -461,10 +461,9 @@ allocCluster.test('sending ERROR_FRAME OK', {
     }), 'DoubleResponse::method', null, {
         value: 'foobar'
     }, function onResponse(err, resp) {
-        assert.ok(err);
-        assert.equal(err.type, 'tchannel.unexpected');
-        assert.equal(err.codeName, 'UnexpectedError');
-        assert.equal(err.message, 'Unexpected Error');
+        assert.ok(err && (
+            err.type === 'tchannel.unexpected'
+        ), 'expected "unexpected" error');
 
         assert.equal(resp, undefined);
 
@@ -538,10 +537,9 @@ allocCluster.test('sending ERROR_FRAME NOT_OK', {
     }), 'DoubleResponse::method', null, {
         value: 'foobar'
     }, function onResponse(err, resp) {
-        assert.ok(err);
-        assert.equal(err.type, 'tchannel.unexpected');
-        assert.equal(err.codeName, 'UnexpectedError');
-        assert.equal(err.message, 'Unexpected Error');
+        assert.ok(err && (
+            err.type === 'tchannel.unexpected'
+        ), 'expected "unexpected" error');
 
         assert.equal(resp, undefined);
 
@@ -611,10 +609,9 @@ allocCluster.test('sending ERROR_FRAME ERROR_FRAME', {
     }), 'DoubleResponse::method', null, {
         value: 'foobar'
     }, function onResponse(err, resp) {
-        assert.ok(err);
-        assert.equal(err.type, 'tchannel.unexpected');
-        assert.equal(err.codeName, 'UnexpectedError');
-        assert.equal(err.message, 'Unexpected Error');
+        assert.ok(err && (
+            err.type === 'tchannel.unexpected'
+        ), 'expected "unexpected" error');
 
         assert.equal(resp, undefined);
 
@@ -682,9 +679,10 @@ allocCluster.test('sending INTERNAL_TIMEOUT OK', {
     }), 'DoubleResponse::method', null, {
         value: 'foobar'
     }, function onResponse(err, resp) {
-        assert.ok(err);
-        assert.ok(err.type === 'tchannel.request.timeout' ||
-            err.type === 'tchannel.timeout');
+        assert.ok(err && (
+            err.type === 'tchannel.request.timeout' ||
+            err.type === 'tchannel.timeout'
+        ), 'expected timeout error');
 
         setTimeout(afterTime, 500);
     });
@@ -746,9 +744,10 @@ allocCluster.test('sending INTERNAL_TIMEOUT NOT_OK', {
     }), 'DoubleResponse::method', null, {
         value: 'foobar'
     }, function onResponse(err, resp) {
-        assert.ok(err);
-        assert.ok(err.type === 'tchannel.request.timeout' ||
-            err.type === 'tchannel.timeout');
+        assert.ok(err && (
+            err.type === 'tchannel.request.timeout' ||
+            err.type === 'tchannel.timeout'
+        ), 'expected timeout error');
 
         setTimeout(afterTime, 500);
     });
@@ -810,9 +809,10 @@ allocCluster.test('sending INTERNAL_TIMEOUT ERROR_FRAME', {
     }), 'DoubleResponse::method', null, {
         value: 'foobar'
     }, function onResponse(err, resp) {
-        assert.ok(err);
-        assert.ok(err.type === 'tchannel.request.timeout' ||
-            err.type === 'tchannel.timeout');
+        assert.ok(err && (
+            err.type === 'tchannel.request.timeout' ||
+            err.type === 'tchannel.timeout'
+        ), 'expected timeout error');
 
         setTimeout(afterTime, 500);
     });
