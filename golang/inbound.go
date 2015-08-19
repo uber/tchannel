@@ -62,7 +62,11 @@ func (c *Connection) handleCallReq(frame *Frame) bool {
 
 	mex, err := c.inbound.newExchange(ctx, c.framePool, callReq.messageType(), frame.Header.ID, 512)
 	if err != nil {
+		if err == errDuplicateMex {
+			err = errInboundRequestAlreadyActive
+		}
 		c.log.Errorf("could not register exchange for %s", frame.Header)
+		c.SendSystemError(frame.Header.ID, nil, err)
 		return true
 	}
 
