@@ -33,7 +33,6 @@
     "hexer": "^1.4.5",
     "json-stringify-safe": "^5.0.0",
     "lru-cache": "^2.6.4",
-    "readable-stream": "1.0.33",
     "ready-signal": "^1.1.1",
     "run-parallel": "^1.1.0",
     "run-series": "^1.1.2",
