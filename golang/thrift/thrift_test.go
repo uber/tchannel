@@ -81,6 +81,38 @@ func TestRequest(t *testing.T) {
 	})
 }
 
+func TestRequestSubChannel(t *testing.T) {
+	ctx, cancel := NewContext(time.Second)
+	defer cancel()
+
+	tchan, err := tchannel.NewChannel("svc1", nil)
+	require.NoError(t, err, "server NewChannel failed")
+	require.NoError(t, tchan.ListenAndServe(":0"), "Listen failed")
+	defer tchan.Close()
+
+	clientCh, err := tchannel.NewChannel("client", nil)
+	require.NoError(t, err, "client NewChannel failed")
+	defer clientCh.Close()
+	clientCh.Peers().Add(tchan.PeerInfo().HostPort)
+
+	tests := []tchannel.Registrar{tchan, tchan.GetSubChannel("svc2"), tchan.GetSubChannel("svc3")}
+	for _, ch := range tests {
+		mockHandler := new(mocks.TChanSecondService)
+		server := NewServer(ch)
+		server.Register(gen.NewTChanSecondServiceServer(mockHandler))
+
+		client := NewClient(clientCh, ch.ServiceName(), nil)
+		secondClient := gen.NewTChanSecondServiceClient(client)
+
+		echoArg := ch.ServiceName()
+		echoRes := echoArg + "-echo"
+		mockHandler.On("Echo", ctxArg(), echoArg).Return(echoRes, nil)
+		res, err := secondClient.Echo(ctx, echoArg)
+		assert.NoError(t, err, "Echo failed")
+		assert.Equal(t, echoRes, res)
+	}
+}
+
 func TestThriftError(t *testing.T) {
 	thriftErr := &gen.SimpleErr{
 		Message: "this is the error",
