@@ -38,15 +38,16 @@ allocCluster.test('request() without hasNoParent', {
     }, function onIdentified(err) {
         assert.ifError(err);
 
-        var error = getError(function throwIt() {
-            subTwo.request({
-                serviceName: 'server'
-            }).send('echo', 'a', 'b');
-        });
-        assert.ok(error.message.indexOf('For the call to server') >= 0);
+        assert.throws(doRequest, /For the call to server/);
 
         assert.end();
     });
+
+    function doRequest() {
+        subTwo.request({
+            serviceName: 'server'
+        }).send('echo', 'a', 'b');
+    }
 });
 
 allocCluster.test('request() without as header', {
@@ -65,21 +66,24 @@ allocCluster.test('request() without as header', {
     }, function onIdentified(err) {
         assert.ifError(err);
 
-        var error = getError(function throwIt() {
-            subTwo.request({
-                serviceName: 'server',
-                hasNoParent: true
-            }).send('echo', 'a', 'b', noop);
-        });
-        assert.ok(error.message.indexOf(
-            'Got request for server echo without as header'
-        ) >= 0);
+        doRequest();
+    });
 
-        // purge orphaned out req.
-        subTwo.peers.get(one.hostPort).connections[0].ops.clear();
+    function doRequest() {
+        subTwo.request({
+            serviceName: 'server',
+            hasNoParent: true
+        }).send('echo', 'a', 'b', onResponse);
+    }
+
+    function onResponse(err, res) {
+        assert.equal(err && err.type,
+                     'tchannel.handler.outgoing-req-as-header-required',
+                     'expected error type');
+        assert.notOk(res, 'expected no response');
 
         assert.end();
-    });
+    }
 });
 
 allocCluster.test('request() without cn header', {
@@ -98,40 +102,28 @@ allocCluster.test('request() without cn header', {
     }, function onIdentified(err) {
         assert.ifError(err);
 
-        var error = getError(function throwIt() {
-            subTwo.request({
-                serviceName: 'server',
-                hasNoParent: true,
-                headers: {
-                    as: 'raw'
-                }
-            }).send('echo', 'a', 'b', noop);
-        });
-
-        // purge orphaned out req.
-        subTwo.peers.get(one.hostPort).connections[0].ops.clear();
-
-        assert.ok(error.message.indexOf(
-            'Got request for server echo without cn header'
-        ) >= 0);
-
-        assert.end();
+        doRequest();
     });
-});
 
-function noop() {}
-
-function getError(fn) {
-    var error = null;
-
-    try {
-        fn();
-    } catch (err) {
-        error = err;
+    function doRequest() {
+        subTwo.request({
+            serviceName: 'server',
+            hasNoParent: true,
+            headers: {
+                as: 'raw'
+            }
+        }).send('echo', 'a', 'b', onResponse);
     }
 
-    return error;
-}
+    function onResponse(err, res) {
+        assert.equal(err && err.type,
+                     'tchannel.handler.outgoing-req-cn-header-required',
+                     'expected error type');
+        assert.notOk(res, 'expected no response');
+
+        assert.end();
+    }
+});
 
 function remoteService(chan) {
     chan.makeSubChannel({

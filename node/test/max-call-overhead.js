@@ -81,16 +81,20 @@ allocCluster.test('request() with large arg1', {
         serviceName: 'server'
     });
 
+    var arg1 = '';
+    for (var i = 0; i < 16 * 1024 + 1; i++) {
+        arg1 += 'a';
+    }
+
     subTwo.waitForIdentified({
         host: one.hostPort
     }, function onIdentified(err) {
         assert.ifError(err);
 
-        var arg1 = '';
-        for (var i = 0; i < 16 * 1024 + 1; i++) {
-            arg1 += 'a';
-        }
+        doRequest();
+});
 
+    function doRequest() {
         subTwo.request({
             serviceName: 'server',
             hasNoParent: true,
@@ -99,16 +103,13 @@ allocCluster.test('request() with large arg1', {
                 'cn': 'wat'
             }
         }).send(arg1, 'a', 'b', onResponse);
-    });
+    }
 
-    function onResponse(err, resp, arg2, arg3) {
-        assert.ok(err);
-        assert.equal(err.type, 'tchannel.arg1-over-length-limit');
-        assert.equal(err.message,
-            'arg1 length 16385 is larger than the limit 16384'
-        );
-
-        assert.equal(null, resp);
+    function onResponse(err, res) {
+        assert.equal(err && err.type,
+                     'tchannel.arg1-over-length-limit',
+                     'expected error type');
+        assert.notOk(res, 'expected no response');
 
         assert.end();
     }

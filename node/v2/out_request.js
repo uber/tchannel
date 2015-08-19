@@ -51,21 +51,26 @@ V2OutRequest.prototype._sendCallRequest =
 V2StreamingOutRequest.prototype._sendCallRequest =
 function _sendCallRequest(args, isLast) {
     var self = this;
+    var err = null;
+
     var flags = 0;
     if (!isLast) {
         flags |= CallFlags.Fragment;
     }
 
     if (args && args[0] && args[0].length > v2.MaxArg1Size) {
-        self.operations.popOutReq(self.id);
-        self.errorEvent.emit(self, errors.Arg1OverLengthLimit({
+        err = errors.Arg1OverLengthLimit({
             length: args[0].length,
             limit: v2.MaxArg1Size
-        }));
-        return false;
+        });
+    } else {
+        err = self.handler.sendCallRequestFrame(self, flags, args);
     }
 
-    self.handler.sendCallRequestFrame(self, flags, args);
+    if (err) {
+        self.operations.popOutReq(self.id);
+        self.emitError(err);
+    }
 };
 
 V2OutRequest.prototype._sendCallRequestCont =
