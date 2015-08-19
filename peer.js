@@ -443,7 +443,7 @@ PreferOutgoingHandler.prototype.getScore = function getScore() {
     switch (qos) {
         case TIER_ONLY_INCOMING:
             if (!self.peer.channel.destroyed) {
-                self.peer.connect();
+                self.peer.connect(true);
             }
             /* falls through */
         case TIER_UNCONNECTED:
