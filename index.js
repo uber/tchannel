@@ -97,8 +97,19 @@ require('util').inherits(TChannel, require('events').EventEmitter);
 
 // Decoulping config and creation from the constructor.
 // This also allows us to better unit test the code as the test process
-// is not blocked by the listening connections
-TChannel.prototype.listen = function () {
+// is not blocked by the listening connections.
+// - options supports:
+//   {fd: X} - listen will attach to the existing socket, and host/port
+//   remain required, but become only descriptive. See also:
+//   https://nodejs.org/api/net.html#net_server_listen_handle_callback
+TChannel.prototype.listen = function (options) {
+	options = options || {};
+	if (options && typeof options !== 'object') {
+		throw new Error('listen options must be an object');
+	}
+	if (options.fd !== undefined && !(options.fd >= 0)) {
+		throw new Error('listen options.fd must be positive integer');
+	}
 	if (!this.serverSocket) {
 		throw new Error('Missing server Socket.');
 	}
@@ -109,7 +120,12 @@ TChannel.prototype.listen = function () {
 		throw new Error('Missing server port.');
 	}
 
-	this.serverSocket.listen(this.port, this.host);
+	if (options.fd >= 0) {
+		this.listenFd = options.fd;
+		this.serverSocket.listen({ fd: options.fd });
+	} else {
+		this.serverSocket.listen(this.port, this.host);
+	}
 };
 
 
