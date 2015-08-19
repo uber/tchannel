@@ -21,6 +21,7 @@
 'use strict';
 
 var assert = require('assert');
+var fs = require('fs');
 var TypedError = require('error/typed');
 var WrappedError = require('error/wrapped');
 var timers = require('timers');
@@ -91,10 +92,19 @@ function HyperbahnClient(options) {
         'Must pass in top level tchannel');
     assert(options.tchannel.tracer, 'Top channel must have trace enabled');
     assert(options.serviceName, 'must pass in serviceName');
-    assert(Array.isArray(options.hostPortList),
-        'Must pass in hostPortList');
+    if (Array.isArray(options.hostPortList)) {
+        self.hostPortList = options.hostPortList;
+    } else if (typeof options.hostPortFile === 'string') {
+        var hostContent = safeSyncRead(options.hostPortFile);
+        assert(!hostContent.error, 'Failed to read the hostPortFile');
+        var hostJson = safeJSONParse(hostContent.fileContents);
+        assert(!hostJson.error, 'Failed to parse the hostPortFile');
+        assert(Array.isArray(hostJson.json), 'The hostPortFile must contain a hostPortList');
+        self.hostPortList = hostJson.json;
+    } else {
+        assert(false, 'Must pass in hostPortList or hostPortFile');
+    }
 
-    self.hostPortList = options.hostPortList;
     self.serviceName = options.serviceName;
     self.callerName = options.callerName || options.serviceName;
     self.tchannel = options.tchannel;
@@ -425,3 +435,35 @@ HyperbahnClient.prototype.destroy = function destroy() {
     timers.clearTimeout(self._advertisementTimer);
     timers.clearTimeout(self.advertisementTimeoutTimer);
 };
+
+function safeSyncRead(filePath) {
+    var fileContents;
+    var error;
+
+    try {
+        fileContents = fs.readFileSync(filePath, 'utf8');
+    } catch (err) {
+        error = err;
+    }
+
+    return {
+        fileContents: fileContents,
+        error: error
+    };
+}
+
+function safeJSONParse(text) {
+    var json;
+    var error;
+
+    try {
+        json = JSON.parse(text);
+    } catch (err) {
+        error = err;
+    }
+
+    return {
+        json: json,
+        error: error
+    };
+}
