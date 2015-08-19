@@ -216,7 +216,7 @@ type Registrar interface {
 	// Logger returns the logger for this Registrar.
 	Logger() Logger
 
-	// Peers returns the peerlist for this Registrar
+	// Peers returns the peer list for this Registrar.
 	Peers() *PeerList
 }
 
