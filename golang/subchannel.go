@@ -15,6 +15,7 @@ type SubChannel struct {
 	defaultCallOptions *CallOptions
 	peers              *PeerList
 	handlers           *handlerMap
+	logger             Logger
 }
 
 // Map of subchannel and the corresponding service
@@ -24,11 +25,13 @@ type subChannelMap struct {
 }
 
 func newSubChannel(serviceName string, ch *Channel) *SubChannel {
+	logger := ch.Logger().WithFields(LogField{"subchannel", serviceName})
 	return &SubChannel{
 		serviceName: serviceName,
 		peers:       ch.peers,
 		topChannel:  ch,
 		handlers:    &handlerMap{},
+		logger:      logger,
 	}
 }
 
@@ -55,6 +58,11 @@ func (c *SubChannel) Peers() *PeerList {
 // Register registers a handler on the subchannel for a service+operation pair
 func (c *SubChannel) Register(h Handler, operationName string) {
 	c.handlers.register(h, c.ServiceName(), operationName)
+}
+
+// Logger returns the logger for this subchannel.
+func (c *SubChannel) Logger() Logger {
+	return c.logger
 }
 
 // Find if a handler for the given service+operation pair exists

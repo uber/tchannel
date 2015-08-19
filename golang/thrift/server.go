@@ -32,18 +32,17 @@ import (
 
 // Server handles incoming TChannel calls and forwards them to the matching TChanServer.
 type Server struct {
-	*tchannel.Channel
-
+	ch       tchannel.Registrar
 	log      tchannel.Logger
 	mut      sync.RWMutex
 	handlers map[string]TChanServer
 }
 
 // NewServer returns a server that can serve thrift services over TChannel.
-func NewServer(tchan *tchannel.Channel) *Server {
+func NewServer(registrar tchannel.Registrar) *Server {
 	return &Server{
-		Channel:  tchan,
-		log:      tchan.Logger(),
+		ch:       registrar,
+		log:      registrar.Logger(),
 		handlers: make(map[string]TChanServer),
 	}
 }
@@ -58,7 +57,7 @@ func (s *Server) Register(svr TChanServer) {
 	s.mut.Unlock()
 
 	for _, m := range svr.Methods() {
-		s.Channel.Register(s, service+"::"+m)
+		s.ch.Register(s, service+"::"+m)
 	}
 }
 
