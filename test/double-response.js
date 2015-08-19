@@ -72,10 +72,6 @@ allocCluster.test('sending OK OK', {
         'error',
         'outgoing response has an error'
     );
-    cluster.logger.whitelist(
-        'warn',
-        'OutResponse called send() after end'
-    );
 
     cluster.asThrift.send(cluster.client.request({
         hasNoParent: true,
@@ -96,9 +92,8 @@ allocCluster.test('sending OK OK', {
     function afterTime() {
         var lines = cluster.logger.items();
 
-        assert.equal(lines.length, 2);
+        assert.equal(lines.length, 1);
         var record1 = lines[0];
-        var record2 = lines[1];
 
         var err1 = record1.meta.error;
 
@@ -110,15 +105,6 @@ allocCluster.test('sending OK OK', {
         assert.equal(err1.type, 'tchannel.response-already-started');
         assert.equal(err1.ok, true);
         assert.equal(record1.meta.ok, true);
-
-        assert.equal(record2.meta.state, 2);
-        assert.equal(record2.meta.isOk, true);
-        assert.equal(record2.meta.hasResponse, true);
-        assert.equal(record2.meta.serviceName, 'server');
-        assert.equal(record2.msg,
-            'OutResponse called send() after end');
-        assert.equal(record2.levelName, 'warn');
-        assert.equal(record2.meta.endpoint, 'DoubleResponse::method');
 
         assert.end();
     }
@@ -135,10 +121,6 @@ allocCluster.test('sending OK NOT_OK', {
         'error',
         'outgoing response has an error'
     );
-    cluster.logger.whitelist(
-        'warn',
-        'OutResponse called send() after end'
-    );
 
     cluster.asThrift.send(cluster.client.request({
         hasNoParent: true,
@@ -159,9 +141,8 @@ allocCluster.test('sending OK NOT_OK', {
     function afterTime() {
         var lines = cluster.logger.items();
 
-        assert.equal(lines.length, 2);
+        assert.equal(lines.length, 1);
         var record1 = lines[0];
-        var record2 = lines[1];
 
         var err1 = record1.meta.error;
 
@@ -173,15 +154,6 @@ allocCluster.test('sending OK NOT_OK', {
         assert.equal(err1.type, 'tchannel.response-already-started');
         assert.equal(err1.ok, false);
         assert.equal(record1.meta.ok, true);
-
-        assert.equal(record2.meta.state, 2);
-        assert.equal(record2.meta.isOk, true);
-        assert.equal(record2.meta.hasResponse, true);
-        assert.equal(record2.meta.serviceName, 'server');
-        assert.equal(record2.msg,
-            'OutResponse called send() after end');
-        assert.equal(record2.levelName, 'warn');
-        assert.equal(record2.meta.endpoint, 'DoubleResponse::method');
 
         assert.end();
     }
@@ -259,10 +231,6 @@ allocCluster.test('sending NOT_OK OK', {
         'error',
         'outgoing response has an error'
     );
-    cluster.logger.whitelist(
-        'warn',
-        'OutResponse called send() after end'
-    );
 
     cluster.asThrift.send(cluster.client.request({
         hasNoParent: true,
@@ -283,9 +251,8 @@ allocCluster.test('sending NOT_OK OK', {
     function afterTime() {
         var lines = cluster.logger.items();
 
-        assert.equal(lines.length, 2);
+        assert.equal(lines.length, 1);
         var record1 = lines[0];
-        var record2 = lines[1];
 
         var err1 = record1.meta.error;
 
@@ -297,15 +264,6 @@ allocCluster.test('sending NOT_OK OK', {
         assert.equal(err1.type, 'tchannel.response-already-started');
         assert.equal(err1.ok, true);
         assert.equal(record1.meta.ok, false);
-
-        assert.equal(record2.meta.state, 2);
-        assert.equal(record2.meta.isOk, false);
-        assert.equal(record2.meta.hasResponse, true);
-        assert.equal(record2.meta.serviceName, 'server');
-        assert.equal(record2.msg,
-            'OutResponse called send() after end');
-        assert.equal(record2.levelName, 'warn');
-        assert.equal(record2.meta.endpoint, 'DoubleResponse::method');
 
         assert.end();
     }
@@ -322,10 +280,6 @@ allocCluster.test('sending NOT_OK NOT_OK', {
         'error',
         'outgoing response has an error'
     );
-    cluster.logger.whitelist(
-        'warn',
-        'OutResponse called send() after end'
-    );
 
     cluster.asThrift.send(cluster.client.request({
         hasNoParent: true,
@@ -346,9 +300,8 @@ allocCluster.test('sending NOT_OK NOT_OK', {
     function afterTime() {
         var lines = cluster.logger.items();
 
-        assert.equal(lines.length, 2);
+        assert.equal(lines.length, 1);
         var record1 = lines[0];
-        var record2 = lines[1];
 
         var err1 = record1.meta.error;
 
@@ -360,15 +313,6 @@ allocCluster.test('sending NOT_OK NOT_OK', {
         assert.equal(err1.type, 'tchannel.response-already-started');
         assert.equal(err1.ok, false);
         assert.equal(record1.meta.ok, false);
-
-        assert.equal(record2.meta.state, 2);
-        assert.equal(record2.meta.isOk, false);
-        assert.equal(record2.meta.hasResponse, true);
-        assert.equal(record2.meta.serviceName, 'server');
-        assert.equal(record2.msg,
-            'OutResponse called send() after end');
-        assert.equal(record2.levelName, 'warn');
-        assert.equal(record2.meta.endpoint, 'DoubleResponse::method');
 
         assert.end();
     }
@@ -450,10 +394,6 @@ allocCluster.test('sending ERROR_FRAME OK', {
         'error',
         'Got unexpected error in handler'
     );
-    cluster.logger.whitelist(
-        'warn',
-        'OutResponse called send() after end'
-    );
 
     cluster.asThrift.send(cluster.client.request({
         hasNoParent: true,
@@ -473,10 +413,9 @@ allocCluster.test('sending ERROR_FRAME OK', {
     function afterTime() {
         var lines = cluster.logger.items();
 
-        assert.equal(lines.length, 3);
+        assert.equal(lines.length, 2);
         var record1 = lines[0];
         var record2 = lines[1];
-        var record3 = lines[2];
 
         var err1 = record1.meta.error;
         var err2 = record2.meta.error;
@@ -495,17 +434,6 @@ allocCluster.test('sending ERROR_FRAME OK', {
         assert.equal(err2.method, 'setOk');
         assert.equal(err2.ok, true);
         assert.equal(err2.type, 'tchannel.response-already-started');
-
-        assert.equal(record3.meta.state, 3);
-        assert.equal(record3.meta.isOk, true);
-        assert.equal(record3.meta.hasResponse, false);
-        assert.equal(record3.meta.codeString, 'UnexpectedError');
-        assert.equal(record3.meta.errorMessage, 'Unexpected Error');
-        assert.equal(record3.meta.serviceName, 'server');
-        assert.equal(record3.msg,
-            'OutResponse called send() after end');
-        assert.equal(record3.levelName, 'warn');
-        assert.equal(record3.meta.endpoint, 'DoubleResponse::method');
 
         assert.end();
     }
@@ -526,10 +454,6 @@ allocCluster.test('sending ERROR_FRAME NOT_OK', {
         'error',
         'Got unexpected error in handler'
     );
-    cluster.logger.whitelist(
-        'warn',
-        'OutResponse called send() after end'
-    );
 
     cluster.asThrift.send(cluster.client.request({
         hasNoParent: true,
@@ -549,10 +473,9 @@ allocCluster.test('sending ERROR_FRAME NOT_OK', {
     function afterTime() {
         var lines = cluster.logger.items();
 
-        assert.equal(lines.length, 3);
+        assert.equal(lines.length, 2);
         var record1 = lines[0];
         var record2 = lines[1];
-        var record3 = lines[2];
 
         var err1 = record1.meta.error;
         var err2 = record2.meta.error;
@@ -571,17 +494,6 @@ allocCluster.test('sending ERROR_FRAME NOT_OK', {
         assert.equal(err2.method, 'setOk');
         assert.equal(err2.ok, false);
         assert.equal(err2.type, 'tchannel.response-already-started');
-
-        assert.equal(record3.meta.state, 3);
-        assert.equal(record3.meta.isOk, true);
-        assert.equal(record3.meta.hasResponse, false);
-        assert.equal(record3.meta.codeString, 'UnexpectedError');
-        assert.equal(record3.meta.errorMessage, 'Unexpected Error');
-        assert.equal(record3.meta.serviceName, 'server');
-        assert.equal(record3.msg,
-            'OutResponse called send() after end');
-        assert.equal(record3.levelName, 'warn');
-        assert.equal(record3.meta.endpoint, 'DoubleResponse::method');
 
         assert.end();
     }
@@ -667,10 +579,6 @@ allocCluster.test('sending INTERNAL_TIMEOUT OK', {
         'info',
         'error for timed out outgoing response'
     );
-    cluster.logger.whitelist(
-        'info',
-        'OutResponse.send() after inreq timed out'
-    );
 
     cluster.asThrift.send(cluster.client.request({
         hasNoParent: true,
@@ -690,9 +598,8 @@ allocCluster.test('sending INTERNAL_TIMEOUT OK', {
     function afterTime() {
         var lines = cluster.logger.items();
 
-        assert.equal(lines.length, 2);
+        assert.equal(lines.length, 1);
         var record1 = lines[0];
-        var record2 = lines[1];
 
         var err1 = record1.meta.error;
 
@@ -705,16 +612,6 @@ allocCluster.test('sending INTERNAL_TIMEOUT OK', {
         assert.equal(err1.method, 'setOk');
         assert.equal(err1.type, 'tchannel.response-already-started');
         assert.equal(err1.ok, true);
-
-        assert.equal(record2.meta.state, 3);
-        assert.equal(record2.meta.isOk, true);
-        assert.equal(record2.meta.hasResponse, false);
-        assert.equal(record2.meta.serviceName, 'server');
-        assert.equal(record2.meta.codeString, 'Timeout');
-        assert.equal(record2.msg,
-            'OutResponse.send() after inreq timed out');
-        assert.equal(record2.levelName, 'info');
-        assert.equal(record2.meta.endpoint, 'DoubleResponse::method');
 
         assert.end();
     }
@@ -732,10 +629,6 @@ allocCluster.test('sending INTERNAL_TIMEOUT NOT_OK', {
         'info',
         'error for timed out outgoing response'
     );
-    cluster.logger.whitelist(
-        'info',
-        'OutResponse.send() after inreq timed out'
-    );
 
     cluster.asThrift.send(cluster.client.request({
         hasNoParent: true,
@@ -755,9 +648,8 @@ allocCluster.test('sending INTERNAL_TIMEOUT NOT_OK', {
     function afterTime() {
         var lines = cluster.logger.items();
 
-        assert.equal(lines.length, 2);
+        assert.equal(lines.length, 1);
         var record1 = lines[0];
-        var record2 = lines[1];
 
         var err1 = record1.meta.error;
 
@@ -770,16 +662,6 @@ allocCluster.test('sending INTERNAL_TIMEOUT NOT_OK', {
         assert.equal(err1.method, 'setOk');
         assert.equal(err1.type, 'tchannel.response-already-started');
         assert.equal(err1.ok, false);
-
-        assert.equal(record2.meta.state, 3);
-        assert.equal(record2.meta.isOk, true);
-        assert.equal(record2.meta.hasResponse, false);
-        assert.equal(record2.meta.serviceName, 'server');
-        assert.equal(record2.meta.codeString, 'Timeout');
-        assert.equal(record2.msg,
-            'OutResponse.send() after inreq timed out');
-        assert.equal(record2.levelName, 'info');
-        assert.equal(record2.meta.endpoint, 'DoubleResponse::method');
 
         assert.end();
     }
