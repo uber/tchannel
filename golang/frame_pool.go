@@ -1,5 +1,7 @@
 package tchannel
 
+import "sync"
+
 // Copyright (c) 2015 Uber Technologies, Inc.
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -29,10 +31,56 @@ type FramePool interface {
 	Release(f *Frame)
 }
 
-// The DefaultFramePool uses the heap as the pool
-var DefaultFramePool FramePool = defaultFramePool{}
+// DefaultFramePool is the disabled frame pool which uses the heap.
+var DefaultFramePool = DisabledFramePool
 
-type defaultFramePool struct{}
+// DisabledFramePool is a pool that uses the heap and relies on GC.
+var DisabledFramePool = disabledFramePool{}
 
-func (p defaultFramePool) Get() *Frame      { return NewFrame(MaxFramePayloadSize) }
-func (p defaultFramePool) Release(f *Frame) {}
+type disabledFramePool struct{}
+
+func (p disabledFramePool) Get() *Frame      { return NewFrame(MaxFramePayloadSize) }
+func (p disabledFramePool) Release(f *Frame) {}
+
+type syncFramePool struct {
+	pool *sync.Pool
+}
+
+// NewSyncFramePool returns a frame pool that uses a sync.Pool.
+func NewSyncFramePool() FramePool {
+	return &syncFramePool{
+		pool: &sync.Pool{New: func() interface{} { return NewFrame(MaxFramePayloadSize) }},
+	}
+}
+
+func (p syncFramePool) Get() *Frame {
+	return p.pool.Get().(*Frame)
+}
+
+func (p syncFramePool) Release(f *Frame) {
+	p.pool.Put(f)
+}
+
+type channelFramePool chan *Frame
+
+// NewChannelFramePool returns a frame pool backed by a channel that has a max capacity.
+func NewChannelFramePool(capacity int) FramePool {
+	return channelFramePool(make(chan *Frame, capacity))
+}
+
+func (c channelFramePool) Get() *Frame {
+	select {
+	case frame := <-c:
+		return frame
+	default:
+		return NewFrame(MaxFramePayloadSize)
+	}
+}
+
+func (c channelFramePool) Release(f *Frame) {
+	select {
+	case c <- f:
+	default:
+		// Too many frames in the channel, discard it.
+	}
+}
