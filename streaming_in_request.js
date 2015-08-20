@@ -85,6 +85,7 @@ StreamingInRequest.prototype.handleFrame = function handleFrame(parts, isLast) {
     return null;
 };
 
+// TODO: deprecated, remove
 StreamingInRequest.prototype.withArg1 = function withArg1(callback) {
     var self = this;
     callback(null, self.arg1);
