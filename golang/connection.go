@@ -667,31 +667,30 @@ func (c *Connection) checkExchanges() {
 		return err == nil
 	}
 
-	var updated bool
+	var updated connectionState
 	if c.readState() == connectionStartClose {
 		if c.inbound.count() == 0 && moveState(connectionStartClose, connectionInboundClosed) {
-			updated = true
+			updated = connectionInboundClosed
 		}
 		// If there was no update to the state, there's no more processing to do.
-		if !updated {
+		if updated == 0 {
 			return
 		}
 	}
 
 	if c.readState() == connectionInboundClosed {
 		if c.outbound.count() == 0 && moveState(connectionInboundClosed, connectionClosed) {
-			updated = true
+			updated = connectionClosed
 		}
 	}
 
-	if updated {
-		curState := c.readState()
+	if updated != 0 {
 		// If the connection is closed, we can safely close the channel.
-		if curState == connectionClosed {
+		if updated == connectionClosed {
 			close(c.sendCh)
 		}
 
-		c.log.Debugf("checkExchanges updated connection state to %v", curState)
+		c.log.Debugf("checkExchanges updated connection state to %v", updated)
 		c.callOnCloseStateChange()
 	}
 }
