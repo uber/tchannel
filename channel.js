@@ -472,7 +472,7 @@ TChannel.prototype.listen = function listen(port, host, options, callback) {
     assert(!self.listened, 'TChannel can only listen once');
     assert(typeof host === 'string', 'TChannel requires host argument');
     assert(typeof port === 'number', 'TChannel must listen with numeric port');
-    assert(options.fd === undefined || typeof options.fd === 'number', 'TChannel listen options.fd must be numeric');
+    assert(options.fd === undefined || (typeof options.fd === 'number' && options.fd >= 0), 'TChannel listen options.fd must be numeric');
     assert(host !== '0.0.0.0', 'TChannel must listen with externally visible host');
     self.listened = true;
     self.requestedPort = port;
