@@ -193,16 +193,7 @@ TChannelV2Handler.prototype.handleCallRequest = function handleCallRequest(reqFr
 
     var err = self.checkCallReqFrame(reqFrame);
     if (err) {
-        req.res = self.buildOutResponse(req);
-        var codeName = errors.classify(err) || 'ProtocolError';
-        // TODO: would UnexpectedError be a better default?
-        // - on the one hand, if the error isn't classified, we may be safer
-        //   "failing closed" and terminating the connection
-        // - on the other hand, that may be too heavy handed for a forwarding
-        //   entity, since it may cause undue connection thrashing in the
-        //   presence of bad actors
-        // all the more reason to kill every "TODO typed error"
-        req.res.sendError(codeName, err.message);
+        req.errorEvent.emit(req, err);
         return;
     }
 
@@ -339,7 +330,7 @@ TChannelV2Handler.prototype.handleCallResponse = function handleCallResponse(res
 
     var err = self.checkCallResFrame(resFrame);
     if (err) {
-        self.errorEvent.emit(self, err);
+        res.errorEvent.emit(res, err);
         return;
     }
 
@@ -536,7 +527,7 @@ TChannelV2Handler.prototype._handleCallFrame = function _handleCallFrame(r, fram
 
     if (err) {
         // TODO wrap context
-        self.errorEvent.emit(self, err);
+        r.errorEvent.emit(r, err);
         return false;
     }
 
@@ -872,6 +863,7 @@ TChannelV2Handler.prototype.buildOutResponse = function buildOutResponse(req, op
 
 TChannelV2Handler.prototype.buildInRequest = function buildInRequest(reqFrame) {
     var self = this;
+
     var opts = new InRequestOptions(
         self.connection.channel,
         reqFrame.body.ttl || SERVER_TIMEOUT_DEFAULT,
@@ -885,11 +877,45 @@ TChannelV2Handler.prototype.buildInRequest = function buildInRequest(reqFrame) {
         self.tracer
     );
 
+    var req;
     if (reqFrame.body.flags & v2.CallFlags.Fragment) {
-        return new StreamingInRequest(reqFrame.id, opts);
+        req = new StreamingInRequest(reqFrame.id, opts);
     } else {
-        return new InRequest(reqFrame.id, opts);
+        req = new InRequest(reqFrame.id, opts);
     }
+
+    req.errorEvent.on(onReqError);
+
+    function onReqError(err) {
+        self.onReqError(err, req);
+    }
+
+    return req;
+};
+
+TChannelV2Handler.prototype.onReqError = function onReqError(err, req) {
+    var self = this;
+
+    var codeName = errors.classify(err);
+    if (codeName &&
+        codeName !== 'ProtocolError'
+    ) {
+        // TODO: move req to error state?
+        if (!req.res) {
+            req.res = self.buildOutResponse(req);
+        }
+        req.res.sendError(codeName, err.message);
+    } else {
+        self.errorEvent.emit(self, err);
+    }
+};
+
+TChannelV2Handler.prototype.onResError = function onResError(err, res) {
+    var self = this;
+
+    // TODO: wrap errors to clarify "errors on responses to req..." ?
+    var req = self.connection.ops.getOutReq(res.id);
+    req.errorEvent.emit(req, err);
 };
 
 /*jshint maxparams:10*/
@@ -913,6 +939,7 @@ function InRequestOptions(
 
 TChannelV2Handler.prototype.buildInResponse = function buildInResponse(resFrame) {
     var self = this;
+
     var opts = {
         logger: self.logger,
         random: self.random,
@@ -922,9 +949,19 @@ TChannelV2Handler.prototype.buildInResponse = function buildInResponse(resFrame)
         streamed: resFrame.body.flags & v2.CallFlags.Fragment,
         headers: resFrame.body.headers
     };
+
+    var res;
     if (opts.streamed) {
-        return new StreamingInResponse(resFrame.id, opts);
+        res = new StreamingInResponse(resFrame.id, opts);
     } else {
-        return new InResponse(resFrame.id, opts);
+        res = new InResponse(resFrame.id, opts);
     }
+
+    res.errorEvent.on(onResError);
+
+    function onResError(err) {
+        self.onResError(err, res);
+    }
+
+    return res;
 };

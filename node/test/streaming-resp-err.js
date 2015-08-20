@@ -85,8 +85,8 @@ allocCluster.test('end response with error frame', {
     }
 
     function onError(err) {
-        assert.ifError(err);
-        assert.ok(false, 'expected no req error event');
+        assert.equal(err && err.type, 'tchannel.unexpected', 'expected an UnexpectedError');
+        assert.equal(err && err.message, 'oops', 'expected "oops"');
     }
 
     function streamHandler(inreq, buildRes) {
