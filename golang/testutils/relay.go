@@ -68,8 +68,8 @@ func (r frameRelay) relayConn(c net.Conn) {
 }
 
 func (r frameRelay) relayBetween(outgoing bool, c net.Conn, outC net.Conn) {
+	frame := tchannel.NewFrame(tchannel.MaxFramePayloadSize)
 	for {
-		frame := tchannel.NewFrame(tchannel.MaxFramePayloadSize)
 		if !assert.NoError(r.t, frame.ReadIn(c), "read frame failed") {
 			return
 		}
