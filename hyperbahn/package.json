@@ -1,0 +1,80 @@
+{
+  "name": "hyperbahn",
+  "version": "9.2.3",
+  "description": "Service Discovery and Routing",
+  "keywords": [],
+  "author": "Raynos <raynos2@gmail.com>",
+  "repository": "git+ssh://git@github.com:uber/tchannel.git",
+  "homepage": "https://github.com/uber/tchannel",
+  "contributors": [
+    {
+      "name": "Raynos"
+    }
+  ],
+  "dependencies": {
+    "bufrw": "0.9.20",
+    "chalk": "1.0.0",
+    "collect-parallel": "^1.0.1",
+    "debug-logtron": "4.0.0",
+    "deep-extend": "0.3.2",
+    "error": "6.0.0",
+    "get-port": "1.0.0",
+    "git-repo-info": "1.0.4",
+    "heapdump": "0.3.5",
+    "inherits": "2.0.1",
+    "is-empty-object": "1.0.0",
+    "json-stringify-safe": "5.0.0",
+    "leaked-handles": "5.1.0",
+    "logtron": "8.3.4",
+    "minimist": "1.1.1",
+    "mkdirp": "0.5.0",
+    "my-local-ip": "1.0.0",
+    "null-logtron": "2.2.0",
+    "process": "0.10.0",
+    "raynos-process-reporter": "2.0.0",
+    "raynos-replr": "0.2.5-port-0-support",
+    "readable-stream": "1.0.33-2",
+    "ready-signal": "1.2.0",
+    "ringpop": "10.0.0-beta6",
+    "run-parallel": "1.0.0",
+    "safe-json-parse": "4.0.0",
+    "static-config": "2.1.0",
+    "tape-cluster": "2.0.1",
+    "tcap": "5.4.2",
+    "tchannel": "2.5.1",
+    "tcurl": "4.8.1",
+    "thriftify": "1.0.0-alpha14",
+    "uber-statsd-client": "1.3.2",
+    "uncaught-exception": "5.0.0",
+    "uuid": "2.0.1",
+    "xtend": "4.0.0"
+  },
+  "devDependencies": {
+    "format-stack": "4.1.0",
+    "istanbul": "^0.3.17",
+    "opn": "^0.1.2",
+    "tape": "^3.4.0",
+    "uber-standard": "3.6.5"
+  },
+  "licenses": [],
+  "scripts": {
+    "check-cover": "istanbul check-coverage || echo coverage failed",
+    "check-ls": "npm ls --loglevel=http --parseable 1>/dev/null && echo '# npm is in a good state'",
+    "cover": "npm run test-cover -s && npm run check-cover -s",
+    "lint": "standard -v --reporter stylish && echo '# linter passed'",
+    "shrinkwrap": "node bin/shrinkwrap.js --dev",
+    "test": "npm run check-ls -s && npm run lint -s && npm run cover",
+    "test-repeat": "NODE_DEBUG=autobahn node test/index.js | FORCE_COLOR=1 tap-spec; while [ $? -eq 0 ]; do NODE_DEBUG=autobahn node test/index.js | FORCE_COLOR=1 tap-spec; done;",
+    "test-cover": "istanbul cover test/index.js",
+    "view-cover": "opn ./coverage/index.html"
+  },
+  "engines": {
+    "node": "0.10.x",
+    "npm": "1.4.3"
+  },
+  "standard": {
+    "ignore": [
+      "dashboards/*.js"
+    ]
+  }
+}
