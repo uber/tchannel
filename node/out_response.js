@@ -280,24 +280,30 @@ TChannelOutResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
     }
 };
 
+TChannelOutResponse.prototype.extendLogInfo = function extendLogInfo(info) {
+    var self = this;
+
+    info.serviceName = self.inreq.serviceName;
+    info.cn = self.inreq.headers.cn;
+    info.endpoint = self.inreq.endpoint;
+    info.remoteAddr = self.inreq.remoteAddr;
+
+    info.end = self.end;
+    info.codeString = self.codeString;
+    info.errorMessage = self.message;
+    info.isOk = self.ok;
+    info.hasResponse = !!self.arg3;
+    info.state = self.state;
+
+    return info;
+};
+
 TChannelOutResponse.prototype.send = function send(res1, res2) {
     var self = this;
 
     /* send calls after finish() should be swallowed */
     if (self.end) {
-        var logOptions = {
-            serviceName: self.inreq.serviceName,
-            cn: self.inreq.headers.cn,
-            endpoint: self.inreq.endpoint,
-            remoteAddr: self.inreq.remoteAddr,
-
-            end: self.end,
-            codeString: self.codeString,
-            errorMessage: self.message,
-            isOk: self.ok,
-            hasResponse: !!self.arg3,
-            state: self.state
-        };
+        var logOptions = self.extendLogInfo({});;
 
         if (self.inreq && self.inreq.timedOut) {
             self.logger.info('OutResponse.send() after inreq timed out', logOptions);
