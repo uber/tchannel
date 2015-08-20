@@ -399,14 +399,24 @@ TChannelOutRequest.prototype.sendCallRequestContFrame = function sendCallRequest
     }
 };
 
+TChannelOutRequest.prototype.sendArg1 = function sendArg1(arg1) {
+    var self = this;
+
+    self.arg1 = arg1;
+    self.endpoint = String(arg1);
+    if (self.span) {
+        self.span.name = self.endpoint;
+    }
+
+    return self;
+};
+
 TChannelOutRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     var self = this;
 
-    self.endpoint = String(arg1);
+    self.sendArg1(arg1);
 
     if (self.span) {
-        self.span.name = self.endpoint;
-
         self.span.annotateBinary('as', self.headers.as);
         self.span.annotateBinary('cn', self.headers.cn);
     }
@@ -419,7 +429,6 @@ TChannelOutRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
         self.hookupCallback(callback);
     }
 
-    self.arg1 = arg1;
     self.arg2 = arg2;
     self.arg3 = arg3;
 

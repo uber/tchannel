@@ -115,9 +115,8 @@ test('argstream', function t(assert) {
         });
         function finish(err) {
             assert.ifError(err, 'no end error');
-            assert.equal(getArg(s.arg1), args[0] || null, 'expected arg1');
-            assert.equal(getArg(s.arg2), args[1] || null, 'expected arg2');
-            assert.equal(getArg(s.arg3), args[2] || null, 'expected arg3');
+            assert.equal(getArg(s.arg2), args[0] || null, 'expected arg2');
+            assert.equal(getArg(s.arg3), args[1] || null, 'expected arg3');
             assert.end();
         }
     }));
@@ -141,9 +140,8 @@ test('argstream', function t(assert) {
         function finish(err) {
             assert.ifError(err, 'no end error');
             i.handleFrame(lastParts || [], true);
-            assert.equal(getArg(i.arg1), args[0] || null, 'expected arg1');
-            assert.equal(getArg(i.arg2), args[1] || null, 'expected arg2');
-            assert.equal(getArg(i.arg3), args[2] || null, 'expected arg3');
+            assert.equal(getArg(i.arg2), args[0] || null, 'expected arg2');
+            assert.equal(getArg(i.arg3), args[1] || null, 'expected arg3');
             assert.end();
         }
     }));
@@ -165,7 +163,7 @@ function argSearchTest(options, testFunc) {
         init: function init() {
             var self = this;
             self.frontier.push({
-                frames: [['', '', '']]
+                frames: [['', '']]
             });
         },
 
@@ -224,7 +222,7 @@ function realFrames(frames) {
 
 function writeFrames(frames, s, callback) {
     hookupEnd(s, callback);
-    var writingArg = 1;
+    var writingArg = 2;
     eachFrame(0);
     function eachFrame(i) {
         var stream = s['arg' + writingArg];

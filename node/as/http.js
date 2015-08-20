@@ -334,23 +334,14 @@ function AsHTTPHandler(asHTTP, channel, handler) {
 
 AsHTTPHandler.prototype.handleRequest = function handleRequest(req, buildResponse) {
     var self = this;
-    var hreq = {};
 
-    // TODO: real soon arg1 won't be streamable / fragmentable
-    if (req.streamed) {
-        req.arg1.onValueReady(onArg1);
-    } else {
-        onArg1(null, req.arg1);
-    }
-
-    function onArg1(err, arg1) {
-        if (err) {
-            sendError(err);
-        } else {
-            hreq.url = arg1;
-            req.withArg2(onArg2);
-        }
-    }
+    // TODO: explicate type
+    var hreq = {
+        url: req.arg1,
+        head: null,
+        body: null
+    };
+    req.withArg2(onArg2);
 
     function onArg2(err, arg2) {
         if (err) {
@@ -391,7 +382,8 @@ AsHTTPHandler.prototype.handleRequest = function handleRequest(req, buildRespons
     }
 
     function handle() {
-        var hres = { // TODO: explicate type
+        // TODO: explicate type
+        var hres = {
             head: new HTTPResArg2(200, 'Ok'),
             sendError: sendError,
             sendResponse: sendResponse

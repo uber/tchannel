@@ -144,6 +144,7 @@ TChannelInRequest.prototype.onTimeout = function onTimeout(now) {
     }
 };
 
+// TODO: deprecated, remove
 TChannelInRequest.prototype.withArg1 = function withArg1(callback) {
     var self = this;
     callback(null, self.arg1);

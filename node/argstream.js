@@ -49,20 +49,15 @@ function ArgStream() {
     self.frameEvent = self.defineEvent('frame');
     self.finishEvent = self.defineEvent('finish');
 
-    self.arg1 = StreamArg();
     self.arg2 = StreamArg();
     self.arg3 = StreamArg();
 
-    self.arg1.on('error', passError);
     self.arg2.on('error', passError);
     self.arg3.on('error', passError);
     function passError(err) {
         self.errorEvent.emit(self, err);
     }
 
-    self.arg2.on('start', function onArg2Start() {
-        if (!self.arg1._writableState.ended) self.arg1.end();
-    });
     self.arg3.on('start', function onArg3Start() {
         if (!self.arg2._writableState.ended) self.arg2.end();
     });
@@ -76,15 +71,14 @@ function InArgStream() {
     }
     var self = this;
     ArgStream.call(self);
-    self.streams = [self.arg1, self.arg2, self.arg3];
+    self.streams = [self.arg2, self.arg3];
     self._iStream = 0;
     self.finished = false;
     self._numFinished = 0;
-    self.arg1.on('finish', argFinished);
     self.arg2.on('finish', argFinished);
     self.arg3.on('finish', argFinished);
     function argFinished() {
-        if (++self._numFinished >= 3 && !self.finished) {
+        if (++self._numFinished >= 2 && !self.finished) {
             self.finished = true;
             self.finishEvent.emit(self);
         }
@@ -135,10 +129,7 @@ function OutArgStream() {
     self._flushImmed = null;
     self.finished = false;
     self.frame = [Buffer(0)];
-    self.currentArgN = 1;
-    self.arg1.on('data', function onArg1Data(chunk) {
-        self._handleFrameChunk(1, chunk);
-    });
+    self.currentArgN = 2;
     self.arg2.on('data', function onArg2Data(chunk) {
         self._handleFrameChunk(2, chunk);
     });
@@ -146,9 +137,6 @@ function OutArgStream() {
         self._handleFrameChunk(3, chunk);
     });
 
-    self.arg1.on('finish', function onArg1Finish() {
-        self._handleFrameChunk(1, null);
-    });
     self.arg2.on('finish', function onArg2Finish() {
         self._handleFrameChunk(2, null);
     });
