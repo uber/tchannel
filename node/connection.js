@@ -428,7 +428,8 @@ TChannelConnection.prototype.nextFrameId = function nextFrameId() {
 
 TChannelConnection.prototype.buildOutRequest = function buildOutRequest(options) {
     var self = this;
-    return self.handler.buildOutRequest(options);
+    var req = self.handler.buildOutRequest(options);
+    return req;
 };
 
 TChannelConnection.prototype.buildOutResponse = function buildOutResponse(req, options) {
