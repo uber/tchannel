@@ -25,6 +25,11 @@ var WrappedError = require('error/wrapped');
 
 // All exported errors must be in sorted order
 
+module.exports.Arg1Fragmented = TypedError({
+    type: 'tchannel.arg1-fragmented',
+    message: 'arg1 must not be fragmented'
+});
+
 module.exports.Arg1OverLengthLimit = TypedError({
     type: 'tchannel.arg1-over-length-limit',
     message: 'arg1 length {length} is larger than the limit {limit}',
@@ -634,6 +639,7 @@ module.exports.classify = function classify(err) {
         case 'tchannel-thrift-handler.parse-error.head-failed':
         case 'tchannel.arg-chunk.gap':
         case 'tchannel.arg-chunk.out-of-order':
+        case 'tchannel.arg1-fragmented':
         case 'tchannel.arg1-over-length-limit':
         case 'tchannel.argstream.exceeded-frame-parts':
         case 'tchannel.call.checksum-type-changed':

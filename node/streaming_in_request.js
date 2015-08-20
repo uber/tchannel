@@ -58,6 +58,10 @@ StreamingInRequest.prototype.handleFrame = function handleFrame(parts, isLast) {
     var self = this;
 
     if (self.state === States.Initial) {
+        if (parts.length < 2) {
+            return errors.Arg1Fragmented();
+        }
+
         self.state = States.Streaming;
     } else if (self.state !== States.Streaming) {
         return errors.ArgStreamUnknownFrameHandlingStateError();
