@@ -23,7 +23,6 @@
 var assert = require('assert');
 var bufrw = require('bufrw');
 var http = require('http');
-var PassThrough = require('stream').PassThrough;
 var extend = require('xtend');
 var extendInto = require('xtend/mutable');
 var errors = require('../errors.js');
@@ -132,11 +131,9 @@ TChannelHTTP.prototype.sendRequest = function send(treq, hreq, options, callback
             });
             callback(fromBufferErr, null, null);
         } else if (tres.streamed) {
-            callback(null, arg2res.value, tres.arg3);
+            callback(null, arg2res.value, tres.arg3, null);
         } else {
-            var body = PassThrough();
-            body.end(tres.arg3);
-            callback(null, arg2res.value, body);
+            callback(null, arg2res.value, null, tres.arg3);
         }
     }
 };
@@ -226,7 +223,7 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
         self.sendRequest(treq, hreq, forwarded);
     }
 
-    function forwarded(err, head, body) {
+    function forwarded(err, head, bodyStream, bodyArg) {
         if (err) {
             // TODO: better map of error type -> http status code, see
             // tchannel/errors.classify
@@ -249,7 +246,11 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
             } else {
                 hres.writeHead(head.statusCode, headers);
             }
-            body.pipe(hres);
+            if (bodyStream !== null) {
+                bodyStream.pipe(hres);
+            } else {
+                hres.end(bodyArg);
+            }
         }
         callback(err);
     }
@@ -277,7 +278,9 @@ TChannelHTTP.prototype.forwardToHTTP = function forwardToHTTP(tchannel, options,
 
 TChannelHTTP.prototype._forwardToLBPool = function _forwardToLBPool(options, inreq, outres, callback) {
     var self = this;
-    self.lbpool.request(options, inreq.body, onResponse);
+
+    var data = inreq.bodyStream || inreq.bodyArg; // lb_pool likes polymorphism
+    self.lbpool.request(options, data , onResponse);
 
     function onResponse(err, res, body) {
         if (err) {
@@ -299,7 +302,12 @@ TChannelHTTP.prototype._forwardToNodeHTTP = function _forwardToNodeHTTP(options,
     var outreq = http.request(options, onResponse);
     outreq.on('error', onError);
     // TODO: more http state machine integration
-    inreq.body.pipe(outreq);
+
+    if (inreq.bodyStream !== null) {
+        inreq.bodyStream.pipe(outreq);
+    } else {
+        outreq.end(inreq.bodyArg);
+    }
 
     function onResponse(inres) {
         if (!sent) {
@@ -339,7 +347,8 @@ AsHTTPHandler.prototype.handleRequest = function handleRequest(req, buildRespons
     var hreq = {
         url: req.arg1,
         head: null,
-        body: null
+        bodyArg: null,
+        bodyStream: null
     };
     req.withArg2(onArg2);
 
@@ -363,10 +372,9 @@ AsHTTPHandler.prototype.handleRequest = function handleRequest(req, buildRespons
 
         hreq.head = arg2res.value;
         if (req.streamed) {
-            hreq.body = req.arg3;
+            hreq.bodyStream = req.arg3;
         } else {
-            hreq.body = PassThrough();
-            hreq.body.end(req.arg3);
+            hreq.bodyArg = req.arg3;
         }
 
         handle();
