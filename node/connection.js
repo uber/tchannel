@@ -280,9 +280,9 @@ TChannelConnection.prototype.onCallResponse = function onCallResponse(res) {
 
     var req = self.ops.getOutReq(res.id);
     if (res.state === States.Done || res.state === States.Error) {
-        self.popOutReq(res);
+        self.ops.popOutReq(res.id, res);
     } else {
-        self.popOutReqLater(res);
+        self._deferPopOutReq(res);
     }
 
     if (!req) {
@@ -299,8 +299,7 @@ TChannelConnection.prototype.onCallResponse = function onCallResponse(res) {
     req.emitResponse(res);
 };
 
-TChannelConnection.prototype.popOutReqLater =
-function popOutReqLater(res) {
+TChannelConnection.prototype._deferPopOutReq = function _deferPopOutReq(res) {
     var self = this;
     var called = false;
 
@@ -314,15 +313,8 @@ function popOutReqLater(res) {
         }
 
         called = true;
-        self.popOutReq(res);
+        self.ops.popOutReq(res.id, res);
     }
-};
-
-TChannelConnection.prototype.popOutReq =
-function popOutReq(res) {
-    var self = this;
-
-    self.ops.popOutReq(res.id, res);
 };
 
 TChannelConnection.prototype.ping = function ping() {
@@ -436,7 +428,13 @@ TChannelConnection.prototype.nextFrameId = function nextFrameId() {
 
 TChannelConnection.prototype.buildOutRequest = function buildOutRequest(options) {
     var self = this;
-    return self.handler.buildOutRequest(options);
+    var req = self.handler.buildOutRequest(options);
+    req.errorEvent.on(onReqError);
+    return req;
+
+    function onReqError(err) {
+        self.ops.popOutReq(req.id, err);
+    }
 };
 
 TChannelConnection.prototype.buildOutResponse = function buildOutResponse(req, options) {
@@ -453,6 +451,7 @@ TChannelConnection.prototype.buildOutResponse = function buildOutResponse(req, o
     options.span = req.span;
     options.checksumType = req.checksum && req.checksum.type;
 
+    // TODO: take over popInReq on req/res error?
     return self.handler.buildOutResponse(req, options);
 };
 
