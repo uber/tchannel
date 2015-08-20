@@ -1,7 +1,7 @@
 'use strict';
 
 var chalk = require('chalk');
-var Replr = require('replr/lib/ReplrServer.js');
+var Replr = require('raynos-replr/lib/ReplrServer.js');
 var process = require('process');
 
 module.exports = createRepl;
