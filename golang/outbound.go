@@ -60,6 +60,12 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string, callOpti
 		return nil, err
 	}
 
+	// Close may have been called between the time we checked the state and us creating the exchange.
+	if state := c.readState(); state != connectionStartClose && state != connectionActive {
+		mex.shutdown()
+		return nil, ErrConnectionClosed
+	}
+
 	headers := transportHeaders{
 		CallerName: c.localPeerInfo.ServiceName,
 	}

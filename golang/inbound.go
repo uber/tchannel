@@ -70,6 +70,12 @@ func (c *Connection) handleCallReq(frame *Frame) bool {
 		return true
 	}
 
+	// Close may have been called between the time we checked the state and us creating the exchange.
+	if c.readState() != connectionActive {
+		mex.shutdown()
+		return true
+	}
+
 	call.AddBinaryAnnotation(BinaryAnnotation{Key: "cn", Value: callReq.Headers[CallerName]})
 	call.AddBinaryAnnotation(BinaryAnnotation{Key: "as", Value: callReq.Headers[ArgScheme]})
 	call.AddAnnotation(AnnotationKeyServerReceive)
