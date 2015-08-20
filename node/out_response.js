@@ -248,7 +248,7 @@ TChannelOutResponse.prototype.emitFinish = function emitFinish() {
 
 TChannelOutResponse.prototype.setOk = function setOk(ok) {
     var self = this;
-    if (self.state !== States.Initial) {
+    if (self._doubleCheck('setOk')) {
         self.errorEvent.emit(self, errors.ResponseAlreadyStarted({
             state: self.state,
             method: 'setOk',
@@ -298,18 +298,43 @@ TChannelOutResponse.prototype.extendLogInfo = function extendLogInfo(info) {
     return info;
 };
 
+TChannelOutResponse.prototype._doubleCheck = function _doubleCheck(methodName) {
+    var self = this;
+
+    // TODO: reconcile / restore this
+
+    // var logOptions = self.extendLogInfo({});
+    // var logOptions = self.extendLogInfo({});
+
+    // if (self.inreq && self.inreq.timedOut) {
+    //     self.logger.info('OutResponse.send() after inreq timed out', logOptions);
+    // } else {
+    //     self.logger.warn('OutResponse called send() after end', logOptions);
+    // }
+
+    // if (self.inreq && self.inreq.timedOut) {
+    //     self.logger.info('OutResponse.send() after inreq timed out', logOptions);
+    // } else {
+    //     self.logger.warn('OutResponse called send() after end', logOptions);
+    // }
+
+    if (self.state !== States.Initial) {
+
+        return true;
+    }
+
+    if (self.end) {
+
+        return true;
+    }
+
+    return false;
+};
+
 TChannelOutResponse.prototype.send = function send(res1, res2) {
     var self = this;
 
-    /* send calls after finish() should be swallowed */
-    if (self.end) {
-        var logOptions = self.extendLogInfo({});;
-
-        if (self.inreq && self.inreq.timedOut) {
-            self.logger.info('OutResponse.send() after inreq timed out', logOptions);
-        } else {
-            self.logger.warn('OutResponse called send() after end', logOptions);
-        }
+    if (self._doubleCheck('send')) {
         return;
     }
 
