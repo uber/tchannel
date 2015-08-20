@@ -100,6 +100,7 @@ var HyperbahnCluster = require('./lib/hyperbahn-cluster.js');
 require('./hyperbahn/forward.js')(HyperbahnCluster);
 require('./hyperbahn/advertise.js')(HyperbahnCluster);
 require('./hyperbahn/unadvertise.js')(HyperbahnCluster);
+require('./hyperbahn/hostports.js')(HyperbahnCluster);
 require('./hyperbahn/forward-retry.js')(HyperbahnCluster);
 
 require('./hyperbahn/hyperbahn-down.js')(HyperbahnCluster);

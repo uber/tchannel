@@ -24,10 +24,14 @@
 
 var assert = require('assert');
 var util = require('util');
+var fs = require('fs');
+var path = require('path');
 var setTimeout = require('timers').setTimeout;
 
 var Errors = require('../errors.js');
 var TChannelJSON = require('../as/json');
+var TChannelThrift = require('../as/thrift');
+var thriftSource = fs.readFileSync(path.join(__dirname, 'hyperbahn.thrift'), 'utf8');
 var TChannelEndpointHandler = require('../endpoint-handler');
 
 var MAX_RELAY_AD_ATTEMPTS = 2;
@@ -35,6 +39,15 @@ var RELAY_AD_RETRY_TIME = 1 * 1000;
 var RELAY_AD_TIMEOUT = 500;
 
 module.exports = HyperbahnHandler;
+
+// TODO: should be part of Hyperbahn error file
+var TypedError = require('error/typed');
+var NoHostError = TypedError({
+    type: 'no-host',
+    nameAsThrift: 'noHost',
+    message: 'no host available for {serviceName}',
+    serviceName: null
+});
 
 function HyperbahnHandler(options) {
     if (!(this instanceof HyperbahnHandler)) {
@@ -58,6 +71,11 @@ function HyperbahnHandler(options) {
         logger: self.channel.logger
     });
 
+    self.tchannelThrift = TChannelThrift({
+        logger: self.channel.logger,
+        source: thriftSource
+    });
+
     // TODO replace JSON with real bufrw handlers for this
     self.tchannelJSON.register(self, 'ad', self,
         self.handleAdvertise);
@@ -67,6 +85,9 @@ function HyperbahnHandler(options) {
         self.handleUnadvertise);
     self.tchannelJSON.register(self, 'relay-unad', self,
         self.handleRelayUnadvertise);
+
+    self.tchannelThrift.register(self, 'Hyperbahn::hostportsByService', self,
+        self.handleHostportsByService);
 
     self.relayAdTimeout = options.relayAdTimeout ||
         RELAY_AD_TIMEOUT;
@@ -336,4 +357,109 @@ HyperbahnHandler.prototype.unadvertise =
 function unadvertise(service) {
     var self = this;
     self.channel.topChannel.handler.removeServicePeer(service.serviceName, service.hostPort);
+};
+
+HyperbahnHandler.prototype.handleHostportsByService =
+function handleHostportsByService(self, req, arg2, arg3, cb) {
+    var serviceName = arg3.serviceName;
+    var exitNodes = self.egressNodes.exitsFor(serviceName);
+    var exitHosts = Object.keys(exitNodes);
+
+    var myHost = self.channel.hostPort;
+    if (exitHosts.indexOf(myHost) === -1) {
+        // Since Hyperbahn is fully connected to service hosts,
+        // randomly picking one suffices
+        var exit = Math.floor(Math.random() * exitHosts.length);
+        self.sendRelayAsThrift({
+            hostPort: exitHosts[exit],
+            body: arg3,
+            inreq: req,
+            endpoint: 'Hyperbahn::hostportsByService'
+        }, onFinish);
+    } else {
+        var svcchan = self.channel.topChannel.subChannels[serviceName];
+        var hosts = [];
+        if (svcchan) {
+            hosts = svcchan.peers.keys();
+        }
+        var err;
+        if (hosts.length === 0) {
+            err = NoHostError({
+                serviceName: serviceName
+            });
+        }
+
+        onFinish(null, {
+            ok: !err,
+            body: err || hosts,
+            typeName: err ? 'noHost' : null
+        });
+    }
+
+    function onFinish(err, res) {
+        cb(err, res);
+    }
+};
+
+HyperbahnHandler.prototype.sendRelayAsThrift =
+function sendRelayAsThrift(opts, callback) {
+    var self = this;
+
+    var attempts = 0;
+
+    tryRequest();
+
+    // TODO: move functions out to methods
+    function tryRequest() {
+        attempts++;
+
+        self.channel.waitForIdentified({
+            host: opts.hostPort
+        }, onIdentified);
+
+        function onIdentified(err) {
+            if (err) {
+                return onResponse(err);
+            }
+
+            self.tchannelThrift.send(self.channel.request({
+                host: opts.hostPort,
+                serviceName: 'hyperbahn',
+                trace: false,
+                timeout: self.relayAdTimeout,
+                headers: {
+                    cn: self.callerName
+                },
+                retryLimit: 1,
+                parent: opts.inreq
+            }), opts.endpoint, null, opts.body, onResponse);
+        }
+
+        function onResponse(err, response) {
+            if (response && response.ok) {
+                return callback(null, {
+                    ok: true,
+                    body: response.body
+                });
+            }
+
+            var codeName = Errors.classify(err);
+            if (attempts <= self.maxRelayAdAttempts && err &&
+                (
+                    codeName === 'NetworkError' ||
+                    codeName === 'Timeout'
+                )
+            ) {
+                setTimeout(tryRequest, self.relayAdRetryTime);
+            } else {
+                self.logError(err, opts, response);
+
+                callback(null, {
+                    ok: false,
+                    body: err || response.body,
+                    typeName: err ? 'error' : response.typeName
+                });
+            }
+        }
+    }
 };
