@@ -429,7 +429,12 @@ TChannelConnection.prototype.nextFrameId = function nextFrameId() {
 TChannelConnection.prototype.buildOutRequest = function buildOutRequest(options) {
     var self = this;
     var req = self.handler.buildOutRequest(options);
+    req.errorEvent.on(onReqError);
     return req;
+
+    function onReqError(err) {
+        self.ops.popOutReq(req.id, err);
+    }
 };
 
 TChannelConnection.prototype.buildOutResponse = function buildOutResponse(req, options) {
@@ -446,6 +451,7 @@ TChannelConnection.prototype.buildOutResponse = function buildOutResponse(req, o
     options.span = req.span;
     options.checksumType = req.checksum && req.checksum.type;
 
+    // TODO: take over popInReq on req/res error?
     return self.handler.buildOutResponse(req, options);
 };
 
