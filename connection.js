@@ -282,7 +282,7 @@ TChannelConnection.prototype.onCallResponse = function onCallResponse(res) {
     if (res.state === States.Done || res.state === States.Error) {
         self.ops.popOutReq(res.id, res);
     } else {
-        self.popOutReqLater(res);
+        self._deferPopOutReq(res);
     }
 
     if (!req) {
@@ -299,8 +299,7 @@ TChannelConnection.prototype.onCallResponse = function onCallResponse(res) {
     req.emitResponse(res);
 };
 
-TChannelConnection.prototype.popOutReqLater =
-function popOutReqLater(res) {
+TChannelConnection.prototype._deferPopOutReq = function _deferPopOutReq(res) {
     var self = this;
     var called = false;
 
