@@ -27,6 +27,7 @@ var WrappedError = require('error/wrapped');
 var timers = require('timers');
 var util = require('util');
 var EventEmitter = require('events').EventEmitter;
+var safeJsonParse = require('safe-json-parse/tuple');
 
 var Reporter = require('../tcollector/reporter.js');
 var TChannelJSON = require('../as/json.js');
@@ -95,12 +96,12 @@ function HyperbahnClient(options) {
     if (Array.isArray(options.hostPortList)) {
         self.hostPortList = options.hostPortList;
     } else if (typeof options.hostPortFile === 'string') {
-        var hostContent = safeSyncRead(options.hostPortFile);
-        assert(!hostContent.error, 'Failed to read the hostPortFile');
-        var hostJson = safeJSONParse(hostContent.fileContents);
-        assert(!hostJson.error, 'Failed to parse the hostPortFile');
-        assert(Array.isArray(hostJson.json), 'The hostPortFile must contain a hostPortList');
-        self.hostPortList = hostJson.json;
+        var tuple = safeSyncRead(options.hostPortFile);
+        assert(!tuple[0], 'Failed to read the hostPortFile');
+        tuple = safeJsonParse(tuple[1]);
+        assert(!tuple[0], 'Failed to parse the hostPortFile');
+        assert(Array.isArray(tuple[1]), 'The hostPortFile must contain a hostPortList');
+        self.hostPortList = tuple[1];
     } else {
         assert(false, 'Must pass in hostPortList or hostPortFile');
     }
@@ -437,7 +438,7 @@ HyperbahnClient.prototype.destroy = function destroy() {
 };
 
 function safeSyncRead(filePath) {
-    var fileContents;
+    var fileContents = null;
     var error;
 
     try {
@@ -446,24 +447,5 @@ function safeSyncRead(filePath) {
         error = err;
     }
 
-    return {
-        fileContents: fileContents,
-        error: error
-    };
-}
-
-function safeJSONParse(text) {
-    var json;
-    var error;
-
-    try {
-        json = JSON.parse(text);
-    } catch (err) {
-        error = err;
-    }
-
-    return {
-        json: json,
-        error: error
-    };
+    return [error, fileContents];
 }
