@@ -1,0 +1,18 @@
+[
+    {
+        "key":"rateLimiting.enabled",
+        "value":true
+    },
+    {
+        "key":"rateLimiting.exemptServices",
+        "value":["sam","robert"]
+    },
+    {
+        "key":"rateLimiting.rpsLimitForServiceName",
+        "value":{"nancy":111,"bill":60,"summer":66}
+    },
+    {
+        "key":"rateLimiting.totalRpsLimit",
+        "value":1201
+    }
+]
