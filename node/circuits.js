@@ -161,10 +161,9 @@ Circuits.prototype.handleRequest = function handleRequest(req, buildRes, nextHan
     if (!serviceName) {
         return buildRes().sendError('BadRequest', 'All requests must have a service name');
     }
-    return req.withArg1(function withArg1() {
-        var circuit = self.getCircuit(callerName, serviceName, String(req.arg1));
-        return circuit.handleRequest(req, buildRes, nextHandler);
-    });
+
+    var circuit = self.getCircuit(callerName, serviceName, String(req.arg1));
+    return circuit.handleRequest(req, buildRes, nextHandler);
 };
 
 // Called upon membership change to collect services that the corresponding
