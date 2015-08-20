@@ -70,6 +70,12 @@ func (c *Connection) handleCallReq(frame *Frame) bool {
 		return true
 	}
 
+	// Close may have been called between the time we checked the state and us creating the exchange.
+	if c.readState() != connectionActive {
+		mex.shutdown()
+		return true
+	}
+
 	call.AddBinaryAnnotation(BinaryAnnotation{Key: "cn", Value: callReq.Headers[CallerName]})
 	call.AddBinaryAnnotation(BinaryAnnotation{Key: "as", Value: callReq.Headers[ArgScheme]})
 	call.AddAnnotation(AnnotationKeyServerReceive)
@@ -115,7 +121,7 @@ func (c *Connection) handleCallReq(frame *Frame) bool {
 	response.commonStatsTags = call.commonStatsTags
 
 	setResponseHeaders(call.headers, response.headers)
-	go c.dispatchInbound(call)
+	go c.dispatchInbound(c.connID, callReq.ID(), call)
 	return false
 }
 
@@ -141,7 +147,7 @@ func (call *InboundCall) createStatsTags(connectionTags map[string]string) {
 }
 
 // dispatchInbound ispatches an inbound call to the appropriate handler
-func (c *Connection) dispatchInbound(call *InboundCall) {
+func (c *Connection) dispatchInbound(_ uint32, _ uint32, call *InboundCall) {
 	c.log.Debugf("Received incoming call for %s from %s", call.ServiceName(), c.remotePeerInfo)
 
 	if err := call.readOperation(); err != nil {
