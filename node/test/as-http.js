@@ -95,8 +95,17 @@ allocHTTPTest('as/http can bridge a service using lbpool', {
         }, null, {
             statusCode: 200,
             statusMessage: 'Ok',
-            body:
-                '{"request":{"method":"GET","url":"/such/stuff","headers":{"host":"' + egressHost + '","connection":"keep-alive"}}}\n'
+            body: JSON.stringify({
+                request: {
+                    method: 'GET',
+                    url: '/such/stuff',
+                    headers: {
+                        host: egressHost,
+                        connection: 'keep-alive',
+                        'content-length': '0'
+                    }
+                }
+            }) + '\n'
         }),
 
         cluster.sendRequest.thunk({
@@ -110,10 +119,22 @@ allocHTTPTest('as/http can bridge a service using lbpool', {
             statusCode: 200,
             statusMessage: 'Ok',
             body:
-                '{"request":{"method":"PUT","url":"/wat/even/is","headers":{"content-type":"text/plain","x-test-header":"test header value","host":"' +
-                egressHost +
-                '","connection":"keep-alive","transfer-encoding":"chunked"}}}\n' +
-                '{"chunk":"hello world"}\n'
+                JSON.stringify({
+                    request: {
+                        method: 'PUT',
+                        url: '/wat/even/is',
+                        headers: {
+                            'content-type': 'text/plain',
+                            'x-test-header': 'test header value',
+                            host:  egressHost,
+                            connection: 'keep-alive',
+                            'transfer-encoding': 'chunked',
+                            'content-length': '11'
+                        }
+                    }
+                }) + '\n' + JSON.stringify({
+                    chunk: 'hello world'
+                }) + '\n'
         }),
 
         cluster.sendRequest.thunk({
@@ -122,8 +143,17 @@ allocHTTPTest('as/http can bridge a service using lbpool', {
         }, null, {
             statusCode: 420,
             statusMessage: 'obviously',
-            body:
-                '{"request":{"method":"GET","url":"/returnStatus/420/obviously","headers":{"host":"' + egressHost + '","connection":"keep-alive"}}}\n'
+            body: JSON.stringify({
+                request: {
+                    method: 'GET',
+                    url: '/returnStatus/420/obviously',
+                    headers:  {
+                        host: egressHost,
+                        connection: 'keep-alive',
+                        'content-length': '0'
+                    }
+                }
+            }) + '\n'
         }),
 
     ], assert.end);
