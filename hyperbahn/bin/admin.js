@@ -15,6 +15,8 @@ var fs = require('fs');
 function main() {
     /*eslint no-process-exit: 0*/
     var argv = minimist(process.argv.slice(2));
+    argv.hostfile = argv.H || argv.hostfile;
+
     var admin = Admin(argv);
     admin.run(onAdmin);
 
@@ -60,9 +62,7 @@ function Admin(options) {
 
     var self = this;
 
-    self.hosts = options.hosts || getHostPortsForProd(
-        '/etc/uber/hyperbahn/ringpop-v2.json'
-    );
+    self.hosts = options.hosts || getHostPortsForProd(options.hostfile);
 
     self.argv = options;
     self.channel = new TChannel({
