@@ -18,13 +18,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-'use strict';
+var TChannel = require('../index.js');
 
-require('./safe-quit.js');
-require('./timeouts.js');
-require('./send.js');
-require('./register.js');
-require('./identify.js');
-require('./tchannel.js');
-require('./listen-on-fd.js');
-require('./regression-inOps-leak.js');
+// just in case, always die.
+setTimeout(process.exit.bind(null, 0), 5000);
+process.on('disconnect', process.exit);
+
+process.on('message', doListen);
+
+function doListen(port, socket) {
+    var serverOptions = {host: '127.0.0.1', port: parseInt(port), listening: false};
+    var server = new TChannel(serverOptions);
+
+    server.register('endpoint', function(x, y, z, cb) { cb(null, 'ok'); });
+    server.on('socketClose', process.exit.bind(process));
+    server.serverSocket.on('listening', process.send.bind(process, port));
+    server.listen({ fd: socket.fd });
+}
