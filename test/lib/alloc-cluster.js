@@ -169,11 +169,7 @@ function allocCluster(opts) {
     }
 }
 
-allocCluster.test = function testCluster(desc, opts, t) {
-    if (opts === undefined) {
-        return test(desc);
-    }
-
+function clusterTester(opts, t) {
     if (typeof opts === 'number') {
         opts = {
             numPeers: opts
@@ -186,7 +182,10 @@ allocCluster.test = function testCluster(desc, opts, t) {
     if (opts.timers && opts.channelOptions) {
         opts.channelOptions.timers = opts.timers;
     }
-    test(desc, function t2(assert) {
+
+    return t2;
+
+    function t2(assert) {
         opts.assert = assert;
         allocCluster(opts).ready(function clusterReady(cluster) {
             assert.once('end', function testEnded() {
@@ -195,28 +194,19 @@ allocCluster.test = function testCluster(desc, opts, t) {
             });
             t(cluster, assert);
         });
-    });
+    }
+}
+
+allocCluster.test = function testCluster(desc, opts, t) {
+    if (opts === undefined) {
+        return test(desc);
+    }
+
+    test(desc, clusterTester(opts, t));
 };
 
 allocCluster.test.only = function testClusterOnly(desc, opts, t) {
-    if (typeof opts === 'number') {
-        opts = {
-            numPeers: opts
-        };
-    }
-    if (typeof opts === 'function') {
-        t = opts;
-        opts = {};
-    }
-    test.only(desc, function t2(assert) {
-        opts.assert = assert;
-        allocCluster(opts).ready(function clusterReady(cluster) {
-            assert.once('end', function testEnded() {
-                cluster.destroy();
-            });
-            t(cluster, assert);
-        });
-    });
+    test.only(desc, clusterTester(opts, t));
 };
 
 function connectChannels(channels, callback) {
