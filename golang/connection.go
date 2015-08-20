@@ -641,11 +641,6 @@ func (c *Connection) readFrames(_ uint32) {
 // writes them to the connection.
 func (c *Connection) writeFrames(_ uint32) {
 	for f := range c.sendCh {
-		if f == nil {
-			close(c.sendCh)
-			break
-		}
-
 		c.log.Debugf("Writing frame %s", f.Header)
 		err := f.WriteOut(c.conn)
 		c.framePool.Release(f)
