@@ -21,7 +21,7 @@ request and you get a `buildResponse({ streamed: bool })` function
 which takes options and can be used to build a streaming or
 non-streaming outgoing response.
 
- - `req.arg1` A readable stream of buffers for arg1
+ - `req.arg1` A string or buffer
  - `req.arg2` A readable stream of buffers for arg1
  - `req.arg3` A readable stream of buffers for arg1
 
@@ -42,7 +42,7 @@ boolean to `true`.
 The rest of the options are documented in the 
 [sub-channel](./sub-channel.md) docs.
 
- - `req.arg1` A writable stream of buffers for arg1
+ - `req.arg1` A string or buffer
  - `req.arg2` A writable stream of buffers for arg2
  - `req.arg3` A writable stream of buffers for arg3
 
@@ -59,7 +59,7 @@ var req = subChan.request({
     serviceName: 'foo'
 });
 
-req.arg1.end('endpoint');
+req.sendArg1('endpoint');
 req.arg2.end('');
 myStream.pipe(req.arg3);
 
