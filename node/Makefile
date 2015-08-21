@@ -22,7 +22,3 @@ test:
 
 lint:
 	npm run lint
-
-update_release:
-	# git-subtree is sensitive to user git-config settings...
-	cd .. && HOME= XDG_CONFIG_HOME= git subtree push --prefix=node . ${RELEASE_BRANCH}
