@@ -59,7 +59,8 @@ tag=hyperbahn-v$VERSION
 
 git commit hyperbahn/package.json -m "Cut $tag"
 
-DEV_BRANCH=$DEV_BRANCH make -C hyperbahn update_dev
+localrev=$(env HOME= XDG_CONFIG_HOME= git subtree split --prefix=hyperbahn)
+git update-ref "refs/heads/$DEV_BRANCH" "$localrev" -m "Cut $tag"
 
 git tag -a -m "Tag $tag" "$tag" "$DEV_BRANCH"
 git push origin master dev_hyperbahn --tags
