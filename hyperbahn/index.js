@@ -21,11 +21,13 @@
 'use strict';
 
 var assert = require('assert');
+var fs = require('fs');
 var TypedError = require('error/typed');
 var WrappedError = require('error/wrapped');
 var timers = require('timers');
 var util = require('util');
 var EventEmitter = require('events').EventEmitter;
+var safeJsonParse = require('safe-json-parse/tuple');
 
 var Reporter = require('../tcollector/reporter.js');
 var TChannelJSON = require('../as/json.js');
@@ -91,10 +93,19 @@ function HyperbahnClient(options) {
         'Must pass in top level tchannel');
     assert(options.tchannel.tracer, 'Top channel must have trace enabled');
     assert(options.serviceName, 'must pass in serviceName');
-    assert(Array.isArray(options.hostPortList),
-        'Must pass in hostPortList');
+    if (Array.isArray(options.hostPortList)) {
+        self.hostPortList = options.hostPortList;
+    } else if (typeof options.hostPortFile === 'string') {
+        var tuple = safeSyncRead(options.hostPortFile);
+        assert(!tuple[0], 'Failed to read the hostPortFile');
+        tuple = safeJsonParse(tuple[1]);
+        assert(!tuple[0], 'Failed to parse the hostPortFile');
+        assert(Array.isArray(tuple[1]), 'The hostPortFile must contain a hostPortList');
+        self.hostPortList = tuple[1];
+    } else {
+        assert(false, 'Must pass in hostPortList or hostPortFile');
+    }
 
-    self.hostPortList = options.hostPortList;
     self.serviceName = options.serviceName;
     self.callerName = options.callerName || options.serviceName;
     self.tchannel = options.tchannel;
@@ -425,3 +436,16 @@ HyperbahnClient.prototype.destroy = function destroy() {
     timers.clearTimeout(self._advertisementTimer);
     timers.clearTimeout(self.advertisementTimeoutTimer);
 };
+
+function safeSyncRead(filePath) {
+    var fileContents = null;
+    var error;
+
+    try {
+        fileContents = fs.readFileSync(filePath, 'utf8');
+    } catch (err) {
+        error = err;
+    }
+
+    return [error, fileContents];
+}
