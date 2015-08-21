@@ -1,8 +1,3 @@
-package tchannel_test
-
-// This file contains functions for tests to access internal tchannel state.
-// Since it has a _test.go suffix, it is only compiled with tests in this package.
-
 // Copyright (c) 2015 Uber Technologies, Inc.
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,6 +17,11 @@ package tchannel_test
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
+package tchannel_test
+
+// This file contains functions for tests to access internal tchannel state.
+// Since it has a _test.go suffix, it is only compiled with tests in this package.
 
 import (
 	"bytes"
