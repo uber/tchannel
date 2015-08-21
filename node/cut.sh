@@ -63,6 +63,6 @@ DEV_BRANCH=$DEV_BRANCH make -C node update_dev
 
 git tag -a -m "Tag $tag" "$tag" "$DEV_BRANCH"
 git push origin master dev_node --tags
-git checkout dev_node
-npm publish
-git checkout master
+git archive --format tgz dev_node >package.tgz
+npm publish package.tgz --tag "${NPM_TAG:-alpha}"
+rm package.tgz
