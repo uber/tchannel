@@ -159,16 +159,7 @@ RelayRequest.prototype.onIdentified = function onIdentified(err1) {
     self.outreq.errorEvent.on(onError);
 
     if (self.outreq.streamed) {
-        // TODO: frame-at-a-time rather than re-streaming?
-
-        var arg1 = self.inreq.arg1;
-        if (arg1.buf) {
-            arg1 = arg1.buf;
-        }
-
-        self.outreq.sendStreams(
-            arg1, self.inreq.arg2, self.inreq.arg3
-        );
+        self.outreq.sendStreams(self.inreq.arg1, self.inreq.arg2, self.inreq.arg3);
     } else {
         self.outreq.send(self.inreq.arg1, self.inreq.arg2, self.inreq.arg3);
     }
@@ -237,7 +228,6 @@ RelayRequest.prototype.onResponse = function onResponse(res) {
     })) return;
 
     if (self.outres.streamed) {
-        self.outres.arg1.end();
         self.inres.arg2.pipe(self.outres.arg2);
         self.inres.arg3.pipe(self.outres.arg3);
     } else {
