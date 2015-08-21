@@ -12,7 +12,7 @@ Network multiplexing and framing protocol for RPC
 - Large requests/responses may/must be broken into fragments to be sent
   progressively.
 - Optional checksums.
-- Can be used to transport multiple protocols between endpoints, eg. HTTP+JSON
+- Can be used to transport multiple protocols between endpoints, e.g. HTTP+JSON
   and Thrift.
 
 ## Parts
