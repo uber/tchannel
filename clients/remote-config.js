@@ -230,10 +230,7 @@ RemoteConfigFile.prototype._onStat = function _onStat(err, stat, cb) {
         };
         if (self.logError) {
             self.logger.error(msg, logObj);
-        } else {
-            self.logger.info(msg, logObj);
         }
-
         return cb();
     }
 
@@ -270,8 +267,6 @@ RemoteConfigFile.prototype._parseFile = function _parseFile(err, fileContents) {
         };
         if (self.logError) {
             self.logger.error(msg, logObj);
-        } else {
-            self.logger.info(msg, logObj);
         }
 
         return;
