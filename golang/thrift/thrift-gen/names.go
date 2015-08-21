@@ -113,7 +113,7 @@ func goPublicFieldName(name string) string {
 }
 
 var thriftToGo = map[string]string{
-	"bool": "bool",
+	"bool":   "bool",
 	"byte":   "int8",
 	"i16":    "int16",
 	"i32":    "int32",
