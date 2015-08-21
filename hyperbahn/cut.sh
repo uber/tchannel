@@ -64,6 +64,5 @@ DEV_BRANCH=$DEV_BRANCH make -C hyperbahn update_dev
 git tag -a -m "Tag $tag" "$tag" "$DEV_BRANCH"
 git push origin master dev_hyperbahn --tags
 
-git checkout dev_hyperbahn
-npm publish --tag "${NPM_TAG:-alpha}"
-git checkout master
+git archive --prefix=package/ --format tgz dev_hyperbahn >package.tgz
+npm publish package.tgz --tag "${NPM_TAG:-alpha}"
