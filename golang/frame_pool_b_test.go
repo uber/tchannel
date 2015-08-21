@@ -1,14 +1,3 @@
-package tchannel_test
-
-import (
-	"math/rand"
-	"sync"
-	"sync/atomic"
-	"testing"
-
-	. "github.com/uber/tchannel/golang"
-)
-
 // Copyright (c) 2015 Uber Technologies, Inc.
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,6 +17,17 @@ import (
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
+package tchannel_test
+
+import (
+	"math/rand"
+	"sync"
+	"sync/atomic"
+	"testing"
+
+	. "github.com/uber/tchannel/golang"
+)
 
 func benchmarkUsing(b *testing.B, pool FramePool) {
 	const numGoroutines = 1000
