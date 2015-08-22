@@ -52,12 +52,12 @@ type testHandler struct {
 }
 
 func (h *testHandler) forward(ctx Context, args *ForwardArgs) (*Res, error) {
-	headerVal := ctx.Headers().(string)
-	ctx.SetResponseHeaders(headerVal + "-resp")
+	headerVal := ctx.Headers()["hdr"]
+	ctx.SetResponseHeaders(map[string]string{"hdr": headerVal + "-resp"})
 	h.calls = append(h.calls, "forward-"+headerVal)
 	h.callers = append(h.callers, tchannel.CurrentCall(ctx).CallerName())
 
-	ctx = WithHeaders(ctx, args.HeaderVal)
+	ctx = WithHeaders(ctx, map[string]string{"hdr": args.HeaderVal})
 	res := &Res{}
 
 	if args.Method == "forward" {
@@ -65,7 +65,7 @@ func (h *testHandler) forward(ctx Context, args *ForwardArgs) (*Res, error) {
 			h.t.Errorf("forward->forward Call failed: %v", err)
 			return nil, err
 		}
-		assert.Equal(h.t, args.HeaderVal+"-resp", ctx.ResponseHeaders())
+		assert.Equal(h.t, map[string]string{"hdr": args.HeaderVal + "-resp"}, ctx.ResponseHeaders())
 		return res, nil
 	}
 
@@ -78,7 +78,7 @@ func (h *testHandler) forward(ctx Context, args *ForwardArgs) (*Res, error) {
 }
 
 func (h *testHandler) leaf(ctx Context, _ *struct{}) (*Res, error) {
-	headerVal := ctx.Headers().(string)
+	headerVal := ctx.Headers()["hdr"]
 	h.calls = append(h.calls, "leaf-"+headerVal)
 	h.callers = append(h.callers, tchannel.CurrentCall(ctx).CallerName())
 	return &Res{"leaf called!"}, nil
@@ -161,7 +161,7 @@ func TestForwardChain(t *testing.T) {
 
 	ctx, cancel := NewContext(time.Second)
 	defer cancel()
-	ctx = WithHeaders(ctx, "initial")
+	ctx = WithHeaders(ctx, map[string]string{"hdr": "initial"})
 	assert.Nil(t, tchannel.CurrentCall(ctx))
 
 	sc := servers["serv3"].channel.GetSubChannel("serv1")
@@ -184,7 +184,7 @@ func TestEmptyRequestHeader(t *testing.T) {
 	require.NoError(t, ch.ListenAndServe("127.0.0.1:0"))
 
 	handler := func(ctx Context, _ *struct{}) (*struct{}, error) {
-		assert.Equal(t, nil, ctx.Headers())
+		assert.Equal(t, map[string]string(nil), ctx.Headers())
 		return nil, nil
 	}
 	onError := func(ctx context.Context, err error) {
