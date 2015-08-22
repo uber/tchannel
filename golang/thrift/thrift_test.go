@@ -51,7 +51,7 @@ type testArgs struct {
 }
 
 func ctxArg() mock.AnythingOfTypeArgument {
-	return mock.AnythingOfType("*thrift.thriftCtx")
+	return mock.AnythingOfType("*tchannel.headerCtx")
 }
 
 func TestThriftArgs(t *testing.T) {
