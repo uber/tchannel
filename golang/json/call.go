@@ -43,7 +43,7 @@ func makeCall(ctx Context, call *tchannel.OutboundCall, arg interface{}, resp in
 	}
 
 	// Call Arg2Reader before application error.
-	var respHeaders interface{}
+	var respHeaders map[string]string
 	if err := tchannel.NewArgReader(call.Response().Arg2Reader()).ReadJSON(&respHeaders); err != nil {
 		return fmt.Errorf("arg2 read failed: %v", err)
 	}

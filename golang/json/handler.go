@@ -119,7 +119,7 @@ func Register(registrar tchannel.Registrar, funcs Handlers, onError func(context
 
 // Handle deserializes the JSON arguments and calls the underlying handler.
 func (h *handler) Handle(tctx context.Context, call *tchannel.InboundCall) error {
-	var headers interface{}
+	var headers map[string]string
 	if err := tchannel.NewArgReader(call.Arg2Reader()).ReadJSON(&headers); err != nil {
 		return fmt.Errorf("arg2 read failed: %v", err)
 	}

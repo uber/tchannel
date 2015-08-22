@@ -28,52 +28,20 @@ import (
 )
 
 // Context is a JSON Context which contains request and response headers.
-type Context interface {
-	context.Context
-
-	// Headers returns the call request headers.
-	Headers() interface{}
-
-	// ResponseHeaders returns the call response headers.
-	ResponseHeaders() interface{}
-
-	// SetResponseHeaders sets the given response headers on the context.
-	SetResponseHeaders(headers interface{})
-}
-
-type jsonCtx struct {
-	context.Context
-	reqHeaders  interface{}
-	respHeaders interface{}
-}
-
-// Headers gets application headers out of the context.
-func (c *jsonCtx) Headers() interface{} {
-	return c.reqHeaders
-}
-
-// ResponseHeaders returns the response headers.
-func (c *jsonCtx) ResponseHeaders() interface{} {
-	return c.respHeaders
-}
-
-// SetResponseHeaders sets the response headers.
-func (c *jsonCtx) SetResponseHeaders(headers interface{}) {
-	c.respHeaders = headers
-}
+type Context tchannel.ContextWithHeaders
 
 // NewContext returns a Context that can be used to make JSON calls.
 func NewContext(timeout time.Duration) (Context, context.CancelFunc) {
-	tctx, cancel := tchannel.NewContext(timeout)
-	return &jsonCtx{
-		Context: tctx,
-	}, cancel
+	ctx, cancel := tchannel.NewContext(timeout)
+	return tchannel.WrapWithHeaders(ctx, nil), cancel
+}
+
+// Wrap returns a JSON Context that wraps around a Context.
+func Wrap(ctx context.Context) Context {
+	return tchannel.WrapWithHeaders(ctx, nil)
 }
 
 // WithHeaders returns a Context that can be used to make a call with request headers.
-func WithHeaders(ctx context.Context, headers interface{}) Context {
-	return &jsonCtx{
-		Context:    ctx,
-		reqHeaders: headers,
-	}
+func WithHeaders(ctx context.Context, headers map[string]string) Context {
+	return tchannel.WrapWithHeaders(ctx, headers)
 }
