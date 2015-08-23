@@ -67,6 +67,8 @@ require('./balance_peer_requests.js');
 require('./tcollector-reporter.js');
 require('./pool-of-servers.js');
 require('./no_frag_arg1.js');
+require('./listen-on-fd.js');
+//require('./listen-on-fd-child.js'); // fake it for scripts/verify_included.sh
 
 require('./trace/basic_server.js');
 require('./trace/server_2_requests.js');

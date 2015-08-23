@@ -27,9 +27,9 @@ for FILE in $FILES; do
     set -e
 
     if [ "$EXIT_CODE" != "0" ]; then
-        echo "Could not find $FILE";
+        echo "$0: $FILE not referenced by test/index.js."
         exit 1
     fi
 done
 
-echo "All tests included!"
+echo "$0: All found tests referenced in test/index.js."
