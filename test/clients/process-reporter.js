@@ -22,7 +22,7 @@
 
 var test = require('tape');
 var setTimeout = require('timers').setTimeout;
-var processReporter = require('raynos-process-reporter');
+var processReporter = require('process-reporter');
 
 test('processReporter reports libuv health', function t(assert) {
     var fakeStatsd = {
