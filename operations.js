@@ -116,7 +116,10 @@ Operations.prototype.checkLastTimeoutTime = function checkLastTimeoutTime(now) {
 Operations.prototype._deferResetDueToTimeouts = function _deferResetDueToTimeouts(now) {
     var self = this;
 
+    var elapsed = now - self.lastTimeoutTime;
     var err = errors.ConnectionStaleTimeoutError({
+        period: self.connectionStalePeriod,
+        elapsed: elapsed,
         lastTimeoutTime: self.lastTimeoutTime
     });
     process.nextTick(opCheckLastTimedout);
