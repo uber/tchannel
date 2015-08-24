@@ -83,6 +83,14 @@ function TChannelConnection(channel, socket, direction, socketRemoteAddr) {
 }
 inherits(TChannelConnection, TChannelConnectionBase);
 
+TChannelConnection.prototype.extendLogInfo = function extendLogInfo(info) {
+    var self = this;
+
+    info.hostPort = self.channel.hostPort;
+
+    return info;
+};
+
 TChannelConnection.prototype.setupSocket = function setupSocket() {
     var self = this;
 
@@ -239,9 +247,7 @@ function sendProtocolError(type, err) {
 TChannelConnection.prototype.onTimedOut = function onTimedOut(err) {
     var self = this;
 
-    self.logger.warn('destroying socket from timeouts', {
-        hostPort: self.channel.hostPort
-    });
+    self.logger.warn('destroying socket from timeouts', self.extendLogInfo({}));
     self.resetAll(err);
 };
 
