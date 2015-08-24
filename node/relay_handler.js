@@ -47,8 +47,11 @@ RelayHandler.prototype.handleRequest = function handleRequest(req, buildRes) {
 RelayHandler.prototype._monitorRequest = function _monitorRequest(req, buildRes) {
     var self = this;
 
+    // TODO: null-return is error / declined indication... could be clearer
     buildRes = self.circuits.monitorRequest(req, buildRes);
-    self._handleRequest(req, buildRes);
+    if (buildRes) {
+        self._handleRequest(req, buildRes);
+    }
 };
 
 RelayHandler.prototype._handleRequest = function _handleRequest(req, buildRes) {
