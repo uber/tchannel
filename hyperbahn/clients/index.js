@@ -36,7 +36,7 @@ var HyperbahnEgressNodes = require('tchannel/hyperbahn/egress-nodes');
 var ServiceProxy = require('tchannel/hyperbahn/service_proxy.js');
 var CountedReadySignal = require('ready-signal/counted');
 var fs = require('fs');
-var ProcessReporter = require('raynos-process-reporter');
+var ProcessReporter = require('process-reporter');
 
 var createLogger = require('./logger.js');
 var createStatsd = require('./statsd.js');
