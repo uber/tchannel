@@ -83,6 +83,15 @@ function TChannelConnection(channel, socket, direction, socketRemoteAddr) {
 }
 inherits(TChannelConnection, TChannelConnectionBase);
 
+TChannelConnection.prototype.extendLogInfo = function extendLogInfo(info) {
+    var self = this;
+
+    info.hostPort = self.channel.hostPort;
+    info.socketRemoteAddr = self.socketRemoteAddr;
+
+    return info;
+};
+
 TChannelConnection.prototype.setupSocket = function setupSocket() {
     var self = this;
 
@@ -143,7 +152,6 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     self.handler.callIncomingResponseEvent.on(onCallResponse);
     self.handler.pingIncomingResponseEvent.on(onPingResponse);
     self.handler.callIncomingErrorEvent.on(onCallError);
-    self.timedOutEvent.on(onTimedOut);
 
     // TODO: restore dumping from old:
     // var stream = self.socket;
@@ -164,10 +172,6 @@ TChannelConnection.prototype.setupHandler = function setupHandler() {
     // stream = stream
     //     .pipe(self.socket)
     //     ;
-
-    function onTimedOut(err) {
-        self.onTimedOut(err);
-    }
 
     function onWriteError(err) {
         self.onWriteError(err);
@@ -234,15 +238,6 @@ function sendProtocolError(type, err) {
         // TODO: what if you have a write error in a call req cont frame
         self.resetAll(protocolError);
     }
-};
-
-TChannelConnection.prototype.onTimedOut = function onTimedOut(err) {
-    var self = this;
-
-    self.logger.warn('destroying socket from timeouts', {
-        hostPort: self.channel.hostPort
-    });
-    self.resetAll(err);
 };
 
 TChannelConnection.prototype.onWriteError = function onWriteError(err) {
@@ -596,7 +591,11 @@ InitOperation.prototype.onTimeout = function onTimeout(now) {
         elapsed: elapsed,
         timeout: self.timeout
     });
-    self.connection.timedOutEvent.emit(self.connection, err);
+
+    self.connection.logger.warn('destroying due to init timeout', self.connection.extendLogInfo({
+        error: err
+    }));
+    self.connection.resetAll(err);
 };
 
 module.exports = TChannelConnection;
