@@ -63,7 +63,8 @@ localrev=$(env HOME= XDG_CONFIG_HOME= git subtree split --prefix=hyperbahn)
 git update-ref "refs/heads/$DEV_BRANCH" "$localrev" -m "Cut $tag"
 
 git tag -a -m "Tag $tag" "$tag" "$DEV_BRANCH"
-git push origin master dev_hyperbahn --tags
+git push origin master --tags
+git push -f origin dev_hyperbahn
 
 git archive --prefix=package/ --format tgz dev_hyperbahn >package.tgz
 npm publish package.tgz --tag "${NPM_TAG:-alpha}"
