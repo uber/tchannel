@@ -110,6 +110,8 @@ module.exports.ConnectionStaleTimeoutError = TypedError({
     type: 'tchannel.connection-stale.timeout',
     message: 'Connection got two timeouts in a row.\n' +
         'Connection has been marked as stale and will be timed out',
+    period: null,
+    elapsed: null,
     lastTimeoutTime: null
 });
 
