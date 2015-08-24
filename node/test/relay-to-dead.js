@@ -73,17 +73,21 @@ allocCluster.test('relaying to init timeout server', {
             );
 
             assert.equal(cluster.logger.items().length, 0);
-            cluster.logger.whitelist('warn', 'destroying socket from timeouts');
+            cluster.logger.whitelist('warn', 'destroying due to init timeout');
             cluster.logger.whitelist('warn', 'resetting connection');
             cluster.logger.whitelist('warn', 'Got a connection error');
 
             setTimeout(function onTimeout() {
                 var logs = cluster.logger.items();
-                assert.equal(
-                    logs[0].msg, 'destroying socket from timeouts'
-                );
-                assert.equal(logs[1].msg, 'resetting connection');
-                assert.equal(logs[2].msg, 'Got a connection error');
+                assert.equal(logs.length, 3, 'expected 3 logs');
+
+                var record1 = logs[0];
+                var record2 = logs[1];
+                var record3 = logs[2];
+
+                assert.equal(record1.msg, 'destroying due to init timeout');
+                assert.equal(record2.msg, 'resetting connection');
+                assert.equal(record3.msg, 'Got a connection error');
 
                 deadServer.close();
                 assert.end();
