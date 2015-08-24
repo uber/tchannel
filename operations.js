@@ -122,7 +122,10 @@ Operations.prototype._deferResetDueToTimeouts = function _deferResetDueToTimeout
     process.nextTick(opCheckLastTimedout);
 
     function opCheckLastTimedout() {
-        self.connection.timedOutEvent.emit(self.connection, err);
+        self.logger.warn('destroying socket from timeouts', self.connection.extendLogInfo({
+            error: err
+        }));
+        self.connection.resetAll(err);
     }
 };
 
