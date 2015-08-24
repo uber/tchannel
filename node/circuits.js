@@ -160,14 +160,16 @@ Circuits.prototype.monitorRequest = function monitorRequest(req, buildRes) {
     var callerName = req.headers.cn || 'no-cn';
     var serviceName = req.serviceName;
     if (!serviceName) {
-        return buildRes().sendError('BadRequest', 'All requests must have a service name');
+        buildRes().sendError('BadRequest', 'All requests must have a service name');
+        return null;
     }
 
     var arg1 = String(req.arg1);
     var circuit = self.getCircuit(callerName, serviceName, arg1);
 
     if (!circuit.state.shouldRequest()) {
-        return buildRes().sendError('Declined', 'Service is not healthy');
+        buildRes().sendError('Declined', 'Service is not healthy');
+        return null;
     }
 
     return circuit.monitorRequest(req, buildRes);
