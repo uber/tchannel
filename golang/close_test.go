@@ -51,6 +51,26 @@ func makeCall(ch *Channel, hostPort, service string) error {
 	return err
 }
 
+func TestCloseOnlyListening(t *testing.T) {
+	ch, err := testutils.NewServer(nil)
+	require.NoError(t, err, "NewServer failed")
+
+	// If there are no connections, then the channel should close immediately.
+	ch.Close()
+	assert.Equal(t, ChannelClosed, ch.State())
+	assert.True(t, ch.Closed(), "Channel should be closed")
+}
+
+func TestCloseNewClient(t *testing.T) {
+	ch, err := testutils.NewClient(nil)
+	require.NoError(t, err, "NewServer failed")
+
+	// If there are no connections, then the channel should close immediately.
+	ch.Close()
+	assert.Equal(t, ChannelClosed, ch.State())
+	assert.True(t, ch.Closed(), "Channel should be closed")
+}
+
 // TestCloseStress ensures that once a Channel is closed, it cannot be reached.
 func TestCloseStress(t *testing.T) {
 	CheckStress(t)

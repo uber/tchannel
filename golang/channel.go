@@ -442,7 +442,11 @@ func (ch *Channel) Close() {
 	if ch.mutable.l != nil {
 		ch.mutable.l.Close()
 	}
+
 	ch.mutable.state = ChannelStartClose
+	if len(ch.mutable.conns) == 0 {
+		ch.mutable.state = ChannelClosed
+	}
 	ch.mutable.mut.Unlock()
 
 	ch.peers.Close()
