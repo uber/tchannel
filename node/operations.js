@@ -105,15 +105,24 @@ Operations.prototype.checkLastTimeoutTime = function checkLastTimeoutTime(now) {
     var self = this;
 
     if (self.lastTimeoutTime &&
-        now > self.lastTimeoutTime + self.connectionStalePeriod) {
-        var err = errors.ConnectionStaleTimeoutError({
-            lastTimeoutTime: self.lastTimeoutTime
-        });
-        process.nextTick(function opCheckLastTimedout() {
-            self.connection.timedOutEvent.emit(self.connection, err);
-        });
+        now > self.lastTimeoutTime + self.connectionStalePeriod
+    ) {
+        self._deferResetDueToTimeouts(now);
     } else if (!self.lastTimeoutTime) {
         self.lastTimeoutTime = now;
+    }
+};
+
+Operations.prototype._deferResetDueToTimeouts = function _deferResetDueToTimeouts(now) {
+    var self = this;
+
+    var err = errors.ConnectionStaleTimeoutError({
+        lastTimeoutTime: self.lastTimeoutTime
+    });
+    process.nextTick(opCheckLastTimedout);
+
+    function opCheckLastTimedout() {
+        self.connection.timedOutEvent.emit(self.connection, err);
     }
 };
 
