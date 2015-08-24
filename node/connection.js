@@ -603,7 +603,11 @@ InitOperation.prototype.onTimeout = function onTimeout(now) {
         elapsed: elapsed,
         timeout: self.timeout
     });
-    self.connection.timedOutEvent.emit(self.connection, err);
+
+    self.connection.logger.warn('destroying due to init timeout', self.connection.extendLogInfo({
+        error: err
+    }));
+    self.connection.resetAll(err);
 };
 
 module.exports = TChannelConnection;
