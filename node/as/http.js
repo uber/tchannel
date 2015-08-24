@@ -80,7 +80,15 @@ TChannelHTTP.prototype.sendRequest = function send(treq, hreq, options, callback
     // TODO: get lower level access to raw request header pairs
     var keys = Object.keys(hreq.headers);
     for (var i = 0; i < keys.length; i++) {
-        head.headerPairs.push([keys[i], hreq.headers[keys[i]]]);
+        var key = keys[i];
+        var val = hreq.headers[key];
+        if (Array.isArray(val)) {
+            for (var j = 0; j < keys.length; j++) {
+                head.headerPairs.push([key, val[j]]);
+            }
+        } else {
+            head.headerPairs.push([key, val]);
+        }
     }
 
     var arg1 = ''; // TODO: left empty for now, could compute circuit names heuristically
@@ -144,7 +152,15 @@ TChannelHTTP.prototype.sendResponse = function send(buildResponse, hres, body, c
     var head = new HTTPResArg2(hres.statusCode, hres.statusMessage);
     var keys = Object.keys(hres.headers);
     for (var i = 0; i < keys.length; i++) {
-        head.headerPairs.push([keys[i], hres.headers[keys[i]]]);
+        var key = keys[i];
+        var val = hres.headers[key];
+        if (Array.isArray(val)) {
+            for (var j = 0; j < keys.length; j++) {
+                head.headerPairs.push([key, val[j]]);
+            }
+        } else {
+            head.headerPairs.push([key, val]);
+        }
     }
 
     var arg2res = bufrw.toBufferResult(HTTPResArg2.RW, head);
@@ -237,7 +253,15 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
             var headers = {};
             for (var i = 0; i < head.headerPairs.length; i++) {
                 var pair = head.headerPairs[i];
-                headers[pair[0]] = pair[1];
+                var key = pair[0];
+                var val = pair[1];
+                if (headers[key] === undefined) {
+                    headers[key] = val;
+                } else if (Array.isArray(headers[key])) {
+                    headers[key].push(val);
+                } else {
+                    headers[key] = [headers[key], val];
+                }
             }
             // work-arround a node issue where default statusMessage is missing
             // from the client side when server side set as optional parameter
@@ -259,15 +283,24 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
 TChannelHTTP.prototype.forwardToHTTP = function forwardToHTTP(tchannel, options, inreq, outres, callback) {
     var self = this;
     self.logger = self.logger || tchannel.logger;
+    var headers = {};
     options = extend(options, {
         method: inreq.head.method,
         path: inreq.head.url,
-        headers: {},
+        headers: headers,
         keepAlive: true
     });
     for (var i = 0; i < inreq.head.headerPairs.length; i++) {
         var pair = inreq.head.headerPairs[i];
-        options.headers[pair[0]] = pair[1];
+        var key = pair[0];
+        var val = pair[1];
+        if (headers[key] === undefined) {
+            headers[key] = val;
+        } else if (Array.isArray(headers[key])) {
+            headers[key].push(val);
+        } else {
+            headers[key] = [headers[key], val];
+        }
     }
     if (self.lbpool) {
         self._forwardToLBPool(options, inreq, outres, callback);
