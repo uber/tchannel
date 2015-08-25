@@ -73,12 +73,22 @@ RelayHandler.prototype._handleRequest = function _handleRequest(req, buildRes) {
     // }
 
     req.forwardTrace = true;
-    var rereq = new RelayRequest(self.channel, req, buildRes);
 
+    var peer = self.channel.peers.choosePeer(null);
+    if (!peer) {
+        // TODO: stat
+        // TODO: allow for customization of this message so hyperbahn can
+        // augment it with things like "at entry node", "at exit node", etc
+        buildRes().sendError('Declined', 'no peer available for request');
+        self.channel.logger.warn('no relay peer available', req.extendLogInfo({}));
+        return;
+    }
+
+    var rereq = new RelayRequest(self.channel, peer, req, buildRes);
     rereq.createOutRequest();
 };
 
-function RelayRequest(channel, inreq, buildRes) {
+function RelayRequest(channel, peer, inreq, buildRes) {
     var self = this;
 
     self.channel = channel;
@@ -88,7 +98,7 @@ function RelayRequest(channel, inreq, buildRes) {
     self.outres = null;
     self.outreq = null;
     self.buildRes = buildRes;
-    self.peer = null;
+    self.peer = peer;
 
     self.error = null;
 
@@ -113,7 +123,7 @@ function RelayRequest(channel, inreq, buildRes) {
     }
 }
 
-RelayRequest.prototype.createOutRequest = function createOutRequest(host) {
+RelayRequest.prototype.createOutRequest = function createOutRequest() {
     var self = this;
 
     if (self.outreq) {
@@ -122,23 +132,6 @@ RelayRequest.prototype.createOutRequest = function createOutRequest(host) {
             remoteAddr: self.inreq.remoteAddr,
             id: self.inreq.id
         });
-        return;
-    }
-
-    if (self.peer) {
-        self.logger.error('createOutRequest: overwritting peers', {
-            hostPort: self.peer.hostPort
-        });
-    }
-
-    if (host) {
-        self.peer = self.channel.peers.add(host);
-    } else {
-        self.peer = self.channel.peers.choosePeer(null);
-    }
-
-    if (!self.peer) {
-        self.onError(errors.NoPeerAvailable());
         return;
     }
 
@@ -274,7 +267,6 @@ RelayRequest.prototype.onError = function onError(err) {
 
     self.outres.sendError(codeName, err.message);
     self.logError(err, codeName);
-    // TODO: stat in some cases, e.g. declined / peer not available
 };
 
 RelayRequest.prototype.extendLogInfo = function extendLogInfo(info) {
