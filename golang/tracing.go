@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/uber/tchannel/golang/typed"
-	"golang.org/x/net/context"
 )
 
 var (
@@ -105,13 +104,4 @@ func (s Span) NewChildSpan() *Span {
 		childSpan.spanID = uint64(traceRng.Int63())
 	}
 	return childSpan
-}
-
-// CurrentSpan returns the Span value for the provided Context
-func CurrentSpan(ctx context.Context) *Span {
-	if span := ctx.Value(contextKeyTracing); span != nil {
-		return span.(*Span)
-	}
-
-	return nil
 }
