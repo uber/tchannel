@@ -91,6 +91,16 @@ function RelayRequest(channel, inreq, buildRes) {
     self.peer = null;
 
     self.error = null;
+
+    self.boundOnIdentified = onIdentified;
+
+    function onIdentified(err) {
+        if (err) {
+            self.onError(err);
+        } else {
+            self.onIdentified();
+        }
+    }
 }
 
 RelayRequest.prototype.createOutRequest = function createOutRequest(host) {
@@ -122,20 +132,11 @@ RelayRequest.prototype.createOutRequest = function createOutRequest(host) {
         return;
     }
 
-    self.peer.waitForIdentified(onIdentified);
-
-    function onIdentified(err) {
-        self.onIdentified(err);
-    }
+    self.peer.waitForIdentified(self.boundOnIdentified);
 };
 
-RelayRequest.prototype.onIdentified = function onIdentified(err1) {
+RelayRequest.prototype.onIdentified = function onIdentified() {
     var self = this;
-
-    if (err1) {
-        self.onError(err1);
-        return;
-    }
 
     var identified = false;
     var closing = false;
@@ -189,8 +190,8 @@ RelayRequest.prototype.onIdentified = function onIdentified(err1) {
         self.onResponse(res);
     }
 
-    function onError(err2) {
-        self.onError(err2);
+    function onError(err) {
+        self.onError(err);
     }
 };
 
