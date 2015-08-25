@@ -93,10 +93,15 @@ function RelayRequest(channel, inreq, buildRes) {
     self.error = null;
 
     self.boundOnError = onError;
+    self.boundExtendLogInfo = extendLogInfo;
     self.boundOnIdentified = onIdentified;
 
     function onError(err) {
         self.onError(err);
+    }
+
+    function extendLogInfo(info) {
+        self.extendLogInfo(info);
     }
 
     function onIdentified(err) {
@@ -291,30 +296,33 @@ RelayRequest.prototype.extendLogInfo = function extendLogInfo(info) {
     return info;
 };
 
-RelayRequest.prototype.logError = function logError(err, codeName) {
+RelayRequest.prototype.logError = function relayRequestLogError(err, codeName) {
     var self = this;
+    logError(self.logger, err, codeName, self.boundExtendLogInfo);
+};
 
+function logError(logger, err, codeName, extendLogInfo) {
     var level = errorLogLevel(err, codeName);
 
-    var logOptions = self.extendLogInfo({
+    var logOptions = extendLogInfo({
         error: err,
         isErrorFrame: err.isErrorFrame
     });
 
     if (err.isErrorFrame) {
         if (level === 'warn') {
-            self.logger.warn('forwarding error frame', logOptions);
+            logger.warn('forwarding error frame', logOptions);
         } else if (level === 'info') {
-            self.logger.info('forwarding expected error frame', logOptions);
+            logger.info('forwarding expected error frame', logOptions);
         }
     } else if (level === 'error') {
-        self.logger.error('unexpected error while forwarding', logOptions);
+        logger.error('unexpected error while forwarding', logOptions);
     } else if (level === 'warn') {
-        self.logger.warn('error while forwarding', logOptions);
+        logger.warn('error while forwarding', logOptions);
     } else if (level === 'info') {
-        self.logger.info('expected error while forwarding', logOptions);
+        logger.info('expected error while forwarding', logOptions);
     }
-};
+}
 
 function errorLogLevel(err, codeName) {
     switch (codeName) {
