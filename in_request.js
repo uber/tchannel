@@ -69,6 +69,24 @@ inherits(TChannelInRequest, EventEmitter);
 
 TChannelInRequest.prototype.type = 'tchannel.incoming-request';
 
+TChannelInRequest.prototype.extendLogInfo = function extendLogInfo(info) {
+    var self = this;
+
+    // TODO: add:
+    // - request id?
+    // - tracing id?
+    // - other?
+    info.inRemoteAddr = self.remoteAddr;
+    info.serviceName = self.serviceName;
+    if (self.endpoint !== null) {
+        info.arg1 = self.endpoint;
+    } else {
+        info.arg1 = String(self.arg1);
+    }
+
+    return info;
+};
+
 TChannelInRequest.prototype.setupTracing = function setupTracing(options) {
     var self = this;
 
