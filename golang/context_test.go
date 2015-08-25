@@ -1,5 +1,4 @@
 // Copyright (c) 2015 Uber Technologies, Inc.
-
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -18,29 +17,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchannel
+package tchannel_test
 
 import (
 	"testing"
 	"time"
 
+	. "github.com/uber/tchannel/golang"
+
 	"github.com/stretchr/testify/assert"
+	"github.com/uber/tchannel/golang/testutils"
 )
 
-type mockIncomingCall struct {
-	callerName string
-}
-
-func (m *mockIncomingCall) CallerName() string {
-	return m.callerName
-}
-
-var (
-	cn = "hello"
-)
+var cn = "hello"
 
 func TestWrapContextForTest(t *testing.T) {
-	call := &mockIncomingCall{callerName: cn}
+	call := testutils.NewIncomingCall(cn)
 	ctx, cancel := NewContext(time.Second)
 	defer cancel()
 	actual := WrapContextForTest(ctx, call)
