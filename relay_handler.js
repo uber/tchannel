@@ -280,19 +280,24 @@ RelayRequest.prototype.onError = function onError(err) {
     // TODO: stat in some cases, e.g. declined / peer not available
 };
 
+RelayRequest.prototype.extendLogInfo = function extendLogInfo(info) {
+    var self = this;
+
+    info.outRemoteAddr = self.outreq && self.outreq.remoteAddr;
+    info = self.inreq.extendLogInfo(info);
+
+    return info;
+};
+
 RelayRequest.prototype.logError = function logError(err, codeName) {
     var self = this;
 
     var level = errorLogLevel(err, codeName);
 
-    var logOptions = {
+    var logOptions = self.extendLogInfo({
         error: err,
-        isErrorFrame: err.isErrorFrame,
-        outRemoteAddr: self.outreq && self.outreq.remoteAddr,
-        inRemoteAddr: self.inreq.remoteAddr,
-        serviceName: self.inreq.serviceName,
-        outArg1: String(self.inreq.arg1)
-    };
+        isErrorFrame: err.isErrorFrame
+    });
 
     if (err.isErrorFrame) {
         if (level === 'warn') {
