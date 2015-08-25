@@ -40,6 +40,9 @@ type CallOptions struct {
 	// Format is arg scheme used for this call, sent in the "as" header.
 	// This header is only set if the Format is set.
 	Format Format
+
+	// ShardKey determines where this call request belongs, used with ringpop applications.
+	ShardKey string
 }
 
 var defaultCallOptions = &CallOptions{}
@@ -55,6 +58,9 @@ func (c *CallOptions) setHeaders(headers transportHeaders) {
 	}
 
 	headers[ArgScheme] = format.String()
+	if c.ShardKey != "" {
+		headers[ShardKey] = c.ShardKey
+	}
 }
 
 // setResponseHeaders copies some headers from the incoming call request to the response.
