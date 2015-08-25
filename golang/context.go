@@ -26,45 +26,68 @@ import (
 	"golang.org/x/net/context"
 )
 
+const defaultTimeout = time.Second
+
 type contextKey int
 
-const (
-	contextKeyUnknown contextKey = iota
-	contextKeyTracing
-	contextKeyCall
-)
+const contextKeyTChannel = 1
+
+type tchannelCtxParams struct {
+	span *Span
+	call IncomingCall
+}
 
 // IncomingCall exposes properties for incoming calls through the context.
 type IncomingCall interface {
 	// CallerName returns the caller name from the CallerName transport header.
 	CallerName() string
+
+	// ShardKey returns the shard key from the ShardKey transport header.
+	ShardKey() string
+}
+
+func getTChannelParams(ctx context.Context) *tchannelCtxParams {
+	if params, ok := ctx.Value(contextKeyTChannel).(*tchannelCtxParams); ok {
+		return params
+	}
+	return nil
 }
 
 // NewContext returns a new root context used to make TChannel requests.
 func NewContext(timeout time.Duration) (context.Context, context.CancelFunc) {
-	tctx, cancel := context.WithTimeout(context.Background(), timeout)
-	ctx := context.WithValue(tctx, contextKeyTracing, NewRootSpan())
-	return ctx, cancel
+	return NewContextBuilder(timeout).
+		setSpan(NewRootSpan()).
+		Build()
 }
 
 // WrapContextForTest returns a copy of the given Context that is associated with the call.
 // This should be used in units test only.
+// NOTE: This method is deprecated. Callers should use NewContextBuilder().SetIncomingCallForTest.
 func WrapContextForTest(ctx context.Context, call IncomingCall) context.Context {
-	return context.WithValue(ctx, contextKeyCall, call)
+	getTChannelParams(ctx).call = call
+	return ctx
 }
 
 // newIncomingContext creates a new context for an incoming call with the given span.
 func newIncomingContext(call IncomingCall, timeout time.Duration, span *Span) (context.Context, context.CancelFunc) {
-	tctx, cancel := context.WithTimeout(context.Background(), timeout)
-	ctx := context.WithValue(tctx, contextKeyTracing, span)
-	ctx = context.WithValue(ctx, contextKeyCall, call)
-	return ctx, cancel
+	return NewContextBuilder(timeout).
+		setIncomingCall(call).
+		setSpan(span).
+		Build()
 }
 
 // CurrentCall returns the current incoming call, or nil if this is not an incoming call context.
 func CurrentCall(ctx context.Context) IncomingCall {
-	if v := ctx.Value(contextKeyCall); v != nil {
-		return v.(IncomingCall)
+	if params := getTChannelParams(ctx); params != nil {
+		return params.call
+	}
+	return nil
+}
+
+// CurrentSpan returns the Span value for the provided Context
+func CurrentSpan(ctx context.Context) *Span {
+	if params := getTChannelParams(ctx); params != nil {
+		return params.span
 	}
 	return nil
 }
