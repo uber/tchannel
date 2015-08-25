@@ -39,44 +39,70 @@ allocHTTPTest('as/http can bridge a service using node http', {
                      cluster.httpEgress.address().port;
 
     parallel([
-
         cluster.sendRequest.thunk({
             method: 'GET',
             path: '/such/stuff',
         }, null, {
             statusCode: 200,
             statusMessage: 'Ok',
-            body:
-                '{"request":{"method":"GET","url":"/such/stuff","headers":{"host":"' + egressHost + '","connection":"keep-alive"}}}\n'
+            body: JSON.stringify({
+                request: {
+                    method: 'GET',
+                    url: '/such/stuff',
+                    headers: {
+                        host: egressHost,
+                        connection: 'keep-alive',
+                    }
+                }
+            }) + '\n'
         }),
-
         cluster.sendRequest.thunk({
             method: 'PUT',
             path: '/wat/even/is',
             headers: {
                 'Content-Type': 'text/plain',
-                'X-Test-Header': 'test header value'
+                'X-Test-Header': 'test header one, test header two',
+                'Set-Cookie': [ 'test cookie one', 'test cookie two'],
+                'Max-Forwards': '5'
             }
         }, 'hello world', {
             statusCode: 200,
             statusMessage: 'Ok',
-            body:
-                '{"request":{"method":"PUT","url":"/wat/even/is","headers":{"content-type":"text/plain","x-test-header":"test header value","host":"' +
-                egressHost +
-                '","connection":"keep-alive","transfer-encoding":"chunked"}}}\n' +
-                '{"chunk":"hello world"}\n'
+            body: JSON.stringify({
+                request: {
+                    method: 'PUT',
+                    url: '/wat/even/is',
+                    headers: {
+                        'content-type': 'text/plain',
+                        'x-test-header': 'test header one, test header two',
+                        'set-cookie': [ 'test cookie one', 'test cookie two'],
+                        'max-forwards': '5',
+                        host:  egressHost,
+                        connection: 'keep-alive',
+                        'transfer-encoding': 'chunked'
+                    }
+                }
+            }) + '\n' + JSON.stringify({
+                chunk: 'hello world'
+            }) + '\n'
         }),
-
         cluster.sendRequest.thunk({
             method: 'GET',
             path: '/returnStatus/420/obviously',
         }, null, {
             statusCode: 420,
             statusMessage: 'obviously',
-            body:
-                '{"request":{"method":"GET","url":"/returnStatus/420/obviously","headers":{"host":"' + egressHost + '","connection":"keep-alive"}}}\n'
+            body: JSON.stringify({
+                request: {
+                    method: 'GET',
+                    url: '/returnStatus/420/obviously',
+                    headers:  {
+                        host: egressHost,
+                        connection: 'keep-alive',
+                    }
+                }
+            }) + '\n'
         }),
-
     ], assert.end);
 });
 
@@ -86,7 +112,7 @@ allocHTTPTest('as/http can bridge a service using lbpool', {
 }, function t(cluster, assert) {
 
     var egressHost = cluster.httpEgress.address().address + ':' +
-                     cluster.httpEgress.address().port;
+        cluster.httpEgress.address().port;
     parallel([
 
         cluster.sendRequest.thunk({
@@ -113,28 +139,32 @@ allocHTTPTest('as/http can bridge a service using lbpool', {
             path: '/wat/even/is',
             headers: {
                 'Content-Type': 'text/plain',
-                'X-Test-Header': 'test header value'
+                'X-Test-Header': 'test header one, test header two',
+                'Set-Cookie': [ 'test cookie one', 'test cookie two'],
+                'Max-Forwards': '5'
             }
         }, 'hello world', {
             statusCode: 200,
             statusMessage: 'Ok',
             body:
                 JSON.stringify({
-                    request: {
-                        method: 'PUT',
-                        url: '/wat/even/is',
-                        headers: {
-                            'content-type': 'text/plain',
-                            'x-test-header': 'test header value',
-                            host:  egressHost,
-                            connection: 'keep-alive',
-                            'transfer-encoding': 'chunked',
-                            'content-length': '11'
-                        }
+                request: {
+                    method: 'PUT',
+                    url: '/wat/even/is',
+                    headers: {
+                        'content-type': 'text/plain',
+                        'x-test-header': 'test header one, test header two',
+                        'set-cookie': [ 'test cookie one', 'test cookie two'],
+                        'max-forwards': '5',
+                        host:  egressHost,
+                        connection: 'keep-alive',
+                        'transfer-encoding': 'chunked',
+                        'content-length': '11'
                     }
-                }) + '\n' + JSON.stringify({
-                    chunk: 'hello world'
-                }) + '\n'
+                }
+            }) + '\n' + JSON.stringify({
+                chunk: 'hello world'
+            }) + '\n'
         }),
 
         cluster.sendRequest.thunk({
@@ -164,7 +194,7 @@ allocHTTPTest('as/http can handle a timeout', {
     onServiceRequest: handleTestHTTPTimeout,
     expectedEgressError: function assertError(assert, err) {
         assert.ok(err.type === 'tchannel.request.timeout' ||
-            err.type === 'tchannel.timeout',
+                  err.type === 'tchannel.timeout',
         'expected error');
     }
 }, function t(cluster, assert) {
