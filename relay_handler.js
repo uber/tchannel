@@ -92,7 +92,12 @@ function RelayRequest(channel, inreq, buildRes) {
 
     self.error = null;
 
+    self.boundOnError = onError;
     self.boundOnIdentified = onIdentified;
+
+    function onError(err) {
+        self.onError(err);
+    }
 
     function onIdentified(err) {
         if (err) {
@@ -178,7 +183,7 @@ RelayRequest.prototype.onIdentified = function onIdentified() {
         retryFlags: self.inreq.retryFlags
     });
     self.outreq.responseEvent.on(onResponse);
-    self.outreq.errorEvent.on(onError);
+    self.outreq.errorEvent.on(self.boundOnError);
 
     if (self.outreq.streamed) {
         self.outreq.sendStreams(self.inreq.arg1, self.inreq.arg2, self.inreq.arg3);
@@ -188,10 +193,6 @@ RelayRequest.prototype.onIdentified = function onIdentified() {
 
     function onResponse(res) {
         self.onResponse(res);
-    }
-
-    function onError(err) {
-        self.onError(err);
     }
 };
 
