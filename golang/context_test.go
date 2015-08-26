@@ -45,7 +45,7 @@ func TestWrapContextForTest(t *testing.T) {
 func TestShardKeyPropagates(t *testing.T) {
 	WithVerifiedServer(t, nil, func(ch *Channel, hostPort string) {
 		peerInfo := ch.PeerInfo()
-		registerFunc(t, ch, "test", func(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+		testutils.RegisterFunc(t, ch, "test", func(ctx context.Context, args *raw.Args) (*raw.Res, error) {
 			return &raw.Res{
 				Arg3: []byte(CurrentCall(ctx).ShardKey()),
 			}, nil

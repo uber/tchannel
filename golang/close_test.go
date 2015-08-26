@@ -154,24 +154,6 @@ func TestCloseStress(t *testing.T) {
 	}
 }
 
-type simpleHandler struct {
-	t *testing.T
-	f func(context.Context, *raw.Args) (*raw.Res, error)
-}
-
-func (h simpleHandler) OnError(ctx context.Context, err error) {
-	h.t.Errorf("simpleHandler OnError: %v %v", ctx, err)
-}
-
-func (h simpleHandler) Handle(ctx context.Context, args *raw.Args) (*raw.Res, error) {
-	return h.f(ctx, args)
-}
-
-func registerFunc(t *testing.T, ch *Channel, name string,
-	f func(ctx context.Context, args *raw.Args) (*raw.Res, error)) {
-	ch.Register(raw.Wrap(simpleHandler{t, f}), name)
-}
-
 func TestCloseSemantics(t *testing.T) {
 	defer testutils.SetTimeout(t, 2*time.Second)()
 	ctx, cancel := NewContext(time.Second)
@@ -181,11 +163,11 @@ func TestCloseSemantics(t *testing.T) {
 		ch, err := testutils.NewServer(&testutils.ChannelOpts{ServiceName: name})
 		require.NoError(t, err)
 		c := make(chan struct{})
-		registerFunc(t, ch, "stream", func(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+		testutils.RegisterFunc(t, ch, "stream", func(ctx context.Context, args *raw.Args) (*raw.Res, error) {
 			<-c
 			return &raw.Res{}, nil
 		})
-		registerFunc(t, ch, "call", func(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+		testutils.RegisterFunc(t, ch, "call", func(ctx context.Context, args *raw.Args) (*raw.Res, error) {
 			return &raw.Res{}, nil
 		})
 		return ch, c
@@ -281,7 +263,7 @@ func TestCloseSingleChannel(t *testing.T) {
 	var completed sync.WaitGroup
 	blockCall := make(chan struct{})
 
-	registerFunc(t, ch, "echo", func(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+	testutils.RegisterFunc(t, ch, "echo", func(ctx context.Context, args *raw.Args) (*raw.Res, error) {
 		connected.Done()
 		<-blockCall
 		return &raw.Res{
@@ -327,7 +309,7 @@ func TestCloseOneSide(t *testing.T) {
 	connected := make(chan struct{})
 	completed := make(chan struct{})
 	blockCall := make(chan struct{})
-	registerFunc(t, ch2, "echo", func(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+	testutils.RegisterFunc(t, ch2, "echo", func(ctx context.Context, args *raw.Args) (*raw.Res, error) {
 		connected <- struct{}{}
 		<-blockCall
 		return &raw.Res{
@@ -373,7 +355,7 @@ func TestCloseSendError(t *testing.T) {
 
 	closed := uint32(0)
 	counter := uint32(0)
-	registerFunc(t, serverCh, "echo", func(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+	testutils.RegisterFunc(t, serverCh, "echo", func(ctx context.Context, args *raw.Args) (*raw.Res, error) {
 		atomic.AddUint32(&counter, 1)
 		return &raw.Res{Arg2: args.Arg2, Arg3: args.Arg3}, nil
 	})
