@@ -296,12 +296,31 @@ function refreshServicePeer(serviceName, hostPort) {
 ServiceDispatchHandler.prototype.removeServicePeer =
 function removeServicePeer(serviceName, hostPort) {
     var self = this;
+
     var svcchan = self.channel.subChannels[serviceName];
-    var peer = svcchan.peers.get(hostPort);
-    if (peer) {
-        peer.close(noop);
+    if (!svcchan) {
+        return;
     }
-    self.channel.peers.delete(hostPort);
+
+    var peer = self.channel.peers.get(hostPort);
+    if (!peer) {
+        return;
+    }
+
+    var anyOtherSubChan = false;
+    var subChanKeys = Object.keys(self.channel.subChannels);
+    for (var i = 0; i < subChanKeys; i++) {
+        var subChan = self.channel.subChannels[subChanKeys[i]];
+        if (subChan.peers.get(hostPort)) {
+            anyOtherSubChan = true;
+            break;
+        }
+    }
+
+    if (!anyOtherSubChan) {
+        peer.close(noop);
+        self.channel.peers.delete(hostPort);
+    }
 };
 
 function noop() {}
