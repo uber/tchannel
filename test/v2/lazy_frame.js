@@ -161,6 +161,10 @@ test('CallRequest.RW.lazy', function t(assert) {
         v2.CallRequest.RW.lazy.readService(lazyFrame),
         frame.body.service,
         'CallRequest.RW.lazy.readService');
+    assertReadRes(
+        v2.CallRequest.RW.lazy.readArg1(lazyFrame),
+        Buffer(frame.body.args[0]),
+        'CallRequest.RW.lazy.readArg1');
     assert.equal(
         v2.CallRequest.RW.lazy.isFrameTerminal(lazyFrame),
         !(frame.body.flags & v2.CallFlags.Fragment),

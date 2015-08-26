@@ -25,6 +25,7 @@ var farm32 = require('farmhash').fingerprint32;
 var crc32 = require('crc').crc32;
 var crc32c = require('sse4_crc32').calculate;
 var bufrw = require('bufrw');
+var bufrwErrors = require('bufrw/errors');
 var errors = require('../errors');
 
 module.exports = Checksum;
@@ -91,6 +92,27 @@ Checksum.RW = bufrw.Switch(bufrw.UInt8, rwCases, {
     valKey: 'type',
     dataKey: 'val'
 });
+
+Checksum.RW.lazySkip = function lazySkip(frame, offset) {
+    var res = bufrw.UInt8.readFrom(frame.buffer, offset);
+    if (res.err) {
+        return res;
+    }
+    offset = res.offset;
+
+    var caseRW = rwCases[res.value];
+    if (!caseRW) {
+        res.err = bufrwErrors.InvalidSwitchValue({
+            value: res.value
+        });
+        return res;
+    }
+
+    offset += caseRW.width;
+    res.offset = offset;
+    res.value = null;
+    return res;
+};
 
 Checksum.prototype.compute = function compute(args, prior) {
     if (typeof prior !== 'number') prior = 0;

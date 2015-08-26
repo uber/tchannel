@@ -98,6 +98,37 @@ CallRequest.RW.lazy.readService = function lazyReadService(frame) {
     return bufrw.str1.readFrom(frame.buffer, CallRequest.RW.lazy.serviceOffset);
 };
 
+CallRequest.RW.lazy.readArg1 = function readArg1(frame) {
+    // last fixed offset
+    var offset = CallRequest.RW.lazy.serviceOffset;
+
+    // TODO: memoize computed offsets on frame between readService, readArg1, and any others
+
+    // SKIP service~1
+    var res = bufrw.str1.sizerw.readFrom(frame.buffer, offset);
+    if (res.err) {
+        return res;
+    }
+    offset = res.offset + res.value;
+
+    // SKIP nh:1 (hk~1 hv~1){nh}
+    res = header.header1.lazySkip(frame, offset);
+    if (res.err) {
+        return res;
+    }
+    offset = res.offset;
+
+    // SKIP csumtype:1 (csum:4){0,1}
+    res = Checksum.RW.lazySkip(frame, offset);
+    if (res.err) {
+        return res;
+    }
+    offset = res.offset;
+
+    // READ arg~2
+    return argsrw.argrw.readFrom(frame.buffer, offset);
+};
+
 CallRequest.RW.lazy.isFrameTerminal = function isFrameTerminal(frame) {
     var flags = CallRequest.RW.lazy.readFlags(frame);
     var frag = flags & CallFlags.Fragment;
@@ -267,6 +298,21 @@ CallResponse.RW.lazy.tracingOffset = CallResponse.RW.lazy.codeOffset + 1;
 CallResponse.RW.lazy.readTracing = function lazyReadTracing(frame) {
     // tracing:24 traceflags:1
     return Tracing.RW.readFrom(frame.buffer, CallResponse.RW.lazy.tracingOffset);
+};
+
+CallResponse.RW.lazy.readArg1 = function readArg1(frame) {
+    // last fixed offset
+    var offset = CallResponse.RW.lazy.tracingOffset;
+
+    // SKIP csumtype:1 (csum:4){0,1}
+    var res = Checksum.RW.lazySkip(frame, offset);
+    if (res.err) {
+        return res;
+    }
+    offset = res.offset;
+
+    // READ arg~2
+    return argsrw.argrw.readFrom(frame.buffer, offset);
 };
 
 CallResponse.RW.lazy.isFrameTerminal = function isFrameTerminal(frame) {

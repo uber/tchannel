@@ -192,6 +192,30 @@ HeaderRW.prototype.readFrom = function readFrom(buffer, offset) {
     return bufrw.ReadResult.just(offset, headers);
 };
 
+HeaderRW.prototype.lazySkip = function lazySkip(frame, offset) {
+    var self = this;
+
+    // TODO: conspire with Call(Request,Response) to memoize headers start/end
+    // offsets, maybe even start of each key?
+
+    var res = self.countrw.readFrom(frame.buffer, offset);
+    if (res.err) return res;
+    offset = res.offset;
+    var n = res.value;
+
+    for (var i = 0; i < n; i++) {
+        res = self.keyrw.sizerw.readFrom(frame.buffer, offset);
+        if (res.err) return res;
+        offset = res.offset + res.value;
+
+        res = self.valrw.sizerw.readFrom(frame.buffer, offset);
+        if (res.err) return res;
+        offset = res.offset + res.value;
+    }
+
+    return bufrw.ReadResult.just(offset, null);
+};
+
 module.exports = HeaderRW;
 
 // nh:1 (hk~1 hv~1){nh}
