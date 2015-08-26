@@ -28,8 +28,12 @@ import (
 	"fmt"
 	"net"
 	"sync/atomic"
+	"testing"
+
+	"golang.org/x/net/context"
 
 	"github.com/uber/tchannel/golang"
+	"github.com/uber/tchannel/golang/raw"
 )
 
 var connectionLog = flag.Bool("connectionLog", false, "Enables connection logging in tests")
@@ -135,4 +139,24 @@ func NewClient(opts *ChannelOpts) (*tchannel.Channel, error) {
 	serviceName := defaultString(opts.ServiceName, DefaultClientName)
 	processName := defaultString(opts.ProcessName, serviceName+"-"+fmt.Sprint(clientNum))
 	return tchannel.NewChannel(serviceName, getChannelOptions(opts, processName))
+}
+
+type rawFuncHandler struct {
+	t *testing.T
+	f func(context.Context, *raw.Args) (*raw.Res, error)
+}
+
+func (h rawFuncHandler) OnError(ctx context.Context, err error) {
+	h.t.Errorf("simpleHandler OnError: %v %v", ctx, err)
+}
+
+func (h rawFuncHandler) Handle(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+	return h.f(ctx, args)
+}
+
+// RegisterFunc registers a function as a handler for the given operation name.
+func RegisterFunc(t *testing.T, ch *tchannel.Channel, name string,
+	f func(ctx context.Context, args *raw.Args) (*raw.Res, error)) {
+
+	ch.Register(raw.Wrap(rawFuncHandler{t, f}), name)
 }

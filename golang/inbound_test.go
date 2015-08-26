@@ -43,7 +43,7 @@ func TestActiveCallReq(t *testing.T) {
 		gotCall := make(chan struct{})
 		unblock := make(chan struct{})
 
-		registerFunc(t, ch, "blocked", func(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+		testutils.RegisterFunc(t, ch, "blocked", func(ctx context.Context, args *raw.Args) (*raw.Res, error) {
 			gotCall <- struct{}{}
 			<-unblock
 			return &raw.Res{}, nil
