@@ -67,5 +67,5 @@ git push origin master --tags
 git push -f origin dev_hyperbahn
 
 git archive --prefix=package/ --format tgz dev_hyperbahn >package.tgz
-npm publish package.tgz --tag "${NPM_TAG:-alpha}"
+${NPM:-npm} publish package.tgz --tag "${NPM_TAG:-alpha}"
 rm package.tgz
