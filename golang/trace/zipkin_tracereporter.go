@@ -4,8 +4,10 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"net"
+	"time"
 
 	tc "github.com/uber/tchannel/golang"
+	"github.com/uber/tchannel/golang/thrift"
 	"github.com/uber/tchannel/golang/trace/thrift/gen-go/tcollector"
 )
 
@@ -18,18 +20,13 @@ type ZipkinTraceReporter struct {
 func (r *ZipkinTraceReporter) Report(
 	span tc.Span, annotations []tc.Annotation, binaryAnnotations []tc.BinaryAnnotation, name string, endpoint *tc.Endpoint) {
 
-	//thriftClient := thrift.NewClient(r.tchannel, "tcollector", nil)
-	//client := tcollector.NewTChanTCollectorClient(thriftClient)
+	thriftClient := thrift.NewClient(r.tchannel, "tcollector", nil)
+	client := tcollector.NewTChanTCollectorClient(thriftClient)
 
-	//ctx, cancel := thrift.NewContext(time.Second)
-	// add transport header into context
-	// ctx = thrift.WithHeaders(
-	// 	ctx, map[string]string{"shardKey": string(Base64Encode(span.TraceID()))},
-	// )
+	ctx, cancel := thrift.NewContext(time.Second)
 
-	//thriftSpan := BuildZipkinSpan(span, annotations, binaryAnnotations, name, endpoint)
+	thriftSpan := BuildZipkinSpan(span, annotations, binaryAnnotations, name, endpoint)
 
-	// client submit
 }
 
 // BuildZipkinSpan builds zipkin span based on tchannel span.
