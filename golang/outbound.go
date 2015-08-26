@@ -66,6 +66,12 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string, callOpti
 		return nil, ErrConnectionClosed
 	}
 
+	if opts := currentCallOptions(ctx); opts != nil {
+		// TODO(prashant): Figure out whether we want callOptions as BeginCall argument
+		// and as a Context value.
+		callOptions = opts
+	}
+
 	headers := transportHeaders{
 		CallerName: c.localPeerInfo.ServiceName,
 	}
