@@ -306,6 +306,7 @@ function removeServicePeer(serviceName, hostPort) {
     if (!peer) {
         return;
     }
+    svcchan.peers.delete(hostPort);
 
     var anyOtherSubChan = false;
     var subChanKeys = Object.keys(self.channel.subChannels);
