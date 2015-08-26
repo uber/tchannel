@@ -73,12 +73,22 @@ RelayHandler.prototype._handleRequest = function _handleRequest(req, buildRes) {
     // }
 
     req.forwardTrace = true;
-    var rereq = new RelayRequest(self.channel, req, buildRes);
 
+    var peer = self.channel.peers.choosePeer(null);
+    if (!peer) {
+        // TODO: stat
+        // TODO: allow for customization of this message so hyperbahn can
+        // augment it with things like "at entry node", "at exit node", etc
+        buildRes().sendError('Declined', 'no peer available for request');
+        self.channel.logger.warn('no relay peer available', req.extendLogInfo({}));
+        return;
+    }
+
+    var rereq = new RelayRequest(self.channel, peer, req, buildRes);
     rereq.createOutRequest();
 };
 
-function RelayRequest(channel, inreq, buildRes) {
+function RelayRequest(channel, peer, inreq, buildRes) {
     var self = this;
 
     self.channel = channel;
@@ -88,12 +98,32 @@ function RelayRequest(channel, inreq, buildRes) {
     self.outres = null;
     self.outreq = null;
     self.buildRes = buildRes;
-    self.peer = null;
+    self.peer = peer;
 
     self.error = null;
+
+    self.boundOnError = onError;
+    self.boundExtendLogInfo = extendLogInfo;
+    self.boundOnIdentified = onIdentified;
+
+    function onError(err) {
+        self.onError(err);
+    }
+
+    function extendLogInfo(info) {
+        self.extendLogInfo(info);
+    }
+
+    function onIdentified(err) {
+        if (err) {
+            self.onError(err);
+        } else {
+            self.onIdentified();
+        }
+    }
 }
 
-RelayRequest.prototype.createOutRequest = function createOutRequest(host) {
+RelayRequest.prototype.createOutRequest = function createOutRequest() {
     var self = this;
 
     if (self.outreq) {
@@ -105,56 +135,20 @@ RelayRequest.prototype.createOutRequest = function createOutRequest(host) {
         return;
     }
 
-    if (self.peer) {
-        self.logger.error('createOutRequest: overwritting peers', {
-            hostPort: self.peer.hostPort
-        });
-    }
-
-    if (host) {
-        self.peer = self.channel.peers.add(host);
-    } else {
-        self.peer = self.channel.peers.choosePeer(null);
-    }
-
-    if (!self.peer) {
-        self.onError(errors.NoPeerAvailable());
-        return;
-    }
-
-    self.peer.waitForIdentified(onIdentified);
-
-    function onIdentified(err) {
-        self.onIdentified(err);
-    }
+    self.peer.waitForIdentified(self.boundOnIdentified);
 };
 
-RelayRequest.prototype.onIdentified = function onIdentified(err1) {
+RelayRequest.prototype.onIdentified = function onIdentified() {
     var self = this;
 
-    if (err1) {
-        self.onError(err1);
-        return;
-    }
-
-    var identified = false;
-    var closing = false;
-    for (var i = 0; i < self.peer.connections.length; i++) {
-        if (self.peer.connections[i].remoteName) {
-            identified = true;
-            closing = self.peer.connections[i].closing;
-            if (!closing) break;
-        }
-    }
-
-    if (!identified) {
+    var conn = chooseRelayPeerConnection(self.peer);
+    if (!conn.remoteName) {
         // we get the problem
         self.logger.error('onIdentified called on no connection identified', {
             hostPort: self.peer.hostPort
         });
     }
-
-    if (closing) {
+    if (conn.closing) {
         // most likely
         self.logger.error('onIdentified called on connection closing', {
             hostPort: self.peer.hostPort
@@ -177,7 +171,7 @@ RelayRequest.prototype.onIdentified = function onIdentified(err1) {
         retryFlags: self.inreq.retryFlags
     });
     self.outreq.responseEvent.on(onResponse);
-    self.outreq.errorEvent.on(onError);
+    self.outreq.errorEvent.on(self.boundOnError);
 
     if (self.outreq.streamed) {
         self.outreq.sendStreams(self.inreq.arg1, self.inreq.arg2, self.inreq.arg3);
@@ -187,10 +181,6 @@ RelayRequest.prototype.onIdentified = function onIdentified(err1) {
 
     function onResponse(res) {
         self.onResponse(res);
-    }
-
-    function onError(err2) {
-        self.onError(err2);
     }
 };
 
@@ -277,37 +267,44 @@ RelayRequest.prototype.onError = function onError(err) {
 
     self.outres.sendError(codeName, err.message);
     self.logError(err, codeName);
-    // TODO: stat in some cases, e.g. declined / peer not available
 };
 
-RelayRequest.prototype.logError = function logError(err, codeName) {
+RelayRequest.prototype.extendLogInfo = function extendLogInfo(info) {
     var self = this;
 
+    info.outRemoteAddr = self.outreq && self.outreq.remoteAddr;
+    info = self.inreq.extendLogInfo(info);
+
+    return info;
+};
+
+RelayRequest.prototype.logError = function relayRequestLogError(err, codeName) {
+    var self = this;
+    logError(self.logger, err, codeName, self.boundExtendLogInfo);
+};
+
+function logError(logger, err, codeName, extendLogInfo) {
     var level = errorLogLevel(err, codeName);
 
-    var logOptions = {
+    var logOptions = extendLogInfo({
         error: err,
-        isErrorFrame: err.isErrorFrame,
-        outRemoteAddr: self.outreq && self.outreq.remoteAddr,
-        inRemoteAddr: self.inreq.remoteAddr,
-        serviceName: self.inreq.serviceName,
-        outArg1: String(self.inreq.arg1)
-    };
+        isErrorFrame: err.isErrorFrame
+    });
 
     if (err.isErrorFrame) {
         if (level === 'warn') {
-            self.logger.warn('forwarding error frame', logOptions);
+            logger.warn('forwarding error frame', logOptions);
         } else if (level === 'info') {
-            self.logger.info('forwarding expected error frame', logOptions);
+            logger.info('forwarding expected error frame', logOptions);
         }
     } else if (level === 'error') {
-        self.logger.error('unexpected error while forwarding', logOptions);
+        logger.error('unexpected error while forwarding', logOptions);
     } else if (level === 'warn') {
-        self.logger.warn('error while forwarding', logOptions);
+        logger.warn('error while forwarding', logOptions);
     } else if (level === 'info') {
-        self.logger.info('expected error while forwarding', logOptions);
+        logger.info('expected error while forwarding', logOptions);
     }
-};
+}
 
 function errorLogLevel(err, codeName) {
     switch (codeName) {
@@ -331,4 +328,13 @@ function errorLogLevel(err, codeName) {
         default:
             return 'error';
     }
+}
+
+function chooseRelayPeerConnection(peer) {
+    var conn = null;
+    for (var i = 0; i < peer.connections.length; i++) {
+        conn = peer.connections[i];
+        if (conn.remoteName && !conn.closing) break;
+    }
+    return conn;
 }
