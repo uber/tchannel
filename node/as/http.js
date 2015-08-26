@@ -77,19 +77,7 @@ TChannelHTTP.prototype.sendRequest = function send(treq, hreq, options, callback
     }
 
     var head = new HTTPReqArg2(hreq.method, hreq.url);
-    // TODO: get lower level access to raw request header pairs
-    var keys = Object.keys(hreq.headers);
-    for (var i = 0; i < keys.length; i++) {
-        var key = keys[i];
-        var val = hreq.headers[key];
-        if (Array.isArray(val)) {
-            for (var j = 0; j < keys.length; j++) {
-                head.headerPairs.push([key, val[j]]);
-            }
-        } else {
-            head.headerPairs.push([key, val]);
-        }
-    }
+    head.headerPairs = self._toBufferHeader(hreq.headers);
 
     var arg1 = ''; // TODO: left empty for now, could compute circuit names heuristically
     var arg2res = bufrw.toBufferResult(HTTPReqArg2.RW, head);
@@ -126,9 +114,6 @@ TChannelHTTP.prototype.sendRequest = function send(treq, hreq, options, callback
     }
 
     function readArg2(tres, arg2) {
-        // TODO: currently does the wrong thing and doesn't implement a
-        // multi-map, due to assuming node-like mangling on the other side
-        // to ensure singularity
         var arg2res = bufrw.fromBufferResult(HTTPResArg2.RW, arg2);
         if (arg2res.err) {
             self.logger.error('Buffer read for arg2 failed', {
@@ -150,19 +135,7 @@ TChannelHTTP.prototype.sendResponse = function send(buildResponse, hres, body, c
     // TODO: map http response codes onto error frames and application errors
     var self = this;
     var head = new HTTPResArg2(hres.statusCode, hres.statusMessage);
-    var keys = Object.keys(hres.headers);
-    for (var i = 0; i < keys.length; i++) {
-        var key = keys[i];
-        var val = hres.headers[key];
-        if (Array.isArray(val)) {
-            for (var j = 0; j < keys.length; j++) {
-                head.headerPairs.push([key, val[j]]);
-            }
-        } else {
-            head.headerPairs.push([key, val]);
-        }
-    }
-
+    head.headerPairs = self._toBufferHeader(hres.headers);
     var arg2res = bufrw.toBufferResult(HTTPResArg2.RW, head);
     if (arg2res.err) {
         self.logger.error('Buffer write for arg2 failed', {
@@ -183,7 +156,7 @@ TChannelHTTP.prototype.sendResponse = function send(buildResponse, hres, body, c
             }
         }).sendOk(arg2, body);
         callback(null);
-        return;
+        return null;
     }
 
     return buildResponse({
@@ -249,20 +222,7 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
                 error: err
             });
         } else {
-            // TODO: better lower level mapping of headerPairs
-            var headers = {};
-            for (var i = 0; i < head.headerPairs.length; i++) {
-                var pair = head.headerPairs[i];
-                var key = pair[0];
-                var val = pair[1];
-                if (headers[key] === undefined) {
-                    headers[key] = val;
-                } else if (Array.isArray(headers[key])) {
-                    headers[key].push(val);
-                } else {
-                    headers[key] = [headers[key], val];
-                }
-            }
+            var headers = self._fromBufferHeader(head.headerPairs);
             // work-arround a node issue where default statusMessage is missing
             // from the client side when server side set as optional parameter
             if (head.message) {
@@ -283,25 +243,13 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
 TChannelHTTP.prototype.forwardToHTTP = function forwardToHTTP(tchannel, options, inreq, outres, callback) {
     var self = this;
     self.logger = self.logger || tchannel.logger;
-    var headers = {};
+    var headers = self._fromBufferHeader(inreq.head.headerPairs);
     options = extend(options, {
         method: inreq.head.method,
         path: inreq.head.url,
         headers: headers,
         keepAlive: true
     });
-    for (var i = 0; i < inreq.head.headerPairs.length; i++) {
-        var pair = inreq.head.headerPairs[i];
-        var key = pair[0];
-        var val = pair[1];
-        if (headers[key] === undefined) {
-            headers[key] = val;
-        } else if (Array.isArray(headers[key])) {
-            headers[key].push(val);
-        } else {
-            headers[key] = [headers[key], val];
-        }
-    }
     if (self.lbpool) {
         self._forwardToLBPool(options, inreq, outres, callback);
     } else {
@@ -313,7 +261,7 @@ TChannelHTTP.prototype._forwardToLBPool = function _forwardToLBPool(options, inr
     var self = this;
 
     var data = inreq.bodyStream || inreq.bodyArg; // lb_pool likes polymorphism
-    self.lbpool.request(options, data , onResponse);
+    self.lbpool.request(options, data, onResponse);
 
     function onResponse(err, res, body) {
         if (err) {
@@ -360,6 +308,89 @@ TChannelHTTP.prototype._forwardToNodeHTTP = function _forwardToNodeHTTP(options,
             callback(err);
         }
     }
+};
+
+// per RFC2616
+TChannelHTTP.prototype._fromBufferHeader = function _fromBufferHeader(bufrwHeaders) {
+    var httpHeaders = {};
+    for (var i = 0; i < bufrwHeaders.length; i++) {
+        var pair = bufrwHeaders[i];
+        var key = pair[0];
+        var val = pair[1];
+        key = key.toLowerCase();
+        switch (key) {
+            case 'set-cookie':
+                if (httpHeaders[key] !== undefined) {
+                    httpHeaders[key].push(val);
+                } else {
+                    httpHeaders[key] = [val];
+                }
+                break;
+            case 'content-type':
+            case 'content-length':
+            case 'user-agent':
+            case 'referer':
+            case 'host':
+            case 'authorization':
+            case 'proxy-authorization':
+            case 'if-modified-since':
+            case 'if-unmodified-since':
+            case 'from':
+            case 'location':
+            case 'max-forwards':
+                // drop duplicates
+                if (httpHeaders[key] === undefined) {
+                    httpHeaders[key] = val;
+                }
+                break;
+            default:
+                // make comma-separated list
+                if (httpHeaders[key] !== undefined) {
+                    httpHeaders[key] += ', ' + val;
+                } else {
+                    httpHeaders[key] = val;
+                }
+        }
+    }
+    return httpHeaders;
+};
+
+TChannelHTTP.prototype._toBufferHeader = function _toBufferHeader(httpHeaders) {
+    var bufrwHeaders = [];
+    var keys = Object.keys(httpHeaders);
+    for (var i = 0; i < keys.length; i++) {
+        var key = keys[i];
+        var val = httpHeaders[key];
+        switch (key) {
+            case 'set-cookie':
+                for (var j = 0; j < val.length; j++) {
+                    bufrwHeaders.push([key, val[j]]);
+                }
+                break;
+            case 'content-type':
+            case 'content-length':
+            case 'user-agent':
+            case 'referer':
+            case 'host':
+            case 'authorization':
+            case 'proxy-authorization':
+            case 'if-modified-since':
+            case 'if-unmodified-since':
+            case 'from':
+            case 'location':
+            case 'max-forwards':
+                // no duplicates
+                bufrwHeaders.push([key, val]);
+                break;
+            default:
+                // prase comma-separated list
+                val = val.split(', ');
+                for (var k = 0; k < val.length; k++) {
+                    bufrwHeaders.push([key, val[k]]);
+                }
+        }
+    }
+    return bufrwHeaders;
 };
 
 function AsHTTPHandler(asHTTP, channel, handler) {
