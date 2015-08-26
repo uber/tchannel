@@ -24,9 +24,6 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
-
-	"github.com/uber/tchannel/golang"
-	"github.com/uber/tchannel/golang/json"
 )
 
 const (
@@ -55,44 +52,6 @@ type ErrAdvertiseFailed struct {
 
 func (e ErrAdvertiseFailed) Error() string {
 	return fmt.Sprintf("advertise failed, retry: %v, cause: %v", e.WillRetry, e.Cause)
-}
-
-// The following parameters define the request/response for the Hyperbahn 'ad' call.
-type service struct {
-	Name string `json:"serviceName"`
-	Cost int    `json:"cost"`
-}
-
-type adRequest struct {
-	Services []service `json:"services"`
-}
-
-type adResponse struct {
-	ConnectionCount int `json:"connectionCount"`
-}
-
-func (c *Client) sendAdvertise() error {
-	ctx, cancel := json.NewContext(c.opts.Timeout)
-	defer cancel()
-
-	// Disable tracing on Hyperbahn advertise messages to avoid cascading failures (see #790).
-	tchannel.CurrentSpan(ctx).EnableTracing(false)
-
-	sc := c.tchan.GetSubChannel(hyperbahnServiceName)
-	arg := &adRequest{
-		Services: []service{{
-			Name: c.tchan.PeerInfo().ServiceName,
-			Cost: 0,
-		}},
-	}
-	var resp adResponse
-	c.opts.Handler.On(SendAdvertise)
-
-	if err := json.CallSC(ctx, sc, "ad", arg, &resp); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // fuzzInterval returns a fuzzed version of the interval based on FullJitter as described here:

@@ -77,6 +77,7 @@ type retryTest struct {
 	sleepArgs  <-chan time.Duration
 	sleepBlock chan<- struct{}
 
+	ch     *tchannel.Channel
 	client *Client
 	mock   mock.Mock
 }
@@ -123,6 +124,7 @@ func runRetryTest(t *testing.T, f func(r *retryTest)) {
 		require.NoError(t, err)
 		defer clientCh.Close()
 
+		r.ch = clientCh
 		r.client, err = NewClient(clientCh, configFor(hostPort), &ClientOptions{
 			Handler:      r,
 			FailStrategy: FailStrategyIgnore,
@@ -143,6 +145,40 @@ func TestAdvertiseSuccess(t *testing.T) {
 
 		// Verify that the arguments passed to 'ad' are correct.
 		expectedRequest := adRequest{[]service{{Name: "my-client", Cost: 0}}}
+		require.Equal(t, expectedRequest, r.req)
+
+		// Verify readvertise happen after sleeping for ~advertiseInterval.
+		r.mock.On("On", Readvertised).Return().Times(10)
+		for i := 0; i < 10; i++ {
+			s1 := <-r.sleepArgs
+			checkAdvertiseInterval(t, s1)
+			r.sleepBlock <- struct{}{}
+
+			r.setAdvertiseSuccess()
+			require.Equal(t, expectedRequest, r.req)
+		}
+
+		// Block till the last advertise completes.
+		<-r.sleepArgs
+	})
+}
+
+func TestMutlipleAdvertise(t *testing.T) {
+	runRetryTest(t, func(r *retryTest) {
+		r.mock.On("On", SendAdvertise).Return().
+			Times(1 /* initial */ + 10 /* successful retries */)
+		r.mock.On("On", Advertised).Return().Once()
+		r.setAdvertiseSuccess()
+
+		sc2, sc3 := r.ch.GetSubChannel("svc-2"), r.ch.GetSubChannel("svc-3")
+		require.NoError(t, r.client.Advertise(sc2, sc3))
+
+		// Verify that the arguments passed to 'ad' are correct.
+		expectedRequest := adRequest{[]service{
+			{Name: "my-client", Cost: 0},
+			{Name: "svc-2", Cost: 0},
+			{Name: "svc-3", Cost: 0},
+		}}
 		require.Equal(t, expectedRequest, r.req)
 
 		// Verify readvertise happen after sleeping for ~advertiseInterval.

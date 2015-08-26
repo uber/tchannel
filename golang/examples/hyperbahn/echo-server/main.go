@@ -50,7 +50,9 @@ func main() {
 	}
 	log.Printf("Listening on %v", l.Addr())
 
-	tchan.Register(raw.Wrap(handler{}), "echo")
+	sc := tchan.GetSubChannel("go-echo-2")
+	tchan.Register(raw.Wrap(handler{""}), "echo")
+	sc.Register(raw.Wrap(handler{"subchannel:"}), "echo")
 	tchan.Serve(l)
 
 	if len(os.Args[1:]) == 0 {
@@ -66,7 +68,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("hyperbahn.NewClient failed: %v", err)
 	}
-	if err := client.Advertise(); err != nil {
+	if err := client.Advertise(sc); err != nil {
 		log.Fatalf("Advertise failed: %v", err)
 	}
 
@@ -84,15 +86,20 @@ func (eventHandler) OnError(err error) {
 	fmt.Printf("OnError(%v)\n", err)
 }
 
-type handler struct{}
+type handler struct {
+	prefix string
+}
 
-func (handler) OnError(ctx context.Context, err error) {
+func (h handler) OnError(ctx context.Context, err error) {
 	log.Fatalf("OnError: %v", err)
 }
 
-func (handler) Handle(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+func (h handler) Handle(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+	arg2 := h.prefix + string(args.Arg2)
+	arg3 := h.prefix + string(args.Arg3)
+
 	return &raw.Res{
-		Arg2: args.Arg2,
-		Arg3: args.Arg3,
+		Arg2: []byte(arg2),
+		Arg3: []byte(arg3),
 	}, nil
 }
