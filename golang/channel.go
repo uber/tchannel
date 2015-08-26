@@ -41,6 +41,9 @@ const (
 	ephemeralHostPort = "0.0.0.0:0"
 )
 
+// TraceReporterFactory is the interface of the method to generate TraceReporter instance.
+type TraceReporterFactory func(*Channel) TraceReporter
+
 // ChannelOptions are used to control parameters on a create a TChannel
 type ChannelOptions struct {
 	// Default Connection options
@@ -57,6 +60,9 @@ type ChannelOptions struct {
 
 	// Trace reporter to use for this channel.
 	TraceReporter TraceReporter
+
+	// Trace reporter factory to generate trace reporter instance.
+	TraceReporterFactory TraceReporterFactory
 }
 
 // ChannelState is the state of a channel.
@@ -89,14 +95,15 @@ const (
 // want to receive requests should call one of Serve or ListenAndServe
 // TODO(prashant): Shutdown all subchannels + peers when channel is closed.
 type Channel struct {
-	log               Logger
-	commonStatsTags   map[string]string
-	statsReporter     StatsReporter
-	traceReporter     TraceReporter
-	connectionOptions ConnectionOptions
-	handlers          *handlerMap
-	peers             *PeerList
-	subChannels       *subChannelMap
+	log                  Logger
+	commonStatsTags      map[string]string
+	statsReporter        StatsReporter
+	traceReporter        TraceReporter
+	traceReporterFactory TraceReporterFactory
+	connectionOptions    ConnectionOptions
+	handlers             *handlerMap
+	peers                *PeerList
+	subChannels          *subChannelMap
 
 	// mutable contains all the members of Channel which are mutable.
 	mutable struct {
@@ -121,11 +128,6 @@ func NewChannel(serviceName string, opts *ChannelOptions) (*Channel, error) {
 		logger = NullLogger
 	}
 
-	traceReporter := opts.TraceReporter
-	if traceReporter == nil {
-		traceReporter = NullReporter
-	}
-
 	processName := opts.ProcessName
 	if processName == "" {
 		processName = fmt.Sprintf("%s[%d]", filepath.Base(os.Args[0]), os.Getpid())
@@ -140,10 +142,24 @@ func NewChannel(serviceName string, opts *ChannelOptions) (*Channel, error) {
 		connectionOptions: opts.DefaultConnectionOptions,
 		log:               logger.WithFields(LogField{"service", serviceName}),
 		statsReporter:     statsReporter,
-		traceReporter:     traceReporter,
 		handlers:          &handlerMap{},
 		subChannels:       &subChannelMap{},
 	}
+
+	var traceReporter TraceReporter
+
+	if opts.TraceReporterFactory != nil {
+		traceReporter = opts.TraceReporterFactory(ch)
+	} else {
+		traceReporter = opts.TraceReporter
+	}
+
+	if traceReporter == nil {
+		traceReporter = NullReporter
+	}
+
+	ch.SetTraceReporter(traceReporter)
+
 	ch.mutable.peerInfo = LocalPeerInfo{
 		PeerInfo: PeerInfo{
 			ProcessName: processName,
@@ -155,6 +171,11 @@ func NewChannel(serviceName string, opts *ChannelOptions) (*Channel, error) {
 	ch.peers = newPeerList(ch)
 	ch.createCommonStats()
 	return ch, nil
+}
+
+// SetTraceReporter sets TraceReporter to the Channel instance.
+func (ch *Channel) SetTraceReporter(traceReporter TraceReporter) {
+	ch.traceReporter = traceReporter
 }
 
 // Serve serves incoming requests using the provided listener.
