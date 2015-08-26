@@ -311,7 +311,9 @@ TChannelHTTP.prototype.forwardToHTTP = function forwardToHTTP(tchannel, options,
 
 TChannelHTTP.prototype._forwardToLBPool = function _forwardToLBPool(options, inreq, outres, callback) {
     var self = this;
-
+    options = extend(options, {
+        encoding: null
+    });
     var data = inreq.bodyStream || inreq.bodyArg; // lb_pool likes polymorphism
     self.lbpool.request(options, data , onResponse);
 
