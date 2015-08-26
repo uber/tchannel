@@ -307,8 +307,20 @@ function removeServicePeer(serviceName, hostPort) {
         return;
     }
 
-    peer.close(noop);
-    self.channel.peers.delete(hostPort);
+    var anyOtherSubChan = false;
+    var subChanKeys = Object.keys(self.channel.subChannels);
+    for (var i = 0; i < subChanKeys; i++) {
+        var subChan = self.channel.subChannels[subChanKeys[i]];
+        if (subChan.peers.get(hostPort)) {
+            anyOtherSubChan = true;
+            break;
+        }
+    }
+
+    if (!anyOtherSubChan) {
+        peer.close(noop);
+        self.channel.peers.delete(hostPort);
+    }
 };
 
 function noop() {}
