@@ -151,6 +151,9 @@ const (
 	// likely to fail in the same way if they were to fail.
 	FailureDomain TransportHeaderName = "fd"
 
+	// ShardKey header value is used by ringpop to deliver calls to a specific tchannel instance.
+	ShardKey TransportHeaderName = "sk"
+
 	// RetryFlags header specifies whether retry policies.
 	RetryFlags TransportHeaderName = "re"
 

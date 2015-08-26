@@ -28,13 +28,13 @@ import (
 
 	// Test is in a separate package to avoid circular dependencies.
 
-	"github.com/uber/tchannel/golang/testutils"
 	. "github.com/uber/tchannel/golang/thrift"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	tchannel "github.com/uber/tchannel/golang"
+	"github.com/uber/tchannel/golang/testutils"
 	gen "github.com/uber/tchannel/golang/thrift/gen-go/test"
 	"github.com/uber/tchannel/golang/thrift/mocks"
 )

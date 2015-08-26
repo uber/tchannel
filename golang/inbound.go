@@ -224,6 +224,11 @@ func (call *InboundCall) CallerName() string {
 	return call.headers[CallerName]
 }
 
+// ShardKey returns the shard key from the ShardKey transport header.
+func (call *InboundCall) ShardKey() string {
+	return call.headers[ShardKey]
+}
+
 // Reads the entire operation name (arg1) from the request stream.
 func (call *InboundCall) readOperation() error {
 	var arg1 []byte

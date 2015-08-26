@@ -1,5 +1,4 @@
 // Copyright (c) 2015 Uber Technologies, Inc.
-
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -18,33 +17,53 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tchannel
+package tchannel_test
 
 import (
 	"testing"
 	"time"
 
+	"golang.org/x/net/context"
+
+	. "github.com/uber/tchannel/golang"
+
 	"github.com/stretchr/testify/assert"
+	"github.com/uber/tchannel/golang/raw"
+	"github.com/uber/tchannel/golang/testutils"
 )
 
-type mockIncomingCall struct {
-	callerName string
-}
-
-func (m *mockIncomingCall) CallerName() string {
-	return m.callerName
-}
-
-var (
-	cn = "hello"
-)
+var cn = "hello"
 
 func TestWrapContextForTest(t *testing.T) {
-	call := &mockIncomingCall{callerName: cn}
+	call := testutils.NewIncomingCall(cn)
 	ctx, cancel := NewContext(time.Second)
 	defer cancel()
 	actual := WrapContextForTest(ctx, call)
 	assert.Equal(t, call, CurrentCall(actual), "Incorrect call object returned.")
+}
+
+func TestShardKeyPropagates(t *testing.T) {
+	WithVerifiedServer(t, nil, func(ch *Channel, hostPort string) {
+		peerInfo := ch.PeerInfo()
+		testutils.RegisterFunc(t, ch, "test", func(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+			return &raw.Res{
+				Arg3: []byte(CurrentCall(ctx).ShardKey()),
+			}, nil
+		})
+
+		ctx, cancel := NewContextBuilder(time.Second).Build()
+		defer cancel()
+		_, arg3, _, err := raw.Call(ctx, ch, peerInfo.HostPort, peerInfo.ServiceName, "test", nil, nil)
+		assert.NoError(t, err, "Call failed")
+		assert.Equal(t, arg3, []byte(""))
+
+		ctx, cancel = NewContextBuilder(time.Second).
+			SetShardKey("shard").Build()
+		defer cancel()
+		_, arg3, _, err = raw.Call(ctx, ch, peerInfo.HostPort, peerInfo.ServiceName, "test", nil, nil)
+		assert.NoError(t, err, "Call failed")
+		assert.Equal(t, string(arg3), "shard")
+	})
 }
 
 func TestCurrentCallWithNilResult(t *testing.T) {

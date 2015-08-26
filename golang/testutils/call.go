@@ -26,16 +26,26 @@ import "github.com/uber/tchannel/golang"
 // ensure it's only compiled with tests.
 
 // FakeIncomingCall implements IncomingCall interface.
+// Note: the F suffix for the fields is to clash with the method name.
 type FakeIncomingCall struct {
-	callerName string
+	// CallerNameF is the calling service's name.
+	CallerNameF string
+
+	// ShardKeyF is the intended destination for this call.
+	ShardKeyF string
 }
 
 // CallerName returns the caller name as specified in the fake call.
 func (f *FakeIncomingCall) CallerName() string {
-	return f.callerName
+	return f.CallerNameF
+}
+
+// ShardKey returns the shard key as specified in the fake call.
+func (f *FakeIncomingCall) ShardKey() string {
+	return f.ShardKeyF
 }
 
 // NewIncomingCall creates an incoming call for tests.
 func NewIncomingCall(callerName string) tchannel.IncomingCall {
-	return &FakeIncomingCall{callerName: callerName}
+	return &FakeIncomingCall{CallerNameF: callerName}
 }

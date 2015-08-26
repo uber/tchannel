@@ -70,6 +70,9 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string, callOpti
 		CallerName: c.localPeerInfo.ServiceName,
 	}
 	callOptions.setHeaders(headers)
+	if opts := currentCallOptions(ctx); opts != nil {
+		opts.overrideHeaders(headers)
+	}
 
 	call := new(OutboundCall)
 	call.mex = mex
