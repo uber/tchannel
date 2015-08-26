@@ -326,6 +326,17 @@ TChannelHTTP.prototype._fromBufferHeader = function _fromBufferHeader(bufrwHeade
                     httpHeaders[key] = [val];
                 }
                 break;
+            case 'content-type':
+            case 'content-length':
+            case 'user-agent':
+            case 'referer':
+            case 'host':
+            case 'authorization':
+            case 'proxy-authorization':
+            case 'if-modified-since':
+            case 'if-unmodified-since':
+            case 'from':
+            case 'location':
             case 'max-forwards':
                 // drop duplicates
                 if (httpHeaders[key] === undefined) {
@@ -356,6 +367,17 @@ TChannelHTTP.prototype._toBufferHeader = function _toBufferHeader(httpHeaders) {
                     bufrwHeaders.push([key, val[j]]);
                 }
                 break;
+            case 'content-type':
+            case 'content-length':
+            case 'user-agent':
+            case 'referer':
+            case 'host':
+            case 'authorization':
+            case 'proxy-authorization':
+            case 'if-modified-since':
+            case 'if-unmodified-since':
+            case 'from':
+            case 'location':
             case 'max-forwards':
                 // no duplicates
                 bufrwHeaders.push([key, val]);
