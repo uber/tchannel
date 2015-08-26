@@ -302,10 +302,12 @@ function removeServicePeer(serviceName, hostPort) {
         return;
     }
 
-    var peer = svcchan.peers.get(hostPort);
-    if (peer) {
-        peer.close(noop);
+    var peer = self.channel.peers.get(hostPort);
+    if (!peer) {
+        return;
     }
+
+    peer.close(noop);
     self.channel.peers.delete(hostPort);
 };
 
