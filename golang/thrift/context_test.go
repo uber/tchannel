@@ -18,13 +18,21 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package thrift
+package thrift_test
 
 import (
+	"errors"
 	"testing"
 	"time"
 
+	. "github.com/uber/tchannel/golang/thrift"
+
 	"github.com/stretchr/testify/assert"
+	"github.com/uber/tchannel/golang"
+	"github.com/uber/tchannel/golang/raw"
+	"github.com/uber/tchannel/golang/testutils"
+	gen "github.com/uber/tchannel/golang/thrift/gen-go/test"
+	"golang.org/x/net/context"
 )
 
 func TestWrapContext(t *testing.T) {
@@ -32,4 +40,30 @@ func TestWrapContext(t *testing.T) {
 	defer cancel()
 	actual := Wrap(ctx)
 	assert.NotNil(t, actual, "Should not return nil.")
+}
+
+func TestContextBuilder(t *testing.T) {
+	ctx, cancel := tchannel.NewContextBuilder(time.Second).SetShardKey("shard").Build()
+	defer cancel()
+
+	var called bool
+	testutils.WithServer(nil, func(ch *tchannel.Channel, hostPort string) {
+		peerInfo := ch.PeerInfo()
+
+		testutils.RegisterFunc(t, ch, "SecondService::Echo", func(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+			call := tchannel.CurrentCall(ctx)
+			assert.Equal(t, peerInfo.ServiceName, call.CallerName(), "unexpected caller name")
+			assert.Equal(t, "shard", call.ShardKey(), "unexpected shard key")
+			assert.Equal(t, tchannel.Thrift, args.Format)
+			called = true
+			return nil, errors.New("err")
+		})
+
+		client := NewClient(ch, ch.PeerInfo().ServiceName, &ClientOptions{
+			HostPort: peerInfo.HostPort,
+		})
+		secondClient := gen.NewTChanSecondServiceClient(client)
+		secondClient.Echo(ctx, "asd")
+		assert.True(t, called, "test not called")
+	})
 }
