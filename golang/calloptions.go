@@ -52,12 +52,15 @@ func (c *CallOptions) setHeaders(headers transportHeaders) {
 		c = defaultCallOptions
 	}
 
-	format := Raw
-	if c.Format != "" {
-		format = c.Format
-	}
+	headers[ArgScheme] = Raw.String()
+	c.overrideHeaders(headers)
+}
 
-	headers[ArgScheme] = format.String()
+// overrideHeaders sets headers if the call options contains non-default values.
+func (c *CallOptions) overrideHeaders(headers transportHeaders) {
+	if c.Format != "" {
+		headers[ArgScheme] = c.Format.String()
+	}
 	if c.ShardKey != "" {
 		headers[ShardKey] = c.ShardKey
 	}
