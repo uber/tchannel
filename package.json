@@ -35,7 +35,7 @@
     "raynos-replr": "0.2.5-port-0-support",
     "readable-stream": "1.0.33-2",
     "ready-signal": "1.2.0",
-    "ringpop": "10.3.0",
+    "ringpop": "10.5.0",
     "run-parallel": "1.0.0",
     "safe-json-parse": "4.0.0",
     "static-config": "2.1.0",
