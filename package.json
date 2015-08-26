@@ -25,7 +25,7 @@
     "url": "git@github.com:uber/tchannel"
   },
   "dependencies": {
-    "bufrw": "^0.9.24",
+    "bufrw": "^0.9.25",
     "crc": "^3.2.1",
     "debug-logtron": "5.0.0",
     "error": "^7.0.1",
