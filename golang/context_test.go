@@ -23,9 +23,12 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/net/context"
+
 	. "github.com/uber/tchannel/golang"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/uber/tchannel/golang/raw"
 	"github.com/uber/tchannel/golang/testutils"
 )
 
@@ -37,6 +40,30 @@ func TestWrapContextForTest(t *testing.T) {
 	defer cancel()
 	actual := WrapContextForTest(ctx, call)
 	assert.Equal(t, call, CurrentCall(actual), "Incorrect call object returned.")
+}
+
+func TestShardKeyPropagates(t *testing.T) {
+	WithVerifiedServer(t, nil, func(ch *Channel, hostPort string) {
+		peerInfo := ch.PeerInfo()
+		registerFunc(t, ch, "test", func(ctx context.Context, args *raw.Args) (*raw.Res, error) {
+			return &raw.Res{
+				Arg3: []byte(CurrentCall(ctx).ShardKey()),
+			}, nil
+		})
+
+		ctx, cancel := NewContextBuilder(time.Second).Build()
+		defer cancel()
+		_, arg3, _, err := raw.Call(ctx, ch, peerInfo.HostPort, peerInfo.ServiceName, "test", nil, nil)
+		assert.NoError(t, err, "Call failed")
+		assert.Equal(t, arg3, []byte(""))
+
+		ctx, cancel = NewContextBuilder(time.Second).
+			SetShardKey("shard").Build()
+		defer cancel()
+		_, arg3, _, err = raw.Call(ctx, ch, peerInfo.HostPort, peerInfo.ServiceName, "test", nil, nil)
+		assert.NoError(t, err, "Call failed")
+		assert.Equal(t, string(arg3), "shard")
+	})
 }
 
 func TestCurrentCallWithNilResult(t *testing.T) {

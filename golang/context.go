@@ -33,8 +33,9 @@ type contextKey int
 const contextKeyTChannel = 1
 
 type tchannelCtxParams struct {
-	span *Span
-	call IncomingCall
+	span    *Span
+	call    IncomingCall
+	options *CallOptions
 }
 
 // IncomingCall exposes properties for incoming calls through the context.
@@ -88,6 +89,13 @@ func CurrentCall(ctx context.Context) IncomingCall {
 func CurrentSpan(ctx context.Context) *Span {
 	if params := getTChannelParams(ctx); params != nil {
 		return params.span
+	}
+	return nil
+}
+
+func currentCallOptions(ctx context.Context) *CallOptions {
+	if params := getTChannelParams(ctx); params != nil {
+		return params.options
 	}
 	return nil
 }

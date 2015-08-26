@@ -36,7 +36,7 @@ type ContextBuilder struct {
 	Headers map[string]string
 
 	// CallOptions are TChannel call options for the specific call.
-	CallOptions CallOptions
+	CallOptions *CallOptions
 
 	// Hidden fields: we do not want users outside of tchannel to set these.
 	incomingCall IncomingCall
@@ -74,12 +74,18 @@ func (cb *ContextBuilder) SetHeaders(headers map[string]string) *ContextBuilder 
 
 // SetShardKey sets the ShardKey call option ("sk" transport header).
 func (cb *ContextBuilder) SetShardKey(sk string) *ContextBuilder {
+	if cb.CallOptions == nil {
+		cb.CallOptions = new(CallOptions)
+	}
 	cb.CallOptions.ShardKey = sk
 	return cb
 }
 
 // SetFormat sets the Format call option ("as" transport header).
 func (cb *ContextBuilder) SetFormat(f Format) *ContextBuilder {
+	if cb.CallOptions == nil {
+		cb.CallOptions = new(CallOptions)
+	}
 	cb.CallOptions.Format = f
 	return cb
 }
@@ -114,8 +120,9 @@ func (cb *ContextBuilder) Build() (ContextWithHeaders, context.CancelFunc) {
 	}
 
 	params := &tchannelCtxParams{
-		span: cb.span,
-		call: cb.incomingCall,
+		options: cb.CallOptions,
+		span:    cb.span,
+		call:    cb.incomingCall,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
