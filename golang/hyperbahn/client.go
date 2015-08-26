@@ -32,8 +32,9 @@ import (
 
 // Client manages Hyperbahn connections and registrations.
 type Client struct {
-	tchan *tchannel.Channel
-	opts  ClientOptions
+	tchan    *tchannel.Channel
+	services []string
+	opts     ClientOptions
 }
 
 // FailStrategy is the strategy to use when registration fails maxRegistrationFailures
@@ -119,9 +120,21 @@ func addPeer(ch *tchannel.Channel, hostPort string) {
 	peers.Add(hostPort)
 }
 
+func (c *Client) getServiceNames(otherServices []tchannel.Registrar) {
+	c.services = make([]string, 0, len(otherServices)+1)
+	c.services = append(c.services, c.tchan.PeerInfo().ServiceName)
+
+	for _, s := range otherServices {
+		c.services = append(c.services, s.ServiceName())
+	}
+}
+
 // Advertise advertises the service with Hyperbahn, and returns any errors on initial advertisement.
+// Advertise can register multiple services hosted on the same endpoint.
 // If the advertisement succeeds, a goroutine is started to re-advertise periodically.
-func (c *Client) Advertise() error {
+func (c *Client) Advertise(otherServices ...tchannel.Registrar) error {
+	c.getServiceNames(otherServices)
+
 	if err := c.sendAdvertise(); err != nil {
 		return err
 	}
