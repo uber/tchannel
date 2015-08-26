@@ -24,6 +24,8 @@ Network multiplexing and framing protocol for RPC
   TChannel peer library for Python
 - [tchannel-golang](https://github.com/uber/tchannel/tree/master/golang)
   TChannel peer library for Go
+- [tchannel-java](https://github.com/uber/tchannel-java)
+  TChannel peer library for the JVM
 - [tcurl](https://github.com/uber/tcurl) TChannel curl program, for making manual
   one-off requests to TChannel servers.
 - [tcap](https://github.com/uber/tcap/) TChannel packet capture tool, for
