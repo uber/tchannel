@@ -1,3 +1,23 @@
+// Copyright (c) 2015 Uber Technologies, Inc.
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
 package trace
 
 import (
@@ -33,34 +53,34 @@ func TestBuildZipkinSpan(t *testing.T) {
 	span := *tchannel.NewRootSpan()
 	name := "test"
 	annotations := RandomAnnotations()
-	thriftSpan := BuildZipkinSpan(span, annotations, nil, name, host)
+	thriftSpan := buildZipkinSpan(span, annotations, nil, name, host)
 
 	expectedSpan := gen.Span{
-		TraceId: UInt64ToBytes(span.TraceID()),
+		TraceId: uInt64ToBytes(span.TraceID()),
 		Host: &gen.Endpoint{
-			Ipv4:        (int32)(InetAton("127.0.0.1")),
+			Ipv4:        (int32)(inetAton("127.0.0.1")),
 			Port:        8888,
 			ServiceName: "test",
 		},
 		Name:        name,
-		Id:          UInt64ToBytes(span.SpanID()),
-		ParentId:    UInt64ToBytes(span.ParentID()),
-		Annotations: BuildZipkinAnnotations(annotations),
+		Id:          uInt64ToBytes(span.SpanID()),
+		ParentId:    uInt64ToBytes(span.ParentID()),
+		Annotations: buildZipkinAnnotations(annotations),
 		Debug:       false,
 	}
 	reflect.DeepEqual(thriftSpan, expectedSpan)
 }
 
 func TestInetAton(t *testing.T) {
-	assert.Equal(t, InetAton("1.0.0.1"), (uint32)(16777217))
+	assert.Equal(t, inetAton("1.0.0.1"), (uint32)(16777217))
 }
 
 func TestUInt64ToBytes(t *testing.T) {
-	assert.Equal(t, UInt64ToBytes(54613478251749257), []byte("\x00\xc2\x06\xabK$\xdf\x89"))
+	assert.Equal(t, uInt64ToBytes(54613478251749257), []byte("\x00\xc2\x06\xabK$\xdf\x89"))
 }
 
 func TestBase64Encode(t *testing.T) {
-	assert.Equal(t, Base64Encode(12711515087145684), "AC0pDj1TitQ=")
+	assert.Equal(t, base64Encode(12711515087145684), "AC0pDj1TitQ=")
 }
 
 func RandomAnnotations() []tchannel.Annotation {
@@ -104,7 +124,7 @@ func TestSubmit(t *testing.T) {
 		span := *tchannel.NewRootSpan()
 		name := "test"
 		annotations := RandomAnnotations()
-		thriftSpan := BuildZipkinSpan(span, annotations, nil, name, host)
+		thriftSpan := buildZipkinSpan(span, annotations, nil, name, host)
 		thriftSpan.BinaryAnnotations = []*gen.BinaryAnnotation{}
 		ret := &gen.Response{Ok: true}
 		args.s.On("Submit", ctxArg(), thriftSpan).Return(ret, nil)

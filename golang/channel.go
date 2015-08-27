@@ -146,19 +146,14 @@ func NewChannel(serviceName string, opts *ChannelOptions) (*Channel, error) {
 		subChannels:       &subChannelMap{},
 	}
 
-	var traceReporter TraceReporter
-
+	traceReporter := opts.TraceReporter
 	if opts.TraceReporterFactory != nil {
 		traceReporter = opts.TraceReporterFactory(ch)
-	} else {
-		traceReporter = opts.TraceReporter
 	}
-
 	if traceReporter == nil {
 		traceReporter = NullReporter
 	}
-
-	ch.SetTraceReporter(traceReporter)
+	ch.traceReporter = traceReporter
 
 	ch.mutable.peerInfo = LocalPeerInfo{
 		PeerInfo: PeerInfo{
@@ -171,11 +166,6 @@ func NewChannel(serviceName string, opts *ChannelOptions) (*Channel, error) {
 	ch.peers = newPeerList(ch)
 	ch.createCommonStats()
 	return ch, nil
-}
-
-// SetTraceReporter sets TraceReporter to the Channel instance.
-func (ch *Channel) SetTraceReporter(traceReporter TraceReporter) {
-	ch.traceReporter = traceReporter
 }
 
 // Serve serves incoming requests using the provided listener.
