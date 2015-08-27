@@ -289,7 +289,7 @@ ApplicationClients.prototype.updateCircuitsEnabled = function updateCircuitsEnab
     var self = this;
     var enabled = self.remoteConfig.get('circuits.enabled', false);
     if (enabled) {
-        self.serviceProxy.enableCircuts();
+        self.serviceProxy.enableCircuits();
     } else {
         self.serviceProxy.disableCircuits();
     }
