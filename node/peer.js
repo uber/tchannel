@@ -195,6 +195,7 @@ TChannelPeer.prototype.countConnections = function countConnections(direction) {
     return count;
 };
 
+// ensures that a connection exists
 TChannelPeer.prototype.connect = function connect(outOnly) {
     var self = this;
     var conn = self.getIdentifiedOutConnection();
@@ -204,6 +205,12 @@ TChannelPeer.prototype.connect = function connect(outOnly) {
         self.addConnection(conn);
     }
     return conn;
+};
+
+// ensures that an outbound connection exists
+TChannelPeer.prototype.connectTo = function connectTo() {
+    var self = this;
+    self.connect(true);
 };
 
 TChannelPeer.prototype.waitForIdentified =
