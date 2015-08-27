@@ -239,3 +239,39 @@ test('CallResponse.RW.lazy', function t(assert) {
         assert.deepEqual(res.value, value, 'expected value from ' + desc);
     }
 });
+
+test('CallRequestCont.RW.lazy', function t(assert) {
+    var frame = new v2.Frame(24,    // frame id
+        new v2.CallRequestCont(     // frame body
+            42,                     // flags
+            v2.Checksum.Types.None, // csum
+            ["key", "turn"]         // args
+        )
+    );
+    var buf = bufrw.toBuffer(v2.Frame.RW, frame);
+
+    var lazyFrame = bufrw.fromBuffer(v2.LazyFrame.RW, buf);
+
+    // validate basic lazy frame properties
+    assert.equal(lazyFrame.id, frame.id, 'expected frame id');
+    assert.equal(lazyFrame.type, frame.type, 'expected frame type');
+    assert.deepEqual(lazyFrame.buffer.parent, buf.parent,
+        'frame carries a slice into the original read buffer');
+
+    // validate lazy reading
+    assertReadRes(
+        v2.CallRequestCont.RW.lazy.readFlags(lazyFrame),
+        frame.body.flags,
+        'CallRequestCont.RW.lazy.readFlags');
+    assert.equal(
+        v2.CallRequestCont.RW.lazy.isFrameTerminal(lazyFrame),
+        !(frame.body.flags & v2.CallFlags.Fragment),
+        'CallRequestCont.RW.lazy.isFrameTerminal');
+
+    assert.end();
+
+    function assertReadRes(res, value, desc) {
+        assert.ifError(res.err, 'no error from ' + desc);
+        assert.deepEqual(res.value, value, 'expected value from ' + desc);
+    }
+});
