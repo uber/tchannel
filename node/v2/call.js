@@ -27,6 +27,8 @@ var ArgsRW = require('./args');
 var Checksum = require('./checksum');
 var header = require('./header');
 var Tracing = require('./tracing');
+var Frame = require('./frame');
+var CallFlags = require('./call_flags');
 var argsrw = ArgsRW();
 
 var ResponseCodes = {
@@ -59,6 +61,48 @@ function CallRequest(flags, ttl, tracing, service, headers, csum, args) {
 CallRequest.Cont = require('./cont').RequestCont;
 CallRequest.TypeCode = 0x03;
 CallRequest.RW = bufrw.Base(callReqLength, readCallReqFrom, writeCallReqInto);
+
+CallRequest.RW.lazy = {};
+
+CallRequest.RW.lazy.flagsOffset = Frame.Overhead;
+CallRequest.RW.lazy.readFlags = function readFlags(frame) {
+    // flags:1
+    return bufrw.UInt8.readFrom(frame.buffer, CallRequest.RW.lazy.flagsOffset);
+};
+
+CallRequest.RW.lazy.ttlOffset = CallRequest.RW.lazy.flagsOffset + 1;
+CallRequest.RW.lazy.readTTL = function readTTL(frame) {
+    // ttl:4
+    var res = bufrw.UInt32BE.readFrom(frame.buffer, CallRequest.RW.lazy.ttlOffset);
+    if (!res.err && res.value <= 0) {
+        res.err = errors.InvalidTTL({
+            ttl: res.value
+        });
+    }
+    return res;
+};
+CallRequest.RW.lazy.writeTTL = function writeTTL(ttl, frame) {
+    // ttl:4
+    return bufrw.UInt32BE.writeInto(ttl, frame.buffer, CallRequest.RW.lazy.ttlOffset);
+};
+
+CallRequest.RW.lazy.tracingOffset = CallRequest.RW.lazy.ttlOffset + 4;
+CallRequest.RW.lazy.readTracing = function lazyReadTracing(frame) {
+    // tracing:24 traceflags:1
+    return Tracing.RW.readFrom(frame.buffer, CallRequest.RW.lazy.tracingOffset);
+};
+
+CallRequest.RW.lazy.serviceOffset = CallRequest.RW.lazy.tracingOffset + 25;
+CallRequest.RW.lazy.readService = function lazyReadService(frame) {
+    // service~1
+    return bufrw.str1.readFrom(frame.buffer, CallRequest.RW.lazy.serviceOffset);
+};
+
+CallRequest.RW.lazy.isFrameTerminal = function isFrameTerminal(frame) {
+    var flags = CallRequest.RW.lazy.readFlags(frame);
+    var frag = flags & CallFlags.Fragment;
+    return !frag;
+};
 
 function callReqLength(body) {
     var res;
