@@ -252,6 +252,29 @@ CallResponse.TypeCode = 0x04;
 CallResponse.Codes = ResponseCodes;
 CallResponse.RW = bufrw.Base(callResLength, readCallResFrom, writeCallResInto);
 
+CallResponse.RW.lazy = {};
+
+CallResponse.RW.lazy.flagsOffset = Frame.Overhead;
+CallResponse.RW.lazy.readFlags = function readFlags(frame) {
+    // flags:1
+    return bufrw.UInt8.readFrom(frame.buffer, CallResponse.RW.lazy.flagsOffset);
+};
+
+CallResponse.RW.lazy.codeOffset = CallResponse.RW.lazy.flagsOffset + 1;
+// TODO: readCode?
+
+CallResponse.RW.lazy.tracingOffset = CallResponse.RW.lazy.codeOffset + 1;
+CallResponse.RW.lazy.readTracing = function lazyReadTracing(frame) {
+    // tracing:24 traceflags:1
+    return Tracing.RW.readFrom(frame.buffer, CallResponse.RW.lazy.tracingOffset);
+};
+
+CallResponse.RW.lazy.isFrameTerminal = function isFrameTerminal(frame) {
+    var flags = CallResponse.RW.lazy.readFlags(frame);
+    var frag = flags & CallFlags.Fragment;
+    return !frag;
+};
+
 function callResLength(body) {
     var res;
     var length = 0;
