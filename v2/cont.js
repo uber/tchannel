@@ -124,6 +124,20 @@ CallResponseCont.TypeCode = 0x14;
 CallResponseCont.Cont = CallResponseCont;
 CallResponseCont.RW = bufrw.Base(callResContLength, readCallResContFrom, writeCallResContInto);
 
+CallResponseCont.RW.lazy = {};
+
+CallResponseCont.RW.lazy.flagsOffset = Frame.Overhead;
+CallResponseCont.RW.lazy.readFlags = function readFlags(frame) {
+    // flags:1
+    return bufrw.UInt8.readFrom(frame.buffer, CallResponseCont.RW.lazy.flagsOffset);
+};
+
+CallResponseCont.RW.lazy.isFrameTerminal = function isFrameTerminal(frame) {
+    var flags = CallResponseCont.RW.lazy.readFlags(frame);
+    var frag = flags & CallFlags.Fragment;
+    return !frag;
+};
+
 function callResContLength(body) {
     var res;
     var length = 0;
