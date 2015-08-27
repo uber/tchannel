@@ -218,21 +218,19 @@ function handleRelay(endpoint, req, arg2, arg3, cb) {
         var exitHosts = Object.keys(exitNodes);
 
         var myHost = self.channel.hostPort;
-        if (exitHosts.indexOf(myHost) !== -1) {
-            if (endpoint === 'ad') {
-                self.advertise(service);
-            } else if (endpoint === 'unad') {
-                self.unadvertise(service);
-            } else {
-                logger.error('Unexpected endpoint for relay', {
-                    endpoint: endpoint,
-                    service: service
-                });
-            }
-        } else {
+        if (exitHosts.indexOf(myHost) === -1) {
             logger.warn('Non-exit node got relay', {
                 myHost: myHost,
                 exitHosts: exitHosts,
+                service: service
+            });
+        } else if (endpoint === 'ad') {
+            self.advertise(service);
+        } else if (endpoint === 'unad') {
+            self.unadvertise(service);
+        } else {
+            logger.error('Unexpected endpoint for relay', {
+                endpoint: endpoint,
                 service: service
             });
         }
