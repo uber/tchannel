@@ -105,7 +105,7 @@ func TestSubmit(t *testing.T) {
 		name := "test"
 		annotations := RandomAnnotations()
 		thriftSpan := BuildZipkinSpan(span, annotations, nil, name, host)
-
+		thriftSpan.BinaryAnnotations = []*gen.BinaryAnnotation{}
 		ret := &gen.Response{Ok: true}
 		args.s.On("Submit", ctxArg(), thriftSpan).Return(ret, nil)
 		got, err := args.c.Submit(ctx, thriftSpan)
