@@ -277,11 +277,22 @@ ApplicationClients.prototype.destroy = function destroy() {
 
 ApplicationClients.prototype.onRemoteConfigUpdate = function onRemoteConfigUpdate() {
     var self = this;
+    self.updateCircuitsEnabled();
     self.updateRateLimitingEnabled();
     self.updateTotalRpsLimit();
     self.updateExemptServices();
     self.updateRpsLimitForServiceName();
     self.updateKValues();
+};
+
+ApplicationClients.prototype.updateCircuitsEnabled = function updateCircuitsEnabled() {
+    var self = this;
+    var enabled = self.remoteConfig.get('circuits.enabled', false);
+    if (enabled) {
+        self.serviceProxy.enableCircuts();
+    } else {
+        self.serviceProxy.disableCircuits();
+    }
 };
 
 ApplicationClients.prototype.updateRateLimitingEnabled = function updateRateLimitingEnabled() {
