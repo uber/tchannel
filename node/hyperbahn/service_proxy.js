@@ -51,7 +51,8 @@ function ServiceDispatchHandler(options) {
     self.permissionsCache = options.permissionsCache;
     self.serviceReqDefaults = options.serviceReqDefaults || {};
 
-    self.circuits = options.circuitsConfig && options.circuitsConfig.enabled ? new Circuits({
+    self.circuitsEnabled = options.circuitsConfig && options.circuitsConfig.enabled || false;
+    self.circuits = self.circuitsEnabled ? new Circuits({
         timeHeap: self.channel.timeHeap,
         timers: self.channel.timers,
         random: self.random,
@@ -80,7 +81,7 @@ function ServiceDispatchHandler(options) {
     }
 
     function onCircuitStateChange(stateChange) {
-        self.handleCircuitStateChange(stateChange);
+        self.onCircuitStateChange(stateChange);
     }
 
     function onMembershipChanged() {
@@ -483,8 +484,8 @@ function isExitFor(serviceName) {
     return chan.serviceProxyMode === 'exit';
 };
 
-ServiceDispatchHandler.prototype.handleCircuitStateChange =
-function handleCircuitStateChange(change) {
+ServiceDispatchHandler.prototype.onCircuitStateChange =
+function onCircuitStateChange(change) {
     var self = this;
 
     var circuit = change.circuit;
@@ -545,6 +546,48 @@ function destroy() {
     var self = this;
     self.channel.timers.clearTimeout(self.servicePurgeTimer);
     self.rateLimiter.destroy();
+};
+
+ServiceDispatchHandler.prototype.enableCircuits =
+function enableCircuits() {
+    var self = this;
+
+    if (self.circuitsEnabled) {
+        return;
+    }
+    self.circuitsEnabled = true;
+
+    var serviceNames = Object.keys(self.channel.subChannels);
+    for (var index = 0; index < serviceNames.length; index++) {
+        var serviceName = serviceNames[index];
+        var subChannel = self.channel.subChannels[serviceName];
+        if (subChannel.handler.type === 'tchannel.relay-handler' &&
+            subChannel.serviceProxyMode === 'exit'
+        ) {
+            subChannel.handler.circuits = self.circuits;
+        }
+    }
+};
+
+ServiceDispatchHandler.prototype.disableCircuits =
+function disableCircuits() {
+    var self = this;
+
+    if (!self.circuitsEnabled) {
+        return;
+    }
+    self.circuitsEnabled = false;
+
+    var serviceNames = Object.keys(self.channel.subChannels);
+    for (var index = 0; index < serviceNames.length; index++) {
+        var serviceName = serviceNames[index];
+        var subChannel = self.channel.subChannels[serviceName];
+        if (subChannel.handler.type === 'tchannel.relay-handler' &&
+            subChannel.serviceProxyMode === 'exit'
+        ) {
+            subChannel.handler.circuits = null;
+        }
+    }
 };
 
 ServiceDispatchHandler.prototype.enableRateLimiter =
