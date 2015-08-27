@@ -46,13 +46,14 @@ func NewZipkinTraceReporter(ch *tc.Channel) *ZipkinTraceReporter {
 }
 
 // Report method will submit trace span to tcollector server.
-func (r *ZipkinTraceReporter) Report(
-	span tc.Span, annotations []tc.Annotation, binaryAnnotations []tc.BinaryAnnotation, name string, endpoint *tc.Endpoint) {
+func (r *ZipkinTraceReporter) Report(span tc.Span, annotations []tc.Annotation, binaryAnnotations []tc.BinaryAnnotation) {
 	ctx, cancel := tc.NewContextBuilder(time.Second).
 		SetShardKey(base64Encode(span.TraceID())).Build()
 	defer cancel()
 
-	thriftSpan := buildZipkinSpan(span, annotations, binaryAnnotations, name, endpoint)
+	// FIXME remove this dummy endpoint.
+	endpoint := &tc.Endpoint{Ipv4: "127.0.0.1", Port: 8888, ServiceName: "dummy"}
+	thriftSpan := buildZipkinSpan(span, annotations, binaryAnnotations, "dummy", endpoint)
 	// client submit
 	r.client.Submit(ctx, thriftSpan)
 }

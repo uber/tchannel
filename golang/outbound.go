@@ -116,7 +116,7 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string, callOpti
 	response.messageForFragment = func(initial bool) message {
 		if initial {
 			call.AddAnnotation(AnnotationKeyClientReceive)
-			call.Report(call.callReq.Tracing, c.traceReporter, "", nil)
+			call.Report(call.callReq.Tracing, c.traceReporter)
 			return &response.callRes
 		}
 

@@ -64,7 +64,7 @@ func NewBinaryAnnotation(key string, value interface{}) BinaryAnnotation {
 
 // TraceReporter is the interface used to report Trace spans.
 type TraceReporter interface {
-	Report(span Span, annotations []Annotation, binaryAnnotations []BinaryAnnotation, name string, endpoint *Endpoint)
+	Report(span Span, annotations []Annotation, binaryAnnotations []BinaryAnnotation)
 }
 
 // NullReporter is the default TraceReporter which does not do anything.
@@ -72,7 +72,7 @@ var NullReporter TraceReporter = nullReporter{}
 
 type nullReporter struct{}
 
-func (nullReporter) Report(_ Span, _ []Annotation, _ []BinaryAnnotation, _ string, _ *Endpoint) {}
+func (nullReporter) Report(_ Span, _ []Annotation, _ []BinaryAnnotation) {}
 
 // SimpleTraceReporter is a trace reporter which prints using the default logger.
 var SimpleTraceReporter TraceReporter = simpleTraceReporter{}
@@ -80,9 +80,9 @@ var SimpleTraceReporter TraceReporter = simpleTraceReporter{}
 type simpleTraceReporter struct{}
 
 func (simpleTraceReporter) Report(
-	span Span, annotations []Annotation, binaryAnnotations []BinaryAnnotation, name string, endpoint *Endpoint) {
-	log.Printf("SimpleTraceReporter.Report span: %+v annotations: %+v binaryAnnotations: %+v name: %+v endpoint: %+v",
-		span, annotations, binaryAnnotations, name, endpoint)
+	span Span, annotations []Annotation, binaryAnnotations []BinaryAnnotation) {
+	log.Printf("SimpleTraceReporter.Report span: %+v annotations: %+v binaryAnnotations: %+v",
+		span, annotations, binaryAnnotations)
 }
 
 // Annotations is am embeddable struct used to track annotations.
@@ -102,6 +102,6 @@ func (as *Annotations) AddAnnotation(key AnnotationKey) {
 }
 
 // Report reports the annotations to the given trace reporter.
-func (as *Annotations) Report(span Span, reporter TraceReporter, name string, endpoint *Endpoint) {
-	reporter.Report(span, as.annotations, as.binaryAnnotations, name, endpoint)
+func (as *Annotations) Report(span Span, reporter TraceReporter) {
+	reporter.Report(span, as.annotations, as.binaryAnnotations)
 }

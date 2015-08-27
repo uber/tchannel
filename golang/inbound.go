@@ -91,7 +91,7 @@ func (c *Connection) handleCallReq(frame *Frame) bool {
 	response.messageForFragment = func(initial bool) message {
 		if initial {
 			call.AddAnnotation(AnnotationKeyServerSend)
-			call.Report(callReq.Tracing, c.traceReporter, "", nil)
+			call.Report(callReq.Tracing, c.traceReporter)
 
 			callRes := new(callRes)
 			callRes.Headers = response.headers
