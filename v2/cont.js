@@ -23,6 +23,8 @@
 var bufrw = require('bufrw');
 var Checksum = require('./checksum');
 var ArgsRW = require('./args');
+var Frame = require('./frame');
+var CallFlags = require('./call_flags');
 var argsrw = ArgsRW();
 
 // flags:1 csumtype:1 (csum:4){0,1} (arg~2)+
@@ -38,6 +40,20 @@ function CallRequestCont(flags, csum, args) {
 CallRequestCont.TypeCode = 0x13;
 CallRequestCont.Cont = CallRequestCont;
 CallRequestCont.RW = bufrw.Base(callReqContLength, readCallReqContFrom, writeCallReqContInto);
+
+CallRequestCont.RW.lazy = {};
+
+CallRequestCont.RW.lazy.flagsOffset = Frame.Overhead;
+CallRequestCont.RW.lazy.readFlags = function readFlags(frame) {
+    // flags:1
+    return bufrw.UInt8.readFrom(frame.buffer, CallRequestCont.RW.lazy.flagsOffset);
+};
+
+CallRequestCont.RW.lazy.isFrameTerminal = function isFrameTerminal(frame) {
+    var flags = CallRequestCont.RW.lazy.readFlags(frame);
+    var frag = flags & CallFlags.Fragment;
+    return !frag;
+};
 
 function callReqContLength(body) {
     var res;
@@ -107,6 +123,20 @@ function CallResponseCont(flags, csum, args) {
 CallResponseCont.TypeCode = 0x14;
 CallResponseCont.Cont = CallResponseCont;
 CallResponseCont.RW = bufrw.Base(callResContLength, readCallResContFrom, writeCallResContInto);
+
+CallResponseCont.RW.lazy = {};
+
+CallResponseCont.RW.lazy.flagsOffset = Frame.Overhead;
+CallResponseCont.RW.lazy.readFlags = function readFlags(frame) {
+    // flags:1
+    return bufrw.UInt8.readFrom(frame.buffer, CallResponseCont.RW.lazy.flagsOffset);
+};
+
+CallResponseCont.RW.lazy.isFrameTerminal = function isFrameTerminal(frame) {
+    var flags = CallResponseCont.RW.lazy.readFlags(frame);
+    var frag = flags & CallFlags.Fragment;
+    return !frag;
+};
 
 function callResContLength(body) {
     var res;
