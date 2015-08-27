@@ -27,6 +27,8 @@ var ArgsRW = require('./args');
 var Checksum = require('./checksum');
 var header = require('./header');
 var Tracing = require('./tracing');
+var Frame = require('./frame');
+var CallFlags = require('./call_flags');
 var argsrw = ArgsRW();
 
 var ResponseCodes = {
@@ -59,6 +61,79 @@ function CallRequest(flags, ttl, tracing, service, headers, csum, args) {
 CallRequest.Cont = require('./cont').RequestCont;
 CallRequest.TypeCode = 0x03;
 CallRequest.RW = bufrw.Base(callReqLength, readCallReqFrom, writeCallReqInto);
+
+CallRequest.RW.lazy = {};
+
+CallRequest.RW.lazy.flagsOffset = Frame.Overhead;
+CallRequest.RW.lazy.readFlags = function readFlags(frame) {
+    // flags:1
+    return bufrw.UInt8.readFrom(frame.buffer, CallRequest.RW.lazy.flagsOffset);
+};
+
+CallRequest.RW.lazy.ttlOffset = CallRequest.RW.lazy.flagsOffset + 1;
+CallRequest.RW.lazy.readTTL = function readTTL(frame) {
+    // ttl:4
+    var res = bufrw.UInt32BE.readFrom(frame.buffer, CallRequest.RW.lazy.ttlOffset);
+    if (!res.err && res.value <= 0) {
+        res.err = errors.InvalidTTL({
+            ttl: res.value
+        });
+    }
+    return res;
+};
+CallRequest.RW.lazy.writeTTL = function writeTTL(ttl, frame) {
+    // ttl:4
+    return bufrw.UInt32BE.writeInto(ttl, frame.buffer, CallRequest.RW.lazy.ttlOffset);
+};
+
+CallRequest.RW.lazy.tracingOffset = CallRequest.RW.lazy.ttlOffset + 4;
+CallRequest.RW.lazy.readTracing = function lazyReadTracing(frame) {
+    // tracing:24 traceflags:1
+    return Tracing.RW.readFrom(frame.buffer, CallRequest.RW.lazy.tracingOffset);
+};
+
+CallRequest.RW.lazy.serviceOffset = CallRequest.RW.lazy.tracingOffset + 25;
+CallRequest.RW.lazy.readService = function lazyReadService(frame) {
+    // service~1
+    return bufrw.str1.readFrom(frame.buffer, CallRequest.RW.lazy.serviceOffset);
+};
+
+CallRequest.RW.lazy.readArg1 = function readArg1(frame) {
+    // last fixed offset
+    var offset = CallRequest.RW.lazy.serviceOffset;
+
+    // TODO: memoize computed offsets on frame between readService, readArg1, and any others
+
+    // SKIP service~1
+    var res = bufrw.str1.sizerw.readFrom(frame.buffer, offset);
+    if (res.err) {
+        return res;
+    }
+    offset = res.offset + res.value;
+
+    // SKIP nh:1 (hk~1 hv~1){nh}
+    res = header.header1.lazySkip(frame, offset);
+    if (res.err) {
+        return res;
+    }
+    offset = res.offset;
+
+    // SKIP csumtype:1 (csum:4){0,1}
+    res = Checksum.RW.lazySkip(frame, offset);
+    if (res.err) {
+        return res;
+    }
+    offset = res.offset;
+
+    // READ arg~2
+    return argsrw.argrw.readFrom(frame.buffer, offset);
+};
+
+CallRequest.RW.lazy.isFrameTerminal = function isFrameTerminal(frame) {
+    var flags = CallRequest.RW.lazy.readFlags(frame);
+    var frag = flags & CallFlags.Fragment;
+    return !frag;
+};
 
 function callReqLength(body) {
     var res;
@@ -207,6 +282,44 @@ CallResponse.Cont = require('./cont').ResponseCont;
 CallResponse.TypeCode = 0x04;
 CallResponse.Codes = ResponseCodes;
 CallResponse.RW = bufrw.Base(callResLength, readCallResFrom, writeCallResInto);
+
+CallResponse.RW.lazy = {};
+
+CallResponse.RW.lazy.flagsOffset = Frame.Overhead;
+CallResponse.RW.lazy.readFlags = function readFlags(frame) {
+    // flags:1
+    return bufrw.UInt8.readFrom(frame.buffer, CallResponse.RW.lazy.flagsOffset);
+};
+
+CallResponse.RW.lazy.codeOffset = CallResponse.RW.lazy.flagsOffset + 1;
+// TODO: readCode?
+
+CallResponse.RW.lazy.tracingOffset = CallResponse.RW.lazy.codeOffset + 1;
+CallResponse.RW.lazy.readTracing = function lazyReadTracing(frame) {
+    // tracing:24 traceflags:1
+    return Tracing.RW.readFrom(frame.buffer, CallResponse.RW.lazy.tracingOffset);
+};
+
+CallResponse.RW.lazy.readArg1 = function readArg1(frame) {
+    // last fixed offset
+    var offset = CallResponse.RW.lazy.tracingOffset;
+
+    // SKIP csumtype:1 (csum:4){0,1}
+    var res = Checksum.RW.lazySkip(frame, offset);
+    if (res.err) {
+        return res;
+    }
+    offset = res.offset;
+
+    // READ arg~2
+    return argsrw.argrw.readFrom(frame.buffer, offset);
+};
+
+CallResponse.RW.lazy.isFrameTerminal = function isFrameTerminal(frame) {
+    var flags = CallResponse.RW.lazy.readFlags(frame);
+    var frag = flags & CallFlags.Fragment;
+    return !frag;
+};
 
 function callResLength(body) {
     var res;

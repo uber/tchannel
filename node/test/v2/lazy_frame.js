@@ -21,12 +21,12 @@
 'use strict';
 
 var Buffer = require('buffer').Buffer;
+var bufrw = require('bufrw');
 var test = require('tape');
 var testRW = require('bufrw/test_rw');
 
 var TestBody = require('./lib/test_body.js');
-var Frame = require('../../v2/frame.js');
-var LazyFrame = require('../../v2/lazy_frame.js');
+var v2 = require('../../v2/index.js');
 
 var Bytes = [
     0x00, 0x15,             // size: 2
@@ -38,20 +38,20 @@ var Bytes = [
 
     0x04, 0x64, 0x6f, 0x67, 0x65 // junk bytes
 ];
-var lazyFrame = new LazyFrame(
+var lazyFrame = new v2.LazyFrame(
     0x15, 0x03, 0x01,
     new Buffer(Bytes)
 );
-lazyFrame.bodyRW = Frame.Types[0x03].RW;
+lazyFrame.bodyRW = v2.Frame.Types[0x03].RW;
 
-test('LazyFrame.RW: read/write', testRW.cases(LazyFrame.RW, [
+test('LazyFrame.RW: read/write', testRW.cases(v2.LazyFrame.RW, [
     [
         lazyFrame, Bytes
     ]
 ]));
 
 TestBody.testWith('LazyFrame.readBody', function t(assert) {
-    var frame = LazyFrame.RW.readFrom(new Buffer([
+    var frame = v2.LazyFrame.RW.readFrom(new Buffer([
         0x00, 0x15,             // size: 2
         0x00,                   // type: 1
         0x00,                   // reserved:1
@@ -75,7 +75,7 @@ TestBody.testWith('LazyFrame.readBody', function t(assert) {
 });
 
 TestBody.testWith('LazyFrame.setId', function t(assert) {
-    var frame = LazyFrame.RW.readFrom(new Buffer([
+    var frame = v2.LazyFrame.RW.readFrom(new Buffer([
         0x00, 0x15,             // size: 2
         0x00,                   // type: 1
         0x00,                   // reserved:1
@@ -93,7 +93,7 @@ TestBody.testWith('LazyFrame.setId', function t(assert) {
     assert.equal(frame.id, 0x04);
 
     var buffer = new Buffer(frame.size);
-    LazyFrame.RW.writeInto(frame, buffer, 0);
+    v2.LazyFrame.RW.writeInto(frame, buffer, 0);
 
     assert.deepEqual(
         buffer,
@@ -108,6 +108,240 @@ TestBody.testWith('LazyFrame.setId', function t(assert) {
             0x04, 0x64, 0x6f, 0x67, 0x65 // junk bytes
         ])
     );
+
+    assert.end();
+});
+
+test('CallRequest.RW.lazy', function t(assert) {
+    var spanId = Buffer([0x02, 0x04, 0x06, 0x08, 0x0a, 0x0c, 0x0e, 0x10]);
+    var parentId = Buffer([0x01, 0x03, 0x05, 0x07, 0x09, 0x0b, 0x0d, 0x0f]);
+    var traceId = Buffer([0x01, 0x01, 0x02, 0x03, 0x05, 0x08, 0x0d, 0x15]);
+    var tracing = new v2.Tracing(
+        spanId, parentId, traceId
+    );
+
+    var frame = new v2.Frame(24,    // frame id
+        new v2.CallRequest(         // frame body
+            42,                     // flags
+            99,                     // ttl
+            tracing,                // tracing
+            "castle",               // service
+            {                       // headers
+                "cn": "mario",      // headers.cn
+                "as": "plumber"     // headers.as
+            },                      //
+            v2.Checksum.Types.None, // csum
+            ["door", "key", "turn"] // args
+        )
+    );
+    var buf = bufrw.toBuffer(v2.Frame.RW, frame);
+
+    var lazyFrame = bufrw.fromBuffer(v2.LazyFrame.RW, buf);
+
+    // validate basic lazy frame properties
+    assert.equal(lazyFrame.id, frame.id, 'expected frame id');
+    assert.equal(lazyFrame.type, frame.type, 'expected frame type');
+    assert.deepEqual(lazyFrame.buffer.parent, buf.parent,
+        'frame carries a slice into the original read buffer');
+
+    // validate call req lazy reading
+    assertReadRes(
+        v2.CallRequest.RW.lazy.readFlags(lazyFrame),
+        frame.body.flags,
+        'CallRequest.RW.lazy.readFlags');
+    assertReadRes(
+        v2.CallRequest.RW.lazy.readTTL(lazyFrame),
+        frame.body.ttl,
+        'CallRequest.RW.lazy.readTTL');
+    assertReadRes(
+        v2.CallRequest.RW.lazy.readTracing(lazyFrame),
+        tracing,
+        'CallRequest.RW.lazy.readTracing');
+    assertReadRes(
+        v2.CallRequest.RW.lazy.readService(lazyFrame),
+        frame.body.service,
+        'CallRequest.RW.lazy.readService');
+    assertReadRes(
+        v2.CallRequest.RW.lazy.readArg1(lazyFrame),
+        Buffer(frame.body.args[0]),
+        'CallRequest.RW.lazy.readArg1');
+    assert.equal(
+        v2.CallRequest.RW.lazy.isFrameTerminal(lazyFrame),
+        !(frame.body.flags & v2.CallFlags.Fragment),
+        'CallRequest.RW.lazy.isFrameTerminal');
+
+    // validate call req lazy writing
+    var newTTL = frame.body.ttl - 15;
+    assert.ifError(
+        v2.CallRequest.RW.lazy.writeTTL(newTTL, lazyFrame).err,
+        'no error from v2.CallRequest.RW.lazy.writeTTL');
+    var newFrame = bufrw.fromBuffer(v2.Frame.RW, lazyFrame.buffer);
+    assert.equal(
+        newFrame.body.ttl, newTTL,
+        'expected new TTL to round trip through eager frame');
+
+    assert.end();
+
+    function assertReadRes(res, value, desc) {
+        assert.ifError(res.err, 'no error from ' + desc);
+        assert.deepEqual(res.value, value, 'expected value from ' + desc);
+    }
+});
+
+test('CallResponse.RW.lazy', function t(assert) {
+    var spanId = Buffer([0x02, 0x04, 0x06, 0x08, 0x0a, 0x0c, 0x0e, 0x10]);
+    var parentId = Buffer([0x01, 0x03, 0x05, 0x07, 0x09, 0x0b, 0x0d, 0x0f]);
+    var traceId = Buffer([0x01, 0x01, 0x02, 0x03, 0x05, 0x08, 0x0d, 0x15]);
+    var tracing = new v2.Tracing(
+        spanId, parentId, traceId
+    );
+
+    var frame = new v2.Frame(24,    // frame id
+        new v2.CallResponse(        // frame body
+            42,                     // flags
+            1,                      // code
+            tracing,                // tracing
+            {                       // headers
+                "as": "plumber"     // headers.as
+            },                      //
+            v2.Checksum.Types.None, // csum
+            ["", "creak", "open"]   // args
+        )
+    );
+    var buf = bufrw.toBuffer(v2.Frame.RW, frame);
+
+    var lazyFrame = bufrw.fromBuffer(v2.LazyFrame.RW, buf);
+
+    // validate basic lazy frame properties
+    assert.equal(lazyFrame.id, frame.id, 'expected frame id');
+    assert.equal(lazyFrame.type, frame.type, 'expected frame type');
+    assert.deepEqual(lazyFrame.buffer.parent, buf.parent,
+        'frame carries a slice into the original read buffer');
+
+    // validate call res lazy reading
+    assertReadRes(
+        v2.CallResponse.RW.lazy.readFlags(lazyFrame),
+        frame.body.flags,
+        'CallResponse.RW.lazy.readFlags');
+    assertReadRes(
+        v2.CallResponse.RW.lazy.readTracing(lazyFrame),
+        tracing,
+        'CallResponse.RW.lazy.readTracing');
+    assert.equal(
+        v2.CallResponse.RW.lazy.isFrameTerminal(lazyFrame),
+        !(frame.body.flags & v2.CallFlags.Fragment),
+        'CallResponse.RW.lazy.isFrameTerminal');
+
+    assert.end();
+
+    function assertReadRes(res, value, desc) {
+        assert.ifError(res.err, 'no error from ' + desc);
+        assert.deepEqual(res.value, value, 'expected value from ' + desc);
+    }
+});
+
+test('CallRequestCont.RW.lazy', function t(assert) {
+    var frame = new v2.Frame(24,    // frame id
+        new v2.CallRequestCont(     // frame body
+            42,                     // flags
+            v2.Checksum.Types.None, // csum
+            ["key", "turn"]         // args
+        )
+    );
+    var buf = bufrw.toBuffer(v2.Frame.RW, frame);
+
+    var lazyFrame = bufrw.fromBuffer(v2.LazyFrame.RW, buf);
+
+    // validate basic lazy frame properties
+    assert.equal(lazyFrame.id, frame.id, 'expected frame id');
+    assert.equal(lazyFrame.type, frame.type, 'expected frame type');
+    assert.deepEqual(lazyFrame.buffer.parent, buf.parent,
+        'frame carries a slice into the original read buffer');
+
+    // validate lazy reading
+    assertReadRes(
+        v2.CallRequestCont.RW.lazy.readFlags(lazyFrame),
+        frame.body.flags,
+        'CallRequestCont.RW.lazy.readFlags');
+    assert.equal(
+        v2.CallRequestCont.RW.lazy.isFrameTerminal(lazyFrame),
+        !(frame.body.flags & v2.CallFlags.Fragment),
+        'CallRequestCont.RW.lazy.isFrameTerminal');
+
+    assert.end();
+
+    function assertReadRes(res, value, desc) {
+        assert.ifError(res.err, 'no error from ' + desc);
+        assert.deepEqual(res.value, value, 'expected value from ' + desc);
+    }
+});
+
+test('CallResponseCont.RW.lazy', function t(assert) {
+    var frame = new v2.Frame(24,    // frame id
+        new v2.CallResponseCont(    // frame body
+            42,                     // flags
+            v2.Checksum.Types.None, // csum
+            ["key", "turn"]         // args
+        )
+    );
+    var buf = bufrw.toBuffer(v2.Frame.RW, frame);
+
+    var lazyFrame = bufrw.fromBuffer(v2.LazyFrame.RW, buf);
+
+    // validate basic lazy frame properties
+    assert.equal(lazyFrame.id, frame.id, 'expected frame id');
+    assert.equal(lazyFrame.type, frame.type, 'expected frame type');
+    assert.deepEqual(lazyFrame.buffer.parent, buf.parent,
+        'frame carries a slice into the original read buffer');
+
+    // validate lazy reading
+    assertReadRes(
+        v2.CallResponseCont.RW.lazy.readFlags(lazyFrame),
+        frame.body.flags,
+        'CallResponseCont.RW.lazy.readFlags');
+    assert.equal(
+        v2.CallResponseCont.RW.lazy.isFrameTerminal(lazyFrame),
+        !(frame.body.flags & v2.CallFlags.Fragment),
+        'CallResponseCont.RW.lazy.isFrameTerminal');
+
+    assert.end();
+
+    function assertReadRes(res, value, desc) {
+        assert.ifError(res.err, 'no error from ' + desc);
+        assert.deepEqual(res.value, value, 'expected value from ' + desc);
+    }
+});
+
+test('ErrorResponse.RW.lazy', function t(assert) {
+    var spanId = Buffer([0x02, 0x04, 0x06, 0x08, 0x0a, 0x0c, 0x0e, 0x10]);
+    var parentId = Buffer([0x01, 0x03, 0x05, 0x07, 0x09, 0x0b, 0x0d, 0x0f]);
+    var traceId = Buffer([0x01, 0x01, 0x02, 0x03, 0x05, 0x08, 0x0d, 0x15]);
+    var tracing = new v2.Tracing(
+        spanId, parentId, traceId
+    );
+
+    var frame = new v2.Frame(24,         // frame id
+        new v2.ErrorResponse(            // frame body
+            v2.ErrorResponse.Codes.Busy, // code
+            tracing,                     // tracing
+            "mess"                       // message
+        )
+    );
+    var buf = bufrw.toBuffer(v2.Frame.RW, frame);
+
+    var lazyFrame = bufrw.fromBuffer(v2.LazyFrame.RW, buf);
+
+    // validate basic lazy frame properties
+    assert.equal(lazyFrame.id, frame.id, 'expected frame id');
+    assert.equal(lazyFrame.type, frame.type, 'expected frame type');
+    assert.deepEqual(lazyFrame.buffer.parent, buf.parent,
+        'frame carries a slice into the original read buffer');
+
+    // validate call req lazy reading
+    assert.equal(
+        v2.ErrorResponse.RW.lazy.isFrameTerminal(lazyFrame),
+        !(frame.body.flags & v2.CallFlags.Fragment),
+        'ErrorResponse.RW.lazy.isFrameTerminal');
 
     assert.end();
 });
