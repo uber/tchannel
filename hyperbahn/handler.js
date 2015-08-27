@@ -218,7 +218,7 @@ function handleRelay(endpoint, req, arg2, arg3, cb) {
         var exitHosts = Object.keys(exitNodes);
 
         var myHost = self.channel.hostPort;
-        if (exitHosts.indexOf(myHost) === -1) {
+        if (exitHosts.indexOf(myHost) < 0) {
             logger.warn('Non-exit node got relay', {
                 myHost: myHost,
                 exitHosts: exitHosts,
