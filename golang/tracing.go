@@ -73,10 +73,7 @@ const tracingFlagEnabled byte = 0x01
 
 // NewRootSpan creates a new top-level Span for a call-graph within the provided context
 func NewRootSpan() *Span {
-	return &Span{
-		traceID: uint64(traceRng.Int63()),
-		spanID:  uint64(traceRng.Int63()),
-	}
+	return &Span{traceID: uint64(traceRng.Int63())}
 }
 
 // TraceID returns the trace id for the entire call graph of requests. Established at the outermost
