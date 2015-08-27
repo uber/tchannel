@@ -25,8 +25,7 @@ var test = require('tape');
 var testRW = require('bufrw/test_rw');
 
 var TestBody = require('./lib/test_body.js');
-var Frame = require('../../v2/frame.js');
-var LazyFrame = require('../../v2/lazy_frame.js');
+var v2 = require('../../v2/index.js');
 
 var Bytes = [
     0x00, 0x15,             // size: 2
@@ -38,20 +37,20 @@ var Bytes = [
 
     0x04, 0x64, 0x6f, 0x67, 0x65 // junk bytes
 ];
-var lazyFrame = new LazyFrame(
+var lazyFrame = new v2.LazyFrame(
     0x15, 0x03, 0x01,
     new Buffer(Bytes)
 );
-lazyFrame.bodyRW = Frame.Types[0x03].RW;
+lazyFrame.bodyRW = v2.Frame.Types[0x03].RW;
 
-test('LazyFrame.RW: read/write', testRW.cases(LazyFrame.RW, [
+test('LazyFrame.RW: read/write', testRW.cases(v2.LazyFrame.RW, [
     [
         lazyFrame, Bytes
     ]
 ]));
 
 TestBody.testWith('LazyFrame.readBody', function t(assert) {
-    var frame = LazyFrame.RW.readFrom(new Buffer([
+    var frame = v2.LazyFrame.RW.readFrom(new Buffer([
         0x00, 0x15,             // size: 2
         0x00,                   // type: 1
         0x00,                   // reserved:1
@@ -75,7 +74,7 @@ TestBody.testWith('LazyFrame.readBody', function t(assert) {
 });
 
 TestBody.testWith('LazyFrame.setId', function t(assert) {
-    var frame = LazyFrame.RW.readFrom(new Buffer([
+    var frame = v2.LazyFrame.RW.readFrom(new Buffer([
         0x00, 0x15,             // size: 2
         0x00,                   // type: 1
         0x00,                   // reserved:1
@@ -93,7 +92,7 @@ TestBody.testWith('LazyFrame.setId', function t(assert) {
     assert.equal(frame.id, 0x04);
 
     var buffer = new Buffer(frame.size);
-    LazyFrame.RW.writeInto(frame, buffer, 0);
+    v2.LazyFrame.RW.writeInto(frame, buffer, 0);
 
     assert.deepEqual(
         buffer,
