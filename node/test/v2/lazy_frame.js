@@ -183,3 +183,55 @@ test('CallRequest.RW.lazy', function t(assert) {
         assert.deepEqual(res.value, value, 'expected value from ' + desc);
     }
 });
+
+test('CallResponse.RW.lazy', function t(assert) {
+    var spanId = Buffer([0x02, 0x04, 0x06, 0x08, 0x0a, 0x0c, 0x0e, 0x10]);
+    var parentId = Buffer([0x01, 0x03, 0x05, 0x07, 0x09, 0x0b, 0x0d, 0x0f]);
+    var traceId = Buffer([0x01, 0x01, 0x02, 0x03, 0x05, 0x08, 0x0d, 0x15]);
+    var tracing = new v2.Tracing(
+        spanId, parentId, traceId
+    );
+
+    var frame = new v2.Frame(24,    // frame id
+        new v2.CallResponse(        // frame body
+            42,                     // flags
+            1,                      // code
+            tracing,                // tracing
+            {                       // headers
+                "as": "plumber"     // headers.as
+            },                      //
+            v2.Checksum.Types.None, // csum
+            ["", "creak", "open"]   // args
+        )
+    );
+    var buf = bufrw.toBuffer(v2.Frame.RW, frame);
+
+    var lazyFrame = bufrw.fromBuffer(v2.LazyFrame.RW, buf);
+
+    // validate basic lazy frame properties
+    assert.equal(lazyFrame.id, frame.id, 'expected frame id');
+    assert.equal(lazyFrame.type, frame.type, 'expected frame type');
+    assert.deepEqual(lazyFrame.buffer.parent, buf.parent,
+        'frame carries a slice into the original read buffer');
+
+    // validate call res lazy reading
+    assertReadRes(
+        v2.CallResponse.RW.lazy.readFlags(lazyFrame),
+        frame.body.flags,
+        'CallResponse.RW.lazy.readFlags');
+    assertReadRes(
+        v2.CallResponse.RW.lazy.readTracing(lazyFrame),
+        tracing,
+        'CallResponse.RW.lazy.readTracing');
+    assert.equal(
+        v2.CallResponse.RW.lazy.isFrameTerminal(lazyFrame),
+        !(frame.body.flags & v2.CallFlags.Fragment),
+        'CallResponse.RW.lazy.isFrameTerminal');
+
+    assert.end();
+
+    function assertReadRes(res, value, desc) {
+        assert.ifError(res.err, 'no error from ' + desc);
+        assert.deepEqual(res.value, value, 'expected value from ' + desc);
+    }
+});
