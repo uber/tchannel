@@ -23,14 +23,17 @@ func (r *ZipkinTraceReporter) Report(
 	thriftClient := thrift.NewClient(r.tchannel, "tcollector", nil)
 	client := tcollector.NewTChanTCollectorClient(thriftClient)
 
-	ctx, cancel := thrift.NewContext(time.Second)
+	ctx, cancel := tc.NewContextBuilder(time.Second).
+		SetShardKey(Base64Encode(span.TraceID())).Build()
+	defer cancel()
 
 	thriftSpan := BuildZipkinSpan(span, annotations, binaryAnnotations, name, endpoint)
-
+	// client submit
+	client.Submit(ctx, thriftSpan)
 }
 
 // BuildZipkinSpan builds zipkin span based on tchannel span.
-func BuildZipkinSpan(span tc.Span, annotations []tc.Annotation, binaryAnnotations []tc.BinaryAnnotation, name string, endpoint *tc.Endpoint) tcollector.Span {
+func BuildZipkinSpan(span tc.Span, annotations []tc.Annotation, binaryAnnotations []tc.BinaryAnnotation, name string, endpoint *tc.Endpoint) *tcollector.Span {
 
 	host := tcollector.Endpoint{
 		Ipv4:        (int32)(InetAton(endpoint.Ipv4)),
@@ -49,7 +52,7 @@ func BuildZipkinSpan(span tc.Span, annotations []tc.Annotation, binaryAnnotation
 		Debug:       false,
 	}
 
-	return thriftSpan
+	return &thriftSpan
 
 }
 
@@ -59,7 +62,7 @@ func BuildZipkinAnnotations(anns []tc.Annotation) []*tcollector.Annotation {
 
 	for i, ann := range anns {
 		zipkinAnns[i] = &tcollector.Annotation{
-			Timestamp: (float64)(ann.Timestamp.UTC().UnixNano() / 1e6),
+			Timestamp: (float64)(ann.Timestamp.UnixNano() / 1e6),
 			Value:     (string)(ann.Key),
 		}
 	}
