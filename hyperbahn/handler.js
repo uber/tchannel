@@ -196,16 +196,16 @@ function sendAdvertise(services, options, callback) {
 */
 HyperbahnHandler.prototype.handleRelayAdvertise =
 function handleRelayAdvertise(self, req, arg2, arg3, cb) {
-    self.handleRelay(req, arg2, arg3, cb, 'ad');
+    self.handleRelay('ad', req, arg2, arg3, cb);
 };
 
 HyperbahnHandler.prototype.handleRelayUnadvertise =
 function handleRelayUnadvertise(self, req, arg2, arg3, cb) {
-    self.handleRelay(req, arg2, arg3, cb, 'unad');
+    self.handleRelay('unad', req, arg2, arg3, cb);
 };
 
 HyperbahnHandler.prototype.handleRelay =
-function handleRelay(req, arg2, arg3, cb, endpoint) {
+function handleRelay(endpoint, req, arg2, arg3, cb) {
     var self = this;
     var services = arg3.services;
     var logger = self.channel.logger;
