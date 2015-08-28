@@ -77,6 +77,8 @@ function TChannelV2Handler(options) {
     self.streamingRes = Object.create(null);
     self.writeBuffer = new Buffer(v2.Frame.MaxSize);
 
+    self.handleFrame = self.handleEagerFrame;
+
     self.requireAs = self.options.requireAs === false ? false : true;
     self.requireCn = self.options.requireCn === false ? false : true;
 }
@@ -116,7 +118,7 @@ TChannelV2Handler.prototype.nextFrameId = function nextFrameId() {
     return self.lastSentFrameId;
 };
 
-TChannelV2Handler.prototype.handleFrame = function handleFrame(frame) {
+TChannelV2Handler.prototype.handleEagerFrame = function handleEagerFrame(frame) {
     var self = this;
     switch (frame.body.type) {
         case v2.Types.InitRequest:
