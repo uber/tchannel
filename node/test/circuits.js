@@ -22,18 +22,13 @@
 
 var debugLogtron = require('debug-logtron');
 var RelayNetwork = require('./lib/relay_network.js');
-var States = require('../states');
 var MockTimers = require('time-mock');
 var CountedReadySignal = require('ready-signal/counted');
 
 var aliceAndBob = {
     timers: new MockTimers(1e9),
     clusterOptions: {
-        logger: debugLogtron('tchannel', {enabled: false}),
-        peerOptions: {
-            // Pin down the peer states
-            initialState: States.LockedHealthyState
-        }
+        logger: debugLogtron('tchannel', {enabled: false})
     },
     serviceNames: ['alice', 'bob'],
     numInstancesPerService: 1,
@@ -42,17 +37,16 @@ var aliceAndBob = {
     circuitsConfig: {
         enabled: true,
         period: 500
+    },
+    remoteConfig: {
+        'circuits.enabled': true
     }
 };
 
 var aliceBobCharlie = {
     timers: new MockTimers(1e9),
     clusterOptions: {
-        logger: debugLogtron('tchannel', {enabled: false}),
-        peerOptions: {
-            // Pin down the peer states
-            initialState: States.LockedHealthyState
-        }
+        logger: debugLogtron('tchannel', {enabled: false})
     },
     serviceNames: ['alice', 'bob', 'charlie'],
     numInstancesPerService: 1,
@@ -61,6 +55,9 @@ var aliceBobCharlie = {
     circuitsConfig: {
         enabled: true,
         period: 500
+    },
+    remoteConfig: {
+        'circuits.enabled': true
     }
 };
 
