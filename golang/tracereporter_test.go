@@ -26,16 +26,18 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func FakeTraceReporterFactory(tchannel *Channel) TraceReporter {
-	return SimpleTraceReporter
-}
-
 func TestZipkinTraceReporterFactoryOverTraceReporter(t *testing.T) {
+	var gotChannel *Channel
+	testTraceReporterFactory := func(ch *Channel) TraceReporter {
+		gotChannel = ch
+		return SimpleTraceReporter
+	}
 	tc, err := NewChannel("client", &ChannelOptions{
 		Logger:               SimpleLogger,
 		TraceReporter:        NullReporter,
-		TraceReporterFactory: FakeTraceReporterFactory,
+		TraceReporterFactory: testTraceReporterFactory,
 	})
 	assert.NoError(t, err)
-	assert.True(t, tc.traceReporter == SimpleTraceReporter, "TChannel sets wrong TraceReporter")
+	assert.Equal(t, tc, gotChannel, "TraceReporterFactory got wrong channel")
+	assert.Equal(t, tc.traceReporter, SimpleTraceReporter, "Wrong TraceReporter")
 }

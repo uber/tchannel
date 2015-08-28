@@ -83,30 +83,30 @@ func TestBase64Encode(t *testing.T) {
 }
 
 func RandomAnnotations() []tchannel.Annotation {
-	anns := make([]tchannel.Annotation, 4)
-	anns[0] = tchannel.Annotation{
-		Key:       tchannel.AnnotationKeyClientReceive,
-		Timestamp: time.Now(),
+	baseTime := time.Date(2015, 1, 2, 3, 4, 5, 6, time.UTC)
+	return []tchannel.Annotation{
+		{
+			Key:       tchannel.AnnotationKeyClientReceive,
+			Timestamp: baseTime.Add(time.Second),
+		},
+		{
+			Key:       tchannel.AnnotationKeyClientSend,
+			Timestamp: baseTime.Add(2 * time.Second),
+		},
+		{
+			Key:       tchannel.AnnotationKeyServerReceive,
+			Timestamp: baseTime.Add(3 * time.Second),
+		},
+		{
+			Key:       tchannel.AnnotationKeyServerSend,
+			Timestamp: baseTime.Add(4 * time.Second),
+		},
 	}
-	anns[1] = tchannel.Annotation{
-		Key:       tchannel.AnnotationKeyClientSend,
-		Timestamp: time.Now(),
-	}
-	anns[2] = tchannel.Annotation{
-		Key:       tchannel.AnnotationKeyServerReceive,
-		Timestamp: time.Now(),
-	}
-	anns[3] = tchannel.Annotation{
-		Key:       tchannel.AnnotationKeyServerSend,
-		Timestamp: time.Now(),
-	}
-
-	return anns
 }
 
 type testArgs struct {
 	s *mocks.TChanTCollector
-	c gen.TChanTCollector // ?
+	c gen.TChanTCollector
 }
 
 func ctxArg() mock.AnythingOfTypeArgument {
