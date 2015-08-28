@@ -198,15 +198,13 @@ function onResponseError(err, req) {
         return;
     }
 
-    var loggingOptions = {
+    // TODO: req.extendLogInfo
+    var loggingOptions = req.res.extendLogInfo({
         error: err,
         arg1: String(req.arg1),
-        ok: req.res.ok,
-        type: req.res.type,
         serviceName: req.serviceName,
-        state: States.describe(req.res.state),
         socketRemoteAddr: self.socketRemoteAddr
-    };
+    });
 
     if (req.res.state === States.Done) {
         var arg2 = isStringOrBuffer(req.res.arg2) ?
@@ -218,9 +216,6 @@ function onResponseError(err, req) {
         loggingOptions.arg2 = String(arg2).slice(0, 50);
         loggingOptions.bufArg3 = arg3.slice(0, 50);
         loggingOptions.arg3 = String(arg3).slice(0, 50);
-    } else if (req.res.state === States.Error) {
-        loggingOptions.codeString = req.res.codeString;
-        loggingOptions.errMessage = req.res.message;
     }
 
     if ((err.type === 'tchannel.response-already-started' ||
