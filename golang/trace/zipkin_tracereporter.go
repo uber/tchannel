@@ -32,6 +32,8 @@ import (
 	"github.com/uber/tchannel/golang/trace/thrift/gen-go/tcollector"
 )
 
+const tcollectorServiceName = "tcollector"
+
 // ZipkinTraceReporter is a trace reporter that submits trace spans in to zipkin trace server.
 type ZipkinTraceReporter struct {
 	tchannel *tc.Channel
@@ -40,7 +42,7 @@ type ZipkinTraceReporter struct {
 
 // NewZipkinTraceReporter returns a zipkin trace reporter that submits span to tcollector service.
 func NewZipkinTraceReporter(ch *tc.Channel) *ZipkinTraceReporter {
-	thriftClient := thrift.NewClient(ch, "tcollector", nil)
+	thriftClient := thrift.NewClient(ch, tcollectorServiceName, nil)
 	client := tcollector.NewTChanTCollectorClient(thriftClient)
 	return &ZipkinTraceReporter{tchannel: ch, client: client}
 }
@@ -68,11 +70,11 @@ func buildZipkinSpan(span tc.Span, annotations []tc.Annotation, binaryAnnotation
 
 	// TODO Add BinaryAnnotations
 	thriftSpan := tcollector.Span{
-		TraceId:     uInt64ToBytes(span.TraceID()),
+		TraceId:     uint64ToBytes(span.TraceID()),
 		Host:        &host,
 		Name:        name,
-		Id:          uInt64ToBytes(span.SpanID()),
-		ParentId:    uInt64ToBytes(span.ParentID()),
+		Id:          uint64ToBytes(span.SpanID()),
+		ParentId:    uint64ToBytes(span.ParentID()),
 		Annotations: buildZipkinAnnotations(annotations),
 		Debug:       false,
 	}
@@ -100,12 +102,12 @@ func inetAton(ip string) uint32 {
 
 // base64Encode encodes uint64 with base64 StdEncoding.
 func base64Encode(data uint64) string {
-	return base64.StdEncoding.EncodeToString(uInt64ToBytes(data))
+	return base64.StdEncoding.EncodeToString(uint64ToBytes(data))
 }
 
-// UInt64ToBytes converts uint64 to bytes.
-func uInt64ToBytes(i uint64) []byte {
-	var buf = make([]byte, 8)
+// uint64ToBytes converts uint64 to bytes.
+func uint64ToBytes(i uint64) []byte {
+	buf := make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, uint64(i))
 	return buf
 }

@@ -22,7 +22,6 @@ package trace
 
 import (
 	"net"
-	"reflect"
 	"testing"
 	"time"
 
@@ -38,7 +37,7 @@ import (
 func TestZipkinTraceReporterFactory(t *testing.T) {
 	_, err := tchannel.NewChannel("client", &tchannel.ChannelOptions{
 		Logger:               tchannel.SimpleLogger,
-		TraceReporterFactory: tchannel.TraceReporterFactory(ZipkinTraceReporterFactory),
+		TraceReporterFactory: ZipkinTraceReporterFactory,
 	})
 
 	assert.NoError(t, err)
@@ -56,27 +55,27 @@ func TestBuildZipkinSpan(t *testing.T) {
 	thriftSpan := buildZipkinSpan(span, annotations, nil, name, host)
 
 	expectedSpan := gen.Span{
-		TraceId: uInt64ToBytes(span.TraceID()),
+		TraceId: uint64ToBytes(span.TraceID()),
 		Host: &gen.Endpoint{
 			Ipv4:        (int32)(inetAton("127.0.0.1")),
 			Port:        8888,
 			ServiceName: "test",
 		},
 		Name:        name,
-		Id:          uInt64ToBytes(span.SpanID()),
-		ParentId:    uInt64ToBytes(span.ParentID()),
+		Id:          uint64ToBytes(span.SpanID()),
+		ParentId:    uint64ToBytes(span.ParentID()),
 		Annotations: buildZipkinAnnotations(annotations),
 		Debug:       false,
 	}
-	reflect.DeepEqual(thriftSpan, expectedSpan)
+	assert.Equal(t, thriftSpan, expectedSpan, "Span mismatch")
 }
 
 func TestInetAton(t *testing.T) {
-	assert.Equal(t, inetAton("1.0.0.1"), (uint32)(16777217))
+	assert.Equal(t, inetAton("1.2.3.4"), uint32(16909060))
 }
 
 func TestUInt64ToBytes(t *testing.T) {
-	assert.Equal(t, uInt64ToBytes(54613478251749257), []byte("\x00\xc2\x06\xabK$\xdf\x89"))
+	assert.Equal(t, uint64ToBytes(54613478251749257), []byte("\x00\xc2\x06\xabK$\xdf\x89"))
 }
 
 func TestBase64Encode(t *testing.T) {
@@ -129,8 +128,8 @@ func TestSubmit(t *testing.T) {
 		ret := &gen.Response{Ok: true}
 		args.s.On("Submit", ctxArg(), thriftSpan).Return(ret, nil)
 		got, err := args.c.Submit(ctx, thriftSpan)
-		require.NoError(t, err)
-		assert.Equal(t, ret, got)
+		require.NoError(t, err, "Submit failed")
+		assert.Equal(t, ret, got, "Submit response mismatch")
 	})
 }
 
