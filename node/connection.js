@@ -83,6 +83,17 @@ function TChannelConnection(channel, socket, direction, socketRemoteAddr) {
 }
 inherits(TChannelConnection, TChannelConnectionBase);
 
+TChannelConnection.prototype.setLazyHandling = function setLazyHandling(enabled) {
+    var self = this;
+
+    if (enabled) {
+        self.mach.chunkRW = v2.LazyFrame.RW;
+    } else {
+        self.mach.chunkRW = v2.Frame.RW;
+    }
+    self.handler.setLazyHandling(enabled);
+};
+
 TChannelConnection.prototype.extendLogInfo = function extendLogInfo(info) {
     var self = this;
 
