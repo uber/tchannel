@@ -118,6 +118,28 @@ TChannelV2Handler.prototype.nextFrameId = function nextFrameId() {
     return self.lastSentFrameId;
 };
 
+TChannelV2Handler.prototype.useLazyFrames = function useLazyFrames(enabled) {
+    var self = this;
+
+    if (enabled) {
+        self.handleFrame = self.handleLazyFrame;
+    } else {
+        self.handleFrame = self.handleEagerFrame;
+    }
+};
+
+TChannelV2Handler.prototype.handleLazyFrame = function handleLazyFrame(frame) {
+    var self = this;
+
+    var res = frame.readBody();
+    if (res.err) {
+        self.errorEvent.emit(res.err);
+        return;
+    }
+
+    self.handleEagerFrame(frame);
+};
+
 TChannelV2Handler.prototype.handleEagerFrame = function handleEagerFrame(frame) {
     var self = this;
     switch (frame.body.type) {
