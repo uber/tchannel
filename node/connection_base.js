@@ -193,6 +193,11 @@ TChannelConnectionBase.prototype.onResponseError =
 function onResponseError(err, req) {
     var self = this;
 
+    // don't log if we get further timeout errors for already timed out response
+    if (req.timedOut && errors.classify(err) === 'Timeout') {
+        return;
+    }
+
     var loggingOptions = {
         error: err,
         arg1: String(req.arg1),
