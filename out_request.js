@@ -302,9 +302,11 @@ TChannelOutRequest.prototype.extendLogInfo = function extendLogInfo(info) {
     info.requestRemoteAddr = self.remoteAddr;
     info.serviceName = self.serviceName;
 
-    info.reqRemoteAddr = self.remoteAddr;
-    info.serviceName = self.serviceName;
-    info.outArg1 = String(self.arg1);
+    if (self.endpoint !== null) {
+        info.requestArg1 = self.endpoint;
+    } else {
+        info.requestArg1 = String(self.arg1);
+    }
 
     return info;
 };
