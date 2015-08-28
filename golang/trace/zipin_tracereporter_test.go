@@ -127,10 +127,11 @@ func TestSubmit(t *testing.T) {
 		thriftSpan := buildZipkinSpan(span, annotations, nil, name, host)
 		thriftSpan.BinaryAnnotations = []*gen.BinaryAnnotation{}
 		ret := &gen.Response{Ok: true}
+
 		args.s.On("Submit", ctxArg(), thriftSpan).Return(ret, nil)
 		res, err := args.c.Report(span, annotations, nil)
 		assert.Equal(t, res, true)
-		assert.NoError(t, *err)
+		assert.NoError(t, err)
 	})
 }
 

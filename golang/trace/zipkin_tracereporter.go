@@ -50,7 +50,7 @@ func NewZipkinTraceReporter(ch *tc.Channel) *ZipkinTraceReporter {
 
 // Report method will submit trace span to tcollector server.
 func (r *ZipkinTraceReporter) Report(
-	span tc.Span, annotations []tc.Annotation, binaryAnnotations []tc.BinaryAnnotation) (bool, *error) {
+	span tc.Span, annotations []tc.Annotation, binaryAnnotations []tc.BinaryAnnotation) (bool, error) {
 	ctx, cancel := tc.NewContextBuilder(time.Second).
 		SetShardKey(base64Encode(span.TraceID())).Build()
 	defer cancel()
@@ -61,7 +61,7 @@ func (r *ZipkinTraceReporter) Report(
 	// client submit
 	res, err := r.client.Submit(ctx, thriftSpan)
 	fmt.Printf("%+#v", res)
-	return res.Ok, &err
+	return res.Ok, err
 }
 
 // buildZipkinSpan builds zipkin span based on tchannel span.
