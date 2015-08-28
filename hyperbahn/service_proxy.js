@@ -51,14 +51,13 @@ function ServiceDispatchHandler(options) {
     self.permissionsCache = options.permissionsCache;
     self.serviceReqDefaults = options.serviceReqDefaults || {};
 
-    self.circuitsEnabled = options.circuitsConfig && options.circuitsConfig.enabled || false;
-    self.circuits = self.circuitsEnabled ? new Circuits({
-        timeHeap: self.channel.timeHeap,
-        timers: self.channel.timers,
-        random: self.random,
-        egressNodes: self.egressNodes,
-        config: options.circuitsConfig
-    }) : null;
+    self.circuitsEnabled = false;
+    self.circuitsConfig = options.circuitsConfig;
+    self.circuits = null;
+    self.boundOnCircuitStateChange = onCircuitStateChange;
+    if (self.circuitsConfig && self.circuitsConfig.enabled) {
+        self.enableCircuits();
+    }
 
     self.servicePurgePeriod = options.servicePurgePeriod ||
         SERVICE_PURGE_PERIOD;
@@ -75,10 +74,6 @@ function ServiceDispatchHandler(options) {
     self.rateLimiterEnabled = options.rateLimiterEnabled;
 
     self.egressNodes.on('membershipChanged', onMembershipChanged);
-
-    if (self.circuits) {
-        self.circuits.circuitStateChangeEvent.on(onCircuitStateChange);
-    }
 
     function onCircuitStateChange(stateChange) {
         self.onCircuitStateChange(stateChange);
@@ -548,6 +543,21 @@ function destroy() {
     self.rateLimiter.destroy();
 };
 
+ServiceDispatchHandler.prototype.initCircuits =
+function initCircuits() {
+    var self = this;
+
+    self.circuits = new Circuits({
+        timeHeap: self.channel.timeHeap,
+        timers: self.channel.timers,
+        random: self.random,
+        egressNodes: self.egressNodes,
+        config: self.circuitsConfig
+    });
+
+    self.circuits.circuitStateChangeEvent.on(self.boundOnCircuitStateChange);
+};
+
 ServiceDispatchHandler.prototype.enableCircuits =
 function enableCircuits() {
     var self = this;
@@ -556,6 +566,10 @@ function enableCircuits() {
         return;
     }
     self.circuitsEnabled = true;
+
+    if (!self.circuits) {
+        self.initCircuits();
+    }
 
     var serviceNames = Object.keys(self.channel.subChannels);
     for (var index = 0; index < serviceNames.length; index++) {
