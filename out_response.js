@@ -66,6 +66,21 @@ inherits(TChannelOutResponse, EventEmitter);
 
 TChannelOutResponse.prototype.type = 'tchannel.outgoing-response';
 
+TChannelOutResponse.prototype.extendLogInfo = function extendLogInfo(info) {
+    var self = this;
+
+    info.responseType = self.type;
+    info.responseState = States.describe(self.state);
+    info.responseOk = self.ok;
+    info.responseCode = self.code;
+    info.responseCodeString = self.codeString;
+    info.responseErrorMessage = self.message;
+    info.responseStart = self.start;
+    info.responseEnd = self.end;
+
+    return info;
+};
+
 TChannelOutResponse.prototype._sendCallResponse = function _sendCallResponse(args, isLast) {
     var self = this;
     throw errors.UnimplementedMethod({
@@ -109,9 +124,7 @@ TChannelOutResponse.prototype.sendParts = function sendParts(parts, isLast) {
             // TODO: log warn
             break;
         default:
-            self.channel.logger.error('TChannelOutResponse is in a wrong state', {
-                state: self.state
-            });
+            self.channel.logger.error('TChannelOutResponse is in a wrong state', self.extendLogInfo({}));
             break;
     }
 };
@@ -208,19 +221,13 @@ TChannelOutResponse.prototype.emitFinish = function emitFinish() {
     var now = self.timers.now();
 
     if (self.end) {
-        self.logger.warn('out response double emitFinish', {
-            end: self.end,
+        self.logger.warn('out response double emitFinish', self.extendLogInfo({
             now: now,
             serviceName: self.inreq.serviceName,
             cn: self.inreq.headers.cn,
             endpoint: String(self.inreq.arg1),
-            codeString: self.codeString,
-            errorMessage: self.message,
-            remoteAddr: self.inreq.connection.socketRemoteAddr,
-            state: self.state,
-
-            isOk: self.ok
-        });
+            remoteAddr: self.inreq.connection.socketRemoteAddr
+        }));
         return;
     }
 
@@ -270,10 +277,10 @@ TChannelOutResponse.prototype.sendOk = function sendOk(res1, res2) {
 TChannelOutResponse.prototype.sendNotOk = function sendNotOk(res1, res2) {
     var self = this;
     if (self.state === States.Error) {
-        self.logger.error('cannot send application error, already sent error frame', {
+        self.logger.error('cannot send application error, already sent error frame', self.extendLogInfo({
             res1: res1,
             res2: res2
-        });
+        }));
     } else {
         self.setOk(false);
         self.send(res1, res2);
@@ -285,19 +292,13 @@ TChannelOutResponse.prototype.send = function send(res1, res2) {
 
     /* send calls after finish() should be swallowed */
     if (self.end) {
-        var logOptions = {
+        var logOptions = self.extendLogInfo({
             serviceName: self.inreq.serviceName,
             cn: self.inreq.headers.cn,
             endpoint: self.inreq.endpoint,
             remoteAddr: self.inreq.remoteAddr,
-
-            end: self.end,
-            codeString: self.codeString,
-            errorMessage: self.message,
-            isOk: self.ok,
-            hasResponse: !!self.arg3,
-            state: self.state
-        };
+            hasResponse: !!self.arg3
+        });
 
         if (self.inreq && self.inreq.timedOut) {
             self.logger.info('OutResponse.send() after inreq timed out', logOptions);
