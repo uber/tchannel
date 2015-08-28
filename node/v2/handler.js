@@ -77,6 +77,7 @@ function TChannelV2Handler(options) {
     self.streamingRes = Object.create(null);
     self.writeBuffer = new Buffer(v2.Frame.MaxSize);
 
+    self.handleCallLazily = self.options.handleCallLazily || null;
     self.handleFrame = self.handleEagerFrame;
 
     self.requireAs = self.options.requireAs === false ? false : true;
@@ -130,6 +131,26 @@ TChannelV2Handler.prototype.useLazyFrames = function useLazyFrames(enabled) {
 
 TChannelV2Handler.prototype.handleLazyFrame = function handleLazyFrame(frame) {
     var self = this;
+
+    switch (frame.type) {
+        // TODO: make some lazy type handlers?
+        // case v2.Types.InitRequest:
+        // case v2.Types.InitResponse:
+        // case v2.Types.Cancel:
+        // case v2.Types.Claim:
+        // case v2.Types.PingRequest:
+        // case v2.Types.PingResponse:
+
+        case v2.Types.CallRequest:
+        case v2.Types.CallResponse:
+        case v2.Types.CallRequestCont:
+        case v2.Types.CallResponseCont:
+        case v2.Types.ErrorResponse:
+            if (self.handleCallLazily && self.handleCallLazily(frame)) {
+                return;
+            }
+            break;
+    }
 
     var res = frame.readBody();
     if (res.err) {
