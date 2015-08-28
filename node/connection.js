@@ -83,6 +83,22 @@ function TChannelConnection(channel, socket, direction, socketRemoteAddr) {
 }
 inherits(TChannelConnection, TChannelConnectionBase);
 
+TChannelConnection.prototype.setLazyHandling = function setLazyHandling(enabled) {
+    var self = this;
+
+    // TODO: push down read machine concern into handler entirely;
+    // boundary should just be self.handler.handleChunk in
+    // onSocketChunk under setupSocket; then the switching logic
+    // moves wholly into a `self.handler.setLazyHandling(bool)`
+    if (enabled && self.mach.chunkRW !== v2.LazyFrame.RW) {
+        self.mach.chunkRW = v2.LazyFrame.RW;
+        self.handler.useLazyFrames(enabled);
+    } else if (!enabled && self.mach.chunkRW !== v2.Frame.RW) {
+        self.mach.chunkRW = v2.Frame.RW;
+        self.handler.useLazyFrames(enabled);
+    }
+};
+
 TChannelConnection.prototype.extendLogInfo = function extendLogInfo(info) {
     var self = this;
 
@@ -139,6 +155,8 @@ function noop() {}
 
 TChannelConnection.prototype.setupHandler = function setupHandler() {
     var self = this;
+
+    self.setLazyHandling(self.channel.useLazyHandling);
 
     self.handler.write = function write(buf, done) {
         self.socket.write(buf, null, done);

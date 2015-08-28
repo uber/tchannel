@@ -68,6 +68,10 @@ function TChannelConnectionBase(channel, direction, socketRemoteAddr) {
 }
 inherits(TChannelConnectionBase, EventEmitter);
 
+TChannelConnectionBase.prototype.setLazyHandling = function setLazyHandling() {
+    // noop
+};
+
 // create a request
 TChannelConnectionBase.prototype.request =
 function connBaseRequest(options) {
