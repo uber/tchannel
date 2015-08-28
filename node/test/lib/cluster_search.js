@@ -172,7 +172,7 @@ function setupClient(cluster, callback) {
     // TODO: could pre-connect
     // var peers = client.peers.values();
     // peers.forEach(function each(peer) {
-    //     var conn = peer.connect(true);
+    //     var conn = peer.connectTo();
     //     if (conn.remoteName) {
     //         ready.signal();
     //     } else {

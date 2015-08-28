@@ -63,7 +63,7 @@ PreferOutgoing.prototype.getScore = function getScore() {
     switch (tier) {
         case PreferOutgoing.ONLY_INCOMING:
             if (!self.peer.channel.destroyed) {
-                self.peer.connect(true);
+                self.peer.connectTo();
             }
             /* falls through */
         case PreferOutgoing.UNCONNECTED:
