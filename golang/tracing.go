@@ -34,7 +34,14 @@ var (
 	traceRng = NewRand(time.Now().UnixNano())
 )
 
-// Span represents Zipkin-style span
+// Endpoint represents Zipkin-style endpoint.
+type Endpoint struct {
+	Ipv4        string
+	Port        int32
+	ServiceName string
+}
+
+// Span represents Zipkin-style span.
 type Span struct {
 	traceID  uint64
 	parentID uint64

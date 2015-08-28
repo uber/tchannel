@@ -64,7 +64,9 @@ func NewBinaryAnnotation(key string, value interface{}) BinaryAnnotation {
 
 // TraceReporter is the interface used to report Trace spans.
 type TraceReporter interface {
-	Report(span Span, annotations []Annotation, binaryAnnotations []BinaryAnnotation)
+	// Report method is intended to report Span information.
+	// It returns any error encountered otherwise nil.
+	Report(span Span, annotations []Annotation, binaryAnnotations []BinaryAnnotation) error
 }
 
 // NullReporter is the default TraceReporter which does not do anything.
@@ -72,16 +74,20 @@ var NullReporter TraceReporter = nullReporter{}
 
 type nullReporter struct{}
 
-func (nullReporter) Report(_ Span, _ []Annotation, _ []BinaryAnnotation) {}
+func (nullReporter) Report(_ Span, _ []Annotation, _ []BinaryAnnotation) error {
+	return nil
+}
 
 // SimpleTraceReporter is a trace reporter which prints using the default logger.
 var SimpleTraceReporter TraceReporter = simpleTraceReporter{}
 
 type simpleTraceReporter struct{}
 
-func (simpleTraceReporter) Report(span Span, annotations []Annotation, binaryAnnotations []BinaryAnnotation) {
+func (simpleTraceReporter) Report(
+	span Span, annotations []Annotation, binaryAnnotations []BinaryAnnotation) error {
 	log.Printf("SimpleTraceReporter.Report span: %+v annotations: %+v binaryAnnotations: %+v",
 		span, annotations, binaryAnnotations)
+	return nil
 }
 
 // Annotations is am embeddable struct used to track annotations.
@@ -101,6 +107,6 @@ func (as *Annotations) AddAnnotation(key AnnotationKey) {
 }
 
 // Report reports the annotations to the given trace reporter.
-func (as *Annotations) Report(span Span, reporter TraceReporter) {
-	reporter.Report(span, as.annotations, as.binaryAnnotations)
+func (as *Annotations) Report(span Span, reporter TraceReporter) error {
+	return reporter.Report(span, as.annotations, as.binaryAnnotations)
 }
