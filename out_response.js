@@ -69,9 +69,9 @@ TChannelOutResponse.prototype.type = 'tchannel.outgoing-response';
 TChannelOutResponse.prototype.extendLogInfo = function extendLogInfo(info) {
     var self = this;
 
-    info.ok = self.ok;
-    info.type = self.type;
-    info.state = States.describe(self.state);
+    info.responseOk = self.ok;
+    info.responseType = self.type;
+    info.responseState = States.describe(self.state);
 
     return info;
 };
