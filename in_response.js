@@ -63,6 +63,16 @@ inherits(TChannelInResponse, EventEmitter);
 
 TChannelInResponse.prototype.type = 'tchannel.incoming-response';
 
+TChannelInResponse.prototype.extendLogInfo = function extendLogInfo(info) {
+    var self = this;
+
+    info.ok = self.ok;
+    info.type = self.type;
+    info.state = States.describe(self.state);
+
+    return info;
+};
+
 TChannelInResponse.prototype.onFinish = function onFinish(_arg, self) {
     self.state = States.Done;
 };
