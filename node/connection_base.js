@@ -193,17 +193,14 @@ TChannelConnectionBase.prototype.onResponseError =
 function onResponseError(err, req) {
     var self = this;
 
-    var loggingOptions = {
-        error: err,
-        arg1: String(req.arg1),
-        ok: req.res.ok,
-        type: req.res.type,
-        serviceName: req.serviceName,
-        state: req.res.state === States.Done ? 'Done' :
-            req.res.state === States.Error ? 'Error' :
-            'Unknown',
-        socketRemoteAddr: self.socketRemoteAddr
-    };
+    // don't log if we get further timeout errors for already timed out response
+    if (req.timedOut && errors.classify(err) === 'Timeout') {
+        return;
+    }
+
+    var loggingOptions = req.extendLogInfo(req.res.extendLogInfo({
+        error: err
+    }));
 
     if (req.res.state === States.Done) {
         var arg2 = isStringOrBuffer(req.res.arg2) ?
@@ -215,9 +212,6 @@ function onResponseError(err, req) {
         loggingOptions.arg2 = String(arg2).slice(0, 50);
         loggingOptions.bufArg3 = arg3.slice(0, 50);
         loggingOptions.arg3 = String(arg3).slice(0, 50);
-    } else if (req.res.state === States.Error) {
-        loggingOptions.codeString = req.res.codeString;
-        loggingOptions.errMessage = req.res.message;
     }
 
     if ((err.type === 'tchannel.response-already-started' ||
