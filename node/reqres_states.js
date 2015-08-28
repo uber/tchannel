@@ -24,3 +24,22 @@ module.exports.Initial = 0;
 module.exports.Streaming = 1;
 module.exports.Done = 2;
 module.exports.Error = 3;
+
+module.exports.classify = function classify(state) {
+    switch (state) {
+        case module.exports.Initial:
+            return 'Initial';
+        case module.exports.Streaming:
+            return 'Streaming';
+        case module.exports.Done:
+            return 'Done';
+        case module.exports.Error:
+            return 'Error';
+        default:
+            return null;
+    }
+};
+
+module.exports.describe = function describe(state) {
+    return module.exports.classify(state) || 'Unknown(' + state + ')';
+};
