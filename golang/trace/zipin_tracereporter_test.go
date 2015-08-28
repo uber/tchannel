@@ -54,7 +54,7 @@ func TestBuildZipkinSpan(t *testing.T) {
 	annotations := RandomAnnotations()
 	thriftSpan := buildZipkinSpan(span, annotations, nil, name, host)
 
-	expectedSpan := gen.Span{
+	expectedSpan := &gen.Span{
 		TraceId: uint64ToBytes(span.TraceID()),
 		Host: &gen.Endpoint{
 			Ipv4:        (int32)(inetAton("127.0.0.1")),
@@ -67,6 +67,7 @@ func TestBuildZipkinSpan(t *testing.T) {
 		Annotations: buildZipkinAnnotations(annotations),
 		Debug:       false,
 	}
+
 	assert.Equal(t, thriftSpan, expectedSpan, "Span mismatch")
 }
 
@@ -106,7 +107,7 @@ func RandomAnnotations() []tchannel.Annotation {
 
 type testArgs struct {
 	s *mocks.TChanTCollector
-	c gen.TChanTCollector
+	c tchannel.TraceReporter
 }
 
 func ctxArg() mock.AnythingOfTypeArgument {
@@ -127,9 +128,9 @@ func TestSubmit(t *testing.T) {
 		thriftSpan.BinaryAnnotations = []*gen.BinaryAnnotation{}
 		ret := &gen.Response{Ok: true}
 		args.s.On("Submit", ctxArg(), thriftSpan).Return(ret, nil)
-		got, err := args.c.Submit(ctx, thriftSpan)
-		require.NoError(t, err, "Submit failed")
-		assert.Equal(t, ret, got, "Submit response mismatch")
+		res, err := args.c.Report(span, annotations, nil)
+		assert.Equal(t, res, true)
+		assert.NoError(t, *err)
 	})
 }
 
@@ -156,7 +157,7 @@ func withSetup(t *testing.T, f func(ctx thrift.Context, args testArgs)) {
 }
 
 func setupServer(h *mocks.TChanTCollector) (*tchannel.Channel, net.Listener, error) {
-	tchan, err := tchannel.NewChannel("service", nil)
+	tchan, err := tchannel.NewChannel(tcollectorServiceName, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -173,7 +174,7 @@ func setupServer(h *mocks.TChanTCollector) (*tchannel.Channel, net.Listener, err
 	return tchan, listener, nil
 }
 
-func getClient(dst string) (gen.TChanTCollector, error) {
+func getClient(dst string) (tchannel.TraceReporter, error) {
 	tchan, err := tchannel.NewChannel("client", &tchannel.ChannelOptions{
 		Logger: tchannel.SimpleLogger,
 	})
@@ -182,8 +183,5 @@ func getClient(dst string) (gen.TChanTCollector, error) {
 	}
 
 	tchan.Peers().Add(dst)
-	client := thrift.NewClient(tchan, "service", nil)
-
-	tcollectorClient := gen.NewTChanTCollectorClient(client)
-	return tcollectorClient, nil
+	return NewZipkinTraceReporter(tchan), nil
 }

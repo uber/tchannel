@@ -24,6 +24,7 @@ package trace
 import (
 	"encoding/base64"
 	"encoding/binary"
+	"fmt"
 	"net"
 	"time"
 
@@ -48,16 +49,19 @@ func NewZipkinTraceReporter(ch *tc.Channel) *ZipkinTraceReporter {
 }
 
 // Report method will submit trace span to tcollector server.
-func (r *ZipkinTraceReporter) Report(span tc.Span, annotations []tc.Annotation, binaryAnnotations []tc.BinaryAnnotation) {
+func (r *ZipkinTraceReporter) Report(
+	span tc.Span, annotations []tc.Annotation, binaryAnnotations []tc.BinaryAnnotation) (bool, *error) {
 	ctx, cancel := tc.NewContextBuilder(time.Second).
 		SetShardKey(base64Encode(span.TraceID())).Build()
 	defer cancel()
 
 	// FIXME remove this dummy endpoint.
-	endpoint := &tc.Endpoint{Ipv4: "127.0.0.1", Port: 8888, ServiceName: "dummy"}
-	thriftSpan := buildZipkinSpan(span, annotations, binaryAnnotations, "dummy", endpoint)
+	endpoint := &tc.Endpoint{Ipv4: "127.0.0.1", Port: 8888, ServiceName: "test"}
+	thriftSpan := buildZipkinSpan(span, annotations, binaryAnnotations, "test", endpoint)
 	// client submit
-	r.client.Submit(ctx, thriftSpan)
+	res, err := r.client.Submit(ctx, thriftSpan)
+	fmt.Printf("%+#v", res)
+	return res.Ok, &err
 }
 
 // buildZipkinSpan builds zipkin span based on tchannel span.
