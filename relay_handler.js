@@ -111,7 +111,7 @@ function RelayRequest(channel, peer, inreq, buildRes) {
     }
 
     function extendLogInfo(info) {
-        self.extendLogInfo(info);
+        return self.extendLogInfo(info);
     }
 
     function onIdentified(err) {
