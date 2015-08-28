@@ -198,13 +198,9 @@ function onResponseError(err, req) {
         return;
     }
 
-    // TODO: req.extendLogInfo
-    var loggingOptions = req.res.extendLogInfo({
-        error: err,
-        arg1: String(req.arg1),
-        serviceName: req.serviceName,
-        socketRemoteAddr: self.socketRemoteAddr
-    });
+    var loggingOptions = req.extendLogInfo(req.res.extendLogInfo({
+        error: err
+    }));
 
     if (req.res.state === States.Done) {
         var arg2 = isStringOrBuffer(req.res.arg2) ?
