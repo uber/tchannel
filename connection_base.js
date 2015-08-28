@@ -204,9 +204,7 @@ function onResponseError(err, req) {
         ok: req.res.ok,
         type: req.res.type,
         serviceName: req.serviceName,
-        state: req.res.state === States.Done ? 'Done' :
-            req.res.state === States.Error ? 'Error' :
-            'Unknown',
+        state: States.describe(req.res.state),
         socketRemoteAddr: self.socketRemoteAddr
     };
 
