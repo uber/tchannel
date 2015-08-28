@@ -24,7 +24,6 @@ package trace
 import (
 	"encoding/base64"
 	"encoding/binary"
-	"fmt"
 	"net"
 	"time"
 
@@ -50,7 +49,7 @@ func NewZipkinTraceReporter(ch *tc.Channel) *ZipkinTraceReporter {
 
 // Report method will submit trace span to tcollector server.
 func (r *ZipkinTraceReporter) Report(
-	span tc.Span, annotations []tc.Annotation, binaryAnnotations []tc.BinaryAnnotation) (bool, error) {
+	span tc.Span, annotations []tc.Annotation, binaryAnnotations []tc.BinaryAnnotation) error {
 	ctx, cancel := tc.NewContextBuilder(time.Second).
 		SetShardKey(base64Encode(span.TraceID())).Build()
 	defer cancel()
@@ -59,9 +58,9 @@ func (r *ZipkinTraceReporter) Report(
 	endpoint := &tc.Endpoint{Ipv4: "127.0.0.1", Port: 8888, ServiceName: "test"}
 	thriftSpan := buildZipkinSpan(span, annotations, binaryAnnotations, "test", endpoint)
 	// client submit
-	res, err := r.client.Submit(ctx, thriftSpan)
-	fmt.Printf("%+#v", res)
-	return res.Ok, err
+	// ignore the response result because TChannel shouldn't care about it.
+	_, err := r.client.Submit(ctx, thriftSpan)
+	return err
 }
 
 // buildZipkinSpan builds zipkin span based on tchannel span.

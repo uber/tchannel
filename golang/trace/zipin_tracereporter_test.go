@@ -129,8 +129,7 @@ func TestSubmit(t *testing.T) {
 		ret := &gen.Response{Ok: true}
 
 		args.s.On("Submit", ctxArg(), thriftSpan).Return(ret, nil)
-		res, err := args.c.Report(span, annotations, nil)
-		assert.Equal(t, res, true)
+		err := args.c.Report(span, annotations, nil)
 		assert.NoError(t, err)
 	})
 }
