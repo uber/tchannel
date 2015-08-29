@@ -203,8 +203,8 @@ allocHTTPTest('as/http can handle a timeout', {
             method: 'GET',
             path: '/such/stuff',
         }, null, {
-            statusCode: 500,
-            body: 'null'
+            statusCode: 504,
+            statusMessage: 'Gateway Timeout'
         }),
 
     ], assert.end);
@@ -419,7 +419,9 @@ function testRequester(assert, baseOptions) {
         }
 
         function onEnd() {
-            assert.equal(String(buf.read()), expected.body, 'expected body');
+            if (expected.body) {
+                assert.equal(String(buf.read()), expected.body, 'expected body');
+            }
             callback(null);
         }
     }
