@@ -21,8 +21,6 @@
 'use strict';
 
 var allocCluster = require('./lib/test-cluster.js');
-var path = require('path');
-var fs = require('fs');
 var setTimeout = require('timers').setTimeout;
 
 allocCluster.test('rate limiter should be configured correclty', {
@@ -42,7 +40,23 @@ allocCluster.test('rate limiter should be configured correclty', {
     }
 }, function t(cluster, assert) {
     cluster.apps.forEach(function update(app) {
-        var content = fs.readFileSync(path.join(__dirname, 'hyperbahn-remote-config.json'), 'utf8');
+        var content = JSON.stringify([{
+            'key': 'rateLimiting.enabled',
+            'value': true
+        }, {
+            'key': 'rateLimiting.exemptServices',
+            'value': ['sam', 'robert']
+        }, {
+            'key': 'rateLimiting.rpsLimitForServiceName',
+            'value': {
+                'nancy': 111,
+                'bill': 60,
+                'summer': 66
+            }
+        }, {
+            'key': 'rateLimiting.totalRpsLimit',
+            'value': 1201
+        }]);
         app.remoteConfigFile.writeFile(content);
     });
     setTimeout(check, 20);
