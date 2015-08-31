@@ -28,7 +28,8 @@ var parallel = require('run-parallel');
 allocCluster.test('request circuit state from endpoint', {
     size: 2,
     remoteConfig: {
-        'rateLimiting.enable': false
+        'rateLimiting.enabled': false,
+        'circuits.enabled': true
     },
     seedConfig: {
         'hyperbahn.circuits': {
