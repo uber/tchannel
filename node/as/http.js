@@ -188,9 +188,7 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
     }, requestOptions));
     var peer = tchannel.peers.choosePeer(null);
     if (!peer) {
-        hres.writeHead(503, 'Service Unavailable: no tchannel peer');
-        hres.end(); // TODO: error content
-        self.logger.warn('Choose peer failed');
+        self._sendHTTPError(hres, errors.NoPeerAvailable());
         callback(errors.NoPeerAvailable());
         return null;
     }
@@ -198,11 +196,7 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
     peer.waitForIdentified(onIdentified);
     function onIdentified(err) {
         if (err) {
-            hres.writeHead(500, 'Connection failure');
-            hres.end();
-            self.logger.warn('Identifying peer failed', {
-                error: err
-            });
+            self._sendHTTPError(hres, err);
             callback(err);
             return null;
         }
@@ -214,13 +208,7 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
 
     function forwarded(err, head, bodyStream, bodyArg) {
         if (err) {
-            // TODO: better map of error type -> http status code, see
-            // tchannel/errors.classify
-            hres.writeHead(500, err.type + ' - ' + err.message);
-            hres.end(); // TODO: error content
-            self.logger.warn('Forwarding to tchannel failed', {
-                error: err
-            });
+            self._sendHTTPError(hres, err);
         } else {
             var headers = self._fromBufferHeader(head.headerPairs);
             // work-arround a node issue where default statusMessage is missing
@@ -238,6 +226,38 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
         }
         callback(err);
     }
+};
+
+TChannelHTTP.prototype._sendHTTPError = function _sendHTTPError(hres, error) {
+    hres.setHeader('Content-Type', 'text/plain');
+    var codeName = errors.classify(error);
+    switch (codeName) {
+        case 'Cancelled':
+            hres.writeHead(500, 'TChannel Cancelled');
+            break;
+        case 'Unhealthy':
+        case 'Declined':
+            hres.writeHead(503, 'Service Unavailable');
+            break;
+        case 'Timeout':
+            hres.writeHead(504, 'Gateway Timeout');
+            break;
+        case 'BadRequest':
+            hres.writeHead(400, 'Bad Request');
+            break;
+        case 'Busy':
+            hres.writeHead(429, 'Too Many Requests');
+            break;
+        case 'ProtocolError':
+            hres.writeHead(500, 'TChannel Protocol Error');
+            break;
+        case 'NetworkError':
+            hres.writeHead(500, 'TChannel Network Error');
+            break;
+        default:
+            hres.writeHead(500, 'Internal Server Error');
+    }
+    hres.end(error.message);
 };
 
 TChannelHTTP.prototype.forwardToHTTP = function forwardToHTTP(tchannel, options, inreq, outres, callback) {
