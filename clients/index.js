@@ -37,9 +37,10 @@ var ServiceProxy = require('tchannel/hyperbahn/service_proxy.js');
 var CountedReadySignal = require('ready-signal/counted');
 var fs = require('fs');
 var ProcessReporter = require('process-reporter');
+var NullStatsd = require('uber-statsd-client/null');
 
 var createLogger = require('./logger.js');
-var createStatsd = require('./statsd.js');
+var DualStatsd = require('./dual-statsd.js');
 var createRepl = require('./repl.js');
 var HeapDumper = require('./heap-dumper.js');
 var RemoteConfig = require('./remote-config.js');
@@ -66,12 +67,17 @@ function ApplicationClients(options) {
         JSON.parse(options.argv.bootstrapFile) :
         config.get('hyperbahn.ringpop.bootstrapFile');
 
-    self.statsd = options.seedClients.statsd ||
-        createStatsd({
-            project: config.get('info.project'),
-            host: config.get('clients.uber-statsd-client').host,
-            port: config.get('clients.uber-statsd-client').port
-        });
+    var statsOptions = config.get('clients.uber-statsd-client');
+    self.statsd = options.seedClients.statsd || (
+        (statsOptions && statsOptions.host && statsOptions.port) ?
+            DualStatsd({
+                host: statsOptions.host,
+                port: statsOptions.port,
+                project: config.get('info.project'),
+                processTitle: options.processTitle
+            }) :
+            NullStatsd()
+    );
     self.logger = options.seedClients.logger ||
         createLogger({
             team: config.get('info.team'),
