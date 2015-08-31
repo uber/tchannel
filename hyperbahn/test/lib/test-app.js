@@ -47,6 +47,7 @@ function TestApplication(opts) {
 
     opts = opts || {};
     opts.seedConfig = shallowExtend(opts.seedConfig || {});
+    opts.processTitle = 'test-hyperbahn';
     opts.argv = opts.argv || {};
     if (typeof opts.argv.port === 'undefined') {
         opts.argv.port = 0;
@@ -80,7 +81,8 @@ function TestApplication(opts) {
         maxErrorRate: opts.maxErrorRate,
         minRequests: opts.minRequests,
         probation: opts.probation,
-        rateLimiterBuckets: opts.rateLimiterBuckets
+        rateLimiterBuckets: opts.rateLimiterBuckets,
+        processTitle: opts.processTitle
     });
 
     // The client is initialized once the application has

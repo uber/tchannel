@@ -55,6 +55,7 @@ function Application(config, opts) {
         config: config,
         argv: opts.argv,
         seedClients: self.seedClients,
+        processTitle: opts.processTitle,
 
         serviceReqDefaults: opts.serviceReqDefaults,
         servicePurgePeriod: opts.servicePurgePeriod,
