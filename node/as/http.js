@@ -229,6 +229,7 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
 };
 
 TChannelHTTP.prototype._sendHTTPError = function _sendHTTPError(hres, error) {
+    hres.setHeader('Content-Type', 'text/plain');
     var codeName = errors.classify(error);
     switch (codeName) {
         case 'Cancelled':
