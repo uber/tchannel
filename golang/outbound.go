@@ -32,7 +32,7 @@ import (
 const maxOperationSize = 16 * 1024
 
 // beginCall begins an outbound call on the connection
-func (c *Connection) beginCall(ctx context.Context, serviceName string, callOptions *CallOptions) (*OutboundCall, error) {
+func (c *Connection) beginCall(ctx context.Context, serviceName string, callOptions *CallOptions, operation string) (*OutboundCall, error) {
 	switch c.readState() {
 	case connectionActive, connectionStartClose:
 		break
