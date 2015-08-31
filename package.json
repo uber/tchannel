@@ -41,7 +41,7 @@
     "static-config": "2.1.0",
     "tape-cluster": "2.0.1",
     "tcap": "5.4.2",
-    "tchannel": "2.7.4",
+    "tchannel": "2.8.0",
     "tcurl": "4.8.1",
     "thriftify": "1.0.0-alpha14",
     "uber-statsd-client": "1.3.2",
