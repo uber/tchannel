@@ -59,7 +59,7 @@ allocCluster.test('disable rate limiter and forward', {
 
         bob.clientChannel.request({
             serviceName: 'steve',
-            timeout: 100
+            timeout: 50
         }).send('echo', null, JSON.stringify('oh hi lol'), onForwarded);
     }
 
@@ -109,7 +109,7 @@ allocCluster.test('set total rate limiter and forward', {
 
         bob.clientChannel.request({
             serviceName: 'steve',
-            timeout: 10
+            timeout: 50
         }).send('echo', null, JSON.stringify('oh hi lol'), onReq);
 
         function onReq(err2) {
@@ -117,7 +117,7 @@ allocCluster.test('set total rate limiter and forward', {
 
             bob.clientChannel.request({
                 serviceName: 'steve',
-                timeout: 10
+                timeout: 50
             }).send('echo', null, JSON.stringify('oh hi lol'), onForwarded);
         }
     }
@@ -181,7 +181,7 @@ allocCluster.test('set service rate limiter and forward', {
         }
         bob.clientChannel.request({
             serviceName: 'steve',
-            timeout: 10
+            timeout: 50
         }).send('echo', null, JSON.stringify('oh hi lol'), cb);
     }
 
@@ -232,7 +232,7 @@ allocCluster.test('set exempt service and forward', {
 
         bob.clientChannel.request({
             serviceName: 'steve',
-            timeout: 10
+            timeout: 50
         }).send('echo', null, JSON.stringify('oh hi lol'), onForwarded);
     }
 
