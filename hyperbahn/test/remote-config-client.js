@@ -76,7 +76,7 @@ test('will update on starting up', function t(assert) {
     });
 
     config.startPolling();
-    setTimeout(check, 20);
+    setTimeout(check, 50);
     function check() {
         assert.ok(updated, 'the update event should have been emitted');
         config.destroy();
@@ -100,7 +100,7 @@ test('will alert on property change', function t(assert) {
         'foo': 'baz'
     });
 
-    setTimeout(check, 20);
+    setTimeout(check, 50);
     function check() {
         assert.ok(updated, 'the update event should have been emitted');
         config.destroy();

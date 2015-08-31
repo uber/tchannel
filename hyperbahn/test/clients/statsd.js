@@ -25,7 +25,7 @@ var dgram = require('dgram');
 var os = require('os');
 var setTimeout = require('timers').setTimeout;
 
-var createStatsd = require('../../clients/statsd.js');
+var createStatsd = require('../../clients/dual-statsd.js');
 
 test('statsd can talk to a server', function t(assert) {
 
@@ -48,7 +48,8 @@ test('statsd can talk to a server', function t(assert) {
             packetQueue: {
                 flush: 10
             },
-            socketTimeout: 25
+            socketTimeout: 25,
+            processTitle: 'test-hyperbahn'
         });
 
         client.increment('some-stat');
@@ -58,7 +59,9 @@ test('statsd can talk to a server', function t(assert) {
         function onStat() {
             assert.deepEqual(messages, [
                 'my-app..' + os.hostname().split('.')[0] +
-                    '.some-stat:1|c\n'
+                    '.some-stat:1|c\n',
+                'my-app.per-worker..' + os.hostname().split('.')[0] +
+                    '.test-hyperbahn.some-stat:1|c\n'
             ]);
 
             server.close();
