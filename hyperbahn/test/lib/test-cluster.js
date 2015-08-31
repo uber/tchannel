@@ -34,7 +34,6 @@ var inherits = require('util').inherits;
 var nodeAssert = require('assert');
 var TChannelJSON = require('tchannel/as/json');
 var tapeCluster = require('tape-cluster');
-var path = require('path');
 
 var TCReporter = require('tchannel/tcollector/reporter');
 var FakeTCollector = require('./fake-tcollector');
