@@ -219,10 +219,6 @@ func (p *Peer) BeginCall(ctx context.Context, serviceName string, operationName 
 		return nil, err
 	}
 
-	if err := call.writeOperation([]byte(operationName)); err != nil {
-		return nil, err
-	}
-
 	return call, err
 }
 

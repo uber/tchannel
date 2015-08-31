@@ -157,7 +157,9 @@ func withSetup(t *testing.T, f func(ctx thrift.Context, args testArgs)) {
 }
 
 func setupServer(h *mocks.TChanTCollector) (*tchannel.Channel, net.Listener, error) {
-	tchan, err := tchannel.NewChannel(tcollectorServiceName, nil)
+	tchan, err := tchannel.NewChannel(tcollectorServiceName, &tchannel.ChannelOptions{
+		Logger: tchannel.SimpleLogger,
+	})
 	if err != nil {
 		return nil, nil, err
 	}

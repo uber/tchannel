@@ -131,6 +131,10 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string, callOpti
 	response.commonStatsTags = call.commonStatsTags
 
 	call.response = response
+
+	if err := call.writeOperation([]byte(operation)); err != nil {
+		return nil, err
+	}
 	return call, nil
 }
 

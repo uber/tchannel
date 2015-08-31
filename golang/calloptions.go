@@ -48,10 +48,6 @@ type CallOptions struct {
 var defaultCallOptions = &CallOptions{}
 
 func (c *CallOptions) setHeaders(headers transportHeaders) {
-	if c == nil {
-		c = defaultCallOptions
-	}
-
 	headers[ArgScheme] = Raw.String()
 	c.overrideHeaders(headers)
 }
