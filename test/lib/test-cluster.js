@@ -34,7 +34,6 @@ var inherits = require('util').inherits;
 var nodeAssert = require('assert');
 var TChannelJSON = require('tchannel/as/json');
 var tapeCluster = require('tape-cluster');
-var path = require('path');
 
 var TCReporter = require('tchannel/tcollector/reporter');
 var FakeTCollector = require('./fake-tcollector');
@@ -338,25 +337,26 @@ function createApplication(hostPort, cb) {
     var host = parts[0];
     var port = Number(parts[1]);
 
-    var remoteConfigPath = path.join(__dirname, '../hyperbahn-remote-config.json');
+    var localOpts = shallowExtend(self.opts);
+    localOpts.seedConfig = deepExtend(localOpts.seedConfig || {}, {
+        'tchannel.host': host,
+        'hyperbahn.ringpop.bootstrapFile': self.ringpopHosts
+    });
+    localOpts.argv = {
+        port: port
+    };
+
+    // var remoteConfigPath = path.join(__dirname, '../hyperbahn-remote-config.json');
     var rateLimiterBuckets;
     var remoteConfigFile;
     if (self.opts.remoteConfig) {
         remoteConfigFile = RemoteConfigFile(hostPort);
         remoteConfigFile.write(self.opts.remoteConfig);
-        remoteConfigPath = remoteConfigFile.filePath;
+        localOpts.seedConfig = deepExtend(localOpts.seedConfig, {
+            'clients.remote-config.file': remoteConfigFile.filePath
+        });
         rateLimiterBuckets = self.opts.remoteConfig['rateLimiting.rateLimiterBuckets'];
     }
-
-    var localOpts = shallowExtend(self.opts);
-    localOpts.seedConfig = deepExtend(localOpts.seedConfig || {}, {
-        'tchannel.host': host,
-        'hyperbahn.ringpop.bootstrapFile': self.ringpopHosts,
-        'clients.remote-config.file': remoteConfigPath
-    });
-    localOpts.argv = {
-        port: port
-    };
 
     localOpts.clients = localOpts.clients || {};
     localOpts.clients.logger =

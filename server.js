@@ -52,6 +52,7 @@ function main(opts) {
     assert(opts.argv.port !== undefined, '--port is required');
 
     var config = createConfig();
+    opts.processTitle = process.title;
     var app = Application(config, opts);
 
     // attach before throwing exception
