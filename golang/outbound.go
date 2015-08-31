@@ -32,7 +32,7 @@ import (
 const maxOperationSize = 16 * 1024
 
 // beginCall begins an outbound call on the connection
-func (c *Connection) beginCall(ctx context.Context, serviceName string, callOptions *CallOptions) (*OutboundCall, error) {
+func (c *Connection) beginCall(ctx context.Context, serviceName string, callOptions *CallOptions, operation string) (*OutboundCall, error) {
 	switch c.readState() {
 	case connectionActive, connectionStartClose:
 		break
@@ -87,6 +87,10 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string, callOpti
 	call.createStatsTags(c.commonStatsTags)
 	call.log = c.log.WithFields(LogField{"Out-Call", requestID})
 
+	if callOptions.Format != HTTP {
+		call.commonStatsTags["target-endpoint"] = string(operation)
+	}
+
 	// TODO(mmihic): It'd be nice to do this without an fptr
 	call.messageForFragment = func(initial bool) message {
 		if initial {
@@ -125,6 +129,7 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string, callOpti
 	response.contents = newFragmentingReader(response)
 	response.statsReporter = call.statsReporter
 	response.commonStatsTags = call.commonStatsTags
+
 	call.response = response
 	return call, nil
 }
@@ -183,11 +188,6 @@ func (call *OutboundCall) createStatsTags(connectionTags map[string]string) {
 func (call *OutboundCall) writeOperation(operation []byte) error {
 	if len(operation) > maxOperationSize {
 		return call.failed(ErrOperationTooLarge)
-	}
-
-	// TODO(prashant): Should operation become part of BeginCall so this can use Format directly.
-	if call.callReq.Headers[ArgScheme] != HTTP.String() {
-		call.commonStatsTags["target-endpoint"] = string(operation)
 	}
 
 	call.statsReporter.IncCounter("outbound.calls.send", call.commonStatsTags, 1)

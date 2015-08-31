@@ -211,7 +211,10 @@ func (p *Peer) BeginCall(ctx context.Context, serviceName string, operationName 
 		return nil, err
 	}
 
-	call, err := conn.beginCall(ctx, serviceName, callOptions)
+	if callOptions == nil {
+		callOptions = defaultCallOptions
+	}
+	call, err := conn.beginCall(ctx, serviceName, callOptions, operationName)
 	if err != nil {
 		return nil, err
 	}
