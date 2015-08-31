@@ -59,7 +59,7 @@ allocCluster.test('disable rate limiter and forward', {
 
         bob.clientChannel.request({
             serviceName: 'steve',
-            timeout: 10
+            timeout: 100
         }).send('echo', null, JSON.stringify('oh hi lol'), onForwarded);
     }
 
