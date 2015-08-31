@@ -77,6 +77,7 @@ function TimeHeap(options) {
     self.lastTime = self.timers.now();
     self.timer = null;
     self.end = 0;
+    self.lastRun = 0;
 }
 
 TimeHeap.prototype.clear = function clear() {
@@ -139,6 +140,7 @@ TimeHeap.prototype.onTimeout = function onTimeout(now) {
     var self = this;
 
     self.timer = null;
+    self.lastRun = now;
     self.drainExpired(now);
     if (self.end) {
         self.setNextTimer(now);
