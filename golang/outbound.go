@@ -32,7 +32,7 @@ import (
 const maxOperationSize = 16 * 1024
 
 // beginCall begins an outbound call on the connection
-func (c *Connection) beginCall(ctx context.Context, serviceName string, callOptions *CallOptions) (*OutboundCall, error) {
+func (c *Connection) beginCall(ctx context.Context, serviceName string, callOptions *CallOptions, operation string) (*OutboundCall, error) {
 	switch c.readState() {
 	case connectionActive, connectionStartClose:
 		break
@@ -84,7 +84,7 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string, callOpti
 		TimeToLive: timeToLive,
 	}
 	call.statsReporter = c.statsReporter
-	call.createStatsTags(c.commonStatsTags)
+	call.createStatsTags(c.commonStatsTags, callOptions, operation)
 	call.log = c.log.WithFields(LogField{"Out-Call", requestID})
 
 	// TODO(mmihic): It'd be nice to do this without an fptr
@@ -125,7 +125,12 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string, callOpti
 	response.contents = newFragmentingReader(response)
 	response.statsReporter = call.statsReporter
 	response.commonStatsTags = call.commonStatsTags
+
 	call.response = response
+
+	if err := call.writeOperation([]byte(operation)); err != nil {
+		return nil, err
+	}
 	return call, nil
 }
 
@@ -170,24 +175,24 @@ func (call *OutboundCall) Response() *OutboundCallResponse {
 }
 
 // createStatsTags creates the common stats tags, if they are not already created.
-func (call *OutboundCall) createStatsTags(connectionTags map[string]string) {
+func (call *OutboundCall) createStatsTags(connectionTags map[string]string, callOptions *CallOptions, operation string) {
 	call.commonStatsTags = map[string]string{
 		"target-service": call.callReq.Service,
 	}
 	for k, v := range connectionTags {
 		call.commonStatsTags[k] = v
 	}
+
+	if callOptions.Format != HTTP {
+		call.commonStatsTags["target-endpoint"] = string(operation)
+	}
+
 }
 
 // writeOperation writes the operation (arg1) to the call
 func (call *OutboundCall) writeOperation(operation []byte) error {
 	if len(operation) > maxOperationSize {
 		return call.failed(ErrOperationTooLarge)
-	}
-
-	// TODO(prashant): Should operation become part of BeginCall so this can use Format directly.
-	if call.callReq.Headers[ArgScheme] != HTTP.String() {
-		call.commonStatsTags["target-endpoint"] = string(operation)
 	}
 
 	call.statsReporter.IncCounter("outbound.calls.send", call.commonStatsTags, 1)
