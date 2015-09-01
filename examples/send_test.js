@@ -95,6 +95,11 @@ ready(function (err) {
     });
     client.waitForIdentified({host: '127.0.0.1:4040'}, function onIdentified() {
         req.send('ping', null, null, function (err, res) {
+            if (err) {
+                console.error('FAILED to send ping to 127.0.0.1:4040', err);
+                process.exit(1);
+                return;
+            }
             console.log('ping res from client: ' + res.arg2 + ' ' + res.arg3);
             var sreq = server.request({
                 headers: {
@@ -105,6 +110,11 @@ ready(function (err) {
             });
             server.waitForIdentified({host: '127.0.0.1:4041'}, function onClientIdentified() {
                 sreq.send('ping', null, null, function (err, res) {
+                    if (err) {
+                        console.error('FAILED to send ping to 127.0.0.1:4041', err);
+                        process.exit(1);
+                        return;
+                    }
                     console.log('ping res server: ' + res.arg2 + ' ' + res.arg3);
                     topClient.close();
                 });
