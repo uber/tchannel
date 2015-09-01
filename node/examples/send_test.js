@@ -97,18 +97,18 @@ ready(function (err) {
         req.send('ping', null, null, function (err, res) {
             console.log('ping res from client: ' + res.arg2 + ' ' + res.arg3);
             var sreq = server.request({
-                    headers: {
-                        cn: 'server',
-                        as: 'raw'
-                    },
-                    hasNoParent: true
-                });
+                headers: {
+                    cn: 'server',
+                    as: 'raw'
+                },
+                hasNoParent: true
+            });
             server.waitForIdentified({host: '127.0.0.1:4041'}, function onClientIdentified() {
                 sreq.send('ping', null, null, function (err, res) {
                     console.log('ping res server: ' + res.arg2 + ' ' + res.arg3);
                     topClient.close();
                 });
-            })
+            });
         });
     });
 
