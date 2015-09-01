@@ -240,7 +240,9 @@ HyperbahnClient.prototype.advertisementFailure =
 function advertisementFailure(err) {
     var self = this;
 
-    self.destroy();
+    if (self.hardFail) {
+        self.destroy();
+    }
     self.emit('error', err);
 
     if (self.statsd) {
