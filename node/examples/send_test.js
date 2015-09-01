@@ -87,6 +87,7 @@ var ready = CountedReadySignal(3);
 
 ready(function (err) {
     var req = client.request({
+        serviceName: 'server',
         headers: {
             cn: 'client',
             as: 'raw'
@@ -102,6 +103,7 @@ ready(function (err) {
             }
             console.log('ping res from client: ' + res.arg2 + ' ' + res.arg3);
             var sreq = server.request({
+                serviceName: 'client',
                 headers: {
                     cn: 'server',
                     as: 'raw'
@@ -124,6 +126,7 @@ ready(function (err) {
 
     // very aggressive settings. Not recommended for real life.
     var req2 = client2.request({
+        serviceName: 'server',
         headers: {
             cn: 'client2',
             as: 'raw'
@@ -136,6 +139,7 @@ ready(function (err) {
             console.log('2 slow res: ' + formatRes(err, res));
             client2
                 .request({
+                    serviceName: 'server',
                     headers: {
                         cn: 'client2',
                         as: 'raw'
@@ -148,6 +152,7 @@ ready(function (err) {
 
             client2
                 .request({
+                    serviceName: 'server',
                     headers: {
                         cn: 'client2',
                         as: 'raw'
@@ -162,6 +167,7 @@ ready(function (err) {
 
         client2
             .request({
+                serviceName: 'server',
                 headers: {
                     cn: 'client2',
                     as: 'raw'
