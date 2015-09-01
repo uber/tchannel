@@ -44,24 +44,23 @@ func TestZipkinTraceReporterFactory(t *testing.T) {
 }
 
 func TestBuildZipkinSpan(t *testing.T) {
-	host := &tchannel.Endpoint{
-		Ipv4:        "127.0.0.1",
-		Port:        8888,
-		ServiceName: "test",
+	endpoint := tchannel.TargetEndpoint{
+		HostPort:    "127.0.0.1:8888",
+		ServiceName: "testServer",
+		Operation:   "test",
 	}
 	span := *tchannel.NewRootSpan()
-	name := "test"
 	annotations := RandomAnnotations()
-	thriftSpan := buildZipkinSpan(span, annotations, nil, name, host)
+	thriftSpan := buildZipkinSpan(span, annotations, nil, endpoint)
 
 	expectedSpan := &gen.Span{
 		TraceId: uint64ToBytes(span.TraceID()),
 		Host: &gen.Endpoint{
 			Ipv4:        (int32)(inetAton("127.0.0.1")),
 			Port:        8888,
-			ServiceName: "test",
+			ServiceName: "testServer",
 		},
-		Name:        name,
+		Name:        "test",
 		Id:          uint64ToBytes(span.SpanID()),
 		ParentId:    uint64ToBytes(span.ParentID()),
 		Annotations: buildZipkinAnnotations(annotations),
@@ -116,20 +115,19 @@ func ctxArg() mock.AnythingOfTypeArgument {
 
 func TestSubmit(t *testing.T) {
 	withSetup(t, func(ctx thrift.Context, args testArgs) {
-		host := &tchannel.Endpoint{
-			Ipv4:        "127.0.0.1",
-			Port:        8888,
-			ServiceName: "test",
+		endpoint := tchannel.TargetEndpoint{
+			HostPort:    "127.0.0.1:8888",
+			ServiceName: "testServer",
+			Operation:   "test",
 		}
 		span := *tchannel.NewRootSpan()
-		name := "test"
 		annotations := RandomAnnotations()
-		thriftSpan := buildZipkinSpan(span, annotations, nil, name, host)
+		thriftSpan := buildZipkinSpan(span, annotations, nil, endpoint)
 		thriftSpan.BinaryAnnotations = []*gen.BinaryAnnotation{}
 		ret := &gen.Response{Ok: true}
 
 		args.s.On("Submit", ctxArg(), thriftSpan).Return(ret, nil)
-		err := args.c.Report(span, annotations, nil)
+		err := args.c.Report(span, annotations, nil, endpoint)
 		assert.NoError(t, err)
 	})
 }

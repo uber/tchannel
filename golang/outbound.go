@@ -115,8 +115,13 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string, callOpti
 	response.log = c.log.WithFields(LogField{"Out-Response", requestID})
 	response.messageForFragment = func(initial bool) message {
 		if initial {
+			targetEndpoint := TargetEndpoint{
+				HostPort:    call.conn.remotePeerInfo.HostPort,
+				ServiceName: serviceName,
+				Operation:   operation,
+			}
 			call.AddAnnotation(AnnotationKeyClientReceive)
-			call.Report(call.callReq.Tracing, c.traceReporter)
+			call.Report(call.callReq.Tracing, targetEndpoint, c.traceReporter)
 			return &response.callRes
 		}
 
