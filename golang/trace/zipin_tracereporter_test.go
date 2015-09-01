@@ -46,8 +46,8 @@ func TestZipkinTraceReporterFactory(t *testing.T) {
 func TestBuildZipkinSpan(t *testing.T) {
 	endpoint := tchannel.TargetEndpoint{
 		HostPort:    "127.0.0.1:8888",
-		ServiceName: "test",
-		Name:        "test",
+		ServiceName: "testServer",
+		Operation:   "test",
 	}
 	span := *tchannel.NewRootSpan()
 	annotations := RandomAnnotations()
@@ -58,7 +58,7 @@ func TestBuildZipkinSpan(t *testing.T) {
 		Host: &gen.Endpoint{
 			Ipv4:        (int32)(inetAton("127.0.0.1")),
 			Port:        8888,
-			ServiceName: "test",
+			ServiceName: "testServer",
 		},
 		Name:        "test",
 		Id:          uint64ToBytes(span.SpanID()),
@@ -117,8 +117,8 @@ func TestSubmit(t *testing.T) {
 	withSetup(t, func(ctx thrift.Context, args testArgs) {
 		endpoint := tchannel.TargetEndpoint{
 			HostPort:    "127.0.0.1:8888",
-			ServiceName: "test",
-			Name:        "test",
+			ServiceName: "testServer",
+			Operation:   "test",
 		}
 		span := *tchannel.NewRootSpan()
 		annotations := RandomAnnotations()

@@ -38,7 +38,7 @@ var (
 type TargetEndpoint struct {
 	HostPort    string
 	ServiceName string
-	Name        string
+	Operation   string
 }
 
 // Span represents Zipkin-style span.

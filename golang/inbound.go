@@ -93,7 +93,7 @@ func (c *Connection) handleCallReq(frame *Frame) bool {
 			targetEndpoint := TargetEndpoint{
 				HostPort:    c.localPeerInfo.HostPort,
 				ServiceName: call.serviceName,
-				Name:        string(call.Operation()),
+				Operation:   string(call.Operation()),
 			}
 			call.Report(callReq.Tracing, targetEndpoint, c.traceReporter)
 
