@@ -35,6 +35,10 @@ import (
 var (
 	errAlreadyListening  = errors.New("channel already listening")
 	errInvalidStateForOp = errors.New("channel is in an invalid state for that operation")
+
+	// ErrNoServiceName is returned when no service name is provided when
+	// creating a new channel.
+	ErrNoServiceName = errors.New("no service name provided")
 )
 
 const (
@@ -119,6 +123,10 @@ type Channel struct {
 // to peers, but will not listen or handling incoming requests until one of ListenAndServe
 // or Serve is called. The local service name should be passed to serviceName.
 func NewChannel(serviceName string, opts *ChannelOptions) (*Channel, error) {
+	if serviceName == "" {
+		return nil, ErrNoServiceName
+	}
+
 	if opts == nil {
 		opts = &ChannelOptions{}
 	}
