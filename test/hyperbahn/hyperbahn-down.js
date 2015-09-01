@@ -65,10 +65,10 @@ function runTests(HyperbahnCluster) {
             assert.equal(err.time, 200);
             assert.equal(err.code, 'ECONNREFUSED');
             assert.equal(err.syscall, 'connect');
-            assert.equal(err.fullType,
+            assert.ok(err.fullType.indexOf(
                 'hyperbahn-client.advertisement-timeout' +
-                '~!~tchannel.socket' +
-                '~!~error.wrapped-io.connect.ECONNREFUSED');
+                '~!~tchannel.socket', 0) === 0,
+                'error should be advertisement timeout, wrapping etc');
             assert.equal(err.causeMessage,
                 'tchannel socket error ' +
                 '(ECONNREFUSED from connect): ' +
