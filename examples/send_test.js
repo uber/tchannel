@@ -85,7 +85,7 @@ client.handler.register('ping', function onPing(req, res) {
 
 var ready = CountedReadySignal(3);
 
-var listening = ready(function (err) {
+ready(function (err) {
     var req = client.request({
         headers: {
             cn: 'client',
