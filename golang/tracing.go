@@ -34,11 +34,11 @@ var (
 	traceRng = NewRand(time.Now().UnixNano())
 )
 
-// Endpoint represents Zipkin-style endpoint.
-type Endpoint struct {
-	Ipv4        string
-	Port        int32
+// TargetEndpoint represents target server endpoint information.
+type TargetEndpoint struct {
+	HostPort    string
 	ServiceName string
+	Name        string
 }
 
 // Span represents Zipkin-style span.

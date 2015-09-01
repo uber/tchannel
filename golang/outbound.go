@@ -109,6 +109,11 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string, callOpti
 	call.AddBinaryAnnotation(BinaryAnnotation{Key: "as", Value: call.callReq.Headers[ArgScheme]})
 	call.AddAnnotation(AnnotationKeyClientSend)
 
+	targetEndpoint := TargetEndpoint{
+		HostPort:    call.conn.remotePeerInfo.HostPort,
+		ServiceName: serviceName,
+		Name:        operation,
+	}
 	response := new(OutboundCallResponse)
 	response.startedAt = timeNow()
 	response.mex = mex
@@ -116,7 +121,7 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string, callOpti
 	response.messageForFragment = func(initial bool) message {
 		if initial {
 			call.AddAnnotation(AnnotationKeyClientReceive)
-			call.Report(call.callReq.Tracing, c.traceReporter)
+			call.Report(call.callReq.Tracing, targetEndpoint, c.traceReporter)
 			return &response.callRes
 		}
 

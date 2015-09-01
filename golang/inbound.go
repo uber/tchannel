@@ -79,7 +79,6 @@ func (c *Connection) handleCallReq(frame *Frame) bool {
 	call.AddBinaryAnnotation(BinaryAnnotation{Key: "cn", Value: callReq.Headers[CallerName]})
 	call.AddBinaryAnnotation(BinaryAnnotation{Key: "as", Value: callReq.Headers[ArgScheme]})
 	call.AddAnnotation(AnnotationKeyServerReceive)
-
 	response := new(InboundCallResponse)
 	response.mex = mex
 	response.conn = c
@@ -91,7 +90,12 @@ func (c *Connection) handleCallReq(frame *Frame) bool {
 	response.messageForFragment = func(initial bool) message {
 		if initial {
 			call.AddAnnotation(AnnotationKeyServerSend)
-			call.Report(callReq.Tracing, c.traceReporter)
+			targetEndpoint := TargetEndpoint{
+				HostPort:    c.localPeerInfo.HostPort,
+				ServiceName: call.serviceName,
+				Name:        string(call.Operation()),
+			}
+			call.Report(callReq.Tracing, targetEndpoint, c.traceReporter)
 
 			callRes := new(callRes)
 			callRes.Headers = response.headers

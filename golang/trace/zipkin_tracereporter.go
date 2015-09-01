@@ -25,6 +25,8 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"net"
+	"strconv"
+	"strings"
 	"time"
 
 	tc "github.com/uber/tchannel/golang"
@@ -49,14 +51,12 @@ func NewZipkinTraceReporter(ch *tc.Channel) *ZipkinTraceReporter {
 
 // Report method will submit trace span to tcollector server.
 func (r *ZipkinTraceReporter) Report(
-	span tc.Span, annotations []tc.Annotation, binaryAnnotations []tc.BinaryAnnotation) error {
+	span tc.Span, annotations []tc.Annotation, binaryAnnotations []tc.BinaryAnnotation, targetEndpoint tc.TargetEndpoint) error {
 	ctx, cancel := tc.NewContextBuilder(time.Second).
 		SetShardKey(base64Encode(span.TraceID())).Build()
 	defer cancel()
 
-	// FIXME remove this dummy endpoint.
-	endpoint := &tc.Endpoint{Ipv4: "127.0.0.1", Port: 8888, ServiceName: "test"}
-	thriftSpan := buildZipkinSpan(span, annotations, binaryAnnotations, "test", endpoint)
+	thriftSpan := buildZipkinSpan(span, annotations, binaryAnnotations, targetEndpoint)
 	// client submit
 	// ignore the response result because TChannel shouldn't care about it.
 	_, err := r.client.Submit(ctx, thriftSpan)
@@ -64,18 +64,20 @@ func (r *ZipkinTraceReporter) Report(
 }
 
 // buildZipkinSpan builds zipkin span based on tchannel span.
-func buildZipkinSpan(span tc.Span, annotations []tc.Annotation, binaryAnnotations []tc.BinaryAnnotation, name string, endpoint *tc.Endpoint) *tcollector.Span {
+func buildZipkinSpan(span tc.Span, annotations []tc.Annotation, binaryAnnotations []tc.BinaryAnnotation, targetEndpoint tc.TargetEndpoint) *tcollector.Span {
+	hostport := strings.Split(targetEndpoint.HostPort, ":")
+	port, _ := strconv.ParseInt(hostport[1], 10, 32)
 	host := tcollector.Endpoint{
-		Ipv4:        (int32)(inetAton(endpoint.Ipv4)),
-		Port:        endpoint.Port,
-		ServiceName: endpoint.ServiceName,
+		Ipv4:        int32(inetAton(hostport[0])),
+		Port:        int32(port),
+		ServiceName: targetEndpoint.ServiceName,
 	}
 
 	// TODO Add BinaryAnnotations
 	thriftSpan := tcollector.Span{
 		TraceId:     uint64ToBytes(span.TraceID()),
 		Host:        &host,
-		Name:        name,
+		Name:        targetEndpoint.Name,
 		Id:          uint64ToBytes(span.SpanID()),
 		ParentId:    uint64ToBytes(span.ParentID()),
 		Annotations: buildZipkinAnnotations(annotations),
