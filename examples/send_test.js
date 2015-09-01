@@ -180,9 +180,9 @@ ready(function (err) {
     });
 });
 
-server.listen(4040, '127.0.0.1', ready.signal);
-client.listen(4041, '127.0.0.1', ready.signal);
-client2.listen(4042, '127.0.0.1', ready.signal);
+topServer.listen(4040, '127.0.0.1', ready.signal);
+topClient.listen(4041, '127.0.0.1', ready.signal);
+topClient2.listen(4042, '127.0.0.1', ready.signal);
 
 function formatRes(err, res) {
     var ret = [];
