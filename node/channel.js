@@ -323,7 +323,8 @@ TChannel.prototype.onServerSocketConnection = function onServerSocketConnection(
     }
 
     var socketRemoteAddr = sock.remoteAddress + ':' + sock.remotePort;
-    var conn = new TChannelConnection(self, sock, 'in', socketRemoteAddr);
+    var chan = self.topChannel || self;
+    var conn = new TChannelConnection(chan, sock, 'in', socketRemoteAddr);
 
     conn.errorEvent.on(onConnectionError);
 
