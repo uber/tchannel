@@ -156,7 +156,7 @@ function noop() {}
 TChannelConnection.prototype.setupHandler = function setupHandler() {
     var self = this;
 
-    self.setLazyHandling(self.channel.useLazyHandling);
+    self.setLazyHandling(self.channel.options.useLazyHandling);
 
     self.handler.write = function write(buf, done) {
         self.socket.write(buf, null, done);
