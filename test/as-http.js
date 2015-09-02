@@ -31,7 +31,7 @@ var TChannelHTTP = require('../as/http.js');
 var allocCluster = require('./lib/alloc-cluster.js');
 var LBPool = require('lb_pool').Pool;
 
-allocHTTPTest('as/http can bridge a service using node http', {
+allocHTTPTest('as/http can bridge a service using node http (streaming)', {
     onServiceRequest: handleTestHTTPRequest
 }, function t(cluster, assert) {
 
@@ -106,7 +106,7 @@ allocHTTPTest('as/http can bridge a service using node http', {
     ], assert.end);
 });
 
-allocHTTPTest('as/http can bridge a service using lbpool', {
+allocHTTPTest('as/http can bridge a service using lbpool (non-streaming)', {
     onServiceRequest: handleTestHTTPRequest,
     enableLBPool: true
 }, function t(cluster, assert) {
@@ -342,7 +342,7 @@ function allocHTTPBridge(opts) {
             cluster.egressChan,
             hreq,
             hres,
-            {},
+            {streamed: !opts.enableLBPool},
             onEgressComplete);
     }
 
