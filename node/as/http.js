@@ -198,9 +198,6 @@ TChannelHTTP.prototype.setHandler = function register(tchannel, handler) {
 TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, hreq, hres, requestOptions, callback) {
     var self = this;
     self.logger = self.logger || tchannel.logger;
-    // TODO: no retrying due to:
-    // - streamed bypasses TChannelRequest
-    // - driving peer selection manually therefore
     // TODO: more http state machine integration
 
     var options = tchannel.requestOptions(extendInto({
