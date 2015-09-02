@@ -159,7 +159,10 @@ function HyperbahnClient(options) {
     if (self.hardFail) {
         self.advertisementTimeoutTime = advertisementTimeout || 5000;
     } else {
-        self.advertisementTimeoutTime = advertisementTimeout;
+        self.advertisementTimeoutTime = 0;
+        self.logger.info('HyperbahnClient advertisement timeout disabled', {
+            service: self.serviceName
+        });
     }
 }
 
@@ -304,10 +307,6 @@ function advertise(opts) {
             },
             self.advertisementTimeoutTime
         );
-    } else {
-        self.logger.info('HyperbahnClient advertisement timeout disabled', {
-            service: self.serviceName
-        });
     }
 
     self.attemptCounter++;
