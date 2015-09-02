@@ -76,6 +76,7 @@ function BenchmarkRunner(opts) {
         statsdPort: STATSD_PORT,
         clientPort: CLIENT_PORT
     };
+    self.serviceName = 'benchmark';
 }
 
 BenchmarkRunner.prototype.start = function start() {
@@ -177,7 +178,7 @@ function startServer(serverPort, instances) {
 
     var noOverhead = self.opts.noEndpointOverhead;
 
-    var serverProc = run(server, [
+    var serverProc = self.run(server, [
         self.opts.trace ? '--trace' : '--no-trace',
         '--traceRelayHostPort', '127.0.0.1:' + self.ports.relayTraceServerPort,
         '--port', String(serverPort),
@@ -195,7 +196,7 @@ BenchmarkRunner.prototype.startGoServer =
 function startGoServer(serverPort, instances) {
     var self = this;
 
-    var serverProc = runExternal('../../golang/build/examples/bench/server', [
+    var serverProc = self.runExternal('../../golang/build/examples/bench/server', [
         '--host', 'localhost',
         '--port', String(serverPort),
         '--instances', String(instances)
@@ -209,7 +210,7 @@ BenchmarkRunner.prototype.startTraceServer =
 function startTraceServer() {
     var self = this;
 
-    self.traceProc = run(trace);
+    self.traceProc = self.run(trace);
     self.traceProc.stdout.pipe(process.stderr);
     self.traceProc.stderr.pipe(process.stdout);
 };
@@ -219,7 +220,7 @@ function startRelay(type) {
     var self = this;
 
     // type = 'bench-relay'
-    var relayProc = run(relay, [
+    var relayProc = self.run(relay, [
         '--benchPort', String(self.ports.serverPort),
         '--tracePort', String(self.ports.traceServerPort),
         '--benchRelayPort', String(self.ports.relayServerPort),
@@ -257,7 +258,7 @@ function startClient(clientPort) {
         '--clientPort', String(clientPort),
         '--instanceNumber', String(self.benchCounter)
     ]);
-    var benchProc = run(bench, args);
+    var benchProc = self.run(bench, args);
     self.benchProcs.push(benchProc);
 
     benchProc.stderr.pipe(process.stderr);
@@ -356,6 +357,21 @@ BenchmarkRunner.prototype.startTorch = function startTorch() {
     }, torchDelay);
 };
 
+BenchmarkRunner.prototype.run = function run(script, args) {
+    var name = script.replace(/\.js$/, '');
+    args = args ? args.slice(0) : [];
+    args.unshift(script);
+    var child = childProcess.spawn(process.execPath, args);
+    console.error('running', name, child.pid);
+    return child;
+};
+
+BenchmarkRunner.prototype.runExternal = function runExternal(cmd, args) {
+    var child = childProcess.spawn(cmd, args);
+    console.error('running', cmd, child.pid);
+    return child;
+};
+
 if (require.main === module) {
     var argv = parseArgs(process.argv.slice(2), {
         '--': true,
@@ -376,19 +392,4 @@ function lpad(input, len, chr) {
         str = chr + str;
     }
     return str;
-}
-
-function runExternal(cmd, args) {
-    var child = childProcess.spawn(cmd, args);
-    console.error('running', cmd, child.pid);
-    return child;
-}
-
-function run(script, args) {
-    var name = script.replace(/\.js$/, '');
-    args = args ? args.slice(0) : [];
-    args.unshift(script);
-    var child = childProcess.spawn(process.execPath, args);
-    console.error('running', name, child.pid);
-    return child;
 }
