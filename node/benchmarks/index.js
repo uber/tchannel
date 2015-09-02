@@ -20,7 +20,7 @@
 
 'use strict';
 
-/*eslint no-console: 0*/
+/* eslint no-console: 0 */
 var childProcess = require('child_process');
 var parseArgs = require('minimist');
 var path = require('path');
@@ -48,6 +48,8 @@ var STATSD_PORT = 7036;
 var INSTANCE_COUNT = 72;
 var CLIENT_PORT = 7041;
 
+module.exports = BenchmarkRunner;
+
 function BenchmarkRunner(opts) {
     if (!(this instanceof BenchmarkRunner)) {
         return new BenchmarkRunner(opts);
@@ -64,54 +66,97 @@ function BenchmarkRunner(opts) {
     self.benchProcs = [];
     self.benchCounter = 0;
     self.fileStream = null;
+
+    self.instanceCount = INSTANCE_COUNT;
+    self.ports = {
+        serverPort: SERVER_PORT,
+        traceServerPort: TRACE_SERVER_PORT,
+        relayServerPort: RELAY_SERVER_PORT,
+        relayTraceServerPort: RELAY_TRACE_PORT,
+        statsdPort: STATSD_PORT,
+        clientPort: CLIENT_PORT
+    };
 }
 
 BenchmarkRunner.prototype.start = function start() {
     var self = this;
 
-    self.startStatsd();
+    self.spawnSupportServices();
 
-    if (self.opts.multiProc) {
-        self.startServer(SERVER_PORT, 24);
-        self.startServer(SERVER_PORT + 24, 24);
-        self.startServer(SERVER_PORT + 48, 24);
-    } else {
-        self.startServer(SERVER_PORT, INSTANCE_COUNT);
-    }
-
-    if (self.opts.trace) {
-        self.startTraceServer();
-    }
+    self.spawnTargetServer();
 
     if (self.opts.relay || self.opts.trace) {
-        setTimeout(startRelayServers, 500);
+        setTimeout(startRelay, 500);
     } else {
         setTimeout(startClient, 500);
     }
 
-    function startRelayServers() {
-        self.startRelay('bench-relay');
-        if (self.opts.trace) {
-            self.startRelay('trace-relay');
-        }
+    function startRelay() {
+        self.spawnRelayServer();
 
         setTimeout(startClient, 500);
     }
 
     function startClient() {
-        self.openFileStream();
-
-        if (self.opts.multiProc) {
-            self.startClient(CLIENT_PORT);
-            self.startClient(CLIENT_PORT + 200);
-            self.startClient(CLIENT_PORT + 300);
-        } else {
-            self.startClient(CLIENT_PORT);
-        }
+        self.spawnBenchmarkClient();
 
         if (self.opts.torch) {
-            self.startTorch();
+            self.spawnTorchProcess();
         }
+    }
+};
+
+BenchmarkRunner.prototype.spawnSupportServices =
+function spawnSupportServices() {
+    var self = this;
+
+    self.startStatsd();
+    self.openFileStream();
+};
+
+BenchmarkRunner.prototype.spawnTargetServer =
+function spawnTargetServer() {
+    var self = this;
+
+    if (self.opts.multiProc) {
+        self.startServer(self.ports.serverPort, 24);
+        self.startServer(self.ports.serverPort + 24, 24);
+        self.startServer(self.ports.serverPort + 48, 24);
+    } else {
+        self.startServer(self.ports.serverPort, self.instanceCount);
+    }
+};
+
+BenchmarkRunner.prototype.spawnRelayServer =
+function spawnRelayServer() {
+    var self = this;
+
+    self.startRelay('bench-relay');
+    if (self.opts.trace) {
+        self.startTraceServer();
+        self.startRelay('trace-relay');
+    }
+};
+
+BenchmarkRunner.prototype.spawnBenchmarkClient =
+function spawnBenchmarkClient() {
+    var self = this;
+
+    if (self.opts.multiProc) {
+        self.startClient(self.ports.clientPort);
+        self.startClient(self.ports.clientPort + 200);
+        self.startClient(self.ports.clientPort + 300);
+    } else {
+        self.startClient(self.ports.clientPort);
+    }
+};
+
+BenchmarkRunner.prototype.spawnTorchProcess =
+function spawnTorchProcess() {
+    var self = this;
+
+    if (self.opts.torch) {
+        self.startTorch();
     }
 };
 
@@ -127,14 +172,14 @@ function startServer(serverPort, instances) {
     var self = this;
 
     if (self.opts.goServer) {
-      return self.startGoServer(serverPort, instances);
+        return self.startGoServer(serverPort, instances);
     }
 
     var noOverhead = self.opts.noEndpointOverhead;
 
     var serverProc = run(server, [
         self.opts.trace ? '--trace' : '--no-trace',
-        '--traceRelayHostPort', '127.0.0.1:' + RELAY_TRACE_PORT,
+        '--traceRelayHostPort', '127.0.0.1:' + self.ports.relayTraceServerPort,
         '--port', String(serverPort),
         '--instances', String(instances),
         '--pingOverhead', noOverhead ? 'none' : 'norm:10,5',
@@ -150,10 +195,10 @@ BenchmarkRunner.prototype.startGoServer =
 function startGoServer(serverPort, instances) {
     var self = this;
 
-    var serverProc = runExternal("../../golang/build/examples/bench/server", [
-      "--host", "localhost",
-      "--port", String(serverPort),
-      "--instances", String(instances),
+    var serverProc = runExternal('../../golang/build/examples/bench/server', [
+        '--host', 'localhost',
+        '--port', String(serverPort),
+        '--instances', String(instances)
     ]);
     self.serverProcs.push(serverProc);
     serverProc.stdout.pipe(process.stderr);
@@ -175,12 +220,12 @@ function startRelay(type) {
 
     // type = 'bench-relay'
     var relayProc = run(relay, [
-        '--benchPort', String(SERVER_PORT),
-        '--tracePort', String(TRACE_SERVER_PORT),
-        '--benchRelayPort', String(RELAY_SERVER_PORT),
-        '--traceRelayPort', String(RELAY_TRACE_PORT),
+        '--benchPort', String(self.ports.serverPort),
+        '--tracePort', String(self.ports.traceServerPort),
+        '--benchRelayPort', String(self.ports.relayServerPort),
+        '--traceRelayPort', String(self.ports.relayTraceServerPort),
         '--type', type,
-        '--instances', String(INSTANCE_COUNT),
+        '--instances', String(self.instanceCount),
         self.opts.trace ? '--trace' : '--no-trace',
         self.opts.debug ? '--debug' : '--no-debug'
     ]);
@@ -208,7 +253,7 @@ function startClient(clientPort) {
 
     var args = self.opts['--'];
     args = args.concat([
-        '--benchPort', String(SERVER_PORT),
+        '--benchPort', String(self.ports.serverPort),
         '--clientPort', String(clientPort),
         '--instanceNumber', String(self.benchCounter)
     ]);
@@ -250,9 +295,10 @@ function startClient(clientPort) {
 
 BenchmarkRunner.prototype.close = function close() {
     var self = this;
+    var i;
 
     console.error('benchmark finished');
-    for (var i = 0; i < self.serverProcs.length; i++) {
+    for (i = 0; i < self.serverProcs.length; i++) {
         self.serverProcs[i].kill();
     }
     if (self.traceProc) {
@@ -332,10 +378,10 @@ function lpad(input, len, chr) {
     return str;
 }
 
-function runExternal(runner, args) {
-  var child = childProcess.spawn(runner, args);
-  console.error('running', runner, child.pid);
-  return child;
+function runExternal(cmd, args) {
+    var child = childProcess.spawn(cmd, args);
+    console.error('running', cmd, child.pid);
+    return child;
 }
 
 function run(script, args) {
