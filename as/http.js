@@ -127,7 +127,7 @@ TChannelHTTP.prototype.sendRequest = function send(treq, hreq, options, callback
         }
         function arg2Ready(err, arg2) {
             if (err) {
-                callback(err, null, null);
+                callback(err, null, null, null);
             } else {
                 readArg2(tres, arg2);
             }
@@ -143,7 +143,7 @@ TChannelHTTP.prototype.sendRequest = function send(treq, hreq, options, callback
             var fromBufferErr = errors.HTTPReqArg2fromoBufferError(arg2res.err, {
                 arg2: arg2
             });
-            callback(fromBufferErr, null, null);
+            callback(fromBufferErr, null, null, null);
         } else if (tres.streamed) {
             callback(null, arg2res.value, tres.arg3, null);
         } else {
