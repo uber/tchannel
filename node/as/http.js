@@ -20,7 +20,6 @@
 
 'use strict';
 
-var assert = require('assert');
 var bufrw = require('bufrw');
 var http = require('http');
 var extend = require('xtend');
