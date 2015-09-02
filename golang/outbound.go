@@ -187,11 +187,9 @@ func (call *OutboundCall) createStatsTags(connectionTags map[string]string, call
 	for k, v := range connectionTags {
 		call.commonStatsTags[k] = v
 	}
-
 	if callOptions.Format != HTTP {
 		call.commonStatsTags["target-endpoint"] = string(operation)
 	}
-
 }
 
 // writeOperation writes the operation (arg1) to the call
