@@ -26,6 +26,7 @@ var http = require('http');
 var extend = require('xtend');
 var extendInto = require('xtend/mutable');
 var errors = require('../errors.js');
+var getRawBody = require('raw-body');
 
 var headerRW = bufrw.Repeat(bufrw.UInt16BE,
     bufrw.Series(bufrw.str2, bufrw.str2));
@@ -69,7 +70,6 @@ function TChannelHTTP(options) {
 }
 
 TChannelHTTP.prototype.sendRequest = function send(treq, hreq, options, callback) {
-    assert(treq.streamed, 'as http must have a streamed tchannel request');
     var self = this;
     if (typeof options === 'function') {
         callback = options;
@@ -94,11 +94,32 @@ TChannelHTTP.prototype.sendRequest = function send(treq, hreq, options, callback
     var arg2 = arg2res.value;
 
     treq.headers.as = 'http';
-    return treq.sendStreams(arg1, arg2, hreq, onResponse);
+    if (treq.streamed) {
+        return treq.sendStreams(arg1, arg2, hreq, onStreamResponse);
+    }
+    getRawBody(hreq, {
+        length: hreq.headers['content-length'],
+        limit: '1mb'
+      }, onRawBody);
 
-    function onResponse(err, treq, tres) {
+    function onRawBody(err, body) {
         if (err) {
-            callback(err, null, null);
+            return err;
+        }
+        return treq.send(arg1, arg2, body, onResponse);
+    }
+
+    function onResponse(err, tres, arg2, arg3) {
+        if (err) {
+            callback(err, null, null, null);
+        } else {
+            readArg2(tres, arg2);
+        }
+    }
+
+    function onStreamResponse(err, treq, tres) {
+        if (err) {
+            callback(err, null, null, null);
         } else if (tres.streamed) {
             tres.arg2.onValueReady(arg2Ready);
         } else {
@@ -183,7 +204,6 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
     // TODO: more http state machine integration
 
     var options = tchannel.requestOptions(extendInto({
-        streamed: true,
         hasNoParent: true
     }, requestOptions));
     var peer = tchannel.peers.choosePeer(null);
