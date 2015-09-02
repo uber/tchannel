@@ -100,7 +100,6 @@ func TestFragmentationMiddleArgNearFragmentBoundary(t *testing.T) {
 			0x0000, 0x0000, // empty chunk indicating the end of arg 1
 			0x0000, 0x0004, 'N', 'O', 'P', 'Q'}}, // all of arg 2
 	))
-
 }
 
 func TestFragmentationMiddleArgOnExactFragmentBoundary(t *testing.T) {
