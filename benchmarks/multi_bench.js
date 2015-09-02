@@ -105,7 +105,6 @@ Test.prototype.run = function (callback) {
 
     this.callback = callback;
 
-    var ids = [];
     var counter = numClients;
     for (i = 0; i < numClients ; i++) {
         self.newClient(i, onReady);
