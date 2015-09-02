@@ -159,7 +159,7 @@ function HyperbahnClient(options) {
     if (self.hardFail) {
         self.advertisementTimeoutTime = advertisementTimeout || 5000;
     } else {
-        self.advertisementTimeoutTime = advertisementTimeout;
+        self.advertisementTimeoutTime = 0;
     }
 }
 
@@ -240,9 +240,7 @@ HyperbahnClient.prototype.advertisementFailure =
 function advertisementFailure(err) {
     var self = this;
 
-    if (self.hardFail) {
-        self.destroy();
-    }
+    self.destroy();
     self.emit('error', err);
 
     if (self.statsd) {
@@ -306,10 +304,6 @@ function advertise(opts) {
             },
             self.advertisementTimeoutTime
         );
-    } else {
-        self.logger.info('HyperbahnClient advertisement timeout disabled', {
-            service: self.serviceName
-        });
     }
 
     self.attemptCounter++;
