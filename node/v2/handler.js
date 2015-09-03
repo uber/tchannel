@@ -633,7 +633,8 @@ function verifyCallRequestFrame(req, args) {
     return null;
 };
 
-TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFrame(res, flags, args) {
+TChannelV2Handler.prototype.sendCallResponseFrame =
+function sendCallResponseFrame(res, flags, args) {
     var self = this;
     if (self.remoteName === null) {
         self.errorEvent.emit(self, errors.SendCallResBeforeIdentifiedError());
