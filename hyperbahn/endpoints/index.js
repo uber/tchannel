@@ -20,6 +20,8 @@
 
 'use strict';
 
+var TChannelAsThrift = require('tchannel/as/thrift.js');
+
 module.exports = setupEndpoints;
 
 function setupEndpoints(clients, services) {
@@ -67,5 +69,13 @@ function setupEndpoints(clients, services) {
         //     // XXX check ready, return error frame if not
         //     handle(req, res, arg2, arg3);
         // }
+    });
+
+    /*eslint no-unused-vars: 0*/
+    // thrift health endpoint
+    var tchannelAsThrift = new TChannelAsThrift({
+        source: '',
+        channel: clients.autobahnChannel,
+        isHealthy: require('./health').isHealthy
     });
 }
