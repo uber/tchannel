@@ -89,7 +89,6 @@ function Admin(options) {
     self.channel = new TChannel({
         trace: false
     });
-    self.channel.listen(0, '127.0.0.1');
 }
 
 Admin.exec = function exec(string, options, cb) {
