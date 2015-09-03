@@ -137,6 +137,14 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
     req.remoteAddr = self.remoteName;
     self.ops.addInReq(req);
 
+    if (self.draining && (
+            !self.drainExempt || !self.drainExempt(req)
+        )) {
+        var res = self.buildResponse(req, {});
+        res.sendError('Declined', 'connection draining: ' + self.drainReason);
+        return;
+    }
+
     process.nextTick(runHandler);
 
     function runHandler() {
