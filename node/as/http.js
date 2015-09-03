@@ -99,10 +99,11 @@ TChannelHTTP.prototype.sendRequest = function send(treq, hreq, options, callback
     getRawBody(hreq, {
         length: hreq.headers['content-length'],
         limit: '1mb'
-      }, onRawBody);
+    }, onRawBody);
 
     function onRawBody(err, body) {
         if (err) {
+            callback(err, null, null, null);
             return err;
         }
         return treq.send(arg1, arg2, body, onResponse);
