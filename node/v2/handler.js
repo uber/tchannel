@@ -570,7 +570,7 @@ function sendCallRequestFrame(req, flags, args) {
         flags, req.timeout, req.tracing, req.serviceName, req.headers,
         req.checksum.type, args
     );
-    req.checksum = self._sendCallBodies(
+    req.checksum = self.sendCallBodies(
         req.id, reqBody, null,
         'tchannel.outbound.request.size', new stat.OutboundRequestSizeTags(
             req.serviceName,
@@ -651,7 +651,7 @@ function sendCallResponseFrame(res, flags, args) {
     var resBody = new v2.CallResponse(
         flags, code, res.tracing, res.headers,
         res.checksum.type, args);
-    res.checksum = self._sendCallBodies(
+    res.checksum = self.sendCallBodies(
         res.id, resBody, null,
         'tchannel.outbound.response.size', new stat.OutboundResponseSizeTags(
             req.serviceName,
@@ -688,7 +688,7 @@ TChannelV2Handler.prototype.sendCallRequestContFrame = function sendCallRequestC
     }
 
     var reqBody = new v2.CallRequestCont(flags, req.checksum.type, args);
-    req.checksum = self._sendCallBodies(
+    req.checksum = self.sendCallBodies(
         req.id, reqBody, req.checksum,
         'tchannel.outbound.request.size', new stat.OutboundRequestSizeTags(
             req ? req.serviceName : '',
@@ -706,7 +706,7 @@ TChannelV2Handler.prototype.sendCallResponseContFrame = function sendCallRespons
 
     var req = res.inreq;
     var resBody = new v2.CallResponseCont(flags, res.checksum.type, args);
-    res.checksum = self._sendCallBodies(
+    res.checksum = self.sendCallBodies(
         res.id, resBody, res.checksum,
         'tchannel.outbound.response.size', new stat.OutboundResponseSizeTags(
             req.serviceName,
@@ -715,8 +715,8 @@ TChannelV2Handler.prototype.sendCallResponseContFrame = function sendCallRespons
         ));
 };
 
-TChannelV2Handler.prototype._sendCallBodies =
-function _sendCallBodies(id, body, checksum, chanStat, tags) {
+TChannelV2Handler.prototype.sendCallBodies =
+function sendCallBodies(id, body, checksum, chanStat, tags) {
     var self = this;
     var channel = self.connection.channel;
     var frame;
