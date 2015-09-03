@@ -37,3 +37,23 @@ allocCluster.test('tchannel health', {
         assert.end();
     });
 });
+
+allocCluster.test('tchannel thrift health', {
+    size: 1,
+    dummySize: 0,
+    namedRemotes: []
+}, function t(cluster, assert) {
+    var app = cluster.apps[0];
+
+    app.client.sendHealthThrift(function onResponse(err, resp) {
+        if (err) {
+            assert.end(err);
+        }
+
+        assert.ok(resp.ok, 'response should be ok\n');
+        assert.ok(resp.body.ok, 'response body should be ok\n');
+        assert.equal(resp.body.message, 'hello from autobahn\n');
+
+        assert.end();
+    });
+});
