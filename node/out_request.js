@@ -407,6 +407,10 @@ TChannelOutRequest.prototype.sendArg1 = function sendArg1(arg1) {
 TChannelOutRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     var self = this;
 
+    if (callback) {
+        self.hookupCallback(callback);
+    }
+
     self.sendArg1(arg1);
 
     if (self.span) {
@@ -416,10 +420,6 @@ TChannelOutRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
 
     if (self.logical === false && self.retryCount === 0) {
         self.emitOutboundCallsSent();
-    }
-
-    if (callback) {
-        self.hookupCallback(callback);
     }
 
     self.arg2 = arg2;
