@@ -21,6 +21,8 @@
 'use strict';
 
 var errors = require('./errors.js');
+var inherits = require('util').inherits;
+var EventEmitter = require('./lib/event_emitter');
 
 var TOMBSTONE_TTL_OFFSET = 500;
 
@@ -28,6 +30,8 @@ module.exports = Operations;
 
 function Operations(opts) {
     var self = this;
+
+    EventEmitter.call(self);
 
     self.timers = opts.timers;
     self.logger = opts.logger;
@@ -47,6 +51,7 @@ function Operations(opts) {
     };
     self.lastTimeoutTime = 0;
 }
+inherits(Operations, EventEmitter);
 
 Operations.prototype.extendLogInfo = function extendLogInfo(info) {
     var self = this;
