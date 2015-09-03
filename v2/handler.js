@@ -570,15 +570,13 @@ function sendCallRequestFrame(req, flags, args) {
         flags, req.timeout, req.tracing, req.serviceName, req.headers,
         req.checksum.type, args
     );
-
-    var result = self._sendCallBodies(
+    req.checksum = self._sendCallBodies(
         req.id, reqBody, null,
         'tchannel.outbound.request.size', new stat.OutboundRequestSizeTags(
             req.serviceName,
             req.headers.cn,
             req.endpoint
         ));
-    req.checksum = result.checksum;
 
     return null;
 };
@@ -650,14 +648,13 @@ TChannelV2Handler.prototype.sendCallResponseFrame = function sendCallResponseFra
 
     self.validateCallResponseFrame(res);
 
-    var result = self._sendCallBodies(
+    res.checksum = self._sendCallBodies(
         res.id, resBody, null,
         'tchannel.outbound.response.size', new stat.OutboundResponseSizeTags(
             req.serviceName,
             req.headers.cn,
             req.endpoint
         ));
-    res.checksum = result.checksum;
 };
 
 TChannelV2Handler.prototype.validateCallResponseFrame =
@@ -683,15 +680,15 @@ TChannelV2Handler.prototype.sendCallRequestContFrame = function sendCallRequestC
         self.errorEvent.emit(self, errors.SendCallReqContBeforeIdentifiedError());
         return;
     }
+
     var reqBody = new v2.CallRequestCont(flags, req.checksum.type, args);
-    var result = self._sendCallBodies(
+    req.checksum = self._sendCallBodies(
         req.id, reqBody, req.checksum,
         'tchannel.outbound.request.size', new stat.OutboundRequestSizeTags(
             req ? req.serviceName : '',
             req ? req.headers.cn : '',
             req ? req.endpoint : ''
         ));
-    req.checksum = result.checksum;
 };
 
 TChannelV2Handler.prototype.sendCallResponseContFrame = function sendCallResponseContFrame(res, flags, args) {
@@ -703,14 +700,13 @@ TChannelV2Handler.prototype.sendCallResponseContFrame = function sendCallRespons
 
     var req = res.inreq;
     var resBody = new v2.CallResponseCont(flags, res.checksum.type, args);
-    var result = self._sendCallBodies(
+    res.checksum = self._sendCallBodies(
         res.id, resBody, res.checksum,
         'tchannel.outbound.response.size', new stat.OutboundResponseSizeTags(
             req.serviceName,
             req.headers.cn,
             req.endpoint
         ));
-    res.checksum = result.checksum;
 };
 
 TChannelV2Handler.prototype._sendCallBodies =
@@ -732,21 +728,12 @@ function _sendCallBodies(id, body, checksum, chanStat, tags) {
         checksum = body.csum;
     } while (body = body.cont);
 
-    var result = new CallBodiesResult(checksum, size);
-
     var stat = channel.buildStat(chanStat, 'counter', size, tags);
     channel.emitFastStat(stat);
     self.emitBytesSent(size);
 
-    return result;
+    return checksum;
 };
-
-function CallBodiesResult(checksum, size) {
-    var self = this;
-
-    self.checksum = checksum;
-    self.size = size;
-}
 
 TChannelV2Handler.prototype.sendPingRequest = function sendPingRequest() {
     var self = this;
