@@ -734,8 +734,10 @@ function _sendCallBodies(id, body, checksum, chanStat, tags) {
         checksum = body.csum;
     } while (body = body.cont);
 
-    var stat = channel.buildStat(chanStat, 'counter', size, tags);
-    channel.emitFastStat(stat);
+    if (chanStat) {
+        var stat = channel.buildStat(chanStat, 'counter', size, tags);
+        channel.emitFastStat(stat);
+    }
     self.emitBytesSent(size);
 
     return checksum;
