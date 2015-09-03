@@ -641,7 +641,10 @@ function sendCallResponseFrame(res, flags, args) {
         return;
     }
 
-    self.validateCallResponseFrame(res);
+    var err = self.validateCallResponseFrame(res);
+    if (err) {
+        return err;
+    }
 
     var code = res.ok ? v2.CallResponse.Codes.OK : v2.CallResponse.Codes.Error;
     var req = res.inreq;
@@ -662,6 +665,7 @@ function validateCallResponseFrame(res) {
     var self = this;
 
     if (self.requireAs) {
+        // TODO: consider returning typed error like for req frame validate
         assert(res.headers && res.headers.as,
             'Expected the "as" transport header to be set for response');
     } else if (!res.headers || !res.headers.as) {
@@ -672,6 +676,8 @@ function validateCallResponseFrame(res) {
             socketRemoteAddr: self.connection.socketRemoteAddr
         });
     }
+
+    return null;
 };
 
 TChannelV2Handler.prototype.sendCallRequestContFrame = function sendCallRequestContFrame(req, flags, args) {
