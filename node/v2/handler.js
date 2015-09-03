@@ -584,7 +584,7 @@ function sendCallRequestFrame(req, flags, args) {
 };
 
 TChannelV2Handler.prototype.emitBytesSent =
-function emitBytesSent(result) {
+function emitBytesSent(size) {
     var self = this;
 
     var channel = self.connection.channel;
@@ -592,7 +592,7 @@ function emitBytesSent(result) {
         channel.emitFastStat(channel.buildStat(
             'tchannel.connections.bytes-sent',
             'counter',
-            result.size,
+            size,
             new stat.ConnectionsBytesSentTags(
                 channel.hostPort || '0.0.0.0:0',
                 self.connection.socketRemoteAddr
@@ -736,7 +736,7 @@ function _sendCallBodies(id, body, checksum, chanStat, tags) {
 
     var stat = channel.buildStat(chanStat, 'counter', size, tags);
     channel.emitFastStat(stat);
-    self.emitBytesSent(result);
+    self.emitBytesSent(size);
 
     return result;
 };
