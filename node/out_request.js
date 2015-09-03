@@ -77,6 +77,10 @@ function TChannelOutRequest(id, options) {
     self.err = null;
     self.res = null;
 
+    // set for requests created on draining connections
+    self.drained = false;
+    self.drainReason = '';
+
     if (options.channel.tracer && !self.forwardTrace) {
         // new span with new ids
         self.setupTracing(options);
@@ -325,6 +329,14 @@ TChannelOutRequest.prototype.emitResponse = function emitResponse(res) {
 
 TChannelOutRequest.prototype.sendParts = function sendParts(parts, isLast) {
     var self = this;
+
+    if (self.drained) {
+        self.emitError(errors.RequestDrained({
+            reason: self.drainReason
+        }));
+        return;
+    }
+
     switch (self.state) {
         case States.Initial:
             self.sendCallRequestFrame(parts, isLast);
@@ -396,6 +408,13 @@ TChannelOutRequest.prototype.sendCallRequestContFrame = function sendCallRequest
 TChannelOutRequest.prototype.sendArg1 = function sendArg1(arg1) {
     var self = this;
 
+    if (self.drained) {
+        self.emitError(errors.RequestDrained({
+            reason: self.drainReason
+        }));
+        return;
+    }
+
     self.arg1 = arg1;
     self.endpoint = String(arg1);
     if (self.span) {
@@ -410,6 +429,13 @@ TChannelOutRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
 
     if (callback) {
         self.hookupCallback(callback);
+    }
+
+    if (self.drained) {
+        self.emitError(errors.RequestDrained({
+            reason: self.drainReason
+        }));
+        return;
     }
 
     self.sendArg1(arg1);
