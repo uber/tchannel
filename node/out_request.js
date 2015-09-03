@@ -192,21 +192,6 @@ function emitResponseStat(res) {
     }
 };
 
-function emitOutboundCallsSuccess(request) {
-    request.channel.emitFastStat(request.channel.buildStat(
-        'tchannel.outbound.calls.success',
-        'counter',
-        1,
-        new stat.OutboundCallsSuccessTags(
-            request.serviceName,
-            request.headers.cn,
-            request.endpoint
-        )
-    ));
-}
-
-
-
 TChannelOutRequest.prototype.emitPerAttemptResponseStat =
 function emitPerAttemptResponseStat(res) {
     var self = this;
@@ -229,7 +214,6 @@ function emitPerAttemptResponseStat(res) {
         emitOutboundCallsSuccess(self);
     }
 };
-
 
 TChannelOutRequest.prototype.emitPerAttemptLatency =
 function emitPerAttemptLatency() {
@@ -463,7 +447,7 @@ function emitOutboundCallsSent() {
 };
 
 TChannelOutRequest.prototype.hookupStreamCallback =
-function hookupCallback(callback) {
+function hookupStreamCallback(callback) {
     var self = this;
     var called = false;
 
@@ -485,8 +469,10 @@ function hookupCallback(callback) {
     return self;
 };
 
-TChannelOutRequest.prototype.hookupCallback = function hookupCallback(callback) {
+TChannelOutRequest.prototype.hookupCallback =
+function hookupCallback(callback) {
     var self = this;
+
     if (callback.canStream) {
         return self.hookupStreamCallback(callback);
     }
@@ -558,3 +544,16 @@ TChannelOutRequest.prototype.onTimeout = function onTimeout(now) {
         }));
     }
 };
+
+function emitOutboundCallsSuccess(request) {
+    request.channel.emitFastStat(request.channel.buildStat(
+        'tchannel.outbound.calls.success',
+        'counter',
+        1,
+        new stat.OutboundCallsSuccessTags(
+            request.serviceName,
+            request.headers.cn,
+            request.endpoint
+        )
+    ));
+}
