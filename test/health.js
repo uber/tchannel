@@ -29,7 +29,7 @@ var fs = require('fs');
 var TChannelAsThrift = require('../as/thrift.js');
 var allocCluster = require('./lib/alloc-cluster.js');
 
-var globalThriftText = fs.readFileSync(
+var thriftSource = fs.readFileSync(
     path.join(__dirname, 'anechoic-chamber.thrift'), 'utf8'
 );
 
@@ -48,7 +48,9 @@ allocCluster.test('thrift works with health check present', {
     }), 'Chamber::echo', null, {
         value: 10
     }, function onResponse(err, res) {
-        assert.ifError(err);
+        if (err) {
+            assert.end(err);
+        }
 
         assert.ok(res.ok);
         assert.equal(res.headers.as, 'thrift');
@@ -105,7 +107,7 @@ allocCluster.test('health check works in bad scenarios', {
         hasNoParent: true
     }), 'Meta::health', null, {}, function onResponse(err, res) {
         if (err) {
-            assert.end(false);
+            assert.end(err);
         }
 
         assert.ok(res && res.ok && !res.body.ok, 'res body should not be ok');
@@ -151,7 +153,7 @@ function makeTChannelThriftServer(cluster, opts) {
     var health = opts.good ? healthGood : healthBad;
 
     var tchannelAsThrift = new TChannelAsThrift({
-        source: opts.thriftText || globalThriftText,
+        source: thriftSource,
         logParseFailures: false,
         channel: cluster.channels[0].subChannels.server,
         isHealthy: health
