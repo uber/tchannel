@@ -70,12 +70,11 @@ StreamingOutRequest.prototype.sendArg1 = function sendArg1(arg1) {
 StreamingOutRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     var self = this;
 
-    self.sendArg1(arg1);
-
     if (callback) {
         self.hookupCallback(callback);
     }
 
+    self.sendArg1(arg1);
     self.arg2.end(arg2);
     self.arg3.end(arg3);
 
@@ -85,12 +84,11 @@ StreamingOutRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
 StreamingOutRequest.prototype.sendStreams = function sendStreams(arg1, arg2, arg3, callback) {
     var self = this;
 
-    self.sendArg1(arg1);
-
     if (callback) {
         self.hookupStreamCallback(callback);
     }
 
+    self.sendArg1(arg1);
     pipelineStreams([arg2, arg3], [self.arg2, self.arg3]);
 
     return self;
