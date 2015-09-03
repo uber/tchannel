@@ -202,6 +202,12 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
     var options = tchannel.requestOptions(extendInto({
         hasNoParent: true
     }, requestOptions));
+
+    if (!options.streamed) {
+        var treq = tchannel.request(options);
+        return self.sendRequest(treq, hreq, forwarded);
+    }
+
     var peer = tchannel.peers.choosePeer(null);
     if (!peer) {
         self._sendHTTPError(hres, errors.NoPeerAvailable());
