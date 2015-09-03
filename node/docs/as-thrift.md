@@ -92,12 +92,12 @@ It can be passed options.
     can set the option to `false`
  - `opts.channel` The channel used to make requests on. This
     option is required if you want to use the `.request()` method or
-    `opts.healthCheckCallback` is passed in.
- - `opts.healthCheckCallback` The callback function used to return the
+    `opts.isHealthy` is passed in.
+ - `opts.isHealthy` The callback function used to return the
    health check status of the service. The callback function should return
    an object that contains 1) a required field of `ok` that can be `true` or
-   `false`; and 2) an optional field of `message` that indicates the reason for
-   current status.
+   `false`; and 2) a field of `message` that indicates the reason for
+   current status. `message` is required when `ok` is `false`.
 
 ### `tchannelThrift.request(reqOpts).send(endpoint, head, body, cb)`
 
