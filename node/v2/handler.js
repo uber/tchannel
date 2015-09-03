@@ -641,14 +641,13 @@ function sendCallResponseFrame(res, flags, args) {
         return;
     }
 
+    self.validateCallResponseFrame(res);
+
     var code = res.ok ? v2.CallResponse.Codes.OK : v2.CallResponse.Codes.Error;
     var req = res.inreq;
     var resBody = new v2.CallResponse(
         flags, code, res.tracing, res.headers,
         res.checksum.type, args);
-
-    self.validateCallResponseFrame(res);
-
     res.checksum = self._sendCallBodies(
         res.id, resBody, null,
         'tchannel.outbound.response.size', new stat.OutboundResponseSizeTags(
