@@ -79,7 +79,7 @@ allocCluster.test('health check works in good scenarios', {
         hasNoParent: true
     }), 'Meta::health', null, {}, function onResponse(err, res) {
         if (err) {
-            assert.end(false);
+            assert.end(err);
         }
 
         assert.ok(res && res.ok && res.body.ok, 'res should be ok');
