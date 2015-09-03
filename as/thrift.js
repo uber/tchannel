@@ -57,13 +57,13 @@ function TChannelAsThrift(opts) {
 
     self.channel = opts.channel;
 
-    self.healthCheckCallback = opts.healthCheckCallback;
-    assert(!self.healthCheckCallback || typeof self.healthCheckCallback === 'function',
-        'healthCheckCallback must be a function');
-    assert(!self.healthCheckCallback || self.channel,
-        'channel must be provided with healthCheckCallback');
+    self.isHealthy = opts.isHealthy;
+    assert(!self.isHealthy || typeof self.isHealthy === 'function',
+        'isHealthy must be a function');
+    assert(!self.isHealthy || self.channel,
+        'channel must be provided with isHealthy');
 
-    if (self.healthCheckCallback) {
+    if (self.isHealthy) {
         fs.readFile(path.join(__dirname, 'meta.thrift'), 'utf8', registerHealthCheck);
     }
 
@@ -89,10 +89,10 @@ function TChannelThriftRequest(options) {
 }
 
 function health(self, req, head, body, callback) {
-    var status = self.healthCheckCallback();
+    var status = self.isHealthy();
     assert(status && typeof status.ok === 'boolean', 'status must have ok field');
-    assert(status && (!status.message || typeof status.message === 'string'),
-        'status.message must be a type of "string"');
+    assert(status && (status.ok || typeof status.message === 'string'),
+        'status.message must be provided when status.ok === false');
 
     return callback(null, {
         ok: true,

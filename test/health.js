@@ -154,7 +154,7 @@ function makeTChannelThriftServer(cluster, opts) {
         source: opts.thriftText || globalThriftText,
         logParseFailures: false,
         channel: cluster.channels[0].subChannels.server,
-        healthCheckCallback: health
+        isHealthy: health
     });
     tchannelAsThrift.register(server, 'Chamber::echo', options, okHandler);
 
