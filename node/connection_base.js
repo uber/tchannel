@@ -40,6 +40,10 @@ function TChannelConnectionBase(channel, direction, socketRemoteAddr) {
     self.timedOutEvent = self.defineEvent('timedOut');
     self.pingResponseEvent = self.defineEvent('pingResonse');
 
+    self.draining = false;
+    self.drainReason = '';
+    self.drainExempt = null;
+
     self.closing = false;
     self.closeError = null;
     self.closeEvent = self.defineEvent('close');
@@ -81,6 +85,29 @@ TChannelConnectionBase.prototype.extendLogInfo = function extendLogInfo(info) {
 
 TChannelConnectionBase.prototype.setLazyHandling = function setLazyHandling() {
     // noop
+};
+
+TChannelConnectionBase.prototype.drain =
+function drain(reason, exempt, callback) {
+    var self = this;
+
+    if (callback === undefined) {
+        callback = exempt;
+        exempt = null;
+    }
+
+    self.draining = true;
+    self.drainReason = reason;
+    self.drainExempt = exempt || null;
+    self.ops.draining = true;
+    self.ops.drainExempt = self.drainExempt;
+    if (callback) {
+        if (self.ops.hasDrained()) {
+            process.nextTick(callback);
+        } else {
+            self.ops.drainEvent.on(callback);
+        }
+    }
 };
 
 // create a request
