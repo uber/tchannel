@@ -21,6 +21,8 @@
 'use strict';
 
 var assert = require('assert');
+var fs = require('fs');
+var path = require('path');
 var bufrw = require('bufrw');
 var Result = require('bufrw/result');
 var thriftify = require('thriftify');
@@ -53,8 +55,29 @@ function TChannelAsThrift(opts) {
     self.logParseFailures = typeof logParseFailures === 'boolean' ?
         logParseFailures : true;
 
-    // only used in request()
     self.channel = opts.channel;
+
+    self.healthCheckCallback = opts.healthCheckCallback;
+    assert(!self.healthCheckCallback || typeof self.healthCheckCallback === 'function',
+        'healthCheckCallback must be a function');
+    assert(!self.healthCheckCallback || self.channel,
+        'channel must be provided with healthCheckCallback');
+
+    if (self.healthCheckCallback) {
+        fs.readFile(path.join(__dirname, 'meta.thrift'), 'utf8', registerHealthCheck);
+    }
+
+    function registerHealthCheck(err, source) {
+        if (err) {
+            self.channel.logger.error('failed to read meta.thrift file', {
+                error: err
+            });
+            return;
+        }
+
+        var metaSpec = thriftify.parseSpec(source);
+        self.register(self.channel, 'Meta::health', self, health, metaSpec);
+    }
 }
 
 function TChannelThriftRequest(options) {
@@ -63,6 +86,17 @@ function TChannelThriftRequest(options) {
     self.channel = options.channel;
     self.reqOptions = options.reqOptions;
     self.tchannelThrift = options.tchannelThrift;
+}
+
+function health(self, req, head, body, callback) {
+    var status = self.healthCheckCallback();
+    return callback(null, {
+        ok: true,
+        body: {
+            ok: status.ok,
+            message: status.message
+        }
+    });
 }
 
 TChannelThriftRequest.prototype.send =
@@ -88,7 +122,7 @@ TChannelAsThrift.prototype.request = function request(reqOptions) {
 };
 
 TChannelAsThrift.prototype.register =
-function register(channel, name, opts, handle) {
+function register(channel, name, opts, handle, spec) {
     var self = this;
 
     if (!self.logger) {
@@ -110,7 +144,8 @@ function register(channel, name, opts, handle) {
             head: inHeadBuffer,
             body: inBodyBuffer,
             endpoint: name,
-            direction: 'in.request'
+            direction: 'in.request',
+            spec: spec
         });
 
         if (parseResult.err) {
@@ -153,7 +188,8 @@ function register(channel, name, opts, handle) {
                 ok: thriftRes.ok,
                 typeName: thriftRes.typeName,
                 endpoint: name,
-                direction: 'out.response'
+                direction: 'out.response',
+                spec: spec
             });
 
             if (stringifyResult.err) {
@@ -245,12 +281,13 @@ function TChannelThriftResponse(response, parseResult) {
 
 TChannelAsThrift.prototype._parse = function parse(opts) {
     var self = this;
+    var spec = opts.spec || self.spec;
 
     var argsName = opts.endpoint + '_args';
-    var argsType = self.spec.getType(argsName);
+    var argsType = spec.getType(argsName);
 
     var returnName = opts.endpoint + '_result';
-    var resultType = self.spec.getType(returnName);
+    var resultType = spec.getType(returnName);
 
     var headRes = bufrw.fromBufferResult(HeaderRW, opts.head);
     if (headRes.err) {
@@ -314,12 +351,13 @@ TChannelAsThrift.prototype._parse = function parse(opts) {
 
 TChannelAsThrift.prototype._stringify = function stringify(opts) {
     var self = this;
+    var spec = opts.spec || self.spec;
 
     var argsName = opts.endpoint + '_args';
-    var argsType = self.spec.getType(argsName);
+    var argsType = spec.getType(argsName);
 
     var returnName = opts.endpoint + '_result';
-    var resultType = self.spec.getType(returnName);
+    var resultType = spec.getType(returnName);
 
     opts.head = opts.head || {};
 
