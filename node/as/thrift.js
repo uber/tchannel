@@ -90,6 +90,8 @@ function TChannelThriftRequest(options) {
 
 function health(self, req, head, body, callback) {
     var status = self.healthCheckCallback();
+    assert(status && typeof status.ok === 'boolean', 'status must have ok field');
+
     return callback(null, {
         ok: true,
         body: {
