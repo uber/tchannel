@@ -39,6 +39,7 @@ require('./regression-inOps-leak.js');
 require('./regression-listening-on-used-port.js');
 require('./regression-conn-double-buildResponse.js');
 require('./as-thrift.js');
+require('./health.js');
 require('./as-json.js');
 require('./as-http.js');
 require('./peer.js');
