@@ -704,17 +704,15 @@ TChannelV2Handler.prototype.sendCallRequestContFrame = function sendCallRequestC
     var result = self._sendCallBodies(req.id, reqBody, req.checksum);
     req.checksum = result.checksum;
 
-    var req0 = self.connection.ops.getOutReq(req.id);
-
     var channel = self.connection.channel;
     channel.emitFastStat(channel.buildStat(
         'tchannel.outbound.request.size',
         'counter',
         result.size,
         new stat.OutboundRequestSizeTags(
-            req0 ? req0.serviceName : '',
-            req0 ? req0.headers.cn : '',
-            req0 ? req.endpoint : ''
+            req ? req.serviceName : '',
+            req ? req.headers.cn : '',
+            req ? req.endpoint : ''
         )
     ));
 
