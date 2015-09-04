@@ -232,11 +232,11 @@ Operations.prototype.popOutReq = function popOutReq(id, context) {
     }
 
     var tombstone = new OperationTombstone(self, id, self.timers.now(), req);
-    req.operations = null;
     self.requests.out[id] = tombstone;
-    self.pending.out--;
-
     tombstone.timeHeapHandle = self.connection.channel.timeHeap.update(tombstone, tombstone.time);
+
+    req.operations = null;
+    self.pending.out--;
 
     return req;
 };
