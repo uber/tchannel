@@ -151,7 +151,7 @@ TestClient.prototype.sendHealthThrift = function sendHealthThrift(cb) {
 
     thriftSend(self, {
         endpoint: 'Meta::health',
-        serviceName: 'autobahn',
+        serviceName: 'hyperbahn',
         head: null,
         body: null
     }, healthSpec, cb);
