@@ -19,9 +19,12 @@
 // THE SOFTWARE.
 
 'use strict';
+var fs = require('fs');
+var path = require('path');
 
 var TChannel = require('tchannel');
 var TChannelJSON = require('tchannel/as/json');
+var TChannelThrift = require('tchannel/as/thrift');
 var inherits = require('inherits');
 var EventEmitter = require('events').EventEmitter;
 
@@ -80,6 +83,35 @@ function jsonSend(testClient, opts, cb) {
     }
 }
 
+function thriftSend(testClient, opts, thriftSource, cb) {
+    var thrift = new TChannelThrift({source: thriftSource});
+    testClient._client.waitForIdentified({
+        host: testClient.hostPort
+    }, onIdentified);
+
+    function onIdentified(err) {
+        if (err) {
+            return cb(err);
+        }
+
+        var req = testClient._client.request({
+            host: testClient.hostPort,
+            serviceName: opts.serviceName,
+            hasNoParent: true,
+            timeout: opts.timeout || 1000,
+            headers: {
+                'cn': 'test-client'
+            }
+        });
+
+        thrift.send(req,
+            opts.endpoint,
+            opts.head,
+            opts.body,
+            cb);
+    }
+}
+
 TestClient.prototype.getHosts = function getHosts(body, cb) {
     var self = this;
 
@@ -111,6 +143,18 @@ TestClient.prototype.sendHealth = function sendHealth(cb) {
         head: null,
         body: null
     }, cb);
+};
+
+TestClient.prototype.sendHealthThrift = function sendHealthThrift(cb) {
+    var self = this;
+    var healthSpec = fs.readFileSync(path.join(__dirname, '../../node_modules/tchannel/as/meta.thrift'), 'utf8');
+
+    thriftSend(self, {
+        endpoint: 'Meta::health',
+        serviceName: 'hyperbahn',
+        head: null,
+        body: null
+    }, healthSpec, cb);
 };
 
 TestClient.prototype.sendSetK = function sendSetK(body, cb) {

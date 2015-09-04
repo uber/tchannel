@@ -21,6 +21,7 @@
 'use strict';
 
 module.exports = home;
+module.exports.isHealthy = isHealthy;
 
 function home(opts, req, head, body, cb) {
     cb(null, {
@@ -28,4 +29,11 @@ function home(opts, req, head, body, cb) {
         head: null,
         body: 'hello from autobahn\n'
     });
+}
+
+function isHealthy() {
+    return {
+        ok: true,
+        message: 'hello from hyperbahn\n'
+    };
 }
