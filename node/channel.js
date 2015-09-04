@@ -484,10 +484,14 @@ TChannel.prototype.register = function register(name, options, handler) {
             throw errors.TopLevelRegisterError();
 
         default:
-            throw errors.InvalidHandlerForRegister({
-                handlerType: handlerType,
-                handler: self.handler
-            });
+            if (typeof self.handler.register === 'function') {
+                self.handler.register(name, options, handler);
+            } else {
+                throw errors.InvalidHandlerForRegister({
+                    handlerType: handlerType,
+                    handler: self.handler
+                });
+            }
     }
 };
 
