@@ -34,6 +34,6 @@ function home(opts, req, head, body, cb) {
 function isHealthy() {
     return {
         ok: true,
-        message: 'hello from autobahn\n'
+        message: 'hello from hyperbahn\n'
     };
 }

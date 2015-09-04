@@ -52,7 +52,7 @@ allocCluster.test('tchannel thrift health', {
 
         assert.ok(resp.ok, 'response should be ok\n');
         assert.ok(resp.body.ok, 'response body should be ok\n');
-        assert.equal(resp.body.message, 'hello from autobahn\n');
+        assert.equal(resp.body.message, 'hello from hyperbahn\n');
 
         assert.end();
     });
