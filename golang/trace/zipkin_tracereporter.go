@@ -34,33 +34,67 @@ import (
 	"github.com/uber/tchannel/golang/trace/thrift/gen-go/tcollector"
 )
 
-const tcollectorServiceName = "tcollector"
+const (
+	tcollectorServiceName = "tcollector"
+	chanBufferSize        = 100
+)
+
+type zipkinData struct {
+	Span              tc.Span
+	Annotations       []tc.Annotation
+	BinaryAnnotations []tc.BinaryAnnotation
+	TargetEndpoint    tc.TargetEndpoint
+}
 
 // ZipkinTraceReporter is a trace reporter that submits trace spans in to zipkin trace server.
 type ZipkinTraceReporter struct {
 	tchannel *tc.Channel
 	client   tcollector.TChanTCollector
+	c        chan zipkinData
 }
 
 // NewZipkinTraceReporter returns a zipkin trace reporter that submits span to tcollector service.
 func NewZipkinTraceReporter(ch *tc.Channel) *ZipkinTraceReporter {
 	thriftClient := thrift.NewClient(ch, tcollectorServiceName, nil)
 	client := tcollector.NewTChanTCollectorClient(thriftClient)
-	return &ZipkinTraceReporter{tchannel: ch, client: client}
+	// create the goroutine method to actually to the submit Span.
+	reporter := &ZipkinTraceReporter{tchannel: ch, client: client, c: make(chan zipkinData, chanBufferSize)}
+	go reporter.zipkinSpanWorker()
+	return reporter
 }
 
 // Report method will submit trace span to tcollector server.
 func (r *ZipkinTraceReporter) Report(
-	span tc.Span, annotations []tc.Annotation, binaryAnnotations []tc.BinaryAnnotation, targetEndpoint tc.TargetEndpoint) error {
+	span tc.Span, annotations []tc.Annotation, binaryAnnotations []tc.BinaryAnnotation, targetEndpoint tc.TargetEndpoint) {
+	data := zipkinData{
+		Span:              span,
+		Annotations:       annotations,
+		BinaryAnnotations: binaryAnnotations,
+		TargetEndpoint:    targetEndpoint,
+	}
+	r.c <- data
+}
+
+func (r *ZipkinTraceReporter) zipkinReport(data *zipkinData) error {
 	ctx, cancel := tc.NewContextBuilder(time.Second).
-		SetShardKey(base64Encode(span.TraceID())).Build()
+		SetShardKey(base64Encode(data.Span.TraceID())).Build()
 	defer cancel()
 
-	thriftSpan := buildZipkinSpan(span, annotations, binaryAnnotations, targetEndpoint)
+	thriftSpan := buildZipkinSpan(data.Span, data.Annotations, data.BinaryAnnotations, data.TargetEndpoint)
 	// client submit
 	// ignore the response result because TChannel shouldn't care about it.
 	_, err := r.client.Submit(ctx, thriftSpan)
 	return err
+}
+
+func (r *ZipkinTraceReporter) zipkinSpanWorker() {
+	for {
+		data := <-r.c
+		err := r.zipkinReport(&data)
+		if err != nil {
+			r.tchannel.Logger().Infof("Zipkin Span submit failed. Get error: %v", err)
+		}
+	}
 }
 
 // buildZipkinSpan builds zipkin span based on tchannel span.

@@ -106,7 +106,7 @@ func RandomAnnotations() []tchannel.Annotation {
 
 type testArgs struct {
 	s *mocks.TChanTCollector
-	c tchannel.TraceReporter
+	c *ZipkinTraceReporter
 }
 
 func ctxArg() mock.AnythingOfTypeArgument {
@@ -126,9 +126,21 @@ func TestSubmit(t *testing.T) {
 		thriftSpan.BinaryAnnotations = []*gen.BinaryAnnotation{}
 		ret := &gen.Response{Ok: true}
 
-		args.s.On("Submit", ctxArg(), thriftSpan).Return(ret, nil)
-		err := args.c.Report(span, annotations, nil, endpoint)
-		assert.NoError(t, err)
+		called := make(chan struct{})
+		args.s.On("Submit", ctxArg(), thriftSpan).Return(ret, nil).Run(func(arg mock.Arguments) {
+			close(called)
+		})
+		got, err := args.s.Submit(ctx, thriftSpan)
+		require.NoError(t, err)
+		assert.Equal(t, ret, got)
+		args.c.Report(span, annotations, nil, endpoint)
+
+		// wait for the Report to get called
+		select {
+		case <-time.After(time.Second):
+			t.Fatal("Submit not called")
+		case <-called:
+		}
 	})
 }
 
@@ -174,7 +186,7 @@ func setupServer(h *mocks.TChanTCollector) (*tchannel.Channel, net.Listener, err
 	return tchan, listener, nil
 }
 
-func getClient(dst string) (tchannel.TraceReporter, error) {
+func getClient(dst string) (*ZipkinTraceReporter, error) {
 	tchan, err := tchannel.NewChannel("client", &tchannel.ChannelOptions{
 		Logger: tchannel.SimpleLogger,
 	})
