@@ -197,3 +197,18 @@ func getClient(dst string) (*ZipkinTraceReporter, error) {
 	tchan.Peers().Add(dst)
 	return NewZipkinTraceReporter(tchan), nil
 }
+
+func BenchmarkBuildThrift(b *testing.B) {
+	endpoint := tchannel.TargetEndpoint{
+		HostPort:    "127.0.0.1:8888",
+		ServiceName: "testServer",
+		Operation:   "test",
+	}
+	span := *tchannel.NewRootSpan()
+	annotations := RandomAnnotations()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		buildZipkinSpan(span, annotations, nil, endpoint)
+	}
+}
