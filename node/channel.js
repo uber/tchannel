@@ -119,6 +119,7 @@ function TChannel(options) {
     // self.connectionsBytesRcvdStat = self.defineCounter('connections.bytes-recvd');
 
     self.options = extend({
+        useLazyHandling: false,
         timeoutCheckInterval: 100,
         timeoutFuzz: 100,
         connectionStalePeriod: CONN_STALE_PERIOD,
@@ -262,6 +263,24 @@ function TChannel(options) {
     }
 }
 inherits(TChannel, StatEmitter);
+
+TChannel.prototype.setLazyHandling = function setLazyHandling(enabled) {
+    var self = this;
+
+    if (self.topChannel) {
+        self.topChannel.setLazyHandling(enabled);
+        return;
+    }
+
+    self.options.useLazyHandling = enabled;
+    var peers = self.peers.values();
+    for (var i = 0; i < peers.length; i++) {
+        var peer = peers[i];
+        for (var j = 0; j < peer.connections; j++) {
+            peer.connections[j].setLazyHandling(enabled);
+        }
+    }
+};
 
 TChannel.prototype.getServer = function getServer() {
     var self = this;
