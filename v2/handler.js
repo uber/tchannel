@@ -77,6 +77,9 @@ function TChannelV2Handler(options) {
     self.streamingRes = Object.create(null);
     self.writeBuffer = new Buffer(v2.Frame.MaxSize);
 
+    self.handleCallLazily = self.options.handleCallLazily || null;
+    self.handleFrame = self.handleEagerFrame;
+
     self.requireAs = self.options.requireAs === false ? false : true;
     self.requireCn = self.options.requireCn === false ? false : true;
 }
@@ -116,7 +119,49 @@ TChannelV2Handler.prototype.nextFrameId = function nextFrameId() {
     return self.lastSentFrameId;
 };
 
-TChannelV2Handler.prototype.handleFrame = function handleFrame(frame) {
+TChannelV2Handler.prototype.useLazyFrames = function useLazyFrames(enabled) {
+    var self = this;
+
+    if (enabled) {
+        self.handleFrame = self.handleLazyFrame;
+    } else {
+        self.handleFrame = self.handleEagerFrame;
+    }
+};
+
+TChannelV2Handler.prototype.handleLazyFrame = function handleLazyFrame(frame) {
+    var self = this;
+
+    switch (frame.type) {
+        // TODO: make some lazy type handlers?
+        // case v2.Types.InitRequest:
+        // case v2.Types.InitResponse:
+        // case v2.Types.Cancel:
+        // case v2.Types.Claim:
+        // case v2.Types.PingRequest:
+        // case v2.Types.PingResponse:
+
+        case v2.Types.CallRequest:
+        case v2.Types.CallResponse:
+        case v2.Types.CallRequestCont:
+        case v2.Types.CallResponseCont:
+        case v2.Types.ErrorResponse:
+            if (self.handleCallLazily && self.handleCallLazily(frame)) {
+                return;
+            }
+            break;
+    }
+
+    var res = frame.readBody();
+    if (res.err) {
+        self.errorEvent.emit(res.err);
+        return;
+    }
+
+    self.handleEagerFrame(frame);
+};
+
+TChannelV2Handler.prototype.handleEagerFrame = function handleEagerFrame(frame) {
     var self = this;
     switch (frame.body.type) {
         case v2.Types.InitRequest:
@@ -570,7 +615,7 @@ function sendCallRequestFrame(req, flags, args) {
         flags, req.timeout, req.tracing, req.serviceName, req.headers,
         req.checksum.type, args
     );
-    req.checksum = self._sendCallBodies(
+    req.checksum = self.sendCallBodies(
         req.id, reqBody, null,
         'tchannel.outbound.request.size', new stat.OutboundRequestSizeTags(
             req.serviceName,
@@ -650,7 +695,7 @@ function sendCallResponseFrame(res, flags, args) {
     var resBody = new v2.CallResponse(
         flags, res.code, res.tracing, res.headers,
         res.checksum.type, args);
-    res.checksum = self._sendCallBodies(
+    res.checksum = self.sendCallBodies(
         res.id, resBody, null,
         'tchannel.outbound.response.size', new stat.OutboundResponseSizeTags(
             req.serviceName,
@@ -687,7 +732,7 @@ TChannelV2Handler.prototype.sendCallRequestContFrame = function sendCallRequestC
     }
 
     var reqBody = new v2.CallRequestCont(flags, req.checksum.type, args);
-    req.checksum = self._sendCallBodies(
+    req.checksum = self.sendCallBodies(
         req.id, reqBody, req.checksum,
         'tchannel.outbound.request.size', new stat.OutboundRequestSizeTags(
             req ? req.serviceName : '',
@@ -705,7 +750,7 @@ TChannelV2Handler.prototype.sendCallResponseContFrame = function sendCallRespons
 
     var req = res.inreq;
     var resBody = new v2.CallResponseCont(flags, res.checksum.type, args);
-    res.checksum = self._sendCallBodies(
+    res.checksum = self.sendCallBodies(
         res.id, resBody, res.checksum,
         'tchannel.outbound.response.size', new stat.OutboundResponseSizeTags(
             req.serviceName,
@@ -714,8 +759,8 @@ TChannelV2Handler.prototype.sendCallResponseContFrame = function sendCallRespons
         ));
 };
 
-TChannelV2Handler.prototype._sendCallBodies =
-function _sendCallBodies(id, body, checksum, chanStat, tags) {
+TChannelV2Handler.prototype.sendCallBodies =
+function sendCallBodies(id, body, checksum, chanStat, tags) {
     var self = this;
     var channel = self.connection.channel;
     var frame;
@@ -733,8 +778,10 @@ function _sendCallBodies(id, body, checksum, chanStat, tags) {
         checksum = body.csum;
     } while (body = body.cont);
 
-    var stat = channel.buildStat(chanStat, 'counter', size, tags);
-    channel.emitFastStat(stat);
+    if (chanStat) {
+        var stat = channel.buildStat(chanStat, 'counter', size, tags);
+        channel.emitFastStat(stat);
+    }
     self.emitBytesSent(size);
 
     return checksum;
