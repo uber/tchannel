@@ -126,6 +126,12 @@ function connBaseRequest(options) {
     // options.checksumType = options.checksum;
 
     var req = self.buildOutRequest(options);
+    if (self.draining && (
+            !self.drainExempt || !self.drainExempt(req)
+        )) {
+        req.drained = true;
+        req.drainReason = self.drainReason;
+    }
     self.ops.addOutReq(req);
     req.peer.invalidateScore();
     return req;
