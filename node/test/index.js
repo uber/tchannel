@@ -69,6 +69,7 @@ require('./tcollector-reporter.js');
 require('./pool-of-servers.js');
 require('./no_frag_arg1.js');
 require('./lazy_conn_handler.js');
+require('./chan_drain.js');
 
 require('./trace/basic_server.js');
 require('./trace/server_2_requests.js');

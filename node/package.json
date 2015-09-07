@@ -51,6 +51,7 @@
     "async": "^0.9.0",
     "chalk": "^1.0.0",
     "child_pty": "^0.5.1",
+    "collect-parallel": "^1.0.1",
     "duplexer": "^0.1.1",
     "faucet": "0.0.1",
     "format-stack": "4.1.1",
