@@ -264,6 +264,18 @@ function TChannel(options) {
 }
 inherits(TChannel, StatEmitter);
 
+TChannel.prototype.eachConnection = function eachConnection(each) {
+    var self = this;
+
+    var peers = self.peers.values();
+    for (var i = 0; i < peers.length; i++) {
+        var peer = peers[i];
+        for (var j = 0; j < peer.connections; j++) {
+            each(peer.connections[j]);
+        }
+    }
+};
+
 TChannel.prototype.setLazyHandling = function setLazyHandling(enabled) {
     var self = this;
 
@@ -273,12 +285,10 @@ TChannel.prototype.setLazyHandling = function setLazyHandling(enabled) {
     }
 
     self.options.useLazyHandling = enabled;
-    var peers = self.peers.values();
-    for (var i = 0; i < peers.length; i++) {
-        var peer = peers[i];
-        for (var j = 0; j < peer.connections; j++) {
-            peer.connections[j].setLazyHandling(enabled);
-        }
+    self.eachConnection(updateEachConn);
+
+    function updateEachConn(conn) {
+        conn.setLazyHandling(enabled);
     }
 };
 
