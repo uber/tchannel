@@ -268,10 +268,18 @@ TChannel.prototype.eachConnection = function eachConnection(each) {
     var self = this;
 
     var peers = self.peers.values();
-    for (var i = 0; i < peers.length; i++) {
+    var i;
+    for (i = 0; i < peers.length; i++) {
         var peer = peers[i];
         for (var j = 0; j < peer.connections; j++) {
             each(peer.connections[j]);
+        }
+    }
+
+    if (self.serverConnections) {
+        var connKeys = Object.keys(self.serverConnections);
+        for (i = 0; i < connKeys.length; i++) {
+            each(self.serverConnections[connKeys[i]]);
         }
     }
 };
