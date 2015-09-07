@@ -189,7 +189,9 @@ function clusterTester(opts, t) {
         opts.assert = assert;
         allocCluster(opts).ready(function clusterReady(cluster) {
             assert.once('end', function testEnded() {
-                cluster.assertEmptyState(assert);
+                if (!opts.skipEmptyCheck) {
+                    cluster.assertEmptyState(assert);
+                }
                 cluster.destroy();
             });
             t(cluster, assert);
