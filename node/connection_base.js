@@ -241,7 +241,7 @@ TChannelConnectionBase.prototype.onReqDone = function onReqDone(req) {
     if (inreq !== req && !req.timedOut) {
         self.logger.warn('mismatched onReqDone callback', {
             hostPort: self.channel.hostPort,
-            hasInReq: inreq !== undefined,
+            hasInReq: !!inreq,
             id: req.id
         });
     }
