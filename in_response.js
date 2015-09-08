@@ -66,6 +66,7 @@ TChannelInResponse.prototype.type = 'tchannel.incoming-response';
 TChannelInResponse.prototype.extendLogInfo = function extendLogInfo(info) {
     var self = this;
 
+    info.responseId = self.id;
     info.responseType = self.type;
     info.responseState = States.describe(self.state);
     info.responseOk = self.ok;
