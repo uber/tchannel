@@ -48,6 +48,19 @@ function Operations(opts) {
     self.lastTimeoutTime = 0;
 }
 
+Operations.prototype.extendLogInfo = function extendLogInfo(info) {
+    var self = this;
+
+    if (self.connection) {
+        info.hostPort = self.connection.channel.hostPort;
+        info.socketRemoteAddr = self.connection.socketRemoteAddr;
+        info.remoteName = self.connection.remoteName;
+        info.connClosing = self.connection.closing;
+    }
+
+    return info;
+};
+
 function OperationTombstone(operations, id, time, req) {
     var self = this;
 
@@ -79,12 +92,7 @@ OperationTombstone.prototype.extendLogInfo = function extendLogInfo(info) {
     info.heapAmItem = self.timeHeapHandle && self.timeHeapHandle.item === self;
 
     if (self.operations) {
-        var conn = self.operations.connection;
-        info.hostPort = conn && conn.channel.hostPort;
-        info.socketRemoteAddr = conn && conn.socketRemoteAddr;
-        info.remoteName = conn && conn.remoteName;
-        info.connClosing = conn && conn.closing;
-
+        info = self.operations.extendLogInfo(info);
         var other = self.operations.requests.out[self.id];
         if (self !== other) {
             info.otherType = typeof other;
