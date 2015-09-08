@@ -259,11 +259,10 @@ TChannelConnectionBase.prototype.onReqDone = function onReqDone(req) {
         return;
     }
 
-    self.logger.warn('mismatched onReqDone callback', {
-        hostPort: self.channel.hostPort,
+    self.logger.warn('mismatched onReqDone callback', self.extendLogInfo({
         hasInReq: !!inreq,
         id: req.id
-    });
+    }));
 };
 
 module.exports = TChannelConnectionBase;
