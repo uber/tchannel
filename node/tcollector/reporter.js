@@ -53,7 +53,8 @@ function TCollectorTraceReporter(options) {
     }
 
     self.tchannelThrift = new self.channel.TChannelAsThrift({
-        source: tcollectorSpec
+        source: tcollectorSpec,
+        strict: false
     });
 }
 
