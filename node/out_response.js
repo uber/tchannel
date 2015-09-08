@@ -195,6 +195,15 @@ TChannelOutResponse.prototype.sendCallResponseContFrame = function sendCallRespo
 
 TChannelOutResponse.prototype.sendError = function sendError(codeString, message) {
     var self = this;
+
+    if (self.inreq.connection.closing) {
+        self.logger.info('ignoring outresponse.sendError on a closed connection', {
+            codeString: codeString,
+            errorMessage: message
+        });
+        return;
+    }
+
     if (self.state === States.Done || self.state === States.Error) {
         self.errorEvent.emit(self, errors.ResponseAlreadyDone({
             attempted: 'error frame',
@@ -337,7 +346,13 @@ TChannelOutResponse.prototype.send = function send(res1, res2) {
         ));
     }
 
-    self.sendCallResponseFrame([self.arg1, res1, res2], true);
+    // TODO: may be spam, consider dropping
+    if (self.inreq.connection.closing) {
+        self.logger.info('ignoring outresponse.send on a closed connection', self.extendLogInfo({}));
+    } else {
+        self.sendCallResponseFrame([self.arg1, res1, res2], true);
+    }
+
     self.emitFinish();
 
     return self;
