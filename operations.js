@@ -52,10 +52,7 @@ Operations.prototype.extendLogInfo = function extendLogInfo(info) {
     var self = this;
 
     if (self.connection) {
-        info.hostPort = self.connection.channel.hostPort;
-        info.socketRemoteAddr = self.connection.socketRemoteAddr;
-        info.remoteName = self.connection.remoteName;
-        info.connClosing = self.connection.closing;
+        info = self.connection.extendLogInfo(info);
     }
 
     return info;
