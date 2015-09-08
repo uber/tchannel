@@ -88,7 +88,7 @@ function runTests(HyperbahnCluster) {
         var client = new HyperbahnClient({
             serviceName: 'hello-bob',
             callerName: 'hello-bob-test',
-            hostPortList: hostPortFile,
+            hostPortFile: hostPortFile,
             tchannel: bob.channel,
             logger: DebugLogtron('hyperbahnClient')
         });
