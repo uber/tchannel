@@ -248,14 +248,22 @@ TChannelConnectionBase.prototype.onReqDone = function onReqDone(req) {
 
     var inreq = self.ops.popInReq(req.id);
 
-    // incoming req that timed out are already cleaned up
-    if (inreq !== req && !req.timedOut) {
-        self.logger.warn('mismatched onReqDone callback', {
-            hostPort: self.channel.hostPort,
-            hasInReq: !!inreq,
-            id: req.id
-        });
+    if (inreq === req) {
+        return;
     }
+
+    // we popped something else, or there was nothing to pop
+
+    // incoming req that timed out are already cleaned up
+    if (req.timedOut) {
+        return;
+    }
+
+    self.logger.warn('mismatched onReqDone callback', {
+        hostPort: self.channel.hostPort,
+        hasInReq: !!inreq,
+        id: req.id
+    });
 };
 
 module.exports = TChannelConnectionBase;
