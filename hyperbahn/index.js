@@ -95,15 +95,15 @@ function HyperbahnClient(options) {
     assert(options.serviceName, 'must pass in serviceName');
     if (Array.isArray(options.hostPortList)) {
         self.hostPortList = options.hostPortList;
-    } else if (typeof options.hostPortList === 'string') {
-        var tuple = safeSyncRead(options.hostPortList);
+    } else if (typeof options.hostPortFile === 'string') {
+        var tuple = safeSyncRead(options.hostPortFile);
         assert(!tuple[0], 'Read host port list failed with ' + tuple[0]);
         tuple = safeJsonParse(tuple[1]);
         assert(!tuple[0], 'Parse host port list failed with ' + tuple[0]);
         assert(Array.isArray(tuple[1]), 'Host port list in the file is not array');
         self.hostPortList = tuple[1];
     } else {
-        assert(false, 'hostPortList must be either an array or a file path');
+        assert(false, 'Must pass in hostPortList as array or hostPortFile as string');
     }
 
     self.serviceName = options.serviceName;
