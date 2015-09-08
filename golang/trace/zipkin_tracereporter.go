@@ -51,6 +51,7 @@ type ZipkinTraceReporter struct {
 	tchannel *tc.Channel
 	client   tcollector.TChanTCollector
 	c        chan zipkinData
+	logger   tc.Logger
 }
 
 // NewZipkinTraceReporter returns a zipkin trace reporter that submits span to tcollector service.
@@ -58,7 +59,12 @@ func NewZipkinTraceReporter(ch *tc.Channel) *ZipkinTraceReporter {
 	thriftClient := thrift.NewClient(ch, tcollectorServiceName, nil)
 	client := tcollector.NewTChanTCollectorClient(thriftClient)
 	// create the goroutine method to actually to the submit Span.
-	reporter := &ZipkinTraceReporter{tchannel: ch, client: client, c: make(chan zipkinData, chanBufferSize)}
+	reporter := &ZipkinTraceReporter{
+		tchannel: ch,
+		client:   client,
+		c:        make(chan zipkinData, chanBufferSize),
+		logger:   ch.Logger(),
+	}
 	go reporter.zipkinSpanWorker()
 	return reporter
 }
@@ -76,6 +82,7 @@ func (r *ZipkinTraceReporter) Report(
 	select {
 	case r.c <- data:
 	default:
+		r.logger.Infof("Buffer channel for zipkin trace report is full.")
 	}
 }
 
@@ -92,8 +99,7 @@ func (r *ZipkinTraceReporter) zipkinReport(data *zipkinData) error {
 }
 
 func (r *ZipkinTraceReporter) zipkinSpanWorker() {
-	for {
-		data := <-r.c
+	for data := range r.c {
 		if err := r.zipkinReport(&data); err != nil {
 			r.tchannel.Logger().Infof("Zipkin Span submit failed. Get error: %v", err)
 		}
