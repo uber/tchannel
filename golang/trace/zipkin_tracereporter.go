@@ -72,7 +72,11 @@ func (r *ZipkinTraceReporter) Report(
 		BinaryAnnotations: binaryAnnotations,
 		TargetEndpoint:    targetEndpoint,
 	}
-	r.c <- data
+
+	select {
+	case r.c <- data:
+	default:
+	}
 }
 
 func (r *ZipkinTraceReporter) zipkinReport(data *zipkinData) error {
@@ -90,8 +94,7 @@ func (r *ZipkinTraceReporter) zipkinReport(data *zipkinData) error {
 func (r *ZipkinTraceReporter) zipkinSpanWorker() {
 	for {
 		data := <-r.c
-		err := r.zipkinReport(&data)
-		if err != nil {
+		if err := r.zipkinReport(&data); err != nil {
 			r.tchannel.Logger().Infof("Zipkin Span submit failed. Get error: %v", err)
 		}
 	}

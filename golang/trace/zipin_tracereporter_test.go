@@ -106,7 +106,7 @@ func RandomAnnotations() []tchannel.Annotation {
 
 type testArgs struct {
 	s *mocks.TChanTCollector
-	c *ZipkinTraceReporter
+	c tchannel.TraceReporter
 }
 
 func ctxArg() mock.AnythingOfTypeArgument {
@@ -127,15 +127,12 @@ func TestSubmit(t *testing.T) {
 		ret := &gen.Response{Ok: true}
 
 		called := make(chan struct{})
-		args.s.On("Submit", ctxArg(), thriftSpan).Return(ret, nil).Run(func(arg mock.Arguments) {
+		args.s.On("Submit", ctxArg(), thriftSpan).Return(ret, nil).Run(func(_ mock.Arguments) {
 			close(called)
 		})
-		got, err := args.s.Submit(ctx, thriftSpan)
-		require.NoError(t, err)
-		assert.Equal(t, ret, got)
 		args.c.Report(span, annotations, nil, endpoint)
 
-		// wait for the Report to get called
+		// wait for the server's Submit to get called
 		select {
 		case <-time.After(time.Second):
 			t.Fatal("Submit not called")
@@ -186,7 +183,7 @@ func setupServer(h *mocks.TChanTCollector) (*tchannel.Channel, net.Listener, err
 	return tchan, listener, nil
 }
 
-func getClient(dst string) (*ZipkinTraceReporter, error) {
+func getClient(dst string) (tchannel.TraceReporter, error) {
 	tchan, err := tchannel.NewChannel("client", &tchannel.ChannelOptions{
 		Logger: tchannel.SimpleLogger,
 	})
