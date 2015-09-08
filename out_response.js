@@ -78,6 +78,7 @@ TChannelOutResponse.prototype.extendLogInfo = function extendLogInfo(info) {
     info.responseErrorMessage = self.message;
     info.responseStart = self.start;
     info.responseEnd = self.end;
+    info.responseHasArg3 = self.arg3 !== null && self.arg3 !== undefined;
 
     if (self.inreq) {
         info = self.inreq.extendLogInfo(info);
@@ -294,7 +295,6 @@ TChannelOutResponse.prototype.send = function send(res1, res2) {
     /* send calls after finish() should be swallowed */
     if (self.end) {
         var logOptions = self.extendLogInfo({
-            hasResponse: !!self.arg3
         });
 
         if (self.inreq && self.inreq.timedOut) {
