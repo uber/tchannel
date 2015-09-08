@@ -281,6 +281,7 @@ TChannelOutRequest.prototype.emitError = function emitError(err) {
 TChannelOutRequest.prototype.extendLogInfo = function extendLogInfo(info) {
     var self = this;
 
+    info.requestId = self.id;
     info.requestType = self.type;
     info.requestState = States.describe(self.state);
     info.requestRemoteAddr = self.remoteAddr;
