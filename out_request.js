@@ -76,7 +76,6 @@ function TChannelOutRequest(id, options) {
     self.span = null;
     self.err = null;
     self.res = null;
-    self.timedOut = false;
 
     if (options.channel.tracer && !self.forwardTrace) {
         // new span with new ids
@@ -286,6 +285,7 @@ TChannelOutRequest.prototype.extendLogInfo = function extendLogInfo(info) {
     info.requestState = States.describe(self.state);
     info.requestRemoteAddr = self.remoteAddr;
     info.serviceName = self.serviceName;
+    info.requestErr = self.err;
 
     if (self.endpoint !== null) {
         info.requestArg1 = self.endpoint;
@@ -509,6 +509,7 @@ function hookupCallback(callback) {
 
 TChannelOutRequest.prototype.onTimeout = function onTimeout(now) {
     var self = this;
+    var timeoutError;
 
     if (self.err) {
         self.channel.logger.warn('unexpected onTimeout for errored out request', {
@@ -525,7 +526,13 @@ TChannelOutRequest.prototype.onTimeout = function onTimeout(now) {
     }
 
     if (!self.res || self.res.state === States.Initial) {
-        self.timedOut = true;
+        timeoutError = errors.RequestTimeoutError({
+            id: self.id,
+            start: self.start,
+            elapsed: now - self.start,
+            logical: self.logical,
+            timeout: self.timeout
+        });
         if (self.operations) {
             self.operations.checkLastTimeoutTime(now);
             self.operations.popOutReq(self.id);
@@ -535,14 +542,7 @@ TChannelOutRequest.prototype.onTimeout = function onTimeout(now) {
     }
 
     function deferOutReqTimeoutErrorEmit() {
-        var elapsed = now - self.start;
-        self.emitError(errors.RequestTimeoutError({
-            id: self.id,
-            start: self.start,
-            elapsed: elapsed,
-            logical: self.logical,
-            timeout: self.timeout
-        }));
+        self.emitError(timeoutError);
     }
 };
 
