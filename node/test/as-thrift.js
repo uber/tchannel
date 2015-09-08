@@ -129,9 +129,10 @@ allocCluster.test('send and receive a not ok', {
         assert.ifError(err);
 
         assert.ok(!res.ok);
+
         assert.equal(res.body.value, 10);
         assert.equal(res.body.message, 'No echo');
-        assert.equal(res.body.type, 'tchannel.hydrated-error.default-type');
+        assert.equal(res.body.type, undefined);
 
         assert.end();
     });
@@ -155,6 +156,7 @@ allocCluster.test('send and receive a typed not ok', {
         assert.ifError(err);
 
         assert.ok(!res.ok);
+
         assert.equal(res.body.value, 10);
         assert.equal(res.body.message, 'No echo typed error');
         assert.equal(res.body.type, 'server.no-echo');
@@ -331,10 +333,9 @@ allocCluster.test('logger set correctly in send and register functions', {
     });
 });
 
-allocCluster.test('send without required fields', {
+allocCluster.test('send with invalid types', {
     numPeers: 2
 }, function t(cluster, assert) {
-
     makeTChannelThriftServer(cluster, {
         okResponse: true
     });
@@ -359,10 +360,11 @@ allocCluster.test('send without required fields', {
             'tchannel-thrift-handler.parse-error.body-failed: ' +
                 'Could not parse body (arg3) argument.\n' +
                 'Expected Thrift encoded arg3 for endpoint Chamber::echo.\n' +
-                'Got \u000b\u0000\u0000\u0000\u0000\u0000\u0003lol ' +
+                'Got \u000b\u0000\u0001\u0000\u0000\u0000\u0003lol ' +
                 'instead of Thrift.\n' +
                 'Parsing error was: ' +
-                'AStruct::reify expects field 0 typeid 8; received 11.\n'
+                'unexpected typeid 11 (STRING) for field "value" ' +
+                'with id 1 on echo_args; expected 8 (I32).\n'
         );
 
         assert.equal(res, undefined);

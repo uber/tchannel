@@ -30,7 +30,7 @@ exception NoEchoTypedError {
 }
 
 service Chamber {
-    i32 echo(0: required string value) throws (
+    i32 echo(1: required string value) throws (
         1: NoEchoError noEcho
         2: NoEchoTypedError noEchoTyped
     )

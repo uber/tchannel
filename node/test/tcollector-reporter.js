@@ -20,22 +20,27 @@
 
 'use strict';
 
-var thriftify = require('thriftify');
 var path = require('path');
 var test = require('tape');
 var fs = require('fs');
 var Buffer = require('buffer').Buffer;
 var timers = require('timers');
+var thriftrw = require('thriftrw');
 
 var allocCluster = require('./lib/alloc-cluster');
 
 var TCollectorReporter = require('../tcollector/reporter');
 
-var tcollectorSpec =
-    fs.readFileSync(path.join(__dirname, '..', 'tcollector', 'tcollector.thrift'), 'utf8');
+var tcollectorSpec = fs.readFileSync(
+    path.join(__dirname, '..', 'tcollector', 'tcollector.thrift'),
+    'utf8'
+);
 
 test('test of thriftify spec', function t1(assert) {
-    var thriftSpec = thriftify.newSpec(path.join(__dirname, '..', 'tcollector', 'tcollector.thrift'));
+    var thriftSpec = new thriftrw.Thrift({
+        source: tcollectorSpec,
+        strict: false
+    });
 
     var argsType = thriftSpec.getType('TCollector::submit_args');
 
@@ -95,11 +100,11 @@ test('test of thriftify spec', function t1(assert) {
         ]
     }};
 
-    var res = argsType.toBuffer(span);
+    var res = argsType.toBufferResult(span);
 
     assert.ifErr(res.err);
 
-    var res2 = argsType.fromBuffer(res.value);
+    var res2 = argsType.fromBufferResult(res.value);
 
     assert.ifErr(res2.err);
 
@@ -204,7 +209,8 @@ allocCluster.test('functional test', {
     });
 
     var thrift = new serverTChannel.TChannelAsThrift({
-        source: tcollectorSpec
+        source: tcollectorSpec,
+        strict: false
     });
 
     thrift.register(

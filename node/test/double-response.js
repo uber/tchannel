@@ -27,15 +27,15 @@ var TChannelAsThrift = require('../as/thrift.js');
 
 var throft = [
     'struct DoubleResult {',
-    '    1: string value',
+    '    1: required string value',
     '}',
     '',
     'exception DoubleError {',
-    '    1: string message',
+    '    1: required string message',
     '}',
     '',
     'service DoubleResponse {',
-    '    DoubleResult method(0: string value) throws (',
+    '    DoubleResult method(1: string value) throws (',
     '        1: DoubleError error',
     '    )',
     '}'
