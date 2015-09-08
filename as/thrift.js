@@ -25,7 +25,7 @@ var fs = require('fs');
 var path = require('path');
 var bufrw = require('bufrw');
 var Result = require('bufrw/result');
-var thriftify = require('thriftify');
+var thriftrw = require('thriftrw');
 
 var errors = require('../errors.js');
 
@@ -43,7 +43,10 @@ function TChannelAsThrift(opts) {
     assert(opts && typeof opts.source === 'string',
         'must pass source as an argument');
 
-    self.spec = thriftify.parseSpec(opts.source);
+    self.spec = new thriftrw.Thrift({
+        source: opts.source,
+        strict: opts.strict
+    });
 
     // Pulled off of things in `.register` and `.send` rather than passed in
     self.logger = null;
@@ -75,7 +78,9 @@ function TChannelAsThrift(opts) {
             return;
         }
 
-        var metaSpec = thriftify.parseSpec(source);
+        var metaSpec = new thriftrw.Thrift({
+            source: source
+        });
         self.register(self.channel, 'Meta::health', self, health, metaSpec);
     }
 }
@@ -275,12 +280,7 @@ function TChannelThriftResponse(response, parseResult) {
     self.head = parseResult.head;
     self.body = null;
     self.headers = response.headers;
-
-    if (response.ok) {
-        self.body = parseResult.body;
-    } else {
-        self.body = errors.ReconstructedError(parseResult.body);
-    }
+    self.body = parseResult.body;
 }
 
 TChannelAsThrift.prototype._parse = function parse(opts) {
@@ -316,9 +316,9 @@ TChannelAsThrift.prototype._parse = function parse(opts) {
 
     var bodyRes;
     if (opts.direction === 'in.request') {
-        bodyRes = argsType.fromBuffer(opts.body);
+        bodyRes = argsType.fromBufferResult(opts.body);
     } else if (opts.direction === 'in.response') {
-        bodyRes = resultType.fromBuffer(opts.body);
+        bodyRes = resultType.fromBufferResult(opts.body);
 
         if (bodyRes.value && opts.ok) {
             bodyRes.value = bodyRes.value.success;
@@ -385,7 +385,7 @@ TChannelAsThrift.prototype._stringify = function stringify(opts) {
 
     var bodyRes;
     if (opts.direction === 'out.request') {
-        bodyRes = argsType.toBuffer(opts.body);
+        bodyRes = argsType.toBufferResult(opts.body);
     } else if (opts.direction === 'out.response') {
         var thriftResult = {};
         if (!opts.ok) {
@@ -394,7 +394,7 @@ TChannelAsThrift.prototype._stringify = function stringify(opts) {
             thriftResult.success = opts.body;
         }
 
-        bodyRes = resultType.toBuffer(thriftResult);
+        bodyRes = resultType.toBufferResult(thriftResult);
     }
 
     if (bodyRes.err) {
