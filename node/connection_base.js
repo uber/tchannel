@@ -68,6 +68,15 @@ function TChannelConnectionBase(channel, direction, socketRemoteAddr) {
 }
 inherits(TChannelConnectionBase, EventEmitter);
 
+TChannelConnectionBase.prototype.extendLogInfo = function extendLogInfo(info) {
+    var self = this;
+
+    info.hostPort = self.channel.hostPort;
+    info.socketRemoteAddr = self.socketRemoteAddr;
+
+    return info;
+};
+
 TChannelConnectionBase.prototype.setLazyHandling = function setLazyHandling() {
     // noop
 };

@@ -99,15 +99,6 @@ TChannelConnection.prototype.setLazyHandling = function setLazyHandling(enabled)
     }
 };
 
-TChannelConnection.prototype.extendLogInfo = function extendLogInfo(info) {
-    var self = this;
-
-    info.hostPort = self.channel.hostPort;
-    info.socketRemoteAddr = self.socketRemoteAddr;
-
-    return info;
-};
-
 TChannelConnection.prototype.setupSocket = function setupSocket() {
     var self = this;
 
