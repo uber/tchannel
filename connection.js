@@ -538,7 +538,10 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
         if (!req) {
             return;
         }
+        req.emitError(makeReqError(req));
+    });
 
+    function makeReqError(req) {
         var info = req.extendLogInfo({
             socketRemoteAddr: self.socketRemoteAddr,
             direction: self.direction,
@@ -551,9 +554,8 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
         } else {
             reqErr = errors.TChannelConnectionResetError(reqErr, info);
         }
-
-        req.emitError(reqErr);
-    });
+        return reqErr;
+    }
 
     self.ops.clear();
 
