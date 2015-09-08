@@ -94,7 +94,7 @@ test('create HyperbahnClient without hostPortList', function t(assert) {
             tchannel: tchannel,
             serviceName: 'foo'
         });
-    }, /Must pass in hostPortList/);
+    }, /hostPortList must be either an array or a file path/);
 
     tchannel.close();
     assert.end();
@@ -106,9 +106,9 @@ test('create HyperbahnClient with bad hostPortFile', function t(assert) {
         HyperbahnClient({
             tchannel: tchannel,
             serviceName: 'foo',
-            hostPortFile: '~~~~~'
+            hostPortList: '~~~~~'
         });
-    }, /Failed to read the hostPortFile/);
+    }, /Read host port list failed with Error: ENOENT, no such file or directory \'~~~~~\'/);
 
     tchannel.close();
     assert.end();
