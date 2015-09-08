@@ -79,6 +79,10 @@ TChannelOutResponse.prototype.extendLogInfo = function extendLogInfo(info) {
     info.responseStart = self.start;
     info.responseEnd = self.end;
 
+    if (self.inreq) {
+        info = self.inreq.extendLogInfo(info);
+    }
+
     return info;
 };
 
@@ -223,11 +227,7 @@ TChannelOutResponse.prototype.emitFinish = function emitFinish() {
 
     if (self.end) {
         self.logger.warn('out response double emitFinish', self.extendLogInfo({
-            now: now,
-            serviceName: self.inreq.serviceName,
-            cn: self.inreq.headers.cn,
-            endpoint: String(self.inreq.arg1),
-            remoteAddr: self.inreq.connection.socketRemoteAddr
+            now: now
         }));
         return;
     }
@@ -294,10 +294,6 @@ TChannelOutResponse.prototype.send = function send(res1, res2) {
     /* send calls after finish() should be swallowed */
     if (self.end) {
         var logOptions = self.extendLogInfo({
-            serviceName: self.inreq.serviceName,
-            cn: self.inreq.headers.cn,
-            endpoint: self.inreq.endpoint,
-            remoteAddr: self.inreq.remoteAddr,
             hasResponse: !!self.arg3
         });
 
