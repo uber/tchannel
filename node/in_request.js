@@ -90,6 +90,10 @@ TChannelInRequest.prototype.extendLogInfo = function extendLogInfo(info) {
         info.requestArg1 = String(self.arg1);
     }
 
+    if (self.connection) {
+        info = self.connection.extendLogInfo(info);
+    }
+
     return info;
 };
 
