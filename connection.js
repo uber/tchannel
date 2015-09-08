@@ -542,15 +542,13 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
     });
 
     function makeReqError(req) {
-        var info = req.extendLogInfo(self.extendLogInfo({}));
-
         var reqErr = err;
         if (reqErr.type === 'tchannel.socket-local-closed') {
-            reqErr = errors.TChannelLocalResetError(reqErr, info);
+            reqErr = errors.TChannelLocalResetError(reqErr);
         } else {
-            reqErr = errors.TChannelConnectionResetError(reqErr, info);
+            reqErr = errors.TChannelConnectionResetError(reqErr);
         }
-        return reqErr;
+        return req.extendLogInfo(self.extendLogInfo(reqErr));
     }
 
     self.ops.clear();
