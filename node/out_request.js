@@ -192,21 +192,6 @@ function emitResponseStat(res) {
     }
 };
 
-function emitOutboundCallsSuccess(request) {
-    request.channel.emitFastStat(request.channel.buildStat(
-        'tchannel.outbound.calls.success',
-        'counter',
-        1,
-        new stat.OutboundCallsSuccessTags(
-            request.serviceName,
-            request.headers.cn,
-            request.endpoint
-        )
-    ));
-}
-
-
-
 TChannelOutRequest.prototype.emitPerAttemptResponseStat =
 function emitPerAttemptResponseStat(res) {
     var self = this;
@@ -229,7 +214,6 @@ function emitPerAttemptResponseStat(res) {
         emitOutboundCallsSuccess(self);
     }
 };
-
 
 TChannelOutRequest.prototype.emitPerAttemptLatency =
 function emitPerAttemptLatency() {
@@ -423,6 +407,10 @@ TChannelOutRequest.prototype.sendArg1 = function sendArg1(arg1) {
 TChannelOutRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
     var self = this;
 
+    if (callback) {
+        self.hookupCallback(callback);
+    }
+
     self.sendArg1(arg1);
 
     if (self.span) {
@@ -432,10 +420,6 @@ TChannelOutRequest.prototype.send = function send(arg1, arg2, arg3, callback) {
 
     if (self.logical === false && self.retryCount === 0) {
         self.emitOutboundCallsSent();
-    }
-
-    if (callback) {
-        self.hookupCallback(callback);
     }
 
     self.arg2 = arg2;
@@ -463,7 +447,7 @@ function emitOutboundCallsSent() {
 };
 
 TChannelOutRequest.prototype.hookupStreamCallback =
-function hookupCallback(callback) {
+function hookupStreamCallback(callback) {
     var self = this;
     var called = false;
 
@@ -485,8 +469,10 @@ function hookupCallback(callback) {
     return self;
 };
 
-TChannelOutRequest.prototype.hookupCallback = function hookupCallback(callback) {
+TChannelOutRequest.prototype.hookupCallback =
+function hookupCallback(callback) {
     var self = this;
+
     if (callback.canStream) {
         return self.hookupStreamCallback(callback);
     }
@@ -558,3 +544,16 @@ TChannelOutRequest.prototype.onTimeout = function onTimeout(now) {
         }));
     }
 };
+
+function emitOutboundCallsSuccess(request) {
+    request.channel.emitFastStat(request.channel.buildStat(
+        'tchannel.outbound.calls.success',
+        'counter',
+        1,
+        new stat.OutboundCallsSuccessTags(
+            request.serviceName,
+            request.headers.cn,
+            request.endpoint
+        )
+    ));
+}

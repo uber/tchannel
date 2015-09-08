@@ -231,13 +231,12 @@ Operations.prototype.popOutReq = function popOutReq(id, context) {
         });
     }
 
-    var now = self.timers.now();
-    var tombstone = new OperationTombstone(self, id, now, req);
-    req.operations = null;
+    var tombstone = new OperationTombstone(self, id, self.timers.now(), req);
     self.requests.out[id] = tombstone;
-    self.pending.out--;
+    tombstone.timeHeapHandle = self.connection.channel.timeHeap.update(tombstone, tombstone.time);
 
-    tombstone.timeHeapHandle = self.connection.channel.timeHeap.update(tombstone, now);
+    req.operations = null;
+    self.pending.out--;
 
     return req;
 };
