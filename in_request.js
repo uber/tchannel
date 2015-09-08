@@ -141,6 +141,13 @@ TChannelInRequest.prototype.handleFrame = function handleFrame(parts, isLast) {
     return null;
 };
 
+TChannelInRequest.prototype.emitError = function emitError(err) {
+    var self = this;
+
+    self.err = err;
+    self.errorEvent.emit(self, err);
+};
+
 TChannelInRequest.prototype.emitFinish = function emitFinish() {
     var self = this;
 
@@ -165,14 +172,11 @@ TChannelInRequest.prototype.onTimeout = function onTimeout(now) {
             elapsed: now - self.start,
             timeout: self.timeout
         });
-        if (!self.err) {
-            self.err = timeoutError;
-        }
         process.nextTick(deferInReqTimeoutErrorEmit);
     }
 
     function deferInReqTimeoutErrorEmit() {
-        self.errorEvent.emit(self, timeoutError);
+        self.emitError(timeoutError);
     }
 };
 
