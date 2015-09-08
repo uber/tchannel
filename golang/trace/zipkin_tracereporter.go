@@ -101,7 +101,7 @@ func (r *ZipkinTraceReporter) zipkinReport(data *zipkinData) error {
 func (r *ZipkinTraceReporter) zipkinSpanWorker() {
 	for data := range r.c {
 		if err := r.zipkinReport(&data); err != nil {
-			r.tchannel.Logger().Infof("Zipkin Span submit failed. Get error: %v", err)
+			r.logger.Infof("Zipkin Span submit failed. Get error: %v", err)
 		}
 	}
 }
