@@ -254,7 +254,7 @@ function bootstrap(cb) {
 
     self.repl.once('listening', listenReady.signal);
     self.repl.start();
-    
+
     if (self.logger.bootstrap) {
         self.logger.bootstrap(listenReady.signal);
     } else {
