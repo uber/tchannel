@@ -25,6 +25,8 @@ var setTimeout = require('timers').setTimeout;
 var parallel = require('run-parallel');
 var tape = require('tape');
 var nodeAssert = require('assert');
+var util = require('util');
+var EventEmitter = require('events').EventEmitter;
 
 var HyperbahnCluster = require('../lib/test-cluster.js');
 
@@ -185,6 +187,7 @@ function BatchClient(options) {
     }
 
     var self = this;
+    EventEmitter.call(self);
 
     self.serverServiceName = options.serverServiceName;
     self.clientServiceName = options.clientServiceName;
@@ -203,6 +206,7 @@ function BatchClient(options) {
         self.channels.push(options.remotes[i].clientChannel);
     }
 }
+util.inherits(BatchClient, EventEmitter);
 
 BatchClient.prototype.sendRequests = function sendRequests(now, cb) {
     var self = this;
@@ -231,6 +235,10 @@ BatchClient.prototype.sendRequests = function sendRequests(now, cb) {
         if (!batchResult) {
             batchResult = resultBuckets[bucketIndex] =
                 new BatchClientResult();
+            self.emit('batch-created', {
+                index: bucketIndex,
+                batch: batchResult
+            });
         }
 
         currentBatch += 1;
@@ -253,6 +261,11 @@ BatchClient.prototype.sendRequests = function sendRequests(now, cb) {
             for (var j = 0; j < responses.length; j++) {
                 responseCounter++;
                 batchResult.push(responses[j]);
+
+                self.emit('batch-updated', {
+                    batch: batchResult,
+                    index: bucketIndex
+                });
             }
 
             if (responseCounter >= self.requestVolume) {
