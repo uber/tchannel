@@ -74,7 +74,7 @@ function setupEndpoints(clients, services) {
     /*eslint no-unused-vars: 0*/
     // thrift health endpoint
     var tchannelAsThrift = new TChannelAsThrift({
-        source: '',
+        source: '// lul',
         channel: clients.hyperbahnChannel,
         isHealthy: require('./health').isHealthy
     });
