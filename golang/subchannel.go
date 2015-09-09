@@ -87,9 +87,16 @@ func (c *SubChannel) Logger() Logger {
 	return c.logger
 }
 
-// StatsReporter returns the StatsReporter for this subchannel.
+// StatsReporter returns the stats reporter for this subchannel.
 func (c *SubChannel) StatsReporter() StatsReporter {
-	return c.statsReporter
+	return c.topChannel.StatsReporter()
+}
+
+// StatsTags returns the stats tags for this subchannel.
+func (c *SubChannel) StatsTags() map[string]string {
+	tags := c.topChannel.StatsTags()
+	tags["subchannel"] = c.serviceName
+	return tags
 }
 
 // Find if a handler for the given service+operation pair exists
