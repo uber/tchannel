@@ -197,7 +197,7 @@ TChannelOutResponse.prototype.sendError = function sendError(codeString, message
     var self = this;
     if (self.state === States.Done || self.state === States.Error) {
         self.errorEvent.emit(self, errors.ResponseAlreadyDone({
-            attempted: 'send error frame: ' + codeString + ': ' + message,
+            attempted: 'error frame',
             currentState: self.state,
             method: 'sendError',
             codeString: codeString,
@@ -294,10 +294,16 @@ TChannelOutResponse.prototype.send = function send(res1, res2) {
 
     /* send calls after finish() should be swallowed */
     if (self.end) {
-        if (self.inreq && self.inreq.timedOut) {
-            self.logger.info('OutResponse.send() after inreq timed out', self.extendLogInfo({}));
-        } else {
-            self.logger.warn('OutResponse called send() after end', self.extendLogInfo({}));
+        var inreqErrClass = self.inreq &&
+                            self.inreq.err &&
+                            errors.classify(self.inreq.err);
+
+        switch (inreqErrClass) {
+            case 'Timeout':
+                self.logger.info('OutResponse.send() after inreq timed out', self.extendLogInfo({}));
+                break;
+            default:
+                self.logger.warn('OutResponse called send() after end', self.extendLogInfo({}));
         }
         return;
     }
