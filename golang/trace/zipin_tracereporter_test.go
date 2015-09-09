@@ -126,9 +126,18 @@ func TestSubmit(t *testing.T) {
 		thriftSpan.BinaryAnnotations = []*gen.BinaryAnnotation{}
 		ret := &gen.Response{Ok: true}
 
-		args.s.On("Submit", ctxArg(), thriftSpan).Return(ret, nil)
-		err := args.c.Report(span, annotations, nil, endpoint)
-		assert.NoError(t, err)
+		called := make(chan struct{})
+		args.s.On("Submit", ctxArg(), thriftSpan).Return(ret, nil).Run(func(_ mock.Arguments) {
+			close(called)
+		})
+		args.c.Report(span, annotations, nil, endpoint)
+
+		// wait for the server's Submit to get called
+		select {
+		case <-time.After(time.Second):
+			t.Fatal("Submit not called")
+		case <-called:
+		}
 	})
 }
 
@@ -184,4 +193,19 @@ func getClient(dst string) (tchannel.TraceReporter, error) {
 
 	tchan.Peers().Add(dst)
 	return NewZipkinTraceReporter(tchan), nil
+}
+
+func BenchmarkBuildThrift(b *testing.B) {
+	endpoint := tchannel.TargetEndpoint{
+		HostPort:    "127.0.0.1:8888",
+		ServiceName: "testServer",
+		Operation:   "test",
+	}
+	span := *tchannel.NewRootSpan()
+	annotations := RandomAnnotations()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		buildZipkinSpan(span, annotations, nil, endpoint)
+	}
 }

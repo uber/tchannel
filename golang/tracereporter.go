@@ -66,7 +66,7 @@ func NewBinaryAnnotation(key string, value interface{}) BinaryAnnotation {
 type TraceReporter interface {
 	// Report method is intended to report Span information.
 	// It returns any error encountered otherwise nil.
-	Report(span Span, annotations []Annotation, binaryAnnotations []BinaryAnnotation, targetEndpoint TargetEndpoint) error
+	Report(span Span, annotations []Annotation, binaryAnnotations []BinaryAnnotation, targetEndpoint TargetEndpoint)
 }
 
 // NullReporter is the default TraceReporter which does not do anything.
@@ -74,8 +74,7 @@ var NullReporter TraceReporter = nullReporter{}
 
 type nullReporter struct{}
 
-func (nullReporter) Report(_ Span, _ []Annotation, _ []BinaryAnnotation, _ TargetEndpoint) error {
-	return nil
+func (nullReporter) Report(_ Span, _ []Annotation, _ []BinaryAnnotation, _ TargetEndpoint) {
 }
 
 // SimpleTraceReporter is a trace reporter which prints using the default logger.
@@ -84,10 +83,9 @@ var SimpleTraceReporter TraceReporter = simpleTraceReporter{}
 type simpleTraceReporter struct{}
 
 func (simpleTraceReporter) Report(
-	span Span, annotations []Annotation, binaryAnnotations []BinaryAnnotation, targetEndpoint TargetEndpoint) error {
+	span Span, annotations []Annotation, binaryAnnotations []BinaryAnnotation, targetEndpoint TargetEndpoint) {
 	log.Printf("SimpleTraceReporter.Report span: %+v annotations: %+v binaryAnnotations: %+v targetEndpoint: %+v",
 		span, annotations, binaryAnnotations, targetEndpoint)
-	return nil
 }
 
 // Annotations is am embeddable struct used to track annotations.
@@ -107,6 +105,6 @@ func (as *Annotations) AddAnnotation(key AnnotationKey) {
 }
 
 // Report reports the annotations to the given trace reporter.
-func (as *Annotations) Report(span Span, targetEndpoint TargetEndpoint, reporter TraceReporter) error {
-	return reporter.Report(span, as.annotations, as.binaryAnnotations, targetEndpoint)
+func (as *Annotations) Report(span Span, targetEndpoint TargetEndpoint, reporter TraceReporter) {
+	reporter.Report(span, as.annotations, as.binaryAnnotations, targetEndpoint)
 }
