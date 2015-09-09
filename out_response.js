@@ -305,7 +305,7 @@ TChannelOutResponse.prototype.send = function send(res1, res2) {
             default:
                 self.logger.warn('OutResponse called send() after end', self.extendLogInfo({}));
         }
-        return;
+        return self;
     }
 
     self.arg2 = res1;
