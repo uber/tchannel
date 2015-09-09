@@ -744,18 +744,47 @@ module.exports.classify = function classify(err) {
 // To determine whether a circuit should break for each response code.
 // TODO consider whether to keep a circuit healthy if a downstream circuit is
 // unhealthy.
-var symptoms = {
-    'BadRequest': false, // not an indicator of bad health
-    'Cancelled': false, // not an indicator of bad health
-    'Unhealthy': true,
-    'Timeout': true,
-    'Busy': true,
-    'Declined': true,
-    'UnexpectedError': true,
-    'NetworkError': true,
-    'ProtocolError': true
+module.exports.isUnhealthy = function isUnhealthy(codeName) {
+    switch (codeName) {
+        // not an indicator of bad health
+        case 'BadRequest':
+        case 'Cancelled':
+            return false;
+
+        case 'Unhealthy':
+        case 'Timeout':
+        case 'Busy':
+        case 'Declined':
+        case 'UnexpectedError':
+        case 'NetworkError':
+        case 'ProtocolError':
+            return true;
+
+        default:
+            return null;
+    }
 };
 
-module.exports.isUnhealthy = function isUnhealthy(code) {
-    return symptoms[code];
+module.exports.shouldRetry = function shouldRetry(codeName, retryFlags) {
+    switch (codeName) {
+        case 'BadRequest':
+        case 'Cancelled':
+        case 'Unhealthy':
+            return false;
+
+        case 'Busy':
+        case 'Declined':
+            return true;
+
+        case 'Timeout':
+            return !!retryFlags.onTimeout;
+
+        case 'NetworkError':
+        case 'ProtocolError':
+        case 'UnexpectedError':
+            return !!retryFlags.onConnectionError;
+
+        default:
+            return null;
+    }
 };

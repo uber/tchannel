@@ -32,13 +32,17 @@ var errorsPath = path.resolve(path.join(__dirname, '..', 'errors.js'));
 
 test('errors module should be in sorted order', function t(assert) {
     var exportedErrors = [];
-    processLineMatches(errorsPath,
-        /^module\.exports\.([^ ]+) *= *([\w_\-]+)/,
-        function each(match) {
+
+    processLineMatches({
+        filePath: errorsPath,
+        caseRegex: /^module\.exports\.([^ ]+) *= *([\w_\-]+)/,
+        onMatch: function each(match) {
             if (/Error$/.test(match[2])) {
                 exportedErrors.push(match[1]);
             }
-        }, checkExportedErrors);
+        },
+        onFinish: checkExportedErrors
+    });
 
     function checkExportedErrors() {
         var expected = exportedErrors.slice().sort();
@@ -60,16 +64,19 @@ test('error classification cases must be sorted', function t(assert) {
     var caseAccum = [];
     var cases = {};
 
-    processLineMatches(errorsPath,
-        /\breturn +'(\w+)'|case\s+(['"])(.+?)\2/,
-        function each(match) {
+    processLineMatches({
+        filePath: errorsPath,
+        caseRegex: /\breturn +'(\w+)'|case\s+(['"])(.+?)\2/,
+        onMatch: function each(match) {
             if (match[1]) {
                 cases[match[1]] = caseAccum;
                 caseAccum = [];
             } else {
                 caseAccum.push(match[3]);
             }
-        }, checkCases);
+        },
+        onFinish: checkCases
+    });
 
     function checkCases() {
         Object.keys(cases).forEach(checkCase);
@@ -97,11 +104,16 @@ test('error classification cases must be sorted', function t(assert) {
 
 test('error case statements should not be duplicates', function t(assert) {
     var caseTypes = [];
-    processLineMatches(errorsPath,
-        /case\s+(['"])(.+?)\1/,
-        function each(match) {
+    processLineMatches({
+        filePath: errorsPath,
+        startRegex: /module\.exports\.classify = function classify\(err\) \{/,
+        caseRegex: /case\s+(['"])(.+?)\1/,
+        endRegex: /\};/,
+        onMatch: function each(match) {
             caseTypes.push(match[2]);
-        }, checkCases);
+        },
+        onFinish: checkCases
+    });
 
     function checkCases() {
         var errorTypes = getValueTypes(Errors);
@@ -142,20 +154,36 @@ test('all errors are classified', function t(assert) {
     assert.end();
 });
 
-function processLineMatches(filePath, pattern, proc, done) {
-    fs.createReadStream(filePath, 'utf8')
+function processLineMatches(options) {
+    var inScope = false;
+
+    fs.createReadStream(options.filePath, 'utf8')
         .pipe(split2())
         .on('data', eachLine)
         .on('end', streamDone);
 
     function eachLine(line) {
-        var match = pattern.exec(line);
-        if (match) {
-            proc(match);
+        if (options.startRegex && !inScope) {
+            if (options.startRegex.test(line)) {
+                inScope = true;
+            }
+        }
+
+        if (!options.startRegex || inScope) {
+            var match = options.caseRegex.exec(line);
+            if (match) {
+                options.onMatch(match);
+            }
+        }
+
+        if (options.endRegex && inScope) {
+            if (options.endRegex.test(line)) {
+                inScope = false;
+            }
         }
     }
 
     function streamDone() {
-        process.nextTick(done);
+        process.nextTick(options.onFinish);
     }
 }
