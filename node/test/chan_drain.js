@@ -286,6 +286,354 @@ allocCluster.test('drain server with a few incoming (with exempt service)', {
     }
 });
 
+allocCluster.test('drain client with a few outgoing', {
+    numPeers: 4,
+    skipEmptyCheck: true
+}, function t(cluster, assert) {
+    var server = cluster.channels[0];
+    var drainClient = cluster.channels[1];
+    var clients = null;
+    var finishCount = 0;
+    var reqN = 0;
+    setupTestClients(cluster, ['a'], runTest);
+    setupServiceServer(server, 'a', 5);
+
+    function runTest(err, gotClients) {
+        if (err) {
+            finish(err);
+            return;
+        }
+        clients = gotClients;
+
+        finishCount = 2;
+        assert.timeoutAfter(50);
+        collectParallel(clients.a, sendOne, sendsDone);
+
+        setTimeout(testdown, 1);
+    }
+
+    function testdown() {
+        assert.comment('triggering drain');
+        assert.equal(finishCount, 2, 'requests have not finished');
+        drainClient.drain('testdown', drained);
+        finishCount++;
+        collectParallel(clients.a, sendOne, afterDrainSendsDone);
+    }
+
+    function sendOne(client, _, done) {
+        reqN++;
+        assert.comment('sending request ' + reqN);
+        client.request().send('echo', 'such', 'mess' + reqN, done);
+    }
+
+    function sendsDone(err, res) {
+        if (err) {
+            finish(err);
+            return;
+        }
+
+        for (var i = 0; i < res.length; i++) {
+            assert.ifError(res[i].err, 'res[' + i + ']: no error');
+            assert.equal(
+                res[i].value &&
+                String(res[i].value.arg3), 'mess' + (i + 1),
+                'res[' + i + ']: expected arg3');
+        }
+
+        finish();
+    }
+
+    function afterDrainSendsDone(err, res) {
+        if (err) {
+            finish(err);
+            return;
+        }
+
+        assert.equal(
+            res[0].err && res[0].err.type,
+            'tchannel.request.drained',
+            'res[0]: expected request drained');
+        assert.equal(res[0].value, null, 'res[0]: no value');
+
+        for (var i = 1; i < res.length; i++) {
+            assert.ifError(res[i].err, 'res[' + i + ']: no error');
+            assert.equal(
+                res[i].value &&
+                String(res[i].value.arg3), 'mess' + (i + 4),
+                'res[' + i + ']: expected arg3');
+        }
+
+        finish();
+    }
+
+    function drained() {
+        assert.pass('drain happened');
+        drainClient.close(closed);
+    }
+
+    function closed(err) {
+        if (err) {
+            finish(err);
+            return;
+        }
+
+        assert.pass('client closed');
+        setTimeout(finish, 1);
+    }
+
+    function finish(err) {
+        assert.ifError(err, 'no unexpected error');
+
+        if (--finishCount === 0) {
+            // cluster.assertEmptyState(assert);
+            // return;
+
+            cluster.assertCleanState(assert, {
+                channels: [
+                    // server has no peers
+                    {peers: [
+                        {connections: []},
+                        {connections: [
+                            {
+                                direction: 'in',
+                                inReqs: 0,
+                                outReqs: 0,
+                                streamingReq: 0,
+                                streamingRes: 0
+                            }
+                        ]},
+                        {connections: [
+                            {
+                                direction: 'in',
+                                inReqs: 0,
+                                outReqs: 0,
+                                streamingReq: 0,
+                                streamingRes: 0
+                            }
+                        ]}
+                    ]},
+                    // all client connections closed
+                    {peers: []},
+                    {peers: [{connections: [
+                        {
+                            direction: 'out',
+                            inReqs: 0,
+                            outReqs: 0,
+                            streamingReq: 0,
+                            streamingRes: 0
+                        }
+                    ]}]},
+                    {peers: [{connections: [
+                        {
+                            direction: 'out',
+                            inReqs: 0,
+                            outReqs: 0,
+                            streamingReq: 0,
+                            streamingRes: 0
+                        }
+                    ]}]}
+                ]
+            });
+        }
+
+        if (finishCount <= 0) {
+            assert.end();
+        }
+    }
+});
+
+allocCluster.test('drain client with a few outgoing (with exempt service)', {
+    numPeers: 4,
+    skipEmptyCheck: true
+}, function t(cluster, assert) {
+    var server = cluster.channels[0];
+    var drainClient = cluster.channels[1];
+    var clients = null;
+    var finishCount = 0;
+    var reqN = 0;
+    setupTestClients(cluster, ['a', 'b'], runTest);
+    setupServiceServer(server, 'a', 5);
+    setupServiceServer(server, 'b', 5);
+
+    cluster.logger.whitelist('info', 'resetting connection');
+    // cluster.logger.whitelist('info', 'ignoring outresponse.send on a closed connection');
+
+    function runTest(err, gotClients) {
+        if (err) {
+            finish(err);
+            return;
+        }
+        clients = gotClients;
+
+        assert.timeoutAfter(50);
+
+        finishCount++;
+        collectParallel(clients.a, sendOne, checkSendsDone('service:a', checkASend, finish));
+
+        finishCount++;
+        collectParallel(clients.b, sendOne, checkSendsDone('service:b', checkBSend, finish));
+
+        setTimeout(testdown, 1);
+
+        function checkASend(desc, res, i) {
+            assert.ifError(res.err, desc + 'no error');
+            assert.equal(res.value && String(res.value.arg3), 'mess' + (i + 1),
+                         desc + 'expected arg3');
+        }
+
+        function checkBSend(desc, res, i) {
+            if (res.err) {
+                assert.equal(res.err.type, 'tchannel.local.reset',
+                             desc + 'expected local reset error');
+            } else {
+                assert.equal(String(res.value.arg3), 'mess' + (i + 4),
+                             desc + 'expected arg3');
+            }
+        }
+    }
+
+    function testdown() {
+        assert.comment('triggering drain');
+        assert.equal(finishCount, 2, 'requests have not finished');
+
+        finishCount++;
+        drainClient.drain('testdown', drainExemptB, drained);
+
+        finishCount++;
+        collectParallel(clients.a, sendOne, checkSendsDone('service:a', checkADecline, finish));
+
+        finishCount++;
+        collectParallel(clients.b, sendOne, checkSendsDone('service:b', checkBRes, finish));
+
+        function checkADecline(desc, res, i) {
+            if (i === 0) {
+                assert.equal(res.err && res.err.type, 'tchannel.request.drained',
+                             desc + 'expected request drained');
+                assert.equal(res.value, null,
+                             desc + 'no value');
+            } else {
+                assert.ifError(res.err, desc + 'no error');
+                assert.equal(res.value && String(res.value.arg3), 'mess' + (i + 7),
+                             desc + 'expected arg3');
+            }
+        }
+
+        function checkBRes(desc, res, i) {
+            if (res.err) {
+                assert.equal(res.err.type, 'tchannel.local.reset',
+                             desc + 'expected local reset error');
+            } else {
+                assert.equal(String(res.value.arg3), 'mess' + (i + 10),
+                             desc + 'expected arg3');
+            }
+        }
+    }
+
+    function drainExemptB(req) {
+        return req.serviceName === 'b';
+    }
+
+    function sendOne(client, _, done) {
+        reqN++;
+        assert.comment('sending request ' + reqN);
+        client.request().send('echo', 'such', 'mess' + reqN, done);
+    }
+
+    function drained() {
+        assert.pass('drain happened');
+        drainClient.close(closed);
+    }
+
+    function closed(err) {
+        if (err) {
+            finish(err);
+            return;
+        }
+
+        assert.pass('client closed');
+        setTimeout(finish, 1);
+    }
+
+    function checkLogs() {
+        var logs = cluster.logger.items().map(function eachLog(log) {
+            return {
+                level: log.levelName,
+                msg: log.msg
+            };
+        });
+
+        // TODO: why not always get log
+        if (logs.length > 0) {
+            assert.deepEqual(logs[0], {
+                level: 'info',
+                msg: 'resetting connection'
+            }, 'expected resetting connection log');
+        }
+    }
+
+    function finish(err) {
+        assert.ifError(err, 'no unexpected error');
+
+        if (--finishCount === 0) {
+            // cluster.assertEmptyState(assert);
+            // return;
+
+            checkLogs();
+
+            cluster.assertCleanState(assert, {
+                channels: [
+                    // server has no peers
+                    {peers: [
+                        {connections: []},
+                        {connections: [
+                            {
+                                direction: 'in',
+                                inReqs: 0,
+                                outReqs: 0,
+                                streamingReq: 0,
+                                streamingRes: 0
+                            }
+                        ]},
+                        {connections: [
+                            {
+                                direction: 'in',
+                                inReqs: 0,
+                                outReqs: 0,
+                                streamingReq: 0,
+                                streamingRes: 0
+                            }
+                        ]}
+                    ]},
+                    // all client connections closed
+                    {peers: []},
+                    {peers: [{connections: [
+                        {
+                            direction: 'out',
+                            inReqs: 0,
+                            outReqs: 0,
+                            streamingReq: 0,
+                            streamingRes: 0
+                        }
+                    ]}]},
+                    {peers: [{connections: [
+                        {
+                            direction: 'out',
+                            inReqs: 0,
+                            outReqs: 0,
+                            streamingReq: 0,
+                            streamingRes: 0
+                        }
+                    ]}]}
+                ]
+            });
+        }
+
+        if (finishCount <= 0) {
+            assert.end();
+        }
+    }
+});
+
 // TODO: test draining of outgoing reqs
 // TODO: currently the exempt test provokes mismatched onReqDone callback warn logs
 
