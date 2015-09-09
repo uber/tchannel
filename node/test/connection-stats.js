@@ -27,7 +27,10 @@ var allocCluster = require('./lib/alloc-cluster.js');
 var timers = TimeMock(Date.now());
 
 allocCluster.test('emits connection stats with success', {
-    numPeers: 2
+    numPeers: 2,
+    channelOptions: {
+        emitConnectionMetrics: true
+    }
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
     var client = cluster.channels[1];
@@ -99,7 +102,10 @@ allocCluster.test('emits connection stats with success', {
 });
 
 allocCluster.test('emits connection stats with failure', {
-    numPeers: 1
+    numPeers: 1,
+    channelOptions: {
+        emitConnectionMetrics: true
+    }
 }, function t(cluster, assert) {
     var client = cluster.channels[0];
     var clientHost = cluster.hosts[0];
@@ -167,7 +173,8 @@ allocCluster.test('emits connection stats with failure', {
 allocCluster.test('emits active connections', {
     numPeers: 2,
     channelOptions: {
-        timers: timers
+        timers: timers,
+        emitConnectionMetrics: true
     }
 }, function t(cluster, assert) {
     var server = cluster.channels[0];

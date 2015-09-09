@@ -30,7 +30,8 @@ allocCluster.test('emits response stats with ok', {
         statTags: {
             app: 'server',
             host: os.hostname()
-        }
+        },
+        emitConnectionMetrics: true
     }
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
@@ -193,7 +194,8 @@ allocCluster.test('emits response stats with not ok', {
         statTags: {
             app: 'server',
             host: os.hostname()
-        }
+        },
+        emitConnectionMetrics: true
     }
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
@@ -357,7 +359,8 @@ allocCluster.test('emits response stats with error', {
         statTags: {
             app: 'server',
             host: os.hostname()
-        }
+        },
+        emitConnectionMetrics: true
     }
 }, function t(cluster, assert) {
     var server = cluster.channels[0];

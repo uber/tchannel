@@ -31,7 +31,8 @@ var timers = TimeMock(Date.now());
 allocCluster.test('emits stats on call success', {
     numPeers: 2,
     channelOptions: {
-        timers: timers
+        timers: timers,
+        emitConnectionMetrics: true
     }
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
@@ -149,7 +150,8 @@ allocCluster.test('emits stats on call success', {
 allocCluster.test('emits stats on p2p call success', {
     numPeers: 2,
     channelOptions: {
-        timers: timers
+        timers: timers,
+        emitConnectionMetrics: true
     }
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
@@ -366,7 +368,8 @@ allocCluster.test('emits stats with no connection metrics', {
 allocCluster.test('emits stats on call failure', {
     numPeers: 2,
     channelOptions: {
-        timers: timers
+        timers: timers,
+        emitConnectionMetrics: true
     }
 }, function t(cluster, assert) {
     var server = cluster.channels[0];
