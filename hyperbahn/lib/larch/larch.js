@@ -63,7 +63,7 @@ function logMultiBackend(level, msg, meta, cb) {
     function backendDone() {
         done++;
 
-        if (done === self.backends.length) {
+        if (done >= self.backends.length) {
             cb();
         }
     }
