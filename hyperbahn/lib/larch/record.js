@@ -22,6 +22,7 @@
 
 var os = require('os');
 var process = require('process');
+var stringify = require('json-stringify-safe');
 
 module.exports = Record;
 
@@ -33,8 +34,8 @@ function Record(level, msg, meta, time) {
 }
 
 Record.prototype.serialize = function serialize() {
-    if (!this.serialized) {
-        this.serialized = JSON.stringify(this.toJSON());
+    if (this.serialized !== null) {
+        this.serialized = stringify(this.toJSON());
     }
 
     return this.serialized;
