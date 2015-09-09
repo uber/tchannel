@@ -229,8 +229,7 @@ Operations.prototype.hasDrained = function hasDrained() {
     if (self.pending.in === 0 &&
         self.pending.out === 0) {
         return true;
-    } else if (self.drainExempt &&
-               self._isCollDrained(self.requests.in) &&
+    } else if (self._isCollDrained(self.requests.in) &&
                self._isCollDrained(self.requests.out)) {
         return true;
     }
@@ -254,7 +253,8 @@ Operations.prototype._isCollDrained = function _isCollDrained(coll) {
     for (var id in coll) {
         var op = coll[id];
         if (!(op instanceof OperationTombstone) &&
-            !self.drainExempt(op)
+            !op.drained &&
+            !(self.drainExempt && self.drainExempt(op))
         ) {
             return false;
         }
