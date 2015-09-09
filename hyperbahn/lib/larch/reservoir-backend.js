@@ -95,7 +95,9 @@ ReservoirBackend.prototype.flush = function flush(records) {
 ReservoirBackend.prototype.log = function log(record, cb) {
     var self = this;
 
-    cb();
+    if (typeof cb === 'function') {
+        cb();
+    }
 
     self.count += 1;
 
