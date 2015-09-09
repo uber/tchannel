@@ -26,6 +26,8 @@ var timers = require('timers');
 
 var BaseBackend = require('./base-backend');
 
+module.exports = ReservoirBackend;
+
 function ReservoirBackend(options) {
     if (!(this instanceof ReservoirBackend)) {
         return new ReservoirBackend(options);
