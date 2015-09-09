@@ -40,6 +40,10 @@ function TChannelConnectionBase(channel, direction, socketRemoteAddr) {
     self.timedOutEvent = self.defineEvent('timedOut');
     self.pingResponseEvent = self.defineEvent('pingResonse');
 
+    self.draining = false;
+    self.drainReason = '';
+    self.drainExempt = null;
+
     self.closing = false;
     self.closeError = null;
     self.closeEvent = self.defineEvent('close');
@@ -83,6 +87,29 @@ TChannelConnectionBase.prototype.setLazyHandling = function setLazyHandling() {
     // noop
 };
 
+TChannelConnectionBase.prototype.drain =
+function drain(reason, exempt, callback) {
+    var self = this;
+
+    if (callback === undefined) {
+        callback = exempt;
+        exempt = null;
+    }
+
+    self.draining = true;
+    self.drainReason = reason;
+    self.drainExempt = exempt || null;
+    self.ops.draining = true;
+    self.ops.drainExempt = self.drainExempt;
+    if (callback) {
+        if (self.ops.hasDrained()) {
+            process.nextTick(callback);
+        } else {
+            self.ops.drainEvent.on(callback);
+        }
+    }
+};
+
 // create a request
 TChannelConnectionBase.prototype.request =
 function connBaseRequest(options) {
@@ -99,6 +126,12 @@ function connBaseRequest(options) {
     // options.checksumType = options.checksum;
 
     var req = self.buildOutRequest(options);
+    if (self.draining && (
+            !self.drainExempt || !self.drainExempt(req)
+        )) {
+        req.drained = true;
+        req.drainReason = self.drainReason;
+    }
     self.ops.addOutReq(req);
     req.peer.invalidateScore();
     return req;
@@ -109,6 +142,14 @@ TChannelConnectionBase.prototype.handleCallRequest = function handleCallRequest(
 
     req.remoteAddr = self.remoteName;
     self.ops.addInReq(req);
+
+    if (self.draining && (
+            !self.drainExempt || !self.drainExempt(req)
+        )) {
+        var res = self.buildResponse(req, {});
+        res.sendError('Declined', 'connection draining: ' + self.drainReason);
+        return;
+    }
 
     process.nextTick(runHandler);
 

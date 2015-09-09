@@ -382,6 +382,12 @@ module.exports.RequestAlreadyDone = TypedError({
     attempted: null
 });
 
+module.exports.RequestDrained = TypedError({
+    type: 'tchannel.request.drained',
+    message: 'refusing to send drained request: {reason}',
+    reason: null
+});
+
 module.exports.RequestFrameState = TypedError({
     type: 'tchannel.request-frame-state',
     message: 'cannot send {attempted} in {state} request state',
@@ -627,6 +633,7 @@ module.exports.classify = function classify(err) {
         case 'tchannel.max-pending-for-service':
         case 'tchannel.no-peer-available':
         case 'tchannel.no-service-handler':
+        case 'tchannel.request.drained':
             return 'Declined';
 
         case 'tchannel.connection-stale.timeout':

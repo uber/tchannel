@@ -21,6 +21,8 @@
 'use strict';
 
 var errors = require('./errors.js');
+var inherits = require('util').inherits;
+var EventEmitter = require('./lib/event_emitter');
 
 var TOMBSTONE_TTL_OFFSET = 500;
 
@@ -28,6 +30,11 @@ module.exports = Operations;
 
 function Operations(opts) {
     var self = this;
+
+    EventEmitter.call(self);
+    self.draining = false;
+    self.drainExempt = null;
+    self.drainEvent = self.defineEvent('drain');
 
     self.timers = opts.timers;
     self.logger = opts.logger;
@@ -47,6 +54,7 @@ function Operations(opts) {
     };
     self.lastTimeoutTime = 0;
 }
+inherits(Operations, EventEmitter);
 
 Operations.prototype.extendLogInfo = function extendLogInfo(info) {
     var self = this;
@@ -215,6 +223,46 @@ Operations.prototype.addInReq = function addInReq(req) {
     return req;
 };
 
+Operations.prototype.hasDrained = function hasDrained() {
+    var self = this;
+
+    if (self.pending.in === 0 &&
+        self.pending.out === 0) {
+        return true;
+    } else if (self._isCollDrained(self.requests.in) &&
+               self._isCollDrained(self.requests.out)) {
+        return true;
+    }
+
+    return false;
+};
+
+Operations.prototype.checkDrained = function checkDrained() {
+    var self = this;
+
+    if (self.hasDrained()) {
+        self.drainEvent.emit(self);
+        self.drainEvent.removeAllListeners();
+    }
+};
+
+Operations.prototype._isCollDrained = function _isCollDrained(coll) {
+    var self = this;
+
+    /* jshint forin:false */
+    for (var id in coll) {
+        var op = coll[id];
+        if (!(op instanceof OperationTombstone) &&
+            !op.drained &&
+            !(self.drainExempt && self.drainExempt(op))
+        ) {
+            return false;
+        }
+    }
+
+    return true;
+};
+
 Operations.prototype.popOutReq = function popOutReq(id, context) {
     var self = this;
 
@@ -244,6 +292,9 @@ Operations.prototype.popOutReq = function popOutReq(id, context) {
 
     req.operations = null;
     self.pending.out--;
+    if (self.draining) {
+        self.checkDrained();
+    }
 
     return req;
 };
@@ -293,6 +344,9 @@ Operations.prototype.popInReq = function popInReq(id) {
 
     delete self.requests.in[id];
     self.pending.in--;
+    if (self.draining) {
+        self.checkDrained();
+    }
 
     return req;
 };
