@@ -271,7 +271,7 @@ TChannel.prototype.eachConnection = function eachConnection(each) {
     var i;
     for (i = 0; i < peers.length; i++) {
         var peer = peers[i];
-        for (var j = 0; j < peer.connections; j++) {
+        for (var j = 0; j < peer.connections.length; j++) {
             each(peer.connections[j]);
         }
     }
