@@ -76,18 +76,14 @@ allocCluster.test('conn double buildResponse: build send build sendError', {
             levelName: 'error',
             msg: 'outgoing response has an error',
             errorType: 'tchannel.response-already-done',
-            errorMessage: 'cannot send send error frame: ' +
-                          'UnexpectedError: response already started (state 2)' +
-                          ', response already done in state: 2'
+            errorMessage: 'cannot send error frame, response already done in state: 2'
         }, 'expected first error log');
 
         assert.deepEqual(pluckErrorLog(record2), {
             levelName: 'error',
             msg: 'outgoing response has an error',
             errorType: 'tchannel.response-already-done',
-            errorMessage: 'cannot send send error frame: ' +
-                          'UnexpectedError: nope' +
-                          ', response already done in state: 2'
+            errorMessage: 'cannot send error frame, response already done in state: 2'
         }, 'expected second error log');
 
         assert.end();

@@ -197,7 +197,7 @@ TChannelOutResponse.prototype.sendError = function sendError(codeString, message
     var self = this;
     if (self.state === States.Done || self.state === States.Error) {
         self.errorEvent.emit(self, errors.ResponseAlreadyDone({
-            attempted: 'send error frame: ' + codeString + ': ' + message,
+            attempted: 'error frame',
             currentState: self.state,
             method: 'sendError',
             codeString: codeString,
