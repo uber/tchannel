@@ -235,6 +235,9 @@ type Registrar interface {
 	// Logger returns the logger for this Registrar.
 	Logger() Logger
 
+	// StatsReporter returns the stats reporter for this Registrar.
+	StatsReporter() StatsReporter
+
 	// Peers returns the peer list for this Registrar.
 	Peers() *PeerList
 }
@@ -346,6 +349,11 @@ func (ch *Channel) Ping(ctx context.Context, hostPort string) error {
 // Logger returns the logger for this channel.
 func (ch *Channel) Logger() Logger {
 	return ch.log
+}
+
+// StatsReporter returns the stats reporter for this channel.
+func (ch *Channel) StatsReporter() StatsReporter {
+	return ch.statsReporter
 }
 
 // ServiceName returns the serviceName that this channel was created for.
