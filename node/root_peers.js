@@ -37,6 +37,7 @@ function TChannelRootPeers(channel, options) {
 
     self.allocPeerEvent = self.defineEvent('allocPeer');
     self.peerOptions = self.options.peerOptions || {};
+    self.preferOutgoing = self.options.preferOutgoing;
     self.selfPeer = null;
 }
 
@@ -87,6 +88,7 @@ TChannelRootPeers.prototype.add = function add(hostPort, options) {
     }
 
     options = options || extend({}, self.peerOptions);
+    options.preferOutgoing = self.preferOutgoing;
     peer = TChannelPeer(self.channel, hostPort, options);
     self.allocPeerEvent.emit(self, peer);
 
