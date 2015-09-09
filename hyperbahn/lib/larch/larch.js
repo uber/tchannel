@@ -22,7 +22,9 @@
 
 var assert = require('assert');
 var collectParallel = require('collect-parallel/array');
+
 var Levels = require('./levels');
+var Record = require('./record');
 
 module.exports = Larch;
 
@@ -47,16 +49,20 @@ Larch.prototype.logSingleBackend =
 function logSingleBackend(level, msg, meta, cb) {
     var self = this;
 
-    self.backends[0].log(level, msg, meta, cb);
+    var record = new Record(level, msg, meta, null);
+
+    self.backends[0].log(record, cb);
 };
 
 Larch.prototype.logMultiBackend =
 function logMultiBackend(level, msg, meta, cb) {
     var self = this;
 
+    var record = new Record(level, msg, meta, null);
+
     var i;
     for (i = 0; i < self.backends.length; i++) {
-        self.backends[i].log(level, msg, meta, backendDone);
+        self.backends[i].log(record, backendDone);
     }
 
     var done = 0;
@@ -90,29 +96,29 @@ Larch.prototype.destroy = function destroy(cb) {
 };
 
 Larch.prototype.trace = function trace(msg, meta, cb) {
-    this.log(Levels.BY_NAME.trace, msg, meta, cb);
+    this.log('trace', msg, meta, cb);
 };
 
 Larch.prototype.debug = function debug(msg, meta, cb) {
-    this.log(Levels.BY_NAME.debug, msg, meta, cb);
+    this.log('debug', msg, meta, cb);
 };
 
 Larch.prototype.info = function info(msg, meta, cb) {
-    this.log(Levels.BY_NAME.info, msg, meta, cb);
+    this.log('info', msg, meta, cb);
 };
 
 Larch.prototype.access = function access(msg, meta, cb) {
-    this.log(Levels.BY_NAME.access, msg, meta, cb);
+    this.log('access', msg, meta, cb);
 };
 
 Larch.prototype.warn = function warn(msg, meta, cb) {
-    this.log(Levels.BY_NAME.warn, msg, meta, cb);
+    this.log('warn', msg, meta, cb);
 };
 
 Larch.prototype.error = function error(msg, meta, cb) {
-    this.log(Levels.BY_NAME.error, msg, meta, cb);
+    this.log('error', msg, meta, cb);
 };
 
 Larch.prototype.fatal = function fatal(msg, meta, cb) {
-    this.log(Levels.BY_NAME.fatal, msg, meta, cb);
+    this.log('fatal', msg, meta, cb);
 };
