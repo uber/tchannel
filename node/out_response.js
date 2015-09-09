@@ -196,6 +196,12 @@ TChannelOutResponse.prototype.sendCallResponseContFrame = function sendCallRespo
 TChannelOutResponse.prototype.sendError = function sendError(codeString, message) {
     var self = this;
 
+    // if the request has already error with a similar error, stop
+    if (self.inreq.err &&
+        errors.classify(self.inreq.err) === codeString) {
+        return;
+    }
+
     if (self.inreq.connection && // because selfpeer/connection
         self.inreq.connection.closing) {
         self.logger.info('ignoring outresponse.sendError on a closed connection', {
