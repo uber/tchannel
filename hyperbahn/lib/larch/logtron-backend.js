@@ -22,6 +22,7 @@
 
 var util = require('util');
 var assert = require('assert');
+var LogtronEntry = require('logtron/entry');
 
 var BaseBackend = require('./base-backend');
 
@@ -49,5 +50,31 @@ util.inherits(LogtronBackend, BaseBackend);
 LogtronBackend.prototype.log = function log(record, cb) {
     var self = this;
 
-    self.logtron.writeEntry(record, cb);
+    var entry = new LogtronEntry(
+        record.data.level,
+        record.data.msg,
+        record.meta,
+        self.logtron.path
+    );
+
+    self.logtron.writeEntry(entry, cb);
 };
+
+LogtronBackend.prototype.logMany = function logMany(records, cb) {
+    var self = this;
+
+    var i;
+    var done = 0;
+    for (i = 0; i < records.length; i++) {
+        self.log(records[i], recordDone);
+    }
+
+    function recordDone() {
+        done++;
+
+        if (done >= records.length) {
+            cb();
+        }
+    }
+};
+
