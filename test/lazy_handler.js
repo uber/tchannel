@@ -23,7 +23,7 @@
 var v2 = require('../v2/index.js');
 var allocCluster = require('./lib/alloc-cluster.js');
 
-allocCluster.test('connection.handler: lazy call handling', 2, function t(cluster, assert) {
+allocCluster.test('channel.handler: lazy call handling', 2, function t(cluster, assert) {
     var one = cluster.channels[0];
     var two = cluster.channels[1];
 
@@ -31,24 +31,17 @@ allocCluster.test('connection.handler: lazy call handling', 2, function t(cluste
         serviceName: 'bob'
     });
 
-    // var server =
-    two.makeSubChannel({
+    var server = two.makeSubChannel({
         serviceName: 'bob'
     });
-    two.connectionEvent.on(onServerConnection);
 
     var clientPeer = client.peers.add(two.hostPort);
     clientPeer.waitForIdentified(onIdentified);
 
-    function onServerConnection(conn) {
-        conn.setLazyHandling(true);
-        conn.handler.handleCallLazily = handleCallLazily;
-    }
+    server.setLazyHandling(true);
+    server.handler.handleLazily = handleCallLazily;
 
-    function handleCallLazily(frame) {
-        // this is conn.handler
-        // jshint validthis:true
-
+    function handleCallLazily(conn, frame) {
         var res = frame.bodyRW.lazy.readService(frame);
         if (res.err) {
             throw res.err;
@@ -61,7 +54,7 @@ allocCluster.test('connection.handler: lazy call handling', 2, function t(cluste
         }
         assert.deepEqual(res.value, Buffer('such'), 'expected called arg1');
 
-        this.sendCallBodies(frame.id, new v2.CallResponse(
+        conn.handler.sendCallBodies(frame.id, new v2.CallResponse(
             0,                       // flags
             0,                       // code
             v2.Tracing.emptyTracing, // tracing
@@ -80,12 +73,6 @@ allocCluster.test('connection.handler: lazy call handling', 2, function t(cluste
             assert.end(err);
             return;
         }
-
-        // console.log(clientPeer.);
-        // console.log(Object.keys(two.serverConnections));
-
-        // var serverPeer = two.peers.get(one.hostPort);
-        // console.log(serverPeer.connections);
 
         client.request({
             serviceName: 'bob',
