@@ -47,13 +47,21 @@ TChannelServiceNameHandler.prototype.handleLazily = function handleLazily(conn, 
 
     var res = reqFrame.bodyRW.lazy.readService(reqFrame);
     if (res.err) {
-        // TODO: some way to indicate error directly
+        // TODO: stat?
+        self.channel.logger.warn('failed to lazy read frame serviceName', conn.extendLogInfo({
+            error: res.err
+        }));
+        // TODO: protocol error instead?
+        self._sendLazyErrorFrame(conn, reqFrame, 'BadRequest', 'failed to read serviceName');
         return false;
     }
 
     var serviceName = res.value;
     if (!serviceName) {
-        // TODO: some way to indicate error directly
+        // TODO: reqFrame.extendLogInfo would be nice, especially if it added
+        // things like callerName and arg1
+        self.channel.logger.warn('missing service name in lazy frame', conn.extendLogInfo({}));
+        self._sendLazyErrorFrame(conn, reqFrame, 'BadRequest', 'missing serviceName');
         return false;
     }
 
@@ -64,6 +72,19 @@ TChannelServiceNameHandler.prototype.handleLazily = function handleLazily(conn, 
     } else {
         return false;
     }
+};
+
+TChannelServiceNameHandler.prototype._sendLazyErrorFrame =
+function _sendLazyErrorFrame(conn, reqFrame, codeString, message) {
+    var fakeR = {
+        id: reqFrame.id,
+        tracing: null
+    };
+    var res = reqFrame.bodyRW.lazy.readService(reqFrame);
+    if (!res.err) {
+        fakeR.tracing = res.value;
+    }
+    conn.handler.sendErrorFrame(fakeR, codeString, message);
 };
 
 TChannelServiceNameHandler.prototype.handleRequest = function handleRequest(req, buildRes) {
