@@ -42,10 +42,17 @@ module.exports = HyperbahnHandler;
 
 // TODO: should be part of Hyperbahn error file
 var TypedError = require('error/typed');
-var NoHostError = TypedError({
-    type: 'no-host',
-    nameAsThrift: 'noHost',
-    message: 'no host available for {serviceName}',
+var NoPeersAvailable = TypedError({
+    type: 'no-peers-asvailable',
+    nameAsThrift: 'noPeersAvailable',
+    message: 'no peer available for {serviceName}',
+    serviceName: null
+});
+
+var InvalidServiceName = TypedError({
+    type: 'invalid-service-name',
+    nameAsThrift: 'invalidServiceName',
+    message: 'invalid service name: {serviceName}',
     serviceName: null
 });
 
@@ -86,8 +93,8 @@ function HyperbahnHandler(options) {
     self.tchannelJSON.register(self, 'relay-unad', self,
         self.handleRelayUnadvertise);
 
-    self.tchannelThrift.register(self, 'Hyperbahn::hostportsByService', self,
-        self.handleHostportsByService);
+    self.tchannelThrift.register(self, 'Hyperbahn::discover', self,
+        self.discover);
 
     self.relayAdTimeout = options.relayAdTimeout ||
         RELAY_AD_TIMEOUT;
@@ -359,9 +366,39 @@ function unadvertise(service) {
     self.channel.topChannel.handler.removeServicePeer(service.serviceName, service.hostPort);
 };
 
-HyperbahnHandler.prototype.handleHostportsByService =
-function handleHostportsByService(self, req, arg2, arg3, cb) {
-    var serviceName = arg3.serviceName;
+function convertHosts(hosts) {
+    var res = [];
+    for (var i = 0; i < hosts.length; i++) {
+        var strs = hosts[i].split(':');
+        var obj = {
+            port: parseInt(strs[1])
+        };
+        strs = strs[0].split('.');
+        obj.ip = {
+            ipv4: parseInt(strs[3]) + parseInt(strs[2]) << 8 +
+                parseInt(strs[1]) << 16 + parseInt(strs[0]) << 24
+        };
+
+        res.push(obj);
+    }
+
+    return res;
+}
+
+HyperbahnHandler.prototype.discover =
+function discover(self, req, head, body, cb) {
+    var serviceName = body && body.query && body.query.serviceName;
+    if (typeof serviceName !== 'string' || serviceName.length === 0) {
+        cb(null, {
+            ok: false,
+            body: InvalidServiceName({
+                serviceName: serviceName
+            }),
+            typeName: 'invalidServiceName'
+        });
+        return;
+    }
+
     var exitNodes = self.egressNodes.exitsFor(serviceName);
     var exitHosts = Object.keys(exitNodes);
 
@@ -372,32 +409,32 @@ function handleHostportsByService(self, req, arg2, arg3, cb) {
         var exit = Math.floor(Math.random() * exitHosts.length);
         self.sendRelayAsThrift({
             hostPort: exitHosts[exit],
-            body: arg3,
+            body: body,
             inreq: req,
-            endpoint: 'Hyperbahn::hostportsByService'
-        }, onFinish);
+            endpoint: 'Hyperbahn::discover'
+        }, cb);
     } else {
         var svcchan = self.channel.topChannel.subChannels[serviceName];
         var hosts = [];
         if (svcchan) {
-            hosts = svcchan.peers.keys();
+            hosts = convertHosts(svcchan.peers.keys());
         }
-        var err;
         if (hosts.length === 0) {
-            err = NoHostError({
-                serviceName: serviceName
+            cb(null, {
+                ok: false,
+                body: NoPeersAvailable({
+                    serviceName: serviceName
+                }),
+                typeName: 'noPeersAvailable'
+            });
+        } else {
+            cb(null, {
+                ok: true,
+                body: {
+                    peers: hosts
+                }
             });
         }
-
-        onFinish(null, {
-            ok: !err,
-            body: err || hosts,
-            typeName: err ? 'noHost' : null
-        });
-    }
-
-    function onFinish(err, res) {
-        cb(err, res);
     }
 };
 
@@ -436,10 +473,11 @@ function sendRelayAsThrift(opts, callback) {
         }
 
         function onResponse(err, response) {
-            if (response && response.ok) {
+            if (response) {
                 return callback(null, {
-                    ok: true,
-                    body: response.body
+                    ok: response.ok,
+                    body: response.body,
+                    typeName: response.typeName
                 });
             }
 

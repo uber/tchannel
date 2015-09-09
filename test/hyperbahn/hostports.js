@@ -53,21 +53,25 @@ function runTests(HyperbahnCluster) {
             hasNoParent: true
         });
         thrift.send(request,
-            'Hyperbahn::hostportsByService',
+            'Hyperbahn::discover',
             null,
-            {serviceName: 'matt'},
+            {
+                query: {
+                    serviceName: 'matt'
+                }
+            },
             onResponse
         );
         function onResponse(err, res) {
             assert.ok(!err, 'should be no errors');
             assert.ok(res, 'should be a result');
             assert.ok(!res.ok, 'result should be not ok');
-            assert.equals(res.body.message, 'no host available for matt', 'error message as expected');
+            assert.equals(res.body.message, 'no peer available for matt', 'error message as expected');
             assert.end();
         }
     });
 
-    HyperbahnCluster.test('get host port as expected', {
+    HyperbahnCluster.test.only('get host port as expected', {
         size: 5
     }, function t(cluster, assert) {
         var bob = cluster.remotes.bob;
@@ -97,9 +101,13 @@ function runTests(HyperbahnCluster) {
 
         function onResponse() {
             thrift.send(request,
-                'Hyperbahn::hostportsByService',
+                'Hyperbahn::discover',
                 null,
-                {serviceName: 'hello-bob'},
+                {
+                    query: {
+                        serviceName: 'hello-bob'
+                    }
+                },
                 check
             );
         }

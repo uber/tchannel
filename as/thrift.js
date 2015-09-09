@@ -48,8 +48,7 @@ function TChannelAsThrift(opts) {
         strict: opts.strict
     });
 
-    // Pulled off of things in `.register` and `.send` rather than passed in
-    self.logger = null;
+    self.logger = opts.logger;
 
     var bossMode = opts && opts.bossMode;
     self.bossMode = typeof bossMode === 'boolean' ? bossMode : false;
