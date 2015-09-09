@@ -69,6 +69,10 @@ TimeSeriesCluster.test('control test for time-series of timeout requests', {
     cluster.logger.whitelist('info', 'expected error while forwarding');
     cluster.logger.whitelist('info', 'OutResponse.send() after inreq timed out');
     cluster.logger.whitelist('warn', 'forwarding error frame');
+    cluster.logger.whitelist('warn', 'mismatched conn.onReqDone');
+    cluster.logger.whitelist('info', 'ignoring outresponse.send on a closed connection');
+    cluster.logger.whitelist('info', 'ignoring outresponse.sendError on a closed connection');
+    cluster.logger.whitelist('info', 'popOutReq received for unknown or lost id');
 
     // Stays here.
     var RANGES = {

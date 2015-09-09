@@ -27,10 +27,21 @@ var tape = require('tape');
 var nodeAssert = require('assert');
 var util = require('util');
 var EventEmitter = require('events').EventEmitter;
+var process = require('process');
 
 var HyperbahnCluster = require('../lib/test-cluster.js');
 
 TimeSeriesCluster.test = tapeCluster(tape, TimeSeriesCluster);
+
+TimeSeriesCluster.buildString = function buildString(size) {
+    var tempArray = [];
+
+    for (var i = 0; i < size; i++) {
+        tempArray.push('A');
+    }
+
+    return tempArray.join('');
+};
 
 module.exports = TimeSeriesCluster;
 
@@ -54,6 +65,7 @@ function TimeSeriesCluster(opts) {
     self.clientRequestsPerBatch = opts.clientRequestsPerBatch || 15;
     self.serverInstances = opts.serverInstances || 10;
     self.clientInstances = opts.clientInstances || 5;
+    self.requestBody = opts.requestBody || '';
 
     self.serverServiceName = 'time-series-server';
     self.clientServiceName = 'time-series-client';
@@ -137,20 +149,17 @@ TimeSeriesCluster.prototype.bootstrap = function bootstrap(cb) {
             self.serverInstances, self.serverInstances + self.clientInstances
         );
 
-        var requestVolume = self.buckets.length * (
-            self.numBatchesInBucket * self.clientRequestsPerBatch
-        );
-
         self.batchClient = BatchClient({
             remotes: clientRemotes,
             requestsPerBatch: self.clientRequestsPerBatch,
             clientBatchDelay: self.clientBatchDelay,
             clientTimeout: self.clientTimeout,
-            requestVolume: requestVolume,
             numBatchesInBucket: self.numBatchesInBucket,
+            numBuckets: self.buckets.length,
             endpoint: self.endpointToRequest,
             clientServiceName: self.clientServiceName,
-            serverServiceName: self.serverServiceName
+            serverServiceName: self.serverServiceName,
+            body: self.requestBody
         });
 
         cb(null);
@@ -193,7 +202,7 @@ function BatchClient(options) {
     self.clientServiceName = options.clientServiceName;
     self.requestsPerBatch = options.requestsPerBatch;
     self.clientBatchDelay = options.clientBatchDelay;
-    self.requestVolume = options.requestVolume;
+    self.numBuckets = options.numBuckets;
 
     self.numBatchesInBucket = options.numBatchesInBucket;
 
@@ -205,72 +214,109 @@ function BatchClient(options) {
     for (var i = 0; i < options.remotes.length; i++) {
         self.channels.push(options.remotes[i].clientChannel);
     }
+
+    self.requestVolume = self.numBuckets * (
+        self.numBatchesInBucket * self.requestsPerBatch
+    );
+
+    self.body = options.body || '';
+    self.requestOptions = {
+        serviceName: self.serverServiceName,
+        timeout: self.clientTimeout,
+        headers: {
+            'as': 'raw',
+            'cn': self.clientServiceName
+        }
+    };
+
+    self.freeList = new Array(self.requestVolume);
+    for (var j = 0; j < self.requestVolume; j++) {
+        self.freeList[j] = new BatchClientRequestResult();
+    }
 }
 util.inherits(BatchClient, EventEmitter);
 
 BatchClient.prototype.sendRequests = function sendRequests(now, cb) {
     var self = this;
 
-    var resultBuckets = [];
-    var bucketIndex = 0;
-    var currentBatch = 0;
-    var requestCounter = 0;
-    var responseCounter = 0;
-    var startTime = now;
+    var loop = new BatchClientLoop(now, self, cb);
+    loop.runNext();
+};
 
-    loop();
+function BatchClientLoop(now, batchClient, onFinish) {
+    var self = this;
 
-    function loop() {
-        if (requestCounter >= self.requestVolume) {
-            return null;
+    self.batchClient = batchClient;
+    self.startTime = now;
+    self.onFinish = onFinish;
+
+    self.resultBuckets = new Array(self.batchClient.numBuckets);
+    self.bucketIndex = 0;
+    self.currentBatch = 0;
+    self.responseCounter = 0;
+
+    var size = self.batchClient.requestsPerBatch * self.batchClient.numBatchesInBucket;
+    for (var k = 0; k < self.batchClient.numBuckets; k++) {
+        self.resultBuckets[k] = new BatchClientResult(size);
+    }
+
+    self.boundSendRequest = boundSendRequest;
+
+    function boundSendRequest(callback) {
+        self.batchClient._sendRequest(callback);
+    }
+}
+
+BatchClientLoop.prototype.runNext = function runNext() {
+    var self = this;
+
+    if (self.bucketIndex >= self.batchClient.numBuckets) {
+        return null;
+    }
+
+    var thunks = [];
+    for (var i = 0; i < self.batchClient.requestsPerBatch; i++) {
+        thunks.push(self.boundSendRequest);
+    }
+
+    var batchResult = self.resultBuckets[self.bucketIndex];
+
+    self.batchClient.emit('batch-updated', {
+        index: self.bucketIndex,
+        batch: batchResult
+    });
+    batchResult.touch();
+
+    self.currentBatch += 1;
+    if (self.currentBatch % self.batchClient.numBatchesInBucket === 0) {
+        self.bucketIndex++;
+    }
+
+    parallel(thunks, onResults);
+
+    var targetTime = self.startTime + (
+        self.currentBatch * self.batchClient.clientBatchDelay
+    );
+    var delta = targetTime - Date.now();
+
+    setTimeout(runAgain, delta);
+
+    function runAgain() {
+        self.runNext();
+    }
+
+    function onResults(err, responses) {
+        if (err) {
+            return self.onFinish(err);
         }
 
-        var thunks = [];
-        for (var i = 0; i < self.requestsPerBatch; i++) {
-            requestCounter++;
-            thunks.push(self._sendRequest.bind(self));
+        for (var j = 0; j < responses.length; j++) {
+            self.responseCounter++;
+            batchResult.push(responses[j]);
         }
 
-        var batchResult = resultBuckets[bucketIndex];
-        if (!batchResult) {
-            batchResult = resultBuckets[bucketIndex] =
-                new BatchClientResult();
-            self.emit('batch-created', {
-                index: bucketIndex,
-                batch: batchResult
-            });
-        }
-
-        currentBatch += 1;
-        if (currentBatch % self.numBatchesInBucket === 0) {
-            bucketIndex++;
-        }
-
-        parallel(thunks, onResults);
-
-        var targetTime = startTime + (currentBatch * self.clientBatchDelay);
-        var delta = targetTime - Date.now();
-
-        setTimeout(loop, delta);
-
-        function onResults(err, responses) {
-            if (err) {
-                return cb(err);
-            }
-
-            for (var j = 0; j < responses.length; j++) {
-                responseCounter++;
-                batchResult.push(responses[j]);
-
-                self.emit('batch-updated', {
-                    batch: batchResult,
-                    index: bucketIndex
-                });
-            }
-
-            if (responseCounter >= self.requestVolume) {
-                cb(null, resultBuckets);
-            }
+        if (self.responseCounter >= self.batchClient.requestVolume) {
+            self.onFinish(null, self.resultBuckets);
         }
     }
 };
@@ -278,39 +324,48 @@ BatchClient.prototype.sendRequests = function sendRequests(now, cb) {
 BatchClient.prototype._sendRequest = function _sendRequest(cb) {
     var self = this;
 
+    var start = Date.now();
     var randomClient = self.channels[
         Math.floor(Math.random() * self.channels.length)
     ];
 
-    var req = randomClient.request({
-        serviceName: self.serverServiceName,
-        timeout: self.clientTimeout,
-        headers: {
-            'as': 'raw',
-            'cn': self.clientServiceName
-        }
-    });
-    req.send(self.endpoint, '', '', onResponse);
+    var req = randomClient.request(self.requestOptions);
+    req.send(self.endpoint, '', self.body, onResponse);
 
     function onResponse(err, resp) {
+        var result = self.freeList.pop();
+
+        result.error = err || null;
+        result.responseOk = resp ? resp.ok : false;
+        result.duration = Date.now() - start;
+
         // console.log('got response', {
         //     err: !!err
         // });
-        cb(null, {
-            error: err || null,
-            value: resp
-        });
+        cb(null, result);
     }
 };
 
-function BatchClientResult() {
+function BatchClientRequestResult() {
+    var self = this;
+
+    self.error = null;
+    self.responseOk = null;
+    self.duration = null;
+}
+
+function asMegaBytes(num) {
+    return Math.ceil(num / (1024 * 1024));
+}
+
+function BatchClientResult(size) {
     if (!(this instanceof BatchClientResult)) {
-        return new BatchClientResult();
+        return new BatchClientResult(size);
     }
 
     var self = this;
 
-    self._results = [];
+    self._results = new Array(size);
 
     self.totalCount = 0;
     self.errorCount = 0;
@@ -319,7 +374,23 @@ function BatchClientResult() {
     self.declinedCount = 0;
 
     self.byType = {};
+
+    self.processMetrics = {
+        rss: null,
+        heapTotal: null,
+        heapUsed: null
+    };
 }
+
+BatchClientResult.prototype.touch = function touch() {
+    var self = this;
+
+    var memoryUsage = process.memoryUsage();
+
+    self.processMetrics.rss = asMegaBytes(memoryUsage.rss);
+    self.processMetrics.heapTotal = asMegaBytes(memoryUsage.heapTotal);
+    self.processMetrics.heapUsed = asMegaBytes(memoryUsage.heapUsed);
+};
 
 BatchClientResult.prototype.push = function push(result) {
     var self = this;
@@ -349,7 +420,8 @@ BatchClientResult.prototype.inspect = function inspect() {
         successCount: self.successCount,
         timeoutCount: self.timeoutCount,
         declinedCount: self.declinedCount,
-        byType: self.byType
+        byType: self.byType,
+        processMetrics: self.processMetrics
     });
 };
 
@@ -365,11 +437,34 @@ function TimeSeriesRemote(remote, timers, name) {
     self.name = name;
 
     self.channel.register('slow-endpoint', slowEndpoint);
+    self.channel.register('echo-endpoint', echoEndpoint);
+    self.channel.register('health-endpoint', healthEndpoint);
 
-    function slowEndpoint(req, res) {
-        self.slowEndpoint(req, res);
+    function slowEndpoint(req, res, arg2, arg3) {
+        self.slowEndpoint(req, res, arg2, arg3);
+    }
+
+    function echoEndpoint(req, res, arg2, arg3) {
+        self.echoEndpoint(req, res, arg2, arg3);
+    }
+
+    function healthEndpoint(req, res, arg2, arg3) {
+        self.healthEndpoint(req, res, arg2, arg3);
     }
 }
+
+TimeSeriesRemote.prototype.echoEndpoint =
+function echoEndpoint(req, res, arg2, arg3) {
+    res.headers.as = 'raw';
+    res.sendOk(arg2, arg3);
+};
+
+TimeSeriesRemote.prototype.healthEndpoint = function healthEndpoint(req, res) {
+    var self = this;
+
+    res.headers.as = 'raw';
+    res.sendOk('', 'served by ' + self.name);
+};
 
 TimeSeriesRemote.prototype.slowEndpoint = function slowEndpoint(req, res) {
     var self = this;

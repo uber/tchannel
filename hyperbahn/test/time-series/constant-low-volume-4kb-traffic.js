@@ -20,7 +20,14 @@
 
 'use strict';
 
+var console = require('console');
+var Buffer = require('buffer').Buffer;
+
 var TimeSeriesCluster = require('./_time-series-cluster.js');
+
+var KILOBYTE = 1024;
+var REQUEST_BODY = TimeSeriesCluster.buildString(4 * KILOBYTE);
+var REQUEST_BODY_BUFFER = new Buffer(REQUEST_BODY);
 
 TimeSeriesCluster.test('control test for time-series of timeout requests', {
     clusterOptions: {},
@@ -28,21 +35,27 @@ TimeSeriesCluster.test('control test for time-series of timeout requests', {
         25, 25, 25, 25, 25, 25
     ],
     clientTimeout: 100,
-    numBatchesInBucket: 10,
-    clientBatchDelay: 1000,
-    clientRequestsPerBatch: 150,
-    endpointToRequest: 'slow-endpoint'
+    numBatchesInBucket: 100,
+    endpointToRequest: 'echo-endpoint',
+    requestBody: REQUEST_BODY_BUFFER
 }, function t(cluster, assert) {
     cluster.logger.whitelist('info', 'error for timed out outgoing response');
     cluster.logger.whitelist('info', 'forwarding expected error frame');
     cluster.logger.whitelist('info', 'expected error while forwarding');
     cluster.logger.whitelist('info', 'OutResponse.send() after inreq timed out');
     cluster.logger.whitelist('warn', 'forwarding error frame');
+    cluster.logger.whitelist('warn', 'mismatched conn.onReqDone');
 
+    var count = 0;
     cluster.batchClient.on('batch-updated', function onUpdate(meta) {
-        console.log('batch updated', {
-            batch: meta.batch
-        });
+        count++;
+
+        if (count % 10 === 0) {
+            /* eslint no-console:0 */
+            console.log('batch updated', {
+                batch: meta.batch
+            });
+        }
     });
 
     cluster.sendRequests(onResults);
@@ -53,8 +66,8 @@ TimeSeriesCluster.test('control test for time-series of timeout requests', {
         for (var i = 0; i < cluster.buckets.length; i++) {
             cluster.assertRange(assert, {
                 value: results[i].errorCount,
-                min: MIN_ERRORS[i],
-                max: MAX_ERRORS[i],
+                min: 0,
+                max: 0,
                 name: cluster.buckets[i]
             });
         }
