@@ -54,6 +54,8 @@ PreferOutgoing.prototype.getTier = function getTier() {
 PreferOutgoing.prototype.getScore = function getScore() {
     var self = this;
 
+    // TODO: support pruning old incoming conns
+
     // space:
     //   [0.1, 0.4)  peers with no identified outgoing connection
     //   [0.4, 1.0)  identified outgoing connections
@@ -71,6 +73,60 @@ PreferOutgoing.prototype.getScore = function getScore() {
         case PreferOutgoing.FRESH_OUTGOING:
             return 0.1 + random * 0.3;
         case PreferOutgoing.READY_OUTGOING:
+            return 0.4 + random * 0.6;
+    }
+};
+
+module.exports.PreferIncoming = PreferIncoming;
+
+function PreferIncoming(peer) {
+    var self = this;
+
+    self.peer = peer;
+    self.lastTier = self.getTier();
+}
+
+PreferIncoming.UNCONNECTED = 0;
+PreferIncoming.ONLY_OUTGOING = 1;
+PreferIncoming.FRESH_INCOMING = 2;
+PreferIncoming.READY_INCOMING = 3;
+
+PreferIncoming.prototype.getTier = function getTier() {
+    var self = this;
+
+    var inconn = self.peer.getInConnection();
+    var outconn = self.peer.getOutConnection();
+
+    if (!inconn && !outconn) {
+        return PreferIncoming.UNCONNECTED;
+    } else if (!inconn || inconn.direction !== 'in') {
+        return PreferIncoming.ONLY_OUTGOING;
+    } else if (inconn.remoteName === null) {
+        return PreferIncoming.FRESH_INCOMING;
+    } else {
+        return PreferIncoming.READY_INCOMING;
+    }
+};
+
+PreferIncoming.prototype.shouldRequest = function shouldRequest() {
+    var self = this;
+
+    // TODO: support pruning old outgoing conns
+
+    // space:
+    //   [0.1, 0.4)  peers with no identified incoming connection
+    //   [0.4, 1.0)  identified incoming connections
+    var random = self.peer.outPendingWeightedRandom();
+    var tier = self.getTier();
+    self.lastTier = tier;
+    switch (tier) {
+        case PreferIncoming.ONLY_OUTGOING:
+            /* falls through */
+        case PreferIncoming.UNCONNECTED:
+            /* falls through */
+        case PreferIncoming.FRESH_INCOMING:
+            return 0.1 + random * 0.3;
+        case PreferIncoming.READY_INCOMING:
             return 0.4 + random * 0.6;
     }
 };
