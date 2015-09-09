@@ -41,7 +41,7 @@
     "static-config": "2.1.0",
     "tape-cluster": "2.0.1",
     "tcap": "5.4.2",
-    "tchannel": "2.9.1",
+    "tchannel": "2.9.2",
     "tcurl": "4.8.1",
     "thriftify": "1.0.0-alpha14",
     "uber-statsd-client": "1.3.2",
@@ -60,7 +60,7 @@
   "licenses": [],
   "scripts": {
     "add-licence": "uber-licence",
-    "check-benchmark": "node benchmarks -- -r 10000 -p 10000",
+    "check-benchmark": "node benchmarks --relay -- --relay -r 10000 -p 10000",
     "check-licence": "uber-licence --dry",
     "check-cover": "istanbul check-coverage || echo coverage failed",
     "check-ls": "npm ls --loglevel=http --parseable 1>/dev/null && echo '# npm is in a good state'",
