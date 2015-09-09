@@ -18,57 +18,47 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package hyperbahn
+package mockhyperbahn_test
 
 import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel/golang"
-	"github.com/uber/tchannel/golang/json"
+	"github.com/uber/tchannel/golang/hyperbahn"
+	"github.com/uber/tchannel/golang/testutils/mockhyperbahn"
 )
 
-// The following parameters define the request/response for the Hyperbahn 'ad' call.
-type service struct {
-	Name string `json:"serviceName"`
-	Cost int    `json:"cost"`
-}
+var config = struct {
+	hyperbahnConfig hyperbahn.Configuration
+}{}
 
-// AdRequest is the Ad request sent to Hyperbahn.
-type AdRequest struct {
-	Services []service `json:"services"`
-}
-
-// AdResponse is the Ad response from Hyperbahn.
-type AdResponse struct {
-	ConnectionCount int `json:"connectionCount"`
-}
-
-func (c *Client) createRequest() *AdRequest {
-	req := &AdRequest{
-		Services: make([]service, len(c.services)),
-	}
-	for i, s := range c.services {
-		req.Services[i] = service{
-			Name: s,
-			Cost: 0,
-		}
-	}
-	return req
-}
-
-func (c *Client) sendAdvertise() error {
-	ctx, cancel := json.NewContext(c.opts.Timeout)
-	defer cancel()
-
-	// Disable tracing on Hyperbahn advertise messages to avoid cascading failures (see #790).
-	tchannel.CurrentSpan(ctx).EnableTracing(false)
-
-	sc := c.tchan.GetSubChannel(hyperbahnServiceName)
-	arg := c.createRequest()
-	var resp AdResponse
-	c.opts.Handler.On(SendAdvertise)
-
-	if err := json.CallSC(ctx, sc, "ad", arg, &resp); err != nil {
+// setupServer is the application code we are attempting to test.
+func setupServer() error {
+	ch, err := tchannel.NewChannel("myservice", nil)
+	if err != nil {
 		return err
 	}
 
-	return nil
+	if err := ch.ListenAndServe("127.0.0.1:0"); err != nil {
+		return err
+	}
+
+	client, err := hyperbahn.NewClient(ch, config.hyperbahnConfig, nil)
+	if err != nil {
+		return err
+	}
+
+	return client.Advertise()
+}
+
+func TestMockHyperbahn(t *testing.T) {
+	mh, err := mockhyperbahn.New()
+	require.NoError(t, err, "mock hyperbahn failed")
+	defer mh.Close()
+
+	config.hyperbahnConfig = mh.Configuration()
+	require.NoError(t, setupServer(), "setupServer failed")
+	assert.Equal(t, []string{"myservice"}, mh.GetAdvertised())
 }
