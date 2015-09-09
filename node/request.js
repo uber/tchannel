@@ -330,30 +330,15 @@ TChannelRequest.prototype.shouldRetryError = function shouldRetryError(err) {
     if (err) {
         var codeName = errors.classify(err);
 
-        switch (codeName) {
-            case 'BadRequest':
-            case 'Cancelled':
-            case 'Unhealthy':
-                return false;
-
-            case 'Busy':
-            case 'Declined':
-                return true;
-
-            case 'Timeout':
-                return !!self.options.retryFlags.onTimeout;
-
-            case 'NetworkError':
-            case 'ProtocolError':
-            case 'UnexpectedError':
-                return !!self.options.retryFlags.onConnectionError;
-
-            default:
-                self.channel.logger.error('unknown error type in request retry', {
-                    error: err
-                });
-                return true;
+        var shouldRetry = errors.shouldRetry(codeName, self.options.retryFlags);
+        if (shouldRetry === null) {
+            self.channel.logger.error('unknown error type in request retry', {
+                error: err
+            });
+            return true;
         }
+
+        return shouldRetry;
     }
 
     return false;
