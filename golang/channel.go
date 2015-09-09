@@ -235,6 +235,12 @@ type Registrar interface {
 	// Logger returns the logger for this Registrar.
 	Logger() Logger
 
+	// StatsReporter returns the stats reporter for this Registrar
+	StatsReporter() StatsReporter
+
+	// StatsTags returns the tags that should be used.
+	StatsTags() map[string]string
+
 	// Peers returns the peer list for this Registrar.
 	Peers() *PeerList
 }
@@ -346,6 +352,21 @@ func (ch *Channel) Ping(ctx context.Context, hostPort string) error {
 // Logger returns the logger for this channel.
 func (ch *Channel) Logger() Logger {
 	return ch.log
+}
+
+// StatsReporter returns the stats reporter for this channel.
+func (ch *Channel) StatsReporter() StatsReporter {
+	return ch.statsReporter
+}
+
+// StatsTags returns the common tags that should be used when reporting stats.
+// It returns a new map for each call.
+func (ch *Channel) StatsTags() map[string]string {
+	m := make(map[string]string)
+	for k, v := range ch.commonStatsTags {
+		m[k] = v
+	}
+	return m
 }
 
 // ServiceName returns the serviceName that this channel was created for.
