@@ -95,10 +95,6 @@ ReservoirBackend.prototype.flush = function flush(records) {
 ReservoirBackend.prototype.log = function log(record, cb) {
     var self = this;
 
-    if (typeof cb === 'function') {
-        cb();
-    }
-
     self.count += 1;
 
     if (self.records.length < self.size) {
@@ -109,6 +105,10 @@ ReservoirBackend.prototype.log = function log(record, cb) {
             // evict and replace
             self.records[probability] = record;
         }
+    }
+
+    if (typeof cb === 'function') {
+        cb();
     }
 };
 
