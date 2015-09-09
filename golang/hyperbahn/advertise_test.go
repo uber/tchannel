@@ -32,28 +32,7 @@ import (
 	"github.com/uber/tchannel/golang"
 	"github.com/uber/tchannel/golang/json"
 	"github.com/uber/tchannel/golang/testutils"
-	"golang.org/x/net/context"
 )
-
-func advertiseHandler(t *testing.T, f func(req adRequest) (adResponse, error)) tchannel.Handler {
-	return tchannel.HandlerFunc(func(ctx context.Context, call *tchannel.InboundCall) {
-		var arg2 []byte
-		var req adRequest
-		require.NoError(t, tchannel.NewArgReader(call.Arg2Reader()).Read(&arg2))
-		require.NoError(t, tchannel.NewArgReader(call.Arg3Reader()).ReadJSON(&req))
-
-		resp := call.Response()
-		response, err := f(req)
-		if err != nil {
-			resp.SetApplicationError()
-			require.NoError(t, tchannel.NewArgWriter(resp.Arg2Writer()).Write(nil))
-			require.NoError(t, tchannel.NewArgWriter(resp.Arg3Writer()).Write(nil))
-			return
-		}
-		require.NoError(t, tchannel.NewArgWriter(resp.Arg2Writer()).Write(nil))
-		require.NoError(t, tchannel.NewArgWriter(resp.Arg3Writer()).WriteJSON(response))
-	})
-}
 
 func TestAdvertiseFailed(t *testing.T) {
 	withSetup(t, func(serverCh *tchannel.Channel, hostPort string) {
@@ -70,8 +49,8 @@ func TestAdvertiseFailed(t *testing.T) {
 type retryTest struct {
 	// channel used to control the response to an 'ad' call.
 	respCh chan int
-	// req is the adRequest sent to the adHandler.
-	req adRequest
+	// req is the AdRequest sent to the adHandler.
+	req *AdRequest
 
 	// sleep stub channels.
 	sleepArgs  <-chan time.Duration
@@ -89,13 +68,13 @@ func (r *retryTest) OnError(err error) {
 	r.mock.Called(err)
 }
 
-func (r *retryTest) adHandler(req adRequest) (adResponse, error) {
+func (r *retryTest) adHandler(ctx json.Context, req *AdRequest) (*AdResponse, error) {
 	r.req = req
 	v := <-r.respCh
 	if v == 0 {
-		return adResponse{}, errors.New("failed")
+		return nil, errors.New("failed")
 	}
-	return adResponse{v}, nil
+	return &AdResponse{v}, nil
 }
 
 func (r *retryTest) setup() {
@@ -118,7 +97,7 @@ func runRetryTest(t *testing.T, f func(r *retryTest)) {
 	defer testutils.ResetSleepStub(&timeSleep)
 
 	withSetup(t, func(serverCh *tchannel.Channel, hostPort string) {
-		serverCh.Register(advertiseHandler(t, r.adHandler), "ad")
+		json.Register(serverCh, json.Handlers{"ad": r.adHandler}, nil)
 
 		clientCh, err := tchannel.NewChannel("my-client", nil)
 		require.NoError(t, err)
@@ -144,7 +123,7 @@ func TestAdvertiseSuccess(t *testing.T) {
 		require.NoError(t, r.client.Advertise())
 
 		// Verify that the arguments passed to 'ad' are correct.
-		expectedRequest := adRequest{[]service{{Name: "my-client", Cost: 0}}}
+		expectedRequest := &AdRequest{[]service{{Name: "my-client", Cost: 0}}}
 		require.Equal(t, expectedRequest, r.req)
 
 		// Verify readvertise happen after sleeping for ~advertiseInterval.
@@ -174,7 +153,7 @@ func TestMutlipleAdvertise(t *testing.T) {
 		require.NoError(t, r.client.Advertise(sc2, sc3))
 
 		// Verify that the arguments passed to 'ad' are correct.
-		expectedRequest := adRequest{[]service{
+		expectedRequest := &AdRequest{[]service{
 			{Name: "my-client", Cost: 0},
 			{Name: "svc-2", Cost: 0},
 			{Name: "svc-3", Cost: 0},
@@ -197,7 +176,7 @@ func TestMutlipleAdvertise(t *testing.T) {
 	})
 }
 
-var advertiseErr = make(json.ErrApplication)
+var advertiseErr = json.ErrApplication{"type": "error", "message": "failed"}
 
 func TestRetryTemporaryFailure(t *testing.T) {
 	runRetryTest(t, func(r *retryTest) {

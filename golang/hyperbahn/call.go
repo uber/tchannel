@@ -31,16 +31,18 @@ type service struct {
 	Cost int    `json:"cost"`
 }
 
-type adRequest struct {
+// AdRequest is the Ad request sent to Hyperbahn.
+type AdRequest struct {
 	Services []service `json:"services"`
 }
 
-type adResponse struct {
+// AdResponse is the Ad response from Hyperbahn.
+type AdResponse struct {
 	ConnectionCount int `json:"connectionCount"`
 }
 
-func (c *Client) createRequest() *adRequest {
-	req := &adRequest{
+func (c *Client) createRequest() *AdRequest {
+	req := &AdRequest{
 		Services: make([]service, len(c.services)),
 	}
 	for i, s := range c.services {
@@ -61,7 +63,7 @@ func (c *Client) sendAdvertise() error {
 
 	sc := c.tchan.GetSubChannel(hyperbahnServiceName)
 	arg := c.createRequest()
-	var resp adResponse
+	var resp AdResponse
 	c.opts.Handler.On(SendAdvertise)
 
 	if err := json.CallSC(ctx, sc, "ad", arg, &resp); err != nil {
