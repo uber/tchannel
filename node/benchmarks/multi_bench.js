@@ -20,7 +20,6 @@
 
 'use strict';
 
-var async = require('async');
 var Statsd = require('uber-statsd-client');
 var metrics = require('metrics');
 var parseArgs = require('minimist');
@@ -106,17 +105,21 @@ Test.prototype.run = function (callback) {
 
     this.callback = callback;
 
-    var ids = [];
-    for (i = 0; i < numClients ; i++) ids.push(i);
-    async.each(ids, function each(i, done) {
-        self.newClient(i, done);
-    }, function(err) {
+    var counter = numClients;
+    for (i = 0; i < numClients ; i++) {
+        self.newClient(i, onReady);
+    }
+
+    function onReady(err) {
         if (err) {
             console.error('failed to setup clients', err);
         } else {
-            self.start();
+            counter--;
+            if (counter === 0) {
+                self.start();
+            }
         }
-    });
+    }
 };
 
 Test.prototype.newClient = function (id, callback) {
