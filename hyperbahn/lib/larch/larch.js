@@ -23,7 +23,6 @@
 var assert = require('assert');
 var collectParallel = require('collect-parallel/array');
 
-var Levels = require('./levels');
 var Record = require('./record');
 
 module.exports = Larch;

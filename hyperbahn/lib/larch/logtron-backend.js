@@ -77,4 +77,3 @@ LogtronBackend.prototype.logMany = function logMany(records, cb) {
         }
     }
 };
-
