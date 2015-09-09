@@ -254,8 +254,12 @@ function bootstrap(cb) {
 
     self.repl.once('listening', listenReady.signal);
     self.repl.start();
-
-    self.logger.bootstrap(listenReady.signal);
+    
+    if (self.logger.bootstrap) {
+        self.logger.bootstrap(listenReady.signal);
+    } else {
+        listenReady.signal();
+    }
 
     self._controlServer.listen(self._controlPort, listenReady.signal);
 
@@ -282,7 +286,9 @@ ApplicationClients.prototype.destroy = function destroy() {
     self.repl.close();
     self._controlServer.close();
 
-    self.logger.destroy();
+    if (self.logger.destroy) {
+        self.logger.destroy();
+    }
 };
 
 ApplicationClients.prototype.onRemoteConfigUpdate = function onRemoteConfigUpdate() {
