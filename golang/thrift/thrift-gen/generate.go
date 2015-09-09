@@ -21,6 +21,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -29,11 +30,17 @@ import (
 	"strings"
 )
 
+var flagThriftBinary = flag.String("thriftBinary", "thrift", "Command to use for the Apache Thrift binary")
+
 func execCmd(name string, args ...string) error {
 	cmd := exec.Command(name, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
+}
+
+func execThrift(args ...string) error {
+	return execCmd(*flagThriftBinary, args...)
 }
 
 func deleteRemote(dir string) error {
@@ -76,7 +83,7 @@ func runThrift(inFile string, thriftImport string) (string, error) {
 	}
 
 	// Generate the Apache Thrift generated code.
-	if err := execCmd("thrift", "-r", "--gen", "go:thrift_import="+thriftImport, "-o", dir, inFile); err != nil {
+	if err := execThrift("-r", "--gen", "go:thrift_import="+thriftImport, "-o", dir, inFile); err != nil {
 		return "", fmt.Errorf("Thrift compile failed: %v", err)
 	}
 
