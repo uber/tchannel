@@ -30,7 +30,8 @@ allocCluster.test('emits stats', {
         statTags: {
             app: 'client',
             host: os.hostname()
-        }
+        },
+        emitConnectionMetrics: true
     }
 }, function t(cluster, assert) {
     var server = cluster.channels[0];

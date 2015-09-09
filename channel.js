@@ -137,7 +137,7 @@ function TChannel(options) {
     self.requireCn = self.options.requireCn;
     self.emitConnectionMetrics =
         typeof self.options.emitConnectionMetrics === 'boolean' ?
-        self.options.emitConnectionMetrics : true;
+        self.options.emitConnectionMetrics : false;
     self.choosePeerWithHeap = self.options.choosePeerWithHeap || false;
 
     // required: 'app'
