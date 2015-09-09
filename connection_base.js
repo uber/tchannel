@@ -208,8 +208,11 @@ TChannelConnectionBase.prototype.onResponseError =
 function onResponseError(err, req) {
     var self = this;
 
+    var reqTimedOut = req.err &&
+                      errors.classify(req.err) === 'Timeout';
+
     // don't log if we get further timeout errors for already timed out response
-    if (req.timedOut && errors.classify(err) === 'Timeout') {
+    if (reqTimedOut && errors.classify(err) === 'Timeout') {
         return;
     }
 
@@ -231,7 +234,7 @@ function onResponseError(err, req) {
 
     if ((err.type === 'tchannel.response-already-started' ||
         err.type === 'tchannel.response-already-done') &&
-        req.timedOut
+        reqTimedOut
     ) {
         self.logger.info(
             'error for timed out outgoing response', loggingOptions
@@ -255,7 +258,7 @@ TChannelConnectionBase.prototype.onReqDone = function onReqDone(req) {
     // we popped something else, or there was nothing to pop
 
     // incoming req that timed out are already cleaned up
-    if (req.timedOut) {
+    if (req.err && errors.classify(req.err) === 'Timeout') {
         return;
     }
 

@@ -515,16 +515,13 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
         });
     }
 
-    var logInfo = {
+    var logInfo = self.extendLogInfo({
         error: err,
-        remoteName: self.remoteName,
-        localName: self.channel.hostPort,
-        socketRemoteAddr: self.socketRemoteAddr,
         numInOps: inOpKeys.length,
         numOutOps: outOpKeys.length,
         inPending: pending.in,
         outPending: pending.out
-    };
+    });
 
     // requests that we've received we can delete, but these reqs may have started their
     //   own outgoing work, which is hard to cancel. By setting this.closing, we make sure
@@ -541,22 +538,18 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
         if (!req) {
             return;
         }
+        req.emitError(makeReqError(req));
+    });
 
-        var info = req.extendLogInfo({
-            socketRemoteAddr: self.socketRemoteAddr,
-            direction: self.direction,
-            remoteName: self.remoteName
-        });
-
+    function makeReqError(req) {
         var reqErr = err;
         if (reqErr.type === 'tchannel.socket-local-closed') {
-            reqErr = errors.TChannelLocalResetError(reqErr, info);
+            reqErr = errors.TChannelLocalResetError(reqErr);
         } else {
-            reqErr = errors.TChannelConnectionResetError(reqErr, info);
+            reqErr = errors.TChannelConnectionResetError(reqErr);
         }
-
-        req.emitError(reqErr);
-    });
+        return req.extendLogInfo(self.extendLogInfo(reqErr));
+    }
 
     self.ops.clear();
 
