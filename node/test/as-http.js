@@ -260,7 +260,7 @@ function allocHTTPTest(desc, opts, testFunc) {
         opts.assert = assert;
         var cluster = allocHTTPBridge(opts);
         assert.once('end', onAssertEnd);
-        cluster.ready(onReady);
+        cluster.allReady(onReady);
 
         function onAssertEnd() {
             cluster.destroy();
@@ -285,6 +285,7 @@ function allocHTTPBridge(opts) {
     cluster.ready(cready.signal);
     cluster.httpEgress = allocHTTPServer(opts.onEgressRequest, cready.signal);
     cluster.httpService = allocHTTPServer(opts.onServiceRequest, cready.signal);
+    cluster.allReady = CountedReadySignal(1);
     var serviceName = opts.serviceName || 'test_http';
     var chanOpts = {
         serviceName: serviceName,
@@ -316,6 +317,7 @@ function allocHTTPBridge(opts) {
         cluster.egressChan.peers.add(cluster.ingressServer.hostPort);
 
         var addr = cluster.httpEgress.address();
+        console.log(addr);
         cluster.requestOptions.host = addr.address;
         cluster.requestOptions.port = addr.port;
         if (opts.enableLBPool) {
@@ -327,6 +329,7 @@ function allocHTTPBridge(opts) {
         }
         cluster.asHTTP = new TChannelHTTP(opts);
         cluster.asHTTP.setHandler(cluster.ingressChan, onIngressRequest);
+        cluster.allReady.signal();
     }
 
     function onIngressRequest(treq, tres) {
