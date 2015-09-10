@@ -26,7 +26,7 @@ var Buffer = require('buffer').Buffer;
 var TimeSeriesCluster = require('./_time-series-cluster.js');
 
 var KILOBYTE = 1024;
-var REQUEST_BODY = TimeSeriesCluster.buildString(4 * KILOBYTE);
+var REQUEST_BODY = TimeSeriesCluster.buildString(48 * KILOBYTE);
 var REQUEST_BODY_BUFFER = new Buffer(REQUEST_BODY);
 
 TimeSeriesCluster.test('control test for time-series of timeout requests', {
@@ -81,8 +81,8 @@ TimeSeriesCluster.test('control test for time-series of timeout requests', {
             cluster.assertRange(assert, {
                 index: i,
                 value: results[i].latency.p95,
-                min: 7,
-                max: 20,
+                min: 10,
+                max: 50,
                 description: ' p95 of requests '
             });
             cluster.assertRange(assert, {
@@ -95,8 +95,8 @@ TimeSeriesCluster.test('control test for time-series of timeout requests', {
             cluster.assertRange(assert, {
                 index: i,
                 value: results[i].processMetrics.rss,
-                min: 100,
-                max: 140,
+                min: 140,
+                max: 180,
                 description: ' RSS of process '
             });
         }
