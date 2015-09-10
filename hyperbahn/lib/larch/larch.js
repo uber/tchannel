@@ -24,6 +24,7 @@ var assert = require('assert');
 var collectParallel = require('collect-parallel/array');
 
 var Record = require('./record');
+var errors = require('./errors');
 
 module.exports = Larch;
 
@@ -58,6 +59,7 @@ function logMultiBackend(level, msg, meta, cb) {
     var self = this;
 
     var record = new Record(level, msg, meta, null);
+    var errors = [];
 
     var i;
     for (i = 0; i < self.backends.length; i++) {
@@ -65,11 +67,14 @@ function logMultiBackend(level, msg, meta, cb) {
     }
 
     var done = 0;
-    function backendDone() {
+    function backendDone(err) {
         done++;
+        if (err) {
+            errors.push(err);
+        }
 
         if (done >= self.backends.length) {
-            cb();
+            cb(errors.length === 0 ? null : errors);
         }
     }
 };
@@ -77,20 +82,28 @@ function logMultiBackend(level, msg, meta, cb) {
 Larch.prototype.bootstrap = function bootstrap(cb) {
     var self = this;
 
-    collectParallel(self.backends, bootstrapBackend, cb);
+    collectParallel(self.backends, bootstrapBackend, bootstrapsDone);
 
     function bootstrapBackend(backend, i, backendCb) {
         backend.bootstrap(backendCb);
+    }
+
+    function bootstrapsDone(ignored, results) {
+        cb(errors.resultArrayToError(results), null);
     }
 };
 
 Larch.prototype.destroy = function destroy(cb) {
     var self = this;
 
-    collectParallel(self.backends, destroyBackend, cb);
+    collectParallel(self.backends, destroyBackend, destroysDone);
 
     function destroyBackend(backend, i, backendCb) {
         backend.destroy(backendCb);
+    }
+
+    function destroysDone(ignored, results) {
+        cb(errors.resultArrayToError(results), null);
     }
 };
 
