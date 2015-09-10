@@ -317,7 +317,6 @@ function allocHTTPBridge(opts) {
         cluster.egressChan.peers.add(cluster.ingressServer.hostPort);
 
         var addr = cluster.httpEgress.address();
-        console.log(addr);
         cluster.requestOptions.host = addr.address;
         cluster.requestOptions.port = addr.port;
         if (opts.enableLBPool) {
