@@ -190,7 +190,8 @@ TimeSeriesCluster.prototype.assertRange = function assertRange(assert, options) 
         options.value + ') for' + options.description +
         ' should be greater than >= ' + options.min);
     assert.ok(options.value <= options.max,
-        'count (' + options.value + ') for' + options.description +
+        'in batch ( ' + options.index + ' ) count (' +
+        options.value + ') for' + options.description +
         ' should be less than <= ' + options.max);
 };
 
