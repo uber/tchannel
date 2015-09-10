@@ -169,7 +169,7 @@ function runTests(HyperbahnCluster) {
                 assert.end(err);
             }
             assert.ok(!res.ok, 'should be not ok');
-            // TODO: the res.body.message is missing, need to assert on that
+            assert.equals(res.body.message, 'invalid service name: ', 'error message as expected');
             assert.end();
         }
     });
