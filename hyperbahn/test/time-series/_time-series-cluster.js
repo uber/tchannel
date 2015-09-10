@@ -29,6 +29,8 @@ var util = require('util');
 var EventEmitter = require('events').EventEmitter;
 var process = require('process');
 var metrics = require('metrics');
+var console = require('console');
+var path = require('path');
 
 var HyperbahnCluster = require('../lib/test-cluster.js');
 
@@ -184,13 +186,50 @@ TimeSeriesCluster.prototype.close = function close(cb) {
 
 TimeSeriesCluster.prototype.assertRange = function assertRange(assert, options) {
     assert.ok(options.value >= options.min,
-        'count (' + options.value + ') for ' +
-        'reqs with timeout of ' + options.name +
-        ' should have >= ' + options.min + ' errors');
+        'in batch ( ' + options.index + ' ) count (' +
+        options.value + ') for' + options.description +
+        ' should be greater than >= ' + options.min);
     assert.ok(options.value <= options.max,
-        'count (' + options.value + ') for ' +
-        'reqs with timeout of ' + options.name +
-        ' should have <= ' + options.max + ' errors');
+        'count (' + options.value + ') for' + options.description +
+        ' should be less than <= ' + options.max);
+};
+
+TimeSeriesCluster.prototype.takeHeaps =
+function takeHeaps(delayOne, delayTwo, delayThree) {
+    var HEAP_FILE_ONE = path.join(
+        __dirname,
+        path.basename(__filename).split('.')[0] + '-1first-heap.heapsnapshot'
+    );
+    var HEAP_FILE_TWO = path.join(
+        __dirname,
+        path.basename(__filename).split('.')[0] + '-2second-heap.heapsnapshot'
+    );
+    var HEAP_FILE_THREE = path.join(
+        __dirname,
+        path.basename(__filename).split('.')[0] + '-3third-heap.heapsnapshot'
+    );
+
+    var heapdump = require('heapdump');
+
+    setTimeout(firstHeap, delayOne * 1000);
+    setTimeout(secondHeap, delayTwo * 1000);
+    setTimeout(thirdHeap, delayThree * 1000);
+
+    function firstHeap() {
+        /* eslint no-console:0 */
+        console.log('writing first heap');
+        heapdump.writeSnapshot(HEAP_FILE_ONE);
+    }
+
+    function secondHeap() {
+        console.log('writing second heap');
+        heapdump.writeSnapshot(HEAP_FILE_TWO);
+    }
+
+    function thirdHeap() {
+        console.log('writing third heap');
+        heapdump.writeSnapshot(HEAP_FILE_THREE);
+    }
 };
 
 function BatchClient(options) {
@@ -385,6 +424,14 @@ function BatchClientResult(size) {
         heapUsed: null
     };
     self._latencyHistogram = new metrics.Histogram();
+    self.latency = {
+        min: null,
+        median: null,
+        p75: null,
+        p95: null,
+        p99: null,
+        max: null
+    };
 }
 
 BatchClientResult.prototype.touch = function touch() {
@@ -395,6 +442,15 @@ BatchClientResult.prototype.touch = function touch() {
     self.processMetrics.rss = asMegaBytes(memoryUsage.rss);
     self.processMetrics.heapTotal = asMegaBytes(memoryUsage.heapTotal);
     self.processMetrics.heapUsed = asMegaBytes(memoryUsage.heapUsed);
+
+    var latencyObject = self._latencyHistogram.printObj();
+
+    self.latency.min = latencyObject.min;
+    self.latency.median = latencyObject.median;
+    self.latency.p75 = Math.ceil(latencyObject.p75);
+    self.latency.p95 = Math.ceil(latencyObject.p95);
+    self.latency.p99 = Math.ceil(latencyObject.p99);
+    self.latency.max = latencyObject.max;
 };
 
 BatchClientResult.prototype.push = function push(result) {
@@ -420,8 +476,6 @@ BatchClientResult.prototype.push = function push(result) {
 BatchClientResult.prototype.inspect = function inspect() {
     var self = this;
 
-    var latencyObject = self._latencyHistogram.printObj();
-
     return require('util').inspect({
         totalCount: self.totalCount,
         errorCount: self.errorCount,
@@ -431,14 +485,7 @@ BatchClientResult.prototype.inspect = function inspect() {
         byType: self.byType,
         processMetrics: self.processMetrics,
         secondsElapsed: Math.ceil((Date.now() - startOfFile) / 1000),
-        latency: {
-            min: latencyObject.min,
-            median: latencyObject.median,
-            p75: Math.ceil(latencyObject.p75),
-            p95: Math.ceil(latencyObject.p95),
-            p99: Math.ceil(latencyObject.p99),
-            max: latencyObject.max
-        }
+        latency: self.latency
     });
 };
 

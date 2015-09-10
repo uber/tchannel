@@ -22,8 +22,6 @@
 
 var console = require('console');
 var Buffer = require('buffer').Buffer;
-var setTimeout = require('timers').setTimeout;
-var path = require('path');
 
 var TimeSeriesCluster = require('./_time-series-cluster.js');
 
@@ -31,31 +29,18 @@ var KILOBYTE = 1024;
 var REQUEST_BODY = TimeSeriesCluster.buildString(4 * KILOBYTE);
 var REQUEST_BODY_BUFFER = new Buffer(REQUEST_BODY);
 
-var HEAP_FILE_ONE = path.join(
-    __dirname,
-    path.basename(__filename).split('.')[0] + '-1first-heap.heapsnapshot'
-);
-var HEAP_FILE_TWO = path.join(
-    __dirname,
-    path.basename(__filename).split('.')[0] + '-2second-heap.heapsnapshot'
-);
-var HEAP_FILE_THREE = path.join(
-    __dirname,
-    path.basename(__filename).split('.')[0] + '-3third-heap.heapsnapshot'
-);
-
 TimeSeriesCluster.test('control test for time-series of timeout requests', {
     clusterOptions: {},
     buckets: [
-        25, 25, 25, 25, 25, 25
+        25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25
     ],
     clientTimeout: 250,
     endpointToRequest: 'echo-endpoint',
     requestBody: REQUEST_BODY_BUFFER,
 
-    numBatchesInBucket: 100,
+    numBatchesInBucket: 50,
     clientBatchDelay: 250,
-    clientRequestsPerBatch: 25
+    clientRequestsPerBatch: 15
 }, function t(cluster, assert) {
     cluster.logger.whitelist('info', 'error for timed out outgoing response');
     cluster.logger.whitelist('info', 'forwarding expected error frame');
@@ -70,22 +55,15 @@ TimeSeriesCluster.test('control test for time-series of timeout requests', {
 
         if (count % 10 === 0) {
             /* eslint no-console:0 */
-            console.log('batch updated', {
-                batch: meta.batch
-            });
+            console.log('batch updated', meta);
         }
     });
 
     cluster.sendRequests(onResults);
 
-    var takeHeaps = false;
-    var heapdump;
-    if (takeHeaps) {
-        heapdump = require('heapdump');
-
-        setTimeout(firstHeap, 20 * 1000);
-        setTimeout(secondHeap, 40 * 1000);
-        setTimeout(thirdHeap, 60 * 1000);
+    var shouldTakeHeaps = false;
+    if (shouldTakeHeaps) {
+        cluster.takeHeaps(20, 40, 60);
     }
 
     function onResults(err, results) {
@@ -93,28 +71,35 @@ TimeSeriesCluster.test('control test for time-series of timeout requests', {
 
         for (var i = 0; i < cluster.buckets.length; i++) {
             cluster.assertRange(assert, {
+                index: i,
                 value: results[i].errorCount,
                 min: 0,
                 max: 50,
-                name: cluster.buckets[i]
+                description: ' reqs with timeout of ' + cluster.buckets[i]
+            });
+            cluster.assertRange(assert, {
+                index: i,
+                value: results[i].latency.p95,
+                min: 7,
+                max: 20,
+                description: ' p95 of requests '
+            });
+            cluster.assertRange(assert, {
+                index: i,
+                value: results[i].processMetrics.heapTotal,
+                min: 50,
+                max: 90,
+                description: ' heap size of process '
+            });
+            cluster.assertRange(assert, {
+                index: i,
+                value: results[i].processMetrics.rss,
+                min: 100,
+                max: 140,
+                description: ' RSS of process '
             });
         }
 
         assert.end();
-    }
-
-    function firstHeap() {
-        console.log('writing first heap');
-        heapdump.writeSnapshot(HEAP_FILE_ONE);
-    }
-
-    function secondHeap() {
-        console.log('writing second heap');
-        heapdump.writeSnapshot(HEAP_FILE_TWO);
-    }
-
-    function thirdHeap() {
-        console.log('writing third heap');
-        heapdump.writeSnapshot(HEAP_FILE_THREE);
     }
 });
