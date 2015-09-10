@@ -43,14 +43,14 @@ module.exports = HyperbahnHandler;
 // TODO: should be part of Hyperbahn error file
 var TypedError = require('error/typed');
 var NoPeersAvailable = TypedError({
-    type: 'no-peers-asvailable',
+    type: 'hyperbahn.no-peers-available',
     nameAsThrift: 'noPeersAvailable',
     message: 'no peer available for {serviceName}',
     serviceName: null
 });
 
 var InvalidServiceName = TypedError({
-    type: 'invalid-service-name',
+    type: 'hyperbahn.invalid-service-name',
     nameAsThrift: 'invalidServiceName',
     message: 'invalid service name: {serviceName}',
     serviceName: null
@@ -373,10 +373,10 @@ function convertHosts(hosts) {
         var obj = {
             port: parseInt(strs[1])
         };
-        strs = strs[0].split('.');
+        strs = strs[0].replace('localhost', '127.0.0.1').split('.');
         obj.ip = {
-            ipv4: parseInt(strs[3]) + parseInt(strs[2]) << 8 +
-                parseInt(strs[1]) << 16 + parseInt(strs[0]) << 24
+            ipv4: parseInt(strs[3]) + (parseInt(strs[2]) << 8) +
+                (parseInt(strs[1]) << 16) + (parseInt(strs[0]) << 24)
         };
 
         res.push(obj);
@@ -387,8 +387,8 @@ function convertHosts(hosts) {
 
 HyperbahnHandler.prototype.discover =
 function discover(self, req, head, body, cb) {
-    var serviceName = body && body.query && body.query.serviceName;
-    if (typeof serviceName !== 'string' || serviceName.length === 0) {
+    var serviceName = body.query.serviceName;
+    if (serviceName.length === 0) {
         cb(null, {
             ok: false,
             body: InvalidServiceName({
@@ -442,62 +442,42 @@ HyperbahnHandler.prototype.sendRelayAsThrift =
 function sendRelayAsThrift(opts, callback) {
     var self = this;
 
-    var attempts = 0;
+    self.channel.waitForIdentified({
+        host: opts.hostPort
+    }, onIdentified);
 
-    tryRequest();
-
-    // TODO: move functions out to methods
-    function tryRequest() {
-        attempts++;
-
-        self.channel.waitForIdentified({
-            host: opts.hostPort
-        }, onIdentified);
-
-        function onIdentified(err) {
-            if (err) {
-                return onResponse(err);
-            }
-
-            self.tchannelThrift.send(self.channel.request({
-                host: opts.hostPort,
-                serviceName: 'hyperbahn',
-                trace: false,
-                timeout: self.relayAdTimeout,
-                headers: {
-                    cn: self.callerName
-                },
-                retryLimit: 1,
-                parent: opts.inreq
-            }), opts.endpoint, null, opts.body, onResponse);
+    function onIdentified(err) {
+        if (err) {
+            return onResponse(err);
         }
 
-        function onResponse(err, response) {
-            if (response) {
-                return callback(null, {
-                    ok: response.ok,
-                    body: response.body,
-                    typeName: response.typeName
-                });
-            }
+        self.tchannelThrift.send(self.channel.request({
+            host: opts.hostPort,
+            serviceName: 'hyperbahn',
+            trace: false,
+            timeout: self.relayAdTimeout,
+            headers: {
+                cn: self.callerName
+            },
+            retryLimit: 0,
+            parent: opts.inreq
+        }), opts.endpoint, null, opts.body, onResponse);
+    }
 
-            var codeName = Errors.classify(err);
-            if (attempts <= self.maxRelayAdAttempts && err &&
-                (
-                    codeName === 'NetworkError' ||
-                    codeName === 'Timeout'
-                )
-            ) {
-                setTimeout(tryRequest, self.relayAdRetryTime);
-            } else {
-                self.logError(err, opts, response);
-
-                callback(null, {
-                    ok: false,
-                    body: err || response.body,
-                    typeName: err ? 'error' : response.typeName
-                });
-            }
+    function onResponse(err, response) {
+        if (response) {
+            return callback(null, {
+                ok: response.ok,
+                body: response.body,
+                typeName: response.typeName
+            });
         }
+
+        self.logError(err, opts, response);
+        callback(null, {
+            ok: false,
+            body: err,
+            typeName: 'error'
+        });
     }
 };

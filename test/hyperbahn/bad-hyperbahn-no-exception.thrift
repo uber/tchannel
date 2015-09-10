@@ -1,13 +1,3 @@
-exception NoPeersAvailable {
-    1: required string message
-    2: required string serviceName
-}
-
-exception InvalidServiceName {
-    1: required string message
-    2: required string serviceName
-}
-
 struct DiscoveryQuery {
     1: required string serviceName
 }
@@ -28,8 +18,5 @@ struct DiscoveryResult {
 service Hyperbahn {
     DiscoveryResult discover(
         1: required DiscoveryQuery query
-    ) throws (
-        1: NoPeersAvailable noPeersAvailable
-        2: InvalidServiceName invalidServiceName
     )
 }

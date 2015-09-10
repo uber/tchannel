@@ -9,7 +9,6 @@ exception InvalidServiceName {
 }
 
 struct DiscoveryQuery {
-    1: required string serviceName
 }
 
 union IpAddress {

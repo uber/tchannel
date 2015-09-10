@@ -27,7 +27,6 @@ struct DiscoveryResult {
 
 service Hyperbahn {
     DiscoveryResult discover(
-        1: required DiscoveryQuery query
     ) throws (
         1: NoPeersAvailable noPeersAvailable
         2: InvalidServiceName invalidServiceName
