@@ -89,7 +89,7 @@ Larch.prototype.bootstrap = function bootstrap(cb) {
     }
 
     function bootstrapsDone(ignored, results) {
-        cb(errors.resultArrayToError(results), null);
+        cb(errors.resultArrayToError(results, 'larch.bootstrap.many-errors'));
     }
 };
 
@@ -103,7 +103,7 @@ Larch.prototype.destroy = function destroy(cb) {
     }
 
     function destroysDone(ignored, results) {
-        cb(errors.resultArrayToError(results), null);
+        cb(errors.resultArrayToError(results, 'larch.destroy.many-errors'));
     }
 };
 
