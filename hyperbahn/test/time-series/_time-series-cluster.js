@@ -28,6 +28,7 @@ var nodeAssert = require('assert');
 var util = require('util');
 var EventEmitter = require('events').EventEmitter;
 var process = require('process');
+var metrics = require('metrics');
 
 var HyperbahnCluster = require('../lib/test-cluster.js');
 
@@ -383,6 +384,7 @@ function BatchClientResult(size) {
         heapTotal: null,
         heapUsed: null
     };
+    self._latencyHistogram = new metrics.Histogram();
 }
 
 BatchClientResult.prototype.touch = function touch() {
@@ -399,6 +401,7 @@ BatchClientResult.prototype.push = function push(result) {
     var self = this;
 
     self._results.push(result);
+    self._latencyHistogram.update(result.duration);
 
     self.totalCount++;
     if (result.error) {
@@ -417,6 +420,8 @@ BatchClientResult.prototype.push = function push(result) {
 BatchClientResult.prototype.inspect = function inspect() {
     var self = this;
 
+    var latencyObject = self._latencyHistogram.printObj();
+
     return require('util').inspect({
         totalCount: self.totalCount,
         errorCount: self.errorCount,
@@ -425,7 +430,15 @@ BatchClientResult.prototype.inspect = function inspect() {
         declinedCount: self.declinedCount,
         byType: self.byType,
         processMetrics: self.processMetrics,
-        secondsElapsed: Math.ceil((Date.now() - startOfFile) / 1000)
+        secondsElapsed: Math.ceil((Date.now() - startOfFile) / 1000),
+        latency: {
+            min: latencyObject.min,
+            median: latencyObject.median,
+            p75: Math.ceil(latencyObject.p75),
+            p95: Math.ceil(latencyObject.p95),
+            p99: Math.ceil(latencyObject.p99),
+            max: latencyObject.max
+        }
     });
 };
 
