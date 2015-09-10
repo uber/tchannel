@@ -41,6 +41,12 @@ function resultArrayToError(items, type, message) {
         }
     }
 
+    return errorArrayToError(errors, type, message);
+}
+
+module.exports.errorArrayToError = errorArrayToError;
+
+function errorArrayToError(errors, type, message) {
     if (errors.length === 0) {
         return null;
     } else if (errors.length === 1) {

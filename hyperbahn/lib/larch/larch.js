@@ -59,22 +59,19 @@ function logMultiBackend(level, msg, meta, cb) {
     var self = this;
 
     var record = new Record(level, msg, meta, null);
-    var errors = [];
 
-    var i;
-    for (i = 0; i < self.backends.length; i++) {
-        self.backends[i].log(record, backendDone);
+    collectParallel(self.backends, writeBackend, writesDone);
+
+    function writeBackend(backend, i, backendCb) {
+        backend.log(record, backendCb);
     }
 
-    var done = 0;
-    function backendDone(err) {
-        done++;
-        if (err) {
-            errors.push(err);
-        }
-
-        if (done >= self.backends.length) {
-            cb(errors.length === 0 ? null : errors);
+    function writesDone(ignored, results) {
+        if (typeof cb === 'function') {
+            cb(Errors.resultArrayToError(
+                results, 
+                'larch.log-multi-backend.many-errors'
+            ));
         }
     }
 };

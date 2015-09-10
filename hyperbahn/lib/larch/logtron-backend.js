@@ -24,6 +24,7 @@ var util = require('util');
 var assert = require('assert');
 var LogtronEntry = require('logtron/entry');
 
+var Errors = require('./errors');
 var BaseBackend = require('./base-backend');
 
 module.exports = LogtronBackend;
@@ -65,15 +66,22 @@ LogtronBackend.prototype.logMany = function logMany(records, cb) {
 
     var i;
     var done = 0;
+    var errors = [];
     for (i = 0; i < records.length; i++) {
         self.log(records[i], recordDone);
     }
 
-    function recordDone() {
+    function recordDone(error) {
         done++;
+        if (error) {
+            errors.push(error);
+        }
 
         if (done >= records.length) {
-            cb();
+            cb(Errors.errorArrayToError(
+                errors, 
+                'larch.logtron-backend.log-many.many-errors'
+            ));
         }
     }
 };
