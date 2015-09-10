@@ -107,7 +107,7 @@ allocCluster.test('emits stats on call success', {
             time: null
         }, {
             type: 'c',
-            name: 'tchannel.connections.bytes-sent.localhost',
+            name: 'tchannel.connections.bytes-sent.127-0-0-1',
             value: null,
             delta: 109,
             time: null
@@ -119,7 +119,7 @@ allocCluster.test('emits stats on call success', {
             time: null
         }, {
             type: 'c',
-            name: 'tchannel.connections.bytes-recvd.localhost',
+            name: 'tchannel.connections.bytes-recvd.127-0-0-1',
             value: null,
             delta: 67,
             time: null
@@ -233,7 +233,7 @@ allocCluster.test('emits stats on p2p call success', {
             time: null
         }, {
             type: 'c',
-            name: 'tchannel.connections.bytes-sent.localhost',
+            name: 'tchannel.connections.bytes-sent.127-0-0-1',
             value: null,
             delta: 109,
             time: null
@@ -245,7 +245,7 @@ allocCluster.test('emits stats on p2p call success', {
             time: null
         }, {
             type: 'c',
-            name: 'tchannel.connections.bytes-recvd.localhost',
+            name: 'tchannel.connections.bytes-recvd.127-0-0-1',
             value: null,
             delta: 67,
             time: null
@@ -444,7 +444,7 @@ allocCluster.test('emits stats on call failure', {
             time: null
         }, {
             type: 'c',
-            name: 'tchannel.connections.bytes-sent.localhost',
+            name: 'tchannel.connections.bytes-sent.127-0-0-1',
             value: null,
             delta: 109,
             time: null
@@ -456,7 +456,7 @@ allocCluster.test('emits stats on call failure', {
             time: null
         }, {
             type: 'c',
-            name: 'tchannel.connections.bytes-recvd.localhost',
+            name: 'tchannel.connections.bytes-recvd.127-0-0-1',
             value: null,
             delta: 66,
             time: null
