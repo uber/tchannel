@@ -36,6 +36,17 @@ if (require.main === module) {
     runTests(require('../lib/hyperbahn-cluster.js'));
 }
 
+function covertHost(host) {
+    var res = '';
+    console.log(host.ip.ipv4);
+    console.log((host.ip.ipv4 & 0xff000000) >> 24);
+    res += ((host.ip.ipv4 & 0xff000000) >> 24) + '.';
+    res += ((host.ip.ipv4 & 0xff0000) >> 16) + '.';
+    res += ((host.ip.ipv4 & 0xff00) >> 8) + '.';
+    res += host.ip.ipv4 & 0xff;
+    return res + ':' + host.port;
+}
+
 function runTests(HyperbahnCluster) {
     HyperbahnCluster.test('get no host', {
         size: 5
@@ -63,7 +74,9 @@ function runTests(HyperbahnCluster) {
             onResponse
         );
         function onResponse(err, res) {
-            assert.ok(!err, 'should be no errors');
+            if (err) {
+                assert.end(err);
+            }
             assert.ok(res, 'should be a result');
             assert.ok(!res.ok, 'result should be not ok');
             assert.equals(res.body.message, 'no peer available for matt', 'error message as expected');
@@ -71,7 +84,7 @@ function runTests(HyperbahnCluster) {
         }
     });
 
-    HyperbahnCluster.test.only('get host port as expected', {
+    HyperbahnCluster.test('get host port as expected', {
         size: 5
     }, function t(cluster, assert) {
         var bob = cluster.remotes.bob;
@@ -113,12 +126,142 @@ function runTests(HyperbahnCluster) {
         }
 
         function check(err, res) {
-            assert.ok(!err, 'should be no errors');
+            if (err) {
+                assert.end(err);
+            }
             assert.ok(res, 'should be a result');
             assert.ok(res.ok, 'result should be ok');
-            assert.equals(res.body[0], bob.channel.hostPort, 'should get the expected hostPort');
+            console.log(res.body.peers[0]);
+            assert.equals(covertHost(res.body.peers[0]), bob.channel.hostPort.replace('localhost', '127.0.0.1'),
+                'should get the expected hostPort');
             client.destroy();
             assert.end();
         }
     });
+
+    HyperbahnCluster.test('malformed thrift IDL: empty serviceName', {
+        size: 5
+    }, function t(cluster, assert) {
+        var bob = cluster.remotes.bob;
+        var bobSub = bob.channel.makeSubChannel({
+            serviceName: 'hyperbahn',
+            peers: cluster.hostPortList
+        });
+        var request = bobSub.request({
+            headers: {
+                cn: 'test'
+            },
+            serviceName: 'hyperbahn',
+            hasNoParent: true
+        });
+        thrift.send(request,
+            'Hyperbahn::discover',
+            null,
+            {
+                query: {
+                    serviceName: ''
+                }
+            },
+            onResponse
+        );
+        function onResponse(err, res) {
+            if (err) {
+                assert.end(err);
+            }
+            assert.ok(!res.ok, 'should be not ok');
+            // TODO: the res.body.message is missing, need to assert on that
+            assert.end();
+        }
+    });
+
+    // HyperbahnCluster.test('malformed thrift IDL: an empty body', {
+    //     size: 5
+    // }, function t(cluster, assert) {
+    //     var bob = cluster.remotes.bob;
+    //     var bobSub = bob.channel.makeSubChannel({
+    //         serviceName: 'hyperbahn',
+    //         peers: cluster.hostPortList
+    //     });
+    //     var request = bobSub.request({
+    //         headers: {
+    //             cn: 'test'
+    //         },
+    //         serviceName: 'hyperbahn',
+    //         hasNoParent: true
+    //     });
+    //     var badSource = fs.readFileSync(path.join(__dirname, 'bad-hyperbahn-empty-req-body.thrift'), 'utf8');
+    //     var badThrift = new TChannelAsThrift({source: badSource});
+    //     badThrift.send(request,
+    //         'Hyperbahn::discover',
+    //         null,
+    //         {},
+    //         onResponse
+    //     );
+    //     function onResponse(err, res) {
+    //         assert.ok(err, 'should be error');
+    //         assert.end();
+    //     }
+    // });
+
+    // HyperbahnCluster.test('malformed thrift IDL: a body with a query without the serviceName field', {
+    //     size: 5
+    // }, function t(cluster, assert) {
+    //     var bob = cluster.remotes.bob;
+    //     var bobSub = bob.channel.makeSubChannel({
+    //         serviceName: 'hyperbahn',
+    //         peers: cluster.hostPortList
+    //     });
+    //     var request = bobSub.request({
+    //         headers: {
+    //             cn: 'test'
+    //         },
+    //         serviceName: 'hyperbahn',
+    //         hasNoParent: true
+    //     });
+    //     var badSource = fs.readFileSync(path.join(__dirname, 'bad-hyperbahn-empty-req-body.thrift'), 'utf8');
+    //     var badThrift = new TChannelAsThrift({source: badSource});
+    //     badThrift.send(request,
+    //         'Hyperbahn::discover',
+    //         null,
+    //         {query: {}},
+    //         onResponse
+    //     );
+    //     function onResponse(err, res) {
+    //         assert.ok(err, 'should be error');
+    //         assert.end();
+    //     }
+    // });
+
+    // HyperbahnCluster.test('malformed thrift IDL: empty serviceName with no exception defined', {
+    //     size: 5
+    // }, function t(cluster, assert) {
+    //     var bob = cluster.remotes.bob;
+    //     var bobSub = bob.channel.makeSubChannel({
+    //         serviceName: 'hyperbahn',
+    //         peers: cluster.hostPortList
+    //     });
+    //     var request = bobSub.request({
+    //         headers: {
+    //             cn: 'test'
+    //         },
+    //         serviceName: 'hyperbahn',
+    //         hasNoParent: true
+    //     });
+    //     var badSource = fs.readFileSync(path.join(__dirname, 'bad-hyperbahn-no-exception.thrift'), 'utf8');
+    //     var badThrift = new TChannelAsThrift({source: badSource});
+    //     badThrift.send(request,
+    //         'Hyperbahn::discover',
+    //         null,
+    //         {
+    //             query: {
+    //                 serviceName: ''
+    //             }
+    //         },
+    //         onResponse
+    //     );
+    //     function onResponse(err, res) {
+    //         assert.ok(err, 'there should be an error');
+    //         assert.end();
+    //     }
+    // });
 }
