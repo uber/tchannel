@@ -31,6 +31,8 @@ var process = require('process');
 
 var HyperbahnCluster = require('../lib/test-cluster.js');
 
+var startOfFile = Date.now();
+
 TimeSeriesCluster.test = tapeCluster(tape, TimeSeriesCluster);
 
 TimeSeriesCluster.buildString = function buildString(size) {
@@ -261,9 +263,14 @@ function BatchClientLoop(now, batchClient, onFinish) {
     }
 
     self.boundSendRequest = boundSendRequest;
+    self.boundRunAgain = boundRunAgain;
 
     function boundSendRequest(callback) {
         self.batchClient._sendRequest(callback);
+    }
+
+    function boundRunAgain() {
+        self.runNext();
     }
 }
 
@@ -299,11 +306,7 @@ BatchClientLoop.prototype.runNext = function runNext() {
     );
     var delta = targetTime - Date.now();
 
-    setTimeout(runAgain, delta);
-
-    function runAgain() {
-        self.runNext();
-    }
+    setTimeout(self.boundRunAgain, delta);
 
     function onResults(err, responses) {
         if (err) {
@@ -421,7 +424,8 @@ BatchClientResult.prototype.inspect = function inspect() {
         timeoutCount: self.timeoutCount,
         declinedCount: self.declinedCount,
         byType: self.byType,
-        processMetrics: self.processMetrics
+        processMetrics: self.processMetrics,
+        secondsElapsed: Math.ceil((Date.now() - startOfFile) / 1000)
     });
 };
 
@@ -499,14 +503,18 @@ function TimeWindow(options) {
 
     self.index = 0;
     self.currentTime = self.buckets[self.index];
+
+    self.boundAdvance = boundAdvance;
+
+    function boundAdvance() {
+        self.advance();
+    }
 }
 
 TimeWindow.prototype.setTimer = function setTimer() {
     var self = this;
 
-    setTimeout(function advance() {
-        self.advance();
-    }, self.interval);
+    setTimeout(self.boundAdvance, self.interval);
 };
 
 TimeWindow.prototype.advance = function advance() {
