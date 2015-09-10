@@ -74,7 +74,6 @@ function TestCluster(opts) {
     self.remotes = {};
     // Names of additional remotes (from opts.namedRemotes)
     self.namedRemotes = [];
-    self.stats = [];
 
     self.timers = null; // Set whenever a channel is created
 
@@ -104,17 +103,10 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
             self.apps[i] = self.createApplication(
                 self.ringpopHosts[i], ready.signal
             );
-            self.apps[i].clients.tchannel.on('stat', onStat);
         }
         for (i = 0; i < self.dummySize; i++) {
             self.dummies[i] = self.createDummy(ready.signal);
-            self.dummies[i].on('stat', onStat);
         }
-    }
-
-    function onStat(stat, tchannel) {
-        stat.hostPort = this.hostPort;
-        self.stats.push(stat);
     }
 
     function onReady() {
@@ -148,13 +140,11 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
             trace: self.opts.trace,
             traceSample: 1
         }, ready.signal);
-        self.remotes.bob.channel.on('stat', onStat);
         self.remotes.steve = self.createRemote({
             serviceName: 'steve',
             trace: self.opts.trace,
             traceSample: 1
         }, ready.signal);
-        self.remotes.steve.channel.on('stat', onStat);
 
         for (var i = 0; i < self.namedRemotesConfig.length; i++) {
             self.namedRemotes[i] = self.createRemote({
@@ -162,7 +152,6 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
                 trace: self.opts.trace,
                 traceSample: 1
             }, ready.signal);
-            self.namedRemotes[i].channel.on('stat', onStat);
         }
     }
 
