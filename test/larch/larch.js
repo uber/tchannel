@@ -40,8 +40,6 @@ util.inherits(FakeBackend, BaseBackend);
 FakeBackend.prototype.log = function log(record, cb) {
     var self = this;
 
-    console.log("got here lol");
-
     self.logs.push(record);
 
     if (typeof cb === 'function') {
@@ -55,7 +53,7 @@ test('larch with single backend uses logSingleBackend', function t1(assert) {
     var logger = Larch({backends: [backend]});
 
     assert.ok(
-        logger.log === logger.logSingleBackend, 
+        logger.log === logger.logSingleBackend,
         'logger is using logSingleBackend'
     );
 
@@ -80,7 +78,7 @@ test('larch with muiltple backends uses logMultiBackend', function t2(assert) {
     var logger = Larch({backends: [backend, backend2]});
 
     assert.ok(
-        logger.log === logger.logMultiBackend, 
+        logger.log === logger.logMultiBackend,
         'logger is using logSingleBackend'
     );
 
