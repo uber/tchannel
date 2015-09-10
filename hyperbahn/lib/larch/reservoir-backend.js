@@ -100,7 +100,7 @@ ReservoirBackend.prototype.log = function log(record, cb) {
     if (self.records.length < self.size) {
         self.records.push(record);
     } else {
-        var probability = self.rangeRand(1, self.count);
+        var probability = self.rangeRand(1, self.count - 1);
         if (probability < self.records.length) {
             // evict and replace
             self.records[probability] = record;
