@@ -40,7 +40,7 @@ test('resultArrayToError with no errors', function t1(assert) {
 });
 
 test('resultArrayToError with 1 error', function t2(assert) {
-    var didntWorkErr = new Error('didnt work'); 
+    var didntWorkErr = new Error('didnt work');
 
     var array = [
         new Result(null, 'asdf'),
@@ -86,8 +86,8 @@ test('resultArrayToError with all errors', function t4(assert) {
     var err3 = new Error('didnt work');
 
     var array = [
-        new Result(err1), 
-        new Result(err2), 
+        new Result(err1),
+        new Result(err2),
         new Result(err3)
     ];
 
