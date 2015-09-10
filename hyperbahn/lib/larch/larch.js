@@ -69,7 +69,7 @@ function logMultiBackend(level, msg, meta, cb) {
     function writesDone(ignored, results) {
         if (typeof cb === 'function') {
             cb(Errors.resultArrayToError(
-                results, 
+                results,
                 'larch.log-multi-backend.many-errors'
             ));
         }
