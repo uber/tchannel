@@ -38,6 +38,8 @@ var MAX_RELAY_AD_ATTEMPTS = 2;
 var RELAY_AD_RETRY_TIME = 1 * 1000;
 var RELAY_AD_TIMEOUT = 500;
 
+var RELAY_TIMEOUT = 500;
+
 module.exports = HyperbahnHandler;
 
 // TODO: should be part of Hyperbahn error file
@@ -102,6 +104,8 @@ function HyperbahnHandler(options) {
         RELAY_AD_RETRY_TIME;
     self.maxRelayAdAttempts = options.maxRelayAdAttempts ||
         MAX_RELAY_AD_ATTEMPTS;
+
+    self.relayTimeout = options.relayTimeout || RELAY_TIMEOUT;
 }
 util.inherits(HyperbahnHandler, TChannelEndpointHandler);
 
@@ -373,7 +377,7 @@ function convertHosts(hosts) {
         var obj = {
             port: parseInt(strs[1])
         };
-        strs = strs[0].replace('localhost', '127.0.0.1').split('.');
+        strs = strs[0].split('.');
         obj.ip = {
             ipv4: parseInt(strs[3]) + (parseInt(strs[2]) << 8) +
                 (parseInt(strs[1]) << 16) + (parseInt(strs[0]) << 24)
@@ -387,7 +391,7 @@ function convertHosts(hosts) {
 
 HyperbahnHandler.prototype.discover =
 function discover(self, req, head, body, cb) {
-    var serviceName = body.query.serviceName;
+    var serviceName = body && body.query && body.query.serviceName;
     if (serviceName.length === 0) {
         cb(null, {
             ok: false,
@@ -412,7 +416,29 @@ function discover(self, req, head, body, cb) {
             body: body,
             inreq: req,
             endpoint: 'Hyperbahn::discover'
-        }, cb);
+        }, function handleForward(err, resp) {
+            if (err) {
+                self.channel.logger.error('Failed to call discover API on exit node', {
+                    error: err,
+                    serviceName: serviceName,
+                    exitHost: exitHosts[exit]
+                });
+                return cb(err, null);
+            }
+
+            // Need to reconstruct the error
+            if (resp.body.name === 'ThriftException') {
+                cb(null, {
+                    ok: false,
+                    body: NoPeersAvailable({
+                        serviceName: serviceName
+                    }),
+                    typeName: 'noPeersAvailable'
+                });
+            } else {
+                cb(null, resp);
+            }
+        });
     } else {
         var svcchan = self.channel.topChannel.subChannels[serviceName];
         var hosts = [];
@@ -455,7 +481,7 @@ function sendRelayAsThrift(opts, callback) {
             host: opts.hostPort,
             serviceName: 'hyperbahn',
             trace: false,
-            timeout: self.relayAdTimeout,
+            timeout: self.relayTimeout,
             headers: {
                 cn: self.callerName
             },
@@ -465,19 +491,6 @@ function sendRelayAsThrift(opts, callback) {
     }
 
     function onResponse(err, response) {
-        if (response) {
-            return callback(null, {
-                ok: response.ok,
-                body: response.body,
-                typeName: response.typeName
-            });
-        }
-
-        self.logError(err, opts, response);
-        callback(null, {
-            ok: false,
-            body: err,
-            typeName: 'error'
-        });
+        return callback(err, response);
     }
 };

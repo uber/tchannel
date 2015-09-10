@@ -132,7 +132,7 @@ function runTests(HyperbahnCluster) {
             assert.ok(res, 'should be a result');
             assert.ok(res.ok, 'result should be ok');
             console.log(res.body.peers[0]);
-            assert.equals(covertHost(res.body.peers[0]), bob.channel.hostPort.replace('localhost', '127.0.0.1'),
+            assert.equals(covertHost(res.body.peers[0]), bob.channel.hostPort,
                 'should get the expected hostPort');
             client.destroy();
             assert.end();
