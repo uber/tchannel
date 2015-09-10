@@ -29,7 +29,7 @@ var KILOBYTE = 1024;
 var REQUEST_BODY = TimeSeriesCluster.buildString(4 * KILOBYTE);
 var REQUEST_BODY_BUFFER = new Buffer(REQUEST_BODY);
 
-TimeSeriesCluster.test('control test for time-series of timeout requests', {
+TimeSeriesCluster.test('constant low volume 4kb traffic', {
     clusterOptions: {},
     buckets: [
         25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25
