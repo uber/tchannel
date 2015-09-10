@@ -23,7 +23,7 @@
 var Result = require('rezult');
 var test = require('tape');
 
-var Errors = require('../../../lib/larch/errors');
+var Errors = require('../../lib/larch/errors');
 
 test('resultArrayToError with no errors', function t1(assert) {
     var array = [
