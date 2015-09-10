@@ -501,7 +501,7 @@ function buildRingpopHosts(n, cb) {
         var ringpopHosts = [];
 
         for (var j = 0; j < ports.length; j++) {
-            ringpopHosts[j] = myLocalIp() + ':' + ports[j];
+            ringpopHosts[j] = '127.0.0.1:' + ports[j];
         }
 
         cb(null, ringpopHosts);
