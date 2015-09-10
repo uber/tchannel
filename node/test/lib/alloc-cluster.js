@@ -33,7 +33,7 @@ module.exports = allocCluster;
 function allocCluster(opts) {
     opts = opts || {};
 
-    var host = 'localhost';
+    var host = '127.0.0.1';
     var logger = debugLogtron('tchannel', {
         enabled: true,
         verbose: !!opts.logVerbose
