@@ -174,94 +174,98 @@ function runTests(HyperbahnCluster) {
         }
     });
 
-    // HyperbahnCluster.test('malformed thrift IDL: an empty body', {
-    //     size: 5
-    // }, function t(cluster, assert) {
-    //     var bob = cluster.remotes.bob;
-    //     var bobSub = bob.channel.makeSubChannel({
-    //         serviceName: 'hyperbahn',
-    //         peers: cluster.hostPortList
-    //     });
-    //     var request = bobSub.request({
-    //         headers: {
-    //             cn: 'test'
-    //         },
-    //         serviceName: 'hyperbahn',
-    //         hasNoParent: true
-    //     });
-    //     var badSource = fs.readFileSync(path.join(__dirname, 'bad-hyperbahn-empty-req-body.thrift'), 'utf8');
-    //     var badThrift = new TChannelAsThrift({source: badSource});
-    //     badThrift.send(request,
-    //         'Hyperbahn::discover',
-    //         null,
-    //         {},
-    //         onResponse
-    //     );
-    //     function onResponse(err, res) {
-    //         assert.ok(err, 'should be error');
-    //         assert.end();
-    //     }
-    // });
+    HyperbahnCluster.test('malformed thrift IDL: an empty body', {
+        size: 5
+    }, function t(cluster, assert) {
+        var bob = cluster.remotes.bob;
+        var bobSub = bob.channel.makeSubChannel({
+            serviceName: 'hyperbahn',
+            peers: cluster.hostPortList
+        });
+        var request = bobSub.request({
+            headers: {
+                cn: 'test'
+            },
+            serviceName: 'hyperbahn',
+            hasNoParent: true
+        });
+        var badSource = fs.readFileSync(path.join(__dirname, 'bad-hyperbahn-empty-req-body.thrift'), 'utf8');
+        var badThrift = new TChannelAsThrift({source: badSource});
+        badThrift.send(request,
+            'Hyperbahn::discover',
+            null,
+            {},
+            onResponse
+        );
+        function onResponse(err, res) {
+            assert.ok(err, 'should be error');
+            assert.equals(err.type, 'tchannel.bad-request', 'error should be bad request');
+            assert.end();
+        }
+    });
 
-    // HyperbahnCluster.test('malformed thrift IDL: a body with a query without the serviceName field', {
-    //     size: 5
-    // }, function t(cluster, assert) {
-    //     var bob = cluster.remotes.bob;
-    //     var bobSub = bob.channel.makeSubChannel({
-    //         serviceName: 'hyperbahn',
-    //         peers: cluster.hostPortList
-    //     });
-    //     var request = bobSub.request({
-    //         headers: {
-    //             cn: 'test'
-    //         },
-    //         serviceName: 'hyperbahn',
-    //         hasNoParent: true
-    //     });
-    //     var badSource = fs.readFileSync(path.join(__dirname, 'bad-hyperbahn-empty-req-body.thrift'), 'utf8');
-    //     var badThrift = new TChannelAsThrift({source: badSource});
-    //     badThrift.send(request,
-    //         'Hyperbahn::discover',
-    //         null,
-    //         {query: {}},
-    //         onResponse
-    //     );
-    //     function onResponse(err, res) {
-    //         assert.ok(err, 'should be error');
-    //         assert.end();
-    //     }
-    // });
+    HyperbahnCluster.test('malformed thrift IDL: a body with a query without the serviceName field', {
+        size: 5
+    }, function t(cluster, assert) {
+        var bob = cluster.remotes.bob;
+        var bobSub = bob.channel.makeSubChannel({
+            serviceName: 'hyperbahn',
+            peers: cluster.hostPortList
+        });
+        var request = bobSub.request({
+            headers: {
+                cn: 'test'
+            },
+            serviceName: 'hyperbahn',
+            hasNoParent: true
+        });
+        var badSource = fs.readFileSync(path.join(__dirname, 'bad-hyperbahn-empty-req-body.thrift'), 'utf8');
+        var badThrift = new TChannelAsThrift({source: badSource});
+        badThrift.send(request,
+            'Hyperbahn::discover',
+            null,
+            {query: {}},
+            onResponse
+        );
+        function onResponse(err, res) {
+            assert.ok(err, 'should be error');
+            assert.equals(err.type, 'tchannel.bad-request', 'error should be bad request');
+            assert.end();
+        }
+    });
 
-    // HyperbahnCluster.test('malformed thrift IDL: empty serviceName with no exception defined', {
-    //     size: 5
-    // }, function t(cluster, assert) {
-    //     var bob = cluster.remotes.bob;
-    //     var bobSub = bob.channel.makeSubChannel({
-    //         serviceName: 'hyperbahn',
-    //         peers: cluster.hostPortList
-    //     });
-    //     var request = bobSub.request({
-    //         headers: {
-    //             cn: 'test'
-    //         },
-    //         serviceName: 'hyperbahn',
-    //         hasNoParent: true
-    //     });
-    //     var badSource = fs.readFileSync(path.join(__dirname, 'bad-hyperbahn-no-exception.thrift'), 'utf8');
-    //     var badThrift = new TChannelAsThrift({source: badSource});
-    //     badThrift.send(request,
-    //         'Hyperbahn::discover',
-    //         null,
-    //         {
-    //             query: {
-    //                 serviceName: ''
-    //             }
-    //         },
-    //         onResponse
-    //     );
-    //     function onResponse(err, res) {
-    //         assert.ok(err, 'there should be an error');
-    //         assert.end();
-    //     }
-    // });
+    HyperbahnCluster.test('malformed thrift IDL: empty serviceName with no exception defined', {
+        size: 5
+    }, function t(cluster, assert) {
+        var bob = cluster.remotes.bob;
+        var bobSub = bob.channel.makeSubChannel({
+            serviceName: 'hyperbahn',
+            peers: cluster.hostPortList
+        });
+        var request = bobSub.request({
+            headers: {
+                cn: 'test'
+            },
+            serviceName: 'hyperbahn',
+            hasNoParent: true
+        });
+        var badSource = fs.readFileSync(path.join(__dirname, 'bad-hyperbahn-no-exception.thrift'), 'utf8');
+        var badThrift = new TChannelAsThrift({source: badSource});
+        badThrift.send(request,
+            'Hyperbahn::discover',
+            null,
+            {
+                query: {
+                    serviceName: ''
+                }
+            },
+            onResponse
+        );
+        function onResponse(err, res) {
+            assert.ok(err, 'should be error');
+            assert.equals(err.type, 'tchannel-thrift-handler.parse-error.body-failed',
+                'error should be parser error');
+            assert.end();
+        }
+    });
 }
