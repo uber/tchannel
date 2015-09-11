@@ -71,6 +71,7 @@ function TimeSeriesCluster(opts) {
     self.serverInstances = opts.serverInstances || 10;
     self.clientInstances = opts.clientInstances || 5;
     self.requestBody = opts.requestBody || '';
+    self.requestBodyChunks = opts.requestBodyChunks || [];
 
     self.serverServiceName = 'time-series-server';
     self.clientServiceName = 'time-series-client';
@@ -164,7 +165,8 @@ TimeSeriesCluster.prototype.bootstrap = function bootstrap(cb) {
             endpoint: self.endpointToRequest,
             clientServiceName: self.clientServiceName,
             serverServiceName: self.serverServiceName,
-            body: self.requestBody
+            body: self.requestBody,
+            bodyChunks: self.requestBodyChunks
         });
 
         cb(null);
@@ -176,6 +178,14 @@ TimeSeriesCluster.prototype.sendRequests = function sendRequests(cb) {
 
     self.timeWindow.setTimer();
     self.batchClient.sendRequests(Date.now(), cb);
+};
+
+TimeSeriesCluster.prototype.sendStreamingRequests =
+function sendStreamingRequests(cb) {
+    var self = this;
+
+    self.timeWindow.setTimer();
+    self.batchClient.sendStreamingRequests(Date.now(), cb);
 };
 
 TimeSeriesCluster.prototype.close = function close(cb) {
@@ -263,6 +273,7 @@ function BatchClient(options) {
     );
 
     self.body = options.body || '';
+    self.bodyChunks = options.bodyChunks || [];
     self.requestOptions = {
         serviceName: self.serverServiceName,
         timeout: self.clientTimeout,
@@ -271,6 +282,16 @@ function BatchClient(options) {
             'cn': self.clientServiceName
         }
     };
+    self.streamingRequestOptions = {
+        serviceName: self.serverServiceName,
+        streamed: true,
+        timeout: self.clientTimeout,
+        headers: {
+            'as': 'raw',
+            'cn': self.clientServiceName
+        }
+    };
+    self.streamWriteDelay = 10;
 
     self.freeList = new Array(self.requestVolume);
     for (var j = 0; j < self.requestVolume; j++) {
@@ -282,16 +303,117 @@ util.inherits(BatchClient, EventEmitter);
 BatchClient.prototype.sendRequests = function sendRequests(now, cb) {
     var self = this;
 
-    var loop = new BatchClientLoop(now, self, cb);
+    var loop = new BatchClientLoop({
+        start: now,
+        batchClient: self,
+        onFinish: cb
+    });
     loop.runNext();
 };
 
-function BatchClientLoop(now, batchClient, onFinish) {
+BatchClient.prototype.sendStreamingRequests =
+function sendStreamingRequests(now, cb) {
     var self = this;
 
-    self.batchClient = batchClient;
-    self.startTime = now;
-    self.onFinish = onFinish;
+    var loop = new BatchClientLoop({
+        start: now,
+        batchClient: self,
+        streamed: true,
+        onFinish: cb
+    });
+    loop.runNext();
+};
+
+BatchClient.prototype._sendRequestStream =
+function _sendRequestStream(cb) {
+    var self = this;
+
+    var start = Date.now();
+    var randomClient = self.channels[
+        Math.floor(Math.random() * self.channels.length)
+    ];
+
+    var req = randomClient.request(self.streamingRequestOptions);
+    req.hookupStreamCallback(onStreamingResponse);
+
+    req.sendArg1(self.endpoint);
+    req.arg2.end('');
+
+    var bodyChunks = self.bodyChunks.slice();
+    writeLoop();
+
+    function writeLoop() {
+        if (bodyChunks.length === 0) {
+            return req.arg3.end();
+        }
+
+        var chunk = bodyChunks.shift();
+        req.arg3.write(chunk);
+
+        setTimeout(writeLoop, self.streamWriteDelay);
+    }
+
+    function onStreamingResponse(err1, _, resp) {
+        var result;
+
+        if (err1) {
+            result = self.freeList.pop();
+
+            result.error = err1;
+            result.responseOk = false;
+            result.duration = Date.now() - start;
+            return cb(null, result);
+        }
+
+        resp.withArg23(onBuffers);
+
+        function onBuffers(err2) {
+            result = self.freeList.pop();
+
+            result.error = err2 || null;
+            result.responseOk = resp ? resp.ok : false;
+            result.duration = Date.now() - start;
+
+            // console.log('got response', {
+            //     err: !!err
+            // });
+            cb(null, result);
+        }
+    }
+};
+
+BatchClient.prototype._sendRequest = function _sendRequest(cb) {
+    var self = this;
+
+    var start = Date.now();
+    var randomClient = self.channels[
+        Math.floor(Math.random() * self.channels.length)
+    ];
+
+    var req = randomClient.request(self.requestOptions);
+    req.send(self.endpoint, '', self.body, onResponse);
+
+    function onResponse(err, resp) {
+        var result = self.freeList.pop();
+
+        result.error = err || null;
+        result.responseOk = resp ? resp.ok : false;
+        result.duration = Date.now() - start;
+
+        // console.log('got response', {
+        //     err: !!err
+        // });
+        cb(null, result);
+    }
+};
+
+function BatchClientLoop(options) {
+    var self = this;
+
+    self.batchClient = options.batchClient;
+    self.startTime = options.start;
+    self.onFinish = options.onFinish;
+    self.streamed = options.streamed;
 
     self.resultBuckets = new Array(self.batchClient.numBuckets);
     self.bucketIndex = 0;
@@ -304,10 +426,15 @@ function BatchClientLoop(now, batchClient, onFinish) {
     }
 
     self.boundSendRequest = boundSendRequest;
+    self.boundSendStreamingRequest = boundSendStreamingRequest;
     self.boundRunAgain = boundRunAgain;
 
     function boundSendRequest(callback) {
         self.batchClient._sendRequest(callback);
+    }
+
+    function boundSendStreamingRequest(callback) {
+        self.batchClient._sendRequestStream(callback);
     }
 
     function boundRunAgain() {
@@ -324,7 +451,11 @@ BatchClientLoop.prototype.runNext = function runNext() {
 
     var thunks = [];
     for (var i = 0; i < self.batchClient.requestsPerBatch; i++) {
-        thunks.push(self.boundSendRequest);
+        if (self.streamed) {
+            thunks.push(self.boundSendStreamingRequest);
+        } else {
+            thunks.push(self.boundSendRequest);
+        }
     }
 
     var batchResult = self.resultBuckets[self.bucketIndex];
@@ -362,31 +493,6 @@ BatchClientLoop.prototype.runNext = function runNext() {
         if (self.responseCounter >= self.batchClient.requestVolume) {
             self.onFinish(null, self.resultBuckets);
         }
-    }
-};
-
-BatchClient.prototype._sendRequest = function _sendRequest(cb) {
-    var self = this;
-
-    var start = Date.now();
-    var randomClient = self.channels[
-        Math.floor(Math.random() * self.channels.length)
-    ];
-
-    var req = randomClient.request(self.requestOptions);
-    req.send(self.endpoint, '', self.body, onResponse);
-
-    function onResponse(err, resp) {
-        var result = self.freeList.pop();
-
-        result.error = err || null;
-        result.responseOk = resp ? resp.ok : false;
-        result.duration = Date.now() - start;
-
-        // console.log('got response', {
-        //     err: !!err
-        // });
-        cb(null, result);
     }
 };
 
@@ -504,6 +610,9 @@ function TimeSeriesRemote(remote, timers, name) {
     self.channel.register('slow-endpoint', slowEndpoint);
     self.channel.register('echo-endpoint', echoEndpoint);
     self.channel.register('health-endpoint', healthEndpoint);
+    self.channel.register('streaming-echo-endpoint', {
+        streamed: true
+    }, streamingEchoEndpoint);
 
     function slowEndpoint(req, res, arg2, arg3) {
         self.slowEndpoint(req, res, arg2, arg3);
@@ -516,12 +625,26 @@ function TimeSeriesRemote(remote, timers, name) {
     function healthEndpoint(req, res, arg2, arg3) {
         self.healthEndpoint(req, res, arg2, arg3);
     }
+
+    function streamingEchoEndpoint(req, buildResponse) {
+        self.streamingEchoEndpoint(req, buildResponse);
+    }
 }
 
 TimeSeriesRemote.prototype.echoEndpoint =
 function echoEndpoint(req, res, arg2, arg3) {
     res.headers.as = 'raw';
     res.sendOk(arg2, arg3);
+};
+
+TimeSeriesRemote.prototype.streamingEchoEndpoint =
+function streamingEchoEndpoint(req, buildResponse) {
+    var resp = buildResponse({
+        streamed: true
+    });
+
+    resp.headers.as = 'raw';
+    resp.sendStreams(req.arg2, req.arg3);
 };
 
 TimeSeriesRemote.prototype.healthEndpoint = function healthEndpoint(req, res) {
