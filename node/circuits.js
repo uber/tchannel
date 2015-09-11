@@ -253,4 +253,12 @@ Circuit.prototype.monitorResponse = function monitorResponse(res) {
     }
 };
 
+Circuit.prototype.extendLogInfo = function extendLogInfo(info) {
+    var self = this;
+    info.callerName = self.callerName;
+    info.serviceName = self.serviceName;
+    info.endpointName = self.endpointName;
+    return info;
+};
+
 module.exports = Circuits;
