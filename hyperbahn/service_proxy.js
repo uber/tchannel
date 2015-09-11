@@ -94,12 +94,8 @@ function handleRequest(req, buildRes) {
     /* eslint max-statements:[2,20] */
     var self = this;
     if (!req.serviceName) {
-        self.logger.warn('Got incoming req with no service', {
-            serviceName: req.serviceName,
-            callerName: req.headers.cn,
-            socketRemoteAddr: req.connection.socketRemoteAddr,
-            arg1: String(req.arg1)
-        });
+        self.logger.warn('Got incoming req with no service',
+            self.extendLogInfo(req.extendLogInfo({})));
 
         buildRes().sendError('BadRequest', 'no service name given');
         return;
@@ -136,13 +132,10 @@ function rateLimit(req, buildRes) {
     // apply rate limiter
     if (self.rateLimiter.shouldRateLimitTotalRequest(req.serviceName)) {
         var totalLimit = self.rateLimiter.totalRequestCounter.rpsLimit;
-        self.logger.info('hyperbahn node is rate-limited by the total rps limit', {
-            rpsLimit: totalLimit,
-            cn: req.headers && req.headers.cn,
-            serviceName: req.serviceName,
-            endpoint: req.endpoint,
-            remoteAddr: req.remoteAddr
-        });
+        self.logger.info('hyperbahn node is rate-limited by the total rps limit',
+            self.extendLogInfo(req.extendLogInfo({
+                rpsLimit: totalLimit
+            })));
         buildRes().sendError('Busy', 'hyperbahn node is rate-limited by the total rps of ' + totalLimit);
         return true;
     }
@@ -150,13 +143,10 @@ function rateLimit(req, buildRes) {
     // check RPS for service limit
     if (isExitNode && self.rateLimiter.shouldRateLimitService(req.serviceName)) {
         var serviceLimit = self.rateLimiter.getRpsLimitForService(req.serviceName);
-        self.logger.info('hyperbahn service is rate-limited by the service rps limit', {
-            rpsLimit: serviceLimit,
-            cn: req.headers && req.headers.cn,
-            serviceName: req.serviceName,
-            endpoint: req.endpoint,
-            remoteAddr: req.remoteAddr
-        });
+        self.logger.info('hyperbahn service is rate-limited by the service rps limit',
+            self.extendLogInfo(req.extendLogInfo({
+                rpsLimit: serviceLimit
+            })));
         buildRes().sendError('Busy', req.serviceName + ' is rate-limited by the rps of ' + serviceLimit);
         return true;
     }
@@ -190,9 +180,9 @@ function getServiceChannel(serviceName, create) {
     if (!svcchan && create) {
         var now = self.channel.timers.now();
         if (now >= self.createdAt + self.logGracePeriod) {
-            self.logger.info('Creating new sub channel', {
+            self.logger.info('Creating new sub channel', self.extendLogInfo({
                 serviceName: serviceName
-            });
+            }));
         }
 
         svcchan = self.createServiceChannel(serviceName);
@@ -371,11 +361,11 @@ function changeToExit(exitNodes, svcchan) {
         newMode: 'exit'
     });
 
-    self.logger.info('Changing to exit node', {
+    self.logger.info('Changing to exit node', self.extendLogInfo({
         oldMode: oldMode,
         newMode: 'exit',
         serviceName: svcchan.serviceName
-    });
+    }));
 };
 
 ServiceDispatchHandler.prototype.changeToForward =
@@ -402,11 +392,11 @@ function changeToForward(exitNodes, svcchan) {
         newMode: 'forward'
     });
 
-    self.logger.info('Changing to forward node', {
+    self.logger.info('Changing to forward node', self.extendLogInfo({
         oldMode: oldMode,
         newMode: 'forward',
         serviceName: svcchan.serviceName
-    });
+    }));
 };
 
 ServiceDispatchHandler.prototype.updateExitNodes =
@@ -508,11 +498,8 @@ function onCircuitStateChange(change) {
                     clean(circuit.endpointName),
                 1
             );
-            self.logger.info('circuit returned to good health', {
-                callerName: circuit.callerName,
-                serviceName: circuit.serviceName,
-                endpointName: circuit.endpointName
-            });
+            self.logger.info('circuit returned to good health',
+                self.extendLogInfo(circuit.extendLogInfo({})));
         // healthy -> unhealthy
         } else {
             self.statsd.increment('circuits.unhealthy.total', 1);
@@ -530,11 +517,8 @@ function onCircuitStateChange(change) {
                     clean(circuit.endpointName),
                 1
             );
-            self.logger.warn('circuit became unhealthy', {
-                callerName: circuit.callerName,
-                serviceName: circuit.serviceName,
-                endpointName: circuit.endpointName
-            });
+            self.logger.warn('circuit became unhealthy',
+                self.extendLogInfo(circuit.extendLogInfo({})));
         }
     }
 };
@@ -660,6 +644,22 @@ ServiceDispatchHandler.prototype.disableRateLimiter =
 function disableRateLimiter() {
     var self = this;
     self.rateLimiterEnabled = false;
+};
+
+ServiceDispatchHandler.prototype.extendLogInfo =
+function extendLogInfo(info) {
+    var self = this;
+
+    info.affineServices = Object.keys(self.exitServices);
+
+    info.circuitsEnabled = self.circuitsEnabled;
+    info.rateLimiterEnabled = self.rateLimiterEnabled;
+    info.partialAffinityEnabled = self.partialAffinityEnabled;
+
+    info.minPeersPerWorker = self.minPeersPerWorker;
+    info.minPeersPerRelay = self.minPeersPerRelay;
+
+    return info;
 };
 
 // TODO Consider sharding by hostPort and indexing exit exitNodes by hostPort.
