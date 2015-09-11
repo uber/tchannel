@@ -36,12 +36,12 @@ type Server struct {
 	log           tchannel.Logger
 	mut           sync.RWMutex
 	handlers      map[string]TChanServer
-	healthHandler *HealthHandler
+	healthHandler *healthHandler
 }
 
 // NewServer returns a server that can serve thrift services over TChannel.
 func NewServer(registrar tchannel.Registrar) *Server {
-	healthHandler := NewHealthHandler()
+	healthHandler := newHealthHandler()
 	server := &Server{
 		ch:            registrar,
 		log:           registrar.Logger(),
@@ -49,7 +49,7 @@ func NewServer(registrar tchannel.Registrar) *Server {
 		healthHandler: healthHandler,
 	}
 
-	server.Register(NewTChanMetaServer(healthHandler))
+	server.Register(newTChanMetaServer(healthHandler))
 	return server
 }
 
@@ -69,7 +69,7 @@ func (s *Server) Register(svr TChanServer) {
 
 // RegisterHealthHandler registers User health endpoint handler into TChannel.
 func (s *Server) RegisterHealthHandler(f HealthFunc) {
-	s.healthHandler.SetHandler(f)
+	s.healthHandler.setHandler(f)
 }
 
 func (s *Server) onError(err error) {

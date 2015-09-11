@@ -18,15 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package thrift_test
+package thrift
 
 import (
 	"net"
 	"testing"
 	"time"
-
-	. "github.com/uber/tchannel/golang/thrift"
-	"github.com/uber/tchannel/golang/thrift/gen-go/meta"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -34,7 +31,7 @@ import (
 )
 
 func TestDefaultHealth(t *testing.T) {
-	withMetaSetup(t, func(ctx Context, c TChanMeta) {
+	withMetaSetup(t, func(ctx Context, c tchanMeta) {
 		ret, err := c.Health(ctx)
 		assert.Equal(t, ret.Ok, true)
 		assert.NoError(t, err)
@@ -42,7 +39,7 @@ func TestDefaultHealth(t *testing.T) {
 	}, nil)
 }
 
-func withMetaSetup(t *testing.T, f func(ctx Context, c TChanMeta), healthHandler HealthFunc) {
+func withMetaSetup(t *testing.T, f func(ctx Context, c tchanMeta), healthHandler HealthFunc) {
 	ctx, cancel := NewContext(time.Second * 10)
 	defer cancel()
 
@@ -79,7 +76,7 @@ func setupMetaServer(healthHandler HealthFunc) (*tchannel.Channel, net.Listener,
 	return tchan, listener, nil
 }
 
-func getMetaClient(dst string) (TChanMeta, error) {
+func getMetaClient(dst string) (tchanMeta, error) {
 	tchan, err := tchannel.NewChannel("client", &tchannel.ChannelOptions{
 		Logger: tchannel.SimpleLogger,
 	})
@@ -89,16 +86,16 @@ func getMetaClient(dst string) (TChanMeta, error) {
 
 	tchan.Peers().Add(dst)
 	thriftClient := NewClient(tchan, "meta", nil)
-	return NewTChanMetaClient(thriftClient), nil
+	return newTChanMetaClient(thriftClient), nil
 }
 
-func customHealth(ctx Context) (r *meta.HealthStatus, err error) {
+func customHealth(ctx Context) (bool, *string) {
 	message := "from me"
-	return &meta.HealthStatus{Ok: false, Message: &message}, nil
+	return false, &message
 }
 
 func TestCustomHealth(t *testing.T) {
-	withMetaSetup(t, func(ctx Context, c TChanMeta) {
+	withMetaSetup(t, func(ctx Context, c tchanMeta) {
 		ret, err := c.Health(ctx)
 		assert.Equal(t, ret.Ok, false)
 		assert.NoError(t, err)

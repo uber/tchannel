@@ -7,8 +7,8 @@ import (
 	"github.com/uber/tchannel/golang/thrift/gen-go/meta"
 )
 
-// TChanMeta is interface for the service and client for the services defined in the IDL.
-type TChanMeta interface {
+// tchanMeta is interface for the service and client for the services defined in the IDL.
+type tchanMeta interface {
 	Health(ctx Context) (*meta.HealthStatus, error)
 }
 
@@ -18,8 +18,8 @@ type tchanMetaClient struct {
 	client TChanClient
 }
 
-// NewTChanMetaClient creates new tchanMetaClient instance.
-func NewTChanMetaClient(client TChanClient) TChanMeta {
+// newTChanMetaClient creates new tchanMetaClient instance.
+func newTChanMetaClient(client TChanClient) tchanMeta {
 	return &tchanMetaClient{client: client}
 }
 
@@ -34,11 +34,11 @@ func (c *tchanMetaClient) Health(ctx Context) (*meta.HealthStatus, error) {
 }
 
 type tchanMetaServer struct {
-	handler TChanMeta
+	handler tchanMeta
 }
 
-// NewTChanMetaServer creates new instance of tchanMetaServer.
-func NewTChanMetaServer(handler TChanMeta) TChanServer {
+// newTChanMetaServer creates new instance of tchanMetaServer.
+func newTChanMetaServer(handler tchanMeta) TChanServer {
 	return &tchanMetaServer{handler}
 }
 
