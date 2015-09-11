@@ -41,9 +41,8 @@ func TestDefaultHealth(t *testing.T) {
 	})
 }
 
-func customHealth(ctx Context) (bool, *string) {
-	message := "from me"
-	return false, &message
+func customHealth(ctx Context) (bool, string) {
+	return false, "from me"
 }
 
 func TestCustomHealth(t *testing.T) {
