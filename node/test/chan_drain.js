@@ -38,7 +38,7 @@ allocCluster.test('immediate drain', {
             return;
         }
 
-        assert.timeoutAfter(20);
+        assert.timeoutAfter(50);
         server.drain('testdown', drained);
     }
 
@@ -196,8 +196,9 @@ allocCluster.test('drain server with a few incoming (with exempt service)', {
 
         function checkBSend(desc, res, i) {
             if (res.err) {
-                assert.equal(res.err.type, 'tchannel.connection.reset',
-                             desc + 'expected connection reset error');
+                assert.ok(res.err.type === 'tchannel.connection.reset' ||
+                    res.err.type === 'tchannel.request.timeout',
+                    desc + 'expected connection reset or request timeout error');
             } else {
                 assert.equal(String(res.value.arg3), 'mess' + (i + 4),
                              desc + 'expected arg3');
@@ -227,8 +228,9 @@ allocCluster.test('drain server with a few incoming (with exempt service)', {
 
         function checkBRes(desc, res, i) {
             if (res.err) {
-                assert.equal(res.err.type, 'tchannel.connection.reset',
-                             desc + 'expected connection reset error');
+                assert.ok(res.err.type === 'tchannel.connection.reset' ||
+                    res.err.type === 'tchannel.request.timeout',
+                    desc + 'expected connection reset error');
             } else {
                 assert.equal(String(res.value.arg3), 'mess' + (i + 10),
                              desc + 'expected arg3');
@@ -483,8 +485,9 @@ allocCluster.test('drain client with a few outgoing (with exempt service)', {
 
         function checkBSend(desc, res, i) {
             if (res.err) {
-                assert.equal(res.err.type, 'tchannel.local.reset',
-                             desc + 'expected local reset error');
+                assert.ok(res.err.type === 'tchannel.local.reset' ||
+                    res.err.type === 'request.timeout',
+                    desc + 'expected local reset or request timeout error');
             } else {
                 assert.equal(String(res.value.arg3), 'mess' + (i + 4),
                              desc + 'expected arg3');
@@ -692,7 +695,7 @@ function setupServiceClient(rootchan, service) {
     return rootchan.makeSubChannel({
         serviceName: service,
         requestDefaults: {
-            timeout: 20,
+            timeout: 100,
             hasNoParent: true,
             retryflags: {
                 never: true
