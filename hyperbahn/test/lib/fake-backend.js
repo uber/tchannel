@@ -20,6 +20,38 @@
 
 'use strict';
 
-require('./errors');
-require('./larch');
-require('./reservoir-backend');
+var util = require('util');
+
+var BaseBackend = require('../../lib/larch/base-backend');
+
+module.exports = FakeBackend;
+
+function FakeBackend(options) {
+    if (!(this instanceof FakeBackend)) {
+        return new FakeBackend(options);
+    }
+    this.logs = [];
+    this.bootstrapped = false;
+    this.destroyed = false;
+}
+
+util.inherits(FakeBackend, BaseBackend);
+
+FakeBackend.prototype.log = function log(record, cb) {
+    this.logs.push(record);
+
+    if (typeof cb === 'function') {
+        cb();
+    }
+};
+
+FakeBackend.prototype.bootstrap = function bootstrap(cb) {
+    this.bootstrapped = true;
+    cb();
+};
+
+FakeBackend.prototype.destroy = function destroy(cb) {
+    this.destroyed = true;
+    cb();
+};
+
