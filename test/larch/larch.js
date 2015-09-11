@@ -30,21 +30,29 @@ function FakeBackend(options) {
     if (!(this instanceof FakeBackend)) {
         return new FakeBackend(options);
     }
-    var self = this;
-
-    self.logs = [];
+    this.logs = [];
+    this.bootstrapped = false;
+    this.destroyed = false;
 }
 
 util.inherits(FakeBackend, BaseBackend);
 
 FakeBackend.prototype.log = function log(record, cb) {
-    var self = this;
-
-    self.logs.push(record);
+    this.logs.push(record);
 
     if (typeof cb === 'function') {
         cb();
     }
+};
+
+FakeBackend.prototype.bootstrap = function bootstrap(cb) {
+    this.bootstrapped = true;
+    cb();
+};
+
+FakeBackend.prototype.destroy = function destroy(cb) {
+    this.destroyed = true;
+    cb();
 };
 
 test('larch with single backend uses logSingleBackend', function t1(assert) {
@@ -57,6 +65,9 @@ test('larch with single backend uses logSingleBackend', function t1(assert) {
         'logger is using logSingleBackend'
     );
 
+    logger.bootstrap();
+    assert.ok(backend.bootstrapped, 'backend was bootstrapped');
+
     logger.error('test', {foo: 'bar'});
 
     var jsonRecord = backend.logs[0].toJSON();
@@ -67,6 +78,9 @@ test('larch with single backend uses logSingleBackend', function t1(assert) {
         {foo: 'bar', message: 'test', level: 'error'},
         'log backend gets message'
     );
+
+    logger.destroy();
+    assert.ok(backend.destroyed, 'backend was destroyed');
 
     assert.end();
 });
