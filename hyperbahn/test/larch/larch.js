@@ -21,10 +21,8 @@
 'use strict';
 
 var test = require('tape');
-var util = require('util');
 
 var Larch = require('../../lib/larch/larch');
-var BaseBackend = require('../../lib/larch/base-backend');
 var FakeBackend = require('../lib/fake-backend');
 
 test('larch with single backend uses logSingleBackend', function t1(assert) {

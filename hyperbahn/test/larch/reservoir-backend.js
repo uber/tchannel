@@ -60,27 +60,27 @@ test('ReservoirBackend correctly limits logs', function t1(assert) {
     assert.ok(backend.logs.length === 5, 'only 5 logs got through to backend');
 
     assert.ok(
-        backend.logs[0].data.message === 'thing failed', 
+        backend.logs[0].data.message === 'thing failed',
         'logs[0] is right'
     );
     assert.ok(
-        backend.logs[1].data.message === 'timed out', 
+        backend.logs[1].data.message === 'timed out',
         'logs[1] is right'
     );
     assert.ok(
-        backend.logs[2].data.message === 'timed out', 
+        backend.logs[2].data.message === 'timed out',
         'logs[2] is right'
     );
     assert.ok(
-        backend.logs[3].data.message === 'timed out', 
+        backend.logs[3].data.message === 'timed out',
         'logs[3] is right'
     );
     assert.ok(
-        backend.logs[4].data.message === 'timed out', 
+        backend.logs[4].data.message === 'timed out',
         'logs[4] is right'
     );
 
     assert.end();
 });
 
-function noop () {}
+function noop() {}

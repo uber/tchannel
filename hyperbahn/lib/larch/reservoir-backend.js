@@ -74,6 +74,7 @@ function ReservoirBackend(options) {
     self.timer = null;
     self.count = 0;
     self.records = [];
+    self.errors = [];
 }
 
 util.inherits(ReservoirBackend, BaseBackend);
@@ -90,6 +91,7 @@ ReservoirBackend.prototype.flush = function flush(records) {
 
     function onLoggingDone(err) {
         // TODO: what to do when flush fails? Generate a log message?
+        self.errors.push(err);
     }
 
     self.records.length = 0;
@@ -127,7 +129,7 @@ ReservoirBackend.prototype.bootstrap = function bootstrap(cb) {
     var self = this;
 
     assert(
-        typeof cb === 'function', 
+        typeof cb === 'function',
         'bootstrap must be called with a callback'
     );
 
