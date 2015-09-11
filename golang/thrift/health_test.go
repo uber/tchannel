@@ -25,7 +25,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/samuel/go-thrift/thrift"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel/golang"
@@ -42,7 +41,7 @@ func TestDefaultHealth(t *testing.T) {
 }
 
 func customHealth(ctx Context) (bool, string) {
-	return false, "from me"
+	return false, ""
 }
 
 func TestCustomHealth(t *testing.T) {
@@ -51,7 +50,7 @@ func TestCustomHealth(t *testing.T) {
 		ret, err := c.Health(ctx)
 		if assert.NoError(t, err, "Health endpoint failed") {
 			assert.False(t, ret.Ok, "Health status mismatch")
-			assert.Equal(t, ret.Message, thrift.String("from me"), "Health message mismatch")
+			assert.Nil(t, ret.Message, "Health message mismatch")
 		}
 	})
 }
