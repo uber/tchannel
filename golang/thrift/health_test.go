@@ -32,10 +32,10 @@ import (
 )
 
 func TestDefaultHealth(t *testing.T) {
-	withMetaSetup(t, nil, func(ctx Context, c tchanMeta) {
+	withMetaSetup(t, func(ctx Context, c tchanMeta, server *Server) {
 		ret, err := c.Health(ctx)
 		if assert.NoError(t, err, "Health endpoint failed") {
-			assert.Equal(t, ret.Ok, true, "Health status mismatch")
+			assert.True(t, ret.Ok, "Health status mismatch")
 			assert.Nil(t, ret.Message, "Health message mismatch")
 		}
 	})
@@ -47,50 +47,47 @@ func customHealth(ctx Context) (bool, *string) {
 }
 
 func TestCustomHealth(t *testing.T) {
-	withMetaSetup(t, customHealth, func(ctx Context, c tchanMeta) {
+	withMetaSetup(t, func(ctx Context, c tchanMeta, server *Server) {
+		server.RegisterHealthHandler(customHealth)
 		ret, err := c.Health(ctx)
 		if assert.NoError(t, err, "Health endpoint failed") {
-			assert.Equal(t, ret.Ok, false, "Health status mismatch")
+			assert.False(t, ret.Ok, "Health status mismatch")
 			assert.Equal(t, ret.Message, thrift.String("from me"), "Health message mismatch")
 		}
 	})
 }
 
-func withMetaSetup(t *testing.T, healthHandler HealthFunc, f func(ctx Context, c tchanMeta)) {
+func withMetaSetup(t *testing.T, f func(ctx Context, c tchanMeta, server *Server)) {
 	ctx, cancel := NewContext(time.Second * 10)
 	defer cancel()
 
 	// Start server
-	tchan, listener, err := setupMetaServer(healthHandler)
+	tchan, listener, server, err := setupMetaServer()
 	require.NoError(t, err)
 	defer tchan.Close()
 
 	// Get client1
 	c, err := getMetaClient(listener.Addr().String())
 	require.NoError(t, err)
-	f(ctx, c)
+	f(ctx, c, server)
 }
 
-func setupMetaServer(healthHandler HealthFunc) (*tchannel.Channel, net.Listener, error) {
+func setupMetaServer() (*tchannel.Channel, net.Listener, *Server, error) {
 	tchan, err := tchannel.NewChannel("meta", &tchannel.ChannelOptions{
 		Logger: tchannel.SimpleLogger,
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	listener, err := net.Listen("tcp", ":0")
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	server := NewServer(tchan)
-	if healthHandler != nil {
-		server.RegisterHealthHandler(healthHandler)
-	}
-
 	tchan.Serve(listener)
-	return tchan, listener, nil
+	return tchan, listener, server, nil
 }
 
 func getMetaClient(dst string) (tchanMeta, error) {
