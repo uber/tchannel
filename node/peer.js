@@ -218,7 +218,13 @@ TChannelPeer.prototype.countConnections = function countConnections(direction) {
 // ensures that a connection exists
 TChannelPeer.prototype.connect = function connect(outOnly) {
     var self = this;
-    var conn = self.getIdentifiedOutConnection();
+    var conn = null;
+    if (self.preferIncoming && !outOnly) {
+        conn = self.getIdentifiedInConnection();
+    } else {
+        conn = self.getIdentifiedOutConnection();
+    }
+
     if (!conn || (outOnly && conn.direction !== 'out')) {
         var socket = self.makeOutSocket();
         conn = self.makeOutConnection(socket);
