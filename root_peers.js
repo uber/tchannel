@@ -20,7 +20,6 @@
 
 'use strict';
 
-var assert = require('assert');
 var inherits = require('util').inherits;
 var extend = require('xtend');
 
@@ -38,10 +37,7 @@ function TChannelRootPeers(channel, options) {
 
     self.allocPeerEvent = self.defineEvent('allocPeer');
     self.peerOptions = self.options.peerOptions || {};
-    self.preferOutgoing = self.options.preferOutgoing;
-    self.preferIncoming = self.options.preferIncoming;
-    assert(!self.preferOutgoing || !self.preferIncoming,
-        'preferOutgoing and preferIncoming cannot be both set');
+    self.preferConnectionDirection = self.options.preferConnectionDirection;
 
     self.selfPeer = null;
 }
@@ -93,8 +89,7 @@ TChannelRootPeers.prototype.add = function add(hostPort, options) {
     }
 
     options = options || extend({}, self.peerOptions);
-    options.preferOutgoing = self.preferOutgoing;
-    options.preferIncoming = self.preferIncoming;
+    options.preferConnectionDirection = self.preferConnectionDirection;
     peer = TChannelPeer(self.channel, hostPort, options);
     self.allocPeerEvent.emit(self, peer);
 

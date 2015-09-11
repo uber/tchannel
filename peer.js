@@ -64,12 +64,10 @@ function TChannelPeer(channel, hostPort, options) {
         );
     }
 
-    self.preferOutgoing = self.options.preferOutgoing;
-    self.preferIncoming = self.options.preferIncoming;
-
-    if (self.preferOutgoing) {
+    self.preferConnectionDirection = self.options.preferConnectionDirection;
+    if (self.preferConnectionDirection === 'out') {
         self.setScoreStrategy(PreferOutgoing);
-    } else if (self.preferIncoming) {
+    } else if (self.preferConnectionDirection === 'in') {
         self.setScoreStrategy(PreferIncoming);
     } else {
         self.setScoreStrategy(NoPreference);
@@ -219,7 +217,7 @@ TChannelPeer.prototype.countConnections = function countConnections(direction) {
 TChannelPeer.prototype.connect = function connect(outOnly) {
     var self = this;
     var conn = null;
-    if (self.preferIncoming && !outOnly) {
+    if (self.preferConnectionDirection === 'in' && !outOnly) {
         conn = self.getIdentifiedInConnection();
     } else {
         conn = self.getIdentifiedOutConnection();
@@ -390,7 +388,7 @@ TChannelPeer.prototype.makeOutConnection = function makeOutConnection(socket) {
     return conn;
 };
 
-TChannelPeer.prototype.outPendingWeightedRandom = function outPendingWeightedRandom() {
+TChannelPeer.prototype.pendingWeightedRandom = function pendingWeightedRandom(direction) {
     // Returns a score in the range from 0 to 1, where it is preferable to use
     // a peer with a higher score over one with a lower score.
     // This range is divided among an infinite set of subranges corresponding
@@ -414,21 +412,27 @@ TChannelPeer.prototype.outPendingWeightedRandom = function outPendingWeightedRan
     //
     // This remains true with this algorithm, within each equivalence class.
     var self = this;
-    var pending = self.pendingIdentified + self.countOutPending();
+    var countPending = null;
+    if (direction === 'in') {
+        countPending = self.countInPending();
+    } else {
+        countPending = self.countOutPending();
+    }
+    var pending = self.pendingIdentified + countPending;
     var max = Math.pow(0.5, pending);
     var min = max / 2;
     var diff = max - min;
     return min + diff * self.random();
 };
 
-TChannelPeer.prototype.inPendingWeightedRandom = function inPendingWeightedRandom() {
-    // See outPendingWeightedRandom for explanation
+TChannelPeer.prototype.outPendingWeightedRandom = function outPendingWeightedRandom() {
     var self = this;
-    var pending = self.pendingIdentified + self.countInPending();
-    var max = Math.pow(0.5, pending);
-    var min = max / 2;
-    var diff = max - min;
-    return min + diff * self.random();
+    return self.pendingWeightedRandom('out');
+};
+
+TChannelPeer.prototype.inPendingWeightedRandom = function inPendingWeightedRandom() {
+    var self = this;
+    return self.pendingWeightedRandom('in');
 };
 
 TChannelPeer.prototype.countOutPending = function countOutPending() {

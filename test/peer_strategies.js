@@ -95,7 +95,7 @@ allocCluster.test('prefer any re-uses incoming conn and does not open outgoing c
 
 allocCluster.test('prefer incoming doesn\'t increase the connection count' , {
     numPeers: 2,
-    preferIncoming: true
+    preferConnectionDirection: 'in'
 }, function t(cluster, assert) {
     var steve = cluster.channels[0];
     var bob = cluster.channels[1];
@@ -150,7 +150,7 @@ allocCluster.test('prefer incoming doesn\'t increase the connection count' , {
 allocCluster.test('prefer incoming selects the incoming peer when outgoing is present' , {
     numPeers: 3,
     skipEmptyCheck: true,
-    preferIncoming: true
+    preferConnectionDirection: 'in'
 }, function t(cluster, assert) {
     var bob = cluster.channels[0];
     var steve = cluster.channels[1];
@@ -158,7 +158,7 @@ allocCluster.test('prefer incoming selects the incoming peer when outgoing is pr
 
     setupEcho(bob, 'bob');
     setupEcho(steve, 'steve');
-    setupEcho(steve2, 'steve', done);
+    setupEcho(steve2, 'steve', update);
     var subBob = bob.makeSubChannel({
         serviceName: 'steve',
         peers: [steve.hostPort, steve2.hostPort],
@@ -181,6 +181,11 @@ allocCluster.test('prefer incoming selects the incoming peer when outgoing is pr
 
     ready(onReady);
 
+    var steve2Requested = false;
+    function update() {
+        steve2Requested = true;
+    }
+
     function onReady(err, res, arg2, arg3) {
         var bobCount = countConnections(bob);
         var steveCount = countConnections(steve);
@@ -195,17 +200,16 @@ allocCluster.test('prefer incoming selects the incoming peer when outgoing is pr
         subBob.request({
             serviceName: 'steve',
             hasNoParent: true
-        }).send('echo', 'a', 'b', function noop() {});
-    }
-
-    function done() {
-        assert.end();
+        }).send('echo', 'a', 'b', function onResponse() {
+            assert.ok(steve2Requested, 'the request from bob should go to steve2');
+            assert.end();
+        });
     }
 });
 
 allocCluster.test('prefer outgoing creates new conn even if incoming', {
     numPeers: 2,
-    preferOutgoing: true
+    preferConnectionDirection: 'out'
 }, function t(cluster, assert) {
     var steve = cluster.channels[0];
     var bob = cluster.channels[1];
@@ -257,15 +261,15 @@ allocCluster.test('prefer outgoing creates new conn even if incoming', {
     }
 });
 
-function setupEcho(channel, serviceName, cb) {
+function setupEcho(channel, serviceName, onEchoSent) {
     var c = channel.makeSubChannel({
         serviceName: serviceName
     });
     c.register('echo', function echo(req, res, arg2, arg3) {
         res.headers.as = 'raw';
         res.sendOk(arg2, arg3);
-        if (cb) {
-            cb();
+        if (onEchoSent) {
+            onEchoSent();
         }
     });
 }
