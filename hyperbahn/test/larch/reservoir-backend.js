@@ -80,6 +80,8 @@ test('ReservoirBackend correctly limits logs', function t1(assert) {
         'logs[4] is right'
     );
 
+    reservoir.destroy(noop);
+
     assert.end();
 });
 
