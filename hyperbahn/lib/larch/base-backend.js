@@ -47,7 +47,7 @@ function BaseBackend(options) {
 
     assert(
         typeof self.destroy === 'function',
-        '`bootstrap` method of BaseBackend must be overridden by function'
+        '`destroy` method of BaseBackend must be overridden by function'
     );
 
     assert(
