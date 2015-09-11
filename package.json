@@ -55,6 +55,7 @@
     "opn": "^0.1.2",
     "rezult": "^1.0.0",
     "tape": "^3.4.0",
+    "time-mock": "^0.1.2",
     "uber-licence": "1.5.1",
     "uber-standard": "3.6.5"
   },
