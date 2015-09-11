@@ -67,7 +67,7 @@ func (s *Server) Register(svr TChanServer) {
 	}
 }
 
-// RegisterHealthHandler registers User health endpoint handler into TChannel.
+// RegisterHealthHandler uses the user-specified function f for the Health endpoint.
 func (s *Server) RegisterHealthHandler(f HealthFunc) {
 	s.healthHandler.setHandler(f)
 }

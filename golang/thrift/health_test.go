@@ -25,21 +25,38 @@ import (
 	"testing"
 	"time"
 
+	"github.com/samuel/go-thrift/thrift"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel/golang"
 )
 
 func TestDefaultHealth(t *testing.T) {
-	withMetaSetup(t, func(ctx Context, c tchanMeta) {
+	withMetaSetup(t, nil, func(ctx Context, c tchanMeta) {
 		ret, err := c.Health(ctx)
-		assert.Equal(t, ret.Ok, true)
-		assert.NoError(t, err)
-		assert.Nil(t, ret.Message)
-	}, nil)
+		if assert.NoError(t, err, "Health endpoint failed") {
+			assert.Equal(t, ret.Ok, true, "Health status mismatch")
+			assert.Nil(t, ret.Message, "Health message mismatch")
+		}
+	})
 }
 
-func withMetaSetup(t *testing.T, f func(ctx Context, c tchanMeta), healthHandler HealthFunc) {
+func customHealth(ctx Context) (bool, *string) {
+	message := "from me"
+	return false, &message
+}
+
+func TestCustomHealth(t *testing.T) {
+	withMetaSetup(t, customHealth, func(ctx Context, c tchanMeta) {
+		ret, err := c.Health(ctx)
+		if assert.NoError(t, err, "Health endpoint failed") {
+			assert.Equal(t, ret.Ok, false, "Health status mismatch")
+			assert.Equal(t, ret.Message, thrift.String("from me"), "Health message mismatch")
+		}
+	})
+}
+
+func withMetaSetup(t *testing.T, healthHandler HealthFunc, f func(ctx Context, c tchanMeta)) {
 	ctx, cancel := NewContext(time.Second * 10)
 	defer cancel()
 
@@ -87,18 +104,4 @@ func getMetaClient(dst string) (tchanMeta, error) {
 	tchan.Peers().Add(dst)
 	thriftClient := NewClient(tchan, "meta", nil)
 	return newTChanMetaClient(thriftClient), nil
-}
-
-func customHealth(ctx Context) (bool, *string) {
-	message := "from me"
-	return false, &message
-}
-
-func TestCustomHealth(t *testing.T) {
-	withMetaSetup(t, func(ctx Context, c tchanMeta) {
-		ret, err := c.Health(ctx)
-		assert.Equal(t, ret.Ok, false)
-		assert.NoError(t, err)
-		assert.Equal(t, *ret.Message, "from me")
-	}, customHealth)
 }

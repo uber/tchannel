@@ -22,9 +22,9 @@ package thrift
 
 import "github.com/uber/tchannel/golang/thrift/gen-go/meta"
 
-// HealthFunc is function interface for health check endpoint.
-// Customized health endpoint has to follow this interface.
-type HealthFunc func(ctx Context) (bool, *string)
+// HealthFunc is the interface for custom health endpoints.
+// ok is whether the service health is OK, and message is optional additional information for the health result.
+type HealthFunc func(ctx Context) (ok bool, message *string)
 
 // healthHandler implements the default health check enpoint.
 type healthHandler struct {
@@ -33,16 +33,17 @@ type healthHandler struct {
 
 // newHealthHandler return a new HealthHandler instance.
 func newHealthHandler() *healthHandler {
-	return &healthHandler{}
+	return &healthHandler{handler: defaultHealth}
 }
 
 // Health returns true as default Health endpoint.
-func (h *healthHandler) Health(ctx Context) (r *meta.HealthStatus, err error) {
-	if h.handler != nil {
-		ok, message := h.handler(ctx)
-		return &meta.HealthStatus{Ok: ok, Message: message}, nil
-	}
-	return &meta.HealthStatus{Ok: true}, nil
+func (h *healthHandler) Health(ctx Context) (*meta.HealthStatus, error) {
+	ok, message := h.handler(ctx)
+	return &meta.HealthStatus{Ok: ok, Message: message}, nil
+}
+
+func defaultHealth(ctx Context) (bool, *string) {
+	return true, nil
 }
 
 // SetHandler sets customized handler for health endpoint.
