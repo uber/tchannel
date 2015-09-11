@@ -21,6 +21,7 @@
 'use strict';
 
 var allocCluster = require('./lib/alloc-cluster');
+var CountedReadySignal = require('ready-signal/counted');
 
 function countConnections(channel) {
     var outCount = 0;
@@ -92,6 +93,116 @@ allocCluster.test('prefer any re-uses incoming conn and does not open outgoing c
     }
 });
 
+allocCluster.test('prefer incoming doesn\'t increase the connection count' , {
+    numPeers: 2,
+    preferIncoming: true
+}, function t(cluster, assert) {
+    var steve = cluster.channels[0];
+    var bob = cluster.channels[1];
+
+    setupEcho(steve, 'steve');
+    setupEcho(bob, 'bob');
+    var subBob = bob.makeSubChannel({
+        serviceName: 'steve',
+        peers: [steve.hostPort],
+        requestDefaults: {
+            headers: {
+                as: 'raw',
+                cn: 'wat'
+            }
+        }
+    });
+
+    var subSteve = steve.makeSubChannel({
+        serviceName: 'bob',
+        peers: [bob.hostPort],
+        requestDefaults: {
+            headers: {
+                as: 'raw',
+                cn: 'wat'
+            }
+        }
+    });
+
+    subBob.request({
+        serviceName: 'steve',
+        hasNoParent: true
+    }).send('echo', 'a', 'b', onResponse);
+
+    function onResponse(err, res) {
+        subSteve.request({
+            serviceName: 'bob',
+            hasNoParent: true
+        }).send('echo', 'a', 'b', onResponse2);
+    }
+
+    function onResponse2(err, res, arg2, arg3) {
+        var steveCount = countConnections(steve);
+        var bobCount = countConnections(bob);
+        assert.equals(bobCount.inCount, 0, 'bob should not have incoming connections');
+        assert.equals(bobCount.outCount, 1, 'bob should have 1 outgoing connection');
+        assert.equals(steveCount.outCount, 0, 'steve should not have outgoing connections');
+        assert.equals(steveCount.inCount, 1, 'steve should have 1 incoming connection');
+        assert.end();
+    }
+});
+
+allocCluster.test('prefer incoming selects the incoming peer when outgoing is present' , {
+    numPeers: 3,
+    skipEmptyCheck: true,
+    preferIncoming: true
+}, function t(cluster, assert) {
+    var bob = cluster.channels[0];
+    var steve = cluster.channels[1];
+    var steve2 = cluster.channels[2];
+
+    setupEcho(bob, 'bob');
+    setupEcho(steve, 'steve');
+    setupEcho(steve2, 'steve', done);
+    var subBob = bob.makeSubChannel({
+        serviceName: 'steve',
+        peers: [steve.hostPort, steve2.hostPort],
+        requestDefaults: {
+            headers: {
+                as: 'raw',
+                cn: 'wat'
+            }
+        }
+    });
+
+    var ready = CountedReadySignal(2);
+    bob.waitForIdentified({
+        host: steve.hostPort
+    }, ready.signal);
+
+    steve2.waitForIdentified({
+        host: bob.hostPort
+    }, ready.signal);
+
+    ready(onReady);
+
+    function onReady(err, res, arg2, arg3) {
+        var bobCount = countConnections(bob);
+        var steveCount = countConnections(steve);
+        var steve2Count = countConnections(steve2);
+        assert.equals(bobCount.inCount, 1, 'bob should have 1 incoming connection');
+        assert.equals(bobCount.outCount, 1, 'bob should have 1 outgoing connection');
+        assert.equals(steveCount.outCount, 0, 'steve should not have outgoing connections');
+        assert.equals(steveCount.inCount, 1, 'steve should have 1 incoming connection');
+        assert.equals(steve2Count.outCount, 1, 'steve2 should have 1 outgoing connections');
+        assert.equals(steve2Count.inCount, 0, 'steve2 should not have incoming connections');
+
+        subBob.request({
+            serviceName: 'steve',
+            hasNoParent: true
+        }).send('echo', 'a', 'b', function noop() {});
+    }
+
+    function done() {
+        assert.end();
+    }
+});
+
 allocCluster.test('prefer outgoing creates new conn even if incoming', {
     numPeers: 2,
     preferOutgoing: true
@@ -146,12 +257,15 @@ allocCluster.test('prefer outgoing creates new conn even if incoming', {
     }
 });
 
-function setupEcho(channel, serviceName) {
+function setupEcho(channel, serviceName, cb) {
     var c = channel.makeSubChannel({
         serviceName: serviceName
     });
     c.register('echo', function echo(req, res, arg2, arg3) {
         res.headers.as = 'raw';
         res.sendOk(arg2, arg3);
+        if (cb) {
+            cb();
+        }
     });
 }
