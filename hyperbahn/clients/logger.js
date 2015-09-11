@@ -21,12 +21,12 @@
 'use strict';
 
 var os = require('os');
-var Logtron = require('logtron');
+var Logger = require('logtron');
 var process = require('process');
 
-var Larch = require('../lib/larch/larch');
-var LarchLogtronBackend = require('../lib/larch/logtron-backend');
-var LarchReservoirBackend = require('../lib/larch/reservoir-backend');
+var LarchLogger = require('../lib/larch/larch');
+var LogtronLogBackend = require('../lib/larch/logtron-backend');
+var ReservoirLogBackend = require('../lib/larch/reservoir-backend');
 
 var Levels = {
     TRACE: 10,
@@ -42,7 +42,7 @@ module.exports = createLogger;
 
 // inline createLogger for now because yolo
 function createLogger(options) {
-    var logtronLogger = new Logtron({
+    var logtronLogger = new Logger({
         meta: {
             team: options.team,
             project: options.project,
@@ -80,7 +80,7 @@ function createLogger(options) {
             }
         },
         statsd: options.statsd,
-        backends: Logtron.defaultBackends({
+        backends: Logger.defaultBackends({
             kafka: options.kafka,
             logFile: options.logFile,
             console: options.console,
@@ -95,11 +95,11 @@ function createLogger(options) {
 
     // The backend for larch is a reservoir sampler that logs to a logtron
     // backend which redirects to a Logtron instance
-    var larchBackend = LarchReservoirBackend({
-        backend: LarchLogtronBackend(logtronLogger)
+    var larchBackend = ReservoirLogBackend({
+        backend: LogtronLogBackend(logtronLogger)
     });
 
-    var logger = Larch({
+    var logger = LarchLogger({
         backends: [larchBackend]
     });
 
