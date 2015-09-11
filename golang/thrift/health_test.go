@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/samuel/go-thrift/thrift"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel/golang"
@@ -40,17 +41,32 @@ func TestDefaultHealth(t *testing.T) {
 	})
 }
 
-func customHealth(ctx Context) (bool, string) {
+func customHealthEmpty(ctx Context) (bool, string) {
 	return false, ""
 }
 
-func TestCustomHealth(t *testing.T) {
+func TestCustomHealthEmpty(t *testing.T) {
 	withMetaSetup(t, func(ctx Context, c tchanMeta, server *Server) {
-		server.RegisterHealthHandler(customHealth)
+		server.RegisterHealthHandler(customHealthEmpty)
 		ret, err := c.Health(ctx)
 		if assert.NoError(t, err, "Health endpoint failed") {
 			assert.False(t, ret.Ok, "Health status mismatch")
 			assert.Nil(t, ret.Message, "Health message mismatch")
+		}
+	})
+}
+
+func customHealthNoEmpty(ctx Context) (bool, string) {
+	return false, "from me"
+}
+
+func TestCustomHealthNoEmpty(t *testing.T) {
+	withMetaSetup(t, func(ctx Context, c tchanMeta, server *Server) {
+		server.RegisterHealthHandler(customHealthNoEmpty)
+		ret, err := c.Health(ctx)
+		if assert.NoError(t, err, "Health endpoint failed") {
+			assert.False(t, ret.Ok, "Health status mismatch")
+			assert.Equal(t, ret.Message, thrift.String("from me"), "Health message mismatch")
 		}
 	})
 }
