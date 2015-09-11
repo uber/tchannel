@@ -32,19 +32,25 @@ import (
 
 // Server handles incoming TChannel calls and forwards them to the matching TChanServer.
 type Server struct {
-	ch       tchannel.Registrar
-	log      tchannel.Logger
-	mut      sync.RWMutex
-	handlers map[string]TChanServer
+	ch            tchannel.Registrar
+	log           tchannel.Logger
+	mut           sync.RWMutex
+	handlers      map[string]TChanServer
+	healthHandler *healthHandler
 }
 
 // NewServer returns a server that can serve thrift services over TChannel.
 func NewServer(registrar tchannel.Registrar) *Server {
-	return &Server{
-		ch:       registrar,
-		log:      registrar.Logger(),
-		handlers: make(map[string]TChanServer),
+	healthHandler := newHealthHandler()
+	server := &Server{
+		ch:            registrar,
+		log:           registrar.Logger(),
+		handlers:      make(map[string]TChanServer),
+		healthHandler: healthHandler,
 	}
+
+	server.Register(newTChanMetaServer(healthHandler))
+	return server
 }
 
 // Register registers the given TChanServer to be called on any incoming call for its' services.
@@ -59,6 +65,11 @@ func (s *Server) Register(svr TChanServer) {
 	for _, m := range svr.Methods() {
 		s.ch.Register(s, service+"::"+m)
 	}
+}
+
+// RegisterHealthHandler uses the user-specified function f for the Health endpoint.
+func (s *Server) RegisterHealthHandler(f HealthFunc) {
+	s.healthHandler.setHandler(f)
 }
 
 func (s *Server) onError(err error) {
