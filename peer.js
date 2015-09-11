@@ -30,6 +30,7 @@ var errors = require('./errors');
 var Request = require('./request');
 var PreferOutgoing = require('./peer_score_strategies.js').PreferOutgoing;
 var NoPreference = require('./peer_score_strategies.js').NoPreference;
+var PreferIncoming = require('./peer_score_strategies.js').PreferIncoming;
 
 var DEFAULT_REPORT_INTERVAL = 1000;
 
@@ -64,9 +65,12 @@ function TChannelPeer(channel, hostPort, options) {
     }
 
     self.preferOutgoing = self.options.preferOutgoing;
+    self.preferIncoming = self.options.preferIncoming;
 
     if (self.preferOutgoing) {
         self.setScoreStrategy(PreferOutgoing);
+    } else if (self.preferIncoming) {
+        self.setScoreStrategy(PreferIncoming);
     } else {
         self.setScoreStrategy(NoPreference);
     }
@@ -158,13 +162,22 @@ TChannelPeer.prototype.close = function close(callback) {
     }
 };
 
-TChannelPeer.prototype.getInConnection = function getInConnection() {
+TChannelPeer.prototype.getInConnection = function getInConnection(preferIdentified) {
     var self = this;
+    var candidate = null;
     for (var i = 0; i < self.connections.length; i++) {
         var conn = self.connections[i];
-        if (!conn.closing) return conn;
+        if (conn.closing) continue;
+        if (!preferIdentified) return conn; // user doesn't care, take first incoming
+        if (conn.remoteName) return conn; // user wanted an identified channel, and we found one
+        if (!candidate) candidate = conn; // we'll fallback to returning this if we can't find an identified one
     }
-    return null;
+    return candidate;
+};
+
+TChannelPeer.prototype.getIdentifiedInConnection = function getIdentifiedInConnection() {
+    var self = this;
+    return self.getInConnection(true);
 };
 
 TChannelPeer.prototype.getOutConnection = function getOutConnection(preferIdentified) {
@@ -402,6 +415,16 @@ TChannelPeer.prototype.outPendingWeightedRandom = function outPendingWeightedRan
     return min + diff * self.random();
 };
 
+TChannelPeer.prototype.inPendingWeightedRandom = function inPendingWeightedRandom() {
+    // See outPendingWeightedRandom for explanation
+    var self = this;
+    var pending = self.pendingIdentified + self.countInPending();
+    var max = Math.pow(0.5, pending);
+    var min = max / 2;
+    var diff = max - min;
+    return min + diff * self.random();
+};
+
 TChannelPeer.prototype.countOutPending = function countOutPending() {
     var self = this;
     var pending = 0;
@@ -409,6 +432,17 @@ TChannelPeer.prototype.countOutPending = function countOutPending() {
         var connPending = self.connections[index].ops.getPending();
 
         pending += connPending.out;
+    }
+    return pending;
+};
+
+TChannelPeer.prototype.countInPending = function countInPending() {
+    var self = this;
+    var pending = 0;
+    for (var index = 0; index < self.connections.length; index++) {
+        var connPending = self.connections[index].ops.getPending();
+
+        pending += connPending.in;
     }
     return pending;
 };

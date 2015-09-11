@@ -22,6 +22,7 @@
 
 module.exports.PreferOutgoing = PreferOutgoing;
 module.exports.NoPreference = NoPreference;
+module.exports.PreferIncoming = PreferIncoming;
 
 function PreferOutgoing(peer) {
     var self = this;
@@ -116,6 +117,56 @@ NoPreference.prototype.getScore = function getScore() {
         case NoPreference.CONNECTED:
             return 0.1 + random * 0.3;
         case NoPreference.IDENTIFIED:
+            return 0.4 + random * 0.6;
+    }
+};
+
+function PreferIncoming(peer) {
+    var self = this;
+
+    self.peer = peer;
+    self.lastTier = self.getTier();
+}
+
+PreferIncoming.UNCONNECTED = 0;
+PreferIncoming.ONLY_OUTGOING = 1;
+PreferIncoming.FRESH_INCOMING = 2;
+PreferIncoming.READY_INCOMING = 3;
+
+PreferIncoming.prototype.getTier = function getTier() {
+    var self = this;
+
+    var outconn = self.peer.getOutConnection();
+    var inconn = self.peer.getIdentifiedInConnection();
+
+    if (!inconn && !outconn) {
+        return PreferIncoming.UNCONNECTED;
+    } else if (!inconn || inconn.direction !== 'in') {
+        return PreferIncoming.ONLY_OUTGOING;
+    } else if (inconn.remoteName === null) {
+        return PreferIncoming.FRESH_INCOMING;
+    } else {
+        return PreferIncoming.READY_INCOMING;
+    }
+};
+
+PreferIncoming.prototype.getScore = function getScore() {
+    var self = this;
+
+    // space:
+    //   [0.1, 0.4)  peers with no identified outgoing connection
+    //   [0.4, 1.0)  identified outgoing connections
+    var random = self.peer.inPendingWeightedRandom();
+    var tier = self.getTier();
+    self.lastTier = tier;
+    switch (tier) {
+        case PreferIncoming.ONLY_OUTGOING:
+            /* falls through */
+        case PreferIncoming.UNCONNECTED:
+            /* falls through */
+        case PreferIncoming.FRESH_INCOMING:
+            return 0.1 + random * 0.3;
+        case PreferIncoming.READY_INCOMING:
             return 0.4 + random * 0.6;
     }
 };
