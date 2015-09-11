@@ -54,4 +54,3 @@ FakeBackend.prototype.destroy = function destroy(cb) {
     this.destroyed = true;
     cb();
 };
-
