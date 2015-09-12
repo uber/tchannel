@@ -42,7 +42,7 @@ TimeSeriesCluster.test('control test for time-series of timeout requests', {
 
     clientInstances: 1,
     clientBatchDelay: 100,
-    numBatchesInBucket: 25,
+    numBatchesInBucket: 10,
     clientRequestsPerBatch: 25,
     clientRequestsPerBatchForFirstBucket: 10
 }, function t(cluster, assert) {
@@ -59,7 +59,7 @@ TimeSeriesCluster.test('control test for time-series of timeout requests', {
 
     // Set rate on a single Hyperbahn worker
     cluster._cluster.apps[4].clients
-        .serviceProxy.rateLimiter.updateTotalLimit(50);
+        .serviceProxy.rateLimiter.updateTotalLimit(10);
 
     // cluster.printBatches();
 
@@ -80,12 +80,12 @@ TimeSeriesCluster.test('control test for time-series of timeout requests', {
 
         var logLines = cluster.logger.items();
         var rateLimits = logLines.filter(isRateLimit);
-        assert.ok(rateLimits.length >= 50,
-            'expect at least 50 attempts to be rate limited');
+        assert.ok(rateLimits.length >= 25,
+            'expect at least 25 attempts to be rate limited');
 
         assert.ok(rateLimits.every(function checkLog(r) {
-            return r.fields.rpsLimit === 50;
-        }), 'rate limit should be 50');
+            return r.fields.rpsLimit === 10;
+        }), 'rate limit should be 10');
 
         assert.end();
     }
