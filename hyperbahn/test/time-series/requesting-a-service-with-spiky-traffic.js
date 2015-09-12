@@ -26,7 +26,7 @@
     TODO; tests again with circuits + rate limiter on
 */
 
-var TimeSeriesCluster = require('./_time-series-cluster.js');
+var TimeSeriesCluster = require('../lib/time-series-cluster.js');
 
 /*  Run a large ring that talks to K instances
 

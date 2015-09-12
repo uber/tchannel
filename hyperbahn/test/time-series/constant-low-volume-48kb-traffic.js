@@ -23,7 +23,7 @@
 var console = require('console');
 var Buffer = require('buffer').Buffer;
 
-var TimeSeriesCluster = require('./_time-series-cluster.js');
+var TimeSeriesCluster = require('../lib/time-series-cluster.js');
 
 var KILOBYTE = 1024;
 var REQUEST_BODY = TimeSeriesCluster.buildString(48 * KILOBYTE);
