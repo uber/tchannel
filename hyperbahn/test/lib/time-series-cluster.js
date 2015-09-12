@@ -151,7 +151,6 @@ function setupClusterOptions(opts) {
     if (!('rateLimiting.enabled' in self.clusterOptions.remoteConfig)) {
         self.clusterOptions.remoteConfig['rateLimiting.enabled'] = false;
     }
-    self.clusterOptions.namedRemotes = self.namedRemotes;
     if (!('hyperbahn.circuits' in self.clusterOptions.remoteConfig)) {
         self.clusterOptions.remoteConfig['hyperbahn.circuits'] = {
             period: 100,
@@ -161,6 +160,14 @@ function setupClusterOptions(opts) {
             enabled: false
         };
     }
+    if (!('kValue.services' in self.clusterOptions.remoteConfig)) {
+        // Force fully connected client
+        self.clusterOptions.remoteConfig['kValue.services'] = {
+            'time-series-client': self.clusterOptions.size * 3
+        };
+    }
+
+    self.clusterOptions.namedRemotes = self.namedRemotes;
 };
 
 TimeSeriesCluster.prototype.bootstrap = function bootstrap(cb) {
