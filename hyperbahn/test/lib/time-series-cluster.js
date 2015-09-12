@@ -138,7 +138,7 @@ TimeSeriesCluster.prototype.setupClusterOptions =
 function setupClusterOptions(opts) {
     var self = this;
 
-    self.clusterOptions = opts.cluster || {};
+    self.clusterOptions = opts.clusterOptions || {};
     if (!self.clusterOptions.size) {
         self.clusterOptions.size = 10;
     }
