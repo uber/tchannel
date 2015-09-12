@@ -124,6 +124,9 @@ BenchServer.prototype.registerEndpoints = function registerEndpoints() {
     self.serverChan.register('set', onSet);
     self.serverChan.register('get', onGet);
 
+    self.serverChan.register('bad_set', onBad);
+    self.serverChan.register('bad_get', onBad);
+
     function onPing(req, res) {
         res.headers.as = 'raw';
         res.sendOk('pong', null);
@@ -146,6 +149,11 @@ BenchServer.prototype.registerEndpoints = function registerEndpoints() {
         } else {
             res.sendNotOk('key not found', key);
         }
+    }
+
+    function onBad(req, res, arg2, arg3) {
+        res.headers.as = 'raw';
+        res.sendError('BadRequest', 'parse error');
     }
 };
 
