@@ -101,6 +101,7 @@ function TimeSeriesCluster(opts) {
     self.clientBatchDelay = opts.clientBatchDelay || 100;
     self.numBatchesInBucket = opts.numBatchesInBucket || 5;
     self.clientRequestsPerBatch = opts.clientRequestsPerBatch || 15;
+    self.clientRequestsPerBatchForFirstBucket = opts.clientRequestsPerBatchForFirstBucket || 10;
     self.serverInstances = opts.serverInstances || 10;
     self.clientInstances = opts.clientInstances || 5;
     self.requestBody = opts.requestBody || '';
@@ -191,6 +192,7 @@ TimeSeriesCluster.prototype.bootstrap = function bootstrap(cb) {
         self.batchClient = BatchClient({
             remotes: clientRemotes,
             requestsPerBatch: self.clientRequestsPerBatch,
+            requestsPerBatchForFirstBucket: self.clientRequestsPerBatchForFirstBucket,
             clientBatchDelay: self.clientBatchDelay,
             clientTimeout: self.clientTimeout,
             numBatchesInBucket: self.numBatchesInBucket,
@@ -287,6 +289,7 @@ function BatchClient(options) {
     self.serverServiceName = options.serverServiceName;
     self.clientServiceName = options.clientServiceName;
     self.requestsPerBatch = options.requestsPerBatch;
+    self.requestsPerBatchForFirstBucket = options.requestsPerBatchForFirstBucket;
     self.clientBatchDelay = options.clientBatchDelay;
     self.numBuckets = options.numBuckets;
 
@@ -301,9 +304,9 @@ function BatchClient(options) {
         self.channels.push(options.remotes[i].clientChannel);
     }
 
-    self.requestVolume = self.numBuckets * (
+    self.requestVolume = ((self.numBuckets - 1) * (
         self.numBatchesInBucket * self.requestsPerBatch
-    );
+    )) + (self.numBatchesInBucket * self.requestsPerBatchForFirstBucket);
 
     self.body = options.body || '';
     self.bodyChunks = options.bodyChunks || [];
@@ -453,8 +456,15 @@ function BatchClientLoop(options) {
     self.currentBatch = 0;
     self.responseCounter = 0;
 
-    var size = self.batchClient.requestsPerBatch * self.batchClient.numBatchesInBucket;
     for (var k = 0; k < self.batchClient.numBuckets; k++) {
+        var size;
+        if (k === 0) {
+            size = self.batchClient.requestsPerBatchForFirstBucket *
+                self.batchClient.numBatchesInBucket;
+        } else {
+            size = self.batchClient.requestsPerBatch *
+                self.batchClient.numBatchesInBucket;
+        }
         self.resultBuckets[k] = new BatchClientBucket(size);
     }
 
@@ -483,7 +493,15 @@ BatchClientLoop.prototype.runNext = function runNext() {
     }
 
     var thunks = [];
-    for (var i = 0; i < self.batchClient.requestsPerBatch; i++) {
+
+    var requestsPerBatch;
+    if (self.bucketIndex === 0) {
+        requestsPerBatch = self.batchClient.requestsPerBatchForFirstBucket;
+    } else {
+        requestsPerBatch = self.batchClient.requestsPerBatch;
+    }
+
+    for (var i = 0; i < requestsPerBatch; i++) {
         if (self.streamed) {
             thunks.push(self.boundSendStreamingRequest);
         } else {
