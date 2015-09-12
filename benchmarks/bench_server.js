@@ -123,7 +123,9 @@ BenchServer.prototype.registerEndpoints = function registerEndpoints() {
     self.serverChan.register('ping', onPing);
     self.serverChan.register('set', onSet);
     self.serverChan.register('get', onGet);
-    self.serverChan.register('bad', onBad);
+
+    self.serverChan.register('bad_set', onBad);
+    self.serverChan.register('bad_get', onBad);
 
     function onPing(req, res) {
         res.headers.as = 'raw';
