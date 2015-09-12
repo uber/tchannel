@@ -102,7 +102,8 @@ TimeSeriesCluster.test('control test for time-series of timeout requests', {
                 value: results[i].errorCount,
                 min: MIN_ERRORS[i],
                 max: MAX_ERRORS[i],
-                name: cluster.buckets[i]
+                index: i,
+                description: ' reqs with timeout of ' + cluster.buckets[i]
             });
         }
 
