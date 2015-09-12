@@ -50,6 +50,25 @@ TimeSeriesCluster.buildString = function buildString(size) {
 
 module.exports = TimeSeriesCluster;
 
+/*  TimeSeriesCluster is a hyperbahn worker cluster that comes
+    pre-configured with a batch client and a time series remote
+    to enable the authoring of test that repeat certain types
+    of requests over time.
+
+    The idea is that you configure it with
+
+     - what type of request to make
+     - what volume and rate of requests
+     - what type of semantics should the TimeSeriesRemote have
+
+    And then tell it to run tests for a few seconds or a few
+    minutes.
+
+    Once you are done sending tests you will get back a list of
+    BatchClientResult objects which contain statistics of the
+    latency and error rate for all the requests in that batch.
+
+*/
 function TimeSeriesCluster(opts) {
     /* eslint max-statements: [2, 40] */
     if (!(this instanceof TimeSeriesCluster)) {
