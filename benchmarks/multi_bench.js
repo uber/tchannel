@@ -49,7 +49,7 @@ var argv = parseArgs(process.argv.slice(2), {
         pipeline: '10,100,1000,20000',
         sizes: '4,4096'
     },
-    boolean: ['relay', 'trace']
+    boolean: ['relay', 'trace', 'bad']
 });
 var multiplicity = parseInt(argv.multiplicity, 10);
 var numClients = parseInt(argv.numClients, 10);
@@ -93,6 +93,8 @@ function Test(args) {
     this.connectLatency = new metrics.Histogram();
     this.readyLatency = new metrics.Histogram();
     this.commandLatency = new metrics.Histogram();
+
+    this.expectBadRequest = !!args.expectBadRequest;
 }
 
 Test.prototype.copy = function () {
@@ -246,7 +248,11 @@ Test.prototype.sendNext = function () {
 
     function done(err) {
         if (err) {
-            throw err;
+            if (!self.expectBadRequest) {
+                throw err;
+            } else if (err.type !== 'tchannel.bad-request') {
+                throw err;
+            } 
         }
         self.commandsCompleted++;
         self.commandLatency.update(Date.now() - start);
@@ -297,16 +303,18 @@ argv.sizes.forEach(function each(size) {
     argv.pipeline.forEach(function each(pipeline) {
         tests.push(new Test({
             descr: "SET " + sizeDesc,
-            command: "set",
+            command: "set" + (argv.bad ? "_bad" : ""),
             arg2: key,
             arg3: str,
-            pipeline: pipeline
+            pipeline: pipeline,
+            expectBadRequest: argv.bad
         }));
         tests.push(new Test({
             descr: "GET " + sizeDesc,
-            command: "get",
+            command: "get" + (argv.bad ? "_bad" : ""),
             arg2: key,
-            pipeline: pipeline
+            pipeline: pipeline,
+            expectBadRequest: argv.bad
         }));
     });
 });
