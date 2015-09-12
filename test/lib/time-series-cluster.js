@@ -455,7 +455,7 @@ function BatchClientLoop(options) {
 
     var size = self.batchClient.requestsPerBatch * self.batchClient.numBatchesInBucket;
     for (var k = 0; k < self.batchClient.numBuckets; k++) {
-        self.resultBuckets[k] = new BatchClientResult(size);
+        self.resultBuckets[k] = new BatchClientBucket(size);
     }
 
     self.boundSendRequest = boundSendRequest;
@@ -541,9 +541,9 @@ function asMegaBytes(num) {
     return Math.ceil(num / (1024 * 1024));
 }
 
-function BatchClientResult(size) {
-    if (!(this instanceof BatchClientResult)) {
-        return new BatchClientResult(size);
+function BatchClientBucket(size) {
+    if (!(this instanceof BatchClientBucket)) {
+        return new BatchClientBucket(size);
     }
 
     var self = this;
@@ -574,7 +574,7 @@ function BatchClientResult(size) {
     };
 }
 
-BatchClientResult.prototype.touch = function touch() {
+BatchClientBucket.prototype.touch = function touch() {
     var self = this;
 
     var memoryUsage = process.memoryUsage();
@@ -593,7 +593,7 @@ BatchClientResult.prototype.touch = function touch() {
     self.latency.max = latencyObject.max;
 };
 
-BatchClientResult.prototype.push = function push(result) {
+BatchClientBucket.prototype.push = function push(result) {
     var self = this;
 
     self._results.push(result);
@@ -613,7 +613,7 @@ BatchClientResult.prototype.push = function push(result) {
     }
 };
 
-BatchClientResult.prototype.inspect = function inspect() {
+BatchClientBucket.prototype.inspect = function inspect() {
     var self = this;
 
     return require('util').inspect({
