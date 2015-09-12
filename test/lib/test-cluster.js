@@ -23,7 +23,6 @@
 var CountedReadySignal = require('ready-signal/counted');
 var EventEmitter = require('events').EventEmitter;
 var tape = require('tape');
-var myLocalIp = require('my-local-ip');
 var deepExtend = require('deep-extend');
 var shallowExtend = require('xtend');
 var getPort = require('get-port');
