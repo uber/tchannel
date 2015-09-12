@@ -65,8 +65,22 @@ module.exports = TimeSeriesCluster;
     minutes.
 
     Once you are done sending tests you will get back a list of
-    BatchClientResult objects which contain statistics of the
-    latency and error rate for all the requests in that batch.
+    BatchClientBucket objects which contain statistics of the
+    latency and error rate for all the requests in that bucket.
+
+     - `opts.buckets` A list of values for each batch. The
+        number of buckets is the number of batches you want
+     - `opts.clientTimeout` ttl of outgoing requests
+     - `opts.endpointToRequest` endpoint name to use in client
+     - `opts.clientBatchDelay` wait period between each batch
+        of requests in a bucket
+     - `opts.numBatchesInBucket` the number of batches per bucket.
+     - `opts.serverInstances` number of instances of the TimeSeriesRemote
+     - `opts.clientInstances` number of tchannel clients used
+        by the BatchClient
+     - `opts.requestBody` the arg3 for any non-streaming reqs
+     - `opts.requestBodyChunks` an array of buffers used
+        by the streaming requests in the BatchClient
 
 */
 function TimeSeriesCluster(opts) {
