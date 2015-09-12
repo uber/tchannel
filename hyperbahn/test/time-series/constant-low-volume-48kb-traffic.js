@@ -20,49 +20,27 @@
 
 'use strict';
 
-/*
-    TODO; tests again with circuits on
-    TODO; tests again with rate limiter on
-    TODO; tests again with circuits + rate limiter on
-*/
+var console = require('console');
+var Buffer = require('buffer').Buffer;
 
 var TimeSeriesCluster = require('../lib/time-series-cluster.js');
 
-/*  Run a large ring that talks to K instances
+var KILOBYTE = 1024;
+var REQUEST_BODY = TimeSeriesCluster.buildString(48 * KILOBYTE);
+var REQUEST_BODY_BUFFER = new Buffer(REQUEST_BODY);
 
-For each instance K there should be spikes in timeouts to
-hit the circuit breaker
-
-Over a four second period:
-
- - 0-0.5 75 requests (15 per 100ms bucket)
- - 0.5-1 75 requests (15 per 100ms bucket)
- - 1-1.5 75 requests (15 per 100ms bucket)
- - 1.5-2 75 requests (15 per 100ms bucket)
- - 2-2.5 75 requests (15 per 100ms bucket)
- - 2.5-3 75 requests (15 per 100ms bucket)
- - 3-3.5 75 requests (15 per 100ms bucket)
- - 3.5-4 75 requests (15 per 100ms bucket)
-
-Over a four second period:
-
- - 0-0.5 300ms + fuzz
- - 0.5-1 500ms + fuzz
- - 1-1.5 600ms + fuzz
- - 1.5-2 500ms + fuzz
- - 2-2.5 425ms + fuzz
- - 2.5-3 300ms + fuzz
- - 3-3.5 425ms + fuzz
- - 3.5-4 450ms + fuzz
-
-*/
-TimeSeriesCluster.test('control test for time-series of timeout requests', {
+TimeSeriesCluster.test('constant low volume 48kb traffic', {
     clusterOptions: {},
     buckets: [
-        300, 500, 600, 500, 425, 300, 425, 450
+        25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25
     ],
-    clientTimeout: 500,
-    endpointToRequest: 'slow-endpoint'
+    clientTimeout: 100,
+    endpointToRequest: 'echo-endpoint',
+    requestBody: REQUEST_BODY_BUFFER,
+
+    numBatchesInBucket: 50,
+    clientBatchDelay: 250,
+    clientRequestsPerBatch: 15
 }, function t(cluster, assert) {
     cluster.logger.whitelist('info', 'error for timed out outgoing response');
     cluster.logger.whitelist('info', 'forwarding expected error frame');
@@ -70,39 +48,56 @@ TimeSeriesCluster.test('control test for time-series of timeout requests', {
     cluster.logger.whitelist('info', 'OutResponse.send() after inreq timed out');
     cluster.logger.whitelist('warn', 'forwarding error frame');
     cluster.logger.whitelist('warn', 'mismatched conn.onReqDone');
-    cluster.logger.whitelist('info', 'ignoring outresponse.send on a closed connection');
-    cluster.logger.whitelist('info', 'ignoring outresponse.sendError on a closed connection');
-    cluster.logger.whitelist('info', 'popOutReq received for unknown or lost id');
 
-    // Stays here.
-    var RANGES = {
-        '300': [0, 18],
-        '425': [2, 40],
-        '450': [5, 50],
-        '500': [25, 80],
-        '600': [50, 99]
-    };
+    var count = 0;
+    cluster.batchClient.on('batch-updated', function onUpdate(meta) {
+        count++;
 
-    var MIN_ERRORS = [];
-    var MAX_ERRORS = [];
-
-    for (var k = 0; k < cluster.buckets.length; k++) {
-        var val = cluster.buckets[k];
-        MIN_ERRORS[k] = RANGES[val][0];
-        MAX_ERRORS[k] = RANGES[val][1];
-    }
+        if (count % 10 === 0) {
+            /* eslint no-console:0 */
+            console.log('batch updated', meta);
+        }
+    });
 
     cluster.sendRequests(onResults);
+
+    var shouldTakeHeaps = false;
+    if (shouldTakeHeaps) {
+        cluster.takeHeaps(20, 40, 60);
+    }
 
     function onResults(err, results) {
         assert.ifError(err);
 
-        for (var i = 0; i < cluster.buckets.length; i++) {
+        // Skip bucket 0 because JIT warmup
+        for (var i = 1; i < cluster.buckets.length; i++) {
             cluster.assertRange(assert, {
+                index: i,
                 value: results[i].errorCount,
-                min: MIN_ERRORS[i],
-                max: MAX_ERRORS[i],
-                name: cluster.buckets[i]
+                min: 0,
+                max: 50,
+                description: ' reqs with timeout of ' + cluster.buckets[i]
+            });
+            cluster.assertRange(assert, {
+                index: i,
+                value: results[i].latency.p95,
+                min: 10,
+                max: 50,
+                description: ' p95 of requests '
+            });
+            cluster.assertRange(assert, {
+                index: i,
+                value: results[i].processMetrics.heapTotal,
+                min: 50,
+                max: 90,
+                description: ' heap size of process '
+            });
+            cluster.assertRange(assert, {
+                index: i,
+                value: results[i].processMetrics.rss,
+                min: 140,
+                max: 180,
+                description: ' RSS of process '
             });
         }
 

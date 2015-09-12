@@ -52,6 +52,7 @@
   "devDependencies": {
     "format-stack": "4.1.0",
     "istanbul": "^0.3.17",
+    "metrics": "^0.1.9",
     "opn": "^0.1.2",
     "tape": "^3.4.0",
     "uber-licence": "1.5.1",
