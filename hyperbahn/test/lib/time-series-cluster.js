@@ -208,6 +208,20 @@ TimeSeriesCluster.prototype.bootstrap = function bootstrap(cb) {
     }
 };
 
+TimeSeriesCluster.prototype.printBatches = function printBatches() {
+    var self = this;
+
+    var count = 0;
+    self.batchClient.on('batch-updated', function onUpdate(meta) {
+        count++;
+
+        if (count % 10 === 0) {
+            /* eslint no-console:0 */
+            console.log('batch updated', meta);
+        }
+    });
+};
+
 TimeSeriesCluster.prototype.sendRequests = function sendRequests(cb) {
     var self = this;
 
