@@ -28,6 +28,7 @@ function RelayConnection(socket, relay, direction) {
     self.parser = new FrameParser();
     self.idCounter = 1;
     self.guid = String(GUID++) + '~';
+    self.outRequestMapping = Object.create(null);
 
     self.initialized = false;
     self.frameQueue = [];

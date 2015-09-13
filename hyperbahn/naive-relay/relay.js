@@ -18,7 +18,7 @@ function NaiveRelay(opts) {
     self.destinations = opts.relays;
     self.server = net.createServer(onSocket);
 
-    self.outRequestMapping = Object.create(null);
+    // self.outRequestMapping = Object.create(null);
     self.connections = null;
     self.hostPort = null;
 
@@ -148,21 +148,19 @@ function forwardCallRequest(frame) {
     var outId = destConn.allocateId();
     frame.writeId(outId);
 
-    var frameKey = destConn.guid + String(outId);
-    self.outRequestMapping[frameKey] = frame;
+    // var frameKey = destConn.guid + String(outId);
+    destConn.outRequestMapping[outId] = frame;
 
     destConn.writeFrame(frame);
 };
 
 NaiveRelay.prototype.forwardCallResponse =
 function forwardCallResponse(frame) {
-    var self = this;
-
     var frameId = frame.readId();
 
-    var frameKey = frame.sourceConnection.guid + String(frameId);
-    var reqFrame = self.outRequestMapping[frameKey];
-    delete self.outRequestMapping[frameKey];
+    // var frameKey = frame.sourceConnection.guid + String(frameId);
+    var reqFrame = frame.sourceConnection.outRequestMapping[frameId];
+    delete frame.sourceConnection.outRequestMapping[frameId];
 
     if (!reqFrame) {
         console.error('unknown frame', {
