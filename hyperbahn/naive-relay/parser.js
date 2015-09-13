@@ -21,20 +21,15 @@ function FrameParser(connection) {
 FrameParser.prototype.write = function write(buffer) {
     var self = this;
 
-    // If not parsing yet.
-    if (self.remainder.length === 0) {
-        // console.log('FrameParser scanStart');
-        self.scanStart(buffer);
-    } else {
-        // console.log('FrameParser scanRest');
-        self.scanRest(buffer);
-    }
+    self.scanStart(buffer);
 };
 
 FrameParser.prototype.scanStart = function scanStart(buffer) {
     var self = this;
 
-    self.frameLength = readFrameSize(buffer, 0);
+    if (!self.frameLength) {
+        self.frameLength = readFrameSize(buffer, 0);
+    }
 
     if (self.frameLength <= 16) {
         console.error('got really small frame', {
@@ -42,14 +37,16 @@ FrameParser.prototype.scanStart = function scanStart(buffer) {
         });
     }
 
-    if (self.frameLength === buffer.length) {
-        self.flush(buffer);
+    var totalLength = self.remainderLength + buffer.length;
+
+    if (self.frameLength === totalLength) {
+        self.flush(self.concatRemainder(buffer));
         return;
     }
 
-    if (self.frameLength > buffer.length) {
+    if (self.frameLength > totalLength) {
         // console.log('addRemainder in scanStart', {
-        //     bufferLength: buffer.length,
+        //     bufferLength: totalLength,
         //     frameLength: self.frameLength
         // });
 
@@ -57,51 +54,23 @@ FrameParser.prototype.scanStart = function scanStart(buffer) {
         return;
     }
 
-    while (self.frameLength <= buffer.length) {
-        var len = self.frameLength;
-
-        var frameBuffer = buffer.slice(0, len);
-        self.flush(frameBuffer);
-
-        if (len === buffer.length) {
-            return;
-        }
-
-        buffer = buffer.slice(len, buffer.length);
-        self.frameLength = readFrameSize(buffer, 0);
-    }
-
-    if (buffer.length) {
-        self.addRemainder(buffer);
-    }
-};
-
-FrameParser.prototype.scanRest = function scanRest(buffer) {
-    var self = this;
-
-    var totalLength = self.remainderLength + buffer.length;
-
-    // console.log('scanRest', {
-    //     totalLength: totalLength,
-    //     frameLength: self.frameLength,
-    //     remainderLength: self.remainderLength,
-    //     bufferLength: buffer.length
-    // });
-
-    if (self.frameLength < totalLength) {
+    while (self.frameLength <= totalLength) {
         var endOfBuffer = self.frameLength - self.remainderLength;
 
         var lastBuffer = buffer.slice(0, endOfBuffer);
         self.flush(self.concatRemainder(lastBuffer));
 
-        var rest = buffer.slice(endOfBuffer, buffer.length);
-        self.scanStart(rest);
-    } else if (self.frameLength === totalLength) {
-        self.flush(self.concatRemainder(buffer));
-    } else if (self.frameLength > totalLength) {
+        if (endOfBuffer === buffer.length) {
+            return;
+        }
+
+        buffer = buffer.slice(endOfBuffer, buffer.length);
+        totalLength = buffer.length;
+        self.frameLength = readFrameSize(buffer, 0);
+    }
+
+    if (buffer.length) {
         self.addRemainder(buffer);
-    } else {
-        throw new Error('not possible');
     }
 };
 
@@ -123,6 +92,10 @@ function addRemainder(buffer) {
 FrameParser.prototype.concatRemainder =
 function concatRemainder(buffer) {
     var self = this;
+
+    if (self.remainder.length === 0) {
+        return buffer;
+    }
 
     self.addRemainder(buffer);
     var buf = Buffer.concat(self.remainder, self.remainderLength);
