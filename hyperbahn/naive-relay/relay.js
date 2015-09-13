@@ -148,8 +148,10 @@ function forwardCallRequest(frame) {
     var outId = destConn.allocateId();
     frame.writeId(outId);
 
+    var dictKey = String(outId);
+
     // var frameKey = destConn.guid + String(outId);
-    destConn.outRequestMapping[outId] = frame;
+    destConn.outRequestMapping[dictKey] = frame;
 
     destConn.writeFrame(frame);
 };
@@ -158,9 +160,11 @@ NaiveRelay.prototype.forwardCallResponse =
 function forwardCallResponse(frame) {
     var frameId = frame.readId();
 
+    var dictKey = String(frameId);
+
     // var frameKey = frame.sourceConnection.guid + String(frameId);
-    var reqFrame = frame.sourceConnection.outRequestMapping[frameId];
-    delete frame.sourceConnection.outRequestMapping[frameId];
+    var reqFrame = frame.sourceConnection.outRequestMapping[dictKey];
+    delete frame.sourceConnection.outRequestMapping[dictKey];
 
     if (!reqFrame) {
         console.error('unknown frame', {
