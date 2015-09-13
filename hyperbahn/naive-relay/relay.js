@@ -4,6 +4,7 @@ var net = require('net');
 var console = require('console');
 var setTimeout = require('timers').setTimeout;
 
+var LazyFrame = require('./lazy-frame.js');
 var RelayConnection = require('./connection.js');
 
 module.exports = NaiveRelay;
@@ -95,10 +96,12 @@ NaiveRelay.prototype.handleFrame = function handleFrame(frame) {
     switch (frameType) {
         case 0x01:
             self.handleInitRequest(frame);
+            LazyFrame.free(frame);
             break;
 
         case 0x02:
             self.handleInitResponse(frame);
+            LazyFrame.free(frame);
             break;
 
         case 0x03:
@@ -176,6 +179,9 @@ function forwardCallResponse(frame) {
     frame.writeId(reqFrame.oldId);
 
     reqFrame.sourceConnection.writeFrame(frame);
+
+    LazyFrame.free(frame);
+    LazyFrame.free(reqFrame);
 };
 
 NaiveRelay.prototype.handleUnknownFrame =

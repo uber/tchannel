@@ -78,7 +78,7 @@ RelayConnection.prototype.onFrameBuffer =
 function onFrameBuffer(frameBuffer) {
     var self = this;
 
-    var frame = new LazyFrame(self, frameBuffer);
+    var frame = LazyFrame.alloc(self, frameBuffer);
     self.relay.handleFrame(frame);
 };
 

@@ -3,13 +3,44 @@
 var ID_OFFSET = 4;
 var TYPE_OFFSET = 2;
 
+LazyFrame.freeList = new Array(1000);
+for (var i = 0; i < 1000; i++) {
+    LazyFrame.freeList.push(new LazyFrame());
+}
+
+LazyFrame.alloc = allocLazyFrame;
+LazyFrame.free = freeLazyFrame;
+
 module.exports = LazyFrame;
 
-function LazyFrame(sourceConnection, frameBuffer) {
+function allocLazyFrame(sourceConnection, frameBuffer) {
+    if (LazyFrame.freeList.length === 0) {
+        var frame = new LazyFrame();
+    } else {
+        frame = LazyFrame.freeList.pop();
+    }
+
+    frame.sourceConnection = sourceConnection;
+    frame.frameBuffer = frameBuffer;
+
+    return frame;
+}
+
+function freeLazyFrame(frame) {
+    frame.sourceConnection = null;
+    frame.frameBuffer = null;
+    frame.oldId = null;
+    frame.newId = null;
+    frame.frameType = null;
+
+    LazyFrame.freeList.push(frame);
+}
+
+function LazyFrame() {
     var self = this;
 
-    self.sourceConnection = sourceConnection;
-    self.frameBuffer = frameBuffer;
+    self.sourceConnection = null;
+    self.frameBuffer = null;
 
     self.oldId = null;
     self.newId = null;

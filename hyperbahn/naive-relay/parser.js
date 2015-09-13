@@ -21,12 +21,6 @@ function FrameParser(connection) {
 FrameParser.prototype.write = function write(buffer) {
     var self = this;
 
-    self.scanStart(buffer);
-};
-
-FrameParser.prototype.scanStart = function scanStart(buffer) {
-    var self = this;
-
     if (!self.frameLength) {
         self.frameLength = readFrameSize(buffer, 0);
     }
