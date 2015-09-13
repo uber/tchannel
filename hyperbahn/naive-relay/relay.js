@@ -25,7 +25,6 @@ function NaiveRelay(opts) {
 
     self.requestCount = 0;
     self.successCount = 0;
-    self.incomingCount = 0;
 
     function onSocket(socket) {
         self.onSocket(socket, 'in');
@@ -38,8 +37,8 @@ NaiveRelay.prototype.printRPS = function printRPS() {
     setTimeout(printTheRPS, 1000);
 
     function printTheRPS() {
-        var rate = self.incomingCount;
-        self.incomingCount = 0;
+        var rate = self.successCount;
+        self.successCount = 0;
 
         console.log('RPS[relay]:', rate);
 
@@ -107,7 +106,6 @@ NaiveRelay.prototype.handleFrame = function handleFrame(frame) {
 
         case 0x03:
             self.requestCount++;
-            self.incomingCount++;
             // console.log('pending requests', self.requestCount);
 
             self.forwardCallRequest(frame);
