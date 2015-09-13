@@ -32,4 +32,8 @@ function main(argv) {
         relays: argv.relays
     });
     relay.listen(argv.port, argv.host || myLocalIp());
+
+    if (argv.printRPS) {
+        relay.printRPS();
+    }
 }

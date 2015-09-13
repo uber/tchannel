@@ -2,6 +2,7 @@
 
 var net = require('net');
 var console = require('console');
+var setTimeout = require('timers').setTimeout;
 
 var RelayConnection = require('./connection.js');
 
@@ -22,11 +23,27 @@ function NaiveRelay(opts) {
     self.hostPort = null;
 
     self.requestCount = 0;
+    self.successCount = 0;
 
     function onSocket(socket) {
         self.onSocket(socket, 'in');
     }
 }
+
+NaiveRelay.prototype.printRPS = function printRPS() {
+    var self = this;
+
+    setTimeout(printTheRPS, 1000);
+
+    function printTheRPS() {
+        var rate = self.successCount;
+        self.successCount = 0;
+
+        console.log('RPS[relay]:', rate);
+
+        setTimeout(printTheRPS, 1000);
+    }
+};
 
 NaiveRelay.prototype.onSocket = function onSocket(socket, direction) {
     var self = this;
@@ -93,6 +110,7 @@ NaiveRelay.prototype.handleFrame = function handleFrame(frame) {
 
         case 0x04:
             self.requestCount--;
+            self.successCount++;
             // console.log('pending requests', self.requestCount);
 
             self.forwardCallResponse(frame);
