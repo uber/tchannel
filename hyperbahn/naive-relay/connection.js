@@ -44,14 +44,26 @@ function RelayConnection(socket, relay, direction) {
 RelayConnection.prototype.readStart = function readStart() {
     var self = this;
 
-    self.socket.on('data', onData);
+    self.socket.on('readable', onReadable);
 
     if (self.direction === 'out') {
         self.sendInitRequest();
     }
 
-    function onData(socketBuffer) {
-        self.onSocketBuffer(socketBuffer);
+    function onReadable() {
+        self.onSocketReadable();
+    }
+};
+
+RelayConnection.prototype.onSocketReadable =
+function onSocketReadable() {
+    var self = this;
+
+    var chunk;
+
+    /* eslint yoda: 0*/
+    while (null !== (chunk = self.socket.read())) {
+        self.onSocketBuffer(chunk);
     }
 };
 
