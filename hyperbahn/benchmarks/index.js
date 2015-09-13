@@ -49,10 +49,13 @@ HyperbahnBenchmarkRunner.prototype.spawnNaiveRelayServer =
 function spawnNaiveRelayServer() {
     var self = this;
 
+    var relays = '127.0.0.1:' + self.ports.serverPort;
+
     var naiveRelayProc = self.run(naiveRelay, [
-        '--destination', String(self.ports.serverPort),
+        '--relays', relays,
         '--instances', String(self.instanceCount),
-        '--port', String(self.ports.relayServerPort)
+        '--port', String(self.ports.relayServerPort),
+        '--host', '127.0.0.1'
     ]);
     self.relayProcs.push(naiveRelayProc);
     naiveRelayProc.stdout.pipe(process.stderr);

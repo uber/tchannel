@@ -14,11 +14,11 @@ function NaiveRelay(opts) {
 
     var self = this;
 
-    self.destinationPort = opts.destination;
+    self.destinations = opts.relays;
     self.server = net.createServer(onSocket);
 
     self.outRequestMapping = Object.create(null);
-    self.destConn = null;
+    self.connections = null;
     self.hostPort = null;
 
     self.requestCount = 0;
@@ -37,23 +37,33 @@ NaiveRelay.prototype.onSocket = function onSocket(socket, direction) {
     return conn;
 };
 
-NaiveRelay.prototype.listen = function listen(port) {
+NaiveRelay.prototype.listen = function listen(port, host) {
     var self = this;
 
-    self.hostPort = '127.0.0.1:' + port;
-    self.server.listen(port);
+    self.hostPort = host + ':' + port;
+    self.server.listen(port, host);
 };
 
 NaiveRelay.prototype.chooseConn = function chooseConn(frame) {
     var self = this;
 
-    if (self.destConn) {
-        return self.destConn;
+    if (self.connections) {
+        var rand = Math.floor(Math.random() * self.connections.length);
+
+        return self.connections[rand];
     }
 
-    var socket = net.createConnection(self.destinationPort);
-    self.destConn = self.onSocket(socket, 'out');
-    return self.destConn;
+    self.connections = [];
+    var hostPorts = self.destinations.split(',');
+
+    for (var i = 0; i < hostPorts.length; i++) {
+        var parts = hostPorts[i].split(':');
+        var socket = net.createConnection(parts[1], parts[0]);
+        var conn = self.onSocket(socket, 'out');
+        self.connections.push(conn);
+    }
+
+    return self.connections[0];
 };
 
 NaiveRelay.prototype.handleFrame = function handleFrame(frame) {

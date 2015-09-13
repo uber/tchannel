@@ -4,31 +4,32 @@
 
     Takes frames in; Mutates the id; forwards.
 
-    Accepting one TCP socket in; Hardcoded to send to a destination
+    Accepting one TCP socket in; Hardcoded to send to a relays
 
     This program is bounded by a single TCP socket
 
-    node naive-relay.js --destination [num] --port [num]
+    node naive-relay.js --relays [hps] --port [num]
 */
 
 var parseArgs = require('minimist');
 var assert = require('assert');
 var process = require('process');
+var myLocalIp = require('my-local-ip');
 
 var NaiveRelay = require('../naive-relay/relay.js');
 
 if (require.main === module) {
-    var argv = parseArgs(process.argv.slice(2));
+    var args = parseArgs(process.argv.slice(2));
     process.title = 'nodejs-benchmarks-naive_relay';
-    main(argv);
+    main(args);
 }
 
 function main(argv) {
-    assert(argv.destination, '--destination required');
+    assert(argv.relays, '--relays required');
     assert(argv.port, '--port required');
 
     var relay = NaiveRelay({
-        destination: argv.destination
+        relays: argv.relays
     });
-    relay.listen(argv.port);
+    relay.listen(argv.port, argv.host || myLocalIp());
 }
