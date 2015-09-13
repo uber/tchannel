@@ -3,7 +3,7 @@ torch-relay-bench:
 		-- --relay --skipPing -s 4096,16384 -p 1000,10000,20000
 
 take_relay:
-	node index.js --relay --noEndpointOverhead -o relay-$$(git rev-parse --short HEAD).json \
+	node index.js --useNaive --relay --noEndpointOverhead -o relay-$$(git rev-parse --short HEAD).json \
 		-- --relay --skipPing -m 3 -s 4096,16384 -p 1000,10000,20000
 	ln -sf relay-$$(git rev-parse --short HEAD).json relay-$$(basename $$(git symbolic-ref HEAD)).json
 

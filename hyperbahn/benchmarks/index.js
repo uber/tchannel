@@ -29,6 +29,7 @@ var path = require('path');
 var BenchmarkRunner = require('tchannel/benchmarks/');
 
 var bahn = path.join(__dirname, 'hyperbahn-worker.js');
+var naiveRelay = path.join(__dirname, 'naive-relay.js');
 
 function HyperbahnBenchmarkRunner(opts) {
     if (!(this instanceof HyperbahnBenchmarkRunner)) {
@@ -37,8 +38,26 @@ function HyperbahnBenchmarkRunner(opts) {
 
     var self = this;
     BenchmarkRunner.call(self, opts);
+
+    if (opts.useNaive) {
+        self.spawnRelayServer = self.spawnNaiveRelayServer;
+    }
 }
 util.inherits(HyperbahnBenchmarkRunner, BenchmarkRunner);
+
+HyperbahnBenchmarkRunner.prototype.spawnNaiveRelayServer =
+function spawnNaiveRelayServer() {
+    var self = this;
+
+    var naiveRelayProc = self.run(naiveRelay, [
+        '--destination', String(self.ports.serverPort),
+        '--instances', String(self.instanceCount),
+        '--port', String(self.ports.relayServerPort)
+    ]);
+    self.relayProcs.push(naiveRelayProc);
+    naiveRelayProc.stdout.pipe(process.stderr);
+    naiveRelayProc.stderr.pipe(process.stderr);
+};
 
 HyperbahnBenchmarkRunner.prototype.spawnRelayServer =
 function spawnRelayServer() {
