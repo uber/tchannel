@@ -42,23 +42,37 @@ FrameParser.prototype.scanStart = function scanStart(buffer) {
         });
     }
 
-    if (self.frameLength < buffer.length) {
-        var frameBuffer = buffer.slice(0, self.frameLength);
-        var rest = buffer.slice(self.frameLength, buffer.length);
-
-        self.flush(frameBuffer);
-        self.scanStart(rest);
-    } else if (self.frameLength === buffer.length) {
+    if (self.frameLength === buffer.length) {
         self.flush(buffer);
-    } else if (self.frameLength > buffer.length) {
+        return;
+    }
+
+    if (self.frameLength > buffer.length) {
         // console.log('addRemainder in scanStart', {
         //     bufferLength: buffer.length,
         //     frameLength: self.frameLength
         // });
 
         self.addRemainder(buffer);
-    } else {
-        throw new Error('not possible');
+        return;
+    }
+
+    while (self.frameLength <= buffer.length) {
+        var len = self.frameLength;
+
+        var frameBuffer = buffer.slice(0, len);
+        self.flush(frameBuffer);
+
+        if (len === buffer.length) {
+            return;
+        }
+
+        buffer = buffer.slice(len, buffer.length);
+        self.frameLength = readFrameSize(buffer, 0);
+    }
+
+    if (buffer.length) {
+        self.addRemainder(buffer);
     }
 };
 
