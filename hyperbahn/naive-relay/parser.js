@@ -40,7 +40,8 @@ FrameParser.prototype.scanStart = function scanStart(buffer) {
     var totalLength = self.remainderLength + buffer.length;
 
     if (self.frameLength === totalLength) {
-        self.flush(self.concatRemainder(buffer));
+        self.onFrameBuffer(self.concatRemainder(buffer));
+        self.frameLength = null;
         return;
     }
 
@@ -58,7 +59,8 @@ FrameParser.prototype.scanStart = function scanStart(buffer) {
         var endOfBuffer = self.frameLength - self.remainderLength;
 
         var lastBuffer = buffer.slice(0, endOfBuffer);
-        self.flush(self.concatRemainder(lastBuffer));
+        self.onFrameBuffer(self.concatRemainder(lastBuffer));
+        self.frameLength = null;
 
         if (endOfBuffer === buffer.length) {
             return;
@@ -72,13 +74,6 @@ FrameParser.prototype.scanStart = function scanStart(buffer) {
     if (buffer.length) {
         self.addRemainder(buffer);
     }
-};
-
-FrameParser.prototype.flush = function flush(buffer) {
-    var self = this;
-
-    self.onFrameBuffer(buffer);
-    self.frameLength = null;
 };
 
 FrameParser.prototype.addRemainder =
