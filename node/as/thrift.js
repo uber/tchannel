@@ -48,8 +48,7 @@ function TChannelAsThrift(opts) {
         strict: opts.strict
     });
 
-    // Pulled off of things in `.register` and `.send` rather than passed in
-    self.logger = null;
+    self.logger = opts.logger;
 
     var bossMode = opts && opts.bossMode;
     self.bossMode = typeof bossMode === 'boolean' ? bossMode : false;
@@ -281,6 +280,7 @@ function TChannelThriftResponse(response, parseResult) {
     self.body = null;
     self.headers = response.headers;
     self.body = parseResult.body;
+    self.typeName = parseResult.typeName;
 }
 
 TChannelAsThrift.prototype._parse = function parse(opts) {
@@ -315,6 +315,7 @@ TChannelAsThrift.prototype._parse = function parse(opts) {
     }
 
     var bodyRes;
+    var typeName;
     if (opts.direction === 'in.request') {
         bodyRes = argsType.fromBufferResult(opts.body);
     } else if (opts.direction === 'in.response') {
@@ -323,7 +324,8 @@ TChannelAsThrift.prototype._parse = function parse(opts) {
         if (bodyRes.value && opts.ok) {
             bodyRes.value = bodyRes.value.success;
         } else if (bodyRes.value && !opts.ok) {
-            bodyRes.value = onlyProperty(bodyRes.value);
+            typeName = onlyKey(bodyRes.value);
+            bodyRes.value = bodyRes.value[typeName];
         }
     }
 
@@ -349,7 +351,8 @@ TChannelAsThrift.prototype._parse = function parse(opts) {
 
     return new Result(null, {
         head: headRes.value,
-        body: bodyRes.value
+        body: bodyRes.value,
+        typeName: typeName
     });
 };
 
@@ -421,10 +424,10 @@ TChannelAsThrift.prototype._stringify = function stringify(opts) {
 };
 
 // TODO proper Thriftify result union that reifies as the selected field.
-function onlyProperty(object) {
+function onlyKey(object) {
     for (var name in object) {
         if (object[name] !== null) {
-            return object[name];
+            return name;
         }
     }
 }

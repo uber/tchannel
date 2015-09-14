@@ -24,17 +24,39 @@
 
 var assert = require('assert');
 var util = require('util');
+var fs = require('fs');
+var path = require('path');
 var setTimeout = require('timers').setTimeout;
 
 var Errors = require('../errors.js');
 var TChannelJSON = require('../as/json');
+var TChannelThrift = require('../as/thrift');
+var thriftSource = fs.readFileSync(path.join(__dirname, 'hyperbahn.thrift'), 'utf8');
 var TChannelEndpointHandler = require('../endpoint-handler');
 
 var MAX_RELAY_AD_ATTEMPTS = 2;
 var RELAY_AD_RETRY_TIME = 1 * 1000;
 var RELAY_AD_TIMEOUT = 500;
 
+var RELAY_TIMEOUT = 500;
+
 module.exports = HyperbahnHandler;
+
+// TODO: should be part of Hyperbahn error file
+var TypedError = require('error/typed');
+var NoPeersAvailable = TypedError({
+    type: 'hyperbahn.no-peers-available',
+    nameAsThrift: 'noPeersAvailable',
+    message: 'no peer available for {serviceName}',
+    serviceName: null
+});
+
+var InvalidServiceName = TypedError({
+    type: 'hyperbahn.invalid-service-name',
+    nameAsThrift: 'invalidServiceName',
+    message: 'invalid service name: {serviceName}',
+    serviceName: null
+});
 
 function HyperbahnHandler(options) {
     if (!(this instanceof HyperbahnHandler)) {
@@ -58,6 +80,12 @@ function HyperbahnHandler(options) {
         logger: self.channel.logger
     });
 
+    self.tchannelThrift = TChannelThrift({
+        channel: self.channel,
+        logger: self.channel.logger,
+        source: thriftSource
+    });
+
     // TODO replace JSON with real bufrw handlers for this
     self.tchannelJSON.register(self, 'ad', self,
         self.handleAdvertise);
@@ -68,12 +96,17 @@ function HyperbahnHandler(options) {
     self.tchannelJSON.register(self, 'relay-unad', self,
         self.handleRelayUnadvertise);
 
+    self.tchannelThrift.register(self, 'Hyperbahn::discover', self,
+        self.discover);
+
     self.relayAdTimeout = options.relayAdTimeout ||
         RELAY_AD_TIMEOUT;
     self.relayAdRetryTime = options.relayAdRetryTime ||
         RELAY_AD_RETRY_TIME;
     self.maxRelayAdAttempts = options.maxRelayAdAttempts ||
         MAX_RELAY_AD_ATTEMPTS;
+
+    self.relayTimeout = options.relayTimeout || RELAY_TIMEOUT;
 }
 util.inherits(HyperbahnHandler, TChannelEndpointHandler);
 
@@ -336,4 +369,91 @@ HyperbahnHandler.prototype.unadvertise =
 function unadvertise(service) {
     var self = this;
     self.channel.topChannel.handler.removeServicePeer(service.serviceName, service.hostPort);
+};
+
+function convertHosts(hosts) {
+    var res = [];
+    for (var i = 0; i < hosts.length; i++) {
+        var strs = hosts[i].split(':');
+        var obj = {
+            port: parseInt(strs[1])
+        };
+        strs = strs[0].split('.');
+        obj.ip = {
+            ipv4: parseInt(strs[3]) + (parseInt(strs[2]) << 8) +
+                (parseInt(strs[1]) << 16) + (parseInt(strs[0]) << 24)
+        };
+
+        res.push(obj);
+    }
+
+    return res;
+}
+
+HyperbahnHandler.prototype.discover =
+function discover(self, req, head, body, cb) {
+    var serviceName = body.query.serviceName;
+    if (serviceName.length === 0) {
+        cb(null, {
+            ok: false,
+            body: InvalidServiceName({
+                serviceName: serviceName
+            }),
+            typeName: 'invalidServiceName'
+        });
+        return;
+    }
+
+    var exitNodes = self.egressNodes.exitsFor(serviceName);
+    var exitHosts = Object.keys(exitNodes);
+
+    var svcchan = null;
+    var myHost = self.channel.hostPort;
+    if (exitHosts.indexOf(myHost) === -1) {
+        // Since Hyperbahn is fully connected to service hosts,
+        // any exit node suffices.
+        svcchan = self.channel.topChannel.handler.getOrCreateServiceChannel(serviceName);
+        self.tchannelThrift.send(svcchan.request({
+            serviceName: 'hyperbahn',
+            headers: {
+                cn: 'hyperbahn'
+            },
+            parent: req,
+            timeout: 5000,
+            timeoutPerAttempt: 500,
+            trace: false
+        }), 'Hyperbahn::discover', null, body, function handleForward(err, resp) {
+            if (err) {
+                self.channel.logger.error('Failed to call discover API on exit node', {
+                    error: err,
+                    serviceName: serviceName
+                });
+                return cb(err, null);
+            }
+
+            cb(null, resp);
+        });
+    } else {
+        svcchan = self.channel.topChannel.subChannels[serviceName];
+        var hosts = [];
+        if (svcchan) {
+            hosts = convertHosts(svcchan.peers.keys());
+        }
+        if (hosts.length === 0) {
+            cb(null, {
+                ok: false,
+                body: NoPeersAvailable({
+                    serviceName: serviceName
+                }),
+                typeName: 'noPeersAvailable'
+            });
+        } else {
+            cb(null, {
+                ok: true,
+                body: {
+                    peers: hosts
+                }
+            });
+        }
+    }
 };
