@@ -104,5 +104,8 @@ function createLogger(options) {
         statsd: options.statsd
     });
 
-    return logger;
+    return {
+        logger: logger,
+        reservoir: larchBackend
+    };
 }

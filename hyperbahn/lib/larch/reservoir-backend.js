@@ -98,6 +98,32 @@ ReservoirBackend.rangeRand = function rand(lo, hi) {
     return Math.floor(Math.random() * (hi - lo) + lo);
 };
 
+ReservoirBackend.prototype.setSize = function setSize(size) {
+    var self = this;
+
+    var i;
+    if (size < self.size) {
+        var removed = self.records.splice(size, self.size - size);
+
+        for (i = 0; i < removed.length; i++) {
+            self.countDrop(removed[i].data.level);
+        }
+    }
+
+    self.size = size;
+};
+
+ReservoirBackend.prototype.setFlushInterval = function setFlushInterval(time) {
+    var self = this;
+
+    self.flushInterval = time;
+
+    if (self.timer) {
+        self.timers.clearTimeout(self.timer);
+        self.setupTimer();
+    }
+};
+
 ReservoirBackend.prototype.flush = function flush(records) {
     var self = this;
 
@@ -201,13 +227,21 @@ ReservoirBackend.prototype.bootstrap = function bootstrap(cb) {
         'bootstrap must be called with a callback'
     );
 
-    self.timer = self.timers.setTimeout(onTimer, self.flushInterval);
+    self.setupTimer();
+
+    self.backend.bootstrap(cb);
+};
+
+ReservoirBackend.prototype.setupTimer = function setupTimer() {
+    var self = this;
+
+    if (!self.timer) {
+        self.timer = self.timers.setTimeout(onTimer, self.flushInterval);
+    }
 
     function onTimer() {
         self.flush(self.records);
 
         self.timer = self.timers.setTimeout(onTimer, self.flushInterval);
     }
-
-    self.backend.bootstrap(cb);
 };

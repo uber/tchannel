@@ -48,7 +48,7 @@ var RemoteConfig = require('./remote-config.js');
 module.exports = ApplicationClients;
 
 function ApplicationClients(options) {
-    /*eslint max-statements: [2, 40] */
+    /*eslint max-statements: [2, 50] */
     if (!(this instanceof ApplicationClients)) {
         return new ApplicationClients(options);
     }
@@ -78,8 +78,12 @@ function ApplicationClients(options) {
             }) :
             NullStatsd()
     );
-    self.logger = options.seedClients.logger ||
-        createLogger({
+
+    if (options.seedClients.logger) {
+        self.logger = options.seedClients.logger;
+        self.logReservoir = null;
+    } else {
+        var loggerParts = createLogger({
             team: config.get('info.team'),
             project: config.get('info.project'),
             kafka: config.get('clients.logtron.kafka'),
@@ -88,6 +92,9 @@ function ApplicationClients(options) {
             sentry: config.get('clients.logtron.sentry'),
             statsd: self.statsd
         });
+        self.logger = loggerParts.logger;
+        self.logReservoir = loggerParts.logReservoir;
+    }
 
     /*eslint no-process-env: 0*/
     var uncaughtTimeouts = config.get('clients.uncaught-exception.timeouts');
@@ -300,6 +307,18 @@ ApplicationClients.prototype.onRemoteConfigUpdate = function onRemoteConfigUpdat
     self.updateExemptServices();
     self.updateRpsLimitForServiceName();
     self.updateKValues();
+    self.updateReservoir();
+};
+
+ApplicationClients.prototype.updateReservoir = function updateReservoir() {
+    var self = this;
+    if (self.logReservoir) {
+        var size = self.remoteConfig.get('log.reservoir.size', 100);
+        var interval = self.remoteConfig.get('log.reservoir.flushInterval', 50);
+
+        self.logReservoir.setFlushInterval(interval);
+        self.logReservoir.setSize(size);
+    }
 };
 
 ApplicationClients.prototype.updateCircuitsEnabled = function updateCircuitsEnabled() {
