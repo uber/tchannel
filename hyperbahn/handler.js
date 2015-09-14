@@ -431,18 +431,7 @@ function discover(self, req, head, body, cb) {
                 return cb(err, null);
             }
 
-            // Need to reconstruct the error
-            if (resp.typeName === 'noPeersAvailable') {
-                cb(null, {
-                    ok: false,
-                    body: NoPeersAvailable({
-                        serviceName: serviceName
-                    }),
-                    typeName: 'noPeersAvailable'
-                });
-            } else {
-                cb(null, resp);
-            }
+            cb(null, resp);
         });
     } else {
         svcchan = self.channel.topChannel.subChannels[serviceName];

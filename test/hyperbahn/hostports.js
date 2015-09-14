@@ -174,6 +174,7 @@ function runTests(HyperbahnCluster) {
     HyperbahnCluster.test('malformed thrift IDL: an empty body', {
         size: 5
     }, function t(cluster, assert) {
+        cluster.logger.whitelist('warn', 'Got unexpected invalid thrift for arg3');
         var bob = cluster.remotes.bob;
         var bobSub = bob.channel.makeSubChannel({
             serviceName: 'hyperbahn',
@@ -204,6 +205,11 @@ function runTests(HyperbahnCluster) {
             assert.ok(err.message.indexOf(
                 'Parsing error was: missing required field "query" with id 1 on discover_args') !== -1,
                 'error message should be a parsing failure');
+
+            var items = cluster.logger.items();
+            assert.ok(items.length > 0 && items[0].msg === 'Got unexpected invalid thrift for arg3',
+                'Do not miss the error log');
+
             assert.end();
         }
     });
@@ -211,6 +217,7 @@ function runTests(HyperbahnCluster) {
     HyperbahnCluster.test('malformed thrift IDL: a body with a query without the serviceName field', {
         size: 5
     }, function t(cluster, assert) {
+        cluster.logger.whitelist('warn', 'Got unexpected invalid thrift for arg3');
         var bob = cluster.remotes.bob;
         var bobSub = bob.channel.makeSubChannel({
             serviceName: 'hyperbahn',
@@ -241,6 +248,11 @@ function runTests(HyperbahnCluster) {
             assert.ok(err.message.indexOf(
                 'Parsing error was: missing required field "query" with id 1 on discover_args') !== -1,
                 'error message should be a parsing failure');
+
+            var items = cluster.logger.items();
+            assert.ok(items.length > 0 && items[0].msg === 'Got unexpected invalid thrift for arg3',
+                'Do not miss the error log');
+
             assert.end();
         }
     });
@@ -248,6 +260,7 @@ function runTests(HyperbahnCluster) {
     HyperbahnCluster.test('malformed thrift IDL: empty serviceName with no exception defined', {
         size: 5
     }, function t(cluster, assert) {
+        cluster.logger.whitelist('warn', 'Got unexpected invalid thrift for arg3');
         var bob = cluster.remotes.bob;
         var bobSub = bob.channel.makeSubChannel({
             serviceName: 'hyperbahn',
@@ -280,6 +293,11 @@ function runTests(HyperbahnCluster) {
                 'Could not parse body (arg3) argument.\n' +
                 'Expected Thrift encoded arg3 for endpoint Hyperbahn::discover.') === 0,
                 'error message should be a parsing failure');
+
+            var items = cluster.logger.items();
+            assert.ok(items.length > 0 && items[0].msg === 'Got unexpected invalid thrift for arg3',
+                'Do not miss the error log');
+
             assert.end();
         }
     });
