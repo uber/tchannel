@@ -48,7 +48,7 @@ var RemoteConfig = require('./remote-config.js');
 module.exports = ApplicationClients;
 
 function ApplicationClients(options) {
-    /*eslint max-statements: [2, 40] */
+    /*eslint max-statements: [2, 50] */
     if (!(this instanceof ApplicationClients)) {
         return new ApplicationClients(options);
     }
@@ -81,7 +81,7 @@ function ApplicationClients(options) {
 
     if (options.seedClients.logger) {
         self.logger = options.seedClients.logger;
-        self.reservoir = null;
+        self.logReservoir = null;
     } else {
         var loggerParts = createLogger({
             team: config.get('info.team'),
@@ -93,7 +93,7 @@ function ApplicationClients(options) {
             statsd: self.statsd
         });
         self.logger = loggerParts.logger;
-        self.reservoir = loggerParts.reservoir;
+        self.logReservoir = loggerParts.logReservoir;
     }
 
     /*eslint no-process-env: 0*/
@@ -307,7 +307,7 @@ ApplicationClients.prototype.onRemoteConfigUpdate = function onRemoteConfigUpdat
     self.updateExemptServices();
     self.updateRpsLimitForServiceName();
     self.updateKValues();
-    self.updateLogReservoirSize();
+    self.updateReservoir();
 };
 
 ApplicationClients.prototype.updateReservoir = function updateReservoir() {
@@ -315,15 +315,9 @@ ApplicationClients.prototype.updateReservoir = function updateReservoir() {
     if (self.logReservoir) {
         var size = self.remoteConfig.get('log.reservoir.size', 100);
         var interval = self.remoteConfig.get('log.reservoir.flushInterval', 50);
-        var enabled = self.remoteConfig.get('log.reservoir.enabled', false);
 
         self.logReservoir.setFlushInterval(interval);
         self.logReservoir.setSize(size);
-        if (enabled) {
-            self.logReservoir.enable();
-        } else {
-            self.logReservoir.disable();
-        }
     }
 };
 
