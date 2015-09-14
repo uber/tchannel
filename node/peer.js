@@ -30,6 +30,7 @@ var errors = require('./errors');
 var Request = require('./request');
 var PreferOutgoing = require('./peer_score_strategies.js').PreferOutgoing;
 var NoPreference = require('./peer_score_strategies.js').NoPreference;
+var PreferIncoming = require('./peer_score_strategies.js').PreferIncoming;
 
 var DEFAULT_REPORT_INTERVAL = 1000;
 
@@ -63,10 +64,11 @@ function TChannelPeer(channel, hostPort, options) {
         );
     }
 
-    self.preferOutgoing = self.options.preferOutgoing;
-
-    if (self.preferOutgoing) {
+    self.preferConnectionDirection = self.options.preferConnectionDirection;
+    if (self.preferConnectionDirection === 'out') {
         self.setScoreStrategy(PreferOutgoing);
+    } else if (self.preferConnectionDirection === 'in') {
+        self.setScoreStrategy(PreferIncoming);
     } else {
         self.setScoreStrategy(NoPreference);
     }
@@ -158,13 +160,22 @@ TChannelPeer.prototype.close = function close(callback) {
     }
 };
 
-TChannelPeer.prototype.getInConnection = function getInConnection() {
+TChannelPeer.prototype.getInConnection = function getInConnection(preferIdentified) {
     var self = this;
+    var candidate = null;
     for (var i = 0; i < self.connections.length; i++) {
         var conn = self.connections[i];
-        if (!conn.closing) return conn;
+        if (conn.closing) continue;
+        if (!preferIdentified) return conn; // user doesn't care, take first incoming
+        if (conn.remoteName) return conn; // user wanted an identified channel, and we found one
+        if (!candidate) candidate = conn; // we'll fallback to returning this if we can't find an identified one
     }
-    return null;
+    return candidate;
+};
+
+TChannelPeer.prototype.getIdentifiedInConnection = function getIdentifiedInConnection() {
+    var self = this;
+    return self.getInConnection(true);
 };
 
 TChannelPeer.prototype.getOutConnection = function getOutConnection(preferIdentified) {
@@ -205,7 +216,13 @@ TChannelPeer.prototype.countConnections = function countConnections(direction) {
 // ensures that a connection exists
 TChannelPeer.prototype.connect = function connect(outOnly) {
     var self = this;
-    var conn = self.getIdentifiedOutConnection();
+    var conn = null;
+    if (self.preferConnectionDirection === 'in' && !outOnly) {
+        conn = self.getIdentifiedInConnection();
+    } else {
+        conn = self.getIdentifiedOutConnection();
+    }
+
     if (!conn || (outOnly && conn.direction !== 'out')) {
         var socket = self.makeOutSocket();
         conn = self.makeOutConnection(socket);
@@ -371,7 +388,7 @@ TChannelPeer.prototype.makeOutConnection = function makeOutConnection(socket) {
     return conn;
 };
 
-TChannelPeer.prototype.outPendingWeightedRandom = function outPendingWeightedRandom() {
+TChannelPeer.prototype.pendingWeightedRandom = function pendingWeightedRandom(direction) {
     // Returns a score in the range from 0 to 1, where it is preferable to use
     // a peer with a higher score over one with a lower score.
     // This range is divided among an infinite set of subranges corresponding
@@ -395,21 +412,26 @@ TChannelPeer.prototype.outPendingWeightedRandom = function outPendingWeightedRan
     //
     // This remains true with this algorithm, within each equivalence class.
     var self = this;
-    var pending = self.pendingIdentified + self.countOutPending();
+    var pending = self.pendingIdentified + self.countPending(direction);
     var max = Math.pow(0.5, pending);
     var min = max / 2;
     var diff = max - min;
     return min + diff * self.random();
 };
 
-TChannelPeer.prototype.countOutPending = function countOutPending() {
+TChannelPeer.prototype.countPending = function countPending(direction) {
     var self = this;
     var pending = 0;
     for (var index = 0; index < self.connections.length; index++) {
         var connPending = self.connections[index].ops.getPending();
 
-        pending += connPending.out;
+        if (direction === 'in') {
+            pending += connPending.in;
+        } else {
+            pending += connPending.out;
+        }
     }
+
     return pending;
 };
 
