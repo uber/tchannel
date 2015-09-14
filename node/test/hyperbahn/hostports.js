@@ -38,8 +38,6 @@ if (require.main === module) {
 
 function covertHost(host) {
     var res = '';
-    console.log(host.ip.ipv4);
-    console.log((host.ip.ipv4 & 0xff000000) >> 24);
     res += ((host.ip.ipv4 & 0xff000000) >> 24) + '.';
     res += ((host.ip.ipv4 & 0xff0000) >> 16) + '.';
     res += ((host.ip.ipv4 & 0xff00) >> 8) + '.';
@@ -49,7 +47,7 @@ function covertHost(host) {
 
 function runTests(HyperbahnCluster) {
     HyperbahnCluster.test('get no host', {
-        size: 5
+        size: 25
     }, function t(cluster, assert) {
         var bob = cluster.remotes.bob;
         var bobSub = bob.channel.makeSubChannel({
@@ -131,7 +129,6 @@ function runTests(HyperbahnCluster) {
             }
             assert.ok(res, 'should be a result');
             assert.ok(res.ok, 'result should be ok');
-            console.log(res.body.peers[0]);
             assert.equals(covertHost(res.body.peers[0]), bob.channel.hostPort,
                 'should get the expected hostPort');
             client.destroy();
@@ -200,6 +197,13 @@ function runTests(HyperbahnCluster) {
         function onResponse(err, res) {
             assert.ok(err, 'should be error');
             assert.equals(err.type, 'tchannel.bad-request', 'error should be bad request');
+            assert.ok(err.message.indexOf(
+                'tchannel-thrift-handler.parse-error.body-failed: Could not parse body (arg3) argument.\n' +
+                'Expected Thrift encoded arg3 for endpoint Hyperbahn::discover.') === 0,
+                'error message should be a parsing failure');
+            assert.ok(err.message.indexOf(
+                'Parsing error was: missing required field "query" with id 1 on discover_args') !== -1,
+                'error message should be a parsing failure');
             assert.end();
         }
     });
@@ -230,6 +234,13 @@ function runTests(HyperbahnCluster) {
         function onResponse(err, res) {
             assert.ok(err, 'should be error');
             assert.equals(err.type, 'tchannel.bad-request', 'error should be bad request');
+            assert.ok(err.message.indexOf(
+                'tchannel-thrift-handler.parse-error.body-failed: Could not parse body (arg3) argument.\n' +
+                'Expected Thrift encoded arg3 for endpoint Hyperbahn::discover.') === 0,
+                'error message should be a parsing failure');
+            assert.ok(err.message.indexOf(
+                'Parsing error was: missing required field "query" with id 1 on discover_args') !== -1,
+                'error message should be a parsing failure');
             assert.end();
         }
     });
@@ -265,6 +276,10 @@ function runTests(HyperbahnCluster) {
             assert.ok(err, 'should be error');
             assert.equals(err.type, 'tchannel-thrift-handler.parse-error.body-failed',
                 'error should be parser error');
+            assert.ok(err.message.indexOf(
+                'Could not parse body (arg3) argument.\n' +
+                'Expected Thrift encoded arg3 for endpoint Hyperbahn::discover.') === 0,
+                'error message should be a parsing failure');
             assert.end();
         }
     });
