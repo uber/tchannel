@@ -418,7 +418,10 @@ function discover(self, req, head, body, cb) {
             headers: {
                 cn: 'hyperbahn'
             },
-            parent: req
+            parent: req,
+            timeout: 5000,
+            timeoutPerAttempt: 500,
+            trace: false
         }), 'Hyperbahn::discover', null, body, function handleForward(err, resp) {
             if (err) {
                 self.channel.logger.error('Failed to call discover API on exit node', {
@@ -429,7 +432,7 @@ function discover(self, req, head, body, cb) {
             }
 
             // Need to reconstruct the error
-            if (resp.body.name === 'ThriftException') {
+            if (resp.body.typeName === 'noPeersAvailable') {
                 cb(null, {
                     ok: false,
                     body: NoPeersAvailable({
