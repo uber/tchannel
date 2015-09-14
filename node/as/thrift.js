@@ -322,7 +322,9 @@ TChannelAsThrift.prototype._parse = function parse(opts) {
         if (bodyRes.value && opts.ok) {
             bodyRes.value = bodyRes.value.success;
         } else if (bodyRes.value && !opts.ok) {
-            bodyRes.value = onlyProperty(bodyRes.value);
+            var typeName = onlyKey(bodyRes.value);
+            bodyRes.value = bodyRes.value[typeName];
+            bodyRes.value.typeName = typeName;
         }
     }
 
@@ -420,10 +422,10 @@ TChannelAsThrift.prototype._stringify = function stringify(opts) {
 };
 
 // TODO proper Thriftify result union that reifies as the selected field.
-function onlyProperty(object) {
+function onlyKey(object) {
     for (var name in object) {
         if (object[name] !== null) {
-            return object[name];
+            return name;
         }
     }
 }
