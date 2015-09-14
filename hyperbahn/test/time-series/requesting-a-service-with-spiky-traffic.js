@@ -76,7 +76,7 @@ TimeSeriesCluster.test('control test for time-series of timeout requests', {
 
     // Stays here.
     var RANGES = {
-        '300': [0, 18],
+        '300': [0, 40],
         '425': [2, 40],
         '450': [5, 50],
         '500': [25, 80],
