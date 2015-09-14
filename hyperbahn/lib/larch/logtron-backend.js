@@ -67,6 +67,7 @@ LogtronBackend.prototype.logMany = function logMany(records, cb) {
     var i;
     var done = 0;
     var errors = [];
+
     for (i = 0; i < records.length; i++) {
         self.log(records[i], recordDone);
     }

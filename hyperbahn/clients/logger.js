@@ -100,7 +100,8 @@ function createLogger(options) {
     });
 
     var logger = LarchLogger({
-        backends: [larchBackend]
+        backends: [larchBackend],
+        statsd: options.statsd
     });
 
     return logger;
