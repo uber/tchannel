@@ -280,6 +280,7 @@ function TChannelThriftResponse(response, parseResult) {
     self.body = null;
     self.headers = response.headers;
     self.body = parseResult.body;
+    self.typeName = parseResult.typeName;
 }
 
 TChannelAsThrift.prototype._parse = function parse(opts) {
@@ -314,6 +315,7 @@ TChannelAsThrift.prototype._parse = function parse(opts) {
     }
 
     var bodyRes;
+    var typeName;
     if (opts.direction === 'in.request') {
         bodyRes = argsType.fromBufferResult(opts.body);
     } else if (opts.direction === 'in.response') {
@@ -322,9 +324,8 @@ TChannelAsThrift.prototype._parse = function parse(opts) {
         if (bodyRes.value && opts.ok) {
             bodyRes.value = bodyRes.value.success;
         } else if (bodyRes.value && !opts.ok) {
-            var typeName = onlyKey(bodyRes.value);
+            typeName = onlyKey(bodyRes.value);
             bodyRes.value = bodyRes.value[typeName];
-            bodyRes.value.typeName = typeName;
         }
     }
 
@@ -350,7 +351,8 @@ TChannelAsThrift.prototype._parse = function parse(opts) {
 
     return new Result(null, {
         head: headRes.value,
-        body: bodyRes.value
+        body: bodyRes.value,
+        typeName: typeName
     });
 };
 

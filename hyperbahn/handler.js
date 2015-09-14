@@ -432,7 +432,7 @@ function discover(self, req, head, body, cb) {
             }
 
             // Need to reconstruct the error
-            if (resp.body.typeName === 'noPeersAvailable') {
+            if (resp.typeName === 'noPeersAvailable') {
                 cb(null, {
                     ok: false,
                     body: NoPeersAvailable({
