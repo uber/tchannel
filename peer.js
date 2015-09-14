@@ -412,48 +412,26 @@ TChannelPeer.prototype.pendingWeightedRandom = function pendingWeightedRandom(di
     //
     // This remains true with this algorithm, within each equivalence class.
     var self = this;
-    var countPending = null;
-    if (direction === 'in') {
-        countPending = self.countInPending();
-    } else {
-        countPending = self.countOutPending();
-    }
-    var pending = self.pendingIdentified + countPending;
+    var pending = self.pendingIdentified + self.countPending(direction);
     var max = Math.pow(0.5, pending);
     var min = max / 2;
     var diff = max - min;
     return min + diff * self.random();
 };
 
-TChannelPeer.prototype.outPendingWeightedRandom = function outPendingWeightedRandom() {
-    var self = this;
-    return self.pendingWeightedRandom('out');
-};
-
-TChannelPeer.prototype.inPendingWeightedRandom = function inPendingWeightedRandom() {
-    var self = this;
-    return self.pendingWeightedRandom('in');
-};
-
-TChannelPeer.prototype.countOutPending = function countOutPending() {
+TChannelPeer.prototype.countPending = function countPending(direction) {
     var self = this;
     var pending = 0;
     for (var index = 0; index < self.connections.length; index++) {
         var connPending = self.connections[index].ops.getPending();
 
-        pending += connPending.out;
+        if (direction === 'in') {
+            pending += connPending.in;
+        } else {
+            pending += connPending.out;
+        }
     }
-    return pending;
-};
 
-TChannelPeer.prototype.countInPending = function countInPending() {
-    var self = this;
-    var pending = 0;
-    for (var index = 0; index < self.connections.length; index++) {
-        var connPending = self.connections[index].ops.getPending();
-
-        pending += connPending.in;
-    }
     return pending;
 };
 
