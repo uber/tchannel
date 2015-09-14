@@ -125,12 +125,15 @@ ReservoirBackend.prototype.flush = function flush(records) {
 
     function onLoggingDone(err) {
         // TODO: what to do when flush fails? Generate a log message?
-        var count = 1;
-        if (err.count) {
-            count = err.count;
+        if (err) {
+            var count = 1;
+            if (err.count) {
+                count = err.count;
+            }
+
+            self.statsd.incr('larch.errors', count);
         }
 
-        self.statsd.incr('larch.errors', count);
         self.statsd.timing('larch.flushTime', self.now() - start);
     }
 
