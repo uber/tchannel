@@ -20,23 +20,44 @@
 
 'use strict';
 
-/* Test fail with confusing message if running server.js &
-    tests at the same time.
-*/
+var TypedError = require('error/typed');
 
-require('./endpoint-logging.js');
-require('./health.js');
-require('./register/');
-require('./forward/');
-require('./clients/');
-require('./child-process/');
-require('./hosts/');
-require('./connections/');
-require('./circuits/');
-require('./hyperbahn-client.js');
-require('./admin/');
-require('./trace.js');
-require('./remote-config-client.js');
-require('./remote-config.js');
-require('./time-series/requesting-a-service-with-spiky-traffic.js');
-require('./larch/');
+var ManyErrors = module.exports.ManyErrors = TypedError({
+    type: 'many.errors',
+    message: '{count} errors. Example: {example}',
+    count: null,
+    example: null,
+    errors: null
+});
+
+module.exports.resultArrayToError = resultArrayToError;
+
+function resultArrayToError(items, type, message) {
+    var errors = [];
+    var i;
+    for (i = 0; i < items.length; i++) {
+        if (items[i].err) {
+            errors.push(items[i].err);
+        }
+    }
+
+    return errorArrayToError(errors, type, message);
+}
+
+module.exports.errorArrayToError = errorArrayToError;
+
+function errorArrayToError(errors, type, message) {
+    if (errors.length === 0) {
+        return null;
+    } else if (errors.length === 1) {
+        return errors[0];
+    } else {
+        return ManyErrors({
+            message: message,
+            type: type,
+            errors: errors,
+            count: errors.length,
+            example: errors[0].message
+        });
+    }
+}
