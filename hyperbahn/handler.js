@@ -81,6 +81,7 @@ function HyperbahnHandler(options) {
     });
 
     self.tchannelThrift = TChannelThrift({
+        channel: self.channel,
         logger: self.channel.logger,
         source: thriftSource
     });
@@ -391,7 +392,7 @@ function convertHosts(hosts) {
 
 HyperbahnHandler.prototype.discover =
 function discover(self, req, head, body, cb) {
-    var serviceName = body && body.query && body.query.serviceName;
+    var serviceName = body.query.serviceName;
     if (serviceName.length === 0) {
         cb(null, {
             ok: false,
@@ -406,22 +407,23 @@ function discover(self, req, head, body, cb) {
     var exitNodes = self.egressNodes.exitsFor(serviceName);
     var exitHosts = Object.keys(exitNodes);
 
+    var svcchan = null;
     var myHost = self.channel.hostPort;
     if (exitHosts.indexOf(myHost) === -1) {
         // Since Hyperbahn is fully connected to service hosts,
-        // randomly picking one suffices
-        var exit = Math.floor(Math.random() * exitHosts.length);
-        self.sendRelayAsThrift({
-            hostPort: exitHosts[exit],
-            body: body,
-            inreq: req,
-            endpoint: 'Hyperbahn::discover'
-        }, function handleForward(err, resp) {
+        // any exit node suffices.
+        svcchan = self.channel.topChannel.handler.getOrCreateServiceChannel(serviceName);
+        self.tchannelThrift.send(svcchan.request({
+            serviceName: 'hyperbahn',
+            headers: {
+                cn: 'hyperbahn'
+            },
+            parent: req
+        }), 'Hyperbahn::discover', null, body, function handleForward(err, resp) {
             if (err) {
                 self.channel.logger.error('Failed to call discover API on exit node', {
                     error: err,
-                    serviceName: serviceName,
-                    exitHost: exitHosts[exit]
+                    serviceName: serviceName
                 });
                 return cb(err, null);
             }
@@ -440,7 +442,7 @@ function discover(self, req, head, body, cb) {
             }
         });
     } else {
-        var svcchan = self.channel.topChannel.subChannels[serviceName];
+        svcchan = self.channel.topChannel.subChannels[serviceName];
         var hosts = [];
         if (svcchan) {
             hosts = convertHosts(svcchan.peers.keys());
@@ -461,36 +463,5 @@ function discover(self, req, head, body, cb) {
                 }
             });
         }
-    }
-};
-
-HyperbahnHandler.prototype.sendRelayAsThrift =
-function sendRelayAsThrift(opts, callback) {
-    var self = this;
-
-    self.channel.waitForIdentified({
-        host: opts.hostPort
-    }, onIdentified);
-
-    function onIdentified(err) {
-        if (err) {
-            return onResponse(err);
-        }
-
-        self.tchannelThrift.send(self.channel.request({
-            host: opts.hostPort,
-            serviceName: 'hyperbahn',
-            trace: false,
-            timeout: self.relayTimeout,
-            headers: {
-                cn: self.callerName
-            },
-            retryLimit: 0,
-            parent: opts.inreq
-        }), opts.endpoint, null, opts.body, onResponse);
-    }
-
-    function onResponse(err, response) {
-        return callback(err, response);
     }
 };
