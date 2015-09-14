@@ -90,12 +90,54 @@ function ReservoirBackend(options) {
     self.records = [];
     self.dropCount = {};
     self.logCount = {};
+    self.enabled = false;
 }
 
 util.inherits(ReservoirBackend, BaseBackend);
 
 ReservoirBackend.rangeRand = function rand(lo, hi) {
     return Math.floor(Math.random() * (hi - lo) + lo);
+};
+
+ReservoirBackend.prototype.disable = function disable() {
+    var self = this;
+
+    if (self.enabled !== false) {
+        self.flush(self.records);
+    }
+    self.enabled = false;
+};
+
+ReservoirBackend.prototype.enable = function enable() {
+    var self = this;
+
+    self.enabled = true;
+};
+
+ReservoirBackend.prototype.setSize = function setSize(size) {
+    var self = this;
+
+    var i;
+    if (size < self.size) {
+        var removed = self.records.splice(size, self.size - size);
+
+        for (i = 0; i < removed.length; i++) {
+            self.countDrop(removed[i].data.level);
+        }
+    }
+
+    self.size = size;
+};
+
+ReservoirBackend.prototype.setFlushInterval = function setFlushInterval(time) {
+    var self = this;
+
+    self.flushInterval = time;
+
+    if (self.timer) {
+        self.timers.clearTimeout(self.timer);
+        self.setupTimer();
+    }
 };
 
 ReservoirBackend.prototype.flush = function flush(records) {
@@ -143,6 +185,10 @@ ReservoirBackend.prototype.flush = function flush(records) {
 
 ReservoirBackend.prototype.log = function log(record, cb) {
     var self = this;
+
+    if (!self.enabled) {
+        return self.backend.log(record, cb);
+    }
 
     self.count += 1;
 
@@ -201,13 +247,21 @@ ReservoirBackend.prototype.bootstrap = function bootstrap(cb) {
         'bootstrap must be called with a callback'
     );
 
-    self.timer = self.timers.setTimeout(onTimer, self.flushInterval);
+    self.setupTimer();
+
+    self.backend.bootstrap(cb);
+};
+
+ReservoirBackend.prototype.setupTimer = function setupTimer() {
+    var self = this;
+    
+    if (!self.timer) {
+        self.timer = self.timers.setTimeout(onTimer, self.flushInterval);
+    }
 
     function onTimer() {
         self.flush(self.records);
 
         self.timer = self.timers.setTimeout(onTimer, self.flushInterval);
     }
-
-    self.backend.bootstrap(cb);
 };
