@@ -159,6 +159,8 @@ ReservoirBackend.prototype.countDrop = function countDrop(level) {
 };
 
 ReservoirBackend.prototype.countLog = function countLog(level) {
+    var self = this;
+
     if (!self.logCount[level]) {
         self.logCount[level] = 1;
     } else {
