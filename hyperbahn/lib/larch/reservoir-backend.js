@@ -84,6 +84,7 @@ function ReservoirBackend(options) {
     self.records = [];
     self.errors = [];
     self.dropCount = {};
+    self.logCount = {};
 }
 
 util.inherits(ReservoirBackend, BaseBackend);
@@ -99,6 +100,13 @@ ReservoirBackend.prototype.flush = function flush(records) {
     var keys = Object.keys(self.dropCount);
     for (i = 0; i < keys.length; i++) {
         self.statsd.count('larch.dropped.' + keys[i], self.dropCount[keys[i]]);
+        self.dropCount[keys[i]] = 0;
+    }
+
+    keys = Object.keys(self.logCount);
+    for (i = 0; i < keys.length; i++) {
+        self.statsd.count('larch.logged.' + keys[i], self.logCount[keys[i]]);
+        self.logCount[keys[i]] = 0;
     }
 
     var copy = records.slice(0);
@@ -120,16 +128,18 @@ ReservoirBackend.prototype.log = function log(record, cb) {
 
     if (self.records.length < self.size) {
         self.records.push(record);
+        self.countLog(record.data.level);
     } else {
         var probability = self.rangeRand(0, self.count);
         if (probability < self.size) {
             // record drop for the record we're evicting
-            self.recordDrop(self.records[probability].data.level);
+            self.countDrop(self.records[probability].data.level);
+            self.countLog(record.data.level);
 
             self.records[probability] = record;
         } else {
             // record drop for record we're dropping
-            self.recordDrop(record.data.level);
+            self.countDrop(record.data.level);
         }
     }
 
@@ -138,13 +148,21 @@ ReservoirBackend.prototype.log = function log(record, cb) {
     }
 };
 
-ReservoirBackend.prototype.recordDrop = function recordDrop(level) {
+ReservoirBackend.prototype.countDrop = function countDrop(level) {
     var self = this;
 
     if (!self.dropCount[level]) {
         self.dropCount[level] = 1;
     } else {
         self.dropCount[level] += 1;
+    }
+};
+
+ReservoirBackend.prototype.countLog = function countLog(level) {
+    if (!self.logCount[level]) {
+        self.logCount[level] = 1;
+    } else {
+        self.logCount[level] += 1;
     }
 };
 
