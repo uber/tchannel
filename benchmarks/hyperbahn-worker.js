@@ -41,7 +41,12 @@ function HyperbahnWorker(opts) {
     assert(opts.instances, 'instances required');
     assert(opts.workerPort, 'workerPort required');
 
+    assert(opts.sentryPort, 'sentryPort required');
+    assert(opts.kafkaPort, 'kafkaPort required');
+
     self.statsdPort = Number(opts.statsdPort);
+    self.kafkaPort = Number(opts.kafkaPort);
+    self.sentryPort = Number(opts.sentryPort);
     self.config = self.createConfig();
     self.app = HyperbahnApplication(self.config, {
         processTitle: process.title,
@@ -91,6 +96,13 @@ HyperbahnWorker.prototype.createConfig = function createConfig() {
             'clients.uber-statsd-client': {
                 host: '127.0.0.1',
                 port: self.statsdPort
+            },
+            'clients.logtron.kafka': {
+                leafHost: '127.0.0.1',
+                leafPort: self.kafkaPort
+            },
+            'clients.logtron.sentry': {
+                id: 'http://bs:bs@localhost:' + self.sentryPort
             },
             'tchannel.host': '127.0.0.1'
         }
