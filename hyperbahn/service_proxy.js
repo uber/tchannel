@@ -124,8 +124,8 @@ ServiceDispatchHandler.prototype.rateLimit =
 function rateLimit(req, buildRes) {
     var self = this;
 
-    // stats all traffic using rate limiter's counter
-    self.rateLimiter.incrementServiceCounter(req.headers.cn + '~~' + req.serviceName);
+    // stats edge traffic
+    self.rateLimiter.incrementEdgeCounter(req.headers.cn + '~~' + req.serviceName);
 
     var isExitNode = self.isExitFor(req.serviceName);
     if (isExitNode) {
@@ -138,7 +138,8 @@ function rateLimit(req, buildRes) {
         self.logger.info('hyperbahn node is rate-limited by the total rps limit',
             self.extendLogInfo(req.extendLogInfo({
                 rpsLimit: totalLimit,
-                counters: self.rateLimiter.counters
+                serviceCounters: self.rateLimiter.serviceCounters,
+                edgeCounters: self.rateLimiter.edgeCounters
             })));
         buildRes().sendError('Busy', 'hyperbahn node is rate-limited by the total rps of ' + totalLimit);
         return true;
@@ -150,7 +151,8 @@ function rateLimit(req, buildRes) {
         self.logger.info('hyperbahn service is rate-limited by the service rps limit',
             self.extendLogInfo(req.extendLogInfo({
                 rpsLimit: serviceLimit,
-                counters: self.rateLimiter.counters
+                serviceCounters: self.rateLimiter.serviceCounters,
+                edgeCounters: self.rateLimiter.edgeCounters
             })));
         buildRes().sendError('Busy', req.serviceName + ' is rate-limited by the rps of ' + serviceLimit);
         return true;
