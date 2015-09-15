@@ -32,7 +32,6 @@ var uncaught = require('uncaught-exception');
 var TChannel = require('tchannel');
 var TChannelAsJSON = require('tchannel/as/json');
 var HyperbahnHandler = require('tchannel/hyperbahn/handler');
-var HyperbahnEgressNodes = require('tchannel/hyperbahn/egress-nodes');
 var CountedReadySignal = require('ready-signal/counted');
 var fs = require('fs');
 var ProcessReporter = require('process-reporter');
@@ -44,6 +43,7 @@ var DualStatsd = require('./dual-statsd.js');
 var createRepl = require('./repl.js');
 var HeapDumper = require('./heap-dumper.js');
 var RemoteConfig = require('./remote-config.js');
+var HyperbahnEgressNodes = require('../egress-nodes.js');
 
 module.exports = ApplicationClients;
 

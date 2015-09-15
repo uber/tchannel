@@ -22,7 +22,7 @@
 
 var assert = require('assert');
 var inherits = require('util').inherits;
-var EventEmitter = require('../lib/event_emitter');
+var EventEmitter = require('tchannel/lib/event_emitter');
 
 module.exports = EgressNodes;
 
