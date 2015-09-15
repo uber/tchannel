@@ -42,7 +42,7 @@ function HyperbahnBenchmarkRunner(opts) {
 }
 util.inherits(HyperbahnBenchmarkRunner, BenchmarkRunner);
 
-HyperbahnBenchmarkRunner.prototype.startFakeSentry = 
+HyperbahnBenchmarkRunner.prototype.startFakeSentry =
 function startFakeSentry() {
     var self = this;
     self.sentry = FakeSentryServer(onSentry);
@@ -92,5 +92,3 @@ if (require.main === module) {
     var runner = HyperbahnBenchmarkRunner(argv);
     runner.start();
 }
-
-function noop () {}
