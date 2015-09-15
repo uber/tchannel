@@ -560,7 +560,6 @@ TChannelConnection.prototype.resetAll = function resetAll(err) {
         self.logger.warn('resetting connection', logInfo);
         self.errorEvent.emit(self, err);
     } else if (
-        err.type !== 'tchannel.socket-closed' &&
         err.type !== 'tchannel.socket-local-closed'
     ) {
         logInfo.error = extend(err);
