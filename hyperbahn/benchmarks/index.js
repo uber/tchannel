@@ -25,7 +25,7 @@ var parseArgs = require('minimist');
 var process = require('process');
 var util = require('util');
 var path = require('path');
-var FakeKafkaServer = require('./kafka-server');
+var FakeKafkaServer = require('kafka-server');
 var FakeSentryServer = require('sentry-logger/test/lib/sentry-server');
 
 var BenchmarkRunner = require('tchannel/benchmarks/');

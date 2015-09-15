@@ -53,6 +53,7 @@
     "body": "^5.1.0",
     "format-stack": "4.1.0",
     "istanbul": "^0.3.17",
+    "kafka-logger": "^6.1.0",
     "metrics": "^0.1.9",
     "opn": "^0.1.2",
     "rezult": "^1.0.0",
