@@ -583,7 +583,7 @@ InitOperation.prototype.onTimeout = function onTimeout(now) {
     var self = this;
 
     // noop if identify succeeded
-    if (self.connection.remoteName) {
+    if (self.connection.remoteName || self.connection.closing) {
         return;
     }
 
