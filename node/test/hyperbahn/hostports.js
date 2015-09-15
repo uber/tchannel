@@ -47,7 +47,7 @@ function covertHost(host) {
 
 function runTests(HyperbahnCluster) {
     HyperbahnCluster.test('get no host', {
-        size: 25
+        size: 15
     }, function t(cluster, assert) {
         var bob = cluster.remotes.bob;
         var bobSub = bob.channel.makeSubChannel({
