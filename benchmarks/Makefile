@@ -23,4 +23,8 @@ take-relay-bad:
 		-- --bad --relay --skipPing -m 3 -s 4096,16384 -p 10000,20000
 	ln -sf relay-$$(git rev-parse --short HEAD)-bad.json relay-$$(basename $$(git symbolic-ref HEAD))-bad.json
 
+torch-relay-bad-bench:
+	node index.js --bad --relay --torch relay --torchFile ./flame.raw --torchTime 10 \
+		-- --bad --relay --skipPing -s 4096,16384 -p 10000,20000
+
 .PHONY: take-relay take-relay-bad create-flame top-benchmark kill-dead-benchmarks torch-relay-bench
