@@ -44,6 +44,7 @@ function usage() {
     console.error('  --http-port <port> (default: 0)');
     console.error('  --tchannel-port <port> (default: 0)');
     console.error('  --peers <host:port>[,<host:port>[,...]]');
+    console.error('  --streamed (default false)');
     process.exit(1);
 }
 
@@ -87,7 +88,9 @@ function onHTTPListening() {
 }
 
 function onHTTPRequest(hreq, hres) {
-    asHTTP.forwardToTChannel(svcChan, hreq, hres, {}, function onComplete(error) {
+    asHTTP.forwardToTChannel(svcChan, hreq, hres, {
+        streamed: argv.streamed
+    }, function onComplete(error) {
         if (error) {
             console.error('forward to tchannel failed', error);
         }
