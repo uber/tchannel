@@ -91,7 +91,8 @@ function RateLimiter(options) {
     }
     self.rpsLimitForServiceName = options.rpsLimitForServiceName || Object.create(null);
     self.exemptServices = options.exemptServices || [];
-    self.counters = Object.create(null);
+    self.serviceCounters = Object.create(null);
+    self.edgeCounters = Object.create(null);
     self.totalRequestCounter = RateLimiterCounter({
         numOfBuckets: self.numOfBuckets,
         rpsLimit: self.totalRpsLimit
@@ -129,9 +130,11 @@ function refresh() {
 
     self.totalRequestCounter.refresh();
 
-    var serviceNames = Object.keys(self.counters);
-    for (var i = 0; i < serviceNames.length; i++) {
-        var counter = self.counters[serviceNames[i]];
+    var serviceNames = Object.keys(self.serviceCounters);
+    var i;
+    var counter;
+    for (i = 0; i < serviceNames.length; i++) {
+        counter = self.serviceCounters[serviceNames[i]];
         if (self.cycle === self.numOfBuckets) {
             var statsTag = new stat.RateLimiterServiceTags(serviceNames[i]);
             if (counter.rps) {
@@ -153,6 +156,22 @@ function refresh() {
         counter.refresh();
     }
 
+    var edges = Object.keys(self.edgeCounters);
+    for (i = 0; i < edges.length; i++) {
+        counter = self.edgeCounters[edges[i]];
+        if (self.cycle === self.numOfBuckets) {
+            if (counter.rps) {
+                self.channel.emitFastStat(self.channel.buildStat(
+                    'tchannel.rate-limiting.edge-rps',
+                    'counter',
+                    counter.rps,
+                    new stat.RateLimiterEdgeTags(edges[i])
+                ));
+            }
+        }
+        counter.refresh();
+    }
+
     self.cycle--;
     if (self.cycle <= 0) {
         self.cycle = self.numOfBuckets;
@@ -169,7 +188,7 @@ function refresh() {
 RateLimiter.prototype.removeServiceCounter =
 function removeServiceCounter(serviceName) {
     var self = this;
-    delete self.counters[serviceName];
+    delete self.serviceCounters[serviceName];
 };
 
 RateLimiter.prototype.updateExemptServices =
@@ -232,7 +251,7 @@ function updateServiceLimit(serviceName, limit) {
     }
 
     // update counter
-    var counter = self.counters[serviceName];
+    var counter = self.serviceCounters[serviceName];
     if (counter) {
         counter.rpsLimit = limit;
     }
@@ -257,7 +276,7 @@ function createServiceCounter(serviceName) {
     }
 
     // if this is an existing service counter
-    counter = self.counters[serviceName];
+    counter = self.serviceCounters[serviceName];
     // creating a new service counter
     if (!counter) {
         var limit = self.rpsLimitForServiceName[serviceName];
@@ -268,7 +287,7 @@ function createServiceCounter(serviceName) {
             numOfBuckets: self.numOfBuckets,
             rpsLimit: limit
         });
-        self.counters[serviceName] = counter;
+        self.serviceCounters[serviceName] = counter;
     }
 
     return counter;
@@ -285,6 +304,21 @@ function incrementServiceCounter(serviceName) {
     }
 };
 
+RateLimiter.prototype.incrementEdgeCounter =
+function incrementEdgeCounter(name) {
+    var self = this;
+    var counter = self.edgeCounters[name];
+    if (!counter) {
+        counter = RateLimiterCounter({
+            numOfBuckets: self.numOfBuckets,
+            rpsLimit: 0
+        });
+        self.edgeCounters[name] = counter;
+    }
+
+    counter.increment();
+};
+
 RateLimiter.prototype.incrementTotalCounter =
 function incrementTotalCounter(serviceName) {
     var self = this;
@@ -299,7 +333,7 @@ function shouldRateLimitService(serviceName) {
     if (self.exemptServices.indexOf(serviceName) !== -1) {
         return false;
     }
-    var counter = self.counters[serviceName];
+    var counter = self.serviceCounters[serviceName];
     assert(counter, 'cannot find counter for ' + serviceName);
     var result = counter.rps > counter.rpsLimit;
     if (result) {
