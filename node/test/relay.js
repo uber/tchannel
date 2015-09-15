@@ -246,36 +246,6 @@ function echo(req, res, arg2, arg3) {
     res.sendOk(arg2, arg3);
 }
 
-RelayNetwork.test('relay through a network', {
-    serviceNames: ['alice', 'bob'],
-    numInstancesPerService: 1,
-    kValue: 1,
-    numRelays: 2
-}, function t(network, assert) {
-    network.forEachSubChannel(function register(c, service, index) {
-        c.register('ping', function ping(req, res) {
-            res.headers.as = 'raw';
-            res.sendOk('' + index, service);
-        });
-    });
-
-    network.subChannelsByName.alice[0].request({
-        hasNoParent: true,
-        serviceName: 'bob',
-        headers: {
-            cn: 'alice',
-            as: 'raw'
-        }
-    }).send('ping', 'foo', 'bar', function onResponse(err, res, arg2, arg3) {
-        if (err) {
-            return assert.end(err);
-        }
-        assert.equal(arg3.toString(), 'bob',
-            'response relayed to and from requested service');
-        assert.end();
-    });
-});
-
 RelayNetwork.test('relay respects relayFlags', {
     serviceNames: ['alice', 'bob'],
     numInstancesPerService: 3,
