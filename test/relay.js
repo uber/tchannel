@@ -246,49 +246,6 @@ function echo(req, res, arg2, arg3) {
     res.sendOk(arg2, arg3);
 }
 
-RelayNetwork.test('relay respects relayFlags', {
-    serviceNames: ['alice', 'bob'],
-    numInstancesPerService: 3,
-    kValue: 1,
-    numRelays: 2
-}, function t(network, assert) {
-    network.cluster.logger.whitelist('warn', 'forwarding error frame');
-
-    var counters = {
-        alice: 0,
-        bob: 0
-    };
-
-    network.forEachSubChannel(function register(c, service) {
-        c.register('ping', function ping(req, res) {
-            counters[service]++;
-            res.sendError('UnexpectedError', 'oops');
-        });
-    });
-
-    network.subChannelsByName.alice[0].request({
-        hasNoParent: true,
-        serviceName: 'bob',
-        headers: {
-            cn: 'alice',
-            as: 'raw'
-        },
-        retryFlags: {
-            never: true
-        }
-    }).send('ping', 'foo', 'bar', onResponse);
-
-    function onResponse(err, res, arg2, arg3) {
-        assert.ok(err);
-        assert.equal(err.message, 'oops');
-
-        assert.equal(counters.alice, 0);
-        assert.equal(counters.bob, 1);
-
-        assert.end();
-    }
-});
-
 RelayNetwork.test('relay network changes dont break', {
     serviceNames: ['alice', 'bob'],
     numInstancesPerService: 1,
