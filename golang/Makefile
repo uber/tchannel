@@ -40,6 +40,10 @@ fmt format:
 	go fmt $(PKGS)
 	echo
 
+godep:
+	rm -rf Godeps
+	godep save ./...
+
 test_ci: test
 
 test: clean setup
