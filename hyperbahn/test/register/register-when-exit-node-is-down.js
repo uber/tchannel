@@ -74,10 +74,11 @@ allocCluster.test('register when exit node is down', {
             result.body.connectionCount > 0);
 
         var errors = cluster.logger.items();
+
         assert.equal(errors.length, 1);
-        assert.equal(errors[0].fields.msg,
+        assert.equal(errors[0].msg,
             'Relay advertise failed with expected err');
-        assert.equal(errors[0].fields.error.fullType,
+        assert.equal(errors[0].meta.error.fullType,
             'tchannel.socket~!~' +
             'error.wrapped-io.connect.ECONNREFUSED');
 

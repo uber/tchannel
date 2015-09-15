@@ -37,8 +37,8 @@ allocCluster.test('tchannel heap dumps', function t(cluster, assert) {
 
         var logs = cluster.logger.items();
         assert.equal(logs.length, 1);
-        assert.equal(logs[0].fields.msg, 'write a heapsnapshot');
-        assert.equal(logs[0].fields.file, resp.body.path);
+        assert.equal(logs[0].msg, 'write a heapsnapshot');
+        assert.equal(logs[0].meta.file, resp.body.path);
 
         setTimeout(onTimeout, 1000);
 
