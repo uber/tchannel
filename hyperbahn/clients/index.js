@@ -33,12 +33,12 @@ var TChannel = require('tchannel');
 var TChannelAsJSON = require('tchannel/as/json');
 var HyperbahnHandler = require('tchannel/hyperbahn/handler');
 var HyperbahnEgressNodes = require('tchannel/hyperbahn/egress-nodes');
-var ServiceProxy = require('tchannel/hyperbahn/service_proxy.js');
 var CountedReadySignal = require('ready-signal/counted');
 var fs = require('fs');
 var ProcessReporter = require('process-reporter');
 var NullStatsd = require('uber-statsd-client/null');
 
+var ServiceProxy = require('../service-proxy.js');
 var createLogger = require('./logger.js');
 var DualStatsd = require('./dual-statsd.js');
 var createRepl = require('./repl.js');
