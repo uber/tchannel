@@ -89,6 +89,7 @@ if (require.main === module) {
         },
         boolean: ['relay', 'trace', 'debug', 'noEndpointOverhead']
     });
+    process.title = 'nodejs-benchmarks-top-level-runner';
     var runner = HyperbahnBenchmarkRunner(argv);
     runner.start();
 }
