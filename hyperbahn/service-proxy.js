@@ -31,6 +31,7 @@ var util = require('util');
 var DEFAULT_LOG_GRACE_PERIOD = 5 * 60 * 1000;
 var SERVICE_PURGE_PERIOD = 5 * 60 * 1000;
 
+/* eslint max-statements: [2, 30] */
 function ServiceDispatchHandler(options) {
     if (!(this instanceof ServiceDispatchHandler)) {
         return new ServiceDispatchHandler(options);
@@ -131,7 +132,6 @@ function handleLazily(conn, reqFrame) {
 
 ServiceDispatchHandler.prototype.handleRequest =
 function handleRequest(req, buildRes) {
-    /* eslint max-statements:[2,20] */
     var self = this;
     if (!req.serviceName) {
         self.logger.warn('Got incoming req with no service',
