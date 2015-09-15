@@ -14,8 +14,8 @@
   "dependencies": {
     "bufrw": "0.9.20",
     "chalk": "1.0.0",
-    "collect-parallel": "^1.0.1",
-    "debug-logtron": "4.0.0",
+    "collect-parallel": "1.0.1",
+    "debug-logtron": "5.0.0",
     "deep-extend": "0.3.2",
     "error": "6.0.0",
     "get-port": "1.0.0",
