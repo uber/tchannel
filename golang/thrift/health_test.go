@@ -25,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/samuel/go-thrift/thrift"
+	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel/golang"
@@ -66,7 +66,7 @@ func TestCustomHealthNoEmpty(t *testing.T) {
 		ret, err := c.Health(ctx)
 		if assert.NoError(t, err, "Health endpoint failed") {
 			assert.False(t, ret.Ok, "Health status mismatch")
-			assert.Equal(t, ret.Message, thrift.String("from me"), "Health message mismatch")
+			assert.Equal(t, ret.Message, thrift.StringPtr("from me"), "Health message mismatch")
 		}
 	})
 }
