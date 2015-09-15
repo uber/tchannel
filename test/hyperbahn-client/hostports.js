@@ -50,10 +50,11 @@ function runTests(HyperbahnCluster) {
         size: 15
     }, function t(cluster, assert) {
         var bob = cluster.remotes.bob;
-        var bobSub = bob.channel.makeSubChannel({
-            serviceName: 'hyperbahn',
-            peers: cluster.hostPortList
-        });
+        var bobSub = bob.channel.subChannels.hyperbahn ||
+            bob.channel.makeSubChannel({
+                serviceName: 'hyperbahn',
+                peers: cluster.hostPortList
+            });
         var request = bobSub.request({
             headers: {
                 cn: 'test'
@@ -87,10 +88,11 @@ function runTests(HyperbahnCluster) {
     }, function t(cluster, assert) {
         var bob = cluster.remotes.bob;
         var steve = cluster.remotes.steve;
-        var steveSub = steve.channel.makeSubChannel({
-            serviceName: 'hyperbahn',
-            peers: cluster.hostPortList
-        });
+        var steveSub = steve.channel.subChannels.hyperbahn || 
+            steve.channel.makeSubChannel({
+                serviceName: 'hyperbahn',
+                peers: cluster.hostPortList
+            });
         var request = steveSub.request({
             headers: {
                 cn: 'test'
@@ -140,10 +142,11 @@ function runTests(HyperbahnCluster) {
         size: 5
     }, function t(cluster, assert) {
         var bob = cluster.remotes.bob;
-        var bobSub = bob.channel.makeSubChannel({
-            serviceName: 'hyperbahn',
-            peers: cluster.hostPortList
-        });
+        var bobSub = bob.channel.subChannels.hyperbahn ||
+            bob.channel.makeSubChannel({
+                serviceName: 'hyperbahn',
+                peers: cluster.hostPortList
+            });
         var request = bobSub.request({
             headers: {
                 cn: 'test'
@@ -176,10 +179,11 @@ function runTests(HyperbahnCluster) {
     }, function t(cluster, assert) {
         cluster.logger.whitelist('warn', 'Got unexpected invalid thrift for arg3');
         var bob = cluster.remotes.bob;
-        var bobSub = bob.channel.makeSubChannel({
-            serviceName: 'hyperbahn',
-            peers: cluster.hostPortList
-        });
+        var bobSub = bob.channel.subChannels.hyperbahn ||
+            bob.channel.makeSubChannel({
+                serviceName: 'hyperbahn',
+                peers: cluster.hostPortList
+            });
         var request = bobSub.request({
             headers: {
                 cn: 'test'
@@ -207,6 +211,7 @@ function runTests(HyperbahnCluster) {
                 'error message should be a parsing failure');
 
             var items = cluster.logger.items();
+            console.log('items', items);
             assert.ok(items.length > 0 && items[0].msg === 'Got unexpected invalid thrift for arg3',
                 'Do not miss the error log');
 
@@ -219,10 +224,11 @@ function runTests(HyperbahnCluster) {
     }, function t(cluster, assert) {
         cluster.logger.whitelist('warn', 'Got unexpected invalid thrift for arg3');
         var bob = cluster.remotes.bob;
-        var bobSub = bob.channel.makeSubChannel({
-            serviceName: 'hyperbahn',
-            peers: cluster.hostPortList
-        });
+        var bobSub = bob.channel.subChannels.hyperbahn ||
+            bob.channel.makeSubChannel({
+                serviceName: 'hyperbahn',
+                peers: cluster.hostPortList
+            });
         var request = bobSub.request({
             headers: {
                 cn: 'test'
@@ -262,10 +268,11 @@ function runTests(HyperbahnCluster) {
     }, function t(cluster, assert) {
         cluster.logger.whitelist('warn', 'Got unexpected invalid thrift for arg3');
         var bob = cluster.remotes.bob;
-        var bobSub = bob.channel.makeSubChannel({
-            serviceName: 'hyperbahn',
-            peers: cluster.hostPortList
-        });
+        var bobSub = bob.channel.subChannels.hyperbahn ||
+            bob.channel.makeSubChannel({
+                serviceName: 'hyperbahn',
+                peers: cluster.hostPortList
+            });
         var request = bobSub.request({
             headers: {
                 cn: 'test'
