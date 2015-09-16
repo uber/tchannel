@@ -21,9 +21,9 @@
 'use strict';
 
 var test = require('tape');
-var TChannel = require('../../');
+var TChannel = require('tchannel');
 
-var HyperbahnClient = require('../../hyperbahn/index.js');
+var HyperbahnClient = require('tchannel/hyperbahn/index.js');
 
 test('getting client subChannel without serviceName', function t(assert) {
     var client = HyperbahnClient({

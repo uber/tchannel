@@ -21,10 +21,10 @@
 'use strict';
 
 var test = require('tape');
-var TChannel = require('../../');
+var TChannel = require('tchannel');
 var DebugLogtron = require('debug-logtron');
 
-var HyperbahnClient = require('../../hyperbahn/index.js');
+var HyperbahnClient = require('tchannel/hyperbahn/index.js');
 
 test('creating HyperbahnClient with new', function t(assert) {
     var logger = DebugLogtron('hyperbahnclient');

@@ -24,8 +24,8 @@ var DebugLogtron = require('debug-logtron');
 var fs = require('fs');
 var path = require('path');
 
-var TChannelAsThrift = require('../../as/thrift');
-var HyperbahnClient = require('../../hyperbahn/index.js');
+var TChannelAsThrift = require('tchannel/as/thrift');
+var HyperbahnClient = require('tchannel/hyperbahn/index.js');
 
 var source = fs.readFileSync(path.join(__dirname, '../../hyperbahn/hyperbahn.thrift'), 'utf8');
 var thrift = new TChannelAsThrift({source: source});

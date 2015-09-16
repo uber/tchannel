@@ -20,8 +20,8 @@
 
 'use strict';
 var test = require('tape');
-var EgressNode = require('../../hyperbahn/egress-nodes');
-var EventEmitter = require('../../lib/event_emitter');
+var EgressNode = require('tchannel/hyperbahn/egress-nodes');
+var EventEmitter = require('tchannel/lib/event_emitter');
 
 test('set default k value works', function (assert) {
     var ringpop = new EventEmitter();

@@ -22,8 +22,8 @@
 
 var DebugLogtron = require('debug-logtron');
 
-var HyperbahnClient = require('../../hyperbahn/index.js');
-var TChannelJSON = require('../../as/json');
+var HyperbahnClient = require('tchannel/hyperbahn/index.js');
+var TChannelJSON = require('tchannel/as/json');
 // var timers = TimeMock(Date.now());
 
 module.exports = runTests;

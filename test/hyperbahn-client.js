@@ -22,13 +22,19 @@
 
 var TestCluster = require('./lib/test-cluster.js');
 
-require('tchannel/test/hyperbahn/forward.js')(TestCluster);
-require('tchannel/test/hyperbahn/advertise.js')(TestCluster);
-require('tchannel/test/hyperbahn/unadvertise.js')(TestCluster);
-// require('tchannel/test/hyperbahn/hostports.js')(TestCluster);
-require('tchannel/test/hyperbahn/forward-retry.js')(TestCluster);
+require('./hyperbahn-client/constructor.js');
+require('./hyperbahn-client/todo.js');
+require('./hyperbahn-client/sub-channel.js');
+require('./hyperbahn-client/kill-switch.js');
+require('./hyperbahn-client/egress-nodes.js');
 
-require('tchannel/test/hyperbahn/hyperbahn-down.js')(TestCluster);
-require('tchannel/test/hyperbahn/hyperbahn-times-out.js')(TestCluster);
+require('./hyperbahn-client/forward.js')(TestCluster);
+require('./hyperbahn-client/advertise.js')(TestCluster);
+require('./hyperbahn-client/unadvertise.js')(TestCluster);
+// require('./hyperbahn-client/hostports.js')(TestCluster);
+require('./hyperbahn-client/forward-retry.js')(TestCluster);
 
-require('tchannel/test/hyperbahn/rate-limiter.js')(TestCluster);
+require('./hyperbahn-client/hyperbahn-down.js')(TestCluster);
+require('./hyperbahn-client/hyperbahn-times-out.js')(TestCluster);
+
+require('./hyperbahn-client/rate-limiter.js')(TestCluster);

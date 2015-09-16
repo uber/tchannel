@@ -20,8 +20,8 @@
 
 'use strict';
 var DebugLogtron = require('debug-logtron');
-var TChannelJSON = require('../../as/json');
-var HyperbahnClient = require('../../hyperbahn/index.js');
+var TChannelJSON = require('tchannel/as/json');
+var HyperbahnClient = require('tchannel/hyperbahn/index.js');
 var series = require('run-series');
 
 module.exports = runTests;
