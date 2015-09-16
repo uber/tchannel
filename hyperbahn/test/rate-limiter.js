@@ -50,13 +50,13 @@ function wait(done) {
     timers.advance(500);
 }
 
-test('rps counter works', function (assert) {
+test('rps counter works', function t(assert) {
     var channel = new TChannel({
         timers: timers,
         statsd: nullStatsd(2)
     });
     var statsd = channel.statsd;
-    var rateLimiter = RateLimiter ({
+    var rateLimiter = RateLimiter({
         numOfBuckets: 2,
         channel: channel
     });
@@ -83,13 +83,13 @@ test('rps counter works', function (assert) {
     channel.close();
 });
 
-test('rps counter works in 1.5 seconds', function (assert) {
+test('rps counter works in 1.5 seconds', function t(assert) {
     var channel = new TChannel({
         timers: timers,
         statsd: nullStatsd(14)
     });
     var statsd = channel.statsd;
-    var rateLimiter = RateLimiter ({
+    var rateLimiter = RateLimiter({
         numOfBuckets: 2,
         channel: channel
     });
@@ -204,11 +204,11 @@ test('rps counter works in 1.5 seconds', function (assert) {
     });
 });
 
-test('remove counter works', function (assert) {
+test('remove counter works', function t(assert) {
     var channel = new TChannel({
-        timers: timers,
+        timers: timers
     });
-    var rateLimiter = RateLimiter ({
+    var rateLimiter = RateLimiter({
         channel: channel,
         numOfBuckets: 2
     });
@@ -228,11 +228,11 @@ test('remove counter works', function (assert) {
     assert.end();
 });
 
-test('rate limit works', function (assert) {
+test('rate limit works', function t(assert) {
     var channel = new TChannel({
-        timers: timers,
+        timers: timers
     });
-    var rateLimiter = RateLimiter ({
+    var rateLimiter = RateLimiter({
         channel: channel,
         numOfBuckets: 2,
         rpsLimitForServiceName: {
@@ -258,11 +258,11 @@ test('rate limit works', function (assert) {
     assert.end();
 });
 
-test('rate exempt service works', function (assert) {
+test('rate exempt service works', function t(assert) {
     var channel = new TChannel({
-        timers: timers,
+        timers: timers
     });
-    var rateLimiter = RateLimiter ({
+    var rateLimiter = RateLimiter({
         channel: channel,
         totalRpsLimit: 2,
         exemptServices: ['steve']
@@ -281,17 +281,17 @@ test('rate exempt service works', function (assert) {
     assert.end();
 });
 
-test('rate exempt service works', function (assert) {
+test('rate exempt service works', function t(assert) {
     var channel = new TChannel({
-        timers: timers,
+        timers: timers
     });
-    var rateLimiter = RateLimiter ({
+    var rateLimiter = RateLimiter({
         channel: channel,
         totalRpsLimit: 2,
         rpsLimitForServiceName: {
             steve: 2,
             bob: 2
-        },
+        }
     });
 
     increment(rateLimiter, 'steve', 'bob');
