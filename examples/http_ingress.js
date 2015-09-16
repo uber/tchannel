@@ -20,10 +20,12 @@
 
 'use strict';
 
+var http = require('http');
 var assert = require('assert');
 var parseArgs = require('minimist');
 var TChannel = require('../channel');
 var TChannelAsHTTP = require('../as/http');
+var LBPool = require('lb_pool').Pool;
 
 /* Minimal working example of an HTTP "bridge" over TChannel:
  * 1) start an http service:
@@ -54,6 +56,7 @@ function usage() {
     console.error('\nOptions:');
     console.error('  --bind <address>');
     console.error('  --tchannel-port <port>');
+    console.error('  --streamed');
     process.exit(1);
 }
 
@@ -67,7 +70,16 @@ assert(parts.length === 2);
 var destHost = parts[0];
 var destPort = parts[1];
 
-var asHTTP = TChannelAsHTTP();
+if (argv.streamed) {
+    var asHTTP = TChannelAsHTTP();
+}
+else {
+    var servers = [dest];
+    var lbpool = new LBPool(http, servers, {
+        keep_alive: true
+    });
+    var asHTTP = TChannelAsHTTP({lbpool: lbpool});
+}
 
 var tchan = TChannel();
 tchan.listen(argv.tchannelPort, argv.bind, onChannelListening);
