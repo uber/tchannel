@@ -23,7 +23,7 @@
 var format = require('util').format;
 var inherits = require('util').inherits;
 
-var errors = require('./errors');
+var errors = require('tchannel/errors');
 
 module.exports.StateOptions = StateOptions;
 module.exports.HealthyState = HealthyState;

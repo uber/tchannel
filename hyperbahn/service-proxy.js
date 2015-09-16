@@ -25,8 +25,9 @@ var RelayHandler = require('tchannel/relay_handler');
 var EventEmitter = require('tchannel/lib/event_emitter');
 var clean = require('tchannel/lib/statsd-clean').clean;
 var RateLimiter = require('tchannel/rate_limiter');
-var Circuits = require('tchannel/circuits');
 var util = require('util');
+
+var Circuits = require('./circuits.js');
 
 var DEFAULT_LOG_GRACE_PERIOD = 5 * 60 * 1000;
 var SERVICE_PURGE_PERIOD = 5 * 60 * 1000;

@@ -18,13 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-"use strict";
+'use strict';
 
 var inherits = require('util').inherits;
-var states = require('./states');
-var EventEmitter = require('./lib/event_emitter');
-var StateMachine = require('./state_machine');
-var errors = require('./errors');
+var errors = require('tchannel/errors');
+var EventEmitter = require('tchannel/lib/event_emitter');
+
+var states = require('./states.js');
+var StateMachine = require('./state_machine.js');
 
 // Each circuit uses the circuits collection as the "nextHandler" for
 // "shouldRequest" to consult.  Peers use this hook to weight peers both by
