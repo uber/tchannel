@@ -56,10 +56,14 @@ function TestCluster(opts) {
     self.dummySize = self.opts.dummySize || 2;
     self.namedRemotesConfig = self.opts.namedRemotes || [];
 
-    if (typeof opts.kValue === 'number') {
-        opts.remoteConfig = opts.remoteConfig || {};
-        opts.remoteConfig['kValue.default'] = opts.kValue;
-    }
+    var defaultKValue = self.size <= 20 ?
+        Math.floor(self.size / 2) : 10;
+
+    self.kValue = typeof opts.kValue === 'number' ?
+        opts.kValue : defaultKValue;
+
+    opts.remoteConfig = opts.remoteConfig || {};
+    opts.remoteConfig['kValue.default'] = self.kValue;
 
     // These are a ring of Hyperbahn apps
     self.apps = [];
