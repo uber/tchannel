@@ -44,6 +44,7 @@ allocCluster.test('immediate drain', {
 
     function drained() {
         assert.pass('immediate drain happened');
+        waitForConnRemoved(6, cluster, finish);
         server.close(closed);
     }
 
@@ -52,9 +53,7 @@ allocCluster.test('immediate drain', {
             finish(err);
             return;
         }
-
         assert.pass('server closed');
-        setTimeout(finish, 1);
     }
 
     function finish(err) {
@@ -137,6 +136,7 @@ allocCluster.test('drain server with a few incoming', {
 
     function drained() {
         assert.pass('drain happened');
+        waitForConnRemoved(6, cluster, finish);
         server.close(closed);
     }
 
@@ -147,7 +147,6 @@ allocCluster.test('drain server with a few incoming', {
         }
 
         assert.pass('server closed');
-        setTimeout(finish, 1);
     }
 
     function finish(err) {
@@ -250,6 +249,7 @@ allocCluster.test('drain server with a few incoming (with exempt service)', {
 
     function drained() {
         assert.pass('drain happened');
+        waitForConnRemoved(6, cluster, finish);
         server.close(closed);
     }
 
@@ -279,8 +279,6 @@ allocCluster.test('drain server with a few incoming (with exempt service)', {
                 msg: 'ignoring outresponse.send on a closed connection'
             }, 'expected zero or more sends after close');
         }
-
-        setTimeout(finish, 1);
     }
 
     function finish(err) {
@@ -370,6 +368,7 @@ allocCluster.test('drain client with a few outgoing', {
 
     function drained() {
         assert.pass('drain happened');
+        waitForConnRemoved(2, cluster, finish);
         drainClient.close(closed);
     }
 
@@ -380,7 +379,6 @@ allocCluster.test('drain client with a few outgoing', {
         }
 
         assert.pass('client closed');
-        setTimeout(finish, 1);
     }
 
     function finish(err) {
@@ -436,9 +434,7 @@ allocCluster.test('drain client with a few outgoing', {
                     ]}]}
                 ]
             });
-        }
 
-        if (finishCount <= 0) {
             assert.end();
         }
     }
@@ -544,6 +540,7 @@ allocCluster.test('drain client with a few outgoing (with exempt service)', {
 
     function drained() {
         assert.pass('drain happened');
+        waitForConnRemoved(2, cluster, finish);
         drainClient.close(closed);
     }
 
@@ -554,7 +551,6 @@ allocCluster.test('drain client with a few outgoing (with exempt service)', {
         }
 
         assert.pass('client closed');
-        setTimeout(finish, 1);
     }
 
     function checkLogs() {
@@ -629,9 +625,7 @@ allocCluster.test('drain client with a few outgoing (with exempt service)', {
                     ]}]}
                 ]
             });
-        }
 
-        if (finishCount <= 0) {
             assert.end();
         }
     }
@@ -739,11 +733,24 @@ function checkFinish(assert, err, cluster, finishCount) {
                 {peers: [{connections: []}]}
             ]
         });
-    }
 
-    if (finishCount <= 0) {
         assert.end();
     }
 
     return finishCount;
+}
+
+function waitForConnRemoved(count, cluster, callback) {
+    cluster.channels.forEach(function eachChannel(chan) {
+        var peers = chan.peers.values();
+        peers.forEach(function eachPeer(peer) {
+            peer.on('removeConnection', removed);
+        });
+    });
+
+    function removed() {
+        if (--count <= 0) {
+            callback(null);
+        }
+    }
 }
