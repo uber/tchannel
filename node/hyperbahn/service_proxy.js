@@ -111,14 +111,13 @@ function handleRequest(req, buildRes) {
     }
 
     var chan = self.channel.subChannels[req.serviceName];
-    if (chan) {
-        // Temporary hack. Need to set json by default because
-        // we want to upgrade without breaking ncar
-        chan.handler.handleRequest(req, buildRes);
-    } else {
+    if (!chan) {
         chan = self.getOrCreateServiceChannel(req.serviceName);
-        chan.handler.handleRequest(req, buildRes);
     }
+
+    // Temporary hack. Need to set json by default because
+    // we want to upgrade without breaking ncar
+    chan.handler.handleRequest(req, buildRes);
 };
 
 ServiceDispatchHandler.prototype.rateLimit =
