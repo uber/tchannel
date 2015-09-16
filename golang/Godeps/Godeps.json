@@ -1,6 +1,6 @@
 {
 	"ImportPath": "github.com/uber/tchannel/golang",
-	"GoVersion": "go1.4.2",
+	"GoVersion": "go1.5",
 	"Packages": [
 		"./..."
 	],
@@ -15,8 +15,13 @@
 			"Rev": "e2d8818d10f59a279d5a97778c1c4ecdbcd5c9df"
 		},
 		{
+			"ImportPath": "github.com/jessevdk/go-flags",
+			"Comment": "v1-297-g1b89bf7",
+			"Rev": "1b89bf73cd2c3a911d7b2a279ab085c4a18cf539"
+		},
+		{
 			"ImportPath": "github.com/samuel/go-thrift/parser",
-			"Rev": "cc9ca8d18368623fde7aaf35a8a6a32feafd7f51"
+			"Rev": "67448a76c265e5e6e88d5e46ae628107b122b822"
 		},
 		{
 			"ImportPath": "github.com/stretchr/objx",
