@@ -111,13 +111,13 @@ function handleRequest(req, buildRes) {
     }
 
     var chan = self.channel.subChannels[req.serviceName];
-    if (chan) {
-        // Temporary hack. Need to set json by default because
-        // we want to upgrade without breaking ncar
-        chan.handler.handleRequest(req, buildRes);
-    } else {
-        self.handleDefault(req, buildRes);
+    if (!chan) {
+        chan = self.createServiceChannel(req.serviceName);
     }
+
+    // Temporary hack. Need to set json by default because
+    // we want to upgrade without breaking ncar
+    chan.handler.handleRequest(req, buildRes);
 };
 
 ServiceDispatchHandler.prototype.rateLimit =
@@ -167,13 +167,6 @@ function rateLimit(req, buildRes) {
     return false;
 };
 
-ServiceDispatchHandler.prototype.handleDefault =
-function handleDefault(req, buildRes) {
-    var self = this;
-    var svcchan = self.getOrCreateServiceChannel(req.serviceName);
-    svcchan.handler.handleRequest(req, buildRes);
-};
-
 ServiceDispatchHandler.prototype.getOrCreateServiceChannel =
 function getOrCreateServiceChannel(serviceName) {
     var self = this;
@@ -185,13 +178,6 @@ function getServiceChannel(serviceName, create) {
     var self = this;
     var svcchan = self.channel.subChannels[serviceName];
     if (!svcchan && create) {
-        var now = self.channel.timers.now();
-        if (now >= self.createdAt + self.logGracePeriod) {
-            self.logger.info('Creating new sub channel', self.extendLogInfo({
-                serviceName: serviceName
-            }));
-        }
-
         svcchan = self.createServiceChannel(serviceName);
     }
     return svcchan;
@@ -220,6 +206,13 @@ function _getServicePeer(svcchan, hostPort) {
 ServiceDispatchHandler.prototype.createServiceChannel =
 function createServiceChannel(serviceName) {
     var self = this;
+
+    var now = self.channel.timers.now();
+    if (now >= self.createdAt + self.logGracePeriod) {
+        self.logger.info('Creating new sub channel', self.extendLogInfo({
+            serviceName: serviceName
+        }));
+    }
 
     var exitNodes = self.egressNodes.exitsFor(serviceName);
     var isExit = self.egressNodes.isExitFor(serviceName);

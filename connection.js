@@ -604,4 +604,19 @@ InitOperation.prototype.onTimeout = function onTimeout(now) {
     self.connection.resetAll(err);
 };
 
+TChannelConnection.prototype.sendLazyErrorFrame =
+function sendLazyErrorFrame(reqFrame, codeString, message) {
+    var self = this;
+
+    var fakeR = {
+        id: reqFrame.id,
+        tracing: null
+    };
+    var res = reqFrame.bodyRW.lazy.readService(reqFrame);
+    if (!res.err) {
+        fakeR.tracing = res.value;
+    }
+    self.handler.sendErrorFrame(fakeR, codeString, message);
+};
+
 module.exports = TChannelConnection;
