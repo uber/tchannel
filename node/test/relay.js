@@ -23,8 +23,6 @@
 var allocCluster = require('./lib/alloc-cluster');
 var TChannel = require('../channel');
 var RelayHandler = require('../relay_handler');
-var RelayNetwork = require('./lib/relay_network');
-var CountedReady = require('ready-signal/counted');
 
 allocCluster.test('send relay requests', {
     numPeers: 2
