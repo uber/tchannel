@@ -143,7 +143,8 @@ function HyperbahnClient(options) {
     self.hyperbahnChannel = self.tchannel.subChannels.hyperbahn ||
         self.tchannel.makeSubChannel({
             serviceName: 'hyperbahn',
-            peers: self.hostPortList
+            peers: self.hostPortList,
+            preferConnectionDirection: 'in'
         });
     self.tchannelJSON = TChannelJSON();
 
@@ -195,6 +196,7 @@ function getClientChannel(options) {
     var channelOptions = {
         peers: self.hostPortList,
         serviceName: options.serviceName,
+        preferConnectionDirection: 'in',
         requestDefaults: {
             serviceName: options.serviceName,
             headers: {
