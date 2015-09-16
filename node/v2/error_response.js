@@ -65,8 +65,31 @@ CodeNames[Codes.NetworkError] = 'network error';
 CodeNames[Codes.ProtocolError] = 'protocol error';
 CodeNames[Codes.Unhealthy] = 'unhealthy';
 
+function CodeError(type, message, isErrorFrame, codeName, errorCode, originalId) {
+    var self = this;
+    self.type = type;
+    self.message = message;
+    self.isErrorFrame = isErrorFrame;
+    self.codeName = codeName;
+    self.errorCode = errorCode;
+    self.originalId = originalId;
+}
+
+function partiallyApplyCodeError(options1) {
+    return function makeError(options2) {
+        return new CodeError(
+            options1.type || options2.type,
+            options1.message || options2.message,
+            options1.isErrorFrame || options2.isErrorFrame,
+            options1.codeName || options2.codeName,
+            options1.errorCode || options2.errorCode,
+            options1.originalId || options2.originalId
+        );
+    }
+}
+
 var CodeErrors = Object.create(null);
-CodeErrors[Codes.Timeout] = TypedError({
+CodeErrors[Codes.Timeout] = partiallyApplyCodeError({
     type: 'tchannel.timeout',
     message: 'TChannel timeout',
     isErrorFrame: true,
@@ -74,7 +97,7 @@ CodeErrors[Codes.Timeout] = TypedError({
     errorCode: Codes.Timeout,
     originalId: null
 });
-CodeErrors[Codes.Cancelled] = TypedError({
+CodeErrors[Codes.Cancelled] = partiallyApplyCodeError({
     type: 'tchannel.cancelled',
     message: 'TChannel cancelled',
     isErrorFrame: true,
@@ -82,7 +105,7 @@ CodeErrors[Codes.Cancelled] = TypedError({
     errorCode: Codes.Cancelled,
     originalId: null
 });
-CodeErrors[Codes.Busy] = TypedError({
+CodeErrors[Codes.Busy] = partiallyApplyCodeError({
     type: 'tchannel.busy',
     message: 'TChannel busy',
     isErrorFrame: true,
@@ -90,7 +113,7 @@ CodeErrors[Codes.Busy] = TypedError({
     errorCode: Codes.Busy,
     originalId: null
 });
-CodeErrors[Codes.Declined] = TypedError({
+CodeErrors[Codes.Declined] = partiallyApplyCodeError({
     type: 'tchannel.declined',
     message: 'TChannel declined',
     isErrorFrame: true,
@@ -98,7 +121,7 @@ CodeErrors[Codes.Declined] = TypedError({
     errorCode: Codes.Declined,
     originalId: null
 });
-CodeErrors[Codes.UnexpectedError] = TypedError({
+CodeErrors[Codes.UnexpectedError] = partiallyApplyCodeError({
     type: 'tchannel.unexpected',
     message: 'TChannel unexpected error',
     isErrorFrame: true,
@@ -106,7 +129,7 @@ CodeErrors[Codes.UnexpectedError] = TypedError({
     errorCode: Codes.UnexpectedError,
     originalId: null
 });
-CodeErrors[Codes.BadRequest] = TypedError({
+CodeErrors[Codes.BadRequest] = partiallyApplyCodeError({
     type: 'tchannel.bad-request',
     message: 'TChannel bad request',
     isErrorFrame: true,
@@ -114,7 +137,7 @@ CodeErrors[Codes.BadRequest] = TypedError({
     errorCode: Codes.BadRequest,
     originalId: null
 });
-CodeErrors[Codes.NetworkError] = TypedError({
+CodeErrors[Codes.NetworkError] = partiallyApplyCodeError({
     type: 'tchannel.network',
     message: 'TChannel network error',
     isErrorFrame: true,
@@ -122,7 +145,7 @@ CodeErrors[Codes.NetworkError] = TypedError({
     errorCode: Codes.NetworkError,
     originalId: null
 });
-CodeErrors[Codes.ProtocolError] = TypedError({
+CodeErrors[Codes.ProtocolError] = partiallyApplyCodeError({
     type: 'tchannel.protocol',
     message: 'TChannel protocol error',
     isErrorFrame: true,
@@ -130,7 +153,7 @@ CodeErrors[Codes.ProtocolError] = TypedError({
     errorCode: Codes.ProtocolError,
     originalId: null
 });
-CodeErrors[Codes.Unhealthy] = TypedError({
+CodeErrors[Codes.Unhealthy] = partiallyApplyCodeError({
     type: 'tchannel.unhealthy',
     message: 'TChannel unhealthy',
     isErrorFrame: true,
