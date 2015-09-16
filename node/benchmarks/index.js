@@ -332,13 +332,14 @@ BenchmarkRunner.prototype.startTorch = function startTorch() {
     var torchTime = self.opts.torchTime || '30';
     var torchDelay = self.opts.torchDelay || 10 * 1000;
     var torchType = self.opts.torchType || 'raw';
+    var torchIndex = self.opts.torchIndex || 0;
 
     if (self.opts.torch === 'relay') {
-        torchPid = self.relayProcs[0].pid;
+        torchPid = self.relayProcs[torchIndex].pid;
     } else if (self.opts.torch === 'client') {
-        torchPid = self.benchProcs[0].pid;
+        torchPid = self.benchProcs[torchIndex].pid;
     } else if (self.opts.torch === 'server') {
-        torchPid = self.serverProcs[0].pid;
+        torchPid = self.serverProcs[torchIndex].pid;
     }
 
     setTimeout(function delayTorching() {
