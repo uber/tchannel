@@ -64,8 +64,8 @@ test('rps counter works', function (assert) {
     increment(rateLimiter, 'steve');
 
     assert.equals(rateLimiter.totalRequestCounter.rps, 5, 'total request');
-    assert.equals(rateLimiter.counters.steve.rps, 3, 'request for steve');
-    assert.equals(rateLimiter.counters.bob.rps, 2, 'request for bob');
+    assert.equals(rateLimiter.serviceCounters.steve.rps, 3, 'request for steve');
+    assert.equals(rateLimiter.serviceCounters.bob.rps, 2, 'request for bob');
 
     channel.flushStats();
     assert.deepEqual(statsd._buffer._elements, [{
@@ -99,16 +99,16 @@ test('rps counter works in 1.5 seconds', function (assert) {
         increment.bind(null, rateLimiter, 'steve', null),
         function check1(done) {
             assert.equals(rateLimiter.totalRequestCounter.rps, 5, 'check1: total request');
-            assert.equals(rateLimiter.counters.steve.rps, 3, 'check1: request for steve');
-            assert.equals(rateLimiter.counters.bob.rps, 2, 'check1: request for bob');
+            assert.equals(rateLimiter.serviceCounters.steve.rps, 3, 'check1: request for steve');
+            assert.equals(rateLimiter.serviceCounters.bob.rps, 2, 'check1: request for bob');
             done();
         },
         wait,
         increment.bind(null, rateLimiter, 'steve', 'bob'),
         function check2(done) {
             assert.equals(rateLimiter.totalRequestCounter.rps, 3, 'check2: total request');
-            assert.equals(rateLimiter.counters.steve.rps, 2, 'check2: request for steve');
-            assert.equals(rateLimiter.counters.bob.rps, 1, 'check2: request for bob');
+            assert.equals(rateLimiter.serviceCounters.steve.rps, 2, 'check2: request for steve');
+            assert.equals(rateLimiter.serviceCounters.bob.rps, 1, 'check2: request for bob');
             done();
         }
     ], function done() {
@@ -218,8 +218,8 @@ test('remove counter works', function (assert) {
     rateLimiter.removeServiceCounter('steve');
 
     assert.equals(rateLimiter.totalRequestCounter.rps, 5, 'total request');
-    assert.ok(!rateLimiter.counters.steve, 'steve should be removed');
-    assert.equals(rateLimiter.counters.bob.rps, 2, 'request for bob');
+    assert.ok(!rateLimiter.serviceCounters.steve, 'steve should be removed');
+    assert.equals(rateLimiter.serviceCounters.bob.rps, 2, 'request for bob');
 
     rateLimiter.destroy();
     channel.close();
@@ -244,8 +244,8 @@ test('rate limit works', function (assert) {
     increment(rateLimiter, 'steve');
 
     assert.equals(rateLimiter.totalRequestCounter.rps, 5, 'total request');
-    assert.equals(rateLimiter.counters.steve.rps, 3, 'request for steve');
-    assert.equals(rateLimiter.counters.bob.rps, 2, 'request for bob');
+    assert.equals(rateLimiter.serviceCounters.steve.rps, 3, 'request for steve');
+    assert.equals(rateLimiter.serviceCounters.bob.rps, 2, 'request for bob');
 
     assert.ok(rateLimiter.shouldRateLimitTotalRequest(), 'should rate limit total request');
     assert.ok(rateLimiter.shouldRateLimitService('steve'), 'should rate limit steve');
