@@ -1,10 +1,10 @@
 torch-relay-bench:
 	node index.js --relay --torch relay --torchFile ./flame.raw --torchTime 10 \
-		-- --relay --skipPing -s 4096,16384 -p 1000,10000,20000
+		-- --relay --skipPing -s 4096,16384 -p 10000,20000
 
-take_relay:
+take-relay:
 	node index.js --relay --noEndpointOverhead -o relay-$$(git rev-parse --short HEAD).json \
-		-- --relay --skipPing -m 3 -s 4096,16384 -p 1000,10000,20000
+		-- --relay --skipPing -m 3 -s 4096,16384 -p 10000,20000
 	ln -sf relay-$$(git rev-parse --short HEAD).json relay-$$(basename $$(git symbolic-ref HEAD)).json
 
 kill-dead-benchmarks:
@@ -18,4 +18,13 @@ create-flame:
 	flamegraph.pl ./flame.folded > ./flame.svg
 	google-chrome ./flame.svg
 
-.PHONY: take_relay
+take-relay-bad:
+	node index.js --bad --relay --noEndpointOverhead -o relay-$$(git rev-parse --short HEAD)-bad.json \
+		-- --bad --relay --skipPing -m 3 -s 4096,16384 -p 10000,20000
+	ln -sf relay-$$(git rev-parse --short HEAD)-bad.json relay-$$(basename $$(git symbolic-ref HEAD))-bad.json
+
+torch-relay-bad-bench:
+	node index.js --bad --relay --torch relay --torchFile ./flame.raw --torchTime 10 \
+		-- --bad --relay --skipPing -s 4096,16384 -p 10000,20000
+
+.PHONY: take-relay take-relay-bad create-flame top-benchmark kill-dead-benchmarks torch-relay-bench

@@ -50,11 +50,14 @@
     "xtend": "4.0.0"
   },
   "devDependencies": {
+    "body": "^5.1.0",
     "format-stack": "4.1.0",
     "istanbul": "^0.3.17",
+    "kafka-logger": "^6.1.0",
     "metrics": "^0.1.9",
     "opn": "^0.1.2",
     "rezult": "^1.0.0",
+    "sentry-logger": "^3.0.3",
     "tape": "^3.4.0",
     "time-mock": "^0.1.2",
     "uber-licence": "1.5.1",

@@ -25,6 +25,8 @@ var parseArgs = require('minimist');
 var process = require('process');
 var util = require('util');
 var path = require('path');
+var FakeKafkaServer = require('kafka-logger/test/lib/kafka-server');
+var FakeSentryServer = require('sentry-logger/test/lib/sentry-server');
 
 var BenchmarkRunner = require('tchannel/benchmarks/');
 
@@ -40,16 +42,39 @@ function HyperbahnBenchmarkRunner(opts) {
 }
 util.inherits(HyperbahnBenchmarkRunner, BenchmarkRunner);
 
+HyperbahnBenchmarkRunner.prototype.startFakeSentry =
+function startFakeSentry() {
+    var self = this;
+    self.sentry = FakeSentryServer(onSentry);
+
+    function onSentry(msg) {
+    }
+};
+
+HyperbahnBenchmarkRunner.prototype.startFakeKafka =
+function startFakeKafka() {
+    var self = this;
+    self.kafka = FakeKafkaServer(onKafkaMessage);
+
+    function onKafkaMessage(msg) {
+    }
+};
+
 HyperbahnBenchmarkRunner.prototype.spawnRelayServer =
 function spawnRelayServer() {
     var self = this;
+
+    self.startFakeKafka();
+    self.startFakeSentry();
 
     var hyperbahnProc = self.run(bahn, [
         '--serverPort', String(self.ports.serverPort),
         '--serverServiceName', String(self.serviceName),
         '--instances', String(self.instanceCount),
         '--workerPort', String(self.ports.relayServerPort),
-        '--statsdPort', String(self.ports.statsdPort)
+        '--statsdPort', String(self.ports.statsdPort),
+        '--kafkaPort', String(self.kafka.port),
+        '--sentryPort', String(self.sentry.address().port)
     ]);
     self.relayProcs.push(hyperbahnProc);
     hyperbahnProc.stdout.pipe(process.stderr);
@@ -64,6 +89,7 @@ if (require.main === module) {
         },
         boolean: ['relay', 'trace', 'debug', 'noEndpointOverhead']
     });
+    process.title = 'nodejs-benchmarks-top-level-runner';
     var runner = HyperbahnBenchmarkRunner(argv);
     runner.start();
 }
