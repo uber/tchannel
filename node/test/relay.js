@@ -245,36 +245,3 @@ function echo(req, res, arg2, arg3) {
     res.headers.as = 'raw';
     res.sendOk(arg2, arg3);
 }
-
-RelayNetwork.test('relay network changes dont break', {
-    serviceNames: ['alice', 'bob'],
-    numInstancesPerService: 1,
-    kValue: 1,
-    numRelays: 2
-}, function t(network, assert) {
-    network.cluster.logger.whitelist('info', 'Changing to forward node');
-
-    var aliceHosts = network.topology.alice;
-    var bobHosts = network.topology.bob;
-    network.topology.bob = aliceHosts;
-    network.topology.alice = bobHosts;
-
-    var ready = CountedReady(2);
-
-    network.relayChannels[0].handler.roleTransitionEvent
-        .on(function forwardChange(stuff) {
-            assert.equals(stuff.newMode, 'forward');
-            ready.signal();
-        });
-
-    network.relayChannels[1].handler.roleTransitionEvent
-        .on(function forwardChange(stuff) {
-            assert.equals(stuff.newMode, 'forward');
-            ready.signal();
-        });
-
-    network.egressNodesForRelay[0].membershipChangedEvent.emit();
-    network.egressNodesForRelay[1].membershipChangedEvent.emit();
-
-    ready(assert.end);
-});
