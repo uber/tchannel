@@ -30,6 +30,8 @@ var Circuits = require('../circuits');
 
 var DEFAULT_LOG_GRACE_PERIOD = 5 * 60 * 1000;
 var SERVICE_PURGE_PERIOD = 5 * 60 * 1000;
+var DEFAULT_MIN_PEERS_PER_WORKER = 5;
+var DEFAULT_MIN_PEERS_PER_RELAY = 5;
 
 function ServiceDispatchHandler(options) {
     if (!(this instanceof ServiceDispatchHandler)) {
@@ -73,6 +75,10 @@ function ServiceDispatchHandler(options) {
         numOfBuckets: options.rateLimiterBuckets
     });
     self.rateLimiterEnabled = options.rateLimiterEnabled;
+
+    self.partialAffinityEnabled = options.partialAffinityEnabled;
+    self.minPeersPerWorker = options.minPeersPerWorker || DEFAULT_MIN_PEERS_PER_WORKER;
+    self.minPeersPerRelay = options.minPeersPerRelay || DEFAULT_MIN_PEERS_PER_RELAY;
 
     self.egressNodes.on('membershipChanged', onMembershipChanged);
 
@@ -275,11 +281,65 @@ ServiceDispatchHandler.prototype.refreshServicePeer =
 function refreshServicePeer(serviceName, hostPort) {
     var self = this;
 
+    // Add hostPort to service peers, decision pending on whether to connect.
     var peer = self.getServicePeer(serviceName, hostPort);
-    peer.connect(true);
 
+    // The old way: fully connect every egress to all affine peers.
+    if (!self.partialAffinityEnabled) {
+        peer.connectTo();
+        return;
+    }
+
+    // Make a note not to collect this service
     var time = self.channel.timers.now();
     self.exitServices[serviceName] = time;
+
+    // Obtain and sort the affine worker and relay lists.
+    var relays = Object.keys(self.egressNodes.exitsFor(serviceName));
+    relays.sort();
+    var serviceChannel = self.getOrCreateServiceChannel(serviceName);
+    var workers = serviceChannel.peers.keys();
+    workers.sort();
+
+    // Find our position within the affine relay set so we can project that
+    // position into the affine worker set.
+    var relayIndex = relays.indexOf(self.channel.hostPort);
+    // istanbul ignore if
+    if (relayIndex < 0) {
+        // This should only occur if an advertisement loses the race with a
+        // relay ring membership change.
+        self.logger.warn('Relay could not find itself in the affinity set for service', {
+            serviceName: serviceName,
+            relayHostPort: self.channel.hostPort,
+            workerHostPort: hostPort,
+            relays: relays,
+            workers: workers
+        });
+        return;
+    }
+
+    // Compute the range of workers that this relay should be connected to.
+    var ratio = workers.length / relays.length;
+    var start = (relayIndex * ratio) % workers.length;
+    var length = Math.max(self.minPeersPerRelay, self.minPeersPerWorker * ratio);
+    var stop = (start + length) % workers.length;
+
+    // Adjust connections as necessary.
+    for (var workerIndex = 0; workerIndex < workers.length; workerIndex++) {
+        var shouldConnect;
+        if (start <= stop) { // ...start||||stop...
+            shouldConnect = workerIndex >= start && workerIndex < stop;
+        } else { // |||stop...start|||
+            shouldConnect = workerIndex >= start || workerIndex < stop;
+        }
+        if (shouldConnect) {
+            peer = self.getServicePeer(serviceName, workers[workerIndex]);
+            peer.connectTo();
+        }
+        // TODO Drop peers that no longer have affinity for this service, such
+        // that they may be elligible for having their connections reaped.
+    }
+
 };
 
 ServiceDispatchHandler.prototype.removeServicePeer =
@@ -644,6 +704,18 @@ ServiceDispatchHandler.prototype.disableRateLimiter =
 function disableRateLimiter() {
     var self = this;
     self.rateLimiterEnabled = false;
+};
+
+ServiceDispatchHandler.prototype.enablePartialAffinity =
+function enablePartialAffinity() {
+    var self = this;
+    self.partialAffinityEnabled = true;
+};
+
+ServiceDispatchHandler.prototype.disablePartialAffinity =
+function disablePartialAffinity() {
+    var self = this;
+    self.partialAffinityEnabled = false;
 };
 
 ServiceDispatchHandler.prototype.extendLogInfo =
