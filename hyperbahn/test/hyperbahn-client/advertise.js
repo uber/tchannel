@@ -24,7 +24,7 @@ var DebugLogtron = require('debug-logtron');
 var fs = require('fs');
 var crypto = require('crypto');
 
-var HyperbahnClient = require('../../hyperbahn/index.js');
+var HyperbahnClient = require('tchannel/hyperbahn/index.js');
 
 module.exports = runTests;
 
