@@ -23,7 +23,6 @@
 require('./errors.js');
 require('./event_emitter.js');
 require('./argstream.js');
-// require('./circuits.js');
 require('./safe-quit.js');
 require('./timeouts.js');
 require('./send.js');
