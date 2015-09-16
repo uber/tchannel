@@ -96,7 +96,8 @@ function runTests(HyperbahnCluster) {
                     cluster.apps.forEach(function (app) {
                         var relayChannel = app.clients.tchannel;
                         assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 3, 'total request');
-                        assert.equals(relayChannel.handler.rateLimiter.counters.steve.rps, 3, 'request for steve');
+                        assert.equals(relayChannel.handler.rateLimiter.serviceCounters.steve.rps, 3, 'request for steve');
+                        assert.equals(relayChannel.handler.rateLimiter.edgeCounters['bob~~steve'].rps, 3, 'request for bob~~steve');
                     });
                     done();
                 }
@@ -149,7 +150,8 @@ function runTests(HyperbahnCluster) {
                         var relayChannel = app.clients.tchannel;
                         var rateLimiter = relayChannel.handler.rateLimiter;
                         assert.equals(rateLimiter.totalRequestCounter.rps, 3, 'check1: total request');
-                        assert.equals(rateLimiter.counters.steve.rps, 3, 'check1: request for steve');
+                        assert.equals(rateLimiter.serviceCounters.steve.rps, 3, 'check1: request for steve');
+                        assert.equals(relayChannel.handler.rateLimiter.edgeCounters['bob~~steve'].rps, 3, 'check1: request for bob~~steve');
                     });
                     done();
                 },
@@ -161,7 +163,8 @@ function runTests(HyperbahnCluster) {
                         var relayChannel = app.clients.tchannel;
                         var rateLimiter = relayChannel.handler.rateLimiter;
                         assert.equals(rateLimiter.totalRequestCounter.rps, 2, 'check2: total request');
-                        assert.equals(rateLimiter.counters.steve.rps, 2, 'check2: request for steve');
+                        assert.equals(rateLimiter.serviceCounters.steve.rps, 2, 'check2: request for steve');
+                        assert.equals(relayChannel.handler.rateLimiter.edgeCounters['bob~~steve'].rps, 2, 'check2: request for bob~~steve');
                     });
                     done();
                 }
