@@ -67,7 +67,8 @@ function TestCluster(opts) {
         opts.kValue : defaultKValue;
 
     opts.remoteConfig = opts.remoteConfig || {};
-    opts.remoteConfig['kValue.default'] = self.kValue;
+    opts.remoteConfig['kValue.default'] =
+        opts.remoteConfig['kValue.default'] || self.kValue;
 
     // These are a ring of Hyperbahn apps
     self.apps = [];
