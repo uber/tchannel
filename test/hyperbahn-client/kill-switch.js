@@ -23,7 +23,8 @@
 var EventEmitter = require('tchannel/lib/event_emitter.js');
 var test = require('tape');
 var TChannel = require('tchannel');
-var ServiceProxy = require('tchannel/hyperbahn/service_proxy.js');
+
+var ServiceProxy = require('../../service-proxy.js');
 
 test('set cn/service', function t(assert) {
 
