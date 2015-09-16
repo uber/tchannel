@@ -59,8 +59,8 @@ function TestCluster(opts) {
     var defaultKValue = self.size <= 20 ?
         Math.floor(self.size / 2) : 10;
 
-    if (defaultKValue < 2) {
-        defaultKValue = 2;
+    if (defaultKValue < 1) {
+        defaultKValue = 1;
     }
 
     self.kValue = typeof opts.kValue === 'number' ?
