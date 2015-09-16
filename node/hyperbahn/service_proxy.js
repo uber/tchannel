@@ -112,7 +112,7 @@ function handleRequest(req, buildRes) {
 
     var chan = self.channel.subChannels[req.serviceName];
     if (!chan) {
-        chan = self.getOrCreateServiceChannel(req.serviceName);
+        chan = self.createServiceChannel(req.serviceName);
     }
 
     // Temporary hack. Need to set json by default because
