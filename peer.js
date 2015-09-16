@@ -43,6 +43,7 @@ function TChannelPeer(channel, hostPort, options) {
 
     self.stateChangedEvent = self.defineEvent('stateChanged');
     self.allocConnectionEvent = self.defineEvent('allocConnection');
+    self.removeConnectionEvent = self.defineEvent('removeConnection');
 
     assert(hostPort !== '0.0.0.0:0', 'Cannot create ephemeral peer');
 
@@ -360,6 +361,7 @@ TChannelPeer.prototype.removeConnection = function removeConnection(conn) {
 
     self._maybeInvalidateScore();
 
+    self.removeConnectionEvent.emit(self);
     return ret;
 };
 
