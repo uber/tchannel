@@ -249,6 +249,7 @@ allocCluster.test('drain server with a few incoming (with exempt service)', {
 
     function drained() {
         assert.pass('drain happened');
+        waitForConnRemoved(6, cluster, finish);
         server.close(closed);
     }
 
@@ -278,8 +279,6 @@ allocCluster.test('drain server with a few incoming (with exempt service)', {
                 msg: 'ignoring outresponse.send on a closed connection'
             }, 'expected zero or more sends after close');
         }
-
-        setTimeout(finish, 1);
     }
 
     function finish(err) {
@@ -750,8 +749,8 @@ function waitForConnRemoved(count, cluster, callback) {
     });
 
     function removed() {
-        if (--count === 0) {
-            callback();
+        if (--count <= 0) {
+            callback(null);
         }
     }
 }
