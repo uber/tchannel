@@ -27,6 +27,7 @@ var parallel = require('run-parallel');
 
 allocCluster.test('request circuit state from endpoint', {
     size: 2,
+    kValue: 1,
     remoteConfig: {
         'rateLimiting.enabled': false,
         'circuits.enabled': true
@@ -76,7 +77,7 @@ allocCluster.test('request circuit state from endpoint', {
             // 0.5 is the error rate threshold. There is some variance.
             // Test seems to pass with a success rate of 0.4, flipping the
             // circuit breaker.
-            tasks.push(sendRequest.bind(null, cluster, Math.random() < 0.3));
+            tasks.push(sendRequest.bind(null, cluster, Math.random() < 0.2));
         }
 
         parallel(tasks, afterBarrage);
