@@ -178,13 +178,6 @@ function getServiceChannel(serviceName, create) {
     var self = this;
     var svcchan = self.channel.subChannels[serviceName];
     if (!svcchan && create) {
-        var now = self.channel.timers.now();
-        if (now >= self.createdAt + self.logGracePeriod) {
-            self.logger.info('Creating new sub channel', self.extendLogInfo({
-                serviceName: serviceName
-            }));
-        }
-
         svcchan = self.createServiceChannel(serviceName);
     }
     return svcchan;
@@ -213,6 +206,13 @@ function _getServicePeer(svcchan, hostPort) {
 ServiceDispatchHandler.prototype.createServiceChannel =
 function createServiceChannel(serviceName) {
     var self = this;
+
+    var now = self.channel.timers.now();
+    if (now >= self.createdAt + self.logGracePeriod) {
+        self.logger.info('Creating new sub channel', self.extendLogInfo({
+            serviceName: serviceName
+        }));
+    }
 
     var exitNodes = self.egressNodes.exitsFor(serviceName);
     var isExit = self.egressNodes.isExitFor(serviceName);
