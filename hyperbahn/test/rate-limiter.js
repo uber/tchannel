@@ -22,10 +22,12 @@
 var test = require('tape');
 var TimeMock = require('time-mock');
 var nullStatsd = require('uber-statsd-client/null');
-var timers = TimeMock(Date.now());
 var series = require('run-series');
+var TChannel = require('tchannel');
+
 var RateLimiter = require('../rate_limiter.js');
-var TChannel = require('../channel.js');
+
+var timers = TimeMock(Date.now());
 
 function increment(rateLimiter, steve, bob, done) {
     if (steve) {
