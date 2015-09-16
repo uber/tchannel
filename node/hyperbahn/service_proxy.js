@@ -116,7 +116,8 @@ function handleRequest(req, buildRes) {
         // we want to upgrade without breaking ncar
         chan.handler.handleRequest(req, buildRes);
     } else {
-        self.handleDefault(req, buildRes);
+        chan = self.getOrCreateServiceChannel(req.serviceName);
+        chan.handler.handleRequest(req, buildRes);
     }
 };
 
@@ -158,13 +159,6 @@ function rateLimit(req, buildRes) {
     }
 
     return false;
-};
-
-ServiceDispatchHandler.prototype.handleDefault =
-function handleDefault(req, buildRes) {
-    var self = this;
-    var svcchan = self.getOrCreateServiceChannel(req.serviceName);
-    svcchan.handler.handleRequest(req, buildRes);
 };
 
 ServiceDispatchHandler.prototype.getOrCreateServiceChannel =
