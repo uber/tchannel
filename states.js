@@ -90,7 +90,7 @@ State.prototype.onRequestHealthy = function onRequestHealthy() {
 State.prototype.onRequestUnhealthy = function onRequestUnhealthy() {
 };
 
-State.prototype.onRequestError = function onRequestError(err) {
+State.prototype.onRequestError = function onRequestError() {
 };
 
 State.prototype.close = function close(callback) {
@@ -307,7 +307,7 @@ UnhealthyState.prototype.onNewPeriod = function onNewPeriod(now) {
 
     if (self.healthyCount >= self.minResponseCount) {
         self.stateMachine.setState(HealthyState);
-        return;
+        return false;
     }
 
     var triedLastPeriod = self.triedThisPeriod;
