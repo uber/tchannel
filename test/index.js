@@ -61,7 +61,6 @@ require('./examples.js');
 require('./busy.js');
 require('./ephemeral-client.js');
 require('./relay-to-dead.js');
-require('./rate-limiter.js');
 require('./time_heap.js');
 require('./balance_peer_requests.js');
 require('./tcollector-reporter.js');
