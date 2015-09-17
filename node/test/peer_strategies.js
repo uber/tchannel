@@ -207,6 +207,67 @@ allocCluster.test('prefer incoming selects the incoming peer when outgoing is pr
     }
 });
 
+allocCluster.test('subChannel: prefer incoming selects the incoming peer when outgoing is present' , {
+    numPeers: 3,
+    skipEmptyCheck: true,
+    preferConnectionDirection: 'out'
+}, function t(cluster, assert) {
+    var bob = cluster.channels[0];
+    var steve = cluster.channels[1];
+    var steve2 = cluster.channels[2];
+
+    setupEcho(bob, 'bob');
+    setupEcho(steve, 'steve');
+    setupEcho(steve2, 'steve', update);
+    var subBob = bob.makeSubChannel({
+        serviceName: 'steve',
+        peers: [steve.hostPort, steve2.hostPort],
+        preferConnectionDirection: 'in',
+        requestDefaults: {
+            headers: {
+                as: 'raw',
+                cn: 'wat'
+            }
+        }
+    });
+
+    var ready = CountedReadySignal(2);
+    bob.waitForIdentified({
+        host: steve.hostPort
+    }, ready.signal);
+
+    steve2.waitForIdentified({
+        host: bob.hostPort
+    }, ready.signal);
+
+    ready(onReady);
+
+    var steve2Requested = false;
+    function update() {
+        steve2Requested = true;
+    }
+
+    function onReady(err, res, arg2, arg3) {
+        var bobCount = countConnections(bob);
+        var steveCount = countConnections(steve);
+        var steve2Count = countConnections(steve2);
+        assert.equals(bobCount.inCount, 1, 'bob should have 1 incoming connection');
+        assert.equals(bobCount.outCount, 1, 'bob should have 1 outgoing connection');
+        assert.equals(steveCount.outCount, 0, 'steve should not have outgoing connections');
+        assert.equals(steveCount.inCount, 1, 'steve should have 1 incoming connection');
+        assert.equals(steve2Count.outCount, 1, 'steve2 should have 1 outgoing connections');
+        assert.equals(steve2Count.inCount, 0, 'steve2 should not have incoming connections');
+
+        subBob.request({
+            serviceName: 'steve',
+            hasNoParent: true
+        }).send('echo', 'a', 'b', function onResponse() {
+            assert.ok(steve2Requested, 'the request from bob should go to steve2');
+            assert.end();
+        });
+    }
+});
+
 allocCluster.test('prefer outgoing should not create new connections', {
     numPeers: 2,
     preferConnectionDirection: 'out'
@@ -276,6 +337,67 @@ allocCluster.test('prefer outgoing selects the outgoing peer when incoming is pr
     var subBob = bob.makeSubChannel({
         serviceName: 'steve',
         peers: [steve.hostPort, steve2.hostPort],
+        requestDefaults: {
+            headers: {
+                as: 'raw',
+                cn: 'wat'
+            }
+        }
+    });
+
+    var ready = CountedReadySignal(2);
+    bob.waitForIdentified({
+        host: steve.hostPort
+    }, ready.signal);
+
+    steve2.waitForIdentified({
+        host: bob.hostPort
+    }, ready.signal);
+
+    ready(onReady);
+
+    var steveRequested = false;
+    function update() {
+        steveRequested = true;
+    }
+
+    function onReady(err, res, arg2, arg3) {
+        var bobCount = countConnections(bob);
+        var steveCount = countConnections(steve);
+        var steve2Count = countConnections(steve2);
+        assert.equals(bobCount.inCount, 1, 'bob should have 1 incoming connection');
+        assert.equals(bobCount.outCount, 1, 'bob should have 1 outgoing connection');
+        assert.equals(steveCount.outCount, 0, 'steve should not have outgoing connections');
+        assert.equals(steveCount.inCount, 1, 'steve should have 1 incoming connection');
+        assert.equals(steve2Count.outCount, 1, 'steve2 should have 1 outgoing connections');
+        assert.equals(steve2Count.inCount, 0, 'steve2 should not have incoming connections');
+
+        subBob.request({
+            serviceName: 'steve',
+            hasNoParent: true
+        }).send('echo', 'a', 'b', function onResponse() {
+            assert.ok(steveRequested, 'the request from bob should go to steve');
+            assert.end();
+        });
+    }
+});
+
+allocCluster.test('subChannel: prefer outgoing selects the outgoing peer when incoming is present' , {
+    numPeers: 3,
+    skipEmptyCheck: true,
+    preferConnectionDirection: 'in'
+}, function t(cluster, assert) {
+    var bob = cluster.channels[0];
+    var steve = cluster.channels[1];
+    var steve2 = cluster.channels[2];
+
+    setupEcho(bob, 'bob');
+    setupEcho(steve, 'steve', update);
+    setupEcho(steve2, 'steve');
+    var subBob = bob.makeSubChannel({
+        serviceName: 'steve',
+        peers: [steve.hostPort, steve2.hostPort],
+        preferConnectionDirection: 'out',
         requestDefaults: {
             headers: {
                 as: 'raw',
