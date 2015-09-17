@@ -442,12 +442,9 @@ TChannel.prototype.onServerSocketConnection = function onServerSocketConnection(
     function onConnectionError(err) {
         var codeName = errors.classify(err);
 
-        var loggerInfo = {
-            error: err,
-            direction: conn.direction,
-            remoteName: conn.remoteName,
-            socketRemoteAddr: conn.socketRemoteAddr
-        };
+        var loggerInfo = conn.extendLogInfo({
+            error: err
+        });
 
         if (codeName === 'Timeout') {
             self.logger.warn('Got a connection error', loggerInfo);
