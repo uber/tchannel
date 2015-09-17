@@ -275,6 +275,10 @@ function extendLogInfo(info) {
     var self = this;
 
     info.hostPort = self.hostPort;
+    info.channelListened = self.listened;
+    info.channelListening = self.listening;
+    info.channelDestroyed = self.destroyed;
+    info.channelDraining = self.draining;
 
     return info;
 };
