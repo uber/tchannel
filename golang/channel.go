@@ -429,34 +429,36 @@ func (ch *Channel) incomingConnectionActive(c *Connection) {
 
 // connectionCloseStateChange is called when a connection's close state changes.
 func (ch *Channel) connectionCloseStateChange(c *Connection) {
-	switch chState := ch.State(); chState {
-	case ChannelStartClose, ChannelInboundClosed:
-		ch.mutable.mut.RLock()
-		minState := connectionClosed
-		for _, c := range ch.mutable.conns {
-			if s := c.readState(); s < minState {
-				minState = s
-			}
-		}
-		ch.mutable.mut.RUnlock()
-
-		var updateTo ChannelState
-		if minState >= connectionClosed {
-			updateTo = ChannelClosed
-		} else if minState >= connectionInboundClosed && chState == ChannelStartClose {
-			updateTo = ChannelInboundClosed
-		}
-
-		if updateTo > 0 {
-			ch.mutable.mut.Lock()
-			ch.mutable.state = updateTo
-			ch.mutable.mut.Unlock()
-			chState = updateTo
-		}
-
-		c.log.Debugf("ConnectionCloseStateChange channel state = %v connection minState = %v",
-			chState, minState)
+	chState := ch.State()
+	if chState != ChannelStartClose && chState != ChannelInboundClosed {
+		return
 	}
+
+	ch.mutable.mut.RLock()
+	minState := connectionClosed
+	for _, c := range ch.mutable.conns {
+		if s := c.readState(); s < minState {
+			minState = s
+		}
+	}
+	ch.mutable.mut.RUnlock()
+
+	var updateTo ChannelState
+	if minState >= connectionClosed {
+		updateTo = ChannelClosed
+	} else if minState >= connectionInboundClosed && chState == ChannelStartClose {
+		updateTo = ChannelInboundClosed
+	}
+
+	if updateTo > 0 {
+		ch.mutable.mut.Lock()
+		ch.mutable.state = updateTo
+		ch.mutable.mut.Unlock()
+		chState = updateTo
+	}
+
+	c.log.Debugf("ConnectionCloseStateChange channel state = %v connection minState = %v",
+		chState, minState)
 }
 
 // Closed returns whether this channel has been closed with .Close()
