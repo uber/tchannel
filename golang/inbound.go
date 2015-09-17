@@ -181,12 +181,10 @@ func (c *Connection) dispatchInbound(_ uint32, _ uint32, call *InboundCall) {
 		return
 	}
 
-	// TODO(prashant): This is an expensive way to check for cancellation, and is not thread-safe.
-	// We need to figure out a better solution to avoid leaking calls that timeout.
+	// TODO(prashant): This is an expensive way to check for cancellation. Use a heap for timeouts.
 	go func() {
-		<-call.mex.ctx.Done()
-		if call.mex.ctx.Err() != nil {
-			call.failed(call.mex.ctx.Err())
+		if <-call.mex.ctx.Done(); call.mex.ctx.Err() == context.DeadlineExceeded {
+			call.mex.inboundTimeout()
 		}
 	}()
 
@@ -327,7 +325,10 @@ func (response *InboundCallResponse) doneSending() {
 	latency := timeNow().Sub(response.calledAt)
 	response.statsReporter.RecordTimer("inbound.calls.latency", response.commonStatsTags, latency)
 
-	response.mex.shutdown()
+	// The message exchange is still open if there are no errors, call shutdown.
+	if response.err == nil {
+		response.mex.shutdown()
+	}
 }
 
 // errorSending shuts down the message exhcnage for this call, and records counters.
