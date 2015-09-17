@@ -495,10 +495,7 @@ TChannelV2Handler.prototype.handleError = function handleError(errFrame, callbac
     var id = errFrame.id;
     var code = errFrame.body.code;
     var message = String(errFrame.body.message);
-    var err = v2.ErrorResponse.CodeErrors[code]({
-        originalId: id,
-        message: message
-    });
+    var err = new v2.ErrorResponse.CodeErrors[code](id, message);
 
     delete self.streamingReq[id];
     delete self.streamingRes[id];
