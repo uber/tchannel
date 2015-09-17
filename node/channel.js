@@ -21,6 +21,19 @@
 'use strict';
 
 var assert = require('assert');
+var version = require('./package.json').version;
+if (typeof global.tchannelVersion === 'string' &&
+    version !== global.tchannelVersion
+) {
+    assert(true,
+        'Must use only a single version of tchannel.\n' +
+        'Found two versions: ' + version + ' and ' +
+            global.tchannelVersion + '\n'
+    );
+} else {
+    global.tchannelVersion = version;
+}
+
 var globalTimers = {
     setTimeout: require('timers').setTimeout,
     clearTimeout: require('timers').clearTimeout,
