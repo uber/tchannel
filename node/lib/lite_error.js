@@ -21,6 +21,7 @@
 'use strict';
 
 var TypedError = require('error/typed');
+var extend = require('xtend');
 
 module.exports = LiteError;
 
@@ -31,7 +32,7 @@ function LiteError(options) {
 }
 
 LiteError.prototype.toError = function toError() {
-    var copy = LiteError(this);
+    var copy = extend(this);
     delete copy.fullType;
     return TypedError(copy)();
 };
