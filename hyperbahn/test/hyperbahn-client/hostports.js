@@ -195,7 +195,6 @@ function runTests(HyperbahnCluster) {
                 'error message should be a parsing failure');
 
             var items = cluster.logger.items();
-            console.log('items', items);
             assert.ok(items.length > 0 && items[0].msg === 'Got unexpected invalid thrift for arg3',
                 'Do not miss the error log');
 
