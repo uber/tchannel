@@ -270,6 +270,19 @@ function TChannel(options) {
 }
 inherits(TChannel, StatEmitter);
 
+TChannel.prototype.extendLogInfo =
+function extendLogInfo(info) {
+    var self = this;
+
+    info.hostPort = self.hostPort;
+    info.channelListened = self.listened;
+    info.channelListening = self.listening;
+    info.channelDestroyed = self.destroyed;
+    info.channelDraining = self.draining;
+
+    return info;
+};
+
 TChannel.prototype.eachConnection = function eachConnection(each) {
     var self = this;
 
@@ -329,11 +342,10 @@ TChannel.prototype.drain = function drain(reason, exempt, callback) {
     drained(callback);
     self.eachConnection(drainEachConn);
     process.nextTick(drained.signal);
-    self.logger.info('draining channel', {
-        hostPort: self.hostPort,
+    self.logger.info('draining channel', self.extendLogInfo({
         reason: self.drainReason,
         count: drained.counter
-    });
+    }));
 
     function drainEachConn(conn) {
         drained.counter++;
@@ -392,11 +404,10 @@ TChannel.prototype.onServerSocketConnection = function onServerSocketConnection(
     var self = this;
 
     if (self.destroyed) {
-        self.logger.error('got incoming socket whilst destroyed', {
+        self.logger.error('got incoming socket whilst destroyed', self.extendLogInfo({
             remoteAddress: sock.remoteAddress,
-            remotePort: sock.remotePort,
-            hostPort: self.hostPort
-        });
+            remotePort: sock.remotePort
+        }));
         return;
     }
 
@@ -431,12 +442,9 @@ TChannel.prototype.onServerSocketConnection = function onServerSocketConnection(
     function onConnectionError(err) {
         var codeName = errors.classify(err);
 
-        var loggerInfo = {
-            error: err,
-            direction: conn.direction,
-            remoteName: conn.remoteName,
-            socketRemoteAddr: conn.socketRemoteAddr
-        };
+        var loggerInfo = conn.extendLogInfo({
+            error: err
+        });
 
         if (codeName === 'Timeout') {
             self.logger.warn('Got a connection error', loggerInfo);
@@ -454,10 +462,9 @@ TChannel.prototype.onServerSocketListening = function onServerSocketListening() 
     var hostPort = self.host + ':' + address.port;
 
     if (self.destroyed) {
-        self.logger.error('got serverSocket listen whilst destroyed', {
-            requestedPort: self.requestedPort,
-            hostPort: hostPort
-        });
+        self.logger.error('got serverSocket listen whilst destroyed', self.extendLogInfo({
+            requestedPort: self.requestedPort
+        }));
         return;
     }
 
@@ -486,12 +493,11 @@ TChannel.prototype.onServerSocketError = function onServerSocketError(err) {
             host: self.host
         });
     }
-    self.logger.error('server socket error', {
-        error: err,
+    self.logger.error('server socket error', self.extendLogInfo({
         requestedPort: self.requestedPort,
         host: self.host,
-        hostPort: self.hostPort || null
-    });
+        error: err
+    }));
     self.errorEvent.emit(self, err);
 };
 
@@ -885,9 +891,9 @@ TChannel.prototype.close = function close(callback) {
     function onClose() {
         if (--counter <= 0) {
             if (counter < 0) {
-                self.logger.error('closed more channel sockets than expected', {
+                self.logger.error('closed more channel sockets than expected', self.extendLogInfo({
                     counter: counter
-                });
+                }));
             }
             if (typeof callback === 'function') {
                 callback();
