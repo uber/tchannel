@@ -254,32 +254,9 @@ TChannelHTTP.prototype.forwardToTChannel = function forwardToTChannel(tchannel, 
 TChannelHTTP.prototype._sendHTTPError = function _sendHTTPError(hres, error) {
     hres.setHeader('Content-Type', 'text/plain');
     var codeName = errors.classify(error);
-    switch (codeName) {
-        case 'Cancelled':
-            hres.writeHead(500, 'TChannel Cancelled');
-            break;
-        case 'Unhealthy':
-        case 'Declined':
-            hres.writeHead(503, 'Service Unavailable');
-            break;
-        case 'Timeout':
-            hres.writeHead(504, 'Gateway Timeout');
-            break;
-        case 'BadRequest':
-            hres.writeHead(400, 'Bad Request');
-            break;
-        case 'Busy':
-            hres.writeHead(429, 'Too Many Requests');
-            break;
-        case 'ProtocolError':
-            hres.writeHead(500, 'TChannel Protocol Error');
-            break;
-        case 'NetworkError':
-            hres.writeHead(500, 'TChannel Network Error');
-            break;
-        default:
-            hres.writeHead(500, 'Internal Server Error');
-    }
+    var httpInfo = errors.toHTTPCode(codeName);
+
+    hres.writeHead(httpInfo.statusCode, httpInfo.statusMessage);
     hres.end(error.message);
 };
 
