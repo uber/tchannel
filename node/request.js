@@ -25,10 +25,12 @@ module.exports = TChannelRequest;
 var assert = require('assert');
 var EventEmitter = require('./lib/event_emitter');
 var inherits = require('util').inherits;
+var TypedError = require('error/typed');
 
 var TChannelOutRequest = require('./out_request.js');
 var RetryFlags = require('./retry-flags.js');
 var errors = require('./errors');
+var LiteError = require('./lib/lite_error');
 
 function TChannelRequest(options) {
     /*eslint max-statements: [2, 40]*/
@@ -91,7 +93,13 @@ TChannelRequest.prototype.emitError = function emitError(err) {
     TChannelOutRequest.prototype.emitLatency.call(self);
 
     self.channel.services.onRequestError(self);
-    self.errorEvent.emit(self, err);
+
+    if (LiteError.isLiteError(err)) {
+        var realError = err.toError();
+        self.errorEvent.emit(self, realError);
+    } else {
+        self.errorEvent.emit(self, err);
+    }
 };
 
 TChannelRequest.prototype.emitResponse = function emitResponse(res) {
