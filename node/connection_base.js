@@ -76,7 +76,8 @@ inherits(TChannelConnectionBase, EventEmitter);
 TChannelConnectionBase.prototype.extendLogInfo = function extendLogInfo(info) {
     var self = this;
 
-    info.hostPort = self.channel.hostPort;
+    info = self.channel.extendLogInfo(info);
+
     info.connDirection = self.direction;
     info.socketRemoteAddr = self.socketRemoteAddr;
     info.remoteName = self.remoteName;
