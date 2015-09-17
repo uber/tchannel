@@ -69,11 +69,7 @@ TChannelSubPeers.prototype.add = function add(hostPort, options) {
     self._keys.push(hostPort);
 
     var el = self._heap.add(peer);
-    var heapElements = peer.heapElementCollection[self.preferConnectionDirection];
-    if (!heapElements) {
-        heapElements = [];
-        peer.heapElementCollection[self.preferConnectionDirection] = heapElements;
-    }
+    var heapElements = peer.getOrCreateHeapElements(self.preferConnectionDirection);
     heapElements.push(el);
 
     return peer;
@@ -98,7 +94,7 @@ TChannelSubPeers.prototype._delete = function _del(peer) {
     delete self._map[peer.hostPort];
     popout(self._keys, index);
 
-    var heapElements = peer.heapElementCollection[self.preferConnectionDirection] || [];
+    var heapElements = peer.getOrCreateHeapElements(self.preferConnectionDirection);
     for (var i = 0; i < heapElements.length; i++) {
         var el = heapElements[i];
         if (el.heap === self._heap) {

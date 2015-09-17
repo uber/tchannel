@@ -468,4 +468,15 @@ TChannelPeer.prototype.getScore = function getScore(direction) {
     return self.handlers[direction].getScore();
 };
 
+TChannelPeer.prototype.getOrCreateHeapElements = function getOrCreateHeapElements(direction) {
+    var self = this;
+    var heapElements = self.heapElementCollection[direction];
+    if (!heapElements) {
+        heapElements = [];
+        self.heapElementCollection[direction] = heapElements;
+    }
+
+    return heapElements;
+};
+
 module.exports = TChannelPeer;
