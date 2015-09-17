@@ -24,12 +24,15 @@ var inherits = require('inherits');
 var EventEmitter = require('events').EventEmitter;
 var WrappedError = require('error/wrapped');
 var assert = require('assert');
+var process = require('process');
 
 var setupEndpoints = require('./endpoints/');
 var ApplicationClients = require('./clients/');
 
 var ExitNode = require('./exit');
 var EntryNode = require('./entry');
+
+var DRAIN_DEADLINE_TIMEOUT = 30 * 1000;
 
 var ApplicationClientsFailureError = WrappedError({
     type: 'autobahn.app-clients-failed',
@@ -66,7 +69,11 @@ function Application(config, opts) {
         rateLimiterBuckets: opts.rateLimiterBuckets
     });
     self.services = null;
+    self.logger = self.clients.logger;
     self.tchannel = self.clients.tchannel;
+    self.drainDeadlineTimer = null;
+    self.drainStart = null;
+    self.drainEnd = null;
 
     self.isBootstrapped = false;
 
@@ -96,6 +103,7 @@ Application.prototype.bootstrap = function bootstrap(cb) {
 
     setupEndpoints(self.clients, self.services);
 
+    self.hookupSignals();
     self.clients.bootstrap(onClientsReady);
 
     function onClientsReady(err) {
@@ -111,6 +119,141 @@ Application.prototype.bootstrap = function bootstrap(cb) {
         cb(null);
     }
 
+};
+
+Application.prototype.hookupSignals =
+function hookupSignals() {
+    var self = this;
+
+    process.on('SIGTERM', onSigTerm);
+    process.on('SIGINT', onSigInt);
+
+    function onSigTerm() {
+        self.onSigTerm();
+    }
+
+    function onSigInt() {
+        self.onSigInt();
+    }
+};
+
+Application.prototype.extendLogInfo =
+function extendLogInfo(info) {
+    var self = this;
+
+    info = self.tchannel.extendLogInfo(info);
+
+    return info;
+};
+
+Application.prototype.onSigTerm =
+function onSigTerm() {
+    var self = this;
+
+    if (self.tchannel.draining) {
+        self.logger.info('got additional SIGTERM while draining', self.extendLogInfo({}));
+    } else {
+        self.startDrain();
+    }
+};
+
+Application.prototype.startDrain =
+function startDrain() {
+    var self = this;
+
+    self.drainStart = self.tchannel.timers.now();
+    self.logger.info('got SIGTERM, draining application', self.extendLogInfo({}));
+    self.tchannel.drain('shutting down due to SIGTERM',
+                        isReqDrainExempt, drainedThenClose);
+    self.drainDeadlineTimer = self.tchannel.timers.setTimeout(
+        deadlineTimedOut, DRAIN_DEADLINE_TIMEOUT);
+
+    function isReqDrainExempt(req) {
+        return self.isReqDrainExempt(req);
+    }
+
+    function drainedThenClose() {
+        self.drainedThenClose();
+    }
+
+    function deadlineTimedOut() {
+        self.deadlineTimedOut();
+    }
+};
+
+Application.prototype.onSigInt =
+function onSigInt() {
+    var self = this;
+
+    if (self.tchannel.draining) {
+        self.finishDrain('warn', 'got SIGINT, drain aborted');
+    } else if (!self.destroyed) {
+        self.logger.info('got SIGINT, destroying application', self.extendLogInfo({}));
+        self.destroy();
+    }
+};
+
+Application.prototype.deadlineTimedOut =
+function deadlineTimedOut() {
+    var self = this;
+
+    self.finishDrain('warn', 'deadline timeout exceeded, closing now');
+};
+
+Application.prototype.drainedThenClose =
+function drainedThenClose() {
+    var self = this;
+
+    if (!self.destroyed) {
+        self.finishDrain('info', 'tchannel drained, destroying application');
+    }
+};
+
+Application.prototype.isReqDrainExempt =
+function isReqDrainExempt(req) {
+    var self = this;
+
+    // we only drain relay requests
+    var chan = self.tchannel.subChannels[req.serviceName];
+    var type = chan && chan.handler && chan.handler.type;
+    if (type === 'tchannel.relay-handler') {
+        return false;
+    } else {
+        return true;
+    }
+};
+
+Application.prototype.finishDrain =
+function finishDrain(level, mess, info) {
+    var self = this;
+
+    self.drainEnd = self.tchannel.timers.now();
+
+    if (!info) {
+        info = {};
+    }
+    var drainDuration = self.drainEnd - self.drainStart;
+    self.clients.statsd.timing('server.drain-time', drainDuration);
+    info.drainDurationMs = drainDuration;
+    info = self.extendLogInfo(info);
+
+    switch (level) {
+        case 'info':
+            self.logger.info(mess, info);
+            break;
+        case 'warn':
+            self.logger.warn(mess, info);
+            break;
+        default:
+            info.invalidLogLevel = level;
+            self.logger.error(mess, info);
+            break;
+    }
+
+    self.tchannel.timers.clearTimeout(self.drainDeadlineTimer);
+    self.drainDeadlineTimer = null;
+
+    self.destroy();
 };
 
 Application.prototype.bootstrapAndListen =
