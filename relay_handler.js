@@ -284,7 +284,7 @@ RelayRequest.prototype.logError = function relayRequestLogError(err, codeName) {
 };
 
 function logError(logger, err, codeName, extendLogInfo) {
-    var level = errorLogLevel(err, codeName);
+    var level = errors.logLevel(err, codeName);
 
     var logOptions = extendLogInfo({
         error: err,
@@ -303,30 +303,6 @@ function logError(logger, err, codeName, extendLogInfo) {
         logger.warn('error while forwarding', logOptions);
     } else if (level === 'info') {
         logger.info('expected error while forwarding', logOptions);
-    }
-}
-
-function errorLogLevel(err, codeName) {
-    switch (codeName) {
-        case 'ProtocolError':
-        case 'UnexpectedError':
-            if (err.isErrorFrame) {
-                return 'warn';
-            }
-            return 'error';
-
-        case 'NetworkError':
-        case 'Cancelled':
-        case 'Declined':
-        case 'Busy':
-            return 'warn';
-
-        case 'BadRequest':
-        case 'Timeout':
-            return 'info';
-
-        default:
-            return 'error';
     }
 }
 
