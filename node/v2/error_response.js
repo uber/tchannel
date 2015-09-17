@@ -23,7 +23,6 @@
 var bufrw = require('bufrw');
 var WriteResult = bufrw.WriteResult;
 var ReadResult = bufrw.ReadResult;
-//var TypedError = require('error/typed');
 var Tracing = require('./tracing');
 var util = require('util');
 
