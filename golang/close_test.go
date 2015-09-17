@@ -71,6 +71,28 @@ func TestCloseNewClient(t *testing.T) {
 	assert.True(t, ch.Closed(), "Channel should be closed")
 }
 
+func TestCloseAfterTimeout(t *testing.T) {
+	WithVerifiedServer(t, nil, func(ch *Channel, hostPort string) {
+		ch.Register(raw.Wrap(newTestHandler(t)), "timeout")
+
+		ctx, cancel := NewContext(10 * time.Millisecond)
+		defer cancel()
+
+		// Make a call, wait for it to timeout.
+		clientCh, err := testutils.NewClient(nil)
+		require.NoError(t, err, "NewClient failed")
+		peerInfo := ch.PeerInfo()
+		_, _, _, err = raw.Call(ctx, clientCh, peerInfo.HostPort, peerInfo.ServiceName, "timeout", nil, nil)
+		assert.Error(t, err, "Expected call to timeout")
+
+		// The client channel should also close immediately.
+		clientCh.Close()
+		runtime.Gosched()
+		assert.Equal(t, ChannelClosed, clientCh.State())
+		assert.True(t, clientCh.Closed(), "Channel should be closed")
+	})
+}
+
 // TestCloseStress ensures that once a Channel is closed, it cannot be reached.
 func TestCloseStress(t *testing.T) {
 	CheckStress(t)
