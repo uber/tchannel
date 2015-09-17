@@ -260,6 +260,7 @@ func TestCloseSemantics(t *testing.T) {
 	// Once the incoming connection is drained, outgoing calls should fail.
 	s1C <- struct{}{}
 	<-call2
+	runtime.Gosched()
 	assert.Equal(t, ChannelInboundClosed, s1.State())
 	require.Error(t, call(s1, s2),
 		"closed channel with no pending incoming calls should not allow outgoing calls")
@@ -267,6 +268,7 @@ func TestCloseSemantics(t *testing.T) {
 	// Now the channel should be completely closed as there are no pending connections.
 	s2C <- struct{}{}
 	<-call1
+	runtime.Gosched()
 	assert.Equal(t, ChannelClosed, s1.State())
 
 	// Close s2 so we don't leave any goroutines running.
