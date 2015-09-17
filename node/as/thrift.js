@@ -128,6 +128,10 @@ TChannelAsThrift.prototype.request = function request(reqOptions) {
     var self = this;
 
     assert(self.channel, 'channel is required for thrift.request()');
+    assert(reqOptions &&
+        reqOptions.type !== 'tchannel.request' &&
+        reqOptions.type !== 'tchannel.outgoing-request',
+        'invalid reqOptions to TChannelAsThrift.request');
 
     var req = new TChannelThriftRequest({
         channel: self.channel,
