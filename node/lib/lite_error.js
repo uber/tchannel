@@ -28,15 +28,6 @@ function LiteError(options) {
     if (!(this instanceof LiteError)) {
         return new LiteError(options);
     }
-
-    var self = this;
-    if (options) {
-        var i;
-        var keys = Object.keys(options);
-        for (i = 0; i < keys.length; i++) {
-            self[keys[i]] = options[keys[i]];
-        }
-    }
 }
 
 LiteError.prototype.toError = function toError() {
