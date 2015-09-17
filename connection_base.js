@@ -77,6 +77,7 @@ TChannelConnectionBase.prototype.extendLogInfo = function extendLogInfo(info) {
     var self = this;
 
     info.hostPort = self.channel.hostPort;
+    info.connDirection = self.direction;
     info.socketRemoteAddr = self.socketRemoteAddr;
     info.remoteName = self.remoteName;
     info.connClosing = self.closing;
