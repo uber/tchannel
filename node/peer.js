@@ -55,8 +55,6 @@ function TChannelPeer(channel, hostPort, options) {
     self.hostPort = hostPort;
     self.connections = [];
     self.pendingIdentified = 0;
-    self.heapElements = [];
-    self.handler = null;
 
     self.reportInterval = self.options.reportInterval || DEFAULT_REPORT_INTERVAL;
     if (self.reportInterval > 0 && self.channel.emitConnectionMetrics) {
@@ -65,14 +63,8 @@ function TChannelPeer(channel, hostPort, options) {
         );
     }
 
-    self.preferConnectionDirection = self.options.preferConnectionDirection;
-    if (self.preferConnectionDirection === 'out') {
-        self.setScoreStrategy(PreferOutgoing);
-    } else if (self.preferConnectionDirection === 'in') {
-        self.setScoreStrategy(PreferIncoming);
-    } else {
-        self.setScoreStrategy(NoPreference);
-    }
+    self.heapElementCollection = {};
+    self.handlers = {};
 
     function onReport() {
         if (!self.hostPort) {
@@ -95,23 +87,36 @@ function TChannelPeer(channel, hostPort, options) {
 
 inherits(TChannelPeer, EventEmitter);
 
-TChannelPeer.prototype.setScoreStrategy = function setScoreStrategy(ScoreStrategy) {
+TChannelPeer.prototype.addScoreStrategy = function addScoreStrategy(direction) {
     var self = this;
 
-    self.handler = new ScoreStrategy(self);
+    if (direction === 'out') {
+        self.handlers.out = new PreferOutgoing(self);
+    } else if (direction === 'in') {
+        self.handlers.in = new PreferIncoming(self);
+    } else {
+        self.handlers.default = new NoPreference(self);
+    }
 };
+
+
 
 TChannelPeer.prototype.invalidateScore = function invalidateScore() {
     var self = this;
 
-    if (!self.heapElements.length) {
-        return;
-    }
+    var directions = Object.keys(self.handlers);
+    for (var j = 0; j < directions.length; j++) {
+        var handler = self.handlers[directions[j]];
+        var heapElements = self.heapElementCollection[directions[j]];
+        if (!heapElements || heapElements.length === 0) {
+            continue;
+        }
 
-    var score = self.handler.getScore();
-    for (var i = 0; i < self.heapElements.length; i++) {
-        var el = self.heapElements[i];
-        el.rescore(score);
+        var score = handler.getScore();
+        for (var i = 0; i < heapElements.length; i++) {
+            var el = heapElements[i];
+            el.rescore(score);
+        }
     }
 };
 
@@ -215,16 +220,16 @@ TChannelPeer.prototype.countConnections = function countConnections(direction) {
 };
 
 // ensures that a connection exists
-TChannelPeer.prototype.connect = function connect(outOnly) {
+TChannelPeer.prototype.connect = function connect(preferConnectionDirection) {
     var self = this;
     var conn = null;
-    if (self.preferConnectionDirection === 'in' && !outOnly) {
+    if (preferConnectionDirection === 'in') {
         conn = self.getIdentifiedInConnection();
     } else {
         conn = self.getIdentifiedOutConnection();
     }
 
-    if (!conn || (outOnly && conn.direction !== 'out')) {
+    if (!conn || (preferConnectionDirection === 'out' && conn.direction !== 'out')) {
         var socket = self.makeOutSocket();
         conn = self.makeOutConnection(socket);
         self.addConnection(conn);
@@ -235,7 +240,7 @@ TChannelPeer.prototype.connect = function connect(outOnly) {
 // ensures that an outbound connection exists
 TChannelPeer.prototype.connectTo = function connectTo() {
     var self = this;
-    self.connect(true);
+    self.connect('out');
 };
 
 TChannelPeer.prototype.waitForIdentified =
@@ -443,15 +448,24 @@ TChannelPeer.prototype.countPending = function countPending(direction) {
 // Called on connection change event
 TChannelPeer.prototype._maybeInvalidateScore = function _maybeInvalidateScore() {
     var self = this;
+    var should = false;
 
-    if (self.handler.getTier() !== self.handler.lastTier) {
+    var directions = Object.keys(self.handlers);
+    for (var j = 0; j < directions.length; j++) {
+        var handler = self.handlers[directions[j]];
+        if (handler.getTier() !== handler.lastTier) {
+            should = true;
+        }
+    }
+
+    if (should) {
         self.invalidateScore();
     }
 };
 
-TChannelPeer.prototype.getScore = function getScore() {
+TChannelPeer.prototype.getScore = function getScore(direction) {
     var self = this;
-    return self.handler.getScore();
+    return self.handlers[direction].getScore();
 };
 
 module.exports = TChannelPeer;

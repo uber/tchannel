@@ -24,13 +24,15 @@ module.exports = PeerHeap;
 
 // A max-score (pre-computed) for peer selection
 
-function PeerHeap() {
+function PeerHeap(direction) {
     var self = this;
 
     self.array = [];
     // TODO: worth it to keep a tail free list like TimeHeap?
     // self.end = 0;
     self._stack = [];
+
+    self.direction = direction;
 }
 
 PeerHeap.prototype.choose = function choose(threshold, filter) {
@@ -121,7 +123,7 @@ PeerHeap.prototype.clear = function clear() {
 PeerHeap.prototype.add = function add(peer) {
     var self = this;
 
-    var score = peer.handler.getScore();
+    var score = peer.getScore(self.direction);
     var i = self.push(peer, score);
     var el = self.array[i];
     return el;
@@ -132,7 +134,7 @@ PeerHeap.prototype.rescore = function rescore() {
 
     for (var i = 0; i < self.array.length; i++) {
         var el = self.array[i];
-        el.score = el.peer.handler.getScore();
+        el.score = el.peer.getScore(self.direction);
     }
     self.heapify();
 };
@@ -274,7 +276,7 @@ PeerHeapElement.prototype.rescore = function rescore(score) {
     }
 
     if (score === undefined) {
-        score = self.peer.getScore();
+        score = self.peer.getScore(self.direction);
     }
 
     self.score = score;
