@@ -21,9 +21,10 @@
 'use strict';
 
 var debugLogtron = require('debug-logtron');
-var RelayNetwork = require('./lib/relay_network.js');
 var MockTimers = require('time-mock');
 var CountedReadySignal = require('ready-signal/counted');
+
+var RelayNetwork = require('../lib/relay-network.js');
 
 var aliceAndBob = {
     timers: new MockTimers(1e9),
