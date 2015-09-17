@@ -25,7 +25,7 @@ var version = require('./package.json').version;
 if (typeof global.tchannelVersion === 'string' &&
     version !== global.tchannelVersion
 ) {
-    assert(true,
+    assert(false,
         'Must use only a single version of tchannel.\n' +
         'Found two versions: ' + version + ' and ' +
             global.tchannelVersion + '\n'
