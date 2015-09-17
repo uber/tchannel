@@ -788,3 +788,37 @@ module.exports.shouldRetry = function shouldRetry(codeName, retryFlags) {
             return null;
     }
 };
+
+function HTTPInfo(statusCode, statusMessage) {
+    this.statusCode = statusCode;
+    this.statusMessage = statusMessage;
+}
+
+module.exports.toHTTPCode = function toHTTPCode(codeName) {
+    switch (codeName) {
+        case 'Cancelled':
+            return new HTTPInfo(500, 'TChannel Cancelled');
+
+        case 'Unhealthy':
+        case 'Declined':
+            return new HTTPInfo(503, 'Service Unavailable');
+
+        case 'Timeout':
+            return new HTTPInfo(504, 'Gateway Timeout');
+
+        case 'BadRequest':
+            return new HTTPInfo(400, 'Bad Request');
+
+        case 'Busy':
+            return new HTTPInfo(429, 'Too Many Requests');
+
+        case 'ProtocolError':
+            return new HTTPInfo(500, 'TChannel Protocol Error');
+
+        case 'NetworkError':
+            return new HTTPInfo(500, 'TChannel Network Error');
+
+        default:
+            return new HTTPInfo(500, 'Internal Server Error');
+    }
+};
