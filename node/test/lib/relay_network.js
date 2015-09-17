@@ -58,6 +58,10 @@ function RelayNetwork(options) {
     self.defaultServiceRpsLimit = options.defaultServiceRpsLimit;
     self.rateLimiterBuckets = options.rateLimiterBuckets;
     self.rateLimiterEnabled = options.rateLimiterEnabled;
+    self.circuitsEnabled = options.circuitsEnabled;
+    self.partialAffinityEnabled = options.partialAffinityEnabled;
+    self.minPeersPerWorker = options.minPeersPerWorker;
+    self.minPeersPerRelay = options.minPeersPerRelay;
 
     self.numPeers = self.numRelays + self.serviceNames.length * self.numInstancesPerService;
     self.clusterOptions.numPeers = self.numPeers;
@@ -169,6 +173,10 @@ RelayNetwork.prototype.setCluster = function setCluster(cluster) {
             defaultServiceRpsLimit: self.defaultServiceRpsLimit,
             rateLimiterBuckets: self.rateLimiterBuckets,
             rateLimiterEnabled: self.rateLimiterEnabled,
+            circuitsEnabled: self.circuitsEnabled,
+            partialAffinityEnabled: self.partialAffinityEnabled,
+            minPeersPerWorker: self.minPeersPerWorker,
+            minPeersPerRelay: self.minPeersPerRelay,
             circuitsConfig: self.circuitsConfig
         });
 
