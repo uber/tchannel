@@ -3,7 +3,12 @@ struct HealthStatus {
     2: optional string message
 }
 
+struct ThriftIDLs {
+    // map: filename -> contents
+    1: required map<string, string> idls 
+}
+
 service Meta {
     HealthStatus health()
-    string thriftIDL()
+    ThriftIDLs thriftIDL()
 }
