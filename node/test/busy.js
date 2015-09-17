@@ -23,7 +23,6 @@
 var Buffer = require('buffer').Buffer;
 var allocCluster = require('./lib/alloc-cluster.js');
 var TChannel = require('../channel.js');
-var LiteError = require('../lib/lite_error');
 
 allocCluster.test('request().send() to a server', 2, function t(cluster, assert) {
     var two = cluster.channels[1];
@@ -87,7 +86,7 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
     }
 
     function onResp2(err, res, arg2, arg3) {
-        assert.ok(LiteError.isError(err), 'got an error');
+        assert.ok(isError(err), 'got an error');
 
         assert.equals(err.type, 'tchannel.busy');
         assert.ok(err.isErrorFrame, 'err isErrorFrame');
@@ -99,3 +98,7 @@ allocCluster.test('request().send() to a server', 2, function t(cluster, assert)
         assert.end();
     }
 });
+
+function isError(err) {
+    return Object.prototype.toString.call(err) === '[object Error]';
+}
