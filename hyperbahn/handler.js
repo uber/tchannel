@@ -27,18 +27,20 @@ var util = require('util');
 var fs = require('fs');
 var path = require('path');
 var setTimeout = require('timers').setTimeout;
-
-var Errors = require('../errors.js');
-var TChannelJSON = require('../as/json');
-var TChannelThrift = require('../as/thrift');
-var thriftSource = fs.readFileSync(path.join(__dirname, 'hyperbahn.thrift'), 'utf8');
-var TChannelEndpointHandler = require('../endpoint-handler');
+var Errors = require('tchannel/errors.js');
+var TChannelJSON = require('tchannel/as/json');
+var TChannelThrift = require('tchannel/as/thrift');
+var TChannelEndpointHandler = require('tchannel/endpoint-handler');
 
 var MAX_RELAY_AD_ATTEMPTS = 2;
 var RELAY_AD_RETRY_TIME = 1 * 1000;
 var RELAY_AD_TIMEOUT = 500;
 
 var RELAY_TIMEOUT = 500;
+
+var thriftSource = fs.readFileSync(
+    path.join(__dirname, 'hyperbahn.thrift'), 'utf8'
+);
 
 module.exports = HyperbahnHandler;
 
@@ -124,13 +126,13 @@ HyperbahnHandler.prototype.type = 'hyperbahn.advertisement-handler';
     }
 */
 HyperbahnHandler.prototype.handleAdvertise =
-function handleAdvertise(self, req, arg2, arg3, cb) {
-    self.sendRelays(req, arg2, arg3, 'relay-ad', cb);
+function handleAdvertise(handler, req, arg2, arg3, cb) {
+    handler.sendRelays(req, arg2, arg3, 'relay-ad', cb);
 };
 
 HyperbahnHandler.prototype.handleUnadvertise =
-function handleUnadvertise(self, req, arg2, arg3, cb) {
-    self.sendRelays(req, arg2, arg3, 'relay-unad', cb);
+function handleUnadvertise(handler, req, arg2, arg3, cb) {
+    handler.sendRelays(req, arg2, arg3, 'relay-unad', cb);
 };
 
 HyperbahnHandler.prototype.sendRelays =
@@ -228,13 +230,13 @@ function sendAdvertise(services, options, callback) {
     res: {}
 */
 HyperbahnHandler.prototype.handleRelayAdvertise =
-function handleRelayAdvertise(self, req, arg2, arg3, cb) {
-    self.handleRelay('ad', req, arg2, arg3, cb);
+function handleRelayAdvertise(handler, req, arg2, arg3, cb) {
+    handler.handleRelay('ad', req, arg2, arg3, cb);
 };
 
 HyperbahnHandler.prototype.handleRelayUnadvertise =
-function handleRelayUnadvertise(self, req, arg2, arg3, cb) {
-    self.handleRelay('unad', req, arg2, arg3, cb);
+function handleRelayUnadvertise(handler, req, arg2, arg3, cb) {
+    handler.handleRelay('unad', req, arg2, arg3, cb);
 };
 
 HyperbahnHandler.prototype.handleRelay =
@@ -376,12 +378,12 @@ function convertHosts(hosts) {
     for (var i = 0; i < hosts.length; i++) {
         var strs = hosts[i].split(':');
         var obj = {
-            port: parseInt(strs[1])
+            port: parseInt(strs[1], 10)
         };
         strs = strs[0].split('.');
         obj.ip = {
-            ipv4: parseInt(strs[3]) + (parseInt(strs[2]) << 8) +
-                (parseInt(strs[1]) << 16) + (parseInt(strs[0]) << 24)
+            ipv4: parseInt(strs[3], 10) + (parseInt(strs[2], 10) << 8) +
+                (parseInt(strs[1], 10) << 16) + (parseInt(strs[0], 10) << 24)
         };
 
         res.push(obj);
@@ -391,7 +393,7 @@ function convertHosts(hosts) {
 }
 
 HyperbahnHandler.prototype.discover =
-function discover(self, req, head, body, cb) {
+function discover(handler, req, head, body, cb) {
     var serviceName = body.query.serviceName;
     if (serviceName.length === 0) {
         cb(null, {
@@ -404,16 +406,16 @@ function discover(self, req, head, body, cb) {
         return;
     }
 
-    var exitNodes = self.egressNodes.exitsFor(serviceName);
+    var exitNodes = handler.egressNodes.exitsFor(serviceName);
     var exitHosts = Object.keys(exitNodes);
 
     var svcchan = null;
-    var myHost = self.channel.hostPort;
+    var myHost = handler.channel.hostPort;
     if (exitHosts.indexOf(myHost) === -1) {
         // Since Hyperbahn is fully connected to service hosts,
         // any exit node suffices.
-        svcchan = self.channel.topChannel.handler.getOrCreateServiceChannel(serviceName);
-        self.tchannelThrift.send(svcchan.request({
+        svcchan = handler.channel.topChannel.handler.getOrCreateServiceChannel(serviceName);
+        handler.tchannelThrift.send(svcchan.request({
             serviceName: 'hyperbahn',
             headers: {
                 cn: 'hyperbahn'
@@ -424,7 +426,7 @@ function discover(self, req, head, body, cb) {
             trace: false
         }), 'Hyperbahn::discover', null, body, function handleForward(err, resp) {
             if (err) {
-                self.channel.logger.error('Failed to call discover API on exit node', {
+                handler.channel.logger.error('Failed to call discover API on exit node', {
                     error: err,
                     serviceName: serviceName
                 });
@@ -434,7 +436,7 @@ function discover(self, req, head, body, cb) {
             cb(null, resp);
         });
     } else {
-        svcchan = self.channel.topChannel.subChannels[serviceName];
+        svcchan = handler.channel.topChannel.subChannels[serviceName];
         var hosts = [];
         if (svcchan) {
             hosts = convertHosts(svcchan.peers.keys());

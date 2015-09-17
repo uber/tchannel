@@ -21,3 +21,4 @@
 'use strict';
 
 require('./happy-path.js');
+require('./circuits.js');

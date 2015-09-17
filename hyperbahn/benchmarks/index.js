@@ -81,6 +81,15 @@ function spawnRelayServer() {
     hyperbahnProc.stderr.pipe(process.stderr);
 };
 
+HyperbahnBenchmarkRunner.prototype.close = function close() {
+    var self = this;
+
+    BenchmarkRunner.prototype.close.call(self);
+
+    self.sentry.close();
+    self.kafka.close();
+};
+
 if (require.main === module) {
     var argv = parseArgs(process.argv.slice(2), {
         '--': true,

@@ -21,7 +21,7 @@
 'use strict';
 
 var inherits = require('util').inherits;
-var EventEmitter = require('../../lib/event_emitter.js');
+var EventEmitter = require('tchannel/lib/event_emitter.js');
 
 module.exports = FakeEgressNodes;
 

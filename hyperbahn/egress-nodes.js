@@ -22,7 +22,7 @@
 
 var assert = require('assert');
 var inherits = require('util').inherits;
-var EventEmitter = require('../lib/event_emitter');
+var EventEmitter = require('tchannel/lib/event_emitter');
 
 module.exports = EgressNodes;
 
@@ -61,7 +61,7 @@ EgressNodes.prototype.kValueFor = function kValueFor(serviceName) {
 
 EgressNodes.prototype.setDefaultKValue = function setDefaultKValue(kValue) {
     var self = this;
-    assert(typeof kValue === 'number' && kValue > 0);
+    assert(typeof kValue === 'number' && kValue > 0, 'kValue must be positive: ' + kValue);
     self.defaultKValue = kValue;
 };
 

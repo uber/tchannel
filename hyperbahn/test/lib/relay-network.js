@@ -24,13 +24,14 @@ var tape = require('tape');
 var parallel = require('run-parallel');
 var NullStatsd = require('uber-statsd-client/null');
 var tapeCluster = require('tape-cluster');
+var allocCluster = require('tchannel/test/lib/alloc-cluster.js');
+var EndpointHandler = require('tchannel/endpoint-handler.js');
 
 var FakeEgressNodes = require('./fake-egress-nodes.js');
-var allocCluster = require('./alloc-cluster.js');
-var EndpointHandler = require('../../endpoint-handler.js');
-var ServiceProxy = require('../../hyperbahn/service_proxy.js');
-var HyperbahnHandler = require('../../hyperbahn/handler.js');
+var ServiceProxy = require('../../service-proxy.js');
+var HyperbahnHandler = require('../../handler.js');
 
+/*eslint complexity: [2, 15], max-statements: [2, 50] */
 function RelayNetwork(options) {
     if (!(this instanceof RelayNetwork)) {
         return new RelayNetwork(options);
@@ -97,7 +98,7 @@ RelayNetwork.prototype.bootstrap = function bootstrap(cb) {
 
 RelayNetwork.prototype.close = function close(cb) {
     var self = this;
-    self.relayChannels.forEach(function (relayChannel) {
+    self.relayChannels.forEach(function each(relayChannel) {
         relayChannel.handler.destroy();
     });
     self.cluster.destroy();
@@ -111,14 +112,14 @@ RelayNetwork.prototype.setCluster = function setCluster(cluster) {
     // consume channels for the following services
     var nextChannelIndex = 0;
 
-    self.relayChannels = self.relayIndexes.map(function () {
+    self.relayChannels = self.relayIndexes.map(function mappy() {
         return cluster.channels[nextChannelIndex++];
     });
 
     self.serviceChannels = [];
     self.serviceChannelsByName = {};
-    self.serviceNames.forEach(function (serviceName) {
-        var channels = self.instanceIndexes.map(function (instanceIndex) {
+    self.serviceNames.forEach(function each(serviceName) {
+        var channels = self.instanceIndexes.map(function mappy2(instanceIndex) {
             return cluster.channels[nextChannelIndex++];
         });
         self.serviceChannels.push(channels);
@@ -127,7 +128,7 @@ RelayNetwork.prototype.setCluster = function setCluster(cluster) {
 
     // Create a relay topology for egress nodes.
     self.topology = {};
-    self.serviceChannels.forEach(function (channels, index) {
+    self.serviceChannels.forEach(function each(channels, index) {
         var serviceName = self.serviceNames[index];
         var relayHostPorts = [];
         for (var kIndex = 0; kIndex < self.kValue; kIndex++) {
@@ -153,7 +154,7 @@ RelayNetwork.prototype.setCluster = function setCluster(cluster) {
     });
 
     // Set up relays
-    self.relayChannels.forEach(function (relayChannel, index) {
+    self.relayChannels.forEach(function each(relayChannel, index) {
         var egressNodes = self.egressNodesForRelay[index];
         var statsd = new NullStatsd();
 
@@ -183,9 +184,9 @@ RelayNetwork.prototype.setCluster = function setCluster(cluster) {
         hyperbahnChannel.handler = hyperbahnHandler;
 
         // In response to artificial advertisement
-        self.serviceNames.forEach(function eachServiceName(serviceName, index) {
+        self.serviceNames.forEach(function eachServiceName(serviceName, index2) {
             if (egressNodes.isExitFor(serviceName)) {
-                self.serviceChannels[index].forEach(function (serviceChannel) {
+                self.serviceChannels[index2].forEach(function each(serviceChannel) {
                     relayChannel.handler.getServicePeer(serviceName, serviceChannel.hostPort);
                 });
             }
@@ -195,9 +196,9 @@ RelayNetwork.prototype.setCluster = function setCluster(cluster) {
     // Create and connect service channels
     self.subChannels = [];
     self.subChannelsByName = {};
-    self.serviceChannels.forEach(function (channels, serviceIndex) {
+    self.serviceChannels.forEach(function each(channels, serviceIndex) {
         var serviceName = self.serviceNames[serviceIndex];
-        var subChannels = channels.map(function (channel, channelIndex) {
+        var subChannels = channels.map(function mappy(channel, channelIndex) {
             var subChannel = channel.makeSubChannel({
                 serviceName: serviceName,
                 requestDefaults: {
@@ -221,11 +222,11 @@ RelayNetwork.prototype.setCluster = function setCluster(cluster) {
 
 };
 
-RelayNetwork.prototype.forEachSubChannel = function (callback) {
+RelayNetwork.prototype.forEachSubChannel = function forEachSubChannel(callback) {
     var self = this;
-    self.subChannels.forEach(function (subChannels, serviceIndex) {
+    self.subChannels.forEach(function each(subChannels, serviceIndex) {
         var serviceName = self.serviceNames[serviceIndex];
-        subChannels.forEach(function (subChannel, instanceIndex) {
+        subChannels.forEach(function each(subChannel, instanceIndex) {
             callback(subChannel, serviceName, instanceIndex);
         });
     });
@@ -234,15 +235,15 @@ RelayNetwork.prototype.forEachSubChannel = function (callback) {
 RelayNetwork.prototype.connect = function connect(callback) {
     var self = this;
 
-    function connectRelays(callback) {
+    function connectRelays(cb) {
         return self.cluster.connectChannels(
             self.relayChannels,
-            callback
+            cb
         );
     }
 
-    function connectServices(callback) {
-        self.connectServices(callback);
+    function connectServices(cb) {
+        self.connectServices(cb);
     }
 
     return parallel([connectRelays, connectServices], callback);
@@ -253,8 +254,8 @@ RelayNetwork.prototype.connectServices = function connectServices(callback) {
 
     var plans = [];
 
-    self.relayChannels.forEach(function (relayChannel, relayIndex) {
-        self.serviceNames.forEach(function (serviceName) {
+    self.relayChannels.forEach(function each(relayChannel, relayIndex) {
+        self.serviceNames.forEach(function each(serviceName) {
             if (self.egressNodesForRelay[relayIndex].isExitFor(serviceName)) {
                 plans.push(planToConnect(
                     relayChannel,
@@ -265,29 +266,29 @@ RelayNetwork.prototype.connectServices = function connectServices(callback) {
     });
 
     function planToConnect(channel, channels) {
-        return function connect(callback) {
-            return self.cluster.connectChannelToChannels(channel, channels, callback);
+        return function connect(cb) {
+            return self.cluster.connectChannelToChannels(channel, channels, cb);
         };
     }
 
     return parallel(plans, callback);
 };
 
-RelayNetwork.prototype.register = function (arg1, handler) {
+RelayNetwork.prototype.register = function register(arg1, handler) {
     var self = this;
     self.forEachSubChannel(function registerHanlder(subChannel) {
         subChannel.handler.register(arg1, handler);
     });
 };
 
-RelayNetwork.prototype.registerEchoHandlers = function () {
+RelayNetwork.prototype.registerEchoHandlers = function registerEchoHandlers() {
     var self = this;
     self.register('echo', function echo(req, res, arg1, arg2) {
         res.sendOk(arg1, arg2);
     });
 };
 
-RelayNetwork.prototype.send = function (options, arg1,  arg2, arg3, callback) {
+RelayNetwork.prototype.send = function send(options, arg1, arg2, arg3, callback) {
     var self = this;
     var callerChannel = self.subChannelsByName[options.callerName][options.callerIndex || 0];
     callerChannel.request({
@@ -300,22 +301,22 @@ RelayNetwork.prototype.send = function (options, arg1,  arg2, arg3, callback) {
     }).send(arg1, arg2, arg3, callback);
 };
 
-RelayNetwork.prototype.exercise = function (count, delay, eachRequest, eachResponse, callback) {
+RelayNetwork.prototype.exercise = function exercise(count, delay, eachRequest, eachResponse, callback) {
     var self = this;
 
-    function tick(count, delay, callback) {
+    function tick(count2, delay2, callback2) {
 
         eachRequest(onResponse);
 
         function onResponse(err, res, arg2, arg3) {
-            self.timers.advance(delay);
+            self.timers.advance(delay2);
             if (eachResponse) {
                 eachResponse(err, res, arg2, arg3);
             }
-            if (count) {
-                tick(count - 1, delay, callback);
+            if (count2) {
+                tick(count2 - 1, delay2, callback2);
             } else {
-                callback();
+                callback2();
             }
         }
     }
@@ -323,14 +324,14 @@ RelayNetwork.prototype.exercise = function (count, delay, eachRequest, eachRespo
     tick(count, delay, callback);
 };
 
-RelayNetwork.prototype.getCircuit = function (relayIndex, callerName, serviceName, endpointName) {
+RelayNetwork.prototype.getCircuit = function getCircuit(relayIndex, callerName, serviceName, endpointName) {
     var self = this;
     var serviceDispatchHandler = self.relayChannels[relayIndex].handler;
     var circuits = serviceDispatchHandler.circuits;
     return circuits.getCircuit(callerName, serviceName, endpointName);
 };
 
-RelayNetwork.prototype.getCircuitTuples = function (relayIndex) {
+RelayNetwork.prototype.getCircuitTuples = function getCircuitTuples(relayIndex) {
     var self = this;
     var serviceDispatchHandler = self.relayChannels[relayIndex].handler;
     var circuits = serviceDispatchHandler.circuits;

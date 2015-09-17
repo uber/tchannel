@@ -20,9 +20,10 @@
 
 'use strict';
 var DebugLogtron = require('debug-logtron');
-var TChannelJSON = require('../../as/json');
-var HyperbahnClient = require('../../hyperbahn/index.js');
+var TChannelJSON = require('tchannel/as/json');
+var HyperbahnClient = require('tchannel/hyperbahn/index.js');
 var series = require('run-series');
+var setTimeout = require('timers').setTimeout;
 
 module.exports = runTests;
 
@@ -93,7 +94,7 @@ function runTests(HyperbahnCluster) {
                 send.bind(null, opts),
                 send.bind(null, opts),
                 function check(done) {
-                    cluster.apps.forEach(function (app) {
+                    cluster.apps.forEach(function check(app) {
                         var relayChannel = app.clients.tchannel;
                         assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 3, 'total request');
                         assert.equals(relayChannel.handler.rateLimiter.serviceCounters.steve.rps, 3, 'request for steve');
@@ -146,7 +147,7 @@ function runTests(HyperbahnCluster) {
                 waitFor(500),
                 send.bind(null, opts),
                 function check1(done) {
-                    cluster.apps.forEach(function (app) {
+                    cluster.apps.forEach(function check(app) {
                         var relayChannel = app.clients.tchannel;
                         var rateLimiter = relayChannel.handler.rateLimiter;
                         assert.equals(rateLimiter.totalRequestCounter.rps, 3, 'check1: total request');
@@ -159,7 +160,7 @@ function runTests(HyperbahnCluster) {
                 waitFor(500),
                 send.bind(null, opts),
                 function check2(done) {
-                    cluster.apps.forEach(function (app) {
+                    cluster.apps.forEach(function check(app) {
                         var relayChannel = app.clients.tchannel;
                         var rateLimiter = relayChannel.handler.rateLimiter;
                         assert.equals(rateLimiter.totalRequestCounter.rps, 2, 'check2: total request');

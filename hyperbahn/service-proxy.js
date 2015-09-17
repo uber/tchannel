@@ -21,16 +21,18 @@
 'use strict';
 
 var assert = require('assert');
-var RelayHandler = require('../relay_handler');
-var EventEmitter = require('../lib/event_emitter');
-var clean = require('../lib/statsd-clean').clean;
+var RelayHandler = require('tchannel/relay_handler');
+var EventEmitter = require('tchannel/lib/event_emitter');
+var clean = require('tchannel/lib/statsd-clean').clean;
 var util = require('util');
-var RateLimiter = require('../rate_limiter');
-var Circuits = require('../circuits');
+
+var RateLimiter = require('./rate_limiter.js');
+var Circuits = require('./circuits.js');
 
 var DEFAULT_LOG_GRACE_PERIOD = 5 * 60 * 1000;
 var SERVICE_PURGE_PERIOD = 5 * 60 * 1000;
 
+/* eslint max-statements: [2, 30] */
 function ServiceDispatchHandler(options) {
     if (!(this instanceof ServiceDispatchHandler)) {
         return new ServiceDispatchHandler(options);
@@ -131,7 +133,6 @@ function handleLazily(conn, reqFrame) {
 
 ServiceDispatchHandler.prototype.handleRequest =
 function handleRequest(req, buildRes) {
-    /* eslint max-statements:[2,20] */
     var self = this;
     if (!req.serviceName) {
         self.logger.warn('Got incoming req with no service',

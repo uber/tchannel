@@ -21,9 +21,10 @@
 'use strict';
 
 var debugLogtron = require('debug-logtron');
-var RelayNetwork = require('./lib/relay_network.js');
 var MockTimers = require('time-mock');
 var CountedReadySignal = require('ready-signal/counted');
+
+var RelayNetwork = require('../lib/relay-network.js');
 
 var aliceAndBob = {
     timers: new MockTimers(1e9),
@@ -63,7 +64,7 @@ var aliceBobCharlie = {
 
 RelayNetwork.test('should switch to unhealthy', aliceAndBob, function t(network, assert) {
 
-    network.register('call', function (req, res) {
+    network.register('call', function onCall(req, res) {
         res.sendError('UnexpectedError', 'head splode');
     });
 
@@ -90,7 +91,9 @@ RelayNetwork.test('should switch to unhealthy', aliceAndBob, function t(network,
     }
 
     function onCompletion(err) {
-        if (err) return assert.end(err);
+        if (err) {
+            return assert.end(err);
+        }
 
         var items = network.cluster.logger.items();
         assert.equal(items.length, 1);
@@ -109,7 +112,7 @@ RelayNetwork.test('should switch to unhealthy', aliceAndBob, function t(network,
 
 RelayNetwork.test('switches to unhealthy on timeout', aliceAndBob, function t(network, assert) {
 
-    network.register('call', function (req, res) {
+    network.register('call', function onCall(req, res) {
         network.timers.advance(200);
     });
 
@@ -118,7 +121,7 @@ RelayNetwork.test('switches to unhealthy on timeout', aliceAndBob, function t(ne
     function eachRequest(callback) {
         network.send({
             callerName: 'alice',
-            serviceName: 'bob',
+            serviceName: 'bob'
         }, 'call', 'tiny head', 'HUGE BODY', callback);
     }
 
@@ -134,7 +137,9 @@ RelayNetwork.test('switches to unhealthy on timeout', aliceAndBob, function t(ne
     }
 
     function onCompletion(err) {
-        if (err) return assert.end(err);
+        if (err) {
+            return assert.end(err);
+        }
 
         assert.deepEquals(network.getCircuitTuples(0), [
             ['alice', 'bob', 'call']
@@ -150,7 +155,7 @@ RelayNetwork.test('switches to unhealthy on timeout', aliceAndBob, function t(ne
 
 RelayNetwork.test('switches to unhealthy on service connection reset', aliceAndBob, function t(network, assert) {
 
-    network.register('call', function (req, res) {
+    network.register('call', function onCall(req, res) {
         network.serviceChannelsByName.bob[0].close();
     });
 
@@ -175,7 +180,9 @@ RelayNetwork.test('switches to unhealthy on service connection reset', aliceAndB
     }
 
     function onCompletion(err) {
-        if (err) return assert.end(err);
+        if (err) {
+            return assert.end(err);
+        }
 
         assert.ok(declined > reset * 2, 'should typicaly decline');
 
@@ -191,7 +198,7 @@ RelayNetwork.test('switches to unhealthy on service connection reset', aliceAndB
 // b.) when connection errors flow through request/send
 // RelayNetwork.test('switches to unhealthy on caller connection reset', aliceAndBob, function t(network, assert) {
 //
-//     network.register('call', function (req, res) {
+//     network.register('call', function onCall(req, res) {
 //         network.serviceChannelsByName.alice[0].close();
 //     });
 //
@@ -216,7 +223,10 @@ RelayNetwork.test('switches to unhealthy on service connection reset', aliceAndB
 //     }
 //
 //     function onCompletion(err) {
-//         if (err) return assert.end(err);
+//         if (err) {
+//             return assert.end(err);
+//         }
+//
 //
 //         assert.ok(declined > reset * 2, 'should typicaly decline');
 //
@@ -229,7 +239,7 @@ RelayNetwork.test('switches to unhealthy on service connection reset', aliceAndB
 
 RelayNetwork.test('does not become unhealthy on cancel', aliceAndBob, function t(network, assert) {
 
-    network.register('call', function (req, res) {
+    network.register('call', function onCall(req, res) {
         res.sendError('Cancelled', 'no result for you');
     });
 
@@ -243,7 +253,9 @@ RelayNetwork.test('does not become unhealthy on cancel', aliceAndBob, function t
     }
 
     function onCompletion(err) {
-        if (err) return assert.end(err);
+        if (err) {
+            return assert.end(err);
+        }
 
         var circuit = network.getCircuit(0, 'alice', 'bob', 'call');
         assert.equals(circuit.state.type, 'tchannel.healthy', 'still healthy');
@@ -254,7 +266,7 @@ RelayNetwork.test('does not become unhealthy on cancel', aliceAndBob, function t
 
 RelayNetwork.test('does not become unhealthy on bad request', aliceAndBob, function t(network, assert) {
 
-    network.register('call', function (req, res) {
+    network.register('call', function onCall(req, res) {
         res.sendError('BadRequest', 'there are no dumb questions');
     });
 
@@ -268,7 +280,9 @@ RelayNetwork.test('does not become unhealthy on bad request', aliceAndBob, funct
     }
 
     function onCompletion(err) {
-        if (err) return assert.end(err);
+        if (err) {
+            return assert.end(err);
+        }
 
         var circuit = network.getCircuit(0, 'alice', 'bob', 'echo');
         assert.equals(circuit.state.type, 'tchannel.healthy', 'still healthy');
@@ -279,7 +293,7 @@ RelayNetwork.test('does not become unhealthy on bad request', aliceAndBob, funct
 
 RelayNetwork.test('circuit state machine behaves properly', aliceAndBob, function t(network, assert) {
 
-    network.register('call', function (req, res) {
+    network.register('call', function onCall(req, res) {
         network.serviceChannelsByName.bob[0].close();
     });
 
@@ -334,7 +348,9 @@ RelayNetwork.test('circuit state machine behaves properly', aliceAndBob, functio
     }
 
     function onCompletion(err) {
-        if (err) return assert.end(err);
+        if (err) {
+            return assert.end(err);
+        }
 
         var circuit = network.getCircuit(0, 'alice', 'bob', 'call');
         assert.equals(circuit.state.type, 'tchannel.unhealthy', 'became unhealthy');
@@ -347,7 +363,7 @@ RelayNetwork.test('recovers after five successes', aliceAndBob, function t(netwo
 
     var healthy = false;
 
-    network.register('call', function (req, res) {
+    network.register('call', function onCall(req, res) {
         if (healthy) {
             res.headers.as = 'raw';
             res.sendOk('tiny head', 'HUGE BODY');
@@ -413,7 +429,9 @@ RelayNetwork.test('recovers after five successes', aliceAndBob, function t(netwo
     }
 
     function onCompletion(err) {
-        if (err) return assert.end(err);
+        if (err) {
+            return assert.end(err);
+        }
 
         assert.end();
     }
@@ -425,7 +443,7 @@ RelayNetwork.test('does not recover when successes are non-consecutive', aliceAn
 
     var circuit = network.getCircuit(0, 'alice', 'bob', 'call');
 
-    network.register('call', function (req, res) {
+    network.register('call', function onCall(req, res) {
         count++;
         if (count > 20 && count % 4 !== 0) {
             res.headers.as = 'raw';
@@ -445,7 +463,10 @@ RelayNetwork.test('does not recover when successes are non-consecutive', aliceAn
     }
 
     function onCompletion(err) {
-        if (err) return assert.end(err);
+        if (err) {
+            return assert.end(err);
+        }
+
         assert.equals(circuit.state.type, 'tchannel.unhealthy');
         assert.end();
     }
@@ -457,7 +478,7 @@ RelayNetwork.test('recovers when failure is periodic but infrequent', aliceAndBo
 
     var circuit = network.getCircuit(0, 'alice', 'bob', 'call');
 
-    network.register('call', function (req, res) {
+    network.register('call', function onCall(req, res) {
         count++;
         if (count > 20 && count % 8 !== 0) {
             res.headers.as = 'raw';
@@ -477,7 +498,10 @@ RelayNetwork.test('recovers when failure is periodic but infrequent', aliceAndBo
     }
 
     function onCompletion(err) {
-        if (err) return assert.end(err);
+        if (err) {
+            return assert.end(err);
+        }
+
         assert.equals(circuit.state.type, 'tchannel.healthy');
         assert.end();
     }
@@ -485,7 +509,7 @@ RelayNetwork.test('recovers when failure is periodic but infrequent', aliceAndBo
 
 function runInterferenceScenario(network, errorCaller, errorService, errorEndpoint, assert) {
 
-    network.register('respond', function (req, res) {
+    network.register('respond', function onRespond(req, res) {
         res.headers.as = 'raw';
         if (String(req.arg3) === 'kill me') {
             res.sendError('UnexpectedError', 'nuke it from orbit');
@@ -495,7 +519,7 @@ function runInterferenceScenario(network, errorCaller, errorService, errorEndpoi
     });
 
     if (errorEndpoint !== 'respond') {
-        network.register(errorEndpoint, function (req, res) {
+        network.register(errorEndpoint, function onError(req, res) {
             res.sendError('UnexpectedError', 'nuke it from orbit');
         });
     }
@@ -519,7 +543,7 @@ function runInterferenceScenario(network, errorCaller, errorService, errorEndpoi
     function eachErrorRequest(callback) {
         network.send({
             callerName: errorCaller,
-            serviceName: errorService,
+            serviceName: errorService
         }, errorEndpoint, 'hello', 'kill me', callback);
     }
 
@@ -528,6 +552,8 @@ function runInterferenceScenario(network, errorCaller, errorService, errorEndpoi
     }
 
     function onCompletion(err) {
+        assert.ifError(err);
+
         var okCircuit = network.getCircuit(0, 'alice', 'bob', 'respond');
         var errorCircuit = network.getCircuit(0, errorCaller, errorService, errorEndpoint);
         assert.equals(okCircuit.state.type, 'tchannel.healthy', 'ok circuit should be healthy');

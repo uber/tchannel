@@ -56,10 +56,19 @@ function TestCluster(opts) {
     self.dummySize = self.opts.dummySize || 2;
     self.namedRemotesConfig = self.opts.namedRemotes || [];
 
-    if (typeof opts.kValue === 'number') {
-        opts.remoteConfig = opts.remoteConfig || {};
-        opts.remoteConfig['kValue.default'] = opts.kValue;
+    var defaultKValue = self.size <= 20 ?
+        Math.floor(self.size / 2) : 10;
+
+    if (defaultKValue < 1) {
+        defaultKValue = 1;
     }
+
+    self.kValue = typeof opts.kValue === 'number' ?
+        opts.kValue : defaultKValue;
+
+    opts.remoteConfig = opts.remoteConfig || {};
+    opts.remoteConfig['kValue.default'] =
+        opts.remoteConfig['kValue.default'] || self.kValue;
 
     // These are a ring of Hyperbahn apps
     self.apps = [];
@@ -423,6 +432,30 @@ function checkExitPeers(assert, opts) {
     exitApps.forEach(function checkApp(exitApp) {
         exitApp.checkExitPeers(assert, opts);
     });
+};
+
+TestCluster.prototype.getExitNodes = function getExitNodes(serviceName) {
+    var self = this;
+
+    var app = self.apps[0];
+    var ringpop = app.clients.ringpop;
+    var hosts = [];
+
+    for (var i = 0; i < self.kValue; i++) {
+        var hp = ringpop.lookup(serviceName + '~' + i);
+        if (hosts.indexOf(hp) === -1) {
+            hosts.push(hp);
+        }
+    }
+
+    var exitApps = [];
+    for (var j = 0; j < self.apps.length; j++) {
+        if (hosts.indexOf(self.apps[j].hostPort) > -1) {
+            exitApps.push(self.apps[j]);
+        }
+    }
+
+    return exitApps;
 };
 
 TestCluster.prototype.sendRegister =

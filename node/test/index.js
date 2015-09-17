@@ -23,7 +23,6 @@
 require('./errors.js');
 require('./event_emitter.js');
 require('./argstream.js');
-require('./circuits.js');
 require('./safe-quit.js');
 require('./timeouts.js');
 require('./send.js');
@@ -53,7 +52,6 @@ require('./request-with-statsd.js');
 require('./response-stats.js');
 require('./response-with-statsd.js');
 require('./ping.js');
-require('./permissions_cache.js');
 require('./connection-stats.js');
 require('./connection-with-statsd.js');
 require('./request-error-context.js');
@@ -63,7 +61,6 @@ require('./examples.js');
 require('./busy.js');
 require('./ephemeral-client.js');
 require('./relay-to-dead.js');
-require('./rate-limiter.js');
 require('./time_heap.js');
 require('./balance_peer_requests.js');
 require('./tcollector-reporter.js');
@@ -90,22 +87,3 @@ require('./v2/ping.js');
 require('./v2/error_response.js');
 require('./v2/args.js');
 require('./v2/lazy_frame.js');
-
-require('./hyperbahn/constructor.js');
-require('./hyperbahn/todo.js');
-require('./hyperbahn/sub-channel.js');
-require('./hyperbahn/kill-switch.js');
-require('./hyperbahn/egress-nodes.js');
-
-var HyperbahnCluster = require('./lib/hyperbahn-cluster.js');
-require('./hyperbahn/forward.js')(HyperbahnCluster);
-require('./hyperbahn/advertise.js')(HyperbahnCluster);
-require('./hyperbahn/unadvertise.js')(HyperbahnCluster);
-require('./hyperbahn/hostports.js')(HyperbahnCluster);
-require('./hyperbahn/forward-retry.js')(HyperbahnCluster);
-
-require('./hyperbahn/hyperbahn-down.js')(HyperbahnCluster);
-require('./hyperbahn/hyperbahn-times-out.js')(HyperbahnCluster);
-
-require('./hyperbahn/rate-limiter.js')(HyperbahnCluster);
-

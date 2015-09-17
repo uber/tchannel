@@ -20,8 +20,9 @@
 
 'use strict';
 
+/* eslint max-statements: [2, 40] */
 var assert = require('assert');
-var stat = require('./lib/stat');
+var stat = require('tchannel/lib/stat');
 
 var DEFAULT_SERVICE_RPS_LIMIT = 100;
 var DEFAULT_TOTAL_RPS_LIMIT = 1000;

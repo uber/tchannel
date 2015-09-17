@@ -20,10 +20,11 @@
 
 'use strict';
 
-var EventEmitter = require('../../lib/event_emitter.js');
+var EventEmitter = require('tchannel/lib/event_emitter.js');
 var test = require('tape');
-var TChannel = require('../../');
-var ServiceProxy = require('../../hyperbahn/service_proxy.js');
+var TChannel = require('tchannel');
+
+var ServiceProxy = require('../../service-proxy.js');
 
 test('set cn/service', function t(assert) {
 

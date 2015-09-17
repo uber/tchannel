@@ -20,10 +20,11 @@
 
 'use strict';
 var test = require('tape');
-var EgressNode = require('../../hyperbahn/egress-nodes');
-var EventEmitter = require('../../lib/event_emitter');
+var EventEmitter = require('tchannel/lib/event_emitter');
 
-test('set default k value works', function (assert) {
+var EgressNode = require('../../egress-nodes.js');
+
+test('set default k value works', function t(assert) {
     var ringpop = new EventEmitter();
     ringpop.membershipChangedEvent = ringpop.defineEvent('membershipChanged');
     var node = new EgressNode({
@@ -37,7 +38,7 @@ test('set default k value works', function (assert) {
     assert.end();
 });
 
-test('set wrong default k', function (assert) {
+test('set wrong default k', function t(assert) {
     var ringpop = new EventEmitter();
     ringpop.membershipChangedEvent = ringpop.defineEvent('membershipChanged');
     var node = new EgressNode({

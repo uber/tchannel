@@ -24,9 +24,7 @@ var allocCluster = require('../lib/test-cluster.js');
 
 allocCluster.test('set k and forward', {
     size: 10,
-    remoteConfig: {
-        'kValue.default': 5
-    }
+    kValue: 5
 }, function t(cluster, assert) {
     var steve = cluster.remotes.steve;
     var bob = cluster.remotes.bob;
@@ -93,8 +91,8 @@ allocCluster.test('set k and forward', {
 
 allocCluster.test('k value get set correctly', {
     size: 10,
+    kValue: 11,
     remoteConfig: {
-        'kValue.default': 11,
         'kValue.services': {
             'bob': 6,
             'steve': 7

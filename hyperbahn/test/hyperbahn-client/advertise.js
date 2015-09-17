@@ -24,7 +24,7 @@ var DebugLogtron = require('debug-logtron');
 var fs = require('fs');
 var crypto = require('crypto');
 
-var HyperbahnClient = require('../../hyperbahn/index.js');
+var HyperbahnClient = require('tchannel/hyperbahn/index.js');
 
 module.exports = runTests;
 
@@ -78,12 +78,6 @@ function runTests(HyperbahnCluster) {
             hostPortFile = '/tmp/host-' + crypto.randomBytes(4).readUInt32LE(0) + '.json';
         } while (fs.existsSync(hostPortFile));
         fs.writeFileSync(hostPortFile, JSON.stringify(cluster.hostPortList), 'utf8');
-        assert.once('end', function cleanup() {
-            client.destroy();
-            if (fs.existsSync(hostPortFile)) {
-                fs.unlinkSync(hostPortFile);
-            }
-        });
 
         var client = new HyperbahnClient({
             serviceName: 'hello-bob',
@@ -91,6 +85,13 @@ function runTests(HyperbahnCluster) {
             hostPortFile: hostPortFile,
             tchannel: bob.channel,
             logger: DebugLogtron('hyperbahnClient')
+        });
+
+        assert.once('end', function cleanup() {
+            client.destroy();
+            if (fs.existsSync(hostPortFile)) {
+                fs.unlinkSync(hostPortFile);
+            }
         });
 
         client.once('advertised', onResponse);
