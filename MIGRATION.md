@@ -1,5 +1,14 @@
 # Migration
 
+# Upgrading from 2.x to 3.x
+
+This is a pretty easy upgrade. We removed `test/lib/hyperbahn-cluster.js`
+
+It's now recommended that you `npm install hyperbahn --save-dev` and import
+`require('hyperbahn/test/lib/test-cluster.js')` instead.
+
+The interface is the same.
+
 # Upgrading from 1.x to 2.x
 
 ## .register() -> .handler.register()
