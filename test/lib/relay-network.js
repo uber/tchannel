@@ -184,9 +184,9 @@ RelayNetwork.prototype.setCluster = function setCluster(cluster) {
         hyperbahnChannel.handler = hyperbahnHandler;
 
         // In response to artificial advertisement
-        self.serviceNames.forEach(function eachServiceName(serviceName) {
+        self.serviceNames.forEach(function eachServiceName(serviceName, index2) {
             if (egressNodes.isExitFor(serviceName)) {
-                self.serviceChannels[index].forEach(function each(serviceChannel) {
+                self.serviceChannels[index2].forEach(function each(serviceChannel) {
                     relayChannel.handler.getServicePeer(serviceName, serviceChannel.hostPort);
                 });
             }
