@@ -31,7 +31,7 @@ require('./hyperbahn-client/egress-nodes.js');
 require('./hyperbahn-client/forward.js')(TestCluster);
 require('./hyperbahn-client/advertise.js')(TestCluster);
 require('./hyperbahn-client/unadvertise.js')(TestCluster);
-// require('./hyperbahn-client/hostports.js')(TestCluster);
+require('./hyperbahn-client/hostports.js')(TestCluster);
 require('./hyperbahn-client/forward-retry.js')(TestCluster);
 
 require('./hyperbahn-client/hyperbahn-down.js')(TestCluster);
