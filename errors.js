@@ -822,3 +822,27 @@ module.exports.toHTTPCode = function toHTTPCode(codeName) {
             return new HTTPInfo(500, 'Internal Server Error');
     }
 };
+
+module.exports.logLevel = function errorLogLevel(err, codeName) {
+    switch (codeName) {
+        case 'ProtocolError':
+        case 'UnexpectedError':
+            if (err.isErrorFrame) {
+                return 'warn';
+            }
+            return 'error';
+
+        case 'Busy':
+        case 'Cancelled':
+        case 'Declined':
+        case 'NetworkError':
+            return 'warn';
+
+        case 'BadRequest':
+        case 'Timeout':
+            return 'info';
+
+        default:
+            return 'error';
+    }
+};
