@@ -20,6 +20,7 @@
 
 'use strict';
 
+/* eslint max-statements: [2, 40] */
 var assert = require('assert');
 var stat = require('tchannel/lib/stat');
 
