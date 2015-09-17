@@ -265,6 +265,10 @@ function createServiceChannel(serviceName) {
         options.requestDefaults = self.serviceReqDefaults[serviceName];
     }
 
+    if (mode === 'exit') {
+        options.preferConnectionDirection = 'out';
+    }
+
     var svcchan = self.channel.makeSubChannel(options);
     svcchan.serviceProxyMode = mode; // duck: punched
 
