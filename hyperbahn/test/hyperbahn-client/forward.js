@@ -28,7 +28,7 @@ var TChannelJSON = require('tchannel/as/json');
 module.exports = runTests;
 
 if (require.main === module) {
-    runTests(require('../lib/hyperbahn-cluster.js'));
+    runTests(require('../lib/test-cluster.js'));
 }
 
 function runTests(HyperbahnCluster) {

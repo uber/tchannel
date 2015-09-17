@@ -27,13 +27,13 @@ var path = require('path');
 var TChannelAsThrift = require('tchannel/as/thrift');
 var HyperbahnClient = require('tchannel/hyperbahn/index.js');
 
-var source = fs.readFileSync(path.join(__dirname, '../../hyperbahn/hyperbahn.thrift'), 'utf8');
+var source = fs.readFileSync(path.join(__dirname, '../../hyperbahn.thrift'), 'utf8');
 var thrift = new TChannelAsThrift({source: source});
 
 module.exports = runTests;
 
 if (require.main === module) {
-    runTests(require('../lib/hyperbahn-cluster.js'));
+    runTests(require('../lib/test-cluster.js'));
 }
 
 function covertHost(host) {
@@ -50,10 +50,7 @@ function runTests(HyperbahnCluster) {
         size: 15
     }, function t(cluster, assert) {
         var bob = cluster.remotes.bob;
-        var bobSub = bob.channel.makeSubChannel({
-            serviceName: 'hyperbahn',
-            peers: cluster.hostPortList
-        });
+        var bobSub = bob.channel.subChannels.hyperbahn;
         var request = bobSub.request({
             headers: {
                 cn: 'test'
@@ -87,10 +84,7 @@ function runTests(HyperbahnCluster) {
     }, function t(cluster, assert) {
         var bob = cluster.remotes.bob;
         var steve = cluster.remotes.steve;
-        var steveSub = steve.channel.makeSubChannel({
-            serviceName: 'hyperbahn',
-            peers: cluster.hostPortList
-        });
+        var steveSub = steve.channel.subChannels.hyperbahn;
         var request = steveSub.request({
             headers: {
                 cn: 'test'
@@ -140,10 +134,7 @@ function runTests(HyperbahnCluster) {
         size: 5
     }, function t(cluster, assert) {
         var bob = cluster.remotes.bob;
-        var bobSub = bob.channel.makeSubChannel({
-            serviceName: 'hyperbahn',
-            peers: cluster.hostPortList
-        });
+        var bobSub = bob.channel.subChannels.hyperbahn;
         var request = bobSub.request({
             headers: {
                 cn: 'test'
@@ -176,10 +167,7 @@ function runTests(HyperbahnCluster) {
     }, function t(cluster, assert) {
         cluster.logger.whitelist('warn', 'Got unexpected invalid thrift for arg3');
         var bob = cluster.remotes.bob;
-        var bobSub = bob.channel.makeSubChannel({
-            serviceName: 'hyperbahn',
-            peers: cluster.hostPortList
-        });
+        var bobSub = bob.channel.subChannels.hyperbahn;
         var request = bobSub.request({
             headers: {
                 cn: 'test'
@@ -219,10 +207,7 @@ function runTests(HyperbahnCluster) {
     }, function t(cluster, assert) {
         cluster.logger.whitelist('warn', 'Got unexpected invalid thrift for arg3');
         var bob = cluster.remotes.bob;
-        var bobSub = bob.channel.makeSubChannel({
-            serviceName: 'hyperbahn',
-            peers: cluster.hostPortList
-        });
+        var bobSub = bob.channel.subChannels.hyperbahn;
         var request = bobSub.request({
             headers: {
                 cn: 'test'
@@ -262,10 +247,7 @@ function runTests(HyperbahnCluster) {
     }, function t(cluster, assert) {
         cluster.logger.whitelist('warn', 'Got unexpected invalid thrift for arg3');
         var bob = cluster.remotes.bob;
-        var bobSub = bob.channel.makeSubChannel({
-            serviceName: 'hyperbahn',
-            peers: cluster.hostPortList
-        });
+        var bobSub = bob.channel.subChannels.hyperbahn;
         var request = bobSub.request({
             headers: {
                 cn: 'test'

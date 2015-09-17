@@ -28,7 +28,7 @@ var setTimeout = require('timers').setTimeout;
 module.exports = runTests;
 
 if (require.main === module) {
-    runTests(require('../lib/hyperbahn-cluster.js'));
+    runTests(require('../lib/test-cluster.js'));
 }
 
 function send(opts, done) {
