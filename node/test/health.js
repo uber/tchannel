@@ -116,6 +116,35 @@ allocCluster.test('health check works in bad scenarios', {
     });
 });
 
+allocCluster.test('meta returns thrift IDL for the service', {
+    numPeers: 2
+}, function t(cluster, assert) {
+    makeTChannelThriftServer(cluster, {
+        okResponse: true,
+        good: true
+    });
+
+    var client = cluster.channels[1].subChannels.server;
+    var source = fs.readFileSync(path.join(__dirname, '../as/meta.thrift'), 'utf8');
+    var healthThrift = new TChannelAsThrift({
+        source: source,
+        logParseFailures: false
+    });
+
+    healthThrift.send(client.request({
+        serviceName: 'server',
+        hasNoParent: true
+    }), 'Meta::thriftIDL', null, {}, function onResponse(err, res) {
+        if (err) {
+            assert.end(err);
+        }
+
+        assert.ok(res && res.ok, 'res should be ok');
+        assert.equals(res.body, thriftSource, 'expected IDL should be returned');
+        assert.end();
+    });
+});
+
 function healthGood() {
     return {
         ok: true

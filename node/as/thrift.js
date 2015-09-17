@@ -77,10 +77,12 @@ function TChannelAsThrift(opts) {
             return;
         }
 
+        self.thriftSource = opts.source;
         var metaSpec = new thriftrw.Thrift({
             source: source
         });
         self.register(self.channel, 'Meta::health', self, health, metaSpec);
+        self.register(self.channel, 'Meta::thriftIDL', self, thriftIDL, metaSpec);
     }
 }
 
@@ -104,6 +106,13 @@ function health(self, req, head, body, callback) {
             ok: status.ok,
             message: status.message
         }
+    });
+}
+
+function thriftIDL(self, req, head, body, callback) {
+    return callback(null, {
+        ok: true,
+        body: self.thriftSource
     });
 }
 
