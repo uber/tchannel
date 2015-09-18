@@ -2,7 +2,7 @@
   "name": "tchannel",
   "description": "network multiplexing and framing protocol for RPC or parser drag racing",
   "author": "mranney@uber.com",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "scripts": {
     "lint": "jshint .",
     "test": "npm run check-licence && npm run lint -s && npm run cover -s && npm run check-benchmark -s",
