@@ -47,7 +47,8 @@ function createLogger(options) {
             team: options.team,
             project: options.project,
             hostname: os.hostname(),
-            pid: process.pid
+            pid: process.pid,
+            processTitle: options.processTitle
         },
         levels: {
             trace: {
