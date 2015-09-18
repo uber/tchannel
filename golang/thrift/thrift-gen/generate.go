@@ -77,11 +77,6 @@ func runThrift(inFile string, thriftImport string) (string, error) {
 		return "", fmt.Errorf("failed to delete directory %s: %v", genDir, err)
 	}
 
-	// Create the directory.
-	if err := os.Mkdir(genDir, 0777); err != nil {
-		return "", fmt.Errorf("failed to create directory %s: %v", genDir, err)
-	}
-
 	// Generate the Apache Thrift generated code.
 	if err := execThrift("-r", "--gen", "go:thrift_import="+thriftImport, "-o", dir, inFile); err != nil {
 		return "", fmt.Errorf("Thrift compile failed: %v", err)
