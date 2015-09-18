@@ -32,6 +32,7 @@ function TChannelPeersBase(channel, options) {
     self.options = options || {};
     self._map = Object.create(null);
     self._keys = [];
+    self.preferConnectionDirection = self.options.preferConnectionDirection || 'any';
 }
 
 inherits(TChannelPeersBase, EventEmitter);
