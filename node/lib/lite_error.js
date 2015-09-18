@@ -20,9 +20,6 @@
 
 'use strict';
 
-var TypedError = require('error/typed');
-var extend = require('xtend');
-
 module.exports = LiteError;
 
 function LiteError() {
