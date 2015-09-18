@@ -687,7 +687,14 @@ func (c *Connection) checkExchanges() {
 	if updated != 0 {
 		// If the connection is closed, we can safely close the channel.
 		if updated == connectionClosed {
-			close(c.sendCh)
+
+			go func() {
+				// We cannot close sendCh until we are sure that there are no other goroutines
+				// that may try to write to sendCh.
+				c.inbound.waitForSendCh()
+				c.outbound.waitForSendCh()
+				close(c.sendCh)
+			}()
 		}
 
 		c.log.Debugf("checkExchanges updated connection state to %v", updated)

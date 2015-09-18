@@ -22,6 +22,7 @@ package tchannel_test
 
 import (
 	"errors"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -43,28 +44,30 @@ var (
 )
 
 type testHandler struct {
-	t      *testing.T
-	mut    sync.Mutex
-	format Format
-	caller string
+	sync.Mutex
+
+	t        *testing.T
+	format   Format
+	caller   string
+	blockErr chan error
 }
 
 func newTestHandler(t *testing.T) *testHandler {
-	return &testHandler{t: t}
+	return &testHandler{t: t, blockErr: make(chan error)}
 }
 
 func (h *testHandler) Handle(ctx context.Context, args *raw.Args) (*raw.Res, error) {
-	h.mut.Lock()
+	h.Lock()
 	h.format = args.Format
 	h.caller = args.Caller
-	h.mut.Unlock()
+	h.Unlock()
 
 	assert.Equal(h.t, args.Caller, CurrentCall(ctx).CallerName())
 
 	switch args.Operation {
-	case "timeout":
-		deadline, _ := ctx.Deadline()
-		time.Sleep(deadline.Add(time.Second).Sub(time.Now()))
+	case "block":
+		<-ctx.Done()
+		h.blockErr <- ctx.Err()
 		return nil, errors.New("timeout")
 	case "echo":
 		return &raw.Res{
@@ -84,7 +87,9 @@ func (h *testHandler) Handle(ctx context.Context, args *raw.Args) (*raw.Res, err
 }
 
 func (h *testHandler) OnError(ctx context.Context, err error) {
-	h.t.Errorf("testHandler got error: %v", err)
+	stack := make([]byte, 4096)
+	runtime.Stack(stack, false /* all */)
+	h.t.Errorf("testHandler got error: %v stack:\n%s", err, stack)
 }
 
 func TestRoundTrip(t *testing.T) {
@@ -230,18 +235,37 @@ func TestServerBusy(t *testing.T) {
 	})
 }
 
+type onErrorTestHandler struct {
+	*testHandler
+	onError func(ctx context.Context, err error)
+}
+
+func (h onErrorTestHandler) OnError(ctx context.Context, err error) {
+	h.onError(ctx, err)
+}
+
 func TestTimeout(t *testing.T) {
 	WithVerifiedServer(t, nil, func(ch *Channel, hostPort string) {
-		ch.Register(raw.Wrap(newTestHandler(t)), "timeout")
+		// onError may be called when the block call tries to write the call response.
+		onError := func(ctx context.Context, err error) {
+			assert.Equal(t, ctx.Err(), err, "onError err should be context error")
+			assert.Equal(t, context.DeadlineExceeded, err)
+		}
+		testHandler := onErrorTestHandler{newTestHandler(t), onError}
+		ch.Register(raw.Wrap(testHandler), "block")
 
-		ctx, cancel := NewContext(30 * time.Millisecond)
+		ctx, cancel := NewContext(5 * time.Millisecond)
 		defer cancel()
 
-		_, _, _, err := raw.Call(ctx, ch, hostPort, testServiceName, "timeout", []byte("Arg2"), []byte("Arg3"))
+		_, _, _, err := raw.Call(ctx, ch, hostPort, testServiceName, "block", []byte("Arg2"), []byte("Arg3"))
 
 		// TODO(mmihic): Maybe translate this into ErrTimeout (or vice versa)?
 		assert.Equal(t, context.DeadlineExceeded, err)
+
+		// Verify the server-side receives a timeout error.
+		assert.Equal(t, context.DeadlineExceeded, <-testHandler.blockErr)
 	})
+	VerifyNoBlockedGoroutines(t)
 }
 
 func TestLargeOperation(t *testing.T) {

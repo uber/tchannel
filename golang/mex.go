@@ -115,6 +115,14 @@ func (mex *messageExchange) shutdown() {
 	mex.mexset.removeExchange(mex.msgID)
 }
 
+// inboundTimeout is called when an exchange times out, but a handler may still be
+// running in the background. Since the handler may still write to the exchange, we
+// cannot shutdown the exchange, but we should remove it from the connection's
+// exchange list.
+func (mex *messageExchange) inboundTimeout() {
+	mex.mexset.timeoutExchange(mex.msgID)
+}
+
 // A messageExchangeSet manages a set of active message exchanges.  It is
 // mainly used to route frames from a peer to the appropriate messageExchange,
 // or to cancel or mark a messageExchange as being in error.  Each Connection
@@ -128,8 +136,9 @@ type messageExchangeSet struct {
 	name      string
 	onRemoved func()
 
-	exchanges map[uint32]*messageExchange
-	mut       sync.RWMutex
+	exchanges  map[uint32]*messageExchange
+	sendChRefs sync.WaitGroup
+	mut        sync.RWMutex
 }
 
 // newExchange creates and adds a new message exchange to this set
@@ -162,13 +171,15 @@ func (mexset *messageExchangeSet) newExchange(ctx context.Context, framePool Fra
 	}
 
 	mexset.exchanges[mex.msgID] = mex
+	mexset.sendChRefs.Add(1)
 
 	// TODO(mmihic): Put into a deadline ordered heap so we can garbage collected expired exchanges
 	return mex, nil
 }
 
-// removeExchange removes a message exchange from the set, if it exists.  It's
-// perfectly fine to try and remove an exchange that has already completed
+// removeExchange removes a message exchange from the set, if it exists.
+// It decrements the sendChRefs wait group, signalling that this exchange no longer has
+// any active goroutines that will try to send to sendCh.
 func (mexset *messageExchangeSet) removeExchange(msgID uint32) {
 	mexset.log.Debugf("Removing %s message exchange %d", mexset.name, msgID)
 
@@ -176,7 +187,25 @@ func (mexset *messageExchangeSet) removeExchange(msgID uint32) {
 	delete(mexset.exchanges, msgID)
 	mexset.mut.Unlock()
 
+	mexset.sendChRefs.Done()
 	mexset.onRemoved()
+}
+
+// timeoutExchange is similar to removeExchange, however it does not decrement
+// the sendChRefs wait group.
+func (mexset *messageExchangeSet) timeoutExchange(msgID uint32) {
+	mexset.log.Debugf("Removing %s message exchange %d due to timeout", mexset.name, msgID)
+
+	mexset.mut.Lock()
+	delete(mexset.exchanges, msgID)
+	mexset.mut.Unlock()
+
+	mexset.onRemoved()
+}
+
+// waitForSendCh waits for all goroutines with references to sendCh to complete.
+func (mexset *messageExchangeSet) waitForSendCh() {
+	mexset.sendChRefs.Wait()
 }
 
 func (mexset *messageExchangeSet) count() int {

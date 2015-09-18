@@ -71,6 +71,33 @@ func TestCloseNewClient(t *testing.T) {
 	assert.True(t, ch.Closed(), "Channel should be closed")
 }
 
+func TestCloseAfterTimeout(t *testing.T) {
+	WithVerifiedServer(t, nil, func(ch *Channel, hostPort string) {
+		testHandler := onErrorTestHandler{newTestHandler(t), func(_ context.Context, err error) {}}
+		ch.Register(raw.Wrap(testHandler), "block")
+
+		ctx, cancel := NewContext(10 * time.Millisecond)
+		defer cancel()
+
+		// Make a call, wait for it to timeout.
+		clientCh, err := testutils.NewClient(nil)
+		require.NoError(t, err, "NewClient failed")
+		peerInfo := ch.PeerInfo()
+		_, _, _, err = raw.Call(ctx, clientCh, peerInfo.HostPort, peerInfo.ServiceName, "block", nil, nil)
+		require.Error(t, err, "Expected call to timeout")
+
+		// The client channel should also close immediately.
+		clientCh.Close()
+		runtime.Gosched()
+		assert.Equal(t, ChannelClosed, clientCh.State())
+		assert.True(t, clientCh.Closed(), "Channel should be closed")
+
+		// Unblock the testHandler so that a goroutine isn't leaked.
+		<-testHandler.blockErr
+	})
+	VerifyNoBlockedGoroutines(t)
+}
+
 // TestCloseStress ensures that once a Channel is closed, it cannot be reached.
 func TestCloseStress(t *testing.T) {
 	CheckStress(t)
@@ -238,6 +265,7 @@ func TestCloseSemantics(t *testing.T) {
 	// Once the incoming connection is drained, outgoing calls should fail.
 	s1C <- struct{}{}
 	<-call2
+	runtime.Gosched()
 	assert.Equal(t, ChannelInboundClosed, s1.State())
 	require.Error(t, call(s1, s2),
 		"closed channel with no pending incoming calls should not allow outgoing calls")
@@ -245,6 +273,7 @@ func TestCloseSemantics(t *testing.T) {
 	// Now the channel should be completely closed as there are no pending connections.
 	s2C <- struct{}{}
 	<-call1
+	runtime.Gosched()
 	assert.Equal(t, ChannelClosed, s1.State())
 
 	// Close s2 so we don't leave any goroutines running.
