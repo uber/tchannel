@@ -420,6 +420,7 @@ function _sendRequestStream(cb) {
             result.error = err1;
             result.responseOk = false;
             result.duration = Date.now() - start;
+            result.outReqHostPort = resp ? resp.remoteAddr : null;
             return cb(null, result);
         }
 
@@ -431,6 +432,7 @@ function _sendRequestStream(cb) {
             result.error = err2 || null;
             result.responseOk = resp ? resp.ok : false;
             result.duration = Date.now() - start;
+            result.outReqHostPort = resp ? resp.remoteAddr : null;
 
             // console.log('got response', {
             //     err: !!err
@@ -457,6 +459,7 @@ BatchClient.prototype._sendRequest = function _sendRequest(cb) {
         result.error = err || null;
         result.responseOk = resp ? resp.ok : false;
         result.duration = Date.now() - start;
+        result.outReqHostPort = resp ? resp.remoteAddr : null;
 
         // console.log('got response', {
         //     err: !!err
@@ -575,6 +578,7 @@ function BatchClientRequestResult() {
     self.error = null;
     self.responseOk = null;
     self.duration = null;
+    self.outReqHostPort = null;
 }
 
 function asMegaBytes(num) {
@@ -597,6 +601,7 @@ function BatchClientBucket(size) {
     self.declinedCount = 0;
 
     self.byType = {};
+    self.targetWorkers = {};
 
     self.processMetrics = {
         rss: null,
@@ -639,6 +644,12 @@ BatchClientBucket.prototype.push = function push(result) {
     self._results.push(result);
     self._latencyHistogram.update(result.duration);
 
+    if (!self.targetWorkers[result.outReqHostPort]) {
+        self.targetWorkers[result.outReqHostPort] = 1;
+    } else {
+        self.targetWorkers[result.outReqHostPort]++;
+    }
+
     self.totalCount++;
     if (result.error) {
         self.errorCount++;
@@ -665,7 +676,8 @@ BatchClientBucket.prototype.inspect = function inspect() {
         byType: self.byType,
         processMetrics: self.processMetrics,
         secondsElapsed: Math.ceil((Date.now() - startOfFile) / 1000),
-        latency: self.latency
+        latency: self.latency,
+        targetWorkers: self.targetWorkers
     });
 };
 
