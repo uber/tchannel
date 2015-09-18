@@ -25,16 +25,33 @@ var extend = require('xtend');
 
 module.exports = LiteError;
 
-function LiteError(options) {
+function LiteError() {
     if (!(this instanceof LiteError)) {
-        return new LiteError(options);
+        return new LiteError();
     }
 }
 
 LiteError.prototype.toError = function toError() {
-    var copy = extend(this);
-    delete copy.fullType;
-    return TypedError(copy)();
+    var result = new Error();
+    Object.defineProperty(result, 'type', {
+        value: this.type,
+        enumerable: true,
+        writable: true,
+        configurable: true
+    });
+
+    var key;
+    for (key in this) {
+        if (this.hasOwnProperty(key)) {
+            result[key] = this[key];
+        }
+    }
+
+    if (!result.fullType) {
+        result.fullType = result.type;
+    }
+
+    return result;
 };
 
 LiteError.isLiteError = function isLiteError(err) {
