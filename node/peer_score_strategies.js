@@ -59,7 +59,7 @@ PreferOutgoing.prototype.getScore = function getScore() {
     // space:
     //   [0.1, 0.4)  peers with no identified outgoing connection
     //   [0.4, 1.0)  identified outgoing connections
-    var random = self.peer.pendingWeightedRandom('out');
+    var random = self.peer.pendingWeightedRandom();
     var tier = self.getTier();
     self.lastTier = tier;
     switch (tier) {
@@ -105,7 +105,7 @@ NoPreference.prototype.getScore = function getScore() {
     // space:
     //   [0.1, 0.4)  peers with no identified connection
     //   [0.4, 1.0)  identified connections
-    var random = self.peer.pendingWeightedRandom('out');
+    var random = self.peer.pendingWeightedRandom();
     var tier = self.getTier();
     self.lastTier = tier;
     switch (tier) {
@@ -153,7 +153,7 @@ PreferIncoming.prototype.getScore = function getScore() {
     // space:
     //   [0.1, 0.4)  peers with no identified outgoing connection
     //   [0.4, 1.0)  identified outgoing connections
-    var random = self.peer.pendingWeightedRandom('in');
+    var random = self.peer.pendingWeightedRandom();
     var tier = self.getTier();
     self.lastTier = tier;
     switch (tier) {
