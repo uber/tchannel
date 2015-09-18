@@ -33,7 +33,7 @@ var REQUEST_BODY_CHUNKS = [
     new Buffer(REQUEST_BODY)
 ];
 
-TimeSeriesCluster.test('constant low volume 512kb traffic', {
+TimeSeriesCluster.test('constant low volume 512KiB traffic', {
     clusterOptions: {},
     buckets: [
         25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25
