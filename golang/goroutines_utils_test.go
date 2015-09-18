@@ -23,8 +23,10 @@ package tchannel_test
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -39,32 +41,34 @@ func getStacks() []byte {
 	}
 }
 
+// parseGoStackHeader parses a stack header that looks like:
+// goroutine 643 [runnable]:
+// And returns the goroutine ID, and the state.
+func parseGoStackHeader(line string) (goroutineID int, state string) {
+	parts := strings.SplitN(line, " ", 3)
+	if len(parts) != 3 {
+		panic(fmt.Sprintf("unexpected stack header format: %v", line))
+	}
+
+	id, err := strconv.Atoi(parts[1])
+	if err != nil {
+		panic(fmt.Sprintf("failed to parse goroutine ID: %v", parts[1]))
+	}
+
+	state = strings.TrimSuffix(strings.TrimPrefix(parts[2], "["), "]")
+	return id, state
+}
+
 type goroutineStack struct {
-	leakLine  string
-	fullStack []string
+	id        int
+	fullStack *bytes.Buffer
 	goState   string
 }
 
-func parseGoState(line string) string {
-	// parse state from 'goroutine 10 [syscall]:'
-	i1 := strings.Index(line, "[")
-	i2 := strings.Index(line, "]")
-	if i1 < 0 || i2 < 0 {
-		return ""
-	}
-	return line[i1+1 : i2]
-}
+func getAllStacks() []goroutineStack {
+	var stacks []goroutineStack
 
-func getMatchingGoStacks() []goroutineStack {
-	badMatches := []string{
-		"(*Channel).Serve",
-		"(*Connection).readFrames",
-		"(*Connection).writeFrames",
-	}
-
-	var matching []goroutineStack
-	var curStack []string
-	var goState string
+	var curStack *goroutineStack
 	stackReader := bufio.NewReader(bytes.NewReader(getStacks()))
 	for {
 		line, err := stackReader.ReadString('\n')
@@ -77,24 +81,58 @@ func getMatchingGoStacks() []goroutineStack {
 
 		// If we see the goroutine header, start a new stack.
 		if strings.HasPrefix(line, "goroutine ") {
-			curStack = nil
-			goState = parseGoState(line)
-		}
-		curStack = append(curStack, line)
-
-		// If the line matches any of our badMatches, log it.
-		for _, m := range badMatches {
-			if strings.Contains(line, m) {
-				matching = append(matching, goroutineStack{
-					leakLine:  line,
-					fullStack: curStack,
-					goState:   goState,
-				})
+			// flush any previous stack
+			if curStack != nil {
+				stacks = append(stacks, *curStack)
+			}
+			id, goState := parseGoStackHeader(line)
+			curStack = &goroutineStack{
+				id:        id,
+				goState:   goState,
+				fullStack: &bytes.Buffer{},
 			}
 		}
+		curStack.fullStack.WriteString(line)
 	}
 
-	return matching
+	if curStack != nil {
+		stacks = append(stacks, *curStack)
+	}
+	return stacks
+}
+
+// isLeak returns whether the given stack contains a stack frame that is considered a leak.
+func (s goroutineStack) isLeak() bool {
+	isLeakLine := func(line string) bool {
+		return strings.Contains(line, "(*Channel).Serve") ||
+			strings.Contains(line, "(*Connection).readFrames") ||
+			strings.Contains(line, "(*Connection).writeFrames")
+	}
+
+	for {
+		s.fullStack.Reset()
+		line, err := s.fullStack.ReadString('\n')
+		if err == io.EOF {
+			return false
+		}
+		if err != nil {
+			panic(err)
+		}
+
+		if isLeakLine(line) {
+			return true
+		}
+	}
+}
+
+func getLeakStacks(stacks []goroutineStack) []goroutineStack {
+	var leakStacks []goroutineStack
+	for _, s := range stacks {
+		if s.isLeak() {
+			leakStacks = append(leakStacks, s)
+		}
+	}
+	return leakStacks
 }
 
 // VerifyNoBlockedGoroutines verifies that there are no goroutines in the global space
@@ -111,21 +149,23 @@ func VerifyNoBlockedGoroutines(t *testing.T) {
 
 retry:
 	for i := 0; i < maxAttempts; i++ {
-		runtime.Gosched()
-		if i > maxAttempts/2 {
-			time.Sleep(time.Millisecond)
-		}
-
-		matching := getMatchingGoStacks()
-		for _, v := range matching {
-			if _, ok := retryStates[v.goState]; ok {
+		// Ignore the first stack which is the current goroutine.
+		stacks := getAllStacks()[1:]
+		for _, stack := range stacks {
+			if _, ok := retryStates[stack.goState]; ok {
+				runtime.Gosched()
+				if i > maxAttempts/2 {
+					time.Sleep(time.Millisecond)
+				}
 				continue retry
 			}
 		}
 
-		for _, v := range matching {
-			t.Errorf("Found leaked goroutine in state %q, leakLine:\n  %s  Full stack:\n%s",
-				v.goState, v.leakLine, strings.Join(v.fullStack, ""))
+		// There are no running/runnable goroutines, so check for bad leaks.
+		leakStacks := getLeakStacks(stacks)
+		for _, v := range leakStacks {
+			t.Errorf("Found leaked goroutine in state %q Full stack:\n%s\n",
+				v.goState, v.fullStack.String())
 		}
 		return
 	}
