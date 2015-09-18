@@ -57,14 +57,22 @@ test('ReservoirBackend correctly limits logs', function t1(assert) {
     timer.advance(50);
 
     assert.ok(reservoir.records.length === 0, 'reservoir was flushed');
-    assert.ok(backend.logs.length === 5, 'only 5 logs got through to backend');
+    assert.ok(backend.logs.length === 6, 'only 6 logs got through to backend');
 
     assert.ok(
-        backend.logs[0].data.message === 'thing failed',
-        'logs[0] is right'
+        backend.logs[0].data.message === 'dropped logs' &&
+        backend.logs[0].data.level === 'warn',
+        'first log is dropped log warn'
     );
+
+    assert.deepEquals(
+        backend.logs[0].meta,
+        {dropCount: {error: 1}, flushInterval: 50, size: 5},
+        'first log contains correct meta'
+    );
+
     assert.ok(
-        backend.logs[1].data.message === 'timed out',
+        backend.logs[1].data.message === 'thing failed',
         'logs[1] is right'
     );
     assert.ok(
@@ -78,6 +86,10 @@ test('ReservoirBackend correctly limits logs', function t1(assert) {
     assert.ok(
         backend.logs[4].data.message === 'timed out',
         'logs[4] is right'
+    );
+    assert.ok(
+        backend.logs[5].data.message === 'timed out',
+        'logs[5] is right'
     );
 
     reservoir.destroy(noop);

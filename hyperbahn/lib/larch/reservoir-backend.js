@@ -24,8 +24,10 @@ var assert = require('assert');
 var util = require('util');
 var timers = require('timers');
 var NullStatsd = require('uber-statsd-client/null');
+var extend = require('xtend');
 
 var BaseBackend = require('./base-backend');
+var Record = require('./record');
 
 module.exports = ReservoirBackend;
 
@@ -128,6 +130,18 @@ ReservoirBackend.prototype.flush = function flush(records) {
     var self = this;
 
     var start = self.now();
+
+    if (self.count > self.size) {
+        self.backend.log(new Record(
+            'warn',
+            'dropped logs',
+            {
+                dropCount: extend(self.dropCount),
+                flushInterval: self.flushInterval,
+                size: self.size
+            }
+        ));
+    }
 
     var i;
     var keys = Object.keys(self.dropCount);
