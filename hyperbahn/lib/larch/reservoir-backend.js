@@ -229,6 +229,9 @@ ReservoirBackend.prototype.countLog = function countLog(level) {
 ReservoirBackend.prototype.destroy = function destroy(cb) {
     var self = this;
 
+    if (self.records.length) {
+        self.flush();
+    }
     self.timers.clearTimeout(self.timer);
     self.backend.destroy(cb);
 };
