@@ -84,12 +84,13 @@ TimeSeriesCluster.test('testing worker with low rate limit', {
     cluster.logger.whitelist('info', 'popOutReq received for unknown or lost id');
     cluster.logger.whitelist('info', 'hyperbahn node is rate-limited by the total rps limit');
 
+    var apps = cluster._cluster.getExitNodes('time-series-server');
+
     // Set rate on a single Hyperbahn worker
-    cluster._cluster.apps[4].clients
-        .serviceProxy.rateLimiter.updateTotalLimit(10);
+    apps[0].clients .serviceProxy
+        .rateLimiter.updateTotalLimit(OVERLOADED_WORKER_RATELIMIT);
 
     // cluster.printBatches();
-
     cluster.sendRequests(onResults);
 
     function onResults(err, results) {
