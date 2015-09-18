@@ -25,7 +25,7 @@
     "is-empty-object": "1.0.0",
     "json-stringify-safe": "5.0.0",
     "leaked-handles": "5.1.0",
-    "logtron": "8.3.4",
+    "logtron": "^8.10.1",
     "minimist": "1.1.1",
     "mkdirp": "0.5.0",
     "my-local-ip": "1.0.0",
