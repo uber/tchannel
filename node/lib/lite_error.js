@@ -52,15 +52,13 @@ LiteError.prototype.toError = function toError() {
 };
 
 LiteError.isLiteError = function isLiteError(err) {
-    if (err) {
-        if (err.constructor) {
-            if (err.constructor.name === 'LiteError') {
-                return true;
-            }
+    if (err && err.constructor) {
+        if (err.constructor.name === 'LiteError') {
+            return true;
+        }
 
-            if (err.constructor.super_ && err.constructor.super_.name === 'LiteError') {
-                return true;
-            }
+        if (err.constructor.super_ && err.constructor.super_.name === 'LiteError') {
+            return true;
         }
     }
     return false;
