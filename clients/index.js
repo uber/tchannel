@@ -85,6 +85,7 @@ function ApplicationClients(options) {
     } else {
         var loggerParts = createLogger({
             team: config.get('info.team'),
+            processTitle: options.processTitle,
             project: config.get('info.project'),
             kafka: config.get('clients.logtron.kafka'),
             logFile: config.get('clients.logtron.logFile'),
