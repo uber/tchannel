@@ -22,7 +22,7 @@
 
 var TimeSeriesCluster = require('../lib/time-series-cluster.js');
 
-TimeSeriesCluster.test('control test for time-series of timeout requests', {
+TimeSeriesCluster.test('testing worker with low rate limit', {
     clusterOptions: {
         size: 10,
         remoteConfig: {
