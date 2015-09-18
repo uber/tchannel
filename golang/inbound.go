@@ -175,7 +175,6 @@ func (c *Connection) dispatchInbound(_ uint32, _ uint32, call *InboundCall) {
 	}
 	if h == nil {
 		c.log.Errorf("Could not find handler for %s:%s", call.ServiceName(), call.Operation())
-		call.mex.shutdown()
 		call.Response().SendSystemError(
 			NewSystemError(ErrCodeBadRequest, "no handler for service %q and operation %q", call.ServiceName(), call.Operation()))
 		return
