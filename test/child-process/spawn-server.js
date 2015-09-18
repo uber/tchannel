@@ -20,10 +20,10 @@
 
 'use strict';
 
+var TChannel = require('tchannel');
 var test = require('tape');
 var path = require('path');
 var spawn = require('child_process').spawn;
-var exec = require('child_process').exec;
 var setTimeout = require('timers').setTimeout;
 var process = require('process');
 var console = require('console');
@@ -31,11 +31,13 @@ var console = require('console');
 var serverFile = path.join(
     __dirname, '..', '..', 'server.js'
 );
-var tcurlFile = path.join(
-    __dirname, '..', '..', 'bin', 'tcurl.js'
-);
 
 test('spin up autobahn', function t(assert) {
+    var chan = TChannel();
+    var autobahnClient = chan.makeSubChannel({
+        serviceName: 'autobahn'
+    });
+
     /*eslint no-console: 0*/
     var proc = spawn('node', [
         serverFile,
@@ -93,20 +95,32 @@ test('spin up autobahn', function t(assert) {
 
         var portNum = portJSON.serverAddress.port;
 
-        exec(
-            'node ' +
-            tcurlFile + ' ' +
-            '-p 127.0.0.1:' + portNum + ' ' +
-            'autobahn' + ' ' +
-            'health_v1',
-            onTCurlResult
-        );
+        var host = '127.0.0.1:' + portNum;
+        autobahnClient.waitForIdentified({
+            host: host
+        }, function onIdentified(err) {
+            if (err) {
+                onTCurlResult(err, null, null);
+                return;
+            }
+            autobahnClient.request({
+                host: host,
+                hasNoParent: true,
+                serviceName: 'autobahn',
+                headers: {
+                    as: 'json',
+                    cn: 'test'
+                }
+            }).send('health_v1', '', '', onTCurlResult);
+        });
     }
 
-    function onTCurlResult(err, stdout, stderr) {
+    function onTCurlResult(err, res, arg2, arg3) {
         if (process.env.NODE_DEBUG === 'autobahn') {
-            console.log(stdout);
-            console.error(stderr);
+            console.log({
+                arg2: arg2,
+                arg3: arg3
+            });
         }
 
         if (err) {
@@ -114,15 +128,16 @@ test('spin up autobahn', function t(assert) {
         }
 
         assert.notEqual(
-            String(stdout).indexOf('hello from autobahn\\n'),
+            String(arg3).indexOf('hello from autobahn\\n'),
             -1
         );
-        assert.equal(stderr, '');
+        assert.equal(String(arg2), 'null');
 
         done();
     }
 
     function done(err) {
+        chan.close();
         proc.kill();
         if (err) {
             assert.ifError(err);
