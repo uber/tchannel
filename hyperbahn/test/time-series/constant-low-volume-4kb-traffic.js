@@ -20,7 +20,6 @@
 
 'use strict';
 
-var console = require('console');
 var Buffer = require('buffer').Buffer;
 
 var TimeSeriesCluster = require('../lib/time-series-cluster.js');
@@ -49,15 +48,7 @@ TimeSeriesCluster.test('constant low volume 4kb traffic', {
     cluster.logger.whitelist('warn', 'forwarding error frame');
     cluster.logger.whitelist('warn', 'mismatched conn.onReqDone');
 
-    var count = 0;
-    cluster.batchClient.on('batch-updated', function onUpdate(meta) {
-        count++;
-
-        if (count % 10 === 0) {
-            /* eslint no-console:0 */
-            console.log('batch updated', meta);
-        }
-    });
+    cluster.printBatches();
 
     cluster.sendRequests(onResults);
 

@@ -103,7 +103,6 @@ Application.prototype.bootstrap = function bootstrap(cb) {
 
     setupEndpoints(self.clients, self.services);
 
-    self.hookupSignals();
     self.clients.bootstrap(onClientsReady);
 
     function onClientsReady(err) {

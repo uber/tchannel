@@ -57,6 +57,7 @@ function main(opts) {
 
     // attach before throwing exception
     process.on('uncaughtException', app.clients.onError);
+    app.hookupSignals();
 
     app.bootstrapAndListen(function onAppReady(err) {
         if (err) {
