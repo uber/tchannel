@@ -48,6 +48,12 @@ function LogtronBackend(logtron) {
 
 util.inherits(LogtronBackend, BaseBackend);
 
+LogtronBackend.prototype.destroy = function destroy(cb) {
+    var self = this;
+
+    self.logtron.close(cb);
+};
+
 LogtronBackend.prototype.log = function log(record, cb) {
     var self = this;
 
