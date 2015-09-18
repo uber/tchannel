@@ -85,7 +85,7 @@ module.exports = TimeSeriesCluster;
 */
 function TimeSeriesCluster(opts) {
     /* eslint max-statements: [2, 40] */
-    /* eslint max-complexity: [2, 20] */
+    /* eslint complexity: [2, 20] */
     if (!(this instanceof TimeSeriesCluster)) {
         return new TimeSeriesCluster(opts);
     }
