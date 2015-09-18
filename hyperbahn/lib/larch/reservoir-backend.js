@@ -24,6 +24,7 @@ var assert = require('assert');
 var util = require('util');
 var timers = require('timers');
 var NullStatsd = require('uber-statsd-client/null');
+var extend = require('xtend');
 
 var BaseBackend = require('./base-backend');
 var Record = require('./record');
@@ -135,7 +136,7 @@ ReservoirBackend.prototype.flush = function flush(records) {
             'warn',
             'dropped logs',
             {
-                dropCount: self.dropCount,
+                dropCount: extend(self.dropCount),
                 flushInterval: self.flushInterval,
                 size: self.size
             }
