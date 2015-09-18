@@ -33,7 +33,8 @@ function TChannelSubPeers(channel, options) {
     TChannelPeersBase.call(self, channel, options);
 
     self.peerScoreThreshold = self.options.peerScoreThreshold || 0;
-    self._heap = new PeerHeap();
+    self.preferConnectionDirection = self.options.preferConnectionDirection || 'default';
+    self._heap = new PeerHeap(self.preferConnectionDirection);
     self.choosePeerWithHeap = channel.choosePeerWithHeap;
 }
 
@@ -63,11 +64,13 @@ TChannelSubPeers.prototype.add = function add(hostPort, options) {
 
     peer = topChannel.peers.add(hostPort, options);
 
+    peer.addScoreStrategy(self.preferConnectionDirection);
     self._map[hostPort] = peer;
     self._keys.push(hostPort);
 
     var el = self._heap.add(peer);
-    peer.heapElements.push(el);
+    var heapElements = peer.getOrCreateHeapElements(self.preferConnectionDirection);
+    heapElements.push(el);
 
     return peer;
 };
@@ -91,11 +94,12 @@ TChannelSubPeers.prototype._delete = function _del(peer) {
     delete self._map[peer.hostPort];
     popout(self._keys, index);
 
-    for (var i = 0; i < peer.heapElements.length; i++) {
-        var el = peer.heapElements[i];
+    var heapElements = peer.getOrCreateHeapElements(self.preferConnectionDirection);
+    for (var i = 0; i < heapElements.length; i++) {
+        var el = heapElements[i];
         if (el.heap === self._heap) {
             el.heap.remove(el.index);
-            popout(peer.heapElements, i);
+            popout(heapElements, i);
             break;
         }
     }
@@ -128,7 +132,7 @@ TChannelSubPeers.prototype.chooseLinearPeer = function chooseLinearPeer(req) {
         var hostPort = hosts[i];
         var peer = self._map[hostPort];
         if (!req || !req.triedRemoteAddrs || !req.triedRemoteAddrs[hostPort]) {
-            var score = peer.handler.getScore(req);
+            var score = peer.getScore(self.preferConnectionDirection);
             var want = score > threshold &&
                        (selectedPeer === null || score > selectedScore);
             if (want) {
