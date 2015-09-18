@@ -64,8 +64,8 @@ func (h *testHandler) Handle(ctx context.Context, args *raw.Args) (*raw.Res, err
 	switch args.Operation {
 	case "timeout":
 		deadline, _ := ctx.Deadline()
-		time.Sleep(deadline.Add(time.Second * 1).Sub(time.Now()))
-		h.t.FailNow()
+		time.Sleep(deadline.Add(time.Second).Sub(time.Now()))
+		return nil, errors.New("timeout")
 	case "echo":
 		return &raw.Res{
 			Arg2: args.Arg2,
@@ -92,7 +92,7 @@ func TestRoundTrip(t *testing.T) {
 		handler := newTestHandler(t)
 		ch.Register(raw.Wrap(handler), "echo")
 
-		ctx, cancel := NewContext(time.Second * 5)
+		ctx, cancel := NewContext(time.Second)
 		defer cancel()
 
 		call, err := ch.BeginCall(ctx, hostPort, testServiceName, "echo", &CallOptions{Format: JSON})
@@ -120,7 +120,7 @@ func TestDefaultFormat(t *testing.T) {
 		handler := newTestHandler(t)
 		ch.Register(raw.Wrap(handler), "echo")
 
-		ctx, cancel := NewContext(time.Second * 5)
+		ctx, cancel := NewContext(time.Second)
 		defer cancel()
 
 		arg2, arg3, resp, err := raw.Call(ctx, ch, hostPort, testServiceName, "echo", testArg2, testArg3)
@@ -134,7 +134,7 @@ func TestDefaultFormat(t *testing.T) {
 }
 
 func TestReuseConnection(t *testing.T) {
-	ctx, cancel := NewContext(time.Second * 5)
+	ctx, cancel := NewContext(time.Second)
 	defer cancel()
 
 	s1Opts := &testutils.ChannelOpts{ServiceName: "s1"}
@@ -186,7 +186,7 @@ func TestReuseConnection(t *testing.T) {
 
 func TestPing(t *testing.T) {
 	WithVerifiedServer(t, nil, func(ch *Channel, hostPort string) {
-		ctx, cancel := NewContext(time.Second * 5)
+		ctx, cancel := NewContext(time.Second)
 		defer cancel()
 
 		clientCh, err := testutils.NewClient(nil)
@@ -197,7 +197,7 @@ func TestPing(t *testing.T) {
 
 func TestBadRequest(t *testing.T) {
 	WithVerifiedServer(t, nil, func(ch *Channel, hostPort string) {
-		ctx, cancel := NewContext(time.Second * 5)
+		ctx, cancel := NewContext(time.Second)
 		defer cancel()
 
 		_, _, _, err := raw.Call(ctx, ch, hostPort, "Nowhere", "Noone", []byte("Headers"), []byte("Body"))
@@ -221,7 +221,7 @@ func TestServerBusy(t *testing.T) {
 	WithVerifiedServer(t, nil, func(ch *Channel, hostPort string) {
 		ch.Register(raw.Wrap(newTestHandler(t)), "busy")
 
-		ctx, cancel := NewContext(time.Second * 5)
+		ctx, cancel := NewContext(time.Second)
 		defer cancel()
 
 		_, _, _, err := raw.Call(ctx, ch, hostPort, testServiceName, "busy", []byte("Arg2"), []byte("Arg3"))
@@ -234,7 +234,7 @@ func TestTimeout(t *testing.T) {
 	WithVerifiedServer(t, nil, func(ch *Channel, hostPort string) {
 		ch.Register(raw.Wrap(newTestHandler(t)), "timeout")
 
-		ctx, cancel := NewContext(time.Millisecond * 100)
+		ctx, cancel := NewContext(30 * time.Millisecond)
 		defer cancel()
 
 		_, _, _, err := raw.Call(ctx, ch, hostPort, testServiceName, "timeout", []byte("Arg2"), []byte("Arg3"))
@@ -269,7 +269,7 @@ func TestFragmentation(t *testing.T) {
 			arg3[i] = byte('A' + (i % 10))
 		}
 
-		ctx, cancel := NewContext(time.Second * 10)
+		ctx, cancel := NewContext(time.Second)
 		defer cancel()
 
 		respArg2, respArg3, _, err := raw.Call(ctx, ch, hostPort, testServiceName, "echo", arg2, arg3)

@@ -45,8 +45,11 @@ func (r frameRelay) listen() (listenHostPort string, cancel func()) {
 	go func() {
 		for {
 			c, err := conn.Accept()
-			if err != nil && atomic.LoadUint32(&closed) == 0 {
-				r.t.Errorf("Accept failed: %v", err)
+			if err != nil {
+				if atomic.LoadUint32(&closed) == 0 {
+					r.t.Errorf("Accept failed: %v", err)
+				}
+				return
 			}
 
 			r.relayConn(c)
@@ -61,10 +64,11 @@ func (r frameRelay) listen() (listenHostPort string, cancel func()) {
 
 func (r frameRelay) relayConn(c net.Conn) {
 	outC, err := net.Dial("tcp", r.destination)
-	require.NoError(r.t, err, "relay outgoing connection failed")
 
-	go r.relayBetween(true /* outgoing */, c, outC)
-	go r.relayBetween(false /* outgoing */, outC, c)
+	if assert.NoError(r.t, err, "relay connection failed") {
+		go r.relayBetween(true /* outgoing */, c, outC)
+		go r.relayBetween(false /* outgoing */, outC, c)
+	}
 }
 
 func (r frameRelay) relayBetween(outgoing bool, c net.Conn, outC net.Conn) {
