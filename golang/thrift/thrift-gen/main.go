@@ -103,6 +103,10 @@ func parseTemplate() *template.Template {
 }
 
 func generateCode(outputFile string, tmpl *template.Template, pkg string, parsed *parser.Thrift) error {
+	if outputFile == "" {
+		return fmt.Errorf("must speciy an output file")
+	}
+
 	wrappedServices, err := wrapServices(parsed)
 	if err != nil {
 		log.Fatalf("Service parsing error: %v", err)
