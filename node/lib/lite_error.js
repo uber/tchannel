@@ -37,11 +37,10 @@ LiteError.prototype.toError = function toError() {
         configurable: true
     });
 
-    var key;
-    for (key in this) {
-        if (this.hasOwnProperty(key)) {
-            result[key] = this[key];
-        }
+    var keys = Object.keys(this);
+    var i;
+    for (i = 0; i < keys.length; i++) {
+        result[keys[i]] = this[keys[i]];
     }
 
     if (!result.fullType) {
