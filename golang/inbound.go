@@ -270,6 +270,7 @@ type InboundCallResponse struct {
 	// calledAt is the time the inbound call was routed to the application.
 	calledAt         time.Time
 	applicationError bool
+	systemError      bool
 	headers          transportHeaders
 	span             Span
 	statsReporter    StatsReporter
@@ -282,7 +283,8 @@ func (response *InboundCallResponse) SendSystemError(err error) error {
 	// Fail all future attempts to read fragments
 	response.cancel()
 	response.state = reqResWriterComplete
-
+	response.systemError = true
+	response.doneSending()
 	return response.conn.SendSystemError(response.mex.msgID, CurrentSpan(response.mex.ctx), err)
 }
 
@@ -317,21 +319,20 @@ func (response *InboundCallResponse) Arg3Writer() (ArgWriter, error) {
 // doneSending shuts down the message exchange for this call.
 // For incoming calls, the last message is sending the call response.
 func (response *InboundCallResponse) doneSending() {
-	if response.applicationError {
+	latency := timeNow().Sub(response.calledAt)
+	response.statsReporter.RecordTimer("inbound.calls.latency", response.commonStatsTags, latency)
+
+	if response.systemError {
+		// TODO(prashant): Report the error code type as per metrics doc and enable.
+		// response.statsReporter.IncCounter("inbound.calls.system-errors", response.commonStatsTags, 1)
+	} else if response.applicationError {
 		response.statsReporter.IncCounter("inbound.calls.app-errors", response.commonStatsTags, 1)
 	} else {
 		response.statsReporter.IncCounter("inbound.calls.success", response.commonStatsTags, 1)
 	}
-	latency := timeNow().Sub(response.calledAt)
-	response.statsReporter.RecordTimer("inbound.calls.latency", response.commonStatsTags, latency)
 
 	// The message exchange is still open if there are no errors, call shutdown.
 	if response.err == nil {
 		response.mex.shutdown()
 	}
-}
-
-// errorSending shuts down the message exhcnage for this call, and records counters.
-func (response *InboundCallResponse) errorSending() {
-	response.mex.shutdown()
 }
