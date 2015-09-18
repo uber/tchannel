@@ -108,6 +108,9 @@ function getSlowKey(stat, prefix) {
                 cleanHostPort(stat.tags['peer-host-port'], 'no-peer-host-port') + '.' +
                 clean(stat.tags.reason, 'no-reason');
 
+        case 'tchannel.relay.latency':
+            return prefix;
+
         // other types
         default:
             return 'tchannel.bad-stat-object';

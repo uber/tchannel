@@ -173,6 +173,8 @@ RelayRequest.prototype.onIdentified = function onIdentified() {
     self.outreq.responseEvent.on(onResponse);
     self.outreq.errorEvent.on(self.boundOnError);
 
+    self.channel.relayLatencyStat.add(elapsed);
+
     if (self.outreq.streamed) {
         self.outreq.sendStreams(self.inreq.arg1, self.inreq.arg2, self.inreq.arg3);
     } else {

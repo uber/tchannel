@@ -132,6 +132,8 @@ function TChannel(options) {
     self.connectionsClosedStat = self.defineCounter('tchannel.connections.closed');
     // self.connectionsBytesRcvdStat = self.defineCounter('connections.bytes-recvd');
 
+    self.relayLatencyStat = self.defineTiming('tchannel.relay.latency');
+
     self.options = extend({
         useLazyHandling: false,
         timeoutCheckInterval: 100,
