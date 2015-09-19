@@ -50,7 +50,8 @@ function Operations(opts) {
     };
     self.pending = {
         in: 0,
-        out: 0
+        out: 0,
+        busy: 0
     };
     self.lastTimeoutTime = 0;
 }
@@ -66,7 +67,7 @@ Operations.prototype.extendLogInfo = function extendLogInfo(info) {
     return info;
 };
 
-function OperationTombstone(operations, id, time, req) {
+function OperationTombstone(operations, id, time, req, context) {
     var self = this;
 
     self.type = 'tchannel.operation.tombstone';
@@ -81,6 +82,9 @@ function OperationTombstone(operations, id, time, req) {
     self.serviceName = req.serviceName;
     self.callerName = req.headers.cn;
     self.endpoint = req.endpoint;
+
+    self.isBusyResponse = context && context.isErrorFrame &&
+        context.codeName === 'Busy';
 }
 
 OperationTombstone.prototype.extendLogInfo = function extendLogInfo(info) {
@@ -130,6 +134,9 @@ OperationTombstone.prototype.onTimeout = function onTimeout(now) {
     if (self.operations &&
         self.operations.requests.out[self.id] === self) {
         delete self.operations.requests.out[self.id];
+        if (self.isBusyResponse) {
+            self.operations.pending.busy--;
+        }
         self.operations = null;
     } else {
         self.logger.warn('mismatched expired operation tombstone', self.extendLogInfo({}));
@@ -286,9 +293,15 @@ Operations.prototype.popOutReq = function popOutReq(id, context) {
         });
     }
 
-    var tombstone = new OperationTombstone(self, id, self.timers.now(), req);
+    var tombstone = new OperationTombstone(
+        self, id, self.timers.now(), req, context
+    );
     self.requests.out[id] = tombstone;
     tombstone.timeHeapHandle = self.connection.channel.timeHeap.update(tombstone, tombstone.time);
+
+    if (tombstone.isBusyResponse) {
+        self.pending.busy++;
+    }
 
     req.operations = null;
     self.pending.out--;
@@ -419,6 +432,9 @@ Operations.prototype._sweepOps = function _sweepOps(ops, direction) {
                     opKey: id
                 }));
                 delete ops[id];
+                if (op.isBusyResponse) {
+                    op.pending.busy--;
+                }
                 op.operations = null;
                 op.timeHeapHandle.cancel();
                 op.timeHeapHandle = null;
@@ -432,6 +448,9 @@ Operations.prototype._sweepOps = function _sweepOps(ops, direction) {
                     heapLastRun: heap.lastRun
                 }));
                 delete ops[id];
+                if (op.isBusyResponse) {
+                    op.pending.busy--;
+                }
                 op.operations = null;
                 op.timeHeapHandle.cancel();
                 op.timeHeapHandle = null;

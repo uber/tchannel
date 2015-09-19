@@ -432,6 +432,8 @@ TChannelPeer.prototype.countPending = function countPending(direction) {
         } else {
             pending += connPending.out;
         }
+
+        pending += connPending.busy;
     }
 
     return pending;
