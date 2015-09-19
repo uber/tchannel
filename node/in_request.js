@@ -25,6 +25,7 @@ var inherits = require('util').inherits;
 
 var errors = require('./errors');
 var States = require('./reqres_states');
+var LiteError = require('./lib/lite_error');
 
 var emptyBuffer = Buffer(0);
 
@@ -145,8 +146,13 @@ TChannelInRequest.prototype.handleFrame = function handleFrame(parts, isLast) {
 TChannelInRequest.prototype.emitError = function emitError(err) {
     var self = this;
 
-    self.err = err;
-    self.errorEvent.emit(self, err);
+    if (LiteError.isLiteError(err)) {
+        self.err = err.toError();
+    } else {
+        self.err = err;
+    }
+
+    self.errorEvent.emit(self, self.err);
 };
 
 TChannelInRequest.prototype.emitFinish = function emitFinish() {

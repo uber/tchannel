@@ -23,10 +23,11 @@
 var bufrw = require('bufrw');
 var WriteResult = bufrw.WriteResult;
 var ReadResult = bufrw.ReadResult;
-var TypedError = require('error/typed');
 var Tracing = require('./tracing');
+var util = require('util');
 
 var errors = require('../errors');
+var LiteError = require('../lib/lite_error');
 
 // TODO: enforce message ID of this frame is Frame.NullId when
 // errorBody.code.ProtocolError = ErrorResponse.Codes.ProtocolError
@@ -66,78 +67,113 @@ CodeNames[Codes.ProtocolError] = 'protocol error';
 CodeNames[Codes.Unhealthy] = 'unhealthy';
 
 var CodeErrors = Object.create(null);
-CodeErrors[Codes.Timeout] = TypedError({
-    type: 'tchannel.timeout',
-    message: 'TChannel timeout',
-    isErrorFrame: true,
-    codeName: 'Timeout',
-    errorCode: Codes.Timeout,
-    originalId: null
-});
-CodeErrors[Codes.Cancelled] = TypedError({
-    type: 'tchannel.cancelled',
-    message: 'TChannel cancelled',
-    isErrorFrame: true,
-    codeName: 'Cancelled',
-    errorCode: Codes.Cancelled,
-    originalId: null
-});
-CodeErrors[Codes.Busy] = TypedError({
-    type: 'tchannel.busy',
-    message: 'TChannel busy',
-    isErrorFrame: true,
-    codeName: 'Busy',
-    errorCode: Codes.Busy,
-    originalId: null
-});
-CodeErrors[Codes.Declined] = TypedError({
-    type: 'tchannel.declined',
-    message: 'TChannel declined',
-    isErrorFrame: true,
-    codeName: 'Declined',
-    errorCode: Codes.Declined,
-    originalId: null
-});
-CodeErrors[Codes.UnexpectedError] = TypedError({
-    type: 'tchannel.unexpected',
-    message: 'TChannel unexpected error',
-    isErrorFrame: true,
-    codeName: 'UnexpectedError',
-    errorCode: Codes.UnexpectedError,
-    originalId: null
-});
-CodeErrors[Codes.BadRequest] = TypedError({
-    type: 'tchannel.bad-request',
-    message: 'TChannel bad request',
-    isErrorFrame: true,
-    codeName: 'BadRequest',
-    errorCode: Codes.BadRequest,
-    originalId: null
-});
-CodeErrors[Codes.NetworkError] = TypedError({
-    type: 'tchannel.network',
-    message: 'TChannel network error',
-    isErrorFrame: true,
-    codeName: 'NetworkError',
-    errorCode: Codes.NetworkError,
-    originalId: null
-});
-CodeErrors[Codes.ProtocolError] = TypedError({
-    type: 'tchannel.protocol',
-    message: 'TChannel protocol error',
-    isErrorFrame: true,
-    codeName: 'ProtocolError',
-    errorCode: Codes.ProtocolError,
-    originalId: null
-});
-CodeErrors[Codes.Unhealthy] = TypedError({
-    type: 'tchannel.unhealthy',
-    message: 'TChannel unhealthy',
-    isErrorFrame: true,
-    codeName: 'Unhealthy',
-    errorCode: Codes.Unhealthy,
-    originalId: null
-});
+CodeErrors[Codes.Timeout] = function TChannelTimeoutError(originalId, message) {
+    LiteError.call(this);
+    this.type = this.fullType = 'tchannel.timeout';
+    this.isErrorFrame = true;
+    this.codeName = 'Timeout';
+    this.errorCode = Codes.Timeout;
+    this.name = 'TchannelTimeoutError';
+    this.message = message || 'TChannel timeout';
+    this.originalId = originalId;
+};
+util.inherits(CodeErrors[Codes.Timeout], LiteError);
+
+CodeErrors[Codes.Cancelled] = function TChannelCancelledError(originalId, message) {
+    LiteError.call(this);
+    this.type = this.fullType = 'tchannel.cancelled';
+    this.isErrorFrame = true;
+    this.codeName = 'Cancelled';
+    this.errorCode = Codes.Cancelled;
+    this.name = 'TchannelCancelledError';
+    this.message = message || 'TChannel cancelled';
+    this.originalId = originalId;
+};
+util.inherits(CodeErrors[Codes.Cancelled], LiteError);
+
+CodeErrors[Codes.Busy] = function TChannelBusyError(originalId, message) {
+    LiteError.call(this);
+    this.type = this.fullType = 'tchannel.busy';
+    this.isErrorFrame = true;
+    this.codeName = 'Busy';
+    this.errorCode = Codes.Busy;
+    this.name = 'TchannelBusyError';
+    this.message = message || 'TChannel busy';
+    this.originalId = originalId;
+};
+util.inherits(CodeErrors[Codes.Busy], LiteError);
+
+CodeErrors[Codes.Declined] = function TChannelDeclinedError(originalId, message) {
+    LiteError.call(this);
+    this.type = this.fullType = 'tchannel.declined';
+    this.isErrorFrame = true;
+    this.codeName = 'Declined';
+    this.errorCode = Codes.Declined;
+    this.name = 'TchannelDeclinedError';
+    this.message = message || 'TChannel declined';
+    this.originalId = originalId;
+};
+util.inherits(CodeErrors[Codes.Declined], LiteError);
+
+CodeErrors[Codes.UnexpectedError] = function TChannelUnexpectedError(originalId, message) {
+    LiteError.call(this);
+    this.type = this.fullType = 'tchannel.unexpected';
+    this.isErrorFrame = true;
+    this.codeName = 'UnexpectedError';
+    this.errorCode = Codes.UnexpectedError;
+    this.name = 'TchannelUnexpectedError';
+    this.message = message || 'TChannel unexpected error';
+    this.originalId = originalId;
+};
+util.inherits(CodeErrors[Codes.UnexpectedError], LiteError);
+
+CodeErrors[Codes.BadRequest] = function TChannelBadRequestError(originalId, message) {
+    LiteError.call(this);
+    this.type = this.fullType = 'tchannel.bad-request';
+    this.isErrorFrame = true;
+    this.codeName = 'BadRequest';
+    this.errorCode = Codes.BadRequest;
+    this.name = 'TchannelBadRequestError';
+    this.message = message || 'TChannel bad request';
+    this.originalId = originalId;
+};
+util.inherits(CodeErrors[Codes.BadRequest], LiteError);
+
+CodeErrors[Codes.NetworkError] = function TChannelNetworkError(originalId, message) {
+    LiteError.call(this);
+    this.type = this.fullType = 'tchannel.network';
+    this.isErrorFrame = true;
+    this.codeName = 'NetworkError';
+    this.errorCode = Codes.NetworkError;
+    this.name = 'TchannelNetworkError';
+    this.message = message || 'TChannel network error';
+    this.originalId = originalId;
+};
+util.inherits(CodeErrors[Codes.NetworkError], LiteError);
+
+CodeErrors[Codes.ProtocolError] = function TChannelProtocolError(originalId, message) {
+    LiteError.call(this);
+    this.type = this.fullType = 'tchannel.protocol';
+    this.isErrorFrame = true;
+    this.codeName = 'ProtocolError';
+    this.errorCode = Codes.ProtocolError;
+    this.name = 'TchannelProtocolError';
+    this.message = message || 'TChannel protocol error';
+    this.originalId = originalId;
+};
+util.inherits(CodeErrors[Codes.ProtocolError], LiteError);
+
+CodeErrors[Codes.Unhealthy] = function TChannelUnhealthyError(originalId, message) {
+    LiteError.call(this);
+    this.type = this.fullType = 'tchannel.unhealthy';
+    this.isErrorFrame = true;
+    this.codeName = 'Unhealthy';
+    this.errorCode = Codes.Unhealthy;
+    this.name = 'TchannelUnhealthyError';
+    this.message = message || 'TChannel unhealthy';
+    this.originalId = originalId;
+};
+util.inherits(CodeErrors[Codes.Unhealthy], LiteError);
 
 ErrorResponse.Codes = Codes;
 ErrorResponse.CodeNames = CodeNames;
