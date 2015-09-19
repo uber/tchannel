@@ -126,7 +126,7 @@ ReservoirBackend.prototype.setFlushInterval = function setFlushInterval(time) {
     }
 };
 
-ReservoirBackend.prototype.flush = function flush(records) {
+ReservoirBackend.prototype.flush = function flush() {
     var self = this;
 
     var start = self.now();
@@ -160,7 +160,7 @@ ReservoirBackend.prototype.flush = function flush(records) {
         self.logCount[keys[i]] = 0;
     }
 
-    var copy = records.slice(0);
+    var copy = self.records.slice(0);
     self.backend.logMany(copy, onLoggingDone);
 
     function onLoggingDone(err) {
@@ -229,6 +229,9 @@ ReservoirBackend.prototype.countLog = function countLog(level) {
 ReservoirBackend.prototype.destroy = function destroy(cb) {
     var self = this;
 
+    if (self.records.length) {
+        self.flush();
+    }
     self.timers.clearTimeout(self.timer);
     self.backend.destroy(cb);
 };
@@ -254,7 +257,7 @@ ReservoirBackend.prototype.setupTimer = function setupTimer() {
     }
 
     function onTimer() {
-        self.flush(self.records);
+        self.flush();
 
         self.timer = self.timers.setTimeout(onTimer, self.flushInterval);
     }
