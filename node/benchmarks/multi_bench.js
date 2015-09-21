@@ -19,11 +19,15 @@
 // THE SOFTWARE.
 
 'use strict';
+/* eslint no-console:0 no-process-exit:0 */
 
 var Statsd = require('uber-statsd-client');
 var metrics = require('metrics');
 var parseArgs = require('minimist');
 var process = require('process');
+var setTimeout = require('timers').setTimeout;
+var Buffer = require('buffer').Buffer;
+var console = require('console');
 
 process.title = 'nodejs-benchmarks-multi_bench';
 
@@ -31,6 +35,7 @@ var TChannel = require('../channel');
 var Reporter = require('../tcollector/reporter.js');
 var base2 = require('../test/lib/base2');
 var LCGStream = require('../test/lib/rng_stream');
+var errors = require('../errors.js');
 
 // TODO: disentangle the global closure of numClients and numRequestss and move
 // these after the harness class declaration
@@ -94,21 +99,21 @@ function Test(args) {
     this.readyLatency = new metrics.Histogram();
     this.commandLatency = new metrics.Histogram();
 
-    this.expectBadRequest = !!args.expectBadRequest;
+    this.expectedError = args.expectedError;
 }
 
-Test.prototype.copy = function () {
+Test.prototype.copy = function copy() {
     return new Test(this.args);
 };
 
-Test.prototype.run = function (callback) {
+Test.prototype.run = function run(callback) {
     var self = this;
     var i;
 
     this.callback = callback;
 
     var counter = numClients;
-    for (i = 0; i < numClients ; i++) {
+    for (i = 0; i < numClients; i++) {
         self.newClient(i, onReady);
     }
 
@@ -124,7 +129,7 @@ Test.prototype.run = function (callback) {
     }
 };
 
-Test.prototype.newClient = function (id, callback) {
+Test.prototype.newClient = function newClient(id, callback) {
     var self = this;
     var port = CLIENT_PORT + id;
     var clientChan = TChannel({
@@ -164,16 +169,18 @@ Test.prototype.newClient = function (id, callback) {
         };
     }
 
-    var newClient = clientChan.makeSubChannel({
+    var client = clientChan.makeSubChannel({
         serviceName: 'benchmark',
         peers: [DESTINATION_SERVER]
     });
-    newClient.createTime = Date.now();
-    newClient.listen(port, "127.0.0.1", function (err) {
-        if (err) return callback(err);
-        self.clients[id] = newClient;
+    client.createTime = Date.now();
+    client.listen(port, '127.0.0.1', function listened(err) {
+        if (err) {
+            return callback(err);
+        }
+        self.clients[id] = client;
         // sending a ping to pre-connect the socket
-        newClient
+        client
             .request({
                 serviceName: 'benchmark',
                 hasNoParent: true,
@@ -183,21 +190,23 @@ Test.prototype.newClient = function (id, callback) {
                     cn: 'multi_bench'
                 }
             })
-            .send('ping', null, null, function(err) {
-                if (err) return callback(err);
-                self.connectLatency.update(Date.now() - newClient.createTime);
-                self.readyLatency.update(Date.now() - newClient.createTime);
+            .send('ping', null, null, function pinged(err2) {
+                if (err2) {
+                    return callback(err2);
+                }
+                self.connectLatency.update(Date.now() - client.createTime);
+                self.readyLatency.update(Date.now() - client.createTime);
                 callback();
             });
     });
 };
 
-Test.prototype.start = function () {
+Test.prototype.start = function start() {
     this.testStart = Date.now();
     this.fillPipeline();
 };
 
-Test.prototype.fillPipeline = function () {
+Test.prototype.fillPipeline = function fillPipeline() {
     var pipeline = this.commandsSent - this.commandsCompleted;
 
     while (this.commandsSent < numRequests && pipeline < this.maxPipeline) {
@@ -212,12 +221,12 @@ Test.prototype.fillPipeline = function () {
     }
 };
 
-Test.prototype.stopClients = function () {
+Test.prototype.stopClients = function stopClients() {
     var self = this;
 
-    this.clients.forEach(function (client, pos) {
+    this.clients.forEach(function each(client, pos) {
         if (pos === self.clients.length - 1) {
-            client.quit(function () {
+            client.quit(function done() {
                 self.callback();
             });
         } else {
@@ -226,33 +235,31 @@ Test.prototype.stopClients = function () {
     });
 };
 
-Test.prototype.sendNext = function () {
+Test.prototype.sendNext = function sendNext() {
     var self = this;
     var curClient = this.commandsSent % this.clients.length;
     var start = Date.now();
 
-    this.clients[curClient]
-        .request({
-            serviceName: 'benchmark',
-            hasNoParent: true,
-            timeout: 30000,
-            headers: {
-                as: 'raw',
-                cn: 'multi_bench',
-                benchHeader1: 'bench value one',
-                benchHeader2: 'bench value two',
-                benchHeader3: 'bench value three'
-            }
-        })
-        .send(this.arg1, this.arg2, this.arg3, done);
+    var req = this.clients[curClient].request({
+        serviceName: 'benchmark',
+        hasNoParent: true,
+        timeout: 30000,
+        headers: {
+            as: 'raw',
+            cn: 'multi_bench',
+            benchHeader1: 'bench value one',
+            benchHeader2: 'bench value two',
+            benchHeader3: 'bench value three'
+        }
+    });
+    req.send(this.arg1, this.arg2, this.arg3, done);
 
-    function done(err) {
+    function done(err, res) {
         if (err) {
-            if (!self.expectBadRequest) {
+            if (!self.expectedError ||
+                !self.expectedError(err, req, res)) {
                 throw err;
-            } else if (err.type !== 'tchannel.bad-request') {
-                throw err;
-            } 
+            }
         }
         self.commandsCompleted++;
         self.commandLatency.update(Date.now() - start);
@@ -260,7 +267,7 @@ Test.prototype.sendNext = function () {
     }
 };
 
-Test.prototype.getStats = function () {
+Test.prototype.getStats = function getStats() {
     var obj = this.commandLatency.printObj();
     obj.descr = this.args.descr;
     obj.instanceNumber = argv.instanceNumber;
@@ -272,9 +279,9 @@ Test.prototype.getStats = function () {
     return obj;
 };
 
-Test.prototype.printStats = function () {
+Test.prototype.printStats = function printStats() {
     var obj = this.getStats();
-    process.stdout.write(JSON.stringify(obj) + "\n");
+    process.stdout.write(JSON.stringify(obj) + '\n');
 };
 
 // -- define tests
@@ -283,7 +290,12 @@ var tests = [];
 
 if (!argv.skipPing) {
     argv.pipeline.forEach(function each(pipeline) {
-        tests.push(new Test({descr: "PING", command: "ping", args: null, pipeline: pipeline}));
+        tests.push(new Test({
+            descr: 'PING',
+            command: 'ping',
+            args: null,
+            pipeline: pipeline
+        }));
     });
 }
 
@@ -295,42 +307,69 @@ var randBytes = new LCGStream({
 argv.sizes.forEach(function each(size) {
     var sizeDesc = base2.pretty(size, 'B');
     var key = 'foo_rand000000000000';
-    var buf = randBytes.read(Math.ceil(size / 4 * 3)); // 4 base64 encoded bytes per 3 raw bytes
+
+    // 4 base64 encoded bytes per 3 raw bytes
+    var buf = randBytes.read(Math.ceil(size / 4 * 3));
     if (!buf) {
-        throw new Error("can't have size " + sizeDesc);
+        throw new Error('can\'t have size ' + sizeDesc);
     }
-    var str = buf.toString('base64').slice(0, size); // chop off any "==" trailer
+
+    // chop off any "==" trailer
+    var str = buf.toString('base64').slice(0, size);
+
+    var expectedErrorTypes = {};
+    if (argv.expectedError) {
+        argv.expectedError
+            .split(/,\s*/)
+            .forEach(function each(errType) {
+                expectedErrorTypes[errType] = true;
+            });
+    }
+    if (argv.bad) {
+        expectedErrorTypes.BadRequest = true;
+    }
+
     argv.pipeline.forEach(function each(pipeline) {
         tests.push(new Test({
-            descr: "SET " + sizeDesc,
-            command: "set" + (argv.bad ? "_bad" : ""),
+            descr: 'SET ' + sizeDesc,
+            command: 'set' + (argv.bad ? '_bad' : ''),
             arg2: key,
             arg3: str,
             pipeline: pipeline,
-            expectBadRequest: argv.bad
+            expectedError: expectedError
         }));
         tests.push(new Test({
-            descr: "GET " + sizeDesc,
-            command: "get" + (argv.bad ? "_bad" : ""),
+            descr: 'GET ' + sizeDesc,
+            command: 'get' + (argv.bad ? '_bad' : ''),
             arg2: key,
             pipeline: pipeline,
-            expectBadRequest: argv.bad
+            expectedError: expectedError
         }));
     });
+
+    function expectedError(err) {
+        var type = errors.classify(err) || err.type;
+        return expectedErrorTypes[type] || false;
+    }
 });
 
 function next(i, j, done) {
-    if (i >= tests.length) return done();
-    if (j >= multiplicity) return next(i+1, 0, done);
+    if (i >= tests.length) {
+        return done();
+    }
+    if (j >= multiplicity) {
+        return next(i + 1, 0, done);
+    }
+
     var test = tests[i].copy();
-    test.run(function () {
+    test.run(function runit() {
         setTimeout(function delayNext() {
-            next(i, j+1, done);
+            next(i, j + 1, done);
         }, 1000);
     });
 }
 
-next(0, 0, function() {
+next(0, 0, function finish() {
     process.exit(0);
 });
 
