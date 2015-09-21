@@ -24,6 +24,8 @@ var allocCluster = require('./lib/alloc-cluster');
 var TChannel = require('../channel');
 var RelayHandler = require('../relay_handler');
 
+var statsFixture = require('./fixtures/relay-stats');
+
 allocCluster.test('relay emits latency stat', {
     numPeers: 2
 }, function t(cluster, assert) {
@@ -74,10 +76,7 @@ allocCluster.test('relay emits latency stat', {
         process.nextTick(checkStat);
 
         function checkStat() {
-            assert.ok(
-                findStat(stats, 'tchannel.relay.latency', 'timing'),
-                'relay emits a relay latency stat'
-            );
+            statsFixture.verify(assert, stats, statsFixture.fixture);
         }
 
         assert.end();
