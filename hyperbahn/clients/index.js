@@ -293,7 +293,11 @@ function bootstrap(cb) {
 
     self.setupChannel(setupDone);
 
-    function setupDone() {
+    function setupDone(err) {
+        if (err) {
+            cb(err);
+        }
+
         self.setupRingpop(cb);
     }
 };
