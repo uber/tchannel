@@ -168,7 +168,7 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
                 serviceName: self.namedRemotesConfig[i],
                 trace: self.opts.trace,
                 traceSample: 1
-            }, ready.signal);
+            }, remotesDone.signal);
         }
     }
 

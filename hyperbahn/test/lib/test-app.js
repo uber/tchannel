@@ -105,6 +105,8 @@ TestApplication.prototype.partialBootstrap =
 function partialBootstrap(listener) {
     var self = this;
 
+    self.isBootstrapped = true;
+
     self.setupServices();
     self.hookupSignals();
     self.clients.setupChannel(onReady);
