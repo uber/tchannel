@@ -59,6 +59,7 @@ function RemoteConfig(options) {
 
     self.pollTimer = null;
     self._destroyed = false;
+    self._inLoadSync = false;
 }
 util.inherits(RemoteConfig, EventEmitter);
 
@@ -73,7 +74,9 @@ RemoteConfig.prototype.startPolling = function startPolling() {
 RemoteConfig.prototype.loadSync = function loadSync() {
     var self = this;
 
+    self._inLoadSync = true;
     self.configRemoteFile.loadSync();
+    self._inLoadSync = false;
 };
 
 RemoteConfig.prototype.get = function get(key, defaultValue) {
@@ -187,10 +190,12 @@ ConfigValues.prototype._updateConfigValues = function _updateConfigValues(newCon
         }
     }
 
-    self.logger.info('[remote-config] config file changed', {
-        changedKeys: changedKeys,
-        newConfig: newConfig
-    });
+    if (!self.remoteConfig._inLoadSync) {
+        self.logger.info('[remote-config] config file changed', {
+            changedKeys: changedKeys,
+            newConfig: newConfig
+        });
+    }
 };
 
 /*  RemoteConfigFile
