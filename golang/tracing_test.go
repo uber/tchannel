@@ -38,10 +38,11 @@ type TracingRequest struct {
 }
 
 type TracingResponse struct {
-	TraceID  uint64
-	SpanID   uint64
-	ParentID uint64
-	Child    *TracingResponse
+	TraceID        uint64
+	SpanID         uint64
+	ParentID       uint64
+	TracingEnabled bool
+	Child          *TracingResponse
 }
 
 type traceHandler struct {
@@ -63,10 +64,11 @@ func (h *traceHandler) call(ctx json.Context, req *TracingRequest) (*TracingResp
 	}
 
 	return &TracingResponse{
-		TraceID:  span.TraceID(),
-		SpanID:   span.SpanID(),
-		ParentID: span.ParentID(),
-		Child:    childResp,
+		TraceID:        span.TraceID(),
+		SpanID:         span.SpanID(),
+		ParentID:       span.ParentID(),
+		TracingEnabled: span.TracingEnabled(),
+		Child:          childResp,
 	}, nil
 }
 
@@ -93,17 +95,18 @@ func TestTracingPropagates(t *testing.T) {
 		clientSpan := CurrentSpan(ctx)
 		require.NotNil(t, clientSpan)
 		assert.Equal(t, uint64(0), clientSpan.ParentID())
-
-		assert.Equal(t, uint64(0), clientSpan.ParentID())
 		assert.NotEqual(t, uint64(0), clientSpan.TraceID())
+		assert.True(t, clientSpan.TracingEnabled(), "Tracing should be enabled")
 		assert.Equal(t, clientSpan.TraceID(), response.TraceID)
 		assert.Equal(t, clientSpan.SpanID(), response.ParentID)
+		assert.True(t, response.TracingEnabled, "Tracing should be enabled")
 		assert.Equal(t, response.TraceID, response.SpanID, "traceID = spanID for root span")
 
 		nestedResponse := response.Child
 		require.NotNil(t, nestedResponse)
 		assert.Equal(t, clientSpan.TraceID(), nestedResponse.TraceID)
 		assert.Equal(t, response.SpanID, nestedResponse.ParentID)
+		assert.True(t, response.TracingEnabled, "Tracing should be enabled")
 		assert.NotEqual(t, response.SpanID, nestedResponse.SpanID)
 	})
 }
