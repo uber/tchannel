@@ -54,7 +54,7 @@ function ApplicationClients(options) {
     }
 
     var self = this;
-    var config = options.config;
+    var config = self.config = options.config;
 
     // We need to move away from myLocalIp(); this fails in weird
     // ways when moving around and changing wifi networks.
@@ -155,19 +155,7 @@ function ApplicationClients(options) {
         serviceName: 'ringpop'
     });
 
-    var ringpopTimeouts = config.get('hyperbahn.ringpop.timeouts');
-    self.ringpop = RingPop({
-        app: config.get('info.project'),
-        hostPort: self._host + ':' + self._port,
-        channel: self.ringpopChannel,
-        logger: self.logger,
-        statsd: self.statsd,
-        pingReqTimeout: ringpopTimeouts.pingReqTimeout,
-        pingTimeout: ringpopTimeouts.pingTimeout,
-        joinTimeout: ringpopTimeouts.joinTimeout
-    });
     self.egressNodes = HyperbahnEgressNodes({
-        ringpop: self.ringpop,
         defaultKValue: 10
     });
 
@@ -178,7 +166,6 @@ function ApplicationClients(options) {
     });
     self.hyperbahnHandler = HyperbahnHandler({
         channel: self.hyperbahnChannel,
-        ringpop: self.ringpop,
         egressNodes: self.egressNodes,
         callerName: 'autobahn',
         relayAdTimeout: hyperbahnTimeouts.relayAdTimeout
@@ -255,7 +242,6 @@ function bootstrap(cb) {
     listenReady(onListen);
 
     self.processReporter.bootstrap();
-    self.ringpop.setupChannel();
 
     self.tchannel.on('listening', listenReady.signal);
     self.tchannel.listen(self._port, self._host);
@@ -272,6 +258,22 @@ function bootstrap(cb) {
     self._controlServer.listen(self._controlPort, listenReady.signal);
 
     function onListen() {
+        var ringpopTimeouts = self.config.get('hyperbahn.ringpop.timeouts');
+
+        self.ringpop = RingPop({
+            app: self.config.get('info.project'),
+            hostPort: self._host + ':' + self._port,
+            channel: self.ringpopChannel,
+            logger: self.logger,
+            statsd: self.statsd,
+            pingReqTimeout: ringpopTimeouts.pingReqTimeout,
+            pingTimeout: ringpopTimeouts.pingTimeout,
+            joinTimeout: ringpopTimeouts.joinTimeout
+        });
+        self.ringpop.setupChannel();
+
+        self.egressNodes.setRingpop(self.ringpop);
+
         if (self.autobahnHostPortList) {
             self.ringpop.bootstrap(self.autobahnHostPortList, cb);
         } else {
