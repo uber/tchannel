@@ -50,7 +50,9 @@ FrameParser.prototype.write = function write(buffer) {
     }
 
     var startOfBuffer = 0;
+    var fauxStartOfBuffer = 0;
     var bufferLength = buffer.length;
+    var totalBufferLength = buffer.length;
 
     while (self.frameLength <= totalLength) {
         var endOfBuffer = self.frameLength - self.remainderLength;
@@ -61,11 +63,12 @@ FrameParser.prototype.write = function write(buffer) {
         self.onFrameBuffer(self.concatRemainder(lastBuffer));
         self.frameLength = null;
 
-        if (endOfBuffer === bufferLength) {
+        if (fauxStartOfBuffer + endOfBuffer === totalBufferLength) {
             return;
         }
 
         buffer = buffer.slice(startOfBuffer + endOfBuffer, bufferLength);
+        fauxStartOfBuffer += endOfBuffer;
         bufferLength = bufferLength - endOfBuffer;
         totalLength = bufferLength;
         self.frameLength = readFrameSize(buffer, startOfBuffer);
