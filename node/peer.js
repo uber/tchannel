@@ -390,7 +390,7 @@ TChannelPeer.prototype.makeOutConnection = function makeOutConnection(socket) {
     return conn;
 };
 
-TChannelPeer.prototype.pendingWeightedRandom = function pendingWeightedRandom(direction) {
+TChannelPeer.prototype.pendingWeightedRandom = function pendingWeightedRandom() {
     // Returns a score in the range from 0 to 1, where it is preferable to use
     // a peer with a higher score over one with a lower score.
     // This range is divided among an infinite set of subranges corresponding
@@ -414,24 +414,20 @@ TChannelPeer.prototype.pendingWeightedRandom = function pendingWeightedRandom(di
     //
     // This remains true with this algorithm, within each equivalence class.
     var self = this;
-    var pending = self.pendingIdentified + self.countPending(direction);
+    var pending = self.pendingIdentified + self.countPending();
     var max = Math.pow(0.5, pending);
     var min = max / 2;
     var diff = max - min;
     return min + diff * self.random();
 };
 
-TChannelPeer.prototype.countPending = function countPending(direction) {
+TChannelPeer.prototype.countPending = function countPending() {
     var self = this;
     var pending = 0;
     for (var index = 0; index < self.connections.length; index++) {
         var connPending = self.connections[index].ops.getPending();
 
-        if (direction === 'in') {
-            pending += connPending.in;
-        } else {
-            pending += connPending.out;
-        }
+        pending += connPending.out;
     }
 
     return pending;
