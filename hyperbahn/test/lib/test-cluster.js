@@ -126,7 +126,7 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
                 return cb(err);
             }
 
-            ringpopBootstrapped.listen();
+            ringpopBootstrapped.signal();
         }
     }
 
