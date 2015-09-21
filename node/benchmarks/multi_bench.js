@@ -35,6 +35,7 @@ var TChannel = require('../channel');
 var Reporter = require('../tcollector/reporter.js');
 var base2 = require('../test/lib/base2');
 var LCGStream = require('../test/lib/rng_stream');
+var errors = require('../errors.js');
 
 // TODO: disentangle the global closure of numClients and numRequestss and move
 // these after the harness class declaration
@@ -315,6 +316,12 @@ argv.sizes.forEach(function each(size) {
 
     // chop off any "==" trailer
     var str = buf.toString('base64').slice(0, size);
+
+    var expectedErrorTypes = {};
+    if (argv.bad) {
+        expectedErrorTypes.BadRequest = true;
+    }
+
     argv.pipeline.forEach(function each(pipeline) {
         tests.push(new Test({
             descr: 'SET ' + sizeDesc,
@@ -334,7 +341,8 @@ argv.sizes.forEach(function each(size) {
     });
 
     function expectedError(err) {
-        return argv.bad && err.type !== 'tchannel.bad-request';
+        var type = errors.classify(err) || err.type;
+        return expectedErrorTypes[type] || false;
     }
 });
 
