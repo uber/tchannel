@@ -108,7 +108,6 @@ function partialBootstrap(listener) {
     self.isBootstrapped = true;
 
     self.setupServices();
-    self.hookupSignals();
     self.clients.setupChannel(onReady);
 
     function onReady(err) {
