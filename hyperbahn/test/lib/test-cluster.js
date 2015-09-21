@@ -25,8 +25,6 @@ var EventEmitter = require('events').EventEmitter;
 var tape = require('tape');
 var deepExtend = require('deep-extend');
 var shallowExtend = require('xtend');
-var getPort = require('get-port');
-var parallel = require('run-parallel');
 var TChannel = require('tchannel');
 var DebugLogtron = require('debug-logtron');
 var inherits = require('util').inherits;
@@ -109,7 +107,6 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
 
     function onReady() {
         var ringpopBootstrapped = CountedReadySignal(self.size);
-        var i;
 
         ringpopBootstrapped(onRingpopBootstrapped);
 
@@ -141,24 +138,24 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
             channel: self.remotes.tcollector.serverChannel
         });
 
-        var ready = CountedReadySignal(
+        var remotesDone = CountedReadySignal(
             2 + self.namedRemotesConfig.length
         );
 
-        ready(onRemotes);
+        remotesDone(onRemotes);
 
         self.remotes.bob = self.createRemote({
             serviceName: 'bob',
             trace: self.opts.trace,
             traceSample: 1
-        }, ready.signal);
+        }, remotesDone.signal);
         self.remotes.steve = self.createRemote({
             serviceName: 'steve',
             trace: self.opts.trace,
             traceSample: 1
-        }, ready.signal);
+        }, remotesDone.signal);
 
-        for (var i = 0; i < self.namedRemotesConfig.length; i++) {
+        for (i = 0; i < self.namedRemotesConfig.length; i++) {
             self.namedRemotes[i] = self.createRemote({
                 serviceName: self.namedRemotesConfig[i],
                 trace: self.opts.trace,

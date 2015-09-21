@@ -283,7 +283,7 @@ function setupRingpop(cb) {
     } else {
         process.nextTick(cb);
     }
-}
+};
 
 ApplicationClients.prototype.bootstrap =
 function bootstrap(cb) {
