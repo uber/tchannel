@@ -67,5 +67,5 @@ git push origin master --tags
 git push -f origin dev_hyperbahn
 
 git archive --prefix=package/ --format tgz dev_hyperbahn >package.tgz
-${NPM:-npm} publish package.tgz --tag "${NPM_TAG:-latest}"
+${NPM:-npm} publish --registry=https://registry.npmjs.org/ package.tgz --tag "${NPM_TAG:-latest}"
 rm package.tgz
