@@ -232,14 +232,14 @@ ApplicationClients.prototype.loadHostList = function loadHostList() {
     return autobahnHostPortList;
 };
 
-ApplicationClients.prototype.bootstrap =
-function bootstrap(cb) {
+ApplicationClients.prototype.setupChannel =
+function setupChannel(cb) {
     var self = this;
 
     assert(typeof cb === 'function', 'cb required');
 
     var listenReady = CountedReadySignal(4);
-    listenReady(onListen);
+    listenReady(cb);
 
     self.processReporter.bootstrap();
 
@@ -256,29 +256,43 @@ function bootstrap(cb) {
     }
 
     self._controlServer.listen(self._controlPort, listenReady.signal);
+};
 
-    function onListen() {
-        var ringpopTimeouts = self.config.get('hyperbahn.ringpop.timeouts');
+ApplicationClients.prototype.setupRingpop =
+function setupRingpop(cb) {
+    var self = this;
 
-        self.ringpop = RingPop({
-            app: self.config.get('info.project'),
-            hostPort: self._host + ':' + self._port,
-            channel: self.ringpopChannel,
-            logger: self.logger,
-            statsd: self.statsd,
-            pingReqTimeout: ringpopTimeouts.pingReqTimeout,
-            pingTimeout: ringpopTimeouts.pingTimeout,
-            joinTimeout: ringpopTimeouts.joinTimeout
-        });
-        self.ringpop.setupChannel();
+    var ringpopTimeouts = self.config.get('hyperbahn.ringpop.timeouts');
 
-        self.egressNodes.setRingpop(self.ringpop);
+    self.ringpop = RingPop({
+        app: self.config.get('info.project'),
+        hostPort: self.tchannel.hostPort,
+        channel: self.ringpopChannel,
+        logger: self.logger,
+        statsd: self.statsd,
+        pingReqTimeout: ringpopTimeouts.pingReqTimeout,
+        pingTimeout: ringpopTimeouts.pingTimeout,
+        joinTimeout: ringpopTimeouts.joinTimeout
+    });
+    self.ringpop.setupChannel();
 
-        if (self.autobahnHostPortList) {
-            self.ringpop.bootstrap(self.autobahnHostPortList, cb);
-        } else {
-            process.nextTick(cb);
-        }
+    self.egressNodes.setRingpop(self.ringpop);
+
+    if (self.autobahnHostPortList) {
+        self.ringpop.bootstrap(self.autobahnHostPortList, cb);
+    } else {
+        process.nextTick(cb);
+    }
+}
+
+ApplicationClients.prototype.bootstrap =
+function bootstrap(cb) {
+    var self = this;
+
+    self.setupChannel(setupDone);
+
+    function setupDone() {
+        self.setupRingpop(cb);
     }
 };
 

@@ -99,16 +99,22 @@ inherits(TestApplication, Application);
 
 TestApplication.test = test;
 
-TestApplication.prototype.bootstrapAndListen =
-function bootstrapAndListen(listener) {
+// Sets up everything but ringpop because we have to wait for the listen(0) to
+// know what port it's on
+TestApplication.prototype.partialBootstrap =
+function partialBootstrap(listener) {
     var self = this;
 
-    Application.prototype.bootstrapAndListen.call(self, onReady);
+    Application.prototype.setupServices.call(self);
+    Application.prototype.hookupSignals.call(self);
+    self.clients.setupChannel(onReady);
 
     function onReady(err) {
         if (err) {
             return self.emit('error', err);
         }
+
+        self.clients.repl.setApp(self);
 
         self.hostPort = self.tchannel.hostPort;
         self.client = TestClient({

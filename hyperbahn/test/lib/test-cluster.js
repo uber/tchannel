@@ -92,36 +92,40 @@ inherits(TestCluster, EventEmitter);
 
 TestCluster.prototype.bootstrap = function bootstrap(cb) {
     var self = this;
-    buildRingpopHosts(self.size, onRingpopHosts);
 
-    function onRingpopHosts(err, hosts) {
-        if (err) {
-            return self.emit('error', err);
-        }
+    var ready = CountedReadySignal(self.size + self.dummySize);
 
-        var ready = CountedReadySignal(self.size + self.dummySize);
+    ready(onReady);
 
-        self.ringpopHosts = hosts;
-        ready(onReady);
+    // bob and steve
 
-        // bob and steve
-
-        var i = 0;
-        for (i = 0; i < self.size; i++) {
-            self.apps[i] = self.createApplication(
-                self.ringpopHosts[i], ready.signal
-            );
-        }
-        for (i = 0; i < self.dummySize; i++) {
-            self.dummies[i] = self.createDummy(ready.signal);
-        }
+    var i = 0;
+    for (i = 0; i < self.size; i++) {
+        self.apps[i] = self.createApplication('127.0.0.1:0', ready.signal);
+    }
+    for (i = 0; i < self.dummySize; i++) {
+        self.dummies[i] = self.createDummy(ready.signal);
     }
 
     function onReady() {
-        for (var i = 0; i < self.apps.length; i++) {
+        var ringpopBootstrapped = CountedReadySignal(self.size);
+        var i;
+
+        ringpopBootstrapped(onRingpopBootstrapped);
+
+        for (i = 0; i < self.apps.length; i++) {
             self.hostPortList[i] = self.apps[i].hostPort;
         }
 
+        self.ringpopHosts = self.hostPortList;
+
+        for (i = 0; i < self.apps.length; i++) {
+            self.apps[i].clients.autobahnHostPortList = self.hostPortList;
+            self.apps[i].clients.setupRingpop(ringpopBootstrapped.signal);
+        }
+    }
+
+    function onRingpopBootstrapped() {
         self.waitForRingpop(onConvergence);
     }
 
@@ -364,7 +368,7 @@ function createApplication(hostPort, cb) {
     // TODO add timeout to gaurd against this edge case
     var app = TestApplication(localOpts);
     app.remoteConfigFile = remoteConfigFile;
-    app.bootstrapAndListen(cb);
+    app.partialBootstrap(cb);
     return app;
 };
 
@@ -504,38 +508,3 @@ function sendRegister(channel, opts, cb) {
         }, cb);
     }
 };
-
-function buildRingpopHosts(n, cb) {
-    var thunks = [];
-
-    for (var i = 0; i < n; i++) {
-        thunks[i] = getPort;
-    }
-
-    parallel(thunks, onPorts);
-
-    function onPorts(err, ports) {
-        if (err) {
-            return cb(err);
-        }
-
-        var uniquePorts = [];
-        for (var k = 0; k < ports.length; k++) {
-            if (uniquePorts.indexOf(ports[k]) === -1) {
-                uniquePorts.push(ports[k]);
-            }
-        }
-
-        if (uniquePorts.length < ports.length) {
-            throw new Error('buildRingpopHosts has duplicates');
-        }
-
-        var ringpopHosts = [];
-
-        for (var j = 0; j < ports.length; j++) {
-            ringpopHosts[j] = '127.0.0.1:' + ports[j];
-        }
-
-        cb(null, ringpopHosts);
-    }
-}

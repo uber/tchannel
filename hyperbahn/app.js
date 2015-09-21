@@ -89,6 +89,16 @@ function Application(config, opts) {
 
 inherits(Application, EventEmitter);
 
+Application.prototype.setupServices = function setupServices() {
+    var self = this;
+
+    self.services = {};
+    self.services.exitNode = ExitNode(self.clients);
+    self.services.entryNode = EntryNode(self.clients);
+
+    setupEndpoints(self.clients, self.services);
+};
+
 Application.prototype.bootstrap = function bootstrap(cb) {
     var self = this;
 
@@ -97,12 +107,7 @@ Application.prototype.bootstrap = function bootstrap(cb) {
     }
     self.isBootstrapped = true;
 
-    self.services = {};
-    self.services.exitNode = ExitNode(self.clients);
-    self.services.entryNode = EntryNode(self.clients);
-
-    setupEndpoints(self.clients, self.services);
-
+    self.setupServices();
     self.hookupSignals();
     self.clients.bootstrap(onClientsReady);
 
@@ -256,19 +261,12 @@ function finishDrain(level, mess, info) {
     self.destroy();
 };
 
+// TODO: remove, unecessary
 Application.prototype.bootstrapAndListen =
 function bootstrapAndListen(callback) {
     var self = this;
 
-    self.bootstrap(onBootstrap);
-
-    function onBootstrap(err) {
-        if (err) {
-            return callback(err);
-        }
-
-        callback(null);
-    }
+    self.bootstrap(callback);
 };
 
 Application.prototype.destroy = function destroy(opts) {
