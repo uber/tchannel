@@ -63,6 +63,9 @@ function HyperbahnWorker(opts) {
 HyperbahnWorker.prototype.start = function start() {
     var self = this;
 
+    // attach before throwing exception
+    process.on('uncaughtException', self.app.clients.onError);
+
     self.app.bootstrapAndListen(onAppReady);
 
     function onAppReady(err) {
