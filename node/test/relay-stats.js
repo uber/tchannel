@@ -257,13 +257,3 @@ function echo(req, res, arg2, arg3) {
     res.sendOk(arg2, arg3);
 }
 
-function findStat(stats, name, type) {
-    var i;
-    for (i = 0; i < stats.length; i++) {
-        if (stats[i].name === name && stats[i].type === type) {
-            return true;
-        }
-    }
-
-    return false;
-}
