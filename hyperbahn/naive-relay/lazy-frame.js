@@ -3,7 +3,7 @@
 var ID_OFFSET = 4;
 var TYPE_OFFSET = 2;
 
-LazyFrame.freeList = new Array(1000);
+LazyFrame.freeList = [];
 for (var i = 0; i < 1000; i++) {
     LazyFrame.freeList.push(new LazyFrame());
 }
@@ -14,8 +14,10 @@ LazyFrame.free = freeLazyFrame;
 module.exports = LazyFrame;
 
 function allocLazyFrame(sourceConnection, frameBuffer) {
+    var frame;
+
     if (LazyFrame.freeList.length === 0) {
-        var frame = new LazyFrame();
+        frame = new LazyFrame();
     } else {
         frame = LazyFrame.freeList.pop();
     }
