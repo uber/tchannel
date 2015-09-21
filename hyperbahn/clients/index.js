@@ -56,6 +56,10 @@ function ApplicationClients(options) {
     var self = this;
     var config = self.config = options.config;
 
+    // Used in setupRingpop method
+    self.ringpopTimeouts = self.config.get('hyperbahn.ringpop.timeouts');
+    self.projectName = self.config.get('info.project'),
+
     // We need to move away from myLocalIp(); this fails in weird
     // ways when moving around and changing wifi networks.
     // host & port are internal fields since they are just used
@@ -262,17 +266,15 @@ ApplicationClients.prototype.setupRingpop =
 function setupRingpop(cb) {
     var self = this;
 
-    var ringpopTimeouts = self.config.get('hyperbahn.ringpop.timeouts');
-
     self.ringpop = RingPop({
-        app: self.config.get('info.project'),
+        app: self.projectName,
         hostPort: self.tchannel.hostPort,
         channel: self.ringpopChannel,
         logger: self.logger,
         statsd: self.statsd,
-        pingReqTimeout: ringpopTimeouts.pingReqTimeout,
-        pingTimeout: ringpopTimeouts.pingTimeout,
-        joinTimeout: ringpopTimeouts.joinTimeout
+        pingReqTimeout: self.ringpopTimeouts.pingReqTimeout,
+        pingTimeout: self.ringpopTimeouts.pingTimeout,
+        joinTimeout: self.ringpopTimeouts.joinTimeout
     });
     self.ringpop.setupChannel();
 

@@ -123,7 +123,6 @@ Application.prototype.bootstrap = function bootstrap(cb) {
 
         cb(null);
     }
-
 };
 
 Application.prototype.hookupSignals =
