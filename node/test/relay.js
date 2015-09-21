@@ -167,7 +167,7 @@ allocCluster.test('relay respects ttl', {
         assert.ok(res.ok);
 
         var ttl = Number(String(arg3));
-        assert.ok(ttl >= 240 && ttl <= 250);
+        assert.ok(ttl >= 200 && ttl <= 250);
 
         assert.end();
     }
