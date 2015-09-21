@@ -695,6 +695,8 @@ ServiceDispatchHandler.prototype.extendLogInfo =
 function extendLogInfo(info) {
     var self = this;
 
+    self.channel.extendLogInfo(info);
+
     info.affineServices = Object.keys(self.exitServices);
 
     info.circuitsEnabled = self.circuitsEnabled;

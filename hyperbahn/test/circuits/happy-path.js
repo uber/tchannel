@@ -96,17 +96,28 @@ allocCluster.test('request circuit state from endpoint', {
     }
 
     function requestCircuitsState() {
+        var exitNodes = cluster.getExitNodes('bob');
+        assert.equal(exitNodes.length, 1);
+        var hostPort = exitNodes[0].hostPort;
+
         // Using bob, because steve's peer is unhealthy.
         var channel = cluster.remotes.bob.clientChannel;
-        var request = channel.request({
-            serviceName: 'autobahn',
-            timeout: 1000,
-            hasNoParent: true,
-            headers: {
-                as: 'json'
-            }
+        channel.waitForIdentified({
+            host: hostPort
+        }, function onConnect(err) {
+            assert.ifError(err);
+
+            var request = channel.request({
+                serviceName: 'autobahn',
+                timeout: 1000,
+                host: hostPort,
+                hasNoParent: true,
+                headers: {
+                    as: 'json'
+                }
+            });
+            cluster.tchannelJSON.send(request, 'circuits_v1', null, null, onCircuitsResponse);
         });
-        cluster.tchannelJSON.send(request, 'circuits_v1', null, null, onCircuitsResponse);
     }
 
     function onCircuitsResponse(err, res) {
