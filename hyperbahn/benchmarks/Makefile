@@ -1,5 +1,5 @@
 torch-relay-bench:
-	node index.js --relay --torch relay --torchFile ./flame.raw --torchTime 10 \
+	node index.js --noEndpointOverhead --useNaive --relay --torch relay --torchFile ./flame.raw --torchTime 10 \
 		-- --relay --skipPing -s 4096,16384 -p 1000,10000,20000
 
 take_relay:
