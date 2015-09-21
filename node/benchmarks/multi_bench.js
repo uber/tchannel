@@ -318,6 +318,13 @@ argv.sizes.forEach(function each(size) {
     var str = buf.toString('base64').slice(0, size);
 
     var expectedErrorTypes = {};
+    if (argv.expectedError) {
+        argv.expectedError
+            .split(/,\s*/)
+            .forEach(function each(errType) {
+                expectedErrorTypes[errType] = true;
+            });
+    }
     if (argv.bad) {
         expectedErrorTypes.BadRequest = true;
     }
