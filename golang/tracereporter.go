@@ -104,7 +104,9 @@ func (as *Annotations) AddAnnotation(key AnnotationKey) {
 	as.annotations = append(as.annotations, NewAnnotation(key))
 }
 
-// Report reports the annotations to the given trace reporter.
+// Report reports the annotations to the given trace reporter, if tracing is enabled in the span.
 func (as *Annotations) Report(span Span, targetEndpoint TargetEndpoint, reporter TraceReporter) {
-	reporter.Report(span, as.annotations, as.binaryAnnotations, targetEndpoint)
+	if span.TracingEnabled() {
+		reporter.Report(span, as.annotations, as.binaryAnnotations, targetEndpoint)
+	}
 }
