@@ -98,7 +98,7 @@ function Test(args) {
     this.readyLatency = new metrics.Histogram();
     this.commandLatency = new metrics.Histogram();
 
-    this.expectBadRequest = !!args.expectBadRequest;
+    this.expectedError = args.expectedError;
 }
 
 Test.prototype.copy = function copy() {
@@ -256,9 +256,8 @@ Test.prototype.sendNext = function sendNext() {
 
     function done(err) {
         if (err) {
-            if (!self.expectBadRequest) {
-                throw err;
-            } else if (err.type !== 'tchannel.bad-request') {
+            if (!self.expectedError ||
+                !self.expectedError(err)) {
                 throw err;
             }
         }
@@ -324,16 +323,20 @@ argv.sizes.forEach(function each(size) {
             arg2: key,
             arg3: str,
             pipeline: pipeline,
-            expectBadRequest: argv.bad
+            expectedError: expectedError
         }));
         tests.push(new Test({
             descr: 'GET ' + sizeDesc,
             command: 'get' + (argv.bad ? '_bad' : ''),
             arg2: key,
             pipeline: pipeline,
-            expectBadRequest: argv.bad
+            expectedError: expectedError
         }));
     });
+
+    function expectedError(err) {
+        return argv.bad && err.type !== 'tchannel.bad-request';
+    }
 });
 
 function next(i, j, done) {
