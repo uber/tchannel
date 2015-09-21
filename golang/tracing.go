@@ -27,6 +27,13 @@ import (
 	"github.com/uber/tchannel/golang/typed"
 )
 
+const (
+	tracingFlagEnabled byte = 0x01
+
+	// The default tracing flags used when a new root span is created.
+	defaultTracingFlags = tracingFlagEnabled
+)
+
 var (
 	// timeNow is a variable for stubbing in unit tests.
 	timeNow = time.Now
@@ -69,11 +76,12 @@ func (s *Span) write(w *typed.WriteBuffer) error {
 	return w.Err()
 }
 
-const tracingFlagEnabled byte = 0x01
-
 // NewRootSpan creates a new top-level Span for a call-graph within the provided context
 func NewRootSpan() *Span {
-	return &Span{traceID: uint64(traceRng.Int63())}
+	return &Span{
+		traceID: uint64(traceRng.Int63()),
+		flags:   defaultTracingFlags,
+	}
 }
 
 // TraceID returns the trace id for the entire call graph of requests. Established at the outermost
