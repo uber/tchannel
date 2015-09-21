@@ -50,6 +50,9 @@ inherits(EgressNodes, EventEmitter);
 
 EgressNodes.prototype.setRingpop = function setRingpop(ringpop) {
     var self = this;
+
+    assert(self.ringpop === null, 'EgressNodes#setRingpop called twice');
+
     self.ringpop = ringpop;
 
     self.ringpop.on('membershipChanged', onMembershipChanged);
