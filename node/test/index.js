@@ -28,7 +28,7 @@ require('./timeouts.js');
 require('./send.js');
 require('./retry.js');
 require('./relay.js');
-require('./relay-latency-stat.js');
+require('./relay-stats.js');
 require('./streaming.js');
 require('./streaming_bisect.js');
 require('./register.js');
