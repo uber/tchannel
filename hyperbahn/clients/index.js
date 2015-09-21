@@ -58,7 +58,7 @@ function ApplicationClients(options) {
 
     // Used in setupRingpop method
     self.ringpopTimeouts = self.config.get('hyperbahn.ringpop.timeouts');
-    self.projectName = self.config.get('info.project'),
+    self.projectName = self.config.get('info.project');
 
     // We need to move away from myLocalIp(); this fails in weird
     // ways when moving around and changing wifi networks.
