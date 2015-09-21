@@ -32,12 +32,11 @@ function EgressNodes(options) {
     }
     var self = this;
 
-    assert(options && options.ringpop, 'ringpop required');
     assert(options && options.defaultKValue, 'defaultKValue required');
 
     EventEmitter.call(self);
 
-    self.ringpop = options.ringpop;
+    self.ringpop = null;
     self.defaultKValue = options.defaultKValue;
 
     self.kValueForServiceName = {};
@@ -45,13 +44,22 @@ function EgressNodes(options) {
     // Surface the membership changed event (for use in particular by service
     // proxies).
     self.membershipChangedEvent = self.defineEvent('membershipChanged');
+}
+
+inherits(EgressNodes, EventEmitter);
+
+EgressNodes.prototype.setRingpop = function setRingpop(ringpop) {
+    var self = this;
+
+    assert(self.ringpop === null, 'EgressNodes#setRingpop called twice');
+
+    self.ringpop = ringpop;
+
     self.ringpop.on('membershipChanged', onMembershipChanged);
     function onMembershipChanged() {
         self.membershipChangedEvent.emit(self);
     }
-}
-
-inherits(EgressNodes, EventEmitter);
+};
 
 EgressNodes.prototype.kValueFor = function kValueFor(serviceName) {
     var self = this;
@@ -72,6 +80,13 @@ EgressNodes.prototype.setKValueFor = function setKValueFor(serviceName, k) {
 
 EgressNodes.prototype.exitsFor = function exitsFor(serviceName) {
     var self = this;
+
+    assert(
+        self.ringpop !== null,
+        'EgressNodes#exitsFor cannot be called before EgressNodes has ' +
+            ' ringpop set'
+    );
+
     var k = self.kValueFor(serviceName);
     // Object<hostPort: String, Array<lookupKey: String>>
     var exitNodes = Object.create(null);
@@ -94,6 +109,13 @@ EgressNodes.prototype.exitsFor = function exitsFor(serviceName) {
 
 EgressNodes.prototype.isExitFor = function isExitFor(serviceName) {
     var self = this;
+
+    assert(
+        self.ringpop !== null,
+        'EgressNodes#isExitFor cannot be called before EgressNodes has ' +
+            ' ringpop set'
+    );
+
     var k = self.kValueFor(serviceName);
     var me = self.ringpop.whoami();
     for (var i = 0; i < k; i++) {

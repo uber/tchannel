@@ -54,7 +54,11 @@ function ApplicationClients(options) {
     }
 
     var self = this;
-    var config = options.config;
+    var config = self.config = options.config;
+
+    // Used in setupRingpop method
+    self.ringpopTimeouts = self.config.get('hyperbahn.ringpop.timeouts');
+    self.projectName = self.config.get('info.project');
 
     // We need to move away from myLocalIp(); this fails in weird
     // ways when moving around and changing wifi networks.
@@ -155,19 +159,7 @@ function ApplicationClients(options) {
         serviceName: 'ringpop'
     });
 
-    var ringpopTimeouts = config.get('hyperbahn.ringpop.timeouts');
-    self.ringpop = RingPop({
-        app: config.get('info.project'),
-        hostPort: self._host + ':' + self._port,
-        channel: self.ringpopChannel,
-        logger: self.logger,
-        statsd: self.statsd,
-        pingReqTimeout: ringpopTimeouts.pingReqTimeout,
-        pingTimeout: ringpopTimeouts.pingTimeout,
-        joinTimeout: ringpopTimeouts.joinTimeout
-    });
     self.egressNodes = HyperbahnEgressNodes({
-        ringpop: self.ringpop,
         defaultKValue: 10
     });
 
@@ -178,7 +170,6 @@ function ApplicationClients(options) {
     });
     self.hyperbahnHandler = HyperbahnHandler({
         channel: self.hyperbahnChannel,
-        ringpop: self.ringpop,
         egressNodes: self.egressNodes,
         callerName: 'autobahn',
         relayAdTimeout: hyperbahnTimeouts.relayAdTimeout
@@ -245,17 +236,16 @@ ApplicationClients.prototype.loadHostList = function loadHostList() {
     return autobahnHostPortList;
 };
 
-ApplicationClients.prototype.bootstrap =
-function bootstrap(cb) {
+ApplicationClients.prototype.setupChannel =
+function setupChannel(cb) {
     var self = this;
 
     assert(typeof cb === 'function', 'cb required');
 
     var listenReady = CountedReadySignal(4);
-    listenReady(onListen);
+    listenReady(cb);
 
     self.processReporter.bootstrap();
-    self.ringpop.setupChannel();
 
     self.tchannel.on('listening', listenReady.signal);
     self.tchannel.listen(self._port, self._host);
@@ -270,13 +260,45 @@ function bootstrap(cb) {
     }
 
     self._controlServer.listen(self._controlPort, listenReady.signal);
+};
 
-    function onListen() {
-        if (self.autobahnHostPortList) {
-            self.ringpop.bootstrap(self.autobahnHostPortList, cb);
-        } else {
-            process.nextTick(cb);
+ApplicationClients.prototype.setupRingpop =
+function setupRingpop(cb) {
+    var self = this;
+
+    self.ringpop = RingPop({
+        app: self.projectName,
+        hostPort: self.tchannel.hostPort,
+        channel: self.ringpopChannel,
+        logger: self.logger,
+        statsd: self.statsd,
+        pingReqTimeout: self.ringpopTimeouts.pingReqTimeout,
+        pingTimeout: self.ringpopTimeouts.pingTimeout,
+        joinTimeout: self.ringpopTimeouts.joinTimeout
+    });
+    self.ringpop.setupChannel();
+
+    self.egressNodes.setRingpop(self.ringpop);
+
+    if (self.autobahnHostPortList) {
+        self.ringpop.bootstrap(self.autobahnHostPortList, cb);
+    } else {
+        process.nextTick(cb);
+    }
+};
+
+ApplicationClients.prototype.bootstrap =
+function bootstrap(cb) {
+    var self = this;
+
+    self.setupChannel(setupDone);
+
+    function setupDone(err) {
+        if (err) {
+            cb(err);
         }
+
+        self.setupRingpop(cb);
     }
 };
 
