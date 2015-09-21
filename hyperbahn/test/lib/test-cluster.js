@@ -118,7 +118,15 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
 
         for (i = 0; i < self.apps.length; i++) {
             self.apps[i].clients.autobahnHostPortList = self.hostPortList;
-            self.apps[i].clients.setupRingpop(ringpopBootstrapped.signal);
+            self.apps[i].clients.setupRingpop(bootstrapDone);
+        }
+
+        function bootstrapDone(err) {
+            if (err) {
+                return cb(err);
+            }
+
+            ringpopBootstrapped.listen();
         }
     }
 
