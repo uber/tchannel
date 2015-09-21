@@ -363,13 +363,17 @@ BenchmarkRunner.prototype.run = function run(script, args) {
     args = args ? args.slice(0) : [];
     args.unshift(script);
     var child = childProcess.spawn(process.execPath, args);
-    console.error('running', name, child.pid);
+    child.on('exit', function exited(code, signal) {
+        console.error('child exited %s[%s] code %s signal %s',
+                      name, child.pid, code, signal);
+    });
+    console.error('running %s[%s]', name, child.pid);
     return child;
 };
 
 BenchmarkRunner.prototype.runExternal = function runExternal(cmd, args) {
     var child = childProcess.spawn(cmd, args);
-    console.error('running', cmd, child.pid);
+    console.error('running %s[%s]', cmd, child.pid);
     return child;
 };
 
