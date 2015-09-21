@@ -49,16 +49,15 @@ FrameParser.prototype.write = function write(buffer) {
         return;
     }
 
-    var startOfBuffer = 0;
+    // var startOfBuffer = 0;
     var fauxStartOfBuffer = 0;
-    var bufferLength = buffer.length;
     var totalBufferLength = buffer.length;
 
     while (self.frameLength <= totalLength) {
         var endOfBuffer = self.frameLength - self.remainderLength;
 
         var lastBuffer = buffer.slice(
-            startOfBuffer, startOfBuffer + endOfBuffer
+            fauxStartOfBuffer, fauxStartOfBuffer + endOfBuffer
         );
         self.onFrameBuffer(self.concatRemainder(lastBuffer));
         self.frameLength = null;
@@ -67,15 +66,16 @@ FrameParser.prototype.write = function write(buffer) {
             return;
         }
 
-        buffer = buffer.slice(startOfBuffer + endOfBuffer, bufferLength);
-        fauxStartOfBuffer += endOfBuffer;
-        bufferLength = bufferLength - endOfBuffer;
-        totalLength = bufferLength;
-        self.frameLength = readFrameSize(buffer, startOfBuffer);
+        // buffer = buffer.slice(startOfBuffer + endOfBuffer, bufferLength);
+        fauxStartOfBuffer = fauxStartOfBuffer + endOfBuffer;
+        totalLength = totalBufferLength - (fauxStartOfBuffer);
+        self.frameLength = readFrameSize(buffer, fauxStartOfBuffer);
     }
 
-    if (buffer.length) {
-        self.addRemainder(buffer);
+    if (fauxStartOfBuffer < totalBufferLength) {
+        self.addRemainder(buffer.slice(
+            fauxStartOfBuffer, totalBufferLength
+        ));
     }
 };
 
