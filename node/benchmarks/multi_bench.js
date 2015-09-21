@@ -239,25 +239,24 @@ Test.prototype.sendNext = function sendNext() {
     var curClient = this.commandsSent % this.clients.length;
     var start = Date.now();
 
-    this.clients[curClient]
-        .request({
-            serviceName: 'benchmark',
-            hasNoParent: true,
-            timeout: 30000,
-            headers: {
-                as: 'raw',
-                cn: 'multi_bench',
-                benchHeader1: 'bench value one',
-                benchHeader2: 'bench value two',
-                benchHeader3: 'bench value three'
-            }
-        })
-        .send(this.arg1, this.arg2, this.arg3, done);
+    var req = this.clients[curClient].request({
+        serviceName: 'benchmark',
+        hasNoParent: true,
+        timeout: 30000,
+        headers: {
+            as: 'raw',
+            cn: 'multi_bench',
+            benchHeader1: 'bench value one',
+            benchHeader2: 'bench value two',
+            benchHeader3: 'bench value three'
+        }
+    });
+    req.send(this.arg1, this.arg2, this.arg3, done);
 
-    function done(err) {
+    function done(err, res) {
         if (err) {
             if (!self.expectedError ||
-                !self.expectedError(err)) {
+                !self.expectedError(err, req, res)) {
                 throw err;
             }
         }
