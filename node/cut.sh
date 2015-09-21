@@ -67,5 +67,5 @@ git push origin master --tags
 git push -f origin dev_node
 
 git archive --prefix=package/ --format tgz dev_node >package.tgz
-${NPM:-npm} publish --registry=http://registry.npmjs.org/ package.tgz --tag "${NPM_TAG:-alpha}"
+${NPM:-npm} publish --registry=https://registry.npmjs.org/ package.tgz --tag "${NPM_TAG:-alpha}"
 rm package.tgz
