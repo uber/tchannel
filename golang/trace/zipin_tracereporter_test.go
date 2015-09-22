@@ -50,7 +50,7 @@ func TestBuildZipkinSpan(t *testing.T) {
 		Operation:   "test",
 	}
 	span := *tchannel.NewRootSpan()
-	annotations := RandomAnnotations()
+	_, annotations := RandomAnnotations()
 	thriftSpan := buildZipkinSpan(span, annotations, nil, endpoint)
 
 	expectedSpan := &gen.Span{
@@ -82,9 +82,76 @@ func TestBase64Encode(t *testing.T) {
 	assert.Equal(t, base64Encode(12711515087145684), "AC0pDj1TitQ=")
 }
 
-func RandomAnnotations() []tchannel.Annotation {
+func TestBuildZipkinAnnotations(t *testing.T) {
+	baseTime, testAnnotations := RandomAnnotations()
+	baseTimeMillis := float64(1420167845000)
+	testExpected := []*gen.Annotation{
+		{
+			Timestamp: baseTimeMillis + 1000,
+			Value:     "cr",
+		},
+		{
+			Timestamp: baseTimeMillis + 2000.0,
+			Value:     "cs",
+		},
+		{
+			Timestamp: baseTimeMillis + 3000,
+			Value:     "sr",
+		},
+		{
+			Timestamp: baseTimeMillis + 4000,
+			Value:     "ss",
+		},
+	}
+
+	makeTCAnnotations := func(ts time.Time) []tchannel.Annotation {
+		return []tchannel.Annotation{{
+			Key:       tchannel.AnnotationKeyClientReceive,
+			Timestamp: ts,
+		}}
+	}
+	makeGenAnnotations := func(ts float64) []*gen.Annotation {
+		return []*gen.Annotation{{
+			Value:     "cr",
+			Timestamp: ts,
+		}}
+	}
+
+	tests := []struct {
+		annotations []tchannel.Annotation
+		expected    []*gen.Annotation
+	}{
+		{
+			annotations: nil,
+			expected:    []*gen.Annotation{},
+		},
+		{
+			annotations: makeTCAnnotations(baseTime.Add(time.Nanosecond)),
+			expected:    makeGenAnnotations(baseTimeMillis),
+		},
+		{
+			annotations: makeTCAnnotations(baseTime.Add(time.Microsecond)),
+			expected:    makeGenAnnotations(baseTimeMillis),
+		},
+		{
+			annotations: makeTCAnnotations(baseTime.Add(time.Millisecond)),
+			expected:    makeGenAnnotations(baseTimeMillis + 1),
+		},
+		{
+			annotations: testAnnotations,
+			expected:    testExpected,
+		},
+	}
+
+	for _, tt := range tests {
+		got := buildZipkinAnnotations(tt.annotations)
+		assert.Equal(t, tt.expected, got, "result spans mismatch")
+	}
+}
+
+func RandomAnnotations() (time.Time, []tchannel.Annotation) {
 	baseTime := time.Date(2015, 1, 2, 3, 4, 5, 6, time.UTC)
-	return []tchannel.Annotation{
+	return baseTime, []tchannel.Annotation{
 		{
 			Key:       tchannel.AnnotationKeyClientReceive,
 			Timestamp: baseTime.Add(time.Second),
@@ -121,7 +188,7 @@ func TestSubmit(t *testing.T) {
 			Operation:   "test",
 		}
 		span := *tchannel.NewRootSpan()
-		annotations := RandomAnnotations()
+		_, annotations := RandomAnnotations()
 		thriftSpan := buildZipkinSpan(span, annotations, nil, endpoint)
 		thriftSpan.BinaryAnnotations = []*gen.BinaryAnnotation{}
 		ret := &gen.Response{Ok: true}
@@ -193,7 +260,7 @@ func BenchmarkBuildThrift(b *testing.B) {
 		Operation:   "test",
 	}
 	span := *tchannel.NewRootSpan()
-	annotations := RandomAnnotations()
+	_, annotations := RandomAnnotations()
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
