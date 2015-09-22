@@ -119,7 +119,7 @@ type traceReportArgs struct {
 	TargetEndpoint    TargetEndpoint
 }
 
-func TestTraceReporting(t *testing.T) {
+func TestTraceReportingEnabled(t *testing.T) {
 	initialTime := time.Date(2015, 2, 1, 10, 10, 0, 0, time.UTC)
 
 	var gotCalls []traceReportArgs
@@ -187,4 +187,25 @@ func TestTraceReporting(t *testing.T) {
 			assert.Equal(t, NewSpan(curSpan.TraceID(), 0, curSpan.TraceID()), gotSpans[0], "Span mismatch")
 		})
 	}
+}
+
+func TestTraceReportingDisabled(t *testing.T) {
+	var gotCalls int
+	testTraceReporter := TraceReporterFunc(func(span Span, annotations []Annotation, binaryAnnotations []BinaryAnnotation, targetEndpoint TargetEndpoint) {
+		gotCalls++
+	})
+
+	traceReporterOpts := &testutils.ChannelOpts{TraceReporter: testTraceReporter}
+	WithVerifiedServer(t, traceReporterOpts, func(ch *Channel, hostPort string) {
+		ch.Register(raw.Wrap(newTestHandler(t)), "echo")
+
+		ctx, cancel := NewContext(time.Second)
+		defer cancel()
+
+		CurrentSpan(ctx).EnableTracing(false)
+		_, _, _, err := raw.Call(ctx, ch, hostPort, ch.PeerInfo().ServiceName, "echo", nil, []byte("arg3"))
+		require.NoError(t, err, "raw.Call failed")
+
+		assert.Equal(t, 0, gotCalls, "TraceReporter should not report if disabled")
+	})
 }
