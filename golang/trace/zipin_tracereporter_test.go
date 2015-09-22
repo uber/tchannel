@@ -21,7 +21,6 @@
 package trace
 
 import (
-	"net"
 	"testing"
 	"time"
 
@@ -29,6 +28,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel/golang"
+	"github.com/uber/tchannel/golang/testutils"
 	"github.com/uber/tchannel/golang/thrift"
 	gen "github.com/uber/tchannel/golang/trace/thrift/gen-go/tcollector"
 	"github.com/uber/tchannel/golang/trace/thrift/mocks"
@@ -150,12 +150,12 @@ func withSetup(t *testing.T, f func(ctx thrift.Context, args testArgs)) {
 	defer cancel()
 
 	// Start server
-	tchan, listener, err := setupServer(args.s)
+	tchan, err := setupServer(args.s)
 	require.NoError(t, err)
 	defer tchan.Close()
 
 	// Get client1
-	args.c, err = getClient(listener.Addr().String())
+	args.c, err = getClient(tchan.PeerInfo().HostPort)
 	require.NoError(t, err)
 
 	f(ctx, args)
@@ -163,30 +163,21 @@ func withSetup(t *testing.T, f func(ctx thrift.Context, args testArgs)) {
 	args.s.AssertExpectations(t)
 }
 
-func setupServer(h *mocks.TChanTCollector) (*tchannel.Channel, net.Listener, error) {
-	tchan, err := tchannel.NewChannel(tcollectorServiceName, &tchannel.ChannelOptions{
-		Logger: tchannel.SimpleLogger,
+func setupServer(h *mocks.TChanTCollector) (*tchannel.Channel, error) {
+	tchan, err := testutils.NewServer(&testutils.ChannelOpts{
+		ServiceName: tcollectorServiceName,
 	})
 	if err != nil {
-		return nil, nil, err
-	}
-
-	listener, err := net.Listen("tcp", ":0")
-	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	server := thrift.NewServer(tchan)
 	server.Register(gen.NewTChanTCollectorServer(h))
-
-	tchan.Serve(listener)
-	return tchan, listener, nil
+	return tchan, nil
 }
 
 func getClient(dst string) (tchannel.TraceReporter, error) {
-	tchan, err := tchannel.NewChannel("client", &tchannel.ChannelOptions{
-		Logger: tchannel.SimpleLogger,
-	})
+	tchan, err := testutils.NewClient(nil)
 	if err != nil {
 		return nil, err
 	}
