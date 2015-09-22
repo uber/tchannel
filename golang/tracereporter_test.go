@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestZipkinTraceReporterFactoryOverTraceReporter(t *testing.T) {
+func TestTraceReporterFactory(t *testing.T) {
 	var gotChannel *Channel
 	testTraceReporterFactory := func(ch *Channel) TraceReporter {
 		gotChannel = ch
