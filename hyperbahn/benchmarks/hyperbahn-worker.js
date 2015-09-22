@@ -63,6 +63,9 @@ function HyperbahnWorker(opts) {
 HyperbahnWorker.prototype.start = function start() {
     var self = this;
 
+    // attach before throwing exception
+    process.on('uncaughtException', self.app.clients.onError);
+
     self.app.bootstrapAndListen(onAppReady);
 
     function onAppReady(err) {
@@ -87,12 +90,15 @@ HyperbahnWorker.prototype.createConfig = function createConfig() {
     var self = this;
 
     var configDir = path.join(__dirname, '..', 'config');
+    var remoteConfigFile = path.join(__dirname, 'remote_config.json');
 
     return StaticConfig({
         files: [
             path.join(configDir, 'production.json')
         ],
         seedConfig: {
+            'clients.remote-config.file': remoteConfigFile,
+
             'clients.uber-statsd-client': {
                 host: '127.0.0.1',
                 port: self.statsdPort

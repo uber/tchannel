@@ -1,0 +1,21 @@
+[
+    {
+        "key": "circuits.enabled",
+        "value": true
+    },
+    {
+        "key": "rateLimiting.enabled",
+        "value": true
+    },
+    {
+        "key": "rateLimiting.exemptServices",
+        "value": [
+            "autobahn",
+            "ringpop"
+        ]
+    },
+    {
+        "key": "rateLimiting.totalRpsLimit",
+        "value": 1600
+    }
+]

@@ -27,6 +27,7 @@ var util = require('util');
 var path = require('path');
 var FakeKafkaServer = require('kafka-logger/test/lib/kafka-server');
 var FakeSentryServer = require('sentry-logger/test/lib/sentry-server');
+var setTimeout = require('timers').setTimeout;
 
 var BenchmarkRunner = require('tchannel/benchmarks/');
 
@@ -79,6 +80,16 @@ function spawnRelayServer() {
     self.relayProcs.push(hyperbahnProc);
     hyperbahnProc.stdout.pipe(process.stderr);
     hyperbahnProc.stderr.pipe(process.stderr);
+
+    if (self.opts.relayKillIn) {
+        setTimeout(function thenKillIt() {
+            console.error('killing %s[%s]', bahn, hyperbahnProc.pid);
+            hyperbahnProc.kill('SIGTERM');
+
+        }, self.opts.relayKillIn);
+        console.error('set kill timer for %s[%s] in %sms',
+                      bahn, hyperbahnProc.pid, self.opts.relayKillIn);
+    }
 };
 
 HyperbahnBenchmarkRunner.prototype.close = function close() {
