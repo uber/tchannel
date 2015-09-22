@@ -24,15 +24,9 @@ var fs = require('fs');
 var path = require('path');
 var assert = require('assert');
 
-var spec = fs.readFileSync(path.join(
-    __dirname,
-    '..',
-    '..',
-    'node_modules',
-    'tchannel',
-    'tcollector',
-    'tcollector.thrift'
-), 'utf8');
+var spec = fs.readFileSync(
+    path.join(__dirname, 'tcollector.thrift'), 'utf8'
+);
 
 module.exports = FakeTCollector;
 
