@@ -91,7 +91,9 @@ func camcelCase(name string) string {
 }
 
 func avoidThriftClash(name string) string {
-	if strings.HasSuffix(name, "Result") || strings.HasSuffix(name, "Args") {
+	if strings.HasSuffix(name, "Result") ||
+		strings.HasSuffix(name, "Args") ||
+		strings.HasPrefix(name, "New") {
 		return name + "_"
 	}
 	return name
