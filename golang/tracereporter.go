@@ -69,6 +69,14 @@ type TraceReporter interface {
 	Report(span Span, annotations []Annotation, binaryAnnotations []BinaryAnnotation, targetEndpoint TargetEndpoint)
 }
 
+// TraceReporterFunc allows using a function as a TraceReporter.
+type TraceReporterFunc func(span Span, annotations []Annotation, binaryAnnotations []BinaryAnnotation, targetEndpoint TargetEndpoint)
+
+// Report calls the underlying function.
+func (f TraceReporterFunc) Report(span Span, annotations []Annotation, binaryAnnotations []BinaryAnnotation, targetEndpoint TargetEndpoint) {
+	f(span, annotations, binaryAnnotations, targetEndpoint)
+}
+
 // NullReporter is the default TraceReporter which does not do anything.
 var NullReporter TraceReporter = nullReporter{}
 

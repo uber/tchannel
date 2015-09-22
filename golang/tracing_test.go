@@ -30,6 +30,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel/golang/json"
+	"github.com/uber/tchannel/golang/raw"
+	"github.com/uber/tchannel/golang/testutils"
 	"golang.org/x/net/context"
 )
 
@@ -109,4 +111,80 @@ func TestTracingPropagates(t *testing.T) {
 		assert.True(t, response.TracingEnabled, "Tracing should be enabled")
 		assert.NotEqual(t, response.SpanID, nestedResponse.SpanID)
 	})
+}
+
+type traceReportArgs struct {
+	Annotations       []Annotation
+	BinaryAnnotations []BinaryAnnotation
+	TargetEndpoint    TargetEndpoint
+}
+
+func TestTraceReporting(t *testing.T) {
+	initialTime := time.Date(2015, 2, 1, 10, 10, 0, 0, time.UTC)
+
+	var gotCalls []traceReportArgs
+	var gotSpans []Span
+	testTraceReporter := TraceReporterFunc(func(span Span, annotations []Annotation, binaryAnnotations []BinaryAnnotation, targetEndpoint TargetEndpoint) {
+		gotCalls = append(gotCalls, traceReportArgs{annotations, binaryAnnotations, targetEndpoint})
+		gotSpans = append(gotSpans, span)
+	})
+
+	traceReporterOpts := &testutils.ChannelOpts{TraceReporter: testTraceReporter}
+	tests := []struct {
+		name       string
+		serverOpts *testutils.ChannelOpts
+		clientOpts *testutils.ChannelOpts
+		expected   []Annotation
+	}{
+		{
+			name:       "inbound",
+			serverOpts: traceReporterOpts,
+			expected: []Annotation{
+				{Key: "sr", Timestamp: initialTime.Add(4 * time.Second)},
+				{Key: "ss", Timestamp: initialTime.Add(6 * time.Second)},
+			},
+		},
+		{
+			name:       "outbound",
+			clientOpts: traceReporterOpts,
+			expected: []Annotation{
+				{Key: "cs", Timestamp: initialTime.Add(1 * time.Second)},
+				{Key: "cr", Timestamp: initialTime.Add(3 * time.Second)},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		gotCalls, gotSpans = nil, nil
+		addFn := testutils.NowStub(GetTimeNow(), initialTime)
+		defer testutils.ResetNowStub(GetTimeNow())
+		addFn(time.Second)
+
+		WithVerifiedServer(t, tt.serverOpts, func(ch *Channel, hostPort string) {
+			ch.Register(raw.Wrap(newTestHandler(t)), "echo")
+
+			clientCh, err := testutils.NewClient(tt.clientOpts)
+			require.NoError(t, err, "NewClient failed")
+
+			ctx, cancel := NewContext(time.Second)
+			defer cancel()
+
+			_, _, _, err = raw.Call(ctx, clientCh, hostPort, ch.PeerInfo().ServiceName, "echo", nil, []byte("arg3"))
+			require.NoError(t, err, "raw.Call failed")
+
+			binaryAnnotations := []BinaryAnnotation{
+				{"cn", clientCh.PeerInfo().ServiceName},
+				{"as", Raw.String()},
+			}
+			targetEndpoint := TargetEndpoint{
+				HostPort:    hostPort,
+				ServiceName: ch.PeerInfo().ServiceName,
+				Operation:   "echo",
+			}
+			expected := []traceReportArgs{{tt.expected, binaryAnnotations, targetEndpoint}}
+			assert.Equal(t, expected, gotCalls, "%v: Report args mismatch", tt.name)
+			curSpan := CurrentSpan(ctx)
+			assert.Equal(t, NewSpan(curSpan.TraceID(), 0, curSpan.TraceID()), gotSpans[0], "Span mismatch")
+		})
+	}
 }

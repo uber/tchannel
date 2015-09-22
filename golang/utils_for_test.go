@@ -45,6 +45,11 @@ func GetConnections(ch *Channel) []*Connection {
 	return connections
 }
 
+// NewSpan returns a Span for testing.
+func NewSpan(traceID uint64, parentID uint64, spanID uint64) Span {
+	return Span{traceID: traceID, parentID: parentID, spanID: spanID, flags: defaultTracingFlags}
+}
+
 // GetTimeNow returns the variable pointing to time.Now for stubbing.
 func GetTimeNow() *func() time.Time {
 	return &timeNow
