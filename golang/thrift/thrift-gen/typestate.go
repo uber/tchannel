@@ -30,7 +30,18 @@ type State struct {
 
 // NewState parses the type information for a parsed Thrift file and returns the state.
 func NewState(v *parser.Thrift) *State {
-	return &State{v.Typedefs}
+	typedefs := make(map[string]*parser.Type)
+	for k, v := range v.Typedefs {
+		typedefs[k] = v
+	}
+
+	// Enums are typedefs to an int64.
+	i64Type := &parser.Type{Name: "i64"}
+	for k := range v.Enums {
+		typedefs[k] = i64Type
+	}
+
+	return &State{typedefs}
 }
 
 func (s *State) isBasicType(thriftType string) bool {

@@ -9,6 +9,7 @@ struct Result {
   2: required i32 func
   3: required i32 chan
   4: required i32 result
+  5: required i64 newRole
 }
 
 service func {
