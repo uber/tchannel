@@ -3,7 +3,7 @@
 	url = https://github.com/uber/tchannel-python.git
 [submodule "node"]
 	path = node
-	url = git@github.com:uber/tchannel-node
+	url = https://github.com/uber/tchannel-node.git
 [submodule "hyperbahn"]
 	path = hyperbahn
-	url = git@github.com:uber/hyperbahn
+	url = https://github.com/uber/hyperbahn
