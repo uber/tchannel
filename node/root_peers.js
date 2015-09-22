@@ -37,7 +37,6 @@ function TChannelRootPeers(channel, options) {
 
     self.allocPeerEvent = self.defineEvent('allocPeer');
     self.peerOptions = self.options.peerOptions || {};
-    self.preferConnectionDirection = self.options.preferConnectionDirection;
 
     self.selfPeer = null;
 }

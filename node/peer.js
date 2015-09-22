@@ -65,14 +65,8 @@ function TChannelPeer(channel, hostPort, options) {
         );
     }
 
-    self.preferConnectionDirection = self.options.preferConnectionDirection;
-    if (self.preferConnectionDirection === 'out') {
-        self.setScoreStrategy(PreferOutgoing);
-    } else if (self.preferConnectionDirection === 'in') {
-        self.setScoreStrategy(PreferIncoming);
-    } else {
-        self.setScoreStrategy(NoPreference);
-    }
+    var direction = self.options.preferConnectionDirection || 'any';
+    self.setPreferConnectionDirection(direction);
 
     function onReport() {
         if (!self.hostPort) {
@@ -94,6 +88,24 @@ function TChannelPeer(channel, hostPort, options) {
 }
 
 inherits(TChannelPeer, EventEmitter);
+
+TChannelPeer.prototype.setPreferConnectionDirection = function setPreferConnectionDirection(direction) {
+    var self = this;
+    if (self.preferConnectionDirection === direction) {
+        return;
+    }
+
+    self.preferConnectionDirection = direction;
+    if (self.preferConnectionDirection === 'out') {
+        self.setScoreStrategy(PreferOutgoing);
+    } else if (self.preferConnectionDirection === 'in') {
+        self.setScoreStrategy(PreferIncoming);
+    } else {
+        self.setScoreStrategy(NoPreference);
+    }
+
+    self.invalidateScore();
+};
 
 TChannelPeer.prototype.setScoreStrategy = function setScoreStrategy(ScoreStrategy) {
     var self = this;
