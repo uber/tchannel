@@ -54,11 +54,11 @@ function ApplicationClients(options) {
     }
 
     var self = this;
-    var config = self.config = options.config;
+    var config = options.config;
 
     // Used in setupRingpop method
-    self.ringpopTimeouts = self.config.get('hyperbahn.ringpop.timeouts');
-    self.projectName = self.config.get('info.project');
+    self.ringpopTimeouts = config.get('hyperbahn.ringpop.timeouts');
+    self.projectName = config.get('info.project');
 
     // We need to move away from myLocalIp(); this fails in weird
     // ways when moving around and changing wifi networks.
