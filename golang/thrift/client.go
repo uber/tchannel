@@ -55,7 +55,11 @@ func (c *client) Call(ctx Context, thriftService, methodName string, req, resp t
 	if c.opts.HostPort != "" {
 		peer = c.sc.Peers().GetOrAdd(c.opts.HostPort)
 	} else {
-		peer = c.sc.Peers().Get()
+		var err error
+		peer, err = c.sc.Peers().Get()
+		if err != nil {
+			return false, err
+		}
 	}
 	call, err := peer.BeginCall(ctx, c.serviceName, thriftService+"::"+methodName, &tchannel.CallOptions{Format: tchannel.Thrift})
 	if err != nil {

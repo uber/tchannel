@@ -32,6 +32,9 @@ var (
 	// ErrInvalidConnectionState indicates that the connection is not in a valid state.
 	ErrInvalidConnectionState = errors.New("connection is in an invalid state")
 
+	// ErrNoPeers indicates that there are no peers.
+	ErrNoPeers = errors.New("no peers available")
+
 	peerRng = NewRand(time.Now().UnixNano())
 )
 
@@ -71,18 +74,18 @@ func randPeer(peers []*Peer) *Peer {
 }
 
 // Get returns a peer from the peer list, or nil if none can be found.
-func (l *PeerList) Get() *Peer {
+func (l *PeerList) Get() (*Peer, error) {
 	l.mut.RLock()
 
 	if len(l.peers) == 0 {
 		l.mut.RUnlock()
-		return nil
+		return nil, ErrNoPeers
 	}
 
 	peer := randPeer(l.peers)
 	l.mut.RUnlock()
 
-	return peer
+	return peer, nil
 }
 
 // GetOrAdd returns a peer for the given hostPort, creating one if it doesn't yet exist.

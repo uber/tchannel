@@ -69,7 +69,12 @@ func (c *SubChannel) BeginCall(ctx context.Context, operationName string, callOp
 		callOptions = defaultCallOptions
 	}
 
-	return c.peers.Get().BeginCall(ctx, c.ServiceName(), operationName, callOptions)
+	peer, err := c.peers.Get()
+	if err != nil {
+		return nil, err
+	}
+
+	return peer.BeginCall(ctx, c.ServiceName(), operationName, callOptions)
 }
 
 // Peers returns the PeerList for this subchannel.

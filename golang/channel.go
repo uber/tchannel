@@ -153,15 +153,7 @@ func NewChannel(serviceName string, opts *ChannelOptions) (*Channel, error) {
 		handlers:          &handlerMap{},
 		subChannels:       &subChannelMap{},
 	}
-
-	traceReporter := opts.TraceReporter
-	if opts.TraceReporterFactory != nil {
-		traceReporter = opts.TraceReporterFactory(ch)
-	}
-	if traceReporter == nil {
-		traceReporter = NullReporter
-	}
-	ch.traceReporter = traceReporter
+	ch.peers = newPeerList(ch)
 
 	ch.mutable.peerInfo = LocalPeerInfo{
 		PeerInfo: PeerInfo{
@@ -171,8 +163,18 @@ func NewChannel(serviceName string, opts *ChannelOptions) (*Channel, error) {
 		ServiceName: serviceName,
 	}
 	ch.mutable.state = ChannelClient
-	ch.peers = newPeerList(ch)
 	ch.createCommonStats()
+
+	// TraceReporter may use the channel, so we must initialize it once the channel is ready.
+	traceReporter := opts.TraceReporter
+	if opts.TraceReporterFactory != nil {
+		traceReporter = opts.TraceReporterFactory(ch)
+	}
+	if traceReporter == nil {
+		traceReporter = NullReporter
+	}
+	ch.traceReporter = traceReporter
+
 	return ch, nil
 }
 
