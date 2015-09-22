@@ -4,3 +4,6 @@
 [submodule "node"]
 	path = node
 	url = git@github.com:uber/tchannel-node
+[submodule "hyperbahn"]
+	path = hyperbahn
+	url = git@github.com:uber/hyperbahn
