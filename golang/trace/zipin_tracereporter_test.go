@@ -21,7 +21,6 @@
 package trace
 
 import (
-	"net"
 	"testing"
 	"time"
 
@@ -29,6 +28,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/uber/tchannel/golang"
+	"github.com/uber/tchannel/golang/testutils"
 	"github.com/uber/tchannel/golang/thrift"
 	gen "github.com/uber/tchannel/golang/trace/thrift/gen-go/tcollector"
 	"github.com/uber/tchannel/golang/trace/thrift/mocks"
@@ -50,7 +50,7 @@ func TestBuildZipkinSpan(t *testing.T) {
 		Operation:   "test",
 	}
 	span := *tchannel.NewRootSpan()
-	annotations := RandomAnnotations()
+	_, annotations := RandomAnnotations()
 	thriftSpan := buildZipkinSpan(span, annotations, nil, endpoint)
 
 	expectedSpan := &gen.Span{
@@ -82,9 +82,76 @@ func TestBase64Encode(t *testing.T) {
 	assert.Equal(t, base64Encode(12711515087145684), "AC0pDj1TitQ=")
 }
 
-func RandomAnnotations() []tchannel.Annotation {
+func TestBuildZipkinAnnotations(t *testing.T) {
+	baseTime, testAnnotations := RandomAnnotations()
+	baseTimeMillis := float64(1420167845000)
+	testExpected := []*gen.Annotation{
+		{
+			Timestamp: baseTimeMillis + 1000,
+			Value:     "cr",
+		},
+		{
+			Timestamp: baseTimeMillis + 2000.0,
+			Value:     "cs",
+		},
+		{
+			Timestamp: baseTimeMillis + 3000,
+			Value:     "sr",
+		},
+		{
+			Timestamp: baseTimeMillis + 4000,
+			Value:     "ss",
+		},
+	}
+
+	makeTCAnnotations := func(ts time.Time) []tchannel.Annotation {
+		return []tchannel.Annotation{{
+			Key:       tchannel.AnnotationKeyClientReceive,
+			Timestamp: ts,
+		}}
+	}
+	makeGenAnnotations := func(ts float64) []*gen.Annotation {
+		return []*gen.Annotation{{
+			Value:     "cr",
+			Timestamp: ts,
+		}}
+	}
+
+	tests := []struct {
+		annotations []tchannel.Annotation
+		expected    []*gen.Annotation
+	}{
+		{
+			annotations: nil,
+			expected:    []*gen.Annotation{},
+		},
+		{
+			annotations: makeTCAnnotations(baseTime.Add(time.Nanosecond)),
+			expected:    makeGenAnnotations(baseTimeMillis),
+		},
+		{
+			annotations: makeTCAnnotations(baseTime.Add(time.Microsecond)),
+			expected:    makeGenAnnotations(baseTimeMillis),
+		},
+		{
+			annotations: makeTCAnnotations(baseTime.Add(time.Millisecond)),
+			expected:    makeGenAnnotations(baseTimeMillis + 1),
+		},
+		{
+			annotations: testAnnotations,
+			expected:    testExpected,
+		},
+	}
+
+	for _, tt := range tests {
+		got := buildZipkinAnnotations(tt.annotations)
+		assert.Equal(t, tt.expected, got, "result spans mismatch")
+	}
+}
+
+func RandomAnnotations() (time.Time, []tchannel.Annotation) {
 	baseTime := time.Date(2015, 1, 2, 3, 4, 5, 6, time.UTC)
-	return []tchannel.Annotation{
+	return baseTime, []tchannel.Annotation{
 		{
 			Key:       tchannel.AnnotationKeyClientReceive,
 			Timestamp: baseTime.Add(time.Second),
@@ -121,7 +188,7 @@ func TestSubmit(t *testing.T) {
 			Operation:   "test",
 		}
 		span := *tchannel.NewRootSpan()
-		annotations := RandomAnnotations()
+		_, annotations := RandomAnnotations()
 		thriftSpan := buildZipkinSpan(span, annotations, nil, endpoint)
 		thriftSpan.BinaryAnnotations = []*gen.BinaryAnnotation{}
 		ret := &gen.Response{Ok: true}
@@ -150,12 +217,12 @@ func withSetup(t *testing.T, f func(ctx thrift.Context, args testArgs)) {
 	defer cancel()
 
 	// Start server
-	tchan, listener, err := setupServer(args.s)
+	tchan, err := setupServer(args.s)
 	require.NoError(t, err)
 	defer tchan.Close()
 
 	// Get client1
-	args.c, err = getClient(listener.Addr().String())
+	args.c, err = getClient(tchan.PeerInfo().HostPort)
 	require.NoError(t, err)
 
 	f(ctx, args)
@@ -163,30 +230,21 @@ func withSetup(t *testing.T, f func(ctx thrift.Context, args testArgs)) {
 	args.s.AssertExpectations(t)
 }
 
-func setupServer(h *mocks.TChanTCollector) (*tchannel.Channel, net.Listener, error) {
-	tchan, err := tchannel.NewChannel(tcollectorServiceName, &tchannel.ChannelOptions{
-		Logger: tchannel.SimpleLogger,
+func setupServer(h *mocks.TChanTCollector) (*tchannel.Channel, error) {
+	tchan, err := testutils.NewServer(&testutils.ChannelOpts{
+		ServiceName: tcollectorServiceName,
 	})
 	if err != nil {
-		return nil, nil, err
-	}
-
-	listener, err := net.Listen("tcp", ":0")
-	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	server := thrift.NewServer(tchan)
 	server.Register(gen.NewTChanTCollectorServer(h))
-
-	tchan.Serve(listener)
-	return tchan, listener, nil
+	return tchan, nil
 }
 
 func getClient(dst string) (tchannel.TraceReporter, error) {
-	tchan, err := tchannel.NewChannel("client", &tchannel.ChannelOptions{
-		Logger: tchannel.SimpleLogger,
-	})
+	tchan, err := testutils.NewClient(nil)
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +260,7 @@ func BenchmarkBuildThrift(b *testing.B) {
 		Operation:   "test",
 	}
 	span := *tchannel.NewRootSpan()
-	annotations := RandomAnnotations()
+	_, annotations := RandomAnnotations()
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
