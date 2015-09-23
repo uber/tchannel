@@ -224,6 +224,13 @@ func (r *reqResReader) recvNextFragment(initial bool) (*readableFragment, error)
 	message := r.messageForFragment(initial)
 	frame, err := r.mex.recvPeerFrameOfType(message.messageType())
 	if err != nil {
+		if IsSystemError(err) {
+			// Record the error without shutting down the exchange, since this should go through
+			// the standard doneReading path.
+			r.err = err
+			return nil, err
+		}
+
 		return nil, r.failed(err)
 	}
 
