@@ -3,6 +3,8 @@ OLDGOPATH := $(GOPATH)
 PATH := $(GODEPS)/bin:$(PATH)
 EXAMPLES=./examples/bench/server ./examples/bench/client ./examples/ping ./examples/thrift ./examples/hyperbahn/echo-server
 PKGS := . ./json ./hyperbahn ./thrift ./typed ./trace $(EXAMPLES)
+TEST_PKGS_NOPREFIX := $(shell go list ./... | sed -e 's/^.*uber\/tchannel\/golang//')
+TEST_PKGS := $(addprefix github.com/uber/tchannel/golang,$(TEST_PKGS_NOPREFIX))
 BUILD := ./build
 SRCS := $(foreach pkg,$(PKGS),$(wildcard $(pkg)/*.go))
 export GOPATH = $(GODEPS):$(OLDGOPATH)
@@ -47,7 +49,7 @@ test_ci: test
 
 test: clean setup
 	echo Testing packages:
-	go test ./... $(TEST_ARG) -parallel=4
+	go test $(TEST_PKGS) $(TEST_ARG) -parallel=4
 
 benchmark: clean setup
 	echo Running benchmarks:
