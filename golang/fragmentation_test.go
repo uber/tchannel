@@ -399,8 +399,8 @@ func (ch fragmentChannel) recvNextFragment(initial bool) (*readableFragment, err
 	return fragment, rbuf.Err()
 }
 
-func (ch fragmentChannel) doneReading() {}
-func (ch fragmentChannel) doneSending() {}
+func (ch fragmentChannel) doneReading(unexpected error) {}
+func (ch fragmentChannel) doneSending()                 {}
 
 func buffers(elements ...[][]byte) [][]byte {
 	var buffers [][]byte

@@ -125,6 +125,12 @@ func (se SystemError) Code() SystemErrCode {
 	return se.code
 }
 
+// IsSystemError returns whether the error is a system error.
+func IsSystemError(err error) bool {
+	_, ok := err.(SystemError)
+	return ok
+}
+
 // GetSystemErrorCode returns the code to report for the given error.  If the error is a SystemError, we can
 // get the code directly.  Otherwise treat it as an unexpected error
 func GetSystemErrorCode(err error) SystemErrCode {

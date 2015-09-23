@@ -53,7 +53,8 @@ type fragmentReceiver interface {
 	recvNextFragment(intial bool) (*readableFragment, error)
 
 	// doneReading is called when the fragment receiver is finished reading all fragments.
-	doneReading()
+	// If an error frame is the last received frame, then doneReading is called with an error.
+	doneReading(unexpectedErr error)
 }
 
 type fragmentingReadState int
@@ -211,7 +212,7 @@ func (r *fragmentingReader) Close() error {
 			return r.err
 		}
 
-		r.receiver.doneReading()
+		r.receiver.doneReading(nil)
 		r.curFragment.done()
 		r.curChunk = nil
 		r.state = fragmentingReadComplete
@@ -250,10 +251,13 @@ func (r *fragmentingReader) recvAndParseNextFragment(initial bool) error {
 		r.curFragment.done()
 	}
 
-	var err error
-	r.curFragment, err = r.receiver.recvNextFragment(initial)
-	if err != nil {
-		return err
+	r.curFragment, r.err = r.receiver.recvNextFragment(initial)
+	if r.err != nil {
+		if IsSystemError(r.err) {
+			// System errors are still reported (e.g. latency, trace reporting).
+			r.receiver.doneReading(r.err)
+		}
+		return r.err
 	}
 
 	// Set checksum, or confirm new checksum is the same type as the prior checksum
