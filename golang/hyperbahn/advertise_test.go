@@ -42,7 +42,26 @@ func TestAdvertiseFailed(t *testing.T) {
 
 		client, err := NewClient(clientCh, configFor(hostPort), nil)
 		require.NoError(t, err, "NewClient")
+		defer client.Close()
 		assert.Error(t, client.Advertise(), "Advertise without handler should fail")
+	})
+}
+
+func TestNotListeningChannel(t *testing.T) {
+	withSetup(t, func(hypCh *tchannel.Channel, hyperbahnHostPort string) {
+		adHandler := func(ctx json.Context, req *AdRequest) (*AdResponse, error) {
+			return &AdResponse{1}, nil
+		}
+		json.Register(hypCh, json.Handlers{"ad": adHandler}, nil)
+
+		ch, err := testutils.NewClient(nil)
+		require.NoError(t, err, "testutils NewClient failed")
+
+		client, err := NewClient(ch, configFor(hyperbahnHostPort), nil)
+		assert.NoError(t, err, "hyperbahn NewClient failed")
+		defer client.Close()
+
+		assert.Equal(t, errEphemeralPeer, client.Advertise(), "Advertise without Listen should fail")
 	})
 }
 
@@ -99,8 +118,8 @@ func runRetryTest(t *testing.T, f func(r *retryTest)) {
 	withSetup(t, func(serverCh *tchannel.Channel, hostPort string) {
 		json.Register(serverCh, json.Handlers{"ad": r.adHandler}, nil)
 
-		clientCh, err := tchannel.NewChannel("my-client", nil)
-		require.NoError(t, err)
+		clientCh, err := testutils.NewServer(&testutils.ChannelOpts{ServiceName: "my-client"})
+		require.NoError(t, err, "NewServer failed")
 		defer clientCh.Close()
 
 		r.ch = clientCh
@@ -109,6 +128,7 @@ func runRetryTest(t *testing.T, f func(r *retryTest)) {
 			FailStrategy: FailStrategyIgnore,
 		})
 		require.NoError(t, err, "NewClient")
+		defer r.client.Close()
 		f(r)
 		r.mock.AssertExpectations(t)
 	})

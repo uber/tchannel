@@ -21,9 +21,13 @@
 package hyperbahn
 
 import (
+	"errors"
+
 	"github.com/uber/tchannel/golang"
 	"github.com/uber/tchannel/golang/json"
 )
+
+var errEphemeralPeer = errors.New("cannot advertise on channel that has not called ListenAndServe")
 
 // The following parameters define the request/response for the Hyperbahn 'ad' call.
 type service struct {
@@ -55,6 +59,11 @@ func (c *Client) createRequest() *AdRequest {
 }
 
 func (c *Client) sendAdvertise() error {
+	// Cannot advertise from an ephemeral peer.
+	if c.tchan.PeerInfo().IsEphemeral() {
+		return errEphemeralPeer
+	}
+
 	ctx, cancel := json.NewContext(c.opts.Timeout)
 	defer cancel()
 

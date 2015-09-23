@@ -72,6 +72,9 @@ func (c *Client) advertiseLoop() {
 
 	for {
 		timeSleep(sleepFor)
+		if c.IsClosed() {
+			return
+		}
 
 		if err := c.sendAdvertise(); err != nil {
 			consecutiveFailures++

@@ -35,6 +35,7 @@ type Client struct {
 	tchan    *tchannel.Channel
 	services []string
 	opts     ClientOptions
+	quit     chan struct{}
 }
 
 // FailStrategy is the strategy to use when registration fails maxRegistrationFailures
@@ -63,7 +64,7 @@ type ClientOptions struct {
 // config is the environment-specific configuration for Hyperbahn such as the list of initial nodes.
 // opts are optional, and are used to customize the client.
 func NewClient(ch *tchannel.Channel, config Configuration, opts *ClientOptions) (*Client, error) {
-	client := &Client{tchan: ch}
+	client := &Client{tchan: ch, quit: make(chan struct{})}
 	if opts != nil {
 		client.opts = *opts
 	}
@@ -141,4 +142,19 @@ func (c *Client) Advertise(otherServices ...tchannel.Registrar) error {
 	c.opts.Handler.On(Advertised)
 	go c.advertiseLoop()
 	return nil
+}
+
+// IsClosed returns whether this Client is closed.
+func (c *Client) IsClosed() bool {
+	select {
+	case <-c.quit:
+		return true
+	default:
+		return false
+	}
+}
+
+// Close closes the Hyperbahn client, which stops any background re-advertisements.
+func (c *Client) Close() {
+	close(c.quit)
 }
