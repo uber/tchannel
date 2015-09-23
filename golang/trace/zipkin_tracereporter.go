@@ -135,8 +135,8 @@ func buildZipkinAnnotations(anns []tc.Annotation) []*tcollector.Annotation {
 	zipkinAnns := make([]*tcollector.Annotation, len(anns))
 	for i, ann := range anns {
 		zipkinAnns[i] = &tcollector.Annotation{
-			Timestamp: (float64)(ann.Timestamp.UnixNano() / 1e6),
-			Value:     (string)(ann.Key),
+			Timestamp: float64(ann.Timestamp.UnixNano() / 1e6),
+			Value:     string(ann.Key),
 		}
 	}
 	return zipkinAnns
