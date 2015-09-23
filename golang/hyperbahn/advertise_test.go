@@ -47,6 +47,24 @@ func TestAdvertiseFailed(t *testing.T) {
 	})
 }
 
+func TestNotListeningChannel(t *testing.T) {
+	withSetup(t, func(hypCh *tchannel.Channel, hyperbahnHostPort string) {
+		adHandler := func(ctx json.Context, req *AdRequest) (*AdResponse, error) {
+			return &AdResponse{1}, nil
+		}
+		json.Register(hypCh, json.Handlers{"ad": adHandler}, nil)
+
+		ch, err := testutils.NewClient(nil)
+		require.NoError(t, err, "testutils NewClient failed")
+
+		client, err := NewClient(ch, configFor(hyperbahnHostPort), nil)
+		assert.NoError(t, err, "hyperbahn NewClient failed")
+		defer client.Close()
+
+		assert.Equal(t, errEphemeralPeer, client.Advertise(), "Advertise without Listen should fail")
+	})
+}
+
 type retryTest struct {
 	// channel used to control the response to an 'ad' call.
 	respCh chan int
