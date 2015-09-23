@@ -96,10 +96,17 @@ func (simpleTraceReporter) Report(
 		span, annotations, binaryAnnotations, targetEndpoint)
 }
 
-// Annotations is am embeddable struct used to track annotations.
+// Annotations is used to track annotations and report them to a TraceReporter.
 type Annotations struct {
-	binaryAnnotations []BinaryAnnotation
+	reporter          TraceReporter
+	endpoint          TargetEndpoint
+	span              Span
 	annotations       []Annotation
+	binaryAnnotations []BinaryAnnotation
+}
+
+func (as *Annotations) SetOperation(operation string) {
+	as.endpoint.Operation = operation
 }
 
 // AddBinaryAnnotation adds a binary annotation.
@@ -113,8 +120,8 @@ func (as *Annotations) AddAnnotation(key AnnotationKey) {
 }
 
 // Report reports the annotations to the given trace reporter, if tracing is enabled in the span.
-func (as *Annotations) Report(span Span, targetEndpoint TargetEndpoint, reporter TraceReporter) {
-	if span.TracingEnabled() {
-		reporter.Report(span, as.annotations, as.binaryAnnotations, targetEndpoint)
+func (as *Annotations) Report() {
+	if as.span.TracingEnabled() {
+		as.reporter.Report(as.span, as.annotations, as.binaryAnnotations, as.endpoint)
 	}
 }

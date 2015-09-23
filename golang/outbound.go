@@ -105,23 +105,27 @@ func (c *Connection) beginCall(ctx context.Context, serviceName string, callOpti
 		call.callReq.Tracing.EnableTracing(false)
 	}
 
-	call.AddBinaryAnnotation(BinaryAnnotation{Key: "cn", Value: call.callReq.Headers[CallerName]})
-	call.AddBinaryAnnotation(BinaryAnnotation{Key: "as", Value: call.callReq.Headers[ArgScheme]})
-	call.AddAnnotation(AnnotationKeyClientSend)
-
 	response := new(OutboundCallResponse)
+	response.Annotations = Annotations{
+		reporter: c.traceReporter,
+		span:     call.callReq.Tracing,
+		endpoint: TargetEndpoint{
+			HostPort:    c.remotePeerInfo.HostPort,
+			ServiceName: serviceName,
+			Operation:   operation,
+		},
+		binaryAnnotations: []BinaryAnnotation{
+			{Key: "cn", Value: call.callReq.Headers[CallerName]},
+			{Key: "as", Value: call.callReq.Headers[ArgScheme]},
+		},
+	}
+	response.AddAnnotation(AnnotationKeyClientSend)
+
 	response.startedAt = timeNow()
 	response.mex = mex
 	response.log = c.log.WithFields(LogField{"Out-Response", requestID})
 	response.messageForFragment = func(initial bool) message {
 		if initial {
-			targetEndpoint := TargetEndpoint{
-				HostPort:    call.conn.remotePeerInfo.HostPort,
-				ServiceName: serviceName,
-				Operation:   operation,
-			}
-			call.AddAnnotation(AnnotationKeyClientReceive)
-			call.Report(call.callReq.Tracing, targetEndpoint, c.traceReporter)
 			return &response.callRes
 		}
 
@@ -165,7 +169,6 @@ func (c *Connection) handleCallResContinue(frame *Frame) bool {
 // ArgReader2() and ArgReader3() methods on the Response() object.
 type OutboundCall struct {
 	reqResWriter
-	Annotations
 
 	callReq         callReq
 	response        *OutboundCallResponse
@@ -219,8 +222,10 @@ func (call *OutboundCall) doneSending() {}
 // An OutboundCallResponse is the response to an outbound call
 type OutboundCallResponse struct {
 	reqResReader
+	Annotations
 
-	callRes callRes
+	callRes     callRes
+	annotations Annotations
 
 	// startedAt is the time at which the outbound call was started.
 	startedAt       time.Time
@@ -289,6 +294,12 @@ func (c *Connection) handleError(frame *Frame) {
 // doneReading shuts down the message exchange for this call.
 // For outgoing calls, the last message is reading the call response.
 func (response *OutboundCallResponse) doneReading(unexpected error) {
+	response.AddAnnotation(AnnotationKeyClientReceive)
+	response.Report()
+
+	latency := timeNow().Sub(response.startedAt)
+	response.statsReporter.RecordTimer("outbound.calls.latency", response.commonStatsTags, latency)
+
 	if unexpected != nil {
 		// TODO(prashant): Report the error code type as per metrics doc and enable.
 		// response.statsReporter.IncCounter("outbound.calls.system-errors", response.commonStatsTags, 1)
@@ -298,8 +309,6 @@ func (response *OutboundCallResponse) doneReading(unexpected error) {
 	} else {
 		response.statsReporter.IncCounter("outbound.calls.success", response.commonStatsTags, 1)
 	}
-	latency := timeNow().Sub(response.startedAt)
-	response.statsReporter.RecordTimer("outbound.calls.latency", response.commonStatsTags, latency)
 
 	response.mex.shutdown()
 }

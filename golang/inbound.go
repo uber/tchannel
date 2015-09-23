@@ -76,10 +76,20 @@ func (c *Connection) handleCallReq(frame *Frame) bool {
 		return true
 	}
 
-	call.AddBinaryAnnotation(BinaryAnnotation{Key: "cn", Value: callReq.Headers[CallerName]})
-	call.AddBinaryAnnotation(BinaryAnnotation{Key: "as", Value: callReq.Headers[ArgScheme]})
-	call.AddAnnotation(AnnotationKeyServerReceive)
 	response := new(InboundCallResponse)
+	response.Annotations = Annotations{
+		reporter: c.traceReporter,
+		span:     callReq.Tracing,
+		endpoint: TargetEndpoint{
+			HostPort:    c.localPeerInfo.HostPort,
+			ServiceName: callReq.Service,
+		},
+		binaryAnnotations: []BinaryAnnotation{
+			{Key: "cn", Value: callReq.Headers[CallerName]},
+			{Key: "as", Value: callReq.Headers[ArgScheme]},
+		},
+	}
+	response.AddAnnotation(AnnotationKeyServerReceive)
 	response.mex = mex
 	response.conn = c
 	response.contents = newFragmentingWriter(response, initialFragment.checksumType.New())
@@ -89,14 +99,6 @@ func (c *Connection) handleCallReq(frame *Frame) bool {
 	response.headers = transportHeaders{}
 	response.messageForFragment = func(initial bool) message {
 		if initial {
-			call.AddAnnotation(AnnotationKeyServerSend)
-			targetEndpoint := TargetEndpoint{
-				HostPort:    c.localPeerInfo.HostPort,
-				ServiceName: call.serviceName,
-				Operation:   string(call.Operation()),
-			}
-			call.Report(callReq.Tracing, targetEndpoint, c.traceReporter)
-
 			callRes := new(callRes)
 			callRes.Headers = response.headers
 			callRes.ResponseCode = responseOK
@@ -162,6 +164,7 @@ func (c *Connection) dispatchInbound(_ uint32, _ uint32, call *InboundCall) {
 	call.commonStatsTags["endpoint"] = string(call.operation)
 	call.statsReporter.IncCounter("inbound.calls.recvd", call.commonStatsTags, 1)
 	call.response.calledAt = timeNow()
+	call.response.SetOperation(string(call.operation))
 
 	// NB(mmihic): Don't cast operation name to string here - this will
 	// create a copy of the byte array, where as aliasing to string in the
@@ -193,7 +196,6 @@ func (c *Connection) dispatchInbound(_ uint32, _ uint32, call *InboundCall) {
 
 // An InboundCall is an incoming call from a peer
 type InboundCall struct {
-	Annotations
 	reqResReader
 
 	response        *InboundCallResponse
@@ -264,6 +266,7 @@ func (call *InboundCall) doneReading(unexpected error) {}
 // An InboundCallResponse is used to send the response back to the calling peer
 type InboundCallResponse struct {
 	reqResWriter
+	Annotations
 
 	cancel context.CancelFunc
 	// calledAt is the time the inbound call was routed to the application.
@@ -318,6 +321,10 @@ func (response *InboundCallResponse) Arg3Writer() (ArgWriter, error) {
 // doneSending shuts down the message exchange for this call.
 // For incoming calls, the last message is sending the call response.
 func (response *InboundCallResponse) doneSending() {
+	// TODO(prashant): Move this to when the message is actually being sent.
+	response.AddAnnotation(AnnotationKeyServerSend)
+	response.Report()
+
 	latency := timeNow().Sub(response.calledAt)
 	response.statsReporter.RecordTimer("inbound.calls.latency", response.commonStatsTags, latency)
 
