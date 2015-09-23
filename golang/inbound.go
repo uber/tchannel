@@ -259,7 +259,7 @@ func (call *InboundCall) Response() *InboundCallResponse {
 	return call.response
 }
 
-func (call *InboundCall) doneReading() {}
+func (call *InboundCall) doneReading(unexpected error) {}
 
 // An InboundCallResponse is used to send the response back to the calling peer
 type InboundCallResponse struct {

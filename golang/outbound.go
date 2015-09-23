@@ -288,8 +288,11 @@ func (c *Connection) handleError(frame *Frame) {
 
 // doneReading shuts down the message exchange for this call.
 // For outgoing calls, the last message is reading the call response.
-func (response *OutboundCallResponse) doneReading() {
-	if response.ApplicationError() {
+func (response *OutboundCallResponse) doneReading(unexpected error) {
+	if unexpected != nil {
+		// TODO(prashant): Report the error code type as per metrics doc and enable.
+		// response.statsReporter.IncCounter("outbound.calls.system-errors", response.commonStatsTags, 1)
+	} else if response.ApplicationError() {
 		// TODO(prashant): Figure out how to add "type" to tags, which TChannel does not know about.
 		response.statsReporter.IncCounter("outbound.calls.app-errors", response.commonStatsTags, 1)
 	} else {
