@@ -118,8 +118,8 @@ func runRetryTest(t *testing.T, f func(r *retryTest)) {
 	withSetup(t, func(serverCh *tchannel.Channel, hostPort string) {
 		json.Register(serverCh, json.Handlers{"ad": r.adHandler}, nil)
 
-		clientCh, err := tchannel.NewChannel("my-client", nil)
-		require.NoError(t, err)
+		clientCh, err := testutils.NewServer(&testutils.ChannelOpts{ServiceName: "my-client"})
+		require.NoError(t, err, "NewServer failed")
 		defer clientCh.Close()
 
 		r.ch = clientCh
