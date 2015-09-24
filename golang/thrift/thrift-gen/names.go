@@ -65,12 +65,12 @@ func goName(name string) string {
 		name += "_a1"
 	}
 
-	name = camelCase(name)
+	name = camelCase(name, false /* publicName */)
 	return name
 }
 
 // camelCase takes a name with underscores such as my_arg and returns camelCase (e.g. myArg).
-func camelCase(name string) string {
+func camelCase(name string, publicName bool) string {
 	parts := strings.Split(name, "_")
 	for i := 1; i < len(parts); i++ {
 		name := parts[i]
@@ -102,16 +102,14 @@ func avoidThriftClash(name string) string {
 // goPublicName returns a go identifier that is exported.
 func goPublicName(name string) string {
 	// Public names cannot clash with goKeywords as they are all lowercase.
-	name = camelCase(name)
+	name = camelCase(name, false /* publicName */)
 	name = strings.ToUpper(name[0:1]) + name[1:]
 	return name
 }
 
 // goPublicFieldName returns the name of the field as used in a struct.
 func goPublicFieldName(name string) string {
-	name = camcelCase(name)
-	name = strings.ToUpper(name[0:1]) + name[1:]
-	return avoidThriftClash(name)
+	return avoidThriftClash(goPublicName(name))
 }
 
 var thriftToGo = map[string]string{
