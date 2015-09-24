@@ -55,6 +55,46 @@ var goKeywords = map[string]bool{
 	"var":         true,
 }
 
+// This set is taken from https://github.com/golang/lint/blob/master/lint.go#L692
+var commonInitialisms = map[string]bool{
+	"API":   true,
+	"ASCII": true,
+	"CPU":   true,
+	"CSS":   true,
+	"DNS":   true,
+	"EOF":   true,
+	"GUID":  true,
+	"HTML":  true,
+	"HTTP":  true,
+	"HTTPS": true,
+	"ID":    true,
+	"IP":    true,
+	"JSON":  true,
+	"LHS":   true,
+	"QPS":   true,
+	"RAM":   true,
+	"RHS":   true,
+	"RPC":   true,
+	"SLA":   true,
+	"SMTP":  true,
+	"SQL":   true,
+	"SSH":   true,
+	"TCP":   true,
+	"TLS":   true,
+	"TTL":   true,
+	"UDP":   true,
+	"UI":    true,
+	"UID":   true,
+	"UUID":  true,
+	"URI":   true,
+	"URL":   true,
+	"UTF8":  true,
+	"VM":    true,
+	"XML":   true,
+	"XSRF":  true,
+	"XSS":   true,
+}
+
 func goName(name string) string {
 	// Thrift Identifier from IDL: ( Letter | '_' ) ( Letter | Digit | '.' | '_' )*
 	// Go identifier from spec: letter { letter | unicode_digit } .
@@ -70,19 +110,30 @@ func goName(name string) string {
 }
 
 // camelCase takes a name with underscores such as my_arg and returns camelCase (e.g. myArg).
+// if publicName is true, then it returns UpperCamelCase.
+// This method will also fix common initialisms (e.g. ID, API, etc).
 func camelCase(name string, publicName bool) string {
 	parts := strings.Split(name, "_")
-	for i := 1; i < len(parts); i++ {
+	startAt := 1
+	if publicName {
+		startAt = 0
+	}
+	for i := startAt; i < len(parts); i++ {
 		name := parts[i]
 		if name == "" {
 			continue
 		}
 
-		// If the first letter is uppercase, Thrift keeps the underscore.
-		if strings.ToUpper(name[0:1]) == name[0:1] {
+		// For all words except the first, if the first letter of the word is
+		// uppercase, Thrift keeps the underscore.
+		if i > 0 && strings.ToUpper(name[0:1]) == name[0:1] {
 			name = "_" + name
 		} else {
 			name = strings.ToUpper(name[0:1]) + name[1:]
+		}
+
+		if isInitialism := commonInitialisms[strings.ToUpper(name)]; isInitialism {
+			name = strings.ToUpper(name)
 		}
 
 		parts[i] = name
@@ -101,10 +152,7 @@ func avoidThriftClash(name string) string {
 
 // goPublicName returns a go identifier that is exported.
 func goPublicName(name string) string {
-	// Public names cannot clash with goKeywords as they are all lowercase.
-	name = camelCase(name, false /* publicName */)
-	name = strings.ToUpper(name[0:1]) + name[1:]
-	return name
+	return camelCase(name, true /* publicName */)
 }
 
 // goPublicFieldName returns the name of the field as used in a struct.
