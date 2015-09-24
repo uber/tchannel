@@ -12,8 +12,8 @@ The protocol is currently implemented in:
 
 
 * Node
-    * [Guide](node-guide.md)
-    * [API Documentation](https://www.npmjs.com/package/tchannel)
+    * [Guide](http://tchannel-node.readthedocs.org/en/latest/GUIDE/)
+    * [API Documentation](http://tchannel-node.readthedocs.org/en/latest/)
 
 
 * Python
