@@ -65,12 +65,12 @@ func goName(name string) string {
 		name += "_a1"
 	}
 
-	name = camcelCase(name)
+	name = camelCase(name)
 	return name
 }
 
-// camcelCase takes a name with underscores such as my_arg and returns camelCase (e.g. myArg).
-func camcelCase(name string) string {
+// camelCase takes a name with underscores such as my_arg and returns camelCase (e.g. myArg).
+func camelCase(name string) string {
 	parts := strings.Split(name, "_")
 	for i := 1; i < len(parts); i++ {
 		name := parts[i]
@@ -102,7 +102,7 @@ func avoidThriftClash(name string) string {
 // goPublicName returns a go identifier that is exported.
 func goPublicName(name string) string {
 	// Public names cannot clash with goKeywords as they are all lowercase.
-	name = camcelCase(name)
+	name = camelCase(name)
 	name = strings.ToUpper(name[0:1]) + name[1:]
 	return name
 }
