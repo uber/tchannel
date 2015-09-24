@@ -109,7 +109,7 @@ func goPublicName(name string) string {
 
 // goPublicFieldName returns the name of the field as used in a struct.
 func goPublicFieldName(name string) string {
-	name = goName(name)
+	name = camcelCase(name)
 	name = strings.ToUpper(name[0:1]) + name[1:]
 	return avoidThriftClash(name)
 }
