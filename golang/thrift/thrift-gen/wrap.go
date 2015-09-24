@@ -47,18 +47,37 @@ func wrapServices(v *parser.Thrift) ([]*Service, error) {
 			return nil, err
 		}
 
-		services = append(services, &Service{s, state})
+		services = append(services, makeService(s, state))
 	}
 
 	sort.Sort(byServiceName(services))
 	return services, nil
 }
 
+func makeService(service *parser.Service, state *State) *Service {
+	var methods []*Method
+	var streamingMethods []*Method
+	for _, m := range service.Methods {
+		m := &Method{m, state}
+		if m.Streaming() {
+			streamingMethods = append(streamingMethods, m)
+		} else {
+			methods = append(methods, m)
+		}
+	}
+	sort.Sort(byMethodName(methods))
+	sort.Sort(byMethodName(streamingMethods))
+
+	return &Service{service, state, methods, streamingMethods}
+}
+
 // Service is a wrapper for parser.Service.
 type Service struct {
 	*parser.Service
 
-	state *State
+	state            *State
+	methods          []*Method
+	streamingMethods []*Method
 }
 
 // ThriftName returns the thrift identifier for this service.
@@ -99,12 +118,12 @@ func (l byMethodName) Swap(i, j int)      { l[i], l[j] = l[j], l[i] }
 
 // Methods returns the methods defined on this service.
 func (s *Service) Methods() []*Method {
-	var methods []*Method
-	for _, m := range s.Service.Methods {
-		methods = append(methods, &Method{m, s.state})
-	}
-	sort.Sort(byMethodName(methods))
-	return methods
+	return s.methods
+}
+
+// StreamingMethods returns the streaming methods defined on this service.
+func (s *Service) StreamingMethods() []*Method {
+	return s.streamingMethods
 }
 
 // Method is a wrapper for parser.Method.
@@ -167,22 +186,31 @@ func (m *Method) ResultType() string {
 	return m.Name() + "Result"
 }
 
-// ArgList returns the argument list for the function.
-func (m *Method) ArgList() string {
+// args returns the arguments for the method as a list.
+func (m *Method) args() []string {
 	args := []string{"ctx " + contextType()}
 	for _, arg := range m.Arguments() {
 		args = append(args, arg.Declaration())
 	}
-	return strings.Join(args, ", ")
+	return args
 }
 
-// CallList creates the call to a function satisfying Interface from an Args struct.
-func (m *Method) CallList(reqStruct string) string {
+// ArgList returns the argument list for the function.
+func (m *Method) ArgList() string {
+	return strings.Join(m.args(), ", ")
+}
+
+func (m *Method) callList(reqStruct string) []string {
 	args := []string{"ctx"}
 	for _, arg := range m.Arguments() {
 		args = append(args, reqStruct+"."+arg.ArgStructName())
 	}
-	return strings.Join(args, ", ")
+	return args
+}
+
+// CallList creates the call to a function satisfying Interface from an Args struct.
+func (m *Method) CallList(reqStruct string) string {
+	return strings.Join(m.callList(reqStruct), ", ")
 }
 
 // RetType returns the go return type of the method.

@@ -46,6 +46,7 @@ var (
 	apacheThriftImport = flag.String("thriftImport", "github.com/apache/thrift/lib/go/thrift", "Go package to use for the Thrift import")
 	inputFile          = flag.String("inputFile", "", "The .thrift file to generate a client for")
 	outputFile         = flag.String("outputFile", "", "The output file to generate go code to")
+	streamOutputFile   = flag.String("streamOutputFile", "", "The output file to generate streaming code to")
 	nlSpaceNL          = regexp.MustCompile(`\n[ \t]+\n`)
 )
 
@@ -63,17 +64,18 @@ func main() {
 		log.Fatalf("Please specify an inputFile")
 	}
 
-	if err := processFile(*generateThrift, *inputFile, *outputFile); err != nil {
+	if err := processFile(*generateThrift, *inputFile, *outputFile, *streamOutputFile); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func processFile(generateThrift bool, inputFile string, outputFile string) error {
+func processFile(generateThrift bool, inputFile string, outputFile string, outputStreamFile string) error {
 	if generateThrift {
 		if outFile, err := runThrift(inputFile, *apacheThriftImport); err != nil {
 			return fmt.Errorf("Could not generate thrift output: %v", err)
 		} else if outputFile == "" {
-			outputFile = outFile
+			outputFile = outFile + ".go"
+			outputStreamFile = outFile + "-stream.go"
 		}
 	}
 
@@ -83,11 +85,25 @@ func processFile(generateThrift bool, inputFile string, outputFile string) error
 		return fmt.Errorf("Could not parse .thrift file: %v", err)
 	}
 
-	goTmpl := parseTemplate()
+	serviceTmpl := parseTemplate(serviceTmpl)
+	serviceStreamTmpl := parseTemplate(serviceStreamTmpl)
 	for filename, v := range parsed {
-		if err := generateCode(outputFile, goTmpl, packageName(filename), v); err != nil {
+		wrappedServices, err := wrapServices(v)
+		if err != nil {
 			return err
 		}
+
+		if err := generateCode(outputFile, serviceTmpl, packageName(filename), wrappedServices); err != nil {
+			return err
+		}
+
+		// If streaming is enabled, generated the stream client.
+		if outputStreamFile != "" {
+			if err := generateCode(outputStreamFile, serviceStreamTmpl, packageName(filename), wrappedServices); err != nil {
+				return err
+			}
+		}
+
 		// TODO(prashant): Support multiple files / includes etc?
 		return nil
 	}
@@ -95,28 +111,19 @@ func processFile(generateThrift bool, inputFile string, outputFile string) error
 	return nil
 }
 
-func parseTemplate() *template.Template {
+func parseTemplate(tmpl string) *template.Template {
 	funcs := map[string]interface{}{
 		"contextType": contextType,
 	}
-	return template.Must(template.New("thrift-gen").Funcs(funcs).Parse(serviceTmpl))
+	return template.Must(template.New("thrift-gen").Funcs(funcs).Parse(tmpl))
 }
 
-func generateCode(outputFile string, tmpl *template.Template, pkg string, parsed *parser.Thrift) error {
-	if outputFile == "" {
-		return fmt.Errorf("must speciy an output file")
-	}
-
-	wrappedServices, err := wrapServices(parsed)
-	if err != nil {
-		log.Fatalf("Service parsing error: %v", err)
-	}
-
+func generateCode(outputFile string, tmpl *template.Template, pkg string, services []*Service) error {
 	buf := &bytes.Buffer{}
 
 	td := TemplateData{
 		Package:        pkg,
-		Services:       wrappedServices,
+		Services:       services,
 		ThriftImport:   *apacheThriftImport,
 		TChannelImport: tchannelThriftImport,
 	}
