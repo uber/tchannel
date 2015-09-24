@@ -101,7 +101,7 @@ func (l byMethodName) Swap(i, j int)      { l[i], l[j] = l[j], l[i] }
 func (s *Service) Methods() []*Method {
 	var methods []*Method
 	for _, m := range s.Service.Methods {
-		methods = append(methods, &Method{m, s.state})
+		methods = append(methods, &Method{m, s, s.state})
 	}
 	sort.Sort(byMethodName(methods))
 	return methods
@@ -111,7 +111,8 @@ func (s *Service) Methods() []*Method {
 type Method struct {
 	*parser.Method
 
-	state *State
+	service *Service
+	state   *State
 }
 
 // ThriftName returns the thrift identifier for this function.
@@ -157,14 +158,18 @@ func (m *Method) HasExceptions() bool {
 	return len(m.Method.Exceptions) > 0
 }
 
+func (m *Method) argResPrefix() string {
+	return goPublicName(m.service.Name) + m.Name()
+}
+
 // ArgsType returns the Go name for the struct used to encode the method's arguments.
 func (m *Method) ArgsType() string {
-	return m.Name() + "Args"
+	return m.argResPrefix() + "Args"
 }
 
 // ResultType returns the Go name for the struct used to encode the method's result.
 func (m *Method) ResultType() string {
-	return m.Name() + "Result"
+	return m.argResPrefix() + "Result"
 }
 
 // ArgList returns the argument list for the function.
