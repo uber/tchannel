@@ -116,18 +116,69 @@ func buildZipkinSpan(span tc.Span, annotations []tc.Annotation, binaryAnnotation
 		ServiceName: targetEndpoint.ServiceName,
 	}
 
-	// TODO Add BinaryAnnotations
 	thriftSpan := tcollector.Span{
-		TraceId:     uint64ToBytes(span.TraceID()),
-		Host:        &host,
-		Name:        targetEndpoint.Operation,
-		Id:          uint64ToBytes(span.SpanID()),
-		ParentId:    uint64ToBytes(span.ParentID()),
-		Annotations: buildZipkinAnnotations(annotations),
-		Debug:       false,
+		TraceId:           uint64ToBytes(span.TraceID()),
+		Host:              &host,
+		Name:              targetEndpoint.Operation,
+		Id:                uint64ToBytes(span.SpanID()),
+		ParentId:          uint64ToBytes(span.ParentID()),
+		Annotations:       buildZipkinAnnotations(annotations),
+		BinaryAnnotations: buildBinaryAnnotations(binaryAnnotations),
+		Debug:             false,
 	}
 
 	return &thriftSpan
+}
+
+func buildBinaryAnnotation(ann tc.BinaryAnnotation) *tcollector.BinaryAnnotation {
+	bann := &tcollector.BinaryAnnotation{Key: ann.Key}
+	switch v := ann.Value.(type) {
+	default:
+	case bool:
+		bann.AnnotationType = tcollector.AnnotationType_BOOL
+		bann.BoolValue = &v
+	case int64:
+		bann.AnnotationType = tcollector.AnnotationType_I64
+		bann.IntValue = &v
+	case int32:
+		bann.AnnotationType = tcollector.AnnotationType_I32
+		var temp int64
+		temp = int64(v)
+		bann.IntValue = &temp
+	case int16:
+		bann.AnnotationType = tcollector.AnnotationType_I16
+		var temp int64
+		temp = int64(v)
+		bann.IntValue = &temp
+	case int:
+		bann.AnnotationType = tcollector.AnnotationType_I32
+		var temp int64
+		temp = int64(v)
+		bann.IntValue = &temp
+	case string:
+		bann.AnnotationType = tcollector.AnnotationType_STRING
+		bann.StringValue = &v
+	case []byte:
+		bann.AnnotationType = tcollector.AnnotationType_BYTES
+		bann.BytesValue = v
+	case float32:
+		bann.AnnotationType = tcollector.AnnotationType_DOUBLE
+		var temp float64
+		temp = float64(v)
+		bann.DoubleValue = &temp
+	case float64:
+		bann.AnnotationType = tcollector.AnnotationType_DOUBLE
+		bann.DoubleValue = &v
+	}
+	return bann
+}
+
+func buildBinaryAnnotations(anns []tc.BinaryAnnotation) []*tcollector.BinaryAnnotation {
+	zipkinAnns := make([]*tcollector.BinaryAnnotation, len(anns))
+	for i, ann := range anns {
+		zipkinAnns[i] = buildBinaryAnnotation(ann)
+	}
+	return zipkinAnns
 }
 
 // buildZipkinAnnotations builds zipkin Annotations based on tchannel annotations.
