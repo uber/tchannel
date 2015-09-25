@@ -18,7 +18,7 @@ Network multiplexing and framing protocol for RPC
 ## Parts
 
 - [tchannel-protocol](https://github.com/uber/tchannel/tree/master/docs/protocol.md) TChannel Protocol Documentation
-- [tchannel-node](https://github.com/uber/tchannel/tree/master/node) TChannel
+- [tchannel-node](https://github.com/uber/tchannel-node) TChannel
   peer library for Node.js
 - [tchannel-python](https://github.com/uber/tchannel-python)
   TChannel peer library for Python
