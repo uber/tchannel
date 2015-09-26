@@ -24,6 +24,7 @@ package trace
 import (
 	"encoding/base64"
 	"encoding/binary"
+	"errors"
 	"net"
 	"strconv"
 	"strings"
@@ -91,10 +92,13 @@ func (r *ZipkinTraceReporter) zipkinReport(data *zipkinData) error {
 		SetShardKey(base64Encode(data.Span.TraceID())).Build()
 	defer cancel()
 
-	thriftSpan := buildZipkinSpan(data.Span, data.Annotations, data.BinaryAnnotations, data.TargetEndpoint)
+	thriftSpan, err := buildZipkinSpan(data.Span, data.Annotations, data.BinaryAnnotations, data.TargetEndpoint)
+	if err != nil {
+		return err
+	}
 	// client submit
 	// ignore the response result because TChannel shouldn't care about it.
-	_, err := r.client.Submit(ctx, thriftSpan)
+	_, err = r.client.Submit(ctx, thriftSpan)
 	return err
 }
 
@@ -107,7 +111,7 @@ func (r *ZipkinTraceReporter) zipkinSpanWorker() {
 }
 
 // buildZipkinSpan builds zipkin span based on tchannel span.
-func buildZipkinSpan(span tc.Span, annotations []tc.Annotation, binaryAnnotations []tc.BinaryAnnotation, targetEndpoint tc.TargetEndpoint) *tcollector.Span {
+func buildZipkinSpan(span tc.Span, annotations []tc.Annotation, binaryAnnotations []tc.BinaryAnnotation, targetEndpoint tc.TargetEndpoint) (*tcollector.Span, error) {
 	hostport := strings.Split(targetEndpoint.HostPort, ":")
 	port, _ := strconv.ParseInt(hostport[1], 10, 32)
 	host := tcollector.Endpoint{
@@ -116,6 +120,10 @@ func buildZipkinSpan(span tc.Span, annotations []tc.Annotation, binaryAnnotation
 		ServiceName: targetEndpoint.ServiceName,
 	}
 
+	tBinaryAnnotations, err := buildBinaryAnnotations(binaryAnnotations)
+	if err != nil {
+		return nil, err
+	}
 	thriftSpan := tcollector.Span{
 		TraceId:           uint64ToBytes(span.TraceID()),
 		Host:              &host,
@@ -123,37 +131,33 @@ func buildZipkinSpan(span tc.Span, annotations []tc.Annotation, binaryAnnotation
 		Id:                uint64ToBytes(span.SpanID()),
 		ParentId:          uint64ToBytes(span.ParentID()),
 		Annotations:       buildZipkinAnnotations(annotations),
-		BinaryAnnotations: buildBinaryAnnotations(binaryAnnotations),
-		Debug:             false,
+		BinaryAnnotations: tBinaryAnnotations,
 	}
 
-	return &thriftSpan
+	return &thriftSpan, nil
 }
 
-func buildBinaryAnnotation(ann tc.BinaryAnnotation) *tcollector.BinaryAnnotation {
+func buildBinaryAnnotation(ann tc.BinaryAnnotation) (*tcollector.BinaryAnnotation, error) {
 	bann := &tcollector.BinaryAnnotation{Key: ann.Key}
 	switch v := ann.Value.(type) {
-	default:
 	case bool:
 		bann.AnnotationType = tcollector.AnnotationType_BOOL
 		bann.BoolValue = &v
 	case int64:
 		bann.AnnotationType = tcollector.AnnotationType_I64
-		bann.IntValue = &v
+		temp := v
+		bann.IntValue = &temp
 	case int32:
 		bann.AnnotationType = tcollector.AnnotationType_I32
-		var temp int64
-		temp = int64(v)
+		temp := int64(v)
 		bann.IntValue = &temp
 	case int16:
 		bann.AnnotationType = tcollector.AnnotationType_I16
-		var temp int64
-		temp = int64(v)
+		temp := int64(v)
 		bann.IntValue = &temp
 	case int:
 		bann.AnnotationType = tcollector.AnnotationType_I32
-		var temp int64
-		temp = int64(v)
+		temp := int64(v)
 		bann.IntValue = &temp
 	case string:
 		bann.AnnotationType = tcollector.AnnotationType_STRING
@@ -163,22 +167,28 @@ func buildBinaryAnnotation(ann tc.BinaryAnnotation) *tcollector.BinaryAnnotation
 		bann.BytesValue = v
 	case float32:
 		bann.AnnotationType = tcollector.AnnotationType_DOUBLE
-		var temp float64
-		temp = float64(v)
+		temp := float64(v)
 		bann.DoubleValue = &temp
 	case float64:
 		bann.AnnotationType = tcollector.AnnotationType_DOUBLE
-		bann.DoubleValue = &v
+		temp := float64(v)
+		bann.DoubleValue = &temp
+	default:
+		return bann, errors.New("Unrecognized date type.")
 	}
-	return bann
+	return bann, nil
 }
 
-func buildBinaryAnnotations(anns []tc.BinaryAnnotation) []*tcollector.BinaryAnnotation {
-	zipkinAnns := make([]*tcollector.BinaryAnnotation, len(anns))
+func buildBinaryAnnotations(anns []tc.BinaryAnnotation) ([]*tcollector.BinaryAnnotation, error) {
+	binaryAnns := make([]*tcollector.BinaryAnnotation, len(anns))
 	for i, ann := range anns {
-		zipkinAnns[i] = buildBinaryAnnotation(ann)
+		b, err := buildBinaryAnnotation(ann)
+		binaryAnns[i] = b
+		if err != nil {
+			return nil, err
+		}
 	}
-	return zipkinAnns
+	return binaryAnns, nil
 }
 
 // buildZipkinAnnotations builds zipkin Annotations based on tchannel annotations.
