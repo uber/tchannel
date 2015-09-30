@@ -74,5 +74,5 @@ set, retaining many existing connections.
 However, small changes do impact the boundaries of every relay and may cause
 adjustments throughout the system.
 
-See [affinity.py](affinity.py) for a simulation that verifies the static
+See [affinity.py](sims/affinity.py) for a simulation that verifies the static
 properties of this peer selection algorithm for a spectrum of scenarios.
