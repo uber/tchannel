@@ -31,7 +31,8 @@ FrameParser.prototype.write = function write(buffer) {
         });
     }
 
-    var totalLength = self.remainderLength + buffer.length;
+    var totalBufferLength = buffer.length;
+    var totalLength = self.remainderLength + totalBufferLength;
 
     if (self.frameLength === totalLength) {
         self.onFrameBuffer(self.concatRemainder(buffer));
@@ -49,32 +50,30 @@ FrameParser.prototype.write = function write(buffer) {
         return;
     }
 
-    // var startOfBuffer = 0;
-    var fauxStartOfBuffer = 0;
-    var totalBufferLength = buffer.length;
+    var startOfBuffer = 0;
 
     while (self.frameLength <= totalLength) {
         var endOfBuffer = self.frameLength - self.remainderLength;
 
         var lastBuffer = buffer.slice(
-            fauxStartOfBuffer, fauxStartOfBuffer + endOfBuffer
+            startOfBuffer, startOfBuffer + endOfBuffer
         );
         self.onFrameBuffer(self.concatRemainder(lastBuffer));
         self.frameLength = null;
 
-        if (fauxStartOfBuffer + endOfBuffer === totalBufferLength) {
+        if (startOfBuffer + endOfBuffer === totalBufferLength) {
             return;
         }
 
         // buffer = buffer.slice(startOfBuffer + endOfBuffer, bufferLength);
-        fauxStartOfBuffer = fauxStartOfBuffer + endOfBuffer;
-        totalLength = totalBufferLength - (fauxStartOfBuffer);
-        self.frameLength = readFrameSize(buffer, fauxStartOfBuffer);
+        startOfBuffer = startOfBuffer + endOfBuffer;
+        totalLength = totalBufferLength - (startOfBuffer);
+        self.frameLength = readFrameSize(buffer, startOfBuffer);
     }
 
-    if (fauxStartOfBuffer < totalBufferLength) {
+    if (startOfBuffer < totalBufferLength) {
         self.addRemainder(buffer.slice(
-            fauxStartOfBuffer, totalBufferLength
+            startOfBuffer, totalBufferLength
         ));
     }
 };
