@@ -343,7 +343,7 @@ func TestBuildBinaryAnnotation(t *testing.T) {
 }
 
 func TestBuildBinaryAnnotationsWithEmptyList(t *testing.T) {
-	result, err := buildBinaryAnnotations([]tchannel.BinaryAnnotation{})
+	result, err := buildBinaryAnnotations(nil)
 	assert.NoError(t, err, "Failed to build binary annotations.")
 	assert.Equal(t, len(result), 0, "BinaryAnnotations should be empty.")
 }
