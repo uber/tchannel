@@ -337,16 +337,33 @@ func TestBuildBinaryAnnotation(t *testing.T) {
 	tests := generateBinaryAnnotationsTestCase()
 	for _, tt := range tests {
 		result, err := buildBinaryAnnotation(tt.annotation)
-		assert.NoError(t, err)
+		assert.NoError(t, err, "Failed to build binary annotations.")
 		assert.Equal(t, tt.expected, result, "BinaryAnnotation is mismatched.")
 	}
 }
 
-func TestBuildBinaryAnnotations(t *testing.T) {
+func TestBuildBinaryAnnotationsWithEmptyList(t *testing.T) {
+	result, err := buildBinaryAnnotations([]tchannel.BinaryAnnotation{})
+	assert.NoError(t, err, "Failed to build binary annotations.")
+	assert.Equal(t, len(result), 0, "BinaryAnnotations should be empty.")
+}
+
+func TestBuildBinaryAnnotationsWithMultiItems(t *testing.T) {
 	tests := generateBinaryAnnotationsTestCase()
+	var binaryAnns []tchannel.BinaryAnnotation
+	var expectedAnns []*gen.BinaryAnnotation
 	for _, tt := range tests {
-		result, err := buildBinaryAnnotations([]tchannel.BinaryAnnotation{tt.annotation})
-		assert.NoError(t, err)
-		assert.Equal(t, tt.expected, result[0], "BinaryAnnotation is mismatched.")
+		binaryAnns = append(binaryAnns, tt.annotation)
+		expectedAnns = append(expectedAnns, tt.expected)
 	}
+	result, err := buildBinaryAnnotations(binaryAnns)
+	assert.NoError(t, err, "Failed to build binary annotations.")
+	assert.Equal(t, expectedAnns, result, "BinaryAnnotation is mismatched.")
+}
+
+func TestBuildBinaryAnnotationsWithError(t *testing.T) {
+	_, err := buildBinaryAnnotations(
+		[]tchannel.BinaryAnnotation{{Key: "app", Value: []bool{false}}},
+	)
+	assert.Error(t, err, "An Error was expected.")
 }

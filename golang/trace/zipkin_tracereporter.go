@@ -24,7 +24,7 @@ package trace
 import (
 	"encoding/base64"
 	"encoding/binary"
-	"errors"
+	"fmt"
 	"net"
 	"strconv"
 	"strings"
@@ -174,7 +174,7 @@ func buildBinaryAnnotation(ann tc.BinaryAnnotation) (*tcollector.BinaryAnnotatio
 		temp := float64(v)
 		bann.DoubleValue = &temp
 	default:
-		return bann, errors.New("Unrecognized date type.")
+		return nil, fmt.Errorf("unrecognized data type: %T", v)
 	}
 	return bann, nil
 }
