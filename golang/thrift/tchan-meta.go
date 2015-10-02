@@ -24,8 +24,8 @@ func newTChanMetaClient(client TChanClient) tchanMeta {
 }
 
 func (c *tchanMetaClient) Health(ctx Context) (*meta.HealthStatus, error) {
-	var resp meta.HealthResult
-	args := meta.HealthArgs{}
+	var resp meta.MetaHealthResult
+	args := meta.MetaHealthArgs{}
 	success, err := c.client.Call(ctx, "Meta", "health", &args, &resp)
 	if err == nil && !success {
 	}
@@ -62,8 +62,8 @@ func (s *tchanMetaServer) Handle(ctx Context, methodName string, protocol athrif
 }
 
 func (s *tchanMetaServer) handleHealth(ctx Context, protocol athrift.TProtocol) (bool, athrift.TStruct, error) {
-	var req meta.HealthArgs
-	var res meta.HealthResult
+	var req meta.MetaHealthArgs
+	var res meta.MetaHealthResult
 
 	if err := req.Read(protocol); err != nil {
 		return false, nil, err

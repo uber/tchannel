@@ -25,13 +25,19 @@ type tchanSecondServiceClient struct {
 	client thrift.TChanClient
 }
 
+func newTChanSecondServiceClient(client thrift.TChanClient) *tchanSecondServiceClient {
+	return &tchanSecondServiceClient{
+		client,
+	}
+}
+
 func NewTChanSecondServiceClient(client thrift.TChanClient) TChanSecondService {
-	return &tchanSecondServiceClient{client: client}
+	return newTChanSecondServiceClient(client)
 }
 
 func (c *tchanSecondServiceClient) Echo(ctx thrift.Context, arg string) (string, error) {
-	var resp EchoResult
-	args := EchoArgs{
+	var resp SecondServiceEchoResult
+	args := SecondServiceEchoArgs{
 		Arg: arg,
 	}
 	success, err := c.client.Call(ctx, "SecondService", "Echo", &args, &resp)
@@ -45,8 +51,14 @@ type tchanSecondServiceServer struct {
 	handler TChanSecondService
 }
 
+func newTChanSecondServiceServer(handler TChanSecondService) *tchanSecondServiceServer {
+	return &tchanSecondServiceServer{
+		handler,
+	}
+}
+
 func NewTChanSecondServiceServer(handler TChanSecondService) thrift.TChanServer {
-	return &tchanSecondServiceServer{handler}
+	return newTChanSecondServiceServer(handler)
 }
 
 func (s *tchanSecondServiceServer) Service() string {
@@ -69,8 +81,8 @@ func (s *tchanSecondServiceServer) Handle(ctx thrift.Context, methodName string,
 }
 
 func (s *tchanSecondServiceServer) handleEcho(ctx thrift.Context, protocol athrift.TProtocol) (bool, athrift.TStruct, error) {
-	var req EchoArgs
-	var res EchoResult
+	var req SecondServiceEchoArgs
+	var res SecondServiceEchoResult
 
 	if err := req.Read(protocol); err != nil {
 		return false, nil, err
@@ -81,8 +93,9 @@ func (s *tchanSecondServiceServer) handleEcho(ctx thrift.Context, protocol athri
 
 	if err != nil {
 		return false, nil, err
+	} else {
+		res.Success = &r
 	}
-	res.Success = &r
 
 	return err == nil, &res, nil
 }
@@ -91,13 +104,19 @@ type tchanSimpleServiceClient struct {
 	client thrift.TChanClient
 }
 
+func newTChanSimpleServiceClient(client thrift.TChanClient) *tchanSimpleServiceClient {
+	return &tchanSimpleServiceClient{
+		client,
+	}
+}
+
 func NewTChanSimpleServiceClient(client thrift.TChanClient) TChanSimpleService {
-	return &tchanSimpleServiceClient{client: client}
+	return newTChanSimpleServiceClient(client)
 }
 
 func (c *tchanSimpleServiceClient) Call(ctx thrift.Context, arg *Data) (*Data, error) {
-	var resp CallResult
-	args := CallArgs{
+	var resp SimpleServiceCallResult
+	args := SimpleServiceCallArgs{
 		Arg: arg,
 	}
 	success, err := c.client.Call(ctx, "SimpleService", "Call", &args, &resp)
@@ -108,8 +127,8 @@ func (c *tchanSimpleServiceClient) Call(ctx thrift.Context, arg *Data) (*Data, e
 }
 
 func (c *tchanSimpleServiceClient) Simple(ctx thrift.Context) error {
-	var resp SimpleResult
-	args := SimpleArgs{}
+	var resp SimpleServiceSimpleResult
+	args := SimpleServiceSimpleArgs{}
 	success, err := c.client.Call(ctx, "SimpleService", "Simple", &args, &resp)
 	if err == nil && !success {
 		if e := resp.SimpleErr; e != nil {
@@ -124,8 +143,14 @@ type tchanSimpleServiceServer struct {
 	handler TChanSimpleService
 }
 
+func newTChanSimpleServiceServer(handler TChanSimpleService) *tchanSimpleServiceServer {
+	return &tchanSimpleServiceServer{
+		handler,
+	}
+}
+
 func NewTChanSimpleServiceServer(handler TChanSimpleService) thrift.TChanServer {
-	return &tchanSimpleServiceServer{handler}
+	return newTChanSimpleServiceServer(handler)
 }
 
 func (s *tchanSimpleServiceServer) Service() string {
@@ -151,8 +176,8 @@ func (s *tchanSimpleServiceServer) Handle(ctx thrift.Context, methodName string,
 }
 
 func (s *tchanSimpleServiceServer) handleCall(ctx thrift.Context, protocol athrift.TProtocol) (bool, athrift.TStruct, error) {
-	var req CallArgs
-	var res CallResult
+	var req SimpleServiceCallArgs
+	var res SimpleServiceCallResult
 
 	if err := req.Read(protocol); err != nil {
 		return false, nil, err
@@ -163,15 +188,16 @@ func (s *tchanSimpleServiceServer) handleCall(ctx thrift.Context, protocol athri
 
 	if err != nil {
 		return false, nil, err
+	} else {
+		res.Success = r
 	}
-	res.Success = r
 
 	return err == nil, &res, nil
 }
 
 func (s *tchanSimpleServiceServer) handleSimple(ctx thrift.Context, protocol athrift.TProtocol) (bool, athrift.TStruct, error) {
-	var req SimpleArgs
-	var res SimpleResult
+	var req SimpleServiceSimpleArgs
+	var res SimpleServiceSimpleResult
 
 	if err := req.Read(protocol); err != nil {
 		return false, nil, err
@@ -187,6 +213,7 @@ func (s *tchanSimpleServiceServer) handleSimple(ctx thrift.Context, protocol ath
 		default:
 			return false, nil, err
 		}
+	} else {
 	}
 
 	return err == nil, &res, nil
