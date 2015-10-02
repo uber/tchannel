@@ -51,8 +51,11 @@ func TestBuildZipkinSpan(t *testing.T) {
 	}
 	span := *tchannel.NewRootSpan()
 	_, annotations := RandomAnnotations()
-	thriftSpan := buildZipkinSpan(span, annotations, nil, endpoint)
-
+	binaryAnnotations := []tchannel.BinaryAnnotation{{Key: "cn", Value: "string"}}
+	thriftSpan, err := buildZipkinSpan(span, annotations, binaryAnnotations, endpoint)
+	assert.NoError(t, err)
+	tBinaryAnnotation, err := buildBinaryAnnotations(binaryAnnotations)
+	assert.NoError(t, err)
 	expectedSpan := &gen.Span{
 		TraceId: uint64ToBytes(span.TraceID()),
 		Host: &gen.Endpoint{
@@ -60,11 +63,11 @@ func TestBuildZipkinSpan(t *testing.T) {
 			Port:        8888,
 			ServiceName: "testServer",
 		},
-		Name:        "test",
-		Id:          uint64ToBytes(span.SpanID()),
-		ParentId:    uint64ToBytes(span.ParentID()),
-		Annotations: buildZipkinAnnotations(annotations),
-		Debug:       false,
+		Name:              "test",
+		Id:                uint64ToBytes(span.SpanID()),
+		ParentId:          uint64ToBytes(span.ParentID()),
+		Annotations:       buildZipkinAnnotations(annotations),
+		BinaryAnnotations: tBinaryAnnotation,
 	}
 
 	assert.Equal(t, thriftSpan, expectedSpan, "Span mismatch")
@@ -189,7 +192,8 @@ func TestSubmit(t *testing.T) {
 		}
 		span := *tchannel.NewRootSpan()
 		_, annotations := RandomAnnotations()
-		thriftSpan := buildZipkinSpan(span, annotations, nil, endpoint)
+		thriftSpan, err := buildZipkinSpan(span, annotations, nil, endpoint)
+		assert.NoError(t, err)
 		thriftSpan.BinaryAnnotations = []*gen.BinaryAnnotation{}
 		ret := &gen.Response{Ok: true}
 
@@ -266,4 +270,100 @@ func BenchmarkBuildThrift(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		buildZipkinSpan(span, annotations, nil, endpoint)
 	}
+}
+
+type BinaryAnnotationTestArgs struct {
+	annotation tchannel.BinaryAnnotation
+	expected   *gen.BinaryAnnotation
+}
+
+func generateBinaryAnnotationsTestCase() []BinaryAnnotationTestArgs {
+	s := "testString"
+	ii64 := int64(5)
+	_ii64 := int64(5)
+	ii32 := int32(6)
+	_ii32 := int64(6)
+	ii16 := int16(7)
+	_ii16 := int64(7)
+	i := 8
+	_i := int64(8)
+	b := false
+	f32 := float32(5.0)
+	_f32 := float64(5.0)
+	f64 := float64(6.0)
+	_f64 := float64(6.0)
+	bs := []byte{4, 3, 2}
+	return []BinaryAnnotationTestArgs{
+		{
+			annotation: tchannel.BinaryAnnotation{Key: "string", Value: s},
+			expected:   &gen.BinaryAnnotation{Key: "string", StringValue: &s, AnnotationType: gen.AnnotationType_STRING},
+		},
+		{
+			annotation: tchannel.BinaryAnnotation{Key: "int", Value: i},
+			expected:   &gen.BinaryAnnotation{Key: "int", IntValue: &_i, AnnotationType: gen.AnnotationType_I32},
+		},
+		{
+			annotation: tchannel.BinaryAnnotation{Key: "int16", Value: ii16},
+			expected:   &gen.BinaryAnnotation{Key: "int16", IntValue: &_ii16, AnnotationType: gen.AnnotationType_I16},
+		},
+		{
+			annotation: tchannel.BinaryAnnotation{Key: "int32", Value: ii32},
+			expected:   &gen.BinaryAnnotation{Key: "int32", IntValue: &_ii32, AnnotationType: gen.AnnotationType_I32},
+		},
+		{
+			annotation: tchannel.BinaryAnnotation{Key: "int64", Value: ii64},
+			expected:   &gen.BinaryAnnotation{Key: "int64", IntValue: &_ii64, AnnotationType: gen.AnnotationType_I64},
+		},
+		{
+			annotation: tchannel.BinaryAnnotation{Key: "bool", Value: b},
+			expected:   &gen.BinaryAnnotation{Key: "bool", BoolValue: &b, AnnotationType: gen.AnnotationType_BOOL},
+		},
+		{
+			annotation: tchannel.BinaryAnnotation{Key: "float32", Value: f32},
+			expected:   &gen.BinaryAnnotation{Key: "float32", DoubleValue: &_f32, AnnotationType: gen.AnnotationType_DOUBLE},
+		},
+		{
+			annotation: tchannel.BinaryAnnotation{Key: "float64", Value: f64},
+			expected:   &gen.BinaryAnnotation{Key: "float64", DoubleValue: &_f64, AnnotationType: gen.AnnotationType_DOUBLE},
+		},
+		{
+			annotation: tchannel.BinaryAnnotation{Key: "bytes", Value: bs},
+			expected:   &gen.BinaryAnnotation{Key: "bytes", BytesValue: bs, AnnotationType: gen.AnnotationType_BYTES},
+		},
+	}
+}
+
+func TestBuildBinaryAnnotation(t *testing.T) {
+	tests := generateBinaryAnnotationsTestCase()
+	for _, tt := range tests {
+		result, err := buildBinaryAnnotation(tt.annotation)
+		assert.NoError(t, err, "Failed to build binary annotations.")
+		assert.Equal(t, tt.expected, result, "BinaryAnnotation is mismatched.")
+	}
+}
+
+func TestBuildBinaryAnnotationsWithEmptyList(t *testing.T) {
+	result, err := buildBinaryAnnotations(nil)
+	assert.NoError(t, err, "Failed to build binary annotations.")
+	assert.Equal(t, len(result), 0, "BinaryAnnotations should be empty.")
+}
+
+func TestBuildBinaryAnnotationsWithMultiItems(t *testing.T) {
+	tests := generateBinaryAnnotationsTestCase()
+	var binaryAnns []tchannel.BinaryAnnotation
+	var expectedAnns []*gen.BinaryAnnotation
+	for _, tt := range tests {
+		binaryAnns = append(binaryAnns, tt.annotation)
+		expectedAnns = append(expectedAnns, tt.expected)
+	}
+	result, err := buildBinaryAnnotations(binaryAnns)
+	assert.NoError(t, err, "Failed to build binary annotations.")
+	assert.Equal(t, expectedAnns, result, "BinaryAnnotation is mismatched.")
+}
+
+func TestBuildBinaryAnnotationsWithError(t *testing.T) {
+	_, err := buildBinaryAnnotations(
+		[]tchannel.BinaryAnnotation{{Key: "app", Value: []bool{false}}},
+	)
+	assert.Error(t, err, "An Error was expected.")
 }
