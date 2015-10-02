@@ -23,6 +23,7 @@ package tchannel
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -552,7 +553,11 @@ func (c *Connection) SendSystemError(id uint32, span *Span, err error) error {
 
 // connectionError handles a connection level error
 func (c *Connection) connectionError(err error) error {
-	c.log.Warnf("Connection error: %v", err)
+	if err == io.EOF {
+		c.log.Debugf("Connection got EOF")
+	} else {
+		c.log.Warnf("Connection error: %v", err)
+	}
 	c.Close()
 	return NewWrappedSystemError(ErrCodeNetwork, err)
 }
