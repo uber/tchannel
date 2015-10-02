@@ -15,6 +15,10 @@ athrift "{{ .ThriftImport }}"
 
 {{ range .Services }}
 type {{ .Interface }} interface {
+	{{ if .HasExtends }}
+		{{ .ExtendsService.Interface }}
+
+	{{ end }}
 	{{ range .Methods }}
 		{{ .Name }}({{ .ArgList }}) {{ .RetType }}
 	{{ end }}
@@ -26,11 +30,25 @@ type {{ .Interface }} interface {
 {{/* Generate client and service implementations for the above interfaces. */}}
 {{ range $svc := .Services }}
 type {{ .ClientStruct }} struct {
+	{{ if .HasExtends }}
+		{{ .ExtendsService.ClientStruct }}
+
+	{{ end }}
 	client thrift.TChanClient
 }
 
+
+func {{ .InternalClientConstructor }}(client thrift.TChanClient) *{{ .ClientStruct }} {
+	return &{{ .ClientStruct }}{
+		{{ if .HasExtends }}
+			*{{ .ExtendsService.InternalClientConstructor }}(client),
+		{{ end }}
+		client,
+	}
+}
+
 func {{ .ClientConstructor }}(client thrift.TChanClient) {{ .Interface }} {
-	return &{{ .ClientStruct }}{client: client}
+	return {{ .InternalClientConstructor }}(client)
 }
 
 {{ range .Methods }}
@@ -59,11 +77,24 @@ func {{ .ClientConstructor }}(client thrift.TChanClient) {{ .Interface }} {
 {{ end }}
 
 type {{ .ServerStruct }} struct {
+	{{ if .HasExtends }}
+		{{ .ExtendsService.ServerStruct }}
+
+	{{ end }}
 	handler {{ .Interface }}
 }
 
+func {{ .InternalServerConstructor }}(handler {{ .Interface }}) *{{ .ServerStruct }} {
+	return &{{ .ServerStruct }}{
+		{{ if .HasExtends }}
+			*{{ .ExtendsService.InternalServerConstructor }}(handler),
+		{{ end }}
+		handler,
+	}
+}
+
 func {{ .ServerConstructor }}(handler {{ .Interface }}) thrift.TChanServer {
-	return &{{ .ServerStruct }}{handler}
+	return {{ .InternalServerConstructor }}(handler)
 }
 
 func (s *{{ .ServerStruct }}) Service() string {
@@ -74,6 +105,11 @@ func (s *{{ .ServerStruct }}) Methods() []string {
 	return []string{
 		{{ range .Methods }}
 			"{{ .ThriftName }}",
+		{{ end }}
+		{{ if .HasExtends }}
+			{{ range .ExtendsService.Methods }}
+				"{{ .ThriftName }}",
+			{{ end }}
 		{{ end }}
 	}
 }

@@ -18,12 +18,11 @@ func checkExtends(allServices map[string]*parser.Service, service *parser.Servic
 		return fmt.Errorf("service %v extends base service %v that is not found", service.Name, extends)
 	}
 
-	for k, m := range baseService.Methods {
+	for k := range baseService.Methods {
 		if _, ok := service.Methods[k]; ok {
 			return fmt.Errorf("service %v cannot extend base service %v as method %v clashes",
 				service.Name, extends, k)
 		}
-		service.Methods[k] = m
 	}
 
 	// Recursively check the baseService for any extends.
@@ -36,6 +35,24 @@ func (l byServiceName) Len() int           { return len(l) }
 func (l byServiceName) Less(i, j int) bool { return l[i].Service.Name < l[j].Service.Name }
 func (l byServiceName) Swap(i, j int)      { l[i], l[j] = l[j], l[i] }
 
+func setExtends(sortedServices []*Service) error {
+	for _, s := range sortedServices {
+		if s.Extends == "" {
+			continue
+		}
+
+		foundService := sort.Search(len(sortedServices), func(i int) bool {
+			return sortedServices[i].Name >= s.Extends
+		})
+		if foundService == len(sortedServices) {
+			return fmt.Errorf("failed to find base service %q for %q", s.Extends, s.Name)
+		}
+		s.ExtendsService = sortedServices[foundService]
+	}
+
+	return nil
+}
+
 func wrapServices(v *parser.Thrift) ([]*Service, error) {
 	var services []*Service
 	state := NewState(v)
@@ -47,10 +64,14 @@ func wrapServices(v *parser.Thrift) ([]*Service, error) {
 			return nil, err
 		}
 
-		services = append(services, &Service{s, state})
+		services = append(services, &Service{s, state, nil})
 	}
 
 	sort.Sort(byServiceName(services))
+	if err := setExtends(services); err != nil {
+		return nil, err
+	}
+
 	return services, nil
 }
 
@@ -58,7 +79,8 @@ func wrapServices(v *parser.Thrift) ([]*Service, error) {
 type Service struct {
 	*parser.Service
 
-	state *State
+	state          *State
+	ExtendsService *Service
 }
 
 // ThriftName returns the thrift identifier for this service.
@@ -81,6 +103,13 @@ func (s *Service) ClientConstructor() string {
 	return "NewTChan" + goPublicName(s.Name) + "Client"
 }
 
+// InternalClientConstructor returns the name of the internal constructor used to create the client
+// struct directly. This returns the type of ClientStruct rather than the interface, and is used
+// to recursively create any base service clients.
+func (s *Service) InternalClientConstructor() string {
+	return "newTChan" + goPublicName(s.Name) + "Client"
+}
+
 // ServerStruct returns the name of the unexported struct that satisfies TChanServer.
 func (s *Service) ServerStruct() string {
 	return "tchan" + goPublicName(s.Name) + "Server"
@@ -89,6 +118,18 @@ func (s *Service) ServerStruct() string {
 // ServerConstructor returns the name of the constructor used to create the TChanServer interface.
 func (s *Service) ServerConstructor() string {
 	return "NewTChan" + goPublicName(s.Name) + "Server"
+}
+
+// InternalServerConstructor is the name of the internal constructor used to create the service
+// directly. This returns the type of ServerStruct rather than the interface, and is used
+// to recursively create any base service structs.
+func (s *Service) InternalServerConstructor() string {
+	return "newTChan" + goPublicName(s.Name) + "Server"
+}
+
+// HasExtends returns whether this service extends another service.
+func (s *Service) HasExtends() bool {
+	return s.ExtendsService != nil
 }
 
 type byMethodName []*Method
