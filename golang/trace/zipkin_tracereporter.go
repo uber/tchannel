@@ -128,7 +128,7 @@ func buildZipkinSpan(span tc.Span, annotations []tc.Annotation, binaryAnnotation
 		TraceId:           uint64ToBytes(span.TraceID()),
 		Host:              &host,
 		Name:              targetEndpoint.Operation,
-		Id:                uint64ToBytes(span.SpanID()),
+		ID:                uint64ToBytes(span.SpanID()),
 		ParentId:          uint64ToBytes(span.ParentID()),
 		Annotations:       buildZipkinAnnotations(annotations),
 		BinaryAnnotations: tBinaryAnnotations,

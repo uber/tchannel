@@ -64,7 +64,7 @@ func TestBuildZipkinSpan(t *testing.T) {
 			ServiceName: "testServer",
 		},
 		Name:              "test",
-		Id:                uint64ToBytes(span.SpanID()),
+		ID:                uint64ToBytes(span.SpanID()),
 		ParentId:          uint64ToBytes(span.ParentID()),
 		Annotations:       buildZipkinAnnotations(annotations),
 		BinaryAnnotations: tBinaryAnnotation,

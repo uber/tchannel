@@ -21,13 +21,19 @@ type tchanTCollectorClient struct {
 	client thrift.TChanClient
 }
 
+func newTChanTCollectorClient(client thrift.TChanClient) *tchanTCollectorClient {
+	return &tchanTCollectorClient{
+		client,
+	}
+}
+
 func NewTChanTCollectorClient(client thrift.TChanClient) TChanTCollector {
-	return &tchanTCollectorClient{client: client}
+	return newTChanTCollectorClient(client)
 }
 
 func (c *tchanTCollectorClient) MultiSubmit(ctx thrift.Context, spans []*Span) ([]*Response, error) {
-	var resp MultiSubmitResult
-	args := MultiSubmitArgs{
+	var resp TCollectorMultiSubmitResult
+	args := TCollectorMultiSubmitArgs{
 		Spans: spans,
 	}
 	success, err := c.client.Call(ctx, "TCollector", "multi_submit", &args, &resp)
@@ -38,8 +44,8 @@ func (c *tchanTCollectorClient) MultiSubmit(ctx thrift.Context, spans []*Span) (
 }
 
 func (c *tchanTCollectorClient) Submit(ctx thrift.Context, span *Span) (*Response, error) {
-	var resp SubmitResult
-	args := SubmitArgs{
+	var resp TCollectorSubmitResult
+	args := TCollectorSubmitArgs{
 		Span: span,
 	}
 	success, err := c.client.Call(ctx, "TCollector", "submit", &args, &resp)
@@ -53,8 +59,14 @@ type tchanTCollectorServer struct {
 	handler TChanTCollector
 }
 
+func newTChanTCollectorServer(handler TChanTCollector) *tchanTCollectorServer {
+	return &tchanTCollectorServer{
+		handler,
+	}
+}
+
 func NewTChanTCollectorServer(handler TChanTCollector) thrift.TChanServer {
-	return &tchanTCollectorServer{handler}
+	return newTChanTCollectorServer(handler)
 }
 
 func (s *tchanTCollectorServer) Service() string {
@@ -80,8 +92,8 @@ func (s *tchanTCollectorServer) Handle(ctx thrift.Context, methodName string, pr
 }
 
 func (s *tchanTCollectorServer) handleMultiSubmit(ctx thrift.Context, protocol athrift.TProtocol) (bool, athrift.TStruct, error) {
-	var req MultiSubmitArgs
-	var res MultiSubmitResult
+	var req TCollectorMultiSubmitArgs
+	var res TCollectorMultiSubmitResult
 
 	if err := req.Read(protocol); err != nil {
 		return false, nil, err
@@ -100,8 +112,8 @@ func (s *tchanTCollectorServer) handleMultiSubmit(ctx thrift.Context, protocol a
 }
 
 func (s *tchanTCollectorServer) handleSubmit(ctx thrift.Context, protocol athrift.TProtocol) (bool, athrift.TStruct, error) {
-	var req SubmitArgs
-	var res SubmitResult
+	var req TCollectorSubmitArgs
+	var res TCollectorSubmitResult
 
 	if err := req.Read(protocol); err != nil {
 		return false, nil, err
