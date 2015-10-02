@@ -5,7 +5,7 @@
 # @see http://docs.travis-ci.com/user/workers/container-based-infrastructure/
 # @see http://blog.travis-ci.com/2014-12-17-faster-builds-with-container-based-infrastructure/
 #
-sudo: true
+# sudo: true
 
 #
 # testing multiple subdirectories
@@ -13,16 +13,7 @@ sudo: true
 # @see https://www.dominicrodger.com/tox-and-travis.html
 #
 env:
-  - SUBDIR=node INSTALL=install
-  - SUBDIR=hyperbahn INSTALL=install
-  - SUBDIR=hyperbahn INSTALL=link
   - SUBDIR=golang INSTALL=install
-
-before_install:
-  - nvm install 0.10
-  - nvm use 0.10
-  - node --version
-  - npm --version
 
 install:
   - make -C $SUBDIR $INSTALL
@@ -42,5 +33,4 @@ after_success:
 #
 cache:
   directories:
-    - node_modules
     - .tox
