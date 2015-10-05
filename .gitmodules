@@ -7,3 +7,6 @@
 [submodule "hyperbahn"]
 	path = hyperbahn
 	url = https://github.com/uber/hyperbahn
+[submodule "golang"]
+	path = golang
+	url = https://github.com/uber/tchannel-go

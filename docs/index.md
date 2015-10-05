@@ -8,7 +8,7 @@ The protocol is currently implemented in:
 
 * Go
     * [Guide](go-guide.md)
-    * [API Documentation](http://godoc.org/github.com/uber/tchannel/golang)
+    * [API Documentation](http://godoc.org/github.com/uber/tchannel-go)
 
 
 * Node
