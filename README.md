@@ -15,6 +15,10 @@ Network multiplexing and framing protocol for RPC
 - Can be used to transport multiple protocols between endpoints, e.g. HTTP+JSON
   and Thrift.
 
+## Getting Started
+
+The best place to get started using tchannel is [tchannel.readthedocs.org](https://tchannel.readthedocs.org).
+
 ## Parts
 
 - [tchannel-protocol](https://github.com/uber/tchannel/tree/master/docs/protocol.md) TChannel Protocol Documentation
