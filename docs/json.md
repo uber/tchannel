@@ -19,7 +19,7 @@ failure.
 For both `call req` and `call res`
 
 - `arg1` must be the method name as defined by [`arg1`][]
-- `arg2` must be the application headers encoded as JSON
+- `arg2` must be the application headers in the format `nh:2 (k~2 v~2){nh}`
 - `arg3` must be the application response as defined by [`arg3`][]
 
 ### `arg1`
