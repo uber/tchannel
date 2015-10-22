@@ -94,6 +94,12 @@ a request down one connection and a response down another. It is certainly
 possible to send one request down one connection and then a subsequent request
 down another, for whatever reason you might have.
 
+A message corresponds to all of the frames that share an id.
+A pair of "init req" and "init res" frames share the same message id.
+A set of "call req", "call req continue", "call res", "call res continue", and
+"error" frames may all share the same message id.
+A pair of "ping req" and "ping res" frames share the same message id.
+
 Initiating a new connection works like this:
 
 1. node A initiates TCP connection to node B
