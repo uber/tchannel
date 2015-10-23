@@ -34,8 +34,6 @@ Network multiplexing and framing protocol for RPC
   writing library, used for TChannel and [Thrift][]
 - [thriftrw](https://github.com/uber/thriftrw) Node.js [Thrift][] buffer reader
   and writer
-- [thriftify](https://github.com/uber/thriftify) Node.js [Thrift][] object
-  serializer and deserializer with run-time Thrift IDL compiler
 
 [Thrift]: https://thrift.apache.org/
 
