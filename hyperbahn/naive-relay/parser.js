@@ -1,107 +1,132 @@
 'use strict';
 
 var Buffer = require('buffer').Buffer;
+var assert = require('assert');
 
 module.exports = FrameParser;
 
-function FrameParser(connection) {
+function FrameParser() {
     if (!(this instanceof FrameParser)) {
-        return new FrameParser(connection);
+        return new FrameParser();
     }
 
     var self = this;
-
-    self.onFrameBuffer = null;
 
     self.remainder = [];
+    self.frameBuffers = [];
     self.remainderLength = 0;
-    self.frameLength = null;
+    self.frameLength = 0;
 }
 
-FrameParser.prototype.write = function write(buffer) {
+FrameParser.prototype.write =
+function write(networkBuffer) {
     var self = this;
 
-    if (!self.frameLength) {
-        self.frameLength = readFrameSize(buffer, 0);
+    var totalBufferLength = networkBuffer.length;
+
+    if (self.frameLength === 0) {
+        self._readFrameLength(networkBuffer, 0);
     }
 
-    if (self.frameLength <= 16) {
-        console.error('got really small frame', {
-            frameLength: self.frameLength
-        });
-    }
+    var maximumBufferLength = self.remainderLength + totalBufferLength;
 
-    var totalBufferLength = buffer.length;
-    var totalLength = self.remainderLength + totalBufferLength;
-
-    if (self.frameLength === totalLength) {
-        self.onFrameBuffer(self.concatRemainder(buffer));
-        self.frameLength = null;
+    if (self.frameLength === maximumBufferLength) {
+        self._pushFrameBuffer(networkBuffer, 0, totalBufferLength);
         return;
     }
 
-    if (self.frameLength > totalLength) {
-        // console.log('addRemainder in scanStart', {
-        //     bufferLength: totalLength,
-        //     frameLength: self.frameLength
-        // });
-
-        self.addRemainder(buffer);
+    if (self.frameLength > maximumBufferLength) {
+        self._addRemainder(networkBuffer, 0, totalBufferLength);
         return;
     }
 
-    var startOfBuffer = 0;
+    var bufferOffset = 0;
 
-    while (self.frameLength <= totalLength) {
+    while (self.frameLength <= maximumBufferLength) {
         var amountToRead = self.frameLength - self.remainderLength;
+        var endOfBuffer = bufferOffset + amountToRead;
 
-        var lastBuffer = buffer.slice(
-            startOfBuffer, startOfBuffer + amountToRead
-        );
-        self.onFrameBuffer(self.concatRemainder(lastBuffer));
-        self.frameLength = null;
+        self._pushFrameBuffer(networkBuffer, bufferOffset, endOfBuffer);
 
-        if (startOfBuffer + amountToRead === totalBufferLength) {
+        if (endOfBuffer === totalBufferLength) {
             return;
         }
 
-        // buffer = buffer.slice(startOfBuffer + amountToRead, bufferLength);
-        startOfBuffer = startOfBuffer + amountToRead;
-        totalLength = totalBufferLength - (startOfBuffer);
-        self.frameLength = readFrameSize(buffer, startOfBuffer);
+        bufferOffset += amountToRead;
+        maximumBufferLength = totalBufferLength - bufferOffset;
+        self._readFrameLength(networkBuffer, bufferOffset);
     }
 
-    if (startOfBuffer < totalBufferLength) {
-        self.addRemainder(buffer.slice(
-            startOfBuffer, totalBufferLength
-        ));
+    if (bufferOffset < totalBufferLength) {
+        self._addRemainder(networkBuffer, bufferOffset, totalBufferLength);
     }
 };
 
-FrameParser.prototype.addRemainder =
-function addRemainder(buffer) {
+FrameParser.prototype.hasFrameBuffers =
+function hasFrameBuffers() {
     var self = this;
 
-    self.remainder.push(buffer);
-    self.remainderLength += buffer.length;
+    return self.frameBuffers.length !== 0;
 };
 
-FrameParser.prototype.concatRemainder =
-function concatRemainder(buffer) {
+FrameParser.prototype.getFrameBuffer =
+function getFrameBuffer() {
     var self = this;
 
-    if (self.remainder.length === 0) {
-        return buffer;
+    assert(self.frameBuffers.length > 0, 'frameBuffers must not be empty');
+
+    var last = self.frameBuffers.pop();
+    return last;
+};
+
+FrameParser.prototype._addRemainder =
+function _addRemainder(networkBuffer, start, end) {
+    var self = this;
+
+    // Allocate a FastBuffer (cheap)
+    var rawFrameBuffer = networkBuffer.slice(start, end);
+    self.remainder.push(rawFrameBuffer);
+    self.remainderLength += rawFrameBuffer.length;
+};
+
+FrameParser.prototype._concatRemainder =
+function _concatRemainder(networkBuffer, start, end) {
+    var self = this;
+
+    if (self.remainderLength === 0) {
+        return networkBuffer;
     }
 
-    self.addRemainder(buffer);
-    var buf = Buffer.concat(self.remainder, self.remainderLength);
+    self._addRemainder(networkBuffer, start, end);
+
+    var frameBuffer = Buffer.concat(self.remainder, self.remainderLength);
+
     self.remainder.length = 0;
     self.remainderLength = 0;
 
-    return buf;
+    return frameBuffer;
 };
 
-function readFrameSize(buffer, offset) {
-    return buffer.readUInt16BE(offset + 0);
-}
+FrameParser.prototype._pushFrameBuffer =
+function _pushFrameBuffer(networkBuffer, start, end) {
+    var self = this;
+
+    var frameBuffer = self.concatRemainder(networkBuffer, start, end);
+
+    self.frameBuffers.push(frameBuffer);
+    self.frameLength = 0;
+};
+
+FrameParser.prototype._readFrameLength =
+function _readFrameLength(networkBuffer, offset) {
+    var self = this;
+
+    self.frameLength = networkBuffer.readUInt16BE(offset);
+
+    // Safety check
+    if (self.frameLength <= 16) {
+        console.error('Got unexpected really small frame', {
+            frameLength: self.frameLength
+        });
+    }
+};
