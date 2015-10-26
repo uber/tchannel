@@ -14,8 +14,10 @@ function FrameParser(context, onFrameBuffer) {
 
     var self = this;
 
-    self.remainder = [];
-    self.remainderLength = 0;
+    self.remainderBuffer = null;
+    self.hasTempRemainderBuffer = false;
+    self.remainderOffset = 0;
+
     self.frameLength = 0;
 
     self._context = context;
@@ -27,12 +29,14 @@ function write(networkBuffer) {
     var self = this;
 
     var networkBufferLength = networkBuffer.length;
-    if (networkBufferLength < SIZE_BYTE_LENGTH) {
+    assert(networkBufferLength > 0, 'Cannot write() empty buffer');
+
+    var maximumBytesAvailable = self.remainderOffset + networkBufferLength;
+    if (maximumBytesAvailable < SIZE_BYTE_LENGTH) {
         self._addRemainder(networkBuffer, 0, networkBufferLength);
         return;
     }
 
-    var maximumBytesAvailable = self.remainderLength + networkBufferLength;
     if (self.frameLength === 0) {
         self._readInitialFrameLength(networkBuffer);
     }
@@ -45,7 +49,7 @@ function write(networkBuffer) {
     var startOfBuffer = 0;
 
     while (self.frameLength <= maximumBytesAvailable) {
-        var amountToRead = self.frameLength - self.remainderLength;
+        var amountToRead = self.frameLength - self.remainderOffset;
         var endOfBuffer = startOfBuffer + amountToRead;
 
         self._pushFrameBuffer(networkBuffer, startOfBuffer, endOfBuffer);
@@ -68,11 +72,32 @@ FrameParser.prototype._addRemainder =
 function _addRemainder(networkBuffer, start, end) {
     var self = this;
 
-    // Maybe allocate a new FastBuffer (cheap)
-    var rawFrameBuffer = maybeSlice(networkBuffer, start, end);
+    if (self.frameLength === 0) {
+        // Maybe allocate a new FastBuffer (cheap)
+        var rawFrameBuffer = maybeSlice(networkBuffer, start, end);
 
-    self.remainder.push(rawFrameBuffer);
-    self.remainderLength += rawFrameBuffer.length;
+        assert(self.remainderBuffer === null,
+            'Cannot assign remainderBuffer twice');
+        self.remainderBuffer = rawFrameBuffer;
+        self.remainderOffset = rawFrameBuffer.length;
+        self.hasTempRemainderBuffer = true;
+        return;
+    }
+
+    if (self.remainderBuffer === null || self.hasTempRemainderBuffer) {
+        var oldRemainder = self.remainderBuffer;
+
+        // Allocate a SlowBuffer (expensive)
+        self.remainderBuffer = new Buffer(self.frameLength);
+        self.hasTempRemainderBuffer = false;
+
+        if (oldRemainder) {
+            oldRemainder.copy(self.remainderBuffer, 0);
+        }
+    }
+
+    networkBuffer.copy(self.remainderBuffer, self.remainderOffset, start, end);
+    self.remainderOffset += (end - start);
 };
 
 FrameParser.prototype._pushFrameBuffer =
@@ -80,17 +105,17 @@ function _pushFrameBuffer(networkBuffer, start, end) {
     var self = this;
 
     var frameBuffer;
-    if (self.remainderLength === 0) {
+    if (self.remainderOffset === 0) {
         // Maybe allocate a new FastBuffer (cheap)
         frameBuffer = maybeSlice(networkBuffer, start, end);
     } else {
         self._addRemainder(networkBuffer, start, end);
 
-        // Allocate a new SlowBuffer (expensive)
-        frameBuffer = Buffer.concat(self.remainder, self.remainderLength);
+        frameBuffer = self.remainderBuffer;
 
-        self.remainder.length = 0;
-        self.remainderLength = 0;
+        self.remainderBuffer = null;
+        self.hasTempRemainderBuffer = false;
+        self.remainderOffset = 0;
     }
 
     self._onFrameBuffer(self._context, frameBuffer);
@@ -101,17 +126,12 @@ FrameParser.prototype._readInitialFrameLength =
 function _readInitialFrameLength(networkBuffer) {
     var self = this;
 
-    if (self.remainderLength === 0) {
+    if (self.remainderOffset === 0) {
         self.frameLength = networkBuffer.readUInt16BE(0);
-    } else if (self.remainderLength === 1) {
-        self.frameLength = self.remainder[0][0] << 8 | networkBuffer[0];
-    } else if (self.remainderLength >= 2) {
-        var firstLen = self.remainder[0].length;
-        if (firstLen === 1) {
-            self.frameLength = self.remainder[0][0] << 8 | self.remainder[1][0];
-        } else {
-            self.frameLength = self.remainder[0].readUInt16BE(0);
-        }
+    } else if (self.remainderOffset === 1) {
+        self.frameLength = self.remainderBuffer[0] << 8 | networkBuffer[0];
+    } else if (self.remainderOffset >= 2) {
+        self.frameLength = self.remainderBuffer.readUInt16BE(0);
     }
 };
 
