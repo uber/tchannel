@@ -7,17 +7,19 @@ var SIZE_BYTE_LENGTH = 2;
 
 module.exports = FrameParser;
 
-function FrameParser() {
+function FrameParser(context, onFrameBuffer) {
     if (!(this instanceof FrameParser)) {
-        return new FrameParser();
+        return new FrameParser(context, onFrameBuffer);
     }
 
     var self = this;
 
     self.remainder = [];
-    self.frameBuffers = [];
     self.remainderLength = 0;
     self.frameLength = 0;
+
+    self._context = context;
+    self._onFrameBuffer = onFrameBuffer;
 }
 
 FrameParser.prototype.write =
@@ -62,23 +64,6 @@ function write(networkBuffer) {
     }
 };
 
-FrameParser.prototype.hasFrameBuffers =
-function hasFrameBuffers() {
-    var self = this;
-
-    return self.frameBuffers.length !== 0;
-};
-
-FrameParser.prototype.getFrameBuffer =
-function getFrameBuffer() {
-    var self = this;
-
-    assert(self.frameBuffers.length > 0, 'frameBuffers must not be empty');
-
-    var last = self.frameBuffers.pop();
-    return last;
-};
-
 FrameParser.prototype._addRemainder =
 function _addRemainder(networkBuffer, start, end) {
     var self = this;
@@ -108,7 +93,7 @@ function _pushFrameBuffer(networkBuffer, start, end) {
         self.remainderLength = 0;
     }
 
-    self.frameBuffers.push(frameBuffer);
+    self._onFrameBuffer(self._context, frameBuffer);
     self.frameLength = 0;
 };
 

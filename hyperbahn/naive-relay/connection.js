@@ -25,7 +25,7 @@ function RelayConnection(socket, relay, direction) {
     self.socket = socket;
     self.relay = relay;
 
-    self.parser = new FrameParser();
+    self.parser = new FrameParser(self, onFrameBuffer);
     self.idCounter = 1;
     self.guid = String(GUID++) + '~';
     self.outRequestMapping = Object.create(null);
@@ -66,12 +66,14 @@ function onSocketBuffer(socketBuffer) {
     var self = this;
 
     self.parser.write(socketBuffer);
+};
 
-    while (self.parser.hasFrameBuffers()) {
-        var frameBuffer = self.parser.getFrameBuffer();
-        var frame = LazyFrame.alloc(self, frameBuffer);
-        self.relay.handleFrame(frame);
-    }
+RelayConnection.prototype.onFrameBuffer =
+function onFrameBuffer(frameBuffer) {
+    var self = this;
+
+    var frame = LazyFrame.alloc(self, frameBuffer);
+    self.relay.handleFrame(frame);
 };
 
 RelayConnection.prototype.allocateId = function allocateId() {
@@ -166,6 +168,10 @@ function flushPending() {
     self.initialized = true;
     self.frameQueue.length = 0;
 };
+
+function onFrameBuffer(connection, buffer) {
+    connection.onFrameBuffer(buffer);
+}
 
 function initFrameSize(hostPort) {
     // frameHeader:16 version:2 nh:2 hkl:2 hk:hkl hvl:2 hb:hvl
