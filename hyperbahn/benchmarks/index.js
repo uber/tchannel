@@ -31,6 +31,8 @@ var BenchmarkRunner = require('tchannel/benchmarks/');
 var bahn = path.join(__dirname, 'hyperbahn-worker.js');
 var naiveRelay = path.join(__dirname, 'naive-relay.js');
 
+var cNaiveRelay = '/home/raynos/uber/naive-relay-c/relay.out';
+
 function HyperbahnBenchmarkRunner(opts) {
     if (!(this instanceof HyperbahnBenchmarkRunner)) {
         return new HyperbahnBenchmarkRunner(opts);
@@ -46,20 +48,24 @@ function HyperbahnBenchmarkRunner(opts) {
 util.inherits(HyperbahnBenchmarkRunner, BenchmarkRunner);
 
 HyperbahnBenchmarkRunner.prototype.spawnNaiveRelayServer =
-function spawnNaiveRelayServer() {
+function spawnNaiveCRelayServer() {
     var self = this;
 
-    var relays = '127.0.0.1:' + self.ports.serverPort;
+    var relays = [];
+    for (var i = 0; i < self.instanceCount; i++) {
+        relays.push('127.0.0.1:' + (self.ports.serverPort + i));
+    }
 
-    var naiveRelayProc = self.run(naiveRelay, [
-        '--relays', relays,
-        '--instances', String(self.instanceCount),
-        '--port', String(self.ports.relayServerPort),
-        '--host', '127.0.0.1'
-    ]);
-    self.relayProcs.push(naiveRelayProc);
-    naiveRelayProc.stdout.pipe(process.stderr);
-    naiveRelayProc.stderr.pipe(process.stderr);
+    var args =[
+        '127.0.0.1', String(self.ports.relayServerPort),
+        relays.join(','), '0'
+    ];
+    var cRelayProc = require('child_process').spawn(cNaiveRelay, args);
+    console.error('running', cNaiveRelay, args);
+
+    self.relayProcs.push(cRelayProc);
+    cRelayProc.stdout.pipe(process.stderr);
+    cRelayProc.stderr.pipe(process.stderr);
 };
 
 HyperbahnBenchmarkRunner.prototype.spawnRelayServer =
