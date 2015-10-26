@@ -67,13 +67,11 @@ function onSocketBuffer(socketBuffer) {
 
     self.parser.write(socketBuffer);
 
-    // console.log('draining parser');
     while (self.parser.hasFrameBuffers()) {
         var frameBuffer = self.parser.getFrameBuffer();
         var frame = LazyFrame.alloc(self, frameBuffer);
         self.relay.handleFrame(frame);
     }
-    // console.log('parser drained');
 };
 
 RelayConnection.prototype.allocateId = function allocateId() {
