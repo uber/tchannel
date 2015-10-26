@@ -121,7 +121,12 @@ function _readInitialFrameLength(networkBuffer) {
     } else if (self.remainderLength === 1) {
         self.frameLength = self.remainder[0][0] << 8 | networkBuffer[0];
     } else if (self.remainderLength >= 2) {
-        self.frameLength = self.remainder[0].readUInt16BE(0);
+        var firstLen = self.remainder[0].length;
+        if (firstLen === 1) {
+            self.frameLength = self.remainder[0][0] << 8 | self.remainder[1][0];
+        } else {
+            self.frameLength = self.remainder[0].readUInt16BE(0);
+        }
     }
 };
 
