@@ -52,7 +52,7 @@ function write(networkBuffer) {
             return;
         }
 
-        bufferOffset += amountToRead;
+        bufferOffset = endOfBuffer;
         maximumBufferLength = totalBufferLength - bufferOffset;
         self._readFrameLength(networkBuffer, bufferOffset);
     }
@@ -92,14 +92,20 @@ function _addRemainder(networkBuffer, start, end) {
 FrameParser.prototype._concatRemainder =
 function _concatRemainder(networkBuffer, start, end) {
     var self = this;
+    var frameBuffer;
 
     if (self.remainderLength === 0) {
-        return networkBuffer;
+        if (start === 0 && end === networkBuffer.length) {
+            return networkBuffer;
+        }
+
+        frameBuffer = networkBuffer.slice(start, end);
+        return frameBuffer;
     }
 
     self._addRemainder(networkBuffer, start, end);
 
-    var frameBuffer = Buffer.concat(self.remainder, self.remainderLength);
+    frameBuffer = Buffer.concat(self.remainder, self.remainderLength);
 
     self.remainder.length = 0;
     self.remainderLength = 0;
@@ -111,7 +117,7 @@ FrameParser.prototype._pushFrameBuffer =
 function _pushFrameBuffer(networkBuffer, start, end) {
     var self = this;
 
-    var frameBuffer = self.concatRemainder(networkBuffer, start, end);
+    var frameBuffer = self._concatRemainder(networkBuffer, start, end);
 
     self.frameBuffers.push(frameBuffer);
     self.frameLength = 0;
