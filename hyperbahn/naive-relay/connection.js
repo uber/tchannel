@@ -33,12 +33,6 @@ function RelayConnection(socket, relay, direction) {
     self.initialized = false;
     self.frameQueue = [];
     self.direction = direction;
-
-    self.parser.onFrameBuffer = onFrameBuffer;
-
-    function onFrameBuffer(frameBuffer) {
-        self.onFrameBuffer(frameBuffer);
-    }
 }
 
 RelayConnection.prototype.readStart = function readStart() {
@@ -72,14 +66,14 @@ function onSocketBuffer(socketBuffer) {
     var self = this;
 
     self.parser.write(socketBuffer);
-};
 
-RelayConnection.prototype.onFrameBuffer =
-function onFrameBuffer(frameBuffer) {
-    var self = this;
-
-    var frame = LazyFrame.alloc(self, frameBuffer);
-    self.relay.handleFrame(frame);
+    // console.log('draining parser');
+    while (self.parser.hasFrameBuffers()) {
+        var frameBuffer = self.parser.getFrameBuffer();
+        var frame = LazyFrame.alloc(self, frameBuffer);
+        self.relay.handleFrame(frame);
+    }
+    // console.log('parser drained');
 };
 
 RelayConnection.prototype.allocateId = function allocateId() {
