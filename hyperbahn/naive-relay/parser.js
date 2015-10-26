@@ -3,6 +3,8 @@
 var Buffer = require('buffer').Buffer;
 var assert = require('assert');
 
+var SIZE_BYTE_LENGTH = 2;
+
 module.exports = FrameParser;
 
 function FrameParser() {
@@ -22,43 +24,41 @@ FrameParser.prototype.write =
 function write(networkBuffer) {
     var self = this;
 
-    var totalBufferLength = networkBuffer.length;
+    var networkBufferLength = networkBuffer.length;
+    if (networkBufferLength < SIZE_BYTE_LENGTH) {
+        self._addRemainder(networkBuffer, 0, networkBufferLength);
+        return;
+    }
 
+    var maximumBytesAvailable = self.remainderLength + networkBufferLength;
     if (self.frameLength === 0) {
-        self._readFrameLength(networkBuffer, 0);
+        self._readInitialFrameLength(networkBuffer);
     }
 
-    var maximumBufferLength = self.remainderLength + totalBufferLength;
-
-    if (self.frameLength === maximumBufferLength) {
-        self._pushFrameBuffer(networkBuffer, 0, totalBufferLength);
+    if (self.frameLength > maximumBytesAvailable) {
+        self._addRemainder(networkBuffer, 0, networkBufferLength);
         return;
     }
 
-    if (self.frameLength > maximumBufferLength) {
-        self._addRemainder(networkBuffer, 0, totalBufferLength);
-        return;
-    }
+    var startOfBuffer = 0;
 
-    var bufferOffset = 0;
-
-    while (self.frameLength <= maximumBufferLength) {
+    while (self.frameLength <= maximumBytesAvailable) {
         var amountToRead = self.frameLength - self.remainderLength;
-        var endOfBuffer = bufferOffset + amountToRead;
+        var endOfBuffer = startOfBuffer + amountToRead;
 
-        self._pushFrameBuffer(networkBuffer, bufferOffset, endOfBuffer);
+        self._pushFrameBuffer(networkBuffer, startOfBuffer, endOfBuffer);
+        startOfBuffer = endOfBuffer;
 
-        if (endOfBuffer === totalBufferLength) {
-            return;
+        if (networkBufferLength - startOfBuffer < SIZE_BYTE_LENGTH) {
+            break;
         }
 
-        bufferOffset = endOfBuffer;
-        maximumBufferLength = totalBufferLength - bufferOffset;
-        self._readFrameLength(networkBuffer, bufferOffset);
+        maximumBytesAvailable = networkBufferLength - startOfBuffer;
+        self.frameLength = networkBuffer.readUInt16BE(startOfBuffer);
     }
 
-    if (bufferOffset < totalBufferLength) {
-        self._addRemainder(networkBuffer, bufferOffset, totalBufferLength);
+    if (startOfBuffer < networkBufferLength) {
+        self._addRemainder(networkBuffer, startOfBuffer, networkBufferLength);
     }
 };
 
@@ -83,56 +83,55 @@ FrameParser.prototype._addRemainder =
 function _addRemainder(networkBuffer, start, end) {
     var self = this;
 
-    // Allocate a FastBuffer (cheap)
-    var rawFrameBuffer = networkBuffer.slice(start, end);
+    // Maybe allocate a new FastBuffer (cheap)
+    var rawFrameBuffer = maybeSlice(networkBuffer, start, end);
+
     self.remainder.push(rawFrameBuffer);
     self.remainderLength += rawFrameBuffer.length;
-};
-
-FrameParser.prototype._concatRemainder =
-function _concatRemainder(networkBuffer, start, end) {
-    var self = this;
-    var frameBuffer;
-
-    if (self.remainderLength === 0) {
-        if (start === 0 && end === networkBuffer.length) {
-            return networkBuffer;
-        }
-
-        frameBuffer = networkBuffer.slice(start, end);
-        return frameBuffer;
-    }
-
-    self._addRemainder(networkBuffer, start, end);
-
-    frameBuffer = Buffer.concat(self.remainder, self.remainderLength);
-
-    self.remainder.length = 0;
-    self.remainderLength = 0;
-
-    return frameBuffer;
 };
 
 FrameParser.prototype._pushFrameBuffer =
 function _pushFrameBuffer(networkBuffer, start, end) {
     var self = this;
 
-    var frameBuffer = self._concatRemainder(networkBuffer, start, end);
+    var frameBuffer;
+    if (self.remainderLength === 0) {
+        // Maybe allocate a new FastBuffer (cheap)
+        frameBuffer = maybeSlice(networkBuffer, start, end);
+    } else {
+        self._addRemainder(networkBuffer, start, end);
+
+        // Allocate a new SlowBuffer (expensive)
+        frameBuffer = Buffer.concat(self.remainder, self.remainderLength);
+
+        self.remainder.length = 0;
+        self.remainderLength = 0;
+    }
 
     self.frameBuffers.push(frameBuffer);
     self.frameLength = 0;
 };
 
-FrameParser.prototype._readFrameLength =
-function _readFrameLength(networkBuffer, offset) {
+FrameParser.prototype._readInitialFrameLength =
+function _readInitialFrameLength(networkBuffer) {
     var self = this;
 
-    self.frameLength = networkBuffer.readUInt16BE(offset);
-
-    // Safety check
-    if (self.frameLength <= 16) {
-        console.error('Got unexpected really small frame', {
-            frameLength: self.frameLength
-        });
+    if (self.remainderLength === 0) {
+        self.frameLength = networkBuffer.readUInt16BE(0);
+    } else if (self.remainderLength === 1) {
+        self.frameLength = self.remainder[0][0] << 8 | networkBuffer[0];
+    } else if (self.remainderLength >= 2) {
+        self.frameLength = self.remainder[0].readUInt16BE(0);
     }
 };
+
+function maybeSlice(buf, start, end) {
+    var slice;
+    if (start === 0 && end === buf.length) {
+        slice = buf;
+    } else {
+        slice = buf.slice(start, end);
+    }
+
+    return slice;
+}
