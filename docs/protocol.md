@@ -275,10 +275,13 @@ new versions are required, this is where a common version can be negotiated.
 There are a variable number of key/value pairs. For version 2, the following
 are required:
 
-| name           | format             | description
-| :------------- | :----------------- | :----------
-| `host_port`    | `address:port`     | where this process can be reached
-| `process_name` | *arbitrary string* | additional identifier for this instance, used for logging
+| name                        | format             | description
+| :-------------------------- | :----------------- | :----------
+| `host_port`                 | `address:port`     | where this process can be reached
+| `process_name`              | *arbitrary string* | additional identifier for this instance, used for logging
+| `tchannel_language`         | *arbitrary string* | a short string naming the implementation language (e.g. `"node"`,` "python"`, `"go"`).
+| `tchannel_language_version` | *arbitrary string* | a language specific version string indicating the version of the runtime or build chain as appropriate (e.g. `"0.10.32", "2.7.10", "1.5.1")
+| `tchannel_version`          | *arbitrary string* | a semver string indicating the version of the tchannel library (e.g. "3.5.31", "2.7.9-g0123456")
 
 For forward compatibility, implementations should ignore headers other than
 these listed above.
