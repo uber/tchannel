@@ -2,20 +2,29 @@
 
 Network multiplexing and framing protocol for RPC
 
-## Design goals
+* [Read the Docs][RTD]
+* Languages: [Node.js][node], [Python][python], [Go][go], [Java][java]
+* Questions: Open a [Github issue][issues]
+* Uber's [OSS website][oss]
 
-- Easy to implement in multiple languages, especially JS and Python.
-- High performance forwarding path.  Intermediaries can make a forwarding
-  decision quickly.
-- Request / response model with out of order responses.  Slow requests will not
-  block subsequent faster requests at head of line.
-- Large requests/responses may/must be broken into fragments to be sent
-  progressively.
-- Optional checksums.
-- Can be used to transport multiple protocols between endpoints, e.g. HTTP+JSON
-  and Thrift.
+## Overview
 
-## Parts
+TChannel is a networking framing protocol used for general RPC, supporting out-of-order responses at extremely high performance where intermediaries can make a forwarding decision quickly. It is easy to implement in multiple languages, especially JavaScript and Python.
+
+## Design Goals
+
+- Easy implementation in multiple languages
+- High performance forwarding path where intermediaries can make forwarding
+  decisions quickly
+- Request/response model with out-of-order responses so that slow requests don't
+  block subsequent faster requests at the head of the line
+- Ability of large requests/responses to be broken into fragments and sent
+  progressively
+- Optional checksums
+- Ability to transport multiple protocols between endpoints (e.g., HTTP+JSON
+  and Thrift)
+
+## Components
 
 - [tchannel-protocol](https://github.com/uber/tchannel/tree/master/docs/protocol.md) TChannel Protocol Documentation
 - [tchannel-node](https://github.com/uber/tchannel-node) TChannel
@@ -36,5 +45,10 @@ Network multiplexing and framing protocol for RPC
   and writer
 
 [Thrift]: https://thrift.apache.org/
+[node]: https://github.com/uber/tchannel-node
+[python]: https://github.com/uber/tchannel-python
+[go]: https://github.com/uber/tchannel-go
+[java]: https://github.com/uber/tchannel-java
+[RTD]: http://tchannel.readthedocs.org/en/latest/
 
-## MIT Licenced
+## MIT Licensed
