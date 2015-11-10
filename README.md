@@ -50,5 +50,7 @@ TChannel is a networking framing protocol used for general RPC, supporting out-o
 [go]: https://github.com/uber/tchannel-go
 [java]: https://github.com/uber/tchannel-java
 [RTD]: http://tchannel.readthedocs.org/en/latest/
+[issues]: https://github.com/uber/hyperbahn/issues
+[oss]: https://uber.github.io/
 
 ## MIT Licensed
