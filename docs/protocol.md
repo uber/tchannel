@@ -332,9 +332,13 @@ Used to control fragmentation. Valid flags:
 | flag   | description
 | ------ | -----------
 | `0x01` | more fragments follow
+| `0x02` | is request streaming
 
 If the fragments flag isn't set, then this is the only/last frame for this
 message id.
+
+If the streaming flag isn't set, then this request has a fragmented body
+instead of a streaming body.
 
 #### ttl:4
 
@@ -875,3 +879,11 @@ the "more fragments remain" flag was not set.
 | 0x03 | 1  | flags:1=0x1, ttl:4=0x2328, tracing:24=0x1,0x2,0x3, traceflags:1=0x1, service~1=0x5"svc A", nh:1=0x1, hk~1=0x1"k", hv~1=0xA"abcdefghij", csumtype:1=0x2 csum:4=0xBEEF arg1~2=0x2<2 bytes> | sending arg1
 | 0x13 | 1  | flags:1=0x1, csumtype:1=0x2 csum:4=0xDEAD arg1~2=0x2<2 bytes> arg2~2=0x2<2 bytes> | sending arg2
 | 0x13 | 1  | flags:1=0x0, csumtype:1=0x2 csum:4=0xF00F arg2~2=0x0<0 bytes> arg3~2=0x8<8 bytes> | complete
+
+## Streaming
+
+A call request or call response can be marked as streaming. Streaming is seperated from Fragmentation.
+
+When a request/response is only fragmented the caller is splitting up a large body over multiple frames. You can generally expect the continuation frames to arrive shortly after the initial call frame.
+
+When a request/response is streamed there are no semantics or expectations about when frames arrive or what the delay between frames is.
