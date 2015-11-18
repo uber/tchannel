@@ -13,8 +13,12 @@ struct ThriftIDLs {
 }
 
 struct VersionInfo {
+  // short string naming the implementation language
   1: required string language
-  2: required string version
+  // language-specific version string representing runtime or build chain
+  2: required string language_version
+  // semver version indicating the version of the tchannel library
+  3: required string version
 }
 
 service Meta {
