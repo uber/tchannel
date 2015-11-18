@@ -12,7 +12,13 @@ struct ThriftIDLs {
     2: required filename entryPoint
 }
 
+struct VersionInfo {
+  1: required string language
+  2: required string version
+}
+
 service Meta {
     HealthStatus health()
     ThriftIDLs thriftIDL()
+    VersionInfo versionInfo()
 }
