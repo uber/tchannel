@@ -3,8 +3,8 @@
 var Buffer = require('buffer').Buffer;
 var process = require('process');
 
-var FrameParser = require('./parser.js');
-var LazyFrame = require('./lazy-frame.js');
+// var FrameParser = require('./parser.js');
+// var LazyFrame = require('./lazy-frame.js');
 
 var GUID = 1;
 
@@ -30,6 +30,7 @@ function RelayConnection(socket, relay, direction) {
     self.frameQueue = [];
     self.writeQueue = [];
     self.direction = direction;
+    self.afterWriteCallback = null;
 
     self.pendingWrite = false;
     self.connected = false;
