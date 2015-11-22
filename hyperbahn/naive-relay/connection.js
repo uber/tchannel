@@ -152,10 +152,10 @@ RelayConnection.prototype.writeFrame = function writeFrame(frame) {
 RelayConnection.prototype.writeToSocket = function writeToSocket(buffer) {
     var self = this;
 
-    if (self.pendingWrite) {
-        self.writeQueue.push(buffer);
-        return;
-    }
+    // if (self.pendingWrite) {
+    //     self.writeQueue.push(buffer);
+    //     return;
+    // }
 
     if (!self.connected) {
         throw new Error('lol noob');
@@ -186,9 +186,9 @@ function afterWrite(status, socket, writeReq) {
     }
 
     conn.pendingWrite = false;
-    if (conn.writeQueue.length) {
-        conn.writeToSocket(conn.writeQueue.shift());
-    }
+    // if (conn.writeQueue.length) {
+    //     conn.writeToSocket(conn.writeQueue.shift());
+    // }
 }
 
 RelayConnection.prototype.handleInitRequest =
