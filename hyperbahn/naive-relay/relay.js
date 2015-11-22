@@ -146,6 +146,7 @@ NaiveRelay.prototype.handleFrame = function handleFrame(frame) {
 
         case 0x04:
             self.forwardCallResponse(frame);
+            self.successCount++;
             break;
 
         default:
