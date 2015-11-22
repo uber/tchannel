@@ -37,7 +37,7 @@ function write(networkBuffer, start, end) {
 
     var maximumBytesAvailable = self.remainderOffset + networkBufferLength;
     if (maximumBytesAvailable < SIZE_BYTE_LENGTH) {
-        self._addRemainder(networkBuffer, startOfBuffer, networkBufferLength);
+        self._addRemainder(networkBuffer, startOfBuffer, endOfNetworkBuffer);
         return;
     }
 
@@ -46,7 +46,7 @@ function write(networkBuffer, start, end) {
     }
 
     if (self.frameLength > maximumBytesAvailable) {
-        self._addRemainder(networkBuffer, startOfBuffer, networkBufferLength);
+        self._addRemainder(networkBuffer, startOfBuffer, endOfNetworkBuffer);
         return;
     }
 
