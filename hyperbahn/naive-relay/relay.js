@@ -1,6 +1,6 @@
 'use strict';
 
-var net = require('net');
+var TCP_WRAP = process.binding('tcp_wrap').TCP;
 var console = require('console');
 var setTimeout = require('timers').setTimeout;
 
@@ -17,18 +17,13 @@ function NaiveRelay(opts) {
     var self = this;
 
     self.destinations = opts.relays;
-    self.server = net.createServer(onSocket);
+    self.server = new TCP_WRAP();
 
-    // self.outRequestMapping = Object.create(null);
     self.connections = null;
     self.hostPort = null;
 
     self.requestCount = 0;
     self.successCount = 0;
-
-    function onSocket(socket) {
-        self.onSocket(socket, 'in');
-    }
 }
 
 NaiveRelay.prototype.printRPS = function printRPS() {
@@ -46,20 +41,50 @@ NaiveRelay.prototype.printRPS = function printRPS() {
     }
 };
 
-NaiveRelay.prototype.onSocket = function onSocket(socket, direction) {
-    var self = this;
-
-    var conn = RelayConnection(socket, self, direction);
-    conn.readStart();
-
-    return conn;
-};
-
 NaiveRelay.prototype.listen = function listen(port, host) {
     var self = this;
 
+    self.server.owner = self;
+    self.server.onconnection = onConnection;
+
     self.hostPort = host + ':' + port;
-    self.server.listen(port, host);
+    var err = self.server.bind(host, port);
+    if (err) {
+        console.error('failed to bind() to address', err);
+        return;
+    }
+
+    err = self.server.listen(511);
+    if (err) {
+        console.error('failed to listen()', err);
+        return;
+    }
+};
+
+function onConnection(socket) {
+    if (!socket) {
+        console.error('could not accept / incoming connect');
+        return;
+    }
+
+    var naiveRelay = this.owner;
+    naiveRelay.onSocket(socket, 'in');
+}
+
+
+NaiveRelay.prototype.onSocket = function onSocket(socket, direction, hostPort) {
+    var self = this;
+
+    var conn = RelayConnection(socket, self, direction);
+    if (direction === 'in') {
+        conn.accept();
+    } else if (direction === 'out') {
+        conn.connect(hostPort);
+    } else {
+        console.error('invalid direction', direction);
+    }
+
+    return conn;
 };
 
 NaiveRelay.prototype.chooseConn = function chooseConn(frame) {
@@ -73,11 +98,12 @@ NaiveRelay.prototype.chooseConn = function chooseConn(frame) {
 
     self.connections = [];
     var hostPorts = self.destinations.split(',');
+    // console.log('talking to: ', hostPorts.length);
 
     for (var i = 0; i < hostPorts.length; i++) {
-        var parts = hostPorts[i].split(':');
-        var socket = net.createConnection(parts[1], parts[0]);
-        var conn = self.onSocket(socket, 'out');
+        var socket = new TCP_WRAP();
+
+        var conn = self.onSocket(socket, 'out', hostPorts[i]);
         self.connections.push(conn);
     }
 
@@ -89,8 +115,10 @@ NaiveRelay.prototype.handleFrame = function handleFrame(frame) {
 
     var frameType = frame.readFrameType();
 
-    // console.error('got frame type', {
-    //     type: frameType
+    // console.log('got frame type', {
+    //     type: frameType,
+    //     id: frame.readId(),
+    //     guid: frame.sourceConnection.guid
     // });
 
     switch (frameType) {
@@ -106,7 +134,7 @@ NaiveRelay.prototype.handleFrame = function handleFrame(frame) {
 
         case 0x03:
             self.requestCount++;
-            // console.log('pending requests', self.requestCount);
+            // console.log('pending requests (req)', self.requestCount);
 
             self.forwardCallRequest(frame);
             break;
@@ -114,7 +142,7 @@ NaiveRelay.prototype.handleFrame = function handleFrame(frame) {
         case 0x04:
             self.requestCount--;
             self.successCount++;
-            // console.log('pending requests', self.requestCount);
+            // console.log('pending requests (res)', self.requestCount);
 
             self.forwardCallResponse(frame);
             break;
@@ -166,14 +194,16 @@ function forwardCallResponse(frame) {
     delete frame.sourceConnection.outRequestMapping[frameId];
 
     if (!reqFrame) {
-        console.error('unknown frame', {
+        console.error('unknown frame to forward', {
             frameId: frame.oldId
         });
         return;
     }
 
     // console.log('forwardCallResponse', {
-    //     id: reqFrame.oldId
+    //     id: reqFrame.oldId,
+    //     respId: frameId,
+    //     guid: reqFrame.sourceConnection.guid
     // });
 
     frame.writeId(reqFrame.oldId);

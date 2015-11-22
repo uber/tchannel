@@ -8,11 +8,6 @@ var LazyFrame = require('./lazy-frame.js');
 
 var GUID = 1;
 
-// var magicCounters = {
-//     out: 0,
-//     in: 0
-// };
-
 module.exports = RelayConnection;
 
 function RelayConnection(socket, relay, direction) {
@@ -24,6 +19,7 @@ function RelayConnection(socket, relay, direction) {
 
     self.socket = socket;
     self.relay = relay;
+    self.socket.owner = self;
 
     self.parser = new FrameParser(self, onFrameBuffer);
     self.idCounter = 1;
@@ -32,40 +28,101 @@ function RelayConnection(socket, relay, direction) {
 
     self.initialized = false;
     self.frameQueue = [];
+    self.writeQueue = [];
     self.direction = direction;
+
+    self.pendingWrite = false;
+    self.connected = false;
+}
+
+RelayConnection.prototype.accept = function accept() {
+    var self = this;
+
+    self.connected = true;
+    self.readStart();
 }
 
 RelayConnection.prototype.readStart = function readStart() {
     var self = this;
 
-    self.socket.on('readable', onReadable);
-
-    if (self.direction === 'out') {
-        self.sendInitRequest();
-    }
-
-    function onReadable() {
-        self.onSocketReadable();
+    self.socket.onread = onRead;
+    var err = self.socket.readStart();
+    if (err) {
+        console.error('could not readStart lul', err);
+        return;
     }
 };
 
-RelayConnection.prototype.onSocketReadable =
-function onSocketReadable() {
+RelayConnection.prototype.connect = function connect(hostPort) {
     var self = this;
 
-    var chunk;
-
-    /* eslint yoda: 0*/
-    while (null !== (chunk = self.socket.read())) {
-        self.onSocketBuffer(chunk);
+    var parts = hostPort.split(':');
+    var connectReq = self.socket.connect(parts[0], parts[1])
+    if (connectReq === null) {
+        console.error('could not connect', process._errno);
+        return;
     }
+
+    connectReq.oncomplete = afterConnect;
+};
+
+function afterConnect(err, socket, req, readable, writable) {
+    var conn = socket.owner;
+
+    if (err) {
+        console.error('lol connect', err);
+        return;
+    }
+
+    if (!readable || !writable) {
+        console.error('bad socket :(');
+        return;
+    }
+
+    conn.connected = true;
+    conn.readStart();
+
+    if (conn.direction === 'out') {
+        // console.log('sendInitRequest');
+        conn.sendInitRequest();
+    }
+}
+
+function onRead(buffer, offset, length) {
+    if (buffer) {
+        var conn = this.owner;
+        // console.log('gotn socket buffer', {
+        //     guid: conn.guid,
+        //     bufStr: buffer.slice(offset, offset + length).toString('utf8')
+        // });
+        conn.onSocketRead(buffer, offset, offset + length);
+    } else if (process._errno == 'EOF') {
+        // console.log('got EOF LOLOLOLOLOLOL');
+        // socket close (TODO lololol)
+        return;
+    } else {
+        console.error('read failed', process._errno);
+        return;
+    }
+}
+
+RelayConnection.prototype.onSocketRead =
+function onSocketRead(buffer, offset, length) {
+    var self = this;
+
+    if (length === 0) {
+        // could have no bytes
+        return;
+    }
+
+    self.onSocketBuffer(buffer, offset, length);
 };
 
 RelayConnection.prototype.onSocketBuffer =
-function onSocketBuffer(socketBuffer) {
+function onSocketBuffer(socketBuffer, start, length) {
     var self = this;
 
-    self.parser.write(socketBuffer);
+    self.parser.write(socketBuffer, start, length);
 };
 
 RelayConnection.prototype.onFrameBuffer =
@@ -86,11 +143,53 @@ RelayConnection.prototype.writeFrame = function writeFrame(frame) {
     var self = this;
 
     if (self.initialized) {
-        self.socket.write(frame.frameBuffer);
+        self.writeToSocket(frame.frameBuffer);
     } else {
         self.frameQueue.push(frame.frameBuffer);
     }
 };
+
+RelayConnection.prototype.writeToSocket = function writeToSocket(buffer) {
+    var self = this;
+
+    if (self.pendingWrite) {
+        self.writeQueue.push(buffer);
+        return;
+    }
+
+    if (!self.connected) {
+        throw new Error('lol noob');
+    }
+
+    self.pendingWrite = true;
+
+    // console.log('writing to socket', self.guid);
+    var writeReq = self.socket.writeBuffer(buffer);
+    if (!writeReq) {
+        console.error('did not get writeReq');
+        return;
+    }
+
+    writeReq.oncomplete = afterWrite;
+};
+
+function afterWrite(status, socket, writeReq) {
+    var conn = socket.owner;
+
+    if (status) {
+        console.error('write failed', status);
+        return;
+    }
+
+    if (conn.afterWriteCallback) {
+        conn.afterWriteCallback();
+    }
+
+    conn.pendingWrite = false;
+    if (conn.writeQueue.length) {
+        conn.writeToSocket(conn.writeQueue.shift());
+    }
+}
 
 RelayConnection.prototype.handleInitRequest =
 function handleInitRequest(reqFrame) {
@@ -101,8 +200,6 @@ function handleInitRequest(reqFrame) {
 
     reqFrame.readId();
     self.sendInitResponse(reqFrame);
-
-    self.flushPending();
 };
 
 RelayConnection.prototype.sendInitResponse =
@@ -123,8 +220,16 @@ function sendInitResponse(reqFrame) {
         buffer, offset, self.relay.hostPort
     );
 
-    self.socket.write(buffer);
+    self.afterWriteCallback = onWrite;
+    self.writeToSocket(buffer);
 };
+
+function onWrite() {
+    var self = this;
+
+    self.afterWriteCallback = null;
+    self.flushPending();
+}
 
 RelayConnection.prototype.sendInitRequest =
 function sendInitRequest() {
@@ -144,7 +249,7 @@ function sendInitRequest() {
         buffer, offset, self.relay.hostPort
     );
 
-    self.socket.write(buffer);
+    self.writeToSocket(buffer);
 };
 
 RelayConnection.prototype.handleInitResponse =
@@ -161,11 +266,13 @@ RelayConnection.prototype.flushPending =
 function flushPending() {
     var self = this;
 
+    self.initialized = true;
+    // console.log('flushing frames', self.frameQueue.length);
+
     for (var i = 0; i < self.frameQueue.length; i++) {
-        self.socket.write(self.frameQueue[i]);
+        self.writeToSocket(self.frameQueue[i]);
     }
 
-    self.initialized = true;
     self.frameQueue.length = 0;
 };
 
