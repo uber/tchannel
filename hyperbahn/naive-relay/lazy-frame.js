@@ -56,7 +56,7 @@ LazyFrame.prototype.readId = function readId() {
         return self.oldId;
     }
 
-    self.oldId = self.frameBuffer.readUInt32BE(ID_OFFSET);
+    self.oldId = self.frameBuffer.readUInt32BE(ID_OFFSET, true);
     return self.oldId;
 };
 
@@ -67,14 +67,14 @@ LazyFrame.prototype.readFrameType = function readFrameType() {
         return self.frameType;
     }
 
-    self.frameType = self.frameBuffer.readUInt8(TYPE_OFFSET);
+    self.frameType = self.frameBuffer.readUInt8(TYPE_OFFSET, true);
     return self.frameType;
 };
 
 LazyFrame.prototype.writeId = function writeId(newId) {
     var self = this;
 
-    self.frameBuffer.writeUInt32BE(newId, ID_OFFSET);
+    self.frameBuffer.writeUInt32BE(newId, ID_OFFSET, true);
 
     self.newId = newId;
     return self.newId;

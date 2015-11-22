@@ -296,35 +296,35 @@ function initFrameSize(hostPort) {
 
 function writeInitBody(buffer, offset, hostPort) {
     // Version
-    buffer.writeUInt16BE(2, offset);
+    buffer.writeUInt16BE(2, offset, true);
     offset += 2;
     // number of headers
-    buffer.writeUInt16BE(2, offset);
+    buffer.writeUInt16BE(2, offset, true);
     offset += 2;
 
     // key length
-    buffer.writeUInt16BE('host_port'.length, offset);
+    buffer.writeUInt16BE('host_port'.length, offset, true);
     offset += 2;
     // key value
     buffer.write('host_port', offset, 'host_port'.length, 'utf8');
     offset += 'host_port'.length;
 
     // value length
-    buffer.writeUInt16BE(hostPort.length, offset);
+    buffer.writeUInt16BE(hostPort.length, offset, true);
     offset += 2;
     // value value
     buffer.write(hostPort, offset, hostPort.length, 'utf8');
     offset += hostPort.length;
 
     // key length
-    buffer.writeUInt16BE('process_name'.length, offset);
+    buffer.writeUInt16BE('process_name'.length, offset, true);
     offset += 2;
     // key value
     buffer.write('process_name', offset, 'process_name'.length, 'utf8');
     offset += 'process_name'.length;
 
     // value length
-    buffer.writeUInt16BE(process.title.length, offset);
+    buffer.writeUInt16BE(process.title.length, offset, true);
     offset += 2;
     // value value
     buffer.write(process.title, offset, process.title.length, 'utf8');
@@ -335,18 +335,18 @@ function writeInitBody(buffer, offset, hostPort) {
 
 function writeFrameHeader(buffer, offset, size, type, id) {
     // size
-    buffer.writeUInt16BE(size, offset);
+    buffer.writeUInt16BE(size, offset, true);
     offset += 2;
 
     // type
-    buffer.writeInt8(type, offset);
+    buffer.writeInt8(type, offset, true);
     offset += 1;
 
     // reserved
     offset += 1;
 
     // id
-    buffer.writeUInt32BE(id, offset);
+    buffer.writeUInt32BE(id, offset, true);
     offset += 4;
 
     // reserved
