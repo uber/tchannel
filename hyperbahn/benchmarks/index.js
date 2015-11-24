@@ -29,7 +29,7 @@ var path = require('path');
 var BenchmarkRunner = require('tchannel/benchmarks/');
 
 var bahn = path.join(__dirname, 'hyperbahn-worker.js');
-var naiveRelay = path.join(__dirname, 'naive-relay.js');
+var naiveRelay = path.join(__dirname, '..', 'naive-relay', 'worker.js');
 
 var cNaiveRelay = '/home/raynos/uber/naive-relay-c/relay.out';
 
@@ -53,11 +53,11 @@ function spawnNaiveRelayServer() {
 
     var relays = '127.0.0.1:' + self.ports.serverPort;
 
+    // '--instances', String(self.instanceCount),
     var naiveRelayProc = self.run(naiveRelay, [
-        '--relays', relays,
-        '--instances', String(self.instanceCount),
-        '--port', String(self.ports.relayServerPort),
-        '--host', '127.0.0.1'
+        String(self.ports.relayServerPort),
+        '127.0.0.1',
+        relays
     ]);
     self.relayProcs.push(naiveRelayProc);
     naiveRelayProc.stdout.pipe(process.stderr);

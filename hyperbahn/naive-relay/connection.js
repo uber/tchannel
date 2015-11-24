@@ -1,7 +1,6 @@
 'use strict';
 
 var Buffer = require('buffer').Buffer;
-var process = require('process');
 
 var FrameParser = require('./parser.js');
 var LazyFrame = require('./lazy-frame.js');

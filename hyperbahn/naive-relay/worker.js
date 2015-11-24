@@ -8,32 +8,28 @@
 
     This program is bounded by a single TCP socket
 
-    node naive-relay.js --relays [hps] --port [num]
+    node naive-relay.js [port] [host] [hps]
 */
 
-var parseArgs = require('minimist');
 var assert = require('assert');
-var process = require('process');
-var myLocalIp = require('my-local-ip');
 
 var NaiveRelay = require('../naive-relay/relay.js');
 
 if (require.main === module) {
-    var args = parseArgs(process.argv.slice(2));
+    var args = process.argv.slice(2);
     process.title = 'nodejs-benchmarks-naive_relay';
     main(args);
 }
 
 function main(argv) {
-    assert(argv.relays, '--relays required');
-    assert(argv.port, '--port required');
+    assert(argv[0], '--port required');
+    assert(argv[1], '--host required');
+    assert(argv[2], '--relays required');
 
     var relay = NaiveRelay({
-        relays: argv.relays
+        relays: argv[2]
     });
-    relay.listen(argv.port, argv.host || myLocalIp());
+    relay.listen(argv[0], argv[1]);
 
-    if (argv.printRPS) {
-        relay.printRPS();
-    }
+    relay.printRPS();
 }
