@@ -634,6 +634,7 @@ valid or not in a call req or res.  Following sections will elaborate on details
 | `se`  | Y   | N   | Speculative Execution
 | `fd`  | Y   | Y   | Failure Domain
 | `sk`  | Y   | N   | Shard key
+| `xs`  | Y   | N   | Cross scope request
 
 ### Transport Header `as` -- Arg Scheme
 
@@ -726,6 +727,18 @@ tchannel instance.
 For example you may want to keep some in memory state, i.e. cache, aggregation.
 You can use read the `sk` and forward the call request to a specific process
 that has ownership for the shard key.
+
+### Transport Header `xs` -- Cross scope request
+
+The cross scope request header when set determines whether this request
+should be routed to the cross scope service.
+
+A scope is a prefix on the service name like `.us-east-1.prod.`.
+
+This header should be set for requests when you don't know which scope
+they belong to and the cross scope service should be able to decide
+where the requests should be routed to (i.e. which datacenter) and
+is responsible for routing it.
 
 ### A note on `host:port` header values
 
