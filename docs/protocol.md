@@ -634,7 +634,7 @@ valid or not in a call req or res.  Following sections will elaborate on details
 | `se`  | Y   | N   | Speculative Execution
 | `fd`  | Y   | Y   | Failure Domain
 | `sk`  | Y   | N   | Shard key
-| `xs`  | Y   | N   | Cross scope request
+| `cr`  | Y   | N   | Custom Routing
 
 ### Transport Header `as` -- Arg Scheme
 
@@ -728,17 +728,15 @@ For example you may want to keep some in memory state, i.e. cache, aggregation.
 You can use read the `sk` and forward the call request to a specific process
 that has ownership for the shard key.
 
-### Transport Header `xs` -- Cross scope request
+### Transport Header `cr` -- Custom routing
 
-The cross scope request header when set determines whether this request
-should be routed to the cross scope service.
+The custom routing request header must be set to a valid service name.
 
-A scope is a prefix on the service name like `.us-east-1.prod.`.
+When the custom routing header is set we will route to the service name
+in the `cr` header instead of the service name in the call request.
 
-This header should be set for requests when you don't know which scope
-they belong to and the cross scope service should be able to decide
-where the requests should be routed to (i.e. which datacenter) and
-is responsible for routing it.
+It is expected that the service in the `cr` header is capable of
+routing the request to the correct end destination.
 
 ### A note on `host:port` header values
 
