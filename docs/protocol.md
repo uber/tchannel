@@ -191,9 +191,9 @@ All frames of all types use this structure:
 ### size:2
 
 Total length of this frame in bytes, including the framing header and body.
-Note that this limits the total size of a frame to 64KiB, even though some of
+Note that this limits the total size of a frame to 64KiB - 1, even though some of
 the other fields are also specified with 16 bit sizes. Implementations must
-take care to not exceed the total frame size of 64KiB.
+take care to not exceed the total frame size of 64KiB - 1.
 
 ### type:1
 
