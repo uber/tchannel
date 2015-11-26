@@ -633,7 +633,8 @@ valid or not in a call req or res.  Following sections will elaborate on details
 | `re`  | Y   | N   | Retry Flags
 | `se`  | Y   | N   | Speculative Execution
 | `fd`  | Y   | Y   | Failure Domain
-| `sk`  | Y   | N   | Shard key
+| `sk`  | Y   | N   | Shard Key
+| `in`  | Y   | N   | Instance Name
 
 ### Transport Header `as` -- Arg Scheme
 
@@ -726,6 +727,16 @@ tchannel instance.
 For example you may want to keep some in memory state, i.e. cache, aggregation.
 You can use read the `sk` and forward the call request to a specific process
 that has ownership for the shard key.
+
+### Transport Header `in` -- Instance Name
+
+An instance name is a unique identifier for an instance that may be more
+consistent than a host:port address, particularly if the instance delegates to
+the operating system to choose a port.
+Instances may advertise their instance name in addition to their service name.
+TChannel relays may respect the instance name header by forwarding to the exact
+host:port of the instance instead of forwarding to any instance with the
+request service name.
 
 ### A note on `host:port` header values
 
