@@ -10,3 +10,6 @@
 [submodule "golang"]
 	path = golang
 	url = https://github.com/uber/tchannel-go
+[submodule "java"]
+	path = java
+	url = https://github.com/uber/tchannel-java.git
