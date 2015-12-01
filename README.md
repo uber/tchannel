@@ -39,10 +39,6 @@ TChannel is a networking framing protocol used for general RPC, supporting out-o
   one-off requests to TChannel servers
 - [tcap](https://github.com/uber/tcap/) TChannel packet capture tool, for
   eavesdropping and inspecting TChannel traffic
-- [bufrw](https://github.com/uber/bufrw/) Node.js buffer structured reading and
-  writing library, used for TChannel and [Thrift][]
-- [thriftrw](https://github.com/uber/thriftrw) Node.js [Thrift][] buffer reader
-  and writer
 
 [Thrift]: https://thrift.apache.org/
 [node]: https://github.com/uber/tchannel-node
