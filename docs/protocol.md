@@ -634,6 +634,7 @@ valid or not in a call req or res.  Following sections will elaborate on details
 | `se`  | Y   | N   | Speculative Execution
 | `fd`  | Y   | Y   | Failure Domain
 | `sk`  | Y   | N   | Shard key
+| `rd`  | Y   | N   | Routing Delegate 
 
 ### Transport Header `as` -- Arg Scheme
 
@@ -726,6 +727,16 @@ tchannel instance.
 For example you may want to keep some in memory state, i.e. cache, aggregation.
 You can use read the `sk` and forward the call request to a specific process
 that has ownership for the shard key.
+
+### Transport Header `rd` -- Routing Delegate
+
+The Routing Delegate request header must be set to a valid service name.
+
+When the Routing Delegate header is set we will route to the service name
+in the `rd` header instead of the service name in the call request.
+
+It is expected that the service in the `rd` header is capable of
+routing the request to the correct end destination.
 
 ### A note on `host:port` header values
 
