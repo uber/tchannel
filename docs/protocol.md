@@ -770,6 +770,10 @@ TTLs are not sent back with the response. It is up to the calling service to
 track the time spent with dependent requests and validate the incoming deadline
 before dispatching every new dependent request.
 
+An RPC message may be marked as backgrounded in the rpc library. For backgrounded
+messages we do not decrement or propagate the TTL. The TTL for all outgoing
+backgrounded messages is the specified timeout when the message is sent.
+
 ## Checksums
 
 Checksums are optional in order to ease implementations in different languages
