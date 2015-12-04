@@ -886,7 +886,7 @@ the "more fragments remain" flag was not set.
 
 ## Streaming
 
-A call request or call response can be marked as streaming. Streaming is seperated from Fragmentation.
+A call request or call response can be marked as streaming. Streaming is separated from Fragmentation.
 
 When a request/response is only fragmented the caller is splitting up a large body over multiple frames. You can generally expect the continuation frames to arrive shortly after the initial call frame.
 
