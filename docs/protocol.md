@@ -337,8 +337,7 @@ Used to control fragmentation. Valid flags:
 If the fragments flag isn't set, then this is the only/last frame for this
 message id.
 
-If the streaming flag isn't set, then this request has a fragmented body
-instead of a streaming body.
+If the streaming flag is set, then streaming request timeout semantics (time to first response frame) apply instead of the non-streaming semantics (time to last response frame).
 
 The streaming flag `0x02` may only be set on a `CallRequest` or `CallResponse`
 frame. If the flag is set on a `CallRequestCont` or `CallResponseCont` frame
