@@ -332,9 +332,16 @@ Used to control fragmentation. Valid flags:
 | flag   | description
 | ------ | -----------
 | `0x01` | more fragments follow
+| `0x02` | is request streaming
 
 If the fragments flag isn't set, then this is the only/last frame for this
 message id.
+
+If the streaming flag is set, then streaming request timeout semantics (time to first response frame) apply instead of the non-streaming semantics (time to last response frame).
+
+The streaming flag `0x02` may only be set on a `CallRequest` or `CallResponse`
+frame. If the flag is set on a `CallRequestCont` or `CallResponseCont` frame
+then it is a protocol error and invalid Cont frame.
 
 #### ttl:4
 
@@ -886,3 +893,11 @@ the "more fragments remain" flag was not set.
 | 0x03 | 1  | flags:1=0x1, ttl:4=0x2328, tracing:24=0x1,0x2,0x3, traceflags:1=0x1, service~1=0x5"svc A", nh:1=0x1, hk~1=0x1"k", hv~1=0xA"abcdefghij", csumtype:1=0x2 csum:4=0xBEEF arg1~2=0x2<2 bytes> | sending arg1
 | 0x13 | 1  | flags:1=0x1, csumtype:1=0x2 csum:4=0xDEAD arg1~2=0x2<2 bytes> arg2~2=0x2<2 bytes> | sending arg2
 | 0x13 | 1  | flags:1=0x0, csumtype:1=0x2 csum:4=0xF00F arg2~2=0x0<0 bytes> arg3~2=0x8<8 bytes> | complete
+
+## Streaming
+
+Any request may be fragmented into multiple frames. For non-streaming requests, this can occur for arguments that exceed the size of a single frame, but must ultimately be captured by a single contiguous chunk of memory on both the sender and receiver. Streaming, paired with a streaming argument scheme, implies that the arguments may continue indefinitely and can be processed in chunks. Streaming requests have alternate timeout semantics.
+
+A non-streaming message times out if the last call response frame is not received within the ttl from the time the first frame request frame was sent.
+
+A streaming message times out if the first call response frame does not arrive within the ttl from the time the first frame request was sent. All streaming response handlers should send a call response frame immediately upon receiving the first call request frame, even if that response carries no content. TChannel imposes no constraints on the liveliness of streaming requests or responses thereafter.
