@@ -885,8 +885,8 @@ the "more fragments remain" flag was not set.
 
 ## Streaming
 
-A call request or call response can be marked as streaming. Streaming is separated from Fragmentation.
+Any request may be fragmented into multiple frames. For non-streaming requests, this can occur for arguments that exceed the size of a single frame, but must ultimately be captured by a single contiguous chunk of memory on both the sender and receiver. Streaming, paired with a streaming argument scheme, implies that the arguments may continue indefinitely and can be processed in chunks. Streaming requests have alternate timeout semantics.
 
-When a request/response is only fragmented the caller is splitting up a large body over multiple frames. You can generally expect the continuation frames to arrive shortly after the initial call frame.
+A non-streaming message times out if the last call response frame is not received within the ttl from the time the first frame request frame was sent.
 
-When a request/response is streamed there are no semantics or expectations about when frames arrive or what the delay between frames is.
+A streaming message times out if the first call response frame does not arrive within the ttl from the time the first frame request was sent. All streaming response handlers should send a call response frame immediately upon receiving the first call request frame, even if that response carries no content. TChannel imposes no constraints on the liveliness of streaming requests or responses thereafter.
