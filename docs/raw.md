@@ -10,6 +10,6 @@ before using `as=raw`.
 
 ## Arguments
 
- - `arg1` : raw bytes
+ - `arg1` : endpoint
  - `arg2` : raw bytes
  - `arg3` : raw bytes
