@@ -1,6 +1,23 @@
+enum State {
+    REFUSING = 0,
+    ACCEPTING = 1,
+    STOPPING = 2,
+    STOPPED = 3,
+}
+
+enum RequestType {
+    LEGACY = 0,
+    TRAFFIC = 1,
+}
+
+struct HealthRequest {
+    1: optional RequestType type
+}
+
 struct HealthStatus {
     1: required bool ok
     2: optional string message
+    3: optional State state
 }
 
 typedef string filename
@@ -22,7 +39,7 @@ struct VersionInfo {
 }
 
 service Meta {
-    HealthStatus health()
+    HealthStatus health(1: HealthRequest hr)
     ThriftIDLs thriftIDL()
     VersionInfo versionInfo()
 }
