@@ -50,7 +50,9 @@ struct VersionInfo {
 }
 
 service Meta {
+    // All arguments are optional. The default is a PROCESS health request.
     HealthStatus health(1: HealthRequest hr)
+
     ThriftIDLs thriftIDL()
     VersionInfo versionInfo()
 }
