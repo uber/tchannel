@@ -1,3 +1,5 @@
+namespace java com.uber.tchannel.meta
+
 // The HealthState provides additional information when the
 // health endpoint returns !ok.
 enum HealthState {
