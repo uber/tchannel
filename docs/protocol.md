@@ -166,7 +166,7 @@ B1 receives "call req" from R1, sends "call res" (0x04) to R1:
 1. use message id M2 for this frame
 2. send args from application response and compute csum
 
-R1 receives "call res" from B1, send "call res" (0x03) to A1:
+R1 receives "call res" from B1, send "call res" (0x04) to A1:
 
 1. match incoming message id M2 with existing "call req"
 2. use message id M1 for new message
