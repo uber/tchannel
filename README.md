@@ -49,4 +49,8 @@ TChannel is a networking framing protocol used for general RPC, supporting out-o
 [issues]: https://github.com/uber/hyperbahn/issues
 [oss]: https://uber.github.io/
 
+## Translation
+
+ - [中文文档](https://github.com/1046102779/microservice/tree/master/opentracing/jaeger/TChannel)
+
 ## MIT Licensed
