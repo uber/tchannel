@@ -2,6 +2,9 @@
 
 Network multiplexing and framing protocol for RPC
 
+[<img src="docs/tchannel-dark.svg#gh-dark-mode-only" alt="TChannel Logo, Dark" width="120" align="left">](docs/logo.md#gh-dark-mode-only)
+[<img src="docs/tchannel-light.svg#gh-light-mode-only" alt="TChannel Logo, Light" width="120" align="left">](docs/logo.md#gh-light-mode-only)
+
 * [Read the Docs][RTD]
 * Languages: [Node.js][node], [Python][python], [Go][go], [Java][java]
 * Questions: Open a [Github issue][issues]
