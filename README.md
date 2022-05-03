@@ -1,5 +1,7 @@
 # TChannel [![Build Status](https://travis-ci.org/uber/tchannel.svg?branch=master)](https://travis-ci.org/uber/tchannel)
 
+This project is no longer active. See https://github.com/uber/tchannel/issues/1428.
+
 Network multiplexing and framing protocol for RPC
 
 [<img src="docs/tchannel-dark.svg#gh-dark-mode-only" alt="TChannel Logo, Dark" width="120" align="left">](docs/logo.md#gh-dark-mode-only)
