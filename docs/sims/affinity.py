@@ -5,9 +5,11 @@ The ideal scenario would have similar numbers of relays and workers, with a
 connection from each relay to each worker, times some multiple for redundancy.
 However, the size of the relay set and worker set are both dynamic and
 independent: they can be adjusted to balance their respective loads.
-Although some scenarios will require a fully connected graph in service to
-redundancy, the number of open connections should be otherwise minimized.
+Although scenarios with either very few workers or very few relays will be
+fully connected, the number of open connections should be otherwise minimal.
 """
+
+from random import shuffle
 
 def choose_peers(relay, relay_count, worker_count, min_w2r, min_r2w):
     """
@@ -138,9 +140,59 @@ def partition():
     yield (100, 100)
     yield (50, 100)
 
+def startup(randomize=False):
+    """
+    This is a simulation of all workers for a given service starting up with a
+    static set of relays.  Each worker starts and sends an advertisement to
+    every relay, altering the set of affine workers.  Assuming that relays
+    infrequently prune connections to workers that are no longer affine,
+    this simulation illustrates that the first workers to start are connected
+    to all of the relays, and each subsequent worker is less connected.
+
+    When workers come online in order, the first workers are fully connected,
+    and the number of connections for each subsequent worker diminishes
+    linearly.
+
+    When the order in which workers first advertise is random, the first
+    workers are still fully connected, but each subsequent worker accumulates
+    much fewer connections.
+    """
+
+    relay_count = 60
+    min_w2r = 5
+    min_r2w = 5
+    worker_count = 1000
+
+    workers = []
+    worker_startup_order = list(range(worker_count))
+    if randomize:
+        shuffle(worker_startup_order)
+
+    w2r_connections = dict((w, set()) for w in range(worker_count))
+
+    # incrementally add workers to the pool of advertising workers
+    for w in worker_startup_order:
+        workers.append(w)
+        workers.sort()
+        # fan out advertisement to every relay
+        for r in range(relay_count):
+            # each relay connects to current peers
+            peers = choose_peers(r, relay_count, len(workers), min_w2r, min_r2w)
+            for peer_index in peers:
+                p = workers[peer_index]
+                w2r_connections[p].add(r)
+
+    num_connections_by_worker = sorted(len(connections) for w, connections in w2r_connections.items())[::-1]
+    for x in num_connections_by_worker:
+        print x
+
 print 'initialization'
 run(scaling_up_workers())
 print 'partition'
 run(partition())
 print 'verify gammut of simulations'
 gammut()
+print 'ordered startup'
+startup()
+print 'random order startup'
+startup(randomize = True)
